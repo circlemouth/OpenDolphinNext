@@ -21,6 +21,7 @@ node_modules/
 /client/target/
 /reporting/target/
 /server-modernized/target/
+/persistence/target/
 
 # Docker Compose runtime output
 /docker/output/
