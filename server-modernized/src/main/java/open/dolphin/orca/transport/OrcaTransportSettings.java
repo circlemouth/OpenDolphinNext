@@ -1,5 +1,8 @@
 package open.dolphin.orca.transport;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -249,8 +252,84 @@ public final class OrcaTransportSettings {
         return retryBackoffMs;
     }
 
+    public String cacheFingerprint() {
+        MessageDigest digest = newDigest();
+        updateDigest(digest, host);
+        updateDigest(digest, port);
+        updateDigest(digest, scheme);
+        updateDigest(digest, user);
+        updateDigest(digest, password);
+        updateDigest(digest, pathPrefix);
+        updateDigest(digest, weborcaExplicit);
+        updateDigest(digest, autoApiPrefixEnabled);
+        updateDigest(digest, retryMax);
+        updateDigest(digest, retryBackoffMs);
+        updateDigest(digest, baseUrl);
+        updateDigest(digest, mode);
+        updateDigest(digest, modeNormalized);
+        return toHex(digest.digest());
+    }
+
     private boolean hasBaseUrl() {
         return baseUrl != null && !baseUrl.isBlank();
+    }
+
+    private static MessageDigest newDigest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 digest unavailable", ex);
+        }
+    }
+
+    private static void updateDigest(MessageDigest digest, String value) {
+        if (value == null) {
+            digest.update((byte) 0);
+            return;
+        }
+        digest.update((byte) 1);
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        digest.update(intBytes(bytes.length));
+        digest.update(bytes);
+    }
+
+    private static void updateDigest(MessageDigest digest, boolean value) {
+        digest.update((byte) (value ? 1 : 0));
+    }
+
+    private static void updateDigest(MessageDigest digest, int value) {
+        digest.update(intBytes(value));
+    }
+
+    private static void updateDigest(MessageDigest digest, long value) {
+        digest.update(new byte[]{
+                (byte) (value >>> 56),
+                (byte) (value >>> 48),
+                (byte) (value >>> 40),
+                (byte) (value >>> 32),
+                (byte) (value >>> 24),
+                (byte) (value >>> 16),
+                (byte) (value >>> 8),
+                (byte) value
+        });
+    }
+
+    private static byte[] intBytes(int value) {
+        return new byte[]{
+                (byte) (value >>> 24),
+                (byte) (value >>> 16),
+                (byte) (value >>> 8),
+                (byte) value
+        };
+    }
+
+    private static String toHex(byte[] bytes) {
+        StringBuilder builder = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) {
+            builder.append(Character.forDigit((value >>> 4) & 0xF, 16));
+            builder.append(Character.forDigit(value & 0xF, 16));
+        }
+        return builder.toString();
     }
 
     private void validateSecurityPolicy() {

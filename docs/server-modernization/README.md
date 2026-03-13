@@ -114,6 +114,12 @@
 - 互換を将来整理する場合も PostgreSQL `oid` への回帰は採らず、JSON 系へ統一する。
 - 判断に迷う場合は `docs/DEVELOPMENT_STATUS.md` の最新方針を優先する。
 
+### DB migration 運用
+- versioned migration の正本は `tools/flyway/sql` とする。
+- `server-modernized/src/main/resources/db/migration` は実行時に読み込まれる反映先として扱い、versioned migration を追加・更新したら同名ファイルを同一コミットで同期する。
+- 差分が生じた場合の正誤判定は `tools/flyway/sql` を優先し、`server-modernized/src/main/resources/db/migration` 側を正本へ合わせて修正する。
+- `server-modernized/src/main/resources/db/migration/P1_03__minimal_baseline_seed.sql` は characterization 用の手動 seed であり、versioned migration 正本には含めない。
+
 ### 運用 / 接続
 - `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`
 - `docs/server-modernization/operations/ORCA_FIRECRAWL_INDEX.md`

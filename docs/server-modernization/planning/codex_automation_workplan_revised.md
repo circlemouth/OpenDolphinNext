@@ -96,7 +96,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 - 次:
   - P1-02
 
-### [ ] P1-02 migration 正本と反映先の整合ルールを明文化する
+### [x] P1-02 migration 正本と反映先の整合ルールを明文化する
 - 対象:
   - `tools/flyway/sql`
   - `src/main/resources/db/migration`
@@ -106,6 +106,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 同期が必要な場合の運用を文書に 1 箇所で明文化する
 - 完了条件:
   - DB 変更タスクで参照先がぶれない
+- 2026-03-14 (RUN_ID=20260313T160056Z):
+  - `tools/flyway/sql` を作成し、versioned migration (`V0300`〜`V0304`) を `server-modernized/src/main/resources/db/migration` から同期した
+  - `docs/server-modernization/README.md` に、`tools/flyway/sql` を正本、`server-modernized/src/main/resources/db/migration` を反映先として扱う運用を追記した
+  - `P1_03__minimal_baseline_seed.sql` は versioned migration 正本ではなく、手動 seed として据え置く扱いを明記した
 - 次:
   - P2-01
 
@@ -113,7 +117,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P2. ORCA transport の接続再利用改善
 
-### [ ] P2-01 RestOrcaTransport の設定キャッシュと HttpClient 寿命を分離する
+### [x] P2-01 RestOrcaTransport の設定キャッシュと HttpClient 寿命を分離する
 - 対象:
   - `server-modernized/src/main/java/open/dolphin/orca/transport/RestOrcaTransport.java`
   - `server-modernized/src/main/java/open/dolphin/orca/transport/OrcaHttpClient.java`
@@ -126,10 +130,13 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 設定リフレッシュと client 再作成が同一条件で結びついていない
 - テスト:
   - 再利用と設定変更時の差し替えを確認する最小テスト
+- 2026-03-14 (RUN_ID=20260313T160056Z):
+  - `RestOrcaTransport` の cache refresh を、設定再読込と `HttpClient` 再生成で分離した
+  - TTL 経過や `reloadSettings()` 実行時でも、設定 fingerprint が不変なら既存 `HttpClient` / `OrcaHttpClient` を維持する構成へ変更した
 - 次:
   - P2-02
 
-### [ ] P2-02 設定変更時だけ transport を差し替える fingerprint 判定を入れる
+### [x] P2-02 設定変更時だけ transport を差し替える fingerprint 判定を入れる
 - 対象:
   - `RestOrcaTransport`
   - 関連設定 DTO / repository
@@ -138,10 +145,13 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 無変更時は既存 client を維持する
 - 完了条件:
   - 無変更 refresh で `HttpClient` が再生成されない
+- 2026-03-14 (RUN_ID=20260313T160056Z):
+  - `OrcaTransportSettings` に cache fingerprint を追加し、admin config の TLS 資材も含めた transport fingerprint を `RestOrcaTransport` 側で計算するようにした
+  - fingerprint が変わった場合のみ transport entry を差し替え、無変更時は loadedAt のみ更新する形へ整理した
 - 次:
   - P2-03
 
-### [ ] P2-03 ORCA transport の再利用確認テストを追加する
+### [x] P2-03 ORCA transport の再利用確認テストを追加する
 - 対象:
   - ORCA transport 周辺テスト
 - 作業:
@@ -150,6 +160,9 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 既存契約を壊していないこと
 - 完了条件:
   - ORCA transport の変更に対する安全網がある
+- 2026-03-14 (RUN_ID=20260313T160056Z):
+  - `server-modernized/src/test/java/open/dolphin/orca/transport/RestOrcaTransportTest.java` に、無変更 refresh で同一 `HttpClient` を再利用するテストと、設定変更時のみ差し替わるテストを追加した
+  - 既存の admin config 解決 / facility 別解決 / Basic 認証ヘッダー生成テストを維持し、既存契約を壊していないことを再確認した
 - 次:
   - P3-01
 

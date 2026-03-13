@@ -7,8 +7,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.io.IOException;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -252,19 +256,26 @@ public class RestOrcaTransport implements OrcaTransport {
         String key = cacheKey(facilityId);
         CachedTransportEntry entry = facilityCache.get(key);
         if (entry == null || entry.isExpired(cacheTtlMs)) {
-            entry = reloadCache(facilityId);
+            entry = reloadCache(facilityId, entry);
         }
         return entry;
     }
 
     private CachedTransportEntry reloadCache(String facilityId) {
+        return reloadCache(facilityId, facilityCache.get(cacheKey(facilityId)));
+    }
+
+    private CachedTransportEntry reloadCache(String facilityId, CachedTransportEntry existingEntry) {
         String key = cacheKey(facilityId);
-        CachedTransportEntry entry = loadSettingsWithFallback(facilityId);
-        if (entry == null) {
+        ResolvedTransportConfig resolvedConfig = loadSettingsWithFallback(facilityId);
+        if (resolvedConfig == null) {
             LOGGER.warning("ORCA transport settings load returned null");
             facilityCache.remove(key);
             return null;
         }
+        CachedTransportEntry entry = existingEntry != null && existingEntry.hasFingerprint(resolvedConfig.fingerprint())
+                ? existingEntry.refresh(resolvedConfig.settings(), resolvedConfig.fingerprint(), System.currentTimeMillis())
+                : buildTransportEntry(resolvedConfig);
         if (!entry.settings().isReady()) {
             LOGGER.log(Level.WARNING, "ORCA transport settings not ready: {0}", entry.settings().auditSummary());
         }
@@ -272,8 +283,8 @@ public class RestOrcaTransport implements OrcaTransport {
         return entry;
     }
 
-    private CachedTransportEntry loadSettingsWithFallback(String facilityId) {
-        CachedTransportEntry entry = null;
+    private ResolvedTransportConfig loadSettingsWithFallback(String facilityId) {
+        ResolvedTransportConfig entry = null;
         try {
             entry = loadSettingsFromAdminConfig(facilityId);
         } catch (RuntimeException ex) {
@@ -287,7 +298,7 @@ public class RestOrcaTransport implements OrcaTransport {
         return entry;
     }
 
-    private CachedTransportEntry loadSettingsFromAdminConfig(String facilityId) {
+    private ResolvedTransportConfig loadSettingsFromAdminConfig(String facilityId) {
         if (orcaConnectionConfigStore == null) {
             return null;
         }
@@ -302,32 +313,36 @@ public class RestOrcaTransport implements OrcaTransport {
                 resolved.useWeborca(),
                 resolved.username(),
                 resolved.password());
-
-        HttpClient.Builder builder = HttpClient.newBuilder()
-                .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
-                .followRedirects(HttpClient.Redirect.NEVER);
-        boolean hasCustomCa = resolved.caCertificate() != null && resolved.caCertificate().length > 0;
-        if (resolved.clientAuthEnabled() || hasCustomCa) {
-            SSLContext sslContext = OrcaTlsSupport.buildSslContext(
-                    resolved.clientAuthEnabled() ? resolved.clientCertificateP12() : null,
-                    resolved.clientAuthEnabled() ? resolved.clientCertificatePassphrase() : null,
-                    resolved.caCertificate());
-            builder.sslContext(sslContext);
-        }
-        HttpClient raw = builder.build();
-        return new CachedTransportEntry(settings, raw, new OrcaHttpClient(raw), System.currentTimeMillis());
+        return ResolvedTransportConfig.forAdminConfig(
+                settings,
+                resolved.clientAuthEnabled(),
+                resolved.clientCertificateP12(),
+                resolved.clientCertificatePassphrase(),
+                resolved.caCertificate());
     }
 
-    private CachedTransportEntry loadFallbackSettings() {
+    private ResolvedTransportConfig loadFallbackSettings() {
         OrcaTransportSettings settings = OrcaTransportSettings.load();
         if (settings == null) {
             return null;
         }
-        HttpClient raw = HttpClient.newBuilder()
+        return ResolvedTransportConfig.forFallback(settings);
+    }
+
+    private CachedTransportEntry buildTransportEntry(ResolvedTransportConfig resolvedConfig) {
+        HttpClient.Builder builder = HttpClient.newBuilder()
                 .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
-                .followRedirects(HttpClient.Redirect.NEVER)
-                .build();
-        return new CachedTransportEntry(settings, raw, new OrcaHttpClient(raw), System.currentTimeMillis());
+                .followRedirects(HttpClient.Redirect.NEVER);
+        if (resolvedConfig.requiresCustomSslContext()) {
+            builder.sslContext(resolvedConfig.buildSslContext());
+        }
+        HttpClient raw = builder.build();
+        return new CachedTransportEntry(
+                resolvedConfig.settings(),
+                raw,
+                new OrcaHttpClient(raw),
+                System.currentTimeMillis(),
+                resolvedConfig.fingerprint());
     }
 
     private static String cacheKey(String facilityId) {
@@ -582,7 +597,8 @@ public class RestOrcaTransport implements OrcaTransport {
             OrcaTransportSettings settings,
             HttpClient rawHttpClient,
             OrcaHttpClient httpClient,
-            long loadedAtEpochMilli) {
+            long loadedAtEpochMilli,
+            String fingerprint) {
 
         private boolean isExpired(long ttlMs) {
             if (ttlMs <= 0L) {
@@ -590,5 +606,126 @@ public class RestOrcaTransport implements OrcaTransport {
             }
             return System.currentTimeMillis() - loadedAtEpochMilli >= ttlMs;
         }
+
+        private boolean hasFingerprint(String candidate) {
+            return fingerprint != null && fingerprint.equals(candidate);
+        }
+
+        private CachedTransportEntry refresh(OrcaTransportSettings refreshedSettings, String refreshedFingerprint, long refreshedAt) {
+            return new CachedTransportEntry(refreshedSettings, rawHttpClient, httpClient, refreshedAt, refreshedFingerprint);
+        }
+    }
+
+    private record ResolvedTransportConfig(
+            OrcaTransportSettings settings,
+            boolean clientAuthEnabled,
+            byte[] clientCertificateP12,
+            String clientCertificatePassphrase,
+            byte[] caCertificate,
+            String fingerprint) {
+
+        private static ResolvedTransportConfig forAdminConfig(
+                OrcaTransportSettings settings,
+                boolean clientAuthEnabled,
+                byte[] clientCertificateP12,
+                String clientCertificatePassphrase,
+                byte[] caCertificate) {
+            byte[] p12Copy = clientCertificateP12 != null ? Arrays.copyOf(clientCertificateP12, clientCertificateP12.length) : null;
+            byte[] caCopy = caCertificate != null ? Arrays.copyOf(caCertificate, caCertificate.length) : null;
+            return new ResolvedTransportConfig(
+                    settings,
+                    clientAuthEnabled,
+                    p12Copy,
+                    clientCertificatePassphrase,
+                    caCopy,
+                    computeFingerprint(settings, clientAuthEnabled, p12Copy, clientCertificatePassphrase, caCopy));
+        }
+
+        private static ResolvedTransportConfig forFallback(OrcaTransportSettings settings) {
+            return new ResolvedTransportConfig(
+                    settings,
+                    false,
+                    null,
+                    null,
+                    null,
+                    computeFingerprint(settings, false, null, null, null));
+        }
+
+        private boolean requiresCustomSslContext() {
+            return clientAuthEnabled || (caCertificate != null && caCertificate.length > 0);
+        }
+
+        private SSLContext buildSslContext() {
+            return OrcaTlsSupport.buildSslContext(
+                    clientAuthEnabled ? clientCertificateP12 : null,
+                    clientAuthEnabled ? clientCertificatePassphrase : null,
+                    caCertificate);
+        }
+    }
+
+    private static String computeFingerprint(
+            OrcaTransportSettings settings,
+            boolean clientAuthEnabled,
+            byte[] clientCertificateP12,
+            String clientCertificatePassphrase,
+            byte[] caCertificate) {
+        MessageDigest digest = newDigest();
+        updateDigest(digest, settings != null ? settings.cacheFingerprint() : null);
+        updateDigest(digest, clientAuthEnabled);
+        updateDigest(digest, clientCertificateP12);
+        updateDigest(digest, clientCertificatePassphrase);
+        updateDigest(digest, caCertificate);
+        return toHex(digest.digest());
+    }
+
+    private static MessageDigest newDigest() {
+        try {
+            return MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 digest unavailable", ex);
+        }
+    }
+
+    private static void updateDigest(MessageDigest digest, String value) {
+        if (value == null) {
+            digest.update((byte) 0);
+            return;
+        }
+        digest.update((byte) 1);
+        byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+        digest.update(intBytes(bytes.length));
+        digest.update(bytes);
+    }
+
+    private static void updateDigest(MessageDigest digest, byte[] value) {
+        if (value == null) {
+            digest.update((byte) 0);
+            return;
+        }
+        digest.update((byte) 1);
+        digest.update(intBytes(value.length));
+        digest.update(value);
+    }
+
+    private static void updateDigest(MessageDigest digest, boolean value) {
+        digest.update((byte) (value ? 1 : 0));
+    }
+
+    private static byte[] intBytes(int value) {
+        return new byte[]{
+                (byte) (value >>> 24),
+                (byte) (value >>> 16),
+                (byte) (value >>> 8),
+                (byte) value
+        };
+    }
+
+    private static String toHex(byte[] bytes) {
+        StringBuilder builder = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) {
+            builder.append(Character.forDigit((value >>> 4) & 0xF, 16));
+            builder.append(Character.forDigit(value & 0xF, 16));
+        }
+        return builder.toString();
     }
 }

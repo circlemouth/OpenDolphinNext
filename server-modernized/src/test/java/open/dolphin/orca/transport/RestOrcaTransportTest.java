@@ -1,6 +1,7 @@
 package open.dolphin.orca.transport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -68,6 +69,50 @@ class RestOrcaTransportTest {
                 transport.resolveBasicAuthHeader("F001"));
         assertEquals("https://facility.example.orca", settings.getBaseUrl());
         verify(store, times(1)).resolve("F001");
+    }
+
+    @Test
+    void reloadSettingsReusesHttpClientWhenResolvedConfigUnchanged() throws Exception {
+        OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.resolve(null)).thenReturn(resolvedConnection(
+                "https://same.example.orca",
+                "same-user",
+                "same-pass"));
+
+        RestOrcaTransport transport = new RestOrcaTransport();
+        setField(transport, "orcaConnectionConfigStore", store);
+
+        transport.reloadSettings();
+        HttpClient firstClient = transport.rawHttpClient();
+
+        transport.reloadSettings();
+        HttpClient secondClient = transport.rawHttpClient();
+
+        assertSame(firstClient, secondClient);
+        verify(store, times(2)).resolve(null);
+    }
+
+    @Test
+    void reloadSettingsReplacesHttpClientWhenResolvedConfigChanges() throws Exception {
+        OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.resolve(null))
+                .thenReturn(resolvedConnection("https://first.example.orca", "user-a", "pass-a"))
+                .thenReturn(resolvedConnection("https://second.example.orca", "user-b", "pass-b"));
+
+        RestOrcaTransport transport = new RestOrcaTransport();
+        setField(transport, "orcaConnectionConfigStore", store);
+
+        transport.reloadSettings();
+        HttpClient firstClient = transport.rawHttpClient();
+
+        transport.reloadSettings();
+        HttpClient secondClient = transport.rawHttpClient();
+
+        assertNotSame(firstClient, secondClient);
+        assertEquals("https://second.example.orca/api/api01rv2/systeminfv2",
+                transport.buildOrcaUrl("/api01rv2/systeminfv2"));
+        assertEquals(basicAuthHeader("user-b", "pass-b"), transport.resolveBasicAuthHeader());
+        verify(store, times(2)).resolve(null);
     }
 
     private static OrcaConnectionConfigStore.ResolvedOrcaConnection resolvedConnection(
