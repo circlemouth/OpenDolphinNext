@@ -221,7 +221,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P4. 受付ホットパスの DB 往復削減
 
-### [ ] P4-01 initializePvtList の問い合わせ構造を棚卸しする
+### [x] P4-01 initializePvtList の問い合わせ構造を棚卸しする
 - 対象:
   - `server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java`
   - `server-modernized/src/main/java/open/dolphin/session/PVTServiceBean.java`
@@ -231,10 +231,15 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - join 可能箇所、一括取得可能箇所、Java 側集計箇所を分ける
 - 完了条件:
   - 次タスクで減らす対象問い合わせが明確である
+- 2026-03-14 (RUN_ID=20260313T230105Z):
+  - `ChartEventServiceBean.initializePvtList()` は、当日 PVT 一覧 1 回取得の後、患者ごとに `HealthInsuranceModel` / `KarteBean` / `AppointmentModel` / `RegisteredDiagnosisModel` を順に再読込しており、明示クエリだけで `1 + 4N` 往復になると整理した
+  - `PVTServiceBean.addPvt()` は、既存患者経路で `PatientModel` 検索と保険再読込を行い、当日受付ではさらに `KarteBean` ID 取得、当日予約取得、病名数取得に加えて `eventServiceBean.getPvtList(fid)` の全走査で重複確認していることを確認した
+  - P4-02 の変更対象は `ChartEventServiceBean.initializePvtList()` に限定し、患者 ID 単位の保険一括取得、カルテ一括取得、カルテ ID 単位の予約一括取得、病名一覧一括取得 + Java 側集計へ寄せる方針を確定した
+  - P4-03 で継続確認すべき対象を `PVTServiceBean.addPvt()` / `ServletContextHolder` 上の `pvtList` 重複走査 / `PatientModel(facilityId, patientId)` 一意制約周辺に絞った
 - 次:
   - P4-02
 
-### [ ] P4-02 initializePvtList を join または一括取得寄りにする
+### [x] P4-02 initializePvtList を join または一括取得寄りにする
 - 対象:
   - `ChartEventServiceBean`
   - 関連 repository / query
@@ -245,6 +250,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 初期一覧構築時の患者ごとの追加問い合わせ数が減る
 - テスト:
   - 一覧の内容が既存契約から外れていないこと
+- 2026-03-14 (RUN_ID=20260313T230105Z):
+  - `server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java` の `initializePvtList()` を、PVT 一覧取得後に患者 ID / カルテ ID を集約し、保険・カルテ・予約・病名をそれぞれ 1 回ずつ一括取得する構成へ変更した
+  - 病名数計算は `setByomeiCount(...)` の判定ロジックを `applyByomeiCount(...)` に寄せ、初期一覧では一括取得済みの `RegisteredDiagnosisModel` 群を再利用するよう整理した
+  - `server-modernized/src/test/java/open/dolphin/session/ChartEventServiceBeanInitializationTest.java` に、複数 PVT 初期化時でも関連問い合わせを患者単位で繰り返さず、予約名・病名数・保険情報が従来どおり埋まることを確認するテストを追加した
 - 次:
   - P4-03
 
