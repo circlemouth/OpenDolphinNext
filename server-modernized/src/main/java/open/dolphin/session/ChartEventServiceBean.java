@@ -14,6 +14,7 @@ import java.util.*;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.AsyncContext;
 import jakarta.transaction.Transactional;
@@ -41,6 +42,16 @@ public class ChartEventServiceBean {
     private static final Logger LOGGER = LoggerFactory.getLogger(ChartEventServiceBean.class);
     private static final int LEGACY_FINALIZED_SAVE_BIT = 1;
     private static final int LEGACY_FINALIZED_MODIFY_BIT = 2;
+    private static final String QUERY_PVT_BY_DATE =
+            "from PatientVisitModel p where p.pvtDate >= :fromDate and p.pvtDate < :toDate order by p.id";
+    private static final String QUERY_INSURANCE_BY_PATIENT_IDS =
+            "from HealthInsuranceModel h where h.patient.id in :patientIds";
+    private static final String QUERY_KARTE_BY_PATIENT_IDS =
+            "from KarteBean k where k.patient.id in :patientIds";
+    private static final String QUERY_APPOINTMENTS_BY_KARTE_IDS_DATE =
+            "from AppointmentModel a where a.karte.id in :karteIds and a.date = :date";
+    private static final String QUERY_DIAGNOSES_BY_KARTE_IDS =
+            "from RegisteredDiagnosisModel r where r.karte.id in :karteIds";
     
     @Inject
     private ServletContextHolder contextHolder;
@@ -369,16 +380,18 @@ public class ChartEventServiceBean {
         LocalDateTime toDate = startOfDay(contextHolder.getTomorrow());
 
         // PatientVisitModelを施設IDで検索する
-        final String sql =
-                "from PatientVisitModel p " +
-                "where p.pvtDate >= :fromDate and p.pvtDate < :toDate " +
-                "order by p.id";
         @SuppressWarnings("unchecked")
         List<PatientVisitModel> result =
-                em.createQuery(sql)
+                em.createQuery(QUERY_PVT_BY_DATE)
                 .setParameter("fromDate", fromDate)
                 .setParameter("toDate", toDate)
                 .getResultList();
+
+        Map<Long, List<HealthInsuranceModel>> insurancesByPatientId = loadInsurancesByPatientIds(result);
+        Map<Long, KarteBean> karteByPatientId = loadKarteByPatientIds(result);
+        Map<Long, String> appointmentsByKarteId = loadAppointmentsByKarteId(karteByPatientId.values());
+        Map<Long, List<RegisteredDiagnosisModel>> diagnosesByKarteId =
+                loadDiagnosesByKarteId(karteByPatientId.values());
 
         // 患者の基本データを取得する
         // 来院情報と患者は ManyToOne の関係である
@@ -390,37 +403,24 @@ public class ChartEventServiceBean {
             contextHolder.getPvtList(fid).add(pvt);
 
             PatientModel patient = pvt.getPatientModel();
+            patient.setHealthInsurances(new ArrayList<>(
+                    insurancesByPatientId.getOrDefault(patient.getId(), List.of())));
 
-            // 患者の健康保険を取得する
-            @SuppressWarnings("unchecked")
-            List<HealthInsuranceModel> insurances =
-                    em.createQuery("from HealthInsuranceModel h where h.patient.id = :pk")
-                    .setParameter("pk", patient.getId())
-                    .getResultList();
-            patient.setHealthInsurances(insurances);
-
-            KarteBean karte = (KarteBean)
-                    em.createQuery("from KarteBean k where k.patient.id = :pk")
-                    .setParameter("pk", patient.getId())
-                    .getSingleResult();
+            KarteBean karte = karteByPatientId.get(patient.getId());
+            if (karte == null) {
+                throw new NoResultException("KarteBean not found for patient id=" + patient.getId());
+            }
 
             // カルテの PK を得る
             long karteId = karte.getId();
 
-            // 予約を検索する
-            @SuppressWarnings("unchecked")
-             List<AppointmentModel> list =
-                    em.createQuery("from AppointmentModel a where a.karte.id = :karteId and a.date = :date")
-                    .setParameter("karteId", karteId)
-                    .setParameter("date", contextHolder.getToday().getTime())
-                    .getResultList();
-            if (list != null && !list.isEmpty()) {
-                AppointmentModel appo = list.get(0);
-                pvt.setAppointment(appo.getName());
+            String appointment = appointmentsByKarteId.get(karteId);
+            if (appointment != null) {
+                pvt.setAppointment(appointment);
             }
 
             // 病名数をチェックする
-            setByomeiCount(karteId, pvt);
+            applyByomeiCount(diagnosesByKarteId.getOrDefault(karteId, List.of()), pvt);
             // 受付番号セット
             //pvt.setNumber(++counter);
         }
@@ -437,7 +437,14 @@ public class ChartEventServiceBean {
     
     // データベースを調べてpvtに病名数を設定する
     public void setByomeiCount(long karteId, PatientVisitModel pvt) {
+        List<RegisteredDiagnosisModel> rdList =
+                em.createQuery("from RegisteredDiagnosisModel r where r.karte.id = :karteId")
+                .setParameter("karteId", karteId)
+                .getResultList();
+        applyByomeiCount(rdList, pvt);
+    }
 
+    private void applyByomeiCount(List<RegisteredDiagnosisModel> rdList, PatientVisitModel pvt) {
         // byomeiCountがすでに0でないならば、byomeiCountは設定済みであろう
         //if (pvt.getByomeiCount() != 0) {
         //    return;
@@ -447,12 +454,6 @@ public class ChartEventServiceBean {
         int byomeiCountToday = 0;
         Date pvtDate = Date.from(pvt.getPvtDate().atZone(ZoneId.systemDefault()).toInstant());
 
-        // データベースから検索
-        final String sql = "from RegisteredDiagnosisModel r where r.karte.id = :karteId";
-        List<RegisteredDiagnosisModel> rdList =
-                em.createQuery(sql)
-                .setParameter("karteId", karteId)
-                .getResultList();
         for (RegisteredDiagnosisModel rd : rdList) {
             Date start = ModelUtils.getStartDate(rd.getStarted()).getTime();
             Date ended = ModelUtils.getEndedDate(rd.getEnded()).getTime();
@@ -465,6 +466,100 @@ public class ChartEventServiceBean {
         }
         pvt.setByomeiCount(byomeiCount);
         pvt.setByomeiCountToday(byomeiCountToday);
+    }
+
+    private Map<Long, List<HealthInsuranceModel>> loadInsurancesByPatientIds(List<PatientVisitModel> visits) {
+        Set<Long> patientIds = collectPatientIds(visits);
+        if (patientIds.isEmpty()) {
+            return Map.of();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<HealthInsuranceModel> insurances = em.createQuery(QUERY_INSURANCE_BY_PATIENT_IDS)
+                .setParameter("patientIds", patientIds)
+                .getResultList();
+
+        Map<Long, List<HealthInsuranceModel>> grouped = new HashMap<>();
+        for (HealthInsuranceModel insurance : insurances) {
+            grouped.computeIfAbsent(insurance.getPatient().getId(), ignored -> new ArrayList<>()).add(insurance);
+        }
+        return grouped;
+    }
+
+    private Map<Long, KarteBean> loadKarteByPatientIds(List<PatientVisitModel> visits) {
+        Set<Long> patientIds = collectPatientIds(visits);
+        if (patientIds.isEmpty()) {
+            return Map.of();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<KarteBean> karteList = em.createQuery(QUERY_KARTE_BY_PATIENT_IDS)
+                .setParameter("patientIds", patientIds)
+                .getResultList();
+
+        Map<Long, KarteBean> grouped = new HashMap<>();
+        for (KarteBean karte : karteList) {
+            grouped.putIfAbsent(karte.getPatientModel().getId(), karte);
+        }
+        return grouped;
+    }
+
+    private Map<Long, String> loadAppointmentsByKarteId(Collection<KarteBean> karteList) {
+        Set<Long> karteIds = collectKarteIds(karteList);
+        if (karteIds.isEmpty()) {
+            return Map.of();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<AppointmentModel> appointments = em.createQuery(QUERY_APPOINTMENTS_BY_KARTE_IDS_DATE)
+                .setParameter("karteIds", karteIds)
+                .setParameter("date", contextHolder.getToday().getTime())
+                .getResultList();
+
+        Map<Long, String> grouped = new HashMap<>();
+        for (AppointmentModel appointment : appointments) {
+            grouped.putIfAbsent(appointment.getKarteBean().getId(), appointment.getName());
+        }
+        return grouped;
+    }
+
+    private Map<Long, List<RegisteredDiagnosisModel>> loadDiagnosesByKarteId(Collection<KarteBean> karteList) {
+        Set<Long> karteIds = collectKarteIds(karteList);
+        if (karteIds.isEmpty()) {
+            return Map.of();
+        }
+
+        @SuppressWarnings("unchecked")
+        List<RegisteredDiagnosisModel> diagnoses = em.createQuery(QUERY_DIAGNOSES_BY_KARTE_IDS)
+                .setParameter("karteIds", karteIds)
+                .getResultList();
+
+        Map<Long, List<RegisteredDiagnosisModel>> grouped = new HashMap<>();
+        for (RegisteredDiagnosisModel diagnosis : diagnoses) {
+            grouped.computeIfAbsent(diagnosis.getKarteBean().getId(), ignored -> new ArrayList<>()).add(diagnosis);
+        }
+        return grouped;
+    }
+
+    private Set<Long> collectPatientIds(List<PatientVisitModel> visits) {
+        Set<Long> patientIds = new LinkedHashSet<>();
+        for (PatientVisitModel visit : visits) {
+            PatientModel patient = visit.getPatientModel();
+            if (patient != null && patient.getId() > 0) {
+                patientIds.add(patient.getId());
+            }
+        }
+        return patientIds;
+    }
+
+    private Set<Long> collectKarteIds(Collection<KarteBean> karteList) {
+        Set<Long> karteIds = new LinkedHashSet<>();
+        for (KarteBean karte : karteList) {
+            if (karte != null && karte.getId() > 0) {
+                karteIds.add(karte.getId());
+            }
+        }
+        return karteIds;
     }
     
     // ０時にpvtListをリニューアルする
