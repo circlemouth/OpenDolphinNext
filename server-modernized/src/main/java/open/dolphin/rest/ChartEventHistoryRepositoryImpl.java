@@ -110,6 +110,27 @@ public class ChartEventHistoryRepositoryImpl implements ChartEventHistoryReposit
         }
     }
 
+    @Override
+    public void purgeAll(int retentionCount, Duration retentionDuration, Instant now) {
+        if (retentionDuration != null && !retentionDuration.isZero() && !retentionDuration.isNegative()) {
+            Instant threshold = now.minus(retentionDuration);
+            em.createNativeQuery("delete from chart_event_history where created_at < ?")
+                    .setParameter(1, Timestamp.from(threshold))
+                    .executeUpdate();
+        }
+
+        if (retentionCount > 0) {
+            em.createNativeQuery(
+                            "delete from chart_event_history where event_id in ("
+                                    + "select event_id from ("
+                                    + "select event_id, row_number() over (partition by facility_id order by event_id desc) as rn "
+                                    + "from chart_event_history"
+                                    + ") ranked where rn > ?)")
+                    .setParameter(1, retentionCount)
+                    .executeUpdate();
+        }
+    }
+
     private Long findEventIdThreshold(String facilityId, int retentionCount) {
         List<?> results = em.createNativeQuery(
                         "select event_id from chart_event_history "

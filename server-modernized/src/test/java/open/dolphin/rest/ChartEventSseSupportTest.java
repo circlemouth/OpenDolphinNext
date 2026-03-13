@@ -203,6 +203,7 @@ class ChartEventSseSupportTest {
         support.broadcast(event);
 
         assertEquals(1, repository.history.get(FACILITY_ID).size());
+        assertEquals(0, repository.purgeCallCount.get());
         assertFalse(sink.events.isEmpty());
         assertEquals("chart-event", sink.events.get(0).getName());
     }
@@ -297,6 +298,7 @@ class ChartEventSseSupportTest {
 
         private final AtomicLong sequence = new AtomicLong();
         private final Map<String, List<ChartEventHistoryRecord>> history = new ConcurrentHashMap<>();
+        private final AtomicInteger purgeCallCount = new AtomicInteger();
 
         @Override
         public long nextEventId() {
@@ -333,7 +335,12 @@ class ChartEventSseSupportTest {
 
         @Override
         public void purge(String facilityId, int retentionCount, Duration retentionDuration, Instant now) {
-            // no-op for tests
+            purgeCallCount.incrementAndGet();
+        }
+
+        @Override
+        public void purgeAll(int retentionCount, Duration retentionDuration, Instant now) {
+            purgeCallCount.incrementAndGet();
         }
 
         void addRecord(String facilityId, long eventId, String issuerUuid, String payloadJson) {
@@ -376,6 +383,11 @@ class ChartEventSseSupportTest {
 
         @Override
         public void purge(String facilityId, int retentionCount, Duration retentionDuration, Instant now) {
+            throw new IllegalStateException("not used");
+        }
+
+        @Override
+        public void purgeAll(int retentionCount, Duration retentionDuration, Instant now) {
             throw new IllegalStateException("not used");
         }
     }

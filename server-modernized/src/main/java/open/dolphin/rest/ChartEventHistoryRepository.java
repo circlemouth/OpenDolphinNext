@@ -19,4 +19,6 @@ public interface ChartEventHistoryRepository {
     OptionalLong findLatestEventId();
 
     void purge(String facilityId, int retentionCount, Duration retentionDuration, Instant now);
+
+    void purgeAll(int retentionCount, Duration retentionDuration, Instant now);
 }

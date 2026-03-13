@@ -30,8 +30,6 @@ import open.dolphin.converter.ChartEventModelConverter;
 import open.dolphin.infomodel.ChartEventModel;
 import open.dolphin.session.support.ChartEventSessionKeys;
 import open.dolphin.session.support.ChartEventStreamPublisher;
-import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
  * Support component that bridges {@link ChartEventResource} SSE subscriptions
@@ -48,9 +46,6 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
     private static final Logger LOGGER = Logger.getLogger(ChartEventSseSupport.class.getName());
 
     private static final int HISTORY_LIMIT = 100;
-    private static final int DEFAULT_REPLAY_LIMIT = 200;
-    private static final int DEFAULT_RETENTION_COUNT = 10000;
-    private static final Duration DEFAULT_RETENTION_DURATION = Duration.ofHours(24);
     private static final String HISTORY_RETAINED_GAUGE = "chartEvent.history.retained";
     private static final String HISTORY_GAP_COUNTER = "chartEvent.history.gapDetected";
 
@@ -68,11 +63,13 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
     private ChartEventHistoryRepository historyRepository;
 
     private ChartEventHistorySettings historySettings = new ChartEventHistorySettings(
-            DEFAULT_REPLAY_LIMIT, DEFAULT_RETENTION_COUNT, DEFAULT_RETENTION_DURATION);
+            ChartEventHistorySettingsResolver.DEFAULT_REPLAY_LIMIT,
+            ChartEventHistorySettingsResolver.DEFAULT_RETENTION_COUNT,
+            ChartEventHistorySettingsResolver.DEFAULT_RETENTION_DURATION);
 
     @PostConstruct
     void initialize() {
-        historySettings = loadHistorySettings();
+        historySettings = ChartEventHistorySettingsResolver.load();
         initializeSequenceFromHistory();
     }
 
@@ -198,12 +195,6 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
             try {
                 long id = historyRepository.nextEventId();
                 historyRepository.save(id, event, json, now);
-                historyRepository.purge(
-                        facilityId,
-                        historySettings.getRetentionCount(),
-                        historySettings.getRetentionDuration(),
-                        now
-                );
                 eventId = id;
                 persisted = true;
             } catch (Exception ex) {
@@ -315,35 +306,6 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         } catch (NumberFormatException e) {
             LOGGER.log(Level.FINE, "Invalid Last-Event-ID header: {0}", lastEventId);
             return -1L;
-        }
-    }
-
-    private ChartEventHistorySettings loadHistorySettings() {
-        Config config = null;
-        try {
-            config = ConfigProvider.getConfig();
-        } catch (Exception ex) {
-            LOGGER.log(Level.FINE, "Failed to load config; using default chart-event history settings", ex);
-        }
-
-        int replayLimit = resolveIntConfig(config, "chartEvent.history.replayLimit", DEFAULT_REPLAY_LIMIT, 1);
-        int retentionCount = resolveIntConfig(config, "chartEvent.history.retentionCount", DEFAULT_RETENTION_COUNT, 0);
-        int retentionHours = resolveIntConfig(
-                config, "chartEvent.history.retentionHours", (int) DEFAULT_RETENTION_DURATION.toHours(), 0);
-        Duration retentionDuration = retentionHours > 0 ? Duration.ofHours(retentionHours) : Duration.ZERO;
-        return new ChartEventHistorySettings(replayLimit, retentionCount, retentionDuration);
-    }
-
-    private int resolveIntConfig(Config config, String key, int defaultValue, int minValue) {
-        if (config == null) {
-            return defaultValue;
-        }
-        try {
-            Integer value = config.getOptionalValue(key, Integer.class).orElse(defaultValue);
-            return value >= minValue ? value : defaultValue;
-        } catch (Exception ex) {
-            LOGGER.log(Level.FINE, "Invalid config for " + key + ", using default.", ex);
-            return defaultValue;
         }
     }
 

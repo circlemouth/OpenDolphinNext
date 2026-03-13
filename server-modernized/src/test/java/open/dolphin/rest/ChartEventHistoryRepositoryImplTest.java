@@ -61,6 +61,36 @@ class ChartEventHistoryRepositoryImplTest {
         verify(em, never()).createNativeQuery(org.mockito.ArgumentMatchers.anyString());
     }
 
+    @Test
+    void purgeAllUsesGlobalAgeDeleteAndPerFacilityCountTrim() throws Exception {
+        ChartEventHistoryRepositoryImpl repository = new ChartEventHistoryRepositoryImpl();
+        EntityManager em = mock(EntityManager.class);
+
+        Query durationDeleteQuery = mock(Query.class, RETURNS_SELF);
+        Query countDeleteQuery = mock(Query.class, RETURNS_SELF);
+
+        when(em.createNativeQuery("delete from chart_event_history where created_at < ?"))
+                .thenReturn(durationDeleteQuery);
+        when(em.createNativeQuery(
+                "delete from chart_event_history where event_id in ("
+                        + "select event_id from ("
+                        + "select event_id, row_number() over (partition by facility_id order by event_id desc) as rn "
+                        + "from chart_event_history"
+                        + ") ranked where rn > ?)"))
+                .thenReturn(countDeleteQuery);
+
+        setField(repository, "em", em);
+
+        Instant now = Instant.parse("2026-02-21T03:27:45Z");
+        repository.purgeAll(100, Duration.ofDays(30), now);
+
+        verify(durationDeleteQuery).setParameter(1, java.sql.Timestamp.from(now.minus(Duration.ofDays(30))));
+        verify(durationDeleteQuery).executeUpdate();
+        verify(countDeleteQuery).setParameter(1, 100);
+        verify(countDeleteQuery).executeUpdate();
+        verify(em, never()).createNativeQuery("delete from chart_event_history where facility_id = ? and created_at < ?");
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = ChartEventHistoryRepositoryImpl.class.getDeclaredField(fieldName);
         field.setAccessible(true);

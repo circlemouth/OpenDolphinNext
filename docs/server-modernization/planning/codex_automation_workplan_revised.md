@@ -170,20 +170,23 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P3. ChartEventHistory purge の経路分離
 
-### [ ] P3-01 SSE 配信経路から purge 呼び出しを外す
+### [x] P3-01 SSE 配信経路から purge 呼び出しを外す
 - 対象:
-  - `server-modernized/src/main/java/open/dolphin/chart/ChartEventSseSupport.java`
-  - `server-modernized/src/main/java/open/dolphin/chart/ChartEventHistoryRepositoryImpl.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/ChartEventSseSupport.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/ChartEventHistoryRepositoryImpl.java`
   - 関連 service
 - 作業:
   - 配信時に毎回 `purge` しない構成へ変える
   - `save` と `purge` を同一ホットパスに置かない
 - 完了条件:
   - イベント配信メソッドから purge が直接呼ばれない
+- 2026-03-14 (RUN_ID=20260313T220553Z):
+  - `ChartEventSseSupport.broadcast()` から `historyRepository.purge(...)` を削除し、配信ホットパスでは履歴保存のみ行う構成へ変更した
+  - 本タスク記載の対象パスが `open/dolphin/chart/...` になっていたが、実コードは `open/dolphin/rest/...` 配下だったため、工程表の記載も実体に合わせて補正した
 - 次:
   - P3-02
 
-### [ ] P3-02 purge を定期メンテナンス経路へ移す
+### [x] P3-02 purge を定期メンテナンス経路へ移す
 - 対象:
   - chart event history 周辺 service / scheduler
 - 作業:
@@ -191,10 +194,14 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - purge 失敗時に配信本体へ影響しない構成にする
 - 完了条件:
   - purge 実行が配信レイテンシに直結しない
+- 2026-03-14 (RUN_ID=20260313T220553Z):
+  - `ChartEventHistoryMaintenanceService` を追加し、保持件数・保持時間の設定を読んで `ChartEventHistoryRepository.purgeAll(...)` を呼ぶ定期メンテナンス経路を新設した
+  - `ChartEventHistoryPurgeScheduler` を追加し、既定 5 分間隔で purge を実行する構成へ移した。purge 失敗は scheduler 側で握り、SSE 配信本体へ波及しない
+  - `ChartEventHistoryRepositoryImpl` に facility 横断の `purgeAll(...)` を追加し、古い履歴の削除と施設単位 retention count の刈り込みをまとめて実行できるようにした
 - 次:
   - P3-03
 
-### [ ] P3-03 履歴保持の挙動確認テストを追加する
+### [x] P3-03 履歴保持の挙動確認テストを追加する
 - 対象:
   - chart event history 周辺テスト
 - 作業:
@@ -203,6 +210,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 配信経路が purge に依存しないことを確認する
 - 完了条件:
   - 分離後の意図がテストで確認できる
+- 2026-03-14 (RUN_ID=20260313T220553Z):
+  - `ChartEventSseSupportTest` に、配信時に履歴保存は続くが purge は呼ばれないことを固定した
+  - `ChartEventHistoryMaintenanceServiceTest` を追加し、保持設定に応じて purgeAll を呼ぶ経路と、保持無効時に何もしない経路を確認した
+  - `ChartEventHistoryRepositoryImplTest` に、facility 横断 purgeAll が保持時間削除と facility 単位 retention count 刈り込みを実行することを追加した
 - 次:
   - P4-01
 
