@@ -241,6 +241,34 @@ class ChartEventSseSupportTest {
         assertEquals("chart-events.replay-gap", sink.events.get(0).getName());
     }
 
+    @Test
+    void broadcastContinuesStreamingWhenHistorySaveFails() {
+        FailingHistoryRepository repository = new FailingHistoryRepository();
+        support.setHistoryRepository(repository);
+        support.setHistorySettings(new ChartEventHistorySettings(200, 10000, Duration.ofHours(24)));
+
+        RecordingSse sse = new RecordingSse();
+        RecordingSseEventSink sink = new RecordingSseEventSink();
+        support.register(FACILITY_ID, "client-1", sse, sink, null);
+
+        ChartEventModel event = new ChartEventModel();
+        event.setFacilityId(FACILITY_ID);
+        event.setIssuerUUID("issuer-1");
+        event.setEventType(ChartEventModel.PVT_STATE);
+
+        support.broadcast(event);
+
+        assertTrue(repository.saveAttempted);
+        assertEquals(2, sink.events.size());
+        assertEquals("chart-events.replay-gap", sink.events.get(0).getName());
+        assertEquals("chart-event", sink.events.get(1).getName());
+        assertEquals("1", sink.events.get(1).getId());
+        assertEquals(1D, meterRegistry.get("chartEvent.history.gapDetected")
+                .tag("facility", FACILITY_ID)
+                .counter()
+                .count(), 0.001);
+    }
+
     private static final class TestLogHandler extends Handler {
 
         private final List<LogRecord> records = new CopyOnWriteArrayList<>();
@@ -312,6 +340,43 @@ class ChartEventSseSupportTest {
             history.computeIfAbsent(facilityId, key -> new CopyOnWriteArrayList<>())
                     .add(new ChartEventHistoryRecord(eventId, issuerUuid, payloadJson));
             sequence.updateAndGet(current -> Math.max(current, eventId));
+        }
+    }
+
+    private static final class FailingHistoryRepository implements ChartEventHistoryRepository {
+
+        private final AtomicLong sequence = new AtomicLong();
+        private boolean saveAttempted;
+
+        @Override
+        public long nextEventId() {
+            return sequence.incrementAndGet();
+        }
+
+        @Override
+        public void save(long eventId, ChartEventModel event, String payloadJson, Instant createdAt) {
+            saveAttempted = true;
+            throw new IllegalStateException("history store unavailable");
+        }
+
+        @Override
+        public List<ChartEventHistoryRecord> fetchAfter(String facilityId, long lastEventId, int limit) {
+            return List.of();
+        }
+
+        @Override
+        public OptionalLong findOldestEventId(String facilityId) {
+            return OptionalLong.empty();
+        }
+
+        @Override
+        public OptionalLong findLatestEventId() {
+            return OptionalLong.empty();
+        }
+
+        @Override
+        public void purge(String facilityId, int retentionCount, Duration retentionDuration, Instant now) {
+            throw new IllegalStateException("not used");
         }
     }
 

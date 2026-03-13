@@ -71,7 +71,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P1. 変更前の足場づくり
 
-### [ ] P1-01 ホットパス改善対象の最小確認テストを追加する
+### [x] P1-01 ホットパス改善対象の最小確認テストを追加する
 - 対象:
   - ORCA transport
   - Chart event history purge
@@ -90,8 +90,11 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 次タスク以降で触る経路に対して、最低限の再確認ポイントがある
 - blocker:
   - 対象コードの source が不足していて、変更前確認が置けない
+- 2026-03-14 (RUN_ID=20260313T150054Z):
+  - `server-modernized/src/test/java/open/dolphin/orca/transport/RestOrcaTransportTest.java` を追加し、admin config からの設定解決、default/facility 別の `HttpClient` 再利用、Basic 認証ヘッダー生成を固定した
+  - `server-modernized/src/test/java/open/dolphin/rest/ChartEventSseSupportTest.java` に、履歴保存失敗時でも SSE 配信を継続し、クライアントへ replay gap を通知する最小確認を追加した
 - 次:
-  - P2-01
+  - P1-02
 
 ### [ ] P1-02 migration 正本と反映先の整合ルールを明文化する
 - 対象:
