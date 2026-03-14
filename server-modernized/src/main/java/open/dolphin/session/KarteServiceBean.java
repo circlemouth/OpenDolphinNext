@@ -50,6 +50,8 @@ public class KarteServiceBean {
     private static final Logger LOGGER = LoggerFactory.getLogger(KarteServiceBean.class);
     private static final DateTimeFormatter ISO_INSTANT_FORMATTER = DateTimeFormatter.ISO_INSTANT;
     private static final DateTimeFormatter ISO_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd").withZone(ZoneOffset.UTC);
+    public static final int DEFAULT_DOCINFO_PAGE_SIZE = 50;
+    public static final int MAX_DOCINFO_PAGE_SIZE = 200;
     // parameters
     private static final String PATIENT_PK = "patientPk";
     private static final String KARTE_ID = "karteId";
@@ -1089,6 +1091,12 @@ public class KarteServiceBean {
 
 //s.oh^ 2014/07/22 一括カルテPDF出力
     public List<DocumentModel> getAllDocument(long patientPK) {
+        return getAllDocument(patientPK, 0, DEFAULT_DOCINFO_PAGE_SIZE);
+    }
+
+    public List<DocumentModel> getAllDocument(long patientPK, int offset, int limit) {
+        int safeOffset = normalizeDocinfoOffset(offset);
+        int safeLimit = normalizeDocinfoPageSize(limit);
         try {
             List<KarteBean> kartes = em.createQuery(QUERY_KARTE)
                     .setParameter(PATIENT_PK, patientPK)
@@ -1101,9 +1109,11 @@ public class KarteServiceBean {
                             "select d.id from DocumentModel d where d.karte.id=:karteId and (d.status='F' or d.status='T') order by d.started desc, d.id desc",
                             Long.class)
                     .setParameter(KARTE_ID, kartes.get(0).getId())
+                    .setFirstResult(safeOffset)
+                    .setMaxResults(safeLimit)
                     .getResultList();
-            // Bulk export/list path: keep metadata complete but avoid per-document integrity verification.
-            List<DocumentModel> documents = loadDocuments(docIds, DocumentLoadMode.ATTACHMENT_LIGHT);
+            // Docinfo list path: keep revision metadata only and leave binary fetch to dedicated APIs.
+            List<DocumentModel> documents = loadDocuments(docIds, DocumentLoadMode.REVISION_LIGHT);
             for (DocumentModel document : documents) {
                 document.toDetuch();
             }
@@ -1128,6 +1138,17 @@ public class KarteServiceBean {
         return null;
     }
 //s.oh$
+
+    public static int normalizeDocinfoOffset(int offset) {
+        return Math.max(offset, 0);
+    }
+
+    public static int normalizeDocinfoPageSize(int limit) {
+        if (limit <= 0) {
+            return DEFAULT_DOCINFO_PAGE_SIZE;
+        }
+        return Math.min(limit, MAX_DOCINFO_PAGE_SIZE);
+    }
 
     private List<DocumentModel> loadDocuments(List<Long> ids, DocumentLoadMode mode) {
         List<Long> orderedIds = normalizeDocumentIds(ids);

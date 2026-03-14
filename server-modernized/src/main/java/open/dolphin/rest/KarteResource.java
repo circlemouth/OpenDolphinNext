@@ -593,12 +593,17 @@ public class KarteResource extends AbstractResource {
     @GET
     @Path("/docinfo/all/{param}")
     @Produces(MediaType.APPLICATION_JSON)
-    public LegacyKarteListResponse.DocumentListResponse getAllDocument(@PathParam("param") String param) {
+    public LegacyKarteListResponse.DocumentListResponse getAllDocument(@PathParam("param") String param,
+                                                                       @DefaultValue("0") @QueryParam("offset") Integer offset,
+                                                                       @QueryParam("limit") Integer limit) {
 
         long pk = Long.parseLong(param);
         ensurePatientFacilityAccess(pk, null);
+        int safeOffset = KarteServiceBean.normalizeDocinfoOffset(offset != null ? offset : 0);
+        int safeLimit =
+                KarteServiceBean.normalizeDocinfoPageSize(limit != null ? limit : KarteServiceBean.DEFAULT_DOCINFO_PAGE_SIZE);
 
-        return toLegacyDocumentListResponse(karteServiceBean.getAllDocument(pk));
+        return toLegacyDocumentListResponse(karteServiceBean.getAllDocument(pk, safeOffset, safeLimit));
     }
 //s.oh$
     

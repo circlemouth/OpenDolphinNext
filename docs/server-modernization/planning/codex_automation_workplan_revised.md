@@ -314,7 +314,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 - 次:
   - P5-02
 
-### [ ] P5-02 `/docinfo/all` をページング前提に変更する
+### [x] P5-02 `/docinfo/all` をページング前提に変更する
 - 対象:
   - `KarteResource`
   - `KarteServiceBean`
@@ -328,6 +328,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - ページ境界
   - デフォルト件数
   - 既存利用箇所の最低限確認
+- 2026-03-14 (RUN_ID=20260314T010119Z):
+  - `server-modernized/src/main/java/open/dolphin/rest/KarteResource.java` の `GET /karte/docinfo/all/{patientPk}` に `offset` / `limit` query parameter を追加し、既定 `limit=50` / 最大 `200` へ正規化するよう変更した
+  - `server-modernized/src/main/java/open/dolphin/session/KarteServiceBean.java` の `getAllDocument(...)` を overload し、文書 ID 取得 query に `setFirstResult` / `setMaxResults` を適用したうえで、一覧取得を `DocumentLoadMode.REVISION_LIGHT` へ切り替えて `schema.imageBytes` と `attachment.contentBytes` を同梱しないよう整理した
+  - `server-modernized/src/test/java/open/dolphin/session/KarteServiceBeanGetDocumentsBulkFetchTest.java` に、ページ境界適用と binary 非同梱を確認するテストを追加し、`server-modernized/src/test/java/open/dolphin/rest/KarteResourceDocinfoAllPagingTest.java` で既定件数と limit clamp を固定した
 - 次:
   - P5-03
 

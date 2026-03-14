@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -29,6 +30,10 @@ import org.junit.jupiter.api.Test;
 
 class KarteServiceBeanGetDocumentsBulkFetchTest {
 
+    private static final String QUERY_KARTE =
+            "select k from KarteBean k join fetch k.patient p where p.id=:patientPk";
+    private static final String QUERY_ALL_DOC_IDS =
+            "select d.id from DocumentModel d where d.karte.id=:karteId and (d.status='F' or d.status='T') order by d.started desc, d.id desc";
     private static final String QUERY_DOCUMENT_BY_IDS =
             "FROM DocumentModel d WHERE d.id IN (:ids) ORDER BY d.id";
     private static final String QUERY_MODULES_BY_DOC_IDS =
@@ -147,6 +152,47 @@ class KarteServiceBeanGetDocumentsBulkFetchTest {
         verify(documentIntegrityService, times(2)).verifyDocumentOnRead(any(DocumentModel.class));
     }
 
+    @Test
+    void getAllDocumentAppliesPagingAndSkipsBinaryPayloads() {
+        KarteBean karte = karte(500L);
+        Query karteQuery = query(List.of(karte));
+        TypedQuery<Long> docIdQuery = typedLongQuery(List.of(20L, 10L));
+
+        List<DocumentModel> documents = List.of(document(20L), document(10L));
+        TypedQuery<DocumentModel> documentQuery = typedQuery(documents);
+        TypedQuery<Object[]> schemaMetadataQuery = typedQuery(List.of(
+                schemaMetadataRow(documents.get(1), 1001L),
+                schemaMetadataRow(documents.get(0), 2001L)));
+        TypedQuery<Object[]> attachmentMetadataQuery = typedQuery(List.of(
+                attachmentMetadataRow(documents.get(1), 3001L),
+                attachmentMetadataRow(documents.get(0), 4001L)));
+
+        when(em.createQuery(QUERY_KARTE)).thenReturn(karteQuery);
+        when(em.createQuery(QUERY_ALL_DOC_IDS, Long.class)).thenReturn(docIdQuery);
+        when(em.createQuery(QUERY_DOCUMENT_BY_IDS, DocumentModel.class)).thenReturn(documentQuery);
+        when(em.createQuery(QUERY_SCHEMA_METADATA_BY_DOC_IDS, Object[].class)).thenReturn(schemaMetadataQuery);
+        when(em.createQuery(QUERY_ATTACHMENT_METADATA_BY_DOC_IDS, Object[].class)).thenReturn(attachmentMetadataQuery);
+
+        List<DocumentModel> result = service.getAllDocument(42L, 5, 2);
+
+        assertThat(result).extracting(DocumentModel::getId).containsExactly(20L, 10L);
+        assertThat(result.get(0).getModules()).isEmpty();
+        assertThat(result.get(0).getSchema()).hasSize(1);
+        assertThat(result.get(0).getSchema().get(0).getImageBytes()).isNull();
+        assertThat(result.get(0).getAttachment()).hasSize(1);
+        assertThat(result.get(0).getAttachment().get(0).getContentBytes()).isNull();
+
+        verify(karteQuery).setParameter("patientPk", 42L);
+        verify(karteQuery).setMaxResults(1);
+        verify(docIdQuery).setParameter("karteId", karte.getId());
+        verify(docIdQuery).setFirstResult(5);
+        verify(docIdQuery).setMaxResults(2);
+        verify(em, never()).createQuery(QUERY_MODULES_BY_DOC_IDS, ModuleModel.class);
+        verify(em, never()).createQuery(QUERY_SCHEMAS_BY_DOC_IDS, SchemaModel.class);
+        verify(em, never()).createQuery(QUERY_ATTACHMENTS_BY_DOC_IDS, AttachmentModel.class);
+        verify(documentIntegrityService, never()).verifyDocumentOnRead(any(DocumentModel.class));
+    }
+
     private static DocumentModel document(long id) {
         DocumentModel document = new DocumentModel();
         document.setId(id);
@@ -216,6 +262,26 @@ class KarteServiceBeanGetDocumentsBulkFetchTest {
         };
     }
 
+    private static Object[] schemaMetadataRow(DocumentModel document, long id) {
+        Date timestamp = new Date(1_709_251_200_000L + id);
+        return new Object[] {
+                id,
+                timestamp,
+                timestamp,
+                timestamp,
+                timestamp,
+                0L,
+                null,
+                "F",
+                document.getUserModel(),
+                document.getKarteBean(),
+                document.getId(),
+                null,
+                "s3://bucket/images/" + id + ".png",
+                "sha256:image-" + id
+        };
+    }
+
     private static KarteBean karte(long id) {
         KarteBean karte = new KarteBean();
         karte.setId(id + 10_000);
@@ -232,6 +298,25 @@ class KarteServiceBeanGetDocumentsBulkFetchTest {
     private static <T> TypedQuery<T> typedQuery(List<T> results) {
         TypedQuery<T> query = mock(TypedQuery.class);
         when(query.setParameter(eq("ids"), any())).thenReturn(query);
+        when(query.getResultList()).thenReturn(new ArrayList<>(results));
+        return query;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static TypedQuery<Long> typedLongQuery(List<Long> results) {
+        TypedQuery<Long> query = mock(TypedQuery.class);
+        when(query.setParameter(eq("karteId"), any())).thenReturn(query);
+        when(query.setFirstResult(any(Integer.class))).thenReturn(query);
+        when(query.setMaxResults(any(Integer.class))).thenReturn(query);
+        when(query.getResultList()).thenReturn(new ArrayList<>(results));
+        return query;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Query query(List<?> results) {
+        Query query = mock(Query.class);
+        when(query.setParameter(eq("patientPk"), any())).thenReturn(query);
+        when(query.setMaxResults(any(Integer.class))).thenReturn(query);
         when(query.getResultList()).thenReturn(new ArrayList<>(results));
         return query;
     }
