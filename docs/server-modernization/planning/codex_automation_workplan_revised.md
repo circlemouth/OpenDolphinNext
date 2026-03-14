@@ -335,7 +335,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 - 次:
   - P5-03
 
-### [ ] P5-03 全患者取得 API をページング前提へ変更する
+### [x] P5-03 全患者取得 API をページング前提へ変更する
 - 対象:
   - `PatientServiceBean`
   - 関連 resource / test
@@ -344,6 +344,11 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 画面用途ごとに必要件数を制限する
 - 完了条件:
   - 無制限全件返却 API が主要経路から外れている
+- 2026-03-14 (RUN_ID=20260314T060116Z):
+  - `server-modernized/src/main/java/open/dolphin/session/PatientServiceBean.java` の `getAllPatient(String fid)` を既定 200 件のページング前提へ変更し、`offset` / `limit` 付き overload と正規化関数を追加した
+  - 全患者取得 query を `order by p.patientId, p.id` の安定順へ固定し、`limit` は最大 500 件に clamp するよう整理した
+  - `server-modernized/src/test/java/open/dolphin/session/PatientServiceBeanGetAllPatientPagingTest.java` を追加し、既定件数・limit clamp・保険情報付与を確認した
+  - 矛盾メモ: `docs/server-modernization/server-api-inventory.md` / `docs/server-modernization/MODERNIZED_REST_API_INVENTORY.md` には legacy `/patient/all` が残っているが、実コードの `server-modernized` では `PatientResource` は未公開で、`WebXmlEndpointExposureTest` も非公開前提になっていた。進捗判定と実装判断は実コードを優先した
 - 次:
   - P6-01
 

@@ -42,6 +42,8 @@ import open.dolphin.session.framework.SessionOperation;
 public class PatientServiceBean {
 
     private static final Logger LOGGER = Logger.getLogger(PatientServiceBean.class.getName());
+    public static final int DEFAULT_ALL_PATIENT_PAGE_SIZE = 200;
+    public static final int MAX_ALL_PATIENT_PAGE_SIZE = 500;
 
     // cancel status=64 を where 節へ追加
     private static final String QUERY_PATIENT_BY_PVTDATE
@@ -58,6 +60,8 @@ public class PatientServiceBean {
     private static final String QUERY_KARTE_BY_PATIENT_PK = "from KarteBean k where k.patient.id = :patientPk";
 //s.oh^ 2014/08/19 施設患者一括表示機能
     private static final String QUERY_PATIENT_BY_APPMEMO = "from PatientModel p where p.facilityId = :fid and p.appMemo like :appMemo";
+    private static final String QUERY_ALL_PATIENTS_BY_FACILITY =
+            "from PatientModel p where p.facilityId=:fid order by p.patientId, p.id";
 //s.oh$
 
     private static final String PK = "pk";
@@ -587,16 +591,35 @@ public class PatientServiceBean {
     
 //s.oh^ 2014/07/22 一括カルテPDF出力
     public List<PatientModel> getAllPatient(String fid) {
-        
-        List<PatientModel> ret = em.createQuery("from PatientModel p where p.facilityId=:fid")
-            .setParameter(FID, fid)
-            .getResultList();
-        
+        return getAllPatient(fid, 0, DEFAULT_ALL_PATIENT_PAGE_SIZE);
+    }
+
+    public List<PatientModel> getAllPatient(String fid, int offset, int limit) {
+        int safeOffset = normalizePatientPageOffset(offset);
+        int safeLimit = normalizePatientPageSize(limit);
+
+        List<PatientModel> ret = em.createQuery(QUERY_ALL_PATIENTS_BY_FACILITY, PatientModel.class)
+                .setParameter(FID, fid)
+                .setFirstResult(safeOffset)
+                .setMaxResults(safeLimit)
+                .getResultList();
+
         populateHealthInsurances(ret);
-        
+
         return ret;
     }
 //s.oh$
+
+    public static int normalizePatientPageOffset(int offset) {
+        return Math.max(offset, 0);
+    }
+
+    public static int normalizePatientPageSize(int limit) {
+        if (limit <= 0) {
+            return DEFAULT_ALL_PATIENT_PAGE_SIZE;
+        }
+        return Math.min(limit, MAX_ALL_PATIENT_PAGE_SIZE);
+    }
     
 //s.oh^ 2014/10/01 患者検索(傷病名)
     private String toSqlLikePattern(String raw) {
