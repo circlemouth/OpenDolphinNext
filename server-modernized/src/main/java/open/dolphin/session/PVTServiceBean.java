@@ -36,6 +36,7 @@ public class PVTServiceBean {
 
     private static final String QUERY_PATIENT_BY_FID_PID        = "from PatientModel p where p.facilityId=:fid and p.patientId=:pid";
     private static final String QUERY_PVT_BY_FID_PID_DATE       = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate and p.patient.patientId=:pid";
+    private static final String QUERY_PVT_BY_FID_PID_PVT_DATE   = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate=:pvtDate and p.patient.patientId=:pid order by p.id";
     private static final String QUERY_PVT_BY_FID_DATE           = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate order by p.pvtDate";
     private static final String QUERY_PVT_BY_FID_DID_DATE       = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate and (doctorId=:did or doctorId=:unassigned) order by p.pvtDate";
     private static final String QUERY_INSURANCE_BY_PATIENT_ID   = "from HealthInsuranceModel h where h.patient.id=:id";
@@ -54,6 +55,7 @@ public class PVTServiceBean {
     private static final String DATE = "date";
     private static final String FROM_DATE = "fromDate";
     private static final String TO_DATE = "toDate";
+    private static final String PVT_DATE = "pvtDate";
     private static final String PERCENT = "%";
     private static final int LEGACY_FINALIZED_SAVE_BIT   = 1;
     private static final int LEGACY_FINALIZED_MODIFY_BIT = 2;
@@ -264,49 +266,19 @@ public class PVTServiceBean {
             pvt.setAppointment(appo.getName());
         }
 
-        // 受付嬢にORCAの受付ボタンを連打されたとき用ｗ 復活！！
-        List<PatientVisitModel> pvtList = eventServiceBean.getPvtList(fid);
-        for (int i = 0; i < pvtList.size(); ++i) {
-            PatientVisitModel test = pvtList.get(i);
-            // pvt時刻が同じでキャンセルでないものは更新(merge)する
-            if (test.getPvtDate().equals(pvt.getPvtDate()) 
-                    && (test.getState() & (1<< PatientVisitModel.BIT_CANCEL)) ==0) {
-//s.oh^ 2013/12/24 同時受付不具合修正
-                // 同一患者のみ
-                if(test.getPatientId() != null && pvt.getPatientId() != null && test.getPatientId().equals(pvt.getPatientId()) && test.getFacilityId().equals(pvt.getFacilityId())) {
-//s.oh$
-                    pvt.setId(test.getId());    // pvtId, state, ownerUUID, byomeiCountは既存のものを使う
-                    pvt.setState(test.getState());
-                    pvt.getPatientModel().setOwnerUUID(test.getPatientModel().getOwnerUUID());
-                    pvt.setByomeiCount(test.getByomeiCount());
-                    pvt.setByomeiCountToday(test.getByomeiCountToday());
-                    // データベースを更新
-                    em.merge(pvt);
-                    // 新しいもので置き換える
-                    pvtList.set(i, pvt);
-                    // クライアントに通知
-                    String uuid = contextHolder.getServerUUID();
-                    ChartEventModel msg = new ChartEventModel(uuid);
-                    msg.setParamFromPvt(pvt);
-                    msg.setPatientVisitModel(pvt);
-                    msg.setEventType(ChartEventModel.PVT_MERGE);
-                    eventServiceBean.notifyEvent(msg);
-                    return 0;   // 追加０個
-                }
-            }
+        PatientVisitModel existingToday = findActiveVisitByFacilityPatientAndPvtDate(fid, pvt.getPatientId(),
+                pvt.getPvtDate());
+        if (existingToday != null) {
+            mergeTodayVisit(fid, existingToday, pvt);
+            return 0;   // 追加０個
         }
+
         // 同じ時刻のPVTがないならばPVTをデータベースに登録(persist)する
         eventServiceBean.setByomeiCount(karteId, pvt);   // 病名数をカウントする
         em.persist(pvt);
-        // pvtListに追加
-        pvtList.add(pvt);    
-        // クライアントに通知
-        String uuid = contextHolder.getServerUUID();
-        ChartEventModel msg = new ChartEventModel(uuid);
-        msg.setParamFromPvt(pvt);
-        msg.setPatientVisitModel(pvt);
-        msg.setEventType(ChartEventModel.PVT_ADD);
-        eventServiceBean.notifyEvent(msg);
+        List<PatientVisitModel> pvtList = eventServiceBean.getPvtList(fid);
+        pvtList.add(pvt);
+        notifyPvtEvent(pvt, ChartEventModel.PVT_ADD);
         
         return 1;   // 追加１個
     }
@@ -372,6 +344,85 @@ public class PVTServiceBean {
 
     static LocalDate extractPvtDatePart(LocalDateTime pvtDate) {
         return pvtDate == null ? null : pvtDate.toLocalDate();
+    }
+
+    private PatientVisitModel findActiveVisitByFacilityPatientAndPvtDate(String fid, String patientId,
+            LocalDateTime pvtDate) {
+        if (fid == null || fid.isBlank() || patientId == null || patientId.isBlank() || pvtDate == null) {
+            return null;
+        }
+        @SuppressWarnings("unchecked")
+        List<PatientVisitModel> matches = em.createQuery(QUERY_PVT_BY_FID_PID_PVT_DATE)
+                .setParameter(FID, fid)
+                .setParameter(PID, patientId)
+                .setParameter(PVT_DATE, pvtDate)
+                .getResultList();
+        for (PatientVisitModel model : matches) {
+            if (!model.getStateBit(PatientVisitModel.BIT_CANCEL)) {
+                return model;
+            }
+        }
+        return null;
+    }
+
+    private void mergeTodayVisit(String fid, PatientVisitModel existingToday, PatientVisitModel incoming) {
+        List<PatientVisitModel> pvtList = eventServiceBean.getPvtList(fid);
+        PatientVisitModel cached = findCachedVisitById(pvtList, existingToday.getId());
+        PatientVisitModel source = cached != null ? cached : existingToday;
+
+        incoming.setId(existingToday.getId());
+        incoming.setState(existingToday.getState());
+        incoming.getPatientModel().setOwnerUUID(resolveOwnerUuid(source, existingToday));
+        incoming.setByomeiCount(source.getByomeiCount());
+        incoming.setByomeiCountToday(source.getByomeiCountToday());
+
+        em.merge(incoming);
+        replaceCachedVisit(pvtList, incoming);
+        notifyPvtEvent(incoming, ChartEventModel.PVT_MERGE);
+    }
+
+    private PatientVisitModel findCachedVisitById(List<PatientVisitModel> pvtList, long pvtId) {
+        if (pvtList == null) {
+            return null;
+        }
+        for (PatientVisitModel model : pvtList) {
+            if (model.getId() == pvtId) {
+                return model;
+            }
+        }
+        return null;
+    }
+
+    private void replaceCachedVisit(List<PatientVisitModel> pvtList, PatientVisitModel incoming) {
+        if (pvtList == null) {
+            return;
+        }
+        for (int i = 0; i < pvtList.size(); i++) {
+            if (pvtList.get(i).getId() == incoming.getId()) {
+                pvtList.set(i, incoming);
+                return;
+            }
+        }
+        pvtList.add(incoming);
+    }
+
+    private String resolveOwnerUuid(PatientVisitModel primary, PatientVisitModel fallback) {
+        if (primary != null && primary.getPatientModel() != null && primary.getPatientModel().getOwnerUUID() != null) {
+            return primary.getPatientModel().getOwnerUUID();
+        }
+        if (fallback != null && fallback.getPatientModel() != null) {
+            return fallback.getPatientModel().getOwnerUUID();
+        }
+        return null;
+    }
+
+    private void notifyPvtEvent(PatientVisitModel pvt, int eventType) {
+        String uuid = contextHolder.getServerUUID();
+        ChartEventModel msg = new ChartEventModel(uuid);
+        msg.setParamFromPvt(pvt);
+        msg.setPatientVisitModel(pvt);
+        msg.setEventType(eventType);
+        eventServiceBean.notifyEvent(msg);
     }
 
     private static String resolveInsuranceKey(HealthInsuranceModel model) {

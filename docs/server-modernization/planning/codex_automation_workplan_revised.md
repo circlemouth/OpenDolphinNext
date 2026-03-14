@@ -257,7 +257,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 - 次:
   - P4-03
 
-### [ ] P4-03 addPvt の重複確認と登録を idempotent に寄せる
+### [x] P4-03 addPvt の重複確認と登録を idempotent に寄せる
 - 対象:
   - `PVTServiceBean.addPvt()`
   - 関連 entity / repository / DB 制約
@@ -269,10 +269,14 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 重複防止の主軸がメモリ全走査ではなくなる
 - blocker:
   - 業務キーが文書化されておらず、コードからも合理的に確定できない
+- 2026-03-14 (RUN_ID=20260314T000119Z):
+  - `server-modernized/src/main/java/open/dolphin/session/PVTServiceBean.java` の当日受付重複判定を、`ServletContextHolder` 上の `pvtList` 全走査から `facilityId + patientId + 正規化済み pvtDate + 未キャンセル` を使う DB 問い合わせへ変更した
+  - 重複時は DB 上の既存 PVT を主キーに merge し、メモリ上の `pvtList` は通知前の反映先だけに縮小した
+  - 予定カルテ経路の既存日次重複処理は据え置き、今回の変更範囲を当日受付ホットパスに限定した
 - 次:
   - P4-04
 
-### [ ] P4-04 addPvt 周辺の安全確認テストを追加する
+### [x] P4-04 addPvt 周辺の安全確認テストを追加する
 - 対象:
   - PVT 周辺テスト
 - 作業:
@@ -281,6 +285,9 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 業務キー重複時の扱い
 - 完了条件:
   - 受付追加ホットパスの最低限の安全網がある
+- 2026-03-14 (RUN_ID=20260314T000119Z):
+  - `server-modernized/src/test/java/open/dolphin/session/PVTServiceBeanAddPvtTest.java` を追加し、正常追加、当日重複時の merge、患者登録のみ（`pvtDate == null`）を確認した
+  - 重複追加テストでは cache を空にした状態でも DB 側の重複判定で merge できることを固定した
 - 次:
   - P5-01
 
@@ -288,7 +295,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P5. 全件返却 API のページング前提化
 
-### [ ] P5-01 `/docinfo/all` の契約を棚卸しし、ページング案を文書化する
+### [x] P5-01 `/docinfo/all` の契約を棚卸しし、ページング案を文書化する
 - 対象:
   - `server-modernized/src/main/java/open/dolphin/rest/KarteResource.java`
   - `server-modernized/src/main/java/open/dolphin/session/KarteServiceBean.java`
@@ -299,6 +306,11 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - ページング導入後も残すべき項目を明文化する
 - 完了条件:
   - 次タスクで実装する契約が確定している
+- 2026-03-14 (RUN_ID=20260314T000119Z):
+  - `docs/modernization/p5-01-docinfo-all-contract-inventory.md` を追加し、現行 `/karte/docinfo/all/{patientPk}` が `DocumentLoadMode.ATTACHMENT_LIGHT` で `modules` 非同梱・`attachment.contentBytes == null`・`schema.imageBytes` 同梱になっていることを整理した
+  - `KarteServiceBeanGetDocumentsBulkFetchTest` を根拠に、現行 light load で保証されている点と `/docinfo/all` 専用 contract test 不足を記録した
+  - `web-client` からの現行参照は見つからず、legacy client の PDF 一括出力だけが旧契約を期待しているが、server-modernized 実装とは既に一致していないことを記録した
+  - P5-02 の契約案を `offset/limit` 追加、`limit` 既定 50 / 最大 200、`schema.imageBytes` と `attachment.contentBytes` を一覧から除外する方針で固定した
 - 次:
   - P5-02
 
