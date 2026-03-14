@@ -6,9 +6,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jakarta.annotation.Resource;
@@ -62,6 +65,12 @@ public class PatientServiceBean {
     private static final String QUERY_PATIENT_BY_APPMEMO = "from PatientModel p where p.facilityId = :fid and p.appMemo like :appMemo";
     private static final String QUERY_ALL_PATIENTS_BY_FACILITY =
             "from PatientModel p where p.facilityId=:fid order by p.patientId, p.id";
+    private static final String QUERY_PATIENT_IDS_BY_FACILITY_AND_IDS =
+            "select p.patientId from PatientModel p where p.facilityId = :fid and p.patientId in (:ids)";
+    private static final String QUERY_PATIENTS_BY_FACILITY_AND_IDS =
+            "from PatientModel p where p.facilityId = :fid and p.patientId in (:ids)";
+    private static final String QUERY_KARTE_BY_PATIENT_IDS =
+            "from KarteBean k where k.patient.id in (:patientIds)";
 //s.oh$
 
     private static final String PK = "pk";
@@ -88,129 +97,51 @@ public class PatientServiceBean {
     private TransactionSynchronizationRegistry registry;
 //masuda$
 
+    public enum PatientSearchType {
+        NAME,
+        KANA,
+        PATIENT_ID,
+        TELEPHONE,
+        ZIPCODE
+    }
+
     
     public List<PatientModel> getPatientsByName(String fid, String name) {
-
-        List<PatientModel> ret = em.createQuery(QUERY_PATIENT_BY_NAME)
-                .setParameter(FID, fid)
-                .setParameter(NAME, name + PERCENT)
-                .getResultList();
-
-        // 後方一致検索を行う
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_NAME)
-                .setParameter(FID, fid)
-                .setParameter(NAME, PERCENT + name)
-                .getResultList();
-        }
-        
-//s.oh^ 2014/08/19 施設患者一括表示機能
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_APPMEMO)
-                .setParameter(FID, fid)
-                .setParameter(APPMEMO, name+PERCENT)
-                .getResultList();
-        }
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_APPMEMO)
-                .setParameter(FID, fid)
-                .setParameter(APPMEMO, PERCENT+name)
-                .getResultList();
-        }
-//s.oh$
-        
-        //-----------------------------------
-        // 患者の健康保険を取得する
-        populateHealthInsurances(ret);
-        //-----------------------------------
-        
-//masuda^   最終受診日設定
-        if (!ret.isEmpty()) {
-            populatePvtDate(fid, ret);
-        }
-//masuda$
-
-        return ret;
+        return searchPatients(fid, PatientSearchType.NAME, name);
     }
 
     
     public List<PatientModel> getPatientsByKana(String fid, String name) {
-
-        List<PatientModel> ret = em.createQuery(QUERY_PATIENT_BY_KANA)
-            .setParameter(FID, fid)
-            .setParameter(NAME, name + PERCENT)
-            .getResultList();
-
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_KANA)
-                .setParameter(FID, fid)
-                .setParameter(NAME, PERCENT + name)
-                .getResultList();
-        }
-        
-//s.oh^ 2014/08/19 施設患者一括表示機能
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_APPMEMO)
-                .setParameter(FID, fid)
-                .setParameter(APPMEMO, name+PERCENT)
-                .getResultList();
-        }
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_APPMEMO)
-                .setParameter(FID, fid)
-                .setParameter(APPMEMO, PERCENT+name)
-                .getResultList();
-        }
-//s.oh$
-
-        //-----------------------------------
-        // 患者の健康保険を取得する
-        populateHealthInsurances(ret);
-        //-----------------------------------
-        
-//masuda^   最終受診日設定
-        if (!ret.isEmpty()) {
-            populatePvtDate(fid, ret);
-        }
-//masuda$
-        
-        return ret;
+        return searchPatients(fid, PatientSearchType.KANA, name);
     }
 
     
     public List<PatientModel> getPatientsByDigit(String fid, String digit) {
+        return searchPatients(fid, PatientSearchType.PATIENT_ID, digit);
+    }
 
-        List<PatientModel> ret = em.createQuery(QUERY_PATIENT_BY_FID_PID_PREFIX)
-            .setParameter(FID, fid)
-            .setParameter(PID, digit+PERCENT)
-            .getResultList();
+    public List<PatientModel> getPatientsByTelephone(String fid, String number) {
+        return searchPatients(fid, PatientSearchType.TELEPHONE, number);
+    }
 
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_TELEPHONE)
-                .setParameter(FID, fid)
-                .setParameter(NUMBER, digit+PERCENT)
-                .getResultList();
+    public List<PatientModel> getPatientsByZipCode(String fid, String zipCode) {
+        return searchPatients(fid, PatientSearchType.ZIPCODE, zipCode);
+    }
+
+    public List<PatientModel> searchPatients(String fid, PatientSearchType searchType, String keyword) {
+        if (fid == null || fid.isBlank() || searchType == null || keyword == null || keyword.isBlank()) {
+            return List.of();
         }
 
-        if (ret.isEmpty()) {
-            ret = em.createQuery(QUERY_PATIENT_BY_ZIPCODE)
-                .setParameter(FID, fid)
-                .setParameter(ZIPCODE, digit+PERCENT)
-                .getResultList();
-        }
+        List<PatientModel> ret = switch (searchType) {
+            case NAME -> searchPatientsByPrefixQuery(QUERY_PATIENT_BY_NAME, NAME, fid, keyword);
+            case KANA -> searchPatientsByPrefixQuery(QUERY_PATIENT_BY_KANA, NAME, fid, keyword);
+            case PATIENT_ID -> searchPatientsByPrefixQuery(QUERY_PATIENT_BY_FID_PID_PREFIX, PID, fid, keyword);
+            case TELEPHONE -> searchPatientsByPrefixQuery(QUERY_PATIENT_BY_TELEPHONE, NUMBER, fid, keyword);
+            case ZIPCODE -> searchPatientsByPrefixQuery(QUERY_PATIENT_BY_ZIPCODE, ZIPCODE, fid, keyword);
+        };
 
-        //-----------------------------------
-        // 患者の健康保険を取得する
-        populateHealthInsurances(ret);
-        //-----------------------------------
-        
-//masuda^   最終受診日設定
-        if (!ret.isEmpty()) {
-            populatePvtDate(fid, ret);
-        }
-//masuda$
-
-        return ret;
+        return finalizePatientSearchResults(fid, ret);
     }
     
     public List<PatientModel> getPatientsByPvtDate(String fid, String pvtDate) {
@@ -237,6 +168,23 @@ public class PatientServiceBean {
         }
         populateHealthInsurances(ret);
         return ret;
+    }
+
+    private List<PatientModel> searchPatientsByPrefixQuery(String query, String parameterName, String fid, String keyword) {
+        return em.createQuery(query, PatientModel.class)
+                .setParameter(FID, fid)
+                .setParameter(parameterName, keyword.trim() + PERCENT)
+                .getResultList();
+    }
+
+    private List<PatientModel> finalizePatientSearchResults(String fid, List<PatientModel> patients) {
+        if (patients == null || patients.isEmpty()) {
+            return List.of();
+        }
+
+        populateHealthInsurances(patients);
+        populatePvtDate(fid, patients);
+        return patients;
     }
 
     /**
@@ -329,6 +277,48 @@ public class PatientServiceBean {
         return patient.getId();
     }
 
+    public SyncPatientUpsertResult upsertPatientsForSync(String fid, List<PatientModel> patients) {
+        if (fid == null || fid.isBlank() || patients == null || patients.isEmpty()) {
+            return new SyncPatientUpsertResult(0, 0);
+        }
+
+        List<PatientModel> normalizedPatients = normalizeSyncPatients(fid, patients);
+        if (normalizedPatients.isEmpty()) {
+            return new SyncPatientUpsertResult(0, 0);
+        }
+
+        List<String> patientIds = normalizedPatients.stream()
+                .map(PatientModel::getPatientId)
+                .filter(Objects::nonNull)
+                .toList();
+        Set<String> existingIds = new LinkedHashSet<>(em.createQuery(
+                        QUERY_PATIENT_IDS_BY_FACILITY_AND_IDS, String.class)
+                .setParameter(FID, fid)
+                .setParameter("ids", patientIds)
+                .getResultList());
+
+        executeSyncPatientUpsert(normalizedPatients);
+
+        List<PatientModel> affectedPatients = em.createQuery(
+                        QUERY_PATIENTS_BY_FACILITY_AND_IDS, PatientModel.class)
+                .setParameter(FID, fid)
+                .setParameter("ids", patientIds)
+                .getResultList();
+        ensureKarteForPatients(affectedPatients);
+        updatePvtList(affectedPatients);
+
+        int created = 0;
+        int updated = 0;
+        for (PatientModel patient : normalizedPatients) {
+            if (existingIds.contains(patient.getPatientId())) {
+                updated++;
+            } else {
+                created++;
+            }
+        }
+        return new SyncPatientUpsertResult(created, updated);
+    }
+
     /**
      * 患者情報を更新する。
      * @param fid 更新対象施設ID
@@ -393,14 +383,132 @@ public class PatientServiceBean {
         return ensureKarte(managed);
     }
 
+    private List<PatientModel> normalizeSyncPatients(String fid, List<PatientModel> patients) {
+        LinkedHashMap<String, PatientModel> indexed = new LinkedHashMap<>();
+        for (PatientModel patient : patients) {
+            if (patient == null || patient.getPatientId() == null || patient.getPatientId().isBlank()) {
+                continue;
+            }
+            patient.setFacilityId(fid);
+            indexed.put(patient.getPatientId(), patient);
+        }
+        return new ArrayList<>(indexed.values());
+    }
+
+    private void executeSyncPatientUpsert(List<PatientModel> patients) {
+        StringBuilder sql = new StringBuilder("""
+                insert into d_patient (
+                    id, facilityid, patientid, fullname, familyname, givenname, kananame,
+                    birthday, gender, zipcode, address, telephone, mobilephone
+                ) values
+                """);
+        int parameterIndex = 1;
+        for (int i = 0; i < patients.size(); i++) {
+            if (i > 0) {
+                sql.append(", ");
+            }
+            sql.append("(nextval('opendolphin.hibernate_sequence')");
+            for (int j = 0; j < 12; j++) {
+                sql.append(", ?").append(parameterIndex++);
+            }
+            sql.append(")");
+        }
+        sql.append("""
+                 on conflict (facilityid, patientid) do update set
+                     fullname = excluded.fullname,
+                     familyname = excluded.familyname,
+                     givenname = excluded.givenname,
+                     kananame = excluded.kananame,
+                     birthday = excluded.birthday,
+                     gender = excluded.gender,
+                     zipcode = excluded.zipcode,
+                     address = excluded.address,
+                     telephone = excluded.telephone,
+                     mobilephone = excluded.mobilephone
+                """);
+
+        jakarta.persistence.Query query = em.createNativeQuery(sql.toString());
+        parameterIndex = 1;
+        for (PatientModel patient : patients) {
+            query.setParameter(parameterIndex++, patient.getFacilityId());
+            query.setParameter(parameterIndex++, patient.getPatientId());
+            query.setParameter(parameterIndex++, patient.getFullName());
+            query.setParameter(parameterIndex++, patient.getFamilyName());
+            query.setParameter(parameterIndex++, patient.getGivenName());
+            query.setParameter(parameterIndex++, patient.getKanaName());
+            query.setParameter(parameterIndex++, patient.getBirthday() != null ? java.sql.Date.valueOf(patient.getBirthday()) : null);
+            query.setParameter(parameterIndex++, patient.getGender());
+            query.setParameter(parameterIndex++, patient.getAddress() != null ? patient.getAddress().getZipCode() : null);
+            query.setParameter(parameterIndex++, patient.getAddress() != null ? patient.getAddress().getAddress() : null);
+            query.setParameter(parameterIndex++, patient.getTelephone());
+            query.setParameter(parameterIndex++, patient.getMobilePhone());
+        }
+        query.executeUpdate();
+    }
+
+    private void ensureKarteForPatients(Collection<PatientModel> patients) {
+        if (patients == null || patients.isEmpty()) {
+            return;
+        }
+        List<Long> patientIds = extractPatientIds(patients);
+        if (patientIds.isEmpty()) {
+            return;
+        }
+        Set<Long> existingKartePatientIds = new LinkedHashSet<>();
+        List<KarteBean> hits = em.createQuery(QUERY_KARTE_BY_PATIENT_IDS, KarteBean.class)
+                .setParameter("patientIds", patientIds)
+                .getResultList();
+        for (KarteBean hit : hits) {
+            if (hit != null && hit.getPatientModel() != null) {
+                existingKartePatientIds.add(hit.getPatientModel().getId());
+            }
+        }
+        Date created = new Date();
+        for (PatientModel patient : patients) {
+            if (patient == null || patient.getId() == 0 || existingKartePatientIds.contains(patient.getId())) {
+                continue;
+            }
+            KarteBean karte = new KarteBean();
+            karte.setPatientModel(patient);
+            karte.setCreated(created);
+            em.persist(karte);
+        }
+    }
+
 //masuda^
     // pvtListのPatientModelを更新し、クライアントにも通知する
     private void updatePvtList(PatientModel pm) {
-        String fid = pm.getFacilityId();
+        updatePvtList(List.of(pm));
+    }
+
+    private void updatePvtList(Collection<PatientModel> patients) {
+        if (patients == null || patients.isEmpty() || eventServiceBean == null) {
+            return;
+        }
+        Map<Long, PatientModel> patientMap = new LinkedHashMap<>();
+        String fid = null;
+        for (PatientModel patient : patients) {
+            if (patient == null || patient.getId() == 0) {
+                continue;
+            }
+            if (fid == null) {
+                fid = patient.getFacilityId();
+            }
+            patientMap.put(patient.getId(), patient);
+        }
+        if (fid == null || patientMap.isEmpty()) {
+            return;
+        }
         List<PatientVisitModel> pvtList = eventServiceBean.getPvtList(fid);
+        if (pvtList == null || pvtList.isEmpty()) {
+            return;
+        }
         List<ChartEventModel> deferredEvents = new ArrayList<>();
         for (PatientVisitModel pvt : pvtList) {
-            if (pvt.getPatientModel().getId() == pm.getId()) {
+            PatientModel pm = pvt != null && pvt.getPatientModel() != null
+                    ? patientMap.get(pvt.getPatientModel().getId())
+                    : null;
+            if (pm != null) {
 //s.oh^ 2013/10/07 患者情報が正しく表示されない
                 List<HealthInsuranceModel> him = pvt.getPatientModel().getHealthInsurances();
                 if(pm.getHealthInsurances() == null) {
@@ -619,6 +727,9 @@ public class PatientServiceBean {
             return DEFAULT_ALL_PATIENT_PAGE_SIZE;
         }
         return Math.min(limit, MAX_ALL_PATIENT_PAGE_SIZE);
+    }
+
+    public record SyncPatientUpsertResult(int createdCount, int updatedCount) {
     }
     
 //s.oh^ 2014/10/01 患者検索(傷病名)

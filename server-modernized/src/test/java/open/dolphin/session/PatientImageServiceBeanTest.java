@@ -162,6 +162,30 @@ class PatientImageServiceBeanTest {
         assertThat(result.get(0).getCreatedAt()).isEqualTo("2026-03-09T08:00:00Z");
     }
 
+    @Test
+    void getImageForDownload_readsMetadataProjectionOnly() {
+        @SuppressWarnings("unchecked")
+        TypedQuery<Object[]> query = mock(TypedQuery.class);
+        when(em.createQuery(anyString(), eq(Object[].class))).thenReturn(query);
+        when(query.setParameter("id", 10L)).thenReturn(query);
+        when(query.setParameter("fid", "F001")).thenReturn(query);
+        when(query.setParameter("pid", "P001")).thenReturn(query);
+        when(query.setParameter("rel", PatientImageServiceBean.LINK_RELATION_PATIENT_IMAGE_PHASEA)).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(new Object[] {
+                10L, "image.png", "image/png", 123L, "s3://bucket/patient/image.png", "digest-1"
+        });
+
+        PatientImageServiceBean.DownloadHandle result = service.getImageForDownload("F001", "P001", 10L);
+
+        assertThat(result).isNotNull();
+        assertThat(result.attachmentId()).isEqualTo(10L);
+        assertThat(result.fileName()).isEqualTo("image.png");
+        assertThat(result.contentType()).isEqualTo("image/png");
+        assertThat(result.contentSize()).isEqualTo(123L);
+        assertThat(result.uri()).isEqualTo("s3://bucket/patient/image.png");
+        assertThat(result.digest()).isEqualTo("digest-1");
+    }
+
     private static void setField(Object target, String fieldName, Object value) throws Exception {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);

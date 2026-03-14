@@ -4,6 +4,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -60,7 +62,7 @@ public class MasterUpdateService {
     @Inject
     private RestOrcaTransport restOrcaTransport;
 
-    private final HttpClient httpClient = HttpClient.newBuilder()
+    private HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(20))
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
@@ -117,7 +119,7 @@ public class MasterUpdateService {
 
         try {
             UpdateArtifact artifact = fetchDatasetArtifact(normalizedCode);
-            String artifactPath = writeArtifact(normalizedCode, artifact.suggestedExtension, artifact.payload, runId, normalizedTrigger);
+            String artifactPath = writeArtifact(normalizedCode, artifact, runId, normalizedTrigger);
 
             MasterUpdateStore.DatasetState updated = store.update(snapshot -> {
                 MasterUpdateStore.DatasetState state = requireDataset(snapshot, normalizedCode);
@@ -607,9 +609,9 @@ public class MasterUpdateService {
                 .header("User-Agent", "OpenDolphin-MasterUpdate/1.0")
                 .build();
 
-        HttpResponse<byte[]> response;
+        HttpResponse<InputStream> response;
         try {
-            response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new MasterUpdateException(502, "external_fetch_failed", "外部データ取得に失敗しました: " + ex.getMessage());
@@ -625,28 +627,52 @@ public class MasterUpdateService {
             );
         }
 
-        byte[] payload = response.body() != null ? response.body() : new byte[0];
-        if (payload.length == 0) {
-            throw new MasterUpdateException(502, "external_empty", "外部データが空です。");
-        }
-
         String contentType = response.headers().firstValue("content-type").orElse(null);
         String extension = resolveExtension(sourceUrl, contentType);
+        Path tempFile = null;
+        try (InputStream body = response.body()) {
+            if (body == null) {
+                throw new MasterUpdateException(502, "external_empty", "外部データが空です。");
+            }
+            tempFile = createArtifactTempFile(extension);
+            StreamedArtifactData streamed = streamToFile(body, tempFile);
+            if (streamed.size <= 0L) {
+                throw new MasterUpdateException(502, "external_empty", "外部データが空です。");
+            }
 
-        UpdateArtifact artifact = new UpdateArtifact();
-        artifact.payload = payload;
-        artifact.hash = sha256(payload);
-        artifact.recordCount = estimateRecordCount(payload, extension, contentType);
-        artifact.summary = "HTTP " + response.statusCode() + " / size=" + payload.length;
-        artifact.note = contentType;
-        artifact.suggestedExtension = extension;
-        artifact.sourceUrl = sourceUrl;
-        return artifact;
+            UpdateArtifact artifact = new UpdateArtifact();
+            artifact.tempFile = tempFile;
+            artifact.hash = streamed.hash;
+            artifact.recordCount = estimateRecordCount(tempFile, extension, contentType);
+            artifact.summary = "HTTP " + response.statusCode() + " / size=" + streamed.size;
+            artifact.note = contentType;
+            artifact.suggestedExtension = extension;
+            artifact.sourceUrl = sourceUrl;
+            artifact.payloadSize = streamed.size;
+            return artifact;
+        } catch (MasterUpdateException ex) {
+            deleteTempFileQuietly(tempFile);
+            throw ex;
+        } catch (IOException ex) {
+            deleteTempFileQuietly(tempFile);
+            throw new MasterUpdateException(500, "artifact_stream_failed", "取得ファイルの一時保存に失敗しました: " + ex.getMessage());
+        }
+    }
+
+    private String writeArtifact(String datasetCode,
+                                 UpdateArtifact artifact,
+                                 String runId,
+                                 String triggerType) {
+        if (artifact == null) {
+            throw new MasterUpdateException(500, "artifact_missing", "取得ファイルがありません。");
+        }
+        return writeArtifact(datasetCode, artifact.suggestedExtension, artifact.payload, artifact.tempFile, runId, triggerType);
     }
 
     private String writeArtifact(String datasetCode,
                                  String extension,
                                  byte[] payload,
+                                 Path tempFile,
                                  String runId,
                                  String triggerType) {
         String safeExtension = extension != null && !extension.isBlank() ? extension : "bin";
@@ -655,11 +681,24 @@ public class MasterUpdateService {
         Path path = resolveArtifactRoot().resolve(datasetCode).resolve(fileName);
         try {
             Files.createDirectories(path.getParent());
-            Files.write(path, payload);
+            if (tempFile != null) {
+                Files.move(tempFile, path);
+            } else {
+                Files.write(path, payload);
+            }
         } catch (IOException ex) {
+            deleteTempFileQuietly(tempFile);
             throw new MasterUpdateException(500, "artifact_write_failed", "取得ファイル保存に失敗しました: " + ex.getMessage());
         }
         return path.toString();
+    }
+
+    private String writeArtifact(String datasetCode,
+                                 String extension,
+                                 byte[] payload,
+                                 String runId,
+                                 String triggerType) {
+        return writeArtifact(datasetCode, extension, payload, null, runId, triggerType);
     }
 
     private Path resolveArtifactRoot() {
@@ -834,7 +873,7 @@ public class MasterUpdateService {
         return "bin";
     }
 
-    private static long estimateRecordCount(byte[] payload, String extension, String contentType) {
+    static long estimateRecordCount(byte[] payload, String extension, String contentType) {
         if (payload == null || payload.length == 0) {
             return 0L;
         }
@@ -870,6 +909,94 @@ public class MasterUpdateService {
         }
 
         return 1L;
+    }
+
+    static long estimateRecordCount(Path artifactPath, String extension, String contentType) {
+        if (artifactPath == null || !Files.exists(artifactPath)) {
+            return 0L;
+        }
+        String ext = extension != null ? extension.toLowerCase(Locale.ROOT) : "";
+        String type = contentType != null ? contentType.toLowerCase(Locale.ROOT) : "";
+
+        if ("zip".equals(ext) || type.contains("zip")) {
+            long entries = 0L;
+            try (InputStream in = Files.newInputStream(artifactPath);
+                 ZipInputStream zip = new ZipInputStream(in)) {
+                ZipEntry entry;
+                while ((entry = zip.getNextEntry()) != null) {
+                    if (!entry.isDirectory()) {
+                        entries++;
+                    }
+                }
+                return Math.max(1L, entries);
+            } catch (IOException ignore) {
+                return 1L;
+            }
+        }
+
+        if ("csv".equals(ext)
+                || "txt".equals(ext)
+                || "json".equals(ext)
+                || "xml".equals(ext)
+                || type.contains("text")
+                || type.contains("csv")
+                || type.contains("json")
+                || type.contains("xml")) {
+            try {
+                long lines;
+                try (java.util.stream.Stream<String> stream = Files.lines(artifactPath, StandardCharsets.UTF_8)) {
+                    lines = stream.count();
+                }
+                return Math.max(1L, lines);
+            } catch (IOException ignore) {
+                return 1L;
+            }
+        }
+
+        return 1L;
+    }
+
+    static StreamedArtifactData streamToFile(InputStream input, Path target) throws IOException {
+        Objects.requireNonNull(input, "input");
+        Objects.requireNonNull(target, "target");
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            long size = 0L;
+            try (OutputStream out = Files.newOutputStream(target)) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    out.write(buffer, 0, read);
+                    digest.update(buffer, 0, read);
+                    size += read;
+                }
+            }
+            return new StreamedArtifactData(size, HexFormat.of().formatHex(digest.digest()));
+        } catch (MasterUpdateException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IOException("Failed to hash streamed artifact", ex);
+        }
+    }
+
+    private Path createArtifactTempFile(String extension) throws IOException {
+        String safeExtension = extension != null && !extension.isBlank() ? extension : "bin";
+        Path tempDir = resolveArtifactRoot().resolve(".tmp");
+        Files.createDirectories(tempDir);
+        return Files.createTempFile(tempDir, "master-update-", "." + safeExtension);
+    }
+
+    private static void deleteTempFileQuietly(Path tempFile) {
+        if (tempFile == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(tempFile);
+        } catch (IOException ignore) {
+            // best effort cleanup
+        }
     }
 
     private static Map<String, Object> toSummary(MasterUpdateStore.DatasetState state) {
@@ -952,11 +1079,31 @@ public class MasterUpdateService {
 
     private static final class UpdateArtifact {
         private byte[] payload;
+        private Path tempFile;
+        private long payloadSize;
         private String hash;
         private long recordCount;
         private String summary;
         private String note;
         private String suggestedExtension;
         private String sourceUrl;
+    }
+
+    static final class StreamedArtifactData {
+        private final long size;
+        private final String hash;
+
+        private StreamedArtifactData(long size, String hash) {
+            this.size = size;
+            this.hash = hash;
+        }
+
+        long size() {
+            return size;
+        }
+
+        String hash() {
+            return hash;
+        }
     }
 }

@@ -148,6 +148,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setEffective(effective);
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
+        criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         OrcaMasterDao.GenericClassSearchResult dbResult = masterGateway.searchGenericClass(criteria);
         final String masterType = "orca05-generic-class";
         if (dbResult == null) {
@@ -167,7 +168,7 @@ public class OrcaMasterResource extends AbstractResource {
                     .filter(entry -> matchesKeyword(keyword, entry.classCode, entry.className, entry.kanaName))
                     .filter(entry -> isEffective(effective, entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
                     .collect(Collectors.toList());
-            int totalCount = filtered.size();
+            Integer totalCount = criteria.isIncludeTotalCount() ? filtered.size() : null;
             List<FixtureGenericClassEntry> paged = paginateList(filtered, params);
             final String etagValue = buildEtag("/orca/master/generic-class", masterType, fallbackFixture, params);
             final long ttlSeconds = cacheTtlSeconds(masterType);
@@ -180,9 +181,11 @@ public class OrcaMasterResource extends AbstractResource {
                     .map(entry -> toGenericClassEntry(entry, fallbackFixture))
                     .collect(Collectors.toList());
             OrcaMasterListResponse<OrcaDrugMasterEntry> response = new OrcaMasterListResponse<>();
-            response.setTotalCount(totalCount);
+            if (totalCount != null) {
+                response.setTotalCount(totalCount);
+            }
             response.setItems(items);
-            recordMasterAudit(request, "/orca/master/generic-class", masterType, 200, fallbackFixture, false, totalCount == 0,
+            recordMasterAudit(request, "/orca/master/generic-class", masterType, 200, fallbackFixture, false, items.isEmpty(),
                     totalCount, buildQueryDetails(null, keyword, effective, params));
             return buildCachedOkResponse(response, etagValue, ttlSeconds);
         }
@@ -198,14 +201,16 @@ public class OrcaMasterResource extends AbstractResource {
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
-        final int totalCount = dbResult.getTotalCount();
+        final Integer totalCount = dbResult.getTotalCount();
         final List<OrcaDrugMasterEntry> items = fixture.entries.stream()
                 .map(entry -> toGenericClassEntry(entry, fixture))
                 .collect(Collectors.toList());
         OrcaMasterListResponse<OrcaDrugMasterEntry> response = new OrcaMasterListResponse<>();
-        response.setTotalCount(totalCount);
+        if (totalCount != null) {
+            response.setTotalCount(totalCount);
+        }
         response.setItems(items);
-        recordMasterAudit(request, "/orca/master/generic-class", masterType, 200, fixture, false, totalCount == 0,
+        recordMasterAudit(request, "/orca/master/generic-class", masterType, 200, fixture, false, items.isEmpty(),
                 totalCount, buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -301,6 +306,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setScope(scope);
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
+        criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> dbResult = masterGateway.searchDrug(criteria);
         final String masterType = "orca08-drug";
         final String apiRoute = "/orca/master/drug";
@@ -327,14 +333,16 @@ public class OrcaMasterResource extends AbstractResource {
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
-        final int totalCount = dbResult.getTotalCount();
+        final Integer totalCount = dbResult.getTotalCount();
         final List<OrcaDrugMasterEntry> items = fixture.entries.stream()
                 .map(entry -> toDrugEntry(entry, fixture))
                 .collect(Collectors.toList());
         OrcaMasterListResponse<OrcaDrugMasterEntry> response = new OrcaMasterListResponse<>();
-        response.setTotalCount(totalCount);
+        if (totalCount != null) {
+            response.setTotalCount(totalCount);
+        }
         response.setItems(items);
-        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, totalCount == 0,
+        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, items.isEmpty(),
                 totalCount, buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -472,6 +480,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setEffective(effective);
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
+        criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterGateway.searchComment(criteria);
         final String masterType = "orca08-comment";
         final String apiRoute = "/orca/master/comment";
@@ -498,14 +507,16 @@ public class OrcaMasterResource extends AbstractResource {
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
-        final int totalCount = dbResult.getTotalCount();
+        final Integer totalCount = dbResult.getTotalCount();
         final List<OrcaTensuEntry> items = fixture.entries.stream()
                 .map(entry -> toCommentEntry(entry, fixture))
                 .collect(Collectors.toList());
         OrcaMasterListResponse<OrcaTensuEntry> response = new OrcaMasterListResponse<>();
-        response.setTotalCount(totalCount);
+        if (totalCount != null) {
+            response.setTotalCount(totalCount);
+        }
         response.setItems(items);
-        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, totalCount == 0,
+        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, items.isEmpty(),
                 totalCount, buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -528,6 +539,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setEffective(effective);
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
+        criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterGateway.searchBodypart(criteria);
         final String masterType = "orca08-bodypart";
         final String apiRoute = "/orca/master/bodypart";
@@ -554,14 +566,16 @@ public class OrcaMasterResource extends AbstractResource {
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
-        final int totalCount = dbResult.getTotalCount();
+        final Integer totalCount = dbResult.getTotalCount();
         final List<OrcaTensuEntry> items = fixture.entries.stream()
                 .map(entry -> toCommentEntry(entry, fixture))
                 .collect(Collectors.toList());
         OrcaMasterListResponse<OrcaTensuEntry> response = new OrcaMasterListResponse<>();
-        response.setTotalCount(totalCount);
+        if (totalCount != null) {
+            response.setTotalCount(totalCount);
+        }
         response.setItems(items);
-        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, totalCount == 0,
+        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, items.isEmpty(),
                 totalCount, buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -827,6 +841,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setPointsMax(pointsMax);
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
+        criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         EtensuDao.EtensuSearchResult dbResult = masterGateway.searchEtensu(criteria);
         if (dbResult == null || dbResult.isLoadFailed()) {
             LoadedFixture<FixtureEtensuEntry> fallbackFixture = loadEntries(
@@ -868,10 +883,13 @@ public class OrcaMasterResource extends AbstractResource {
                     .map(entry -> toEtensuEntry(entry, fallbackFixture))
                     .collect(Collectors.toList());
             OrcaMasterListResponse<OrcaTensuEntry> response = new OrcaMasterListResponse<>();
-            response.setTotalCount(filtered.size());
+            Integer totalCount = criteria.isIncludeTotalCount() ? filtered.size() : null;
+            if (totalCount != null) {
+                response.setTotalCount(totalCount);
+            }
             response.setItems(items);
-            recordMasterAudit(request, apiRoute, masterType, 200, fallbackFixture, false, filtered.isEmpty(),
-                    filtered.size(), etensuAuditDetails);
+            recordMasterAudit(request, apiRoute, masterType, 200, fallbackFixture, false, items.isEmpty(),
+                    totalCount, etensuAuditDetails);
             return buildCachedOkResponse(response, etagValue, ttlSeconds);
         }
         LoadedFixture<EtensuDao.EtensuRecord> dbFixture = new LoadedFixture<>(
@@ -899,15 +917,17 @@ public class OrcaMasterResource extends AbstractResource {
                     true, true, etensuAuditDetails);
             return notFound;
         }
-        final int totalCount = dbResult.getTotalCount();
+        final Integer totalCount = dbResult.getTotalCount();
         final List<OrcaTensuEntry> items = new ArrayList<>(dbResult.getRecords().size());
         for (EtensuDao.EtensuRecord entry : dbResult.getRecords()) {
             items.add(toEtensuEntry(entry, dbFixture));
         }
         OrcaMasterListResponse<OrcaTensuEntry> response = new OrcaMasterListResponse<>();
-        response.setTotalCount(totalCount);
+        if (totalCount != null) {
+            response.setTotalCount(totalCount);
+        }
         response.setItems(items);
-        recordMasterAudit(request, apiRoute, masterType, 200, dbFixture, false, totalCount == 0,
+        recordMasterAudit(request, apiRoute, masterType, 200, dbFixture, false, items.isEmpty(),
                 totalCount,
                 etensuAuditDetails);
         return buildCachedOkResponse(response, etagValue, ttlSeconds, basePerfHeaders);
@@ -1873,6 +1893,9 @@ public class OrcaMasterResource extends AbstractResource {
             if (scope != null) {
                 details.put("scope", scope);
             }
+            if (shouldIncludeTotalCount(params)) {
+                details.put("includeTotalCount", true);
+            }
         }
         if (params != null) {
             details.put("page", parsePositiveInt(params, "page", 1));
@@ -1915,6 +1938,9 @@ public class OrcaMasterResource extends AbstractResource {
         if (params != null) {
             details.put("page", parsePositiveInt(params, "page", 1));
             details.put("size", parsePageSize(params, "size", 100));
+            if (shouldIncludeTotalCount(params)) {
+                details.put("includeTotalCount", true);
+            }
         }
         return details;
     }
@@ -1964,9 +1990,23 @@ public class OrcaMasterResource extends AbstractResource {
         Map<String, String> headers = new LinkedHashMap<>();
         headers.put("X-Orca-Db-Time", Long.toString(result.getDbTimeMs()));
         headers.put("X-Orca-Row-Count", Integer.toString(result.getRecords().size()));
-        headers.put("X-Orca-Total-Count", Integer.toString(result.getTotalCount()));
+        if (result.getTotalCount() != null) {
+            headers.put("X-Orca-Total-Count", Integer.toString(result.getTotalCount()));
+        }
         headers.put("X-Orca-Cache-Hit", Boolean.toString(cacheHit));
         return headers;
+    }
+
+    private boolean shouldIncludeTotalCount(MultivaluedMap<String, String> params) {
+        if (params == null) {
+            return false;
+        }
+        String raw = getFirstValue(params, "includeTotalCount");
+        if (raw == null || raw.isBlank()) {
+            return false;
+        }
+        String normalized = raw.trim().toLowerCase(Locale.ROOT);
+        return "1".equals(normalized) || "true".equals(normalized) || "yes".equals(normalized);
     }
 
     private String buildEtag(String apiRoute, String masterType, LoadedFixture<?> fixture,

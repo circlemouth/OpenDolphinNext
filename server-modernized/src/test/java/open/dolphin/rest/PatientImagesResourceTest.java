@@ -3,6 +3,7 @@ package open.dolphin.rest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -29,7 +30,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import javax.imageio.ImageIO;
-import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.rest.dto.PatientImageEntryResponse;
 import open.dolphin.rest.dto.PatientImageUploadResponse;
 import open.dolphin.security.audit.AuditTrailService;
@@ -209,13 +209,9 @@ class PatientImagesResourceTest {
     @Test
     void download_returnsNoStoreHeaders() throws Exception {
         byte[] bytes = new byte[] {1, 2, 3};
-        AttachmentModel attachment = new AttachmentModel();
-        attachment.setUri("s3://test-bucket/path/test.png");
-        attachment.setContentType("image/png");
-        attachment.setFileName("test.png");
-        attachment.setContentSize(bytes.length);
-        when(patientImageServiceBean.getImageForDownload("F001", "P001", 10L)).thenReturn(attachment);
-        when(attachmentStorageManager.resolveContentLength(attachment)).thenReturn((long) bytes.length);
+        PatientImageServiceBean.DownloadHandle handle = new PatientImageServiceBean.DownloadHandle(
+                10L, "test.png", "image/png", bytes.length, "s3://test-bucket/path/test.png", "digest-1");
+        when(patientImageServiceBean.getImageForDownload("F001", "P001", 10L)).thenReturn(handle);
         doAnswer(invocation -> {
             OutputStream out = invocation.getArgument(1, OutputStream.class);
             try {
@@ -224,7 +220,7 @@ class PatientImagesResourceTest {
                 throw new IllegalStateException(ex);
             }
             return null;
-        }).when(attachmentStorageManager).writeBinaryTo(eq(attachment), any(OutputStream.class));
+        }).when(attachmentStorageManager).writeBinaryTo(any(), any(OutputStream.class));
 
         Response actual = resource.download("P001", 10L);
 
@@ -235,20 +231,21 @@ class PatientImagesResourceTest {
         assertThat(actual.getHeaderString("Content-Length")).isEqualTo("3");
         assertThat(actual.getHeaderString("Content-Disposition")).isEqualTo("attachment; filename=\"test.png\"");
         assertThat(toBytes(actual.getEntity())).containsExactly(bytes);
-        verify(attachmentStorageManager).writeBinaryTo(eq(attachment), any(OutputStream.class));
+        verify(attachmentStorageManager).writeBinaryTo(argThat(attachment ->
+                        attachment.getId() == 10L
+                                && "s3://test-bucket/path/test.png".equals(attachment.getUri())
+                                && "test.png".equals(attachment.getFileName())
+                                && attachment.getContentSize() == 3L),
+                any(OutputStream.class));
         verify(response).setHeader("Cache-Control", "private, no-store, max-age=0, must-revalidate");
     }
 
     @Test
     void download_returnsPdfPayloadWithNoStoreHeaders() throws Exception {
         byte[] bytes = "%PDF-1.4\nmock\n".getBytes(StandardCharsets.UTF_8);
-        AttachmentModel attachment = new AttachmentModel();
-        attachment.setUri("s3://test-bucket/path/report.pdf");
-        attachment.setContentType("application/pdf");
-        attachment.setFileName("report.pdf");
-        attachment.setContentSize(bytes.length);
-        when(patientImageServiceBean.getImageForDownload("F001", "P001", 11L)).thenReturn(attachment);
-        when(attachmentStorageManager.resolveContentLength(attachment)).thenReturn((long) bytes.length);
+        PatientImageServiceBean.DownloadHandle handle = new PatientImageServiceBean.DownloadHandle(
+                11L, "report.pdf", "application/pdf", bytes.length, "s3://test-bucket/path/report.pdf", "digest-2");
+        when(patientImageServiceBean.getImageForDownload("F001", "P001", 11L)).thenReturn(handle);
         doAnswer(invocation -> {
             OutputStream out = invocation.getArgument(1, OutputStream.class);
             try {
@@ -257,7 +254,7 @@ class PatientImagesResourceTest {
                 throw new IllegalStateException(ex);
             }
             return null;
-        }).when(attachmentStorageManager).writeBinaryTo(eq(attachment), any(OutputStream.class));
+        }).when(attachmentStorageManager).writeBinaryTo(any(), any(OutputStream.class));
 
         Response actual = resource.download("P001", 11L);
 

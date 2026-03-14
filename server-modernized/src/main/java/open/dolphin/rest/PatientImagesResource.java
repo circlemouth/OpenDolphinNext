@@ -29,7 +29,6 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
-import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.rest.dto.PatientImageEntryResponse;
 import open.dolphin.rest.dto.PatientImageUploadResponse;
@@ -154,26 +153,26 @@ public class PatientImagesResource extends AbstractResource {
         String fid = resolveFacilityId();
         requirePatientAccessible(fid, patientId);
 
-        AttachmentModel attachment = patientImageServiceBean.getImageForDownload(fid, patientId, imageId);
-        if (attachment == null) {
+        PatientImageServiceBean.DownloadHandle handle = patientImageServiceBean.getImageForDownload(fid, patientId, imageId);
+        if (handle == null) {
             throw restError(httpServletRequest, Response.Status.NOT_FOUND,
                     "not_found", "Image not found",
                     Map.of("patientId", patientId, "imageId", imageId), null);
         }
 
-        if (attachment.getContentBytes() == null
-                && (attachment.getUri() == null || attachment.getUri().isBlank())) {
+        if (handle.uri() == null || handle.uri().isBlank()) {
             throw restError(httpServletRequest, Response.Status.INTERNAL_SERVER_ERROR,
                     "image_bytes_missing", "Image bytes are not available",
                     Map.of("patientId", patientId, "imageId", imageId), null);
         }
 
-        String contentType = attachment.getContentType();
+        String contentType = handle.contentType();
         if (contentType == null || contentType.isBlank()) {
             contentType = "application/octet-stream";
         }
-        String fileName = safeFileName(attachment.getFileName(), "image-" + imageId);
-        long contentLength = attachmentStorageManager.resolveContentLength(attachment);
+        String fileName = safeFileName(handle.fileName(), "image-" + imageId);
+        long contentLength = handle.contentSize() > 0L ? handle.contentSize() : -1L;
+        open.dolphin.infomodel.AttachmentModel attachment = toStreamingAttachment(handle);
         StreamingOutput output = stream -> attachmentStorageManager.writeBinaryTo(attachment, stream);
 
         recordAudit("PATIENT_IMAGE_DOWNLOAD", detailsOf(
@@ -193,6 +192,17 @@ public class PatientImagesResource extends AbstractResource {
         }
         applyNoStoreHeaders(httpServletResponse);
         return builder.build();
+    }
+
+    private open.dolphin.infomodel.AttachmentModel toStreamingAttachment(PatientImageServiceBean.DownloadHandle handle) {
+        open.dolphin.infomodel.AttachmentModel attachment = new open.dolphin.infomodel.AttachmentModel();
+        attachment.setId(handle.attachmentId());
+        attachment.setFileName(handle.fileName());
+        attachment.setContentType(handle.contentType());
+        attachment.setContentSize(handle.contentSize());
+        attachment.setUri(handle.uri());
+        attachment.setDigest(handle.digest());
+        return attachment;
     }
 
     private void requireFeatureEnabled() {

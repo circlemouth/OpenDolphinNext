@@ -9,8 +9,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import open.dolphin.infomodel.ModelUtils;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
@@ -30,12 +28,10 @@ import open.dolphin.session.PatientServiceBean;
 
 /**
  * Imports/synchronizes ORCA patients into the local OpenDolphin patient table (d_patient),
- * using ORCA patientId (Patient_ID) as the business key.
+ * using facilityId + ORCA patientId (Patient_ID) as the business key.
  */
 @ApplicationScoped
 public class OrcaPatientSyncService {
-
-    private static final Logger LOGGER = Logger.getLogger(OrcaPatientSyncService.class.getName());
     private static final int ORCA_PATIENT_BATCH_LIMIT = 100;
     private static final int ORCA_PATIENT_ID_LIST_LIMIT = 1000;
 
@@ -112,10 +108,10 @@ public class OrcaPatientSyncService {
 
             List<PatientDetail> details = batchResponse.getPatients();
             fetched += details.size();
+            List<PatientModel> modelsToUpsert = new ArrayList<>();
             for (PatientDetail detail : details) {
-                UpsertResult result;
                 try {
-                    result = upsertPatient(facilityId, detail);
+                    modelsToUpsert.add(toPatientModel(facilityId, detail));
                 } catch (RuntimeException ex) {
                     String pid = safePatientId(detail);
                     ImportError err = new ImportError();
@@ -123,16 +119,14 @@ public class OrcaPatientSyncService {
                     err.setMessage(ex.getMessage() != null ? ex.getMessage() : "Import failed");
                     response.getErrors().add(err);
                     skipped++;
-                    continue;
-                }
-                if (result == UpsertResult.CREATED) {
-                    created++;
-                } else if (result == UpsertResult.UPDATED) {
-                    updated++;
-                } else {
-                    skipped++;
                 }
             }
+            if (modelsToUpsert.isEmpty()) {
+                continue;
+            }
+            PatientServiceBean.SyncPatientUpsertResult result = patientServiceBean.upsertPatientsForSync(facilityId, modelsToUpsert);
+            created += result.createdCount();
+            updated += result.updatedCount();
         }
 
         response.setFetchedCount(fetched);
@@ -250,9 +244,9 @@ public class OrcaPatientSyncService {
         return normalized.contains("1000") && (normalized.contains("over") || normalized.contains("超") || normalized.contains("上限"));
     }
 
-    private UpsertResult upsertPatient(String facilityId, PatientDetail detail) {
+    private PatientModel toPatientModel(String facilityId, PatientDetail detail) {
         if (detail == null || detail.getSummary() == null) {
-            return UpsertResult.SKIPPED;
+            throw new OrcaGatewayException("patient detail is missing");
         }
         PatientSummary summary = detail.getSummary();
         String patientId = normalizePatientId(summary.getPatientId());
@@ -271,28 +265,9 @@ public class OrcaPatientSyncService {
         String phone1 = normalizeText(detail.getPhoneNumber1());
         String phone2 = normalizeText(detail.getPhoneNumber2());
 
-        PatientModel existing = patientServiceBean.getPatientById(facilityId, patientId);
-        if (existing != null) {
-            applyPatientFields(existing, facilityId, patientId, fullName, kanaName, birthday, gender, zipCode, address, phone1, phone2);
-            patientServiceBean.update(existing);
-            return UpsertResult.UPDATED;
-        }
-
         PatientModel model = new PatientModel();
         applyPatientFields(model, facilityId, patientId, fullName, kanaName, birthday, gender, zipCode, address, phone1, phone2);
-        try {
-            patientServiceBean.addPatient(model);
-            return UpsertResult.CREATED;
-        } catch (RuntimeException ex) {
-            // Race or duplicate constraint. Re-check and treat as update.
-            PatientModel retryExisting = patientServiceBean.getPatientById(facilityId, patientId);
-            if (retryExisting != null) {
-                applyPatientFields(retryExisting, facilityId, patientId, fullName, kanaName, birthday, gender, zipCode, address, phone1, phone2);
-                patientServiceBean.update(retryExisting);
-                return UpsertResult.UPDATED;
-            }
-            throw ex;
-        }
+        return model;
     }
 
     private void applyPatientFields(PatientModel model,
@@ -408,11 +383,5 @@ public class OrcaPatientSyncService {
         if (patientServiceBean == null) {
             throw new IllegalStateException("PatientServiceBean is not available");
         }
-    }
-
-    enum UpsertResult {
-        CREATED,
-        UPDATED,
-        SKIPPED
     }
 }

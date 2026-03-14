@@ -375,7 +375,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 - 次:
   - P6-02
 
-### [ ] P6-02 患者画像レスポンスを stream 寄りに整理する
+### [x] P6-02 患者画像レスポンスを stream 寄りに整理する
 - 対象:
   - `server-modernized/src/main/java/open/dolphin/rest/PatientImagesResource.java`
   - 画像関連 service
@@ -384,10 +384,14 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 可能ならストリームまたは chunk 寄りに整理する
 - 完了条件:
   - 画像返却の主要経路で不要な全載せが減っている
+- 2026-03-14 (RUN_ID=20260314T070048Z):
+  - `server-modernized/src/main/java/open/dolphin/session/PatientImageServiceBean.java` の download 取得を、`AttachmentModel` entity そのものではなく `id/fileName/contentType/contentSize/uri/digest` だけを返す `DownloadHandle` projection へ変更した
+  - `server-modernized/src/main/java/open/dolphin/rest/PatientImagesResource.java` は `DownloadHandle` から stream 用の最小 `AttachmentModel` を組み立てる構成へ寄せ、download 時の不要な document/entity 参照を resource 境界へ持ち上げないよう整理した
+  - `server-modernized/src/test/java/open/dolphin/session/PatientImageServiceBeanTest.java` と `server-modernized/src/test/java/open/dolphin/rest/PatientImagesResourceTest.java` を更新し、metadata projection と streaming download の回帰を確認した
 - 次:
   - P6-03
 
-### [ ] P6-03 外部マスタ取得のバイナリ処理を stream ベースへ寄せる
+### [x] P6-03 外部マスタ取得のバイナリ処理を stream ベースへ寄せる
 - 対象:
   - `MasterUpdateService`
   - 関連 downloader / parser
@@ -395,6 +399,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 外部取得時のメモリ全載せ経路を確認し、stream で扱える範囲を整理する
 - 完了条件:
   - 大きい外部データ取得時の一括メモリ保持が減っている
+- 2026-03-14 (RUN_ID=20260314T070048Z):
+  - `server-modernized/src/main/java/open/dolphin/rest/masterupdate/MasterUpdateService.java` の外部 HTTP 取得を `BodyHandlers.ofByteArray()` から `BodyHandlers.ofInputStream()` に変更し、一時ファイルへ stream 保存しながら SHA-256 とサイズを計算する構成へ変更した
+  - artifact 保存は temp file を final artifact path へ移動する方式へ寄せ、record count 推定も `Path` ベースで zip/text を読み直すように整理した
+  - `server-modernized/src/test/java/open/dolphin/rest/masterupdate/MasterUpdateServiceTest.java` を追加し、stream 保存時の hash/size 計算と zip entry 件数推定を確認した
 - 次:
   - P7-01
 
@@ -402,7 +410,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P7. 患者同期 upsert の一括化
 
-### [ ] P7-01 既存患者の先読みをバッチ化する
+### [x] P7-01 既存患者の先読みをバッチ化する
 - 対象:
   - `server-modernized/src/main/java/open/dolphin/orca/sync/OrcaPatientSyncService.java`
   - `PatientServiceBean`
@@ -412,10 +420,14 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - バッチ単位で既存患者を先にまとめて引く
 - 完了条件:
   - 1 人ずつ `getPatientById` する構造が主経路から外れる
+- 2026-03-14 (RUN_ID=20260314T070048Z):
+  - `server-modernized/src/main/java/open/dolphin/orca/sync/OrcaPatientSyncService.java` で、ORCA patient batch 応答ごとに patientId を集約し、`PatientServiceBean.getPatientList(facilityId, ids)` で既存患者を先読みした map を `upsertPatient(...)` へ渡す構成へ変更した
+  - 通常経路の update/create 判定は先読み map を主軸にし、`getPatientById(...)` は add race 発生時の再確認 fallback に限定した
+  - `server-modernized/src/test/java/open/dolphin/orca/sync/OrcaPatientSyncServiceTest.java` に、既存患者を含む import で batch lookup が 1 回、point lookup が 0 回のまま update/create を完了できることを追加した
 - 次:
   - P7-02
 
-### [ ] P7-02 `facility_id + patient_id` 基準の一括 upsert に寄せる
+### [x] P7-02 `facility_id + patient_id` 基準の一括 upsert に寄せる
 - 対象:
   - 患者同期 service / repository / DB
 - 作業:
@@ -426,6 +438,12 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 患者同期の DB 往復が件数比例で増えにくくなっている
 - blocker:
   - 業務キー確定に不足情報がある
+- 2026-03-14 (RUN_ID=20260314T080100Z):
+  - `persistence/src/main/java/open/dolphin/infomodel/PatientModel.java` と `tools/flyway/sql/V0300__baseline_fresh_schema.sql` の `(facilityId, patientId)` 一意制約を根拠に、同期業務キーを `facility_id + patient_id` へ固定した
+  - `server-modernized/src/main/java/open/dolphin/session/PatientServiceBean.java` に、`INSERT ... ON CONFLICT (facilityid, patientid) DO UPDATE` を使う `upsertPatientsForSync(...)` を追加し、患者単位の `add/update/flush` を chunk 単位の native upsert へ集約した
+  - upsert 後の `d_karte` 補完も `ensureKarteForPatients(...)` で一括確認する構成へ寄せ、PVT 通知更新は対象患者群を 1 回の走査で反映する形に整理した
+  - `server-modernized/src/main/java/open/dolphin/orca/sync/OrcaPatientSyncService.java` は detail 正規化後に `PatientServiceBean.upsertPatientsForSync(...)` を 1 回呼ぶ構成へ変更し、同期主経路から `getPatientById/addPatient/update` の患者単位呼び出しを外した
+  - `server-modernized/src/test/java/open/dolphin/orca/sync/OrcaPatientSyncServiceTest.java` と `server-modernized/src/test/java/open/dolphin/session/PatientServiceBeanSyncPatientUpsertTest.java` を追加・更新し、bulk upsert 1 回委譲と `d_karte` の不足分のみ補完することを確認した
 - 次:
   - P8-01
 
@@ -433,7 +451,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P8. 検索系の重いクエリ整理
 
-### [ ] P8-01 ORCA マスタ検索の条件式を整理する
+### [x] P8-01 ORCA マスタ検索の条件式を整理する
 - 対象:
   - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
   - `server-modernized/src/main/java/open/orca/rest/EtensuDao.java`
@@ -443,10 +461,15 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 前方一致寄り、正規化列寄り、用途別 API 分離のうち、今回の安全範囲で改善できるものを実装する
 - 完了条件:
   - 主要検索経路で最も重い条件式が少なくとも一段軽くなっている
+- 2026-03-14 (RUN_ID=20260314T090102Z):
+  - `server-modernized/src/main/java/open/orca/rest/MasterSearchKeywordSupport.java` を追加し、`OrcaMasterDao` / `EtensuDao` の keyword 条件生成を共通化した
+  - `keyword` が数値コードまたは ORCA コードらしい入力の場合は、`%keyword%` の全列部分一致ではなく code 列の前方一致へ寄せ、`name` / `kana` 列の `UPPER(CAST(...)) LIKE` を外すよう変更した
+  - 明示的な `method=partial|prefix` を受けた薬剤検索は既存挙動を維持しつつ、未指定時の重い code 検索だけを軽くした
+  - `server-modernized/src/test/java/open/orca/rest/MasterSearchKeywordSupportTest.java` を追加し、code prefix 最適化と既存の partial/prefix 条件維持を固定した
 - 次:
   - P8-02
 
-### [ ] P8-02 total count を必要画面だけに絞る
+### [x] P8-02 total count を必要画面だけに絞る
 - 対象:
   - ORCA master 検索周辺
 - 作業:
@@ -454,10 +477,16 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 画面上本当に必要なケースだけ count を残す
 - 完了条件:
   - 不要な count クエリが減っている
+- 2026-03-14 (RUN_ID=20260314T100106Z):
+  - `web-client/src/features/charts/orderMasterSearchApi.ts` の `totalCount?: number` とページ継続ロジックを再確認し、ORCA master 検索では `totalCount` 未返却時でも `pageItemCount === size` を基準に追加取得できること、表示件数も最終的に `items.length` へ収束することを確認した
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java` に `includeTotalCount=true|1|yes` の明示要求を追加し、既定では `totalCount` を返さず、必要時だけ exact count を返す API 契約へ整理した
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java` と `server-modernized/src/main/java/open/orca/rest/EtensuDao.java` で、generic-class / drug / comment / bodypart / etensu の `count(*)` を明示要求時だけ実行するよう変更した
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java` を更新し、既定では `totalCount` と `X-Orca-Total-Count` が省略され、明示要求時のみ返ることを確認した
+  - 矛盾メモ: 進捗正本の未完了先頭は本タスク `P8-02` だった一方、参考 WBS (`server_modernization_wbs_detailed.md`) の先頭未完了は `P10-07` のままで、未完了先頭タスクの位置が一致していない。今回の進捗判定は正本どおり revised workplan を優先した
 - 次:
   - P8-03
 
-### [ ] P8-03 患者検索 API を用途別に分ける
+### [x] P8-03 患者検索 API を用途別に分ける
 - 対象:
   - `PatientServiceBean`
   - 関連 resource / test
@@ -466,6 +495,12 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 用途別の単純な問い合わせへ寄せる
 - 完了条件:
   - 1 リクエストで何段も条件を切り替える構造が一部でも解消している
+- 2026-03-14 (RUN_ID=20260314T110104Z):
+  - `server-modernized/src/main/java/open/dolphin/session/PatientServiceBean.java` に `PatientSearchType` と `searchPatients(...)` を追加し、`name` / `kana` / `patientId` / `telephone` / `zipCode` を用途別の単純 prefix query へ分離した
+  - `getPatientsByName` / `getPatientsByKana` / `getPatientsByDigit` から、後方一致・appMemo・電話・郵便番号への段階フォールバックを外し、`/orca/patients/local-search` の既定用途である `氏名 / カナ / ID` に寄せた
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaPatientLocalSearchResource.java` は payload の `searchType` または keyword から検索用途を解決して `PatientServiceBean.searchPatients(...)` へ委譲する構成へ変更し、audit details にも `searchType` を残すようにした
+  - `server-modernized/src/test/java/open/dolphin/session/PatientServiceBeanPurposeSearchTest.java` を追加し、用途別検索が単一 query 系統で完結し、digit 検索が電話・郵便番号へ cascade しないことを確認した
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaPatientLocalSearchResourceTest.java` を更新し、keyword 由来の検索用途解決と明示 `searchType` 指定を固定した
 - 次:
   - P9-01
 
@@ -473,7 +508,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P9. 通知基盤と共有メモリの整理
 
-### [ ] P9-01 旧 AsyncContext 通知経路を凍結し、SSE 優先を明文化する
+### [x] P9-01 旧 AsyncContext 通知経路を凍結し、SSE 優先を明文化する
 - 対象:
   - `ChartEventServiceBean`
   - `ServletContextHolder`
@@ -483,6 +518,11 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 新規利用を増やさないよう整理する
 - 完了条件:
   - 通知基盤の優先経路が曖昧でない
+- 2026-03-14 (RUN_ID=20260314T110104Z):
+  - `server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java` の `notifyEvent()` を、先に `ChartEventStreamPublisher.broadcast(...)` を呼ぶ構成へ整理し、legacy `AsyncContext` 配信は `dispatchLegacyAsyncContexts(...)` helper に隔離した
+  - `server-modernized/src/main/java/open/dolphin/mbean/ServletContextHolder.java` の `AsyncContext` accessor に deprecated comment を付け、new realtime 実装は SSE を使う方針をコード上で明示した
+  - `server-modernized/src/test/java/open/dolphin/session/ChartEventServiceBeanNotifyEventTest.java` を追加し、legacy subscriber がいない場合でも SSE broadcast が主経路として実行されること、legacy subscriber がいる場合は SSE の後に fallback dispatch されることを確認した
+  - `docs/modernization/p9-01-sse-priority-notification-path.md` を追加し、SSE 主経路化と legacy long-poll 据え置き範囲を文書化した
 - 次:
   - P9-02
 
@@ -497,8 +537,18 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - strong reference な gauge 登録を見直す
 - 完了条件:
   - 施設コンテキストが増え続ける前提が緩和されている
+- 2026-03-14 (RUN_ID=20260314T110104Z, blocker):
+  - blocker の内容:
+    - facility context を「client 0 件になった時点で捨ててよいか」と「履歴を何分/何件維持すべきか」が、`ChartEventSseSupport` と `ReceptionRealtimeSseSupport` で異なり、共通 cleanup 条件をコードと既存文書だけでは合理的に確定できない
+  - 根拠となるファイルまたは不足情報:
+    - `server-modernized/src/main/java/open/dolphin/rest/ChartEventSseSupport.java` は DB 履歴 (`ChartEventHistoryRepository`) を replay 正本にできる一方、`server-modernized/src/main/java/open/dolphin/rest/ReceptionRealtimeSseSupport.java` は in-memory history のみで replay している
+    - `docs/server-modernization/reception-realtime-sync-20260219.md` と既存コードには、facility context / history を idle 時にいつ破棄してよいか、client 0 件時の replay 保証をどこまで維持すべきかの明文化がない
+  - その場で止める理由:
+    - cleanup 条件を推測で入れると、`Last-Event-ID` 再接続時の replay 契約や reception realtime の取りこぼし許容範囲を勝手に変えてしまうため
+  - 人間が次に判断すべきこと:
+    - `ChartEvent` と `ReceptionRealtime` それぞれについて、client 0 件時に context/history を破棄してよい条件、維持期間、replay 保証の有無を文書で確定すること
 - 次:
-  - P9-03
+  - P9-02（blocker 解消待ち）
 
 ### [ ] P9-03 書き込みの多いリスト構造を見直す
 - 対象:

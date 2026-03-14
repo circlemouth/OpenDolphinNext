@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.service.OrcaWrapperService;
@@ -14,6 +16,7 @@ import open.dolphin.rest.dto.orca.PatientDetail;
 import open.dolphin.rest.dto.orca.PatientIdListRequest;
 import open.dolphin.rest.dto.orca.PatientIdListResponse;
 import open.dolphin.rest.dto.orca.PatientIdListResponse.PatientSyncEntry;
+import open.dolphin.rest.dto.orca.PatientImportRequest;
 import open.dolphin.rest.dto.orca.PatientImportResponse;
 import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.dto.orca.PatientSyncRequest;
@@ -54,6 +57,33 @@ class OrcaPatientSyncServiceTest {
         request.setClassCode("01");
 
         assertThrows(RuntimeException.class, () -> service.syncPatients("facility", request, "20260210T094238Z"));
+    }
+
+    @Test
+    void importPatients_usesBulkUpsertPerChunk() {
+        FakeWrapperService wrapper = new FakeWrapperService();
+        StubPatientService patientService = new StubPatientService();
+        PatientModel existing = new PatientModel();
+        existing.setId(10L);
+        existing.setFacilityId("facility");
+        existing.setPatientId("000001");
+        patientService.store.put("facility:000001", existing);
+
+        OrcaPatientSyncService service = new OrcaPatientSyncService(wrapper, patientService, null);
+        PatientImportRequest request = new PatientImportRequest();
+        request.getPatientIds().add("000001");
+        request.getPatientIds().add("000002");
+
+        PatientImportResponse response = service.importPatients("facility", request, "20260314T072500Z");
+
+        assertEquals(2, response.getFetchedCount());
+        assertEquals(1, response.getUpdatedCount());
+        assertEquals(1, response.getCreatedCount());
+        assertEquals(1, patientService.bulkUpsertCalls);
+        assertEquals(0, patientService.batchLookupCalls);
+        assertEquals(0, patientService.pointLookupCalls);
+        assertEquals(0, patientService.addPatientCalls);
+        assertEquals(0, patientService.updateCalls);
     }
 
     private static final class FakeWrapperService extends OrcaWrapperService {
@@ -125,14 +155,66 @@ class OrcaPatientSyncServiceTest {
     private static final class StubPatientService extends PatientServiceBean {
         private final Map<String, PatientModel> store = new HashMap<>();
         private long seq = 1L;
+        private int pointLookupCalls;
+        private int batchLookupCalls;
+        private int bulkUpsertCalls;
+        private int addPatientCalls;
+        private int updateCalls;
 
         @Override
         public PatientModel getPatientById(String fid, String pid) {
+            pointLookupCalls++;
             return store.get(fid + ":" + pid);
         }
 
         @Override
+        public List<PatientModel> getPatientList(String fid, List<String> idList) {
+            batchLookupCalls++;
+            List<PatientModel> result = new ArrayList<>();
+            if (idList == null) {
+                return result;
+            }
+            for (String patientId : idList) {
+                PatientModel patient = store.get(fid + ":" + patientId);
+                if (patient != null) {
+                    result.add(patient);
+                }
+            }
+            return result;
+        }
+
+        @Override
+        public SyncPatientUpsertResult upsertPatientsForSync(String fid, List<PatientModel> patients) {
+            bulkUpsertCalls++;
+            int created = 0;
+            int updated = 0;
+            if (patients == null) {
+                return new SyncPatientUpsertResult(0, 0);
+            }
+            for (PatientModel patient : patients) {
+                String key = fid + ":" + patient.getPatientId();
+                PatientModel existing = store.get(key);
+                if (existing != null) {
+                    existing.setFullName(patient.getFullName());
+                    existing.setKanaName(patient.getKanaName());
+                    existing.setBirthday(patient.getBirthday());
+                    existing.setGender(patient.getGender());
+                    existing.setTelephone(patient.getTelephone());
+                    existing.setMobilePhone(patient.getMobilePhone());
+                    existing.setAddress(patient.getAddress());
+                    updated++;
+                } else {
+                    patient.setId(seq++);
+                    store.put(key, patient);
+                    created++;
+                }
+            }
+            return new SyncPatientUpsertResult(created, updated);
+        }
+
+        @Override
         public long addPatient(PatientModel patient) {
+            addPatientCalls++;
             patient.setId(seq++);
             store.put(patient.getFacilityId() + ":" + patient.getPatientId(), patient);
             return patient.getId();
@@ -140,9 +222,9 @@ class OrcaPatientSyncServiceTest {
 
         @Override
         public int update(PatientModel patient) {
+            updateCalls++;
             store.put(patient.getFacilityId() + ":" + patient.getPatientId(), patient);
             return 1;
         }
     }
 }
-

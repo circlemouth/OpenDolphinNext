@@ -30,9 +30,9 @@ public class OrcaMasterDao {
                 return null;
             }
             Query query = buildGenericClassQuery(criteria, meta);
-            int totalCount = fetchTotalCount(connection, meta.tableName, query);
-            if (totalCount == 0) {
-                return new GenericClassSearchResult(Collections.emptyList(), 0, null);
+            Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
+            if (Integer.valueOf(0).equals(totalCount)) {
+                return new GenericClassSearchResult(Collections.emptyList(), totalCount, null);
             }
             List<GenericClassRecord> records = fetchGenericClassRecords(connection, meta, query,
                     criteria.page, criteria.size);
@@ -55,9 +55,9 @@ public class OrcaMasterDao {
                 return null;
             }
             Query query = buildDrugQuery(criteria, meta);
-            int totalCount = fetchTotalCount(connection, meta.tableName, query);
-            if (totalCount == 0) {
-                return new ListSearchResult<>(Collections.emptyList(), 0, null);
+            Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
+            if (Integer.valueOf(0).equals(totalCount)) {
+                return new ListSearchResult<>(Collections.emptyList(), totalCount, null);
             }
             List<DrugRecord> records = fetchDrugRecords(connection, meta, query, criteria.page, criteria.size);
             String version = resolveVersion(records, null);
@@ -78,9 +78,9 @@ public class OrcaMasterDao {
                 return null;
             }
             Query query = buildCommentQuery(criteria, meta);
-            int totalCount = fetchTotalCount(connection, meta.tableName, query);
-            if (totalCount == 0) {
-                return new ListSearchResult<>(Collections.emptyList(), 0, null);
+            Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
+            if (Integer.valueOf(0).equals(totalCount)) {
+                return new ListSearchResult<>(Collections.emptyList(), totalCount, null);
             }
             List<CommentRecord> records = fetchCommentRecords(connection, meta, query, criteria.page, criteria.size);
             String version = resolveVersion(records, null);
@@ -101,9 +101,9 @@ public class OrcaMasterDao {
                 return null;
             }
             Query query = buildBodypartQuery(criteria, meta);
-            int totalCount = fetchTotalCount(connection, meta.tableName, query);
-            if (totalCount == 0) {
-                return new ListSearchResult<>(Collections.emptyList(), 0, null);
+            Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
+            if (Integer.valueOf(0).equals(totalCount)) {
+                return new ListSearchResult<>(Collections.emptyList(), totalCount, null);
             }
             List<CommentRecord> records = fetchCommentRecords(connection, meta, query, criteria.page, criteria.size);
             String version = resolveVersion(records, null);
@@ -237,30 +237,8 @@ public class OrcaMasterDao {
 
     private void appendKensaSortKeywordFilter(StringBuilder where, List<Object> params, String keyword,
             String codeColumn, String nameColumn, String kanaColumn, String sortColumn) {
-        if (keyword == null || keyword.isBlank()) {
-            return;
-        }
-        String like = "%" + keyword.toUpperCase(Locale.ROOT) + "%";
-        List<String> clauses = new ArrayList<>();
-        if (codeColumn != null) {
-            clauses.add("UPPER(CAST(" + codeColumn + " AS VARCHAR)) LIKE ?");
-            params.add(like);
-        }
-        if (nameColumn != null) {
-            clauses.add("UPPER(CAST(" + nameColumn + " AS VARCHAR)) LIKE ?");
-            params.add(like);
-        }
-        if (kanaColumn != null) {
-            clauses.add("UPPER(CAST(" + kanaColumn + " AS VARCHAR)) LIKE ?");
-            params.add(like);
-        }
-        if (sortColumn != null) {
-            clauses.add("UPPER(CAST(" + sortColumn + " AS VARCHAR)) LIKE ?");
-            params.add(like);
-        }
-        if (!clauses.isEmpty()) {
-            where.append(" AND (").append(String.join(" OR ", clauses)).append(")");
-        }
+        MasterSearchKeywordSupport.appendOrcaKeywordFilter(where, params, keyword, null,
+                codeColumn, nameColumn, kanaColumn, sortColumn);
     }
 
     private Query buildBodypartQuery(CommentCriteria criteria, DrugTableMeta meta) {
@@ -292,30 +270,8 @@ public class OrcaMasterDao {
 
     private void appendKeywordFilter(StringBuilder where, List<Object> params, String keyword,
             String codeColumn, String nameColumn, String kanaColumn, String searchMethod) {
-        if (keyword == null || keyword.isBlank()) {
-            return;
-        }
-        String normalizedMethod = searchMethod != null ? searchMethod.trim().toLowerCase(Locale.ROOT) : "partial";
-        String like = "prefix".equals(normalizedMethod)
-                ? keyword.toUpperCase(Locale.ROOT) + "%"
-                : "%" + keyword.toUpperCase(Locale.ROOT) + "%";
-        List<String> clauses = new ArrayList<>();
-        if (codeColumn != null) {
-            // ORCA master tables sometimes store codes as SMALLINT/INT. Cast to VARCHAR to support LIKE/UPPER.
-            clauses.add("UPPER(CAST(" + codeColumn + " AS VARCHAR)) LIKE ?");
-            params.add(like);
-        }
-        if (nameColumn != null) {
-            clauses.add("UPPER(CAST(" + nameColumn + " AS VARCHAR)) LIKE ?");
-            params.add(like);
-        }
-        if (kanaColumn != null) {
-            clauses.add("UPPER(CAST(" + kanaColumn + " AS VARCHAR)) LIKE ?");
-            params.add(like);
-        }
-        if (!clauses.isEmpty()) {
-            where.append(" AND (").append(String.join(" OR ", clauses)).append(")");
-        }
+        MasterSearchKeywordSupport.appendOrcaKeywordFilter(where, params, keyword, searchMethod,
+                codeColumn, nameColumn, kanaColumn);
     }
 
     private void appendDrugScopeFilter(StringBuilder where, List<Object> params, String scope) {
@@ -355,6 +311,14 @@ public class OrcaMasterDao {
                 return rs.next() ? rs.getInt(1) : 0;
             }
         }
+    }
+
+    private Integer maybeFetchTotalCount(Connection connection, String tableName, Query query, boolean includeTotalCount)
+            throws SQLException {
+        if (!includeTotalCount) {
+            return null;
+        }
+        return fetchTotalCount(connection, tableName, query);
     }
 
     private List<GenericClassRecord> fetchGenericClassRecords(Connection connection, GenericClassTableMeta meta,
@@ -812,6 +776,7 @@ public class OrcaMasterDao {
         private String effective;
         private int page = 1;
         private int size = 100;
+        private boolean includeTotalCount;
 
         public String getKeyword() {
             return keyword;
@@ -844,6 +809,14 @@ public class OrcaMasterDao {
         public void setSize(int size) {
             this.size = size;
         }
+
+        public boolean isIncludeTotalCount() {
+            return includeTotalCount;
+        }
+
+        public void setIncludeTotalCount(boolean includeTotalCount) {
+            this.includeTotalCount = includeTotalCount;
+        }
     }
 
 
@@ -854,6 +827,7 @@ public class OrcaMasterDao {
         private String scope;
         private int page = 1;
         private int size = 100;
+        private boolean includeTotalCount;
 
         public String getKeyword() {
             return keyword;
@@ -902,6 +876,14 @@ public class OrcaMasterDao {
         public void setSize(int size) {
             this.size = size;
         }
+
+        public boolean isIncludeTotalCount() {
+            return includeTotalCount;
+        }
+
+        public void setIncludeTotalCount(boolean includeTotalCount) {
+            this.includeTotalCount = includeTotalCount;
+        }
     }
 
     public static final class CommentCriteria {
@@ -909,6 +891,7 @@ public class OrcaMasterDao {
         private String effective;
         private int page = 1;
         private int size = 100;
+        private boolean includeTotalCount;
 
         public String getKeyword() {
             return keyword;
@@ -940,6 +923,14 @@ public class OrcaMasterDao {
 
         public void setSize(int size) {
             this.size = size;
+        }
+
+        public boolean isIncludeTotalCount() {
+            return includeTotalCount;
+        }
+
+        public void setIncludeTotalCount(boolean includeTotalCount) {
+            this.includeTotalCount = includeTotalCount;
         }
     }
 
@@ -1316,10 +1307,10 @@ public class OrcaMasterDao {
 
     public static final class GenericClassSearchResult {
         private final List<GenericClassRecord> records;
-        private final int totalCount;
+        private final Integer totalCount;
         private final String version;
 
-        public GenericClassSearchResult(List<GenericClassRecord> records, int totalCount, String version) {
+        public GenericClassSearchResult(List<GenericClassRecord> records, Integer totalCount, String version) {
             this.records = records;
             this.totalCount = totalCount;
             this.version = version;
@@ -1329,7 +1320,7 @@ public class OrcaMasterDao {
             return records;
         }
 
-        public int getTotalCount() {
+        public Integer getTotalCount() {
             return totalCount;
         }
 
@@ -1340,10 +1331,10 @@ public class OrcaMasterDao {
 
     public static final class ListSearchResult<T extends VersionedRecord> {
         private final List<T> records;
-        private final int totalCount;
+        private final Integer totalCount;
         private final String version;
 
-        public ListSearchResult(List<T> records, int totalCount, String version) {
+        public ListSearchResult(List<T> records, Integer totalCount, String version) {
             this.records = records;
             this.totalCount = totalCount;
             this.version = version;
@@ -1353,7 +1344,7 @@ public class OrcaMasterDao {
             return records;
         }
 
-        public int getTotalCount() {
+        public Integer getTotalCount() {
             return totalCount;
         }
 

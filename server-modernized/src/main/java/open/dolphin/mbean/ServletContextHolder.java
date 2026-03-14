@@ -21,7 +21,7 @@ public class ServletContextHolder {
     private GregorianCalendar today;
     private GregorianCalendar tomorrow;
 
-    // AsyncContextのリスト
+    // Legacy long-poll fallback only. New realtime subscriptions must use SSE.
     private final List<AsyncContext> acList = new ArrayList<>();
     
     // facilityIdとpvtListのマップ
@@ -31,16 +31,31 @@ public class ServletContextHolder {
     // サーバーのUUID
     private String serverUUID;
 
+    /**
+     * @deprecated AsyncContext based delivery is frozen as a legacy fallback.
+     * Use the SSE resources instead of registering new long-poll clients.
+     */
+    @Deprecated(forRemoval = false)
     public List<AsyncContext> getAsyncContextList() {
         return acList;
     }
 
+    /**
+     * @deprecated AsyncContext based delivery is frozen as a legacy fallback.
+     * Use the SSE resources instead of registering new long-poll clients.
+     */
+    @Deprecated(forRemoval = false)
     public void addAsyncContext(AsyncContext ac) {
         synchronized (acList) {
             acList.add(ac);
         }
     }
 
+    /**
+     * @deprecated AsyncContext based delivery is frozen as a legacy fallback.
+     * Use the SSE resources instead of registering new long-poll clients.
+     */
+    @Deprecated(forRemoval = false)
     public void removeAsyncContext(AsyncContext ac) {
         synchronized (acList) {
             acList.remove(ac);

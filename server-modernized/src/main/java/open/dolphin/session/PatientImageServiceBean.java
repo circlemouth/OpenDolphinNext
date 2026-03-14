@@ -179,32 +179,30 @@ public class PatientImageServiceBean {
         return result;
     }
 
-    public AttachmentModel getImageForDownload(String facilityId, String patientId, long imageId) {
+    public DownloadHandle getImageForDownload(String facilityId, String patientId, long imageId) {
         Objects.requireNonNull(facilityId, "facilityId");
         Objects.requireNonNull(patientId, "patientId");
         if (imageId <= 0) {
             return null;
         }
-        AttachmentModel attachment;
         try {
-            attachment = em.createQuery(
-                            "select a from AttachmentModel a " +
-                                    "join fetch a.document d " +
+            Object[] row = em.createQuery(
+                            "select a.id, a.fileName, a.contentType, a.contentSize, a.uri, a.digest " +
+                                    "from AttachmentModel a " +
                                     "where a.id=:id " +
-                                    "and d.karte.patient.facilityId=:fid " +
-                                    "and d.karte.patient.patientId=:pid " +
+                                    "and a.document.karte.patient.facilityId=:fid " +
+                                    "and a.document.karte.patient.patientId=:pid " +
                                     "and a.linkRelation=:rel",
-                            AttachmentModel.class)
+                            Object[].class)
                     .setParameter("id", imageId)
                     .setParameter("fid", facilityId)
                     .setParameter("pid", patientId)
                     .setParameter("rel", LINK_RELATION_PATIENT_IMAGE_PHASEA)
                     .getSingleResult();
+            return toDownloadHandle(row);
         } catch (NoResultException ex) {
             return null;
         }
-
-        return attachment;
     }
 
     private String formatInstant(Date date) {
@@ -221,6 +219,26 @@ public class PatientImageServiceBean {
             throw new IllegalStateException("Failed to calculate attachment digest", ex);
         }
     }
+
+    private DownloadHandle toDownloadHandle(Object[] row) {
+        if (row == null || row.length < 6) {
+            return null;
+        }
+        long attachmentId = row[0] instanceof Number value ? value.longValue() : 0L;
+        String fileName = row[1] != null ? row[1].toString() : null;
+        String contentType = row[2] != null ? row[2].toString() : null;
+        long contentSize = row[3] instanceof Number value ? value.longValue() : 0L;
+        String uri = row[4] != null ? row[4].toString() : null;
+        String digest = row[5] != null ? row[5].toString() : null;
+        return new DownloadHandle(attachmentId, fileName, contentType, contentSize, uri, digest);
+    }
+
+    public record DownloadHandle(long attachmentId,
+                                 String fileName,
+                                 String contentType,
+                                 long contentSize,
+                                 String uri,
+                                 String digest) {}
 
     public record UploadResult(long documentId, long attachmentId, Date createdAt) {}
 }

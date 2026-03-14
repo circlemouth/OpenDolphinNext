@@ -47,7 +47,7 @@ class OrcaMasterResourceTest {
                 record.startDate = "20240401";
                 record.endDate = "99991231";
                 record.version = "20240426";
-                return new GenericClassSearchResult(List.of(record), 1, "20240426");
+                return new GenericClassSearchResult(List.of(record), criteria.isIncludeTotalCount() ? 1 : null, "20240426");
             }
         };
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
@@ -60,7 +60,7 @@ class OrcaMasterResourceTest {
         OrcaMasterListResponse<OrcaDrugMasterEntry> payload =
                 (OrcaMasterListResponse<OrcaDrugMasterEntry>) response.getEntity();
         assertNotNull(payload);
-        assertNotNull(payload.getTotalCount());
+        assertNull(payload.getTotalCount());
         assertNotNull(payload.getItems());
         assertFalse(payload.getItems().isEmpty());
         OrcaDrugMasterEntry entry = payload.getItems().get(0);
@@ -88,12 +88,13 @@ class OrcaMasterResourceTest {
                 record.startDate = "20250401";
                 record.endDate = "99999999";
                 record.version = "20250401";
-                return new ListSearchResult<>(List.of(record), 1, "20250401");
+                return new ListSearchResult<>(List.of(record), criteria.isIncludeTotalCount() ? 1 : null, "20250401");
             }
         };
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
         MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
         params.add("keyword", "ゲンタ");
+        params.add("includeTotalCount", "true");
         UriInfo uriInfo = createUriInfo(params);
 
         Response response = resource.getDrug(null, uriInfo, authenticatedRequest());
@@ -148,12 +149,13 @@ class OrcaMasterResourceTest {
                 record.startDate = "00000000";
                 record.endDate = "99999999";
                 record.version = "20260125";
-                return new ListSearchResult<>(List.of(record), 1, "20260125");
+                return new ListSearchResult<>(List.of(record), criteria.isIncludeTotalCount() ? 1 : null, "20260125");
             }
         };
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
         MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
         params.add("keyword", "別途");
+        params.add("includeTotalCount", "1");
         UriInfo uriInfo = createUriInfo(params);
 
         Response response = resource.getComment(null, uriInfo, authenticatedRequest());
@@ -207,7 +209,7 @@ class OrcaMasterResourceTest {
                 record.startDate = "00000000";
                 record.endDate = "99999999";
                 record.version = "20260125";
-                return new ListSearchResult<>(List.of(record), 1, "20260125");
+                return new ListSearchResult<>(List.of(record), criteria.isIncludeTotalCount() ? 1 : null, "20260125");
             }
         };
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
@@ -222,7 +224,7 @@ class OrcaMasterResourceTest {
         OrcaMasterListResponse<OrcaTensuEntry> payload =
                 (OrcaMasterListResponse<OrcaTensuEntry>) response.getEntity();
         assertNotNull(payload);
-        assertEquals(1, payload.getTotalCount());
+        assertNull(payload.getTotalCount());
         assertNotNull(payload.getItems());
         assertFalse(payload.getItems().isEmpty());
         OrcaTensuEntry entry = payload.getItems().get(0);
@@ -499,7 +501,7 @@ class OrcaMasterResourceTest {
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao() {
             @Override
             public EtensuSearchResult search(EtensuSearchCriteria criteria) {
-                return new EtensuSearchResult(List.of(record), 1, "202404");
+                return new EtensuSearchResult(List.of(record), criteria.isIncludeTotalCount() ? 1 : null, "202404");
             }
         }, new OrcaMasterDao());
         UriInfo uriInfo = createUriInfo(new MultivaluedHashMap<>());
@@ -511,12 +513,49 @@ class OrcaMasterResourceTest {
         OrcaMasterListResponse<OrcaTensuEntry> payload =
                 (OrcaMasterListResponse<OrcaTensuEntry>) response.getEntity();
         assertNotNull(payload);
-        assertEquals(1, payload.getTotalCount());
+        assertNull(payload.getTotalCount());
+        assertNull(response.getHeaderString("X-Orca-Total-Count"));
         OrcaTensuEntry entry = payload.getItems().get(0);
         assertEquals("11", entry.getKubun());
         assertEquals(288d, entry.getPoints());
         assertEquals("20240101", entry.getNoticeDate());
         assertEquals("20240401", entry.getEffectiveDate());
+    }
+
+    @Test
+    void getEtensu_includeTotalCountExplicitlyRequested_returnsCountAndHeader() throws Exception {
+        EtensuDao.EtensuRecord record = new EtensuDao.EtensuRecord();
+        setEtensuField(record, "tensuCode", "110000003");
+        setEtensuField(record, "name", "Sample Tensu Count");
+        setEtensuField(record, "kubun", "11");
+        setEtensuField(record, "points", 144d);
+        setEtensuField(record, "tanka", 144d);
+        setEtensuField(record, "unit", "visit");
+        setEtensuField(record, "noticeDate", "20240101");
+        setEtensuField(record, "effectiveDate", "20240401");
+        setEtensuField(record, "startDate", "20240401");
+        setEtensuField(record, "endDate", "99991231");
+        setEtensuField(record, "tensuVersion", "202404");
+
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao() {
+            @Override
+            public EtensuSearchResult search(EtensuSearchCriteria criteria) {
+                return new EtensuSearchResult(List.of(record), criteria.isIncludeTotalCount() ? 1 : null, "202404");
+            }
+        }, new OrcaMasterDao());
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("includeTotalCount", "true");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response response = resource.getEtensu(null, uriInfo, authenticatedRequest());
+
+        assertEquals(200, response.getStatus());
+        @SuppressWarnings("unchecked")
+        OrcaMasterListResponse<OrcaTensuEntry> payload =
+                (OrcaMasterListResponse<OrcaTensuEntry>) response.getEntity();
+        assertNotNull(payload);
+        assertEquals(1, payload.getTotalCount());
+        assertEquals("1", response.getHeaderString("X-Orca-Total-Count"));
     }
 
     @Test

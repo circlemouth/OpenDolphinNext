@@ -24,6 +24,7 @@ import open.dolphin.rest.dto.outpatient.PatientOutpatientResponse;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.PatientServiceBean;
+import open.dolphin.session.PatientServiceBean.PatientSearchType;
 
 /**
  * Local-only patient search endpoint under /orca.
@@ -49,9 +50,10 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         String resourcePath = resolveResourcePath(request, getDefaultResourcePath());
         String facilityId = resolveFacilityId(request);
         String keyword = payload != null ? toString(payload.get("keyword")) : null;
+        PatientSearchType searchType = resolveSearchType(payload, keyword);
         String paymentMode = payload != null ? toString(payload.get("paymentMode")) : null;
 
-        List<PatientModel> models = resolvePatients(facilityId, keyword);
+        List<PatientModel> models = resolvePatients(facilityId, keyword, searchType);
         List<PatientOutpatientResponse.PatientRecord> records = new ArrayList<>();
         for (PatientModel model : models) {
             PatientOutpatientResponse.PatientRecord record = toRecord(model);
@@ -94,6 +96,9 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         }
         if (keyword != null && !keyword.isBlank()) {
             details.put("keyword", keyword);
+        }
+        if (searchType != null) {
+            details.put("searchType", searchType.name().toLowerCase());
         }
         if (paymentMode != null && !paymentMode.isBlank()) {
             details.put("paymentMode", paymentMode);
@@ -178,7 +183,7 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         return null;
     }
 
-    private List<PatientModel> resolvePatients(String facilityId, String keyword) {
+    private List<PatientModel> resolvePatients(String facilityId, String keyword, PatientSearchType searchType) {
         if (patientServiceBean == null) {
             return List.of();
         }
@@ -188,13 +193,38 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         if (keyword == null || keyword.isBlank()) {
             return List.of();
         }
+        return patientServiceBean.searchPatients(facilityId, searchType, keyword);
+    }
+
+    private PatientSearchType resolveSearchType(Map<String, Object> payload, String keyword) {
+        PatientSearchType explicit = parseSearchType(payload != null ? toString(payload.get("searchType")) : null);
+        if (explicit != null) {
+            return explicit;
+        }
+        if (keyword == null || keyword.isBlank()) {
+            return null;
+        }
         if (keyword.matches("\\d+")) {
-            return patientServiceBean.getPatientsByDigit(facilityId, keyword);
+            return PatientSearchType.PATIENT_ID;
         }
         if (keyword.matches("[ぁ-んァ-ヶー]+")) {
-            return patientServiceBean.getPatientsByKana(facilityId, keyword);
+            return PatientSearchType.KANA;
         }
-        return patientServiceBean.getPatientsByName(facilityId, keyword);
+        return PatientSearchType.NAME;
+    }
+
+    private PatientSearchType parseSearchType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        return switch (raw.trim().toLowerCase()) {
+            case "name" -> PatientSearchType.NAME;
+            case "kana" -> PatientSearchType.KANA;
+            case "patientid", "patient-id", "id" -> PatientSearchType.PATIENT_ID;
+            case "telephone", "phone" -> PatientSearchType.TELEPHONE;
+            case "zipcode", "zip" -> PatientSearchType.ZIPCODE;
+            default -> null;
+        };
     }
 
     private PatientOutpatientResponse.PatientRecord toRecord(PatientModel model) {

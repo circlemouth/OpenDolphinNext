@@ -75,7 +75,17 @@ public class ChartEventServiceBean {
             return;
         }
 
+        // Modernized realtime notifications must go through SSE first.
+        // The AsyncContext list is retained only as a frozen fallback for legacy long-poll clients.
+        chartEventStreamPublisher.broadcast(evt);
+        dispatchLegacyAsyncContexts(evt, fid);
+    }
+
+    private void dispatchLegacyAsyncContexts(ChartEventModel evt, String fid) {
         List<AsyncContext> acList = contextHolder.getAsyncContextList();
+        if (acList.isEmpty()) {
+            return;
+        }
         synchronized (acList) {
             for (Iterator<AsyncContext> itr = acList.iterator(); itr.hasNext();) {
                 
@@ -104,8 +114,6 @@ public class ChartEventServiceBean {
                 }
             }
         }
-
-        chartEventStreamPublisher.broadcast(evt);
     }
     
     public String getServerUUID() {

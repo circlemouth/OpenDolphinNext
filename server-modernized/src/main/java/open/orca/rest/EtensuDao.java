@@ -35,10 +35,10 @@ public class EtensuDao {
         try (Connection connection = ORCAConnection.getInstance().getConnection()) {
             EtensuTableMeta meta = EtensuTableMeta.load(connection);
             EtensuQuery query = buildQuery(criteria, meta);
-            int totalCount = fetchTotalCount(connection, query);
-            if (totalCount == 0) {
+            Integer totalCount = maybeFetchTotalCount(connection, query, criteria.isIncludeTotalCount());
+            if (Integer.valueOf(0).equals(totalCount)) {
                 long elapsedMs = toMillis(startTime);
-                return new EtensuSearchResult(Collections.emptyList(), 0, criteria.tensuVersion, elapsedMs, false);
+                return new EtensuSearchResult(Collections.emptyList(), totalCount, criteria.tensuVersion, elapsedMs, false);
             }
             List<EtensuRecord> records = fetchRecords(connection, query, criteria.page, criteria.size, meta);
             if (!records.isEmpty()) {
@@ -58,18 +58,8 @@ public class EtensuDao {
         StringBuilder where = new StringBuilder(meta.fromClause).append(" WHERE 1=1");
         String srycdColumn = selectColumn(meta.srycdColumn);
         List<Object> params = new ArrayList<>();
-        if (criteria.keyword != null && !criteria.keyword.isBlank()) {
-            String keyword = "%" + criteria.keyword.toUpperCase(Locale.ROOT) + "%";
-            if (meta.hasName) {
-                where.append(" AND (UPPER(").append(srycdColumn).append(") LIKE ? OR UPPER(COALESCE(")
-                        .append(meta.nameColumn).append(", '')) LIKE ?)");
-                params.add(keyword);
-                params.add(keyword);
-            } else {
-                where.append(" AND UPPER(").append(srycdColumn).append(") LIKE ?");
-                params.add(keyword);
-            }
-        }
+        MasterSearchKeywordSupport.appendEtensuKeywordFilter(where, params, criteria.keyword, srycdColumn,
+                meta.hasName ? meta.nameColumn : null);
         if (criteria.asOf != null && !criteria.asOf.isBlank()) {
             where.append(" AND ").append(meta.startDateColumn).append(" <= ? AND ")
                     .append(meta.endDateColumn).append(" >= ?");
@@ -114,6 +104,14 @@ public class EtensuDao {
                 return rs.next() ? rs.getInt(1) : 0;
             }
         }
+    }
+
+    private Integer maybeFetchTotalCount(Connection connection, EtensuQuery query, boolean includeTotalCount)
+            throws SQLException {
+        if (!includeTotalCount) {
+            return null;
+        }
+        return fetchTotalCount(connection, query);
     }
 
     private List<EtensuRecord> fetchRecords(Connection connection, EtensuQuery query, int page, int size,
@@ -691,6 +689,7 @@ public class EtensuDao {
         private Double pointsMax;
         private int page;
         private int size;
+        private boolean includeTotalCount;
 
         public String getKeyword() {
             return keyword;
@@ -755,24 +754,32 @@ public class EtensuDao {
         public void setSize(int size) {
             this.size = size;
         }
+
+        public boolean isIncludeTotalCount() {
+            return includeTotalCount;
+        }
+
+        public void setIncludeTotalCount(boolean includeTotalCount) {
+            this.includeTotalCount = includeTotalCount;
+        }
     }
 
     public static final class EtensuSearchResult {
         private final List<EtensuRecord> records;
-        private final int totalCount;
+        private final Integer totalCount;
         private final String version;
         private final long dbTimeMs;
         private final boolean loadFailed;
 
-        public EtensuSearchResult(List<EtensuRecord> records, int totalCount, String version) {
+        public EtensuSearchResult(List<EtensuRecord> records, Integer totalCount, String version) {
             this(records, totalCount, version, 0, false);
         }
 
-        public EtensuSearchResult(List<EtensuRecord> records, int totalCount, String version, long dbTimeMs) {
+        public EtensuSearchResult(List<EtensuRecord> records, Integer totalCount, String version, long dbTimeMs) {
             this(records, totalCount, version, dbTimeMs, false);
         }
 
-        public EtensuSearchResult(List<EtensuRecord> records, int totalCount, String version, long dbTimeMs,
+        public EtensuSearchResult(List<EtensuRecord> records, Integer totalCount, String version, long dbTimeMs,
                 boolean loadFailed) {
             this.records = records;
             this.totalCount = totalCount;
@@ -785,7 +792,7 @@ public class EtensuDao {
             return records;
         }
 
-        public int getTotalCount() {
+        public Integer getTotalCount() {
             return totalCount;
         }
 
