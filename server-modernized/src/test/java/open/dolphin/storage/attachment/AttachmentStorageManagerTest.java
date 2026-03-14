@@ -188,6 +188,35 @@ class AttachmentStorageManagerTest {
     }
 
     @Test
+    void prepareExternalAssetForPersist_streamsUploadAndRegistersRollbackHook() throws Exception {
+        byte[] payload = "persist-stream".getBytes(StandardCharsets.UTF_8);
+        AttachmentModel attachment = buildAttachment("stream.txt", "text/plain", null);
+        TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
+        when(registry.getTransactionStatus()).thenReturn(Status.STATUS_ACTIVE);
+        setField(manager, "registry", registry);
+        doAnswer(invocation -> {
+            RequestBody body = invocation.getArgument(1, RequestBody.class);
+            try (InputStream in = body.contentStreamProvider().newStream()) {
+                while (in.read() != -1) {
+                    // consume stream to trigger digest updates
+                }
+            }
+            return null;
+        }).when(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+
+        boolean uploaded = manager.prepareExternalAssetForPersist(
+                attachment,
+                new ByteArrayInputStream(payload),
+                payload.length);
+
+        assertThat(uploaded).isTrue();
+        assertThat(attachment.getUri()).isEqualTo("s3://test-bucket/attachments/doc-20/att-10-stream.txt");
+        assertThat(attachment.getDigest()).isEqualTo(sha256Hex(payload));
+        assertThat(attachment.getContentBytes()).isNull();
+        verify(registry).registerInterposedSynchronization(any(Synchronization.class));
+    }
+
+    @Test
     void scheduleDeleteExternalAssetAfterCommit_deletesImmediatelyWhenNoTransaction() throws Exception {
         TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
         when(registry.getTransactionStatus()).thenReturn(Status.STATUS_NO_TRANSACTION);

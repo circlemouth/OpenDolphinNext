@@ -356,7 +356,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P6. byte 配列偏重の削減
 
-### [ ] P6-01 AttachmentStorageManager のホット経路を stream ベースへ寄せる
+### [x] P6-01 AttachmentStorageManager のホット経路を stream ベースへ寄せる
 - 対象:
   - `server-modernized/src/main/java/open/dolphin/storage/attachment/AttachmentStorageManager.java`
 - 作業:
@@ -365,6 +365,11 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 既存メソッド契約を壊さずに内部実装を改善する
 - 完了条件:
   - ホット経路の主要メソッドで `byte[]` 全載せが避けられている
+- 2026-03-14 (RUN_ID=20260314T061008Z):
+  - `server-modernized/src/main/java/open/dolphin/storage/attachment/AttachmentStorageManager.java` に、stream payload を S3 へ事前外部化し、rollback hook まで登録する `prepareExternalAssetForPersist(...)` を追加した
+  - `server-modernized/src/main/java/open/dolphin/session/PatientImageServiceBean.java` の patient image upload 経路を更新し、S3 モードでは `AttachmentModel.contentBytes` を積まずに stream upload を先行させ、persist 時点では `uri` / `digest` / `contentSize` のみを保持する構成へ寄せた
+  - DB モードでは従来どおり inline `contentBytes` を保持するため、公開契約は据え置いた
+  - `server-modernized/src/test/java/open/dolphin/storage/attachment/AttachmentStorageManagerTest.java` と `server-modernized/src/test/java/open/dolphin/session/PatientImageServiceBeanTest.java` を更新し、stream upload・rollback hook・S3 pre-persist 経路を確認した
 - 次:
   - P6-02
 

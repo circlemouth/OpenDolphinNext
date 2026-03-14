@@ -12,6 +12,7 @@ import java.util.HexFormat;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.io.ByteArrayInputStream;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -24,6 +25,8 @@ import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.PatientImageEntryResponse;
 import open.dolphin.session.framework.SessionOperation;
+import open.dolphin.storage.attachment.AttachmentStorageManager;
+import open.dolphin.storage.attachment.AttachmentStorageMode;
 
 @Named
 @ApplicationScoped
@@ -49,6 +52,9 @@ public class PatientImageServiceBean {
 
     @Inject
     private KarteServiceBean karteServiceBean;
+
+    @Inject
+    private AttachmentStorageManager attachmentStorageManager;
 
     public UploadResult uploadImage(String facilityId,
                                     String patientId,
@@ -98,8 +104,6 @@ public class PatientImageServiceBean {
         attachment.setContentType(contentType);
         attachment.setContentSize(bytes.length);
         attachment.setLastModified(now.getTime());
-        attachment.setContentBytes(bytes);
-        attachment.setDigest(sha256Hex(bytes));
         attachment.setTitle(fileName);
         attachment.setStatus(IInfoModel.STATUS_FINAL);
         attachment.setStarted(now);
@@ -112,6 +116,22 @@ public class PatientImageServiceBean {
         attachment.setUserModel(actor);
         attachment.setKarteBean(karte);
         attachment.setDocumentModel(document);
+        AttachmentStorageMode storageMode = attachmentStorageManager != null ? attachmentStorageManager.getMode() : null;
+        boolean externalizedBeforePersist = false;
+        if (storageMode != null && storageMode.isS3()) {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
+                externalizedBeforePersist = attachmentStorageManager.prepareExternalAssetForPersist(
+                        attachment,
+                        in,
+                        bytes.length);
+            } catch (Exception ex) {
+                throw new IllegalStateException("Failed to externalize patient image before persist", ex);
+            }
+        }
+        if (!externalizedBeforePersist) {
+            attachment.setContentBytes(bytes);
+            attachment.setDigest(sha256Hex(bytes));
+        }
         document.addAttachment(attachment);
 
         long documentId = karteServiceBean.addDocument(document);

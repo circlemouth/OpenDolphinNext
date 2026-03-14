@@ -114,6 +114,20 @@ public class AttachmentStorageManager {
         return uploadToS3(attachment, contentStream, contentLength);
     }
 
+    public boolean prepareExternalAssetForPersist(AttachmentModel attachment, InputStream contentStream, long contentLength) {
+        if (!settings.getMode().isS3() || attachment == null) {
+            return false;
+        }
+        AttachmentStorageManager invoker = selfReference != null && !selfReference.isUnsatisfied()
+                ? selfReference.get()
+                : this;
+        boolean uploaded = invoker.uploadToS3OutsideTransaction(attachment, contentStream, contentLength);
+        if (uploaded) {
+            registerRollbackHook(attachment);
+        }
+        return uploaded;
+    }
+
     public void populateBinary(AttachmentModel attachment) {
         if (attachment == null) {
             return;

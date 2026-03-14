@@ -22,6 +22,8 @@ import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.PatientImageEntryResponse;
+import open.dolphin.storage.attachment.AttachmentStorageManager;
+import open.dolphin.storage.attachment.AttachmentStorageMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,6 +34,7 @@ class PatientImageServiceBeanTest {
     private PatientServiceBean patientServiceBean;
     private UserServiceBean userServiceBean;
     private KarteServiceBean karteServiceBean;
+    private AttachmentStorageManager attachmentStorageManager;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -40,11 +43,13 @@ class PatientImageServiceBeanTest {
         patientServiceBean = mock(PatientServiceBean.class);
         userServiceBean = mock(UserServiceBean.class);
         karteServiceBean = mock(KarteServiceBean.class);
+        attachmentStorageManager = mock(AttachmentStorageManager.class);
 
         setField(service, "em", em);
         setField(service, "patientServiceBean", patientServiceBean);
         setField(service, "userServiceBean", userServiceBean);
         setField(service, "karteServiceBean", karteServiceBean);
+        setField(service, "attachmentStorageManager", attachmentStorageManager);
     }
 
     @Test
@@ -84,6 +89,55 @@ class PatientImageServiceBeanTest {
         assertThat(result.documentId()).isEqualTo(10L);
         assertThat(result.attachmentId()).isEqualTo(99L);
         verify(em, never()).createQuery(anyString(), eq(Long.class));
+    }
+
+    @Test
+    void uploadImage_externalizesToS3BeforePersistWhenAttachmentStorageIsS3() {
+        byte[] payload = new byte[] {1, 2, 3, 4};
+        PatientModel patient = new PatientModel();
+        patient.setId(1L);
+        patient.setFacilityId("F001");
+        patient.setPatientId("P001");
+
+        KarteBean karte = new KarteBean();
+        karte.setId(2L);
+
+        UserModel actor = new UserModel();
+        actor.setUserId("F001:doctor01");
+
+        when(patientServiceBean.getPatientById("F001", "P001")).thenReturn(patient);
+        when(patientServiceBean.ensureKarteByPatientPk(1L)).thenReturn(karte);
+        when(userServiceBean.getUser("F001:doctor01")).thenReturn(actor);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.prepareExternalAssetForPersist(any(), any(), eq((long) payload.length)))
+                .thenAnswer(invocation -> {
+                    AttachmentModel attachment = invocation.getArgument(0);
+                    attachment.setUri("s3://test-bucket/attachments/doc-20/att-10-image.png");
+                    attachment.setDigest("digest-from-stream");
+                    return true;
+                });
+        when(karteServiceBean.addDocument(any())).thenAnswer(invocation -> {
+            open.dolphin.infomodel.DocumentModel document = invocation.getArgument(0);
+            AttachmentModel attachment = document.getAttachment().get(0);
+            assertThat(attachment.getContentBytes()).isNull();
+            assertThat(attachment.getUri()).isEqualTo("s3://test-bucket/attachments/doc-20/att-10-image.png");
+            assertThat(attachment.getDigest()).isEqualTo("digest-from-stream");
+            attachment.setId(99L);
+            document.setId(10L);
+            return 10L;
+        });
+
+        PatientImageServiceBean.UploadResult result = service.uploadImage(
+                "F001",
+                "P001",
+                "F001:doctor01",
+                "image.png",
+                "image/png",
+                payload);
+
+        assertThat(result.documentId()).isEqualTo(10L);
+        assertThat(result.attachmentId()).isEqualTo(99L);
+        verify(attachmentStorageManager).prepareExternalAssetForPersist(any(), any(), eq((long) payload.length));
     }
 
     @Test
