@@ -50,6 +50,14 @@ class ReceptionRealtimeSseSupportTest {
     }
 
     @Test
+    void publishReceptionUpdateWithoutSubscribersDoesNotCreateContext() {
+        support.publishReceptionUpdate("F001", "2026-02-19", "000001", "02", "RUN-REALTIME-001");
+
+        assertFalse(support.hasFacilityContext("F001"));
+        assertEquals(0, support.facilityContextCount());
+    }
+
+    @Test
     void registerWithHistoryGapEmitsReplayGapEvent() {
         RecordingSse bootstrapSse = new RecordingSse();
         RecordingSseEventSink bootstrapSink = new RecordingSseEventSink();
@@ -65,6 +73,25 @@ class ReceptionRealtimeSseSupportTest {
 
         assertFalse(reconnectSink.events.isEmpty());
         assertEquals("reception.replay-gap", reconnectSink.events.get(0).getName());
+    }
+
+    @Test
+    void reconnectAfterZeroClientCleanupAlwaysEmitsReplayGap() {
+        RecordingSse bootstrapSse = new RecordingSse();
+        RecordingSseEventSink bootstrapSink = new RecordingSseEventSink();
+        support.register("F001", bootstrapSse, bootstrapSink, null);
+        support.publishReceptionUpdate("F001", "2026-02-19", "000001", "02", "RUN-REALTIME-001");
+        support.unregister("F001", bootstrapSink);
+
+        assertFalse(support.hasFacilityContext("F001"));
+
+        RecordingSse reconnectSse = new RecordingSse();
+        RecordingSseEventSink reconnectSink = new RecordingSseEventSink();
+        support.register("F001", reconnectSse, reconnectSink, "1");
+
+        assertFalse(reconnectSink.events.isEmpty());
+        assertEquals("reception.replay-gap", reconnectSink.events.get(0).getName());
+        assertTrue(support.hasFacilityContext("F001"));
     }
 
     private static final class RecordingSse implements Sse {

@@ -87,6 +87,7 @@ public class ReceptionRealtimeSseSupport {
             return;
         }
 
+        boolean contextExisted = facilityContexts.containsKey(facilityId);
         FacilityContext context = facilityContexts.computeIfAbsent(facilityId, ignored -> new FacilityContext());
         SseClient client = new SseClient(sink, sse);
         context.addClient(client);
@@ -95,11 +96,15 @@ public class ReceptionRealtimeSseSupport {
         if (replayAfter < 0) {
             return;
         }
-        if (context.isHistoryGap(replayAfter)) {
-            sendReplayGapEvent(context, client);
+        if (!contextExisted) {
+            sendReplayGapEvent(facilityId, context, client);
             return;
         }
-        context.replayHistory(replayAfter, payload -> sendUpdateEvent(context, payload, client));
+        if (context.isHistoryGap(replayAfter)) {
+            sendReplayGapEvent(facilityId, context, client);
+            return;
+        }
+        context.replayHistory(replayAfter, payload -> sendUpdateEvent(facilityId, context, payload, client));
     }
 
     public void unregister(String facilityId, SseEventSink sink) {
@@ -108,7 +113,7 @@ public class ReceptionRealtimeSseSupport {
         }
         FacilityContext context = facilityContexts.get(facilityId);
         if (context != null) {
-            context.removeClient(sink);
+            removeClient(facilityId, context, sink);
         }
     }
 
@@ -121,7 +126,11 @@ public class ReceptionRealtimeSseSupport {
         if (facilityId == null || facilityId.isBlank()) {
             return;
         }
-        FacilityContext context = facilityContexts.computeIfAbsent(facilityId, ignored -> new FacilityContext());
+        FacilityContext context = facilityContexts.get(facilityId);
+        if (context == null || context.hasNoClients()) {
+            cleanupFacilityContextIfIdle(facilityId, context);
+            return;
+        }
         long revision = sequence.incrementAndGet();
         String effectiveRunId = AbstractOrcaRestResource.resolveRunIdValue(runId);
         String updatedAt = Instant.now().toString();
@@ -140,15 +149,20 @@ public class ReceptionRealtimeSseSupport {
         SsePayload payload = new SsePayload(revision, payloadJson);
         context.appendHistory(payload);
         for (SseClient client : context.clients) {
-            sendUpdateEvent(context, payload, client);
+            sendUpdateEvent(facilityId, context, payload, client);
         }
+        cleanupFacilityContextIfIdle(facilityId, context);
     }
 
     private void broadcastKeepAlive() {
         try {
             facilityContexts.forEach((facilityId, context) -> {
+                if (context.hasNoClients()) {
+                    cleanupFacilityContextIfIdle(facilityId, context);
+                    return;
+                }
                 for (SseClient client : context.clients) {
-                    sendKeepAliveEvent(context, client);
+                    sendKeepAliveEvent(facilityId, context, client);
                 }
             });
         } catch (RuntimeException ex) {
@@ -156,7 +170,7 @@ public class ReceptionRealtimeSseSupport {
         }
     }
 
-    private void sendUpdateEvent(FacilityContext context, SsePayload payload, SseClient client) {
+    private void sendUpdateEvent(String facilityId, FacilityContext context, SsePayload payload, SseClient client) {
         if (client == null || client.sink.isClosed()) {
             return;
         }
@@ -167,10 +181,10 @@ public class ReceptionRealtimeSseSupport {
                 .reconnectDelay(RECONNECT_DELAY_MILLIS)
                 .data(String.class, payload.data())
                 .build();
-        sendAsync(context, client, event);
+        sendAsync(facilityId, context, client, event);
     }
 
-    private void sendReplayGapEvent(FacilityContext context, SseClient client) {
+    private void sendReplayGapEvent(String facilityId, FacilityContext context, SseClient client) {
         if (client == null || client.sink.isClosed()) {
             return;
         }
@@ -180,10 +194,10 @@ public class ReceptionRealtimeSseSupport {
                 .reconnectDelay(RECONNECT_DELAY_MILLIS)
                 .data(String.class, REPLAY_GAP_PAYLOAD)
                 .build();
-        sendAsync(context, client, event);
+        sendAsync(facilityId, context, client, event);
     }
 
-    private void sendKeepAliveEvent(FacilityContext context, SseClient client) {
+    private void sendKeepAliveEvent(String facilityId, FacilityContext context, SseClient client) {
         if (client == null || client.sink.isClosed()) {
             return;
         }
@@ -192,17 +206,34 @@ public class ReceptionRealtimeSseSupport {
                 .comment("keep-alive")
                 .reconnectDelay(RECONNECT_DELAY_MILLIS)
                 .build();
-        sendAsync(context, client, event);
+        sendAsync(facilityId, context, client, event);
     }
 
-    private void sendAsync(FacilityContext context, SseClient client, OutboundSseEvent event) {
+    private void sendAsync(String facilityId, FacilityContext context, SseClient client, OutboundSseEvent event) {
         CompletionStage<?> stage = client.sink.send(event);
         stage.whenComplete((ignored, throwable) -> {
             if (throwable != null) {
                 LOGGER.log(Level.FINE, "SSE sink send failed, removing client", throwable);
-                context.removeClient(client.sink);
+                removeClient(facilityId, context, client.sink);
             }
         });
+    }
+
+    private void removeClient(String facilityId, FacilityContext context, SseEventSink sink) {
+        if (context == null || sink == null) {
+            return;
+        }
+        context.removeClient(sink);
+        cleanupFacilityContextIfIdle(facilityId, context);
+    }
+
+    private void cleanupFacilityContextIfIdle(String facilityId, FacilityContext context) {
+        if (facilityId == null || facilityId.isBlank() || context == null || !context.hasNoClients()) {
+            return;
+        }
+        if (facilityContexts.remove(facilityId, context)) {
+            context.clearHistory();
+        }
     }
 
     private String toJson(ReceptionRealtimePayload payload) {
@@ -235,6 +266,14 @@ public class ReceptionRealtimeSseSupport {
         return Executors.newSingleThreadScheduledExecutor(new KeepAliveThreadFactory());
     }
 
+    int facilityContextCount() {
+        return facilityContexts.size();
+    }
+
+    boolean hasFacilityContext(String facilityId) {
+        return facilityContexts.containsKey(facilityId);
+    }
+
     private static final class KeepAliveThreadFactory implements ThreadFactory {
 
         @Override
@@ -257,6 +296,10 @@ public class ReceptionRealtimeSseSupport {
         void removeClient(SseEventSink sink) {
             clients.removeIf(client -> client.sink.equals(sink));
             closeQuietly(sink);
+        }
+
+        boolean hasNoClients() {
+            return clients.isEmpty();
         }
 
         void appendHistory(SsePayload payload) {
@@ -297,6 +340,11 @@ public class ReceptionRealtimeSseSupport {
             }
             clients.clear();
             history.clear();
+        }
+
+        void clearHistory() {
+            history.clear();
+            latestSequenceId.set(-1L);
         }
 
         private void closeQuietly(SseEventSink sink) {

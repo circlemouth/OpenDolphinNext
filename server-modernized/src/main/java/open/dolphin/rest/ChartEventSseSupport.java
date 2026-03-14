@@ -3,6 +3,7 @@ package open.dolphin.rest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -50,6 +51,7 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
     private static final String HISTORY_GAP_COUNTER = "chartEvent.history.gapDetected";
 
     private final Map<String, FacilityContext> facilityContexts = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> retainedSpanGauges = new ConcurrentHashMap<>();
 
     private final AtomicLong sequence = new AtomicLong();
 
@@ -76,7 +78,7 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
     @Inject
     void setMeterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
-        facilityContexts.forEach(this::registerHistoryGauge);
+        facilityContexts.forEach((facilityId, context) -> registerHistoryGauge(facilityId, context.getRetainedSpan()));
     }
 
     void setHistoryRepository(ChartEventHistoryRepository historyRepository) {
@@ -108,9 +110,9 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         }
 
         FacilityContext context = facilityContexts.computeIfAbsent(facilityId, id -> new FacilityContext());
-        registerHistoryGauge(facilityId, context);
         SseClient client = new SseClient(clientUuid, sink, sse);
         context.addClient(client);
+        registerHistoryGauge(facilityId, context.getRetainedSpan());
 
         long replayAfter = parseEventId(lastEventId);
         if (replayAfter >= 0) {
@@ -126,7 +128,7 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
                                 new Object[]{facilityId, clientUuid, replayAfter, oldest.getAsLong()}
                         );
                         recordHistoryGapMetric(facilityId);
-                        sendReplayGapEvent(context, client);
+                        sendReplayGapEvent(facilityId, context, client);
                     }
                     List<ChartEventHistoryRecord> records = historyRepository.fetchAfter(
                             facilityId, replayAfter, historySettings.getReplayLimit());
@@ -134,13 +136,14 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
                         if (record.issuerUuid() != null && record.issuerUuid().equals(clientUuid)) {
                             continue;
                         }
-                        sendEvent(context, new SsePayload(record.eventId(), record.issuerUuid(), record.payloadJson()), client);
+                        sendEvent(facilityId, context,
+                                new SsePayload(record.eventId(), record.issuerUuid(), record.payloadJson()), client);
                     }
                     replayedFromHistory = true;
                 } catch (Exception ex) {
                     LOGGER.log(Level.WARNING, "Failed to replay chart-event history from DB", ex);
                     recordHistoryGapMetric(facilityId);
-                    sendReplayGapEvent(context, client);
+                    sendReplayGapEvent(facilityId, context, client);
                 }
             }
             if (!replayedFromHistory) {
@@ -153,9 +156,9 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
                             new Object[]{facilityId, clientUuid, replayAfter, oldestHistoryId}
                     );
                     recordHistoryGapMetric(facilityId);
-                    sendReplayGapEvent(context, client);
+                    sendReplayGapEvent(facilityId, context, client);
                 }
-                context.replayHistory(replayAfter, client, payload -> sendEvent(context, payload, client));
+                context.replayHistory(replayAfter, client, payload -> sendEvent(facilityId, context, payload, client));
             }
         }
     }
@@ -166,7 +169,7 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
     public void unregister(String facilityId, SseEventSink sink) {
         FacilityContext context = facilityContexts.get(facilityId);
         if (context != null) {
-            context.removeClient(sink);
+            removeClient(facilityId, context, sink);
         }
     }
 
@@ -180,8 +183,6 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         if (facilityId == null) {
             return;
         }
-        FacilityContext context = facilityContexts.computeIfAbsent(facilityId, id -> new FacilityContext());
-        registerHistoryGauge(facilityId, context);
 
         String json = toJson(event);
         if (json == null) {
@@ -210,13 +211,20 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
             sequence.updateAndGet(current -> Math.max(current, assignedEventId));
         }
 
+        FacilityContext context = facilityContexts.get(facilityId);
+        if (context == null || context.hasNoClients()) {
+            cleanupFacilityContextIfIdle(facilityId, context);
+            return;
+        }
+
         SsePayload payload = new SsePayload(assignedEventId, event.getIssuerUUID(), json);
         context.appendHistory(payload);
+        updateRetainedSpanGauge(facilityId, context.getRetainedSpan());
 
         if (!persisted && historyRepository != null && context.markHistoryGapNotified()) {
             recordHistoryGapMetric(facilityId);
             for (SseClient client : context.clients) {
-                sendReplayGapEvent(context, client);
+                sendReplayGapEvent(facilityId, context, client);
             }
         } else if (persisted) {
             context.resetHistoryGapNotified();
@@ -224,18 +232,53 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
 
         for (SseClient client : context.clients) {
             if (client.sink.isClosed()) {
-                context.removeClient(client.sink);
+                removeClient(facilityId, context, client.sink);
                 continue;
             }
             if (payload.issuerUuid != null && payload.issuerUuid.equals(client.clientUuid)) {
                 continue;
             }
-            sendEvent(context, payload, client);
+            sendEvent(facilityId, context, payload, client);
+        }
+        cleanupFacilityContextIfIdle(facilityId, context);
+    }
+
+    private void registerHistoryGauge(String facilityId, double retainedSpan) {
+        if (meterRegistry == null || facilityId == null || facilityId.isBlank()) {
+            return;
+        }
+        AtomicLong valueHolder = retainedSpanGauges.computeIfAbsent(facilityId, ignored -> new AtomicLong());
+        valueHolder.set((long) retainedSpan);
+        if (!meterRegistry.find(HISTORY_RETAINED_GAUGE).tag("facility", facilityId).meters().isEmpty()) {
+            return;
+        }
+        Gauge.builder(HISTORY_RETAINED_GAUGE, valueHolder, AtomicLong::doubleValue)
+                .description("Difference between latest and oldest SSE chart-event history IDs")
+                .tag("facility", facilityId)
+                .strongReference(true)
+                .register(meterRegistry);
+    }
+
+    private void updateRetainedSpanGauge(String facilityId, double retainedSpan) {
+        registerHistoryGauge(facilityId, retainedSpan);
+        AtomicLong valueHolder = retainedSpanGauges.get(facilityId);
+        if (valueHolder != null) {
+            valueHolder.set((long) retainedSpan);
         }
     }
 
-    private void registerHistoryGauge(String facilityId, FacilityContext context) {
-        context.registerGaugeIfNecessary(meterRegistry, facilityId);
+    private void removeRetainedGauge(String facilityId) {
+        if (meterRegistry == null || facilityId == null || facilityId.isBlank()) {
+            return;
+        }
+        AtomicLong valueHolder = retainedSpanGauges.remove(facilityId);
+        if (valueHolder != null) {
+            valueHolder.set(0L);
+        }
+        meterRegistry.find(HISTORY_RETAINED_GAUGE)
+                .tag("facility", facilityId)
+                .meters()
+                .forEach(this::removeMeterSafely);
     }
 
     private void recordHistoryGapMetric(String facilityId) {
@@ -245,7 +288,7 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         meterRegistry.counter(HISTORY_GAP_COUNTER, "facility", facilityId).increment();
     }
 
-    private void sendEvent(FacilityContext context, SsePayload payload, SseClient client) {
+    private void sendEvent(String facilityId, FacilityContext context, SsePayload payload, SseClient client) {
         if (client == null || client.sink.isClosed()) {
             return;
         }
@@ -261,12 +304,12 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         stage.whenComplete((ignored, throwable) -> {
             if (throwable != null) {
                 LOGGER.log(Level.FINE, "SSE sink send failed, removing client", throwable);
-                context.removeClient(client.sink);
+                removeClient(facilityId, context, client.sink);
             }
         });
     }
 
-    private void sendReplayGapEvent(FacilityContext context, SseClient client) {
+    private void sendReplayGapEvent(String facilityId, FacilityContext context, SseClient client) {
         if (client == null || client.sink.isClosed()) {
             return;
         }
@@ -281,9 +324,27 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         stage.whenComplete((ignored, throwable) -> {
             if (throwable != null) {
                 LOGGER.log(Level.FINE, "SSE sink send failed, removing client", throwable);
-                context.removeClient(client.sink);
+                removeClient(facilityId, context, client.sink);
             }
         });
+    }
+
+    private void removeClient(String facilityId, FacilityContext context, SseEventSink sink) {
+        if (context == null || sink == null) {
+            return;
+        }
+        context.removeClient(sink);
+        cleanupFacilityContextIfIdle(facilityId, context);
+    }
+
+    private void cleanupFacilityContextIfIdle(String facilityId, FacilityContext context) {
+        if (facilityId == null || facilityId.isBlank() || context == null || !context.hasNoClients()) {
+            return;
+        }
+        if (facilityContexts.remove(facilityId, context)) {
+            context.clearHistory();
+            removeRetainedGauge(facilityId);
+        }
     }
 
     private String toJson(ChartEventModel event) {
@@ -323,12 +384,35 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         }
     }
 
+    int facilityContextCount() {
+        return facilityContexts.size();
+    }
+
+    boolean hasFacilityContext(String facilityId) {
+        return facilityContexts.containsKey(facilityId);
+    }
+
+    boolean hasRetainedGauge(String facilityId) {
+        return meterRegistry != null
+                && !meterRegistry.find(HISTORY_RETAINED_GAUGE).tag("facility", facilityId).meters().isEmpty();
+    }
+
+    private void removeMeterSafely(Meter meter) {
+        if (meterRegistry == null || meter == null) {
+            return;
+        }
+        try {
+            meterRegistry.remove(meter);
+        } catch (UnsupportedOperationException ignore) {
+            // WildFly Micrometer may not support meter removal.
+        }
+    }
+
     private static final class FacilityContext {
 
         private final CopyOnWriteArrayList<SseClient> clients = new CopyOnWriteArrayList<>();
         private final ConcurrentLinkedDeque<SsePayload> history = new ConcurrentLinkedDeque<>();
         private final AtomicLong latestSequenceId = new AtomicLong(-1L);
-        private final AtomicBoolean gaugeRegistered = new AtomicBoolean();
         private final AtomicBoolean historyGapNotified = new AtomicBoolean();
 
         void addClient(SseClient client) {
@@ -338,6 +422,10 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         void removeClient(SseEventSink sink) {
             clients.removeIf(client -> client.sink.equals(sink));
             closeQuietly(sink);
+        }
+
+        boolean hasNoClients() {
+            return clients.isEmpty();
         }
 
         void appendHistory(SsePayload payload) {
@@ -387,25 +475,17 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
             return oldest >= 0 && lastEventId < oldest;
         }
 
-        void registerGaugeIfNecessary(MeterRegistry registry, String facilityId) {
-            if (registry == null) {
-                return;
-            }
-            if (!gaugeRegistered.compareAndSet(false, true)) {
-                return;
-            }
-            Gauge.builder(HISTORY_RETAINED_GAUGE, this, FacilityContext::getRetainedSpan)
-                    .description("Difference between latest and oldest SSE chart-event history IDs")
-                    .tag("facility", facilityId)
-                    .strongReference(true)
-                    .register(registry);
-        }
-
         boolean markHistoryGapNotified() {
             return historyGapNotified.compareAndSet(false, true);
         }
 
         void resetHistoryGapNotified() {
+            historyGapNotified.set(false);
+        }
+
+        void clearHistory() {
+            history.clear();
+            latestSequenceId.set(-1L);
             historyGapNotified.set(false);
         }
 

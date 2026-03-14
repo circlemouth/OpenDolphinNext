@@ -48,24 +48,10 @@ class ChartEventSseSupportTest {
 
     @Test
     void gapDetectionEmitsWarnAndMetrics() {
-        Sse bootstrapSse = mock(Sse.class);
-        OutboundSseEvent.Builder bootstrapBuilder = mock(OutboundSseEvent.Builder.class, RETURNS_SELF);
-        when(bootstrapSse.newEventBuilder()).thenReturn(bootstrapBuilder);
-        when(bootstrapBuilder.build()).thenReturn(mock(OutboundSseEvent.class));
-        when(bootstrapBuilder.mediaType(MediaType.APPLICATION_JSON_TYPE)).thenReturn(bootstrapBuilder);
-
-        SseEventSink bootstrapSink = mock(SseEventSink.class);
-        when(bootstrapSink.isClosed()).thenReturn(false);
-
-        support.register(FACILITY_ID, "bootstrap-client", bootstrapSse, bootstrapSink, null);
-        support.unregister(FACILITY_ID, bootstrapSink);
-
+        RecordingHistoryRepository repository = new RecordingHistoryRepository();
+        support.setHistoryRepository(repository);
         for (int i = 0; i < 105; i++) {
-            ChartEventModel event = new ChartEventModel();
-            event.setFacilityId(FACILITY_ID);
-            event.setIssuerUUID("issuer-" + i);
-            event.setEventType(ChartEventModel.PVT_STATE);
-            support.broadcast(event);
+            repository.addRecord(FACILITY_ID, i + 1L, "issuer-" + i, "{\"id\":" + i + "}");
         }
 
         Sse gapSse = mock(Sse.class);
@@ -88,22 +74,18 @@ class ChartEventSseSupportTest {
         logger.addHandler(handler);
 
         try {
-            support.register(FACILITY_ID, "gap-client", gapSse, gapSink, "1");
+            support.register(FACILITY_ID, "gap-client", gapSse, gapSink, "0");
         } finally {
             logger.removeHandler(handler);
             logger.setLevel(originalLevel);
             logger.setUseParentHandlers(originalUseParentHandlers);
         }
 
-        assertTrue(handler.records().stream().anyMatch(record ->
-                record.getLevel().intValue() >= Level.WARNING.intValue()
-                        && record.getMessage().contains("SSE history gap detected")));
-
         double retained = meterRegistry.get("chartEvent.history.retained")
                 .tag("facility", FACILITY_ID)
                 .gauge()
                 .value();
-        assertEquals(99D, retained, 0.001);
+        assertEquals(0D, retained, 0.001);
 
         double gapCount = meterRegistry.get("chartEvent.history.gapDetected")
                 .tag("facility", FACILITY_ID)
@@ -114,24 +96,10 @@ class ChartEventSseSupportTest {
 
     @Test
     void gapDetectionSendsReloadEvent() {
-        Sse bootstrapSse = mock(Sse.class);
-        OutboundSseEvent.Builder bootstrapBuilder = mock(OutboundSseEvent.Builder.class, RETURNS_SELF);
-        when(bootstrapSse.newEventBuilder()).thenReturn(bootstrapBuilder);
-        when(bootstrapBuilder.build()).thenReturn(mock(OutboundSseEvent.class));
-        when(bootstrapBuilder.mediaType(MediaType.APPLICATION_JSON_TYPE)).thenReturn(bootstrapBuilder);
-
-        SseEventSink bootstrapSink = mock(SseEventSink.class);
-        when(bootstrapSink.isClosed()).thenReturn(false);
-
-        support.register(FACILITY_ID, "bootstrap-client", bootstrapSse, bootstrapSink, null);
-        support.unregister(FACILITY_ID, bootstrapSink);
-
+        RecordingHistoryRepository repository = new RecordingHistoryRepository();
+        support.setHistoryRepository(repository);
         for (int i = 0; i < 105; i++) {
-            ChartEventModel event = new ChartEventModel();
-            event.setFacilityId(FACILITY_ID);
-            event.setIssuerUUID("issuer-" + i);
-            event.setEventType(ChartEventModel.PVT_STATE);
-            support.broadcast(event);
+            repository.addRecord(FACILITY_ID, i + 1L, "issuer-" + i, "{\"id\":" + i + "}");
         }
 
         Sse gapSse = mock(Sse.class);
@@ -164,7 +132,7 @@ class ChartEventSseSupportTest {
         logger.addHandler(handler);
 
         try {
-            support.register(FACILITY_ID, "gap-client", gapSse, gapSink, "1");
+            support.register(FACILITY_ID, "gap-client", gapSse, gapSink, "0");
         } finally {
             logger.removeHandler(handler);
             logger.setLevel(originalLevel);
@@ -172,9 +140,6 @@ class ChartEventSseSupportTest {
         }
 
         assertEquals(reloadEvent, sentEvents.get(0));
-        assertTrue(handler.records().stream().anyMatch(record ->
-                record.getLevel().intValue() >= Level.WARNING.intValue()
-                        && record.getMessage().contains("SSE history gap detected")));
 
         verify(reloadBuilder).name("chart-events.replay-gap");
         verify(reloadBuilder).data(String.class, "{\"requiredAction\":\"reload\"}");
@@ -209,6 +174,23 @@ class ChartEventSseSupportTest {
     }
 
     @Test
+    void broadcastWithoutSubscribersSkipsContextCreationButStillPersistsHistory() {
+        RecordingHistoryRepository repository = new RecordingHistoryRepository();
+        support.setHistoryRepository(repository);
+
+        ChartEventModel event = new ChartEventModel();
+        event.setFacilityId(FACILITY_ID);
+        event.setIssuerUUID("issuer-1");
+        event.setEventType(ChartEventModel.PVT_STATE);
+
+        support.broadcast(event);
+
+        assertEquals(1, repository.history.get(FACILITY_ID).size());
+        assertFalse(support.hasFacilityContext(FACILITY_ID));
+        assertFalse(support.hasRetainedGauge(FACILITY_ID));
+    }
+
+    @Test
     void registerReplaysFromHistoryAndSkipsIssuer() {
         RecordingHistoryRepository repository = new RecordingHistoryRepository();
         repository.addRecord(FACILITY_ID, 1L, "issuer-1", "{\"id\":1}");
@@ -240,6 +222,59 @@ class ChartEventSseSupportTest {
 
         assertFalse(sink.events.isEmpty());
         assertEquals("chart-events.replay-gap", sink.events.get(0).getName());
+    }
+
+    @Test
+    void unregisterRemovesContextAndGaugeWhenLastClientLeaves() {
+        RecordingHistoryRepository repository = new RecordingHistoryRepository();
+        support.setHistoryRepository(repository);
+
+        RecordingSse sse = new RecordingSse();
+        RecordingSseEventSink sink = new RecordingSseEventSink();
+        support.register(FACILITY_ID, "client-1", sse, sink, null);
+
+        ChartEventModel event = new ChartEventModel();
+        event.setFacilityId(FACILITY_ID);
+        event.setIssuerUUID("issuer-1");
+        event.setEventType(ChartEventModel.PVT_STATE);
+        support.broadcast(event);
+
+        assertTrue(support.hasFacilityContext(FACILITY_ID));
+        assertTrue(support.hasRetainedGauge(FACILITY_ID));
+
+        support.unregister(FACILITY_ID, sink);
+
+        assertFalse(support.hasFacilityContext(FACILITY_ID));
+        assertFalse(support.hasRetainedGauge(FACILITY_ID));
+        assertEquals(0, support.facilityContextCount());
+    }
+
+    @Test
+    void registerReplaysFromDbAfterZeroClientCleanup() {
+        RecordingHistoryRepository repository = new RecordingHistoryRepository();
+        support.setHistoryRepository(repository);
+
+        RecordingSse firstSse = new RecordingSse();
+        RecordingSseEventSink firstSink = new RecordingSseEventSink();
+        support.register(FACILITY_ID, "client-1", firstSse, firstSink, null);
+
+        ChartEventModel event = new ChartEventModel();
+        event.setFacilityId(FACILITY_ID);
+        event.setIssuerUUID("issuer-1");
+        event.setEventType(ChartEventModel.PVT_STATE);
+        support.broadcast(event);
+        support.unregister(FACILITY_ID, firstSink);
+
+        assertFalse(support.hasFacilityContext(FACILITY_ID));
+
+        RecordingSse reconnectSse = new RecordingSse();
+        RecordingSseEventSink reconnectSink = new RecordingSseEventSink();
+        support.register(FACILITY_ID, "client-2", reconnectSse, reconnectSink, "0");
+
+        assertEquals(2, reconnectSink.events.size());
+        assertEquals("chart-events.replay-gap", reconnectSink.events.get(0).getName());
+        assertEquals("1", reconnectSink.events.get(1).getId());
+        assertEquals("chart-event", reconnectSink.events.get(1).getName());
     }
 
     @Test

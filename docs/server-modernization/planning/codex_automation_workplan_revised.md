@@ -526,7 +526,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 - 次:
   - P9-02
 
-### [ ] P9-02 facility ごとの context 保持と cleanup を整理する
+### [x] P9-02 facility ごとの context 保持と cleanup を整理する
 - 対象:
   - `ReceptionRealtimeSseSupport`
   - `ChartEventSseSupport`
@@ -537,18 +537,16 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - strong reference な gauge 登録を見直す
 - 完了条件:
   - 施設コンテキストが増え続ける前提が緩和されている
-- 2026-03-14 (RUN_ID=20260314T110104Z, blocker):
-  - blocker の内容:
-    - facility context を「client 0 件になった時点で捨ててよいか」と「履歴を何分/何件維持すべきか」が、`ChartEventSseSupport` と `ReceptionRealtimeSseSupport` で異なり、共通 cleanup 条件をコードと既存文書だけでは合理的に確定できない
-  - 根拠となるファイルまたは不足情報:
-    - `server-modernized/src/main/java/open/dolphin/rest/ChartEventSseSupport.java` は DB 履歴 (`ChartEventHistoryRepository`) を replay 正本にできる一方、`server-modernized/src/main/java/open/dolphin/rest/ReceptionRealtimeSseSupport.java` は in-memory history のみで replay している
-    - `docs/server-modernization/reception-realtime-sync-20260219.md` と既存コードには、facility context / history を idle 時にいつ破棄してよいか、client 0 件時の replay 保証をどこまで維持すべきかの明文化がない
-  - その場で止める理由:
-    - cleanup 条件を推測で入れると、`Last-Event-ID` 再接続時の replay 契約や reception realtime の取りこぼし許容範囲を勝手に変えてしまうため
-  - 人間が次に判断すべきこと:
-    - `ChartEvent` と `ReceptionRealtime` それぞれについて、client 0 件時に context/history を破棄してよい条件、維持期間、replay 保証の有無を文書で確定すること
+- 2026-03-15 (RUN_ID=20260314T110104Z):
+  - `server-modernized/src/main/java/open/dolphin/rest/ChartEventSseSupport.java` を、DB 履歴を replay 正本として扱う構成へ整理し、`broadcast()` は購読中 client がいない facility の context を新規作成しないよう変更した
+  - `ChartEvent` の facility context は client 0 件時に破棄し、in-memory history も同時に消すよう変更した。再接続時の replay は `Last-Event-ID` を使って DB から取得する
+  - `chartEvent.history.retained` gauge は `FacilityContext` 強参照をやめ、facility 単位の値 holder へ切り替えたうえで、context cleanup 時に meter remove する構成へ変更した
+  - `server-modernized/src/main/java/open/dolphin/rest/ReceptionRealtimeSseSupport.java` は、購読中 client がいる間だけ facility context と in-memory history を保持し、client 0 件時に即 cleanup する構成へ変更した
+  - `ReceptionRealtime` は cleanup 後の再接続で `reception.replay-gap` を返して一覧再取得へ倒し、`publishReceptionUpdate()` では購読中 client がいない facility の context を新規作成しない契約へ整理した
+  - `server-modernized/src/test/java/open/dolphin/rest/ChartEventSseSupportTest.java` と `server-modernized/src/test/java/open/dolphin/rest/ReceptionRealtimeSseSupportTest.java` を更新し、zero-client cleanup 後の DB replay / replay-gap / context・gauge 非残留を固定した
+  - `docs/server-modernization/reception-realtime-sync-20260219.md` に、ReceptionRealtime の cleanup / replay 契約を追記した
 - 次:
-  - P9-02（blocker 解消待ち）
+  - P9-03
 
 ### [ ] P9-03 書き込みの多いリスト構造を見直す
 - 対象:
