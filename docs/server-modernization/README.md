@@ -1,22 +1,25 @@
 # Server-Modernization ドキュメントハブ（現行）
 
-- 更新日: 2026-03-12
-- RUN_ID: 20260312T060136Z
+- 更新日: 2026-03-15
+- RUN_ID: 20260315T020039Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
 
 ## 当面の作業計画
+- `docs/server-modernization/planning/codex_automation_workplan_revised.md`
+- server modernization automation の進捗判定と次作業決定の第一正本。
 - `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
-- `server-modernized` の当面作業を順番に進める際の現行 WBS。完了管理は ☐ / ☑ で更新する。
+- 上記正本を補助する参考 WBS。背景、依存関係、全体像、切替後運用タスクを確認するときに参照する。
 - `docs/DEVELOPMENT_STATUS.md`、`AGENTS.md`、最新のユーザー/マネージャー指示と矛盾する場合はそちらを優先する。
 
 ## 参照優先順位（Server-Modernization領域）
 1. `docs/DEVELOPMENT_STATUS.md`
 2. `AGENTS.md` / `GEMINI.md`
 3. 本ファイル
-4. `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
-5. 目的別ドキュメント
+4. `docs/server-modernization/planning/codex_automation_workplan_revised.md`
+5. `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
+6. 目的別ドキュメント
 
 ## 目的別ドキュメント（現行）
 ### API / 仕様
@@ -99,7 +102,7 @@
 - `docs/modernization/p10-04-load-fault-tests.md`（P10-04: 主要経路の負荷試験・障害試験）
 - `docs/modernization/p10-05-cutover-checklist-modernized.md`（P10-05: モダナイズ版基準の本番切替チェックリスト）
 - `docs/modernization/p10-06-cutover-execution-blocker.md`（P10-06: 本番切替実施のブロッカー記録）
-- `docs/modernization/p10-06-cutover-execution-blocker.md`（P10-06: 本番切替実施ブロッカー記録）
+- `docs/modernization/p10-07-post-cutover-monitoring-blocker.md`（P10-07: 切替後集中監視の blocker と次判断）
 - `docs/modernization/p11-01-legacy-config-inventory.md`（P11-01: 旧設定読み込み経路の棚卸し）
 - `docs/modernization/p11-02-config-priority-matrix.md`（P11-02: ORCA/attachment/license/runtime state の優先順位整理）
 - `docs/modernization/p12-02-next-modernization-themes.md`（P12-02: 次段 modernization テーマ整理）

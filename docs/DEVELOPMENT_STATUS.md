@@ -1,9 +1,9 @@
-# 開発状況（単一参照, 更新日: 2026-03-13）
+# 開発状況（単一参照, 更新日: 2026-03-15）
 
 ## 現行ステータス
 - Phase2 開発ドキュメントは **Legacy/Archive（参照専用）**。Phase2 を現行フェーズとして扱わない。
 - 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`。
-- `server-modernized` の当面作業は `docs/server-modernization/planning/server_modernization_wbs_detailed.md` を実行順付きの作業根拠として追跡する。
+- `server-modernized` の automation 進捗判定は `docs/server-modernization/planning/codex_automation_workplan_revised.md` を第一正本とし、`docs/server-modernization/planning/server_modernization_wbs_detailed.md` は参考資料として扱う。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。
 - 現行の作業内容はフェーズ名では判断せず、最新のタスク指示/チケット/マネージャー指示に従う。
 
@@ -11,10 +11,11 @@
 1. `docs/DEVELOPMENT_STATUS.md`（本ファイル）
 2. `AGENTS.md` / `GEMINI.md`（共通ルールと制約）
 3. 現行ハブ: `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`
-4. 当面の server-modernized 作業WBS: `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
-5. 環境手順: `web-client/README.md` と `setup-modernized-env.sh`
-6. Web クライアント設計: `docs/web-client/`（`planning/phase2/` と `docs/web-client/README.md` は Legacy）
-7. サーバーモダナイズ: `docs/server-modernization/`（`phase2/` と `docs/server-modernized/phase2/` は Legacy）
+4. automation 進捗正本: `docs/server-modernization/planning/codex_automation_workplan_revised.md`
+5. 当面の server-modernized 作業参考WBS: `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
+6. 環境手順: `web-client/README.md` と `setup-modernized-env.sh`
+7. Web クライアント設計: `docs/web-client/`（`planning/phase2/` と `docs/web-client/README.md` は Legacy）
+8. サーバーモダナイズ: `docs/server-modernization/`（`phase2/` と `docs/server-modernized/phase2/` は Legacy）
 
 ## Legacy 参照（Phase2）
 - ロールオフ方針: `docs/server-modernization/phase2/PHASE2_DOCS_ROLLOFF.md`
@@ -27,7 +28,7 @@
 - ORCA 公式仕様の firecrawl 取得物は `docs/server-modernization/operations/ORCA_FIRECRAWL_INDEX.md` を入口に参照する（非Legacy 側の索引）。
 - ORCA 接続情報は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` を正本として運用する（Phase2 版は Legacy）。
 - ORCA オーダー仕様の実装要件は `docs/server-modernization/ORCA-order-system-rule.md` を参照する。
-- `server-modernized` の当面作業を順番に進める場合は `docs/server-modernization/planning/server_modernization_wbs_detailed.md` を参照し、完了更新は WBS の ☐ / ☑ を用いて管理する。
+- `server-modernized` の automation 実行では `docs/server-modernization/planning/codex_automation_workplan_revised.md` を進捗判定の第一正本とし、未完了タスクが残る間は `docs/server-modernization/planning/server_modernization_wbs_detailed.md` のチェック状態で完了判定しない。
 - server-modernized の Mockito 利用テスト実行方針は **JDK25（既定）** を第一選択とし、実行環境差異で attach が不安定な場合のみ **JDK21 + byte-buddy-agent** を fallback とする（詳細は `docs/server-modernization/README.md` のテスト実行方針を参照）。
 - module 永続化の現行方針は `beanJson` 優先ではなく、**新規書込を `beanJson` のみに寄せる** こととする。`beanBytes` は旧データ読込 fallback 専用として扱い、新規二重保存は行わない。
 - module 永続化は将来的に `beanJson` 専用化を目標とし、`beanBytes` の PostgreSQL `oid` 回帰は採らない。互換を切る場合も `oid` ではなく JSON 系へ統一する。
@@ -36,6 +37,11 @@
 - `docs/server-modernized_60117/` 配下は作業履歴の可能性があるため、現時点では **保全** する（判断保留）。
 
 ## 実施記録（最新）
+- 2026-03-15: server modernization automation の進捗正本と `P10-07` 残件を再確認し、切替後集中監視の blocker を文書化（RUN_ID=20260315T020039Z）。
+  - 判定: `docs/server-modernization/planning/codex_automation_workplan_revised.md` の全タスク完了を確認。automation の次回先頭タスクは参考 WBS 側の `P10-07`「切替後の集中監視と是正を行う」。
+  - blocker: `P10-07` の完了条件は「切替後 3 日の運用監視 / エラーログ / 問い合わせ / ORCA 連携結果」に基づく集中監視記録だが、現状の証跡は validation 環境での `P10-06` 稼働確認までであり、切替後実績のログ・問い合わせ・是正履歴が存在しないため、この RUN では完了判定不能。
+  - 反映: `docs/modernization/p10-07-post-cutover-monitoring-blocker.md` を新規作成し、`docs/server-modernization/planning/server_modernization_wbs_detailed.md` のブロッカー欄と `docs/server-modernization/README.md` の進捗参照先を更新。
+  - 矛盾整理: 本ファイルおよび `docs/server-modernization/README.md` に残っていた「WBS を進捗判定の第一基準とする」記述を、`codex_automation_workplan_revised.md` 優先へ補正。
 - 2026-03-13: P10-06「本番切替を実施する（モダナイズ版稼働確認）」を完了し、主要業務疎通と監視確認を validation 環境で実測した（RUN_ID=20260313T054324Z）。
   - 修正（PVT/カルテ/PVT一覧）: `server-modernized/src/main/java/open/dolphin/rest/PVTResource.java` を serialize mapper 基準へ変更して `LocalDateTime` 復元を補正し、`server-modernized/src/main/java/open/dolphin/session/KarteServiceBean.java` / `server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java` の query parameter を `LocalDateTime` bind へ統一。あわせて Hibernate 6 で無効だった `SchemaModel` / `AttachmentModel` の HQL property 名を entity field (`creator`, `karte`) に補正し、attachment-light で module query を不要実行しないよう整理。
   - 修正（整合性シール）: `server-modernized/src/main/java/open/dolphin/security/integrity/DocumentIntegrityService.java` で新規 `DocumentIntegrityEntity` の `persist` タイミングを後ろへ移し、`seal_version` null による `/orca/order/bundles` rollback を解消。

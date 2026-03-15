@@ -695,6 +695,14 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - `docs/modernization/p12-02-next-modernization-themes.md` を追加し、`P9-03`〜`P12-01` の実施結果を踏まえた次段テーマを「設定正本の一本化」「ファイル state / WildFly 固定パス fallback の縮退」「文書と運用番号の整流化」の 3 本に整理した
   - 人間レビューが先に判断すべき事項として、`custom.properties` 撤去の扱い、attachment 設定の正本、license / push dedupe state の移管先、legacy `server/` 配下の追跡済み生成物整理を明記した
   - `docs/server-modernization/README.md` に次段テーマ整理文書への導線を追加した
+- 2026-03-15 (RUN_ID=20260315T030038Z):
+  - `codex_automation_workplan_revised.md` 全体を再確認し、未完了タスクが残っていないことを確認した。automation の進捗判定は引き続き本書を第一正本とし、参考 WBS 側の未完了状態だけでは新規実装タスクへ進めない
+  - 参考 WBS に残る `P10-07` は切替後 3 日監視の運用タスクであり、既存コード・既存資料だけでは完了条件を満たせない blocker であることを再確認した。詳細は `docs/modernization/p10-07-post-cutover-monitoring-blocker.md` を参照する
+  - 次回 automation は新規コード変更ではなく、人間レビューまたは監視証跡の投入有無を先に確認する
+- 2026-03-15 (RUN_ID=20260315T050042Z):
+  - 今回の automation 実行でも `codex_automation_workplan_revised.md` を先頭から再確認し、未完了タスクが存在しないことを再確認した
+  - `common` / `server-modernized` 配下に対して新規に着手できる未完了タスクはなく、`P10-07` blocker を解消するための切替後監視証跡も追加されていないため、コード変更は行わなかった
+  - 次回 automation は引き続き、人間レビューまたは `P10-07` を完了判定できる監視ログ・問い合わせ履歴・ORCA 連携結果の投入有無を先に確認する
 - 次:
   - 人間レビュー待ち
 
