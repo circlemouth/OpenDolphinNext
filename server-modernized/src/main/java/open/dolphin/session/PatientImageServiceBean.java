@@ -187,7 +187,7 @@ public class PatientImageServiceBean {
         }
         try {
             Object[] row = em.createQuery(
-                            "select a.id, a.fileName, a.contentType, a.contentSize, a.uri, a.digest " +
+                            "select a.id, a.fileName, a.contentType, a.contentSize, a.uri, a.digest, a.contentBytes " +
                                     "from AttachmentModel a " +
                                     "where a.id=:id " +
                                     "and a.document.karte.patient.facilityId=:fid " +
@@ -221,7 +221,7 @@ public class PatientImageServiceBean {
     }
 
     private DownloadHandle toDownloadHandle(Object[] row) {
-        if (row == null || row.length < 6) {
+        if (row == null || row.length < 7) {
             return null;
         }
         long attachmentId = row[0] instanceof Number value ? value.longValue() : 0L;
@@ -230,7 +230,8 @@ public class PatientImageServiceBean {
         long contentSize = row[3] instanceof Number value ? value.longValue() : 0L;
         String uri = row[4] != null ? row[4].toString() : null;
         String digest = row[5] != null ? row[5].toString() : null;
-        return new DownloadHandle(attachmentId, fileName, contentType, contentSize, uri, digest);
+        byte[] contentBytes = row[6] instanceof byte[] value ? value : null;
+        return new DownloadHandle(attachmentId, fileName, contentType, contentSize, uri, digest, contentBytes);
     }
 
     public record DownloadHandle(long attachmentId,
@@ -238,7 +239,8 @@ public class PatientImageServiceBean {
                                  String contentType,
                                  long contentSize,
                                  String uri,
-                                 String digest) {}
+                                 String digest,
+                                 byte[] contentBytes) {}
 
     public record UploadResult(long documentId, long attachmentId, Date createdAt) {}
 }

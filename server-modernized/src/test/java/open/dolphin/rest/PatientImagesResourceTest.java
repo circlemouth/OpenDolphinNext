@@ -210,7 +210,7 @@ class PatientImagesResourceTest {
     void download_returnsNoStoreHeaders() throws Exception {
         byte[] bytes = new byte[] {1, 2, 3};
         PatientImageServiceBean.DownloadHandle handle = new PatientImageServiceBean.DownloadHandle(
-                10L, "test.png", "image/png", bytes.length, "s3://test-bucket/path/test.png", "digest-1");
+                10L, "test.png", "image/png", bytes.length, "s3://test-bucket/path/test.png", "digest-1", null);
         when(patientImageServiceBean.getImageForDownload("F001", "P001", 10L)).thenReturn(handle);
         doAnswer(invocation -> {
             OutputStream out = invocation.getArgument(1, OutputStream.class);
@@ -241,10 +241,42 @@ class PatientImagesResourceTest {
     }
 
     @Test
+    void download_returnsInlineBytesWhenUriIsMissing() throws Exception {
+        byte[] bytes = new byte[] {4, 5, 6, 7};
+        PatientImageServiceBean.DownloadHandle handle = new PatientImageServiceBean.DownloadHandle(
+                12L, "inline.png", "image/png", bytes.length, null, "digest-inline", bytes);
+        when(patientImageServiceBean.getImageForDownload("F001", "P001", 12L)).thenReturn(handle);
+        doAnswer(invocation -> {
+            OutputStream out = invocation.getArgument(1, OutputStream.class);
+            try {
+                out.write(invocation.getArgument(0, open.dolphin.infomodel.AttachmentModel.class).getContentBytes());
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+            return null;
+        }).when(attachmentStorageManager).writeBinaryTo(any(), any(OutputStream.class));
+
+        Response actual = resource.download("P001", 12L);
+
+        assertThat(actual.getStatus()).isEqualTo(200);
+        assertThat(actual.getHeaderString("Content-Length")).isEqualTo("4");
+        assertThat(actual.getHeaderString("Content-Disposition")).isEqualTo("attachment; filename=\"inline.png\"");
+        assertThat(toBytes(actual.getEntity())).containsExactly(bytes);
+        verify(attachmentStorageManager).writeBinaryTo(argThat(attachment ->
+                        attachment.getId() == 12L
+                                && attachment.getUri() == null
+                                && "inline.png".equals(attachment.getFileName())
+                                && attachment.getContentSize() == 4L
+                                && attachment.getContentBytes() != null
+                                && java.util.Arrays.equals(attachment.getContentBytes(), bytes)),
+                any(OutputStream.class));
+    }
+
+    @Test
     void download_returnsPdfPayloadWithNoStoreHeaders() throws Exception {
         byte[] bytes = "%PDF-1.4\nmock\n".getBytes(StandardCharsets.UTF_8);
         PatientImageServiceBean.DownloadHandle handle = new PatientImageServiceBean.DownloadHandle(
-                11L, "report.pdf", "application/pdf", bytes.length, "s3://test-bucket/path/report.pdf", "digest-2");
+                11L, "report.pdf", "application/pdf", bytes.length, "s3://test-bucket/path/report.pdf", "digest-2", null);
         when(patientImageServiceBean.getImageForDownload("F001", "P001", 11L)).thenReturn(handle);
         doAnswer(invocation -> {
             OutputStream out = invocation.getArgument(1, OutputStream.class);

@@ -388,6 +388,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - `server-modernized/src/main/java/open/dolphin/session/PatientImageServiceBean.java` の download 取得を、`AttachmentModel` entity そのものではなく `id/fileName/contentType/contentSize/uri/digest` だけを返す `DownloadHandle` projection へ変更した
   - `server-modernized/src/main/java/open/dolphin/rest/PatientImagesResource.java` は `DownloadHandle` から stream 用の最小 `AttachmentModel` を組み立てる構成へ寄せ、download 時の不要な document/entity 参照を resource 境界へ持ち上げないよう整理した
   - `server-modernized/src/test/java/open/dolphin/session/PatientImageServiceBeanTest.java` と `server-modernized/src/test/java/open/dolphin/rest/PatientImagesResourceTest.java` を更新し、metadata projection と streaming download の回帰を確認した
+- 2026-03-15 (RUN_ID=20260315T005410Z, 回帰修正):
+  - `server-modernized/src/main/java/open/dolphin/session/PatientImageServiceBean.java` の `DownloadHandle` に nullable な inline binary を追加し、DB モード想定では `uri == null` でも `contentBytes` を carrier として返せるよう整理した
+  - `server-modernized/src/main/java/open/dolphin/rest/PatientImagesResource.java` は、`uri` が空でも inline bytes があれば download を継続し、`image_bytes_missing` は `uri` と inline bytes の両方が欠ける場合だけ返すよう狭めた
+  - `server-modernized/src/test/java/open/dolphin/session/PatientImageServiceBeanTest.java` と `server-modernized/src/test/java/open/dolphin/rest/PatientImagesResourceTest.java` を更新し、DB モード相当の inline download と既存 S3/PDF download 契約を固定した
 - 次:
   - P6-03
 
@@ -545,6 +549,11 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - `ReceptionRealtime` は cleanup 後の再接続で `reception.replay-gap` を返して一覧再取得へ倒し、`publishReceptionUpdate()` では購読中 client がいない facility の context を新規作成しない契約へ整理した
   - `server-modernized/src/test/java/open/dolphin/rest/ChartEventSseSupportTest.java` と `server-modernized/src/test/java/open/dolphin/rest/ReceptionRealtimeSseSupportTest.java` を更新し、zero-client cleanup 後の DB replay / replay-gap / context・gauge 非残留を固定した
   - `docs/server-modernization/reception-realtime-sync-20260219.md` に、ReceptionRealtime の cleanup / replay 契約を追記した
+- 2026-03-15 (RUN_ID=20260315T005410Z, 契約補強):
+  - `server-modernized/src/main/java/open/dolphin/rest/ChartEventSseSupport.java` の retained gauge は meter handle を facility 単位で管理し、cleanup 時に stale gauge が残らないよう削除経路を明示化した
+  - `server-modernized/src/main/java/open/dolphin/rest/ReceptionRealtimeSseSupport.java` に最小の観測点を追加し、接続中だけ in-memory history が存在し、last client cleanup 後は 0 に戻ることをテスト可能にした
+  - `server-modernized/src/test/java/open/dolphin/rest/ChartEventSseSupportTest.java` で cleanup 後に retained gauge meter が残らないことを追加確認し、`server-modernized/src/test/java/open/dolphin/rest/ReceptionRealtimeSseSupportTest.java` で接続中の in-memory replay と cleanup 後の replay-gap 契約を固定した
+  - 今回の範囲では `ServletContextHolder.pvtListMap` と `MeterRegistryProducer` redesign は対象外とし、revised workplan を進捗判定の第一正本として据え置いた
 - 次:
   - P9-03
 

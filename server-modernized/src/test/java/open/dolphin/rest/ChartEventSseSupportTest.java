@@ -247,6 +247,10 @@ class ChartEventSseSupportTest {
         assertFalse(support.hasFacilityContext(FACILITY_ID));
         assertFalse(support.hasRetainedGauge(FACILITY_ID));
         assertEquals(0, support.facilityContextCount());
+        assertTrue(meterRegistry.find("chartEvent.history.retained")
+                .tag("facility", FACILITY_ID)
+                .meters()
+                .isEmpty());
     }
 
     @Test

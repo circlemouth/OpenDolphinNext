@@ -172,7 +172,7 @@ class PatientImageServiceBeanTest {
         when(query.setParameter("pid", "P001")).thenReturn(query);
         when(query.setParameter("rel", PatientImageServiceBean.LINK_RELATION_PATIENT_IMAGE_PHASEA)).thenReturn(query);
         when(query.getSingleResult()).thenReturn(new Object[] {
-                10L, "image.png", "image/png", 123L, "s3://bucket/patient/image.png", "digest-1"
+                10L, "image.png", "image/png", 123L, "s3://bucket/patient/image.png", "digest-1", null
         });
 
         PatientImageServiceBean.DownloadHandle result = service.getImageForDownload("F001", "P001", 10L);
@@ -184,6 +184,30 @@ class PatientImageServiceBeanTest {
         assertThat(result.contentSize()).isEqualTo(123L);
         assertThat(result.uri()).isEqualTo("s3://bucket/patient/image.png");
         assertThat(result.digest()).isEqualTo("digest-1");
+        assertThat(result.contentBytes()).isNull();
+    }
+
+    @Test
+    void getImageForDownload_returnsInlineBytesForDatabaseModeRows() {
+        @SuppressWarnings("unchecked")
+        TypedQuery<Object[]> query = mock(TypedQuery.class);
+        byte[] payload = new byte[] {9, 8, 7};
+        when(em.createQuery(anyString(), eq(Object[].class))).thenReturn(query);
+        when(query.setParameter("id", 11L)).thenReturn(query);
+        when(query.setParameter("fid", "F001")).thenReturn(query);
+        when(query.setParameter("pid", "P001")).thenReturn(query);
+        when(query.setParameter("rel", PatientImageServiceBean.LINK_RELATION_PATIENT_IMAGE_PHASEA)).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(new Object[] {
+                11L, "scan.png", "image/png", 3L, null, "digest-inline", payload
+        });
+
+        PatientImageServiceBean.DownloadHandle result = service.getImageForDownload("F001", "P001", 11L);
+
+        assertThat(result).isNotNull();
+        assertThat(result.attachmentId()).isEqualTo(11L);
+        assertThat(result.uri()).isNull();
+        assertThat(result.digest()).isEqualTo("digest-inline");
+        assertThat(result.contentBytes()).containsExactly(payload);
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

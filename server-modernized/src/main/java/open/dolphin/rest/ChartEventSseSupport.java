@@ -51,7 +51,8 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
     private static final String HISTORY_GAP_COUNTER = "chartEvent.history.gapDetected";
 
     private final Map<String, FacilityContext> facilityContexts = new ConcurrentHashMap<>();
-    private final Map<String, AtomicLong> retainedSpanGauges = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> retainedSpanGaugeValues = new ConcurrentHashMap<>();
+    private final Map<String, Meter> retainedSpanMeters = new ConcurrentHashMap<>();
 
     private final AtomicLong sequence = new AtomicLong();
 
@@ -77,8 +78,11 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
 
     @Inject
     void setMeterRegistry(MeterRegistry meterRegistry) {
+        if (this.meterRegistry != meterRegistry) {
+            retainedSpanMeters.clear();
+        }
         this.meterRegistry = meterRegistry;
-        facilityContexts.forEach((facilityId, context) -> registerHistoryGauge(facilityId, context.getRetainedSpan()));
+        facilityContexts.forEach((facilityId, context) -> updateRetainedSpanGauge(facilityId, context.getRetainedSpan()));
     }
 
     void setHistoryRepository(ChartEventHistoryRepository historyRepository) {
@@ -247,21 +251,22 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         if (meterRegistry == null || facilityId == null || facilityId.isBlank()) {
             return;
         }
-        AtomicLong valueHolder = retainedSpanGauges.computeIfAbsent(facilityId, ignored -> new AtomicLong());
+        AtomicLong valueHolder = retainedSpanGaugeValues.computeIfAbsent(facilityId, ignored -> new AtomicLong());
         valueHolder.set((long) retainedSpan);
-        if (!meterRegistry.find(HISTORY_RETAINED_GAUGE).tag("facility", facilityId).meters().isEmpty()) {
+        if (retainedSpanMeters.containsKey(facilityId)) {
             return;
         }
-        Gauge.builder(HISTORY_RETAINED_GAUGE, valueHolder, AtomicLong::doubleValue)
+        Gauge gauge = Gauge.builder(HISTORY_RETAINED_GAUGE, valueHolder, AtomicLong::doubleValue)
                 .description("Difference between latest and oldest SSE chart-event history IDs")
                 .tag("facility", facilityId)
                 .strongReference(true)
                 .register(meterRegistry);
+        retainedSpanMeters.put(facilityId, gauge);
     }
 
     private void updateRetainedSpanGauge(String facilityId, double retainedSpan) {
         registerHistoryGauge(facilityId, retainedSpan);
-        AtomicLong valueHolder = retainedSpanGauges.get(facilityId);
+        AtomicLong valueHolder = retainedSpanGaugeValues.get(facilityId);
         if (valueHolder != null) {
             valueHolder.set((long) retainedSpan);
         }
@@ -271,9 +276,13 @@ public class ChartEventSseSupport implements ChartEventStreamPublisher {
         if (meterRegistry == null || facilityId == null || facilityId.isBlank()) {
             return;
         }
-        AtomicLong valueHolder = retainedSpanGauges.remove(facilityId);
+        AtomicLong valueHolder = retainedSpanGaugeValues.remove(facilityId);
         if (valueHolder != null) {
             valueHolder.set(0L);
+        }
+        Meter meter = retainedSpanMeters.remove(facilityId);
+        if (meter != null) {
+            removeMeterSafely(meter);
         }
         meterRegistry.find(HISTORY_RETAINED_GAUGE)
                 .tag("facility", facilityId)

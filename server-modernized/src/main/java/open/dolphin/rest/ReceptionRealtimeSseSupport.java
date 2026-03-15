@@ -274,6 +274,11 @@ public class ReceptionRealtimeSseSupport {
         return facilityContexts.containsKey(facilityId);
     }
 
+    int historySize(String facilityId) {
+        FacilityContext context = facilityContexts.get(facilityId);
+        return context != null ? context.historySize() : 0;
+    }
+
     private static final class KeepAliveThreadFactory implements ThreadFactory {
 
         @Override
@@ -345,6 +350,10 @@ public class ReceptionRealtimeSseSupport {
         void clearHistory() {
             history.clear();
             latestSequenceId.set(-1L);
+        }
+
+        int historySize() {
+            return history.size();
         }
 
         private void closeQuietly(SseEventSink sink) {

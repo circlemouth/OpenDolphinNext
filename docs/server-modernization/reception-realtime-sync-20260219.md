@@ -45,5 +45,7 @@
 - facility context と in-memory history は、購読中 client が 1 件以上いる間だけ保持する。
 - client が 0 件になった時点で、facility context と in-memory history は破棄してよい。
 - `publishReceptionUpdate` は、購読中 client がいない facility のために新しい context を作らない。
+- 接続中だけ、現行の `HISTORY_LIMIT` 件ぶんの in-memory replay を許可する。
 - cleanup 後に `Last-Event-ID` 付きで再接続した場合、server-side replay は行わず `reception.replay-gap` を返し、クライアントは一覧再取得へ倒す。
-- 追加の保持時間は設けない。接続中のみ、現行の `HISTORY_LIMIT` 件ぶんの短期再送を許可する。
+- cleanup 済み facility に対しては、publish 時も full context / full history を再作成しない。
+- 追加の保持時間は設けない。

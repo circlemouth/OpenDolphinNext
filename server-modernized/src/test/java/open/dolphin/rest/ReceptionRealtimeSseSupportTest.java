@@ -76,14 +76,37 @@ class ReceptionRealtimeSseSupportTest {
     }
 
     @Test
+    void registerReplaysInMemoryHistoryWhileClientContextIsActive() {
+        RecordingSse bootstrapSse = new RecordingSse();
+        RecordingSseEventSink bootstrapSink = new RecordingSseEventSink();
+        support.register("F001", bootstrapSse, bootstrapSink, null);
+
+        support.publishReceptionUpdate("F001", "2026-02-19", "000001", "01", "RUN-REALTIME-001");
+        support.publishReceptionUpdate("F001", "2026-02-19", "000002", "02", "RUN-REALTIME-002");
+
+        assertEquals(2, support.historySize("F001"));
+
+        RecordingSse reconnectSse = new RecordingSse();
+        RecordingSseEventSink reconnectSink = new RecordingSseEventSink();
+        support.register("F001", reconnectSse, reconnectSink, "1");
+
+        assertFalse(reconnectSink.events.isEmpty());
+        assertEquals("reception.updated", reconnectSink.events.get(0).getName());
+        assertEquals("2", reconnectSink.events.get(0).getId());
+        assertTrue(String.valueOf(reconnectSink.events.get(0).getData()).contains("\"patientId\":\"000002\""));
+    }
+
+    @Test
     void reconnectAfterZeroClientCleanupAlwaysEmitsReplayGap() {
         RecordingSse bootstrapSse = new RecordingSse();
         RecordingSseEventSink bootstrapSink = new RecordingSseEventSink();
         support.register("F001", bootstrapSse, bootstrapSink, null);
         support.publishReceptionUpdate("F001", "2026-02-19", "000001", "02", "RUN-REALTIME-001");
+        assertEquals(1, support.historySize("F001"));
         support.unregister("F001", bootstrapSink);
 
         assertFalse(support.hasFacilityContext("F001"));
+        assertEquals(0, support.historySize("F001"));
 
         RecordingSse reconnectSse = new RecordingSse();
         RecordingSseEventSink reconnectSink = new RecordingSseEventSink();

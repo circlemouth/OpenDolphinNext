@@ -160,7 +160,9 @@ public class PatientImagesResource extends AbstractResource {
                     Map.of("patientId", patientId, "imageId", imageId), null);
         }
 
-        if (handle.uri() == null || handle.uri().isBlank()) {
+        boolean hasUri = handle.uri() != null && !handle.uri().isBlank();
+        boolean hasInlineBytes = handle.contentBytes() != null && handle.contentBytes().length > 0;
+        if (!hasUri && !hasInlineBytes) {
             throw restError(httpServletRequest, Response.Status.INTERNAL_SERVER_ERROR,
                     "image_bytes_missing", "Image bytes are not available",
                     Map.of("patientId", patientId, "imageId", imageId), null);
@@ -202,6 +204,7 @@ public class PatientImagesResource extends AbstractResource {
         attachment.setContentSize(handle.contentSize());
         attachment.setUri(handle.uri());
         attachment.setDigest(handle.digest());
+        attachment.setContentBytes(handle.contentBytes());
         return attachment;
     }
 
