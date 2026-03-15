@@ -83,14 +83,20 @@ public class PVTServiceBean {
     public int addPvt(PatientVisitModel pvt) {
 
         eventServiceBean.ensureInitialized();
+        String fid = prepareIncomingPvt(pvt);
+        synchronizePatientAndAttach(fid, pvt);
+        pvt.setPvtDate(normalizePvtDateForStorage(pvt.getPvtDate()));
+        return registerVisit(fid, pvt);
+    }
 
+    private String prepareIncomingPvt(PatientVisitModel pvt) {
         // 外部連携入力では facilityID が登録値と異なる場合がある。
         // 施設IDを認証にパスしたユーザの施設IDに設定する。
         String fid = pvt.getFacilityId();
         PatientModel patient = pvt.getPatientModel();
         pvt.setFacilityId(fid);
         patient.setFacilityId(fid);
-        
+
         // 1.4との互換性のためdepartmentにも設定する
         StringBuilder sb = new StringBuilder();
         sb.append(pvt.getDeptName()).append(",");
@@ -99,172 +105,166 @@ public class PVTServiceBean {
         sb.append(pvt.getDoctorId()).append(",");
         sb.append(pvt.getJmariNumber()).append(",");
         pvt.setDepartment(sb.toString());
+        return fid;
+    }
 
-        // 既存の患者かどうか調べる
+    private void synchronizePatientAndAttach(String fid, PatientVisitModel pvt) {
+        PatientModel patient = pvt.getPatientModel();
         try {
-            // 既存の患者かどうか調べる。なければNoResultException
-            PatientModel exist = (PatientModel) 
-                    em.createQuery(QUERY_PATIENT_BY_FID_PID)
-                    .setParameter(FID, fid)
-                    .setParameter(PID, patient.getPatientId())
-                    .getSingleResult();
-            
+            PatientModel exist = findExistingPatient(fid, patient.getPatientId());
             LOGGER.info("addPvt : merge patient");
-
-            //-----------------------------
-            // 健康保険情報を更新する
-            //-----------------------------
-            @SuppressWarnings("unchecked")
-            List<HealthInsuranceModel> old =
-                    em.createQuery(QUERY_INSURANCE_BY_PATIENT_ID)
-                    .setParameter(ID, exist.getId())
-                    .getResultList();
-            
-            // ORCAからpvtに乗ってやってきた保険情報を取得する。検索などからPVT登録したものには乗っかっていない
-            List<HealthInsuranceModel> newOne = patient.getHealthInsurances();
-
-            if (newOne != null && !newOne.isEmpty()) {
-                // 受信保険を既存保険へマージする。部分更新時に既存を全削除しない。
-                InsuranceMergeResult mergeResult = mergeInsurances(old, newOne);
-
-                for (InsuranceUpdate update : mergeResult.updates()) {
-                    HealthInsuranceModel persisted = update.persisted();
-                    HealthInsuranceModel incoming = update.incoming();
-                    persisted.setBeanJson(incoming.getBeanJson());
-                    persisted.setPatient(exist);
-                }
-
-                for (HealthInsuranceModel model : mergeResult.additions()) {
-                    model.setPatient(exist);
-                    em.persist(model);
-                }
-
-                exist.setHealthInsurances(mergeResult.merged());
-            } else {
-                // pvtに保険情報が乗っかっていない場合は古いのを使う
-                exist.setHealthInsurances(old);
-            }
-            
-            // 名前を更新する 2007-04-12
-            exist.setFamilyName(patient.getFamilyName());
-            exist.setGivenName(patient.getGivenName());
-            exist.setFullName(patient.getFullName());
-            exist.setKanaFamilyName(patient.getKanaFamilyName());
-            exist.setKanaGivenName(patient.getKanaGivenName());
-            exist.setKanaName(patient.getKanaName());
-            //exist.setRomanFamilyName(patient.getRomanFamilyName());   // ローマ字はマージしない 2013.10.25 K.Funabashi 3Line
-            //exist.setRomanGivenName(patient.getRomanGivenName());
-            //exist.setRomanName(patient.getRomanName());
-
-            // 性別
-            exist.setGender(patient.getGender());
-            exist.setGenderDesc(patient.getGenderDesc());
-            exist.setGenderCodeSys(patient.getGenderCodeSys());
-
-            // Birthday
-            exist.setBirthday(patient.getBirthday());
-
-            // 住所、電話を更新する
-            exist.setSimpleAddressModel(patient.getSimpleAddressModel());
-            exist.setTelephone(patient.getTelephone());
-            //exist.setMobilePhone(patient.getMobilePhone());
-            
-//s.oh^ 2014/08/19 施設患者一括表示機能
-            exist.setAppMemo(patient.getAppMemo());
-//s.oh$
-
-            // PatientModelを新しい情報に更新する
+            mergePatientState(exist, patient);
             em.merge(exist);
-            // PatientVisit との関係を設定する
             pvt.setPatientModel(exist);
-
         } catch (NoResultException e) {
             LOGGER.info("addPvt : add patient");
-            // 新規患者であれば登録する
-            // 患者属性は cascade=PERSIST で自動的に保存される
-            em.persist(patient);
+            persistNewPatientAndKarte(patient);
+        }
+    }
 
-            // この患者のカルテを生成する
-            KarteBean karte = new KarteBean();
-            karte.setPatientModel(patient);
-            karte.setCreated(new Date());
-            em.persist(karte);
+    private PatientModel findExistingPatient(String fid, String patientId) {
+        return (PatientModel) em.createQuery(QUERY_PATIENT_BY_FID_PID)
+                .setParameter(FID, fid)
+                .setParameter(PID, patientId)
+                .getSingleResult();
+    }
+
+    private void mergePatientState(PatientModel exist, PatientModel incoming) {
+        mergePatientInsurances(exist, incoming.getHealthInsurances());
+        copyPatientProfile(exist, incoming);
+    }
+
+    private void mergePatientInsurances(PatientModel exist, List<HealthInsuranceModel> incomingInsurances) {
+        @SuppressWarnings("unchecked")
+        List<HealthInsuranceModel> old = em.createQuery(QUERY_INSURANCE_BY_PATIENT_ID)
+                .setParameter(ID, exist.getId())
+                .getResultList();
+
+        if (incomingInsurances != null && !incomingInsurances.isEmpty()) {
+            InsuranceMergeResult mergeResult = mergeInsurances(old, incomingInsurances);
+            for (InsuranceUpdate update : mergeResult.updates()) {
+                HealthInsuranceModel persisted = update.persisted();
+                HealthInsuranceModel incoming = update.incoming();
+                persisted.setBeanJson(incoming.getBeanJson());
+                persisted.setPatient(exist);
+            }
+
+            for (HealthInsuranceModel model : mergeResult.additions()) {
+                model.setPatient(exist);
+                em.persist(model);
+            }
+            exist.setHealthInsurances(mergeResult.merged());
+            return;
         }
 
-        // ここからPVT登録処理
+        // pvtに保険情報が乗っかっていない場合は古いのを使う
+        exist.setHealthInsurances(old);
+    }
 
-        pvt.setPvtDate(normalizePvtDateForStorage(pvt.getPvtDate()));
+    private void copyPatientProfile(PatientModel exist, PatientModel incoming) {
+        // 名前を更新する 2007-04-12
+        exist.setFamilyName(incoming.getFamilyName());
+        exist.setGivenName(incoming.getGivenName());
+        exist.setFullName(incoming.getFullName());
+        exist.setKanaFamilyName(incoming.getKanaFamilyName());
+        exist.setKanaGivenName(incoming.getKanaGivenName());
+        exist.setKanaName(incoming.getKanaName());
+        //exist.setRomanFamilyName(incoming.getRomanFamilyName());   // ローマ字はマージしない 2013.10.25 K.Funabashi 3Line
+        //exist.setRomanGivenName(incoming.getRomanGivenName());
+        //exist.setRomanName(incoming.getRomanName());
 
+        // 性別
+        exist.setGender(incoming.getGender());
+        exist.setGenderDesc(incoming.getGenderDesc());
+        exist.setGenderCodeSys(incoming.getGenderCodeSys());
+
+        // Birthday
+        exist.setBirthday(incoming.getBirthday());
+
+        // 住所、電話を更新する
+        exist.setSimpleAddressModel(incoming.getSimpleAddressModel());
+        exist.setTelephone(incoming.getTelephone());
+        //exist.setMobilePhone(incoming.getMobilePhone());
+
+//s.oh^ 2014/08/19 施設患者一括表示機能
+        exist.setAppMemo(incoming.getAppMemo());
+//s.oh$
+    }
+
+    private void persistNewPatientAndKarte(PatientModel patient) {
+        // 新規患者であれば登録する
+        // 患者属性は cascade=PERSIST で自動的に保存される
+        em.persist(patient);
+
+        KarteBean karte = new KarteBean();
+        karte.setPatientModel(patient);
+        karte.setCreated(new Date());
+        em.persist(karte);
+    }
+
+    private int registerVisit(String fid, PatientVisitModel pvt) {
         // 旧仕様では患者情報のみを登録し、来院情報がない場合がある。
         // 来院情報を登録する。pvtDate == nullなら患者登録のみ
         if (pvt.getPvtDate() == null) {
             return 0;   // 追加０個、終了
         }
-        
+
 //minagawa^ 予約: ORCAで未来日受付の場合、persistしてリターン(予定カルテ対応)
         if (!isToday(pvt.getPvtDate())) {
-            LOGGER.info("scheduled PVT: {}", pvt.getPvtDate());
-            // 2重登録をチェックする
-            LocalDate visitDate = extractPvtDatePart(pvt.getPvtDate());
-            if (visitDate == null) {
-                LOGGER.warn("skip scheduled PVT registration because pvtDate is invalid: {}", pvt.getPvtDate());
-                return 0;
-            }
-            List<PatientVisitModel> list = (List<PatientVisitModel>)em
-            .createQuery(QUERY_PVT_BY_FID_PID_DATE)
-            .setParameter(FID, fid)
-            .setParameter(FROM_DATE, visitDate.atStartOfDay())
-            .setParameter(TO_DATE, visitDate.plusDays(1).atStartOfDay())
-            .setParameter(PID, patient.getPatientId())
-            .getResultList();
-        
-            if (list.isEmpty()) {
-                // 受付がない場合
-                em.persist(pvt);
-
-            } else {
-                // 最初のレコードを後から来たデータで上書きする
-                PatientVisitModel target = list.get(0);
-                target.setDepartment(pvt.getDepartment());
-                target.setDeptCode(pvt.getDeptCode());
-                target.setDeptName(pvt.getDeptName());
-                target.setDoctorId(pvt.getDoctorId());
-                target.setDoctorName(pvt.getDoctorName());
-                target.setFirstInsurance(pvt.getFirstInsurance());
-                target.setInsuranceUid(pvt.getInsuranceUid());
-                target.setJmariNumber(pvt.getJmariNumber());
-                // transient及び値が変更されないもの
-                //target.setAppointment(pvt.getAppointment());
-                //target.setFacilityId(pvt.getFacilityId());
-                //target.setMemo(pvt.getMemo());
-                //target.setNumber(pvt.getNumber());
-                //target.setPatientModel(pvt.getPatientModel());
-                //target.setPvtDate(pvt.getPvtDate());
-                //target.setState(pvt.getState());
-                //target.setWatingTime(pvt.getWatingTime());
-            }
-            return 1;
+            return registerScheduledVisit(fid, pvt);
         }
 //minagawa$
+        return registerTodayVisit(fid, pvt);
+    }
 
-        // これ以降は今日の受付で排他制御がかかる
-        
-        // カルテの PK を得る
-        long karteId = (Long)
-                em.createQuery(QUERY_KARTE_ID_BY_PATIENT_ID)
-                .setParameter(ID, pvt.getPatientModel().getId())
-                .getSingleResult();
-        // 予約を検索する
-        @SuppressWarnings("unchecked")
-        List<AppointmentModel> c =
-                em.createQuery(QUERY_APPO_BY_KARTE_ID_DATE)
-                .setParameter(ID, karteId)
-                .setParameter(DATE, contextHolder.getToday().getTime())
-                .getResultList();
-        if (c != null && !c.isEmpty()) {
-            AppointmentModel appo = c.get(0);
-            pvt.setAppointment(appo.getName());
+    private int registerScheduledVisit(String fid, PatientVisitModel pvt) {
+        LOGGER.info("scheduled PVT: {}", pvt.getPvtDate());
+        LocalDate visitDate = extractPvtDatePart(pvt.getPvtDate());
+        if (visitDate == null) {
+            LOGGER.warn("skip scheduled PVT registration because pvtDate is invalid: {}", pvt.getPvtDate());
+            return 0;
         }
+
+        @SuppressWarnings("unchecked")
+        List<PatientVisitModel> list = em.createQuery(QUERY_PVT_BY_FID_PID_DATE)
+                .setParameter(FID, fid)
+                .setParameter(FROM_DATE, visitDate.atStartOfDay())
+                .setParameter(TO_DATE, visitDate.plusDays(1).atStartOfDay())
+                .setParameter(PID, pvt.getPatientId())
+                .getResultList();
+
+        if (list.isEmpty()) {
+            em.persist(pvt);
+            return 1;
+        }
+
+        updateScheduledVisit(list.get(0), pvt);
+        return 1;
+    }
+
+    private void updateScheduledVisit(PatientVisitModel target, PatientVisitModel incoming) {
+        target.setDepartment(incoming.getDepartment());
+        target.setDeptCode(incoming.getDeptCode());
+        target.setDeptName(incoming.getDeptName());
+        target.setDoctorId(incoming.getDoctorId());
+        target.setDoctorName(incoming.getDoctorName());
+        target.setFirstInsurance(incoming.getFirstInsurance());
+        target.setInsuranceUid(incoming.getInsuranceUid());
+        target.setJmariNumber(incoming.getJmariNumber());
+        // transient及び値が変更されないもの
+        //target.setAppointment(incoming.getAppointment());
+        //target.setFacilityId(incoming.getFacilityId());
+        //target.setMemo(incoming.getMemo());
+        //target.setNumber(incoming.getNumber());
+        //target.setPatientModel(incoming.getPatientModel());
+        //target.setPvtDate(incoming.getPvtDate());
+        //target.setState(incoming.getState());
+        //target.setWatingTime(incoming.getWatingTime());
+    }
+
+    private int registerTodayVisit(String fid, PatientVisitModel pvt) {
+        long karteId = findKarteId(pvt);
+        applyTodayAppointment(pvt, karteId);
 
         PatientVisitModel existingToday = findActiveVisitByFacilityPatientAndPvtDate(fid, pvt.getPatientId(),
                 pvt.getPvtDate());
@@ -273,14 +273,33 @@ public class PVTServiceBean {
             return 0;   // 追加０個
         }
 
-        // 同じ時刻のPVTがないならばPVTをデータベースに登録(persist)する
+        persistTodayVisit(fid, pvt, karteId);
+        return 1;   // 追加１個
+    }
+
+    private long findKarteId(PatientVisitModel pvt) {
+        return (Long) em.createQuery(QUERY_KARTE_ID_BY_PATIENT_ID)
+                .setParameter(ID, pvt.getPatientModel().getId())
+                .getSingleResult();
+    }
+
+    private void applyTodayAppointment(PatientVisitModel pvt, long karteId) {
+        @SuppressWarnings("unchecked")
+        List<AppointmentModel> appointments = em.createQuery(QUERY_APPO_BY_KARTE_ID_DATE)
+                .setParameter(ID, karteId)
+                .setParameter(DATE, contextHolder.getToday().getTime())
+                .getResultList();
+        if (appointments != null && !appointments.isEmpty()) {
+            AppointmentModel appo = appointments.get(0);
+            pvt.setAppointment(appo.getName());
+        }
+    }
+
+    private void persistTodayVisit(String fid, PatientVisitModel pvt, long karteId) {
         eventServiceBean.setByomeiCount(karteId, pvt);   // 病名数をカウントする
         em.persist(pvt);
-        List<PatientVisitModel> pvtList = eventServiceBean.getPvtList(fid);
-        pvtList.add(pvt);
+        contextHolder.addPvt(fid, pvt);
         notifyPvtEvent(pvt, ChartEventModel.PVT_ADD);
-        
-        return 1;   // 追加１個
     }
     
     /**
@@ -366,7 +385,7 @@ public class PVTServiceBean {
     }
 
     private void mergeTodayVisit(String fid, PatientVisitModel existingToday, PatientVisitModel incoming) {
-        List<PatientVisitModel> pvtList = eventServiceBean.getPvtList(fid);
+        List<PatientVisitModel> pvtList = contextHolder.getPvtList(fid);
         PatientVisitModel cached = findCachedVisitById(pvtList, existingToday.getId());
         PatientVisitModel source = cached != null ? cached : existingToday;
 
@@ -377,7 +396,7 @@ public class PVTServiceBean {
         incoming.setByomeiCountToday(source.getByomeiCountToday());
 
         em.merge(incoming);
-        replaceCachedVisit(pvtList, incoming);
+        contextHolder.replaceOrAddPvt(fid, incoming);
         notifyPvtEvent(incoming, ChartEventModel.PVT_MERGE);
     }
 
@@ -391,19 +410,6 @@ public class PVTServiceBean {
             }
         }
         return null;
-    }
-
-    private void replaceCachedVisit(List<PatientVisitModel> pvtList, PatientVisitModel incoming) {
-        if (pvtList == null) {
-            return;
-        }
-        for (int i = 0; i < pvtList.size(); i++) {
-            if (pvtList.get(i).getId() == incoming.getId()) {
-                pvtList.set(i, incoming);
-                return;
-            }
-        }
-        pvtList.add(incoming);
     }
 
     private String resolveOwnerUuid(PatientVisitModel primary, PatientVisitModel fallback) {
@@ -885,17 +891,7 @@ public class PVTServiceBean {
             }
             em.remove(exist);
 
-            List<PatientVisitModel> pvtList = eventServiceBean.getPvtList(fid);
-            PatientVisitModel toRemove = null;
-            for (PatientVisitModel model : pvtList) {
-                if (model.getId() == id) {
-                    toRemove = model;
-                    break;
-                }
-            }
-            if (toRemove != null) {
-                pvtList.remove(toRemove);
-            }
+            contextHolder.removePvtById(fid, id);
             return 1;
         } catch (Exception e) {
         }

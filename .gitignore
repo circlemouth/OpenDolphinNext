@@ -16,12 +16,7 @@ node_modules/
 **/.nyc_output/
 
 # Maven build artifacts
-/common/target/
-/server/target/
-/client/target/
-/reporting/target/
-/server-modernized/target/
-/persistence/target/
+**/target/
 
 # Docker Compose runtime output
 /docker/output/
@@ -63,7 +58,8 @@ tmp/
 web-client/tmp/
 .playwright-cli/
 artifacts/verification/
-null)
+**/__MACOSX/
+**/._*
 
 # Server logs
 server.log
@@ -88,7 +84,3 @@ fallback
 # Generated dev config
 custom.properties.dev
 docker-compose.override.dev.yml
-
-# P3-02 module build outputs
-domain/target/
-api-contract/target/

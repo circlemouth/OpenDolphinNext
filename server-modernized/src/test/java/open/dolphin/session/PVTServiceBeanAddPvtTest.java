@@ -13,8 +13,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.Query;
 import java.lang.reflect.Field;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import open.dolphin.infomodel.AppointmentModel;
@@ -38,12 +38,13 @@ class PVTServiceBeanAddPvtTest {
             "from AppointmentModel a where a.karte.id=:id and a.date=:date";
     private static final String QUERY_PVT_BY_FID_PID_PVT_DATE =
             "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate=:pvtDate and p.patient.patientId=:pid order by p.id";
+    private static final String QUERY_PVT_BY_FID_PID_DATE =
+            "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate and p.patient.patientId=:pid";
 
     private PVTServiceBean service;
     private EntityManager em;
     private ChartEventServiceBean eventServiceBean;
     private ServletContextHolder contextHolder;
-    private List<PatientVisitModel> cachedPvtList;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -53,20 +54,18 @@ class PVTServiceBeanAddPvtTest {
         contextHolder = new ServletContextHolder();
         contextHolder.setToday();
         contextHolder.setServerUUID("server-1");
-        cachedPvtList = new ArrayList<>();
 
         setField(service, "em", em);
         setField(service, "eventServiceBean", eventServiceBean);
         setField(service, "contextHolder", contextHolder);
 
-        when(eventServiceBean.getPvtList("F001")).thenReturn(cachedPvtList);
         when(em.merge(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
     void addPvt_persistsNewTodayVisitAndAddsNotification() {
         PatientModel existingPatient = patient(101L, "F001", "P001", "owner-existing");
-        PatientVisitModel incoming = visit(existingPatient.getPatientId(), LocalDateTime.of(2026, 3, 14, 9, 0));
+        PatientVisitModel incoming = visit(existingPatient.getPatientId(), todayAt(9, 0));
 
         Query patientQuery = queryReturningSingle(existingPatient);
         Query insuranceQuery = queryReturningList(List.of());
@@ -87,7 +86,7 @@ class PVTServiceBeanAddPvtTest {
         assertEquals(1, added);
         assertSame(existingPatient, incoming.getPatientModel());
         assertEquals("09:00 予約", incoming.getAppointment());
-        assertSame(incoming, cachedPvtList.get(0));
+        assertSame(incoming, contextHolder.getPvtList("F001").get(0));
         verify(eventServiceBean).setByomeiCount(501L, incoming);
         verify(em).persist(incoming);
 
@@ -100,13 +99,13 @@ class PVTServiceBeanAddPvtTest {
     @Test
     void addPvt_mergesDuplicateTodayVisitUsingDatabaseLookupEvenWhenCacheIsEmpty() {
         PatientModel existingPatient = patient(101L, "F001", "P001", "owner-existing");
-        PatientVisitModel existingVisit = visit(existingPatient.getPatientId(), LocalDateTime.of(2026, 3, 14, 9, 0));
+        PatientVisitModel existingVisit = visit(existingPatient.getPatientId(), todayAt(9, 0));
         existingVisit.setId(900L);
         existingVisit.setFacilityId("F001");
         existingVisit.setPatientModel(existingPatient);
         existingVisit.setState(3);
 
-        PatientVisitModel incoming = visit(existingPatient.getPatientId(), LocalDateTime.of(2026, 3, 14, 9, 0));
+        PatientVisitModel incoming = visit(existingPatient.getPatientId(), todayAt(9, 0));
 
         Query patientQuery = queryReturningSingle(existingPatient);
         Query insuranceQuery = queryReturningList(List.of());
@@ -126,7 +125,7 @@ class PVTServiceBeanAddPvtTest {
         assertEquals(900L, incoming.getId());
         assertEquals(3, incoming.getState());
         assertEquals("owner-existing", incoming.getPatientModel().getOwnerUUID());
-        assertSame(incoming, cachedPvtList.get(0));
+        assertSame(incoming, contextHolder.getPvtList("F001").get(0));
         verify(em).merge(incoming);
         verify(em, never()).persist(incoming);
         verify(eventServiceBean, never()).setByomeiCount(any(Long.class), any(PatientVisitModel.class));
@@ -152,6 +151,34 @@ class PVTServiceBeanAddPvtTest {
         assertEquals(0, added);
         verify(em).persist(incoming.getPatientModel());
         verify(em, never()).persist(incoming);
+        verify(eventServiceBean, never()).notifyEvent(any(ChartEventModel.class));
+    }
+
+    @Test
+    void addPvt_updatesExistingScheduledVisitWithoutTouchingTodayFlow() {
+        PatientModel existingPatient = patient(101L, "F001", "P001", "owner-existing");
+        PatientVisitModel existingVisit = visit(existingPatient.getPatientId(), LocalDate.now().plusDays(1).atTime(9, 0));
+        existingVisit.setFacilityId("F001");
+        existingVisit.setPatientModel(existingPatient);
+        existingVisit.setDoctorName("旧医師");
+
+        PatientVisitModel incoming = visit(existingPatient.getPatientId(), LocalDate.now().plusDays(1).atTime(9, 0));
+        incoming.setDoctorName("新医師");
+
+        Query patientQuery = queryReturningSingle(existingPatient);
+        Query insuranceQuery = queryReturningList(List.of());
+        Query scheduledQuery = queryReturningList(List.of(existingVisit));
+
+        when(em.createQuery(QUERY_PATIENT_BY_FID_PID)).thenReturn(patientQuery);
+        when(em.createQuery(QUERY_INSURANCE_BY_PATIENT_ID)).thenReturn(insuranceQuery);
+        when(em.createQuery(QUERY_PVT_BY_FID_PID_DATE)).thenReturn(scheduledQuery);
+
+        int added = service.addPvt(incoming);
+
+        assertEquals(1, added);
+        assertEquals("新医師", existingVisit.getDoctorName());
+        verify(em, never()).persist(incoming);
+        verify(eventServiceBean, never()).setByomeiCount(any(Long.class), any(PatientVisitModel.class));
         verify(eventServiceBean, never()).notifyEvent(any(ChartEventModel.class));
     }
 
@@ -198,6 +225,10 @@ class PVTServiceBeanAddPvtTest {
         patient.setGender("M");
         patient.setOwnerUUID(ownerUuid);
         return patient;
+    }
+
+    private static LocalDateTime todayAt(int hour, int minute) {
+        return LocalDate.now().atTime(hour, minute);
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

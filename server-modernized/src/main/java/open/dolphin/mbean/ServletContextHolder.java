@@ -1,11 +1,12 @@
 package open.dolphin.mbean;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.servlet.AsyncContext;
 import open.dolphin.infomodel.PatientVisitModel;
@@ -70,17 +71,82 @@ public class ServletContextHolder {
         serverUUID = uuid;
     }
 
-    public Map<String, List<PatientVisitModel>> getPvtListMap() {
-        return pvtListMap;
-    }
-    
     public List<PatientVisitModel> getPvtList(String fid) {
         List<PatientVisitModel> pvtList = pvtListMap.get(fid);
         if (pvtList == null) {
-            pvtList = new CopyOnWriteArrayList<>();
-            pvtListMap.put(fid, pvtList);
+            return List.of();
         }
-        return pvtList;
+        synchronized (pvtList) {
+            return new ArrayList<>(pvtList);
+        }
+    }
+
+    public void addPvt(String fid, PatientVisitModel pvt) {
+        if (fid == null || fid.isBlank() || pvt == null) {
+            return;
+        }
+        List<PatientVisitModel> pvtList = getOrCreatePvtList(fid);
+        synchronized (pvtList) {
+            pvtList.add(pvt);
+        }
+    }
+
+    public void replaceOrAddPvt(String fid, PatientVisitModel incoming) {
+        if (fid == null || fid.isBlank() || incoming == null) {
+            return;
+        }
+        List<PatientVisitModel> pvtList = getOrCreatePvtList(fid);
+        synchronized (pvtList) {
+            for (int i = 0; i < pvtList.size(); i++) {
+                PatientVisitModel current = pvtList.get(i);
+                if (current != null && current.getId() == incoming.getId()) {
+                    pvtList.set(i, incoming);
+                    return;
+                }
+            }
+            pvtList.add(incoming);
+        }
+    }
+
+    public boolean removePvtById(String fid, long pvtId) {
+        List<PatientVisitModel> pvtList = pvtListMap.get(fid);
+        if (pvtList == null) {
+            return false;
+        }
+        synchronized (pvtList) {
+            return pvtList.removeIf(model -> model != null && model.getId() == pvtId);
+        }
+    }
+
+    public void clearPvtList(String fid) {
+        List<PatientVisitModel> pvtList = pvtListMap.get(fid);
+        if (pvtList == null) {
+            return;
+        }
+        synchronized (pvtList) {
+            pvtList.clear();
+        }
+    }
+
+    public void removePvtIf(String fid, Predicate<PatientVisitModel> predicate) {
+        if (predicate == null) {
+            return;
+        }
+        List<PatientVisitModel> pvtList = pvtListMap.get(fid);
+        if (pvtList == null) {
+            return;
+        }
+        synchronized (pvtList) {
+            pvtList.removeIf(predicate);
+        }
+    }
+
+    public List<String> getPvtFacilityIds() {
+        return new ArrayList<>(pvtListMap.keySet());
+    }
+
+    private List<PatientVisitModel> getOrCreatePvtList(String fid) {
+        return pvtListMap.computeIfAbsent(fid, ignored -> Collections.synchronizedList(new ArrayList<>()));
     }
 
     // 今日と明日を設定する

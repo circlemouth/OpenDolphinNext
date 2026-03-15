@@ -68,7 +68,7 @@ public class ChartEventServiceBean {
     
 
     public void notifyEvent(ChartEventModel evt) {
-        
+
         String fid = evt.getFacilityId();
         if (fid == null) {
             warn("Facility id is null.");
@@ -176,17 +176,7 @@ public class ChartEventServiceBean {
         }
         em.remove(exist);
         // pvtListから削除
-        List<PatientVisitModel> pvtList = getPvtList(fid);
-        PatientVisitModel toRemove = null;
-        for (PatientVisitModel model : pvtList) {
-            if (model.getId() == pvtPk) {
-                toRemove = model;
-                break;
-            }
-        }
-        if (toRemove != null) {
-            pvtList.remove(toRemove);
-        }
+        contextHolder.removePvtById(fid, pvtPk);
         return true;
     }
     
@@ -408,7 +398,7 @@ public class ChartEventServiceBean {
         for (PatientVisitModel pvt : result) {
             
             String fid = pvt.getFacilityId();
-            contextHolder.getPvtList(fid).add(pvt);
+            contextHolder.addPvt(fid, pvt);
 
             PatientModel patient = pvt.getPatientModel();
             patient.setHealthInsurances(new ArrayList<>(
@@ -575,8 +565,6 @@ public class ChartEventServiceBean {
         
         contextHolder.setToday();
         
-        Map<String, List<PatientVisitModel>> map = contextHolder.getPvtListMap();
-        
 //s.oh^ 受付リストのクリア 2013/08/15
         Properties config = new Properties();
         StringBuilder sb = new StringBuilder();
@@ -600,13 +588,10 @@ public class ChartEventServiceBean {
         }
         
         if(pvtListClear != null && pvtListClear.equals("true")) {
-            List<String> fidList = new ArrayList<String>();
-            for (Iterator itr = map.entrySet().iterator(); itr.hasNext();) {
-                Map.Entry entry = (Map.Entry) itr.next();
-                List<PatientVisitModel> pvtList = (List<PatientVisitModel>) entry.getValue();
-                pvtList.clear();
-                fidList.add((String)entry.getKey());
-                log("ChartEventService: fid = " + (String)entry.getKey());
+            List<String> fidList = contextHolder.getPvtFacilityIds();
+            for (String fid : fidList) {
+                contextHolder.clearPvtList(fid);
+                log("ChartEventService: fid = " + fid);
             }
             initializePvtList();
             for(int i = 0; i < fidList.size(); i++) {
@@ -620,24 +605,23 @@ public class ChartEventServiceBean {
             log("ChartEventService: ServerUUID = " + contextHolder.getServerUUID());
         }else{
 //s.oh$
-        
-            for (Iterator itr = map.entrySet().iterator(); itr.hasNext();) {
-                Map.Entry entry = (Map.Entry) itr.next();
-                List<PatientVisitModel> pvtList = (List<PatientVisitModel>) entry.getValue();
 
-                List<PatientVisitModel> toRemove = new ArrayList<PatientVisitModel>();
+            for (String fid : contextHolder.getPvtFacilityIds()) {
+                List<PatientVisitModel> pvtList = getPvtList(fid);
+                List<Long> pvtIdsToRemove = new ArrayList<Long>();
                 for (PatientVisitModel pvt : pvtList) {
                     boolean legacyFinalized =
                             pvt.getStateBit(LEGACY_FINALIZED_SAVE_BIT)
                                     || pvt.getStateBit(LEGACY_FINALIZED_MODIFY_BIT);
                     if (legacyFinalized || pvt.getStateBit(PatientVisitModel.BIT_CANCEL)) {
-                        toRemove.add(pvt);
+                        pvtIdsToRemove.add(pvt.getId());
                     }
                 }
-                pvtList.removeAll(toRemove);
+                for (Long pvtId : pvtIdsToRemove) {
+                    contextHolder.removePvtById(fid, pvtId);
+                }
 
                 // クライアントに伝える。
-                String fid = (String) entry.getKey();
                 String uuid = contextHolder.getServerUUID();
                 ChartEventModel msg = new ChartEventModel(uuid);
                 msg.setFacilityId(fid);

@@ -87,6 +87,7 @@
 - `docs/modernization/p9-01-log-format-unification.md`（P9-01: ログ形式の統一）
 - `docs/modernization/p9-02-metrics-simplification.md`（P9-02: メトリクス生成の単純化）
 - `docs/modernization/p9-03-auth-session-unification.md`（P9-03: 認証方式のセッション統一と権限判定整理）
+- `docs/modernization/p9-03-revised-shared-list-structure-review.md`（revised workplan の P9-03: 共有リスト構造見直し。WBS の P9-03 とは番号対応が異なる）
 - `docs/modernization/p9-04-junit5-unification.md`（P9-04: common/server-modernized の JUnit5 基盤統一）
 - `docs/modernization/p9-05-static-analysis-gate.md`（P9-05: SpotBugs/Checkstyle/PMD のCI必須ゲート化）
 - `docs/modernization/p9-06-deployment-simplification.md`（P9-06: WAR+WildFly 配備方式の一本化）
@@ -99,6 +100,9 @@
 - `docs/modernization/p10-05-cutover-checklist-modernized.md`（P10-05: モダナイズ版基準の本番切替チェックリスト）
 - `docs/modernization/p10-06-cutover-execution-blocker.md`（P10-06: 本番切替実施のブロッカー記録）
 - `docs/modernization/p10-06-cutover-execution-blocker.md`（P10-06: 本番切替実施ブロッカー記録）
+- `docs/modernization/p11-01-legacy-config-inventory.md`（P11-01: 旧設定読み込み経路の棚卸し）
+- `docs/modernization/p11-02-config-priority-matrix.md`（P11-02: ORCA/attachment/license/runtime state の優先順位整理）
+- `docs/modernization/p12-02-next-modernization-themes.md`（P12-02: 次段 modernization テーマ整理）
 - `docs/server-modernization/orca-additional-api-implementation-notes.md`
 - `docs/server-modernization/ORCA-order-system-rule.md`（ORCAオーダー仕様・実装要件）
 - `docs/server-modernization/orca-api-contract-unification-20260218.md`
@@ -176,6 +180,11 @@
   - Actions Artifacts の surefire report（`**/target/surefire-reports/*.xml` / `*.txt`）を確認する。
   - failing class を同じ `-Dtest=` 指定でローカル再現する。
   - 修正後は同クラス群で再実行し、WBSと `docs/DEVELOPMENT_STATUS.md` を更新する。
+
+### リポジトリ運用対象外の生成物（P12-01）
+- `**/target/`、`**/__MACOSX/`、AppleDouble (`**/._*`) は生成物として Git 管理対象外にする。
+- 受領 zip の実体はルートの `/common.zip` / `/server-modernized.zip` のみを一時参照対象とし、展開ゴミはレビュー差分へ混ぜない。
+- surefire report や一時ログはローカル確認または Actions Artifacts で扱い、ソース差分には含めない。
 
 ### Web client 連携セキュリティ契約（2026-03）
 - デプロイ順序は backend 先行 → frontend 後続（逆順禁止）。

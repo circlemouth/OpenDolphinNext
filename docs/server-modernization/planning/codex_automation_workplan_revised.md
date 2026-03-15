@@ -548,7 +548,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 - 次:
   - P9-03
 
-### [ ] P9-03 書き込みの多いリスト構造を見直す
+### [x] P9-03 書き込みの多いリスト構造を見直す
 - 対象:
   - `CopyOnWriteArrayList` を使っている PVT / realtime 周辺
 - 作業:
@@ -556,6 +556,11 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 書き込みの多い箇所は別構造へ寄せる
 - 完了条件:
   - 書き込み頻度に不向きな共有構造が主要経路から減る
+- 2026-03-15 (RUN_ID=20260315T000000Z):
+  - `server-modernized/src/main/java/open/dolphin/mbean/ServletContextHolder.java` の facility 別 `pvtList` を `CopyOnWriteArrayList` から `Collections.synchronizedList(new ArrayList<>())` 管理へ変更し、読取は snapshot、構造変更は `addPvt` / `replaceOrAddPvt` / `removePvtById` / `clearPvtList` に集約した
+  - `server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java` と `server-modernized/src/main/java/open/dolphin/session/PVTServiceBean.java` を新しい helper に追従させ、PVT 追加・merge・削除・日次更新のホットパスから `CopyOnWriteArrayList` 前提を外した
+  - `server-modernized/src/test/java/open/dolphin/mbean/ServletContextHolderTest.java` を追加し、snapshot 返却で外部構造変更を遮断できることと、replace/add/remove helper が内部リストへ反映されることを固定した
+  - 参考資料側との矛盾として、`server_modernization_wbs_detailed.md` と `docs/server-modernization/README.md` の `P9-03` は依然「認証方式のセッション統一」を指しており、revised workplan の `P9-03`（共有リスト構造見直し）と番号対応が一致していないことを確認した
 - 次:
   - P10-01
 
@@ -563,7 +568,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P10. 巨大クラスの責務分割
 
-### [ ] P10-01 `PVTServiceBean.addPvt()` を補助メソッドへ分割する
+### [x] P10-01 `PVTServiceBean.addPvt()` を補助メソッドへ分割する
 - 対象:
   - `PVTServiceBean`
 - 作業:
@@ -571,20 +576,29 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 振る舞いは変えず、可読性とテストしやすさを上げる
 - 完了条件:
   - `addPvt()` の責務が少なくなっている
+- 2026-03-15 (RUN_ID=20260314T230036Z):
+  - `server-modernized/src/main/java/open/dolphin/session/PVTServiceBean.java` の `addPvt()` を、入力正規化、患者 upsert、来院登録分岐、予定カルテ更新、当日受付 persist/merge の helper 群へ分割し、P4 で入れた idempotent 化と通知契約を維持したまま可読性を上げた
+  - `server-modernized/src/test/java/open/dolphin/session/PVTServiceBeanAddPvtTest.java` に、予定カルテ既存受付を更新する経路の確認を追加し、当日受付用の既存テストと合わせて分割後の主経路を固定した
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -Dtest=PVTServiceBeanAddPvtTest,PVTServiceBeanClinicalTest test` を実行し、7 tests PASS を確認した
+  - 矛盾メモ: 参考 WBS (`server_modernization_wbs_detailed.md`) の `P10-01`〜`P10-03` は「移行と本番切替」を指しており、revised workplan の `P10-01`〜`P10-03`（巨大クラスの責務分割）と番号帯が一致しない。今回の進捗判定は正本どおり revised workplan を優先した
 - 次:
   - P10-02
 
-### [ ] P10-02 `RestOrcaTransport` の設定解決と送信責務を分ける
+### [x] P10-02 `RestOrcaTransport` の設定解決と送信責務を分ける
 - 対象:
   - `RestOrcaTransport`
 - 作業:
   - 設定解決、client 管理、送信呼び出しを分ける
 - 完了条件:
   - P2 系で入れた改善が読みやすい構造に整理されている
+- 2026-03-15 (RUN_ID=20260315T000038Z):
+  - `server-modernized/src/main/java/open/dolphin/orca/transport/OrcaTransportRegistry.java` を追加し、facility 単位の設定解決、fingerprint による `HttpClient` 再利用判定、TLS 資材付き transport 構築を `RestOrcaTransport` から分離した
+  - `server-modernized/src/main/java/open/dolphin/orca/transport/RestOrcaTransport.java` は、facility/trace 解決と ORCA 送信 orchestration に責務を絞り、設定 reload・current settings・raw client 参照を registry 経由へ整理した
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -Dtest=RestOrcaTransportTest,KarteServiceBeanGetDocumentsBulkFetchTest,KarteResourceDocinfoAllPagingTest test` を実行し、9 tests PASS を確認した
 - 次:
   - P10-03
 
-### [ ] P10-03 `KarteServiceBean` の一覧組み立て責務を分割する
+### [x] P10-03 `KarteServiceBean` の一覧組み立て責務を分割する
 - 対象:
   - `KarteServiceBean`
 - 作業:
@@ -592,6 +606,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 重い一覧と詳細取得の境界を明確にする
 - 完了条件:
   - 一覧 API 改修の保守性が上がっている
+- 2026-03-15 (RUN_ID=20260315T000038Z):
+  - `server-modernized/src/main/java/open/dolphin/session/KarteServiceBean.java` の `/docinfo/all` 経路を、ページ要求正規化、カルテ取得、文書 ID ページ取得、revision-light 読込の helper へ分割し、一覧組み立て責務と詳細取得責務の境界を明示した
+  - 一覧経路の binary 非同梱契約は `loadRevisionLightDocumentPage(...)` に集約し、`loadDocuments(...)` の load mode 切替と分離した
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -Dtest=RestOrcaTransportTest,KarteServiceBeanGetDocumentsBulkFetchTest,KarteResourceDocinfoAllPagingTest test` を実行し、9 tests PASS を確認した
 - 次:
   - P11-01
 
@@ -599,7 +617,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P11. 古い構造の切り落とし準備
 
-### [ ] P11-01 旧設定読み込み経路の棚卸しを行う
+### [x] P11-01 旧設定読み込み経路の棚卸しを行う
 - 対象:
   - `custom.properties`
   - JBoss/WildFly 固有パス依存
@@ -609,10 +627,14 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 今後の切り落とし候補と据え置き候補を分ける
 - 完了条件:
   - 次段の基盤刷新に向けた一覧がある
+- 2026-03-15 (RUN_ID=20260315T000038Z):
+  - `docs/modernization/p11-01-legacy-config-inventory.md` を追加し、`custom.properties` の直読/間接依存、`jboss.home.dir` / WildFly 固有パス依存、ローカルファイル state をファイル単位で棚卸しした
+  - `ORCAConnection` / `OrcaResource` / `ChartEventServiceBean` / `SmsGatewayConfig` の legacy properties 読込、`FileLicenseRepository` / `PushEventDeduplicator` のローカル state、`RuntimeConfigurationSupport` / `AttachmentStorageConfigLoader` / `VelocityHelper` の WildFly パス依存を切り落とし候補と据え置き候補に分類した
+  - `docs/server-modernization/README.md` に inventory 文書への導線を追加した
 - 次:
   - P11-02
 
-### [ ] P11-02 ファイル依存設定の優先順位を整理する
+### [x] P11-02 ファイル依存設定の優先順位を整理する
 - 対象:
   - ORCA 設定
   - attachment storage 設定
@@ -622,6 +644,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - 不要なフォールバックを減らすための前提整理を行う
 - 完了条件:
   - 設定系刷新の次アクションが明確である
+- 2026-03-15 (RUN_ID=20260315T000038Z):
+  - `docs/modernization/p11-02-config-priority-matrix.md` を追加し、ORCA は `DB正本 -> env/system bootstrap -> legacy fallback撤去`、attachment は `env/secret -> config dir 配下 YAML -> fallback撤去`、license/runtime state は `DB正本 -> env/bootstrap -> file state撤去` の優先順位案を整理した
+  - 現行コードの優先順位根拠として `OrcaConnectionConfigStore` / `RestOrcaTransport` / `OrcaTransportSettings` / `AttachmentStorageConfigLoader` / `FileLicenseRepository` / `PushEventDeduplicator` を参照し、次段の切り落とし候補を固定した
+  - 本タスクは文書整理のみのため、コード変更向けの追加テストは実施していない
 - 次:
   - P12-01
 
@@ -629,7 +655,7 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
 
 ## P12. 配布物と運用上の無駄の整理
 
-### [ ] P12-01 リポジトリ運用対象からビルド成果物を外す
+### [x] P12-01 リポジトリ運用対象からビルド成果物を外す
 - 対象:
   - `target/`
   - zip 展開ゴミ
@@ -640,10 +666,15 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - ignore と文書を整える
 - 完了条件:
   - レビューや CI に不要な成果物が混ざらない
+- 2026-03-15 (RUN_ID=20260315T010035Z):
+  - ルート `.gitignore` の Maven 生成物除外を `**/target/` に統一し、`common` / `server-modernized` に限らず追加モジュール (`domain` / `api-contract` など) の build 出力も個別追記なしで除外されるよう整理した
+  - zip 展開ゴミ向けに `**/__MACOSX/` と AppleDouble (`**/._*`) を ignore へ追加し、誤って展開物がレビュー差分へ混ざらないようにした
+  - `docs/server-modernization/README.md` に、生成物は Git 管理対象外とし、受領 zip 実体・surefire report・一時ログの扱いを明文化した
+  - 参考メモ: 追跡済みの `server/server/target/classpath.txt` は legacy `server/` 配下であり、今回の automation 対象外かつ `server/` 変更禁止ルールのため未変更とした
 - 次:
   - P12-02
 
-### [ ] P12-02 modernization 用ドキュメントの次段計画を更新する
+### [x] P12-02 modernization 用ドキュメントの次段計画を更新する
 - 対象:
   - 本文書
   - 必要なら WBS 参考資料
@@ -651,6 +682,10 @@ blocker が出た場合は、該当タスクの下に必ず次の 4 点を追記
   - ここまでの実装結果を踏まえ、次段の大きい刷新テーマを整理する
 - 完了条件:
   - automation の次期テーマが明確になっている
+- 2026-03-15 (RUN_ID=20260315T010035Z):
+  - `docs/modernization/p12-02-next-modernization-themes.md` を追加し、`P9-03`〜`P12-01` の実施結果を踏まえた次段テーマを「設定正本の一本化」「ファイル state / WildFly 固定パス fallback の縮退」「文書と運用番号の整流化」の 3 本に整理した
+  - 人間レビューが先に判断すべき事項として、`custom.properties` 撤去の扱い、attachment 設定の正本、license / push dedupe state の移管先、legacy `server/` 配下の追跡済み生成物整理を明記した
+  - `docs/server-modernization/README.md` に次段テーマ整理文書への導線を追加した
 - 次:
   - 人間レビュー待ち
 

@@ -1095,29 +1095,17 @@ public class KarteServiceBean {
     }
 
     public List<DocumentModel> getAllDocument(long patientPK, int offset, int limit) {
-        int safeOffset = normalizeDocinfoOffset(offset);
-        int safeLimit = normalizeDocinfoPageSize(limit);
+        DocinfoPageRequest pageRequest = new DocinfoPageRequest(
+                patientPK,
+                normalizeDocinfoOffset(offset),
+                normalizeDocinfoPageSize(limit));
         try {
-            List<KarteBean> kartes = em.createQuery(QUERY_KARTE)
-                    .setParameter(PATIENT_PK, patientPK)
-                    .setMaxResults(1)
-                    .getResultList();
-            if (kartes == null || kartes.isEmpty()) {
+            KarteBean karte = findPrimaryKarteForDocinfo(pageRequest.patientPk());
+            if (karte == null) {
                 return new ArrayList<>();
             }
-            List<Long> docIds = em.createQuery(
-                            "select d.id from DocumentModel d where d.karte.id=:karteId and (d.status='F' or d.status='T') order by d.started desc, d.id desc",
-                            Long.class)
-                    .setParameter(KARTE_ID, kartes.get(0).getId())
-                    .setFirstResult(safeOffset)
-                    .setMaxResults(safeLimit)
-                    .getResultList();
-            // Docinfo list path: keep revision metadata only and leave binary fetch to dedicated APIs.
-            List<DocumentModel> documents = loadDocuments(docIds, DocumentLoadMode.REVISION_LIGHT);
-            for (DocumentModel document : documents) {
-                document.toDetuch();
-            }
-            return documents;
+            List<Long> docIds = findPagedDocinfoDocumentIds(karte.getId(), pageRequest.offset(), pageRequest.limit());
+            return loadRevisionLightDocumentPage(docIds);
         } catch (NoResultException e) {
             // 患者登録の際にカルテも生成してある
             return new ArrayList<>();
@@ -1148,6 +1136,36 @@ public class KarteServiceBean {
             return DEFAULT_DOCINFO_PAGE_SIZE;
         }
         return Math.min(limit, MAX_DOCINFO_PAGE_SIZE);
+    }
+
+    private KarteBean findPrimaryKarteForDocinfo(long patientPk) {
+        List<KarteBean> kartes = em.createQuery(QUERY_KARTE)
+                .setParameter(PATIENT_PK, patientPk)
+                .setMaxResults(1)
+                .getResultList();
+        if (kartes == null || kartes.isEmpty()) {
+            return null;
+        }
+        return kartes.get(0);
+    }
+
+    private List<Long> findPagedDocinfoDocumentIds(long karteId, int offset, int limit) {
+        return em.createQuery(
+                        "select d.id from DocumentModel d where d.karte.id=:karteId and (d.status='F' or d.status='T') order by d.started desc, d.id desc",
+                        Long.class)
+                .setParameter(KARTE_ID, karteId)
+                .setFirstResult(offset)
+                .setMaxResults(limit)
+                .getResultList();
+    }
+
+    private List<DocumentModel> loadRevisionLightDocumentPage(List<Long> docIds) {
+        // Docinfo list path: keep revision metadata only and leave binary fetch to dedicated APIs.
+        List<DocumentModel> documents = loadDocuments(docIds, DocumentLoadMode.REVISION_LIGHT);
+        for (DocumentModel document : documents) {
+            document.toDetuch();
+        }
+        return documents;
     }
 
     private List<DocumentModel> loadDocuments(List<Long> ids, DocumentLoadMode mode) {
@@ -1451,6 +1469,9 @@ public class KarteServiceBean {
         boolean loadsAttachmentMetadata() {
             return attachmentMetadata;
         }
+    }
+
+    private record DocinfoPageRequest(long patientPk, int offset, int limit) {
     }
 
     private List<ModuleModel> filterMedModules(List<ModuleModel> modules) {
