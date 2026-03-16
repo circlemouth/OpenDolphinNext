@@ -21,8 +21,8 @@
 
 ### 2) Flyway migration 追加（V0303）
 - 追加:
-  - `server-modernized/src/main/resources/db/migration/V0303__performance_index_tuning.sql`
   - `server-modernized/tools/flyway/sql/V0303__performance_index_tuning.sql`
+  - runtime classpath へは build で生成コピー
 - 追加 index:
   - `d_document_karte_status_started_id_idx` on `d_document(karte_id, status, started DESC, id DESC)`
   - `d_attachment_doc_linkrelation_status_id_idx` on `d_attachment(doc_id, linkrelation, status, id DESC)`

@@ -70,7 +70,7 @@ export async function fetchOrcaOrderInputSets(params: {
   query.set('effective', normalizeYmd(params.effective));
   query.set('page', String(params.page && params.page > 0 ? params.page : 1));
   query.set('size', String(params.size && params.size > 0 ? params.size : 20));
-  const response = await httpFetch(`/orca/order/inputsets?${query.toString()}`, { notifySessionExpired: false });
+  const response = await httpFetch(`/api/orca/order/inputsets?${query.toString()}`, { notifySessionExpired: false });
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'ORCA入力セット検索に失敗しました。' });
   const json = parsed.json ?? {};
   const traceId =
@@ -131,7 +131,7 @@ export async function fetchOrcaOrderInputSetDetail(params: {
   query.set('effective', normalizeYmd(params.effective));
   if (params.entity?.trim()) query.set('entity', params.entity.trim());
   if (params.name?.trim()) query.set('name', params.name.trim());
-  const response = await httpFetch(`/orca/order/inputsets/${encodeURIComponent(setCode)}?${query.toString()}`, {
+  const response = await httpFetch(`/api/orca/order/inputsets/${encodeURIComponent(setCode)}?${query.toString()}`, {
     notifySessionExpired: false,
   });
   const parsed = await parseOrcaApiResponse(response, {

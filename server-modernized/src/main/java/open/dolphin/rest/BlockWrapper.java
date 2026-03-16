@@ -105,9 +105,14 @@ public final class BlockWrapper extends HttpServletRequestWrapper {
             return requestUri;
         }
 
-        String uriForLog = requestUri.startsWith("/openDolphin/resources")
-                ? requestUri.substring(22)
-                : requestUri;
+        String uriForLog;
+        if (requestUri.startsWith("/openDolphin/resources")) {
+            uriForLog = requestUri.substring(22);
+        } else if (requestUri.startsWith("/openDolphin/api")) {
+            uriForLog = requestUri.substring(18);
+        } else {
+            uriForLog = requestUri;
+        }
         return maskLegacyUserPath(uriForLog);
     }
 

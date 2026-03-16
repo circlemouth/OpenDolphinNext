@@ -12,7 +12,6 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.logging.Logger;
@@ -27,9 +26,10 @@ import jakarta.enterprise.concurrent.ManagedThreadFactory;
 import jakarta.inject.Inject;
 import open.dolphin.infomodel.HealthInsuranceModel;
 import open.dolphin.infomodel.PatientVisitModel;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 import open.dolphin.session.PVTServiceBean;
 import open.dolphin.worker.pvt.PvtSocketWorker;
-import open.orca.rest.ORCAConnection;
 
 /**
  * PVT socket listener bootstrap.
@@ -59,6 +59,9 @@ public class PvtService {
 
     @Inject
     private MeterRegistry meterRegistry;
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
 
     private String encoding = UTF8;
     private String FACILITY_ID;
@@ -91,18 +94,10 @@ public class PvtService {
     }
 
     public void startService() throws FileNotFoundException, Exception {
-
-        Properties config = ORCAConnection.getInstance().getProperties();
-
-        FACILITY_ID = config.getProperty("dolphin.facilityId");
-
-        boolean useAsPVTServer;
-        String test = config.getProperty("useAsPVTServer");
-        if (test != null) {
-            useAsPVTServer = Boolean.parseBoolean(test);
-        } else {
-            useAsPVTServer = false;
-        }
+        ServerRuntimeConfiguration.OrcaRuntimeSettings runtime = configurationResolver.orcaRuntime();
+        ServerRuntimeConfiguration.PvtListenerSettings pvt = runtime.pvtListener();
+        FACILITY_ID = runtime.facilityId();
+        boolean useAsPVTServer = pvt.enabled();
 
         if (!useAsPVTServer) {
             workerEnabled = false;
@@ -110,25 +105,28 @@ public class PvtService {
         }
         workerEnabled = true;
 
-        String bindIP = config.getProperty("pvt.listen.bindIP");
-        int port = Integer.parseInt(config.getProperty("pvt.listen.port"));
+        String bindIP = pvt.bindIp();
+        Integer port = pvt.port();
+        if (bindIP == null || bindIP.isBlank() || port == null) {
+            throw new IllegalStateException("PVT listener is enabled but opendolphin.pvt.bind-ip/port is not configured.");
+        }
 
-        encoding = config.getProperty("pvt.listen.encoding");
-        acceptTimeoutMillis = parsePositiveInt(config.getProperty("pvt.listen.acceptTimeoutMillis"),
+        encoding = pvt.encoding() != null ? pvt.encoding() : UTF8;
+        acceptTimeoutMillis = parsePositiveInt(stringValue(pvt.acceptTimeoutMillis()),
                 DEFAULT_ACCEPT_TIMEOUT_MILLIS);
-        readTimeoutMillis = parsePositiveInt(config.getProperty("pvt.listen.readTimeoutMillis"),
+        readTimeoutMillis = parsePositiveInt(stringValue(pvt.readTimeoutMillis()),
                 DEFAULT_READ_TIMEOUT_MILLIS);
-        maxConnectionThreads = parsePositiveInt(config.getProperty("pvt.listen.maxThreads"),
+        maxConnectionThreads = parsePositiveInt(stringValue(pvt.maxThreads()),
                 DEFAULT_MAX_CONNECTION_THREADS);
-        connectionQueueCapacity = parsePositiveInt(config.getProperty("pvt.listen.queueCapacity"),
+        connectionQueueCapacity = parsePositiveInt(stringValue(pvt.queueCapacity()),
                 DEFAULT_CONNECTION_QUEUE_CAPACITY);
-        handleRetryMax = parsePositiveInt(config.getProperty("pvt.listen.retry.max"),
+        handleRetryMax = parsePositiveInt(stringValue(pvt.retryMax()),
                 DEFAULT_HANDLE_RETRY_MAX);
-        handleRetryBackoffMillis = parsePositiveInt(config.getProperty("pvt.listen.retry.backoffMillis"),
+        handleRetryBackoffMillis = parsePositiveInt(stringValue(pvt.retryBackoffMillis()),
                 DEFAULT_HANDLE_RETRY_BACKOFF_MILLIS);
-        idempotencyWindowMillis = parsePositiveLong(config.getProperty("pvt.listen.idempotency.windowMillis"),
+        idempotencyWindowMillis = parsePositiveLong(stringValue(pvt.idempotencyWindowMillis()),
                 DEFAULT_IDEMPOTENCY_WINDOW_MILLIS);
-        poisonQueueCapacity = parsePositiveInt(config.getProperty("pvt.listen.poison.capacity"),
+        poisonQueueCapacity = parsePositiveInt(stringValue(pvt.poisonQueueCapacity()),
                 DEFAULT_POISON_QUEUE_CAPACITY);
 
         InetAddress addr = InetAddress.getByName(bindIP);
@@ -370,5 +368,9 @@ public class PvtService {
             return null;
         }
         return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(Instant.ofEpochMilli(epochMillis).atOffset(ZoneOffset.UTC));
+    }
+
+    private static String stringValue(Object value) {
+        return value != null ? String.valueOf(value) : null;
     }
 }

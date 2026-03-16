@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.Response;
 /**
  * Idempotent logout endpoint for server-side session invalidation.
  */
-@Path("/api/logout")
+@Path("/logout")
 public class LogoutResource extends AbstractResource {
 
     private static final String CACHE_CONTROL_VALUE = "private, no-store, max-age=0, must-revalidate";

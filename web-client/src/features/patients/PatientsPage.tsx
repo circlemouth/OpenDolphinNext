@@ -7,7 +7,6 @@ import {
   type CSSProperties,
   type KeyboardEvent,
   type PointerEvent,
-  type ReactNode,
 } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useLocation, useSearchParams } from 'react-router-dom';
@@ -46,17 +45,14 @@ import { useAdminBroadcast } from '../../libs/admin/useAdminBroadcast';
 import {
   fetchPatients,
   savePatient,
+  type PatientSearchParams,
   type PatientListResponse,
   type PatientMutationPayload,
   type PatientMutationResult,
   type PatientRecord,
 } from './api';
 import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
-import { fetchPatientMemo, updatePatientMemo, type PatientMemoUpdateResult } from './patientMemoApi';
-import { fetchPatientOriginal, type PatientOriginalFormat, type PatientOriginalResponse } from './patientOriginalApi';
-import { fetchInsuranceList, type HealthInsuranceEntry, type InsuranceListResponse, type PublicInsuranceEntry } from './insuranceApi';
 import { fetchOrcaAddress } from './orcaAddressApi';
-import { fetchOrcaHokenja, type OrcaHokenjaResult } from './orcaHokenjaApi';
 import { PATIENT_FIELD_LABEL, diffPatientKeys } from './patientDiff';
 import { validatePatientMutation, type PatientOperation, type PatientValidationError } from './patientValidation';
 import {
@@ -96,21 +92,21 @@ const toLocalDateYmd = (date = new Date()): string => {
   return `${year}-${month}-${day}`;
 };
 
-const buildHokenjaInsuranceLabel = (item: {
-  payerCode?: string;
-  payerName?: string;
-  payerType?: string;
-}) => {
-  if (item.payerName && item.payerCode) return `${item.payerName} (${item.payerCode})`;
-  if (item.payerName) return item.payerName;
-  if (item.payerCode) return item.payerCode;
-  return item.payerType ?? '';
-};
-
 const normalizeZipCode = (value?: string | null) => (value ?? '').replace(/\D/g, '');
 
 const normalizePaymentMode = (value?: string | null): PaymentMode | undefined =>
   value === 'insurance' || value === 'self' ? value : undefined;
+
+const resolvePatientSearchType = (keyword: string | undefined): PatientSearchParams['searchType'] | undefined => {
+  if (!keyword) return undefined;
+  const normalized = keyword.trim();
+  if (!normalized) return undefined;
+  if (/^\d{7}$/.test(normalized)) return 'zipcode';
+  if (/^\d[\d-]{8,}$/.test(normalized)) return 'telephone';
+  if (/^\d+$/.test(normalized)) return 'patient-id';
+  if (/^[ぁ-んァ-ヶー]+$/.test(normalized)) return 'kana';
+  return 'name';
+};
 
 const toSearchParams = (filters: typeof DEFAULT_FILTER) => {
   const params = new URLSearchParams();
@@ -183,17 +179,7 @@ const normalizeAuditValue = (value: unknown): string => {
   return String(value).normalize('NFKC').toLowerCase();
 };
 
-const normalizeSearchKeyword = (value: string) => value.trim().toLowerCase();
 const clampSidebarWidth = (value: number) => Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, value));
-
-const formatInsuranceLabel = (entry: { name?: string; id?: string; classCode?: string }) => {
-  const idPart = entry.id ? entry.id : '—';
-  const namePart = entry.name ?? '名称不明';
-  const classPart = entry.classCode ? `（${entry.classCode}）` : '';
-  return `${idPart} ${namePart}${classPart}`;
-};
-
-const formatMissingTags = (tags?: string[]) => (tags && tags.length > 0 ? tags.join(', ') : 'なし');
 
 const resolveUnlinkedState = (patient?: PatientRecord | null) => {
   const missingPatientId = !patient?.patientId;
@@ -250,13 +236,10 @@ const truncateText = (value: string, limit: number) => {
   return `${value.slice(0, limit)}…`;
 };
 
-type PatientsDetailTabKey = 'basic' | 'orcaTools' | 'insurance' | 'orcaMemo' | 'audit';
+type PatientsDetailTabKey = 'basic' | 'audit';
 
 const PATIENTS_DETAIL_TABS: Array<{ key: PatientsDetailTabKey; label: string }> = [
   { key: 'basic', label: '基本情報' },
-  { key: 'orcaTools', label: 'ORCA更新/原本' },
-  { key: 'insurance', label: '保険' },
-  { key: 'orcaMemo', label: 'ORCAメモ' },
   { key: 'audit', label: '監査/ログ' },
 ];
 const PATIENTS_DETAIL_TAB_KEYS = PATIENTS_DETAIL_TABS.map((tab) => tab.key);
@@ -266,26 +249,6 @@ type ToastState = {
   message: string;
   detail?: string;
 };
-
-type OrcaMetaItem = {
-  label: string;
-  value: ReactNode;
-  tone?: 'warning';
-};
-
-const renderOrcaMeta = (items: OrcaMetaItem[], className?: string) => (
-  <div className={`patients-page__orca-meta${className ? ` ${className}` : ''}`} role="list">
-    {items.map((item, index) => (
-      <div
-        key={`${item.label}-${index}`}
-        className={`patients-page__orca-meta-item${item.tone === 'warning' ? ' is-warning' : ''}`}
-        role="listitem"
-      >
-        <strong className="patients-page__orca-meta-label">{item.label}:</strong> <span className="patients-page__orca-meta-value">{item.value}</span>
-      </div>
-    ))}
-  </div>
-);
 
 type PatientsPageProps = {
   runId: string;
@@ -415,12 +378,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const lastUnlinkedToastKey = useRef<string | null>(null);
   const lastPatientIdParam = useRef<string | null>(null);
   const lastPatientsUpdatedAt = useRef<number | null>(null);
-  const appliedIntentParam = useRef<string | null>(null);
   const detailTabRefs = useRef<Record<PatientsDetailTabKey, HTMLButtonElement | null>>({
     basic: null,
-    orcaTools: null,
-    insurance: null,
-    orcaMemo: null,
     audit: null,
   });
   const [auditKeyword, setAuditKeyword] = useState('');
@@ -430,21 +389,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const [auditLimit, setAuditLimit] = useState<'10' | '20' | '50' | 'all'>('10');
   const [auditDateFrom, setAuditDateFrom] = useState('');
   const [auditDateTo, setAuditDateTo] = useState('');
-  const [orcaMemoFilters, setOrcaMemoFilters] = useState({
-    baseDate: today,
-    memoClass: '',
-    departmentCode: '',
-  });
-  const [orcaMemoEditor, setOrcaMemoEditor] = useState({
-    memo: '',
-    memoClass: '2',
-    departmentCode: '',
-    performDate: today,
-  });
-  const [orcaMemoDirty, setOrcaMemoDirty] = useState(false);
-  const [orcaMemoNotice, setOrcaMemoNotice] = useState<ToastState | null>(null);
-  const [orcaMemoLastUpdate, setOrcaMemoLastUpdate] = useState<PatientMemoUpdateResult | null>(null);
-
   useEffect(() => {
     document.title = `患者管理 | 施設ID=${session.facilityId}`;
   }, [session.facilityId]);
@@ -485,31 +429,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     }
   }, [sidebarWidth, sidebarWidthStorageKey]);
 
-  useEffect(() => {
-    registerDirty('patients:orcaMemo', orcaMemoDirty, '患者メモ（ORCA）の未保存変更');
-  }, [orcaMemoDirty, registerDirty]);
-
-  useEffect(() => {
-    return () => registerDirty('patients:orcaMemo', false);
-  }, [registerDirty]);
-  const [orcaOriginalFormat, setOrcaOriginalFormat] = useState<PatientOriginalFormat>('xml');
-  const [orcaOriginalClass, setOrcaOriginalClass] = useState('');
-  const [orcaOriginalResult, setOrcaOriginalResult] = useState<PatientOriginalResponse | null>(null);
-  const [orcaOriginalNotice, setOrcaOriginalNotice] = useState<ToastState | null>(null);
-  const [insuranceFilters, setInsuranceFilters] = useState({
-    baseDate: today,
-    keyword: '',
-  });
-  const [insuranceResult, setInsuranceResult] = useState<InsuranceListResponse | null>(null);
-  const [insuranceNotice, setInsuranceNotice] = useState<ToastState | null>(null);
   const [orcaAddressPending, setOrcaAddressPending] = useState(false);
-  const [hokenjaFilters, setHokenjaFilters] = useState({
-    keyword: '',
-    pref: '',
-    effective: today,
-  });
-  const [hokenjaPending, setHokenjaPending] = useState(false);
-  const [hokenjaResult, setHokenjaResult] = useState<OrcaHokenjaResult | null>(null);
   const [lastMeta, setLastMeta] = useState<
     Pick<
       PatientListResponse,
@@ -539,251 +459,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const appliedMeta = useRef<Partial<AuthServiceFlags>>({});
   const { flags, setCacheHit, setMissingMaster, setDataSourceTransition, setFallbackUsed, bumpRunId } = useAuthService();
   const { broadcast } = useAdminBroadcast({ facilityId: session.facilityId, userId: session.userId });
-  const orcaMemoPatientId = form.patientId ?? selectedId;
-  const orcaOriginalPatientId = form.patientId ?? selectedId;
-  const insuranceKeyword = normalizeSearchKeyword(insuranceFilters.keyword);
-  const filteredHealthInsurances = useMemo(() => {
-    if (!insuranceResult?.healthInsurances?.length) return [];
-    if (!insuranceKeyword) return insuranceResult.healthInsurances;
-    return insuranceResult.healthInsurances.filter((entry) => {
-      const target = [entry.providerName, entry.providerId, entry.providerClass].filter(Boolean).join(' ').toLowerCase();
-      return target.includes(insuranceKeyword);
-    });
-  }, [insuranceKeyword, insuranceResult?.healthInsurances]);
-  const filteredPublicInsurances = useMemo(() => {
-    if (!insuranceResult?.publicInsurances?.length) return [];
-    if (!insuranceKeyword) return insuranceResult.publicInsurances;
-    return insuranceResult.publicInsurances.filter((entry) => {
-      const target = [entry.publicName, entry.publicId, entry.publicClass].filter(Boolean).join(' ').toLowerCase();
-      return target.includes(insuranceKeyword);
-    });
-  }, [insuranceKeyword, insuranceResult?.publicInsurances]);
-  const patientOriginalPreview = useMemo(() => {
-    if (!orcaOriginalResult) return '—';
-    if (orcaOriginalResult.format === 'json') {
-      if (orcaOriginalResult.rawJson) {
-        return JSON.stringify(orcaOriginalResult.rawJson, null, 2);
-      }
-      return orcaOriginalResult.rawText || '—';
-    }
-    return orcaOriginalResult.rawXml ?? orcaOriginalResult.rawText ?? '—';
-  }, [orcaOriginalResult]);
-
-  const orcaMemoQuery = useQuery({
-    queryKey: [
-      'patients-orca-memo',
-      orcaMemoPatientId,
-      orcaMemoFilters.baseDate,
-      orcaMemoFilters.memoClass,
-      orcaMemoFilters.departmentCode,
-    ],
-    queryFn: () => {
-      if (!orcaMemoPatientId) throw new Error('patientId is required');
-      return fetchPatientMemo({
-        patientId: orcaMemoPatientId,
-        baseDate: orcaMemoFilters.baseDate || undefined,
-        memoClass: orcaMemoFilters.memoClass || undefined,
-        departmentCode: orcaMemoFilters.departmentCode || undefined,
-      });
-    },
-    enabled: Boolean(orcaMemoPatientId),
-  });
-
-  useEffect(() => {
-    if (!orcaMemoPatientId) {
-      setOrcaMemoEditor((prev) => ({ ...prev, memo: '', performDate: today }));
-      setOrcaMemoDirty(false);
-      return;
-    }
-    setOrcaMemoEditor((prev) => ({ ...prev, performDate: today }));
-    setOrcaMemoDirty(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orcaMemoPatientId, today]);
-
-  useEffect(() => {
-    setOrcaOriginalResult(null);
-    setOrcaOriginalNotice(null);
-  }, [orcaOriginalPatientId]);
-
-  useEffect(() => {
-    const data = orcaMemoQuery.data;
-    if (!data) return;
-    if (!orcaMemoDirty) {
-      const memo = data.memos[0]?.memo ?? '';
-      setOrcaMemoEditor((prev) => ({ ...prev, memo }));
-    }
-    logAuditEvent({
-      runId: data.runId ?? runId,
-      source: 'patient-memo-fetch',
-      payload: {
-        action: 'PATIENT_MEMO_FETCH',
-        outcome: data.ok ? 'success' : 'error',
-        details: {
-          patientId: data.patientId,
-          baseDate: data.baseDate,
-          apiResult: data.apiResult,
-          apiResultMessage: data.apiResultMessage,
-          status: data.status,
-          inputSource: 'memo',
-          hasRawXml: Boolean(data.rawXml),
-          missingTags: data.missingTags,
-        },
-      },
-    });
-  }, [orcaMemoDirty, orcaMemoQuery.data, runId]);
-
-  const orcaMemoMutation = useMutation({
-    mutationFn: async () => {
-      if (!orcaMemoPatientId) throw new Error('patientId is required');
-      return updatePatientMemo({
-        patientId: orcaMemoPatientId,
-        memo: orcaMemoEditor.memo,
-        performDate: orcaMemoEditor.performDate,
-        memoClass: orcaMemoEditor.memoClass || undefined,
-        departmentCode: orcaMemoEditor.departmentCode || undefined,
-      });
-    },
-    onSuccess: (result) => {
-      setOrcaMemoLastUpdate(result);
-      setOrcaMemoNotice({
-        tone: result.ok ? 'success' : 'error',
-        message: result.ok ? 'ORCAメモを更新しました。' : 'ORCAメモの更新に失敗しました。',
-        detail: result.apiResultMessage,
-      });
-      logAuditEvent({
-        runId: result.runId ?? runId,
-        source: 'patient-memo-update',
-        payload: {
-          action: 'PATIENT_MEMO_UPDATE',
-          outcome: result.ok ? 'success' : 'error',
-          details: {
-            patientId: orcaMemoPatientId,
-            memoClass: orcaMemoEditor.memoClass,
-            departmentCode: orcaMemoEditor.departmentCode,
-            performDate: orcaMemoEditor.performDate,
-            apiResult: result.apiResult,
-            apiResultMessage: result.apiResultMessage,
-            status: result.status,
-            inputSource: 'memo',
-            hasRawXml: Boolean(result.rawXml),
-            missingTags: result.missingTags,
-          },
-        },
-      });
-      if (result.ok) {
-        setOrcaMemoDirty(false);
-        orcaMemoQuery.refetch();
-      }
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      setOrcaMemoNotice({ tone: 'error', message: `ORCAメモの更新に失敗しました: ${message}` });
-    },
-  });
-
-  const orcaOriginalMutation = useMutation({
-    mutationFn: async () => {
-      if (!orcaOriginalPatientId) throw new Error('patientId is required');
-      return fetchPatientOriginal({
-        patientId: orcaOriginalPatientId,
-        format: orcaOriginalFormat,
-        classCode: orcaOriginalClass || undefined,
-      });
-    },
-    onSuccess: (result) => {
-      setOrcaOriginalResult(result);
-      setOrcaOriginalNotice({
-        tone: result.ok ? 'success' : 'warning',
-        message: result.ok ? 'ORCA 原本を取得しました。' : 'ORCA 原本の取得に失敗しました。',
-        detail: result.apiResultMessage ?? result.error,
-      });
-      logAuditEvent({
-        runId: result.runId ?? runId,
-        source: 'patient-original-fetch',
-        payload: {
-          action: 'ORCA_PATIENT_GET',
-          outcome: result.ok ? 'success' : 'error',
-          details: {
-            patientId: orcaOriginalPatientId,
-            classCode: orcaOriginalClass || undefined,
-            format: orcaOriginalFormat,
-            apiResult: result.apiResult,
-            apiResultMessage: result.apiResultMessage,
-            status: result.status,
-            inputSource: 'original',
-            hasRawXml: Boolean(result.rawXml),
-            hasRawJson: Boolean(result.rawJson),
-            missingTags: result.missingTags,
-          },
-        },
-      });
-      logUiState({
-        action: 'orca_original_fetch',
-        screen: 'patients',
-        runId: result.runId ?? runId,
-        details: {
-          endpoint: 'patientgetv2',
-          patientId: orcaOriginalPatientId,
-          format: orcaOriginalFormat,
-          status: result.status,
-          apiResult: result.apiResult,
-          apiResultMessage: result.apiResultMessage,
-        },
-      });
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      setOrcaOriginalNotice({ tone: 'error', message: `ORCA 原本の取得に失敗しました: ${message}` });
-    },
-  });
-
-  const insuranceMutation = useMutation({
-    mutationFn: async () => {
-      return fetchInsuranceList({ baseDate: insuranceFilters.baseDate });
-    },
-    onSuccess: (result) => {
-      setInsuranceResult(result);
-      setInsuranceNotice({
-        tone: result.ok ? 'success' : 'warning',
-        message: result.ok ? '保険者一覧を取得しました。' : '保険者一覧の取得に失敗しました。',
-        detail: result.apiResultMessage ?? result.error,
-      });
-      logAuditEvent({
-        runId: result.runId ?? runId,
-        source: 'insurance-list-fetch',
-        payload: {
-          action: 'ORCA_INSURANCE_LIST',
-          outcome: result.ok ? 'success' : 'error',
-          details: {
-            baseDate: result.baseDate ?? insuranceFilters.baseDate,
-            apiResult: result.apiResult,
-            apiResultMessage: result.apiResultMessage,
-            status: result.status,
-            inputSource: 'insurance',
-            hasRawXml: Boolean(result.rawXml),
-            missingTags: result.missingTags,
-          },
-        },
-      });
-      logUiState({
-        action: 'orca_insurance_list_fetch',
-        screen: 'patients',
-        runId: result.runId ?? runId,
-        details: {
-          endpoint: 'insuranceinf1v2',
-          baseDate: result.baseDate ?? insuranceFilters.baseDate,
-          status: result.status,
-          apiResult: result.apiResult,
-          apiResultMessage: result.apiResultMessage,
-        },
-      });
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      setInsuranceNotice({ tone: 'error', message: `保険者一覧の取得に失敗しました: ${message}` });
-    },
-  });
-
   useEffect(() => {
     const merged = readFilters(searchParams, locationState?.carryover);
     setDraftFilters((prev) => {
@@ -844,27 +519,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     }
   }, [appliedFilters, location.search, session.facilityId, setSearchParams]);
 
-  useEffect(() => {
-    const intent = searchParams.get('intent');
-    if (!intent) {
-      appliedIntentParam.current = null;
-      return;
-    }
-    if (appliedIntentParam.current === intent) return;
-    if (intent === 'insurance') {
-      setActiveDetailTab('insurance');
-    }
-    appliedIntentParam.current = intent;
-    const next = new URLSearchParams(searchParams);
-    next.delete('intent');
-    setSearchParams(next, { replace: true });
-  }, [searchParams, setSearchParams]);
-
   const patientsQuery = useQuery({
     queryKey: ['patients', appliedFilters],
     queryFn: () =>
       fetchPatients({
         keyword: appliedFilters.keyword || undefined,
+        searchType: resolvePatientSearchType(appliedFilters.keyword || undefined),
         departmentCode: appliedFilters.department || undefined,
         physicianCode: appliedFilters.physician || undefined,
         paymentMode: appliedFilters.paymentMode,
@@ -1163,41 +823,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       setOrcaAddressPending(false);
     }
   }, [blocking, enqueue, form.zip, orcaAddressPending, today]);
-  const handleHokenjaSearch = useCallback(async () => {
-    if (hokenjaPending || blocking) return;
-    const keyword = hokenjaFilters.keyword.trim();
-    if (!keyword) {
-      setHokenjaResult({ ok: false, status: 0, items: [], totalCount: 0, message: '検索キーワードを入力してください。' });
-      return;
-    }
-    setHokenjaPending(true);
-    try {
-      const result = await fetchOrcaHokenja({
-        keyword,
-        pref: hokenjaFilters.pref,
-        effective: hokenjaFilters.effective,
-      });
-      setHokenjaResult(result);
-    } catch (error) {
-      setHokenjaResult({
-        ok: false,
-        status: 0,
-        items: [],
-        totalCount: 0,
-        message: error instanceof Error ? error.message : '保険者検索に失敗しました。',
-      });
-    } finally {
-      setHokenjaPending(false);
-    }
-  }, [blocking, hokenjaFilters.effective, hokenjaFilters.keyword, hokenjaFilters.pref, hokenjaPending]);
   const canLookupAddress = normalizeZipCode(form.zip).length === 7 && !blocking && !orcaAddressPending;
   const missingMasterFlag = resolvedMissingMaster;
   const fallbackUsedFlag = resolvedFallbackUsed;
-  const memoValidationErrors: string[] = [];
-  if (!orcaMemoPatientId) memoValidationErrors.push('患者IDが未選択です。');
-  if (!orcaMemoEditor.performDate) memoValidationErrors.push('Perform_Date が未設定です。');
-  if (!orcaMemoEditor.memo.trim()) memoValidationErrors.push('メモが空です。');
-  const canSaveMemo = memoValidationErrors.length === 0 && !blocking;
   const fieldErrorMap = useMemo(() => {
     const map = new Map<keyof PatientRecord, PatientValidationError>();
     for (const error of displayedValidationErrors) {
@@ -1308,7 +936,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       setPendingSelection(null);
       setSelectionNotice(null);
     } else {
-      if (!hasUnsavedChanges && !orcaMemoDirty) {
+      if (!hasUnsavedChanges) {
         setSelectedId(undefined);
         setForm({});
         setBaseline(null);
@@ -1318,7 +946,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       setSelectionNotice({ tone: 'warning', message: '指定患者が見つかりません。患者を選択してください。' });
     }
     lastPatientIdParam.current = patientIdParam;
-  }, [hasUnsavedChanges, orcaMemoDirty, patientIdParam, patients, patientsQuery.data, patientsQuery.isFetching]);
+  }, [hasUnsavedChanges, patientIdParam, patients, patientsQuery.data, patientsQuery.isFetching]);
 
   useEffect(() => {
     if (!selectionNotice) return;
@@ -1337,7 +965,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     const selectedPatient = patients.find((patient) => resolvePatientKey(patient) === selectedId);
     if (!selectedPatient) {
       setSelectionNotice({ tone: 'warning', message: '一覧更新で選択中の患者が見つかりません。検索条件を確認してください。' });
-      if (!hasUnsavedChanges && !orcaMemoDirty) {
+      if (!hasUnsavedChanges) {
         setSelectedId(undefined);
         setForm({});
         setBaseline(null);
@@ -1346,7 +974,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       }
       return;
     }
-    if (hasUnsavedChanges || orcaMemoDirty) {
+    if (hasUnsavedChanges) {
       setSelectionNotice({ tone: 'info', message: '一覧を更新しました。編集中の内容は保持しています。' });
       setSelectionLost(false);
       return;
@@ -1356,7 +984,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     baselineRef.current = selectedPatient;
     setSelectionNotice({ tone: 'info', message: '一覧を更新しました。選択は保持されています。' });
     setSelectionLost(false);
-  }, [hasUnsavedChanges, orcaMemoDirty, patients, patientsQuery.dataUpdatedAt, selectedId]);
+  }, [hasUnsavedChanges, patients, patientsQuery.dataUpdatedAt, selectedId]);
 
   useEffect(() => {
     if (!lastAuditEvent) return;
@@ -1447,13 +1075,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       if (switchingSelection) return;
       const nextKey = resolvePatientKey(patient);
       if (selectedId === nextKey) return;
-      if (hasUnsavedChanges || orcaMemoDirty) {
+      if (hasUnsavedChanges) {
         setPendingSelection(patient);
         return;
       }
       applyPatientSelection(patient);
     },
-    [applyPatientSelection, hasUnsavedChanges, orcaMemoDirty, selectedId, switchingSelection],
+    [applyPatientSelection, hasUnsavedChanges, selectedId, switchingSelection],
   );
 
   const mutation = useMutation({
@@ -1910,7 +1538,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     if (switchingSelection) return;
     if (!pendingSelection) return;
     setPendingSelection(null);
-    setOrcaMemoDirty(false);
     setValidationErrors([]);
     setLastAttempt(null);
     setToast({ tone: 'info', message: '未保存変更を破棄して患者を切り替えました。' });
@@ -1923,23 +1550,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     let canSwitch = true;
     if (hasUnsavedChanges) {
       canSwitch = await save('update');
-    }
-    if (canSwitch && orcaMemoDirty) {
-      if (!canSaveMemo) {
-        setOrcaMemoNotice({
-          tone: 'warning',
-          message: 'ORCAメモに未保存エラーがあるため、患者切替前に保存できません。',
-          detail: memoValidationErrors.join(' / '),
-        });
-        canSwitch = false;
-      } else {
-        try {
-          const memoResult = await orcaMemoMutation.mutateAsync();
-          canSwitch = memoResult.ok;
-        } catch {
-          canSwitch = false;
-        }
-      }
     }
     if (canSwitch) {
       applyPatientSelection(pendingSelection);
@@ -2910,632 +2520,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           </section>
 
           <section
-            id="patients-detail-panel-orcaTools"
-            role="tabpanel"
-            aria-labelledby="patients-detail-tab-orcaTools"
-            className="patients-page__detail-panel"
-            hidden={activeDetailTab !== 'orcaTools'}
-          >
-
-          <section className="patients-page__orca-original" aria-live={resolveAriaLive(orcaOriginalNotice?.tone ?? 'info')}>
-            <header className="patients-page__orca-original-header patients-page__sticky-bar">
-              <div>
-                <p className="patients-page__orca-original-kicker">ORCA 原本</p>
-                <h3>patientgetv2 原本参照</h3>
-                <p className="patients-page__orca-original-sub">XML2 / JSON を切り替えて取得できます。</p>
-              </div>
-              <div className="patients-page__orca-original-actions">
-                <div className="patients-page__orca-original-toggle" role="radiogroup" aria-label="取得形式">
-                  <span className="patients-page__orca-original-toggle-label">取得形式</span>
-                  <label>
-                    <input
-                      type="radio"
-                      name="patientget-format"
-                      value="xml"
-                      checked={orcaOriginalFormat === 'xml'}
-                      onChange={() => setOrcaOriginalFormat('xml')}
-                    />
-                    XML2
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="patientget-format"
-                      value="json"
-                      checked={orcaOriginalFormat === 'json'}
-                      onChange={() => setOrcaOriginalFormat('json')}
-                    />
-                    JSON
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => importSelectedPatientId && importMutation.mutate(importSelectedPatientId)}
-                  disabled={!importSelectedPatientId || importMutation.isPending}
-                  title={importSelectedPatientId ? 'ORCA患者マスタから取り込み（上書き更新）' : 'Patient_ID を選択してください'}
-                >
-                  {importMutation.isPending ? 'ORCA更新中…' : 'ORCAから更新'}
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => orcaOriginalMutation.mutate()}
-                  disabled={!orcaOriginalPatientId || orcaOriginalMutation.isPending}
-                >
-                  {orcaOriginalMutation.isPending ? '取得中…' : 'patientgetv2 取得'}
-                </button>
-              </div>
-            </header>
-
-            {!orcaOriginalPatientId ? (
-              <p className="patients-page__orca-original-empty">患者を選択すると ORCA 原本を取得できます。</p>
-            ) : (
-              <>
-                <div className="patients-page__orca-original-grid">
-                  <label>
-                    <span>Patient_ID</span>
-                    <input
-                      id="patients-orca-original-patient-id"
-                      name="patientsOrcaOriginalPatientId"
-                      value={orcaOriginalPatientId ?? ''}
-                      readOnly
-                    />
-                  </label>
-                  <label>
-                    <span>class</span>
-                    <input
-                      id="patients-orca-original-class"
-                      name="patientsOrcaOriginalClass"
-                      value={orcaOriginalClass}
-                      onChange={(event) => setOrcaOriginalClass(event.target.value)}
-                      placeholder="例: 01"
-                    />
-                  </label>
-                </div>
-                {renderOrcaMeta([
-                  { label: 'Api_Result', value: orcaOriginalResult?.apiResult ?? '—' },
-                  { label: 'Api_Result_Message', value: orcaOriginalResult?.apiResultMessage ?? '—' },
-                  { label: 'Information_Date', value: orcaOriginalResult?.informationDate ?? '—' },
-                  { label: 'Information_Time', value: orcaOriginalResult?.informationTime ?? '—' },
-                  { label: 'RunId', value: orcaOriginalResult?.runId ?? '—' },
-                  { label: 'TraceId', value: orcaOriginalResult?.traceId ?? '—' },
-                  { label: 'Status', value: orcaOriginalResult?.status ?? '—' },
-                  {
-                    label: 'Format',
-                    value: orcaOriginalResult ? (orcaOriginalResult.format === 'json' ? 'JSON' : 'XML2') : '—',
-                  },
-                  {
-                    label: '必須タグ不足',
-                    value: orcaOriginalResult ? formatMissingTags(orcaOriginalResult.missingTags) : '—',
-                    tone: orcaOriginalResult?.missingTags?.length ? 'warning' : undefined,
-                  },
-                ])}
-                {orcaOriginalNotice ? (
-                  <div className={`patients-page__toast patients-page__toast--${orcaOriginalNotice.tone}`} role="status">
-                    <strong>{orcaOriginalNotice.message}</strong>
-                    {orcaOriginalNotice.detail && <p>{orcaOriginalNotice.detail}</p>}
-                  </div>
-                ) : null}
-                {orcaOriginalResult ? (
-                  <pre className="patients-page__orca-original-response">{patientOriginalPreview}</pre>
-                ) : (
-                  <p className="patients-page__orca-original-empty">原本の取得結果がここに表示されます。</p>
-                )}
-              </>
-            )}
-          </section>
-
-          </section>
-
-          <section
-            id="patients-detail-panel-insurance"
-            role="tabpanel"
-            aria-labelledby="patients-detail-tab-insurance"
-            className="patients-page__detail-panel"
-            hidden={activeDetailTab !== 'insurance'}
-          >
-          <section className="patients-page__insurance-helper" aria-live={resolveAriaLive(insuranceNotice?.tone ?? 'info')}>
-            <header className="patients-page__insurance-header patients-page__sticky-bar">
-              <div>
-                <p className="patients-page__insurance-kicker">ORCA 保険</p>
-                <h3>保険者検索（insuranceinf1v2）</h3>
-                <p className="patients-page__insurance-sub">Base_Date デフォルト: {today}</p>
-              </div>
-              <div className="patients-page__insurance-actions">
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => insuranceMutation.mutate()}
-                  disabled={insuranceMutation.isPending}
-                >
-                  {insuranceMutation.isPending ? '取得中…' : '保険者一覧を取得'}
-                </button>
-              </div>
-            </header>
-            {renderOrcaMeta([
-              { label: 'Api_Result', value: insuranceResult?.apiResult ?? '—' },
-              { label: 'Api_Result_Message', value: insuranceResult?.apiResultMessage ?? '—' },
-              { label: 'Base_Date', value: insuranceResult?.baseDate ?? insuranceFilters.baseDate ?? '—' },
-              { label: 'RunId', value: insuranceResult?.runId ?? '—' },
-              { label: 'TraceId', value: insuranceResult?.traceId ?? '—' },
-              { label: 'Status', value: insuranceResult?.status ?? '—' },
-              {
-                label: '必須タグ不足',
-                value: insuranceResult ? formatMissingTags(insuranceResult.missingTags) : '—',
-                tone: insuranceResult?.missingTags?.length ? 'warning' : undefined,
-              },
-            ])}
-            <div className="patients-page__insurance-grid">
-              <label>
-                <span>取得基準日</span>
-                <input
-                  id="patients-insurance-base-date"
-                  name="patientsInsuranceBaseDate"
-                  type="date"
-                  value={insuranceFilters.baseDate}
-                  onChange={(event) => setInsuranceFilters((prev) => ({ ...prev, baseDate: event.target.value }))}
-                />
-              </label>
-              <label>
-                <span>検索キーワード</span>
-                <input
-                  id="patients-insurance-keyword"
-                  name="patientsInsuranceKeyword"
-                  value={insuranceFilters.keyword}
-                  onChange={(event) => setInsuranceFilters((prev) => ({ ...prev, keyword: event.target.value }))}
-                  placeholder="保険者番号/名称/公費名称"
-                />
-              </label>
-            </div>
-            {insuranceNotice ? (
-              <div className={`patients-page__toast patients-page__toast--${insuranceNotice.tone}`} role="status">
-                <strong>{insuranceNotice.message}</strong>
-                {insuranceNotice.detail && <p>{insuranceNotice.detail}</p>}
-              </div>
-            ) : null}
-            {insuranceResult ? (
-              <div className="patients-page__insurance-summary" role="status" aria-live="polite">
-                <div className="patients-page__insurance-summary-main">
-                  <strong>検索結果</strong>
-                  <span>
-                    保険者 {filteredHealthInsurances.length}件 / 公費 {filteredPublicInsurances.length}件
-                  </span>
-                </div>
-                <div className="patients-page__insurance-summary-meta">
-                  <span>キーワード: {insuranceFilters.keyword || '指定なし'}</span>
-                  <span>反映先: 編集フォームの「保険/自費」欄</span>
-                </div>
-              </div>
-            ) : null}
-            {!insuranceResult ? (
-              <p className="patients-page__insurance-empty">保険者一覧はまだ取得されていません。</p>
-            ) : (
-              <div className="patients-page__insurance-results">
-                <div className="patients-page__insurance-group">
-                  <div className="patients-page__insurance-group-header">
-                    <strong>保険者</strong>
-                    <span>{filteredHealthInsurances.length} 件</span>
-                  </div>
-                  {filteredHealthInsurances.length === 0 ? (
-                    <p className="patients-page__insurance-empty">該当する保険者がありません。</p>
-                  ) : (
-                    <ul>
-                      {filteredHealthInsurances.map((entry: HealthInsuranceEntry, index) => (
-                        <li key={`${entry.providerId ?? 'provider'}-${index}`}>
-                          <div className="patients-page__insurance-item-main">
-                            <span>{entry.providerName ?? '名称不明'}</span>
-                            <small>
-                              番号: {entry.providerId ?? '—'} / class: {entry.providerClass ?? '—'}
-                            </small>
-                          </div>
-                          <div className="patients-page__insurance-item-actions">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                (() => {
-                                  const label = formatInsuranceLabel({
-                                    name: entry.providerName,
-                                    id: entry.providerId,
-                                    classCode: entry.providerClass,
-                                  });
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    insurance: label,
-                                  }));
-                                  enqueue({
-                                    tone: 'success',
-                                    message: '保険者情報を反映しました。',
-                                    detail: label,
-                                  });
-                                })()
-                              }
-                              disabled={blocking}
-                            >
-                              反映
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div className="patients-page__insurance-group">
-                  <div className="patients-page__insurance-group-header">
-                    <strong>公費</strong>
-                    <span>{filteredPublicInsurances.length} 件</span>
-                  </div>
-                  {filteredPublicInsurances.length === 0 ? (
-                    <p className="patients-page__insurance-empty">該当する公費がありません。</p>
-                  ) : (
-                    <ul>
-                      {filteredPublicInsurances.map((entry: PublicInsuranceEntry, index) => (
-                        <li key={`${entry.publicId ?? 'public'}-${index}`}>
-                          <div className="patients-page__insurance-item-main">
-                            <span>{entry.publicName ?? '名称不明'}</span>
-                            <small>
-                              番号: {entry.publicId ?? '—'} / class: {entry.publicClass ?? '—'}
-                            </small>
-                          </div>
-                          <div className="patients-page__insurance-item-actions">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                (() => {
-                                  const label = formatInsuranceLabel({
-                                    name: entry.publicName,
-                                    id: entry.publicId,
-                                    classCode: entry.publicClass,
-                                  });
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    insurance: label,
-                                  }));
-                                  enqueue({
-                                    tone: 'success',
-                                    message: '公費情報を反映しました。',
-                                    detail: label,
-                                  });
-                                })()
-                              }
-                              disabled={blocking}
-                            >
-                              反映
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            )}
-            <section className="patients-page__insurance-helper" aria-label="保険者検索（hokenja）">
-              <header className="patients-page__insurance-header">
-                <div>
-                  <p className="patients-page__insurance-kicker">ORCA 保険</p>
-                  <h3>保険者検索（hokenja）</h3>
-                </div>
-                <div className="patients-page__insurance-actions">
-                  <button type="button" className="ghost" onClick={() => void handleHokenjaSearch()} disabled={blocking || hokenjaPending}>
-                    {hokenjaPending ? '検索中…' : '検索'}
-                  </button>
-                </div>
-              </header>
-              <div className="patients-page__insurance-grid">
-                <label>
-                  <span>keyword</span>
-                  <input
-                    id="patients-hokenja-keyword"
-                    value={hokenjaFilters.keyword}
-                    onChange={(event) => setHokenjaFilters((prev) => ({ ...prev, keyword: event.target.value }))}
-                    placeholder="保険者番号/名称"
-                    disabled={blocking}
-                  />
-                </label>
-                <label>
-                  <span>pref（任意）</span>
-                  <input
-                    id="patients-hokenja-pref"
-                    value={hokenjaFilters.pref}
-                    onChange={(event) => setHokenjaFilters((prev) => ({ ...prev, pref: event.target.value }))}
-                    placeholder="13"
-                    inputMode="numeric"
-                    disabled={blocking}
-                  />
-                </label>
-                <label>
-                  <span>effective</span>
-                  <input
-                    id="patients-hokenja-effective"
-                    type="date"
-                    value={hokenjaFilters.effective}
-                    onChange={(event) => setHokenjaFilters((prev) => ({ ...prev, effective: event.target.value }))}
-                    disabled={blocking}
-                  />
-                </label>
-              </div>
-              {hokenjaResult && !hokenjaResult.ok ? (
-                <div className="patients-page__toast patients-page__toast--error" role="status">
-                  <strong>{hokenjaResult.message ?? '保険者検索に失敗しました。'}</strong>
-                </div>
-              ) : null}
-              {hokenjaResult ? (
-                <div className="patients-page__insurance-summary" role="status" aria-live="polite">
-                  <div className="patients-page__insurance-summary-main">
-                    <strong>検索結果</strong>
-                    <span>{hokenjaResult.totalCount ?? hokenjaResult.items.length} 件</span>
-                  </div>
-                  <div className="patients-page__insurance-summary-meta">
-                    <span>keyword: {hokenjaFilters.keyword || '指定なし'}</span>
-                    <span>反映先: 編集フォームの「保険/自費」欄</span>
-                  </div>
-                </div>
-              ) : (
-                <p className="patients-page__insurance-empty">保険者検索はまだ実行されていません。</p>
-              )}
-              {hokenjaResult?.ok ? (
-                hokenjaResult.items.length === 0 ? (
-                  <p className="patients-page__insurance-empty">該当する保険者がありません。</p>
-                ) : (
-                  <div className="patients-page__insurance-results">
-                    <div className="patients-page__insurance-group">
-                      <div className="patients-page__insurance-group-header">
-                        <strong>保険者</strong>
-                        <span>{hokenjaResult.items.length} 件</span>
-                      </div>
-                      <ul>
-                        {hokenjaResult.items.map((item, index) => {
-                          const label = buildHokenjaInsuranceLabel(item);
-                          return (
-                            <li key={`${item.payerCode ?? 'hokenja'}-${index}`}>
-                              <div className="patients-page__insurance-item-main">
-                                <span>{item.payerName ?? item.payerCode ?? '名称不明'}</span>
-                                <small>
-                                  番号: {item.payerCode ?? '—'} / 種別: {item.payerType ?? '—'} / 住所: {item.addressLine ?? '—'}
-                                </small>
-                              </div>
-                              <div className="patients-page__insurance-item-actions">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setForm((prev) => ({ ...prev, insurance: label }));
-                                    enqueue({ tone: 'success', message: '保険者情報を反映しました。', detail: label });
-                                  }}
-                                  disabled={blocking || !label}
-                                >
-                                  反映
-                                </button>
-                              </div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  </div>
-                )
-              ) : null}
-            </section>
-          </section>
-
-          </section>
-
-          <section
-            id="patients-detail-panel-orcaMemo"
-            role="tabpanel"
-            aria-labelledby="patients-detail-tab-orcaMemo"
-            className="patients-page__detail-panel"
-            hidden={activeDetailTab !== 'orcaMemo'}
-          >
-          <section className="patients-page__orca-memo" aria-live={resolveAriaLive(orcaMemoNotice?.tone ?? 'info')}>
-            <header className="patients-page__orca-memo-header patients-page__sticky-bar">
-              <div>
-                <p className="patients-page__orca-memo-kicker">ORCA患者メモ</p>
-                <h3>ORCA メモ取得/更新</h3>
-                <p className="patients-page__orca-memo-sub">patientlst7v2 / patientmemomodv2 を XML2 で送信します。</p>
-                <p className="patients-page__orca-memo-sub">Base_Date デフォルト: {today} / Perform_Date デフォルト: {today}</p>
-              </div>
-              <div className="patients-page__orca-memo-actions">
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => orcaMemoQuery.refetch()}
-                  disabled={!orcaMemoPatientId || orcaMemoQuery.isFetching}
-                >
-                  {orcaMemoQuery.isFetching ? '取得中…' : '再取得'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => orcaMemoMutation.mutate()}
-                  disabled={!canSaveMemo || orcaMemoMutation.isPending}
-                >
-                  {orcaMemoMutation.isPending ? '保存中…' : 'ORCAへ保存'}
-                </button>
-              </div>
-            </header>
-
-            {!orcaMemoPatientId ? (
-              <p className="patients-page__orca-memo-empty">患者を選択すると ORCA メモを取得できます。</p>
-            ) : (
-              <>
-                <div className="patients-page__orca-status-grid">
-                  <div className="patients-page__orca-status-card">
-                    <div className="patients-page__orca-status-head">
-                      <strong>取得結果</strong>
-                      <span>patientlst7v2</span>
-                    </div>
-                    {renderOrcaMeta(
-                      [
-                        { label: 'Api_Result', value: orcaMemoQuery.data?.apiResult ?? '—' },
-                        { label: 'Api_Result_Message', value: orcaMemoQuery.data?.apiResultMessage ?? '—' },
-                        { label: 'Base_Date', value: orcaMemoQuery.data?.baseDate ?? orcaMemoFilters.baseDate ?? '—' },
-                        { label: 'RunId', value: orcaMemoQuery.data?.runId ?? '—' },
-                        { label: 'TraceId', value: orcaMemoQuery.data?.traceId ?? '—' },
-                        { label: 'Status', value: orcaMemoQuery.data?.status ?? '—' },
-                        {
-                          label: '必須タグ不足',
-                          value: orcaMemoQuery.data ? formatMissingTags(orcaMemoQuery.data.missingTags) : '—',
-                          tone: orcaMemoQuery.data?.missingTags?.length ? 'warning' : undefined,
-                        },
-                      ],
-                      'patients-page__orca-meta--compact',
-                    )}
-                  </div>
-                  <div className="patients-page__orca-status-card">
-                    <div className="patients-page__orca-status-head">
-                      <strong>更新結果</strong>
-                      <span>patientmemomodv2</span>
-                    </div>
-                    {renderOrcaMeta(
-                      [
-                        { label: 'Api_Result', value: orcaMemoLastUpdate?.apiResult ?? '—' },
-                        { label: 'Api_Result_Message', value: orcaMemoLastUpdate?.apiResultMessage ?? '—' },
-                        { label: 'RunId', value: orcaMemoLastUpdate?.runId ?? '—' },
-                        { label: 'TraceId', value: orcaMemoLastUpdate?.traceId ?? '—' },
-                        { label: 'Status', value: orcaMemoLastUpdate?.status ?? '—' },
-                        {
-                          label: '必須タグ不足',
-                          value: orcaMemoLastUpdate ? formatMissingTags(orcaMemoLastUpdate.missingTags) : '—',
-                          tone: orcaMemoLastUpdate?.missingTags?.length ? 'warning' : undefined,
-                        },
-                      ],
-                      'patients-page__orca-meta--compact',
-                    )}
-                    <p className="patients-page__orca-status-note">
-                      監査ログビューでも反映状況を確認できます。<a href="#patients-audit-log">監査ログへ</a>
-                    </p>
-                  </div>
-                </div>
-                {memoValidationErrors.length > 0 ? (
-                  <div className="patients-page__orca-memo-warning" role="alert">
-                    {memoValidationErrors.map((item) => (
-                      <p key={item}>{item}</p>
-                    ))}
-                  </div>
-                ) : null}
-                <div className="patients-page__orca-memo-grid">
-                  <label>
-                    <span>取得基準日</span>
-                    <input
-                      id="patients-orca-memo-base-date"
-                      name="patientsOrcaMemoBaseDate"
-                      type="date"
-                      value={orcaMemoFilters.baseDate}
-                      onChange={(event) =>
-                        setOrcaMemoFilters((prev) => ({ ...prev, baseDate: event.target.value }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    <span>取得 Memo_Class</span>
-                    <input
-                      id="patients-orca-memo-class"
-                      name="patientsOrcaMemoClass"
-                      value={orcaMemoFilters.memoClass}
-                      onChange={(event) =>
-                        setOrcaMemoFilters((prev) => ({ ...prev, memoClass: event.target.value }))
-                      }
-                      placeholder="例: 2"
-                    />
-                  </label>
-                  <label>
-                    <span>取得 診療科コード</span>
-                    <input
-                      id="patients-orca-memo-department"
-                      name="patientsOrcaMemoDepartment"
-                      value={orcaMemoFilters.departmentCode}
-                      onChange={(event) =>
-                        setOrcaMemoFilters((prev) => ({ ...prev, departmentCode: event.target.value }))
-                      }
-                      placeholder="例: 01"
-                    />
-                  </label>
-                </div>
-                <label className="patients-page__orca-memo-textarea">
-                  <span>ORCA メモ内容</span>
-                  <textarea
-                    id="patients-orca-memo-text"
-                    name="patientsOrcaMemoText"
-                    rows={4}
-                    value={orcaMemoEditor.memo}
-                    onChange={(event) => {
-                      setOrcaMemoEditor((prev) => ({ ...prev, memo: event.target.value }));
-                      setOrcaMemoDirty(true);
-                    }}
-                    placeholder="ORCA メモを入力"
-                    disabled={blocking}
-                  />
-                </label>
-                <div className="patients-page__orca-memo-grid">
-                  <label>
-                    <span>更新 Perform_Date</span>
-                    <input
-                      id="patients-orca-memo-perform-date"
-                      name="patientsOrcaMemoPerformDate"
-                      type="date"
-                      value={orcaMemoEditor.performDate}
-                      onChange={(event) => setOrcaMemoEditor((prev) => ({ ...prev, performDate: event.target.value }))}
-                    />
-                  </label>
-                  <label>
-                    <span>更新 Memo_Class</span>
-                    <input
-                      id="patients-orca-memo-editor-class"
-                      name="patientsOrcaMemoEditorClass"
-                      value={orcaMemoEditor.memoClass}
-                      onChange={(event) =>
-                        setOrcaMemoEditor((prev) => ({ ...prev, memoClass: event.target.value }))
-                      }
-                      placeholder="例: 2"
-                    />
-                  </label>
-                  <label>
-                    <span>更新 診療科コード</span>
-                    <input
-                      id="patients-orca-memo-editor-department"
-                      name="patientsOrcaMemoEditorDepartment"
-                      value={orcaMemoEditor.departmentCode}
-                      onChange={(event) =>
-                        setOrcaMemoEditor((prev) => ({ ...prev, departmentCode: event.target.value }))
-                      }
-                      placeholder="例: 01"
-                    />
-                  </label>
-                </div>
-                {orcaMemoNotice ? (
-                  <div className={`patients-page__toast patients-page__toast--${orcaMemoNotice.tone}`} role="status">
-                    <strong>{orcaMemoNotice.message}</strong>
-                    {orcaMemoNotice.detail && <p>{orcaMemoNotice.detail}</p>}
-                  </div>
-                ) : null}
-                {orcaMemoQuery.data && orcaMemoQuery.data.ok && orcaMemoQuery.data.memos.length === 0 ? (
-                  <p className="patients-page__orca-memo-empty">空メモ（取得成功・登録なし）</p>
-                ) : null}
-                {orcaMemoQuery.data?.memos?.length ? (
-                  <details className="patients-page__orca-memo-list">
-                    <summary>取得済みメモ一覧</summary>
-                    <ul>
-                      {orcaMemoQuery.data.memos.map((memo, index) => (
-                        <li key={`${memo.departmentCode ?? 'dept'}-${index}`}>
-                          <strong>{memo.departmentName ?? memo.departmentCode ?? '診療科不明'}</strong>
-                          <span>{memo.memo ?? 'メモなし'}</span>
-                          {memo.acceptanceDate && (
-                            <small>
-                              受付: {memo.acceptanceDate} {memo.acceptanceTime ?? ''}
-                            </small>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : null}
-              </>
-            )}
-          </section>
-
-          </section>
-
-          <section
             id="patients-detail-panel-audit"
             role="tabpanel"
             aria-labelledby="patients-detail-tab-audit"
@@ -3675,24 +2659,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 <small>{lastSaveOrcaStatus.detail}</small>
               </div>
               <div className="patients-page__audit-card">
-                <span>ORCAメモ更新</span>
-                <strong>{orcaMemoLastUpdate ? (orcaMemoLastUpdate.ok ? '成功' : '失敗') : '未送信'}</strong>
-                {renderOrcaMeta(
-                  [
-                    { label: 'Api_Result', value: orcaMemoLastUpdate?.apiResult ?? '—' },
-                    { label: 'Api_Result_Message', value: orcaMemoLastUpdate?.apiResultMessage ?? '—' },
-                    { label: 'RunId', value: orcaMemoLastUpdate?.runId ?? '—' },
-                    { label: 'TraceId', value: orcaMemoLastUpdate?.traceId ?? '—' },
-                    { label: 'Status', value: orcaMemoLastUpdate?.status ?? '—' },
-                    {
-                      label: '必須タグ不足',
-                      value: orcaMemoLastUpdate ? formatMissingTags(orcaMemoLastUpdate.missingTags) : '—',
-                      tone: orcaMemoLastUpdate?.missingTags?.length ? 'warning' : undefined,
-                    },
-                  ],
-                  'patients-page__orca-meta--compact',
-                )}
-                {orcaMemoLastUpdate?.apiResultMessage ? <small>message: {orcaMemoLastUpdate.apiResultMessage}</small> : null}
+                <span>運用整理</span>
+                <strong>完了</strong>
+                <small>患者画面から ORCA 原本/保険/メモの XML 補助 UI を撤去しました。</small>
               </div>
               <div className="patients-page__audit-card">
                 <span>現在の反映可否</span>

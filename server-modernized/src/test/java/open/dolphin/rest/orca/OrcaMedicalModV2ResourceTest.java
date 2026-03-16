@@ -64,7 +64,7 @@ class OrcaMedicalModV2ResourceTest extends RuntimeDelegateTestSupport {
                         return "127.0.0.1";
                     }
                     if ("getRequestURI".equals(name)) {
-                        return "/orca21/medicalmodv2/outpatient";
+                        return "/api/orca/medicalmodv2/outpatient";
                     }
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         String header = String.valueOf(args[0]);
@@ -97,7 +97,7 @@ class OrcaMedicalModV2ResourceTest extends RuntimeDelegateTestSupport {
         OutpatientFlagResponse.AuditEvent auditEvent = response.getAuditEvent();
         assertNotNull(auditEvent, "Audit event should be present");
         assertEquals("ORCA_MEDICAL_GET", auditEvent.getAction());
-        assertEquals("/orca21/medicalmodv2/outpatient", auditEvent.getResource());
+        assertEquals("/api/orca/medicalmodv2/outpatient", auditEvent.getResource());
         assertEquals("SUCCESS", auditEvent.getOutcome());
         assertEquals("trace-outpatient-medical", auditEvent.getTraceId());
         assertEquals("req-outpatient-medical", auditEvent.getRequestId());
@@ -110,7 +110,7 @@ class OrcaMedicalModV2ResourceTest extends RuntimeDelegateTestSupport {
 
         assertNotNull(auditDispatcher.payload, "Audit dispatcher should receive payload");
         assertEquals("ORCA_MEDICAL_GET", auditDispatcher.payload.getAction());
-        assertEquals("/orca21/medicalmodv2/outpatient", auditDispatcher.payload.getResource());
+        assertEquals("/api/orca/medicalmodv2/outpatient", auditDispatcher.payload.getResource());
         assertEquals("F001:doctor01", auditDispatcher.payload.getActorId());
         assertEquals("trace-outpatient-medical", auditDispatcher.payload.getTraceId());
         assertEquals("req-outpatient-medical", auditDispatcher.payload.getRequestId());

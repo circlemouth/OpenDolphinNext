@@ -57,7 +57,7 @@ Patients は、受付やカルテの途中で気づいた患者情報の不足�
 - **表示**:
   - RUN_ID / missingMaster / fallbackUsed / cacheHit / dataSourceTransition / recordsReturned
 - **説明文**:
-  - `/orca/patients/local-search` で閲覧、`/orca12/patientmodv2/outpatient` で保存。
+  - `/api/orca/patients/local-search` で閲覧、`/api/orca/patient/mutation` で保存。
 
 ### 3.2 フィルタ & 保存ビュー
 - **フィルタ項目**:
@@ -143,9 +143,9 @@ Patients は、受付やカルテの途中で気づいた患者情報の不足�
 2. Charts からの遷移
    - returnTo を保持し「Charts に戻る」を提供
 3. 患者検索
-   - 検索条件を適用し `/orca/patients/local-search` を再取得
+   - 検索条件を適用し `/api/orca/patients/local-search` を再取得
 4. 患者更新
-   - バリデーション → `/orca12/patientmodv2/outpatient` へ送信
+   - バリデーション → `/api/orca/patient/mutation` へ送信
 5. ORCA 原本参照
    - XML/JSON の切替で `patientgetv2` を取得
 6. ORCA メモ更新
@@ -166,13 +166,13 @@ Patients は、受付やカルテの途中で気づいた患者情報の不足�
 ## 7. API一覧（Patients）
 | 目的 | エンドポイント | method | 主な入力 | 主な出力/扱い |
 | --- | --- | --- | --- | --- |
-| 患者検索 | `/orca/patients/local-search` | POST (JSON) | keyword/department/physician/paymentMode | 患者一覧 / meta / auditEvent |
-| 患者更新 | `/orca12/patientmodv2/outpatient` | POST (JSON) | operation(create/update/delete), patient | 更新結果 / auditEvent |
-| ORCA原本 | `/api01rv2/patientgetv2` | GET | id, class, format=json | XML2/JSON原本 |
+| 患者検索 | `/api/orca/patients/local-search` | POST (JSON) | keyword/department/physician/paymentMode | 患者一覧 / meta / auditEvent |
+| 患者更新 | `/api/orca/patient/mutation` | POST (JSON) | operation(create/update/delete), patient | 更新結果 / auditEvent |
+| ORCA原本 | `/api/orca/patientgetv2` | GET | id, class, format=json | XML2/JSON原本 |
 | 保険者一覧 | `/api/api01rv2/insuranceinf1v2` | POST (XML) | Base_Date | 保険者/公費一覧 |
 | ORCAメモ取得 | `/api01rv2/patientlst7v2` | POST (XML) | Patient_ID, Base_Date, Memo_Class | メモ一覧 |
 | ORCAメモ更新 | `/orca06/patientmemomodv2` | POST (XML) | Patient_ID, Perform_Date, Memo | 更新結果 |
-| モック | `/orca/patients/local-search/mock`, `/orca12/patientmodv2/outpatient/mock` | POST | VITE_DISABLE_MSW=0 時のフォールバック | デモ/検証用 |
+| モック | `/api/orca/patients/local-search/mock`, `/api/orca/patient/mutation/mock` | POST | VITE_DISABLE_MSW=0 時のフォールバック | デモ/検証用 |
 
 ## 8. 実装上の注意
 - **編集ブロック**時は MissingMasterRecoveryGuide を必ず表示し、再取得導線を明示する。

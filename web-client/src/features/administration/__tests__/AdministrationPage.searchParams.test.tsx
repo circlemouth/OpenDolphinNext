@@ -123,20 +123,8 @@ vi.mock('../delivery/AdminDeliveryStatusCard', () => ({
   AdminDeliveryStatusCard: () => <div data-testid="delivery-status-card" />,
 }));
 
-vi.mock('../delivery/OrcaMasterSyncCard', () => ({
-  OrcaMasterSyncCard: () => <div data-testid="master-sync-card" />,
-}));
-
-vi.mock('../delivery/SystemHealthCard', () => ({
-  SystemHealthCard: () => <div data-testid="system-health-card" />,
-}));
-
-vi.mock('../delivery/MedicalSetSearchCard', () => ({
-  MedicalSetSearchCard: () => <div data-testid="medicalset-search-card" />,
-}));
-
-vi.mock('../delivery/OrcaXmlProxyCard', () => ({
-  OrcaXmlProxyCard: () => <div data-testid="xml-proxy-card" />,
+vi.mock('../delivery/OperationsHealthCard', () => ({
+  OperationsHealthCard: () => <div data-testid="operations-health-card" />,
 }));
 
 vi.mock('../delivery/OrcaInternalWrapperCard', () => ({
@@ -150,11 +138,10 @@ vi.mock('../delivery/OrcaQueueCard', () => ({
 vi.mock('../api', () => ({
   discardOrcaQueue: vi.fn().mockResolvedValue({ ok: true }),
   fetchEffectiveAdminConfig: mockFetchEffectiveAdminConfig,
-  fetchMasterLastUpdate: vi.fn().mockResolvedValue({ ok: true, apiResult: '00', versions: [] }),
-  fetchMedicalSet: vi.fn().mockResolvedValue({ ok: true, apiResult: '00', sets: [] }),
+  fetchOperationsHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', raw: {} }),
+  fetchOperationsReadiness: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', checks: {}, raw: {} }),
   fetchOrcaQueue: mockFetchOrcaQueue,
-  fetchSystemDaily: vi.fn().mockResolvedValue({ ok: true, apiResult: '00' }),
-  fetchSystemInfo: vi.fn().mockResolvedValue({ ok: true, apiResult: '00', versions: [] }),
+  fetchPvtWorkerHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, workerStatus: 'UP', reasons: [], raw: {} }),
   retryOrcaQueue: vi.fn().mockResolvedValue({ ok: true }),
   saveAdminConfig: vi.fn().mockResolvedValue({
     ok: true,
@@ -165,15 +152,6 @@ vi.mock('../api', () => ({
     verifyAdminDelivery: true,
     useMockOrcaQueue: false,
   }),
-  syncMedicationMod: vi.fn().mockResolvedValue({ ok: true, apiResult: '00' }),
-}));
-
-vi.mock('../orcaXmlProxyApi', () => ({
-  buildAcceptListRequestXml: vi.fn(() => '<xml/>'),
-  buildInsuranceProviderRequestXml: vi.fn(() => '<xml/>'),
-  buildManageUsersRequestXml: vi.fn(() => '<xml/>'),
-  buildSystemListRequestXml: vi.fn(() => '<xml/>'),
-  postOrcaXmlProxy: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
 }));
 
 vi.mock('../orcaConnectionApi', () => ({

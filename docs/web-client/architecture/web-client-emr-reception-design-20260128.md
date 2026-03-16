@@ -128,7 +128,7 @@ Reception は、当日の来院状況を見ながら、カルテを開く人と�
 - **構成**:
   - セクションごとに折りたたみ可能（初期: 会計済みのみ折りたたみ）
   - 各セクションの件数を表示
-  - 予約列（`予約`）も表示し、ORCA 予約（`/orca/appointments/list`）を一覧で俯瞰できるようにする
+- 予約列（`予約`）も表示し、ORCA 予約（`/api/orca/appointments/list`）を一覧で俯瞰できるようにする
 - **表示名（内部ステータス → 画面表示）**:
   - `予約` → `予約`
   - `受付中` → `診察待ち`
@@ -195,10 +195,10 @@ Reception は、当日の来院状況を見ながら、カルテを開く人と�
 
 ## 4. データフロー（操作とAPIの対応）
 1. 画面初期表示
-   - 受付一覧: `/orca/appointments/list` + `/orca/visits/list` を併用取得し統合
+   - 受付一覧: `/api/orca/appointments/list` + `/api/orca/visits/list` を併用取得し統合
    - 送信キュー: `/api/orca/queue` と送信キャッシュを取得（例外判定の一次情報）
 2. 受付登録/取消
-   - `/orca/visits/mutation` に Request_Number=01/02 で送信
+   - `/api/orca/visits/mutation` に Request_Number=01/02 で送信
    - 成功時は一覧を即時更新（新規/削除）
 3. フィルタ変更
    - URLパラメータ + localStorage に保存
@@ -223,11 +223,11 @@ Reception は、当日の来院状況を見ながら、カルテを開く人と�
 ## 7. API一覧（Reception）
 | 目的 | エンドポイント | method | 主な入力 | 主な出力/扱い |
 | --- | --- | --- | --- | --- |
-| 予約一覧 | `/orca/appointments/list` | POST (JSON) | appointmentDate, medicalInformation, departmentCode, physicianCode | slots/reservations/visits を統合し一覧生成 |
-| 当日受付一覧 | `/orca/visits/list` | POST (JSON) | visitDate, requestNumber=01 | 受付中/診療中/会計待ち等の一覧に統合 |
-| 受付登録/取消 | `/orca/visits/mutation` | POST (JSON) | Request_Number=01/02, Patient_ID, acceptancePush, paymentMode, etc | 成功/警告/失敗をバナー表示、一覧を即時更新 |
+| 予約一覧 | `/api/orca/appointments/list` | POST (JSON) | appointmentDate, medicalInformation, departmentCode, physicianCode | slots/reservations/visits を統合し一覧生成 |
+| 当日受付一覧 | `/api/orca/visits/list` | POST (JSON) | visitDate, requestNumber=01 | 受付中/診療中/会計待ち等の一覧に統合 |
+| 受付登録/取消 | `/api/orca/visits/mutation` | POST (JSON) | Request_Number=01/02, Patient_ID, acceptancePush, paymentMode, etc | 成功/警告/失敗をバナー表示、一覧を即時更新 |
 | 送信キュー | `/api/orca/queue` | GET | なし | queue を表示と例外判定へ利用 |
-| モック | `/orca/appointments/list/mock`, `/orca/visits/list/mock`, `/orca/visits/mutation/mock` | POST | VITE_DISABLE_MSW=0 時のフォールバック | デモ/検証用 |
+| モック | `/api/orca/appointments/list/mock`, `/api/orca/visits/list/mock`, `/api/orca/visits/mutation/mock` | POST | VITE_DISABLE_MSW=0 時のフォールバック | デモ/検証用 |
 
 ## 8. 実装上の注意
 - 受付一覧の「ORCAキュー」は **/api/orca/queue の queue と送信キャッシュ**を統合して表示する。

@@ -174,7 +174,7 @@ async function fetchDiseaseMasterByName(params: {
     return [];
   }
   const requestParam = `${encodeURIComponent(term)},${encodeURIComponent(params.referenceDate)},${params.partialMatch ? 'true' : 'false'}`;
-  const response = await httpFetch(`/orca/disease/name/${requestParam}/`);
+  const response = await httpFetch(`/api/orca/disease/name/${requestParam}/`);
   if (!response.ok) {
     return [];
   }
@@ -402,7 +402,7 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
   if (params.to) query.set('to', params.to);
   if (params.activeOnly) query.set('activeOnly', 'true');
   const queryString = query.toString();
-  const response = await httpFetch(`/orca/disease/import/${encodeURIComponent(params.patientId)}${queryString ? `?${queryString}` : ''}`);
+  const response = await httpFetch(`/api/orca/disease/import/${encodeURIComponent(params.patientId)}${queryString ? `?${queryString}` : ''}`);
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '病名情報の取得に失敗しました。' });
   if (parsed.ok && !parsed.json) {
     return {
@@ -482,7 +482,7 @@ export async function mutateDiseases(params: {
 }): Promise<DiseaseMutationResult> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
-  const response = await httpFetch('/orca/disease', {
+  const response = await httpFetch('/api/orca/disease', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ patientId: params.patientId, operations: params.operations }),

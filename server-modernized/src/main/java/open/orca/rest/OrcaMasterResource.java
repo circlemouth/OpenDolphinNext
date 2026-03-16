@@ -160,7 +160,7 @@ public class OrcaMasterResource extends AbstractResource {
             if (isUnavailableFallback(fallbackFixture)) {
                 Response failure = serviceUnavailable(request, "MASTER_GENERIC_CLASS_UNAVAILABLE",
                         "薬効分類マスタを取得できませんでした");
-                recordMasterAudit(request, "/orca/master/generic-class", masterType, 503, fallbackFixture, false,
+                recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 503, fallbackFixture, false,
                         true, 0, buildQueryDetails(null, keyword, effective, params));
                 return failure;
             }
@@ -170,10 +170,10 @@ public class OrcaMasterResource extends AbstractResource {
                     .collect(Collectors.toList());
             Integer totalCount = criteria.isIncludeTotalCount() ? filtered.size() : null;
             List<FixtureGenericClassEntry> paged = paginateList(filtered, params);
-            final String etagValue = buildEtag("/orca/master/generic-class", masterType, fallbackFixture, params);
+            final String etagValue = buildEtag("/api/orca/master/generic-class", masterType, fallbackFixture, params);
             final long ttlSeconds = cacheTtlSeconds(masterType);
             if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/orca/master/generic-class", masterType, 304, fallbackFixture, true, null, null,
+                recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 304, fallbackFixture, true, null, null,
                         buildQueryDetails(null, keyword, effective, params));
                 return buildNotModifiedResponse(etagValue, ttlSeconds);
             }
@@ -185,7 +185,7 @@ public class OrcaMasterResource extends AbstractResource {
                 response.setTotalCount(totalCount);
             }
             response.setItems(items);
-            recordMasterAudit(request, "/orca/master/generic-class", masterType, 200, fallbackFixture, false, items.isEmpty(),
+            recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 200, fallbackFixture, false, items.isEmpty(),
                     totalCount, buildQueryDetails(null, keyword, effective, params));
             return buildCachedOkResponse(response, etagValue, ttlSeconds);
         }
@@ -194,10 +194,10 @@ public class OrcaMasterResource extends AbstractResource {
                 dbResult.getVersion(),
                 false
         );
-        final String etagValue = buildEtag("/orca/master/generic-class", masterType, fixture, params);
+        final String etagValue = buildEtag("/api/orca/master/generic-class", masterType, fixture, params);
         final long ttlSeconds = cacheTtlSeconds(masterType);
         if (etagMatches(ifNoneMatch, etagValue)) {
-            recordMasterAudit(request, "/orca/master/generic-class", masterType, 304, fixture, true, null, null,
+            recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 304, fixture, true, null, null,
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
@@ -210,7 +210,7 @@ public class OrcaMasterResource extends AbstractResource {
             response.setTotalCount(totalCount);
         }
         response.setItems(items);
-        recordMasterAudit(request, "/orca/master/generic-class", masterType, 200, fixture, false, items.isEmpty(),
+        recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 200, fixture, false, items.isEmpty(),
                 totalCount, buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -229,7 +229,7 @@ public class OrcaMasterResource extends AbstractResource {
         final String srycd = getFirstValue(params, "srycd");
         final String effective = normalizeEffectiveDate(getFirstValue(params, "effective"));
         final String masterType = "orca05-generic-price";
-        final String apiRoute = "/orca/master/generic-price";
+        final String apiRoute = "/api/orca/master/generic-price";
         if (srycd == null || !SRYCD_PATTERN.matcher(srycd).matches()) {
             recordMasterAudit(request, apiRoute, masterType, 422,
                     new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK, false),
@@ -309,7 +309,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> dbResult = masterGateway.searchDrug(criteria);
         final String masterType = "orca08-drug";
-        final String apiRoute = "/orca/master/drug";
+        final String apiRoute = "/api/orca/master/drug";
         if (dbResult == null) {
             LoadedFixture<OrcaMasterDao.DrugRecord> dbFixture = buildDbFixture(
                     Collections.emptyList(),
@@ -362,7 +362,7 @@ public class OrcaMasterResource extends AbstractResource {
         final String keyword = getFirstValue(params, "keyword");
         final String effective = normalizeEffectiveDate(getFirstValue(params, "effective"));
         final String masterType = "orca06-hokenja";
-        final String apiRoute = "/orca/master/hokenja";
+        final String apiRoute = "/api/orca/master/hokenja";
         if (pref != null && !PREF_PATTERN.matcher(pref).matches()) {
             recordMasterAudit(request, apiRoute, masterType, 422,
                     new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK, false),
@@ -420,7 +420,7 @@ public class OrcaMasterResource extends AbstractResource {
         final String zip = getFirstValue(params, "zip");
         final String effective = normalizeEffectiveDate(getFirstValue(params, "effective"));
         final String masterType = "orca06-address";
-        final String apiRoute = "/orca/master/address";
+        final String apiRoute = "/api/orca/master/address";
         if (zip == null || !ZIP_PATTERN.matcher(zip).matches()) {
             recordMasterAudit(request, apiRoute, masterType, 422,
                     new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK, false),
@@ -483,7 +483,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterGateway.searchComment(criteria);
         final String masterType = "orca08-comment";
-        final String apiRoute = "/orca/master/comment";
+        final String apiRoute = "/api/orca/master/comment";
         if (dbResult == null) {
             LoadedFixture<OrcaMasterDao.CommentRecord> dbFixture = buildDbFixture(
                     Collections.emptyList(),
@@ -542,7 +542,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterGateway.searchBodypart(criteria);
         final String masterType = "orca08-bodypart";
-        final String apiRoute = "/orca/master/bodypart";
+        final String apiRoute = "/api/orca/master/bodypart";
         if (dbResult == null) {
             LoadedFixture<OrcaMasterDao.CommentRecord> dbFixture = buildDbFixture(
                     Collections.emptyList(),
@@ -607,14 +607,14 @@ public class OrcaMasterResource extends AbstractResource {
             );
             if (isUnavailableFallback(fixture)) {
                 Response failure = serviceUnavailable(request, "MASTER_YOUHOU_UNAVAILABLE", "用法マスタを取得できませんでした");
-                recordMasterAudit(request, "/orca/master/youhou", masterType, 503, fixture, false,
+                recordMasterAudit(request, "/api/orca/master/youhou", masterType, 503, fixture, false,
                         true, 0, buildQueryDetails(null, keyword, effective, params));
                 return failure;
             }
-            final String etagValue = buildEtag("/orca/master/youhou", masterType, fixture, params);
+            final String etagValue = buildEtag("/api/orca/master/youhou", masterType, fixture, params);
             final long ttlSeconds = cacheTtlSeconds(masterType);
             if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/orca/master/youhou", masterType, 304, fixture, true, null, null,
+                recordMasterAudit(request, "/api/orca/master/youhou", masterType, 304, fixture, true, null, null,
                         buildQueryDetails(null, keyword, effective, params));
                 return buildNotModifiedResponse(etagValue, ttlSeconds);
             }
@@ -623,7 +623,7 @@ public class OrcaMasterResource extends AbstractResource {
                     .filter(entry -> isEffective(effective, entry.validFrom, entry.validTo))
                     .map(entry -> toYouhouEntry(entry, fixture))
                     .collect(Collectors.toList());
-            recordMasterAudit(request, "/orca/master/youhou", masterType, 200, fixture, false, response.isEmpty(),
+            recordMasterAudit(request, "/api/orca/master/youhou", masterType, 200, fixture, false, response.isEmpty(),
                     response.size(), buildQueryDetails(null, keyword, effective, params));
             return buildCachedOkResponse(response, etagValue, ttlSeconds);
         }
@@ -632,17 +632,17 @@ public class OrcaMasterResource extends AbstractResource {
                 dbResult.getVersion(),
                 false
         );
-        final String etagValue = buildEtag("/orca/master/youhou", masterType, fixture, params);
+        final String etagValue = buildEtag("/api/orca/master/youhou", masterType, fixture, params);
         final long ttlSeconds = cacheTtlSeconds(masterType);
         if (etagMatches(ifNoneMatch, etagValue)) {
-            recordMasterAudit(request, "/orca/master/youhou", masterType, 304, fixture, true, null, null,
+            recordMasterAudit(request, "/api/orca/master/youhou", masterType, 304, fixture, true, null, null,
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
         final List<OrcaDrugMasterEntry> response = fixture.entries.stream()
                 .map(entry -> toYouhouEntry(entry, fixture))
                 .collect(Collectors.toList());
-        recordMasterAudit(request, "/orca/master/youhou", masterType, 200, fixture, false, response.isEmpty(),
+        recordMasterAudit(request, "/api/orca/master/youhou", masterType, 200, fixture, false, response.isEmpty(),
                 response.size(), buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -673,14 +673,14 @@ public class OrcaMasterResource extends AbstractResource {
             );
             if (isUnavailableFallback(fixture)) {
                 Response failure = serviceUnavailable(request, "MASTER_MATERIAL_UNAVAILABLE", "特定器材マスタを取得できませんでした");
-                recordMasterAudit(request, "/orca/master/material", masterType, 503, fixture, false,
+                recordMasterAudit(request, "/api/orca/master/material", masterType, 503, fixture, false,
                         true, 0, buildQueryDetails(null, keyword, effective, params));
                 return failure;
             }
-            final String etagValue = buildEtag("/orca/master/material", masterType, fixture, params);
+            final String etagValue = buildEtag("/api/orca/master/material", masterType, fixture, params);
             final long ttlSeconds = cacheTtlSeconds(masterType);
             if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/orca/master/material", masterType, 304, fixture, true, null, null,
+                recordMasterAudit(request, "/api/orca/master/material", masterType, 304, fixture, true, null, null,
                         buildQueryDetails(null, keyword, effective, params));
                 return buildNotModifiedResponse(etagValue, ttlSeconds);
             }
@@ -689,7 +689,7 @@ public class OrcaMasterResource extends AbstractResource {
                     .filter(entry -> isEffective(effective, entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
                     .map(entry -> toMaterialEntry(entry, fixture))
                     .collect(Collectors.toList());
-            recordMasterAudit(request, "/orca/master/material", masterType, 200, fixture, false, response.isEmpty(),
+            recordMasterAudit(request, "/api/orca/master/material", masterType, 200, fixture, false, response.isEmpty(),
                     response.size(), buildQueryDetails(null, keyword, effective, params));
             return buildCachedOkResponse(response, etagValue, ttlSeconds);
         }
@@ -698,17 +698,17 @@ public class OrcaMasterResource extends AbstractResource {
                 dbResult.getVersion(),
                 false
         );
-        final String etagValue = buildEtag("/orca/master/material", masterType, fixture, params);
+        final String etagValue = buildEtag("/api/orca/master/material", masterType, fixture, params);
         final long ttlSeconds = cacheTtlSeconds(masterType);
         if (etagMatches(ifNoneMatch, etagValue)) {
-            recordMasterAudit(request, "/orca/master/material", masterType, 304, fixture, true, null, null,
+            recordMasterAudit(request, "/api/orca/master/material", masterType, 304, fixture, true, null, null,
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
         final List<OrcaDrugMasterEntry> response = fixture.entries.stream()
                 .map(entry -> toMaterialEntry(entry, fixture))
                 .collect(Collectors.toList());
-        recordMasterAudit(request, "/orca/master/material", masterType, 200, fixture, false, response.isEmpty(),
+        recordMasterAudit(request, "/api/orca/master/material", masterType, 200, fixture, false, response.isEmpty(),
                 response.size(), buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -740,14 +740,14 @@ public class OrcaMasterResource extends AbstractResource {
             if (isUnavailableFallback(fixture)) {
                 Response failure = serviceUnavailable(request, "MASTER_KENSA_SORT_UNAVAILABLE",
                         "検査区分マスタを取得できませんでした");
-                recordMasterAudit(request, "/orca/master/kensa-sort", masterType, 503, fixture, false,
+                recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 503, fixture, false,
                         true, 0, buildQueryDetails(null, keyword, effective, params));
                 return failure;
             }
-            final String etagValue = buildEtag("/orca/master/kensa-sort", masterType, fixture, params);
+            final String etagValue = buildEtag("/api/orca/master/kensa-sort", masterType, fixture, params);
             final long ttlSeconds = cacheTtlSeconds(masterType);
             if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/orca/master/kensa-sort", masterType, 304, fixture, true, null, null,
+                recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 304, fixture, true, null, null,
                         buildQueryDetails(null, keyword, effective, params));
                 return buildNotModifiedResponse(etagValue, ttlSeconds);
             }
@@ -756,7 +756,7 @@ public class OrcaMasterResource extends AbstractResource {
                     .filter(entry -> isEffective(effective, entry.validFrom, entry.validTo))
                     .map(entry -> toKensaSortEntry(entry, fixture))
                     .collect(Collectors.toList());
-            recordMasterAudit(request, "/orca/master/kensa-sort", masterType, 200, fixture, false, response.isEmpty(),
+            recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 200, fixture, false, response.isEmpty(),
                     response.size(), buildQueryDetails(null, keyword, effective, params));
             return buildCachedOkResponse(response, etagValue, ttlSeconds);
         }
@@ -765,17 +765,17 @@ public class OrcaMasterResource extends AbstractResource {
                 dbResult.getVersion(),
                 false
         );
-        final String etagValue = buildEtag("/orca/master/kensa-sort", masterType, fixture, params);
+        final String etagValue = buildEtag("/api/orca/master/kensa-sort", masterType, fixture, params);
         final long ttlSeconds = cacheTtlSeconds(masterType);
         if (etagMatches(ifNoneMatch, etagValue)) {
-            recordMasterAudit(request, "/orca/master/kensa-sort", masterType, 304, fixture, true, null, null,
+            recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 304, fixture, true, null, null,
                     buildQueryDetails(null, keyword, effective, params));
             return buildNotModifiedResponse(etagValue, ttlSeconds);
         }
         final List<OrcaDrugMasterEntry> response = fixture.entries.stream()
                 .map(entry -> toKensaSortEntry(entry, fixture))
                 .collect(Collectors.toList());
-        recordMasterAudit(request, "/orca/master/kensa-sort", masterType, 200, fixture, false, response.isEmpty(),
+        recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 200, fixture, false, response.isEmpty(),
                 response.size(), buildQueryDetails(null, keyword, effective, params));
         return buildCachedOkResponse(response, etagValue, ttlSeconds);
     }
@@ -794,7 +794,7 @@ public class OrcaMasterResource extends AbstractResource {
         final MultivaluedMap<String, String> params = uriInfo.getQueryParameters();
         final String keyword = getFirstValue(params, "keyword");
         final String masterType = "orca08-etensu";
-        final String apiRoute = "/orca/master/etensu";
+        final String apiRoute = "/api/orca/master/etensu";
         final String category = getFirstValue(params, "category");
         if (category != null && !ETENSU_CATEGORY_PATTERN.matcher(category).matches()) {
             recordEtensuValidationAudit(request, masterType, keyword, category, null, null, null, null,
@@ -950,7 +950,7 @@ public class OrcaMasterResource extends AbstractResource {
             details.put("errorCode", errorCode);
         }
         int httpStatus = errorCode != null && errorCode.startsWith("TENSU_POINTS_") ? 400 : 422;
-        recordMasterAudit(request, "/orca/master/etensu", masterType, httpStatus, dbFixture, false, null, 0, details);
+        recordMasterAudit(request, "/api/orca/master/etensu", masterType, httpStatus, dbFixture, false, null, 0, details);
     }
 
     private Response unauthorized(HttpServletRequest request) {

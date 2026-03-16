@@ -144,7 +144,7 @@ describe('diseaseApi', () => {
 
     expect(code).toBe('8832114');
     expect(httpFetch).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('/orca/disease/name/');
+    expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('/api/orca/disease/name/');
   });
 
   it('resolves ICD-10 when exact-name ORCA codes are ambiguous but ICD-10 is unique', async () => {
@@ -234,13 +234,13 @@ describe('diseaseApi', () => {
   it('resolves composite code from prefix + disease split when exact name is absent', async () => {
     vi.mocked(httpFetch).mockImplementation(async (input: RequestInfo | URL) => {
       const decoded = decodeURIComponent(typeof input === 'string' ? input : input.toString());
-      if (decoded.includes('/orca/disease/name/顔皮膚腫瘍,')) {
+      if (decoded.includes('/api/orca/disease/name/顔皮膚腫瘍,')) {
         return new Response(JSON.stringify({ list: [] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
       }
-      if (decoded.includes('/orca/disease/name/顔,')) {
+      if (decoded.includes('/api/orca/disease/name/顔,')) {
         return new Response(
           JSON.stringify({
             list: [{ code: '2056', name: '顔' }],
@@ -251,7 +251,7 @@ describe('diseaseApi', () => {
           },
         );
       }
-      if (decoded.includes('/orca/disease/name/皮膚腫瘍,')) {
+      if (decoded.includes('/api/orca/disease/name/皮膚腫瘍,')) {
         return new Response(
           JSON.stringify({
             list: [{ code: '8832114', name: '皮膚腫瘍' }],
@@ -279,13 +279,13 @@ describe('diseaseApi', () => {
   it('returns undefined when multiple composite candidates exist', async () => {
     vi.mocked(httpFetch).mockImplementation(async (input: RequestInfo | URL) => {
       const decoded = decodeURIComponent(typeof input === 'string' ? input : input.toString());
-      if (decoded.includes('/orca/disease/name/顔皮膚腫瘍,')) {
+      if (decoded.includes('/api/orca/disease/name/顔皮膚腫瘍,')) {
         return new Response(JSON.stringify({ list: [] }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
       }
-      if (decoded.includes('/orca/disease/name/顔,')) {
+      if (decoded.includes('/api/orca/disease/name/顔,')) {
         return new Response(
           JSON.stringify({
             list: [
@@ -299,7 +299,7 @@ describe('diseaseApi', () => {
           },
         );
       }
-      if (decoded.includes('/orca/disease/name/皮膚腫瘍,')) {
+      if (decoded.includes('/api/orca/disease/name/皮膚腫瘍,')) {
         return new Response(
           JSON.stringify({
             list: [{ code: '8832114', name: '皮膚腫瘍' }],

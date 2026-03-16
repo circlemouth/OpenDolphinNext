@@ -24,7 +24,7 @@ import open.dolphin.security.audit.SessionAuditDispatcher;
  * 管理者向けセキュリティ操作エンドポイント。
  * ヘッダ認証の資格情報キャッシュの可視化とクリアを行う。
  */
-@Path("/api/admin/security")
+@Path("/admin/security")
 public class AdminSecurityResource extends AbstractResource {
 
     @Inject

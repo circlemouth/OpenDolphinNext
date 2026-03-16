@@ -38,126 +38,15 @@
   </filter-mapping>
   <filter-mapping>
     <filter-name>LogFilter</filter-name>
-    <url-pattern>/resources/*</url-pattern>
-    <dispatcher>REQUEST</dispatcher>
-  </filter-mapping>
-  <filter-mapping>
-    <filter-name>LogFilter</filter-name>
-    <url-pattern>/orca/*</url-pattern>
+    <url-pattern>/api/*</url-pattern>
     <dispatcher>REQUEST</dispatcher>
   </filter-mapping>
   <filter-mapping>
     <filter-name>CsrfProtectionFilter</filter-name>
-    <url-pattern>/resources/*</url-pattern>
+    <url-pattern>/api/*</url-pattern>
     <dispatcher>REQUEST</dispatcher>
   </filter-mapping>
-  <filter-mapping>
-    <filter-name>CsrfProtectionFilter</filter-name>
-    <url-pattern>/orca/*</url-pattern>
-    <dispatcher>REQUEST</dispatcher>
-  </filter-mapping>
-  
-    <context-param>
-        <param-name>resteasy.resources</param-name>
-        <param-value>
-                open.dolphin.rest.AppoResource,
-                open.dolphin.rest.KarteResource,
-                open.dolphin.rest.KarteDocumentWriteResource,
-                open.dolphin.rest.KarteRevisionResource,
-                open.dolphin.rest.LetterResource,
-                open.dolphin.rest.PVTResource,
-                open.dolphin.rest.OrcaPatientApiResource,
-                open.dolphin.rest.PatientModV2OutpatientResource,
-                open.dolphin.rest.PatientModV2OutpatientMockResource,
-                open.dolphin.rest.PatientImagesResource,
-                open.dolphin.rest.AdminConfigResource,
-                open.dolphin.rest.AdminAccessResource,
-                open.dolphin.rest.AdminAccessPasswordResetResource,
-                open.dolphin.rest.AdminMasterUpdateResource,
-                open.dolphin.rest.AdminOrcaConnectionResource,
-                open.dolphin.rest.AdminOrcaUserResource,
-                open.dolphin.rest.AdminOrcaUserLinkResource,
-                open.dolphin.rest.OrcaQueueResource,
-                open.dolphin.rest.ReceptionRealtimeStreamResource,
-                open.dolphin.rest.OperationsHealthResource,
-                open.dolphin.rest.PvtWorkerHealthResource,
-                open.dolphin.rest.orca.OrcaMedicalResource,
-                open.dolphin.rest.orca.OrcaDiseaseResource,
-                open.dolphin.rest.orca.OrcaOrderBundleResource,
-                open.dolphin.rest.orca.OrcaPatientResource,
-                open.dolphin.rest.orca.OrcaPrescriptionOrderResource,
-                open.dolphin.rest.orca.OrcaSubjectiveResource,
-                open.dolphin.rest.orca.OrcaMedicalAdministrationResource,
-                open.dolphin.rest.StampResource,
-                open.dolphin.rest.SystemResource,
-                open.dolphin.rest.UserResource,
-                open.dolphin.rest.SessionAuthResource,
-                open.dolphin.rest.LogoutResource,
-                open.dolphin.rest.ChartEventStreamResource,
-                open.dolphin.rest.orca.OrcaMedicalModV2Resource,
-                open.orca.rest.OrcaResource,
-                open.orca.rest.OrcaFacilityResource,
-                open.orca.rest.OrcaPatientDiseaseResource,
-                open.orca.rest.OrcaMasterResource,
-                open.orca.rest.OrcaMasterReferenceStatusResource,
-                open.dolphin.orca.rest.OrcaAppointmentResource,
-                open.dolphin.orca.rest.OrcaVisitResource,
-                open.dolphin.orca.rest.OrcaPatientLocalSearchResource,
-                open.dolphin.orca.rest.OrcaPatientBatchResource,
-                open.dolphin.orca.rest.OrcaPatientSyncResource
-        </param-value>
-    </context-param>
 
-    <!-- RESTEasy JSON mapper is explicitly registered to support ORCA DTO LocalDate binding. -->
-    <context-param>
-        <param-name>resteasy.providers</param-name>
-        <param-value>
-                open.dolphin.metrics.RequestMetricsFilter,
-                open.dolphin.rest.jackson.ResteasyObjectMapperResolver
-        </param-value>
-    </context-param>
-
-    <context-param>
-        <param-name>resteasy.scan</param-name>
-        <param-value>false</param-value>
-    </context-param>
-
-    <listener>
-        <listener-class>
-            org.jboss.resteasy.plugins.server.servlet.ResteasyBootstrap
-        </listener-class>
-    </listener>
-    
-    <servlet>
-        <servlet-name>resteasy-servlet</servlet-name>
-        <servlet-class>org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher</servlet-class>
-        <async-supported>true</async-supported>
-        <init-param>
-            <param-name>resteasy.servlet.mapping.prefix</param-name>
-            <param-value>/resources</param-value>
-        </init-param>
-    </servlet>
-
-    <servlet>
-        <servlet-name>resteasy-orca-servlet</servlet-name>
-        <servlet-class>org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher</servlet-class>
-        <async-supported>true</async-supported>
-        <init-param>
-            <param-name>resteasy.servlet.mapping.prefix</param-name>
-            <param-value>/orca</param-value>
-        </init-param>
-    </servlet>
-
-    <servlet-mapping>
-        <servlet-name>resteasy-servlet</servlet-name>
-        <url-pattern>/resources/*</url-pattern>
-    </servlet-mapping>
-
-    <servlet-mapping>
-        <servlet-name>resteasy-orca-servlet</servlet-name>
-        <url-pattern>/orca/*</url-pattern>
-    </servlet-mapping>
-  
   <session-config>
     <session-timeout>30</session-timeout>
     <tracking-mode>COOKIE</tracking-mode>

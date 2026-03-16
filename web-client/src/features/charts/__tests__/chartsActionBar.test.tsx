@@ -115,7 +115,7 @@ describe('ChartsActionBar', () => {
         action: 'ORCA_SEND',
         outcome: 'success',
         details: expect.objectContaining({
-          endpoint: '/api21/medicalmodv2',
+          endpoint: '/api/orca/chart-support/medical-mod-v2',
           httpStatus: 200,
           apiResult: '00',
           apiResultMessage: 'OK',
@@ -198,7 +198,7 @@ describe('ChartsActionBar', () => {
       expect.objectContaining({
         outcome: 'error',
         details: expect.objectContaining({
-          endpoint: '/orca21/medicalmodv2/outpatient',
+          endpoint: '/api/orca/medical/outpatient',
           httpStatus: 500,
           apiResult: 'ERR',
           apiResultMessage: 'server error',

@@ -392,7 +392,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     signal?: AbortSignal,
   ): Promise<{ departmentCode?: string; physicianCode?: string }> => {
     try {
-      const response = await httpFetch('/orca/visits/list', {
+      const response = await httpFetch('/api/orca/visits/list', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visitDate, requestNumber: '01' }),
@@ -1596,7 +1596,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           logAudit(action, outcome === 'success' ? 'success' : 'error', detailParts.join(' / '), durationMs, {
             phase: 'do',
             details: {
-              endpoint: '/api21/medicalmodv2',
+              endpoint: '/api/orca/chart-support/medical-mod-v2',
               httpStatus: result.status,
               apiResult: result.apiResult,
               apiResultMessage: result.apiResultMessage,
@@ -1667,7 +1667,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           });
           return;
         } else {
-          const endpoint = '/orca21/medicalmodv2/outpatient';
+          const endpoint = '/api/orca/medical/outpatient';
           const payload = buildOutpatientPayload();
           const response = await httpFetch(endpoint, {
             method: 'POST',
@@ -1805,7 +1805,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 operationPhase: 'lock',
                 trigger: 'missing_fields',
                 missingFields,
-                endpoint: '/api21/medicalmodv23',
+                endpoint: '/api/orca/chart-support/medical-mod-v23',
               },
             });
           } else {
@@ -1850,7 +1850,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                   patientId: resolvedPatientId,
                   appointmentId: resolvedAppointmentId,
                   traceId: result.traceId ?? resolvedTraceId,
-                  endpoint: '/api21/medicalmodv23',
+                  endpoint: '/api/orca/chart-support/medical-mod-v23',
                   httpStatus: result.status,
                   apiResult: result.apiResult,
                   apiResultMessage: result.apiResultMessage,
@@ -1873,7 +1873,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 dataSourceTransition,
                 details: {
                   operationPhase: 'do',
-                  endpoint: '/api21/medicalmodv23',
+                  endpoint: '/api/orca/chart-support/medical-mod-v23',
                   httpStatus: result.status,
                   apiResult: result.apiResult,
                   apiResultMessage: result.apiResultMessage,
@@ -1903,7 +1903,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                   patientId: resolvedPatientId,
                   appointmentId: resolvedAppointmentId,
                   traceId: resolvedTraceId,
-                  endpoint: '/api21/medicalmodv23',
+                  endpoint: '/api/orca/chart-support/medical-mod-v23',
                   error: detail,
                 },
               });
@@ -1922,7 +1922,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 dataSourceTransition,
                 details: {
                   operationPhase: 'do',
-                  endpoint: '/api21/medicalmodv23',
+                  endpoint: '/api/orca/chart-support/medical-mod-v23',
                   error: detail,
                 },
               });

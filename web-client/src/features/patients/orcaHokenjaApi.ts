@@ -57,7 +57,7 @@ export async function fetchOrcaHokenja(params: {
   query.set('size', String(params.size && params.size > 0 ? params.size : 50));
   const pref = normalizePref(params.pref);
   if (pref) query.set('pref', pref);
-  const response = await httpFetch(`/orca/master/hokenja?${query.toString()}`, { notifySessionExpired: false });
+  const response = await httpFetch(`/api/orca/master/hokenja?${query.toString()}`, { notifySessionExpired: false });
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '保険者検索に失敗しました。' });
   const json = parsed.json ?? {};
   const traceId =

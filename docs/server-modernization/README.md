@@ -1,25 +1,24 @@
 # Server-Modernization ドキュメントハブ（現行）
 
-- 更新日: 2026-03-15
-- RUN_ID: 20260315T020039Z
+- 更新日: 2026-03-16
+- RUN_ID: 20260315T203407Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
 
-## 当面の作業計画
+## Legacy 計画書
+- 現行判断は `docs/DEVELOPMENT_STATUS.md`、`AGENTS.md`、最新のユーザー/マネージャー指示を優先する。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md`
-- server modernization automation の進捗判定と次作業決定の第一正本。
+- Legacy/Archive 扱い。server modernization automation の進捗判定ルールと実施記録を確認するときだけ参照する。
 - `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
-- 上記正本を補助する参考 WBS。背景、依存関係、全体像、切替後運用タスクを確認するときに参照する。
-- `docs/DEVELOPMENT_STATUS.md`、`AGENTS.md`、最新のユーザー/マネージャー指示と矛盾する場合はそちらを優先する。
+- Legacy/Archive 扱い。当時の WBS、背景、依存関係、切替後運用タスクの履歴確認用途に限定して参照する。
 
 ## 参照優先順位（Server-Modernization領域）
 1. `docs/DEVELOPMENT_STATUS.md`
 2. `AGENTS.md` / `GEMINI.md`
 3. 本ファイル
-4. `docs/server-modernization/planning/codex_automation_workplan_revised.md`
-5. `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
-6. 目的別ドキュメント
+4. 目的別ドキュメント
+5. Legacy/Archive 文書
 
 ## 目的別ドキュメント（現行）
 ### API / 仕様
@@ -123,9 +122,9 @@
 
 ### DB migration 運用
 - versioned migration の正本は `tools/flyway/sql` とする。
-- `server-modernized/src/main/resources/db/migration` は実行時に読み込まれる反映先として扱い、versioned migration を追加・更新したら同名ファイルを同一コミットで同期する。
-- 差分が生じた場合の正誤判定は `tools/flyway/sql` を優先し、`server-modernized/src/main/resources/db/migration` 側を正本へ合わせて修正する。
-- `server-modernized/src/main/resources/db/migration/P1_03__minimal_baseline_seed.sql` は characterization 用の手動 seed であり、versioned migration 正本には含めない。
+- source tree に手動保守する `src/main/resources/db/migration` ミラーは置かない。
+- build 時に canonical source から `target/classes/db/migration` へ生成コピーし、runtime / test / verify はこの classpath 供給物を利用する。
+- `P1_03__minimal_baseline_seed.sql` は characterization 用の手動 seed であり、versioned migration 正本には含めない。
 
 ### 運用 / 接続
 - `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`
@@ -148,6 +147,7 @@
 
 ### テスト実行方針（server-modernized / Mockito inline）
 - 既定実行は **JDK25（Homebrew OpenJDK）** を使用する。
+- 2026-03-16 時点では、`server-modernized/` 直下での `mvn -q -DskipITs test` / `mvn -q verify` は `api-contract` 側 DTO classpath 不備（`OperationsHealthResponse` / `OperationsReadinessCheck` / `OrcaReportRequest`）により失敗する。現行の安定検証は root からの reactor 実行を正とする。
 - 検証対象（管理設定/認証まわり）は以下を基準テストとする。
   - `AdminAccessResourceTest`
   - `AdminOrcaConnectionResourceTest`
@@ -209,7 +209,6 @@
 - `docs/server-modernization/orca-claim-deprecation/`
 
 ### レビュー / 計画
-- `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
 - `docs/server-modernization/library-update-plan.md`
 - `docs/server-modernization/server-modernized-code-review-20260117.md`
 
@@ -217,6 +216,8 @@
 - `docs/preprod/implementation-issue-inventory/`
 
 ## Legacy / Archive（参照専用）
+- `docs/server-modernization/planning/codex_automation_workplan_revised.md`
+- `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
 - `docs/server-modernization/phase2/` 配下
 - `docs/server-modernized/phase2/` 配下
 - `docs/archive/2025Q4/server-modernization/` 配下

@@ -100,7 +100,7 @@ export async function fetchOrderBundles(params: FetchOrderBundlesParams): Promis
   const query = new URLSearchParams();
   if (params.entity) query.set('entity', params.entity);
   if (params.from) query.set('from', params.from);
-  const response = await httpFetch(`/orca/order/bundles?patientId=${encodeURIComponent(params.patientId)}${query.toString() ? `&${query.toString()}` : ''}`);
+  const response = await httpFetch(`/api/orca/order/bundles?patientId=${encodeURIComponent(params.patientId)}${query.toString() ? `&${query.toString()}` : ''}`);
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'オーダー情報の取得に失敗しました。' });
   const json = parsed.json ?? {};
   if (parsed.ok && !parsed.json) {
@@ -182,7 +182,7 @@ export async function mutateOrderBundles(params: {
 }): Promise<OrderBundleMutationResult> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
-  const response = await httpFetch('/orca/order/bundles', {
+  const response = await httpFetch('/api/orca/order/bundles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ patientId: params.patientId, operations: params.operations }),

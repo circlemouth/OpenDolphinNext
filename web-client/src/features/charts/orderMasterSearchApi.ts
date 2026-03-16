@@ -1,7 +1,6 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { ensureObservabilityMeta, getObservabilityMeta } from '../../libs/observability/observability';
 import type { DataSourceTransition } from './authService';
-import { buildMedicationGetRequestXml, fetchOrcaMedicationGetXml } from './orcaMedicationGetApi';
 
 export type OrderMasterSearchType =
   | 'drug'
@@ -96,14 +95,14 @@ type OrcaTensuEntry = {
 };
 
 const MASTER_ENDPOINT_MAP: Record<OrderMasterSearchType, string> = {
-  drug: '/orca/master/drug',
-  'generic-class': '/orca/master/generic-class',
-  youhou: '/orca/master/youhou',
-  material: '/orca/master/material',
-  'kensa-sort': '/orca/master/kensa-sort',
-  etensu: '/orca/master/etensu',
-  comment: '/orca/master/comment',
-  bodypart: '/orca/master/bodypart',
+  drug: '/api/orca/master/drug',
+  'generic-class': '/api/orca/master/generic-class',
+  youhou: '/api/orca/master/youhou',
+  material: '/api/orca/master/material',
+  'kensa-sort': '/api/orca/master/kensa-sort',
+  etensu: '/api/orca/master/etensu',
+  comment: '/api/orca/master/comment',
+  bodypart: '/api/orca/master/bodypart',
 };
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
@@ -180,16 +179,6 @@ const isMasterUnavailableError = (
   const summary = `${readMessage(json, '')} ${statusText ?? ''}`.trim();
   if (!summary) return false;
   return /unavailable|取得できませんでした/i.test(summary);
-};
-
-const extractCodeToken = (value: string) => value.trim().split(/\s+/)[0] ?? '';
-
-const isLikelyCodeSearch = (value: string) => {
-  const token = extractCodeToken(value);
-  if (!token) return false;
-  if (/^\d{4,}$/.test(token)) return true;
-  // ORCA input codes such as Y00001 are alphanumeric; accept other similar short codes too.
-  return /^[A-Za-z]\d{3,}$/.test(token);
 };
 
 const extractList = <T,>(json: unknown): { items: T[]; totalCount?: number } => {
@@ -392,47 +381,6 @@ export async function fetchOrderMasterSearch(params: {
     .map((entry) => normalizeDrugEntry(entry, params.type))
     .filter((item): item is OrderMasterSearchItem => Boolean(item));
 
-  let correctionCandidates: OrderMasterSearchItem[] | undefined;
-  let correctionMeta: OrderMasterSearchResult['correctionMeta'] | undefined;
-  let selectionComments: OrderMasterSearchResult['selectionComments'];
-  if ((params.type === 'drug' || params.type === 'generic-class' || params.type === 'kensa-sort') && isLikelyCodeSearch(keyword)) {
-    const baseDate = normalizedDate ?? new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const requestCode = extractCodeToken(keyword);
-    const requestXml = buildMedicationGetRequestXml({ requestNumber: '01', requestCode, baseDate });
-    const medicationResult = await fetchOrcaMedicationGetXml(requestXml);
-    const apiOk = medicationResult.apiResult && /^0+$/.test(medicationResult.apiResult);
-    correctionMeta = {
-      apiResult: medicationResult.apiResult,
-      apiResultMessage: medicationResult.apiResultMessage,
-      validTo: medicationResult.medication?.endDate,
-    };
-    if (medicationResult.ok && apiOk && medicationResult.medication?.medicationName) {
-      correctionCandidates = [
-        {
-          type: params.type,
-          code: medicationResult.medication.medicationCode ?? requestCode,
-          name: medicationResult.medication.medicationName,
-          unit: undefined,
-          category: medicationResult.medication.medicationNameKana ?? 'medicationgetv2',
-          note: medicationResult.apiResultMessage ?? 'medicationgetv2',
-          validFrom: medicationResult.medication.startDate,
-          validTo: medicationResult.medication.endDate,
-        },
-      ];
-    } else {
-      correctionCandidates = [];
-    }
-    selectionComments = medicationResult.selections
-      .map((selection) => ({
-        code: selection.commentCode?.trim() ?? '',
-        name: selection.commentName?.trim() ?? '',
-        category: selection.category,
-        itemNumber: selection.itemNumber,
-        itemNumberBranch: selection.itemNumberBranch,
-      }))
-      .filter((selection) => selection.code.length > 0 && selection.name.length > 0);
-  }
-
   return {
     ok: true,
     items: normalized,
@@ -443,8 +391,8 @@ export async function fetchOrderMasterSearch(params: {
     fallbackUsed: latestMeta.fallbackUsed,
     dataSourceTransition: latestMeta.dataSourceTransition,
     raw: json,
-    correctionCandidates,
-    correctionMeta,
-    selectionComments,
+    correctionCandidates: undefined,
+    correctionMeta: undefined,
+    selectionComments: undefined,
   };
 }

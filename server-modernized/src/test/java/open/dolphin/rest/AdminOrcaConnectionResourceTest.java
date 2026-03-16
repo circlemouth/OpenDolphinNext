@@ -143,7 +143,7 @@ class AdminOrcaConnectionResourceTest {
     void putConfigSavesConfigForAdmin() throws Exception {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-SAVE");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
-        when(request.getRequestURI()).thenReturn("/openDolphin/resources/api/admin/orca/connection");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/admin/orca/connection");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
 
         OrcaConnectionConfigRecord updated = new OrcaConnectionConfigRecord();

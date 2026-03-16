@@ -84,7 +84,7 @@ class PatientImagesResourceTest {
 
         when(request.getRemoteUser()).thenReturn("F001:user01");
         lenient().when(request.getRemoteAddr()).thenReturn("127.0.0.1");
-        lenient().when(request.getRequestURI()).thenReturn("/openDolphin/resources/patients/P001/images");
+        lenient().when(request.getRequestURI()).thenReturn("/openDolphin/api/patients/P001/images");
         Map<String, String> headers = new java.util.HashMap<>();
         headers.put("User-Agent", "JUnit");
         headers.put("X-Request-Id", "req-1");
@@ -202,7 +202,7 @@ class PatientImagesResourceTest {
         @SuppressWarnings("unchecked")
         List<PatientImageEntryResponse> items = (List<PatientImageEntryResponse>) actual.getEntity();
         assertThat(items).hasSize(1);
-        assertThat(items.get(0).getDownloadUrl()).isEqualTo("/openDolphin/resources/patients/P001/images/10");
+        assertThat(items.get(0).getDownloadUrl()).isEqualTo("/openDolphin/api/patients/P001/images/10");
         verify(response).setHeader("Cache-Control", "private, no-store, max-age=0, must-revalidate");
     }
 

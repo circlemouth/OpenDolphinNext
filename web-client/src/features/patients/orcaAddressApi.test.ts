@@ -47,7 +47,7 @@ describe('fetchOrcaAddress', () => {
     expect(result.item?.zip).toBe('1600023');
     expect(result.item?.fullAddress).toBe('東京都新宿区西新宿');
     expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/orca/master/address?zip=1600023&effective=20260309',
+      '/api/orca/master/address?zip=1600023&effective=20260309',
       expect.objectContaining({ notifySessionExpired: false }),
     );
   });

@@ -20,6 +20,7 @@ export type PatientRecord = {
 
 export type PatientSearchParams = {
   keyword?: string;
+  searchType?: 'name' | 'kana' | 'patient-id' | 'telephone' | 'zipcode';
   departmentCode?: string;
   physicianCode?: string;
   paymentMode?: 'all' | 'insurance' | 'self';
@@ -80,12 +81,11 @@ export type PatientMutationResult = {
 const mswEnabled = import.meta.env.DEV && import.meta.env.VITE_DISABLE_MSW !== '1';
 
 const patientInfoCandidates = [
-  '/orca/patients/local-search',
-  ...(mswEnabled ? ['/orca/patients/local-search/mock'] : []),
+  '/api/orca/patients/local-search',
+  ...(mswEnabled ? ['/api/orca/patients/local-search/mock'] : []),
 ];
 const patientMutationCandidates = [
-  '/orca12/patientmodv2/outpatient',
-  ...(mswEnabled ? ['/orca12/patientmodv2/outpatient/mock'] : []),
+  '/api/orca/patient/mutation',
 ];
 
 const normalizeBoolean = (value: unknown) => {
@@ -113,6 +113,18 @@ const buildMissingTags = (apiResult?: string, apiResultMessage?: string) => {
 
 const normalizeDataSourceTransition = (value: unknown): DataSourceTransition | undefined => {
   return typeof value === 'string' ? (value as DataSourceTransition) : undefined;
+};
+
+const inferPatientSearchType = (
+  keyword?: string,
+): PatientSearchParams['searchType'] | undefined => {
+  const normalized = keyword?.trim();
+  if (!normalized) return undefined;
+  if (/^\d{7}$/.test(normalized)) return 'zipcode';
+  if (/^\d[\d-]{8,}$/.test(normalized)) return 'telephone';
+  if (/^\d+$/.test(normalized)) return 'patient-id';
+  if (/^[ぁ-んァ-ヶー]+$/.test(normalized)) return 'kana';
+  return 'name';
 };
 
 const stripNullish = <T extends Record<string, unknown>>(value: T): T => {
@@ -203,8 +215,10 @@ const tryPostJson = async (paths: string[], body: Record<string, unknown>) => {
 
 export async function fetchPatients(params: PatientSearchParams): Promise<PatientListResponse> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
+  const searchType = params.searchType ?? inferPatientSearchType(params.keyword);
   const payload: Record<string, unknown> = {
     keyword: params.keyword,
+    searchType,
     departmentCode: params.departmentCode,
     physicianCode: params.physicianCode,
     paymentMode: params.paymentMode,

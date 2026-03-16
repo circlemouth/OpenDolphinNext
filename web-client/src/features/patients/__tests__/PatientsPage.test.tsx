@@ -365,68 +365,20 @@ describe('PatientsPage audit filters', () => {
   });
 });
 
-describe('PatientsPage ORCA original UI', () => {
+describe('PatientsPage legacy ORCA tabs', () => {
   beforeEach(() => {
     localStorage.clear();
     sessionStorage.clear();
   });
 
-  it('patientgetv2 原本参照の取得形式を切り替えられる', async () => {
+  it('ORCA 原本/保険/メモの補助タブを表示しない', async () => {
     mockPatients();
     renderPatientsPage();
     const user = userEvent.setup();
     await clickPatientRowByName(user, '山田 花子');
-    await user.click(screen.getByRole('tab', { name: 'ORCA更新/原本' }));
-
-    const xmlRadio = screen.getByLabelText('XML2') as HTMLInputElement;
-    const jsonRadio = screen.getByLabelText('JSON') as HTMLInputElement;
-    expect(xmlRadio.checked).toBe(true);
-    expect(jsonRadio.checked).toBe(false);
-
-    await user.click(jsonRadio);
-    expect(jsonRadio.checked).toBe(true);
-
-    const patientIdInput = screen.getByLabelText('Patient_ID') as HTMLInputElement;
-    expect(patientIdInput.value).toBe('P-001');
-
-    const fetchButton = screen.getByRole('button', { name: 'patientgetv2 取得' });
-    expect(fetchButton).toBeEnabled();
-  });
-
-  it('patientgetv2 取得失敗時にエラーバナーと詳細を表示する', async () => {
-    mockPatients();
-    mockMutationResult = {
-      ok: false,
-      status: 500,
-      format: 'xml',
-      apiResult: 'E90',
-      apiResultMessage: '必須タグ不足',
-      informationDate: '2026-01-10',
-      informationTime: '120000',
-      rawText: '<data />',
-      rawXml: '<data />',
-      missingTags: ['Api_Result_Message'],
-      runId: 'RUN-ORCA',
-      traceId: 'TRACE-ORCA',
-    };
-
-    renderPatientsPage();
-    const user = userEvent.setup();
-    await clickPatientRowByName(user, '山田 花子');
-    await user.click(screen.getByRole('tab', { name: 'ORCA更新/原本' }));
-
-    const fetchButton = screen.getByRole('button', { name: 'patientgetv2 取得' });
-    await user.click(fetchButton);
-
-    expect(screen.getByText('ORCA 原本の取得に失敗しました。')).toBeInTheDocument();
-    const originalSection = screen.getByText('patientgetv2 原本参照').closest('section');
-    expect(originalSection).not.toBeNull();
-    if (!originalSection) return;
-    const originalScope = within(originalSection);
-    expect(originalScope.getByText('Api_Result:')).toBeInTheDocument();
-    expect(originalScope.getByText('E90')).toBeInTheDocument();
-    expect(originalScope.getByText('必須タグ不足:')).toBeInTheDocument();
-    expect(originalScope.getByText('Api_Result_Message')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'ORCA更新/原本' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: '保険' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'ORCAメモ' })).not.toBeInTheDocument();
   });
 });
 
@@ -449,12 +401,13 @@ describe('PatientsPage initial selection', () => {
     expect(screen.getByRole('button', { name: /山田 花子/ })).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('intent=insurance の場合は保険タブを初回表示する', () => {
+  it('legacy intent パラメータは無視して現行タブ構成を維持する', () => {
     mockPatients();
     setRouterSearch('?intent=insurance');
     renderPatientsPage();
 
-    expect(screen.getByRole('tab', { name: '保険' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '基本情報' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('tab', { name: '保険' })).not.toBeInTheDocument();
   });
 
   it('location state の patientId と一致する患者を自動選択する', () => {
@@ -642,20 +595,6 @@ describe('PatientsPage form safety', () => {
     const user = userEvent.setup();
     await clickPatientRowByName(user, '山田 花子');
 
-    await user.click(screen.getByRole('tab', { name: 'ORCA更新/原本' }));
-    const originalClassInput = document.getElementById('patients-orca-original-class');
-    expect(originalClassInput).not.toBeNull();
-    if (!originalClassInput) return;
-    await user.type(originalClassInput, '{enter}');
-    expect(mockMutationCallCount).toBe(0);
-
-    await user.click(screen.getByRole('tab', { name: '保険' }));
-    const insuranceKeywordInput = document.getElementById('patients-insurance-keyword');
-    expect(insuranceKeywordInput).not.toBeNull();
-    if (!insuranceKeywordInput) return;
-    await user.type(insuranceKeywordInput, '{enter}');
-    expect(mockMutationCallCount).toBe(0);
-
     await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
     const auditKeywordInput = document.getElementById('patients-audit-keyword');
     expect(auditKeywordInput).not.toBeNull();
@@ -695,36 +634,15 @@ describe('PatientsPage ORCA helpers', () => {
     expect(screen.getByDisplayValue('東京都千代田区千代田')).toBeInTheDocument();
   });
 
-  it('hokenja 検索結果を保険欄へ反映できる', async () => {
+  it('保険 helper タブは表示しない', async () => {
     mockPatients();
-    mockFetchOrcaHokenja.mockResolvedValue({
-      ok: true,
-      status: 200,
-      totalCount: 1,
-      items: [
-        {
-          payerCode: '06123456',
-          payerName: '東京保険者',
-          payerType: '社保',
-          addressLine: '東京都千代田区',
-        },
-      ],
-    });
     const user = userEvent.setup();
 
     renderPatientsPage();
     await clickPatientRowByName(user, '山田 花子');
-    await user.click(screen.getByRole('tab', { name: '保険' }));
-    await user.type(screen.getByLabelText('keyword'), '東京');
-    await user.click(screen.getByRole('button', { name: '検索' }));
-    await user.click(screen.getByRole('button', { name: '反映' }));
 
-    expect(mockFetchOrcaHokenja).toHaveBeenCalledWith({
-      keyword: '東京',
-      pref: '',
-      effective: expect.any(String),
-    });
-    expect(screen.getByDisplayValue('東京保険者 (06123456)')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: '保険' })).not.toBeInTheDocument();
+    expect(mockFetchOrcaHokenja).not.toHaveBeenCalled();
   });
 });
 
@@ -745,7 +663,7 @@ describe('PatientsPage detail tabs keyboard', () => {
     const basicTab = screen.getByRole('tab', { name: '基本情報' });
     basicTab.focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'ORCA更新/原本' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: '監査/ログ' })).toHaveAttribute('aria-selected', 'true');
 
     await user.keyboard('{End}');
     const auditTab = screen.getByRole('tab', { name: '監査/ログ' });
@@ -793,7 +711,7 @@ describe('PatientsPage search summary', () => {
       apiResult: '00',
       apiResultMessage: 'OK',
       missingTags: ['Patient_ID'],
-      sourcePath: '/orca/patients/local-search',
+      sourcePath: '/api/orca/patients/local-search',
     });
 
     renderPatientsPage();

@@ -40,12 +40,12 @@ import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 
 /**
- * Web client compatible endpoint for /orca12/patientmodv2/outpatient.
+ * Web client endpoint for /api/orca/patientmodv2/outpatient.
  *
  * <p>Updates are reflected to ORCA (patientmodv2 class=02) and then re-imported (ORCA -> local)
  * so the local patient table stays consistent with ORCA.</p>
  */
-@Path("/orca12/patientmodv2/outpatient")
+@Path("/orca/patientmodv2/outpatient")
 public class PatientModV2OutpatientResource extends AbstractResource {
 
     private static final String DATA_SOURCE_SERVER = "server";
@@ -136,7 +136,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         response.put("facilityId", facilityId);
 
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("resource", request != null ? request.getRequestURI() : "/orca12/patientmodv2/outpatient");
+        details.put("resource", request != null ? request.getRequestURI() : "/api/orca/patientmodv2/outpatient");
         details.put("operation", operation);
         details.put("patientId", patch.patientId);
         details.put("runId", runId);
@@ -788,7 +788,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         }
         AuditEventPayload payload = new AuditEventPayload();
         payload.setAction(action);
-        payload.setResource(request != null ? request.getRequestURI() : "/orca12/patientmodv2/outpatient");
+        payload.setResource(request != null ? request.getRequestURI() : "/api/orca/patientmodv2/outpatient");
         payload.setDetails(details);
         payload.setTraceId(resolveTraceId(request));
         payload.setRequestId(request != null ? request.getHeader("X-Request-Id") : null);

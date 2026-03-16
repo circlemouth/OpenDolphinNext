@@ -28,7 +28,7 @@ import open.dolphin.security.audit.SessionAuditDispatcher;
 /**
  * ORCA patient get bridge (patientgetv2 JSON contract only).
  */
-@Path("/")
+@Path("/orca")
 public class OrcaPatientApiResource extends AbstractResource {
 
     static final String RUN_ID_FALLBACK = "fallback"; // deprecated sentinel; dynamic runId now used
@@ -40,43 +40,13 @@ public class OrcaPatientApiResource extends AbstractResource {
     SessionAuditDispatcher sessionAuditDispatcher;
 
     @GET
-    @Path("/api01rv2/patientgetv2")
+    @Path("/patientgetv2")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getPatient(@Context HttpServletRequest request,
             @QueryParam("id") String patientId,
             @QueryParam("class") String classCode,
             @QueryParam("format") String format) {
-        return respondPatientGet(request, patientId, classCode, format, "/api01rv2/patientgetv2");
-    }
-
-    @GET
-    @Path("/orca/patientgetv2")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getPatientWithOrcaPrefix(@Context HttpServletRequest request,
-            @QueryParam("id") String patientId,
-            @QueryParam("class") String classCode,
-            @QueryParam("format") String format) {
-        return respondPatientGet(request, patientId, classCode, format, "/orca/patientgetv2");
-    }
-
-    @GET
-    @Path("/api/orca/patientgetv2")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getPatientWithApiOrcaPrefix(@Context HttpServletRequest request,
-            @QueryParam("id") String patientId,
-            @QueryParam("class") String classCode,
-            @QueryParam("format") String format) {
         return respondPatientGet(request, patientId, classCode, format, "/api/orca/patientgetv2");
-    }
-
-    @GET
-    @Path("/api/api01rv2/patientgetv2")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getPatientWithApiPrefix(@Context HttpServletRequest request,
-            @QueryParam("id") String patientId,
-            @QueryParam("class") String classCode,
-            @QueryParam("format") String format) {
-        return respondPatientGet(request, patientId, classCode, format, "/api/api01rv2/patientgetv2");
     }
 
     private Response respondPatientGet(HttpServletRequest request, String patientId, String classCode, String format,

@@ -1,7 +1,7 @@
 package open.dolphin.db;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -20,7 +20,8 @@ import org.junit.jupiter.api.Test;
 class FlywayMigrationConsistencyTest {
 
     private static final Path CANONICAL_DIR = Path.of("tools", "flyway", "sql");
-    private static final Path MIRROR_DIR = Path.of("src", "main", "resources", "db", "migration");
+    private static final Path LEGACY_SOURCE_MIRROR_DIR = Path.of("src", "main", "resources", "db", "migration");
+    private static final Path GENERATED_CLASSPATH_DIR = Path.of("target", "classes", "db", "migration");
     private static final Pattern MIGRATION_PATTERN = Pattern.compile("^V([0-9]+(?:_[0-9]+)?)__.+\\.sql$");
 
     @Test
@@ -29,23 +30,24 @@ class FlywayMigrationConsistencyTest {
     }
 
     @Test
-    void mirroredMigrationsHaveNoDuplicateVersions() throws IOException {
-        assertNoDuplicateVersions(MIRROR_DIR, "mirrored migrations (src/main/resources/db/migration)");
+    void legacySourceMirrorDirectoryIsAbsent() {
+        assertFalse(Files.exists(LEGACY_SOURCE_MIRROR_DIR),
+                "Legacy source mirror must be removed: " + LEGACY_SOURCE_MIRROR_DIR.toAbsolutePath());
     }
 
     @Test
-    void canonicalAndMirrorAreSynchronized() throws IOException {
+    void generatedClasspathMigrationsAreSynchronizedWithCanonicalSource() throws IOException {
         Map<String, Path> canonical = toMigrationMap(CANONICAL_DIR);
-        Map<String, Path> mirror = toMigrationMap(MIRROR_DIR);
+        Map<String, Path> generated = toMigrationMap(GENERATED_CLASSPATH_DIR);
 
-        assertEquals(canonical.keySet(), mirror.keySet(),
-                "Flyway migration filenames diverged between canonical and mirror directories");
+        assertEquals(canonical.keySet(), generated.keySet(),
+                "Generated classpath migrations diverged from canonical Flyway source");
 
         for (String fileName : canonical.keySet()) {
             byte[] canonicalBytes = Files.readAllBytes(canonical.get(fileName));
-            byte[] mirrorBytes = Files.readAllBytes(mirror.get(fileName));
-            assertArrayEquals(canonicalBytes, mirrorBytes,
-                    "Flyway migration content differs for file: " + fileName);
+            byte[] generatedBytes = Files.readAllBytes(generated.get(fileName));
+            assertTrue(java.util.Arrays.equals(canonicalBytes, generatedBytes),
+                    "Generated Flyway migration content differs for file: " + fileName);
         }
     }
 

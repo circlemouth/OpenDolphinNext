@@ -61,7 +61,7 @@ class OrcaDiseaseResourceTest extends RuntimeDelegateTestSupport {
                         return "127.0.0.1";
                     }
                     if ("getRequestURI".equals(name)) {
-                        return "/orca/disease";
+                        return "/api/orca/disease";
                     }
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         String header = String.valueOf(args[0]);

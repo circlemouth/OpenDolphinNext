@@ -1,6 +1,5 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { getObservabilityMeta } from '../../libs/observability/observability';
-import { escapeXml } from '../../libs/xml/xmlUtils';
 
 export type OrcaReportType =
   | 'prescription'
@@ -19,16 +18,7 @@ export const ORCA_REPORT_LABELS: Record<OrcaReportType, string> = {
   statement: '診療費明細書',
 };
 
-const ORCA_REPORT_ENDPOINTS: Record<OrcaReportType, string> = {
-  prescription: '/orca/prescriptionv2',
-  medicinenotebook: '/orca/medicinenotebookv2',
-  karteno1: '/orca/karteno1v2',
-  karteno3: '/orca/karteno3v2',
-  invoicereceipt: '/orca/invoicereceiptv2',
-  statement: '/orca/statementv2',
-};
-
-export type OrcaReportRequestParams = {
+export type OrcaReportRequest = {
   patientId: string;
   invoiceNumber?: string;
   outsideClass?: string;
@@ -44,7 +34,6 @@ export type OrcaReportRequestParams = {
 export type OrcaReportResponse = {
   ok: boolean;
   status: number;
-  rawBody: string;
   apiResult?: string;
   apiResultMessage?: string;
   informationDate?: string;
@@ -67,150 +56,52 @@ export type OrcaReportPdfResult = {
   error?: string;
 };
 
-const escapeXmlValue = (value?: string | null) => escapeXml(value ?? '');
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 
-export function buildOrcaReportRequestXml(type: OrcaReportType, params: OrcaReportRequestParams): string {
-  const base = ['<data>'];
-  const end = ['</data>'];
-  const requestNumber = '01';
-  const patientId = params.patientId;
+const asString = (value: unknown) => (typeof value === 'string' && value.trim() ? value : undefined);
 
-  switch (type) {
-    case 'prescription':
-      return [
-        ...base,
-        '  <prescriptionv2req type="record">',
-        `    <Request_Number type="string">${escapeXmlValue(requestNumber)}</Request_Number>`,
-        `    <Patient_ID type="string">${escapeXmlValue(patientId)}</Patient_ID>`,
-        `    <Invoice_Number type="string">${escapeXmlValue(params.invoiceNumber)}</Invoice_Number>`,
-        `    <Outside_Class type="string">${escapeXmlValue(params.outsideClass ?? 'False')}</Outside_Class>`,
-        '  </prescriptionv2req>',
-        ...end,
-      ].join('\n');
-    case 'medicinenotebook':
-      return [
-        ...base,
-        '  <medicine_notebookv2req type="record">',
-        `    <Request_Number type="string">${escapeXmlValue(requestNumber)}</Request_Number>`,
-        `    <Patient_ID type="string">${escapeXmlValue(patientId)}</Patient_ID>`,
-        `    <Invoice_Number type="string">${escapeXmlValue(params.invoiceNumber)}</Invoice_Number>`,
-        `    <Outside_Class type="string">${escapeXmlValue(params.outsideClass ?? 'False')}</Outside_Class>`,
-        '  </medicine_notebookv2req>',
-        ...end,
-      ].join('\n');
-    case 'karteno1':
-      return [
-        ...base,
-        '  <karte_no1v2req type="record">',
-        `    <Request_Number type="string">${escapeXmlValue(requestNumber)}</Request_Number>`,
-        `    <Order_Class type="string">${escapeXmlValue(params.orderClass ?? '1')}</Order_Class>`,
-        `    <Patient_ID type="string">${escapeXmlValue(patientId)}</Patient_ID>`,
-        `    <Department_Code type="string">${escapeXmlValue(params.departmentCode)}</Department_Code>`,
-        `    <Insurance_Combination_Number type="string">${escapeXmlValue(params.insuranceCombinationNumber)}</Insurance_Combination_Number>`,
-        '  </karte_no1v2req>',
-        ...end,
-      ].join('\n');
-    case 'karteno3':
-      return [
-        ...base,
-        '  <karte_no3v2req type="record">',
-        `    <Request_Number type="string">${escapeXmlValue(requestNumber)}</Request_Number>`,
-        `    <Order_Class type="string">${escapeXmlValue(params.orderClass ?? '1')}</Order_Class>`,
-        `    <Patient_ID type="string">${escapeXmlValue(patientId)}</Patient_ID>`,
-        `    <Perform_Month type="string">${escapeXmlValue(params.performMonth)}</Perform_Month>`,
-        `    <Department_Code type="string">${escapeXmlValue(params.departmentCode)}</Department_Code>`,
-        `    <Insurance_Combination_Number type="string">${escapeXmlValue(params.insuranceCombinationNumber)}</Insurance_Combination_Number>`,
-        `    <Start_Day type="string">${escapeXmlValue(params.startDay)}</Start_Day>`,
-        `    <Last_Page_Number type="string">${escapeXmlValue(params.lastPageNumber)}</Last_Page_Number>`,
-        `    <Last_Row_Number type="string">${escapeXmlValue(params.lastRowNumber)}</Last_Row_Number>`,
-        '  </karte_no3v2req>',
-        ...end,
-      ].join('\n');
-    case 'invoicereceipt':
-      return [
-        ...base,
-        '  <invoice_receiptv2req type="record">',
-        `    <Request_Number type="string">${escapeXmlValue(requestNumber)}</Request_Number>`,
-        `    <Patient_ID type="string">${escapeXmlValue(patientId)}</Patient_ID>`,
-        `    <Invoice_Number type="string">${escapeXmlValue(params.invoiceNumber)}</Invoice_Number>`,
-        '  </invoice_receiptv2req>',
-        ...end,
-      ].join('\n');
-    case 'statement':
-      return [
-        ...base,
-        '  <statementv2req type="record">',
-        `    <Request_Number type="string">${escapeXmlValue(requestNumber)}</Request_Number>`,
-        `    <Patient_ID type="string">${escapeXmlValue(patientId)}</Patient_ID>`,
-        `    <Invoice_Number type="string">${escapeXmlValue(params.invoiceNumber)}</Invoice_Number>`,
-        '  </statementv2req>',
-        ...end,
-      ].join('\n');
-  }
+export function buildOrcaReportRequest(type: OrcaReportType, params: OrcaReportRequest): OrcaReportRequest {
+  return {
+    patientId: params.patientId,
+    invoiceNumber: params.invoiceNumber,
+    outsideClass:
+      type === 'prescription' || type === 'medicinenotebook' ? (params.outsideClass ?? 'False') : undefined,
+    orderClass: type === 'karteno1' || type === 'karteno3' ? (params.orderClass ?? '1') : undefined,
+    departmentCode: params.departmentCode,
+    insuranceCombinationNumber: params.insuranceCombinationNumber,
+    performMonth: params.performMonth,
+    startDay: params.startDay,
+    lastPageNumber: params.lastPageNumber,
+    lastRowNumber: params.lastRowNumber,
+  };
 }
 
-type JsonValue = Record<string, unknown> | unknown[] | null;
-
-const findJsonValue = (value: JsonValue, key: string): unknown => {
-  if (!value || typeof value !== 'object') return undefined;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findJsonValue(item as JsonValue, key);
-      if (found !== undefined) return found;
-    }
-    return undefined;
-  }
-  if (key in value) return (value as Record<string, unknown>)[key];
-  for (const entry of Object.values(value)) {
-    const found = findJsonValue(entry as JsonValue, key);
-    if (found !== undefined) return found;
-  }
-  return undefined;
-};
-
-const readString = (value: unknown): string | undefined => (typeof value === 'string' && value.trim() ? value : undefined);
-
-export async function postOrcaReportXml(type: OrcaReportType, requestXml: string): Promise<OrcaReportResponse> {
+export async function postOrcaReport(type: OrcaReportType, request: OrcaReportRequest): Promise<OrcaReportResponse> {
   const runId = getObservabilityMeta().runId;
-  const response = await httpFetch(ORCA_REPORT_ENDPOINTS[type], {
+  const response = await httpFetch(resolveOrcaReportEndpoint(type), {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/xml; charset=UTF-8',
+      'Content-Type': 'application/json',
       Accept: 'application/json',
     },
-    body: requestXml,
+    body: JSON.stringify(request),
   });
-  const rawBody = await response.text();
-  let json: JsonValue = null;
-  let parseError: string | undefined;
-  try {
-    json = JSON.parse(rawBody) as JsonValue;
-  } catch (error) {
-    parseError = error instanceof Error ? error.message : 'JSON parse failed';
-  }
-
-  const apiResult = readString(findJsonValue(json, 'Api_Result'));
-  const apiResultMessage = readString(findJsonValue(json, 'Api_Result_Message'));
-  const informationDate = readString(findJsonValue(json, 'Information_Date'));
-  const informationTime = readString(findJsonValue(json, 'Information_Time'));
-  const dataId = readString(findJsonValue(json, 'Data_Id'));
-  const formId = readString(findJsonValue(json, 'Form_ID'));
-  const formName = readString(findJsonValue(json, 'Form_Name'));
+  const json = asRecord(await response.json().catch(() => ({}))) ?? {};
 
   return {
-    ok: response.ok && !parseError,
+    ok: Boolean(json.ok ?? response.ok),
     status: response.status,
-    rawBody,
-    apiResult,
-    apiResultMessage,
-    informationDate,
-    informationTime,
-    dataId,
-    formId,
-    formName,
-    runId: getObservabilityMeta().runId ?? runId,
-    traceId: getObservabilityMeta().traceId,
-    error: parseError,
+    apiResult: asString(json.apiResult),
+    apiResultMessage: asString(json.apiResultMessage),
+    informationDate: asString(json.informationDate),
+    informationTime: asString(json.informationTime),
+    dataId: asString(json.dataId),
+    formId: asString(json.formId),
+    formName: asString(json.formName),
+    runId: asString(json.runId) ?? getObservabilityMeta().runId ?? runId,
+    traceId: asString(json.traceId) ?? getObservabilityMeta().traceId,
+    error: asString(json.error),
   };
 }
 
@@ -319,4 +210,4 @@ export async function fetchOrcaReportPdf(dataId: string): Promise<OrcaReportPdfR
   }
 }
 
-export const resolveOrcaReportEndpoint = (type: OrcaReportType) => ORCA_REPORT_ENDPOINTS[type];
+export const resolveOrcaReportEndpoint = (type: OrcaReportType) => `/api/orca/reports/${type}`;

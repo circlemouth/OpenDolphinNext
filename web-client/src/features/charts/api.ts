@@ -10,7 +10,7 @@ import { extractMedicalOutpatientRecord } from './medicalOutpatient';
 import type { OrcaOutpatientSummary } from '../outpatient/types';
 export type { OrcaOutpatientSummary } from '../outpatient/types';
 
-const orcaSummaryCandidates = [{ path: '/orca21/medicalmodv2/outpatient', source: 'server' as ResolveMasterSource }];
+const orcaSummaryCandidates = [{ path: '/api/orca/medical/outpatient', source: 'server' as ResolveMasterSource }];
 
 const preferredSource = (): ResolveMasterSource | undefined =>
   import.meta.env.VITE_DISABLE_MSW === '1' ? 'server' : undefined;

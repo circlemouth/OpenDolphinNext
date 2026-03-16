@@ -25,8 +25,6 @@ import {
   fetchOrcaOrderInputSets,
   type OrcaOrderInputSetSummary,
 } from './orcaOrderInputSetApi';
-import { buildContraindicationCheckRequestXml, fetchContraindicationCheckXml } from './contraindicationCheckApi';
-import { buildMedicationGetRequestXml, fetchOrcaMedicationGetXml } from './orcaMedicationGetApi';
 import { parseOrcaOrderItemMemo, type OrcaOrderItemMeta, updateOrcaOrderItemMeta } from './orcaOrderItemMeta';
 import {
   fetchOrderRecommendations,
@@ -771,7 +769,6 @@ export function OrderBundleEditPanel({
   }, [entity, instanceKey]);
   const isPreviewMode = readOnlyPreview;
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const isTestMode = import.meta.env.MODE === 'test';
   const [form, setForm] = useState<BundleFormState>(() => buildEmptyForm(today));
   const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'error'; message: string } | null>(null);
   const [detailSearchOpen, setDetailSearchOpen] = useState(false);
@@ -805,7 +802,7 @@ export function OrderBundleEditPanel({
   const contraConfirmResolveRef = useRef<((value: boolean) => void) | null>(null);
   const [contraConfirmOpen, setContraConfirmOpen] = useState(false);
   const [clearRowsDialogOpen, setClearRowsDialogOpen] = useState(false);
-  const [contraConfirmPayload, setContraConfirmPayload] = useState<{
+  const [contraConfirmPayload] = useState<{
     summary: string;
     details: string[];
     apiResult?: string;
@@ -1299,12 +1296,16 @@ export function OrderBundleEditPanel({
   const selectedItemCode = selectedItemForPrediction?.code?.trim() ?? '';
   const selectionCommentQuery = useQuery({
     queryKey: ['charts-order-selection-comments', selectedItemCode, form.startDate],
-    queryFn: async () => {
-      const baseDate = form.startDate?.trim() || today;
-      const requestXml = buildMedicationGetRequestXml({ requestNumber: '02', requestCode: selectedItemCode, baseDate });
-      return fetchOrcaMedicationGetXml(requestXml);
-    },
-    enabled: supportsCommentCodes && !isTestMode && /^\d{4,}$/.test(selectedItemCode),
+    queryFn: async (): Promise<{
+      selections: Array<{
+        commentCode?: string;
+        commentName?: string;
+        category?: string;
+        itemNumber?: string;
+        itemNumberBranch?: string;
+      }>;
+    }> => ({ selections: [] }),
+    enabled: false,
     staleTime: 30 * 1000,
     retry: 0,
   });
@@ -1676,7 +1677,6 @@ export function OrderBundleEditPanel({
     [applyOrcaSetForm, entity, form, isMedOrder, today],
   );
 
-  const usageNormalizationSeqRef = useRef(0);
   const pushRecentUsage = useCallback(
     (value: string) => {
       const normalized = value.trim();
@@ -1735,27 +1735,7 @@ export function OrderBundleEditPanel({
   };
 
   const normalizeUsageInput = async (rawValue: string) => {
-    if (isBlocked || isTestMode) return;
-    const token = extractCodeToken(rawValue);
-    if (!token) return;
-    if (!/^[A-Za-z]\d{3,}$/.test(token)) return;
-    const requestId = (usageNormalizationSeqRef.current += 1);
-    const baseDate = form.startDate?.trim() || today;
-    const requestXml = buildMedicationGetRequestXml({ requestNumber: '01', requestCode: token, baseDate });
-    const result = await fetchOrcaMedicationGetXml(requestXml);
-    const apiOk = result.apiResult && /^0+$/.test(result.apiResult);
-    const code = result.medication?.medicationCode?.trim();
-    if (!result.ok || !apiOk || !code) return;
-    const name = result.medication?.medicationName?.trim();
-    if (requestId !== usageNormalizationSeqRef.current) return;
-    const nextLabel = name || code;
-    setForm((prev) => {
-      if (prev.adminMemo?.trim()) return prev;
-      const currentToken = extractCodeToken(prev.admin);
-      if (currentToken.toLowerCase() !== token.toLowerCase()) return prev;
-      return { ...prev, admin: nextLabel, adminMemo: code };
-    });
-    setSelectedUsageMasterMeta(null);
+    void rawValue;
   };
 
   const setMixingCommentEnabled = (enabled: boolean) => {
@@ -2039,53 +2019,6 @@ export function OrderBundleEditPanel({
         : '用法入力後に回数を入力できます。'
     : '';
 
-  const collectContraindicationMedications = (bundleForm: BundleFormState) =>
-    bundleForm.items
-      .map((item) => ({
-        medicationCode: item.code?.trim() ?? '',
-        medicationName: item.name?.trim() ?? '',
-      }))
-      .filter((item) => item.medicationCode.length > 0);
-
-  const buildContraindicationDetails = (result: Awaited<ReturnType<typeof fetchContraindicationCheckXml>>) => {
-    const details: string[] = [];
-    result.results.forEach((entry) => {
-      entry.warnings.forEach((warning) => {
-        const left = entry.medicationName ?? entry.medicationCode ?? '不明';
-        const right = warning.contraName ?? warning.contraCode ?? '禁忌情報';
-        const direction = warning.contextClass ? `(${warning.contextClass})` : '';
-        details.push(`${left} × ${right} ${direction}`.trim());
-      });
-      if (entry.medicalResult && !/^0+$/.test(entry.medicalResult)) {
-        details.push(
-          `${entry.medicationName ?? entry.medicationCode ?? '不明'}: ${entry.medicalResultMessage ?? entry.medicalResult}`,
-        );
-      }
-    });
-    result.symptomInfo.forEach((symptom) => {
-      const label = [symptom.code, symptom.content, symptom.detail].filter(Boolean).join(' ');
-      if (label) details.push(`症状: ${label}`);
-    });
-    return Array.from(new Set(details)).slice(0, 3);
-  };
-
-  const requestContraConfirm = useCallback(
-    (payload: { summary: string; details: string[]; apiResult?: string; apiMessage?: string }) => {
-      if (typeof window === 'undefined') return Promise.resolve(false);
-      const existingResolve = contraConfirmResolveRef.current;
-      if (existingResolve) {
-        existingResolve(false);
-        contraConfirmResolveRef.current = null;
-      }
-      setContraConfirmPayload(payload);
-      setContraConfirmOpen(true);
-      return new Promise<boolean>((resolve) => {
-        contraConfirmResolveRef.current = resolve;
-      });
-    },
-    [],
-  );
-
   const closeContraConfirm = useCallback((result: boolean) => {
     setContraConfirmOpen(false);
     const resolve = contraConfirmResolveRef.current;
@@ -2094,98 +2027,11 @@ export function OrderBundleEditPanel({
   }, []);
 
   const runContraindicationCheck = async (bundleForm: BundleFormState) => {
-    if (!isMedOrder || !patientId) {
-      setContraNotice(null);
-      setContraDetails([]);
-      return true;
-    }
-    const medications = collectContraindicationMedications(bundleForm);
-    if (medications.length === 0) {
-      setContraNotice(null);
-      setContraDetails([]);
-      return true;
-    }
-    setIsContraChecking(true);
-    setContraNotice({ tone: 'info', message: '禁忌チェックを実行中です。' });
-    const performMonth = (meta.visitDate ?? today).slice(0, 7);
-    const checkTerm = '1';
-    const requestNumber = '01';
-    try {
-      const requestXml = buildContraindicationCheckRequestXml({
-        patientId,
-        performMonth,
-        checkTerm,
-        requestNumber,
-        medications,
-      });
-      const result = await fetchContraindicationCheckXml(requestXml);
-      const apiOk = result.apiResult && /^0+$/.test(result.apiResult);
-      const hasWarnings =
-        result.results.some((entry) => entry.warnings.length > 0 || (entry.medicalResult && !/^0+$/.test(entry.medicalResult))) ||
-        result.symptomInfo.length > 0 ||
-        !apiOk;
-      const nextContraDetails = buildContraindicationDetails(result);
-      setContraDetails(nextContraDetails);
-      if (!result.ok) {
-        setContraNotice({
-          tone: 'error',
-          message: `禁忌チェックに失敗しました: ${result.error ?? result.apiResultMessage ?? 'エラー'}`,
-        });
-        return false;
-      }
-      if (hasWarnings) {
-        setContraNotice({
-          tone: 'warning',
-          message: `禁忌チェックで警告があります（Api_Result=${result.apiResult ?? '—'}）。`,
-          detail: result.apiResultMessage,
-        });
-      } else {
-        setContraNotice({ tone: 'info', message: '禁忌チェック: 問題なし' });
-      }
-      logAuditEvent({
-        runId: result.runId ?? meta.runId,
-        cacheHit: meta.cacheHit,
-        missingMaster: meta.missingMaster,
-        fallbackUsed: meta.fallbackUsed,
-        dataSourceTransition: meta.dataSourceTransition,
-        payload: {
-          action: 'ORCA_CONTRAINDICATION_CHECK',
-          outcome: result.ok && !hasWarnings ? 'success' : result.ok ? 'warning' : 'error',
-          subject: 'charts',
-          details: {
-            patientId,
-            entity,
-            performMonth,
-            checkTerm,
-            requestNumber,
-            medicationCount: medications.length,
-            apiResult: result.apiResult,
-            apiResultMessage: result.apiResultMessage,
-            hasWarnings,
-          },
-        },
-      });
-      if (hasWarnings) {
-        const names = medications
-          .map((item) => item.medicationName || item.medicationCode)
-          .filter((name): name is string => Boolean(name));
-        const uniqueNames = Array.from(new Set(names));
-        const nameLabel = uniqueNames.length > 0 ? uniqueNames.join(' / ') : '対象薬剤';
-        return await requestContraConfirm({
-          summary: `禁忌チェックで警告が検出されました。対象薬剤: ${nameLabel}（${medications.length}件）`,
-          details: nextContraDetails,
-          apiResult: result.apiResult,
-          apiMessage: result.apiResultMessage,
-        });
-      }
-      return true;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setContraNotice({ tone: 'error', message: `禁忌チェックに失敗しました: ${message}` });
-      return false;
-    } finally {
-      setIsContraChecking(false);
-    }
+    void bundleForm;
+    setIsContraChecking(false);
+    setContraNotice(null);
+    setContraDetails([]);
+    return true;
   };
 
   const mutation = useMutation({

@@ -15,7 +15,7 @@ import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { resolveOutpatientFlags, type OutpatientFlagSource } from '../outpatient/flags';
 import { useOptionalSession } from '../../AppRouter';
 import { useAppNavigation } from '../../routes/useAppNavigation';
-import { buildIncomeInfoRequestXml, fetchOrcaIncomeInfoXml } from './orcaIncomeInfoApi';
+import { buildIncomeInfoRequest, fetchOrcaIncomeInfo } from './orcaIncomeInfoApi';
 import { getOrcaClaimSendEntry, type OrcaMedicalWarningUi } from './orcaClaimSendCache';
 import { formatOrcaIdentifier } from './orcaIdentifiers';
 import {
@@ -78,8 +78,8 @@ export function OrcaSummary({
     queryKey: ['orca-income-info', patientId, performMonth],
     queryFn: () => {
       if (!patientId) throw new Error('patientId is required');
-      const requestXml = buildIncomeInfoRequestXml({ patientId, performMonth });
-      return fetchOrcaIncomeInfoXml(requestXml);
+      const request = buildIncomeInfoRequest({ patientId, performMonth });
+      return fetchOrcaIncomeInfo(request);
     },
     enabled: false,
     staleTime: 60_000,
@@ -160,11 +160,9 @@ export function OrcaSummary({
       const detail = data.error ?? data.apiResultMessage ?? '収納情報の取得に失敗しました。';
       return { tone: 'error' as const, message: `${apiResultLabel} / ${detail}` };
     }
-    const hasMissing = (data.missingTags ?? []).length > 0;
     const apiOk = Boolean(data.apiResult && /^0+$/.test(data.apiResult));
-    if (!apiOk || hasMissing) {
-      const missing = hasMissing ? `missingTags=${data.missingTags?.join(',')}` : undefined;
-      const reason = [data.apiResultMessage, missing].filter(Boolean).join(' / ');
+    if (!apiOk) {
+      const reason = data.apiResultMessage;
       return {
         tone: 'warning' as const,
         message: `${apiResultLabel} / ${reason || '収納情報の取得に警告'}`,

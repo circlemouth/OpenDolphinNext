@@ -24,7 +24,7 @@ import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 
-@Path("/api/admin")
+@Path("/admin")
 public class AdminConfigResource extends AbstractResource {
 
     @Inject

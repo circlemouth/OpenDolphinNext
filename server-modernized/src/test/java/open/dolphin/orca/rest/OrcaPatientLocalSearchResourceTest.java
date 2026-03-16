@@ -22,7 +22,7 @@ class OrcaPatientLocalSearchResourceTest {
 
         HttpServletRequest request = createRequest(
                 "F001:doctor01",
-                "/orca/patients/local-search",
+                "/api/orca/patients/local-search",
                 Map.of("X-Trace-Id", "trace-local", "X-Request-Id", "req-local"));
 
         PatientOutpatientResponse response = resource.postPatients(request, Map.of("keyword", "test"));
@@ -42,7 +42,7 @@ class OrcaPatientLocalSearchResourceTest {
 
         HttpServletRequest request = createRequest(
                 "F001:doctor01",
-                "/orca/patients/local-search",
+                "/api/orca/patients/local-search",
                 Map.of("X-Trace-Id", "trace-local", "X-Request-Id", "req-local"));
 
         resource.postPatients(request, Map.of("keyword", "000123"));
@@ -64,7 +64,7 @@ class OrcaPatientLocalSearchResourceTest {
 
         HttpServletRequest request = createRequest(
                 "F001:doctor01",
-                "/orca/patients/local-search",
+                "/api/orca/patients/local-search",
                 Map.of("X-Trace-Id", "trace-local", "X-Request-Id", "req-local"));
 
         PatientOutpatientResponse response = resource.postPatients(

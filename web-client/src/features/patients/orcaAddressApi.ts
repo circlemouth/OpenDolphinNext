@@ -43,7 +43,7 @@ export async function fetchOrcaAddress(params: { zip: string; effective?: string
   }
   const meta = ensureObservabilityMeta();
   const effective = normalizeYmd(params.effective);
-  const response = await httpFetch(`/orca/master/address?zip=${encodeURIComponent(zip)}&effective=${encodeURIComponent(effective)}`, {
+  const response = await httpFetch(`/api/orca/master/address?zip=${encodeURIComponent(zip)}&effective=${encodeURIComponent(effective)}`, {
     notifySessionExpired: false,
   });
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '住所補完に失敗しました。' });

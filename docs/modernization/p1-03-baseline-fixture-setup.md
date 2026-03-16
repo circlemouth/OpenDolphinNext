@@ -17,7 +17,6 @@
 
 - 基準データ SQL（手動適用）
   - `server-modernized/tools/flyway/sql/P1_03__minimal_baseline_seed.sql`
-  - `server-modernized/src/main/resources/db/migration/P1_03__minimal_baseline_seed.sql`
 - fixture
   - `server-modernized/src/test/resources/fixtures/p1-03/minimal-dataset.json`
   - `server-modernized/src/test/resources/fixtures/p1-03/orca-patientlst1v2-response.xml`
@@ -49,5 +48,6 @@ SELECT title, uri FROM d_image WHERE id IN (9104001, 9104002) ORDER BY id;
 ## 5. 運用ルール
 
 - 本 SQL は `V*` migration ではない。`flyway migrate` で自動適用しない。
+- source tree の `src/main/resources/db/migration` には複製しない。必要な classpath migration は build で `target/classes/db/migration` へ生成する。
 - fixture 更新時は `minimal-dataset.json` の `runId` を更新し、差分レビュー時に追跡可能にする。
 - `P1-04` 以降のテストケースでこのデータセットを前提にする場合は、テスト側から `datasetId=p1-03-minimal-baseline` を明記する。

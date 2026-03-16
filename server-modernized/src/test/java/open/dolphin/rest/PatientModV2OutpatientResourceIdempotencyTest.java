@@ -32,7 +32,7 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/orca12/patientmodv2/outpatient");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
         Map<String, Object> payload = new HashMap<>();
@@ -69,7 +69,7 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/orca12/patientmodv2/outpatient");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("operation", "create");
@@ -90,7 +90,7 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/orca12/patientmodv2/outpatient");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("operation", "create");

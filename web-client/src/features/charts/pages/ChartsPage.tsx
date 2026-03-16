@@ -10,7 +10,6 @@ import { applyAuthServicePatch, useAuthService, type AuthServiceFlags } from '..
 import { DocumentTimeline } from '../DocumentTimeline';
 import { OrcaSummary } from '../OrcaSummary';
 import { MedicalOutpatientRecordPanel } from '../MedicalOutpatientRecordPanel';
-import { OrcaOriginalPanel } from '../OrcaOriginalPanel';
 import { PatientsTab } from '../PatientsTab';
 import { TelemetryFunnelPanel } from '../TelemetryFunnelPanel';
 import { ChartsActionBar, type ChartsActionBarHandle } from '../ChartsActionBar';
@@ -4665,17 +4664,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
                   {showDebugUi ? (
                     <>
-                      <details className="charts-card charts-fold" id="charts-orca-original">
-                        <summary className="charts-fold__summary">ORCA 原本（XML/JSON）</summary>
-                        <div className="charts-fold__content">
-                          <OrcaOriginalPanel
-                            patientId={encounterContext.patientId}
-                            visitDate={encounterContext.visitDate}
-                            runId={resolvedRunId ?? flags.runId}
-                          />
-                        </div>
-                      </details>
-
                       <details className="charts-card charts-fold">
                         <summary className="charts-fold__summary">ORCA 記録（要約）</summary>
                         <div className="charts-fold__content">

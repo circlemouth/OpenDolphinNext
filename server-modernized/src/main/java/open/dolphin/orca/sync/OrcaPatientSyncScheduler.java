@@ -10,16 +10,15 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Locale;
-import java.util.Properties;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infrastructure.concurrent.ConcurrencyResourceNames;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.PatientSyncRequest;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
-import open.orca.rest.ORCAConnection;
 
 /**
  * Periodic ORCA patient sync scheduler (patientlst1v2 -> patientlst2v2 -> upsert local DB).
@@ -46,6 +45,9 @@ public class OrcaPatientSyncScheduler {
 
     @Inject
     private OrcaPatientSyncStateStore stateStore;
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
 
     private ScheduledFuture<?> scheduled;
 
@@ -187,16 +189,11 @@ public class OrcaPatientSyncScheduler {
         if (systemProp != null && !systemProp.isBlank()) {
             return systemProp.trim();
         }
-        try {
-            Properties props = ORCAConnection.getInstance().getProperties();
-            if (props != null) {
-                String value = props.getProperty("dolphin.facilityId");
-                if (value != null && !value.isBlank()) {
-                    return value.trim();
-                }
+        if (configurationResolver != null) {
+            String value = configurationResolver.orcaRuntime().facilityId();
+            if (value != null && !value.isBlank()) {
+                return value.trim();
             }
-        } catch (Exception ex) {
-            LOGGER.log(Level.FINE, "Failed to resolve facilityId from ORCAConnection properties", ex);
         }
         return null;
     }

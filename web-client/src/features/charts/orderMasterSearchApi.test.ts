@@ -11,17 +11,6 @@ vi.mock('../../libs/observability/observability', () => ({
   getObservabilityMeta: vi.fn(() => ({ runId: 'RUN-TEST' })),
 }));
 
-vi.mock('./orcaMedicationGetApi', () => ({
-  buildMedicationGetRequestXml: vi.fn(() => '<xml />'),
-  fetchOrcaMedicationGetXml: vi.fn(async () => ({
-    ok: true,
-    apiResult: '00',
-    apiResultMessage: 'ok',
-    medication: null,
-    selections: [],
-  })),
-}));
-
 const toRequestUrlString = (requestInput: RequestInfo | URL | undefined): string => {
   if (!requestInput) return '';
   if (typeof requestInput === 'string') return requestInput;
@@ -38,7 +27,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
     localStorage.setItem('devUserId', 'user01');
   });
 
-  it('routes drug search to /orca/master/drug and suppresses session-expiry notice', async () => {
+  it('routes drug search to /api/orca/master/drug and suppresses session-expiry notice', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -50,7 +39,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
     const result = await fetchOrderMasterSearch({ type: 'drug', keyword: 'アム' });
 
     expect(result.ok).toBe(true);
-    expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('/orca/master/drug?');
+    expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('/api/orca/master/drug?');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
@@ -74,7 +63,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/drug?');
+    expect(requestUrl).toContain('/api/orca/master/drug?');
     expect(requestUrl).toContain('method=prefix');
     expect(requestUrl).toContain('scope=outer');
     expect(requestUrl).toContain('effective=20260219');
@@ -100,14 +89,14 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/drug?');
+    expect(requestUrl).toContain('/api/orca/master/drug?');
     expect(requestUrl).toContain('scope=in-hospital');
     expect(requestUrl).toContain('category=facility');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
 
-  it('routes bodypart search to /orca/master/bodypart', async () => {
+  it('routes bodypart search to /api/orca/master/bodypart', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -120,13 +109,13 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/bodypart?');
+    expect(requestUrl).toContain('/api/orca/master/bodypart?');
     expect(requestUrl).not.toContain('category=2');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
 
-  it('routes comment search to /orca/master/comment', async () => {
+  it('routes comment search to /api/orca/master/comment', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -139,13 +128,13 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/comment?');
+    expect(requestUrl).toContain('/api/orca/master/comment?');
     expect(requestUrl).not.toContain('category=8');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
 
-  it('routes material search to /orca/master/material', async () => {
+  it('routes material search to /api/orca/master/material', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -158,12 +147,12 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/material?');
+    expect(requestUrl).toContain('/api/orca/master/material?');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
 
-  it('routes kensa-sort search to /orca/master/kensa-sort', async () => {
+  it('routes kensa-sort search to /api/orca/master/kensa-sort', async () => {
     const { httpFetch } = await import('../../libs/http/httpClient');
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ totalCount: 0, items: [] }), {
@@ -176,7 +165,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/kensa-sort?');
+    expect(requestUrl).toContain('/api/orca/master/kensa-sort?');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
   });
@@ -194,7 +183,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/etensu?');
+    expect(requestUrl).toContain('/api/orca/master/etensu?');
     expect(requestUrl).not.toContain('category=1');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
     expect(init?.notifySessionExpired).toBe(false);
@@ -213,7 +202,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/etensu?');
+    expect(requestUrl).toContain('/api/orca/master/etensu?');
     expect(requestUrl).toContain('page=2');
     expect(requestUrl).toContain('size=500');
     const init = vi.mocked(httpFetch).mock.calls[0]?.[1];
@@ -238,7 +227,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
 
     expect(result.ok).toBe(true);
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/etensu?');
+    expect(requestUrl).toContain('/api/orca/master/etensu?');
     expect(requestUrl).toContain('pointsMin=20');
     expect(requestUrl).toContain('pointsMax=40');
   });
@@ -418,7 +407,7 @@ describe('fetchOrderMasterSearch auth routing', () => {
     });
 
     const requestUrl = vi.mocked(httpFetch).mock.calls[0]?.[0] ?? '';
-    expect(requestUrl).toContain('/orca/master/youhou?');
+    expect(requestUrl).toContain('/api/orca/master/youhou?');
     expect(requestUrl).toContain('effective=20260219');
     expect(requestUrl).toContain('asOf=20260219');
     expect(result.ok).toBe(true);

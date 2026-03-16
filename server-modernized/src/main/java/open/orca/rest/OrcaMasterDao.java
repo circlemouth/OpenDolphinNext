@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,12 +20,21 @@ public class OrcaMasterDao {
     private static final String MATERIAL_CODE_PREFIX = "7";
     private static final String COMMENT_CODE_REGEX = "^(008[1-6]|8[1-6]|098|099|98|99)";
     private static final String BODY_PART_NAME_TOKEN = "部位";
+    private final ORCAConnection orcaConnection;
+
+    public OrcaMasterDao() {
+        this(ORCAConnection.current());
+    }
+
+    OrcaMasterDao(ORCAConnection orcaConnection) {
+        this.orcaConnection = Objects.requireNonNull(orcaConnection, "orcaConnection");
+    }
 
     public GenericClassSearchResult searchGenericClass(GenericClassCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             GenericClassTableMeta meta = GenericClassTableMeta.load(connection);
             if (meta == null || meta.codeColumn == null) {
                 return null;
@@ -49,7 +59,7 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             DrugTableMeta meta = DrugTableMeta.load(connection);
             if (meta == null || meta.codeColumn == null || meta.nameColumn == null) {
                 return null;
@@ -72,7 +82,7 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             DrugTableMeta meta = DrugTableMeta.load(connection);
             if (meta == null || meta.codeColumn == null || meta.nameColumn == null) {
                 return null;
@@ -95,7 +105,7 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             DrugTableMeta meta = DrugTableMeta.load(connection);
             if (meta == null || meta.codeColumn == null || meta.nameColumn == null) {
                 return null;
@@ -118,7 +128,7 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             YouhouTableMeta meta = YouhouTableMeta.load(connection);
             if (meta == null || meta.codeColumn == null) {
                 return null;
@@ -138,7 +148,7 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             DrugTableMeta meta = DrugTableMeta.load(connection);
             if (meta == null || meta.codeColumn == null) {
                 return null;
@@ -157,7 +167,7 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             KensaSortTableMeta kensaSortMeta = KensaSortTableMeta.load(connection);
             DrugTableMeta tensuMeta = DrugTableMeta.load(connection);
             if (kensaSortMeta == null || kensaSortMeta.codeColumn == null

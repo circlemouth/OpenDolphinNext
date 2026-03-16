@@ -1,15 +1,18 @@
-# Server Modernization Automation Workplan Revised
+# Server Modernization Automation Workplan Revised (Legacy/Archive)
+
+> Legacy/Archive 扱いの開発計画書です。進捗判定や次作業決定の現行導線としては使用しません。
+> 現行の参照入口は `docs/DEVELOPMENT_STATUS.md` と `docs/server-modernization/README.md` です。
+> 本書は server modernization automation 実施時の記録を保持するために残しており、履歴確認用途に限定して参照します。
 
 ## 目的
-この文書は、server modernization の進捗判定と次作業決定の第一正本である。  
-`docs/server-modernization/planning/server_modernization_wbs_detailed.md` は参考資料として扱い、
-未完了タスクの探索、完了判定、次タスク決定は、この文書を最優先に行う。
+この文書は、server modernization automation で用いていた進捗判定・次作業決定ルールの記録である。
+現在は Legacy/Archive 扱いとし、未完了タスクの探索、完了判定、次タスク決定の第一基準としては用いない。
 
 ## 対象
 - `common`
 - `server-modernized`
 
-## 進捗判定ルール
+## 当時の進捗判定ルール（履歴記録）
 - この文書のチェック状態を進捗判定の第一基準とする
 - `server_modernization_wbs_detailed.md` の全チェック状態は、完了判定の根拠にしない
 - 両文書が矛盾する場合は、この文書を優先する

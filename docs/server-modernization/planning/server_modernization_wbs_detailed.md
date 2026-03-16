@@ -1,11 +1,12 @@
-# 詳細工程表（server-modernization 当面作業）
+# 詳細工程表（server-modernization 当面作業, Legacy/Archive）
 
+- Legacy/Archive 扱いの開発計画書。現行の進捗判定や次作業決定には使用しない。
 - 更新日: 2026-03-13
 - RUN_ID: 20260313T054324Z
-- 位置付け: `server-modernized` の当面作業を順番に進めるための参考資料。進捗判定と完了判定の第一正本ではない。
+- 位置付け: `server-modernized` の当時の当面作業を順番に進めるための参考資料として残す記録。現行導線は `docs/DEVELOPMENT_STATUS.md` と `docs/server-modernization/README.md` を参照する。
 - task ID の扱い: `docs/server-modernization/planning/codex_automation_workplan_revised.md` の task ID とは同一視しない。番号が一致しても意味・完了条件が異なる場合がある。
-- 完了判定: `docs/server-modernization/planning/codex_automation_workplan_revised.md` を優先し、本書のチェック状態だけで完了判定しない。
-- 運用: 記載タスクは原則として上から順に消化する。`docs/DEVELOPMENT_STATUS.md`、`AGENTS.md`、最新のユーザー/マネージャー指示、`codex_automation_workplan_revised.md` と矛盾する場合は、それらを優先する。
+- 完了判定: 本書のチェック状態では現行作業の完了判定を行わない。
+- 運用: 現行作業では本書の順序に従って着手判断しない。履歴確認や経緯把握が必要な場合のみ参照する。
 - 参照入口: `docs/server-modernization/README.md`
 
 A列は ☐ / ☑ で更新します。優先 S は今すぐ着手、A は続けて着手、B は前工程の完了後に進めます。

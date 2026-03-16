@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,6 +26,15 @@ import open.dolphin.rest.dto.orca.OrcaEtensuSpecimen;
 public class EtensuDao {
     private static final Logger LOGGER = Logger.getLogger(EtensuDao.class.getName());
     private static final Pattern TENSU_VERSION_PATTERN = Pattern.compile("\\d{6}");
+    private final ORCAConnection orcaConnection;
+
+    public EtensuDao() {
+        this(ORCAConnection.current());
+    }
+
+    EtensuDao(ORCAConnection orcaConnection) {
+        this.orcaConnection = Objects.requireNonNull(orcaConnection, "orcaConnection");
+    }
 
     public EtensuSearchResult search(EtensuSearchCriteria criteria) {
         if (criteria == null) {
@@ -32,7 +42,7 @@ public class EtensuDao {
             return new EtensuSearchResult(Collections.emptyList(), 0, null, 0, true);
         }
         long startTime = System.nanoTime();
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = orcaConnection.getConnection()) {
             EtensuTableMeta meta = EtensuTableMeta.load(connection);
             EtensuQuery query = buildQuery(criteria, meta);
             Integer totalCount = maybeFetchTotalCount(connection, query, criteria.isIncludeTotalCount());

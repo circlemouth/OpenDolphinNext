@@ -66,7 +66,7 @@ describe('orcaQueueApi fetchOrcaPushEvents', () => {
 
     expect(mockHttpFetch).toHaveBeenCalledTimes(1);
     const [endpoint, init] = mockHttpFetch.mock.calls[0] ?? [];
-    expect(endpoint).toBe('/orca/pusheventgetv2');
+    expect(endpoint).toBe('/api/orca/pusheventgetv2');
     expect(init).toMatchObject({
       method: 'POST',
       notifySessionExpired: false,

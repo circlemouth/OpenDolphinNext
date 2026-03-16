@@ -78,7 +78,7 @@ const resolveHttpFaultStatus = (fault: FaultSpec) => {
 };
 
 export const outpatientHandlers = [
-  http.post('/orca/appointments/list', async ({ request }) => {
+  http.post('/api/orca/appointments/list', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -113,7 +113,7 @@ export const outpatientHandlers = [
     }
     return respond(buildAppointmentFixture(scenario.flags));
   }),
-  http.post('/orca/appointments/list/mock', async ({ request }) => {
+  http.post('/api/orca/appointments/list/mock', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -147,7 +147,7 @@ export const outpatientHandlers = [
     }
     return respond(buildAppointmentFixture(scenario.flags));
   }),
-  http.post('/orca/visits/list', async ({ request }) => {
+  http.post('/api/orca/visits/list', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -181,7 +181,7 @@ export const outpatientHandlers = [
     }
     return respond(buildVisitListFixture(scenario.flags));
   }),
-  http.post('/orca/visits/list/mock', async ({ request }) => {
+  http.post('/api/orca/visits/list/mock', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -216,7 +216,7 @@ export const outpatientHandlers = [
     }
     return respond(buildVisitListFixture(scenario.flags));
   }),
-  http.post('/orca21/medicalmodv2/outpatient', async ({ request }) => {
+  http.post('/api/orca/medical/outpatient', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -254,7 +254,7 @@ export const outpatientHandlers = [
     }
     return respond(buildMedicalSummaryFixture(scenario.flags));
   }),
-  http.post('/orca/patients/local-search', async ({ request }) => {
+  http.post('/api/orca/patients/local-search', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -263,7 +263,7 @@ export const outpatientHandlers = [
     }
     const httpFaultStatus = resolveHttpFaultStatus(fault);
     if (httpFaultStatus) {
-      const base = buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }, '/orca/patients/local-search');
+      const base = buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }, '/api/orca/patients/local-search');
       if (httpFaultStatus === 404) {
         return respond({
           ...base,
@@ -277,10 +277,10 @@ export const outpatientHandlers = [
       return respond(base);
     }
     if (fault.tokens.has('timeout')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }, '/orca/patients/local-search'));
+      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }, '/api/orca/patients/local-search'));
     }
     if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }, '/orca/patients/local-search'));
+      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }, '/api/orca/patients/local-search'));
     }
     if (fault.tokens.has('schema-mismatch')) {
       const mismatch = {
@@ -297,9 +297,9 @@ export const outpatientHandlers = [
       } as any;
       return respond(mismatch);
     }
-    return respond(buildPatientListFixture(scenario.flags, '/orca/patients/local-search'));
+    return respond(buildPatientListFixture(scenario.flags, '/api/orca/patients/local-search'));
   }),
-  http.post('/orca/patients/local-search/mock', async ({ request }) => {
+  http.post('/api/orca/patients/local-search/mock', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -308,7 +308,7 @@ export const outpatientHandlers = [
     }
     const httpFaultStatus = resolveHttpFaultStatus(fault);
     if (httpFaultStatus) {
-      const base = buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }, '/orca/patients/local-search/mock');
+      const base = buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }, '/api/orca/patients/local-search/mock');
       if (httpFaultStatus === 404) {
         return respond({
           ...base,
@@ -322,10 +322,10 @@ export const outpatientHandlers = [
       return respond(base);
     }
     if (fault.tokens.has('timeout')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }, '/orca/patients/local-search/mock'));
+      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }, '/api/orca/patients/local-search/mock'));
     }
     if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }, '/orca/patients/local-search/mock'));
+      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }, '/api/orca/patients/local-search/mock'));
     }
     if (fault.tokens.has('schema-mismatch')) {
       const mismatch = {
@@ -343,9 +343,9 @@ export const outpatientHandlers = [
       } as any;
       return respond(mismatch);
     }
-    return respond(buildPatientListFixture(scenario.flags, '/orca/patients/local-search/mock'));
+    return respond(buildPatientListFixture(scenario.flags, '/api/orca/patients/local-search/mock'));
   }),
-  http.post('/orca/patients/import', async ({ request }) => {
+  http.post('/api/orca/patients/import', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -423,7 +423,7 @@ export const outpatientHandlers = [
       status: 200,
     });
   }),
-  http.post('/orca12/patientmodv2/outpatient', async ({ request }) => {
+  http.post('/api/orca/patient/mutation', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -457,7 +457,7 @@ export const outpatientHandlers = [
     }
     return respond(buildPatientListFixture(scenario.flags));
   }),
-  http.post('/orca12/patientmodv2/outpatient/mock', async ({ request }) => {
+  http.post('/api/orca/patient/mutation/mock', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);

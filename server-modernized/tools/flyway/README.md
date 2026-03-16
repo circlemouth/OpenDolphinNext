@@ -3,23 +3,18 @@
 ## 正本（Single Source of Truth）
 - **正本**: `server-modernized/tools/flyway/sql`
 - 実行設定: `server-modernized/tools/flyway/flyway.conf`（`flyway.locations=filesystem:server-modernized/tools/flyway/sql`）
-- クラスパス側 `server-modernized/src/main/resources/db/migration` は **ミラー**。実行前に必ず正本と同期する。
+- アプリ起動時 / test 時に使う `db/migration` は、Maven が `tools/flyway/sql` から `target/classes/db/migration` へ **生成コピー**する。source tree に手動ミラーは置かない。
 
-### 同期確認
+### 生成物確認
 ```bash
-comm -3 \
-  <(cd server-modernized/tools/flyway/sql && ls -1 | sort) \
-  <(cd server-modernized/src/main/resources/db/migration && ls -1 | sort)
+mvn -q -f server-modernized/pom.xml -pl server-modernized -am process-resources
+find server-modernized/target/classes/db/migration -maxdepth 1 -type f | sort
 ```
 
 ```bash
-for f in $(cd server-modernized/tools/flyway/sql && ls -1); do
-  if [ -f "server-modernized/src/main/resources/db/migration/$f" ]; then
-    t=$(sha1sum "server-modernized/tools/flyway/sql/$f" | awk '{print $1}')
-    s=$(sha1sum "server-modernized/src/main/resources/db/migration/$f" | awk '{print $1}')
-    [ "$t" = "$s" ] || echo "$f"
-  fi
-done
+diff -u \
+  <(cd server-modernized/tools/flyway/sql && ls V*.sql | sort) \
+  <(cd server-modernized/target/classes/db/migration && ls V*.sql | sort)
 ```
 
 ## 実行
@@ -43,6 +38,7 @@ docker run --rm --network legacy-vs-modern_default \
 - 同一 `Vxxxx` の重複作成は禁止。
 - 競合が発生した場合、後続側を次の空き番号へ繰り上げる（例: `V0240` 重複は片方を `V0244` へ移動）。
 - 既に適用済みの migration ファイルは原則変更しない（checksum 破壊防止）。
+- `P1_03__minimal_baseline_seed.sql` は手動 seed 用の非 versioned SQL であり、`flyway migrate` の対象には含めない。
 
 ## 患者複合キー（一意制約）
 - 追加 migration: `V0244__patient_facility_patientid_unique.sql`

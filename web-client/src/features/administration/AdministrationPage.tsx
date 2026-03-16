@@ -2,51 +2,46 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { getAuditEventLog, logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
+import { getAuditEventLog, logAuditEvent } from '../../libs/audit/auditLogger';
+import { isSystemAdminRole } from '../../libs/auth/roles';
 import { resolveAriaLive, resolveRunId } from '../../libs/observability/observability';
 import { copyTextToClipboard } from '../../libs/observability/runIdCopy';
-import { escapeXml } from '../../libs/xml/xmlUtils';
-import { isSystemAdminRole } from '../../libs/auth/roles';
 import { useAppToast } from '../../libs/ui/appToast';
-import { ToneBanner } from '../reception/components/ToneBanner';
 import { useSession } from '../../AppRouter';
 import { buildFacilityPath } from '../../routes/facilityRoutes';
-import { applyAuthServicePatch, useAuthService, type AuthServiceFlags } from '../charts/authService';
+import { ToneBanner } from '../reception/components/ToneBanner';
+import { AuditSummaryInline } from '../shared/AuditSummaryInline';
+import { RunIdBadge } from '../shared/RunIdBadge';
 import {
   ORCA_QUEUE_STALL_THRESHOLD_MS,
-  buildOrcaQueueWarningSummary,
   isOrcaQueueWarningEntry,
 } from '../outpatient/orcaQueueStatus';
+import { AccessManagementPanel } from './AccessManagementPanel';
+import { MasterUpdatesPanel } from './MasterUpdatesPanel';
+import { OrcaUserManagementPanel } from './OrcaUserManagementPanel';
 import {
   discardOrcaQueue,
   fetchEffectiveAdminConfig,
-  fetchMasterLastUpdate,
-  fetchMedicalSet,
+  fetchOperationsHealth,
+  fetchOperationsReadiness,
   fetchOrcaQueue,
-  fetchSystemDaily,
-  fetchSystemInfo,
+  fetchPvtWorkerHealth,
   retryOrcaQueue,
   saveAdminConfig,
-  syncMedicationMod,
   type AdminConfigPayload,
   type ChartsMasterSourcePolicy,
-  type MasterLastUpdateResponse,
-  type MedicalSetResponse,
-  type MedicalSetSearchPayload,
-  type MedicationModResponse,
   type OrcaQueueEntry,
-  type SystemDailyResponse,
-  type SystemInfoResponse,
 } from './api';
-import {
-  buildAcceptListRequestXml,
-  buildInsuranceProviderRequestXml,
-  buildManageUsersRequestXml,
-  buildSystemListRequestXml,
-  postOrcaXmlProxy,
-  type OrcaXmlProxyEndpoint,
-  type OrcaXmlProxyResponse,
-} from './orcaXmlProxyApi';
+import { ConfirmDialog } from './components/ConfirmDialog';
+import { AdminDeliveryConfigCard } from './delivery/AdminDeliveryConfigCard';
+import { AdminDeliveryStatusCard } from './delivery/AdminDeliveryStatusCard';
+import { DeliveryDashboard } from './delivery/DeliveryDashboard';
+import { DeliverySubNav } from './delivery/DeliverySubNav';
+import { OperationsHealthCard } from './delivery/OperationsHealthCard';
+import { OrcaInternalWrapperCard } from './delivery/OrcaInternalWrapperCard';
+import { OrcaQueueCard } from './delivery/OrcaQueueCard';
+import { WebOrcaConnectionCard } from './delivery/WebOrcaConnectionCard';
+import { type DeliverySection, DELIVERY_SECTION_ITEMS } from './delivery/types';
 import {
   fetchOrcaConnectionConfig,
   saveOrcaConnectionConfig,
@@ -62,31 +57,9 @@ import {
   type MedicalPatientSummary,
   type MedicalRecordEntry,
   type OrcaInternalWrapperBase,
+  type OrcaInternalWrapperEndpoint,
 } from './orcaInternalWrapperApi';
-import { AccessManagementPanel } from './AccessManagementPanel';
-import { OrcaUserManagementPanel } from './OrcaUserManagementPanel';
-import { MasterUpdatesPanel } from './MasterUpdatesPanel';
 import './administration.css';
-import {
-  publishAdminBroadcast,
-  type AdminDeliveryFlagState,
-  type AdminDeliveryStatus,
-} from '../../libs/admin/broadcast';
-import { AuditSummaryInline } from '../shared/AuditSummaryInline';
-import { RunIdBadge } from '../shared/RunIdBadge';
-import { ConfirmDialog } from './components/ConfirmDialog';
-import { DeliverySubNav } from './delivery/DeliverySubNav';
-import { DeliveryDashboard } from './delivery/DeliveryDashboard';
-import { WebOrcaConnectionCard } from './delivery/WebOrcaConnectionCard';
-import { AdminDeliveryConfigCard } from './delivery/AdminDeliveryConfigCard';
-import { AdminDeliveryStatusCard } from './delivery/AdminDeliveryStatusCard';
-import { OrcaMasterSyncCard } from './delivery/OrcaMasterSyncCard';
-import { SystemHealthCard } from './delivery/SystemHealthCard';
-import { MedicalSetSearchCard } from './delivery/MedicalSetSearchCard';
-import { OrcaXmlProxyCard } from './delivery/OrcaXmlProxyCard';
-import { OrcaInternalWrapperCard } from './delivery/OrcaInternalWrapperCard';
-import { OrcaQueueCard } from './delivery/OrcaQueueCard';
-import { DELIVERY_SECTION_ITEMS, type DeliverySection } from './delivery/types';
 
 type AdministrationPageProps = {
   runId: string;
@@ -94,19 +67,8 @@ type AdministrationPageProps = {
 };
 
 type AdministrationTab = 'delivery' | 'orca-users' | 'master-updates';
-
 type Feedback = { tone: 'success' | 'warning' | 'error' | 'info'; message: string };
-type OrcaXmlProxyFormState = {
-  xml: string;
-  classCode?: string;
-  result?: OrcaXmlProxyResponse | null;
-};
-type OrcaInternalWrapperEndpoint =
-  | 'medical-sets'
-  | 'birth-delivery'
-  | 'medical-records'
-  | 'patient-mutation'
-  | 'chart-subjectives';
+
 type OrcaInternalWrapperResult = OrcaInternalWrapperBase & {
   generatedAt?: string;
   patient?: MedicalPatientSummary;
@@ -116,11 +78,13 @@ type OrcaInternalWrapperResult = OrcaInternalWrapperBase & {
   patientDbId?: number;
   patientId?: string;
 };
+
 type OrcaInternalWrapperFormState = {
   payload: string;
   result?: OrcaInternalWrapperResult | null;
   parseError?: string;
 };
+
 type OrcaConnectionFormState = {
   useWeborca: boolean;
   serverUrl: string;
@@ -144,20 +108,24 @@ type OrcaConnectionFormState = {
   updatedAt?: string;
   auditSummary?: string;
 };
-type OrcaConnectionTestState = OrcaConnectionTestResponse | null;
+
 type GuardAction =
   | 'access'
   | 'edit'
   | 'save'
   | 'retry'
   | 'discard'
-  | 'master-check'
-  | 'master-sync'
-  | 'system-check'
-  | 'medicalset-search'
-  | 'orca-xml-proxy'
+  | 'operations-refresh'
   | 'orca-internal-wrapper'
   | 'orca-connection';
+
+type OrcaInternalWrapperOption = {
+  id: OrcaInternalWrapperEndpoint;
+  label: string;
+  hint: string;
+  stubFixed?: boolean;
+  defaultPayload: Record<string, unknown>;
+};
 
 const DEFAULT_ORCA_ENDPOINT =
   (import.meta.env as Record<string, string | undefined>).VITE_ORCA_ENDPOINT ?? 'https://localhost:9080/openDolphin/resources';
@@ -187,145 +155,36 @@ const DEFAULT_ORCA_CONNECTION_FORM: OrcaConnectionFormState = {
   caCertificateConfigured: false,
 };
 
-const ORCA_XML_PROXY_OPTIONS: Array<{
-  id: OrcaXmlProxyEndpoint;
-  label: string;
-  hint: string;
-  supportsClass: boolean;
-  defaultClass?: string;
-}> = [
-  {
-    id: 'acceptlstv2',
-    label: 'acceptlstv2（受付一覧）',
-    hint: 'class=01/02 で受付一覧を取得',
-    supportsClass: true,
-    defaultClass: '01',
-  },
-  {
-    id: 'system01lstv2',
-    label: 'system01lstv2（システム管理一覧）',
-    hint: 'class=02 が標準',
-    supportsClass: true,
-    defaultClass: '02',
-  },
-  {
-    id: 'manageusersv2',
-    label: 'manageusersv2（ユーザー管理）',
-    hint: 'ユーザー管理の原本取得',
-    supportsClass: false,
-  },
-  {
-    id: 'insprogetv2',
-    label: 'insprogetv2（保険者マスタ）',
-    hint: '保険者マスタの原本取得',
-    supportsClass: false,
-  },
-];
+const DEFAULT_DELIVERY_SECTION: DeliverySection = 'dashboard';
 
-type OrcaInternalWrapperOption = {
-  id: OrcaInternalWrapperEndpoint;
-  label: string;
-  hint: string;
-  stubFixed?: boolean;
-  defaultPayload: Record<string, unknown>;
+const isDeliverySection = (value: string | null): value is DeliverySection =>
+  DELIVERY_SECTION_ITEMS.some((item) => item.id === value);
+
+const resolveAdministrationTabFromSearch = (params: URLSearchParams): AdministrationTab => {
+  const tab = params.get('tab');
+  if (tab === 'access') return 'orca-users';
+  if (tab === 'orca-users' || tab === 'master-updates') return tab;
+  return 'delivery';
 };
 
-const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[] => [
-  {
-    id: 'medical-sets',
-    label: '/orca/medical-sets（診療セット）',
-    hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
-    stubFixed: true,
-    defaultPayload: {
-      requestNumber: '01',
-      patientId: '00002',
-      sets: [
-        {
-          medicalClass: '120',
-          medicationCode: '112007410',
-          medicationName: 'テスト処方',
-          quantity: '1',
-          note: 'stub',
-        },
-      ],
-    },
-  },
-  {
-    id: 'birth-delivery',
-    label: '/orca/birth-delivery（出産育児一時金）',
-    hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
-    stubFixed: true,
-    defaultPayload: {
-      requestNumber: '01',
-      patientId: '00002',
-      insuranceCombinationNumber: '0001',
-      performDate: today,
-      note: '出産育児一時金',
-    },
-  },
-  {
-    id: 'medical-records',
-    label: '/orca/medical/records（診療記録取得）',
-    hint: 'feature flag により stub/実データが切り替わります',
-    defaultPayload: {
-      patientId: '00002',
-      fromDate: '',
-      toDate: today,
-      performMonths: 12,
-      departmentCode: '01',
-      sequentialNumber: '',
-      insuranceCombinationNumber: '0001',
-      includeVisitStatus: false,
-    },
-  },
-  {
-    id: 'patient-mutation',
-    label: '/orca/patient/mutation（患者作成/更新/削除）',
-    hint: 'delete は Trial 閉鎖のため stub 応答',
-    defaultPayload: {
-      operation: 'create',
-      patient: {
-        patientId: '00002',
-        wholeName: 'テスト 太郎',
-        wholeNameKana: 'テスト タロウ',
-        birthDate: '1980-01-01',
-        sex: '1',
-        telephone: '',
-        mobilePhone: '',
-        zipCode: '',
-        addressLine: '',
-      },
-    },
-  },
-  {
-    id: 'chart-subjectives',
-    label: '/orca/chart/subjectives（主訴登録）',
-    hint: 'feature flag により stub/実データが切り替わります',
-    defaultPayload: {
-      patientId: '00002',
-      performDate: today,
-      soapCategory: 'S',
-      physicianCode: '10001',
-      body: '主訴テスト',
-    },
-  },
-];
+const resolveDeliverySectionFromSearch = (params: URLSearchParams): DeliverySection => {
+  const section = params.get('section');
+  if (isDeliverySection(section)) return section;
+  return DEFAULT_DELIVERY_SECTION;
+};
 
-const buildInternalWrapperState = (options: OrcaInternalWrapperOption[]) =>
-  options.reduce<Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>>((acc, option) => {
-    acc[option.id] = {
-      payload: JSON.stringify(option.defaultPayload, null, 2),
-      result: null,
-    };
-    return acc;
-  }, {} as Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>);
-
-const resolveXmlProxyOption = (endpoint: OrcaXmlProxyEndpoint) =>
-  ORCA_XML_PROXY_OPTIONS.find((option) => option.id === endpoint) ?? ORCA_XML_PROXY_OPTIONS[0];
-const resolveInternalWrapperOption = (
-  options: OrcaInternalWrapperOption[],
-  endpoint: OrcaInternalWrapperEndpoint,
-) => options.find((option) => option.id === endpoint) ?? options[0];
+const normalizeAdministrationSearchParams = (params: URLSearchParams) => {
+  const normalized = new URLSearchParams(params);
+  const tab = resolveAdministrationTabFromSearch(params);
+  if (tab === 'delivery') {
+    normalized.delete('tab');
+    normalized.set('section', resolveDeliverySectionFromSearch(params));
+    return normalized;
+  }
+  normalized.set('tab', tab);
+  normalized.delete('section');
+  return normalized;
+};
 
 const formatDateInput = (date: Date) => {
   const year = date.getFullYear();
@@ -354,14 +213,19 @@ const formatTimestampWithAgo = (iso?: string) => {
   return `${formatTimestamp(iso)}（${formatTimeAgo(iso)}）`;
 };
 
-const QUEUE_DELAY_WARNING_MS = ORCA_QUEUE_STALL_THRESHOLD_MS;
+const normalizeEnvironmentLabel = (raw?: string) => {
+  if (!raw) return undefined;
+  const value = raw.toLowerCase();
+  if (value.includes('stage')) return 'stage';
+  if (value.includes('dev')) return 'dev';
+  if (value.includes('prod')) return 'prod';
+  if (value.includes('preview')) return 'preview';
+  return raw;
+};
 
 const getStringValue = (value: unknown) => (typeof value === 'string' ? value : undefined);
 
-const extractPatientIdFromPayload = (
-  endpoint: OrcaInternalWrapperEndpoint,
-  payload?: Record<string, unknown>,
-) => {
+const extractPatientIdFromPayload = (endpoint: OrcaInternalWrapperEndpoint, payload?: Record<string, unknown>) => {
   if (!payload) return undefined;
   if (endpoint === 'patient-mutation') {
     const patient = (payload.patient ?? {}) as Record<string, unknown>;
@@ -373,37 +237,27 @@ const extractPatientIdFromPayload = (
 const extractOperationFromPayload = (payload?: Record<string, unknown>) =>
   payload ? getStringValue(payload.operation) : undefined;
 
-const normalizeEnvironmentLabel = (raw?: string) => {
-  if (!raw) return undefined;
-  const value = raw.toLowerCase();
-  if (value.includes('stage')) return 'stage';
-  if (value.includes('dev')) return 'dev';
-  if (value.includes('prod')) return 'prod';
-  if (value.includes('preview')) return 'preview';
-  return raw;
-};
-
 const resolveDeliveryFlagState = (
   configValue: boolean | string | undefined,
   deliveryValue: boolean | string | undefined,
-): AdminDeliveryFlagState => {
-  if (deliveryValue === undefined && configValue === undefined) return 'unknown';
-  if (deliveryValue === undefined) return 'pending';
-  if (configValue === undefined) return 'applied';
-  return deliveryValue === configValue ? 'applied' : 'pending';
+) => {
+  if (deliveryValue === undefined && configValue === undefined) return 'unknown' as const;
+  if (deliveryValue === undefined) return 'pending' as const;
+  if (configValue === undefined) return 'applied' as const;
+  return deliveryValue === configValue ? ('applied' as const) : ('pending' as const);
 };
 
 const buildChartsDeliveryStatus = (
   config?: Partial<AdminConfigPayload>,
   delivery?: Partial<AdminConfigPayload>,
-): AdminDeliveryStatus => ({
+) => ({
   chartsDisplayEnabled: resolveDeliveryFlagState(config?.chartsDisplayEnabled, delivery?.chartsDisplayEnabled),
   chartsSendEnabled: resolveDeliveryFlagState(config?.chartsSendEnabled, delivery?.chartsSendEnabled),
   chartsMasterSource: resolveDeliveryFlagState(config?.chartsMasterSource, delivery?.chartsMasterSource),
 });
 
-const summarizeDeliveryStatus = (status: AdminDeliveryStatus) => {
-  const states = Object.values(status).filter(Boolean) as AdminDeliveryFlagState[];
+const summarizeDeliveryStatus = (status: ReturnType<typeof buildChartsDeliveryStatus>) => {
+  const states = Object.values(status).filter(Boolean);
   const hasPending = states.some((state) => state === 'pending');
   const hasApplied = states.some((state) => state === 'applied');
   return {
@@ -411,42 +265,114 @@ const summarizeDeliveryStatus = (status: AdminDeliveryStatus) => {
     summary: hasPending ? '次回リロード' : hasApplied ? '即時反映' : '不明',
   };
 };
-const DEFAULT_DELIVERY_SECTION: DeliverySection = 'dashboard';
-const isDeliverySection = (value: string | null): value is DeliverySection =>
-  DELIVERY_SECTION_ITEMS.some((item) => item.id === value);
-const resolveAdministrationTabFromSearch = (params: URLSearchParams): AdministrationTab => {
-  const tab = params.get('tab');
-  if (tab === 'access') return 'orca-users';
-  if (tab === 'orca-users' || tab === 'master-updates') return tab;
-  return 'delivery';
-};
-const resolveDeliverySectionFromSearch = (params: URLSearchParams): DeliverySection => {
-  const section = params.get('section');
-  if (isDeliverySection(section)) return section;
-  return DEFAULT_DELIVERY_SECTION;
-};
-const normalizeAdministrationSearchParams = (params: URLSearchParams) => {
-  const normalized = new URLSearchParams(params);
-  const tab = resolveAdministrationTabFromSearch(params);
-  if (tab === 'delivery') {
-    normalized.delete('tab');
-    normalized.set('section', resolveDeliverySectionFromSearch(params));
-    return normalized;
-  }
-  normalized.set('tab', tab);
-  normalized.delete('section');
-  return normalized;
+
+const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[] => [
+  {
+    id: 'medical-sets',
+    label: '/api/orca/medical-sets（診療セット）',
+    hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
+    stubFixed: true,
+    defaultPayload: {
+      requestNumber: '01',
+      patientId: '00002',
+      sets: [
+        {
+          medicalClass: '120',
+          medicationCode: '112007410',
+          medicationName: 'テスト処方',
+          quantity: '1',
+          note: 'stub',
+        },
+      ],
+    },
+  },
+  {
+    id: 'birth-delivery',
+    label: '/api/orca/birth-delivery（出産育児一時金）',
+    hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
+    stubFixed: true,
+    defaultPayload: {
+      requestNumber: '01',
+      patientId: '00002',
+      insuranceCombinationNumber: '0001',
+      performDate: today,
+      note: '出産育児一時金',
+    },
+  },
+  {
+    id: 'medical-records',
+    label: '/api/orca/medical/records（診療記録取得）',
+    hint: 'feature flag により stub/実データが切り替わります',
+    defaultPayload: {
+      patientId: '00002',
+      fromDate: '',
+      toDate: today,
+      performMonths: 12,
+      departmentCode: '01',
+      sequentialNumber: '',
+      insuranceCombinationNumber: '0001',
+      includeVisitStatus: false,
+    },
+  },
+  {
+    id: 'patient-mutation',
+    label: '/api/orca/patient/mutation（患者作成/更新/削除）',
+    hint: 'delete は Trial 閉鎖のため stub 応答',
+    defaultPayload: {
+      operation: 'create',
+      patient: {
+        patientId: '00002',
+        wholeName: 'テスト 太郎',
+        wholeNameKana: 'テスト タロウ',
+        birthDate: '1980-01-01',
+        sex: '1',
+        telephone: '',
+        mobilePhone: '',
+        zipCode: '',
+        addressLine: '',
+      },
+    },
+  },
+  {
+    id: 'chart-subjectives',
+    label: '/api/orca/chart/subjectives（主訴登録）',
+    hint: 'feature flag により stub/実データが切り替わります',
+    defaultPayload: {
+      patientId: '00002',
+      performDate: today,
+      soapCategory: 'S',
+      physicianCode: '10001',
+      body: '主訴テスト',
+    },
+  },
+];
+
+const buildInternalWrapperState = (options: OrcaInternalWrapperOption[]) =>
+  options.reduce<Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>>((acc, option) => {
+    acc[option.id] = {
+      payload: JSON.stringify(option.defaultPayload, null, 2),
+      result: null,
+    };
+    return acc;
+  }, {} as Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>);
+
+const resolveInternalWrapperOption = (options: OrcaInternalWrapperOption[], endpoint: OrcaInternalWrapperEndpoint) =>
+  options.find((option) => option.id === endpoint) ?? options[0];
+
+const resolveStatusTone = (result: { ok: boolean } | null, isPending: boolean) => {
+  if (isPending) return 'pending' as const;
+  if (!result) return 'idle' as const;
+  return result.ok ? ('ok' as const) : ('error' as const);
 };
 
-const buildMedicationTemplateXml = (baseDate: string) =>
-  [
-    '<data>',
-    '  <medicatonmodreq type="record">',
-    '    <Request_Number type="string">01</Request_Number>',
-    `    <Base_Date type="string">${escapeXml(baseDate)}</Base_Date>`,
-    '  </medicatonmodreq>',
-    '</data>',
-  ].join('\n');
+const resolveStatusLabel = (result: { ok: boolean; apiResult?: string } | null, isPending: boolean) => {
+  if (isPending) return '実行中';
+  if (!result) return '未実行';
+  if (result.ok) return `OK${result.apiResult ? ` (${result.apiResult})` : ''}`;
+  return 'NG';
+};
+
+const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const isSystemAdmin = isSystemAdminRole(role);
@@ -454,47 +380,17 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const { enqueue } = useAppToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const guardLogRef = useRef<{ runId?: string; role?: string }>({});
+  const forbiddenLogRef = useRef<{ runId?: string; noted?: boolean }>({});
+  const today = useMemo(() => formatDateInput(new Date()), []);
+  const internalWrapperOptions = useMemo(() => buildInternalWrapperOptions(today), [today]);
   const normalizedSearchParams = useMemo(() => normalizeAdministrationSearchParams(searchParams), [searchParams]);
   const activeTab = useMemo(() => resolveAdministrationTabFromSearch(normalizedSearchParams), [normalizedSearchParams]);
   const activeDeliverySection = useMemo(
     () => resolveDeliverySectionFromSearch(normalizedSearchParams),
     [normalizedSearchParams],
   );
-  useEffect(() => {
-    const normalizedSearch = normalizedSearchParams.toString();
-    const currentSearch = searchParams.toString();
-    if (normalizedSearch === currentSearch) return;
-    setSearchParams(normalizedSearchParams, { replace: true });
-  }, [normalizedSearchParams, searchParams, setSearchParams]);
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    document.title = `管理画面 | 施設ID=${session.facilityId ?? 'unknown'}`;
-  }, [location.pathname, session.facilityId]);
-  const handleTabChange = (next: AdministrationTab) => {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'delivery') {
-      const nextSection = resolveDeliverySectionFromSearch(searchParams);
-      params.delete('tab');
-      params.set('section', nextSection);
-      setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
-      return;
-    }
-    params.set('tab', next);
-    params.delete('section');
-    setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
-  };
-  const handleDeliverySectionChange = (next: DeliverySection) => {
-    const params = new URLSearchParams(searchParams);
-    params.delete('tab');
-    params.set('section', next);
-    setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
-  };
-  const appliedMeta = useRef<Partial<AuthServiceFlags>>({});
-  const guardLogRef = useRef<{ runId?: string; role?: string }>({});
-  const forbiddenLogRef = useRef<{ runId?: string; noted?: boolean }>({});
-  const { flags, bumpRunId, setCacheHit, setMissingMaster, setDataSourceTransition, setFallbackUsed } = useAuthService();
-  const today = useMemo(() => formatDateInput(new Date()), []);
-  const internalWrapperOptions = useMemo(() => buildInternalWrapperOptions(today), [today]);
+
   const [form, setForm] = useState<AdminConfigPayload>(DEFAULT_FORM);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [orcaConnectionForm, setOrcaConnectionForm] = useState<OrcaConnectionFormState>(DEFAULT_ORCA_CONNECTION_FORM);
@@ -508,91 +404,63 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     clientCertificatePassphrase?: string;
   }>({});
   const [orcaConnectionFeedback, setOrcaConnectionFeedback] = useState<Feedback | null>(null);
-  const [orcaConnectionTestResult, setOrcaConnectionTestResult] = useState<OrcaConnectionTestState>(null);
+  const [orcaConnectionTestResult, setOrcaConnectionTestResult] = useState<OrcaConnectionTestResponse | null>(null);
   const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
   const [discardConfirmTarget, setDiscardConfirmTarget] = useState<OrcaQueueEntry | null>(null);
+  const [orcaInternalWrapperTarget, setOrcaInternalWrapperTarget] = useState<OrcaInternalWrapperEndpoint>('medical-sets');
+  const [orcaInternalWrapperState, setOrcaInternalWrapperState] = useState<
+    Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>
+  >(() => buildInternalWrapperState(internalWrapperOptions));
   const [connectivitySummary, setConnectivitySummary] = useState<{
     testedAt: string;
     success: number;
     failure: number;
     details: string[];
   } | null>(null);
-  const [masterLastUpdateResult, setMasterLastUpdateResult] = useState<MasterLastUpdateResponse | null>(null);
-  const [medicationSyncResult, setMedicationSyncResult] = useState<MedicationModResponse | null>(null);
-  const [medicationSyncClass, setMedicationSyncClass] = useState('01');
-  const [medicationTemplateBaseDate, setMedicationTemplateBaseDate] = useState(() => today);
-  const [medicationSyncXml, setMedicationSyncXml] = useState(() => buildMedicationTemplateXml(today));
-  const [systemInfoResult, setSystemInfoResult] = useState<SystemInfoResponse | null>(null);
-  const [systemDailyResult, setSystemDailyResult] = useState<SystemDailyResponse | null>(null);
-  const [systemBaseDate, setSystemBaseDate] = useState(() => today);
-  const [medicalSetQuery, setMedicalSetQuery] = useState<MedicalSetSearchPayload>(() => ({
-    baseDate: today,
-    setCode: '',
-    setName: '',
-    startDate: today,
-    endDate: '',
-    inOut: 'O',
-  }));
-  const [medicalSetResult, setMedicalSetResult] = useState<MedicalSetResponse | null>(null);
-  const [orcaXmlProxyTarget, setOrcaXmlProxyTarget] = useState<OrcaXmlProxyEndpoint>('acceptlstv2');
-  const [orcaXmlProxyState, setOrcaXmlProxyState] = useState<Record<OrcaXmlProxyEndpoint, OrcaXmlProxyFormState>>(
-    () => ({
-      acceptlstv2: {
-        xml: buildAcceptListRequestXml(),
-        classCode: resolveXmlProxyOption('acceptlstv2').defaultClass ?? '01',
-        result: null,
-      },
-      system01lstv2: {
-        xml: buildSystemListRequestXml(resolveXmlProxyOption('system01lstv2').defaultClass ?? '02'),
-        classCode: resolveXmlProxyOption('system01lstv2').defaultClass ?? '02',
-        result: null,
-      },
-      manageusersv2: {
-        xml: buildManageUsersRequestXml(),
-        result: null,
-      },
-      insprogetv2: {
-        xml: buildInsuranceProviderRequestXml(),
-        result: null,
-      },
-    }),
-  );
-  const [orcaInternalWrapperTarget, setOrcaInternalWrapperTarget] = useState<OrcaInternalWrapperEndpoint>('medical-sets');
-  const [orcaInternalWrapperState, setOrcaInternalWrapperState] = useState<
-    Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>
-  >(() => buildInternalWrapperState(internalWrapperOptions));
-  const [masterUpdateLabel, setMasterUpdateLabel] = useState<'初回取得' | '更新あり' | '更新なし'>('初回取得');
-  const lastMasterSignatureRef = useRef<string | undefined>(undefined);
+
   const queryClient = useQueryClient();
+  const guardMessageId = 'admin-guard-message';
+  const guardDetailsId = 'admin-guard-details';
+  const actorId = `${session.facilityId}:${session.userId}`;
+  const showAdminDebugToggles = import.meta.env.VITE_ENABLE_ADMIN_DEBUG === '1' && isSystemAdmin;
 
   const configQuery = useQuery({
     queryKey: ['admin-config'],
     queryFn: fetchEffectiveAdminConfig,
     staleTime: 60_000,
   });
-
   const orcaConnectionQuery = useQuery({
     queryKey: ['admin-orca-connection'],
     queryFn: fetchOrcaConnectionConfig,
     staleTime: 60_000,
-    enabled: isSystemAdmin && activeTab === 'delivery',
+    enabled: activeTab === 'delivery',
   });
-  const orcaConnectionAuthStatus = orcaConnectionQuery.data?.status;
-  const orcaConnectionAccessVerified =
-    isSystemAdmin && activeTab === 'delivery' && orcaConnectionAuthStatus === 200;
-  const orcaConnectionAuthBlocked =
-    isSystemAdmin &&
-    activeTab === 'delivery' &&
-    (orcaConnectionAuthStatus === 401 || orcaConnectionAuthStatus === 403);
-
   const queueQuery = useQuery({
     queryKey: ['orca-queue'],
     queryFn: () => fetchOrcaQueue(),
     refetchInterval: 60_000,
   });
+  const operationsHealthQuery = useQuery({
+    queryKey: ['admin-operations-health'],
+    queryFn: fetchOperationsHealth,
+    staleTime: 30_000,
+    enabled: activeTab === 'delivery',
+  });
+  const operationsReadinessQuery = useQuery({
+    queryKey: ['admin-operations-readiness'],
+    queryFn: fetchOperationsReadiness,
+    staleTime: 30_000,
+    enabled: activeTab === 'delivery',
+  });
+  const pvtWorkerHealthQuery = useQuery({
+    queryKey: ['admin-pvt-worker-health'],
+    queryFn: fetchPvtWorkerHealth,
+    staleTime: 30_000,
+    enabled: activeTab === 'delivery',
+  });
 
   const latestRunId = configQuery.data?.runId ?? queueQuery.data?.runId ?? runId;
-  const resolvedRunId = resolveRunId(latestRunId ?? flags.runId);
+  const resolvedRunId = resolveRunId(latestRunId);
   const panelRunId = resolvedRunId ?? runId;
   const infoLive = resolveAriaLive('info');
   const envFallback = normalizeEnvironmentLabel(
@@ -601,7 +469,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       (import.meta.env.MODE === 'development' ? 'dev' : import.meta.env.MODE),
   );
   const environmentLabel = normalizeEnvironmentLabel(configQuery.data?.environment) ?? envFallback ?? 'unknown';
-  const warningThresholdMinutes = Math.round(QUEUE_DELAY_WARNING_MS / 60000);
+  const warningThresholdMinutes = Math.round(ORCA_QUEUE_STALL_THRESHOLD_MS / 60000);
   const rawConfig = configQuery.data?.rawConfig ?? configQuery.data;
   const rawDelivery = configQuery.data?.rawDelivery;
   const latestAuditEvent = useMemo(() => {
@@ -609,33 +477,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     const latest = snapshot[snapshot.length - 1];
     return (latest?.payload as Record<string, unknown> | undefined) ?? undefined;
   }, [configQuery.data?.runId, feedback?.message, queueQuery.data?.runId, resolvedRunId]);
-  const guardMessageId = 'admin-guard-message';
-  const guardDetailsId = 'admin-guard-details';
-  const actorId = `${session.facilityId}:${session.userId}`;
-  const showAdminDebugToggles = import.meta.env.VITE_ENABLE_ADMIN_DEBUG === '1' && isSystemAdmin;
-  const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
-  const handleCopyValue = useCallback(
-    async (value: string, label: string) => {
-      try {
-        await copyTextToClipboard(value);
-        enqueue({ tone: 'success', message: `${label} をコピーしました`, detail: value, durationMs: 1800 });
-      } catch {
-        enqueue({ tone: 'error', message: `${label} のコピーに失敗しました` });
-      }
-    },
-    [enqueue],
-  );
-  const requestTemplate = useMemo(
-    () =>
-      [
-        '【system_admin 権限依頼テンプレート】',
-        `施設ID: ${session.facilityId}`,
-        `環境: ${environmentLabel}`,
-        '作業内容: Administration の設定変更/配信',
-        '影響範囲: WebORCA接続設定・配信設定・ORCA queue 操作',
-      ].join('\n'),
-    [environmentLabel, session.facilityId],
-  );
+
+  const orcaConnectionAuthStatus = orcaConnectionQuery.data?.status;
+  const orcaConnectionAccessVerified = activeTab === 'delivery' && orcaConnectionAuthStatus === 200;
+  const orcaConnectionAuthBlocked =
+    activeTab === 'delivery' && (orcaConnectionAuthStatus === 401 || orcaConnectionAuthStatus === 403);
+
   const buildConnectionSnapshot = useCallback(
     (formState: OrcaConnectionFormState): OrcaConnectionFormState => ({
       ...formState,
@@ -646,10 +493,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     }),
     [],
   );
+
   const orcaConnectionDirty = useMemo(() => {
     if (!orcaConnectionSavedSnapshot) return false;
     return JSON.stringify(buildConnectionSnapshot(orcaConnectionForm)) !== JSON.stringify(orcaConnectionSavedSnapshot);
   }, [buildConnectionSnapshot, orcaConnectionForm, orcaConnectionSavedSnapshot]);
+
   const configDirty = useMemo(() => {
     if (!rawConfig) return false;
     return (
@@ -662,6 +511,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       rawConfig.chartsMasterSource !== form.chartsMasterSource
     );
   }, [form, rawConfig]);
+
   const configDiffRows = useMemo(
     () =>
       [
@@ -700,64 +550,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       ].filter((row) => row.before !== row.after),
     [form, rawConfig],
   );
-  const countVersionDiffs = (versions?: Array<{ localVersion?: string; newVersion?: string }>) =>
-    versions?.filter((entry) => entry.localVersion && entry.newVersion && entry.localVersion !== entry.newVersion).length ?? 0;
-  const resolveStatusTone = (result: { ok: boolean } | null, isPending: boolean) => {
-    if (isPending) return 'pending';
-    if (!result) return 'idle';
-    return result.ok ? 'ok' : 'error';
-  };
-  const resolveStatusLabel = (result: { ok: boolean; apiResult?: string } | null, isPending: boolean) => {
-    if (isPending) return '実行中';
-    if (!result) return '未実行';
-    if (result.ok) return `OK${result.apiResult ? ` (${result.apiResult})` : ''}`;
-    return 'NG';
-  };
-  const isApiResultOk = (apiResult?: string) => (apiResult ? apiResult.startsWith('00') : false);
-  const resolveHealthTone = (
-    info: SystemInfoResponse | null,
-    daily: SystemDailyResponse | null,
-    isPending: boolean,
-  ) => {
-    if (isPending) return 'pending';
-    if (!info && !daily) return 'idle';
-    if (info && !info.ok) return 'error';
-    if (daily && !daily.ok) return 'error';
-    if (info && info.apiResult && !isApiResultOk(info.apiResult)) return 'warn';
-    if (daily && daily.apiResult && !isApiResultOk(daily.apiResult)) return 'warn';
-    return 'ok';
-  };
-  const resolveHealthLabel = (
-    info: SystemInfoResponse | null,
-    daily: SystemDailyResponse | null,
-    isPending: boolean,
-  ) => {
-    const tone = resolveHealthTone(info, daily, isPending);
-    if (tone === 'pending') return '実行中';
-    if (tone === 'idle') return '未実行';
-    if (tone === 'error') return 'NG';
-    if (tone === 'warn') return 'Warn';
-    return 'OK';
-  };
-  const buildMasterSignature = (result: MasterLastUpdateResponse | null) => {
-    if (!result) return undefined;
-    const versions = result.versions
-      .map((entry) => `${entry.name ?? ''}:${entry.localVersion ?? ''}:${entry.newVersion ?? ''}`)
-      .join('|');
-    return `${result.lastUpdateDate ?? ''}|${versions}`;
-  };
-  const updateOrcaXmlProxyState = useCallback(
-    (endpoint: OrcaXmlProxyEndpoint, patch: Partial<OrcaXmlProxyFormState>) => {
-      setOrcaXmlProxyState((prev) => ({
-        ...prev,
-        [endpoint]: {
-          ...prev[endpoint],
-          ...patch,
-        },
-      }));
-    },
-    [],
-  );
+
   const updateOrcaInternalWrapperState = useCallback(
     (endpoint: OrcaInternalWrapperEndpoint, patch: Partial<OrcaInternalWrapperFormState>) => {
       setOrcaInternalWrapperState((prev) => ({
@@ -770,23 +563,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     },
     [],
   );
-  const buildXmlProxyTemplate = useCallback((endpoint: OrcaXmlProxyEndpoint, classCode?: string) => {
-    switch (endpoint) {
-      case 'acceptlstv2':
-        return buildAcceptListRequestXml();
-      case 'system01lstv2':
-        return buildSystemListRequestXml(classCode);
-      case 'manageusersv2':
-        return buildManageUsersRequestXml();
-      case 'insprogetv2':
-        return buildInsuranceProviderRequestXml();
-      default:
-        return '<data></data>';
-    }
-  }, []);
-  const xmlProxyOption = resolveXmlProxyOption(orcaXmlProxyTarget);
-  const currentXmlProxy = orcaXmlProxyState[orcaXmlProxyTarget];
-  const xmlProxyResult = orcaXmlProxyState[orcaXmlProxyTarget]?.result ?? null;
   const internalWrapperOption = resolveInternalWrapperOption(internalWrapperOptions, orcaInternalWrapperTarget);
   const currentInternalWrapper = orcaInternalWrapperState[orcaInternalWrapperTarget];
   const internalWrapperResult = currentInternalWrapper?.result ?? null;
@@ -804,15 +580,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
           requiredRole: 'system_admin',
           environment: environmentLabel,
           detail,
-          fallback: ['再ログイン', '管理者へ依頼', 'Receptionで確認'],
         },
-      });
-      logUiState({
-        action: 'navigate',
-        screen: 'administration',
-        controlId: 'admin-guard',
-        runId: resolvedRunId,
-        details: { operation: action, role, detail, requiredRole: 'system_admin' },
       });
     },
     [actorId, environmentLabel, resolvedRunId, role],
@@ -825,6 +593,18 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     },
     [logGuardEvent],
   );
+
+  useEffect(() => {
+    const normalizedSearch = normalizedSearchParams.toString();
+    const currentSearch = searchParams.toString();
+    if (normalizedSearch === currentSearch) return;
+    setSearchParams(normalizedSearchParams, { replace: true });
+  }, [normalizedSearchParams, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.title = `管理画面 | 施設ID=${session.facilityId ?? 'unknown'}`;
+  }, [location.pathname, session.facilityId]);
 
   useEffect(() => {
     if (isSystemAdmin) return;
@@ -846,12 +626,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       chartsSendEnabled: data.chartsSendEnabled ?? prev.chartsSendEnabled,
       chartsMasterSource: data.chartsMasterSource ?? prev.chartsMasterSource,
     }));
-    appliedMeta.current = applyAuthServicePatch(
-      { runId: data.runId },
-      appliedMeta.current,
-      { bumpRunId, setCacheHit, setMissingMaster, setDataSourceTransition, setFallbackUsed },
-    );
-  }, [bumpRunId, configQuery.data, setCacheHit, setDataSourceTransition, setFallbackUsed, setMissingMaster]);
+  }, [configQuery.data]);
 
   useEffect(() => {
     const data = orcaConnectionQuery.data;
@@ -894,72 +669,10 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
   const configMutation = useMutation({
     mutationFn: saveAdminConfig,
-    onSuccess: (data) => {
+    onSuccess: () => {
       setSaveConfirmOpen(false);
-      setFeedback({ tone: 'success', message: '設定を保存し、配信をブロードキャストしました。' });
-      const nextChartsFlags = {
-        chartsDisplayEnabled: data.chartsDisplayEnabled ?? form.chartsDisplayEnabled,
-        chartsSendEnabled: data.chartsSendEnabled ?? form.chartsSendEnabled,
-        chartsMasterSource: data.chartsMasterSource ?? form.chartsMasterSource,
-      };
-      const nextDeliveryStatus = buildChartsDeliveryStatus(nextChartsFlags, rawDelivery);
-      const deliveredAt = data.deliveredAt ?? rawDelivery?.deliveredAt;
-      const resolvedEnvironment = normalizeEnvironmentLabel(data.environment) ?? environmentLabel;
-      const broadcast = publishAdminBroadcast({
-        runId: data.runId ?? runId,
-        facilityId: session.facilityId,
-        userId: session.userId,
-        action: 'config',
-        deliveryId: data.deliveryId,
-        deliveryVersion: data.deliveryVersion,
-        deliveryEtag: data.deliveryEtag ?? data.deliveryVersion,
-        deliveredAt,
-        queueMode: data.useMockOrcaQueue ? 'mock' : 'live',
-        verifyAdminDelivery: data.verifyAdminDelivery,
-        chartsDisplayEnabled: nextChartsFlags.chartsDisplayEnabled,
-        chartsSendEnabled: nextChartsFlags.chartsSendEnabled,
-        chartsMasterSource: nextChartsFlags.chartsMasterSource,
-        environment: resolvedEnvironment,
-        deliveryStatus: nextDeliveryStatus,
-        note: data.note,
-        source: data.source,
-      });
-      logAuditEvent({
-        runId: data.runId ?? runId,
-        source: 'admin/delivery',
-        note: data.note ?? 'admin delivery saved',
-        payload: {
-          operation: 'save',
-          actor: `${session.facilityId}:${session.userId}`,
-          role: session.role,
-          environment: resolvedEnvironment,
-          delivery: {
-            deliveryId: data.deliveryId,
-            deliveryVersion: data.deliveryVersion,
-            deliveryEtag: data.deliveryEtag ?? data.deliveryVersion,
-            deliveredAt,
-            deliveryMode: data.deliveryMode ?? configQuery.data?.deliveryMode,
-            source: data.source,
-            verified: data.verified,
-          },
-          flags: {
-            ...form,
-            ...nextChartsFlags,
-          },
-          broadcast,
-          raw: {
-            config: rawConfig,
-            delivery: rawDelivery,
-          },
-        },
-      });
-      logUiState({
-        action: 'config_delivery',
-        screen: 'administration',
-        controlId: 'save-config',
-        runId: data.runId ?? runId,
-        dataSourceTransition: undefined,
-      });
+      setFeedback({ tone: 'success', message: '設定を保存しました。' });
+      queryClient.invalidateQueries({ queryKey: ['admin-config'] });
     },
     onError: () => {
       setSaveConfirmOpen(false);
@@ -975,33 +688,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
         return;
       }
       setOrcaConnectionFeedback({ tone: 'success', message: 'WebORCA 接続設定を保存しました。' });
-      const next = buildConnectionSnapshot({
-        ...orcaConnectionForm,
-        useWeborca: data.useWeborca ?? orcaConnectionForm.useWeborca,
-        serverUrl: data.serverUrl ?? orcaConnectionForm.serverUrl,
-        port: data.port !== undefined ? String(data.port) : orcaConnectionForm.port,
-        username: data.username ?? orcaConnectionForm.username,
-        password: '',
-        passwordConfigured: Boolean(data.passwordConfigured),
-        passwordUpdatedAt: data.passwordUpdatedAt,
-        clientAuthEnabled: Boolean(data.clientAuthEnabled),
-        clientCertificateFile: null,
-        clientCertificateConfigured: Boolean(data.clientCertificateConfigured),
-        clientCertificateFileName: data.clientCertificateFileName,
-        clientCertificateUploadedAt: data.clientCertificateUploadedAt,
-        clientCertificatePassphrase: '',
-        clientCertificatePassphraseConfigured: Boolean(data.clientCertificatePassphraseConfigured),
-        clientCertificatePassphraseUpdatedAt: data.clientCertificatePassphraseUpdatedAt,
-        caCertificateFile: null,
-        caCertificateConfigured: Boolean(data.caCertificateConfigured),
-        caCertificateFileName: data.caCertificateFileName,
-        caCertificateUploadedAt: data.caCertificateUploadedAt,
-        updatedAt: data.updatedAt,
-        auditSummary: data.auditSummary,
-      });
-      setOrcaConnectionForm(next);
-      setOrcaConnectionSavedSnapshot(next);
-      setOrcaConnectionFieldErrors({});
       queryClient.invalidateQueries({ queryKey: ['admin-orca-connection'] });
     },
     onError: (error) => {
@@ -1049,392 +735,36 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       if (params.kind === 'retry') return retryOrcaQueue(params.patientId);
       return discardOrcaQueue(params.patientId);
     },
-    onSuccess: (data, variables) => {
-      queryClient.setQueryData(['orca-queue'], data);
-      const queueOperation = variables.kind;
-      const queueSummary = buildOrcaQueueWarningSummary(data.queue);
-      publishAdminBroadcast({
-        runId: data.runId ?? runId,
-        facilityId: session.facilityId,
-        userId: session.userId,
-        action: 'queue',
-        queueOperation,
-        queueResult: 'success',
-        queuePatientId: variables.patientId,
-        queueStatus: queueSummary,
-        deliveryId: variables.patientId,
-        deliveryVersion: data.source,
-        deliveredAt: new Date().toISOString(),
-        queueMode: data.source,
-        verifyAdminDelivery: data.verifyAdminDelivery,
-        environment: environmentLabel,
-        note: queueOperation === 'retry' ? '再送完了' : '破棄完了',
-      });
-      logAuditEvent({
-        runId: data.runId ?? runId,
-        source: 'admin/delivery',
-        note: `orca queue ${queueOperation}`,
-        payload: {
-          operation: queueOperation,
-          result: 'success',
-          patientId: variables.patientId,
-          environment: environmentLabel,
-          queueMode: data.source,
-          queue: data.queue,
-          queueSnapshot: queueSummary,
-          warningThresholdMs: QUEUE_DELAY_WARNING_MS,
-        },
-      });
-      logAuditEvent({
-        runId: data.runId ?? runId,
-        source: 'orca/queue',
-        note: queueOperation,
-        patientId: variables.patientId,
-        payload: {
-          patientId: variables.patientId,
-          queue: data.queue,
-          operation: queueOperation,
-          result: 'success',
-          queueSnapshot: queueSummary,
-          warningThresholdMs: QUEUE_DELAY_WARNING_MS,
-        },
-      });
-      setFeedback({
-        tone: 'info',
-        message: queueOperation === 'retry' ? '再送リクエストを送信しました。' : 'キューエントリを破棄しました。',
-      });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orca-queue'] });
+      setFeedback({ tone: 'info', message: 'キュー操作を実行しました。' });
     },
-    onError: (error, variables) => {
-      const queueSnapshotEntries = queueQuery.data?.queue ?? [];
-      const queueSummary = buildOrcaQueueWarningSummary(queueSnapshotEntries);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const queueOperation = variables.kind;
-      publishAdminBroadcast({
-        runId: resolvedRunId,
-        facilityId: session.facilityId,
-        userId: session.userId,
-        action: 'queue',
-        queueOperation,
-        queueResult: 'failure',
-        queuePatientId: variables.patientId,
-        queueStatus: queueSummary,
-        deliveredAt: new Date().toISOString(),
-        queueMode: queueQuery.data?.source ?? (form.useMockOrcaQueue ? 'mock' : 'live'),
-        verifyAdminDelivery: queueQuery.data?.verifyAdminDelivery ?? form.verifyAdminDelivery,
-        environment: environmentLabel,
-        note: queueOperation === 'retry' ? '再送失敗' : '破棄失敗',
-      });
-      logAuditEvent({
-        runId: resolvedRunId,
-        source: 'admin/delivery',
-        note: `orca queue ${queueOperation} failed`,
-        payload: {
-          operation: queueOperation,
-          result: 'failure',
-          patientId: variables.patientId,
-          environment: environmentLabel,
-          queueMode: queueQuery.data?.source ?? (form.useMockOrcaQueue ? 'mock' : 'live'),
-          error: errorMessage,
-          queueSnapshot: queueSummary,
-          warningThresholdMs: QUEUE_DELAY_WARNING_MS,
-        },
-      });
-      logAuditEvent({
-        runId: resolvedRunId,
-        source: 'orca/queue',
-        note: `${queueOperation} failed`,
-        patientId: variables.patientId,
-        payload: {
-          patientId: variables.patientId,
-          operation: queueOperation,
-          result: 'failure',
-          error: errorMessage,
-          queueSnapshot: queueSummary,
-          warningThresholdMs: QUEUE_DELAY_WARNING_MS,
-        },
-      });
+    onError: () => {
       setFeedback({ tone: 'error', message: 'キュー操作に失敗しました。' });
-    },
-  });
-
-  const masterLastUpdateMutation = useMutation({
-    mutationFn: fetchMasterLastUpdate,
-    onSuccess: (data) => {
-      const currentSignature = buildMasterSignature(data);
-      const nextLabel =
-        !lastMasterSignatureRef.current
-          ? '初回取得'
-          : lastMasterSignatureRef.current === currentSignature
-            ? '更新なし'
-            : '更新あり';
-      setMasterUpdateLabel(nextLabel);
-      lastMasterSignatureRef.current = currentSignature;
-      setMasterLastUpdateResult(data);
-      logAuditEvent({
-        runId: data.runId ?? resolvedRunId,
-        source: 'admin/master',
-        note: 'master last update checked',
-        payload: {
-          operation: 'masterlastupdatev3',
-          actor: actorId,
-          role,
-          apiResult: data.apiResult,
-          apiResultMessage: data.apiResultMessage,
-          lastUpdateDate: data.lastUpdateDate,
-          versionDiffs: countVersionDiffs(data.versions),
-          updateLabel: nextLabel,
-        },
-      });
-      logUiState({
-        action: 'master_check',
-        screen: 'administration',
-        controlId: 'masterlastupdatev3',
-        runId: data.runId ?? resolvedRunId,
-      });
-    },
-    onError: (error) => {
-      setMasterLastUpdateResult({
-        ok: false,
-        status: 0,
-        apiResultMessage: undefined,
-        apiResult: undefined,
-        informationDate: undefined,
-        informationTime: undefined,
-        lastUpdateDate: undefined,
-        versions: [],
-        rawXml: '',
-        error: toErrorMessage(error),
-        runId: resolvedRunId,
-      });
-    },
-  });
-
-  const medicationModMutation = useMutation({
-    mutationFn: (payload: { classCode: string; xml: string }) => syncMedicationMod(payload),
-    onSuccess: (data) => {
-      setMedicationSyncResult(data);
-      logAuditEvent({
-        runId: data.runId ?? resolvedRunId,
-        source: 'admin/master',
-        note: 'medication master sync requested',
-        payload: {
-          operation: 'medicatonmodv2',
-          actor: actorId,
-          role,
-          apiResult: data.apiResult,
-          apiResultMessage: data.apiResultMessage,
-          classCode: medicationSyncClass,
-        },
-      });
-      logUiState({
-        action: 'master_sync',
-        screen: 'administration',
-        controlId: 'medicatonmodv2',
-        runId: data.runId ?? resolvedRunId,
-      });
-    },
-    onError: (error) => {
-      setMedicationSyncResult({
-        ok: false,
-        status: 0,
-        apiResultMessage: undefined,
-        apiResult: undefined,
-        rawXml: '',
-        error: toErrorMessage(error),
-        runId: resolvedRunId,
-      });
-    },
-  });
-
-  const systemHealthMutation = useMutation({
-    mutationFn: async (params: { baseDate: string }) => {
-      const [info, daily] = await Promise.all([fetchSystemInfo(), fetchSystemDaily(params.baseDate)]);
-      return { info, daily };
-    },
-    onSuccess: ({ info, daily }) => {
-      setSystemInfoResult(info);
-      setSystemDailyResult(daily);
-      logAuditEvent({
-        runId: info.runId ?? daily.runId ?? resolvedRunId,
-        source: 'admin/system',
-        note: 'system health check',
-        payload: {
-          operation: 'system_health',
-          actor: actorId,
-          role,
-          info: {
-            apiResult: info.apiResult,
-            apiResultMessage: info.apiResultMessage,
-            jmaReceiptVersion: info.jmaReceiptVersion,
-            databaseLocalVersion: info.databaseLocalVersion,
-            databaseNewVersion: info.databaseNewVersion,
-            versionDiffs: countVersionDiffs(info.versions),
-          },
-          daily: {
-            apiResult: daily.apiResult,
-            apiResultMessage: daily.apiResultMessage,
-            baseDate: daily.baseDate,
-          },
-        },
-      });
-      logUiState({
-        action: 'system_health',
-        screen: 'administration',
-        controlId: 'system-health',
-        runId: info.runId ?? daily.runId ?? resolvedRunId,
-      });
-    },
-    onError: (error) => {
-      const message = toErrorMessage(error);
-      setSystemInfoResult({
-        ok: false,
-        status: 0,
-        apiResult: undefined,
-        apiResultMessage: undefined,
-        informationDate: undefined,
-        informationTime: undefined,
-        jmaReceiptVersion: undefined,
-        databaseLocalVersion: undefined,
-        databaseNewVersion: undefined,
-        lastUpdateDate: undefined,
-        versions: [],
-        rawXml: '',
-        error: message,
-        runId: resolvedRunId,
-      });
-      setSystemDailyResult({
-        ok: false,
-        status: 0,
-        apiResult: undefined,
-        apiResultMessage: undefined,
-        informationDate: undefined,
-        informationTime: undefined,
-        baseDate: systemBaseDate,
-        rawXml: '',
-        error: message,
-        runId: resolvedRunId,
-      });
-    },
-  });
-
-  const medicalSetMutation = useMutation({
-    mutationFn: (payload: MedicalSetSearchPayload) => fetchMedicalSet(payload),
-    onSuccess: (data) => {
-      setMedicalSetResult(data);
-      logAuditEvent({
-        runId: data.runId ?? resolvedRunId,
-        source: 'admin/medical-set',
-        note: 'medical set search',
-        payload: {
-          operation: 'medicalsetv2',
-          actor: actorId,
-          role,
-          apiResult: data.apiResult,
-          apiResultMessage: data.apiResultMessage,
-          query: medicalSetQuery,
-          results: data.entries.length,
-        },
-      });
-      logUiState({
-        action: 'medicalset_search',
-        screen: 'administration',
-        controlId: 'medicalsetv2',
-        runId: data.runId ?? resolvedRunId,
-      });
-    },
-    onError: (error) => {
-      setMedicalSetResult({
-        ok: false,
-        status: 0,
-        apiResult: undefined,
-        apiResultMessage: undefined,
-        baseDate: medicalSetQuery.baseDate,
-        entries: [],
-        rawXml: '',
-        error: toErrorMessage(error),
-        runId: resolvedRunId,
-      });
-    },
-  });
-
-  const xmlProxyMutation = useMutation({
-    mutationFn: (payload: { endpoint: OrcaXmlProxyEndpoint; xml: string; classCode?: string }) =>
-      postOrcaXmlProxy(payload),
-    onSuccess: (result, variables) => {
-      updateOrcaXmlProxyState(variables.endpoint, { result });
-      logAuditEvent({
-        runId: result.runId ?? resolvedRunId,
-        source: 'admin/orca-xml-proxy',
-        note: 'orca xml proxy request',
-        payload: {
-          operation: result.endpoint,
-          actor: actorId,
-          role,
-          apiResult: result.apiResult,
-          apiResultMessage: result.apiResultMessage,
-          status: result.status,
-          classCode: variables.classCode,
-          missingTags: result.missingTags,
-        },
-      });
-      logUiState({
-        action: 'orca_xml_proxy',
-        screen: 'administration',
-        controlId: `orca-xml-proxy:${result.endpoint}`,
-        runId: result.runId ?? resolvedRunId,
-        details: {
-          endpoint: result.endpoint,
-          status: result.status,
-          apiResult: result.apiResult,
-          apiResultMessage: result.apiResultMessage,
-        },
-      });
-    },
-    onError: (error, variables) => {
-      const message = toErrorMessage(error);
-      const fallback: OrcaXmlProxyResponse = {
-        ok: false,
-        status: 0,
-        endpoint: variables.endpoint,
-        rawXml: '',
-        error: message,
-        runId: resolvedRunId,
-      };
-      updateOrcaXmlProxyState(variables.endpoint, { result: fallback });
     },
   });
 
   const internalWrapperMutation = useMutation({
     mutationFn: async (params: { endpoint: OrcaInternalWrapperEndpoint; payload: Record<string, unknown> }) => {
-      try {
-        switch (params.endpoint) {
-          case 'medical-sets':
-            return postMedicalSets(params.payload);
-          case 'birth-delivery':
-            return postBirthDelivery(params.payload);
-          case 'medical-records':
-            return postMedicalRecords(params.payload);
-          case 'patient-mutation':
-            return postPatientMutation(params.payload);
-          case 'chart-subjectives':
-            return postSubjectiveEntry(params.payload);
-          default:
-            return {
-              ok: false,
-              status: 0,
-              error: 'unsupported endpoint',
-              runId: resolvedRunId,
-              raw: {},
-            } as OrcaInternalWrapperResult;
-        }
-      } catch (error) {
-        return {
-          ok: false,
-          status: 0,
-          error: toErrorMessage(error),
-          runId: resolvedRunId,
-          raw: {},
-        } as OrcaInternalWrapperResult;
+      switch (params.endpoint) {
+        case 'medical-sets':
+          return postMedicalSets(params.payload);
+        case 'birth-delivery':
+          return postBirthDelivery(params.payload);
+        case 'medical-records':
+          return postMedicalRecords(params.payload);
+        case 'patient-mutation':
+          return postPatientMutation(params.payload);
+        case 'chart-subjectives':
+          return postSubjectiveEntry(params.payload);
+        default:
+          return {
+            ok: false,
+            status: 0,
+            error: 'unsupported endpoint',
+            runId: resolvedRunId,
+            raw: {},
+          } as OrcaInternalWrapperResult;
       }
     },
     onSuccess: (result, variables) => {
@@ -1458,65 +788,22 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
           stub: result.stub,
           missingMaster: result.missingMaster,
           fallbackUsed: result.fallbackUsed,
-          messageDetail: result.messageDetail,
-          warningMessage: result.warningMessage,
-        },
-      });
-      logUiState({
-        action: 'send',
-        screen: 'administration',
-        controlId: `orca-internal:${variables.endpoint}`,
-        runId: result.runId ?? resolvedRunId,
-        traceId: result.traceId,
-        missingMaster: result.missingMaster,
-        fallbackUsed: result.fallbackUsed,
-        details: {
-          endpoint: variables.endpoint,
-          apiResult: result.apiResult,
-          apiResultMessage: result.apiResultMessage,
-          status: result.status,
-          stub: result.stub,
-          patientId,
-          operation,
         },
       });
     },
   });
 
-  const xmlProxyStatusTone = (() => {
-    if (xmlProxyMutation.isPending) return 'pending';
-    if (!xmlProxyResult) return 'idle';
-    if (!xmlProxyResult.ok) return 'error';
-    if (xmlProxyResult.apiResult && !isApiResultOk(xmlProxyResult.apiResult)) return 'warn';
-    return 'ok';
-  })();
   const internalWrapperStatusTone = (() => {
-    if (internalWrapperMutation.isPending) return 'pending';
-    if (!internalWrapperResult) return 'idle';
-    if (!internalWrapperResult.ok) return 'error';
-    if (internalWrapperResult.stub) return 'warn';
-    if (internalWrapperResult.apiResult && !isApiResultOk(internalWrapperResult.apiResult)) return 'warn';
-    return 'ok';
+    if (internalWrapperMutation.isPending) return 'pending' as const;
+    if (!internalWrapperResult) return 'idle' as const;
+    if (!internalWrapperResult.ok) return 'error' as const;
+    if (internalWrapperResult.stub) return 'warn' as const;
+    if (internalWrapperResult.apiResult && !internalWrapperResult.apiResult.startsWith('00')) return 'warn' as const;
+    return 'ok' as const;
   })();
-  const internalWrapperStatusLabel = resolveStatusLabel(
-    internalWrapperResult ?? null,
-    internalWrapperMutation.isPending,
-  );
+  const internalWrapperStatusLabel = resolveStatusLabel(internalWrapperResult ?? null, internalWrapperMutation.isPending);
 
-  const queueEntries: OrcaQueueEntry[] = useMemo(
-    () => queueQuery.data?.queue ?? [],
-    [queueQuery.data?.queue],
-  );
-
-  useEffect(() => {
-    const runIdFromQueue = queueQuery.data?.runId ?? configQuery.data?.runId;
-    if (!runIdFromQueue) return;
-    appliedMeta.current = applyAuthServicePatch(
-      { runId: runIdFromQueue },
-      appliedMeta.current,
-      { bumpRunId, setCacheHit, setMissingMaster, setDataSourceTransition, setFallbackUsed },
-    );
-  }, [bumpRunId, configQuery.data?.runId, queueQuery.data?.runId, setCacheHit, setDataSourceTransition, setFallbackUsed, setMissingMaster]);
+  const queueEntries = useMemo(() => queueQuery.data?.queue ?? [], [queueQuery.data?.queue]);
   const warningEntries = useMemo(() => {
     const nowMs = Date.now();
     return queueEntries.filter((entry) => isOrcaQueueWarningEntry(entry, nowMs).isWarning);
@@ -1541,9 +828,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
   const patchOrcaConnectionForm = useCallback(
     (patch: Partial<OrcaConnectionFormState>) => {
-      if (!requireOrcaConnectionAdminAuth()) {
-        return;
-      }
+      if (!requireOrcaConnectionAdminAuth()) return;
       setOrcaConnectionForm((prev) => ({ ...prev, ...patch }));
       setOrcaConnectionFieldErrors((prev) => ({
         ...prev,
@@ -1569,9 +854,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   };
 
   const handleOrcaConnectionSave = () => {
-    if (!requireOrcaConnectionAdminAuth()) {
-      return;
-    }
+    if (!requireOrcaConnectionAdminAuth()) return;
     const serverUrl = orcaConnectionForm.serverUrl.trim();
     const port = Number(orcaConnectionForm.port);
     const username = orcaConnectionForm.username.trim();
@@ -1586,25 +869,14 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       clientCertificatePassphrase?: string;
     } = {};
 
-    if (!serverUrl) {
-      fieldErrors.serverUrl = 'サーバURLは必須です。';
-    }
-    if (!Number.isFinite(port) || port <= 0 || port > 65535) {
-      fieldErrors.port = 'ポートは 1〜65535 で入力してください。';
-    }
-    if (!username) {
-      fieldErrors.username = 'ユーザー名は必須です。';
-    }
-    if (!orcaConnectionForm.passwordConfigured && !password) {
-      fieldErrors.password = 'パスワードまたは API キーは必須です。';
-    }
+    if (!serverUrl) fieldErrors.serverUrl = 'サーバURLは必須です。';
+    if (!Number.isFinite(port) || port <= 0 || port > 65535) fieldErrors.port = 'ポートは 1〜65535 で入力してください。';
+    if (!username) fieldErrors.username = 'ユーザー名は必須です。';
+    if (!orcaConnectionForm.passwordConfigured && !password) fieldErrors.password = 'パスワードまたは API キーは必須です。';
     if (orcaConnectionForm.clientAuthEnabled) {
       const hasP12 = orcaConnectionForm.clientCertificateConfigured || Boolean(orcaConnectionForm.clientCertificateFile);
-      if (!hasP12) {
-        fieldErrors.clientCertificate = 'mTLS 有効時はクライアント証明書（.p12）が必須です。';
-      }
-      const passphraseRequired = !orcaConnectionForm.clientCertificatePassphraseConfigured;
-      if (!passphrase && passphraseRequired) {
+      if (!hasP12) fieldErrors.clientCertificate = 'mTLS 有効時はクライアント証明書（.p12）が必須です。';
+      if (!passphrase && !orcaConnectionForm.clientCertificatePassphraseConfigured) {
         fieldErrors.clientCertificatePassphrase = 'mTLS 有効時は証明書パスフレーズが必須です。';
       }
     }
@@ -1627,14 +899,36 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     });
   };
 
+  const handleCopyValue = useCallback(
+    async (value: string, label: string) => {
+      try {
+        await copyTextToClipboard(value);
+        enqueue({ tone: 'success', message: `${label} をコピーしました`, detail: value, durationMs: 1800 });
+      } catch {
+        enqueue({ tone: 'error', message: `${label} のコピーに失敗しました` });
+      }
+    },
+    [enqueue],
+  );
+
+  const requestTemplate = useMemo(
+    () =>
+      [
+        '【system_admin 権限依頼テンプレート】',
+        `施設ID: ${session.facilityId}`,
+        `環境: ${environmentLabel}`,
+        '作業内容: Administration の設定変更/配信',
+        '影響範囲: WebORCA接続設定・配信設定・ORCA queue 操作',
+      ].join('\n'),
+    [environmentLabel, session.facilityId],
+  );
+
   const handleCopyRequestTemplate = useCallback(async () => {
     await handleCopyValue(requestTemplate, '依頼テンプレ');
   }, [handleCopyValue, requestTemplate]);
 
   const handleOrcaConnectionTest = () => {
-    if (!requireOrcaConnectionAdminAuth()) {
-      return;
-    }
+    if (!requireOrcaConnectionAdminAuth()) return;
     orcaConnectionTestMutation.mutate();
   };
 
@@ -1688,67 +982,16 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     setDiscardConfirmTarget(null);
   };
 
-  const handleMasterCheck = () => {
+  const handleOperationsRefresh = async () => {
     if (!isSystemAdmin) {
-      reportGuardedAction('master-check');
+      reportGuardedAction('operations-refresh');
       return;
     }
-    masterLastUpdateMutation.mutate();
-  };
-
-  const handleRegenerateMedicationTemplate = () => {
-    setMedicationSyncXml(buildMedicationTemplateXml(medicationTemplateBaseDate));
-  };
-
-  const handleMedicationSync = () => {
-    if (!isSystemAdmin) {
-      reportGuardedAction('master-sync');
-      return;
-    }
-    medicationModMutation.mutate({ classCode: medicationSyncClass, xml: medicationSyncXml });
-  };
-
-  const handleSystemHealthCheck = () => {
-    if (!isSystemAdmin) {
-      reportGuardedAction('system-check');
-      return;
-    }
-    systemHealthMutation.mutate({ baseDate: systemBaseDate });
-  };
-
-  const handleMedicalSetSearch = () => {
-    if (!isSystemAdmin) {
-      reportGuardedAction('medicalset-search');
-      return;
-    }
-    medicalSetMutation.mutate(medicalSetQuery);
-  };
-
-  const handleXmlProxySubmit = () => {
-    if (!isSystemAdmin) {
-      reportGuardedAction('orca-xml-proxy');
-      return;
-    }
-    if (!currentXmlProxy) return;
-    xmlProxyMutation.mutate({
-      endpoint: orcaXmlProxyTarget,
-      xml: currentXmlProxy.xml,
-      classCode: currentXmlProxy.classCode,
-    });
-  };
-
-  const handleXmlProxyReset = () => {
-    if (!currentXmlProxy) return;
-    const nextXml = buildXmlProxyTemplate(orcaXmlProxyTarget, currentXmlProxy.classCode);
-    updateOrcaXmlProxyState(orcaXmlProxyTarget, { xml: nextXml });
-  };
-
-  const handleXmlProxyClassChange = (value: string) => {
-    updateOrcaXmlProxyState(orcaXmlProxyTarget, { classCode: value });
-  };
-
-  const handleXmlProxyXmlChange = (value: string) => {
-    updateOrcaXmlProxyState(orcaXmlProxyTarget, { xml: value });
+    await Promise.all([
+      operationsHealthQuery.refetch(),
+      operationsReadinessQuery.refetch(),
+      pvtWorkerHealthQuery.refetch(),
+    ]);
   };
 
   const handleInternalWrapperPayloadChange = (value: string) => {
@@ -1782,22 +1025,19 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
   const handleRunConnectivityGroup = async () => {
     if (!isSystemAdmin) {
-      reportGuardedAction('orca-xml-proxy', 'connectivity-group');
+      reportGuardedAction('operations-refresh', 'connectivity-group');
       return;
     }
     const checks: Array<Promise<{ label: string; ok: boolean; detail: string }>> = [
-      postOrcaXmlProxy({
-        endpoint: 'acceptlstv2',
-        xml: buildAcceptListRequestXml(),
-        classCode: '01',
-      })
-        .then((result) => ({
-          label: 'XML proxy acceptlstv2',
-          ok: Boolean(result.ok),
-          detail: `HTTP ${result.status} / Api_Result=${result.apiResult ?? '―'}`,
+      operationsReadinessQuery
+        .refetch()
+        .then(({ data }) => ({
+          label: 'operations readiness',
+          ok: Boolean(data?.ok),
+          detail: `HTTP ${data?.status ?? '―'} / status=${data?.summaryStatus ?? '―'}`,
         }))
         .catch((error) => ({
-          label: 'XML proxy acceptlstv2',
+          label: 'operations readiness',
           ok: false,
           detail: toErrorMessage(error),
         })),
@@ -1839,10 +1079,8 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
   const syncMismatch = configQuery.data?.syncMismatch;
   const syncMismatchFields = configQuery.data?.syncMismatchFields?.length ? configQuery.data.syncMismatchFields.join(', ') : undefined;
-  const isForbidden =
-    configQuery.data?.status === 403 ||
-    rawConfig?.status === 403 ||
-    rawDelivery?.status === 403;
+  const isForbidden = configQuery.data?.status === 403 || rawConfig?.status === 403 || rawDelivery?.status === 403;
+
   useEffect(() => {
     if (!isForbidden) return;
     if (forbiddenLogRef.current.runId === resolvedRunId && forbiddenLogRef.current.noted) return;
@@ -1862,6 +1100,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       },
     });
   }, [actorId, isForbidden, resolvedRunId, role]);
+
   const deliveryMode = configQuery.data?.deliveryMode ?? rawDelivery?.deliveryMode ?? rawConfig?.deliveryMode;
   const effectiveDeliveryEtag = configQuery.data?.deliveryEtag ?? configQuery.data?.deliveryVersion;
   const deliveryStatus = buildChartsDeliveryStatus(rawConfig, rawDelivery);
@@ -1873,35 +1112,28 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       label: 'Charts表示',
       configValue: rawConfig?.chartsDisplayEnabled,
       deliveryValue: rawDelivery?.chartsDisplayEnabled,
-      state: deliveryStatus.chartsDisplayEnabled ?? 'unknown',
+      state: deliveryStatus.chartsDisplayEnabled,
     },
     {
       key: 'chartsSendEnabled',
       label: 'Charts送信',
       configValue: rawConfig?.chartsSendEnabled,
       deliveryValue: rawDelivery?.chartsSendEnabled,
-      state: deliveryStatus.chartsSendEnabled ?? 'unknown',
+      state: deliveryStatus.chartsSendEnabled,
     },
     {
       key: 'chartsMasterSource',
       label: 'Charts master',
       configValue: rawConfig?.chartsMasterSource,
       deliveryValue: rawDelivery?.chartsMasterSource,
-      state: deliveryStatus.chartsMasterSource ?? 'unknown',
+      state: deliveryStatus.chartsMasterSource,
     },
   ];
-  const masterVersionDiffs = countVersionDiffs(masterLastUpdateResult?.versions);
-  const masterStatusTone = resolveStatusTone(masterLastUpdateResult, masterLastUpdateMutation.isPending);
-  const masterStatusLabel = resolveStatusLabel(masterLastUpdateResult, masterLastUpdateMutation.isPending);
-  const medicationStatusTone = resolveStatusTone(medicationSyncResult, medicationModMutation.isPending);
-  const medicationStatusLabel = resolveStatusLabel(medicationSyncResult, medicationModMutation.isPending);
-  const systemInfoStatusTone = resolveStatusTone(systemInfoResult, systemHealthMutation.isPending);
-  const systemDailyStatusTone = resolveStatusTone(systemDailyResult, systemHealthMutation.isPending);
-  const medicalSetStatusTone = resolveStatusTone(medicalSetResult, medicalSetMutation.isPending);
+
   const orcaConnectionStatusTone = resolveStatusTone(orcaConnectionTestResult, orcaConnectionTestMutation.isPending);
   const orcaConnectionStatusLabel = resolveStatusLabel(orcaConnectionTestResult, orcaConnectionTestMutation.isPending);
-  const xmlProxyStatusLabel = resolveStatusLabel(xmlProxyResult, xmlProxyMutation.isPending);
   const traceId = queueQuery.data?.traceId ?? orcaConnectionTestResult?.traceId;
+
   const queueSummary = useMemo(() => {
     let pending = 0;
     let failed = 0;
@@ -1914,11 +1146,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       if (entry.status === 'delivered') delivered += 1;
       if (entry.status === 'pending' && entry.lastDispatchAt) {
         const delta = now - new Date(entry.lastDispatchAt).getTime();
-        if (delta > QUEUE_DELAY_WARNING_MS) delayed += 1;
+        if (delta > ORCA_QUEUE_STALL_THRESHOLD_MS) delayed += 1;
       }
     }
     return { pending, failed, delivered, delayed };
   }, [queueEntries]);
+
   const webOrcaConnectionLabel = orcaConnectionTestResult
     ? orcaConnectionTestResult.ok
       ? '接続OK'
@@ -1928,12 +1161,16 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       : orcaConnectionAuthBlocked
         ? '認証要確認'
         : '未確認';
+
   const abnormalSummary = (() => {
     const fragments: string[] = [];
-    const dbDiffs = countVersionDiffs(systemInfoResult?.versions);
-    if (dbDiffs > 0) fragments.push(`DB New ≠ Local が ${dbDiffs}件`);
-    if (systemInfoResult && !systemInfoResult.ok) fragments.push('systeminfv2 が NG');
-    if (systemDailyResult && !systemDailyResult.ok) fragments.push('system01dailyv2 が NG');
+    const checks = operationsReadinessQuery.data?.checks ?? {};
+    if (checks.database?.status && checks.database.status !== 'UP') fragments.push(`database=${checks.database.status}`);
+    if (checks.orca?.status && checks.orca.status !== 'UP') fragments.push(`orca=${checks.orca.status}`);
+    if (checks.attachmentStorage?.status && checks.attachmentStorage.status !== 'UP') {
+      fragments.push(`attachmentStorage=${checks.attachmentStorage.status}`);
+    }
+    if (checks.pvtQueue?.status && checks.pvtQueue.status !== 'UP') fragments.push(`pvtQueue=${checks.pvtQueue.status}`);
     if (queueSummary.failed > 0) fragments.push(`queue failed ${queueSummary.failed}件`);
     return fragments.length > 0 ? fragments.join(' / ') : '異常なし';
   })();
@@ -1954,7 +1191,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
           <h1>Administration</h1>
           {activeTab === 'delivery' ? (
             <p className="administration-page__lead" role="status" aria-live={infoLive}>
-              設定配信の運用導線と診断導線を分離し、誤操作を防止します。
+              設定配信の運用導線と監視導線を分離し、誤操作を防止します。
             </p>
           ) : activeTab === 'master-updates' ? (
             <p className="administration-page__lead" role="status" aria-live={infoLive}>
@@ -1976,12 +1213,13 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 <span className="administration-page__pill">
                   queue警告: pending {queueSummary.pending} / failed {queueSummary.failed} / 遅延 {queueSummary.delayed}
                 </span>
+                <span className="administration-page__pill">運用状態: {abnormalSummary}</span>
                 <span className="administration-page__pill">環境: {environmentLabel}</span>
                 {syncMismatch ? (
                   <button
                     type="button"
                     className="administration-page__pill administration-page__pill--warn"
-                    onClick={() => handleDeliverySectionChange('config')}
+                    onClick={() => setSearchParams(new URLSearchParams({ section: 'config' }), { replace: false })}
                   >
                     不整合あり
                   </button>
@@ -2018,22 +1256,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 </span>
               </div>
             </section>
-
-            <section className="admin-header-block">
-              <h2>詳細フラグ</h2>
-              <details>
-                <summary>詳細を表示</summary>
-                <div className="administration-page__meta">
-                  <span className="administration-page__pill">配信元: {configQuery.data?.source ?? 'live'}</span>
-                  <span className="administration-page__pill">deliveryMode: {deliveryMode ?? '―'}</span>
-                  <span className="administration-page__pill">ETag: {effectiveDeliveryEtag ?? '―'}</span>
-                  <span className="administration-page__pill">verifyAdminDelivery: {String(form.verifyAdminDelivery)}</span>
-                  <span className="administration-page__pill">useMockOrcaQueue: {String(form.useMockOrcaQueue)}</span>
-                  <span className="administration-page__pill">chartsMasterSource: {form.chartsMasterSource}</span>
-                  <span className="administration-page__pill">mismatchFields: {syncMismatchFields ?? '―'}</span>
-                </div>
-              </details>
-            </section>
           </div>
 
           <div className="administration-tabs" role="tablist" aria-label="Administration tabs">
@@ -2042,7 +1264,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
               role="tab"
               aria-selected={activeTab === 'delivery'}
               className={`administration-tab${activeTab === 'delivery' ? ' is-active' : ''}`}
-              onClick={() => handleTabChange('delivery')}
+              onClick={() => {
+                const params = new URLSearchParams(searchParams);
+                params.delete('tab');
+                params.set('section', resolveDeliverySectionFromSearch(searchParams));
+                setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
+              }}
             >
               設定配信
             </button>
@@ -2051,7 +1278,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
               role="tab"
               aria-selected={activeTab === 'orca-users'}
               className={`administration-tab${activeTab === 'orca-users' ? ' is-active' : ''}`}
-              onClick={() => handleTabChange('orca-users')}
+              onClick={() => {
+                const params = new URLSearchParams(searchParams);
+                params.set('tab', 'orca-users');
+                params.delete('section');
+                setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
+              }}
             >
               ORCAユーザー連携・権限
             </button>
@@ -2060,14 +1292,27 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
               role="tab"
               aria-selected={activeTab === 'master-updates'}
               className={`administration-tab${activeTab === 'master-updates' ? ' is-active' : ''}`}
-              onClick={() => handleTabChange('master-updates')}
+              onClick={() => {
+                const params = new URLSearchParams(searchParams);
+                params.set('tab', 'master-updates');
+                params.delete('section');
+                setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
+              }}
             >
               マスタ更新
             </button>
           </div>
 
           {activeTab === 'delivery' ? (
-            <DeliverySubNav activeSection={activeDeliverySection} onChange={handleDeliverySectionChange} />
+            <DeliverySubNav
+              activeSection={activeDeliverySection}
+              onChange={(next) => {
+                const params = new URLSearchParams(searchParams);
+                params.delete('tab');
+                params.set('section', next);
+                setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
+              }}
+            />
           ) : null}
 
           {isForbidden && activeTab === 'delivery' ? (
@@ -2148,7 +1393,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 syncMismatch={syncMismatch}
                 syncMismatchFields={syncMismatchFields}
                 warningThresholdMinutes={warningThresholdMinutes}
-                onNavigate={handleDeliverySectionChange}
+                onNavigate={(next) => {
+                  const params = new URLSearchParams(searchParams);
+                  params.delete('tab');
+                  params.set('section', next);
+                  setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
+                }}
               />
             ) : null}
 
@@ -2216,69 +1466,31 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 isSystemAdmin={isSystemAdmin}
                 guardDetailsId={guardDetailsId}
                 pending={queueMutation.isPending}
-                warningThresholdMs={QUEUE_DELAY_WARNING_MS}
+                warningThresholdMs={ORCA_QUEUE_STALL_THRESHOLD_MS}
                 onRetry={handleRetry}
                 onDiscardRequest={handleDiscardRequest}
               />
             ) : null}
 
-            {activeDeliverySection === 'master-health' ? (
-              <div className="administration-grid administration-grid--wide">
-                <OrcaMasterSyncCard
-                  isSystemAdmin={isSystemAdmin}
-                  guardDetailsId={guardDetailsId}
-                  masterStatusTone={masterStatusTone}
-                  masterStatusLabel={masterStatusLabel}
-                  masterLastUpdateResult={masterLastUpdateResult}
-                  masterUpdateLabel={masterUpdateLabel}
-                  masterVersionDiffs={masterVersionDiffs}
-                  onMasterCheck={handleMasterCheck}
-                  masterCheckPending={masterLastUpdateMutation.isPending}
-                  medicationSyncClass={medicationSyncClass}
-                  onMedicationSyncClassChange={setMedicationSyncClass}
-                  medicationSyncXml={medicationSyncXml}
-                  onMedicationSyncXmlChange={setMedicationSyncXml}
-                  medicationTemplateBaseDate={medicationTemplateBaseDate}
-                  onMedicationTemplateBaseDateChange={setMedicationTemplateBaseDate}
-                  onRegenerateMedicationTemplate={handleRegenerateMedicationTemplate}
-                  medicationStatusTone={medicationStatusTone}
-                  medicationStatusLabel={medicationStatusLabel}
-                  medicationSyncResult={medicationSyncResult}
-                  onMedicationSync={handleMedicationSync}
-                  medicationSyncPending={medicationModMutation.isPending}
-                />
-                <SystemHealthCard
-                  isSystemAdmin={isSystemAdmin}
-                  guardDetailsId={guardDetailsId}
-                  overallTone={resolveHealthTone(systemInfoResult, systemDailyResult, systemHealthMutation.isPending)}
-                  overallLabel={resolveHealthLabel(systemInfoResult, systemDailyResult, systemHealthMutation.isPending)}
-                  infoTone={systemInfoStatusTone}
-                  infoLabel={resolveStatusLabel(systemInfoResult, systemHealthMutation.isPending)}
-                  dailyTone={systemDailyStatusTone}
-                  dailyLabel={resolveStatusLabel(systemDailyResult, systemHealthMutation.isPending)}
-                  systemInfoResult={systemInfoResult}
-                  systemDailyResult={systemDailyResult}
-                  systemBaseDate={systemBaseDate}
-                  onSystemBaseDateChange={setSystemBaseDate}
-                  onHealthCheck={handleSystemHealthCheck}
-                  healthCheckPending={systemHealthMutation.isPending}
-                  abnormalSummary={abnormalSummary}
-                />
-              </div>
-            ) : null}
-
-            {activeDeliverySection === 'medicalset' ? (
-              <MedicalSetSearchCard
+            {activeDeliverySection === 'operations' ? (
+              <OperationsHealthCard
                 isSystemAdmin={isSystemAdmin}
                 guardDetailsId={guardDetailsId}
-                query={medicalSetQuery}
-                onQueryChange={(patch) => setMedicalSetQuery((prev) => ({ ...prev, ...patch }))}
-                result={medicalSetResult}
-                statusTone={medicalSetStatusTone}
-                statusLabel={resolveStatusLabel(medicalSetResult, medicalSetMutation.isPending)}
-                searchPending={medicalSetMutation.isPending}
-                onSearch={handleMedicalSetSearch}
-                chartsPath={buildFacilityPath(session.facilityId, '/charts')}
+                healthResult={operationsHealthQuery.data ?? null}
+                readinessResult={operationsReadinessQuery.data ?? null}
+                pvtWorkerResult={pvtWorkerHealthQuery.data ?? null}
+                healthPending={operationsHealthQuery.isFetching}
+                readinessPending={operationsReadinessQuery.isFetching}
+                pvtWorkerPending={pvtWorkerHealthQuery.isFetching}
+                orcaConnectionStatusTone={orcaConnectionStatusTone}
+                orcaConnectionStatusLabel={orcaConnectionStatusLabel}
+                orcaConnectionResult={orcaConnectionTestResult}
+                onRefresh={handleOperationsRefresh}
+                onRunConnectionTest={handleOrcaConnectionTest}
+                refreshPending={
+                  operationsHealthQuery.isFetching || operationsReadinessQuery.isFetching || pvtWorkerHealthQuery.isFetching
+                }
+                connectionTestPending={orcaConnectionTestMutation.isPending}
               />
             ) : null}
 
@@ -2286,9 +1498,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
               <>
                 <section className="administration-card" aria-label="診断一括疎通">
                   <h2 className="administration-card__title">診断/デバッグ</h2>
-                  <p className="admin-note">
-                    このセクションは運用設定から隔離されています。診断用途のみで使用してください。
-                  </p>
+                  <p className="admin-note">このセクションは運用設定から隔離されています。診断用途のみで使用してください。</p>
                   <div className="admin-actions">
                     <button
                       type="button"
@@ -2314,23 +1524,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                   ) : null}
                 </section>
                 <div className="administration-grid administration-grid--wide">
-                  <OrcaXmlProxyCard
-                    isSystemAdmin={isSystemAdmin}
-                    guardDetailsId={guardDetailsId}
-                    options={ORCA_XML_PROXY_OPTIONS}
-                    target={orcaXmlProxyTarget}
-                    currentOption={xmlProxyOption}
-                    currentState={currentXmlProxy}
-                    result={xmlProxyResult}
-                    statusTone={xmlProxyStatusTone}
-                    statusLabel={xmlProxyStatusLabel}
-                    pending={xmlProxyMutation.isPending}
-                    onTargetChange={setOrcaXmlProxyTarget}
-                    onClassChange={handleXmlProxyClassChange}
-                    onXmlChange={handleXmlProxyXmlChange}
-                    onSubmit={handleXmlProxySubmit}
-                    onReset={handleXmlProxyReset}
-                  />
                   <OrcaInternalWrapperCard
                     isSystemAdmin={isSystemAdmin}
                     guardDetailsId={guardDetailsId}

@@ -23,7 +23,7 @@ import open.dolphin.session.UserServiceBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Path("/api/orca/queue")
+@Path("/orca/queue")
 public class OrcaQueueResource extends AbstractResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaQueueResource.class);

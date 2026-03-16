@@ -89,9 +89,6 @@ public class SpaIndexSecurityFilter implements Filter {
         if (path == null) {
             return false;
         }
-        if (path.startsWith("/resources") || path.startsWith("/orca")) {
-            return false;
-        }
         if (path.startsWith("/api")) {
             return false;
         }

@@ -45,7 +45,7 @@ import open.dolphin.session.UserServiceBean;
  *
  * <p>パスワードリセットは管理者の Authenticator（TOTP）を必須とする。</p>
  */
-@Path("/api/admin/access")
+@Path("/admin/access")
 public class AdminAccessResource extends AbstractResource {
 
     private static final Logger LOGGER = Logger.getLogger(AdminAccessResource.class.getName());

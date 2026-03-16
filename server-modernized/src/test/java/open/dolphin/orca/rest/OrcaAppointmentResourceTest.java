@@ -169,7 +169,7 @@ class OrcaAppointmentResourceTest {
         request.setPatient(patient);
 
         AppointmentMutationResponse response = resource.mutateAppointment(
-                createRequest("F001:doctor01", "/orca/appointments/mutation", Map.of("X-Run-Id", "RUN-APPT-001")), request);
+                createRequest("F001:doctor01", "/api/orca/appointments/mutation", Map.of("X-Run-Id", "RUN-APPT-001")), request);
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals("AP-20251120-001", response.getAppointmentId());
@@ -190,7 +190,7 @@ class OrcaAppointmentResourceTest {
 
         HttpServletRequest servletRequest = createRequest(
                 "F001:doctor01",
-                "/orca/appointments/list",
+                "/api/orca/appointments/list",
                 Map.of("X-Trace-Id", "trace-appointment", "X-Request-Id", "req-appointment", "X-Run-Id", "RUN-TRACE-001"));
 
         resource.listAppointments(servletRequest, request);

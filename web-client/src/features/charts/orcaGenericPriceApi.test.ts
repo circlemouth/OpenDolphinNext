@@ -46,7 +46,7 @@ describe('fetchOrcaGenericPrice', () => {
     expect(result.ok).toBe(true);
     expect(result.item?.minPrice).toBe(12.34);
     expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/orca/master/generic-price?srycd=620000001&effective=20260309',
+      '/api/orca/master/generic-price?srycd=620000001&effective=20260309',
       expect.objectContaining({ notifySessionExpired: false }),
     );
   });

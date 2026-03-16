@@ -47,7 +47,7 @@ import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
  *
  * <p>Secrets are never returned in responses.</p>
  */
-@Path("/api/admin/orca/connection")
+@Path("/admin/orca/connection")
 public class AdminOrcaConnectionResource extends AbstractResource {
 
     private static final long MAX_CONFIG_BYTES = 256 * 1024; // 256KiB

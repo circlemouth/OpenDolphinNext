@@ -109,6 +109,9 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
     @Inject
     private UserServiceBean userServiceBean;
 
+    @Inject
+    private ORCAConnection orcaConnection;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -1412,7 +1415,7 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
     protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
         Map<String, InputSetAggregate> aggregates = new LinkedHashMap<>();
         String normalizedKeyword = keyword != null ? keyword.trim().toLowerCase(Locale.ROOT) : null;
-        try (Connection connection = ORCAConnection.getInstance().getConnection();
+        try (Connection connection = resolveOrcaConnection().getConnection();
              PreparedStatement ps = connection.prepareStatement(
                      "SELECT inputcd, dspname FROM tbl_inputcd WHERE inputcd LIKE 'P%' OR inputcd LIKE 'S%' ORDER BY inputcd");
              ResultSet rs = ps.executeQuery()) {
@@ -1434,7 +1437,7 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
         } catch (SQLException e) {
             throw restError(null, Response.Status.SERVICE_UNAVAILABLE, "inputset_unavailable", "Failed to load input sets");
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = resolveOrcaConnection().getConnection()) {
             for (InputSetAggregate aggregate : aggregates.values()) {
                 fillInputSetAggregate(connection, aggregate, effective);
             }
@@ -1493,7 +1496,7 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
     }
 
     protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = resolveOrcaConnection().getConnection()) {
             String bundleName = trimToNull(requestedName);
             if (bundleName == null) {
                 bundleName = loadInputSetName(connection, setCode);
@@ -1611,7 +1614,7 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             return List.of();
         }
         Map<String, OrcaOrderInteractionCheckResponse.Pair> deduped = new LinkedHashMap<>();
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = resolveOrcaConnection().getConnection()) {
             String leftInClause = codes.stream().map(code -> "?").collect(Collectors.joining(","));
             String rightInClause = rightCodes.stream().map(code -> "?").collect(Collectors.joining(","));
             String sql = "SELECT drugcd, drugcd2, TI.syojyoucd, syojyou "
@@ -1897,5 +1900,9 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             return List.of();
         }
         return karteServiceBean.getDocumentsWithModules(ids);
+    }
+
+    private ORCAConnection resolveOrcaConnection() {
+        return orcaConnection != null ? orcaConnection : ORCAConnection.current();
     }
 }

@@ -1,7 +1,7 @@
 # server-modernized 運用メモ
 
 ## ORCA POST 系の既定動作
-- subjectives（`/orca/chart/subjectives`）を含む current ORCA POST 連携は **常に実運用モード** で動作する。
+- subjectives（`/api/orca/chart/subjectives`）を含む current ORCA POST 連携は **常に実運用モード** で動作する。
 - `stub/real` 切替の互換設定、feature flag、filter は削除済みであり、環境変数やシステムプロパティで stub 応答へ切り替えることはできない。
 - 検証時は ORCA 接続設定そのものを正しく投入し、WebORCA Trial など現行接続先で疎通確認する。
 

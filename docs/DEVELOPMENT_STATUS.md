@@ -1,9 +1,9 @@
-# 開発状況（単一参照, 更新日: 2026-03-15）
+# 開発状況（単一参照, 更新日: 2026-03-16）
 
 ## 現行ステータス
 - Phase2 開発ドキュメントは **Legacy/Archive（参照専用）**。Phase2 を現行フェーズとして扱わない。
 - 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`。
-- `server-modernized` の automation 進捗判定は `docs/server-modernization/planning/codex_automation_workplan_revised.md` を第一正本とし、`docs/server-modernization/planning/server_modernization_wbs_detailed.md` は参考資料として扱う。
+- `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` は、server modernization automation の作業記録として保持する **Legacy/Archive** 扱いの開発ドキュメントである。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。
 - 現行の作業内容はフェーズ名では判断せず、最新のタスク指示/チケット/マネージャー指示に従う。
 
@@ -11,16 +11,15 @@
 1. `docs/DEVELOPMENT_STATUS.md`（本ファイル）
 2. `AGENTS.md` / `GEMINI.md`（共通ルールと制約）
 3. 現行ハブ: `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`
-4. automation 進捗正本: `docs/server-modernization/planning/codex_automation_workplan_revised.md`
-5. 当面の server-modernized 作業参考WBS: `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
-6. 環境手順: `web-client/README.md` と `setup-modernized-env.sh`
-7. Web クライアント設計: `docs/web-client/`（`planning/phase2/` と `docs/web-client/README.md` は Legacy）
-8. サーバーモダナイズ: `docs/server-modernization/`（`phase2/` と `docs/server-modernized/phase2/` は Legacy）
+4. 環境手順: `web-client/README.md` と `setup-modernized-env.sh`
+5. Web クライアント設計: `docs/web-client/`（`planning/phase2/` と `docs/web-client/README.md` は Legacy）
+6. サーバーモダナイズ: `docs/server-modernization/`（`phase2/` と `docs/server-modernized/phase2/` は Legacy）
 
 ## Legacy 参照（Phase2）
 - ロールオフ方針: `docs/server-modernization/phase2/PHASE2_DOCS_ROLLOFF.md`
 - Phase2 ドキュメント: `docs/web-client/planning/phase2/`, `docs/web-client/README.md`, `docs/server-modernization/phase2/`, `docs/server-modernized/phase2/`, `docs/managerdocs/PHASE2_*`
 - Archive 保管: `docs/archive/` 配下
+- server modernization 作業記録: `docs/server-modernization/planning/codex_automation_workplan_revised.md`, `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
 
 ## 補足
 - Phase2 の文書は履歴・差分確認のために保持しているが、更新は原則行わない。
@@ -28,7 +27,6 @@
 - ORCA 公式仕様の firecrawl 取得物は `docs/server-modernization/operations/ORCA_FIRECRAWL_INDEX.md` を入口に参照する（非Legacy 側の索引）。
 - ORCA 接続情報は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` を正本として運用する（Phase2 版は Legacy）。
 - ORCA オーダー仕様の実装要件は `docs/server-modernization/ORCA-order-system-rule.md` を参照する。
-- `server-modernized` の automation 実行では `docs/server-modernization/planning/codex_automation_workplan_revised.md` を進捗判定の第一正本とし、未完了タスクが残る間は `docs/server-modernization/planning/server_modernization_wbs_detailed.md` のチェック状態で完了判定しない。
 - server-modernized の Mockito 利用テスト実行方針は **JDK25（既定）** を第一選択とし、実行環境差異で attach が不安定な場合のみ **JDK21 + byte-buddy-agent** を fallback とする（詳細は `docs/server-modernization/README.md` のテスト実行方針を参照）。
 - module 永続化の現行方針は `beanJson` 優先ではなく、**新規書込を `beanJson` のみに寄せる** こととする。`beanBytes` は旧データ読込 fallback 専用として扱い、新規二重保存は行わない。
 - module 永続化は将来的に `beanJson` 専用化を目標とし、`beanBytes` の PostgreSQL `oid` 回帰は採らない。互換を切る場合も `oid` ではなく JSON 系へ統一する。
@@ -37,6 +35,14 @@
 - `docs/server-modernized_60117/` 配下は作業履歴の可能性があるため、現時点では **保全** する（判断保留）。
 
 ## 実施記録（最新）
+- 2026-03-16: server internal modernization checklist の `CFG-03` / `CFG-04` を完了し、typed runtime config と ORCA datasource 解決を現行化した（RUN_ID=20260316T051958Z）。
+  - 反映（runtime config）: `RuntimeConfigurationSupport` から legacy property loader / frontend env 名依存を削除し、`cloud.zero` / `facilityId` / `PVT listener` を `ServerConfigurationResolver#orcaRuntime()` へ移設。
+  - 反映（ORCAConnection）: `open/orca/rest/ORCAConnection.java` を `@ApplicationScoped` + typed datasource config 前提へ置換し、singleton / `custom.properties` 直読を除去。
+  - 検証: `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` と `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify` は PASS。
+  - 既知事項: `cd server-modernized && mvn -q -DskipITs test` / `mvn -q verify` は既存の `api-contract` DTO classpath 不備（`OperationsHealthResponse` / `OperationsReadinessCheck` / `OrcaReportRequest`）で失敗。checklist と `docs/server-modernization/README.md` に記録済み。
+- 2026-03-16: `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` を現行導線から外し、Legacy/Archive 扱いへ切り替えた（RUN_ID=20260315T203407Z）。
+  - 反映: 対象2文書の冒頭へ legacy/archive 注記を追加し、`docs/server-modernization/README.md` と本ファイルの参照優先順位から外した。
+  - 意図: server modernization の概ね完了した計画書を履歴資料へ格下げし、現行判断は `docs/DEVELOPMENT_STATUS.md` と `docs/server-modernization/README.md` に集約する。
 - 2026-03-15: server modernization automation の進捗正本と `P10-07` 残件を再確認し、切替後集中監視の blocker を文書化（RUN_ID=20260315T020039Z）。
   - 判定: `docs/server-modernization/planning/codex_automation_workplan_revised.md` の全タスク完了を確認。automation の次回先頭タスクは参考 WBS 側の `P10-07`「切替後の集中監視と是正を行う」。
   - blocker: `P10-07` の完了条件は「切替後 3 日の運用監視 / エラーログ / 問い合わせ / ORCA 連携結果」に基づく集中監視記録だが、現状の証跡は validation 環境での `P10-06` 稼働確認までであり、切替後実績のログ・問い合わせ・是正履歴が存在しないため、この RUN では完了判定不能。

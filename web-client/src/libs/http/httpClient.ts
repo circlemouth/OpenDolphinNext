@@ -80,7 +80,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     id: 'appointmentOutpatient',
     group: 'outpatient',
     method: 'ANY',
-    path: '/orca/appointments/*',
+    path: '/api/orca/appointments/*',
     purpose: '予約一覧・患者／請求試算・来院状況を取得して ORCA バナーの `runId`/`dataSource` を連携する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'fetchedAt'],
     sourceDocs: ['docs/server-modernization/api-architecture-consolidation-plan.md'],
@@ -89,7 +89,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     id: 'medicalOutpatient',
     group: 'outpatient',
     method: 'ANY',
-    path: '/orca21/medicalmodv2/outpatient',
+    path: '/api/orca/medical/outpatient',
     purpose: 'Charts/DocumentTimeline が表示する外来の Medical record を取得し、`auditEvent` に `recordsReturned`/`outcome` を記録する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'recordsReturned'],
     sourceDocs: [
@@ -104,7 +104,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     id: 'diseaseMutation',
     group: 'outpatient',
     method: 'ANY',
-    path: '/orca/disease',
+    path: '/api/orca/disease',
     purpose: 'Charts の病名編集で傷病名を登録・更新・削除し、主/疑い/開始/転帰を監査ログへ連携する。',
     auditMetadata: ['runId', 'operation', 'patientId'],
     sourceDocs: ['docs/web-client/ux/charts-claim-ui-policy.md'],
@@ -113,7 +113,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     id: 'orderBundleMutation',
     group: 'outpatient',
     method: 'ANY',
-    path: '/orca/order/bundles',
+    path: '/api/orca/order/bundles',
     purpose: 'Charts の処方（RP）/オーダー束編集でバンドルを登録・更新・削除し、監査イベントへ反映する。',
     auditMetadata: ['runId', 'operation', 'patientId', 'entity'],
     sourceDocs: ['docs/web-client/ux/charts-claim-ui-policy.md'],
@@ -122,7 +122,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     id: 'patientOutpatient',
     group: 'outpatient',
     method: 'ANY',
-    path: '/orca12/patientmodv2/outpatient',
+    path: '/api/orca/patient/mutation',
     purpose: 'Patients/Administration で患者基本・保険情報を更新し、新規追加・削除・保険変更の `action=ORCA_PATIENT_MUTATION` を生成する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'operation'],
     sourceDocs: [
@@ -136,7 +136,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     id: 'patientOutpatientInfo',
     group: 'outpatient',
     method: 'ANY',
-    path: '/orca/patients/local-search/*',
+    path: '/api/orca/patients/local-search/*',
     purpose: 'Reception/Patients 用にローカル患者検索を実行し、`missingMaster`/`cacheHit` を含めた `audit` を生成する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'fetchedAt', 'recordsReturned'],
     sourceDocs: ['docs/server-modernization/api-architecture-consolidation-plan.md'],
@@ -230,81 +230,8 @@ const isMissingCsrfAllowedRuntime = () => {
 
 const isOrcaEndpoint = (url?: URL | null): boolean => {
   if (!url) return false;
-  // ORCA-family endpoints and legacy resources may return per-resource auth errors
-  // without meaning the app session itself is expired.
-  const pattern =
-    /^\/(orca\d*|api\/orca(?:\d+)?|api01(rv2)?|api21|blobapi|karte|odletter|user|api\/admin|api\/chart-events|chart-events|api\/realtime|realtime)(\/|$)/;
+  const pattern = /^\/(orca|api\/orca|blobapi|karte|odletter|user|api\/admin|api\/chart-events|chart-events|api\/realtime|realtime)(\/|$)/;
   return pattern.test(url.pathname);
-};
-
-const ORCA_XML_BRIDGE_ENDPOINTS: Record<string, string> = {
-  acceptlstv2: 'ACCEPTANCE_LIST',
-  patientlst7v2: 'PATIENT_MEMO_LIST',
-  patientmemomodv2: 'PATIENT_MEMO_MOD',
-  diseasegetv2: 'DISEASE_GET',
-  diseasev3: 'DISEASE_MOD_V3',
-  medicalgetv2: 'MEDICAL_GET',
-  medicalmodv2: 'MEDICAL_MOD',
-  tmedicalgetv2: 'TEMP_MEDICAL_GET',
-  medicalmodv23: 'MEDICAL_MOD_V23',
-  incomeinfv2: 'INCOME_INFO',
-  subjectiveslstv2: 'SUBJECTIVES_LIST',
-  subjectivesv2: 'SUBJECTIVES_MOD',
-  contraindicationcheckv2: 'CONTRAINDICATION_CHECK',
-  medicationgetv2: 'MEDICATION_GET',
-  medicatonmodv2: 'MEDICATION_MOD',
-  systeminfv2: 'SYSTEM_INFO',
-  system01dailyv2: 'SYSTEM_DAILY',
-  system01lstv2: 'SYSTEM_MANAGEMENT_LIST',
-  manageusersv2: 'MANAGE_USERS',
-  insprogetv2: 'INSURANCE_PROVIDER',
-  insuranceinf1v2: 'INSURANCE_LIST',
-  pusheventgetv2: 'PUSH_EVENT_GET',
-  prescriptionv2: 'PRESCRIPTION_REPORT',
-  medicinenotebookv2: 'MEDICINE_NOTEBOOK_REPORT',
-  karteno1v2: 'KARTENO1_REPORT',
-  karteno3v2: 'KARTENO3_REPORT',
-  invoicereceiptv2: 'INVOICE_RECEIPT_REPORT',
-  statementv2: 'STATEMENT_REPORT',
-};
-
-const resolveOrcaBridgeEndpoint = (url?: URL | null): string | null => {
-  if (!url) return null;
-  const path = url.pathname;
-  if (!/^\/(orca\d*|api\/orca(?:\d+)?|api01rv2|api\/api01rv2|api21|api\/api21)(\/|$)/.test(path)) {
-    return null;
-  }
-  const last = path.split('/').filter(Boolean).pop();
-  if (!last) return null;
-  return ORCA_XML_BRIDGE_ENDPOINTS[last] ?? null;
-};
-
-const isXmlRequestBody = (headers: Record<string, string>): boolean => {
-  const type = headers['Content-Type'] ?? headers['content-type'];
-  if (!type) return false;
-  return type.toLowerCase().includes('application/xml') || type.toLowerCase().includes('text/xml');
-};
-
-const resolveBodyAsString = (body: BodyInit | null | undefined): string | null => {
-  if (typeof body === 'string') {
-    return body;
-  }
-  if (body == null) {
-    return null;
-  }
-  return null;
-};
-
-const buildResponseFromBridgePayload = (payload: unknown, fallbackStatus: number): Response => {
-  const data = (payload ?? {}) as Record<string, unknown>;
-  const status = typeof data.httpStatus === 'number' ? data.httpStatus : fallbackStatus;
-  const contentType = typeof data.contentType === 'string' && data.contentType ? data.contentType : 'application/xml';
-  const body = typeof data.body === 'string' ? data.body : '';
-  const headers = new Headers({ 'Content-Type': contentType });
-  if (typeof data.runId === 'string' && data.runId) {
-    headers.set('X-Run-Id', data.runId);
-  }
-  return new Response(body, { status, headers });
 };
 
 const shouldUseNoStoreCache = (url?: URL | null, method = 'GET') => {
@@ -358,41 +285,7 @@ export async function httpFetch(input: RequestInfo | URL, init?: HttpFetchInit) 
   const cache = initWithHeaders.cache ?? (shouldUseNoStoreCache(requestUrl, requestMethod) ? 'no-store' : undefined);
   // 認証クッキー（JSESSIONID 等）を常に送るため、デフォルトで include を付与する。
   const credentials = initWithHeaders.credentials ?? 'include';
-  const bridgeEndpoint = resolveOrcaBridgeEndpoint(requestUrl);
-  const shouldUseBridge =
-    requestMethod === 'POST' &&
-    !!bridgeEndpoint &&
-    isXmlRequestBody(headers) &&
-    isSameOrigin(requestUrl);
-
-  let response: Response;
-  if (shouldUseBridge) {
-    const bridgePayload: Record<string, unknown> = {
-      endpoint: bridgeEndpoint,
-      payload: resolveBodyAsString(initWithHeaders.body),
-      classCode: requestUrl?.searchParams.get('class') ?? undefined,
-      query: requestUrl?.searchParams.toString() ?? undefined,
-    };
-    const bridgeHeaders = new Headers(headers);
-    bridgeHeaders.set('Accept', 'application/json');
-    bridgeHeaders.set('Content-Type', 'application/json');
-    const bridgeResponse = await fetch('/api/v1/orca/bridge', {
-      method: 'POST',
-      headers: bridgeHeaders,
-      body: JSON.stringify(bridgePayload),
-      cache,
-      credentials,
-    });
-    let bridgeJson: unknown;
-    try {
-      bridgeJson = await bridgeResponse.json();
-    } catch {
-      bridgeJson = undefined;
-    }
-    response = buildResponseFromBridgePayload(bridgeJson, bridgeResponse.status);
-  } else {
-    response = await fetch(input, { ...initWithHeaders, cache, credentials });
-  }
+  const response = await fetch(input, { ...initWithHeaders, cache, credentials });
   captureObservabilityFromResponse(response);
   const resolvedInit =
     init?.notifySessionExpired === undefined && isOrcaEndpoint(requestUrl)

@@ -373,7 +373,7 @@ export function PatientInfoEditDialog({
   const description =
     section === 'insurance'
       ? '保険/自費は ORCA 側で更新してください。電子カルテからの更新は未対応です。'
-      : '保存前に差分を確認し、/orca12/patientmodv2/outpatient で更新します。';
+      : '保存前に差分を確認し、/api/orca/patient/mutation で更新します。';
 
   const fieldErrorMap = useMemo(() => {
     const map = new Map<keyof PatientRecord, string>();

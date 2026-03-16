@@ -14,7 +14,7 @@ import java.util.Map;
 /**
  * Password reset endpoint split from AdminAccessResource.
  */
-@Path("/api/admin/access/users/{userPk}/password-reset")
+@Path("/admin/access/users/{userPk}/password-reset")
 public class AdminAccessPasswordResetResource extends AdminAccessResource {
 
     @POST

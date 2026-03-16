@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * Mock/fallback endpoint split from PatientModV2OutpatientResource.
  */
-@Path("/orca12/patientmodv2/outpatient/mock")
+@Path("/orca/patientmodv2/outpatient/mock")
 public class PatientModV2OutpatientMockResource extends PatientModV2OutpatientResource {
 
     @POST

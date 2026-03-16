@@ -4,8 +4,8 @@
 
 ## 目的
 - `/orca/claim/outpatient` を Web クライアントから呼び出さないことを確認する。
-- 受付/Charts の外来関連フローが `/orca21/medicalmodv2/outpatient` と `/orca/appointments/list`・`/orca/visits/list` に一本化されていることを確認する。
-- 受付送信（`/orca/visits/mutation`＝`/orca11/acceptmodv2`）が必須機能として成立することを確認する。
+- 受付/Charts の外来関連フローが `/api/orca/medical/outpatient` と `/api/orca/appointments/list`・`/api/orca/visits/list` に一本化されていることを確認する。
+- 受付送信（`/api/orca/visits/mutation`＝`/orca11/acceptmodv2`）が必須機能として成立することを確認する。
 - CLAIM 前提の UI 文言・導線が残っていないことを確認する。
 - コンソール/ネットワークに不要な 404/401 が発生しないことを確認する。
 
@@ -18,20 +18,20 @@
 
 ## 残件（P0/P1/P2）: 2026-02-06
 - P0（完了）: 処置オーダー（器材/薬品使用量）送信の再実測（数量/コード一致の実証）。RUN_ID=`20260206T072728Z-procedure-usage-recheck19`
-  - 条件: MSW ON (server-handoff) でも `x-datasource-transition=server` で `/orca/order/bundles` と `/api/orca/queue` が passthrough され、server-modernized の実APIに到達すること（達成）。
-  - 完了条件: `/api21/medicalmodv2` request XML に処置由来の `Medical_Information_child` / `Medication_info_child` が含まれ、`Medication_Code`/`Medication_Number` が UI 入力の数量/コードと一致する（達成: `Medication_Code=M001`, `Medication_Number=2`）。
+  - 条件: MSW ON (server-handoff) でも `x-datasource-transition=server` で `/api/orca/order/bundles` と `/api/orca/queue` が passthrough され、server-modernized の実APIに到達すること（達成）。
+  - 完了条件: `/api/orca/chart-support/medical-mod-v2` request XML に処置由来の `Medical_Information_child` / `Medication_info_child` が含まれ、`Medication_Code`/`Medication_Number` が UI 入力の数量/コードと一致する（達成: `Medication_Code=M001`, `Medication_Number=2`）。
   - 証跡: `artifacts/webclient/e2e/20260206T072728Z-procedure-usage-recheck19/fullflow/`（`network/network.json`, `fullflow-summary.json`, `steps.log`, screenshots）
-- P0（完了）: 材料マスタ検索（`GET /orca/master/material`）の 503 ブロッカー再検証（ORCADS修正後）。RUN_ID=`20260206T183713Z-cmd_20260206_15_sub_16-material-master-reverify28`, `20260206T183833Z-cmd_20260206_15_sub_16-material-master-reverify29`
-  - 実測: Procedure Usage（order-edit）で材料キーワード入力 → `GET /orca/master/material?keyword=<...>` が **200**（body=`[]`）で応答し、UI は「該当する材料が見つかりません。」の空表示を出すことを確認（503 は再現せず）。
+- P0（完了）: 材料マスタ検索（`GET /api/orca/master/material`）の 503 ブロッカー再検証（ORCADS修正後）。RUN_ID=`20260206T183713Z-cmd_20260206_15_sub_16-material-master-reverify28`, `20260206T183833Z-cmd_20260206_15_sub_16-material-master-reverify29`
+  - 実測: Procedure Usage（order-edit）で材料キーワード入力 → `GET /api/orca/master/material?keyword=<...>` が **200**（body=`[]`）で応答し、UI は「該当する材料が見つかりません。」の空表示を出すことを確認（503 は再現せず）。
   - keyword:
     - `a` → 200 / `[]`（RUN_ID=`20260206T183713Z-cmd_20260206_15_sub_16-material-master-reverify28`）
     - `ガーゼ` → 200 / `[]`（RUN_ID=`20260206T183833Z-cmd_20260206_15_sub_16-material-master-reverify29`）
   - 証跡: `artifacts/webclient/e2e/<RUN_ID>/material-master/`（`steps.log`, `network/network.json`, screenshots）
-  - 追加観測: items>0 が得られず材料選択→`POST /orca/order/bundles`（材料 payload 反映）の実証は未達。材料データ投入待ち（DB 0件相当）として別途追跡する。
+  - 追加観測: items>0 が得られず材料選択→`POST /api/orca/order/bundles`（材料 payload 反映）の実証は未達。材料データ投入待ち（DB 0件相当）として別途追跡する。
   - 切り分け（P0補足, RUN_ID=`20260206T190155Z-cmd_20260206_15_sub_18-material-items-rootcause`）:
     - ORCA DB（schema=`master`）の `tbl_material_*` が全て 0件であり、items>0 が出ない主因は「材料マスタ未投入」。
-    - 併せて DEV 用の最小シード投入で items>0 を人工的に作成し、材料選択→`POST /orca/order/bundles` payload 保存まで実証（RUN_ID=`20260206T192539Z-cmd_20260206_15_sub_18-material-items-seeded-verify1`）。
-- P0（完了）: ORDER-001 最小MVP（order-edit の editor 切替 + bundleName 自動補完）を feature flag で段階導入し、/orca/order/bundles まで実測で実証。RUN_ID=`20260207T065042Z-cmd_20260207_08_sub_2-order-001-mvp1`
+    - 併せて DEV 用の最小シード投入で items>0 を人工的に作成し、材料選択→`POST /api/orca/order/bundles` payload 保存まで実証（RUN_ID=`20260206T192539Z-cmd_20260206_15_sub_18-material-items-seeded-verify1`）。
+- P0（完了）: ORDER-001 最小MVP（order-edit の editor 切替 + bundleName 自動補完）を feature flag で段階導入し、/api/orca/order/bundles まで実測で実証。RUN_ID=`20260207T065042Z-cmd_20260207_08_sub_2-order-001-mvp1`
   - flag: `VITE_ORDER_EDIT_MVP=1`
   - MVP内容（StampBoxツリーUIには非依存）:
     - Charts の `オーダー編集` で editor 種別を切替（`generalOrder`/`treatmentOrder`/`testOrder`）
@@ -62,7 +62,7 @@
   - 証跡: `artifacts/verification/20260207T070200Z-cmd_20260207_08_sub_3-rec-001-mvp/rec-001-mvp/`（screenshots + HAR + notes）
 
 ## acceptmodv2 再現条件/ブロッカー
-- 受付登録/取消は `/orca/visits/mutation` → `/orca11/acceptmodv2` に接続する（MSW/実 API の切替は `VITE_DISABLE_MSW` に依存）。
+- 受付登録/取消は `/api/orca/visits/mutation` → `/orca11/acceptmodv2` に接続する（MSW/実 API の切替は `VITE_DISABLE_MSW` に依存）。
 - Trial（weborca-trial）では POST 405（Allow=`OPTIONS, GET`）が実測されており、Trial で 405 が出た場合は Blocker として扱う（RUN_ID=`20251116T210500Z-E2`）。
 - 再検証の前提（接続/認証）: server-modernized の `ORCA_API_*`（`ORCA_API_USER/PASSWORD` など）と `ORCA_MODE`/`ORCA_API_PATH_PREFIX` の整合を確認する。Vite dev proxy を使う場合は `VITE_DEV_PROXY_TARGET` と `ORCA_PROD_BASIC_USER/ORCA_PROD_BASIC_KEY` が必要で、UI 側は `userName/password` ヘッダも併用する。
 - WebORCA Trial で 405 が出る場合は `ORCA_API_PATH_PREFIX=/api` もしくは `ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/api` を明示する（`ORCA_MODE=weborca` でも host/port 経由の URL 生成時は自動で `/api` が付与されないため）。
@@ -72,26 +72,26 @@
 ### REC-030（受付送信）成功条件（本番想定での合格判定）
 - 前提（環境）:
   - MSW OFF で実経路確認（`VITE_DISABLE_MSW=1`）。
-  - `/orca/visits/mutation` が server-modernized 経由で `/orca11/acceptmodv2` に到達し、`ORCA_BASE_URL`/`ORCA_API_PATH_PREFIX` の設定で `/api` prefix の不足/二重付与が起きない。
+  - `/api/orca/visits/mutation` が server-modernized 経由で `/orca11/acceptmodv2` に到達し、`ORCA_BASE_URL`/`ORCA_API_PATH_PREFIX` の設定で `/api` prefix の不足/二重付与が起きない。
   - 認証/権限: Basic 認証 + facility/user が有効で 401 にならない（必要なら `X-Facility-Id` を含む）。
 - 前提（入力データ）:
   - `patientId` は ORCA 側に存在し、`insuranceCombinationNumber` は患者に紐づく実番号（推測で埋めない）。
   - `physicianCode` は職員コード（0001等）ではなく system01lstv2 の physician Code（`10001/10003/10005/10006/10010`）。
 - 合格（期待する戻り）:
-  - `/orca/visits/mutation` は HTTP 200（JSON）で応答し、UI で Api_Result を表示して操作継続できる。
+  - `/api/orca/visits/mutation` は HTTP 200（JSON）で応答し、UI で Api_Result を表示して操作継続できる。
   - Api_Result=00 は「受付登録成功」。
   - Api_Result=16 は「当日同条件で既に受付登録済み（冪等/業務エラー）」として扱い、致命ではない。
   - Api_Result=14/24 は「入力/seed 不備の業務エラー」として UI で明示し、環境/seed を修正して再試行できる（direct/modernized/web-client で同結論）。
   - Api_Result=90 は ORCA 側排他（他端末使用中）で再現性が不定のため、仕様上の差分として許容し「時間を置いて再試行」の運用で吸収する。
 
 ### Trial で失敗しやすい原因（Webの機能不備ではない）
-- ORCA Trial 上流が 502/不安定で server-modernized 側の retry 後に `/orca/visits/mutation` が 500（Session layer failure）になる。
+- ORCA Trial 上流が 502/不安定で server-modernized 側の retry 後に `/api/orca/visits/mutation` が 500（Session layer failure）になる。
 - `ORCA_API_PATH_PREFIX`/`ORCA_BASE_URL` が不適切で、Trial の `/orca11/acceptmodv2` が POST 405（Allow=`OPTIONS, GET`）になる（prefix不足/二重付与）。
 - seed 不足や `physicianCode` 誤り（職員コード送信）で Api_Result=14/24/16 等となる（業務エラーとして UI 表示で許容/切り分け）。
 
 ## acceptmodv2 seed/権限/データ準備（具体手順）
 - 参照: `src/orca_preprod_issue_catalog_resolution_20260123/09_test_data_validation/02_ORCAデータ準備手順.md`
-- ORCA 実データ準備（Local WebORCA 想定）: 02_ORCAデータ準備手順の「Local WebORCA（docker）」に従い、`patientmodv2` / `/orca/visits/mutation` / `/orca/visits/list` の順でデータを作成・確認する。
+- ORCA 実データ準備（Local WebORCA 想定）: 02_ORCAデータ準備手順の「Local WebORCA（docker）」に従い、`patientmodv2` / `/api/orca/visits/mutation` / `/api/orca/visits/list` の順でデータを作成・確認する。
 - Modernized DB の最低限 seed（UI 側の権限/施設）: `ops/db/local-baseline/local_synthetic_seed.sql` を適用し、facility=`1.3.6.1.4.1.9414.72.103` と user=`1.3.6.1.4.1.9414.72.103:doctor1`（roles=admin/doctor/user）を投入する。
 - E2E 再現 seed（UI 側の患者/受付リスト）: `scripts/seed-e2e-repro.sh` を実行し、`ops/db/local-baseline/e2e_repro_seed.sql` を併用して patientId=10010/10011/10012/10013 を当日分で作成する（RUN_ID 例: `20260126T124251Z`）。
 - Legacy 互換の admin/doctor 権限が必要な場合: `ops/db/local-baseline/local_synthetic_seed.sql` で `LOCAL.FACILITY.0001:dolphin` を投入（roles=system-administrator/doctor/user）。
@@ -141,10 +141,10 @@
 
 ## 検証手順
 1. Reception 画面を表示し、Network で `/orca/claim/outpatient` が発火しないことを確認する。
-1. Reception の受付登録/取消フォームから「受付送信」を実行し、`/orca/visits/mutation` の HTTP 応答と Api_Result を確認する。
+1. Reception の受付登録/取消フォームから「受付送信」を実行し、`/api/orca/visits/mutation` の HTTP 応答と Api_Result を確認する。
 1. Reception 画面で `/api/orca/queue` のレスポンスが表示され、送信キューの状態が表示されることを確認する。
 1. Charts 画面を表示し、Network で `/orca/claim/outpatient` が発火しないことを確認する。
-1. Charts 画面で `/orca21/medicalmodv2/outpatient` と `/orca/appointments/list`・`/orca/visits/list` が正常に応答することを確認する。
+1. Charts 画面で `/api/orca/medical/outpatient` と `/api/orca/appointments/list`・`/api/orca/visits/list` が正常に応答することを確認する。
 1. 受付/Charts の CLAIM 依存文言が残っていないことを確認する。
 1. 開発者コンソールで `/orca/claim/outpatient` に起因する 404/401 が発生しないことを確認する。
 1. Charts の ORCA送信ダイアログが出ない場合、`ガード理由（短文）` が ActionBar に表示されることを確認する。
@@ -166,28 +166,28 @@
 
 ### missingMaster 解消後の ORCA送信（MSW既定シナリオ）
 - MSW 既定シナリオ (server-handoff) で Charts を開き、sendDisabled=false を確認。
-- ORCA送信ダイアログを表示し「送信する」を実行、`/orca21/medicalmodv2/outpatient` が 200 で発火することを確認。
+- ORCA送信ダイアログを表示し「送信する」を実行、`/api/orca/chart-support/medical-mod-v2` が 200 で発火することを確認。
 - 実測 (RUN_ID=`20260204T123135Z-missing-master-send-msw`):
   - sendDisabled=false
-  - `http://localhost:5177/orca21/medicalmodv2/outpatient` HTTP 200
+  - `http://localhost:5177/api/orca/chart-support/medical-mod-v2` HTTP 200
   - 証跡: `artifacts/webclient/missing-master-send/20260204T123135Z-missing-master-send-msw/`
 
 ### MSW無効/flagged-mock無効での ORCA送信確認
 - MSW 無効 (VITE_DISABLE_MSW=1 相当) かつ flagged-mock 無効の Vite で Charts を表示し、sendDisabled=false を確認。
-- ORCA送信ダイアログを表示し「送信する」を実行、`/orca21/medicalmodv2/outpatient` が 200 で発火することを確認。
+- ORCA送信ダイアログを表示し「送信する」を実行、`/api/orca/chart-support/medical-mod-v2` が 200 で発火することを確認。
 - 実測 (RUN_ID=`20260204T123958Z-msw-off-send-check`):
   - sendDisabled=false / guardSummary は印刷のみ患者未選択
-  - `http://localhost:5176/orca21/medicalmodv2/outpatient` HTTP 200
+  - `http://localhost:5176/api/orca/chart-support/medical-mod-v2` HTTP 200
   - 証跡: `artifacts/webclient/msw-off-send/20260204T123958Z-msw-off-send-check/`
 
 ## 期待結果
 - `/orca/claim/outpatient` の HTTP リクエストが発生しない。
-- 受付送信（`/orca/visits/mutation`）が HTTP 200 で応答し、Api_Result が成功（00）または警告であることを確認できる。
+- 受付送信（`/api/orca/visits/mutation`）が HTTP 200 で応答し、Api_Result が成功（00）または警告であることを確認できる。
 - 受付/Charts の外来フラグと送信キューが表示され、CLAIM 廃止の影響で UI が崩れない。
 - コンソールに CLAIM 関連の 404/401 が残らない。
 
 ## 記録
-- Network ログのスクリーンショットまたは HAR を保存する（`/orca/visits/mutation` と `/api/orca/queue` を含む）。
+- Network ログのスクリーンショットまたは HAR を保存する（`/api/orca/visits/mutation` と `/api/orca/queue` を含む）。
 - 受付/Charts の画面キャプチャを保存する。
 - `docs/weborca-reception-checklist.md` の結果（RUN_ID/接続先/MSW 設定）を記録する。
 
@@ -276,7 +276,7 @@
 - 環境: `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` (ORCA Trial) / Vite `http://localhost:5173`
 - 使用データ: facilityId=1.3.6.1.4.1.9414.10.1 / userId=dolphindev / patientId=P0002 / visitDate=2026-02-05
 - 文書作成: 紹介状を保存 → `/odletter/letter` PUT 200（文書履歴へ反映）
-- オーダー欄: generalOrder で「紹介状」オーダーを保存 → `/orca/order/bundles` POST 200（createdDocumentIds 取得）。GET は recordsReturned=0 のため、web-client 側で保存直後の行を表示するフォールバックを追加して文書項目ボタンを表示。
+- オーダー欄: generalOrder で「紹介状」オーダーを保存 → `/api/orca/order/bundles` POST 200（createdDocumentIds 取得）。GET は recordsReturned=0 のため、web-client 側で保存直後の行を表示するフォールバックを追加して文書項目ボタンを表示。
 - 文書モーダル: オーダー欄の文書項目クリックでモーダルが開くことを確認。モーダル内の「編集」で更新 `/odletter/letter` PUT 200、 「印刷」で `charts-document-print-dialog` 表示を確認。
 
 ## STAMP-001: スタンプ閲覧（StampBox 最小MVP）
@@ -309,18 +309,18 @@ Feature flag:
   - `charts-stamp-library-preview.png`
   - `network-stamp-endpoints.json`
 - 証跡: `artifacts/webclient/document-modal/20260205T215908Z-document-modal/`（`document-modal.png`, `document-edit.png`, `document-print-preview.png`, `odletter-network.jsonl`, `steps.txt`）
-- /orca/order/bundles GET 空（recordsReturned=0）対策（RUN_ID=`20260206T090300Z-orca-order-bundles-empty-fix`）:
+- /api/orca/order/bundles GET 空（recordsReturned=0）対策（RUN_ID=`20260206T090300Z-orca-order-bundles-empty-fix`）:
   - server-modernized の `OrcaOrderBundleResource#decodeBundle` で `module.getModel()` と `ModelUtils.decodeModule()` を優先し、`beanJson` のみでも Bundle を復元できるように修正。
-  - 期待: 文書/オーダー作成直後でも `/orca/order/bundles` が Bundle 件数を返す。
+  - 期待: 文書/オーダー作成直後でも `/api/orca/order/bundles` が Bundle 件数を返す。
   - 再検証: ModuleJsonConverter 修正反映後の RUN_ID=`20260205T235615Z-orca-order-bundles-retest-authfix` で `recordsReturned=10` を確認。
-- /orca/order/bundles GET 空の再検証（RUN_ID=`20260205T233504Z-orca-order-bundles-empty-recheck`）:
-  - 手順: `POST /karte/document` で beanJson-only の BundleDolphin 文書を作成（docPk=9139, module beanBytes=null, beanJson あり）し、`GET /orca/order/bundles?patientId=P0002` を実行。
+- /api/orca/order/bundles GET 空の再検証（RUN_ID=`20260205T233504Z-orca-order-bundles-empty-recheck`）:
+  - 手順: `POST /karte/document` で beanJson-only の BundleDolphin 文書を作成（docPk=9139, module beanBytes=null, beanJson あり）し、`GET /api/orca/order/bundles?patientId=P0002` を実行。
   - 結果: `recordsReturned=0`（bundles 0 件）を確認。
   - 観測: `GET /karte/documents/9139` で beanJson-only が保存されていることは確認済み。
   - 補足: `ModuleJsonConverter` が BundleDolphin の beanJson を Map として復元するため `BundleDolphin` 判定に到達しない可能性がある（要追跡）。
   - 証跡: `artifacts/webclient/orca-order-bundles/20260205T233504Z/`（add_bundle_doc.json, post_response.txt, get_bundles_response.json, get_document_9139.json）。
-- /orca/order/bundles GET 再検証（ModuleJsonConverter 修正反映後, RUN_ID=`20260205T235615Z-orca-order-bundles-retest-authfix`）:
-  - 手順: `POST /karte/document` で beanJson-only の BundleDolphin 文書を作成（docPk=9160）し、`GET /orca/order/bundles?patientId=P0002` を実行。
+- /api/orca/order/bundles GET 再検証（ModuleJsonConverter 修正反映後, RUN_ID=`20260205T235615Z-orca-order-bundles-retest-authfix`）:
+  - 手順: `POST /karte/document` で beanJson-only の BundleDolphin 文書を作成（docPk=9160）し、`GET /api/orca/order/bundles?patientId=P0002` を実行。
   - 結果: `recordsReturned=10`（新規 Test Order を含む bundles 取得）を確認。
   - 認証: `userName=1.3.6.1.4.1.9414.10.1:dolphindev` / `password=MD5(dolphindev)` / `clientUUID=devclient` / `X-Facility-Id=1.3.6.1.4.1.9414.10.1`
   - 証跡: `artifacts/webclient/orca-order-bundles/20260205T235615Z-orca-order-bundles-retest-authfix/`（add_bundle_doc.json, post_response.txt, get_document_9160.json, get_bundles_response.json, doc_pk.txt）。
@@ -328,28 +328,28 @@ Feature flag:
   - 修正: `ModuleJsonConverter` で `FAIL_ON_UNKNOWN_PROPERTIES=false` と配列型の `@class` prefix 許可を追加。
   - 結果: `ModuleJsonConverter#deserialize` が `BundleDolphin` を復元できることを確認（出力: `open.dolphin.infomodel.BundleDolphin`）。
   - 証跡: `artifacts/webclient/orca-order-bundles/20260205T233749Z/`（bundle.json, modulejsonconverter-decode.txt）。
-- /orca/order/bundles recordsReturned=0 の原因調査（RUN_ID=`20260205T233701Z-order-bundles-records-zero`, 2026-02-06）:
-  - `GET /orca/order/bundles?patientId=01415`（entity/from 有無）→ 200 だが `recordsReturned=0`
+- /api/orca/order/bundles recordsReturned=0 の原因調査（RUN_ID=`20260205T233701Z-order-bundles-records-zero`, 2026-02-06）:
+  - `GET /api/orca/order/bundles?patientId=01415`（entity/from 有無）→ 200 だが `recordsReturned=0`
   - DB: `d_document`(id=9136, karte_id=9058) + `d_module`(id=9137, entity=generalOrder) は存在
   - `d_module.bean_json` は **text 列に OID 文字列(50720)** が入り、`lo_get(50720)` に JSON 本体が格納されている
   - `d_module.beanbytes` は OID(50721) で、`lo_get(50721)` に XML 本体が格納されている
   - `ModuleJsonConverter` は text の JSON / bytea の XML を前提としているため、OID 文字列から payload を復元できず bundles が 0 件になる
   - 恒久対策案: `d_module.beanbytes` を `bytea` 化し OID→bytea へ移行、`bean_json` も OID→JSON text へ移行（または decode 側で OID 解決ロジックを追加）
   - 証跡: `artifacts/verification/20260205T233701Z-order-bundles-records-zero/`（GET 応答 + db-findings.txt）
-- /orca/order/bundles LO(OID) decode 再検証（RUN_ID=`20260205T235736Z-order-bundles-lo-decode`, 2026-02-06）:
-  - `GET /orca/order/bundles?patientId=01415`（entity/from 有無）→ 200、`recordsReturned=5`
+- /api/orca/order/bundles LO(OID) decode 再検証（RUN_ID=`20260205T235736Z-order-bundles-lo-decode`, 2026-02-06）:
+  - `GET /api/orca/order/bundles?patientId=01415`（entity/from 有無）→ 200、`recordsReturned=5`
   - `documentId=9136`/`moduleId=9137`（OID 格納の Test Order）を含む Bundle が取得できることを確認
   - 認証: `doctor1/doctor2025` + `X-Facility-Id=1.3.6.1.4.1.9414.72.103`
   - 証跡: `artifacts/verification/20260205T235736Z-order-bundles-lo-decode/`（GET 応答）
-- /orca/order/bundles LO(OID) decode 再検証（RUN_ID=`20260206T050757Z-ashigaru8-lo-decode-reverify`, 2026-02-06）:
-  - 起動完了報告受領後の再実測。`GET /orca/order/bundles?patientId=01415` → 200、`recordsReturned=5` を再確認。
+- /api/orca/order/bundles LO(OID) decode 再検証（RUN_ID=`20260206T050757Z-ashigaru8-lo-decode-reverify`, 2026-02-06）:
+  - 起動完了報告受領後の再実測。`GET /api/orca/order/bundles?patientId=01415` → 200、`recordsReturned=5` を再確認。
   - 証跡: `artifacts/verification/20260206T050757Z-ashigaru8-lo-decode-reverify/`（GET 応答）
-- WEBクライアント経由の /orca/order/bundles 回帰再検証（作成/取得/異常系, RUN_ID=`20260206T051606Z-orca-order-bundles-webclient-regression`, 2026-02-06）:
+- WEBクライアント経由の /api/orca/order/bundles 回帰再検証（作成/取得/異常系, RUN_ID=`20260206T051606Z-orca-order-bundles-webclient-regression`, 2026-02-06）:
   - 環境: web-client (docker) `http://localhost:5173` → dev proxy → server-modernized (`http://localhost:9080/openDolphin/resources`)
-  - 作成: `POST /orca/order/bundles` → 200 / `createdDocumentIds=[9175]`
-  - 取得: `GET /orca/order/bundles?patientId=01415` → 200 / `recordsReturned=6`（>0 を確認）
-  - 異常系1: `GET /orca/order/bundles`（patientId 欠落）→ 400 `invalid_request` / `field=patientId` / `validationError=true`
-  - 異常系2: `POST /orca/order/bundles`（operations 欠落）→ 400 `invalid_request` / `field=operations` / `validationError=true`
+  - 作成: `POST /api/orca/order/bundles` → 200 / `createdDocumentIds=[9175]`
+  - 取得: `GET /api/orca/order/bundles?patientId=01415` → 200 / `recordsReturned=6`（>0 を確認）
+  - 異常系1: `GET /api/orca/order/bundles`（patientId 欠落）→ 400 `invalid_request` / `field=patientId` / `validationError=true`
+  - 異常系2: `POST /api/orca/order/bundles`（operations 欠落）→ 400 `invalid_request` / `field=operations` / `validationError=true`
   - raw 500 は未再現（400 は構造化 JSON を返却）
   - 証跡: `artifacts/verification/20260206T051606Z-orca-order-bundles-webclient-regression/`（request/response/headers/status/summary.json）
 
@@ -368,71 +368,71 @@ Feature flag:
 - **環境**: Trial で Data_Id が返らない場合は本番想定環境（認証環境/ORMaster）で再確認する。
 
 ### 実施手順（概要）
-1. 受付送信（`/orca/visits/mutation`）で受付を作成。
-2. Charts で代表オーダー（検査/処方）を入力し、`/api21/medicalmodv2` を送信。
+1. 受付送信（`/api/orca/visits/mutation`）で受付を作成。
+2. Charts で代表オーダー（検査/処方）を入力し、`/api/orca/chart-support/medical-mod-v2` を送信。
 3. 送信結果の `Api_Result/Invoice_Number/Data_Id` を確認し記録。
 4. 処方箋帳票（`prescriptionv2`）で `Data_Id` が取得できるかを確認。
 
 ### 処置オーダー（器材/薬品使用量）送信検証
 - 対象画面: Charts > オーダー > 処置（器材/薬品使用量入力）→ ActionBar「ORCA送信」
 - RUN_ID=`20260205T215624Z-procedure-order-usage-send` (2026-02-05)
-- 結果: 当時は不成立。ORCA送信は `/api21/medicalmodv2`（server-modernized 経由）に送るが、リクエストは固定XML（基本診療料のみ）で、処置/器材/薬品の数量・単位が含まれなかった。
+- 結果: 当時は不成立。ORCA送信は `/api/orca/chart-support/medical-mod-v2`（server-modernized 経由）に送るが、リクエストは固定XML（基本診療料のみ）で、処置/器材/薬品の数量・単位が含まれなかった。
 - 証跡: `web-client/src/features/charts/orcaClaimApi.ts` の `buildMedicalModV2RequestXml` が Medical_Class=11 / Medication_Code=110000010 の固定送信のみで、オーダー内容を参照していない。
 - RUN_ID=`20260205T222536Z-procedure-usage-recheck3` (2026-02-06)
   - 再検証（WEB_CLIENT_MODE=npm / ORCA Trial / server-modernized 経由）
-  - 受付送信 `/orca/visits/mutation` が HTTP 500（レスポンス空）、Reception 行が生成されず患者未選択。
-  - `/orca/order/bundles` が HTTP 500（リクエスト: `quantity=2` を含む処置オーダー送信）。
-  - ORCA送信ダイアログは表示されるが `/api21/medicalmodv2` の request は捕捉できず（request/response none）。
+  - 受付送信 `/api/orca/visits/mutation` が HTTP 500（レスポンス空）、Reception 行が生成されず患者未選択。
+  - `/api/orca/order/bundles` が HTTP 500（リクエスト: `quantity=2` を含む処置オーダー送信）。
+  - ORCA送信ダイアログは表示されるが `/api/orca/chart-support/medical-mod-v2` の request は捕捉できず（request/response none）。
   - 証跡: `artifacts/webclient/e2e/20260205T222536Z-procedure-usage-recheck3/fullflow/`（`network/requests.json`, `network/network.json`, `fullflow-summary.json`, `steps.log`, screenshots）
   - server-modernized 側の原因候補（コード起因で 500 を返しうる箇所）
-    - `/orca/visits/mutation`: `OrcaVisitResource.mutateVisit` が `wrapperService.mutateVisit` の `RuntimeException` をそのまま再送出するため、`RestOrcaTransport` の `OrcaGatewayException`（設定不備・必須XML欠落・上流ORCA通信失敗）が発生すると JSON ではなく空の 500 になりやすい。`RestOrcaTransport.invokeDetailed` のログ/`ExternalServiceAuditLogger` で traceId=`103bd0e5-b2b7-456f-9daa-2b1b317a7f0b` を確認するのが最短。
-    - `/orca/order/bundles`: `OrcaOrderBundleResource` で `KarteServiceBean.getKarte` が `NoResultException` や `kartes.get(0)` の `IndexOutOfBoundsException` を投げうる（患者は存在するがカルテが未作成のケース）。このパスは例外ハンドリングがないため 500 になる。patientId=`00005` のカルテ/文書シード欠落が疑わしい。
+    - `/api/orca/visits/mutation`: `OrcaVisitResource.mutateVisit` が `wrapperService.mutateVisit` の `RuntimeException` をそのまま再送出するため、`RestOrcaTransport` の `OrcaGatewayException`（設定不備・必須XML欠落・上流ORCA通信失敗）が発生すると JSON ではなく空の 500 になりやすい。`RestOrcaTransport.invokeDetailed` のログ/`ExternalServiceAuditLogger` で traceId=`103bd0e5-b2b7-456f-9daa-2b1b317a7f0b` を確認するのが最短。
+    - `/api/orca/order/bundles`: `OrcaOrderBundleResource` で `KarteServiceBean.getKarte` が `NoResultException` や `kartes.get(0)` の `IndexOutOfBoundsException` を投げうる（患者は存在するがカルテが未作成のケース）。このパスは例外ハンドリングがないため 500 になる。patientId=`00005` のカルテ/文書シード欠落が疑わしい。
   - NoResult/IndexOutOfBounds 対応（RUN_ID=20260205T224338Z-orca-order-bundles-nokarte-404, 2026-02-06）:
     - `KarteServiceBean#getKarte`（String/long）でカルテ未作成時に `kartes.get(0)` を行わず null を返すようガードを追加し、例外を 404 (`karte_not_found`) で処理できるよう修正。
-    - 検証: DB にカルテ未作成患者 `NO_KARTE_0001` を追加し、認証あり `GET /orca/order/bundles?patientId=NO_KARTE_0001` が 404 `karte_not_found` となることを確認（500 再現なし）。
+    - 検証: DB にカルテ未作成患者 `NO_KARTE_0001` を追加し、認証あり `GET /api/orca/order/bundles?patientId=NO_KARTE_0001` が 404 `karte_not_found` となることを確認（500 再現なし）。
 - RUN_ID=`20260205T225548Z-procedure-usage-recheck4` (2026-02-06)
   - 再検証（WEB_CLIENT_MODE=npm / ORCA Trial / server-modernized 経由 / QA_SKIP_SW=1）
-  - 受付送信 `/orca/visits/mutation` が HTTP 500（レスポンス空、`requestNumber` 正規化で `OrcaGatewayException` 発生ログあり）。
-  - `/orca/order/bundles` が HTTP 500（GET/POST ともレスポンス空）。POST payload は `generalOrder` のみ（`quantity=1`）、材料マスタ検索が timeout して材料アイテムは付与できず。
-  - ORCA送信ダイアログは表示されるが `/api21/medicalmodv2` の request は捕捉できず（request/response none）。`/orca21/medicalmodv2/outpatient` のみ複数回発火。
+  - 受付送信 `/api/orca/visits/mutation` が HTTP 500（レスポンス空、`requestNumber` 正規化で `OrcaGatewayException` 発生ログあり）。
+  - `/api/orca/order/bundles` が HTTP 500（GET/POST ともレスポンス空）。POST payload は `generalOrder` のみ（`quantity=1`）、材料マスタ検索が timeout して材料アイテムは付与できず。
+  - ORCA送信ダイアログは表示されるが `/api/orca/chart-support/medical-mod-v2` の request は捕捉できず（request/response none）。`/api/orca/medical/outpatient` のみ複数回発火。
   - 証跡: `artifacts/webclient/e2e/20260205T225548Z-procedure-usage-recheck4/fullflow/`（`network/requests.json`, `network/network.json`, `steps.log`, screenshots）
   - 追加ログ確認（2026-02-06）:
     - `steps.log` では **material selection** が `locator.waitFor` の 10s timeout（検索ボタンが可視にならない）で停止。
-    - `network/network.json` には `/orca/master/material` が **出現しない**（リクエスト自体が発火していない）。
+    - `network/network.json` には `/api/orca/master/material` が **出現しない**（リクエスト自体が発火していない）。
     - したがって「材料マスタ timeout」は **API遅延ではなく UI 要素未表示**に起因する可能性が高い。
   - server-modernized 側の確認（コード静的確認）:
-    - `/orca/master/material` は `OrcaMasterDao.searchMaterial` の SQLException を `null` で返し、`OrcaMasterResource` が 503 (`MASTER_MATERIAL_UNAVAILABLE`) で返却する。明示的な retry/timeout 制御は実装されていない（DataSource 側に依存）。
-    - `/orca/order/bundles` は `patientId`/`operations`/`entity` などのバリデーションを 400/404 で返すが、**永続化層の RuntimeException は未捕捉**のため空の 500 になり得る。恒久対策として `OrcaOrderBundleResource` の create/update/delete を try/catch し、`order_bundle_unavailable` などのエラーコードで 4xx/5xx を返す構造化レスポンスを検討。
+    - `/api/orca/master/material` は `OrcaMasterDao.searchMaterial` の SQLException を `null` で返し、`OrcaMasterResource` が 503 (`MASTER_MATERIAL_UNAVAILABLE`) で返却する。明示的な retry/timeout 制御は実装されていない（DataSource 側に依存）。
+    - `/api/orca/order/bundles` は `patientId`/`operations`/`entity` などのバリデーションを 400/404 で返すが、**永続化層の RuntimeException は未捕捉**のため空の 500 になり得る。恒久対策として `OrcaOrderBundleResource` の create/update/delete を try/catch し、`order_bundle_unavailable` などのエラーコードで 4xx/5xx を返す構造化レスポンスを検討。
 
-### 再検証（材料マスタ + /orca/order/bundles）
+### 再検証（材料マスタ + /api/orca/order/bundles）
 - RUN_ID=`20260205T233500Z-procedure-usage-recheck5` (2026-02-06)（当該RUNは実行せず。後続RUNで代替済み）
-  - 目的: `/orca/master/material` が実際に発火する条件を再確認し、`/orca/order/bundles` が 4xx/構造化エラーで返ることを確認。
+  - 目的: `/api/orca/master/material` が実際に発火する条件を再確認し、`/api/orca/order/bundles` が 4xx/構造化エラーで返ることを確認。
   - 確認事項:
-    - `/orca/master/material?keyword=...` が Network に出現し、成功 or 503 でレスポンス本文があること。
-    - `/orca/order/bundles` GET/POST の失敗時に `error`/`message` などが返ること（空 500 の回避）。
+    - `/api/orca/master/material?keyword=...` が Network に出現し、成功 or 503 でレスポンス本文があること。
+    - `/api/orca/order/bundles` GET/POST の失敗時に `error`/`message` などが返ること（空 500 の回避）。
 
 - RUN_ID=`20260206T052300Z-procedure-usage-recheck5-material-master-2` (2026-02-06)
-  - 目的: 材料検索 UI 未表示（検索結果行が出ない）と `/orca/master/material` 未発火の再切り分け。
+  - 目的: 材料検索 UI 未表示（検索結果行が出ない）と `/api/orca/master/material` 未発火の再切り分け。
   - 変更（恒久）:
-    - `web-client/scripts/qa-fullflow-weborca.mjs` の Network 記録対象に `/orca/master/material` を追加（従来は監視対象外で「未発火」と誤判定し得た）。
+    - `web-client/scripts/qa-fullflow-weborca.mjs` の Network 記録対象に `/api/orca/master/material` を追加（従来は監視対象外で「未発火」と誤判定し得た）。
     - 同スクリプトの材料選択ステップを「検索結果行の可視化」依存から「HTTP 応答 or notice 表示」依存に変更（items=0 / 503 時でも誤って UI 未表示と判定しない）。
     - `web-client/vite.config.ts` を `loadEnv()` 対応し、`.env.local` の `VITE_DEV_PROXY_TARGET` 等が Vite 起動経路に依らず反映されるよう修正（proxy の ECONNREFUSED→空 500 を回避）。
   - 結果:
-    - `GET /orca/master/material?keyword=ガーゼ` が **発火**し、HTTP 200（`items=[]` / `totalCount=0`）を確認。
+    - `GET /api/orca/master/material?keyword=ガーゼ` が **発火**し、HTTP 200（`items=[]` / `totalCount=0`）を確認。
     - UI は材料セクションが表示され、結果 0 件のため「該当する材料が見つかりません。」の空表示となる（検索結果行が出ないのは正常）。
-    - `/orca/order/bundles` も HTTP 200 を確認（Order 保存まで到達）。
+    - `/api/orca/order/bundles` も HTTP 200 を確認（Order 保存まで到達）。
   - 証跡: `artifacts/webclient/e2e/20260206T052300Z-procedure-usage-recheck5-material-master-2/fullflow/`（`network/`, `steps.log`, screenshots）
 
 - RUN_ID=`20260206T053729Z-procedure-usage-recheck8` (2026-02-06)
-  - 目的: 再ビルド/再起動後の server-modernized で、処置オーダー（材料）を保存し、`/api21/medicalmodv2` の **送信XMLに数量/コードが入るか**を再検証。
-  - 結果: 当時は阻害。`/api21/medicalmodv2` 自体の送信/捕捉には成功したが、処置オーダー由来の `Medical_Information_child` は追加されなかった。
+  - 目的: 再ビルド/再起動後の server-modernized で、処置オーダー（材料）を保存し、`/api/orca/chart-support/medical-mod-v2` の **送信XMLに数量/コードが入るか**を再検証。
+  - 結果: 当時は阻害。`/api/orca/chart-support/medical-mod-v2` 自体の送信/捕捉には成功したが、処置オーダー由来の `Medical_Information_child` は追加されなかった。
   - 観測（重要）:
-    - `POST /orca/order/bundles` は `apiResult=00` で `createdDocumentIds` を返すが、直後の `GET /orca/order/bundles?patientId=01415&entity=generalOrder` が `recordsReturned=0` / `bundles=[]` を返し、**保存結果が一覧に反映されない**。
-    - ORCA送信では `GET /orca/order/bundles?patientId=01415&entity=...&from=2026-02-06` が全 entity で `bundles=[]` となり、送信XMLは **基本診療料（Medical_Class=11 / Medication_Code=110000010 / Medication_Number=1）のみ**。
-    - `GET /orca/master/material?keyword=ガーゼ` は HTTP 200 だが `items=[]`（UI: 「該当する材料が見つかりません。」）。材料コードをUI経由で付与できない。
+    - `POST /api/orca/order/bundles` は `apiResult=00` で `createdDocumentIds` を返すが、直後の `GET /api/orca/order/bundles?patientId=01415&entity=generalOrder` が `recordsReturned=0` / `bundles=[]` を返し、**保存結果が一覧に反映されない**。
+    - ORCA送信では `GET /api/orca/order/bundles?patientId=01415&entity=...&from=2026-02-06` が全 entity で `bundles=[]` となり、送信XMLは **基本診療料（Medical_Class=11 / Medication_Code=110000010 / Medication_Number=1）のみ**。
+    - `GET /api/orca/master/material?keyword=ガーゼ` は HTTP 200 だが `items=[]`（UI: 「該当する材料が見つかりません。」）。材料コードをUI経由で付与できない。
     - `/api/orca/queue` 応答ヘッダに `x-orca-queue-mode: mock`（`source=mock`）が付与されており、Trial（live）想定と挙動が一致していない可能性がある。
   - 原因切り分け（恒久対応により解消）:
-    - `artifacts/.../network/network.json` の `POST /orca/order/bundles` の `createdDocumentIds` が `1770356286987` のような **timestamp系の巨大値**で、server-modernized の採番（例: 9xxx）と一致しない。
+    - `artifacts/.../network/network.json` の `POST /api/orca/order/bundles` の `createdDocumentIds` が `1770356286987` のような **timestamp系の巨大値**で、server-modernized の採番（例: 9xxx）と一致しない。
     - `web-client/src/mocks/handlers/orcaOrderBundles.ts` が **常に recordsReturned=0/bundles=[] を返すMSWハンドラ**になっており、
       `X-DataSource-Transition: server`（request header `x-datasource-transition=server`）でも passthrough せず **MSW が persistence を偽装できていない**のが根因。
   - 恒久対応（2026-02-06）:
@@ -442,28 +442,28 @@ Feature flag:
       server transition は passthrough / 未指定は mock となることをローカルHTTPサーバで unit test 化。
     - `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaOrderBundleResource.java`:
       Web Client が呼ぶ order entities（`treatmentOrder` 等 + `laboTest`）を許可し、MSW passthrough 時に 400 で落ちないよう拡張。
-  - 証跡: `artifacts/webclient/e2e/20260206T053729Z-procedure-usage-recheck8/fullflow/`（`network/network.json` に `POST /orca/order/bundles` / `GET /orca/order/bundles` / `POST /api21/medicalmodv2?class=01` の request XML、`steps.log`, `fullflow-summary.json`, screenshots）
+  - 証跡: `artifacts/webclient/e2e/20260206T053729Z-procedure-usage-recheck8/fullflow/`（`network/network.json` に `POST /api/orca/order/bundles` / `GET /api/orca/order/bundles` / `POST /api/orca/chart-support/medical-mod-v2?class=01` の request XML、`steps.log`, `fullflow-summary.json`, screenshots）
 
 - RUN_ID=`20260206T072728Z-procedure-usage-recheck19` (2026-02-06)
   - 条件: MSW ON (server-handoff) + `x-datasource-transition=server`（passthrough）
-  - `POST /orca/order/bundles` の payload に `items[code=M001, quantity=2]` を含み、`GET /orca/order/bundles?patientId=01415&entity=generalOrder` で当該アイテムが返る（保存→取得の整合を確認）。
-  - `POST /api21/medicalmodv2?class=01` request XML に `Medication_Code=M001` / `Medication_Number=2` が含まれ、UI 入力（数量=2/コード=M001）と一致（P0 完了条件を達成）。
+  - `POST /api/orca/order/bundles` の payload に `items[code=M001, quantity=2]` を含み、`GET /api/orca/order/bundles?patientId=01415&entity=generalOrder` で当該アイテムが返る（保存→取得の整合を確認）。
+  - `POST /api/orca/chart-support/medical-mod-v2?class=01` request XML に `Medication_Code=M001` / `Medication_Number=2` が含まれ、UI 入力（数量=2/コード=M001）と一致（P0 完了条件を達成）。
   - 証跡: `artifacts/webclient/e2e/20260206T072728Z-procedure-usage-recheck19/fullflow/`
   - 補足（恒久対応）:
     - `web-client/src/features/charts/ChartsActionBar.tsx`: generalOrder bundle は classCode を持たないため、medicalmodv2 export 用に `generalOrder` を `Medical_Class=01` へフォールバックし、`OrderBundleItem.code/quantity` を送信XMLへ反映できるようにした。
 
-### /orca/order/bundles 空 500 対策（例外マッピング）
+### /api/orca/order/bundles 空 500 対策（例外マッピング）
 - 修正内容（2026-02-06）:
   - `OrcaOrderBundleResource` の create/update/delete で RuntimeException を捕捉し、503 + `order_bundle_unavailable` を返すよう例外マッピングを追加。
   - ログに `patientId`/`karteId`/`documentId`/`operation`/`runId` を出力。
 - 再検証 RUN_ID=`20260205T234500Z-order-bundles-exception-map` (2026-02-06)（当該RUNは実行せず。後続RUNで検証済み）
-  - 目的: `/orca/order/bundles` の失敗時に空 500 が返らず、構造化 JSON が返ることを確認。
+  - 目的: `/api/orca/order/bundles` の失敗時に空 500 が返らず、構造化 JSON が返ることを確認。
 - 再検証 RUN_ID=`20260205T233339Z-order-bundles-exception-map-verify` (2026-02-06)（server-modernized 未起動で中断）
-  - server-modernized が未起動で疎通できず（curl http://localhost:8080/openDolphin/resources/orca/order/bundles → HTTP 000）。
+  - server-modernized が未起動で疎通できず（curl http://localhost:8080/openDolphin/resources/api/orca/order/bundles → HTTP 000）。
   - 証跡: `artifacts/verification/20260205T233339Z-order-bundles-exception-map-verify/verification-note.txt`
 - 再検証 RUN_ID=`20260205T234051Z-order-bundles-exception-map-recheck` (2026-02-05)
   - `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` で server-modernized を起動後に再試行。
-  - `POST /openDolphin/resources/orca/order/bundles` (patientId=`P0002`, operation=`create`, bundleName=300 chars, items 1件) を送信。
+  - `POST /openDolphin/resources/api/orca/order/bundles` (patientId=`P0002`, operation=`create`, bundleName=300 chars, items 1件) を送信。
   - 結果: この時点では HTTP 500 (`internal_server_error`, message=`ARJUNA016053: Could not commit transaction.`) だった。
   - X-Trace-Id=`9c2fde8d-a7d0-43ba-bb12-68379550663f`、X-Run-Id=`20260205T234051Z`。
   - server log はリクエスト行のみで、patientId/karteId/documentId/operation/runId を含む構造化ログは未確認。
@@ -474,14 +474,14 @@ Feature flag:
   - 原因ログ: `ERROR: value too long for type character varying(255)` → `org.hibernate.exception.DataException` → `ARJUNA016053`（traceId=`47fee8da-cda7-40f1-b596-595ad9e3fb9e`）。
   - 証跡: `artifacts/verification/20260206T050757Z-ashigaru8-arjuna016053-reverify/`（response + server-log-excerpt）
 - RUN_ID=`20260206T050900Z-orca-order-bundles-get` (2026-02-06)
-  - `GET /openDolphin/resources/orca/order/bundles?patientId=P0002` を server-modernized に向けて実行。`recordsReturned=10` を返し、moduleId=9158/9161 など `beanbytes` を持たないエントリも含まれていたことから、`decodeBundleFromJson` フォールバックが動作していることを確認（artifacts/verification/20260206T050900Z-cmd_20260206_04_sub_2/get-response-body.json）。
+  - `GET /openDolphin/resources/api/orca/order/bundles?patientId=P0002` を server-modernized に向けて実行。`recordsReturned=10` を返し、moduleId=9158/9161 など `beanbytes` を持たないエントリも含まれていたことから、`decodeBundleFromJson` フォールバックが動作していることを確認（artifacts/verification/20260206T050900Z-cmd_20260206_04_sub_2/get-response-body.json）。
 - RUN_ID=`20260206T051000Z-orca-order-bundles-exception-map` (2026-02-06)
   - `d_module` に `name='FORCE_FAILURE'` で INSERT すると例外を投げる一時トリガを導入し、`bundleName=FORCE_FAILURE` の create 操作で `PersistenceException` を誘発。
   - POST の応答は HTTP 503 + `order_bundle_unavailable`（traceId=`2f3892e7-7290-4a32-b58d-27322ce7b5ca`、patientId=`P0002`、karteId=`91012`、runId=`20260206T051000Z-cmd_20260206_04_sub_2-failure`）となり、`buildOrderBundleFailure`→`RestExceptionMapper` で構造化レスポンスが返ることを確認した（artifacts/verification/20260206T050900Z-cmd_20260206_04_sub_2/post-response-body.json）。
   - 恒久対応方針: `order_bundle_unavailable` が今後も発生する場合は該当 traceId/runId を元に DB persistence 層やカルテ/文書の状態を調査し、このトリガ手順を再実行して再検証証跡を取得する。
 
 ### 処置オーダー（器材/薬品使用量）送信 - 実装方針案（最小）
-1. **データ導線**: `/orca/order/bundles` → `server-modernized` の `OrcaOrderBundleResource` → `BundleDolphin` → `ClaimItem` → `OrderBundleItem`。
+1. **データ導線**: `/api/orca/order/bundles` → `server-modernized` の `OrcaOrderBundleResource` → `BundleDolphin` → `ClaimItem` → `OrderBundleItem`。
 1. **order→request マッピング**: `OrderBundleItem.code` → `Medication_Code`, `OrderBundleItem.name` → `Medication_Name`, `OrderBundleItem.quantity` → `Medication_Number`。`bundle.classCode`/`className`/`bundleNumber` を `Medical_Class`/`Medical_Class_Name`/`Medical_Class_Number` にマップ。
 1. **web-client 実装ポイント**:
 1. `web-client/src/features/charts/orcaClaimApi.ts` の `buildMedicalModV2RequestXml` を `Medical_Information_child` + `Medication_info_child` 構造へ変更し、動的配列を受け取れる API に拡張する。
@@ -491,15 +491,15 @@ Feature flag:
 ### 処置オーダー（器材/薬品使用量）送信 - 実装反映
 - 変更点:
   - `buildMedicalModV2RequestXml` を固定XMLから拡張し、`Medical_Information_child` + `Medication_info_child` を動的生成するよう変更。
-  - `ChartsActionBar` の ORCA送信時に `/orca/order/bundles` を entity + `from=visitDate` で取得し、`bundle.classCode/className/bundleNumber` と `item.code/name/quantity` を XML にマッピング。
+  - `ChartsActionBar` の ORCA送信時に `/api/orca/order/bundles` を entity + `from=visitDate` で取得し、`bundle.classCode/className/bundleNumber` と `item.code/name/quantity` を XML にマッピング。
 - 影響範囲:
-  - ORCA送信時に `/orca/order/bundles` が追加で発火する（処置系エンティティ分）。
+  - ORCA送信時に `/api/orca/order/bundles` が追加で発火する（処置系エンティティ分）。
   - medicalmodv2 の送信XMLに、処置オーダー由来の `Medical_Information_child` が追加される。
   - unit は現状送信しない（後述）。
 - 再検証手順:
   1. Charts > オーダー > 処置で器材/薬品使用量を入力し保存。
-  1. ActionBar の「ORCA送信」を実行し、Network で `/orca/order/bundles?patientId=...&entity=...&from=YYYY-MM-DD` の応答を確認。
-  1. `/api21/medicalmodv2` の request XML に `Medical_Information_child` / `Medication_info_child` が含まれ、`Medication_Code`/`Medication_Number` が処置オーダーの内容に一致することを確認。
+  1. ActionBar の「ORCA送信」を実行し、Network で `/api/orca/order/bundles?patientId=...&entity=...&from=YYYY-MM-DD` の応答を確認。
+  1. `/api/orca/chart-support/medical-mod-v2` の request XML に `Medical_Information_child` / `Medication_info_child` が含まれ、`Medication_Code`/`Medication_Number` が処置オーダーの内容に一致することを確認。
   1. RUN_ID=`20260206T000000Z-procedure-order-usage-send-update`（要再計測）
 
 ### 処置オーダー送信 - Unit 取り扱いの前提と論点
@@ -513,32 +513,32 @@ Feature flag:
 ### 処置オーダー送信 - リスク/注意点
 - **ORCA 仕様の差異**: `Medical_Information_child`/`Medication_info_child` 構造に統一しないと ORCA 側で解釈されない可能性。
 - **unit 受理不可リスク**: 追加タグが不正扱いされると Api_Result が警告/エラーになりうる。
-- **対象バンドルの選定**: `/orca/order/bundles` は直近 30 日分の文書を返すため、**対象日・entity でフィルタ**しないと過去オーダーが混入する。
+- **対象バンドルの選定**: `/api/orca/order/bundles` は直近 30 日分の文書を返すため、**対象日・entity でフィルタ**しないと過去オーダーが混入する。
 
 - 実測ログ:
   - RUN_ID=`20260204T052600Z-acceptmodv2-webclient` (2026-02-04)
     - MSW OFF / Vite 5173 → server-modernized → WebORCA Trial
-    - `/orca/visits/mutation` が HTTP 500 (Session layer failure) で失敗
+    - `/api/orca/visits/mutation` が HTTP 500 (Session layer failure) で失敗
     - server-modernized ログで ORCA HTTP 405 (`/orca11/acceptmodv2`) を確認
     - 証跡: `artifacts/webclient/e2e/20260204T052600Z-acceptmodv2-webclient/reception-send/`
   - RUN_ID=`20260204T054200Z-acceptmodv2-webclient` (2026-02-04)
     - ORCA_API_PATH_PREFIX=/api 設定後の再検証（MSW OFF / Vite 5173 → server-modernized → WebORCA Trial）
-    - `/orca/visits/mutation` は HTTP 200 だが Api_Result=30（PUSH通知区分エラー）
+    - `/api/orca/visits/mutation` は HTTP 200 だが Api_Result=30（PUSH通知区分エラー）
     - 405 は解消、次のブロッカーは Acceptance_Push 送信
     - 証跡: `artifacts/webclient/e2e/20260204T054200Z-acceptmodv2-webclient/reception-send/`
   - RUN_ID=`20260204T055600Z-acceptmodv2-webclient` (2026-02-04)
     - Acceptance_Push 抑止後の再検証（MSW OFF / Vite 5173 → server-modernized → WebORCA Trial）
-    - `/orca/visits/mutation` が HTTP 200 / Api_Result=00（受付登録成功）
+    - `/api/orca/visits/mutation` が HTTP 200 / Api_Result=00（受付登録成功）
     - 受付送信 UI も成功バナー表示
     - 証跡: `artifacts/webclient/e2e/20260204T055600Z-acceptmodv2-webclient/reception-send/`
   - RUN_ID=`20260204T064501Z` (2026-02-04)
     - 通し検証（Reception → Charts → Order → 診療終了 → ORCA送信）を試行（MSW OFF / Vite 5173 → server-modernized → WebORCA Trial）
-    - `/orca/visits/mutation` は Api_Result=00（患者ID=01417 / physician=10001）
-    - ただし `/orca/appointments/list` = Api_Result=21 / `/orca/visits/list` = Api_Result=13 で一覧が空、Reception 行が生成されず Charts で選択患者の診療科が取得できない
-    - `ORCA 送信` は Department_Code 未解決のため発火せず（/api21/medicalmodv2 リクエスト未送信）
-    - `/orca/order/bundles` と `/orca/disease/import/{patientId}` は patient_not_found（ローカルDB未登録）
-    - `/orca12/patientmodv2/outpatient` でローカルDB登録を試行 → StubEndpointExposureFilter により 404（OPENDOLPHIN_STUB_ENDPOINTS_MODE=block）
-    - `/orca/appointments/mutation` は Api_Result=12（予約時間設定誤り）で予約作成できず
+    - `/api/orca/visits/mutation` は Api_Result=00（患者ID=01417 / physician=10001）
+    - ただし `/api/orca/appointments/list` = Api_Result=21 / `/api/orca/visits/list` = Api_Result=13 で一覧が空、Reception 行が生成されず Charts で選択患者の診療科が取得できない
+    - `ORCA 送信` は Department_Code 未解決のため発火せず（/api/orca/chart-support/medical-mod-v2 リクエスト未送信）
+    - `/api/orca/order/bundles` と `/api/orca/disease/import/{patientId}` は patient_not_found（ローカルDB未登録）
+    - `/api/orca/patient/mutation` でローカルDB登録を試行 → StubEndpointExposureFilter により 404（OPENDOLPHIN_STUB_ENDPOINTS_MODE=block）
+    - `/api/orca/appointments/mutation` は Api_Result=12（予約時間設定誤り）で予約作成できず
     - 証跡: `artifacts/webclient/e2e/20260204T064501Z/fullflow/`
   - RUN_ID=`20260204T124520Z-order-timeout-msw-off` (2026-02-04)
     - 通し検証（MSW OFF / Vite 5176 → server-modernized → WebORCA Trial）を実行
@@ -548,31 +548,31 @@ Feature flag:
   - RUN_ID=`20260204T125430Z-order-timeout-repro` (2026-02-04)
     - MSW OFF / Vite 5176 で Order 保存のみを再現する最小スクリプトを実行
     - `button[type="submit"]` で保存クリックし DOM detach の TimeoutError は再現せず
-    - ただし `/orca/order/bundles` と `/orca/appointments/list` `/orca/visits/list` は HTTP 500（server-modernized 側未整備）
+    - ただし `/api/orca/order/bundles` と `/api/orca/appointments/list` `/api/orca/visits/list` は HTTP 500（server-modernized 側未整備）
     - 証跡: `artifacts/webclient/order-timeout/20260204T125430Z-order-timeout-repro/`
   - RUN_ID=`20260204T125700Z-order-timeout-repro2` (2026-02-04)
     - 既存フローと同条件で Order 保存の再現を再試行（MSW OFF / Vite 5176）
     - DOM detach の TimeoutError は再現せず（保存クリックは完了）
-    - `/orca/order/bundles` と `/orca/appointments/list` `/orca/visits/list` は HTTP 500 を継続
+    - `/api/orca/order/bundles` と `/api/orca/appointments/list` `/api/orca/visits/list` は HTTP 500 を継続
     - 証跡: `artifacts/webclient/order-timeout/20260204T125700Z-order-timeout-repro2/`
   - RUN_ID=`20260204T233300Z-orca-order-bundles-500-triage` (2026-02-04)
-    - Vite 5176 で `/orca/order/bundles` を確認 → HTTP 500 (bodyなし)
-    - Vite ログに `http proxy error: /orca/order/bundles` + `ECONNREFUSED` を確認
+    - Vite 5176 で `/api/orca/order/bundles` を確認 → HTTP 500 (bodyなし)
+    - Vite ログに `http proxy error: /api/orca/order/bundles` + `ECONNREFUSED` を確認
       - `artifacts/webclient/update-depth/20260204T111053Z-update-depth-scan/vite.log`
-    - 直接 `http://localhost:9080/openDolphin/resources/orca/order/bundles` へは 404 `patient_not_found` で応答（上流は生存）
+    - 直接 `http://localhost:9080/openDolphin/resources/api/orca/order/bundles` へは 404 `patient_not_found` で応答（上流は生存）
     - 結論: Vite 5176 の proxy target が接続拒否（旧設定/8080 を参照している可能性）。Vite を `setup-modernized-env.sh` で再起動し、`VITE_DEV_PROXY_TARGET=http://localhost:9080/openDolphin/resources` を反映する必要あり。
     - 証跡: `artifacts/webclient/orca-order-bundles-500/20260204T233300Z-orca-order-bundles-500-triage/`
   - RUN_ID=`20260204T233600Z-orca-order-bundles-retry` (2026-02-04)
     - `WEB_CLIENT_MODE=npm` で `setup-modernized-env.sh` を再実行し、`VITE_DEV_PROXY_TARGET=http://localhost:9080/openDolphin/resources` を再反映（Vite 5176 再起動）
-    - `/orca/order/bundles` は HTTP 404 `patient_not_found`（上流に到達、500 は解消）
-    - Vite ログに `proxy error: /orca/order/bundles` は出力されず
+    - `/api/orca/order/bundles` は HTTP 404 `patient_not_found`（上流に到達、500 は解消）
+    - Vite ログに `proxy error: /api/orca/order/bundles` は出力されず
     - 証跡: `artifacts/webclient/orca-order-bundles-500/20260204T233600Z-orca-order-bundles-retry/`
   - RUN_ID=`20260204T233700Z-orca-order-bundles-5175` (2026-02-04)
-    - Vite 5175 でも `/orca/order/bundles` を確認 → HTTP 404 `patient_not_found`
+    - Vite 5175 でも `/api/orca/order/bundles` を確認 → HTTP 404 `patient_not_found`
     - 5175 側も 500/ECONNREFUSED は解消済み
     - 証跡: `artifacts/webclient/orca-order-bundles-500/20260204T233700Z-orca-order-bundles-5175/`
   - RUN_ID=`20260204T234000Z-order-bundles-patient-not-found` (2026-02-04)
-    - `/orca/order/bundles` の `patient_not_found` を DB で切り分け
+    - `/api/orca/order/bundles` の `patient_not_found` を DB で切り分け
     - `d_patient` に patientId=01415 が存在しない（0 rows）
     - `d_karte` は既存 seed のみ（patientId=00001 等）
     - `ops/db/local-baseline/local_synthetic_seed.sql` は facility `1.3.6.1.4.1.9414.72.103` の patientId を `00001` のみ作成
@@ -580,31 +580,31 @@ Feature flag:
     - 証跡: `artifacts/webclient/orca-order-bundles-500/20260204T234000Z-order-bundles-patient-not-found/`
   - RUN_ID=`20260204T234600Z-order-bundles-01415-seeded` (2026-02-04)
     - `ops/db/local-baseline/local_synthetic_seed.sql` に 01415 の patient + karte seed を追加し、DBへ反映
-    - `/orca/order/bundles?patientId=01415` が HTTP 200（bundles 空、recordsReturned=0）で応答
+    - `/api/orca/order/bundles?patientId=01415` が HTTP 200（bundles 空、recordsReturned=0）で応答
     - 証跡: `artifacts/webclient/orca-order-bundles-500/20260204T234600Z-order-bundles-01415-seeded/`
   - RUN_ID=`20260205T010800Z-order-bundle-ui-blocked` (2026-02-05)
-    - Reception で `受付送信` を実行するが、`/orca/appointments/list` と `/orca/visits/mutation` が 401 Unauthorized
+    - Reception で `受付送信` を実行するが、`/api/orca/appointments/list` と `/api/orca/visits/mutation` が 401 Unauthorized
     - Reception 行が生成されず（rowCount=0）、Charts へ遷移しても患者未選択のため `オーダー編集` が無効
-    - UI で `/orca/order/bundles` の 200→表示反映の再検証は **認証 401 により停止**
+    - UI で `/api/orca/order/bundles` の 200→表示反映の再検証は **認証 401 により停止**
     - 証跡: `artifacts/webclient/order-bundle-save/20260205T010800Z-order-bundle-ui-blocked/`
   - RUN_ID=`20260205T013000Z-orca-401-auth` (2026-02-05)
-    - `/orca/appointments/list` と `/orca/visits/mutation` が 401、`WWW-Authenticate: Basic realm="OpenDolphin"` を返却
+    - `/api/orca/appointments/list` と `/api/orca/visits/mutation` が 401、`WWW-Authenticate: Basic realm="OpenDolphin"` を返却
     - Vite dev proxy は `ORCA_BASIC_USER/ORCA_BASIC_PASSWORD`（または `ORCA_API_USER/ORCA_API_PASSWORD`）が未設定だと `Authorization` を付与しないため、Basic 認証欠落が原因
     - 対応案: `ORCA_TRIAL_USER/ORCA_TRIAL_PASS` もしくは `ORCA_BASIC_USER/ORCA_BASIC_PASSWORD` を設定して `setup-modernized-env.sh` を再起動し、dev proxy に Basic を付与
     - 証跡: `artifacts/webclient/orca-401/20260205T013000Z-orca-401-auth/`
   - RUN_ID=`20260205T020800Z-orca-401-resolved-body` (2026-02-05)
     - `ORCA_BASIC_USER=doctor1` / `ORCA_BASIC_PASSWORD=doctor2025` を反映して再起動
-    - `X-Facility-Id=1.3.6.1.4.1.9414.72.103` 付きで `/orca/appointments/list` / `/orca/visits/mutation` を POST → 401 は消失（400: body不足）
+    - `X-Facility-Id=1.3.6.1.4.1.9414.72.103` 付きで `/api/orca/appointments/list` / `/api/orca/visits/mutation` を POST → 401 は消失（400: body不足）
     - 401 は **dev proxy の Basic ヘッダ未設定が原因**であり、app ユーザー（doctor1）で解消
     - 証跡: `artifacts/webclient/orca-401/20260205T020800Z-orca-401-resolved-body/`
   - RUN_ID=`20260205T021500Z-orca-400fix` (2026-02-05)
     - `Content-Type: application/json` と必須フィールドを含む body を送ると 200 を確認
-    - `/orca/appointments/list` 必須: `appointmentDate`（または `fromDate/toDate`）
-    - `/orca/visits/mutation` 必須: `requestNumber` / `patientId` / `acceptanceDate` / `acceptanceTime`
+    - `/api/orca/appointments/list` 必須: `appointmentDate`（または `fromDate/toDate`）
+    - `/api/orca/visits/mutation` 必須: `requestNumber` / `patientId` / `acceptanceDate` / `acceptanceTime`
     - `X-Facility-Id` を付与し、dev proxy 経由で Basic が付与される前提
     - 証跡: `artifacts/webclient/orca-401/20260205T021500Z-orca-400fix/`
   - RUN_ID=`20260205T023500Z-ui-accept-200` (2026-02-05)
-    - UI（Reception 受付送信）経由で `/orca/appointments/list` と `/orca/visits/mutation` が 200 を確認
+    - UI（Reception 受付送信）経由で `/api/orca/appointments/list` と `/api/orca/visits/mutation` が 200 を確認
     - dev auth（doctor1/doctor2025 + X-Facility-Id）反映後の UI 送信で 400/415 は再現せず
     - 証跡: `artifacts/webclient/orca-401/20260205T023500Z-ui-accept-200/`
   - RUN_ID=`20260205T031500Z-orca-send-stability-a` (2026-02-05)
@@ -619,32 +619,32 @@ Feature flag:
   - RUN_ID=`20260205T090119Z-claim404-mswoff` (2026-02-05)
     - MSW OFF / Vite 5173 → server-modernized → WebORCA Trial
     - `qa-claim-deprecation.mjs` で Reception/Charts を巡回し、`/orca/claim/outpatient` は検知されず（CLAIM 404 再現なし）
-    - `/api/orca/queue` `/orca/deptinfo` `/orca21/medicalmodv2/outpatient` は 200、`/orca/appointments/list` `/orca/visits/list` は HTTP 500
+    - `/api/orca/queue` `/api/orca/deptinfo` `/api/orca/medical/outpatient` は 200、`/api/orca/appointments/list` `/api/orca/visits/list` は HTTP 500
     - 証跡: `artifacts/webclient/claim-deprecation/20260205T090119Z-claim404-mswoff/`
   - RUN_ID=`20260205T071500Z-accept-body-ui` (2026-02-05)
     - acceptmodv2 相当の payload（patientId/department/physician/insurance 付与）でも apiResult=15
     - `診療内容情報が存在しません` が返り、受付情報が ORCA 側に生成されない
     - 証跡: `artifacts/webclient/orca-401/20260205T071500Z-accept-body-ui/`
   - RUN_ID=`20260205T070000Z-orca-visits-list` (2026-02-05)
-    - `/orca/visits/list` が apiResult=13（対象なし）、visits 空のため Reception 行が生成されない
+    - `/api/orca/visits/list` が apiResult=13（対象なし）、visits 空のため Reception 行が生成されない
     - 証跡: `artifacts/webclient/orca-401/20260205T070000Z-orca-visits-list/`
   - RUN_ID=`20260205T071019Z` (2026-02-05)
     - MSW OFF / Vite 5173 → server-modernized → WebORCA Trial で Reception 実測
-    - `/orca/appointments/list` 200 / `/orca/visits/list` 200 / `/orca/visits/mutation` 200 / `/api/orca/queue` 200
+    - `/api/orca/appointments/list` 200 / `/api/orca/visits/list` 200 / `/api/orca/visits/mutation` 200 / `/api/orca/queue` 200
     - `/orca/claim/outpatient` 不発、Reception の CLAIM 文言 0 件
     - 受付送信は Api_Result=14（ドクター不存在）
     - 証跡: `artifacts/webclient/e2e/20260205T071019Z/reception-msw-off/`
   - RUN_ID=`20260205T070641Z-msw-on-reception-charts` (2026-02-05)
     - MSW ON / Vite 4173（`msw=1` / cache-hit）で Reception→Charts を実測
     - `/orca/claim/outpatient` は不発、CLAIM 文言なし
-    - `/orca/appointments/list/mock`・`/orca/visits/list/mock` が 200
-    - `/orca21/medicalmodv2/outpatient` が 200
+    - `/api/orca/appointments/list/mock`・`/api/orca/visits/list/mock` が 200
+    - `/api/orca/medical/outpatient` が 200
     - 401/404 なし（console: font CORS preflight, `Maximum update depth exceeded` 警告）
     - 証跡: `artifacts/webclient/e2e/20260205T070641Z/msw-on/`
   - RUN_ID=`20260205T101740Z` (2026-02-05)
     - UI 受付送信（MSW OFF / Vite 5173 → server-modernized → WebORCA Trial）
     - 条件: patientId=01414 / physicianCode=10001 / insurance=0001
-    - `/orca/visits/mutation` 200 だが Api_Result=16（診療科・保険組合せで受付登録済み）
+    - `/api/orca/visits/mutation` 200 だが Api_Result=16（診療科・保険組合せで受付登録済み）
     - `/api/orca/queue` 200
     - 証跡: `artifacts/webclient/e2e/20260205T101740Z/reception-send/`
   - RUN_ID=`20260206T123144Z-orca-queue-live` (2026-02-06)
@@ -654,12 +654,12 @@ Feature flag:
   - RUN_ID=`20260205T101957Z` (2026-02-05)
     - 直叩きで acceptmodv2 成功を再確認（server-modernized 経由 / Vite 5173）
     - 条件: patientId=01414 / physicianCode=10001 / insurance=0001 / acceptanceDate=2026-02-06
-    - `/orca/visits/mutation` 200 / Api_Result=00
+    - `/api/orca/visits/mutation` 200 / Api_Result=00
     - 証跡: `artifacts/webclient/e2e/20260205T101957Z-direct-acceptmodv2/`
   - RUN_ID=`20260205T114759Z-acceptmodv2-reverify` (2026-02-05)
     - 二重 /api 修正後の設定で再検証（ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp / ORCA_API_PATH_PREFIX=/api）
     - 条件: patientId=01414 / physicianCode=10001 / insurance=0001 / acceptanceDate=2026-02-06
-    - `/orca/visits/mutation` 200 だが Api_Result=16（診療科・保険組合せで受付登録済み）
+    - `/api/orca/visits/mutation` 200 だが Api_Result=16（診療科・保険組合せで受付登録済み）
     - 既に 2026-02-06 受付が存在する可能性があるため、**受付取消 or 別日での再検証が必要**
     - 証跡: `artifacts/webclient/e2e/20260205T114759Z-direct-acceptmodv2/`
   - RUN_ID=`20260205T085918Z-accept-guest-0001` (2026-02-05)
@@ -675,28 +675,28 @@ Feature flag:
     - 証跡: `artifacts/webclient/e2e/20260205T090121Z-accept-doctor1-10001/reception-send/` ほか同系列（`20260205T090129Z-accept-doctor3-10003` / `20260205T090138Z-accept-doctor5-10005` / `20260205T090146Z-accept-doctor6-10006` / `20260205T090155Z-accept-doctor10-10010`）
   - RUN_ID=`20260205T095826Z-accept-doctor1-0001` (2026-02-05)
     - ORCA Trial 登録済み医師コード（0001/0003/0005/0006/0010）＋ dept=01/02/11/10/26 で再検証
-    - `/orca/visits/mutation` は 500（Session layer failure）、ORCA Trial が `/orca11/acceptmodv2` と `/api01rv2/{visitptlstv2,appointlstv2}` で HTTP 502
+    - `/api/orca/visits/mutation` は 500（Session layer failure）、ORCA Trial が `/orca11/acceptmodv2` と `/api01rv2/{visitptlstv2,appointlstv2}` で HTTP 502
     - Api_Result は取得できず（UI では Api_Result: — 表示）
     - 証跡: `artifacts/webclient/e2e/20260205T095826Z-accept-doctor1-0001/reception-send/` ほか同系列（`20260205T095836Z-accept-doctor3-0003` / `20260205T095845Z-accept-doctor5-0005` / `20260205T095853Z-accept-doctor6-0006` / `20260205T095902Z-accept-doctor10-0010`）
   - RUN_ID=`20260205T070802Z` (2026-02-05)
     - MSW OFF / Vite 5173 → server-modernized → WebORCA Trial（QA_SKIP_SW=1 / QA_PATIENT_ID=00001）
-    - `/orca/visits/mutation` は HTTP 200 だが Api_Result=90（他端末使用中）で受付行が生成されず
+    - `/api/orca/visits/mutation` は HTTP 200 だが Api_Result=90（他端末使用中）で受付行が生成されず
     - 原因: ORCA acceptmodv2 仕様の「該当患者の排他チェック（他端末で展開中の有無）」に該当（acceptmod.md 手順3 / Api_Result=90）
     - 回避: 受付対象の患者を変更 or 時間を空けて再試行 / ORCA UI 側で該当患者のセッションを終了（Trial は共有環境のためロック発生が不定）
-    - `/orca/appointments/list` Api_Result=21 / `/orca/visits/list` Api_Result=13（recordsReturned=0）
-    - `/orca21/medicalmodv2/outpatient` が 200（recordsReturned=1, patientId=01415）
+    - `/api/orca/appointments/list` Api_Result=21 / `/api/orca/visits/list` Api_Result=13（recordsReturned=0）
+    - `/api/orca/medical/outpatient` が 200（recordsReturned=1, patientId=01415）
     - ORCA送信ダイアログは表示されるが送信リクエスト未捕捉（guardSummary: 患者未選択）
-    - `/orca/claim/outpatient` 不発、401/404 なし（/orca/order/bundles と /orca/disease/import は 404）
+    - `/orca/claim/outpatient` 不発、401/404 なし（/api/orca/order/bundles と /api/orca/disease/import は 404）
     - 証跡: `artifacts/webclient/e2e/20260205T070802Z/fullflow/`（summary/network/har/screenshots）
   - RUN_ID=`20260205T085849Z-api-result-90` (2026-02-05)
     - MSW OFF / server-modernized → WebORCA Trial を curl で再検証（patientId=00001/00002, physicianCode=0001）
-    - `/orca/visits/mutation` は Api_Result=14（ドクター不存在）になり、Api_Result=90 は再現せず
+    - `/api/orca/visits/mutation` は Api_Result=14（ドクター不存在）になり、Api_Result=90 は再現せず
     - 回避: ORCA Trial で有効な医師コード（例: 10001）へ変更して再試行
     - 90 の再現は Trial 共有環境の同一患者ロック発生タイミング依存と判断
     - 証跡: `artifacts/verification/20260205T085849Z-api-result-90/api-result-90/`
   - RUN_ID=`20260205T085937Z-api-result-90b` (2026-02-05)
     - MSW OFF / server-modernized → WebORCA Trial を curl で再検証（patientId=00001, physicianCode=10001, insuranceCombination=0001）
-    - `/orca/visits/mutation` は Api_Result=24（保険組合せ番号がありません）
+    - `/api/orca/visits/mutation` は Api_Result=24（保険組合せ番号がありません）
     - 受付行生成の前提として「患者ごとの保険組合せ番号が Trial 側に存在すること」が必要
     - 回避: 保険組合せが登録済みの患者へ変更、または ORCA 側で保険組合せを登録して再試行
     - 証跡: `artifacts/verification/20260205T085937Z-api-result-90b/api-result-90/`
@@ -710,14 +710,14 @@ Feature flag:
     - Trial 登録済み医師（10001）以外は 14 になりやすい
     - 証跡: `artifacts/verification/20260205T100136Z-acceptmodv2-direct-doctor3/acceptmodv2-direct/`
   - RUN_ID=`20260205T105842Z-acceptmodv2-proxy` (2026-02-05)
-    - server-modernized 経由で `/orca/visits/mutation` を再実行
+    - server-modernized 経由で `/api/orca/visits/mutation` を再実行
     - ORCA_HTTP_LOG_MODE=detail / ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/api / ORCA_API_PATH_PREFIX=/api を明示
     - patientId=01414 / physician=10001 / insurance=0001 / acceptanceDate=2026-02-06
     - 結果: HTTP 500（Session layer failure）
     - server-modernized ログで ORCA upstream 502 を確認（/orca11/acceptmodv2 を 4 回リトライ → 502）
     - 証跡: `artifacts/verification/20260205T105842Z-acceptmodv2-proxy/acceptmodv2-proxy/`
   - RUN_ID=`20260205T110330Z-acceptmodv2-doubleapi` (2026-02-05)
-    - ORCA Trial へ `https://weborca-trial.orca.med.or.jp/api/api/orca11/acceptmodv2`（/api を二重付与）で直叩き
+    - ORCA Trial へ `https://weborca-trial.orca.med.or.jp/api/orca11/acceptmodv2`（/api を二重付与）で直叩き
     - HTTP 502 を再現（proxy 失敗と同じステータス）
     - 502 の原因が「ORCA_BASE_URL に /api を含めた状態で ORCA_API_PATH_PREFIX=/api を追加」した二重 prefix である可能性を補強
     - 証跡: `artifacts/verification/20260205T110330Z-acceptmodv2-doubleapi/acceptmodv2-doubleapi/`
@@ -734,7 +734,7 @@ Feature flag:
   - RUN_ID=`20260205T110841Z-accept-00001-11-0005` (2026-02-05)
     - ORCA Trial 初期患者 00001〜00011 の保険組み合わせ（国保/社保/後期高齢者/生活保護/自賠責/労災/自費）で受付送信を再検証
     - 医師コード 0001/0003/0005/0006/0010 を診療科に合わせて選択（内科/精神科/整形外科/外科/眼科）
-    - `/orca/visits/mutation` は 500（Session layer failure）、ORCA Trial が `/orca11/acceptmodv2` と `/api01rv2/{visitptlstv2,appointlstv2}` で HTTP 502
+    - `/api/orca/visits/mutation` は 500（Session layer failure）、ORCA Trial が `/orca11/acceptmodv2` と `/api01rv2/{visitptlstv2,appointlstv2}` で HTTP 502
     - Api_Result は取得できず（UI では Api_Result: — 表示）
     - 証跡: `artifacts/webclient/e2e/20260205T110841Z-accept-00001-11-0005/reception-send/` ほか同系列（`20260205T110841Z-accept-00002-01-0001` / `20260205T110841Z-accept-00003-01-0001` / `20260205T110841Z-accept-00004-01-0001` / `20260205T110841Z-accept-00005-11-0005` / `20260205T110841Z-accept-00006-01-0001` / `20260205T110841Z-accept-00007-02-0003` / `20260205T110841Z-accept-00007-26-0010` / `20260205T110841Z-accept-00008-11-0005` / `20260205T110841Z-accept-00009-11-0005` / `20260205T110841Z-accept-00010-10-0006` / `20260205T110841Z-accept-00011-01-0001`）
     - server-modernized ログ: `artifacts/webclient/e2e/20260205T110841Z-accept-trial-physicians/server-log-snippet.txt`（traceId 一覧: `artifacts/webclient/e2e/20260205T110841Z-accept-trial-physicians/trace-ids.tsv`）
@@ -749,8 +749,8 @@ Feature flag:
     - Api_Result=90: Trial 共有ロック条件で `Api_Result=90` を再現（`20260205T070802Z`）
     - 直叩き vs server-modernized 差分:
       - 直叩き（ORCA Trial へ XML/BASIC）: `/orca11/acceptmodv2` は `Api_Result=00` で成功（`20260205T100055Z-acceptmodv2-direct`）
-      - server-modernized 経由: `/orca/visits/mutation` が 500（Session layer failure）、上流 `/orca11/acceptmodv2` は HTTP 502（`20260205T105842Z-acceptmodv2-proxy`）
-      - 直叩きで `/api/api/orca11/acceptmodv2`（二重 prefix）を送ると HTTP 502 を再現（`20260205T110330Z-acceptmodv2-doubleapi`）
+      - server-modernized 経由: `/api/orca/visits/mutation` が 500（Session layer failure）、上流 `/orca11/acceptmodv2` は HTTP 502（`20260205T105842Z-acceptmodv2-proxy`）
+      - 直叩きで `/api/orca11/acceptmodv2`（二重 prefix）を送ると HTTP 502 を再現（`20260205T110330Z-acceptmodv2-doubleapi`）
     - 証跡: `artifacts/verification/20260205T085849Z-api-result-90/`, `artifacts/verification/20260205T085937Z-api-result-90b/`, `artifacts/webclient/e2e/20260205T070802Z/fullflow/`, `artifacts/verification/20260205T100055Z-acceptmodv2-direct/`, `artifacts/verification/20260205T105842Z-acceptmodv2-proxy/`, `artifacts/verification/20260205T110330Z-acceptmodv2-doubleapi/`
   - RUN_ID=`20260206T045324Z-api-result-retest` (2026-02-06)
     - 直叩き（ORCA Trial 直送, acceptmodv2）:
@@ -758,13 +758,13 @@ Feature flag:
       - physician=0001 → Api_Result=14（ドクター不存在）
       - insurance=9999 → Api_Result=24（保険組合せ番号なし）
       - physician=10003/10005/10006/10010 → Api_Result=16（重複）
-    - server-modernized（/orca/visits/mutation, userName/password ヘッダ）:
+    - server-modernized（/api/orca/visits/mutation, userName/password ヘッダ）:
       - patientId=01414 / insurance=0001 / physician=10001 → Api_Result=16
       - physician=0001 → Api_Result=14
       - insurance=9999 → Api_Result=24
       - patientId=00001 / insurance=0005 / physician=10001 → Api_Result=00
       - physician=10003/10005/10006/10010 → Api_Result=16
-    - web-client 経由（Vite dev server 5173, /orca/visits/mutation）:
+    - web-client 経由（Vite dev server 5173, /api/orca/visits/mutation）:
       - `VITE_DEV_PROXY_TARGET=http://localhost:9080` / `VITE_ORCA_API_PATH_PREFIX=off` で起動したが、HTTP 404（HTML）を返却し Api_Result 未取得（proxy 404 の疑い）
     - Api_Result=90/502 は本 RUN では再現せず
     - 証跡: `artifacts/verification/20260206T045324Z-api-result-retest/`
@@ -774,20 +774,20 @@ Feature flag:
     - これにより `VITE_DEV_PROXY_TARGET` に `/openDolphin/resources` を含めない設定でも Vite dev proxy 経由で 404(HTML) を回避できる。
     - 対象: `web-client/vite.config.ts`
   - RUN_ID=`20260206T052731Z-vite-proxy-target-root-fix` (2026-02-06)
-    - web-client 経由（Vite dev server 5173, /orca/visits/mutation）:
+    - web-client 経由（Vite dev server 5173, /api/orca/visits/mutation）:
       - 起動: `VITE_DEV_PROXY_TARGET=http://localhost:9080` / `VITE_ORCA_MODE=weborca` / `VITE_ORCA_API_PATH_PREFIX=off`
-      - `POST /orca/visits/mutation` が HTTP 200 / JSON で応答し、Api_Result を取得できることを確認（Api_Result=16: 二重登録疑い）
+      - `POST /api/orca/visits/mutation` が HTTP 200 / JSON で応答し、Api_Result を取得できることを確認（Api_Result=16: 二重登録疑い）
     - 証跡: `artifacts/verification/20260206T052731Z-vite-proxy-target-root-fix/vite-proxy-orca-visits-mutation.txt`
   - RUN_ID=`20260204T133500Z` (2026-02-04)
     - 通し検証（Reception → Charts → Order → 診療終了 → ORCA送信）再実行（MSW OFF / Vite 5175 → server-modernized → WebORCA Trial）
     - ORCA送信ダイアログ表示を確認し、送信トーストで `Api_Result=00` / `Invoice_Number=INV-000001` / `Data_Id=DATA-000001` を表示
-    - `/api21/medicalmodv2` が 200 で複数回応答（Networkログで確認）
+    - `/api/orca/chart-support/medical-mod-v2` が 200 で複数回応答（Networkログで確認）
     - 受付送信は完了バナー表示だが Reception 行は `not-found`
     - オーダーパネルは DOM detach により `order` ステップが TimeoutError（保存ボタンの再描画）
     - 証跡: `artifacts/webclient/e2e/20260204T133500Z/fullflow/`（summary/network/screenshots/steps.log）
   - RUN_ID=`20260204T140500Z` (2026-02-04)
     - missing_master 解消後の通し検証（MSW OFF / Vite 5175 → server-modernized → WebORCA Trial）
-    - `QA_PATIENT_ID=01415` を指定すると Reception 行が `found` になり、`/orca/order/bundles` は 200 で保存成功
+    - `QA_PATIENT_ID=01415` を指定すると Reception 行が `found` になり、`/api/orca/order/bundles` は 200 で保存成功
     - 診療終了トーストは表示されるが、ORCA送信ダイアログは表示されず、/api21 発火も未捕捉（send request none）
     - `会計へ` ボタンは DOM が安定せずクリックがタイムアウト
     - 証跡: `artifacts/webclient/e2e/20260204T140500Z/fullflow/`（summary/network/screenshots/steps.log）
@@ -804,20 +804,20 @@ Feature flag:
     - 証跡: `artifacts/webclient/update-depth/20260204T153900Z-update-depth-fix5/`（console.json/screen.png）
   - RUN_ID=`20260204T211536Z` (2026-02-04)
     - MSW OFF / flagged-mock OFF / Vite 5173 → server-modernized → WebORCA Trial
-    - 受付送信 `/orca/visits/mutation` は HTTP 200 だが Api_Result=16（診療科・保険組合せで受付登録済み / 二重登録疑い）
-    - `/orca/appointments/list` Api_Result=21（予約なし）、`/orca/visits/list` も患者ID空のレコードで Reception 行が生成されず（reception row not-found）
+    - 受付送信 `/api/orca/visits/mutation` は HTTP 200 だが Api_Result=16（診療科・保険組合せで受付登録済み / 二重登録疑い）
+    - `/api/orca/appointments/list` Api_Result=21（予約なし）、`/api/orca/visits/list` も患者ID空のレコードで Reception 行が生成されず（reception row not-found）
     - Charts: `ORCA 送信` は `patient_not_selected` でガード、/api21 未発火、診療終了は outcome=MISSING
     - 切り分け: Api_Result=16 は「同一受付日で同一診療科・保険組合せが既登録」の重複判定。受付取消（Request_Number=02）か、別患者/別診療科/別保険組合せで再試行が必要。
     - 証跡: `artifacts/webclient/e2e/20260204T211536Z/fullflow/`
   - RUN_ID=`20260204T212400Z` (2026-02-04)
     - QA_PATIENT_ID=00001 / physician=0001 で再試行
-    - `/orca/visits/mutation` が HTTP 500 (Session layer failure)
+    - `/api/orca/visits/mutation` が HTTP 500 (Session layer failure)
     - 切り分け: server-modernized ログで `/orca11/acceptmodv2` が HTTP 405（Trial で /api prefix 未付与）→ Session layer failure。`ORCA_API_PATH_PREFIX=/api` または `ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/api` を設定して再起動が必要。
     - Reception 行が生成されず、ORCA送信は `patient_not_selected`
     - 証跡: `artifacts/webclient/e2e/20260204T212400Z/fullflow/`
   - RUN_ID=`20260204T213722Z` (2026-02-04)
     - ORCA_API_PATH_PREFIX=/api を反映して再試行（MSW OFF / flagged-mock OFF / Vite 5173 → server-modernized）
-    - `/orca/visits/mutation` は HTTP 200（405/500 は解消）だが Api_Result=30（PUSH通知区分エラー）が継続
+    - `/api/orca/visits/mutation` は HTTP 200（405/500 は解消）だが Api_Result=30（PUSH通知区分エラー）が継続
     - Api_Result=16（二重登録疑い）は発生せず（重複受付回避できた）
     - Reception 行 not-found、Charts ORCA送信は dialog 表示だが /api21 は未捕捉（outcome=MISSING）
     - 切り分け:
@@ -827,39 +827,39 @@ Feature flag:
     - 証跡: `artifacts/webclient/e2e/20260204T213722Z/fullflow/`
   - RUN_ID=`20260204T215604Z` (2026-02-04)
     - Api_Result=30/15/03 の恒久修正後に再試行（VITE_SUPPRESS_ACCEPTANCE_PUSH=1）
-    - `/orca/visits/mutation` は Api_Result=00（受付登録完了）を確認
+    - `/api/orca/visits/mutation` は Api_Result=00（受付登録完了）を確認
     - ただし Reception 行 not-found のため Charts で患者未確定 → /api21 未発火（outcome=MISSING）
     - 証跡: `artifacts/webclient/e2e/20260204T215604Z/fullflow/`
   - RUN_ID=`20260204T220450Z` (2026-02-04)
     - local DB に patientId=00005 を seed 追加後の再試行
-    - `/orca/visits/mutation` は Api_Result=16（二重登録疑い）に戻る（当日受付済み）
+    - `/api/orca/visits/mutation` は Api_Result=16（二重登録疑い）に戻る（当日受付済み）
     - ORCA送信は `approval_locked` で /api21 未発火
     - 証跡: `artifacts/webclient/e2e/20260204T220450Z/fullflow/`
   - RUN_ID=`20260204T224200Z-accept-row-fix4` (2026-02-04)
     - QA_SKIP_SW=1 / QA_PATIENT_ID=00005
-    - `/orca/visits/mutation` が HTTP 500（text/plain, body empty）で受付失敗 → Reception row not-found 継続
+    - `/api/orca/visits/mutation` が HTTP 500（text/plain, body empty）で受付失敗 → Reception row not-found 継続
     - Charts ORCA送信後も `approval_locked` にはならず（dataDisabledReason=null を確認）
     - 証跡: `artifacts/webclient/e2e/20260204T224200Z-accept-row-fix4/fullflow/`
   - RUN_ID=`20260204T224700Z-accept-row-fix5` (2026-02-04)
     - QA_SKIP_SW=1 / QA_PATIENT_ID=01415
-    - `/orca/visits/mutation` が HTTP 500（text/plain, body empty）で受付失敗 → Reception row not-found 継続
+    - `/api/orca/visits/mutation` が HTTP 500（text/plain, body empty）で受付失敗 → Reception row not-found 継続
     - Charts ORCA送信後も `approval_locked` にはならず（dataDisabledReason=null を確認）
     - 証跡: `artifacts/webclient/e2e/20260204T224700Z-accept-row-fix5/fullflow/`
   - RUN_ID=`20260204T234800Z-fullflow-01417` (2026-02-04)
     - Vite proxy を `VITE_DEV_PROXY_TARGET=http://localhost:9080/openDolphin/resources` で再起動（proxy 500 を解消）
     - QA_SKIP_SW=1 / QA_PATIENT_ID=01417
-    - `/orca/visits/mutation` Api_Result=00 → Reception row found を確認
-    - `/orca21/medicalmodv2/outpatient` HTTP 200 を確認（/api21 発火）
+    - `/api/orca/visits/mutation` Api_Result=00 → Reception row found を確認
+    - `/api/orca/medical/outpatient` HTTP 200 を確認（/api21 発火）
     - 証跡: `artifacts/webclient/e2e/20260204T234800Z-fullflow-01417/fullflow/`
   - RUN_ID=`20260204T235200Z-fullflow-01418` (2026-02-04)
     - QA_SKIP_SW=1 / QA_PATIENT_ID=01418
-    - `/orca/visits/mutation` Api_Result=00 → Reception row found を確認
-    - `/orca21/medicalmodv2/outpatient` HTTP 200 を確認（/api21 発火）
+    - `/api/orca/visits/mutation` Api_Result=00 → Reception row found を確認
+    - `/api/orca/medical/outpatient` HTTP 200 を確認（/api21 発火）
     - 証跡: `artifacts/webclient/e2e/20260204T235200Z-fullflow-01418/fullflow/`
   - RUN_ID=`20260204T235700Z-fullflow-01417-dept02` (2026-02-04)
     - QA_SKIP_SW=1 / QA_PATIENT_ID=01417 / QA_DEPARTMENT_CODE=02
-    - `/orca/visits/mutation` Api_Result=00 → Reception row found を確認
-    - `/orca21/medicalmodv2/outpatient` HTTP 200 を確認（/api21 発火）
+    - `/api/orca/visits/mutation` Api_Result=00 → Reception row found を確認
+    - `/api/orca/medical/outpatient` HTTP 200 を確認（/api21 発火）
     - 証跡: `artifacts/webclient/e2e/20260204T235700Z-fullflow-01417-dept02/fullflow/`
   - RUN_ID=`20260205T055951Z-orca-trial-dummy` (2026-02-05)
     - ORCA Trial: `patientmodv2` でダミー患者登録を試行（保険あり）
@@ -872,23 +872,23 @@ Feature flag:
     - 証跡: `artifacts/orca-preprod/20260205T060500Z-orca-trial-dummy2/`
   - RUN_ID=`20260205T061000Z-fullflow-01449` (2026-02-05)
     - QA_SKIP_SW=1 / QA_PATIENT_ID=01449（Trial で登録した保険付きダミー患者）
-    - `/orca/visits/mutation` Api_Result=00 → Reception row found を確認
-    - `/orca21/medicalmodv2/outpatient` HTTP 200 を確認（/api21 発火）
+    - `/api/orca/visits/mutation` Api_Result=00 → Reception row found を確認
+    - `/api/orca/medical/outpatient` HTTP 200 を確認（/api21 発火）
     - 証跡: `artifacts/webclient/e2e/20260205T061000Z-fullflow-01449/fullflow/`
 
 ## 薬剤/処置マスタ検索の原因切り分け
 ### 対象 API
-- `GET /orca/master/generic-class`（薬効分類）
-- `GET /orca/master/youhou`（用法）
-- `GET /orca/master/material`（特定器材）
-- `GET /orca/master/kensa-sort`（検査分類）
-- `GET /orca/master/etensu`（点数/部位、旧 `/orca/tensu/etensu` は alias）
+- `GET /api/orca/master/generic-class`（薬効分類）
+- `GET /api/orca/master/youhou`（用法）
+- `GET /api/orca/master/material`（特定器材）
+- `GET /api/orca/master/kensa-sort`（検査分類）
+- `GET /api/orca/master/etensu`（点数/部位、旧 `/api/api/orca/tensu/etensu` は alias）
 - `GET /api/orca/master/*`（/api 付き alias）
 
-### 実測（外部ブロック: /orca/master/material 503 固定）
+### 実測（外部ブロック: /api/orca/master/material 503 固定）
 - cmd_20260206_15_sub_12 (2026-02-06)
   - 環境: web-client `http://127.0.0.1:5173`（docker, `VITE_DISABLE_MSW=1` 想定: `serviceWorker controlled=false`）/ server-modernized 健全
-  - 目的: 503 ブロック中の `/orca/master/material` が keyword を変えることで 200（items=[] or items>0）へ回復するかを 1〜3 回だけ再実測し、回復した場合は材料選択→`/orca/order/bundles` POST payload 反映まで実証する。
+  - 目的: 503 ブロック中の `/api/orca/master/material` が keyword を変えることで 200（items=[] or items>0）へ回復するかを 1〜3 回だけ再実測し、回復した場合は材料選択→`/api/orca/order/bundles` POST payload 反映まで実証する。
   - 結果: keyword を変えても **503 が継続**し、UI は「特定器材マスタを取得できませんでした」を表示。200 成功経路は観測できず（外部要因ブロックとして扱う）。
     - RUN_ID=`20260206T131817Z-cmd_20260206_15_sub_12-material-master-1` keyword=`包帯`
     - RUN_ID=`20260206T131921Z-cmd_20260206_15_sub_12-material-master-2` keyword=`シリンジ`
@@ -898,41 +898,41 @@ Feature flag:
     - `artifacts/webclient/e2e/20260206T131921Z-cmd_20260206_15_sub_12-material-master-2/material-master/`（同上）
     - `artifacts/webclient/e2e/20260206T132023Z-cmd_20260206_15_sub_12-material-master-3/material-master/`（同上）
   - 補足（恒久整備）:
-    - `web-client/scripts/qa-procedure-usage-material-master.mjs` を拡張し、材料検索結果が 200(items>0) で行が表示された場合は、材料行クリック→数量入力→保存（`POST /orca/order/bundles`）まで実行し、`order-bundles-posts.json` に POST payload を残せるようにした（本件は 503 継続のため未到達）。
+    - `web-client/scripts/qa-procedure-usage-material-master.mjs` を拡張し、材料検索結果が 200(items>0) で行が表示された場合は、材料行クリック→数量入力→保存（`POST /api/orca/order/bundles`）まで実行し、`order-bundles-posts.json` に POST payload を残せるようにした（本件は 503 継続のため未到達）。
 
 ### 切り分けチェックリスト
 1. UI 側の検索条件を確認する。`keyword` が空だと検索リクエスト自体が飛ばない。部位検索は放射線/リハビリ系オーダーのみ有効で、`category=2` が既定。
-2. ルーティング/Prefix を確認する。`VITE_ORCA_MODE=weborca` だと `/orca/master/*` は `/api/orca/master/*` に書き換わり、Trial では 404/502 になるため server-modernized 経由に切り替える。
-3. 認証を確認する。`/orca/master/*` は `userName/password` ヘッダ or Basic 認証が必須。`VITE_ORCA_MASTER_USER/PASSWORD` と server 側の `ORCA_MASTER_BASIC_USER/PASSWORD` が一致しているか確認する。
+2. ルーティング/Prefix を確認する。`VITE_ORCA_MODE=weborca` だと `/api/orca/master/*` は `/api/orca/master/*` に書き換わり、Trial では 404/502 になるため server-modernized 経由に切り替える。
+3. 認証を確認する。`/api/orca/master/*` は `userName/password` ヘッダ or Basic 認証が必須。`VITE_ORCA_MASTER_USER/PASSWORD` と server 側の `ORCA_MASTER_BASIC_USER/PASSWORD` が一致しているか確認する。
 4. ORCA DB 接続を確認する。`ORCADS` JNDI が解決できない場合は 503（`MASTER_*_UNAVAILABLE`）になる。server-modernized ログの `ORCA datasource lookup failure`/`Failed to load ORCA-05 * master` を確認する。
 5. データ欠落を確認する。Trial や未シード環境では 503/0件が起きる。レスポンス `meta` の `missingMaster/fallbackUsed/dataSource` と `runId/traceId` を確認する。
 6. 旧ビルドの 404/503 を疑う。`/orca/master` の Path 分離と etensu 列名修正（2026-01-27 反映済み）が未適用だと 404/503 が再発する。
 7. 証跡は Network/HAR と `runId/traceId` を保存し、`docs/web-client/operations/orca-master-bodypart-trial-issue-20260121.md` と突合する。
 
-## SOAP保存（/orca/chart/subjectives） upstream 未応答の切り分け
+## SOAP保存（/api/orca/chart/subjectives） upstream 未応答の切り分け
 - RUN_ID=`20260204T132521Z` (2026-02-04)
 - Vite proxy 先は `VITE_DEV_PROXY_TARGET=http://localhost:9080/openDolphin/resources` を確認（`web-client/.env.local`）。
 - 9080 への直接アクセス（`/openDolphin/resources/dolphin`）が 5s でタイムアウトし応答なし。
-- `POST /openDolphin/resources/orca/chart/subjectives` も同様にタイムアウト（上記と同じ 9080 経路）。
+- `POST /openDolphin/resources/api/orca/chart/subjectives` も同様にタイムアウト（上記と同じ 9080 経路）。
 - コンテナ内部 (`docker exec`) から `localhost:8080` でもタイムアウトし、server-modernized HTTP リスナー自体が応答しない状態を確認。
 - 証跡: `artifacts/webclient/subjectives-upstream/20260204T132521Z/curl-9080.log`
 - 追加対応案:
   - server-modernized の再起動/再作成で HTTP リスナーの復旧を確認（`/openDolphin/resources/dolphin` が即時 200/401 を返すか）。
   - WildFly の bind/listener 設定とコンテナ起動ログを確認（起動完了ログ/HTTP listener 有無）。
 
-## SOAP保存（/orca/chart/subjectives） FK制約違反の恒久修正
+## SOAP保存（/api/orca/chart/subjectives） FK制約違反の恒久修正
 - 事象: `d_document.karte_id` が `public.d_karte` を参照する FK で失敗（`fk6s9ifrm58t6jr9qamv7ey83lm` / `fk_d_module_karte`）。
 - 恒久修正:
   - `OrcaSubjectiveResource` で `patientServiceBean.ensureKarteByPatientPk` を呼び、カルテ未生成を事前解消。
   - `V0234__fix_fk_schema_opendolphin.sql` を追加し、`opendolphin` スキーマの `d_document` / `d_module` FK を `opendolphin.d_karte` / `opendolphin.d_users` に寄せる（`NOT VALID` で既存不整合を温存しつつ新規挿入を保護）。
 - RUN_ID=`20260204T141203Z-soap-fk-fix` (2026-02-04)
-  - `POST /openDolphin/resources/orca/chart/subjectives` が 200 / `apiResult=00` を返却。
+  - `POST /openDolphin/resources/api/orca/chart/subjectives` が 200 / `apiResult=00` を返却。
   - `d_document` に `title=主訴` のレコードが追加されることを DB で確認。
   - 証跡: `artifacts/verification/20260204T141203Z-soap-fk-fix/soap-persistence/`（`post-subjectives*.json` / `db-document-latest.txt` / `server-modernized.log`）
 
-## SOAP保存（/orca/chart/subjectives） UI経由回帰確認
+## SOAP保存（/api/orca/chart/subjectives） UI経由回帰確認
 - RUN_ID=`20260204T141740Z-soap-ui-regression` (2026-02-04)
-  - Web-client UI（Charts > SOAP記載）から保存を実行し、`/orca/chart/subjectives` が 200。
+  - Web-client UI（Charts > SOAP記載）から保存を実行し、`/api/orca/chart/subjectives` が 200。
   - `d_document` に `title=主訴` のレコードが追加されることを DB で確認。
   - 証跡:
     - `artifacts/verification/20260204T141740Z-soap-ui-regression/soap-persistence/qa-soap-persistence.md`
@@ -940,7 +940,7 @@ Feature flag:
     - `artifacts/verification/20260204T141740Z-soap-ui-regression/soap-persistence/db-document-latest.txt`
 - RUN_ID=`20260204T212600Z-soap-ui-restart-fixed` (2026-02-05)
   - `setup-modernized-env.sh` 再起動直後に再検証（`ORCA_MODE=server` / `VITE_DEV_PROXY_TARGET=http://localhost:9080/openDolphin/resources`）。
-  - Web-client UI から `/orca/chart/subjectives` が 200 で保存完了（server-modernized 側で `d_document` / `d_module` INSERT を確認）。
+  - Web-client UI から `/api/orca/chart/subjectives` が 200 で保存完了（server-modernized 側で `d_document` / `d_module` INSERT を確認）。
   - SOAP履歴の再表示は NG（履歴 count=0）だが、保存自体は成功。
   - 証跡:
     - `artifacts/verification/20260204T212600Z-soap-ui-restart-fixed/soap-persistence/qa-soap-persistence.md`
@@ -1054,7 +1054,7 @@ Feature flag:
 ### NOT VALID 制約のリリース注意点
 - リリース手順（最小）:
   1. `V0234__fix_fk_schema_opendolphin.sql` を適用（FK は NOT VALID のため即時ロック影響を最小化）。
-  2. 監視: `/orca/chart/subjectives` などの保存系が 500 になっていないかログ/監査を確認。
+  2. 監視: `/api/orca/chart/subjectives` などの保存系が 500 になっていないかログ/監査を確認。
   3. 既存データ補正（`public`/`opendolphin` の重複・不整合を整理）。
   4. メンテナンス時間に `VALIDATE CONSTRAINT` を実行し完全適用。
 - 影響範囲:
@@ -1103,21 +1103,21 @@ Feature flag:
 - 証跡: RUN_ID `20260204T141203Z-soap-fk-fix`（API保存 200 + DB 追記）、`20260204T141740Z-soap-ui-regression`（UI保存 200 + DB 追記）。
 - NOT VALID 注意点: 既存データは検証されず新規のみ保護。補正後に `VALIDATE CONSTRAINT` を実行して完全適用。
 
-## /orca/visits/mutation 500 改善（Session layer failure 対策）
+## /api/orca/visits/mutation 500 改善（Session layer failure 対策）
 - 修正内容1: `RestExceptionMapper` が `SessionServiceException` の cause を遡り `OrcaGatewayException` を検知し、400/502/503 を返すように変更（`settings`/`missing required fields` などは 400/503 へ振り分け）。
 - 修正内容2: `Session layer failure` メッセージは ORCA 由来メッセージに置換。
-- 影響範囲: `OrcaGatewayException` 起因の ORCA ラッパー系 API（`/orca/visits/mutation` など）が 500 → 適切な 400/502/503 で返る。
+- 影響範囲: `OrcaGatewayException` 起因の ORCA ラッパー系 API（`/api/orca/visits/mutation` など）が 500 → 適切な 400/502/503 で返る。
 - 再検証RUN_ID: `20260205T225518Z-orca-visits-mutation-500-fix`
 - 再検証1: `requestNumber=99`（不正値）→ HTTP 400 (`orca_gateway_error`、`field=requestNumber`) を確認。
 - 再検証2: `requestNumber=01`（正常）→ HTTP 200 / Api_Result=00 を確認。
 - 証跡: `artifacts/verification/20260205T225518Z-orca-visits-mutation-500-fix/mutate_visit_success.json`,
   `artifacts/verification/20260205T225518Z-orca-visits-mutation-500-fix/mutate_visit_invalid_request.json`
 - 追加再検証RUN_ID: `20260205T233121Z-orca-visit-order-500-recheck` (2026-02-06)
-  - `/orca/visits/mutation`: `requestNumber=01` + patientId=`00006` → HTTP 200 / Api_Result=00 を確認
-  - `/orca/visits/mutation`: `requestNumber=99` → HTTP 400 (`orca_gateway_error`) を確認
-  - `/orca/order/bundles` GET: patientId=`NO_KARTE_0001` → 404 `karte_not_found`（karte 未作成検証用に患者を追加）
-  - `/orca/order/bundles` GET: patientId=`01415` → HTTP 200（recordsReturned=0）
-  - `/orca/order/bundles` POST: patientId=`01415` → HTTP 200（createdDocumentIds=9136）
+  - `/api/orca/visits/mutation`: `requestNumber=01` + patientId=`00006` → HTTP 200 / Api_Result=00 を確認
+  - `/api/orca/visits/mutation`: `requestNumber=99` → HTTP 400 (`orca_gateway_error`) を確認
+  - `/api/orca/order/bundles` GET: patientId=`NO_KARTE_0001` → 404 `karte_not_found`（karte 未作成検証用に患者を追加）
+  - `/api/orca/order/bundles` GET: patientId=`01415` → HTTP 200（recordsReturned=0）
+  - `/api/orca/order/bundles` POST: patientId=`01415` → HTTP 200（createdDocumentIds=9136）
   - 証跡: `artifacts/verification/20260205T233121Z-orca-visit-order-500-recheck/`（status/headers/body/json）
 
 ### server-modernized 再ビルド・再起動ゲート報告（足軽3）
@@ -1131,7 +1131,7 @@ Feature flag:
 - 確認方法:
   - `docker inspect`（status/health/startedAt）
   - `curl http://localhost:9080/actuator/health` -> 200
-  - 主要 ORCA エンドポイント（`/openDolphin/resources/orca/master/etensu`, `/openDolphin/resources/orca/order/bundles`）は認証要求を返すこと（401）を確認（経路到達確認）
+  - 主要 ORCA エンドポイント（`/openDolphin/resources/api/orca/master/etensu`, `/openDolphin/resources/api/orca/order/bundles`）は認証要求を返すこと（401）を確認（経路到達確認）
 - 証跡:
   - `artifacts/verification/20260206T045948Z-cmd_20260206_04_sub_1-startup/server-modernized-startup-check.txt`
 
@@ -1159,8 +1159,8 @@ Feature flag:
     - `artifacts/verification/20260207T083550Z-cmd_20260207_10_sub_1-manual-smoke/manual-smoke/mvp2/steps.md`
 - 結果（要点, notes/summary準拠）:
   - baseline: flags off で MVP UI は露出しない（期待通り）。
-  - mvp1: REC/ STAMP は露出確認。ORDER は dataset 依存で `/orca/order/bundles` 未観測のため smoke 不完全（follow-up 要）。
-  - mvp2: STAMP Phase2（copy + order-edit導線）と ORDER entity selector + `/orca/order/bundles` 観測を確認。
+  - mvp1: REC/ STAMP は露出確認。ORDER は dataset 依存で `/api/orca/order/bundles` 未観測のため smoke 不完全（follow-up 要）。
+  - mvp2: STAMP Phase2（copy + order-edit導線）と ORDER entity selector + `/api/orca/order/bundles` 観測を確認。
 
 ### 画像アップロード PhaseA（web-client / MSW）
 - 目的: Charts ユーティリティに「画像/スキャン」を追加し、画像のアップロード -> 一覧反映 -> SOAP へのリンク貼付までの導線を最小で成立させる。
@@ -1221,7 +1221,7 @@ Feature flag:
   - `artifacts/verification/20260207T092856Z-cmd_20260207_11_sub_2-mobile-patient-pick-phase1/mobile-patient-pick-phase1/screenshots/mobile-patient-picker-phase1.png`
 - Phase1 要点（notes 準拠）:
   - 当日候補: source=`GET /api/orca/queue`（Receptionでも利用済み。`queue[].patientId` を候補にする）
-  - 手入力: digits-only、最大12桁、6桁未満は0埋め、存在確認は `POST /orca/patients/local-search`（`fetchPatients({ keyword })`）の exact match で判定
+  - 手入力: digits-only、最大12桁、6桁未満は0埋め、存在確認は `POST /api/orca/patients/local-search`（`fetchPatients({ keyword })`）の exact match で判定
   - 障害時: fetch error はメッセージ + retry
   - 緊急導線: 存在確認をスキップする「そのまま選択」（emergency-only）
 - 合流点（mobile UI側）:

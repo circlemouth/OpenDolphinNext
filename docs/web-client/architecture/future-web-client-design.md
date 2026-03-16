@@ -46,8 +46,8 @@
 | ヘッダー | 患者基本情報、受付ID、保険/自費トグル、`dataSourceTransition` pill | `AuthService` flags | Reception のフィルタを保持。 |
 | アクションバー | 診療終了、ORCA 送信、Draft 保存、キャンセル | 成功/失敗を telemetry + audit に送信 | ORCA 送信は missingMaster=false でのみ有効。 |
 | DocumentTimeline | バナー（ToneBanner）、タイムライン（受付→診療→ORCA キュー）、`missingMaster` highlight | `aria-live` toneに応じ切替 | timeline entry は `data-run-id` 付き。 |
-| OrcaSummary | 予約/外来フラグから取得したサマリ、`dataSourceTransition` 説明、`cacheHit`/`missingMaster` バッジ | `/orca/appointments/list/*` / `/orca21/medicalmodv2/outpatient` | fallbackUsed=true で警告を表示。 |
-| PatientsTab | 患者一覧/検索、タブ: 基本情報/保険/過去受診、右ペインに編集フォーム | `/orca12/patientmodv2/outpatient` | 編集後は Administration に配信。missingMaster 時は編集をブロック。 |
+| OrcaSummary | 予約/外来フラグから取得したサマリ、`dataSourceTransition` 説明、`cacheHit`/`missingMaster` バッジ | `/api/orca/appointments/list/*` / `/api/orca/medical/outpatient` | fallbackUsed=true で警告を表示。 |
+| PatientsTab | 患者一覧/検索、タブ: 基本情報/保険/過去受診、右ペインに編集フォーム | `/api/orca/patient/mutation` | 編集後は Administration に配信。missingMaster 時は編集をブロック。 |
 
 #### 2.4.1 外来カルテ作業台（ブラッシュアップ仕様の反映）
 現行設計の Charts を「外来カルテ作業台」として拡張し、3カラム＋右固定メニューで運用効率を最大化する。
@@ -80,7 +80,7 @@
 | --- | --- | --- | --- |
 | 左メニュー | フィルタ（診療科/担当医/属性）、保存済みビュー | localStorage + URL | Reception からの遷移でフィルタ復元。 |
 | 一覧 | 患者ID、氏名、保険/自費、次回予約、未紐付ステータス、アクション（編集/Receptionへ戻る） | `status-badge` reuse | 未紐付=warning でトーストも表示。 |
-| 右詳細 | 編集フォーム、監査ログビュー、ORCA 反映ステータス | `/orca12/patientmodv2/outpatient` | 保存時に `auditEvent` と `telemetry` へ runId を送信。 |
+| 右詳細 | 編集フォーム、監査ログビュー、ORCA 反映ステータス | `/api/orca/patient/mutation` | 保存時に `auditEvent` と `telemetry` へ runId を送信。 |
 
 ### 2.6 Administration（設定）
 | エリア | 要素/機能 | データ・イベント | 備考 |

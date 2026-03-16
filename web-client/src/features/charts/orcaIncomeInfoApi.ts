@@ -1,6 +1,5 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { getObservabilityMeta } from '../../libs/observability/observability';
-import { checkRequiredTags, escapeXml, extractOrcaXmlMeta, isOrcaApiResultOk, parseXmlDocument, readXmlText } from '../../libs/xml/xmlUtils';
 
 export type IncomeInfoEntry = {
   performDate?: string;
@@ -16,89 +15,88 @@ export type IncomeInfoEntry = {
   mlSmoney?: number;
 };
 
+export type IncomeInfoRequest = {
+  patientId: string;
+  performMonth?: string;
+  performYear?: string;
+};
+
 export type IncomeInfoResponse = {
   ok: boolean;
   apiOk?: boolean;
   status: number;
-  rawXml: string;
   apiResult?: string;
   apiResultMessage?: string;
   informationDate?: string;
   informationTime?: string;
   entries: IncomeInfoEntry[];
-  missingTags?: string[];
   runId?: string;
   traceId?: string;
   error?: string;
 };
 
-const ORCA_INCOME_INFO_PATH = '/orca/incomeinfv2';
+const ORCA_INCOME_INFO_PATH = '/api/orca/chart-support/income-info';
 
-const parseOrcaNumber = (value?: string) => {
-  if (!value) return undefined;
-  const cleaned = value.replace(/\s+/g, '');
-  if (!cleaned) return undefined;
-  const parsed = Number(cleaned);
-  return Number.isNaN(parsed) ? undefined : parsed;
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+
+const asString = (value: unknown) => (typeof value === 'string' ? value : undefined);
+
+const asNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  return undefined;
 };
 
-export const buildIncomeInfoRequestXml = (params: { patientId: string; performMonth?: string; performYear?: string }) => {
-  return [
-    '<data>',
-    '  <private_objects>',
-    `    <Patient_ID>${escapeXml(params.patientId)}</Patient_ID>`,
-    `    <Perform_Month>${escapeXml(params.performMonth ?? '')}</Perform_Month>`,
-    `    <Perform_Year>${escapeXml(params.performYear ?? '')}</Perform_Year>`,
-    '  </private_objects>',
-    '</data>',
-  ].join('\n');
+const normalizeEntry = (value: unknown): IncomeInfoEntry | null => {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    performDate: asString(record.performDate),
+    performEndDate: asString(record.performEndDate),
+    inOut: asString(record.inOut),
+    invoiceNumber: asString(record.invoiceNumber),
+    departmentName: asString(record.departmentName),
+    insuranceCombinationNumber: asString(record.insuranceCombinationNumber),
+    acMoney: asNumber(record.acMoney),
+    icMoney: asNumber(record.icMoney),
+    aiMoney: asNumber(record.aiMoney),
+    oeMoney: asNumber(record.oeMoney),
+    mlSmoney: asNumber(record.mlSmoney),
+  };
 };
 
-const parseIncomeEntries = (doc: Document | null): IncomeInfoEntry[] => {
-  if (!doc) return [];
-  return Array.from(doc.querySelectorAll('Income_Information_child')).map((node) => ({
-    performDate: readXmlText(node, 'Perform_Date'),
-    performEndDate: readXmlText(node, 'Perform_End_Date'),
-    inOut: readXmlText(node, 'InOut'),
-    invoiceNumber: readXmlText(node, 'Invoice_Number'),
-    departmentName: readXmlText(node, 'Department_Name'),
-    insuranceCombinationNumber: readXmlText(node, 'Insurance_Combination_Number'),
-    acMoney: parseOrcaNumber(readXmlText(node, 'Cd_Information > Ac_Money')),
-    icMoney: parseOrcaNumber(readXmlText(node, 'Cd_Information > Ic_Money')),
-    aiMoney: parseOrcaNumber(readXmlText(node, 'Cd_Information > Ai_Money')),
-    oeMoney: parseOrcaNumber(readXmlText(node, 'Cd_Information > Oe_Money')),
-    mlSmoney: parseOrcaNumber(readXmlText(node, 'Cd_Information > Ml_Smoney')),
-  }));
-};
+export const buildIncomeInfoRequest = (params: IncomeInfoRequest): IncomeInfoRequest => ({
+  patientId: params.patientId,
+  performMonth: params.performMonth,
+  performYear: params.performYear,
+});
 
-export async function fetchOrcaIncomeInfoXml(requestXml: string): Promise<IncomeInfoResponse> {
+export async function fetchOrcaIncomeInfo(request: IncomeInfoRequest): Promise<IncomeInfoResponse> {
   const runId = getObservabilityMeta().runId;
   const response = await httpFetch(ORCA_INCOME_INFO_PATH, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/xml; charset=UTF-8',
-      Accept: 'application/xml',
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
     },
-    body: requestXml,
+    body: JSON.stringify(request),
   });
-  const rawXml = await response.text();
-  const { doc, error } = parseXmlDocument(rawXml);
-  const meta = extractOrcaXmlMeta(doc);
-  const apiOk = isOrcaApiResultOk(meta.apiResult);
-  const requiredCheck = checkRequiredTags(doc, ['Api_Result']);
+  const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  const entries = Array.isArray(json.entries)
+    ? json.entries.map(normalizeEntry).filter((entry): entry is IncomeInfoEntry => entry !== null)
+    : [];
+
   return {
-    ok: response.ok && !error,
-    apiOk,
+    ok: Boolean(json.ok ?? response.ok),
+    apiOk: typeof json.apiOk === 'boolean' ? json.apiOk : undefined,
     status: response.status,
-    rawXml,
-    apiResult: meta.apiResult,
-    apiResultMessage: meta.apiResultMessage,
-    informationDate: meta.informationDate,
-    informationTime: meta.informationTime,
-    entries: parseIncomeEntries(doc),
-    missingTags: requiredCheck.missingTags,
-    runId: getObservabilityMeta().runId ?? runId,
-    traceId: getObservabilityMeta().traceId,
-    error,
+    apiResult: asString(json.apiResult),
+    apiResultMessage: asString(json.apiResultMessage),
+    informationDate: asString(json.informationDate),
+    informationTime: asString(json.informationTime),
+    entries,
+    runId: asString(json.runId) ?? getObservabilityMeta().runId ?? runId,
+    traceId: asString(json.traceId) ?? getObservabilityMeta().traceId,
+    error: asString(json.error),
   };
 }

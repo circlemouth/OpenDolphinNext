@@ -11,6 +11,6 @@ const buildTextResponse = (text: string, status = 200) =>
 const deptInfoCsv = ['01 内科', '02 外科', '03 小児科'].join(',');
 
 export const orcaDeptInfoHandlers = [
-  http.get('/orca/deptinfo', () => buildTextResponse(deptInfoCsv)),
+  http.get('/api/orca/deptinfo', () => buildTextResponse(deptInfoCsv)),
   http.get('/api/orca/deptinfo', () => buildTextResponse(deptInfoCsv)),
 ];

@@ -58,7 +58,7 @@ describe('fetchOrcaHokenja', () => {
     expect(result.items[0]?.payerCode).toBe('06123456');
     expect(result.totalCount).toBe(1);
     expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/orca/master/hokenja?keyword=%E6%9D%B1%E4%BA%AC&effective=20260309&page=2&size=10&pref=13',
+      '/api/orca/master/hokenja?keyword=%E6%9D%B1%E4%BA%AC&effective=20260309&page=2&size=10&pref=13',
       expect.objectContaining({ notifySessionExpired: false }),
     );
   });

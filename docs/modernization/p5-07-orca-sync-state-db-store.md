@@ -12,7 +12,7 @@
 - 初期化時に `d_orca_patient_sync_state` テーブルの存在を自己確認（`CREATE TABLE IF NOT EXISTS`）。
 - Flyway migration を追加（canonical/mirror 同期）。
   - `server-modernized/tools/flyway/sql/V0301__orca_patient_sync_state_store.sql`
-  - `server-modernized/src/main/resources/db/migration/V0301__orca_patient_sync_state_store.sql`
+  - runtime classpath へは build で生成コピー
 - baseline テストを migration 0301 に追従。
   - `FreshSchemaBaselineTest` の適用バージョン期待値を `0301` へ更新
   - 新テーブル存在確認を追加
@@ -20,7 +20,7 @@
 ## 変更ファイル
 - `server-modernized/src/main/java/open/dolphin/orca/sync/OrcaPatientSyncStateStore.java`
 - `server-modernized/tools/flyway/sql/V0301__orca_patient_sync_state_store.sql`
-- `server-modernized/src/main/resources/db/migration/V0301__orca_patient_sync_state_store.sql`
+- `server-modernized/pom.xml`
 - `server-modernized/src/test/java/open/dolphin/db/FreshSchemaBaselineTest.java`
 
 ## 検証

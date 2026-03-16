@@ -45,7 +45,7 @@ class OrcaMedicalResourceTest extends RuntimeDelegateTestSupport {
                         return "F001:doctor01";
                     }
                     if ("getRequestURI".equals(name)) {
-                        return "/orca/medical/records";
+                        return "/api/orca/medical/records";
                     }
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         return "trace-medical";

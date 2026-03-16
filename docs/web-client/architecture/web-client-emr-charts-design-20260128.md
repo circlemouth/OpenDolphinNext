@@ -135,7 +135,7 @@
 
 ### 3.6 右カラム（ORCAサマリ/原本/記録）
 - **患者メモ**: 受付/患者情報からの短文メモ
-- **OrcaSummary**: `/orca21/medicalmodv2/outpatient` から外来サマリ取得
+- **OrcaSummary**: `/api/orca/medical/outpatient` から外来サマリ取得
 - **OrcaOriginalPanel**: diseaseget/medicalget/tmedicalget/ diseasev3/medicalmod の XML 原本操作
 - **MedicalOutpatientRecordPanel**: ORCA取得結果の要約
 
@@ -202,26 +202,26 @@
 ### 7.1 受付/送信/キュー
 | 目的 | エンドポイント | method | 主な入力 | 主な出力/扱い |
 | --- | --- | --- | --- | --- |
-| 受付一覧 | `/orca/appointments/list` / `/orca/visits/list` | POST (JSON) | date/keyword/department/physician | 受付/予約リストの基礎データ |
+| 受付一覧 | `/api/orca/appointments/list` / `/api/orca/visits/list` | POST (JSON) | date/keyword/department/physician | 受付/予約リストの基礎データ |
 | ORCAキュー | `/api/orca/queue` | GET | patientId, retry=1 | 送信状況の可視化・再送導線 |
-| ORCAイベント | `/api01rv2/pusheventgetv2` | POST (XML) | Base_Date, Event, User | PushEvent の一覧と通知 |
+| ORCAイベント | `/api/orca/pusheventgetv2` | POST (XML) | Base_Date, Event, User | PushEvent の一覧と通知 |
 
 ### 7.2 ORCA 送信/会計
 | 目的 | エンドポイント | method | 主な入力 | 主な出力/扱い |
 | --- | --- | --- | --- | --- |
-| 診療送信 | `/api21/medicalmodv2` | POST (XML) | Patient_ID, Perform_Date, Dept | Api_Result / Invoice_Number / Data_Id |
-| 診療終了 | `/api21/medicalmodv23` | POST (XML) | Patient_ID, LastVisit_Date | Api_Result |
-| 会計情報 | `/api01rv2/incomeinfv2` | POST (XML) | Patient_ID, Perform_Month | 請求情報の補助 |
+| 診療送信 | `/api/orca/chart-support/medical-mod-v2` | POST (XML) | Patient_ID, Perform_Date, Dept | Api_Result / Invoice_Number / Data_Id |
+| 診療終了 | `/api/orca/chart-support/medical-mod-v23` | POST (XML) | Patient_ID, LastVisit_Date | Api_Result |
+| 会計情報 | `/api/orca/chart-support/income-info` | POST (XML) | Patient_ID, Perform_Month | 請求情報の補助 |
 
 ### 7.3 病名/オーダー/マスタ
 | 目的 | エンドポイント | method | 主な入力 | 主な出力/扱い |
 | --- | --- | --- | --- | --- |
-| 病名取得 | `/orca/disease/import/{patientId}` | GET | from/to/activeOnly | 病名一覧（JSON） |
-| 病名更新 | `/orca/disease` | POST (JSON) | operations[] | create/update/delete |
+| 病名取得 | `/api/orca/disease/import/{patientId}` | GET | from/to/activeOnly | 病名一覧（JSON） |
+| 病名更新 | `/api/orca/disease` | POST (JSON) | operations[] | create/update/delete |
 | 病名原本 | `/api01rv2/diseasegetv2` | POST (XML) | Patient_ID, Base_Date | ORCA原本参照 |
 | 病名XML更新 | `/orca22/diseasev3` | POST (XML) | XML payload | ORCA原本更新 |
-| オーダー束 | `/orca/order/bundles` | GET/POST | patientId, entity | bundle CRUD |
-| マスタ検索 | `/orca/master/*` | GET | keyword/effective | generic/youhou/material/etensu など |
+| オーダー束 | `/api/orca/order/bundles` | GET/POST | patientId, entity | bundle CRUD |
+| マスタ検索 | `/api/orca/master/*` | GET | keyword/effective | generic/youhou/material/etensu など |
 | 薬剤詳細補正 | `/api01rv2/medicationgetv2` | POST (XML) | Request_Code | コード補正/選択候補 |
 | 禁忌チェック | `/api01rv2/contraindicationcheckv2` | POST (XML) | medication codes | 禁忌/相互作用 |
 | 症状詳記 | `/api01rv2/subjectiveslstv2` / `/orca25/subjectivesv2` | POST (XML) | Patient_ID, Perform_Date | 一覧取得/登録 |

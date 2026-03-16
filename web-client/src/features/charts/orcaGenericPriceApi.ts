@@ -38,7 +38,7 @@ export async function fetchOrcaGenericPrice(params: { srycd: string; effective?:
   }
   const meta = ensureObservabilityMeta();
   const response = await httpFetch(
-    `/orca/master/generic-price?srycd=${encodeURIComponent(srycd)}&effective=${encodeURIComponent(normalizeYmd(params.effective))}`,
+    `/api/orca/master/generic-price?srycd=${encodeURIComponent(srycd)}&effective=${encodeURIComponent(normalizeYmd(params.effective))}`,
     { notifySessionExpired: false },
   );
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '最低薬価の取得に失敗しました。' });

@@ -78,18 +78,18 @@ const isMswRuntimeEnabled = () => {
 };
 
 const buildAppointmentCandidates = (mswEnabled: boolean): Array<{ path: string; source: ResolveMasterSource }> => [
-  { path: '/orca/appointments/list', source: 'server' as ResolveMasterSource },
-  ...(mswEnabled ? [{ path: '/orca/appointments/list/mock', source: 'mock' as ResolveMasterSource }] : []),
+  { path: '/api/orca/appointments/list', source: 'server' as ResolveMasterSource },
+  ...(mswEnabled ? [{ path: '/api/orca/appointments/list/mock', source: 'mock' as ResolveMasterSource }] : []),
 ];
 
 const buildVisitCandidates = (mswEnabled: boolean): Array<{ path: string; source: ResolveMasterSource }> => [
-  { path: '/orca/visits/list', source: 'server' as ResolveMasterSource },
-  ...(mswEnabled ? [{ path: '/orca/visits/list/mock', source: 'mock' as ResolveMasterSource }] : []),
+  { path: '/api/orca/visits/list', source: 'server' as ResolveMasterSource },
+  ...(mswEnabled ? [{ path: '/api/orca/visits/list/mock', source: 'mock' as ResolveMasterSource }] : []),
 ];
 
 const buildVisitMutationCandidates = (mswEnabled: boolean): Array<{ path: string; source: ResolveMasterSource }> => [
-  { path: '/orca/visits/mutation', source: 'server' as ResolveMasterSource },
-  ...(mswEnabled ? [{ path: '/orca/visits/mutation/mock', source: 'mock' as ResolveMasterSource }] : []),
+  { path: '/api/orca/visits/mutation', source: 'server' as ResolveMasterSource },
+  ...(mswEnabled ? [{ path: '/api/orca/visits/mutation/mock', source: 'mock' as ResolveMasterSource }] : []),
 ];
 
 const preferredSource = (mswEnabled: boolean): ResolveMasterSource | undefined => (mswEnabled ? 'mock' : 'server');
@@ -115,7 +115,7 @@ const acceptancePushDisabledByEnv = isTruthy(
 export const shouldSuppressAcceptancePush = acceptancePushDisabledByEnv || isWebOrcaMode || isWebOrcaHost;
 export const resolveAcceptancePush = (value?: string) =>
   shouldSuppressAcceptancePush ? undefined : value;
-// CLAIM 廃止方針により常時 OFF（/orca/claim/outpatient は撤去済み）
+// CLAIM 廃止方針により常時 OFF（/api/orca/claim/outpatient は撤去済み）
 export const isClaimOutpatientEnabled = () => false;
 
 const CLAIM_OUTPATIENT_DISABLED_PAYLOAD: ClaimOutpatientPayload = {

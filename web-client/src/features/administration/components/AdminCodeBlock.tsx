@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { copyTextToClipboard } from '../../../libs/observability/runIdCopy';
 import { useAppToast } from '../../../libs/ui/appToast';
 
-type AdminCodeBlockLanguage = 'json' | 'xml' | 'text';
+type AdminCodeBlockLanguage = 'json' | 'text';
 
 type AdminCodeBlockProps = {
   value?: string;
@@ -13,39 +13,9 @@ type AdminCodeBlockProps = {
   className?: string;
 };
 
-const formatXml = (raw: string) => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(raw, 'application/xml');
-  if (doc.querySelector('parsererror')) {
-    throw new Error('XML parse error');
-  }
-  const serialized = new XMLSerializer().serializeToString(doc);
-  const lines = serialized.replace(/(>)(<)(\/*)/g, '$1\n$2$3').split('\n');
-  let indent = 0;
-  const formatted = lines
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      if (line.startsWith('</')) {
-        indent = Math.max(0, indent - 1);
-      }
-      const prefix = '  '.repeat(indent);
-      const next = `${prefix}${line}`;
-      const opens = /^<[^!?][^>]*[^/]>$/.test(line);
-      if (opens) {
-        indent += 1;
-      }
-      return next;
-    });
-  return formatted.join('\n');
-};
-
 const prettyValue = (value: string, language: AdminCodeBlockLanguage) => {
   if (language === 'json') {
     return JSON.stringify(JSON.parse(value), null, 2);
-  }
-  if (language === 'xml') {
-    return formatXml(value);
   }
   return value;
 };

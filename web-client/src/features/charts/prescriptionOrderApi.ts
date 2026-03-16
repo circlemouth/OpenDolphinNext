@@ -718,7 +718,7 @@ const fetchPrescriptionOrderBase = async (params: {
 }): Promise<PrescriptionOrderFetchResult> => {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
-  const response = await httpFetch(`/orca/prescription-orders?${buildPrescriptionOrderQuery(params)}`);
+  const response = await httpFetch(`/api/orca/prescription-orders?${buildPrescriptionOrderQuery(params)}`);
   const parsed = await parseOrcaApiResponse(response, {
     fallbackMessage: '処方オーダー情報の取得に失敗しました。',
   });
@@ -841,7 +841,7 @@ export async function savePrescriptionOrder(params: {
     ...params.order,
     patientId: params.patientId,
   });
-  const response = await httpFetch('/orca/prescription-orders', {
+  const response = await httpFetch('/api/orca/prescription-orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

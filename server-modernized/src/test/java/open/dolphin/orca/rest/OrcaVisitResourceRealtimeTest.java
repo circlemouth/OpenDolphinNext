@@ -77,7 +77,7 @@ class OrcaVisitResourceRealtimeTest {
                         case "getRemoteUser":
                             return remoteUser;
                         case "getRequestURI":
-                            return "/orca/visits/mutation";
+                            return "/api/orca/visits/mutation";
                         case "getRemoteAddr":
                             return "127.0.0.1";
                         case "getAttribute":

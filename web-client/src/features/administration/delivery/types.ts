@@ -3,8 +3,7 @@ export type DeliverySection =
   | 'connection'
   | 'config'
   | 'queue'
-  | 'master-health'
-  | 'medicalset'
+  | 'operations'
   | 'debug';
 
 export type DeliverySectionItem = {
@@ -18,7 +17,6 @@ export const DELIVERY_SECTION_ITEMS: DeliverySectionItem[] = [
   { id: 'connection', label: '接続', description: 'WebORCA接続設定' },
   { id: 'config', label: '配信設定', description: '保存して配信' },
   { id: 'queue', label: '配信キュー', description: 'ORCA queue監視・操作' },
-  { id: 'master-health', label: 'マスタ/ヘルス', description: 'master同期・system health' },
-  { id: 'medicalset', label: '診療セット', description: 'medicalsetv2検索' },
-  { id: 'debug', label: '診断/デバッグ', description: 'XMLプロキシ/内製ラッパー/Legacy/Touch' },
+  { id: 'operations', label: '運用監視', description: 'health/readiness・接続状況' },
+  { id: 'debug', label: '診断/デバッグ', description: '内製ラッパー疎通確認' },
 ];

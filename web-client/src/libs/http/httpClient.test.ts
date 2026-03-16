@@ -194,21 +194,21 @@ describe('httpFetch session expiry reasons', () => {
     const { sessionExpiry, httpClient } = await importSubjects();
     const notifySpy = vi.spyOn(sessionExpiry, 'notifySessionExpired');
 
-    await httpClient.httpFetch('/orca/appointments/list');
+    await httpClient.httpFetch('/api/orca/appointments/list');
     expect(notifySpy).not.toHaveBeenCalled();
   });
 
-  it('does not notify for /api/orcaNN endpoints on 401/403', async () => {
+  it('does not notify for /api/orca endpoints on 401/403', async () => {
     setSession();
     const { sessionExpiry, httpClient } = await importSubjects();
     const notifySpy = vi.spyOn(sessionExpiry, 'notifySessionExpired');
 
     mockFetchSequence([401]);
-    await httpClient.httpFetch('/api/orca102/medicatonmodv2', { method: 'POST' });
+    await httpClient.httpFetch('/api/orca/queue', { method: 'GET' });
     expect(notifySpy).not.toHaveBeenCalled();
 
     mockFetchSequence([403]);
-    await httpClient.httpFetch('/api/orca51/masterlastupdatev3', { method: 'POST' });
+    await httpClient.httpFetch('/api/orca/queue', { method: 'GET' });
     expect(notifySpy).not.toHaveBeenCalled();
   });
 
@@ -235,7 +235,7 @@ describe('httpFetch session expiry reasons', () => {
     const adminHeaders = new Headers((fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(adminHeaders.get('Authorization')).toBeNull();
 
-    await httpClient.httpFetch('/orca/appointments/list', { method: 'GET' });
+    await httpClient.httpFetch('/api/orca/appointments/list', { method: 'GET' });
     const orcaHeaders = new Headers((fetchSpy.mock.calls[1]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(orcaHeaders.get('Authorization')).toBeNull();
 
@@ -256,12 +256,12 @@ describe('httpFetch session expiry reasons', () => {
     expect(nonOrcaHeaders.has('Authorization')).toBe(false);
   });
 
-  it('never attaches Authorization headers for /api/orcaNN endpoints', async () => {
+  it('never attaches Authorization headers for /api/orca endpoints', async () => {
     setSession();
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('/api/orca102/medicatonmodv2', { method: 'POST' });
+    await httpClient.httpFetch('/api/orca/queue', { method: 'GET' });
     const headers = new Headers((fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(headers.get('Authorization')).toBeNull();
   });
@@ -311,7 +311,7 @@ describe('httpFetch session expiry reasons', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('/orca/appointments/list', { method: 'GET' });
+    await httpClient.httpFetch('/api/orca/appointments/list', { method: 'GET' });
     const requestInit = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined;
     expect(requestInit?.credentials).toBe('include');
   });
@@ -330,18 +330,10 @@ describe('httpFetch session expiry reasons', () => {
     expect(nonPhiInit?.cache).toBeUndefined();
   });
 
-  it('does not notify for /api21 and /blobapi endpoints on 401/403', async () => {
+  it('does not notify for /blobapi endpoints on 401/403', async () => {
     setSession();
     const { sessionExpiry, httpClient } = await importSubjects();
     const notifySpy = vi.spyOn(sessionExpiry, 'notifySessionExpired');
-
-    mockFetchSequence([401]);
-    await httpClient.httpFetch('/api21/medicalmodv2', { method: 'POST' });
-    expect(notifySpy).not.toHaveBeenCalled();
-
-    mockFetchSequence([403]);
-    await httpClient.httpFetch('/api21/medicalmodv2', { method: 'POST' });
-    expect(notifySpy).not.toHaveBeenCalled();
 
     mockFetchSequence([401]);
     await httpClient.httpFetch('/blobapi/xxxx', { method: 'GET' });
@@ -414,76 +406,5 @@ describe('buildHttpHeaders CSRF policy', () => {
     );
 
     expect(readCsrfHeader(headers)).toBe('csrf-token-xhr');
-  });
-});
-
-describe('httpFetch ORCA XML bridge', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    sessionStorage.clear();
-    localStorage.clear();
-    clearDevVolatilePlainPassword();
-    document.head.innerHTML = '';
-    setCsrfMetaToken('csrf-bridge-token');
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    document.head.innerHTML = '';
-  });
-
-  it('routes same-origin ORCA XML POST through /api/v1/orca/bridge', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          endpoint: 'ACCEPTANCE_LIST',
-          httpStatus: 200,
-          contentType: 'application/xml',
-          body: '<data><acceptlstv2res><Api_Result>00</Api_Result></acceptlstv2res></data>',
-          runId: 'RUN-BRIDGE-1',
-        }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      ),
-    );
-    const { httpClient } = await importSubjects();
-
-    const response = await httpClient.httpFetch('/orca/acceptlstv2?class=01', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/xml', Accept: 'application/xml' },
-      body: '<data><acceptlstv2req type="record" /></data>',
-    });
-    const xml = await response.text();
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe('/api/v1/orca/bridge');
-    const requestInit = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined;
-    expect(requestInit?.method).toBe('POST');
-    const headers = new Headers(requestInit?.headers ?? {});
-    expect(headers.get('Content-Type')).toBe('application/json');
-    expect(headers.get('Accept')).toBe('application/json');
-    expect(headers.get('X-CSRF-Token')).toBe('csrf-bridge-token');
-    const payload = JSON.parse(String(requestInit?.body ?? '{}')) as Record<string, unknown>;
-    expect(payload.endpoint).toBe('ACCEPTANCE_LIST');
-    expect(payload.classCode).toBe('01');
-    expect(payload.payload).toContain('acceptlstv2req');
-    expect(xml).toContain('<Api_Result>00</Api_Result>');
-    expect(response.headers.get('X-Run-Id')).toBe('RUN-BRIDGE-1');
-  });
-
-  it('keeps non-XML ORCA POST on original endpoint', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
-    const { httpClient } = await importSubjects();
-
-    await httpClient.httpFetch('/orca/acceptlstv2', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: '{"request":"json"}',
-    });
-
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe('/orca/acceptlstv2');
   });
 });

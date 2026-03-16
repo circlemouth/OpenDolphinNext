@@ -63,8 +63,7 @@ export async function fetchWithResolver(options: FetchWithResolverOptions): Prom
     try {
       const method = candidate.method ?? options.method ?? 'POST';
       const body = method === 'GET' ? undefined : options.body ? JSON.stringify(options.body) : undefined;
-      const suppressSessionExpiry =
-        candidate.path.startsWith('/orca') || candidate.path.startsWith('/orca21');
+      const suppressSessionExpiry = candidate.path.startsWith('/api/orca');
       const fetchOnce = async (signal?: AbortSignal) => {
         const response = await httpFetch(candidate.path, {
           method,
@@ -139,8 +138,7 @@ export async function fetchWithResolver(options: FetchWithResolverOptions): Prom
         try {
           const method = candidate.method ?? options.method ?? 'POST';
           const body = method === 'GET' ? undefined : options.body ? JSON.stringify(options.body) : undefined;
-          const suppressSessionExpiry =
-            candidate.path.startsWith('/orca') || candidate.path.startsWith('/orca21');
+          const suppressSessionExpiry = candidate.path.startsWith('/api/orca');
           const response = await httpFetch(candidate.path, {
             method,
             headers: {

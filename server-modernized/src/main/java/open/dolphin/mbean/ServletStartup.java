@@ -11,7 +11,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Properties;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -22,8 +21,9 @@ import open.dolphin.orca.sync.OrcaPatientSyncScheduler;
 import open.dolphin.session.ChartEventServiceBean;
 import open.dolphin.session.SystemServiceBean;
 import open.dolphin.rest.masterupdate.MasterUpdateScheduler;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerConfigurationValidator;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
-import open.orca.rest.ORCAConnection;
 
 /**
  * サーバー起動時の初期化と定期ジョブの実行を Jakarta Concurrency へ移行したライフサイクル管理コンポーネント。
@@ -49,6 +49,12 @@ public class ServletStartup {
     @Inject
     private SystemServiceBean systemServiceBean;
 
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
+
+    @Inject
+    private ServerConfigurationValidator configurationValidator;
+
     private ScheduledFuture<?> midnightRefreshTask;
     private ScheduledFuture<?> monthlyActivityTask;
 
@@ -56,7 +62,7 @@ public class ServletStartup {
     public void init() {
         contextHolder.ensureDateInitialized();
         eventServiceBean.ensureInitialized();
-        ORCAConnection.getInstance().validateDatasourceSecretsOrThrow();
+        configurationValidator.validateOrThrow();
         enforceStartupSecurityGuards();
         logRuntimeConfigurationSummary();
         if (scheduler == null) {
@@ -108,9 +114,7 @@ public class ServletStartup {
 
     private void runMonthlyActivityReportSafely() {
         try {
-            Properties config = ORCAConnection.getInstance().getProperties();
-            String zero = config.getProperty("cloud.zero");
-            if ("true".equalsIgnoreCase(zero)) {
+            if (configurationResolver.orcaRuntime().cloudZero()) {
                 ZonedDateTime targetMonth = ZonedDateTime.now(DEFAULT_ZONE).minusMonths(1);
                 int year = targetMonth.getYear();
                 // Legacy SystemServiceBean expects Calendar-style month index (0-11).
@@ -145,7 +149,7 @@ public class ServletStartup {
     }
 
     private void logRuntimeConfigurationSummary() {
-        String environment = RuntimeConfigurationSupport.resolveEnvironment();
+        String environment = configurationResolver.runtime().environment();
         boolean orcaPatientSyncEnabled = OrcaPatientSyncScheduler.resolveEnabledFromEnvironment();
         boolean masterUpdateSchedulerEnabled = MasterUpdateScheduler.resolveEnabledFromEnvironment();
         String dataDir = RuntimeConfigurationSupport.describeServerDataDirectory();

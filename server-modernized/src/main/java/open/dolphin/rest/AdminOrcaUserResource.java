@@ -53,7 +53,7 @@ import org.xml.sax.InputSource;
 /**
  * Administration APIs for ORCA user management and EHR-ORCA user linking.
  */
-@Path("/api/admin")
+@Path("/admin")
 public class AdminOrcaUserResource extends AbstractResource {
 
     private static final Logger LOGGER = Logger.getLogger(AdminOrcaUserResource.class.getName());

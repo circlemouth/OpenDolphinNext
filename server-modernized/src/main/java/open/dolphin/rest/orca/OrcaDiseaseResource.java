@@ -71,6 +71,9 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
     @Inject
     private UserServiceBean userServiceBean;
 
+    @Inject
+    private ORCAConnection orcaConnection;
+
     @GET
     @Path("/import/{patientId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -447,7 +450,7 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
         if (term == null || term.isBlank()) {
             return List.of();
         }
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = resolveOrcaConnection().getConnection()) {
             List<MasterDiseaseEntry> exact = executeDiseaseMasterQuery(connection, QUERY_DISEASE_MASTER_EXACT, term, referenceDate);
             if (!exact.isEmpty()) {
                 return exact;
@@ -581,7 +584,7 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
     }
 
     private boolean isOrcaDatasourceAvailable() {
-        try (Connection connection = ORCAConnection.getInstance().getConnection()) {
+        try (Connection connection = resolveOrcaConnection().getConnection()) {
             return true;
         } catch (SQLException ex) {
             return false;
@@ -661,5 +664,9 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
 
     private boolean isSupportedOperation(String operation) {
         return "create".equals(operation) || "update".equals(operation) || "delete".equals(operation);
+    }
+
+    private ORCAConnection resolveOrcaConnection() {
+        return orcaConnection != null ? orcaConnection : ORCAConnection.current();
     }
 }

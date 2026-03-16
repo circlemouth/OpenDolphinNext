@@ -21,20 +21,6 @@ vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
 }));
 
-vi.mock('../contraindicationCheckApi', async () => ({
-  buildContraindicationCheckRequestXml: vi.fn().mockReturnValue('<data />'),
-  fetchContraindicationCheckXml: vi.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    rawXml: '<data />',
-    apiResult: '00',
-    apiResultMessage: 'OK',
-    results: [],
-    symptomInfo: [],
-    missingTags: [],
-  }),
-}));
-
 vi.mock('../stampApi', async () => ({
   fetchUserProfile: vi.fn().mockResolvedValue({ ok: true, id: 1, userId: 'facility:doctor' }),
   fetchStampTree: vi.fn().mockResolvedValue({ ok: true, trees: [] }),

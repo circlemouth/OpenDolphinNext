@@ -18,7 +18,7 @@ import open.dolphin.rest.dto.CurrentUserResponse;
 import open.dolphin.rest.support.CurrentUserResponseMapper;
 import open.dolphin.session.UserServiceBean;
 
-@Path("/api/session")
+@Path("/session")
 public class SessionAuthResource extends AbstractResource {
 
     @Inject

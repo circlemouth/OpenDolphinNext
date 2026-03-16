@@ -32,7 +32,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
         PatientMutationRequest payload = new PatientMutationRequest();
@@ -71,7 +71,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
 
         PatientMutationRequest payload = new PatientMutationRequest();
         payload.setOperation("create");
@@ -98,7 +98,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
         PatientMutationRequest payload = new PatientMutationRequest();
@@ -126,7 +126,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
 
         PatientMutationRequest payload = new PatientMutationRequest();
         payload.setOperation("update");

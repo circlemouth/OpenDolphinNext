@@ -28,7 +28,7 @@ import org.jboss.logmanager.MDC;
  *
  * @author Kazushi Minagawa, Digital Globe, Inc.
  */
-@WebFilter(urlPatterns = {"/resources/*", "/orca/*"}, asyncSupported = true)
+@WebFilter(urlPatterns = "/api/*", asyncSupported = true)
 public class LogFilter implements Filter {
 
     private static final Logger SECURITY_LOGGER = Logger.getLogger(LogFilter.class.getName());
@@ -49,9 +49,10 @@ public class LogFilter implements Filter {
     private static final String ANONYMOUS_PRINCIPAL = "anonymous";
     private static final String ERROR_AUDIT_RECORDED_ATTR = LogFilter.class.getName() + ".ERROR_AUDIT_RECORDED";
     private static final String PRINCIPAL_FACILITY_DETAILS_KEY = "facilityId";
-    private static final String SESSION_LOGIN_PATH = "/resources/api/session/login";
-    private static final String SESSION_FACTOR2_LOGIN_PATH = "/resources/api/session/login/factor2";
-    private static final String LOGOUT_PATH = "/resources/api/logout";
+    private static final String SESSION_LOGIN_PATH = "/api/session/login";
+    private static final String SESSION_FACTOR2_LOGIN_PATH = "/api/session/login/factor2";
+    private static final String LOGOUT_PATH = "/api/logout";
+    private static final String API_ROOT = "/api";
     private static final Pattern SAFE_TOKEN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
 
     @Inject
@@ -266,7 +267,7 @@ public class LogFilter implements Filter {
         if (uri == null || uri.isBlank()) {
             return false;
         }
-        return uri.contains("/orca/") || uri.endsWith("/orca");
+        return uri.contains("/api/orca/") || uri.endsWith("/api/orca");
     }
 
     private void logAccessResponse(HttpServletResponse response, BlockWrapper request, String traceId,
@@ -423,7 +424,7 @@ public class LogFilter implements Filter {
         }
         AuditEventPayload payload = new AuditEventPayload();
         payload.setAction("REST_UNAUTHORIZED_GUARD");
-        payload.setResource(request != null ? request.getRequestURI() : "/resources");
+        payload.setResource(request != null ? request.getRequestURI() : API_ROOT);
         String actorId = principal == null || principal.isBlank() ? "anonymous" : principal;
         payload.setActorId(actorId);
         payload.setActorDisplayName(principal);
@@ -481,7 +482,7 @@ public class LogFilter implements Filter {
         AuditEventPayload payload = new AuditEventPayload();
         String resource = request.getRequestURI();
         payload.setAction("REST_ERROR_RESPONSE");
-        payload.setResource(resource != null ? resource : "/resources");
+        payload.setResource(resource != null ? resource : API_ROOT);
         String actorId = request.getRemoteUser();
         if (actorId == null || actorId.isBlank()) {
             actorId = ANONYMOUS_PRINCIPAL;

@@ -47,7 +47,7 @@ export async function importPatientsFromOrca(params: {
 
   let response: Response;
   try {
-    response = await httpFetch('/orca/patients/import', {
+    response = await httpFetch('/api/orca/patients/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

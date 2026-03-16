@@ -62,7 +62,7 @@ class OrcaSubjectiveResourceTest extends RuntimeDelegateTestSupport {
                         return "127.0.0.1";
                     }
                     if ("getRequestURI".equals(name)) {
-                        return "/orca/chart/subjectives";
+                        return "/api/orca/chart/subjectives";
                     }
                     if ("getAttribute".equals(name) && args != null && args.length == 1) {
                         return attributes.get(args[0]);

@@ -47,7 +47,7 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(request.getSession(false)).thenReturn(session);
         when(request.getHeader("X-Run-Id")).thenReturn("run-123");
         when(request.getRemoteAddr()).thenReturn("192.0.2.10");
-        when(request.getRequestURI()).thenReturn("/openDolphin/resources/api/session/login");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
         when(userServiceBean.authenticateWithPolicy(USER_ID, "plain-password", "192.0.2.10"))
                 .thenReturn(UserServiceBean.AuthenticationResult.success());
         when(userServiceBean.getUser(USER_ID)).thenReturn(userWithRole(USER_ID, "system_admin"));
@@ -73,7 +73,7 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
     void loginReturns429WhenIpThrottled() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteAddr()).thenReturn("192.0.2.20");
-        when(request.getRequestURI()).thenReturn("/openDolphin/resources/api/session/login");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
         when(userServiceBean.authenticateWithPolicy(USER_ID, "plain-password", "192.0.2.20"))
                 .thenReturn(UserServiceBean.AuthenticationResult.ipThrottled(90));
 
@@ -91,7 +91,7 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(request.getSession(true)).thenReturn(session);
         when(request.getSession(false)).thenReturn(session);
         when(request.getRemoteAddr()).thenReturn("192.0.2.30");
-        when(request.getRequestURI()).thenReturn("/openDolphin/resources/api/session/login");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
         when(userServiceBean.authenticateWithPolicy(USER_ID, "plain-password", "192.0.2.30"))
                 .thenReturn(UserServiceBean.AuthenticationResult.needsSecondFactor());
 

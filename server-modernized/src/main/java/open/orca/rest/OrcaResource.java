@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import jakarta.ejb.Singleton;
+import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import javax.sql.DataSource;
 import jakarta.ws.rs.Consumes;
@@ -60,6 +61,9 @@ public class OrcaResource {
     private String dbVersion;
     
     private boolean rpOut = true;
+
+    @Inject
+    private ORCAConnection orcaConnection;
     
     private static final String QUERY_FACILITYID_BY_1001
             ="select kanritbl from tbl_syskanri where kanricd='1001'";
@@ -1694,7 +1698,7 @@ public class OrcaResource {
     private Connection getConnection() throws SQLException {
 //minagawa^ 2013/08/29
         //return ds.getConnection();
-        return ORCAConnection.getInstance().getConnection();
+        return resolveOrcaConnection().getConnection();
 //minagawa$
     }
     
@@ -1734,5 +1738,9 @@ public class OrcaResource {
         if (DEBUG) {
             Logger.getLogger("open.dolphin").fine(msg);
         }
+    }
+
+    private ORCAConnection resolveOrcaConnection() {
+        return orcaConnection != null ? orcaConnection : ORCAConnection.current();
     }
 }

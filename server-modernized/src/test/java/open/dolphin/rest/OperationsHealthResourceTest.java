@@ -11,8 +11,12 @@ import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
 import open.dolphin.orca.transport.RestOrcaTransport;
+import open.dolphin.rest.dto.OperationsHealthResponse;
+import open.dolphin.rest.dto.OperationsReadinessCheck;
+import open.dolphin.rest.dto.OperationsReadinessResponse;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
 import open.dolphin.storage.attachment.AttachmentStorageMode;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -40,12 +44,19 @@ class OperationsHealthResourceTest {
     @InjectMocks
     private OperationsHealthResource resource;
 
+    @AfterEach
+    void tearDown() {
+        System.clearProperty("opendolphin.patient.images.enabled");
+    }
+
     @Test
     void healthReturnsUp() {
         Response response = resource.health();
 
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(castBody(response).get("status")).isEqualTo("UP");
+        OperationsHealthResponse body = (OperationsHealthResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("UP");
+        assertThat(body.getService()).isEqualTo("server-modernized");
     }
 
     @Test
@@ -61,13 +72,18 @@ class OperationsHealthResourceTest {
         Response response = resource.readiness();
 
         assertThat(response.getStatus()).isEqualTo(200);
-        Map<String, Object> body = castBody(response);
-        assertThat(body.get("status")).isEqualTo("UP");
-        assertThat(castChecks(body).keySet()).containsExactly(
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("UP");
+        assertThat(body.getChecks().keySet()).containsExactly(
                 "database",
                 "orca",
                 "attachmentStorage",
-                "pvtQueue");
+                "pvtQueue",
+                "patientImages");
+        OperationsReadinessCheck patientImages = body.getChecks().get("patientImages");
+        assertThat(patientImages).isNotNull();
+        assertThat(patientImages.getStatus()).isEqualTo("DISABLED");
+        assertThat(patientImages.getEnabled()).isFalse();
     }
 
     @Test
@@ -82,17 +98,7 @@ class OperationsHealthResourceTest {
         Response response = resource.readiness();
 
         assertThat(response.getStatus()).isEqualTo(503);
-        Map<String, Object> body = castBody(response);
-        assertThat(body.get("status")).isEqualTo("DOWN");
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> castBody(Response response) {
-        return (Map<String, Object>) response.getEntity();
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> castChecks(Map<String, Object> body) {
-        return (Map<String, Object>) body.get("checks");
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("DOWN");
     }
 }

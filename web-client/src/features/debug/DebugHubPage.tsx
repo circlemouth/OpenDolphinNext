@@ -20,29 +20,14 @@ export function DebugHubPage() {
   const links = useMemo<DebugLink[]>(
     () => [
       {
-        label: 'Outpatient Mock',
-        description: 'Reception → Charts のトーン/テレメトリ検証用。MSW gate（DEV + VITE_ENABLE_MSW=1 + ?msw=1）が必要。本番不可。',
-        href: `${buildFacilityPath(session.facilityId, '/debug/outpatient-mock')}?msw=1`,
-      },
-      {
         label: 'Mobile Patient Picker (MSW=1)',
         description: 'モバイル画像アップロード向けの患者特定UI（候補 + 手入力）を検証する。msw=1 が必要。',
         href: `${buildFacilityPath(session.facilityId, '/debug/mobile-patient-picker')}?msw=1`,
       },
       {
-        label: 'Outpatient Mock (MSW=1)',
-        description: '障害注入ヘッダーを許可する URL。QA/検証専用、本番不可。',
-        href: `${buildFacilityPath(session.facilityId, '/debug/outpatient-mock')}?msw=1`,
-      },
-      {
         label: 'Charts',
         description: 'Auth-service flags / Telemetry panel は VITE_ENABLE_DEBUG_UI=1 かつ system_admin。QA/検証専用。',
         href: buildFacilityPath(session.facilityId, '/charts'),
-      },
-      {
-        label: 'ORCA API Console',
-        description: '追加APIを XML2 で直接送信する QA/検証用コンソール。',
-        href: buildFacilityPath(session.facilityId, '/debug/orca-api'),
       },
     ],
     [session.facilityId],

@@ -108,11 +108,11 @@ export type PatientMutationResponse = OrcaInternalWrapperBase & {
   patientId?: string;
 };
 
-const ORCA_MEDICAL_SETS_ENDPOINT = '/orca/medical-sets';
-const ORCA_BIRTH_DELIVERY_ENDPOINT = '/orca/birth-delivery';
-const ORCA_MEDICAL_RECORDS_ENDPOINT = '/orca/medical/records';
-const ORCA_PATIENT_MUTATION_ENDPOINT = '/orca/patient/mutation';
-const ORCA_CHART_SUBJECTIVES_ENDPOINT = '/orca/chart/subjectives';
+const ORCA_MEDICAL_SETS_ENDPOINT = '/api/orca/medical-sets';
+const ORCA_BIRTH_DELIVERY_ENDPOINT = '/api/orca/birth-delivery';
+const ORCA_MEDICAL_RECORDS_ENDPOINT = '/api/orca/medical/records';
+const ORCA_PATIENT_MUTATION_ENDPOINT = '/api/orca/patient/mutation';
+const ORCA_CHART_SUBJECTIVES_ENDPOINT = '/api/orca/chart/subjectives';
 
 const normalizeBooleanHeader = (value: string | null) => {
   if (value === null) return undefined;

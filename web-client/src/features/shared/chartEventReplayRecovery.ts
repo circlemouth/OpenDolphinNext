@@ -8,11 +8,11 @@ export type ReplayGapTarget = {
 export const CHART_EVENT_REPLAY_TARGETS: ReplayGapTarget[] = [
   {
     key: ['outpatient-appointments'],
-    label: '/orca/appointments/list & /orca/visits/list',
+    label: '/api/orca/appointments/list & /api/orca/visits/list',
   },
   {
     key: ['charts-appointments'],
-    label: '/orca/appointments/list & /orca/visits/list',
+    label: '/api/orca/appointments/list & /api/orca/visits/list',
   },
   {
     key: ['orca-queue'],
@@ -20,7 +20,7 @@ export const CHART_EVENT_REPLAY_TARGETS: ReplayGapTarget[] = [
   },
   {
     key: ['orca-push-events'],
-    label: '/orca/pusheventgetv2',
+    label: '/api/orca/pusheventgetv2',
   },
 ];
 

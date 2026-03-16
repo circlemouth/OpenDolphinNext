@@ -240,39 +240,6 @@ const normalizePhysicianLabel = (value?: string) => {
 
 type PhysicianNameMap = Record<string, string>;
 
-const readFirstElementText = (element: Element, tags: string[]): string | undefined => {
-  for (const tag of tags) {
-    const raw = element.getElementsByTagName(tag).item(0)?.textContent;
-    const normalized = normalizePhysicianLabel(raw ?? undefined) ?? raw?.trim();
-    if (normalized) return normalized;
-  }
-  return undefined;
-};
-
-const extractPhysicianNamesFromManageUsersXml = (xml: string): PhysicianNameMap => {
-  const map: PhysicianNameMap = {};
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xml, 'application/xml');
-  if (doc.getElementsByTagName('parsererror').length > 0) return map;
-  const nodes = [
-    ...Array.from(doc.getElementsByTagName('User_Information_child')),
-    ...Array.from(doc.getElementsByTagName('User_Information')),
-  ];
-  nodes.forEach((node) => {
-    if (!(node instanceof Element)) return;
-    const name = readFirstElementText(node, ['New_Full_Name', 'Full_Name', 'WholeName', 'Whole_Name']);
-    if (!name) return;
-    const userNumber = readFirstElementText(node, ['New_User_Number', 'User_Number']);
-    const userId = readFirstElementText(node, ['New_User_Id', 'User_Id']);
-    const candidates = [normalizePhysicianCode(userNumber), normalizePhysicianCode(userId)];
-    candidates.forEach((code) => {
-      if (!code) return;
-      if (!map[code]) map[code] = name;
-    });
-  });
-  return map;
-};
-
 const resolveDepartmentCode = (department?: string) => {
   if (!department) return undefined;
   const trimmed = department.trim();
@@ -914,7 +881,7 @@ export function ReceptionPage({
   }>({});
   const [acceptDepartmentSelection, setAcceptDepartmentSelection] = useState('');
   const [acceptPhysicianSelection, setAcceptPhysicianSelection] = useState('');
-  const [orcaPhysicianNameMap, setOrcaPhysicianNameMap] = useState<PhysicianNameMap>({});
+  const [orcaPhysicianNameMap] = useState<PhysicianNameMap>({});
   const [acceptResult, setAcceptResult] = useState<{
     tone: 'success' | 'warning' | 'error' | 'info';
     message: string;
@@ -1817,7 +1784,7 @@ export function ReceptionPage({
     };
     const fetchDeptInfo = async () => {
       try {
-        const response = await httpFetch('/orca/deptinfo');
+        const response = await httpFetch('/api/orca/deptinfo');
         if (response.status === 404) return;
         if (!response.ok) return;
         const text = await response.text();
@@ -1830,36 +1797,6 @@ export function ReceptionPage({
       }
     };
     void fetchDeptInfo();
-    return () => {
-      active = false;
-    };
-  }, []);
-  useEffect(() => {
-    if (import.meta.env.MODE === 'test') return;
-    if (typeof DOMParser === 'undefined') return;
-    let active = true;
-    const fetchPhysicianNames = async () => {
-      try {
-        const response = await httpFetch('/api/orca101/manageusersv2', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/xml; charset=UTF-8',
-            Accept: 'application/xml',
-          },
-          body: '',
-          notifySessionExpired: false,
-        });
-        if (!response.ok) return;
-        const text = await response.text();
-        if (!text.trim()) return;
-        const map = extractPhysicianNamesFromManageUsersXml(text);
-        if (!active || Object.keys(map).length === 0) return;
-        setOrcaPhysicianNameMap(map);
-      } catch {
-        // ignore
-      }
-    };
-    void fetchPhysicianNames();
     return () => {
       active = false;
     };
@@ -2765,9 +2702,9 @@ export function ReceptionPage({
     // TEMP: XHRで送信可否/ステータスを可視化（撤去前提）
     setXhrDebugState({ lastAttemptAt: now.toISOString(), status: null, error: null });
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/orca/visits/mutation', true);
+    xhr.open('POST', '/api/orca/visits/mutation', true);
     xhr.withCredentials = true;
-    const headers = buildAuthJsonHeaders('POST', '/orca/visits/mutation');
+    const headers = buildAuthJsonHeaders('POST', '/api/orca/visits/mutation');
     Object.entries(headers).forEach(([key, value]) => {
       xhr.setRequestHeader(key, value);
     });
@@ -3787,7 +3724,7 @@ export function ReceptionPage({
 
       const fetchVisitContextCodes = async (): Promise<{ departmentCode?: string; physicianCode?: string }> => {
         try {
-          const response = await httpFetch('/orca/visits/list', {
+          const response = await httpFetch('/api/orca/visits/list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ visitDate: calculationDate, requestNumber: '01' }),
@@ -4933,7 +4870,7 @@ export function ReceptionPage({
                 <div>
                   <h2>患者マスタ検索（name-search）</h2>
                   <p className="reception-master__lead">
-                    /orca/patients/name-search で患者マスタを検索し、選択した患者IDを受付登録へ反映します。
+                    /api/orca/patients/name-search で患者マスタを検索し、選択した患者IDを受付登録へ反映します。
                   </p>
                 </div>
                 <div className="reception-master__meta">

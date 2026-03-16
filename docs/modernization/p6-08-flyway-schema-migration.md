@@ -10,7 +10,7 @@
 
 ## 追加 migration
 - `server-modernized/tools/flyway/sql/V0302__module_payload_table.sql`
-- `server-modernized/src/main/resources/db/migration/V0302__module_payload_table.sql`
+- runtime classpath へは build で生成コピー
 
 ## 変更内容
 - 新規テーブル `opendolphin.d_module_payload` を追加。

@@ -107,8 +107,8 @@ export function DeliveryDashboard({
           <button type="button" className="admin-button admin-button--secondary" onClick={() => onNavigate('config')}>
             配信設定を確認
           </button>
-          <button type="button" className="admin-button admin-button--secondary" onClick={() => onNavigate('master-health')}>
-            マスタ/ヘルスへ
+          <button type="button" className="admin-button admin-button--secondary" onClick={() => onNavigate('operations')}>
+            運用監視へ
           </button>
           <button type="button" className="admin-button admin-button--secondary" onClick={() => onNavigate('debug')}>
             診断/デバッグへ

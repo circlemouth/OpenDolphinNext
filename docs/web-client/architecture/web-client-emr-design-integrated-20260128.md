@@ -215,7 +215,7 @@ RUN_ID=20260130T125310Z PLAYWRIGHT_DISABLE_MSW=1 npx playwright test tests/e2e/c
 - 受付操作は **登録/取消のみ**をフォームで実施し、参照/照会は一覧検索で行う。
 
 **利用API（主要）**
-- 受付/予約: `/orca/appointments/list`, `/orca/visits/list`, `/orca/visits/mutation`
+- 受付/予約: `/api/orca/appointments/list`, `/api/orca/visits/list`, `/api/orca/visits/mutation`
 - 受付トーン/請求: `/api/orca/queue` + 送信キャッシュ
 - ORCA queue: `/api/orca/queue`
 
@@ -240,11 +240,11 @@ RUN_ID=20260130T125310Z PLAYWRIGHT_DISABLE_MSW=1 npx playwright test tests/e2e/c
 
 **利用API（主要）**
 - 文書/カルテ: `/karte/*`, `/odletter/*`
-- 病名: `/orca/disease/*`, `/karte/diagnosis`
-- オーダー束: `/orca/order/bundles`
-- マスタ/相互作用: `/orca/tensu/*`, `/orca/general/*`, `/orca/inputset`, `/orca/interaction`
-- 送信/会計: `/api21/medicalmodv2`, `/api21/medicalmodv23`, `/api01rv2/incomeinfv2`
-- ORCAイベント: `/api01rv2/pusheventgetv2`
+- 病名: `/api/orca/disease/*`, `/karte/diagnosis`
+- オーダー束: `/api/orca/order/bundles`
+- マスタ/相互作用: `/api/orca/tensu/*`, `/api/orca/general/*`, `/api/orca/inputset`, `/api/orca/interaction`
+- 送信/会計: `/api/orca/chart-support/medical-mod-v2`, `/api/orca/chart-support/medical-mod-v23`, `/api/orca/chart-support/income-info`
+- ORCAイベント: `/api/orca/pusheventgetv2`
 - 帳票: `/api01rv2/*` + `/blobapi/{dataId}`
 - 画像: `/karte/images`（正）/ `/karte/iamges`（typo 互換フォールバック）, `/karte/image`, `/karte/attachment`
 - SSE: `/chart-events`
@@ -264,10 +264,10 @@ RUN_ID=20260130T125310Z PLAYWRIGHT_DISABLE_MSW=1 npx playwright test tests/e2e/c
 - ORCA 原本は `patientgetv2` を **XML/JSON 切替で可視化**。
 
 **利用API（主要）**
-- 患者検索: `/orca/patients/local-search`, `/patient/name`, `/patient/kana`, `/patient/id`
-- 患者更新: `/orca12/patientmodv2/outpatient`, `/patient`
+- 患者検索: `/api/orca/patients/local-search`, `/patient/name`, `/patient/kana`, `/patient/id`
+- 患者更新: `/api/orca/patient/mutation`, `/patient`
 - 患者メモ: `/karte/memo`
-- ORCA原本: `/api01rv2/patientgetv2`
+- ORCA原本: `/api/orca/patientgetv2`
 
 **詳細設計（画面別ドキュメント）**
 - `docs/web-client/architecture/web-client-emr-patients-design-20260128.md`
@@ -285,7 +285,7 @@ RUN_ID=20260130T125310Z PLAYWRIGHT_DISABLE_MSW=1 npx playwright test tests/e2e/c
 - ORCA queue: `/api/orca/queue`
 - ORCA master/system: `/api/orca51/masterlastupdatev3`, `/api/api01rv2/systeminfv2`, `/api/api01rv2/system01dailyv2`, `/api/orca21/medicalsetv2`
 - ORCA XML Proxy: `/api/api01rv2/acceptlstv2`, `/api/api01rv2/system01lstv2`, `/api/orca101/manageusersv2`, `/api/api01rv2/insprogetv2`
-- ORCA internal wrapper: `/orca/*` 連携系（tensu-sync, medical-records 等）
+- ORCA internal wrapper: `/api/orca/*` 連携系（tensu-sync, medical-records 等）
 - Touch/ADM/PHR: `/touch/*`, `/adm/*`, `/phr/*`
 
 ### 4.6 Debug / QA 導線（本番ナビ外）

@@ -2,22 +2,22 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 
 import { useOrcaReportPrint } from '../useOrcaReportPrint';
-import { postOrcaReportXml } from '../../orcaReportApi';
+import { postOrcaReport } from '../../orcaReportApi';
 import { recordChartsAuditEvent } from '../../audit';
 
 vi.mock('../../orcaReportApi', async () => {
   const actual = await vi.importActual<typeof import('../../orcaReportApi')>('../../orcaReportApi');
   return {
     ...actual,
-    postOrcaReportXml: vi.fn(),
-    buildOrcaReportRequestXml: vi.fn().mockReturnValue('<data></data>'),
-    resolveOrcaReportEndpoint: vi.fn().mockReturnValue('/orca/prescriptionv2'),
+    postOrcaReport: vi.fn(),
+    buildOrcaReportRequest: vi.fn().mockReturnValue({ patientId: 'P-1' }),
+    resolveOrcaReportEndpoint: vi.fn().mockReturnValue('/api/orca/reports/prescription'),
   };
 });
 
 vi.mock('../../orcaIncomeInfoApi', () => ({
-  buildIncomeInfoRequestXml: vi.fn().mockReturnValue('<data></data>'),
-  fetchOrcaIncomeInfoXml: vi.fn().mockResolvedValue({ ok: true, status: 200, entries: [] }),
+  buildIncomeInfoRequest: vi.fn().mockReturnValue({ patientId: 'P-1' }),
+  fetchOrcaIncomeInfo: vi.fn().mockResolvedValue({ ok: true, status: 200, entries: [] }),
 }));
 
 vi.mock('../../audit', () => ({
@@ -63,10 +63,9 @@ describe('useOrcaReportPrint', () => {
   });
 
   it('prescriptionv2 の Data_Id 未取得時に明示エラーと監査ログを残す', async () => {
-    vi.mocked(postOrcaReportXml).mockResolvedValue({
+    vi.mocked(postOrcaReport).mockResolvedValue({
       ok: true,
       status: 200,
-      rawBody: '{}',
       apiResult: '0000',
       apiResultMessage: 'OK',
       dataId: undefined,

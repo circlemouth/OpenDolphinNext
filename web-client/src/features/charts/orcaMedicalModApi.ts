@@ -1,12 +1,11 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { getObservabilityMeta } from '../../libs/observability/observability';
-import { checkRequiredTags, escapeXml, extractOrcaXmlMeta, isOrcaApiResultOk, parseXmlDocument } from '../../libs/xml/xmlUtils';
 
 export type OrcaXmlResponse = {
   ok: boolean;
   apiOk?: boolean;
   status: number;
-  rawXml: string;
+  rawXml?: string;
   apiResult?: string;
   apiResultMessage?: string;
   informationDate?: string;
@@ -17,89 +16,54 @@ export type OrcaXmlResponse = {
   error?: string;
 };
 
-export const ORCA_MEDICALMODV2_PATH = '/api21/medicalmodv2?class=01';
-export const ORCA_MEDICALMODV23_PATH = '/api21/medicalmodv23';
+export const ORCA_MEDICALMODV23_PATH = '/api/orca/chart-support/medical-mod-v23';
 
-export const buildMedicalModV23RequestXml = (params: {
+export type MedicalModV23RequestPayload = {
   patientId: string;
   requestNumber?: string;
   firstCalculationDate?: string;
   lastVisitDate?: string;
   departmentCode?: string;
-}) => {
-  return [
-    '<data>',
-    '  <medicalv2req3 type="record">',
-    `    <Request_Number type="string">${escapeXml(params.requestNumber ?? '')}</Request_Number>`,
-    `    <Patient_ID type="string">${escapeXml(params.patientId)}</Patient_ID>`,
-    `    <First_Calculation_Date type="string">${escapeXml(params.firstCalculationDate ?? '')}</First_Calculation_Date>`,
-    `    <LastVisit_Date type="string">${escapeXml(params.lastVisitDate ?? '')}</LastVisit_Date>`,
-    `    <Department_Code type="string">${escapeXml(params.departmentCode ?? '')}</Department_Code>`,
-    '  </medicalv2req3>',
-    '</data>',
-  ].join('\n');
 };
 
-export async function postOrcaMedicalModXml(requestXml: string, options: { signal?: AbortSignal } = {}): Promise<OrcaXmlResponse> {
-  const runId = getObservabilityMeta().runId;
-  const response = await httpFetch(ORCA_MEDICALMODV2_PATH, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/xml; charset=UTF-8',
-      Accept: 'application/xml',
-    },
-    body: requestXml,
-    signal: options.signal,
-  });
-  const rawXml = await response.text();
-  const { doc, error } = parseXmlDocument(rawXml);
-  const meta = extractOrcaXmlMeta(doc);
-  const apiOk = isOrcaApiResultOk(meta.apiResult);
-  const requiredCheck = checkRequiredTags(doc, ['Api_Result']);
-  return {
-    ok: response.ok && !error,
-    apiOk,
-    status: response.status,
-    rawXml,
-    apiResult: meta.apiResult,
-    apiResultMessage: meta.apiResultMessage,
-    informationDate: meta.informationDate,
-    informationTime: meta.informationTime,
-    missingTags: requiredCheck.missingTags,
-    runId: getObservabilityMeta().runId ?? runId,
-    traceId: getObservabilityMeta().traceId,
-    error,
-  };
+export const buildMedicalModV23RequestXml = (
+  params: MedicalModV23RequestPayload,
+): MedicalModV23RequestPayload => params;
+
+export async function postOrcaMedicalModXml(
+  payload: MedicalModV23RequestPayload,
+  options: { signal?: AbortSignal } = {},
+): Promise<OrcaXmlResponse> {
+  return postOrcaMedicalModV23Xml(payload, options);
 }
 
-export async function postOrcaMedicalModV23Xml(requestXml: string, options: { signal?: AbortSignal } = {}): Promise<OrcaXmlResponse> {
+export async function postOrcaMedicalModV23Xml(
+  payload: MedicalModV23RequestPayload,
+  options: { signal?: AbortSignal } = {},
+): Promise<OrcaXmlResponse> {
   const runId = getObservabilityMeta().runId;
   const response = await httpFetch(ORCA_MEDICALMODV23_PATH, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/xml; charset=UTF-8',
-      Accept: 'application/xml',
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
     },
-    body: requestXml,
+    body: JSON.stringify(payload),
     signal: options.signal,
   });
-  const rawXml = await response.text();
-  const { doc, error } = parseXmlDocument(rawXml);
-  const meta = extractOrcaXmlMeta(doc);
-  const apiOk = isOrcaApiResultOk(meta.apiResult);
-  const requiredCheck = checkRequiredTags(doc, ['Api_Result']);
+  const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   return {
-    ok: response.ok && !error,
-    apiOk,
+    ok: response.ok && !(typeof json.error === 'string' && json.error.trim()),
+    apiOk: typeof json.apiOk === 'boolean' ? json.apiOk : undefined,
     status: response.status,
-    rawXml,
-    apiResult: meta.apiResult,
-    apiResultMessage: meta.apiResultMessage,
-    informationDate: meta.informationDate,
-    informationTime: meta.informationTime,
-    missingTags: requiredCheck.missingTags,
-    runId: getObservabilityMeta().runId ?? runId,
-    traceId: getObservabilityMeta().traceId,
-    error,
+    rawXml: undefined,
+    apiResult: typeof json.apiResult === 'string' ? json.apiResult : undefined,
+    apiResultMessage: typeof json.apiResultMessage === 'string' ? json.apiResultMessage : undefined,
+    informationDate: typeof json.informationDate === 'string' ? json.informationDate : undefined,
+    informationTime: typeof json.informationTime === 'string' ? json.informationTime : undefined,
+    missingTags: undefined,
+    runId: typeof json.runId === 'string' ? json.runId : getObservabilityMeta().runId ?? runId,
+    traceId: typeof json.traceId === 'string' ? json.traceId : getObservabilityMeta().traceId,
+    error: typeof json.error === 'string' ? json.error : undefined,
   };
 }

@@ -33,9 +33,9 @@ import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.PVTServiceBean;
 
 /**
- * `/orca21/medicalmodv2/outpatient` をモダナイズ版サーバー側で提供する。
+ * `/api/orca/medicalmodv2/outpatient` をモダナイズ版サーバー側で提供する。
  */
-@Path("/orca21/medicalmodv2")
+@Path("/orca/medicalmodv2")
 public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
 
     private static final String DATA_SOURCE = "server";
@@ -98,7 +98,7 @@ public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
         Map<String, Object> details = buildAuditDetails(facilityId, outpatientEntries, response);
         OutpatientFlagResponse.AuditEvent auditEvent = new OutpatientFlagResponse.AuditEvent();
         auditEvent.setAction("ORCA_MEDICAL_GET");
-        auditEvent.setResource("/orca21/medicalmodv2/outpatient");
+        auditEvent.setResource("/api/orca/medicalmodv2/outpatient");
         auditEvent.setOutcome(response.getOutcome());
         auditEvent.setDetails(details);
         auditEvent.setTraceId(traceId);
@@ -125,7 +125,7 @@ public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
         details.put("fetchedAt", response.getFetchedAt());
         details.put("recordsReturned", response.getRecordsReturned());
         details.put("outcome", response.getOutcome());
-        details.put("resource", "/orca21/medicalmodv2/outpatient");
+        details.put("resource", "/api/orca/medicalmodv2/outpatient");
         details.put("telemetryFunnelStage", "charts_orchestration");
         if (entries != null && !entries.isEmpty()) {
             details.put("patientsReturned", entries.size());

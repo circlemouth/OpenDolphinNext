@@ -11,7 +11,6 @@ import jakarta.jms.TextMessage;
 import java.io.BufferedReader;
 import java.io.StringReader;
 import java.util.Collection;
-import java.util.Properties;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import open.dolphin.infomodel.HealthInsuranceModel;
@@ -19,7 +18,7 @@ import open.dolphin.infomodel.PatientVisitModel;
 import open.dolphin.mbean.PVTBuilder;
 import open.dolphin.msg.dto.JmsEnvelopeMessage;
 import open.dolphin.msg.gateway.MessagingHeaders;
-import open.orca.rest.ORCAConnection;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +38,9 @@ public class SessionMessageHandler {
 
     @Inject
     private PVTServiceBean pvtServiceBean;
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
 
     private Executor deferredExecutor = Runnable::run;
 
@@ -162,13 +164,11 @@ public class SessionMessageHandler {
         if (systemProp != null && !systemProp.isBlank()) {
             return systemProp;
         }
-        try {
-            Properties props = ORCAConnection.getInstance().getProperties();
-            if (props != null) {
-                return props.getProperty("dolphin.facilityId");
+        if (configurationResolver != null) {
+            String configured = configurationResolver.orcaRuntime().facilityId();
+            if (configured != null && !configured.isBlank()) {
+                return configured;
             }
-        } catch (Exception ex) {
-            LOGGER.debug("Failed to resolve facilityId from ORCAConnection properties", ex);
         }
         return null;
     }

@@ -16,7 +16,7 @@ import java.util.Map;
 /**
  * EHR-ORCA user link endpoint split from AdminOrcaUserResource.
  */
-@Path("/api/admin")
+@Path("/admin")
 public class AdminOrcaUserLinkResource extends AdminOrcaUserResource {
 
     @PUT

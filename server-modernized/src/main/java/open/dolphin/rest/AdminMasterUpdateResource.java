@@ -30,7 +30,7 @@ import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 /**
  * Administration API for master update operations.
  */
-@Path("/api/admin/master-updates")
+@Path("/admin/master-updates")
 public class AdminMasterUpdateResource extends AbstractResource {
 
     private static final long MAX_UPLOAD_BYTES = 100L * 1024L * 1024L;

@@ -6,11 +6,11 @@ import type { DataSourceTransition } from '../authService';
 import type { ReceptionEntry } from '../../reception/api';
 import type { OrcaClaimSendCacheEntry } from '../orcaClaimSendCache';
 import { recordChartsAuditEvent } from '../audit';
-import { buildIncomeInfoRequestXml, fetchOrcaIncomeInfoXml, type IncomeInfoEntry } from '../orcaIncomeInfoApi';
+import { buildIncomeInfoRequest, fetchOrcaIncomeInfo, type IncomeInfoEntry } from '../orcaIncomeInfoApi';
 import {
-  buildOrcaReportRequestXml,
+  buildOrcaReportRequest,
   ORCA_REPORT_LABELS,
-  postOrcaReportXml,
+  postOrcaReport,
   resolveOrcaReportEndpoint,
   type OrcaReportType,
 } from '../orcaReportApi';
@@ -203,8 +203,8 @@ export function useOrcaReportPrint({
     const performMonth = reportForm.performMonth || defaultPerformMonth;
     setReportIncomeStatus('loading');
     setReportIncomeError(null);
-    const requestXml = buildIncomeInfoRequestXml({ patientId, performMonth });
-    fetchOrcaIncomeInfoXml(requestXml)
+    const request = buildIncomeInfoRequest({ patientId, performMonth });
+    fetchOrcaIncomeInfo(request)
       .then((result) => {
         if (cancelled) return;
         if (result.ok) {
@@ -273,7 +273,7 @@ export function useOrcaReportPrint({
     }
 
     const { actor, facilityId } = resolveAuditActor();
-    const requestXml = buildOrcaReportRequestXml(resolvedReportType, {
+    const requestPayload = buildOrcaReportRequest(resolvedReportType, {
       patientId,
       invoiceNumber: reportForm.invoiceNumber || undefined,
       outsideClass: reportForm.outsideClass,
@@ -327,9 +327,9 @@ export function useOrcaReportPrint({
       },
     });
 
-    let lastResponse: Awaited<ReturnType<typeof postOrcaReportXml>> | null = null;
+    let lastResponse: Awaited<ReturnType<typeof postOrcaReport>> | null = null;
     try {
-      const result = await postOrcaReportXml(resolvedReportType, requestXml);
+      const result = await postOrcaReport(resolvedReportType, requestPayload);
       lastResponse = result;
       const apiResultOk = isApiResultOk(result.apiResult);
       const responseRunId = result.runId ?? runId;

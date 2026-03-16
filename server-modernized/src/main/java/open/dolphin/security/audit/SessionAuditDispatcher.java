@@ -94,7 +94,7 @@ public class SessionAuditDispatcher {
 
     private AuditEventEnvelope.Builder buildEnvelopeFromPayload(AuditEventPayload payload, Map<String, Object> sanitizedDetails) {
         String action = optional(payload.getAction()).orElse("UNSPECIFIED_ACTION");
-        String resource = optional(payload.getResource()).orElse("/resources");
+        String resource = optional(payload.getResource()).orElse("/api");
         String requestId = optional(payload.getRequestId()).orElseGet(() -> optional(payload.getTraceId()).orElse(UUID.randomUUID().toString()));
         String traceId = optional(payload.getTraceId()).orElse(requestId);
 

@@ -27,7 +27,7 @@ import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.PatientServiceBean.PatientSearchType;
 
 /**
- * Local-only patient search endpoint under /orca.
+ * Local-only patient search endpoint served at `/api/orca/patients/local-search`.
  */
 @Path("/orca/patients/local-search")
 public class OrcaPatientLocalSearchResource extends AbstractResource {
@@ -146,7 +146,7 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
     }
 
     protected String getDefaultResourcePath() {
-        return "/orca/patients/local-search";
+        return "/api/orca/patients/local-search";
     }
 
     protected String getAuditAction() {

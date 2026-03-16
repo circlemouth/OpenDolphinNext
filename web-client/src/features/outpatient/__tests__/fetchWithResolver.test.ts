@@ -64,7 +64,7 @@ describe('fetchWithResolver observability flags', () => {
     );
 
     const result = await fetchWithResolver({
-      candidates: [{ path: '/orca/appointments/list', source: 'server' }],
+      candidates: [{ path: '/api/orca/appointments/list', source: 'server' }],
       body: { visitDate: '2026-02-18' },
     });
 
@@ -90,7 +90,7 @@ describe('fetchWithResolver observability flags', () => {
     );
 
     const result = await fetchWithResolver({
-      candidates: [{ path: '/orca/appointments/list', source: 'server' }],
+      candidates: [{ path: '/api/orca/appointments/list', source: 'server' }],
       body: { visitDate: '2026-02-18' },
     });
 

@@ -138,7 +138,7 @@ public class PatientImagesResource extends AbstractResource {
         List<PatientImageEntryResponse> items = patientImageServiceBean.listImages(fid, patientId);
         for (PatientImageEntryResponse item : items) {
             if (item != null && item.getImageId() != null) {
-                item.setDownloadUrl("/openDolphin/resources/patients/" + patientId + "/images/" + item.getImageId());
+                item.setDownloadUrl("/openDolphin/api/patients/" + patientId + "/images/" + item.getImageId());
             }
         }
         applyNoStoreHeaders(httpServletResponse);

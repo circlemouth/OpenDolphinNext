@@ -47,7 +47,7 @@ class PatientImagesResourceFeatureHeaderTest extends RuntimeDelegateTestSupport 
         System.setProperty("opendolphin.patient.images.enabled", "true");
 
         when(request.getRemoteUser()).thenReturn("F001:doctor01");
-        when(request.getRequestURI()).thenReturn("/openDolphin/resources/patients/" + PATIENT_ID + "/images");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/patients/" + PATIENT_ID + "/images");
     }
 
     @AfterEach
@@ -68,7 +68,7 @@ class PatientImagesResourceFeatureHeaderTest extends RuntimeDelegateTestSupport 
         List<PatientImageEntryResponse> items = (List<PatientImageEntryResponse>) response.getEntity();
 
         assertEquals(1, items.size());
-        assertEquals("/openDolphin/resources/patients/00001/images/10", items.get(0).getDownloadUrl());
+        assertEquals("/openDolphin/api/patients/00001/images/10", items.get(0).getDownloadUrl());
         assertEquals("private, no-store, max-age=0, must-revalidate", response.getHeaderString("Cache-Control"));
         verify(this.response).setHeader("Cache-Control", "private, no-store, max-age=0, must-revalidate");
     }

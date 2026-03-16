@@ -17,7 +17,7 @@ class AbstractResourceErrorResponseTest {
     @Test
     void restErrorIncludesRequestIdAndRunIdFromRequestContext() {
         HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getRequestURI()).thenReturn("/resources/api/admin/access/users");
+        when(request.getRequestURI()).thenReturn("/api/admin/access/users");
         when(request.getHeader("X-Request-Id")).thenReturn("req-header-1");
         when(request.getHeader("X-Run-Id")).thenReturn("run-header-1");
         when(request.getHeader("X-Trace-Id")).thenReturn("trace-header-1");
@@ -43,7 +43,7 @@ class AbstractResourceErrorResponseTest {
     @Test
     void restErrorFallsBackRequestIdToTraceId() {
         HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getRequestURI()).thenReturn("/resources/api/admin/access/users");
+        when(request.getRequestURI()).thenReturn("/api/admin/access/users");
         when(request.getAttribute(LogFilter.TRACE_ID_ATTRIBUTE)).thenReturn("trace-only-1");
 
         WebApplicationException ex = AbstractResource.restError(

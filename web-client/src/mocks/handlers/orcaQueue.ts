@@ -160,7 +160,7 @@ export const orcaQueueHandlers = [
       },
     );
   }),
-  http.post('/orca/pusheventgetv2', async ({ request }) => {
+  http.post('/api/orca/pusheventgetv2', async ({ request }) => {
     const fault = parseFaultSpec(request);
     await applyFaultDelay(fault);
 

@@ -1,14 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildOrcaReportRequestXml } from './orcaReportApi';
+import { buildOrcaReportRequest } from './orcaReportApi';
 
-describe('buildOrcaReportRequestXml', () => {
-  it('patientId の動的値を XML エスケープする', () => {
-    const xml = buildOrcaReportRequestXml('prescription', {
-      patientId: '1</Patient_ID><X>pwn</X>',
+describe('buildOrcaReportRequest', () => {
+  it('処方箋向け既定値を JSON 契約で補完する', () => {
+    const request = buildOrcaReportRequest('prescription', {
+      patientId: 'P-1',
     });
 
-    expect(xml).not.toContain('<X>');
-    expect(xml).toContain('&lt;/Patient_ID&gt;&lt;X&gt;pwn&lt;/X&gt;');
+    expect(request).toEqual({
+      patientId: 'P-1',
+      invoiceNumber: undefined,
+      outsideClass: 'False',
+      orderClass: undefined,
+      departmentCode: undefined,
+      insuranceCombinationNumber: undefined,
+      performMonth: undefined,
+      startDay: undefined,
+      lastPageNumber: undefined,
+      lastRowNumber: undefined,
+    });
   });
 });

@@ -25,7 +25,7 @@ export async function checkOrcaOrderInteractions(params: {
   existingCodes?: string[];
 }): Promise<OrcaOrderInteractionResult> {
   const meta = ensureObservabilityMeta();
-  const response = await httpFetch('/orca/order/interactions/check', {
+  const response = await httpFetch('/api/orca/order/interactions/check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     notifySessionExpired: false,

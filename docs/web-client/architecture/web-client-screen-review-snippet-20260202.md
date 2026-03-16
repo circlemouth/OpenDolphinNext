@@ -11,8 +11,8 @@
 | 画面 | ルート | 主要機能 | 主要API | データ整合 | エラー時挙動 |
 | --- | --- | --- | --- | --- | --- |
 | Login | `/login`<br>`/f/:facilityId/login` | 施設/ユーザー/パスワード/UUID入力、LoginSwitchNotice | `/api/user/{facilityId}:{userId}` | RUN_ID生成/保存、session/localStorage共有、facilityIdロック | 認証失敗の表示、セッション失効でログアウト + 監査 |
-| Reception | `/f/:facilityId/reception` | ステータス別一覧、検索/フィルタ、保存ビュー、ORCA queue/再送 | `/orca/appointments/list`<br>`/orca/visits/*`<br>`/api/orca/queue` | Patientsとフィルタ同期、auto-refresh=90s/stale=180s、監査メタ反映 | ApiFailureBanner、missingMaster復旧ガイド、再取得導線 |
-| Charts | `/f/:facilityId/charts` | 3カラム+ドロワー、DocumentTimeline、送信/印刷、SSE | `/karte/*`<br>`/odletter/*`<br>`/orca/*`<br>`/api21/medicalmodv2`<br>`/chart-events` | patientId/returnTo引継ぎ、送信ガード、SSE欠損時再同期 | ApiFailureBanner、missingMaster復旧ガイド、送信失敗トースト+バナー |
+| Reception | `/f/:facilityId/reception` | ステータス別一覧、検索/フィルタ、保存ビュー、ORCA queue/再送 | `/api/orca/appointments/list`<br>`/api/orca/visits/*`<br>`/api/orca/queue` | Patientsとフィルタ同期、auto-refresh=90s/stale=180s、監査メタ反映 | ApiFailureBanner、missingMaster復旧ガイド、再取得導線 |
+| Charts | `/f/:facilityId/charts` | 3カラム+ドロワー、DocumentTimeline、送信/印刷、SSE | `/karte/*`<br>`/odletter/*`<br>`/api/orca/*`<br>`/api/orca/chart-support/medical-mod-v2`<br>`/chart-events` | patientId/returnTo引継ぎ、送信ガード、SSE欠損時再同期 | ApiFailureBanner、missingMaster復旧ガイド、送信失敗トースト+バナー |
 
 ## 要確認事項（短く）
 - `/f/:facilityId/outpatient-mock` の扱い（AppRouter は `/debug/outpatient-mock` のみ許可）。

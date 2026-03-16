@@ -1,10 +1,25 @@
 # Webクライアント ドキュメントハブ（現行）
 
-- 更新日: 2026-02-26
-- RUN_ID: 20260226T103048Z
+- 更新日: 2026-03-15
+- RUN_ID: 20260315T060323Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
+
+## 最新変更（2026-03-15 / ORCA 境界整流と運用 UI 最終形）
+- RUN_ID: `20260315T060323Z`
+- Charts claim 送信の `medicalmodv2` / `medicalmodv23` は、browser で XML を組み立てず `POST /api/orca/chart-support/medical-mod-v2` / `POST /api/orca/chart-support/medical-mod-v23` の JSON 契約へ統一した。`server-modernized` 側には `OrcaChartSupportResource` と chart-support DTO 群を追加し、XML 組み立て・応答解析は server 側へ集約した。
+- 収納情報と帳票発行も JSON 契約へ移行した。web-client は `POST /api/orca/chart-support/income-info` と `POST /api/orca/reports/{type}` を利用し、browser から `/api21/*` `/api01*` `/api/v1/orca/bridge` を直接呼ばない。
+- 患者検索は `web-client/src/features/patients/api.ts` と `web-client/src/features/patients/PatientsPage.tsx` で `searchType=name|kana|patient-id|telephone|zipcode` を明示送信する形へ整理した。server 側の暗黙推論に依存せず、検索意図を client 契約へ持ち上げる。
+- 患者画面では ORCA 原本/保険/メモの XML 補助 UI を撤去し、患者編集導線は local DB / modernized patient mutation 契約を中心に扱う構成へ整理した。受付画面でも ORCA ユーザー一覧 XML 補助処理を除去し、browser 側 `DOMParser` による physician 名抽出をやめた。
+- Administration（設定配信タブ）は `operations` セクションを主導線として追加し、`/health`・`/health/readiness`・`/health/worker/pvt`・WebORCA接続テスト結果を統合表示する通常運用向け UI へ整理した。
+- Administration から ORCA XML proxy 前提を除去し、旧 `master-health` / `medicalset` / XML raw 表示導線を廃止した。`OrcaInternalWrapperCard` は JSON payload のみを扱う診断セクションに限定した。
+- 運用監視では readiness checks（`database` / `orca` / `attachmentStorage` / `pvtQueue` / `patientImages`）を可視化し、queue 要約とあわせて切替後監視の入口を強化した。
+- 不要コード整理として、browser-side XML helper / patient memo・保険・原本参照 API / subjectives・contraindication・medical get・disease get/mod の dead file / `/api/v1/orca/bridge` 前提 / obsolete XML mock を削除した。`server-modernized` 側の未公開 `OrcaBridgeResource` も削除した。
+- 検証:
+  - `npm -C web-client run typecheck` PASS
+  - `npm -C web-client run test -- --run src/features/administration/__tests__/AdministrationPage.searchParams.test.tsx src/features/administration/__tests__/OrcaQueueCard.test.tsx src/features/charts/orcaReportApi.test.ts src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx src/features/charts/__tests__/chartsActionBar.test.tsx src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx src/features/charts/__tests__/orderBundleItemActions.test.tsx src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx src/features/charts/__tests__/orderBundleHistoryCopy.test.tsx src/features/patients/__tests__/PatientsPage.test.tsx src/features/reception/__tests__/ReceptionPage.test.tsx src/libs/http/httpClient.test.ts src/features/charts/orderMasterSearchApi.test.ts --silent=true` PASS（13 files / 143 passed, 1 skipped）
+  - `mvn -f pom.server-modernized.xml -pl api-contract,server-modernized -Dtest=OperationsHealthResourceTest,OrcaChartSupportResourceTest,OrcaReportDocumentResourceTest,WebXmlEndpointExposureTest -Dsurefire.failIfNoSpecifiedTests=false test` PASS（16 tests）
 
 ## 最新変更（2026-02-26 / UIガイドライン適用 第1弾）
 - RUN_ID: `20260226T103048Z`
@@ -26,7 +41,7 @@
 ## 最新変更（2026-02-26）
 - RUN_ID: `20260226T024837Z`
 - 処方オーダーを `OrderBundleEditPanel` 依存から分離し、`PrescriptionOrderEditorPanel` に置換。右ドック「処方」および中列サマリの処方行クリックで、右ドロワー内の RP集合編集UI が開く構成へ移行。
-- `SoapNotePanel` / `RightUtilityDrawer` / `OrderSummaryPane` / `ChartsPage` を更新し、処方のデータ経路を専用化（`prescriptionBundles`）しつつ、注射/処置/検査/算定は既存経路を維持。`prescriptionOrderApi` は `GET/POST /orca/prescription-orders` を直接利用するよう変更。
+- `SoapNotePanel` / `RightUtilityDrawer` / `OrderSummaryPane` / `ChartsPage` を更新し、処方のデータ経路を専用化（`prescriptionBundles`）しつつ、注射/処置/検査/算定は既存経路を維持。`prescriptionOrderApi` は `GET/POST /api/orca/prescription-orders` を直接利用するよう変更。
 - 右ドロワー内コンテンツ切替へ `translateY + opacity` の下から生えるアニメーションを追加し、非モーダル要件（背景クリック可能・オーバーレイなし）を維持。
 - `orderCategoryRegistry` に `resolveOrderEntity` と alias 解決を追加（`prescriptionOrder -> medOrder` 等）し、クライアント/サーバー解釈差の吸収を強化。
 - 受け入れ検証（関連）:

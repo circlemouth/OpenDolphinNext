@@ -36,7 +36,7 @@ const readErrorMessage = (json: unknown, fallback: string) => {
 };
 
 export async function fetchMasterReferenceStatus(): Promise<MasterReferenceStatusResponse> {
-  const response = await httpFetch('/orca/master/reference/status', {
+  const response = await httpFetch('/api/orca/master/reference/status', {
     method: 'GET',
     notifySessionExpired: false,
   });

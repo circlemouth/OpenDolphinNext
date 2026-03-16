@@ -16,7 +16,7 @@ class SessionAuditDispatcherTest {
         AuditEventPayload payload = new AuditEventPayload();
         payload.setActorId("F001:doctor01");
         payload.setAction("ORCA_APPOINTMENT_OUTPATIENT");
-        payload.setResource("/orca/appointments/list");
+        payload.setResource("/api/orca/appointments/list");
         payload.setTraceId("trace-op");
         payload.setRequestId("req-op");
         payload.setDetails(Map.of("operation", "appointment_list"));
@@ -34,7 +34,7 @@ class SessionAuditDispatcherTest {
         AuditEventPayload payload = new AuditEventPayload();
         payload.setActorId("F001:doctor01");
         payload.setAction("ORCA_CLAIM_OUTPATIENT");
-        payload.setResource("/orca/claim/outpatient");
+        payload.setResource("/api/orca/chart-support/medical-mod-v2");
         payload.setTraceId("trace-missing");
         payload.setRequestId("req-missing");
         payload.setDetails(Map.of("outcome", "MISSING"));
