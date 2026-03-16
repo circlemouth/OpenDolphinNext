@@ -643,7 +643,7 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   - direct new される resource test 互換のため、ORCA DB 利用箇所は CDI 注入未解決時のみ `ORCAConnection.current()` へフォールバックする。
 
 #### CFG-05 `SmsGatewayConfig` と `Fido2Config` を typed config 化する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 個別の `System.getenv()` と dev fallback をなくす。
 - 依存: CFG-04
 - 同時実行推奨: `B7`
@@ -657,13 +657,22 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - 上記クラスが typed config 経由だけで構成される。
   - 本番コードから暗黙 default が消えている。
-- 実施日時:
+- 実施日時: 2026-03-16 15:05 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/msg/gateway/SmsGatewayConfig.java`
+  - `server-modernized/src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java`
+  - `server-modernized/src/main/java/open/dolphin/runtime/config/ServerRuntimeConfiguration.java`
+  - `server-modernized/src/test/java/open/dolphin/runtime/config/ServerConfigurationResolverTest.java`
+  - `server-modernized/src/test/java/open/dolphin/msg/gateway/SmsGatewayConfigTest.java`
 - 検証:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=ServerConfigurationResolverTest,ServerConfigurationValidatorTest,SmsGatewayConfigTest,SecurityDefensiveCopyTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
+  - `rg -n 'custom\.properties|jboss\.home\.dir|System\.getenv\(|System\.getProperty\(' server-modernized/src/main/java/open/dolphin/msg/gateway/SmsGatewayConfig.java server-modernized/src/main/java/open/dolphin/security/fido/Fido2Config.java server-modernized/src/main/java/open/dolphin/security/SecondFactorSecurityConfig.java` → 0 hit。
 - メモ:
+  - `SmsGatewayConfig` は `ServerConfigurationResolver#plivo()` の typed config のみを参照する実装へ置換し、`custom.properties` / `jboss.home.dir` / `System.getenv()` 直読を削除した。
+  - `Fido2Config` は既に `SecondFactorSecurityConfig -> ServerConfigurationResolver#fido2()` 経由だったため、その経路を維持しつつ sample/test を typed config 契約に合わせて固定した。
 
 #### CFG-06 sample env / README / test を新設定体系へ揃える
-- [ ] 実施する
+- [x] 実施する
 - 目的: 実装変更後も設定投入方法が迷子にならないようにする。
 - 依存: CFG-05
 - 同時実行推奨: `B7`
@@ -676,15 +685,25 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. 本番と dev/test の投入方法の違いを整理する。
 - 完了条件:
   - sample / README / code が一致している。
-- 実施日時:
+- 実施日時: 2026-03-16 15:05 JST
 - 変更ファイル:
+  - `server-modernized/config/server-modernized.env.sample`
+  - `server-modernized/README.md`
+  - `docs/server-modernization/external-integrations/3_6-external-service-modernization.md`
+  - `server-modernized/src/test/java/open/dolphin/runtime/config/ServerConfigurationResolverTest.java`
+  - `server-modernized/src/test/java/open/dolphin/msg/gateway/SmsGatewayConfigTest.java`
 - 検証:
+  - `rg -n 'PLIVO_LOG_LEVEL|PLIVO_LOG_MESSAGE_CONTENT|PLIVO_HTTP_CONNECT_TIMEOUT|PLIVO_HTTP_READ_TIMEOUT|PLIVO_HTTP_WRITE_TIMEOUT|PLIVO_HTTP_CALL_TIMEOUT|PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE|FIDO2_RP_ID|FIDO2_RP_NAME|FIDO2_ALLOWED_ORIGINS' server-modernized/config/server-modernized.env.sample server-modernized/README.md docs/server-modernization/external-integrations/3_6-external-service-modernization.md` → sample / README / 運用文書の全てに現行キーが反映済み。
+  - `cd server-modernized && mvn -q -DskipITs test` → FAIL（既知の `OperationsHealthResponse` / `OperationsReadinessCheck` / `OrcaReportRequest` classpath 不備）。
+  - `cd server-modernized && mvn -q verify` → FAIL（同上）。
 - メモ:
+  - sample env に Plivo の log / timeout / retry キーを追加し、FIDO2 が暗黙 default を持たないことを明記した。
+  - README と外部連携文書を、`custom.properties` フォールバック前提ではなく typed config 正本前提へ更新した。
 
 ### Phase 4. ORCA master を現行スキーマ固定で再設計
 
 #### ORCA-01 ORCA master の対象スキーマ契約を明文化する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 互換吸収をやめる前に、「何を正規スキーマとして支えるか」を固定する。
 - 依存: CFG-06
 - 同時実行推奨: `B8`
@@ -696,13 +715,19 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. 旧列名候補や旧表名候補はサポート外と明記する。
 - 完了条件:
   - repo 内に supported schema contract が文書化されている。
-- 実施日時:
+- 実施日時: 2026-03-16 15:25 JST
 - 変更ファイル:
+  - `docs/development/orca-master-supported-schema-contract.md`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'TBL_GENERIC_CLASS|TBL_TENSU_MASTER|TBL_YOUHOU|TBL_MATERIAL_H_M|TBL_KENSASORT' docs/development/orca-master-supported-schema-contract.md server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
 - メモ:
+  - ORCA master が正規サポートするテーブル、列、前提制約を `docs/development/orca-master-supported-schema-contract.md` に固定した。
+  - 旧表名、旧列名、多候補吸収、fixture 依存の alias はサポート外と明記した。
 
 #### ORCA-02 `OrcaMasterResource` を resource / service / mapper / audit helper に分割する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 2300 行級 resource から責務を切り離し、以後の変更を安全にする。
 - 依存: ORCA-01
 - 同時実行推奨: `B8`
@@ -715,10 +740,20 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - `OrcaMasterResource` の責務が大幅に減っている。
   - 分離後も endpoint test が成立する。
-- 実施日時:
+- 実施日時: 2026-03-16 15:25 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResponseMapper.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterAuditSupport.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `wc -l server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `rg -n 'OrcaMasterService|OrcaMasterResponseMapper|OrcaMasterAuditSupport' server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
 - メモ:
+  - endpoint 定義を残しつつ、fixture 解決、ETag 算出、response mapping、audit を helper へ分離した。
+  - `OrcaMasterResource` は 2315 行から 1787 行へ縮小した。
 
 #### ORCA-03 `DatabaseMetaData` probing と多候補列吸収を撤去する
 - [ ] 実施する
@@ -1375,6 +1410,71 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 次回の先頭候補:
   - CFG-05 `SmsGatewayConfig` と `Fido2Config` を typed config 化する。
   - 同一バンドル継続で CFG-06 sample env / README / test を新設定体系へ揃える。
+
+#### Run 2026-03-16 15:05 JST
+- 完了:
+  - CFG-05 `SmsGatewayConfig` を `ServerConfigurationResolver#plivo()` ベースの typed config 解決へ置換し、Plivo log / timeout / retry も typed contract 化した。
+  - CFG-06 sample env / README / 外部連携文書 / config test を新設定体系に揃え、FIDO2 必須キーと Plivo 追加キーを明文化した。
+- 継続 / 着手中:
+  - B7 は完了。次の ready bundle は `B8`（ORCA-01, ORCA-02）。
+- ブロッカー:
+  - 外部 blocker なし。
+  - `cd server-modernized && mvn -q -DskipITs test` / `mvn -q verify` は既存の `api-contract` DTO classpath 不備 (`OperationsHealthResponse` / `OperationsReadinessCheck` / `OrcaReportRequest`) により FAIL。今回変更とは無関係。
+- 実行コマンド:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=ServerConfigurationResolverTest,ServerConfigurationValidatorTest,SmsGatewayConfigTest,SecurityDefensiveCopyTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `cd server-modernized && mvn -q -DskipITs test`
+  - `cd server-modernized && mvn -q verify`
+  - `rg -n 'custom\.properties|jboss\.home\.dir|System\.getenv\(|System\.getProperty\(' server-modernized/src/main/java/open/dolphin/msg/gateway/SmsGatewayConfig.java server-modernized/src/main/java/open/dolphin/security/fido/Fido2Config.java server-modernized/src/main/java/open/dolphin/security/SecondFactorSecurityConfig.java`
+  - `rg -n 'PLIVO_LOG_LEVEL|PLIVO_LOG_MESSAGE_CONTENT|PLIVO_HTTP_CONNECT_TIMEOUT|PLIVO_HTTP_READ_TIMEOUT|PLIVO_HTTP_WRITE_TIMEOUT|PLIVO_HTTP_CALL_TIMEOUT|PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE|FIDO2_RP_ID|FIDO2_RP_NAME|FIDO2_ALLOWED_ORIGINS' server-modernized/config/server-modernized.env.sample server-modernized/README.md docs/server-modernization/external-integrations/3_6-external-service-modernization.md`
+- 主な変更ファイル:
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+  - `server-modernized/src/main/java/open/dolphin/msg/gateway/SmsGatewayConfig.java`
+  - `server-modernized/src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java`
+  - `server-modernized/src/main/java/open/dolphin/runtime/config/ServerRuntimeConfiguration.java`
+  - `server-modernized/src/test/java/open/dolphin/runtime/config/ServerConfigurationResolverTest.java`
+  - `server-modernized/src/test/java/open/dolphin/msg/gateway/SmsGatewayConfigTest.java`
+  - `server-modernized/config/server-modernized.env.sample`
+  - `server-modernized/README.md`
+  - `docs/server-modernization/external-integrations/3_6-external-service-modernization.md`
+- 検証結果:
+  - targeted config/security tests は PASS。
+  - `SmsGatewayConfig` / `Fido2Config` / `SecondFactorSecurityConfig` に `custom.properties` / `jboss.home.dir` / `System.getenv` / `System.getProperty` の直読は残っていない。
+  - sample / README / 外部連携文書は新しい `PLIVO_*` / `FIDO2_*` キーで同期済み。
+- 次回の先頭候補:
+  - ORCA-01 ORCA master の対象スキーマ契約を明文化する。
+  - 同一バンドル継続で ORCA-02 `OrcaMasterResource` を resource / service / mapper / audit helper に分割する。
+
+#### Run 2026-03-16 15:25 JST
+- 完了:
+  - ORCA-01 ORCA master の supported schema contract を文書化し、固定で支えるテーブル、列、前提制約を明文化した。
+  - ORCA-02 `OrcaMasterResource` を resource / service / mapper / audit helper へ分割し、endpoint test を維持したまま責務を縮小した。
+- 継続 / 着手中:
+  - B8 は完了。次の ready bundle は `B9`（ORCA-03, ORCA-04）。
+- ブロッカー:
+  - 外部 blocker なし。
+  - `cd server-modernized && mvn -q -DskipITs test` / `mvn -q verify` は既存の DTO classpath 不備 (`OperationsHealthResponse` / `OperationsReadinessCheck` / `OrcaReportRequest`) により FAIL。今回変更とは無関係。
+- 実行コマンド:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `cd server-modernized && mvn -q -DskipITs test`
+  - `cd server-modernized && mvn -q verify`
+  - `wc -l server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `rg -n 'TBL_GENERIC_CLASS|TBL_TENSU_MASTER|TBL_YOUHOU|TBL_MATERIAL_H_M|TBL_KENSASORT' docs/development/orca-master-supported-schema-contract.md server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
+  - `rg -n 'OrcaMasterService|OrcaMasterResponseMapper|OrcaMasterAuditSupport' server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+- 主な変更ファイル:
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+  - `docs/development/orca-master-supported-schema-contract.md`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResponseMapper.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterAuditSupport.java`
+- 検証結果:
+  - `OrcaMasterResourceTest` は PASS。
+  - `OrcaMasterResource` は 1787 行まで縮小し、service / mapper / audit helper 参照へ分離済み。
+  - module 直下の `test` / `verify` は既知の DTO classpath 不備で FAIL のまま。
+- 次回の先頭候補:
+  - ORCA-03 `DatabaseMetaData` probing と多候補列吸収を撤去する。
+  - 同一バンドル継続で ORCA-04 fixture fallback と snapshot fallback を廃止する。
 
 
 

@@ -13,6 +13,10 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * ORCA master DAO.
+ * Supported schema contract is documented in docs/development/orca-master-supported-schema-contract.md.
+ */
 public class OrcaMasterDao {
     private static final Logger LOGGER = Logger.getLogger(OrcaMasterDao.class.getName());
     private static final int MAX_PAGE_SIZE = 2000;

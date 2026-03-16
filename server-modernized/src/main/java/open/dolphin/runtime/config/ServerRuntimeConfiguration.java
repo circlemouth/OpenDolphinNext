@@ -1,6 +1,7 @@
 package open.dolphin.runtime.config;
 
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.util.List;
 
@@ -81,7 +82,14 @@ public final class ServerRuntimeConfiguration {
             String sourceNumber,
             String baseUrl,
             String environment,
-            String defaultCountryCode
+            String defaultCountryCode,
+            String logLevel,
+            Boolean logMessageContent,
+            Duration connectTimeout,
+            Duration readTimeout,
+            Duration writeTimeout,
+            Duration callTimeout,
+            Boolean retryOnConnectionFailure
     ) {
     }
 }

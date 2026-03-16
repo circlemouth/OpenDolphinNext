@@ -12,7 +12,7 @@
 - 監査ログはメッセージ UUID と宛先件数のみ記録し、本文は既定で記録しない（`PLIVO_LOG_MESSAGE_CONTENT=false`）。必要時のみ true を指定する。
 
 ### 1.2 設定の Secrets 化
-- 認証情報とエンドポイントは環境変数で上書きし、`custom.properties` は互換目的のフォールバックとして残す。優先順位: 環境変数 ＞ custom.properties ＞ デフォルト。
+- 認証情報・エンドポイント・HTTP タイムアウトは typed config (`plivo.*` / `PLIVO_*`) のみを正規ルートとする。`custom.properties` フォールバックは廃止済み。
 - 新規に利用可能な環境変数／プロパティは下表の通り。
 
 | 環境変数 | `custom.properties` キー | 既定値 | 説明 |
@@ -20,11 +20,16 @@
 | `PLIVO_AUTH_ID` | `plivo.auth.id` | なし（必須） | Plivo Auth ID |
 | `PLIVO_AUTH_TOKEN` | `plivo.auth.token` | なし（必須） | Plivo Auth Token |
 | `PLIVO_SOURCE_NUMBER` | `plivo.source.number` | なし（必須） | 送信元番号（E.164 形式） |
-| `PLIVO_BASE_URL` | `plivo.baseUrl` | `https://api.plivo.com/v1/` | REST API ベース URL。HTTPS のみ許可 |
+| `PLIVO_BASE_URL` | `plivo.base-url` | `https://api.plivo.com/v1/` | REST API ベース URL。HTTPS のみ許可 |
 | `PLIVO_ENVIRONMENT` | `plivo.environment` | `production` | `production` / `sandbox` を指定。`sandbox` の場合は `https://api.sandbox.plivo.com/v1/` を既定利用 |
 | `PLIVO_LOG_LEVEL` | `plivo.log.level` | `NONE` | Plivo SDK の HTTP ログレベル（`NONE/BASIC/BODY/HEADERS`） |
-| `PLIVO_LOG_MESSAGE_CONTENT` | `plivo.log.messageContent` | `false` | Plivo 側でメッセージ本文を保存するかどうか |
-| `PLIVO_DEFAULT_COUNTRY` | `plivo.defaultCountry` | `+81` | 国内番号を正規化する際の国番号 |
+| `PLIVO_LOG_MESSAGE_CONTENT` | `plivo.log.message-content` | `false` | Plivo 側でメッセージ本文を保存するかどうか |
+| `PLIVO_DEFAULT_COUNTRY` | `plivo.default-country` | `+81` | 国内番号を正規化する際の国番号 |
+| `PLIVO_HTTP_CONNECT_TIMEOUT` | `plivo.http.connect-timeout` | `PT10S` | 接続タイムアウト |
+| `PLIVO_HTTP_READ_TIMEOUT` | `plivo.http.read-timeout` | `PT30S` | 読み取りタイムアウト |
+| `PLIVO_HTTP_WRITE_TIMEOUT` | `plivo.http.write-timeout` | `PT30S` | 書き込みタイムアウト |
+| `PLIVO_HTTP_CALL_TIMEOUT` | `plivo.http.call-timeout` | `PT45S` | 呼び出し全体のタイムアウト |
+| `PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE` | `plivo.http.retry-on-connection-failure` | `true` | 接続失敗時の再試行可否 |
 
 - `docker-compose.yml` / `.env.sample` / `ops/shared/docker/custom.properties` にテンプレート値を追記済み。既存利用者は `.env` で Secrets を管理し、Git 管理下から削除された平文認証情報を移行すること。
 

@@ -79,7 +79,8 @@ public class OrcaMasterResource extends AbstractResource {
     @Inject
     SessionAuditDispatcher sessionAuditDispatcher;
 
-    private final OrcaMasterGateway masterGateway;
+    private final OrcaMasterService masterService;
+    private final OrcaMasterResponseMapper responseMapper;
 
     public OrcaMasterResource() {
         this(new OrcaMasterDaoGateway());
@@ -94,7 +95,9 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
     OrcaMasterResource(OrcaMasterGateway masterGateway) {
-        this.masterGateway = masterGateway != null ? masterGateway : new OrcaMasterDaoGateway();
+        OrcaMasterGateway gateway = masterGateway != null ? masterGateway : new OrcaMasterDaoGateway();
+        this.masterService = new OrcaMasterService(gateway);
+        this.responseMapper = new OrcaMasterResponseMapper();
     }
 
     private enum DataOrigin {
@@ -130,6 +133,37 @@ public class OrcaMasterResource extends AbstractResource {
         }
     }
 
+    private OrcaMasterAuditSupport auditSupport() {
+        return new OrcaMasterAuditSupport(sessionAuditDispatcher);
+    }
+
+    private <T> LoadedFixture<T> toResourceFixture(OrcaMasterService.LoadedFixture<T> fixture) {
+        if (fixture == null) {
+            return new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK, false);
+        }
+        return new LoadedFixture<>(
+                fixture.entries,
+                fixture.snapshotVersion,
+                fixture.version,
+                DataOrigin.valueOf(fixture.origin.name()),
+                fixture.loadFailed
+        );
+    }
+
+    private <T> OrcaMasterService.LoadedFixture<T> toServiceFixture(LoadedFixture<T> fixture) {
+        if (fixture == null) {
+            return new OrcaMasterService.LoadedFixture<>(Collections.emptyList(), null, null,
+                    OrcaMasterService.DataOrigin.FALLBACK, false);
+        }
+        return new OrcaMasterService.LoadedFixture<>(
+                fixture.entries,
+                fixture.snapshotVersion,
+                fixture.version,
+                OrcaMasterService.DataOrigin.valueOf(fixture.origin.name()),
+                fixture.loadFailed
+        );
+    }
+
     @GET
     @Path("/generic-class")
     public Response getGenericClass(
@@ -149,7 +183,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
-        OrcaMasterDao.GenericClassSearchResult dbResult = masterGateway.searchGenericClass(criteria);
+        OrcaMasterDao.GenericClassSearchResult dbResult = masterService.searchGenericClass(criteria);
         final String masterType = "orca05-generic-class";
         if (dbResult == null) {
             LoadedFixture<FixtureGenericClassEntry> fallbackFixture = loadEntries(
@@ -307,7 +341,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
-        OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> dbResult = masterGateway.searchDrug(criteria);
+        OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> dbResult = masterService.searchDrug(criteria);
         final String masterType = "orca08-drug";
         final String apiRoute = "/api/orca/master/drug";
         if (dbResult == null) {
@@ -481,7 +515,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
-        OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterGateway.searchComment(criteria);
+        OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterService.searchComment(criteria);
         final String masterType = "orca08-comment";
         final String apiRoute = "/api/orca/master/comment";
         if (dbResult == null) {
@@ -540,7 +574,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
-        OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterGateway.searchBodypart(criteria);
+        OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> dbResult = masterService.searchBodypart(criteria);
         final String masterType = "orca08-bodypart";
         final String apiRoute = "/api/orca/master/bodypart";
         if (dbResult == null) {
@@ -597,7 +631,7 @@ public class OrcaMasterResource extends AbstractResource {
         OrcaMasterDao.YouhouCriteria criteria = new OrcaMasterDao.YouhouCriteria();
         criteria.setKeyword(keyword);
         criteria.setEffective(effective);
-        OrcaMasterDao.ListSearchResult<OrcaMasterDao.YouhouRecord> dbResult = masterGateway.searchYouhou(criteria);
+        OrcaMasterDao.ListSearchResult<OrcaMasterDao.YouhouRecord> dbResult = masterService.searchYouhou(criteria);
         final String masterType = "orca05-youhou";
         if (dbResult == null) {
             LoadedFixture<FixtureYouhouEntry> fixture = loadEntries(
@@ -663,7 +697,7 @@ public class OrcaMasterResource extends AbstractResource {
         OrcaMasterDao.MaterialCriteria criteria = new OrcaMasterDao.MaterialCriteria();
         criteria.setKeyword(keyword);
         criteria.setEffective(effective);
-        OrcaMasterDao.ListSearchResult<OrcaMasterDao.MaterialRecord> dbResult = masterGateway.searchMaterial(criteria);
+        OrcaMasterDao.ListSearchResult<OrcaMasterDao.MaterialRecord> dbResult = masterService.searchMaterial(criteria);
         final String masterType = "orca05-material";
         if (dbResult == null) {
             LoadedFixture<FixtureMaterialEntry> fixture = loadEntries(
@@ -729,7 +763,7 @@ public class OrcaMasterResource extends AbstractResource {
         OrcaMasterDao.KensaSortCriteria criteria = new OrcaMasterDao.KensaSortCriteria();
         criteria.setKeyword(keyword);
         criteria.setEffective(effective);
-        OrcaMasterDao.ListSearchResult<OrcaMasterDao.KensaSortRecord> dbResult = masterGateway.searchKensaSort(criteria);
+        OrcaMasterDao.ListSearchResult<OrcaMasterDao.KensaSortRecord> dbResult = masterService.searchKensaSort(criteria);
         final String masterType = "orca05-kensa-sort";
         if (dbResult == null) {
             LoadedFixture<FixtureKensaSortEntry> fixture = loadEntries(
@@ -842,7 +876,7 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setPage(parsePositiveInt(params, "page", 1));
         criteria.setSize(parsePageSize(params, "size", 100));
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
-        EtensuDao.EtensuSearchResult dbResult = masterGateway.searchEtensu(criteria);
+        EtensuDao.EtensuSearchResult dbResult = masterService.searchEtensu(criteria);
         if (dbResult == null || dbResult.isLoadFailed()) {
             LoadedFixture<FixtureEtensuEntry> fallbackFixture = loadEntries(
                     FixtureEtensuEntry.class,
@@ -973,55 +1007,23 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
     private Response validationError(HttpServletRequest request, String code, String message) {
-        OrcaMasterErrorResponse response = new OrcaMasterErrorResponse();
-        response.setCode(code);
-        response.setError(code);
-        response.setErrorCode(code);
-        response.setMessage(message);
-        response.setStatus(422);
-        response.setRunId(resolveRunId(request));
-        response.setTimestamp(Instant.now().toString());
-        String traceId = resolveTraceId(request);
-        if (traceId != null && !traceId.isBlank()) {
-            response.setCorrelationId(traceId);
-            response.setTraceId(traceId);
-        }
-        response.setValidationError(Boolean.TRUE);
-        response.setPath(request != null ? request.getRequestURI() : "/orca/master");
-        response.setErrorCategory("validation_error");
-        return Response.status(422).entity(response).build();
+        return auditSupport().validationError(request, code, message);
     }
 
     private Response badRequest(HttpServletRequest request, String code, String message) {
-        return buildErrorResponse(Status.BAD_REQUEST, code, message, request, null);
+        return auditSupport().badRequest(request, code, message);
     }
 
     private <T> LoadedFixture<T> loadEntries(Class<T> entryType, String snapshotRelativePath, String fixtureFileName) {
-        FixtureLoadResult<T> snapshot = tryReadResponse(entryType, snapshotRoot().resolve(snapshotRelativePath));
-        if (snapshot.response != null) {
-            return new LoadedFixture<>(safeList(snapshot.response.list), snapshot.response.snapshotVersion,
-                    snapshot.response.version, DataOrigin.SNAPSHOT, snapshot.loadFailed);
-        }
-        FixtureLoadResult<T> fixture = tryReadResponse(entryType, fixtureRoot().resolve(fixtureFileName));
-        if (fixture.response != null) {
-            return new LoadedFixture<>(safeList(fixture.response.list), fixture.response.snapshotVersion,
-                    fixture.response.version, DataOrigin.MSW_FIXTURE, fixture.loadFailed);
-        }
-        FixtureLoadResult<T> bundledFixture = tryReadResponseFromClasspath(entryType, CLASSPATH_FIXTURE_ROOT + fixtureFileName);
-        if (bundledFixture.response != null) {
-            return new LoadedFixture<>(safeList(bundledFixture.response.list), bundledFixture.response.snapshotVersion,
-                    bundledFixture.response.version, DataOrigin.MSW_FIXTURE, bundledFixture.loadFailed);
-        }
-        return new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK,
-                snapshot.loadFailed || fixture.loadFailed || bundledFixture.loadFailed);
+        return toResourceFixture(masterService.loadEntries(entryType, snapshotRelativePath, fixtureFileName));
     }
 
     private java.nio.file.Path snapshotRoot() {
-        return resolveRoot("ORCA_MASTER_SNAPSHOT_ROOT", SNAPSHOT_ROOT);
+        return masterService.snapshotRoot();
     }
 
     private java.nio.file.Path fixtureRoot() {
-        return resolveRoot("ORCA_MASTER_FIXTURE_ROOT", MSW_FIXTURE_ROOT);
+        return masterService.fixtureRoot();
     }
 
     private java.nio.file.Path resolveRoot(String key, java.nio.file.Path fallback) {
@@ -1096,44 +1098,27 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
     private <T> List<T> safeList(List<T> source) {
-        return source == null ? Collections.emptyList() : source;
+        return masterService.safeList(source);
     }
 
     private <T> LoadedFixture<T> buildDbFixture(List<T> entries, String version, boolean loadFailed) {
-        return new LoadedFixture<>(safeList(entries), null, version, DataOrigin.ORCA_DB, loadFailed);
+        return toResourceFixture(masterService.buildDbFixture(entries, version, loadFailed));
     }
 
     private boolean isUnavailableFallback(LoadedFixture<?> fixture) {
-        return fixture == null || (fixture.origin == DataOrigin.FALLBACK && fixture.entries.isEmpty());
+        return masterService.isUnavailableFallback(toServiceFixture(fixture));
     }
 
     private <T> List<T> paginateList(List<T> source, MultivaluedMap<String, String> params) {
-        int page = parsePositiveInt(params, "page", 1);
-        int size = parsePageSize(params, "size", 100);
-        int fromIndex = Math.max(0, (page - 1) * size);
-        if (fromIndex >= source.size()) {
-            return Collections.emptyList();
-        }
-        int toIndex = Math.min(source.size(), fromIndex + size);
-        return source.subList(fromIndex, toIndex);
+        return masterService.paginateList(source, params);
     }
 
     private int parsePositiveInt(MultivaluedMap<String, String> params, String key, int fallback) {
-        String raw = getFirstValue(params, key);
-        if (raw == null) {
-            return fallback;
-        }
-        try {
-            int parsed = Integer.parseInt(raw);
-            return parsed > 0 ? parsed : fallback;
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
+        return masterService.parsePositiveInt(params, key, fallback);
     }
 
     private int parsePageSize(MultivaluedMap<String, String> params, String key, int fallback) {
-        int parsed = parsePositiveInt(params, key, fallback);
-        return Math.min(parsed, MAX_PAGE_SIZE);
+        return masterService.parsePageSize(params, key, fallback);
     }
 
     private String normalizeDrugSearchMethod(String value) {
@@ -1159,326 +1144,63 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
     private OrcaDrugMasterEntry toGenericClassEntry(OrcaMasterDao.GenericClassRecord entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.classCode,
-                entry.className,
-                "generic",
-                null,
-                null,
-                null,
-                null,
-                null,
-                validFrom,
-                validTo,
-                null,
-                fixture,
-                null,
-                null,
-                null
-        );
+        return responseMapper.toGenericClassEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toGenericClassEntry(FixtureGenericClassEntry entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, entry.validFrom, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, entry.validTo, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.classCode,
-                entry.className,
-                firstNonBlank(entry.categoryCode, "generic"),
-                null,
-                null,
-                null,
-                null,
-                null,
-                validFrom,
-                validTo,
-                null,
-                fixture,
-                entry.cacheHit,
-                entry.missingMaster,
-                entry.fallbackUsed
-        );
+        return responseMapper.toGenericClassEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toGenericPriceEntry(FixtureGenericPriceEntry entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, entry.validFrom, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, entry.validTo, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                firstNonBlank(entry.srycd, entry.code),
-                firstNonBlank(entry.drugName, entry.name),
-                "generic-price",
-                entry.unit,
-                firstNonBlankDouble(entry.price, entry.minPrice),
-                entry.youhouCode,
-                null,
-                null,
-                validFrom,
-                validTo,
-                null,
-                fixture,
-                entry.cacheHit,
-                entry.missingMaster,
-                entry.fallbackUsed
-        );
+        return responseMapper.toGenericPriceEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toDrugEntry(OrcaMasterDao.DrugRecord entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.srycd,
-                entry.drugName,
-                firstNonBlank(entry.category, "drug"),
-                entry.unit,
-                entry.price,
-                null,
-                null,
-                null,
-                validFrom,
-                validTo,
-                entry.note,
-                fixture,
-                false,
-                false,
-                false
-        );
+        return responseMapper.toDrugEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaInsurerEntry toInsurerEntry(FixtureHokenjaEntry entry, LoadedFixture<?> fixture) {
-        OrcaInsurerEntry response = new OrcaInsurerEntry();
-        String payerCode = firstNonBlank(entry.payerCode, entry.insurerNumber);
-        response.setPayerCode(payerCode);
-        response.setPayerName(firstNonBlank(entry.payerName, entry.insurerName));
-        String payerType = resolvePayerType(firstNonBlank(entry.payerType, entry.insurerType), payerCode);
-        response.setPayerType(payerType);
-        response.setPayerRatio(resolvePayerRatio(entry.payerRatio, payerType));
-        String prefCode = firstNonBlank(entry.prefCode, entry.prefectureCode, derivePrefCode(payerCode));
-        response.setPrefCode(prefCode);
-        response.setCityCode(firstNonBlank(entry.cityCode, deriveCityCode(prefCode)));
-        response.setZip(firstNonBlank(entry.zip, entry.zipCode));
-        response.setAddressLine(firstNonBlank(entry.addressLine, entry.address));
-        response.setPhone(entry.phone);
-        response.setValidFrom(firstNonBlank(entry.startDate, entry.validFrom, DEFAULT_VALID_FROM));
-        response.setValidTo(firstNonBlank(entry.endDate, entry.validTo, DEFAULT_VALID_TO));
-        boolean missing = Boolean.TRUE.equals(entry.missingMaster);
-        boolean fallback = Boolean.TRUE.equals(entry.fallbackUsed) || missing || fixture.origin == DataOrigin.FALLBACK;
-        boolean cache = Boolean.TRUE.equals(entry.cacheHit);
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, cache, missing, fallback, null));
-        return response;
+        return responseMapper.toInsurerEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaAddressEntry toAddressEntry(FixtureAddressEntry entry, LoadedFixture<?> fixture) {
-        OrcaAddressEntry response = new OrcaAddressEntry();
-        response.setZip(firstNonBlank(entry.zip, entry.zipCode));
-        String prefCode = firstNonBlank(entry.prefCode, entry.prefectureCode);
-        response.setPrefCode(prefCode);
-        response.setCityCode(firstNonBlank(entry.cityCode, deriveCityCode(prefCode)));
-        response.setCity(entry.city);
-        response.setTown(entry.town);
-        response.setKana(entry.kana);
-        response.setRoman(entry.roman);
-        response.setFullAddress(firstNonBlank(entry.fullAddress, entry.addressLine, entry.address));
-        boolean missing = Boolean.TRUE.equals(entry.missingMaster);
-        boolean fallback = Boolean.TRUE.equals(entry.fallbackUsed) || missing || fixture.origin == DataOrigin.FALLBACK;
-        boolean cache = Boolean.TRUE.equals(entry.cacheHit);
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, cache, missing, fallback, null));
-        return response;
+        return responseMapper.toAddressEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaTensuEntry toCommentEntry(OrcaMasterDao.CommentRecord entry, LoadedFixture<?> fixture) {
-        OrcaTensuEntry response = new OrcaTensuEntry();
-        response.setTensuCode(entry.tensuCode);
-        response.setName(entry.name);
-        response.setKubun(entry.category);
-        response.setCategory(entry.category);
-        response.setUnit(entry.unit);
-        response.setNoticeDate(entry.version);
-        response.setEffectiveDate(firstNonBlank(entry.startDate, DEFAULT_VALID_FROM));
-        response.setStartDate(firstNonBlank(entry.startDate, DEFAULT_VALID_FROM));
-        response.setEndDate(firstNonBlank(entry.endDate, DEFAULT_VALID_TO));
-        response.setTensuVersion(entry.version);
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
-        return response;
+        return responseMapper.toCommentEntry(entry, toServiceFixture(fixture));
     }
 
-
     private OrcaDrugMasterEntry toYouhouEntry(OrcaMasterDao.YouhouRecord entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.youhouCode,
-                entry.youhouName,
-                "youhou",
-                null,
-                null,
-                entry.youhouCode,
-                null,
-                null,
-                validFrom,
-                validTo,
-                null,
-                fixture,
-                false,
-                false,
-                false
-        );
+        return responseMapper.toYouhouEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toYouhouEntry(FixtureYouhouEntry entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.validFrom, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.validTo, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.youhouCode,
-                entry.youhouName,
-                "youhou",
-                null,
-                null,
-                entry.youhouCode,
-                null,
-                null,
-                validFrom,
-                validTo,
-                entry.comment,
-                fixture,
-                entry.cacheHit,
-                entry.missingMaster,
-                entry.fallbackUsed
-        );
+        return responseMapper.toYouhouEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toMaterialEntry(OrcaMasterDao.MaterialRecord entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.materialCode,
-                entry.materialName,
-                "material",
-                entry.unit,
-                entry.price,
-                null,
-                entry.materialCategory,
-                null,
-                validFrom,
-                validTo,
-                entry.category,
-                fixture,
-                false,
-                false,
-                false
-        );
+        return responseMapper.toMaterialEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toMaterialEntry(FixtureMaterialEntry entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, entry.validFrom, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, entry.validTo, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.materialCode,
-                entry.materialName,
-                firstNonBlank(entry.category, "material"),
-                entry.unit,
-                entry.price,
-                null,
-                entry.materialCategory,
-                null,
-                validFrom,
-                validTo,
-                entry.category,
-                fixture,
-                entry.cacheHit,
-                entry.missingMaster,
-                entry.fallbackUsed
-        );
+        return responseMapper.toMaterialEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toKensaSortEntry(OrcaMasterDao.KensaSortRecord entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.startDate, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.endDate, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.kensaCode,
-                entry.kensaName,
-                "kensa-sort",
-                null,
-                null,
-                null,
-                null,
-                entry.kensaSort,
-                validFrom,
-                validTo,
-                entry.classification,
-                fixture,
-                false,
-                false,
-                false
-        );
+        return responseMapper.toKensaSortEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry toKensaSortEntry(FixtureKensaSortEntry entry, LoadedFixture<?> fixture) {
-        String validFrom = firstNonBlank(entry.validFrom, DEFAULT_VALID_FROM);
-        String validTo = firstNonBlank(entry.validTo, DEFAULT_VALID_TO);
-        return buildDrugEntry(
-                entry.kensaCode,
-                entry.kensaName,
-                firstNonBlank(entry.category, "kensa-sort"),
-                null,
-                null,
-                null,
-                null,
-                entry.kensaSort,
-                validFrom,
-                validTo,
-                firstNonBlank(entry.classification, entry.sampleType, entry.insuranceCategory),
-                fixture,
-                entry.cacheHit,
-                entry.missingMaster,
-                entry.fallbackUsed
-        );
+        return responseMapper.toKensaSortEntry(entry, toServiceFixture(fixture));
     }
 
-
     private OrcaTensuEntry toEtensuEntry(FixtureEtensuEntry entry, LoadedFixture<?> fixture) {
-        OrcaTensuEntry response = new OrcaTensuEntry();
-        response.setTensuCode(firstNonBlank(entry.tensuCode, entry.medicalFeeCode));
-        response.setName(entry.name);
-        response.setKubun(firstNonBlank(entry.kubun, entry.category, entry.etensuCategory));
-        response.setNoticeDate(firstNonBlank(entry.noticeDate, entry.version, fixture.version, entry.snapshotVersion));
-        response.setEffectiveDate(firstNonBlank(entry.effectiveDate, entry.startDate, entry.validFrom, DEFAULT_VALID_FROM));
-        response.setPoints(firstNonBlankDouble(entry.points, entry.tanka));
-        response.setTanka(firstNonBlankDouble(entry.tanka, entry.points));
-        response.setUnit(entry.unit);
-        response.setCategory(firstNonBlank(entry.category, entry.etensuCategory));
-        response.setStartDate(firstNonBlank(entry.startDate, entry.validFrom, DEFAULT_VALID_FROM));
-        response.setEndDate(firstNonBlank(entry.endDate, entry.validTo, DEFAULT_VALID_TO));
-        response.setTensuVersion(resolveTensuVersion(entry));
-        boolean missing = Boolean.TRUE.equals(entry.missingMaster);
-        boolean fallback = Boolean.TRUE.equals(entry.fallbackUsed) || missing || fixture.origin == DataOrigin.FALLBACK;
-        boolean cache = Boolean.TRUE.equals(entry.cacheHit);
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, cache, missing, fallback, null));
-        return response;
+        return responseMapper.toEtensuEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaTensuEntry toEtensuEntry(EtensuDao.EtensuRecord record, LoadedFixture<?> fixture) {
-        OrcaTensuEntry response = new OrcaTensuEntry();
-        response.setTensuCode(record.getTensuCode());
-        response.setName(record.getName());
-        response.setKubun(record.getKubun());
-        response.setNoticeDate(firstNonBlank(record.getNoticeDate(), record.getTensuVersion()));
-        response.setEffectiveDate(firstNonBlank(record.getEffectiveDate(), record.getStartDate(), DEFAULT_VALID_FROM));
-        response.setPoints(firstNonBlankDouble(record.getPoints(), record.getTanka()));
-        response.setTanka(firstNonBlankDouble(record.getTanka(), record.getPoints()));
-        response.setUnit(record.getUnit());
-        response.setCategory(record.getCategory());
-        response.setStartDate(firstNonBlank(record.getStartDate(), DEFAULT_VALID_FROM));
-        response.setEndDate(firstNonBlank(record.getEndDate(), DEFAULT_VALID_TO));
-        response.setTensuVersion(record.getTensuVersion());
-        response.setConflicts(record.getConflicts().isEmpty() ? null : record.getConflicts());
-        response.setAdditions(record.getAdditions().isEmpty() ? null : record.getAdditions());
-        response.setCalcUnits(record.getCalcUnits().isEmpty() ? null : record.getCalcUnits());
-        response.setBundlingMembers(record.getBundlingMembers().isEmpty() ? null : record.getBundlingMembers());
-        response.setSpecimens(record.getSpecimens().isEmpty() ? null : record.getSpecimens());
-        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
-        return response;
+        return responseMapper.toEtensuEntry(record, toServiceFixture(fixture));
     }
 
     private OrcaDrugMasterEntry buildDrugEntry(
@@ -1498,56 +1220,8 @@ public class OrcaMasterResource extends AbstractResource {
             Boolean missingMaster,
             Boolean fallbackUsed
     ) {
-        OrcaDrugMasterEntry entry = new OrcaDrugMasterEntry();
-        entry.setCode(code);
-        entry.setName(name);
-        entry.setCategory(category);
-        entry.setUnit(unit);
-        entry.setMinPrice(minPrice);
-        entry.setYouhouCode(youhouCode);
-        entry.setMaterialCategory(materialCategory);
-        entry.setKensaSort(kensaSort);
-        entry.setValidFrom(validFrom);
-        entry.setValidTo(validTo);
-        entry.setNote(note);
-        boolean missing = Boolean.TRUE.equals(missingMaster);
-        boolean fallback = Boolean.TRUE.equals(fallbackUsed) || missing || fixture.origin == DataOrigin.FALLBACK;
-        boolean cache = Boolean.TRUE.equals(cacheHit);
-        OrcaMasterMeta meta = buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, cache, missing, fallback, null);
-        entry.setMeta(meta);
-        return entry;
-    }
-
-    private OrcaMasterMeta buildMeta(
-            DataOrigin origin,
-            String snapshotVersion,
-            String version,
-            boolean cacheHit,
-        boolean missingMaster,
-        boolean fallbackUsed,
-        Boolean validationError
-    ) {
-        OrcaMasterMeta meta = new OrcaMasterMeta();
-        meta.setVersion(firstNonBlank(version, DEFAULT_VERSION));
-        meta.setRunId(AbstractOrcaRestResource.resolveRunIdValue((String) null));
-        meta.setSnapshotVersion(snapshotVersion);
-        meta.setDataSource(dataSourceForOrigin(origin));
-        meta.setCacheHit(cacheHit);
-        meta.setMissingMaster(missingMaster);
-        meta.setFallbackUsed(fallbackUsed);
-        meta.setValidationError(validationError);
-        meta.setFetchedAt(Instant.now().toString());
-        return meta;
-    }
-
-    private String dataSourceForOrigin(DataOrigin origin) {
-        if (origin == DataOrigin.FALLBACK) {
-            return "fallback";
-        }
-        if (origin == DataOrigin.ORCA_DB) {
-            return "server";
-        }
-        return "snapshot";
+        return responseMapper.buildDrugEntry(code, name, category, unit, minPrice, youhouCode, materialCategory,
+                kensaSort, validFrom, validTo, note, toServiceFixture(fixture), cacheHit, missingMaster, fallbackUsed);
     }
 
     private boolean isEffective(String effective, String... ranges) {
@@ -1701,11 +1375,11 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
     private Response notFound(String code, String message, HttpServletRequest request) {
-        return buildErrorResponse(Status.NOT_FOUND, code, message, request, null);
+        return auditSupport().notFound(code, message, request);
     }
 
     private Response serviceUnavailable(HttpServletRequest request, String code, String message) {
-        return buildErrorResponse(Status.SERVICE_UNAVAILABLE, code, message, request, null);
+        return auditSupport().serviceUnavailable(request, code, message);
     }
 
     private Response buildErrorResponse(Status status, String code, String message, HttpServletRequest request,
@@ -1793,170 +1467,42 @@ public class OrcaMasterResource extends AbstractResource {
     private void recordMasterAudit(HttpServletRequest request, String apiRoute, String masterType, int httpStatus,
             LoadedFixture<?> fixture, boolean cacheHit, Boolean emptyResult, Integer resultCount,
             java.util.Map<String, Object> extraDetails) {
-        recordMasterAudit(request, apiRoute, masterType, httpStatus, fixture, cacheHit, emptyResult, resultCount,
-                null, null, extraDetails);
+        auditSupport().recordMasterAudit(request, apiRoute, masterType, httpStatus, toServiceFixture(fixture), cacheHit,
+                emptyResult, resultCount, extraDetails);
     }
 
     private void recordMasterAudit(HttpServletRequest request, String apiRoute, String masterType, int httpStatus,
             LoadedFixture<?> fixture, boolean cacheHit, Boolean emptyResult, Integer resultCount,
             Boolean missingMasterOverride, Boolean fallbackUsedOverride, java.util.Map<String, Object> extraDetails) {
-        if (sessionAuditDispatcher == null) {
-            return;
-        }
-        AuditEventPayload payload = new AuditEventPayload();
-        payload.setAction("ORCA_MASTER_FETCH");
-        payload.setResource(apiRoute);
-        payload.setActorId(request != null ? request.getRemoteUser() : null);
-        payload.setIpAddress(request != null ? request.getRemoteAddr() : null);
-        payload.setUserAgent(request != null ? request.getHeader("User-Agent") : null);
-        String traceId = resolveTraceId(request);
-        if (traceId != null && !traceId.isBlank()) {
-            payload.setTraceId(traceId);
-        }
-        String requestId = request != null ? request.getHeader("X-Request-Id") : null;
-        if (requestId != null && !requestId.isBlank()) {
-            payload.setRequestId(requestId);
-        } else if (traceId != null && !traceId.isBlank()) {
-            payload.setRequestId(traceId);
-        }
-        java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
-        details.put("runId", resolveRunId(request));
-        details.put("masterType", masterType);
-        details.put("httpStatus", httpStatus);
-        details.put("status", httpStatus >= 400 ? "failed" : "success");
-        details.put("dataSource", dataSourceForOrigin(fixture.origin));
-        details.put("snapshotVersion", fixture.snapshotVersion);
-        details.put("version", firstNonBlank(fixture.version, DEFAULT_VERSION));
-        details.put("cacheHit", cacheHit);
-        boolean missingMaster = fixture.origin == DataOrigin.FALLBACK;
-        if (missingMasterOverride != null) {
-            missingMaster = missingMasterOverride;
-        }
-        boolean fallbackUsed = fixture.origin == DataOrigin.FALLBACK;
-        if (fallbackUsedOverride != null) {
-            fallbackUsed = fallbackUsedOverride;
-        } else if (missingMaster) {
-            fallbackUsed = true;
-        }
-        details.put("missingMaster", missingMaster);
-        details.put("fallbackUsed", fallbackUsed);
-        if (traceId != null && !traceId.isBlank()) {
-            details.put("traceId", traceId);
-        }
-        if (resultCount != null) {
-            details.put("resultCount", resultCount);
-            details.put("totalCount", resultCount);
-        }
-        if (emptyResult != null) {
-            details.put("emptyResult", emptyResult);
-        }
-        if (extraDetails != null) {
-            details.putAll(extraDetails);
-        }
-        payload.setDetails(details);
-        AuditEventEnvelope.Outcome outcome = httpStatus >= 400
-                ? AuditEventEnvelope.Outcome.FAILURE
-                : AuditEventEnvelope.Outcome.SUCCESS;
-        String errorCode = httpStatus >= 400 ? "http_" + httpStatus : null;
-        sessionAuditDispatcher.record(payload, outcome, errorCode, null);
+        auditSupport().recordMasterAudit(request, apiRoute, masterType, httpStatus, toServiceFixture(fixture), cacheHit,
+                emptyResult, resultCount, missingMasterOverride, fallbackUsedOverride, extraDetails);
     }
 
     private java.util.Map<String, Object> buildQueryDetails(String pref, String keyword, String effective,
             MultivaluedMap<String, String> params) {
-        return buildQueryDetails(pref, keyword, effective, params, null);
+        return auditSupport().buildQueryDetails(pref, keyword, effective, params);
     }
 
     private java.util.Map<String, Object> buildQueryDetails(String pref, String keyword, String effective,
             MultivaluedMap<String, String> params, String zip) {
-        java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
-        if (pref != null) {
-            details.put("queryPref", pref);
-        }
-        if (zip != null) {
-            details.put("queryZip", zip);
-        }
-        if (keyword != null && !keyword.isBlank()) {
-            details.put("keywordPresent", true);
-            details.put("keywordLength", keyword.length());
-        } else {
-            details.put("keywordPresent", false);
-        }
-        if (effective != null) {
-            details.put("effective", effective);
-        }
-        if (params != null) {
-            String method = normalizeDrugSearchMethod(getFirstValue(params, "method"));
-            if (method != null) {
-                details.put("method", method);
-            }
-            String scope = normalizeDrugScope(getFirstValue(params, "scope"));
-            if (scope != null) {
-                details.put("scope", scope);
-            }
-            if (shouldIncludeTotalCount(params)) {
-                details.put("includeTotalCount", true);
-            }
-        }
-        if (params != null) {
-            details.put("page", parsePositiveInt(params, "page", 1));
-            details.put("size", parsePageSize(params, "size", 100));
-        }
-        return details;
+        return auditSupport().buildQueryDetails(pref, keyword, effective, params, zip);
     }
 
     private java.util.Map<String, Object> buildSrycdDetails(String srycd, String effective,
             MultivaluedMap<String, String> params) {
-        java.util.Map<String, Object> details = buildQueryDetails(null, null, effective, params);
-        details.put("srycd", srycd);
-        return details;
+        return auditSupport().buildSrycdDetails(srycd, effective, params);
     }
 
     private java.util.Map<String, Object> buildTensuQueryDetails(String keyword, String category, String asOf,
             String tensuVersion, Double pointsMin, Double pointsMax, MultivaluedMap<String, String> params) {
-        java.util.Map<String, Object> details = new java.util.LinkedHashMap<>();
-        if (keyword != null && !keyword.isBlank()) {
-            details.put("keywordPresent", true);
-            details.put("keywordLength", keyword.length());
-        } else {
-            details.put("keywordPresent", false);
-        }
-        if (category != null) {
-            details.put("category", category);
-        }
-        if (asOf != null) {
-            details.put("asOf", asOf);
-        }
-        if (tensuVersion != null) {
-            details.put("tensuVersion", tensuVersion);
-        }
-        if (pointsMin != null) {
-            details.put("pointsMin", pointsMin);
-        }
-        if (pointsMax != null) {
-            details.put("pointsMax", pointsMax);
-        }
-        if (params != null) {
-            details.put("page", parsePositiveInt(params, "page", 1));
-            details.put("size", parsePageSize(params, "size", 100));
-            if (shouldIncludeTotalCount(params)) {
-                details.put("includeTotalCount", true);
-            }
-        }
-        return details;
+        return auditSupport().buildTensuQueryDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax, params);
     }
 
     private java.util.Map<String, Object> buildEtensuAuditDetails(String keyword, String category, String asOf,
             String tensuVersion, Double pointsMin, Double pointsMax, MultivaluedMap<String, String> params,
             EtensuDao.EtensuSearchResult result) {
-        java.util.Map<String, Object> details =
-                buildTensuQueryDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax, params);
-        if (result == null) {
-            return details;
-        }
-        details.put("loadFailed", result.isLoadFailed());
-        details.put("rowCount", result.getRecords().size());
-        details.put("dbTimeMs", result.getDbTimeMs());
-        return details;
+        return auditSupport().buildEtensuAuditDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax,
+                params, result);
     }
 
     private Double parseNullableDouble(String value) {
@@ -2011,85 +1557,21 @@ public class OrcaMasterResource extends AbstractResource {
 
     private String buildEtag(String apiRoute, String masterType, LoadedFixture<?> fixture,
             MultivaluedMap<String, String> params) {
-        StringBuilder seed = new StringBuilder();
-        seed.append(apiRoute).append('|');
-        seed.append(masterType).append('|');
-        seed.append(dataSourceForOrigin(fixture.origin)).append('|');
-        seed.append(firstNonBlank(fixture.snapshotVersion, "none")).append('|');
-        seed.append(firstNonBlank(fixture.version, DEFAULT_VERSION)).append('|');
-        seed.append(normalizeQuery(params));
-        return sha256Hex(seed.toString());
+        return masterService.buildEtag(apiRoute, masterType, toServiceFixture(fixture), params);
     }
 
     private String normalizeQuery(MultivaluedMap<String, String> params) {
-        if (params == null || params.isEmpty()) {
-            return "";
-        }
-        Map<String, List<String>> sorted = new TreeMap<>();
-        for (Map.Entry<String, List<String>> entry : params.entrySet()) {
-            if (entry.getKey() == null) {
-                continue;
-            }
-            List<String> values = entry.getValue() != null ? entry.getValue() : Collections.emptyList();
-            List<String> normalized = values.stream()
-                    .filter(Objects::nonNull)
-                    .sorted()
-                    .collect(Collectors.toList());
-            sorted.put(entry.getKey(), normalized);
-        }
-        StringBuilder query = new StringBuilder();
-        for (Map.Entry<String, List<String>> entry : sorted.entrySet()) {
-            if (query.length() > 0) {
-                query.append('&');
-            }
-            query.append(entry.getKey()).append('=');
-            query.append(String.join(",", entry.getValue()));
-        }
-        return query.toString();
+        return masterService.normalizeQuery(params);
     }
 
     private String sha256Hex(String input) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = digest.digest(input.getBytes(StandardCharsets.UTF_8));
-            StringBuilder hex = new StringBuilder(bytes.length * 2);
-            for (byte value : bytes) {
-                String part = Integer.toHexString(value & 0xff);
-                if (part.length() == 1) {
-                    hex.append('0');
-                }
-                hex.append(part);
-            }
-            return hex.toString();
-        } catch (Exception e) {
-            return Integer.toHexString(input.hashCode());
-        }
+        return input == null ? null : masterService.buildEtag("sha256", "sha256",
+                new OrcaMasterService.LoadedFixture<>(List.of(), null, input, OrcaMasterService.DataOrigin.ORCA_DB, false),
+                null);
     }
 
     private boolean etagMatches(String ifNoneMatch, String etagValue) {
-        if (ifNoneMatch == null || ifNoneMatch.isBlank()) {
-            return false;
-        }
-        String[] tokens = ifNoneMatch.split(",");
-        for (String token : tokens) {
-            String candidate = token.trim();
-            if (candidate.isEmpty()) {
-                continue;
-            }
-            if ("*".equals(candidate)) {
-                return true;
-            }
-            if (candidate.startsWith("W/")) {
-                candidate = candidate.substring(2).trim();
-            }
-            if (candidate.startsWith("\"") && candidate.endsWith("\"") && candidate.length() >= 2) {
-                candidate = candidate.substring(1, candidate.length() - 1);
-            }
-            if (etagValue.equals(candidate)) {
-                return true;
-            }
-        }
-        return false;
+        return masterService.etagMatches(ifNoneMatch, etagValue);
     }
 
     private Response buildCachedOkResponse(Object entity, String etagValue, long ttlSeconds) {
@@ -2102,21 +1584,11 @@ public class OrcaMasterResource extends AbstractResource {
 
     private Response buildCachedOkResponse(Object entity, String etagValue, long ttlSeconds,
             Map<String, String> extraHeaders) {
-        EntityTag tag = new EntityTag(etagValue);
-        Response.ResponseBuilder builder = Response.ok(entity)
-                .tag(tag)
-                .header("Cache-Control", cacheControlHeader(ttlSeconds));
-        applyExtraHeaders(builder, extraHeaders);
-        return builder.build();
+        return masterService.buildCachedOkResponse(entity, etagValue, ttlSeconds, extraHeaders);
     }
 
     private Response buildNotModifiedResponse(String etagValue, long ttlSeconds, Map<String, String> extraHeaders) {
-        EntityTag tag = new EntityTag(etagValue);
-        Response.ResponseBuilder builder = Response.status(Status.NOT_MODIFIED)
-                .tag(tag)
-                .header("Cache-Control", cacheControlHeader(ttlSeconds));
-        applyExtraHeaders(builder, extraHeaders);
-        return builder.build();
+        return masterService.buildNotModifiedResponse(etagValue, ttlSeconds, extraHeaders);
     }
 
     private void applyExtraHeaders(Response.ResponseBuilder builder, Map<String, String> extraHeaders) {
@@ -2139,17 +1611,17 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
     private long cacheTtlSeconds(String masterType) {
-        return CACHE_TTL_SHORT_SECONDS;
+        return masterService.cacheTtlSeconds(masterType);
     }
 
-    private static final class FixtureListResponse<T> {
+    static final class FixtureListResponse<T> {
         public List<T> list;
         public Integer totalCount;
         public String snapshotVersion;
         public String version;
     }
 
-    private static final class FixtureGenericClassEntry {
+    static final class FixtureGenericClassEntry {
         public String classCode;
         public String className;
         public String kanaName;
@@ -2165,7 +1637,7 @@ public class OrcaMasterResource extends AbstractResource {
         public Boolean fallbackUsed;
     }
 
-    private static final class FixtureGenericPriceEntry {
+    static final class FixtureGenericPriceEntry {
         public String code;
         public String srycd;
         public String name;
@@ -2183,7 +1655,7 @@ public class OrcaMasterResource extends AbstractResource {
         public Boolean fallbackUsed;
     }
 
-    private static final class FixtureHokenjaEntry {
+    static final class FixtureHokenjaEntry {
         public String payerCode;
         public String insurerNumber;
         public String payerName;
@@ -2209,7 +1681,7 @@ public class OrcaMasterResource extends AbstractResource {
         public Boolean fallbackUsed;
     }
 
-    private static final class FixtureAddressEntry {
+    static final class FixtureAddressEntry {
         public String zip;
         public String zipCode;
         public String prefCode;
@@ -2232,13 +1704,13 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
 
-    private static final class FixtureReference {
+    static final class FixtureReference {
         public String yukostymd;
         public String yukoedymd;
         public String source;
     }
 
-    private static final class FixtureYouhouEntry {
+    static final class FixtureYouhouEntry {
         public String youhouCode;
         public String youhouName;
         public String timingCode;
@@ -2253,7 +1725,7 @@ public class OrcaMasterResource extends AbstractResource {
         public Boolean fallbackUsed;
     }
 
-    private static final class FixtureMaterialEntry {
+    static final class FixtureMaterialEntry {
         public String materialCode;
         public String materialName;
         public String category;
@@ -2271,7 +1743,7 @@ public class OrcaMasterResource extends AbstractResource {
         public Boolean fallbackUsed;
     }
 
-    private static final class FixtureKensaSortEntry {
+    static final class FixtureKensaSortEntry {
         public String kensaCode;
         public String kensaName;
         public String sampleType;
@@ -2288,7 +1760,7 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
 
-    private static final class FixtureEtensuEntry {
+    static final class FixtureEtensuEntry {
         public String etensuCategory;
         public String category;
         public String medicalFeeCode;

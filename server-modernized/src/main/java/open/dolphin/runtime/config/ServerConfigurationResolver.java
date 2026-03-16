@@ -1,8 +1,10 @@
 package open.dolphin.runtime.config;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.time.Duration;
 import java.nio.file.Path;
 import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -65,6 +67,13 @@ public class ServerConfigurationResolver {
     public static final String KEY_PLIVO_BASE_URL = "plivo.base-url";
     public static final String KEY_PLIVO_ENVIRONMENT = "plivo.environment";
     public static final String KEY_PLIVO_DEFAULT_COUNTRY = "plivo.default-country";
+    public static final String KEY_PLIVO_LOG_LEVEL = "plivo.log.level";
+    public static final String KEY_PLIVO_LOG_MESSAGE_CONTENT = "plivo.log.message-content";
+    public static final String KEY_PLIVO_HTTP_CONNECT_TIMEOUT = "plivo.http.connect-timeout";
+    public static final String KEY_PLIVO_HTTP_READ_TIMEOUT = "plivo.http.read-timeout";
+    public static final String KEY_PLIVO_HTTP_WRITE_TIMEOUT = "plivo.http.write-timeout";
+    public static final String KEY_PLIVO_HTTP_CALL_TIMEOUT = "plivo.http.call-timeout";
+    public static final String KEY_PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE = "plivo.http.retry-on-connection-failure";
 
     public ServerRuntimeConfiguration.RuntimeSettings runtime() {
         String environment = optional(KEY_ENVIRONMENT).orElse(null);
@@ -144,7 +153,14 @@ public class ServerConfigurationResolver {
                 optional(KEY_PLIVO_SOURCE_NUMBER).orElse(null),
                 optional(KEY_PLIVO_BASE_URL).orElse(null),
                 optional(KEY_PLIVO_ENVIRONMENT).orElse(null),
-                optional(KEY_PLIVO_DEFAULT_COUNTRY).orElse(null)
+                optional(KEY_PLIVO_DEFAULT_COUNTRY).orElse(null),
+                optional(KEY_PLIVO_LOG_LEVEL).orElse(null),
+                optionalBoolean(KEY_PLIVO_LOG_MESSAGE_CONTENT).orElse(null),
+                optionalDuration(KEY_PLIVO_HTTP_CONNECT_TIMEOUT).orElse(null),
+                optionalDuration(KEY_PLIVO_HTTP_READ_TIMEOUT).orElse(null),
+                optionalDuration(KEY_PLIVO_HTTP_WRITE_TIMEOUT).orElse(null),
+                optionalDuration(KEY_PLIVO_HTTP_CALL_TIMEOUT).orElse(null),
+                optionalBoolean(KEY_PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE).orElse(null)
         );
     }
 
@@ -186,6 +202,10 @@ public class ServerConfigurationResolver {
         return optional(key).map(value -> Path.of(value).toAbsolutePath().normalize());
     }
 
+    private Optional<Duration> optionalDuration(String key) {
+        return optional(key).map(this::parseDuration);
+    }
+
     private boolean hasAny(String... keys) {
         for (String key : keys) {
             if (optional(key).isPresent()) {
@@ -224,6 +244,28 @@ public class ServerConfigurationResolver {
             case "0", "false", "no", "n", "off" -> Boolean.FALSE;
             default -> throw new IllegalArgumentException("Unsupported boolean value: " + value);
         };
+    }
+
+    private Duration parseDuration(String value) {
+        String trimmed = value.trim();
+        try {
+            return Duration.parse(trimmed);
+        } catch (DateTimeParseException ex) {
+            try {
+                if (trimmed.endsWith("ms") || trimmed.endsWith("MS")) {
+                    return Duration.ofMillis(Long.parseLong(trimmed.substring(0, trimmed.length() - 2).trim()));
+                }
+                if (trimmed.endsWith("s") || trimmed.endsWith("S")) {
+                    return Duration.ofSeconds(Long.parseLong(trimmed.substring(0, trimmed.length() - 1).trim()));
+                }
+                if (trimmed.endsWith("m") || trimmed.endsWith("M")) {
+                    return Duration.ofMinutes(Long.parseLong(trimmed.substring(0, trimmed.length() - 1).trim()));
+                }
+                return Duration.ofSeconds(Long.parseLong(trimmed));
+            } catch (NumberFormatException inner) {
+                throw new IllegalArgumentException("Unsupported duration value: " + value, inner);
+            }
+        }
     }
 
     private ZoneId resolveTimezone(String value) {

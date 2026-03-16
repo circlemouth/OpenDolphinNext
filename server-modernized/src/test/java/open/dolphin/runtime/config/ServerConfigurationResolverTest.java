@@ -3,6 +3,7 @@ package open.dolphin.runtime.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +34,20 @@ class ServerConfigurationResolverTest {
                 ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64,
                 ServerConfigurationResolver.KEY_FIDO2_RP_ID,
                 ServerConfigurationResolver.KEY_FIDO2_RP_NAME,
-                ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS);
+                ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS,
+                ServerConfigurationResolver.KEY_PLIVO_AUTH_ID,
+                ServerConfigurationResolver.KEY_PLIVO_AUTH_TOKEN,
+                ServerConfigurationResolver.KEY_PLIVO_SOURCE_NUMBER,
+                ServerConfigurationResolver.KEY_PLIVO_BASE_URL,
+                ServerConfigurationResolver.KEY_PLIVO_ENVIRONMENT,
+                ServerConfigurationResolver.KEY_PLIVO_DEFAULT_COUNTRY,
+                ServerConfigurationResolver.KEY_PLIVO_LOG_LEVEL,
+                ServerConfigurationResolver.KEY_PLIVO_LOG_MESSAGE_CONTENT,
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_CONNECT_TIMEOUT,
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_READ_TIMEOUT,
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_WRITE_TIMEOUT,
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_CALL_TIMEOUT,
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE);
     }
 
     @Test
@@ -98,6 +112,33 @@ class ServerConfigurationResolverTest {
         assertEquals(true, settings.pvtListener().enabled());
         assertEquals("127.0.0.1", settings.pvtListener().bindIp());
         assertEquals(5001, settings.pvtListener().port());
+    }
+
+    @Test
+    void resolvesPlivoSettingsAsTypedValues() {
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_AUTH_ID, "auth-id");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_AUTH_TOKEN, "auth-token");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_SOURCE_NUMBER, "+819012345678");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_ENVIRONMENT, "sandbox");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_LOG_LEVEL, "headers");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_LOG_MESSAGE_CONTENT, "true");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_CONNECT_TIMEOUT, "1500ms");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_READ_TIMEOUT, "PT40S");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_WRITE_TIMEOUT, "45s");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_CALL_TIMEOUT, "2m");
+        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE, "false");
+
+        ServerRuntimeConfiguration.PlivoSettings settings = resolver.plivo();
+
+        assertEquals("auth-id", settings.authId());
+        assertEquals("sandbox", settings.environment());
+        assertEquals("headers", settings.logLevel());
+        assertEquals(Boolean.TRUE, settings.logMessageContent());
+        assertEquals(Duration.ofMillis(1500), settings.connectTimeout());
+        assertEquals(Duration.ofSeconds(40), settings.readTimeout());
+        assertEquals(Duration.ofSeconds(45), settings.writeTimeout());
+        assertEquals(Duration.ofMinutes(2), settings.callTimeout());
+        assertEquals(Boolean.FALSE, settings.retryOnConnectionFailure());
     }
 
     private void clear(String... keys) {
