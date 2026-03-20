@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
@@ -17,6 +18,18 @@ import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
  * @author kazushi
  */
 public class VelocityHelper {
+
+    private static String resolveConfigValue(String key) {
+        try {
+            return ConfigProvider.getConfig()
+                    .getOptionalValue(key, String.class)
+                    .map(String::trim)
+                    .filter(token -> !token.isEmpty())
+                    .orElse(null);
+        } catch (IllegalStateException ex) {
+            return null;
+        }
+    }
     
     static {
         
@@ -29,14 +42,14 @@ public class VelocityHelper {
             p.setProperty("runtime.log.logsystem.class", "org.apache.velocity.runtime.log.NullLogChute");
 
             List<String> templatePaths = new ArrayList<>();
-            String configuredDir = System.getProperty("open.dolphin.templates.dir");
+            String configuredDir = resolveConfigValue("opendolphin.templates.dir");
             if (configuredDir != null && !configuredDir.isBlank()) {
                 templatePaths.add(configuredDir);
             }
 
-            String jbossHome = System.getProperty("jboss.home.dir");
-            if (jbossHome != null && !jbossHome.isBlank()) {
-                templatePaths.add(Paths.get(jbossHome, "templates").toString());
+            String serverDataDir = resolveConfigValue("jboss.server.data.dir");
+            if (serverDataDir != null && !serverDataDir.isBlank()) {
+                templatePaths.add(Paths.get(serverDataDir, "templates").toString());
             }
 
             Path repoTemplates = Paths.get("").toAbsolutePath()

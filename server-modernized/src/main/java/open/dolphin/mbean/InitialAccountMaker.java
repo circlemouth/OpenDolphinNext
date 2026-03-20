@@ -97,19 +97,6 @@ public class InitialAccountMaker {
 //            Logger.getLogger("open.dolphin").info(NO_UPDATE_MEMO);
 //        }
         
-//minagawa^ WildFly         
-//        Properties config = new Properties();
-//        
-//        // コンフィグファイルをチェックする
-//        StringBuilder sb = new StringBuilder();
-//        sb.append(System.getProperty("jboss.home.dir"));
-//        sb.append(File.separator);
-//        sb.append("custom.properties");
-//        File f = new File(sb.toString());
-//        
-//        try {
-//            // 読み込む
-//            FileInputStream fin = new FileInputStream(f);
 //            InputStreamReader r = new InputStreamReader(fin, "JISAutoDetect");
 //            config.load(r);
 //            r.close();

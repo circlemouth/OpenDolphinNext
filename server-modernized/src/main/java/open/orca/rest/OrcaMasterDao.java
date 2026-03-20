@@ -1,7 +1,8 @@
 package open.orca.rest;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.sql.Connection;
-import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,6 +18,7 @@ import java.util.logging.Logger;
  * ORCA master DAO.
  * Supported schema contract is documented in docs/development/orca-master-supported-schema-contract.md.
  */
+@ApplicationScoped
 public class OrcaMasterDao {
     private static final Logger LOGGER = Logger.getLogger(OrcaMasterDao.class.getName());
     private static final int MAX_PAGE_SIZE = 2000;
@@ -26,23 +28,21 @@ public class OrcaMasterDao {
     private static final String BODY_PART_NAME_TOKEN = "部位";
     private final ORCAConnection orcaConnection;
 
-    public OrcaMasterDao() {
-        this(ORCAConnection.current());
+    OrcaMasterDao() {
+        this(null);
     }
 
+    @Inject
     OrcaMasterDao(ORCAConnection orcaConnection) {
-        this.orcaConnection = Objects.requireNonNull(orcaConnection, "orcaConnection");
+        this.orcaConnection = orcaConnection;
     }
 
     public GenericClassSearchResult searchGenericClass(GenericClassCriteria criteria) {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = orcaConnection.getConnection()) {
-            GenericClassTableMeta meta = GenericClassTableMeta.load(connection);
-            if (meta == null || meta.codeColumn == null) {
-                return null;
-            }
+        try (Connection connection = openConnection()) {
+            GenericClassTableMeta meta = GenericClassTableMeta.SUPPORTED_CONTRACT;
             Query query = buildGenericClassQuery(criteria, meta);
             Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
             if (Integer.valueOf(0).equals(totalCount)) {
@@ -63,11 +63,8 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = orcaConnection.getConnection()) {
-            DrugTableMeta meta = DrugTableMeta.load(connection);
-            if (meta == null || meta.codeColumn == null || meta.nameColumn == null) {
-                return null;
-            }
+        try (Connection connection = openConnection()) {
+            DrugTableMeta meta = DrugTableMeta.SUPPORTED_CONTRACT;
             Query query = buildDrugQuery(criteria, meta);
             Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
             if (Integer.valueOf(0).equals(totalCount)) {
@@ -86,11 +83,8 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = orcaConnection.getConnection()) {
-            DrugTableMeta meta = DrugTableMeta.load(connection);
-            if (meta == null || meta.codeColumn == null || meta.nameColumn == null) {
-                return null;
-            }
+        try (Connection connection = openConnection()) {
+            DrugTableMeta meta = DrugTableMeta.SUPPORTED_CONTRACT;
             Query query = buildCommentQuery(criteria, meta);
             Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
             if (Integer.valueOf(0).equals(totalCount)) {
@@ -109,11 +103,8 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = orcaConnection.getConnection()) {
-            DrugTableMeta meta = DrugTableMeta.load(connection);
-            if (meta == null || meta.codeColumn == null || meta.nameColumn == null) {
-                return null;
-            }
+        try (Connection connection = openConnection()) {
+            DrugTableMeta meta = DrugTableMeta.SUPPORTED_CONTRACT;
             Query query = buildBodypartQuery(criteria, meta);
             Integer totalCount = maybeFetchTotalCount(connection, meta.tableName, query, criteria.isIncludeTotalCount());
             if (Integer.valueOf(0).equals(totalCount)) {
@@ -132,11 +123,8 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = orcaConnection.getConnection()) {
-            YouhouTableMeta meta = YouhouTableMeta.load(connection);
-            if (meta == null || meta.codeColumn == null) {
-                return null;
-            }
+        try (Connection connection = openConnection()) {
+            YouhouTableMeta meta = YouhouTableMeta.SUPPORTED_CONTRACT;
             Query query = buildKeywordEffectiveQuery(criteria.keyword, criteria.effective, meta.tableName,
                     meta.codeColumn, meta.nameColumn, meta.kanaColumn, meta.startDateColumn, meta.endDateColumn);
             List<YouhouRecord> records = fetchYouhouRecords(connection, meta, query);
@@ -152,11 +140,8 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = orcaConnection.getConnection()) {
-            DrugTableMeta meta = DrugTableMeta.load(connection);
-            if (meta == null || meta.codeColumn == null) {
-                return null;
-            }
+        try (Connection connection = openConnection()) {
+            DrugTableMeta meta = DrugTableMeta.SUPPORTED_CONTRACT;
             Query query = buildMaterialQuery(criteria, meta);
             List<MaterialRecord> records = fetchMaterialRecordsFromTensu(connection, meta, query);
             String version = resolveVersion(records, null);
@@ -171,13 +156,9 @@ public class OrcaMasterDao {
         if (criteria == null) {
             return null;
         }
-        try (Connection connection = orcaConnection.getConnection()) {
-            KensaSortTableMeta kensaSortMeta = KensaSortTableMeta.load(connection);
-            DrugTableMeta tensuMeta = DrugTableMeta.load(connection);
-            if (kensaSortMeta == null || kensaSortMeta.codeColumn == null
-                    || tensuMeta == null || tensuMeta.codeColumn == null || tensuMeta.nameColumn == null) {
-                return null;
-            }
+        try (Connection connection = openConnection()) {
+            KensaSortTableMeta kensaSortMeta = KensaSortTableMeta.SUPPORTED_CONTRACT;
+            DrugTableMeta tensuMeta = DrugTableMeta.SUPPORTED_CONTRACT;
             Query query = buildKensaSortJoinQuery(criteria, kensaSortMeta, tensuMeta);
             List<KensaSortRecord> records = fetchKensaSortRecordsFromTensu(connection, kensaSortMeta, tensuMeta, query);
             String version = resolveVersion(records, null);
@@ -186,6 +167,13 @@ public class OrcaMasterDao {
             LOGGER.log(Level.WARNING, "Failed to load ORCA-08 kensa sort master", e);
             return null;
         }
+    }
+
+    private Connection openConnection() throws SQLException {
+        if (orcaConnection == null) {
+            throw new SQLException("ORCAConnection is not configured");
+        }
+        return orcaConnection.getConnection();
     }
 
 
@@ -1392,6 +1380,17 @@ public class OrcaMasterDao {
     }
 
     private static final class GenericClassTableMeta {
+        private static final GenericClassTableMeta SUPPORTED_CONTRACT = new GenericClassTableMeta(
+                "TBL_GENERIC_CLASS",
+                "class_code",
+                "class_name",
+                "kana_name",
+                "category_code",
+                "parent_class_code",
+                "start_date",
+                "end_date",
+                "upymd"
+        );
         private final String tableName;
         private final String codeColumn;
         private final String nameColumn;
@@ -1416,26 +1415,23 @@ public class OrcaMasterDao {
             this.versionColumn = versionColumn;
         }
 
-        private static GenericClassTableMeta load(Connection connection) throws SQLException {
-            DatabaseMetaData meta = connection.getMetaData();
-            String table = resolveTable(meta, "TBL_GENERIC_CLASS", "tbl_generic_class");
-            if (table == null) {
-                return null;
-            }
-            String code = columnOrNull(meta, table, "class_code", "yakkakjncd", "code");
-            String name = columnOrNull(meta, table, "class_name", "yakkakjnnm", "name");
-            String kana = columnOrNull(meta, table, "kana_name", "kananame", "kana");
-            String category = columnOrNull(meta, table, "category_code", "category", "kouhatu");
-            String parent = columnOrNull(meta, table, "parent_class_code", "parent_code");
-            String startDate = columnOrNull(meta, table, "start_date", "yukostymd", "valid_from");
-            String endDate = columnOrNull(meta, table, "end_date", "yukoedymd", "valid_to");
-            String version = columnOrNull(meta, table, "upymd", "creymd", "chgymd", "version");
-            return new GenericClassTableMeta(table, code, name, kana, category, parent, startDate, endDate, version);
-        }
     }
 
 
     private static final class DrugTableMeta {
+        private static final DrugTableMeta SUPPORTED_CONTRACT = new DrugTableMeta(
+                "TBL_TENSU_MASTER",
+                "srycd",
+                "name",
+                "kananame",
+                "srysyukbn",
+                "taniname",
+                "ten",
+                "yakkakjncd",
+                "yukostymd",
+                "yukoedymd",
+                "upymd"
+        );
         private final String tableName;
         private final String codeColumn;
         private final String nameColumn;
@@ -1464,28 +1460,18 @@ public class OrcaMasterDao {
             this.versionColumn = versionColumn;
         }
 
-        private static DrugTableMeta load(Connection connection) throws SQLException {
-            DatabaseMetaData meta = connection.getMetaData();
-            String table = resolveTable(meta, "TBL_TENSU_MASTER", "tbl_tensu_master");
-            if (table == null) {
-                return null;
-            }
-            String code = columnOrNull(meta, table, "srycd", "code");
-            String name = columnOrNull(meta, table, "name", "drug_name");
-            String kana = columnOrNull(meta, table, "kananame", "kana_name", "kana");
-            String category = columnOrNull(meta, table, "srysyukbn", "srykbn", "category");
-            String unit = columnOrNull(meta, table, "taniname", "tani", "unit", "tanicd");
-            String price = columnOrNull(meta, table, "ten", "tanka", "price");
-            String note = columnOrNull(meta, table, "yakkakjncd", "drug_class_code", "note");
-            String startDate = columnOrNull(meta, table, "yukostymd", "start_date", "valid_from");
-            String endDate = columnOrNull(meta, table, "yukoedymd", "end_date", "valid_to");
-            String version = columnOrNull(meta, table, "upymd", "chgymd", "creymd", "version");
-            return new DrugTableMeta(table, code, name, kana, category, unit, price, note, startDate, endDate,
-                    version);
-        }
     }
 
     private static final class YouhouTableMeta {
+        private static final YouhouTableMeta SUPPORTED_CONTRACT = new YouhouTableMeta(
+                "TBL_YOUHOU",
+                "youhoucode",
+                "youhouname",
+                "kana",
+                "start_date",
+                "end_date",
+                "upymd"
+        );
         private final String tableName;
         private final String codeColumn;
         private final String nameColumn;
@@ -1505,23 +1491,23 @@ public class OrcaMasterDao {
             this.versionColumn = versionColumn;
         }
 
-        private static YouhouTableMeta load(Connection connection) throws SQLException {
-            DatabaseMetaData meta = connection.getMetaData();
-            String table = resolveTable(meta, "TBL_YOUHOU", "tbl_youhou");
-            if (table == null) {
-                return null;
-            }
-            String code = columnOrNull(meta, table, "youhoucode", "code");
-            String name = columnOrNull(meta, table, "youhouname", "name", "detail_name");
-            String kana = columnOrNull(meta, table, "kana", "kana_name", "kananame");
-            String startDate = columnOrNull(meta, table, "start_date", "yukostymd", "valid_from");
-            String endDate = columnOrNull(meta, table, "end_date", "yukoedymd", "valid_to");
-            String version = columnOrNull(meta, table, "upymd", "creymd", "chgymd", "version");
-            return new YouhouTableMeta(table, code, name, kana, startDate, endDate, version);
-        }
     }
 
     private static final class MaterialTableMeta {
+        private static final MaterialTableMeta SUPPORTED_CONTRACT = new MaterialTableMeta(
+                "TBL_MATERIAL_H_M",
+                "material_code",
+                "material_name",
+                "kana_name",
+                "category",
+                "material_category",
+                "unit",
+                "price",
+                "maker",
+                "start_date",
+                "end_date",
+                "upymd"
+        );
         private final String tableName;
         private final String codeColumn;
         private final String nameColumn;
@@ -1552,30 +1538,20 @@ public class OrcaMasterDao {
             this.versionColumn = versionColumn;
         }
 
-        private static MaterialTableMeta load(Connection connection) throws SQLException {
-            DatabaseMetaData meta = connection.getMetaData();
-            String table = resolveTable(meta, "TBL_MATERIAL_H_M", "TBL_MATERIAL", "tbl_material_h_m",
-                    "tbl_material");
-            if (table == null) {
-                return null;
-            }
-            String code = columnOrNull(meta, table, "material_code", "srycd", "jancd", "code");
-            String name = columnOrNull(meta, table, "material_name", "name", "snamecd");
-            String kana = columnOrNull(meta, table, "kana_name", "kananame", "kana");
-            String category = columnOrNull(meta, table, "category", "classification", "kinokbnno");
-            String materialCategory = columnOrNull(meta, table, "material_category", "category_code", "dockanricd");
-            String unit = columnOrNull(meta, table, "unit", "tani", "taniname");
-            String price = columnOrNull(meta, table, "price", "tanka", "kakaku");
-            String maker = columnOrNull(meta, table, "maker", "companycd1", "companycd2");
-            String startDate = columnOrNull(meta, table, "start_date", "yukostymd", "valid_from");
-            String endDate = columnOrNull(meta, table, "end_date", "yukoedymd", "valid_to");
-            String version = columnOrNull(meta, table, "upymd", "creymd", "chgymd", "version");
-            return new MaterialTableMeta(table, code, name, kana, category, materialCategory, unit, price, maker,
-                    startDate, endDate, version);
-        }
     }
 
     private static final class KensaSortTableMeta {
+        private static final KensaSortTableMeta SUPPORTED_CONTRACT = new KensaSortTableMeta(
+                "TBL_KENSASORT",
+                "kensa_code",
+                "kensa_name",
+                "kana_name",
+                "kensa_sort",
+                "classification",
+                "start_date",
+                "end_date",
+                "upymd"
+        );
         private final String tableName;
         private final String codeColumn;
         private final String nameColumn;
@@ -1600,82 +1576,5 @@ public class OrcaMasterDao {
             this.versionColumn = versionColumn;
         }
 
-        private static KensaSortTableMeta load(Connection connection) throws SQLException {
-            DatabaseMetaData meta = connection.getMetaData();
-            String table = resolveTable(meta, "TBL_KENSASORT", "tbl_kensasort");
-            if (table == null) {
-                return null;
-            }
-            String code = columnOrNull(meta, table, "kensa_code", "srycd", "code");
-            String name = columnOrNull(meta, table, "kensa_name", "name");
-            String kana = columnOrNull(meta, table, "kana_name", "kananame", "kana");
-            String kensaSort = columnOrNull(meta, table, "kensa_sort", "knsbunrui", "classification_code");
-            String classification = columnOrNull(meta, table, "classification", "kbn", "bunrui");
-            String startDate = columnOrNull(meta, table, "start_date", "yukostymd", "valid_from");
-            String endDate = columnOrNull(meta, table, "end_date", "yukoedymd", "valid_to");
-            String version = columnOrNull(meta, table, "upymd", "creymd", "chgymd", "version");
-            return new KensaSortTableMeta(table, code, name, kana, kensaSort, classification, startDate, endDate,
-                    version);
-        }
-    }
-
-
-
-    private static String resolveTable(DatabaseMetaData meta, String... candidates) throws SQLException {
-        if (candidates == null) {
-            return null;
-        }
-        for (String candidate : candidates) {
-            if (candidate == null) {
-                continue;
-            }
-            String resolved = findTable(meta, candidate);
-            if (resolved != null) {
-                return resolved;
-            }
-            resolved = findTable(meta, candidate.toLowerCase(Locale.ROOT));
-            if (resolved != null) {
-                return resolved;
-            }
-        }
-        return null;
-    }
-
-    private static String findTable(DatabaseMetaData meta, String table) throws SQLException {
-        try (ResultSet rs = meta.getTables(null, null, table, new String[] {"TABLE", "VIEW"})) {
-            if (rs.next()) {
-                return rs.getString("TABLE_NAME");
-            }
-        }
-        return null;
-    }
-
-    private static String columnOrNull(DatabaseMetaData meta, String table, String... candidates) throws SQLException {
-        if (table == null || candidates == null) {
-            return null;
-        }
-        for (String candidate : candidates) {
-            if (candidate == null) {
-                continue;
-            }
-            String resolved = findColumn(meta, table, candidate);
-            if (resolved != null) {
-                return resolved;
-            }
-            resolved = findColumn(meta, table.toLowerCase(Locale.ROOT), candidate.toLowerCase(Locale.ROOT));
-            if (resolved != null) {
-                return resolved;
-            }
-        }
-        return null;
-    }
-
-    private static String findColumn(DatabaseMetaData meta, String table, String column) throws SQLException {
-        try (ResultSet rs = meta.getColumns(null, null, table, column)) {
-            if (rs.next()) {
-                return rs.getString("COLUMN_NAME");
-            }
-        }
-        return null;
     }
 }

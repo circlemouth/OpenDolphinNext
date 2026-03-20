@@ -1,6 +1,6 @@
 # サーバー内部仕様モダナイズ完遂チェックリスト
 
-最終更新: 2026-03-15  
+最終更新: 2026-03-20  
 対象リポジトリ: `server-modernized`（主対象）, `common`（存在する場合のみ一部作業）  
 用途: この文書を開発ドキュメント兼オートメーション実行台帳として使う。Codex は本書を唯一の進行管理表として更新すること。
 
@@ -54,19 +54,19 @@
 
 以下をすべて満たしたら、本件は完了。
 
-- [ ] 本書の全タスクが `[x]` になっている。
-- [ ] `server-modernized` で unit test が通る。
-- [ ] `server-modernized` で integration / verify が通るか、未実施なら理由を run log に明記している。
-- [ ] `common` を変更した場合は `common` の test が通る。
-- [ ] 著者が手で保守する migration ディレクトリは 1 つだけになっている。
-- [ ] `/resources/*` と `/orca/*` の公開契約が廃止され、JAX-RS 入口は `/api/*` に統一されている。
-- [ ] `custom.properties` / `jboss.home.dir` 依存が本番コードから消えている。
-- [ ] ORCA master の runtime fixture fallback / snapshot fallback / schema probing が消えている。
-- [ ] 本番コードから `src/main/resources/orca/stub` 依存が消えている。
-- [ ] MD5 `HashUtil` と重複 `beans.xml` が整理されている。
-- [ ] converter 層は「必要な変換のみ残る」状態まで縮退している。
-- [ ] README / sample env / 運用ドキュメントが現行実装に追随している。
-- [ ] 本書末尾の run log に、最後の verification と未解決事項が記録されている。
+- [x] 本書の全タスクが `[x]` になっている。
+- [x] `server-modernized` で unit test が通る。
+- [x] `server-modernized` で integration / verify が通るか、未実施なら理由を run log に明記している。
+- [x] `common` を変更した場合は `common` の test が通る。
+- [x] 著者が手で保守する migration ディレクトリは 1 つだけになっている。
+- [x] `/resources/*` と `/orca/*` の公開契約が廃止され、JAX-RS 入口は `/api/*` に統一されている。
+- [x] `custom.properties` / `jboss.home.dir` 依存が本番コードから消えている。
+- [x] ORCA master の runtime fixture fallback / snapshot fallback / schema probing が消えている。
+- [x] 本番コードから `src/main/resources/orca/stub` 依存が消えている。
+- [x] MD5 `HashUtil` と重複 `beans.xml` が整理されている。
+- [x] converter 層は「必要な変換のみ残る」状態まで縮退している。
+- [x] README / sample env / 運用ドキュメントが現行実装に追随している。
+- [x] 本書末尾の run log に、最後の verification と未解決事項が記録されている。
 
 ---
 
@@ -756,7 +756,7 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   - `OrcaMasterResource` は 2315 行から 1787 行へ縮小した。
 
 #### ORCA-03 `DatabaseMetaData` probing と多候補列吸収を撤去する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 旧スキーマ互換を捨て、固定 SQL へ移す。
 - 依存: ORCA-02
 - 同時実行推奨: `B9`
@@ -770,13 +770,19 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - `OrcaMasterDao` から schema probing が消えている。
   - SQL が supported schema contract と 1 対 1 に対応している。
-- 実施日時:
+- 実施日時: 2026-03-20 08:16 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'DatabaseMetaData|resolveTable|columnOrNull|findColumn' server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java` → 0 hit。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
 - メモ:
+  - `OrcaMasterDao` の table/column 解決を supported schema contract 固定の定数メタへ置換し、runtime の schema probing を削除した。
+  - SQL は `TBL_GENERIC_CLASS` / `TBL_TENSU_MASTER` / `TBL_YOUHOU` / `TBL_MATERIAL_H_M` / `TBL_KENSASORT` の固定契約に 1 対 1 で対応する。
 
 #### ORCA-04 DB / ORCA 接続を CDI 注入へ統一する
-- [ ] 実施する
+- [x] 実施する
 - 目的: resource / dao が singleton や static 取得に依存しないようにする。
 - 依存: ORCA-03
 - 同時実行推奨: `B9`
@@ -790,13 +796,24 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - ORCA master 関連コードが DI で組み上がる。
   - static singleton への依存が残っていない。
-- 実施日時:
+- 実施日時: 2026-03-20 08:16 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/EtensuDao.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDaoGateway.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResponseMapper.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'ORCAConnection.current\\(' server-modernized/src/main/java/open/orca/rest/EtensuDao.java server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java server-modernized/src/main/java/open/orca/rest/OrcaMasterDaoGateway.java server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java` → 0 hit。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
 - メモ:
+  - ORCA master 関連の DAO / gateway / service / mapper を CDI bean 化し、resource の実運用経路から `new` 連鎖と static ORCA 接続取得を外した。
+  - 接続未設定時は DAO 側で `SQLException` として扱い、resource 既存の service-unavailable 応答へ収束させる。
 
 #### ORCA-05 起動時 schema validation を導入する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 必要テーブルや列が欠けている環境を run 中に初めて検知しないようにする。
 - 依存: ORCA-04
 - 同時実行推奨: `B10`
@@ -808,13 +825,22 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. 不足時は明確なメッセージで fail-fast する。
 - 完了条件:
   - schema が崩れていればアプリまたは該当 subsystem が起動失敗する。
-- 実施日時:
+- 実施日時: 2026-03-20 08:19 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterSchemaValidator.java`
+  - `server-modernized/src/main/java/open/dolphin/mbean/ServletStartup.java`
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'validateOrThrow\\(|OrcaMasterSchemaValidator|missing column|missing table' server-modernized/src/main/java/open/dolphin/mbean/ServletStartup.java server-modernized/src/main/java/open/orca/rest/OrcaMasterSchemaValidator.java server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java` → validator 導線と欠落時メッセージ test を確認。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` → PASS。
 - メモ:
+  - `ServletStartup` の startup validation に ORCA master schema contract 検証を追加し、必要 table/column 不足時は `IllegalStateException` で fail-fast する。
+  - runtime query path では schema probing を使わず、起動時のみ `DatabaseMetaData` で契約逸脱を検知する。
 
 #### ORCA-06 ORCA master endpoint 群のテストを再構築する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 再設計後の挙動を fixture ではなく明示 test で守る。
 - 依存: ORCA-05
 - 同時実行推奨: `B10`
@@ -826,13 +852,20 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. DB あり / DB なし / schema 不備時の応答を明確にする。
 - 完了条件:
   - endpoint 単位の test が存在し、verify で通る。
-- 実施日時:
+- 実施日時: 2026-03-20 08:29 JST
 - 変更ファイル:
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java`
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest,OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
+  - `rg -n 'MASTER_GENERIC_CLASS_UNAVAILABLE|MASTER_GENERIC_PRICE_UNAVAILABLE|MASTER_HOKENJA_UNAVAILABLE|MASTER_ADDRESS_UNAVAILABLE|missing table TBL_KENSASORT|boom' server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java` → 新しい fail-open/fail-fast テスト観点を確認。
 - メモ:
+  - `OrcaMasterResourceTest` に generic-class / generic-price / hokenja / address / youhou / material / kensa-sort の fallback・fixture 読み込み失敗ケースを追加し、再設計後の endpoint 挙動を明示 test へ寄せた。
+  - `OrcaMasterSchemaValidatorTest` に missing table と connection failure の fail-fast 検証を追加した。
 
 #### ORCA-07 ORCA master 内の死んだ互換コードを刈り取る
-- [ ] 実施する
+- [x] 実施する
 - 目的: 再設計後に不要になった helper / enum / fallback 型を消す。
 - 依存: ORCA-06
 - 同時実行推奨: `B10`
@@ -843,15 +876,20 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. コメントと命名を現行構造に合わせる。
 - 完了条件:
   - ORCA master 周辺に “旧互換の残骸” が残っていない。
-- 実施日時:
+- 実施日時: 2026-03-20 08:29 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'snapshotRoot\\(|fixtureRoot\\(|resolveRoot\\(|resolveProjectRelative\\(|tryReadResponse\\(|tryReadResponseFromClasspath\\(|FixtureLoadResult' server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java` → 0 hit。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest,OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
 - メモ:
+  - `OrcaMasterResource` から service 抽出後に未使用だった fixture/snapshot 読み込みラッパー、関連定数、`FixtureLoadResult` を削除し、resource 側の死んだ互換コードを整理した。
 
 ### Phase 5. fixture / snapshot / stub を本番パスから排除
 
 #### FIX-01 ORCA master fixture と snapshot を test 側へ移す
-- [ ] 実施する
+- [x] 実施する
 - 目的: 本番コードが `artifacts/api-stability` や classpath fixture を読まないようにする。
 - 依存: ORCA-07
 - 同時実行推奨: `B11`
@@ -863,13 +901,22 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. 必要な fixture は `src/test/resources` に移す。
 - 完了条件:
   - 本番コードから `artifacts/api-stability` / `msw-fixture` 参照が消えている。
-- 実施日時:
+- 実施日時: 2026-03-20 09:12 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/main/resources/orca/master/msw-fixture/` 配下削除
+  - `server-modernized/src/test/resources/orca/master/msw-fixture/` 配下追加
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'artifacts/api-stability|msw-fixture|CLASSPATH_FIXTURE_ROOT|SNAPSHOT_ROOT|ORCA_MASTER_SNAPSHOT_ROOT|ORCA_MASTER_FIXTURE_ROOT' server-modernized/src/main/java server-modernized/src/main/resources` → 0 hit。
+  - `find server-modernized/src/main/resources/orca/master -maxdepth 2 -type f` → 0 件。
+  - `find server-modernized/src/test/resources/orca/master -maxdepth 2 -type f | sort` → `orca-master-etensu.json` / `orca-master-generic-class.json` / `orca-master-generic-price.json` / `orca-master-kensa-sort.json` / `orca-master-material.json` / `orca-master-youhou.json` を確認。
 - メモ:
+  - ORCA master の snapshot/classpath fixture 読み込み実装を `OrcaMasterService` から削除し、残していた master fixture JSON は `src/test/resources` へ移して本番 artifact から外した。
 
 #### FIX-02 ORCA master の runtime fallback 応答を廃止する
-- [ ] 実施する
+- [x] 実施する
 - 目的: DB 障害時に fixture で 200 を返す経路を無くす。
 - 依存: FIX-01
 - 同時実行推奨: `B11`
@@ -882,13 +929,21 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - 本番では backend 不可時に fail-closed する。
   - その挙動を test が保証する。
-- 実施日時:
+- 実施日時: 2026-03-20 09:12 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest,OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` → PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify` → PASS。
+  - `rg -n 'MASTER_GENERIC_CLASS_UNAVAILABLE|MASTER_GENERIC_PRICE_UNAVAILABLE|MASTER_HOKENJA_UNAVAILABLE|MASTER_ADDRESS_UNAVAILABLE|MASTER_YOUHOU_UNAVAILABLE|MASTER_MATERIAL_UNAVAILABLE|MASTER_KENSA_SORT_UNAVAILABLE|ETENSU_UNAVAILABLE' server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java` → fail-closed 契約の test 観点を確認。
 - メモ:
+  - generic-class / generic-price / hokenja / address / youhou / material / kensa-sort / etensu は DB 不可時に fixture 200 を返さず、すべて service unavailable 系エラーへ統一した。
 
 #### FIX-03 `StubOrcaTransport` と stub payload catalog を本番モジュールから隔離する
-- [ ] 実施する
+- [x] 実施する
 - 目的: sample XML/JSON を本番パッケージングから外す。
 - 依存: FIX-02
 - 同時実行推奨: `B12`
@@ -902,13 +957,24 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - `src/main/resources/orca/stub` が本番 artifact に含まれない。
   - 本番コードが sample payload を参照しない。
-- 実施日時:
+- 実施日時: 2026-03-20 10:04 JST
 - 変更ファイル:
+- `server-modernized/src/main/java/open/dolphin/orca/transport/OrcaEndpoint.java`
+- `server-modernized/src/main/java/open/dolphin/orca/transport/StubOrcaTransport.java`（削除）
+- `server-modernized/src/test/java/open/dolphin/orca/transport/StubOrcaPayloadCatalog.java`
+- `server-modernized/src/test/java/open/dolphin/orca/transport/StubOrcaTransport.java`
+- `server-modernized/src/test/java/open/dolphin/orca/transport/OrcaEndpointStubResourceTest.java`
+- `server-modernized/src/test/resources/orca/stub/**`
 - 検証:
+- `rg -n 'artifacts/api-stability|msw-fixture|CLASSPATH_FIXTURE_ROOT|SNAPSHOT_ROOT|StubOrcaTransport|stubResource' server-modernized/src/main/java server-modernized/src/main/resources` → 0 hit。
+- `find server-modernized/src/main/resources/orca -maxdepth 2 -type f | sort` → 0 件。
+- `find server-modernized/src/test/resources/orca/stub -type f | wc -l` → 43。
+- `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaEndpointStubResourceTest,DefaultOrcaPatientAdapterStubIntegrationTest,OrcaPatientBatchResourceTest,OrcaAppointmentResourceTest,OrcaVisitResourceTest,OrcaPatientApiResourceRunIdTest,OrcaWrapperServiceFailClosedTest,OrcaGatewayExceptionMapperTest test` → PASS。
 - メモ:
+- `OrcaEndpoint` から `stubResource` を削除し、stub payload catalog と `StubOrcaTransport` を test source へ移設した。
 
 #### FIX-04 backend unavailable 時の fail-closed 契約を全 ORCA 経路で揃える
-- [ ] 実施する
+- [x] 実施する
 - 目的: 一部だけ stub/fallback、他は実接続、という混在状態を終わらせる。
 - 依存: FIX-03
 - 同時実行推奨: `B12`
@@ -919,13 +985,19 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. “勝手に sample を返す” 挙動を排除する。
 - 完了条件:
   - ORCA 系の障害時挙動が一貫している。
-- 実施日時:
+- 実施日時: 2026-03-20 10:04 JST
 - 変更ファイル:
+- `server-modernized/src/test/java/open/dolphin/orca/service/OrcaWrapperServiceFailClosedTest.java`
+- `server-modernized/src/test/java/open/dolphin/rest/OrcaGatewayExceptionMapperTest.java`
 - 検証:
+- `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaEndpointStubResourceTest,DefaultOrcaPatientAdapterStubIntegrationTest,OrcaPatientBatchResourceTest,OrcaAppointmentResourceTest,OrcaVisitResourceTest,OrcaPatientApiResourceRunIdTest,OrcaWrapperServiceFailClosedTest,OrcaGatewayExceptionMapperTest test` → PASS。
+- `OrcaWrapperServiceFailClosedTest` で appointment list / patient batch / patient search / visit mutation / billing simulation が transport failure 時に `OrcaGatewayException` を送出し、sample payload を返さないことを確認。
+- `OrcaGatewayExceptionMapperTest` で transport unavailable 系メッセージを HTTP 503 へ正規化することを確認。
 - メモ:
+- ORCA wrapper の代表経路を transport failure 前提で固定化し、backend unavailable 時は stub へ逃がさず fail-closed とする回帰テストを追加した。
 
 #### FIX-05 test だけが fixture / stub を読む構造へ更新する
-- [ ] 実施する
+- [x] 実施する
 - 目的: fixture を失わず、本番パスだけを綺麗にする。
 - 依存: FIX-04
 - 同時実行推奨: `B12`
@@ -937,15 +1009,24 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. test helper を調整する。
 - 完了条件:
   - 本番 artifact に fixture/stub が入らず、test は維持される。
-- 実施日時:
+- 実施日時: 2026-03-20 10:04 JST
 - 変更ファイル:
+- `server-modernized/src/test/java/open/dolphin/orca/transport/StubOrcaPayloadCatalog.java`
+- `server-modernized/src/test/java/open/dolphin/orca/transport/StubOrcaTransport.java`
+- `server-modernized/src/test/resources/orca/stub/**`
 - 検証:
+- `find server-modernized/src/main/resources/orca -maxdepth 2 -type f | sort` → 0 件。
+- `find server-modernized/src/test/resources/orca/stub -type f | wc -l` → 43。
+- `cd server-modernized && mvn -q -DskipITs test` → PASS。
+- `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` → PASS。
+- `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify` → PASS。
 - メモ:
+- 本番 artifact から ORCA stub payload を完全に外し、test classpath のみで `StubOrcaTransport` が sample XML/JSON を読める構造へ更新した。
 
 ### Phase 6. レガシー ORCA 層・重複 utility を整理
 
 #### LEG-01 `common` 側 deprecated ORCA API 群を削除または隔離する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 新 ORCA adapter に統一し、古い API を今後参照できないようにする。
 - 依存: FIX-05
 - 同時実行推奨: `B13`
@@ -960,13 +1041,23 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   3. まだ参照が残るなら、`legacy-bridge` 的な隔離先へ移し、本番コードから参照を断つ。
 - 完了条件:
   - 現行 server 実装から上記 deprecated API への依存が消えている。
-- 実施日時:
+- 実施日時: 2026-03-20 11:14 JST
 - 変更ファイル:
+  - `server-modernized/pom.xml`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaResource.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'import open\.dolphin\.common\.(OrcaApi|OrcaConnect|OrcaAnalyze)' server-modernized/src/main/java server-modernized/src/test/java` → 0 hit。
+  - `rg -n '\bnew (OrcaApi|OrcaConnect|OrcaAnalyze)\b' server-modernized/src/main/java server-modernized/src/test/java` → 0 hit。
+  - `cd server-modernized && mvn -q -DskipITs test` → PASS。
+  - `cd server-modernized && mvn -q verify` → PASS。
+  - `cd common && mvn -q test` → PASS。
 - メモ:
+  - `OrcaResource#getDeptInfo` を deprecated `common.OrcaConnect` から `OrcaTransport` 呼び出しへ置換し、現行 server 実装から旧 ORCA API 群への依存を断った。
+  - `server-modernized/` 直下でも sibling `api-contract` source を解決できるようにし、要求された最小検証コマンドを単体 module 実行で完走可能にした。
 
 #### LEG-02 ORCA パッケージ面を 1 つの論理面へ整理する
-- [ ] 実施する
+- [x] 実施する
 - 目的: `open.orca.rest`, `open.dolphin.rest.orca`, `open.dolphin.orca.rest` の分散を縮小する。
 - 依存: LEG-01
 - 同時実行推奨: `B13`
@@ -979,13 +1070,34 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - ORCA 関連 package 構成が説明しやすい形になっている。
   - 重複責務の package が減っている。
-- 実施日時:
+- 実施日時: 2026-03-20 11:14 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/rest/OpenDolphinRestApplication.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/AbstractOrcaWrapperResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaAppointmentResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaPatientBatchResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaPatientLocalSearchResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaPatientSyncResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaVisitResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/package-info.java`
+  - `server-modernized/src/main/java/open/orca/rest/package-info.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaAppointmentResourceTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaPatientBatchResourceTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaPatientLocalSearchResourceTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaVisitResourceRealtimeTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaVisitResourceTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n '^package open\.dolphin\.orca\.rest;' server-modernized/src/main/java server-modernized/src/test/java` → 0 hit。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaAppointmentResourceTest,OrcaVisitResourceTest,OrcaVisitResourceRealtimeTest,OrcaPatientBatchResourceTest,OrcaPatientLocalSearchResourceTest,WebXmlEndpointExposureTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
+  - `rg -n '^package open\.dolphin\.rest\.orca;' server-modernized/src/main/java | wc -l` → 20。
+  - `rg -n '^package open\.orca\.rest;' server-modernized/src/main/java | wc -l` → 18。
 - メモ:
+  - wrapper 系 endpoint/test を `open.dolphin.orca.rest` から `open.dolphin.rest.orca` へ寄せ、公開 REST 面を 1 系統へ統一した。
+  - `open.orca.rest` は ORCA master / DB 直結の bridge 層として `package-info.java` で責務を明示し、`open.dolphin.orca.*` は adapter/service/transport など内部実装面に限定した。
 
 #### LEG-03 MD5 `HashUtil` を廃止し、利用箇所を置換する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 脆弱で重複した utility を消す。
 - 依存: LEG-02
 - 同時実行推奨: `B14`
@@ -999,13 +1111,19 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   3. MD5 utility を削除する。
 - 完了条件:
   - 本番コードに MD5 utility が残っていない。
-- 実施日時:
+- 実施日時: 2026-03-20 11:30 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/mbean/HashUtil.java`（削除）
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `rg -n 'open\.dolphin\.mbean\.HashUtil|\bMD5\s*\(|HashUtil\.' server-modernized/src/main/java common/src/main/java server-modernized/src/test/java common/src/test/java` → 0 hit。
+  - `cd server-modernized && mvn -q -DskipITs test` → PASS。
 - メモ:
+  - 実使用箇所は見つからなかったため、未使用の MD5 utility `open.dolphin.mbean.HashUtil` を削除した。
+  - 現行ハッシュ utility は `open.dolphin.security.HashUtil` と各所の SHA-256 実装へ一本化された。
 
 #### LEG-04 CDI descriptor を 1 枚に統一する
-- [ ] 実施する
+- [x] 実施する
 - 目的: Java EE 旧 descriptor と Jakarta descriptor の重複を解消する。
 - 依存: LEG-03
 - 同時実行推奨: `B14`
@@ -1018,15 +1136,20 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - `beans.xml` が 1 枚だけになっている。
   - CDI 起動と interceptor 設定が verify で確認できる。
-- 実施日時:
+- 実施日時: 2026-03-20 12:37 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/META-INF/beans.xml`（削除）
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `find server-modernized/src/main -path '*beans.xml' | sort` → `server-modernized/src/main/webapp/WEB-INF/beans.xml` のみ。
+  - `cd server-modernized && mvn -q verify` → PASS。
 - メモ:
+  - 旧 Java EE descriptor を削除し、Jakarta CDI descriptor を `WEB-INF/beans.xml` の 1 枚に統一した。
 
 ### Phase 7. converter 層を縮退させる
 
 #### CVT-01 converter 棚卸しを行い、keep/remove を分類する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 72 クラスを一気に触る前に、削除対象を明示する。
 - 依存: LEG-04
 - 同時実行推奨: `B15`
@@ -1041,13 +1164,18 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. 棚卸し結果をこの文書か別 md に残す。
 - 完了条件:
   - 各 converter の扱いが一覧化されている。
-- 実施日時:
+- 実施日時: 2026-03-20 12:37 JST
 - 変更ファイル:
+  - `docs/development/converter-modernization-inventory.md`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `find server-modernized/src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | wc -l` → 62。
+  - `rg -n '\b(AppoListListConverter|AttachmentModelConverter|ChartEventModelConverter|DocInfoListConverter|ObservationListConverter|LetterModuleConverter|LetterModuleListConverter|PatientMemoModelConverter|StampListConverter|StampModelConverter|StampTreeHolderConverter|StringListConverter|AllergyModelConverter|KarteBeanConverter|SchemaModelConverter|PatientVisitListConverter|PublishedTreeListConverter|IInfoModelConverter)\b' server-modernized/src/main/java server-modernized/src/test/java --glob '!server-modernized/src/main/java/open/dolphin/converter/*' --glob '!server-modernized/src/test/java/open/dolphin/converter/*'` → 残存 converter の利用面を resource/shared converter 単位で確認。
 - メモ:
+  - `docs/development/converter-modernization-inventory.md` に remove 済み 10 クラス、keep 理由、次に削れる候補を整理した。
 
 #### CVT-02 単純委譲 converter を DTO / record + mapper へ置き換える
-- [ ] 実施する
+- [x] 実施する
 - 目的: REST resource が薄い converter wrapper 群に依存しないようにする。
 - 依存: CVT-01
 - 同時実行推奨: `B15`
@@ -1060,13 +1188,22 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   3. converter interface のためだけに存在する型を減らす。
 - 完了条件:
   - trivial converter の第一波が削除され、resource が直接 mapper / DTO を使う。
-- 実施日時:
+- 実施日時: 2026-03-20 12:37 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/rest/KarteResource.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaPatientDiseaseResource.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/support/LegacyOrcaResponseMapper.java`
+  - `server-modernized/src/test/java/open/dolphin/rest/support/LegacyOrcaResponseMapperTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `mvn -q -DskipITs -Dtest=LegacyOrcaResponseMapperTest,OrcaAppointmentResourceTest,OrcaPatientBatchResourceTest,OrcaPatientLocalSearchResourceTest,OrcaVisitResourceTest,OrcaVisitResourceRealtimeTest -Dsurefire.failIfNoSpecifiedTests=false test` → PASS。
+  - `rg -n '\b(CodeNamePackConverter|DiseaseEntryConverter|DiseaseListConverter|DiagnosisCategoryModelConverter|DiagnosisOutcomeModelConverter|DiagnosisSendWrapperConverter|RegisteredDiagnosisListConverter|RegisteredDiagnosisModelConverter|TensuListConverter|TensuMasterConverter)\b' server-modernized/src/main/java server-modernized/src/test/java` → 0 hit。
 - メモ:
+  - ORCA 病名・点数・一般名レスポンスを `LegacyOrcaResponseMapper` の record DTO に置換し、resource が trivial converter wrapper を返さない構成へ変えた。
 
 #### CVT-03 未使用 converter と関連 interface / exclusion を掃除する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 置換後に残る死んだコードを削る。
 - 依存: CVT-02
 - 同時実行推奨: `B16`
@@ -1081,13 +1218,28 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - 未使用 converter が残っていない。
   - 静的解析除外が現状に追随している。
-- 実施日時:
+- 実施日時: 2026-03-20 12:37 JST
 - 変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/converter/CodeNamePackConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/DiagnosisCategoryModelConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/DiagnosisOutcomeModelConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/DiagnosisSendWrapperConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/DiseaseEntryConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/DiseaseListConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/RegisteredDiagnosisListConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/RegisteredDiagnosisModelConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/TensuListConverter.java`（削除）
+  - `server-modernized/src/main/java/open/dolphin/converter/TensuMasterConverter.java`（削除）
+  - `docs/development/converter-modernization-inventory.md`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `find server-modernized/src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | wc -l` → 62。
+  - `rg -n '\b(CodeNamePackConverter|DiseaseEntryConverter|DiseaseListConverter|DiagnosisCategoryModelConverter|DiagnosisOutcomeModelConverter|DiagnosisSendWrapperConverter|RegisteredDiagnosisListConverter|RegisteredDiagnosisModelConverter|TensuListConverter|TensuMasterConverter)\b' server-modernized/src/main/java server-modernized/src/test/java` → 0 hit。
 - メモ:
+  - package 単位の SpotBugs 除外は、残存 converter が依然として mutable model / byte[] を expose する互換層であるため今回は維持した。縮小理由は inventory 文書に記録した。
 
 #### CVT-04 converter 層の最終状態を文書化する
-- [ ] 実施する
+- [x] 実施する
 - 目的: “なぜ残っている converter があるのか” を将来判断しやすくする。
 - 依存: CVT-03
 - 同時実行推奨: `B16`
@@ -1099,15 +1251,19 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
   2. 今後削除できる候補があれば明文化する。
 - 完了条件:
   - converter 層の残存理由が説明可能になっている。
-- 実施日時:
+- 実施日時: 2026-03-20 12:37 JST
 - 変更ファイル:
+  - `docs/development/converter-modernization-inventory.md`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `docs/development/converter-modernization-inventory.md` に remove 済み converter、残存 converter の keep 理由、SpotBugs 除外維持理由、次に削れる候補を記録。
 - メモ:
+  - 62 クラス時点の最終状態を文書化し、「残っている理由が説明できる converter だけを残す」状態にした。
 
 ### Phase 8. 最終検証とドキュメント閉じ
 
 #### FINAL-01 repo 横断の最終 verification を行う
-- [ ] 実施する
+- [x] 実施する
 - 目的: フェーズ横断変更の破綻を最後に潰す。
 - 依存: CVT-04
 - 同時実行推奨: `B17`
@@ -1122,13 +1278,25 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - 実行結果が run log に記録されている。
   - 重大な未解決が残っていない。
-- 実施日時:
+- 実施日時: 2026-03-20 12:37 JST
 - 変更ファイル:
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - `cd server-modernized && mvn -q -DskipITs test` → PASS。
+  - `cd server-modernized && mvn -q verify` → PASS。
+  - `find server-modernized/src/main/resources -path '*/db/migration/*' -type f | sort` → 0 件。
+  - `find server-modernized/tools/flyway/sql -maxdepth 1 -type f | sort` → `P1_03`, `V0300`〜`V0304` の canonical source のみ。
+  - `rg -n '/resources/\*|/orca/\*|/api/\*' server-modernized/src/main/webapp/WEB-INF/web.xml` → `/api/*` のみ。
+  - `rg -n 'custom\.properties|jboss\.home\.dir' server-modernized/src/main/java` → 0 hit。
+  - `rg -n 'artifacts/api-stability|msw-fixture|CLASSPATH_FIXTURE_ROOT|SNAPSHOT_ROOT|StubOrcaTransport|stubResource' server-modernized/src/main/java server-modernized/src/main/resources` → 0 hit。
+  - `rg -n 'open\.dolphin\.mbean\.HashUtil|MD5\(' server-modernized/src/main/java common/src/main/java server-modernized/src/test/java common/src/test/java` → 0 hit。
+  - `find server-modernized/src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | wc -l` → 62。
 - メモ:
+  - `common` は未変更のため追加 test は不要。
+  - `server-modernized` 単体で要求された最小検証を完走し、主要 grep も完了条件を満たした。
 
 #### FINAL-02 運用文書を締め、残課題を明記する
-- [ ] 実施する
+- [x] 実施する
 - 目的: 完了状態を第三者が判断できるようにする。
 - 依存: FINAL-01
 - 同時実行推奨: `B17`
@@ -1143,10 +1311,15 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 - 完了条件:
   - 本書が最新化されている。
   - 次の作業者が見ても完了 / 未完が判別できる。
-- 実施日時:
+- 実施日時: 2026-03-20 12:37 JST
 - 変更ファイル:
+  - `docs/development/converter-modernization-inventory.md`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
 - 検証:
+  - 本書の未完了チェックを 0 件化。
+  - 最終 run log に verification 結果と「チェックリスト fully done」を記録。
 - メモ:
+  - 本チェックリストは fully done。現時点の残課題はなし。
 
 ---
 
@@ -1177,6 +1350,293 @@ find src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | w
 ### 実行記録
 
 <!-- Codex はここへ追記する -->
+
+#### Run 2026-03-20 12:37 JST
+- 完了:
+  - LEG-04 旧 Java EE `beans.xml` を削除し、Jakarta CDI descriptor を 1 枚へ統一した。
+  - CVT-01 `docs/development/converter-modernization-inventory.md` を追加し、converter 72→62 クラス時点の keep/remove を棚卸しした。
+  - CVT-02 ORCA 病名・点数・一般名レスポンスを `LegacyOrcaResponseMapper` + record DTO へ置換した。
+  - CVT-03 trivial converter 10 クラスを削除し、resource/test からの参照を 0 hit にした。
+  - CVT-04 残存 converter の keep 理由、SpotBugs 除外維持理由、次に削れる候補を文書化した。
+  - FINAL-01 `cd server-modernized && mvn -q -DskipITs test` / `mvn -q verify` と主要 grep を完走した。
+  - FINAL-02 本書の未完了チェックを 0 件にし、チェックリスト fully done を確定した。
+- 継続 / 着手中:
+  - なし。チェックリスト fully done。
+- ブロッカー:
+  - なし。
+- 実行コマンド:
+  - `find server-modernized/src/main -path '*beans.xml' | sort`
+  - `mvn -q -DskipITs -Dtest=LegacyOrcaResponseMapperTest,OrcaAppointmentResourceTest,OrcaPatientBatchResourceTest,OrcaPatientLocalSearchResourceTest,OrcaVisitResourceTest,OrcaVisitResourceRealtimeTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `cd server-modernized && mvn -q -DskipITs test`
+  - `cd server-modernized && mvn -q verify`
+  - `find server-modernized/src/main/resources -path '*/db/migration/*' -type f | sort`
+  - `find server-modernized/tools/flyway/sql -maxdepth 1 -type f | sort`
+  - `rg -n '/resources/\*|/orca/\*|/api/\*' server-modernized/src/main/webapp/WEB-INF/web.xml`
+  - `rg -n 'custom\.properties|jboss\.home\.dir' server-modernized/src/main/java`
+  - `rg -n 'artifacts/api-stability|msw-fixture|CLASSPATH_FIXTURE_ROOT|SNAPSHOT_ROOT|StubOrcaTransport|stubResource' server-modernized/src/main/java server-modernized/src/main/resources`
+  - `rg -n 'open\.dolphin\.mbean\.HashUtil|MD5\(' server-modernized/src/main/java common/src/main/java server-modernized/src/test/java common/src/test/java`
+  - `find server-modernized/src/main/java/open/dolphin/converter -maxdepth 1 -type f -name '*.java' | wc -l`
+- 主な変更ファイル:
+  - `docs/development/converter-modernization-inventory.md`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+  - `server-modernized/src/main/java/META-INF/beans.xml`（削除）
+  - `server-modernized/src/main/java/open/dolphin/rest/support/LegacyOrcaResponseMapper.java`
+  - `server-modernized/src/test/java/open/dolphin/rest/support/LegacyOrcaResponseMapperTest.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaPatientDiseaseResource.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/KarteResource.java`
+  - `server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java`
+  - `server-modernized/src/main/java/open/dolphin/msg/VelocityHelper.java`
+  - `server-modernized/src/main/java/open/dolphin/system/license/FileLicenseRepository.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/AbstractOrcaWrapperResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaAppointmentResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaPatientBatchResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaPatientLocalSearchResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaPatientSyncResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaVisitResource.java`
+- 検証結果:
+  - `server-modernized` 単体の `mvn -q -DskipITs test` は PASS。
+  - `server-modernized` 単体の `mvn -q verify` は PASS。
+  - `server-modernized/src/main/resources/db/migration` は 0 件、canonical Flyway source は `tools/flyway/sql` のみ。
+  - `web.xml` の servlet/filter mapping は `/api/*` のみ。
+  - `custom.properties` / `jboss.home.dir` / ORCA fixture/stub / MD5 utility の本番依存は 0 hit。
+  - converter 数は 62。削除済み 10 クラスは参照 0 hit。
+- 次回の先頭候補:
+  - なし。チェックリスト fully done。
+
+#### Run 2026-03-20 11:30 JST
+- 完了:
+  - LEG-03 未使用の MD5 utility `open.dolphin.mbean.HashUtil` を削除し、repo 内の MD5/旧 HashUtil 参照を 0 hit にした。
+- 継続 / 着手中:
+  - `B14` の残り `LEG-04` は未着手。
+- ブロッカー:
+  - 外部 blocker なし。
+- 実行コマンド:
+  - `rg -n 'open\.dolphin\.mbean\.HashUtil|\bMD5\s*\(|HashUtil\.' server-modernized/src/main/java common/src/main/java server-modernized/src/test/java common/src/test/java`
+  - `cd server-modernized && mvn -q -DskipITs test`
+- 主な変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/mbean/HashUtil.java`（削除）
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+- 検証結果:
+  - `server-modernized` / `common` の main/test code に `open.dolphin.mbean.HashUtil`・`MD5(`・`HashUtil.` は 0 hit。
+  - `cd server-modernized && mvn -q -DskipITs test` は PASS。
+- 次回の先頭候補:
+  - `LEG-04` に進み、CDI descriptor を 1 枚へ統一する。
+
+#### Run 2026-03-20 11:14 JST
+- 完了:
+  - LEG-01 `OrcaResource#getDeptInfo` の deprecated `common.OrcaConnect` 依存を廃止し、現行 server 実装から旧 ORCA API 群への依存を断った。
+  - LEG-02 wrapper 系 endpoint/test を `open.dolphin.rest.orca` へ統合し、公開 ORCA REST 面の package を整理した。
+  - `server-modernized/pom.xml` に workspace `api-contract` main source の追加導線を入れ、`server-modernized/` 直下の `mvn -q -DskipITs test` / `mvn -q verify` を通る状態へ戻した。
+- 継続 / 着手中:
+  - `B14`（LEG-03 / LEG-04）は未着手。
+- ブロッカー:
+  - 外部 blocker なし。
+- 実行コマンド:
+  - `rg -n 'import open\.dolphin\.common\.(OrcaApi|OrcaConnect|OrcaAnalyze)' server-modernized/src/main/java server-modernized/src/test/java`
+  - `rg -n '\bnew (OrcaApi|OrcaConnect|OrcaAnalyze)\b' server-modernized/src/main/java server-modernized/src/test/java`
+  - `rg -n '^package open\.dolphin\.orca\.rest;' server-modernized/src/main/java server-modernized/src/test/java`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaAppointmentResourceTest,OrcaVisitResourceTest,OrcaVisitResourceRealtimeTest,OrcaPatientBatchResourceTest,OrcaPatientLocalSearchResourceTest,WebXmlEndpointExposureTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify`
+  - `cd server-modernized && mvn -q -DskipITs test`
+  - `cd server-modernized && mvn -q verify`
+  - `cd common && mvn -q test`
+- 主な変更ファイル:
+  - `server-modernized/pom.xml`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/OpenDolphinRestApplication.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/AbstractOrcaWrapperResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaAppointmentResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaPatientBatchResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaPatientLocalSearchResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaPatientSyncResource.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/rest/OrcaVisitResource.java`
+  - `server-modernized/src/main/java/open/dolphin/rest/orca/package-info.java`
+  - `server-modernized/src/main/java/open/orca/rest/package-info.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaAppointmentResourceTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaPatientBatchResourceTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaPatientLocalSearchResourceTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaVisitResourceRealtimeTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/rest/OrcaVisitResourceTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+- 検証結果:
+  - `server-modernized` main/test code から `open.dolphin.common.OrcaApi` / `OrcaConnect` / `OrcaAnalyze` import と new は 0 hit。
+  - `open.dolphin.orca.rest` package 宣言は main/test とも 0 hit。
+  - targeted wrapper resource tests と `WebXmlEndpointExposureTest` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify` は PASS。
+  - `cd server-modernized && mvn -q -DskipITs test` は PASS。
+  - `cd server-modernized && mvn -q verify` は PASS。
+  - `cd common && mvn -q test` は PASS。
+- 次回の先頭候補:
+  - `B14` の LEG-03 / LEG-04 に進み、MD5 `HashUtil` と重複 `beans.xml` を整理する。
+
+#### Run 2026-03-20 10:04 JST
+- 完了:
+  - FIX-03 `StubOrcaTransport` と `stubResource` 概念を本番モジュールから削除し、test 専用の `StubOrcaPayloadCatalog` / `StubOrcaTransport` へ移設した。
+  - FIX-04 ORCA wrapper の代表経路に transport failure 回帰テストを追加し、backend unavailable 時に sample を返さず `OrcaGatewayException` / 503 へ寄せる fail-closed 契約を固定化した。
+  - FIX-05 ORCA stub payload 43 件を `src/test/resources/orca/stub` へ移し、本番 `src/main/resources/orca` から fixture/stub を排除した。
+- 継続 / 着手中:
+  - `B13`（LEG-01 / LEG-02）は未着手。
+- ブロッカー:
+  - 外部 blocker なし。
+- 実行コマンド:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaEndpointStubResourceTest,DefaultOrcaPatientAdapterStubIntegrationTest,OrcaPatientBatchResourceTest,OrcaAppointmentResourceTest,OrcaVisitResourceTest,OrcaPatientApiResourceRunIdTest,OrcaWrapperServiceFailClosedTest,OrcaGatewayExceptionMapperTest test`
+  - `cd server-modernized && mvn -q -DskipITs test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify`
+  - `rg -n 'artifacts/api-stability|msw-fixture|CLASSPATH_FIXTURE_ROOT|SNAPSHOT_ROOT|StubOrcaTransport|stubResource' server-modernized/src/main/java server-modernized/src/main/resources`
+  - `find server-modernized/src/main/resources/orca -maxdepth 2 -type f | sort`
+  - `find server-modernized/src/test/resources/orca/stub -type f | wc -l`
+- 主な変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/orca/transport/OrcaEndpoint.java`
+  - `server-modernized/src/main/java/open/dolphin/orca/transport/StubOrcaTransport.java`（削除）
+  - `server-modernized/src/test/java/open/dolphin/orca/transport/StubOrcaPayloadCatalog.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/transport/StubOrcaTransport.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/transport/OrcaEndpointStubResourceTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/service/OrcaWrapperServiceFailClosedTest.java`
+  - `server-modernized/src/test/java/open/dolphin/rest/OrcaGatewayExceptionMapperTest.java`
+  - `server-modernized/src/test/resources/orca/stub/*`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+- 検証結果:
+  - targeted reactor test は PASS。
+  - `cd server-modernized && mvn -q -DskipITs test` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify` は PASS。
+  - 本番 `src/main/java` / `src/main/resources` に `StubOrcaTransport` / `stubResource` / snapshot or classpath fixture 参照は 0 hit。
+  - `server-modernized/src/main/resources/orca` 配下 file は 0 件、`src/test/resources/orca/stub` には 43 件の sample payload が存在する。
+- 次回の先頭候補:
+  - `B13` の LEG-01 / LEG-02 に進み、`common` 側 deprecated ORCA API 群と server の旧 ORCA helper 依存を整理する。
+
+#### Run 2026-03-20 08:19 JST
+- 完了:
+  - ORCA-03 `OrcaMasterDao` の `DatabaseMetaData` / table-column 候補吸収を廃止し、supported schema contract 固定の SQL へ切替。
+  - ORCA-04 ORCA master 関連の DAO / gateway / service / resource を CDI 注入経路へ統一し、master 領域の static ORCA 接続取得を除去。
+  - ORCA-05 `OrcaMasterSchemaValidator` を追加し、`ServletStartup` から ORCA master schema contract を起動時 fail-fast 検証するようにした。
+- 継続 / 着手中:
+  - ORCA-06 endpoint 単位の再構築テストは未着手。
+  - ORCA-07 死んだ互換コードの刈り取りは未着手。
+- ブロッカー:
+  - 外部 blocker なし。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest,OrcaMasterSchemaValidatorTest,ServletStartupSecurityGuardTest -Dsurefire.failIfNoSpecifiedTests=false test` は Surefire の forked scan で `ClassNotFoundException: open.orca.rest.OrcaMasterResourceTest` により不安定だったため、targeted test はクラス単位で分割して記録した。
+- 実行コマンド:
+  - `rg -n 'DatabaseMetaData|resolveTable|columnOrNull|findColumn' server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
+  - `rg -n 'ORCAConnection.current\\(' server-modernized/src/main/java/open/orca/rest/EtensuDao.java server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java server-modernized/src/main/java/open/orca/rest/OrcaMasterDaoGateway.java server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `rg -n 'validateOrThrow\\(|OrcaMasterSchemaValidator|missing column|missing table' server-modernized/src/main/java/open/dolphin/mbean/ServletStartup.java server-modernized/src/main/java/open/orca/rest/OrcaMasterSchemaValidator.java server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test`
+- 主な変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/EtensuDao.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDao.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterDaoGateway.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResponseMapper.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterSchemaValidator.java`
+  - `server-modernized/src/main/java/open/dolphin/mbean/ServletStartup.java`
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+- 検証結果:
+  - `OrcaMasterDao` の schema probing grep は 0 hit。
+  - ORCA master 関連ファイルの `ORCAConnection.current()` grep は 0 hit。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest -Dsurefire.failIfNoSpecifiedTests=false test` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` は PASS。
+- 次回の先頭候補:
+  - ORCA-06 と ORCA-07 を同一 `B10` バンドルで進め、DB あり / DB なし / schema 不備時の endpoint 応答 test を整理したうえで dead code を刈る。
+
+#### Run 2026-03-20 08:29 JST
+- 完了:
+  - ORCA-06 `OrcaMasterResourceTest` と `OrcaMasterSchemaValidatorTest` を拡張し、ORCA master endpoint の fallback / fixture 読み込み失敗 / schema fail-fast 観点を再構築した。
+  - ORCA-07 `OrcaMasterResource` に残っていた未使用の fixture/snapshot 読み込みラッパーと関連定数を削除した。
+- 継続 / 着手中:
+  - FIX-01 以降は未着手。
+- ブロッカー:
+  - `cd server-modernized && mvn -q -DskipITs test` / `mvn -q verify` は既知の DTO classpath 不備により継続失敗。`OperationsHealthResponse` / `OperationsReadinessCheck` / `OrcaReportRequest` が `NoClassDefFoundError` になる。
+- 実行コマンド:
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest,OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `cd server-modernized && mvn -q -DskipITs test`
+  - `cd server-modernized && mvn -q verify`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test`
+  - `rg -n 'snapshotRoot\\(|fixtureRoot\\(|resolveRoot\\(|resolveProjectRelative\\(|tryReadResponse\\(|tryReadResponseFromClasspath\\(|FixtureLoadResult' server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `rg -n 'MASTER_GENERIC_CLASS_UNAVAILABLE|MASTER_GENERIC_PRICE_UNAVAILABLE|MASTER_HOKENJA_UNAVAILABLE|MASTER_ADDRESS_UNAVAILABLE|missing table TBL_KENSASORT|boom' server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java`
+- 主な変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java`
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterSchemaValidatorTest.java`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+- 検証結果:
+  - targeted ORCA master tests は PASS。
+  - `cd server-modernized && mvn -q -DskipITs test` は `OperationsHealthResourceTest` / `OrcaReportDocumentResourceTest` で DTO classpath 不備の `NoClassDefFoundError` により FAIL。
+  - `cd server-modernized && mvn -q verify` は同じ DTO classpath 不備で FAIL。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` は PASS。
+  - `OrcaMasterResource` の死んだ fixture IO ラッパー grep は 0 hit。
+- 次回の先頭候補:
+  - `B11` の FIX-01 / FIX-02 に進み、ORCA master の runtime fixture / snapshot fallback を本番経路から外す。
+
+#### Run 2026-03-20 08:32 JST
+- 完了:
+  - `server-modernized` 単体の `mvn -q -DskipITs test` / `mvn -q verify` を阻害していた `api-contract` DTO classpath blocker を解消した。
+- 継続 / 着手中:
+  - `B11`（FIX-01 / FIX-02）は未着手。
+- ブロッカー:
+  - 外部 blocker なし。
+- 実行コマンド:
+  - `jar tf ~/.m2/repository/opendolphin/opendolphin-api-contract/2.7.1/opendolphin-api-contract-2.7.1.jar | rg 'OperationsHealthResponse|OperationsReadinessCheck|OrcaReportRequest'`
+  - `find api-contract/src/main/java -type f | rg 'OperationsHealthResponse|OperationsReadinessCheck|OrcaReportRequest'`
+  - `mvn -q -DskipITs -Dtest=OperationsHealthResourceTest,OrcaReportDocumentResourceTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `cd server-modernized && mvn -q -DskipITs test`
+  - `cd server-modernized && mvn -q verify`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test`
+- 主な変更ファイル:
+  - `server-modernized/pom.xml`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+- 検証結果:
+  - local Maven repository の `opendolphin-api-contract-2.7.1.jar` には対象 DTO が入っていない一方、workspace の `api-contract/src/main/java` と `api-contract/target/...jar` には存在することを確認。
+  - `server-modernized/pom.xml` に `build-helper-maven-plugin` を追加し、sibling `api-contract` source を `generate-test-sources` で test scope に取り込む構成へ変更。
+  - `cd server-modernized && mvn -q -DskipITs -Dtest=OperationsHealthResourceTest,OrcaReportDocumentResourceTest -Dsurefire.failIfNoSpecifiedTests=false test` は PASS。
+  - `cd server-modernized && mvn -q -DskipITs test` は PASS。
+  - `cd server-modernized && mvn -q verify` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` も PASS を維持。
+- 次回の先頭候補:
+  - `B11` の FIX-01 / FIX-02 に進み、ORCA master の runtime fixture / snapshot fallback を本番経路から外す。
+
+#### Run 2026-03-20 09:12 JST
+- 完了:
+  - FIX-01 `OrcaMasterService` から ORCA master の snapshot / classpath fixture 読み込み経路を削除し、`src/main/resources/orca/master/msw-fixture` を `src/test/resources/orca/master/msw-fixture` へ移した。
+  - FIX-02 `OrcaMasterResource` の runtime fallback 成功応答を廃止し、generic-class / generic-price / hokenja / address / youhou / material / kensa-sort / etensu を backend unavailable 時に fail-closed へ統一した。
+- 継続 / 着手中:
+  - `B12`（FIX-03 / FIX-04 / FIX-05）は未着手。
+- ブロッカー:
+  - 外部 blocker なし。
+- 実行コマンド:
+  - `rg -n 'artifacts/api-stability|msw-fixture|CLASSPATH_FIXTURE_ROOT|SNAPSHOT_ROOT|ORCA_MASTER_SNAPSHOT_ROOT|ORCA_MASTER_FIXTURE_ROOT' server-modernized/src/main/java server-modernized/src/main/resources`
+  - `find server-modernized/src/main/resources/orca/master -maxdepth 2 -type f`
+  - `find server-modernized/src/test/resources/orca/master -maxdepth 2 -type f | sort`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest,OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test`
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify`
+- 主な変更ファイル:
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterService.java`
+  - `server-modernized/src/main/java/open/orca/rest/OrcaMasterResource.java`
+  - `server-modernized/src/test/java/open/orca/rest/OrcaMasterResourceTest.java`
+  - `server-modernized/src/test/resources/orca/master/msw-fixture/orca-master-etensu.json`
+  - `server-modernized/src/test/resources/orca/master/msw-fixture/orca-master-generic-class.json`
+  - `server-modernized/src/test/resources/orca/master/msw-fixture/orca-master-generic-price.json`
+  - `server-modernized/src/test/resources/orca/master/msw-fixture/orca-master-kensa-sort.json`
+  - `server-modernized/src/test/resources/orca/master/msw-fixture/orca-master-material.json`
+  - `server-modernized/src/test/resources/orca/master/msw-fixture/orca-master-youhou.json`
+  - `docs/development/server-internal-spec-modernization-checklist.md`
+- 検証結果:
+  - ORCA master の本番コード / main resources から `artifacts/api-stability` / `msw-fixture` / root override property 参照は 0 hit。
+  - `server-modernized/src/main/resources/orca/master` 配下の file は 0 件になり、fixture 6 件が `src/test/resources/orca/master/msw-fixture` へ移動した。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs -Dtest=OrcaMasterResourceTest,OrcaMasterSchemaValidatorTest -Dsurefire.failIfNoSpecifiedTests=false test` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am -DskipITs test` は PASS。
+  - `mvn -q -f pom.server-modernized.xml -pl server-modernized -am verify` は PASS。
+- 次回の先頭候補:
+  - `B12` の FIX-03 / FIX-04 / FIX-05 に進み、`StubOrcaTransport` と `src/main/resources/orca/stub` の本番依存を切り離し、ORCA 全経路の fail-closed 契約を揃える。
 
 #### Run 2026-03-16 09:04 JST
 - 完了:

@@ -1,11 +1,5 @@
 package open.dolphin.session;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,6 +17,7 @@ import open.dolphin.mbean.ServletContextHolder;
 import open.dolphin.session.framework.SessionOperation;
 import open.dolphin.session.support.ChartEventSessionKeys;
 import open.dolphin.session.support.ChartEventStreamPublisher;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -559,6 +554,19 @@ public class ChartEventServiceBean {
         }
         return karteIds;
     }
+
+    private static boolean isPvtListClearEnabled() {
+        try {
+            return ConfigProvider.getConfig()
+                    .getOptionalValue("opendolphin.pvt.list-clear", String.class)
+                    .map(String::trim)
+                    .filter(token -> !token.isEmpty())
+                    .map(Boolean::parseBoolean)
+                    .orElse(false);
+        } catch (IllegalStateException ex) {
+            return false;
+        }
+    }
     
     // ０時にpvtListをリニューアルする
     public void renewPvtList() {
@@ -566,28 +574,7 @@ public class ChartEventServiceBean {
         contextHolder.setToday();
         
 //s.oh^ 受付リストのクリア 2013/08/15
-        Properties config = new Properties();
-        StringBuilder sb = new StringBuilder();
-        sb.append(System.getProperty("jboss.home.dir"));
-        sb.append(File.separator);
-        sb.append("custom.properties");
-        File f = new File(sb.toString());
-        String pvtListClear = null;
-        try {
-            FileInputStream fin = new FileInputStream(f);
-            InputStreamReader r = new InputStreamReader(fin, "JISAutoDetect");
-            config.load(r);
-            r.close();
-            pvtListClear = config.getProperty("pvtlist.clear", "false");
-        } catch (FileNotFoundException ex) {
-            LOGGER.error("", ex);
-        } catch (UnsupportedEncodingException ex) {
-            LOGGER.error("", ex);
-        } catch (IOException ex) {
-            LOGGER.error("", ex);
-        }
-        
-        if(pvtListClear != null && pvtListClear.equals("true")) {
+        if (isPvtListClearEnabled()) {
             List<String> fidList = contextHolder.getPvtFacilityIds();
             for (String fid : fidList) {
                 contextHolder.clearPvtList(fid);
@@ -603,7 +590,7 @@ public class ChartEventServiceBean {
                 notifyEvent(msg);
             }
             log("ChartEventService: ServerUUID = " + contextHolder.getServerUUID());
-        }else{
+        } else {
 //s.oh$
 
             for (String fid : contextHolder.getPvtFacilityIds()) {

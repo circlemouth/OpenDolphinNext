@@ -32,6 +32,7 @@ import open.dolphin.rest.dto.SafetySummaryResponse;
 import open.dolphin.rest.dto.UserPropertyResponse;
 import open.dolphin.rest.support.KarteRevisionResponseMapper;
 import open.dolphin.rest.support.LegacyJsonSupport;
+import open.dolphin.rest.support.LegacyOrcaResponseMapper;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.UserServiceBean;
 
@@ -318,7 +319,7 @@ public class KarteResource extends AbstractResource {
     @GET
     @Path("/diagnosis/{param}")
     @Produces(MediaType.APPLICATION_JSON)
-    public RegisteredDiagnosisListConverter getDiagnosis(@PathParam("param") String param) {
+    public LegacyOrcaResponseMapper.RegisteredDiagnosisListResponse getDiagnosis(@PathParam("param") String param) {
 
         debug(param);
         String[] params = param.split(CAMMA);
@@ -331,13 +332,7 @@ public class KarteResource extends AbstractResource {
         ensureKarteFacilityAccess(karteId, null);
 
         List<RegisteredDiagnosisModel> result = karteServiceBean.getDiagnosis(karteId, fromDate, activeOnly);
-        RegisteredDiagnosisList list = new RegisteredDiagnosisList();
-        list.setList(result);
-        
-        RegisteredDiagnosisListConverter conv = new RegisteredDiagnosisListConverter();
-        conv.setModel(list);
-
-        return conv;
+        return LegacyOrcaResponseMapper.toRegisteredDiagnosisListResponse(result);
     }
     
     @POST

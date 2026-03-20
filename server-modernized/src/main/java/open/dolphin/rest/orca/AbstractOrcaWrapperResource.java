@@ -1,4 +1,4 @@
-package open.dolphin.orca.rest;
+package open.dolphin.rest.orca;
 
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;

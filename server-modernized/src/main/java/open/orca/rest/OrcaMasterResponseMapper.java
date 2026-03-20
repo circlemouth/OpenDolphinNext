@@ -1,5 +1,6 @@
 package open.orca.rest;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import java.time.Instant;
 import open.dolphin.rest.dto.orca.OrcaAddressEntry;
 import open.dolphin.rest.dto.orca.OrcaDrugMasterEntry;
@@ -8,6 +9,7 @@ import open.dolphin.rest.dto.orca.OrcaMasterMeta;
 import open.dolphin.rest.dto.orca.OrcaTensuEntry;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 
+@ApplicationScoped
 class OrcaMasterResponseMapper {
 
     OrcaDrugMasterEntry toGenericClassEntry(OrcaMasterDao.GenericClassRecord entry,

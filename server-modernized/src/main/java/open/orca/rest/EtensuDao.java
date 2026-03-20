@@ -1,5 +1,7 @@
 package open.orca.rest;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -23,17 +25,19 @@ import open.dolphin.rest.dto.orca.OrcaEtensuCalcUnit;
 import open.dolphin.rest.dto.orca.OrcaEtensuConflict;
 import open.dolphin.rest.dto.orca.OrcaEtensuSpecimen;
 
+@ApplicationScoped
 public class EtensuDao {
     private static final Logger LOGGER = Logger.getLogger(EtensuDao.class.getName());
     private static final Pattern TENSU_VERSION_PATTERN = Pattern.compile("\\d{6}");
     private final ORCAConnection orcaConnection;
 
-    public EtensuDao() {
-        this(ORCAConnection.current());
+    EtensuDao() {
+        this(null);
     }
 
+    @Inject
     EtensuDao(ORCAConnection orcaConnection) {
-        this.orcaConnection = Objects.requireNonNull(orcaConnection, "orcaConnection");
+        this.orcaConnection = orcaConnection;
     }
 
     public EtensuSearchResult search(EtensuSearchCriteria criteria) {
@@ -42,7 +46,7 @@ public class EtensuDao {
             return new EtensuSearchResult(Collections.emptyList(), 0, null, 0, true);
         }
         long startTime = System.nanoTime();
-        try (Connection connection = orcaConnection.getConnection()) {
+        try (Connection connection = openConnection()) {
             EtensuTableMeta meta = EtensuTableMeta.load(connection);
             EtensuQuery query = buildQuery(criteria, meta);
             Integer totalCount = maybeFetchTotalCount(connection, query, criteria.isIncludeTotalCount());
@@ -62,6 +66,13 @@ public class EtensuDao {
             long elapsedMs = toMillis(startTime);
             return new EtensuSearchResult(Collections.emptyList(), 0, criteria.tensuVersion, elapsedMs, true);
         }
+    }
+
+    private Connection openConnection() throws SQLException {
+        if (orcaConnection == null) {
+            throw new SQLException("ORCAConnection is not configured");
+        }
+        return orcaConnection.getConnection();
     }
 
     private EtensuQuery buildQuery(EtensuSearchCriteria criteria, EtensuTableMeta meta) {

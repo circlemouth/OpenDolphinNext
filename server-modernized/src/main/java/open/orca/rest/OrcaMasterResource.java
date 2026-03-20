@@ -1,15 +1,7 @@
 package open.orca.rest;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -55,39 +47,72 @@ import open.dolphin.rest.orca.AbstractOrcaRestResource;
 @Path("/orca/master")
 @Produces(MediaType.APPLICATION_JSON)
 public class OrcaMasterResource extends AbstractResource {
+    private static final OrcaMasterGateway NOOP_GATEWAY = new OrcaMasterGateway() {
+        @Override
+        public OrcaMasterDao.GenericClassSearchResult searchGenericClass(OrcaMasterDao.GenericClassCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> searchDrug(OrcaMasterDao.DrugCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> searchComment(OrcaMasterDao.CommentCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> searchBodypart(OrcaMasterDao.CommentCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.ListSearchResult<OrcaMasterDao.YouhouRecord> searchYouhou(OrcaMasterDao.YouhouCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.ListSearchResult<OrcaMasterDao.MaterialRecord> searchMaterial(OrcaMasterDao.MaterialCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.ListSearchResult<OrcaMasterDao.KensaSortRecord> searchKensaSort(OrcaMasterDao.KensaSortCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public EtensuDao.EtensuSearchResult searchEtensu(EtensuDao.EtensuSearchCriteria criteria) {
+            return new EtensuDao.EtensuSearchResult(Collections.emptyList(), 0, null, 0, true);
+        }
+    };
+
 
     private static final String DEFAULT_VERSION = "20240426";
     private static final String DEFAULT_VALID_FROM = "20240401";
     private static final String DEFAULT_VALID_TO = "99991231";
-    private static final long CACHE_TTL_SHORT_SECONDS = 300;
-    private static final long CACHE_TTL_LONG_SECONDS = 604800;
     private static final long CACHE_STALE_REVALIDATE_SECONDS = 86400;
-    private static final int MAX_PAGE_SIZE = 2000;
     private static final Pattern SRYCD_PATTERN = Pattern.compile("^\\d{9}$");
     private static final Pattern ZIP_PATTERN = Pattern.compile("^\\d{7}$");
     private static final Pattern PREF_PATTERN = Pattern.compile("^(0[1-9]|[1-3][0-9]|4[0-7])$");
     private static final Pattern ETENSU_CATEGORY_PATTERN = Pattern.compile("^\\d{1,2}$");
     private static final Pattern TENSU_VERSION_PATTERN = Pattern.compile("^\\d{6}$");
     private static final Pattern AS_OF_PATTERN = Pattern.compile("^\\d{8}$");
-    private static final java.nio.file.Path SNAPSHOT_ROOT = Paths.get("artifacts", "api-stability", "20251124T000000Z", "master-snapshots");
-    private static final java.nio.file.Path MSW_FIXTURE_ROOT = Paths.get("artifacts", "api-stability", "20251124T000000Z", "msw-fixture");
-    private static final String CLASSPATH_FIXTURE_ROOT = "orca/master/msw-fixture/";
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-            .findAndRegisterModules()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     @Inject
     SessionAuditDispatcher sessionAuditDispatcher;
 
-    private final OrcaMasterService masterService;
-    private final OrcaMasterResponseMapper responseMapper;
+    @Inject
+    OrcaMasterService masterService;
+
+    @Inject
+    OrcaMasterResponseMapper responseMapper;
 
     public OrcaMasterResource() {
-        this(new OrcaMasterDaoGateway());
-    }
-
-    OrcaMasterResource(EtensuDao etensuDao) {
-        this(new OrcaMasterDaoGateway(etensuDao));
+        this.masterService = new OrcaMasterService(NOOP_GATEWAY);
+        this.responseMapper = new OrcaMasterResponseMapper();
     }
 
     OrcaMasterResource(EtensuDao etensuDao, OrcaMasterDao masterDao) {
@@ -95,15 +120,12 @@ public class OrcaMasterResource extends AbstractResource {
     }
 
     OrcaMasterResource(OrcaMasterGateway masterGateway) {
-        OrcaMasterGateway gateway = masterGateway != null ? masterGateway : new OrcaMasterDaoGateway();
-        this.masterService = new OrcaMasterService(gateway);
+        this.masterService = new OrcaMasterService(masterGateway);
         this.responseMapper = new OrcaMasterResponseMapper();
     }
 
     private enum DataOrigin {
         ORCA_DB,
-        SNAPSHOT,
-        MSW_FIXTURE,
         FALLBACK
     }
 
@@ -119,16 +141,6 @@ public class OrcaMasterResource extends AbstractResource {
             this.snapshotVersion = snapshotVersion;
             this.version = version;
             this.origin = origin;
-            this.loadFailed = loadFailed;
-        }
-    }
-
-    private static final class FixtureLoadResult<T> {
-        final FixtureListResponse<T> response;
-        final boolean loadFailed;
-
-        FixtureLoadResult(FixtureListResponse<T> response, boolean loadFailed) {
-            this.response = response;
             this.loadFailed = loadFailed;
         }
     }
@@ -186,42 +198,12 @@ public class OrcaMasterResource extends AbstractResource {
         OrcaMasterDao.GenericClassSearchResult dbResult = masterService.searchGenericClass(criteria);
         final String masterType = "orca05-generic-class";
         if (dbResult == null) {
-            LoadedFixture<FixtureGenericClassEntry> fallbackFixture = loadEntries(
-                    FixtureGenericClassEntry.class,
-                    "generic-class/orca_master_generic_class_response.json",
-                    "orca-master-generic-class.json"
-            );
-            if (isUnavailableFallback(fallbackFixture)) {
-                Response failure = serviceUnavailable(request, "MASTER_GENERIC_CLASS_UNAVAILABLE",
-                        "薬効分類マスタを取得できませんでした");
-                recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 503, fallbackFixture, false,
-                        true, 0, buildQueryDetails(null, keyword, effective, params));
-                return failure;
-            }
-            List<FixtureGenericClassEntry> filtered = fallbackFixture.entries.stream()
-                    .filter(entry -> matchesKeyword(keyword, entry.classCode, entry.className, entry.kanaName))
-                    .filter(entry -> isEffective(effective, entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
-                    .collect(Collectors.toList());
-            Integer totalCount = criteria.isIncludeTotalCount() ? filtered.size() : null;
-            List<FixtureGenericClassEntry> paged = paginateList(filtered, params);
-            final String etagValue = buildEtag("/api/orca/master/generic-class", masterType, fallbackFixture, params);
-            final long ttlSeconds = cacheTtlSeconds(masterType);
-            if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 304, fallbackFixture, true, null, null,
-                        buildQueryDetails(null, keyword, effective, params));
-                return buildNotModifiedResponse(etagValue, ttlSeconds);
-            }
-            final List<OrcaDrugMasterEntry> items = paged.stream()
-                    .map(entry -> toGenericClassEntry(entry, fallbackFixture))
-                    .collect(Collectors.toList());
-            OrcaMasterListResponse<OrcaDrugMasterEntry> response = new OrcaMasterListResponse<>();
-            if (totalCount != null) {
-                response.setTotalCount(totalCount);
-            }
-            response.setItems(items);
-            recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 200, fallbackFixture, false, items.isEmpty(),
-                    totalCount, buildQueryDetails(null, keyword, effective, params));
-            return buildCachedOkResponse(response, etagValue, ttlSeconds);
+            LoadedFixture<OrcaMasterDao.GenericClassRecord> unavailableFixture = unavailableFixture();
+            Response failure = serviceUnavailable(request, "MASTER_GENERIC_CLASS_UNAVAILABLE",
+                    "薬効分類マスタを取得できませんでした");
+            recordMasterAudit(request, "/api/orca/master/generic-class", masterType, 503, unavailableFixture, false,
+                    true, 0, buildQueryDetails(null, keyword, effective, params));
+            return failure;
         }
         LoadedFixture<OrcaMasterDao.GenericClassRecord> fixture = buildDbFixture(
                 dbResult.getRecords(),
@@ -270,52 +252,12 @@ public class OrcaMasterResource extends AbstractResource {
                     false, null, 0, buildSrycdDetails(srycd, effective, params));
             return validationError(request, "SRYCD_VALIDATION_ERROR", "srycd must be 9 digits");
         }
-        LoadedFixture<FixtureGenericPriceEntry> fixture = loadEntries(
-                FixtureGenericPriceEntry.class,
-                "generic-price/orca_master_generic-price_response.json",
-                "orca-master-generic-price.json"
-        );
-        if (isUnavailableFallback(fixture)) {
-            Response failure = serviceUnavailable(request, "MASTER_GENERIC_PRICE_UNAVAILABLE",
-                    "最低薬価マスタを取得できませんでした");
-            recordMasterAudit(request, apiRoute, masterType, 503, fixture, false, true, 0,
-                    buildSrycdDetails(srycd, effective, params));
-            return failure;
-        }
-        final String etagValue = buildEtag(apiRoute, masterType, fixture, params);
-        final long ttlSeconds = cacheTtlSeconds(masterType);
-        if (etagMatches(ifNoneMatch, etagValue)) {
-            recordMasterAudit(request, apiRoute, masterType, 304, fixture, true, null, null,
-                    buildSrycdDetails(srycd, effective, params));
-            return buildNotModifiedResponse(etagValue, ttlSeconds);
-        }
-        FixtureGenericPriceEntry match = fixture.entries.stream()
-                .filter(entry -> srycd.equals(firstNonBlank(entry.srycd, entry.code)))
-                .filter(entry -> isEffective(effective, entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
-                .findFirst()
-                .orElse(null);
-        OrcaDrugMasterEntry response = match != null
-                ? toGenericPriceEntry(match, fixture)
-                : buildDrugEntry(
-                        srycd,
-                        "未収載薬",
-                        "generic-price",
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        DEFAULT_VALID_FROM,
-                        DEFAULT_VALID_TO,
-                        null,
-                        fixture,
-                        false,
-                        true,
-                        false
-                );
-        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, false, 1,
-                match == null, null, buildSrycdDetails(srycd, effective, params));
-        return buildCachedOkResponse(response, etagValue, ttlSeconds);
+        LoadedFixture<OrcaDrugMasterEntry> unavailableFixture = unavailableFixture();
+        Response failure = serviceUnavailable(request, "MASTER_GENERIC_PRICE_UNAVAILABLE",
+                "最低薬価マスタを取得できませんでした");
+        recordMasterAudit(request, apiRoute, masterType, 503, unavailableFixture, false, true, 0,
+                buildSrycdDetails(srycd, effective, params));
+        return failure;
     }
 
     @GET
@@ -403,41 +345,11 @@ public class OrcaMasterResource extends AbstractResource {
                     false, null, 0, buildQueryDetails(pref, keyword, effective, params));
             return validationError(request, "PREF_VALIDATION_ERROR", "pref must be a 2-digit prefecture code");
         }
-        LoadedFixture<FixtureHokenjaEntry> fixture = loadEntries(
-                FixtureHokenjaEntry.class,
-                "hokenja/orca_master_hokenja_response.json",
-                "orca-master-hokenja.json"
-        );
-        if (isUnavailableFallback(fixture)) {
-            Response failure = serviceUnavailable(request, "MASTER_HOKENJA_UNAVAILABLE", "保険者マスタを取得できませんでした");
-            recordMasterAudit(request, apiRoute, masterType, 503, fixture, false, true, 0,
-                    buildQueryDetails(pref, keyword, effective, params));
-            return failure;
-        }
-        List<FixtureHokenjaEntry> filtered = fixture.entries.stream()
-                .filter(entry -> matchesPref(pref, entry))
-                .filter(entry -> matchesKeyword(keyword,
-                        firstNonBlank(entry.payerCode, entry.insurerNumber),
-                        firstNonBlank(entry.payerName, entry.insurerName),
-                        entry.insurerKana))
-                .filter(entry -> isEffective(effective, entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
-                .collect(Collectors.toList());
-        final String etagValue = buildEtag(apiRoute, masterType, fixture, params);
-        final long ttlSeconds = cacheTtlSeconds(masterType);
-        if (etagMatches(ifNoneMatch, etagValue)) {
-            recordMasterAudit(request, apiRoute, masterType, 304, fixture, true, null, filtered.size(),
-                    buildQueryDetails(pref, keyword, effective, params));
-            return buildNotModifiedResponse(etagValue, ttlSeconds);
-        }
-        List<OrcaInsurerEntry> items = paginateList(filtered, params).stream()
-                .map(entry -> toInsurerEntry(entry, fixture))
-                .collect(Collectors.toList());
-        OrcaMasterListResponse<OrcaInsurerEntry> response = new OrcaMasterListResponse<>();
-        response.setTotalCount(filtered.size());
-        response.setItems(items);
-        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, filtered.isEmpty(), filtered.size(),
+        LoadedFixture<OrcaInsurerEntry> unavailableFixture = unavailableFixture();
+        Response failure = serviceUnavailable(request, "MASTER_HOKENJA_UNAVAILABLE", "保険者マスタを取得できませんでした");
+        recordMasterAudit(request, apiRoute, masterType, 503, unavailableFixture, false, true, 0,
                 buildQueryDetails(pref, keyword, effective, params));
-        return buildCachedOkResponse(response, etagValue, ttlSeconds);
+        return failure;
     }
 
     @GET
@@ -461,39 +373,11 @@ public class OrcaMasterResource extends AbstractResource {
                     false, null, 0, buildQueryDetails(null, null, effective, params, zip));
             return validationError(request, "ZIP_VALIDATION_ERROR", "zip must be 7 digits");
         }
-        LoadedFixture<FixtureAddressEntry> fixture = loadEntries(
-                FixtureAddressEntry.class,
-                "address/orca_master_address_response.json",
-                "orca-master-address.json"
-        );
-        if (isUnavailableFallback(fixture)) {
-            Response failure = serviceUnavailable(request, "MASTER_ADDRESS_UNAVAILABLE", "住所マスタを取得できませんでした");
-            recordMasterAudit(request, apiRoute, masterType, 503, fixture, false, true, 0,
-                    buildQueryDetails(null, null, effective, params, zip));
-            return failure;
-        }
-        final String etagValue = buildEtag(apiRoute, masterType, fixture, params);
-        final long ttlSeconds = cacheTtlSeconds(masterType);
-        if (etagMatches(ifNoneMatch, etagValue)) {
-            recordMasterAudit(request, apiRoute, masterType, 304, fixture, true, null, null,
-                    buildQueryDetails(null, null, effective, params, zip));
-            return buildNotModifiedResponse(etagValue, ttlSeconds);
-        }
-        FixtureAddressEntry match = fixture.entries.stream()
-                .filter(entry -> zip.equals(firstNonBlank(entry.zip, entry.zipCode)))
-                .filter(entry -> isEffective(effective, entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
-                .findFirst()
-                .orElse(null);
-        if (match == null) {
-            Response notFound = notFound("MASTER_ADDRESS_NOT_FOUND", "指定の郵便番号に該当する住所がありません", request);
-            recordMasterAudit(request, apiRoute, masterType, 404, fixture, false, true, 0,
-                    buildQueryDetails(null, null, effective, params, zip));
-            return notFound;
-        }
-        OrcaAddressEntry response = toAddressEntry(match, fixture);
-        recordMasterAudit(request, apiRoute, masterType, 200, fixture, false, false, 1,
+        LoadedFixture<OrcaAddressEntry> unavailableFixture = unavailableFixture();
+        Response failure = serviceUnavailable(request, "MASTER_ADDRESS_UNAVAILABLE", "住所マスタを取得できませんでした");
+        recordMasterAudit(request, apiRoute, masterType, 503, unavailableFixture, false, true, 0,
                 buildQueryDetails(null, null, effective, params, zip));
-        return buildCachedOkResponse(response, etagValue, ttlSeconds);
+        return failure;
     }
 
     @GET
@@ -634,32 +518,11 @@ public class OrcaMasterResource extends AbstractResource {
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.YouhouRecord> dbResult = masterService.searchYouhou(criteria);
         final String masterType = "orca05-youhou";
         if (dbResult == null) {
-            LoadedFixture<FixtureYouhouEntry> fixture = loadEntries(
-                    FixtureYouhouEntry.class,
-                    "youhou/orca_master_youhou_response.json",
-                    "orca-master-youhou.json"
-            );
-            if (isUnavailableFallback(fixture)) {
-                Response failure = serviceUnavailable(request, "MASTER_YOUHOU_UNAVAILABLE", "用法マスタを取得できませんでした");
-                recordMasterAudit(request, "/api/orca/master/youhou", masterType, 503, fixture, false,
-                        true, 0, buildQueryDetails(null, keyword, effective, params));
-                return failure;
-            }
-            final String etagValue = buildEtag("/api/orca/master/youhou", masterType, fixture, params);
-            final long ttlSeconds = cacheTtlSeconds(masterType);
-            if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/api/orca/master/youhou", masterType, 304, fixture, true, null, null,
-                        buildQueryDetails(null, keyword, effective, params));
-                return buildNotModifiedResponse(etagValue, ttlSeconds);
-            }
-            final List<OrcaDrugMasterEntry> response = fixture.entries.stream()
-                    .filter(entry -> matchesKeyword(keyword, entry.youhouCode, entry.youhouName, entry.comment))
-                    .filter(entry -> isEffective(effective, entry.validFrom, entry.validTo))
-                    .map(entry -> toYouhouEntry(entry, fixture))
-                    .collect(Collectors.toList());
-            recordMasterAudit(request, "/api/orca/master/youhou", masterType, 200, fixture, false, response.isEmpty(),
-                    response.size(), buildQueryDetails(null, keyword, effective, params));
-            return buildCachedOkResponse(response, etagValue, ttlSeconds);
+            LoadedFixture<OrcaMasterDao.YouhouRecord> unavailableFixture = unavailableFixture();
+            Response failure = serviceUnavailable(request, "MASTER_YOUHOU_UNAVAILABLE", "用法マスタを取得できませんでした");
+            recordMasterAudit(request, "/api/orca/master/youhou", masterType, 503, unavailableFixture, false,
+                    true, 0, buildQueryDetails(null, keyword, effective, params));
+            return failure;
         }
         LoadedFixture<OrcaMasterDao.YouhouRecord> fixture = buildDbFixture(
                 dbResult.getRecords(),
@@ -700,32 +563,11 @@ public class OrcaMasterResource extends AbstractResource {
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.MaterialRecord> dbResult = masterService.searchMaterial(criteria);
         final String masterType = "orca05-material";
         if (dbResult == null) {
-            LoadedFixture<FixtureMaterialEntry> fixture = loadEntries(
-                    FixtureMaterialEntry.class,
-                    "material/orca_master_material_response.json",
-                    "orca-master-material.json"
-            );
-            if (isUnavailableFallback(fixture)) {
-                Response failure = serviceUnavailable(request, "MASTER_MATERIAL_UNAVAILABLE", "特定器材マスタを取得できませんでした");
-                recordMasterAudit(request, "/api/orca/master/material", masterType, 503, fixture, false,
-                        true, 0, buildQueryDetails(null, keyword, effective, params));
-                return failure;
-            }
-            final String etagValue = buildEtag("/api/orca/master/material", masterType, fixture, params);
-            final long ttlSeconds = cacheTtlSeconds(masterType);
-            if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/api/orca/master/material", masterType, 304, fixture, true, null, null,
-                        buildQueryDetails(null, keyword, effective, params));
-                return buildNotModifiedResponse(etagValue, ttlSeconds);
-            }
-            final List<OrcaDrugMasterEntry> response = fixture.entries.stream()
-                    .filter(entry -> matchesKeyword(keyword, entry.materialCode, entry.materialName, entry.category))
-                    .filter(entry -> isEffective(effective, entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
-                    .map(entry -> toMaterialEntry(entry, fixture))
-                    .collect(Collectors.toList());
-            recordMasterAudit(request, "/api/orca/master/material", masterType, 200, fixture, false, response.isEmpty(),
-                    response.size(), buildQueryDetails(null, keyword, effective, params));
-            return buildCachedOkResponse(response, etagValue, ttlSeconds);
+            LoadedFixture<OrcaMasterDao.MaterialRecord> unavailableFixture = unavailableFixture();
+            Response failure = serviceUnavailable(request, "MASTER_MATERIAL_UNAVAILABLE", "特定器材マスタを取得できませんでした");
+            recordMasterAudit(request, "/api/orca/master/material", masterType, 503, unavailableFixture, false,
+                    true, 0, buildQueryDetails(null, keyword, effective, params));
+            return failure;
         }
         LoadedFixture<OrcaMasterDao.MaterialRecord> fixture = buildDbFixture(
                 dbResult.getRecords(),
@@ -766,33 +608,12 @@ public class OrcaMasterResource extends AbstractResource {
         OrcaMasterDao.ListSearchResult<OrcaMasterDao.KensaSortRecord> dbResult = masterService.searchKensaSort(criteria);
         final String masterType = "orca05-kensa-sort";
         if (dbResult == null) {
-            LoadedFixture<FixtureKensaSortEntry> fixture = loadEntries(
-                    FixtureKensaSortEntry.class,
-                    "kensa-sort/orca_master_kensa_sort_response.json",
-                    "orca-master-kensa-sort.json"
-            );
-            if (isUnavailableFallback(fixture)) {
-                Response failure = serviceUnavailable(request, "MASTER_KENSA_SORT_UNAVAILABLE",
-                        "検査区分マスタを取得できませんでした");
-                recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 503, fixture, false,
-                        true, 0, buildQueryDetails(null, keyword, effective, params));
-                return failure;
-            }
-            final String etagValue = buildEtag("/api/orca/master/kensa-sort", masterType, fixture, params);
-            final long ttlSeconds = cacheTtlSeconds(masterType);
-            if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 304, fixture, true, null, null,
-                        buildQueryDetails(null, keyword, effective, params));
-                return buildNotModifiedResponse(etagValue, ttlSeconds);
-            }
-            final List<OrcaDrugMasterEntry> response = fixture.entries.stream()
-                    .filter(entry -> matchesKeyword(keyword, entry.kensaCode, entry.kensaName, entry.category, entry.kensaSort))
-                    .filter(entry -> isEffective(effective, entry.validFrom, entry.validTo))
-                    .map(entry -> toKensaSortEntry(entry, fixture))
-                    .collect(Collectors.toList());
-            recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 200, fixture, false, response.isEmpty(),
-                    response.size(), buildQueryDetails(null, keyword, effective, params));
-            return buildCachedOkResponse(response, etagValue, ttlSeconds);
+            LoadedFixture<OrcaMasterDao.KensaSortRecord> unavailableFixture = unavailableFixture();
+            Response failure = serviceUnavailable(request, "MASTER_KENSA_SORT_UNAVAILABLE",
+                    "検査区分マスタを取得できませんでした");
+            recordMasterAudit(request, "/api/orca/master/kensa-sort", masterType, 503, unavailableFixture, false,
+                    true, 0, buildQueryDetails(null, keyword, effective, params));
+            return failure;
         }
         LoadedFixture<OrcaMasterDao.KensaSortRecord> fixture = buildDbFixture(
                 dbResult.getRecords(),
@@ -878,53 +699,11 @@ public class OrcaMasterResource extends AbstractResource {
         criteria.setIncludeTotalCount(shouldIncludeTotalCount(params));
         EtensuDao.EtensuSearchResult dbResult = masterService.searchEtensu(criteria);
         if (dbResult == null || dbResult.isLoadFailed()) {
-            LoadedFixture<FixtureEtensuEntry> fallbackFixture = loadEntries(
-                    FixtureEtensuEntry.class,
-                    "tensu/orca_tensu_ten_response.json",
-                    "orca-master-etensu.json"
-            );
-            if (isUnavailableFallback(fallbackFixture)) {
-                Response failure = serviceUnavailable(request, "ETENSU_UNAVAILABLE", "etensu master unavailable");
-                recordMasterAudit(request, apiRoute, masterType, 503, fallbackFixture, false, true, 0,
-                        buildTensuQueryDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax, params));
-                return failure;
-            }
-            List<FixtureEtensuEntry> filtered = fallbackFixture.entries.stream()
-                    .filter(entry -> matchesKeyword(keyword, entry.tensuCode, entry.medicalFeeCode, entry.name, entry.note))
-                    .filter(entry -> matchesEtensuCategory(category, entry))
-                    .filter(entry -> matchesTensuVersion(normalizeTensuVersion(tensuVersion), entry))
-                    .filter(entry -> isEffective(firstNonBlank(asOf, "99991231"), entry.startDate, entry.endDate, entry.validFrom, entry.validTo))
-                    .filter(entry -> matchesPointsRange(pointsMin, pointsMax, firstNonBlankDouble(entry.points, entry.tanka)))
-                    .collect(Collectors.toList());
-            List<FixtureEtensuEntry> paged = paginateList(filtered, params);
-            final String etagValue = buildEtag(apiRoute, masterType, fallbackFixture, params);
-            final long ttlSeconds = cacheTtlSeconds(masterType);
-            final Map<String, Object> etensuAuditDetails =
-                    buildTensuQueryDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax, params);
-            if (etagMatches(ifNoneMatch, etagValue)) {
-                recordMasterAudit(request, apiRoute, masterType, 304, fallbackFixture, true, null,
-                        filtered.size(), etensuAuditDetails);
-                return buildNotModifiedResponse(etagValue, ttlSeconds);
-            }
-            if (paged.isEmpty()) {
-                Response notFound = buildErrorResponse(Status.NOT_FOUND, "TENSU_NOT_FOUND",
-                        "no etensu entries matched", request, null);
-                recordMasterAudit(request, apiRoute, masterType, 404, fallbackFixture, false, true, 0,
-                        true, true, etensuAuditDetails);
-                return notFound;
-            }
-            List<OrcaTensuEntry> items = paged.stream()
-                    .map(entry -> toEtensuEntry(entry, fallbackFixture))
-                    .collect(Collectors.toList());
-            OrcaMasterListResponse<OrcaTensuEntry> response = new OrcaMasterListResponse<>();
-            Integer totalCount = criteria.isIncludeTotalCount() ? filtered.size() : null;
-            if (totalCount != null) {
-                response.setTotalCount(totalCount);
-            }
-            response.setItems(items);
-            recordMasterAudit(request, apiRoute, masterType, 200, fallbackFixture, false, items.isEmpty(),
-                    totalCount, etensuAuditDetails);
-            return buildCachedOkResponse(response, etagValue, ttlSeconds);
+            LoadedFixture<EtensuDao.EtensuRecord> unavailableFixture = unavailableFixture();
+            Response failure = serviceUnavailable(request, "ETENSU_UNAVAILABLE", "etensu master unavailable");
+            recordMasterAudit(request, apiRoute, masterType, 503, unavailableFixture, false, true, 0,
+                    buildTensuQueryDetails(keyword, category, asOf, tensuVersion, pointsMin, pointsMax, params));
+            return failure;
         }
         LoadedFixture<EtensuDao.EtensuRecord> dbFixture = new LoadedFixture<>(
                 dbResult.getRecords(),
@@ -1014,89 +793,6 @@ public class OrcaMasterResource extends AbstractResource {
         return auditSupport().badRequest(request, code, message);
     }
 
-    private <T> LoadedFixture<T> loadEntries(Class<T> entryType, String snapshotRelativePath, String fixtureFileName) {
-        return toResourceFixture(masterService.loadEntries(entryType, snapshotRelativePath, fixtureFileName));
-    }
-
-    private java.nio.file.Path snapshotRoot() {
-        return masterService.snapshotRoot();
-    }
-
-    private java.nio.file.Path fixtureRoot() {
-        return masterService.fixtureRoot();
-    }
-
-    private java.nio.file.Path resolveRoot(String key, java.nio.file.Path fallback) {
-        String override = System.getProperty(key);
-        if (override == null || override.isBlank()) {
-            override = System.getenv(key);
-        }
-        if (override == null || override.isBlank()) {
-            return resolveProjectRelative(fallback);
-        }
-        return Paths.get(override);
-    }
-
-    private java.nio.file.Path resolveProjectRelative(java.nio.file.Path fallback) {
-        if (fallback == null || fallback.isAbsolute()) {
-            return fallback;
-        }
-        String multiModuleRoot = System.getProperty("maven.multiModuleProjectDirectory");
-        if (multiModuleRoot == null || multiModuleRoot.isBlank()) {
-            multiModuleRoot = null;
-        }
-        if (multiModuleRoot != null) {
-            java.nio.file.Path candidate = Paths.get(multiModuleRoot).resolve(fallback);
-            if (Files.exists(candidate)) {
-                return candidate;
-            }
-        }
-        java.nio.file.Path current = Paths.get("").toAbsolutePath();
-        while (current != null) {
-            java.nio.file.Path candidate = current.resolve(fallback);
-            if (Files.exists(candidate)) {
-                return candidate;
-            }
-            current = current.getParent();
-        }
-        return fallback;
-    }
-
-    private <T> FixtureLoadResult<T> tryReadResponse(Class<T> entryType, java.nio.file.Path file) {
-        if (Files.notExists(file)) {
-            return new FixtureLoadResult<>(null, false);
-        }
-        try {
-            JavaType type = TypeFactory.defaultInstance().constructParametricType(FixtureListResponse.class, entryType);
-            FixtureListResponse<T> response = OBJECT_MAPPER.readValue(file.toFile(), type);
-            if (response == null || response.list == null) {
-                return new FixtureLoadResult<>(null, true);
-            }
-            return new FixtureLoadResult<>(response, false);
-        } catch (IOException e) {
-            return new FixtureLoadResult<>(null, true);
-        }
-    }
-
-    private <T> FixtureLoadResult<T> tryReadResponseFromClasspath(Class<T> entryType, String resourcePath) {
-        if (resourcePath == null || resourcePath.isBlank()) {
-            return new FixtureLoadResult<>(null, false);
-        }
-        try (InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
-            if (stream == null) {
-                return new FixtureLoadResult<>(null, false);
-            }
-            JavaType type = TypeFactory.defaultInstance().constructParametricType(FixtureListResponse.class, entryType);
-            FixtureListResponse<T> response = OBJECT_MAPPER.readValue(stream, type);
-            if (response == null || response.list == null) {
-                return new FixtureLoadResult<>(null, true);
-            }
-            return new FixtureLoadResult<>(response, false);
-        } catch (IOException e) {
-            return new FixtureLoadResult<>(null, true);
-        }
-    }
-
     private <T> List<T> safeList(List<T> source) {
         return masterService.safeList(source);
     }
@@ -1105,8 +801,8 @@ public class OrcaMasterResource extends AbstractResource {
         return toResourceFixture(masterService.buildDbFixture(entries, version, loadFailed));
     }
 
-    private boolean isUnavailableFallback(LoadedFixture<?> fixture) {
-        return masterService.isUnavailableFallback(toServiceFixture(fixture));
+    private <T> LoadedFixture<T> unavailableFixture() {
+        return new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK, true);
     }
 
     private <T> List<T> paginateList(List<T> source, MultivaluedMap<String, String> params) {

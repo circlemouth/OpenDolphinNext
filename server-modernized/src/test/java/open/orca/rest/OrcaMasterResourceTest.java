@@ -15,27 +15,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import open.dolphin.rest.dto.orca.OrcaDrugMasterEntry;
-import open.dolphin.rest.dto.orca.OrcaAddressEntry;
 import open.dolphin.rest.dto.orca.OrcaMasterErrorResponse;
 import open.dolphin.rest.dto.orca.OrcaMasterListResponse;
 import open.dolphin.rest.dto.orca.OrcaMasterMeta;
-import open.dolphin.rest.dto.orca.OrcaInsurerEntry;
 import open.dolphin.rest.dto.orca.OrcaTensuEntry;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class OrcaMasterResourceTest {
 
     private static final String TEST_USER = "1.3.6.1.4.1.9414.70.1:admin";
-    private static final String MASTER_SNAPSHOT_ROOT_PROPERTY = "ORCA_MASTER_SNAPSHOT_ROOT";
-    private static final String MASTER_FIXTURE_ROOT_PROPERTY = "ORCA_MASTER_FIXTURE_ROOT";
-
-    @AfterEach
-    void clearFixtureRootProperties() {
-        System.clearProperty(MASTER_SNAPSHOT_ROOT_PROPERTY);
-        System.clearProperty(MASTER_FIXTURE_ROOT_PROPERTY);
-    }
-
     @Test
     void getGenericClass_returnsPagedResponseWithMeta() {
         OrcaMasterDao masterDao = new OrcaMasterDao() {
@@ -73,6 +61,43 @@ class OrcaMasterResourceTest {
         assertNotNull(meta.getRunId());
         assertFalse(meta.getRunId().isBlank());
         assertNotNull(meta.getFetchedAt());
+    }
+
+    @Test
+    void getGenericClass_dbUnavailable_returnsServiceUnavailable() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public GenericClassSearchResult searchGenericClass(GenericClassCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+
+        Response response = resource.getGenericClass(null, createUriInfo(new MultivaluedHashMap<>()), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_GENERIC_CLASS_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getGenericClass_dbUnavailable_returnsStableErrorBody() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public GenericClassSearchResult searchGenericClass(GenericClassCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+
+        Response response = resource.getGenericClass(null, createUriInfo(new MultivaluedHashMap<>()),
+                authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_GENERIC_CLASS_UNAVAILABLE", payload.getCode());
     }
 
     @Test
@@ -264,13 +289,10 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getGenericPrice(null, uriInfo, authenticatedRequest());
 
-        assertEquals(200, response.getStatus());
-        OrcaDrugMasterEntry payload = (OrcaDrugMasterEntry) response.getEntity();
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
-        assertEquals("110001110", payload.getCode());
-        assertEquals("generic-price", payload.getCategory());
-        assertEquals(120d, payload.getMinPrice());
-        assertNotNull(payload.getMeta());
+        assertEquals("MASTER_GENERIC_PRICE_UNAVAILABLE", payload.getCode());
     }
 
     @Test
@@ -298,18 +320,10 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getHokenja(null, uriInfo, authenticatedRequest());
 
-        assertEquals(200, response.getStatus());
-        @SuppressWarnings("unchecked")
-        OrcaMasterListResponse<OrcaInsurerEntry> payload =
-                (OrcaMasterListResponse<OrcaInsurerEntry>) response.getEntity();
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
-        assertEquals(1, payload.getTotalCount());
-        assertFalse(payload.getItems().isEmpty());
-        OrcaInsurerEntry item = payload.getItems().get(0);
-        assertEquals("06123456", item.getPayerCode());
-        assertEquals("医療共済組合東京", item.getPayerName());
-        assertEquals("13", item.getPrefCode());
-        assertNotNull(item.getMeta());
+        assertEquals("MASTER_HOKENJA_UNAVAILABLE", payload.getCode());
     }
 
     @Test
@@ -336,12 +350,10 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getAddress(null, uriInfo, authenticatedRequest());
 
-        assertEquals(200, response.getStatus());
-        OrcaAddressEntry payload = (OrcaAddressEntry) response.getEntity();
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
-        assertEquals("1000001", payload.getZip());
-        assertEquals("東京都千代田区千代田", payload.getFullAddress());
-        assertNotNull(payload.getMeta());
+        assertEquals("MASTER_ADDRESS_UNAVAILABLE", payload.getCode());
     }
 
     @Test
@@ -353,10 +365,49 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getAddress(null, uriInfo, authenticatedRequest());
 
-        assertEquals(404, response.getStatus());
+        assertEquals(503, response.getStatus());
         OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
-        assertEquals("MASTER_ADDRESS_NOT_FOUND", payload.getCode());
+        assertEquals("MASTER_ADDRESS_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getGenericPrice_noFixtureFallbackRemains() {
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("srycd", "110001110");
+        Response response = resource.getGenericPrice(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_GENERIC_PRICE_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getHokenja_noFixtureFallbackRemains() {
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "医療共済");
+        Response response = resource.getHokenja(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_HOKENJA_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getAddress_noFixtureFallbackRemains() {
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("zip", "1000001");
+        Response response = resource.getAddress(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_ADDRESS_UNAVAILABLE", payload.getCode());
     }
 
 
@@ -387,6 +438,24 @@ class OrcaMasterResourceTest {
         assertEquals("youhou", entry.getCategory());
         assertEquals(entry.getCode(), entry.getYouhouCode());
         assertNotNull(entry.getMeta());
+    }
+
+    @Test
+    void getYouhou_dbUnavailable_returnsServiceUnavailable() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<YouhouRecord> searchYouhou(YouhouCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+
+        Response response = resource.getYouhou(null, createUriInfo(new MultivaluedHashMap<>()), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_YOUHOU_UNAVAILABLE", payload.getCode());
     }
 
     @Test
@@ -428,6 +497,23 @@ class OrcaMasterResourceTest {
     }
 
     @Test
+    void getMaterial_dbUnavailable_returnsServiceUnavailable() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<MaterialRecord> searchMaterial(MaterialCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        Response response = resource.getMaterial(null, createUriInfo(new MultivaluedHashMap<>()), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_MATERIAL_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
     void getKensaSort_returnsListWithMeta() {
         OrcaMasterDao masterDao = new OrcaMasterDao() {
             @Override
@@ -461,6 +547,26 @@ class OrcaMasterResourceTest {
         assertEquals("2", entry.getKensaSort());
         assertNotNull(entry.getMeta());
         assertEquals("server", entry.getMeta().getDataSource());
+    }
+
+    @Test
+    void getKensaSort_dbUnavailable_returnsServiceUnavailable() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<KensaSortRecord> searchKensaSort(KensaSortCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "血液");
+
+        Response response = resource.getKensaSort(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_KENSA_SORT_UNAVAILABLE", payload.getCode());
     }
 
 
@@ -598,7 +704,7 @@ class OrcaMasterResourceTest {
     }
 
     @Test
-    void getEtensu_dbUnavailable_fallsBackToFixture() {
+    void getEtensu_dbUnavailable_returnsServiceUnavailable() {
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao() {
             @Override
             public EtensuSearchResult search(EtensuSearchCriteria criteria) {
@@ -609,19 +715,14 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getEtensu(null, uriInfo, authenticatedRequest());
 
-        assertEquals(200, response.getStatus());
-        @SuppressWarnings("unchecked")
-        OrcaMasterListResponse<OrcaTensuEntry> payload =
-                (OrcaMasterListResponse<OrcaTensuEntry>) response.getEntity();
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
-        assertFalse(payload.getItems().isEmpty());
+        assertEquals("ETENSU_UNAVAILABLE", payload.getCode());
     }
 
     @Test
-    void getEtensu_dbUnavailable_usesBundledFixtureWhenFilesystemFixtureMissing() {
-        String missingRoot = "target/non-existent-master-fixture-" + System.nanoTime();
-        System.setProperty(MASTER_SNAPSHOT_ROOT_PROPERTY, missingRoot);
-        System.setProperty(MASTER_FIXTURE_ROOT_PROPERTY, missingRoot);
+    void getEtensu_dbUnavailable_keepsServiceUnavailableWithoutFallbackSource() {
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao() {
             @Override
             public EtensuSearchResult search(EtensuSearchCriteria criteria) {
@@ -632,20 +733,14 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getEtensu(null, uriInfo, authenticatedRequest());
 
-        assertEquals(200, response.getStatus());
-        @SuppressWarnings("unchecked")
-        OrcaMasterListResponse<OrcaTensuEntry> payload =
-                (OrcaMasterListResponse<OrcaTensuEntry>) response.getEntity();
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
-        assertFalse(payload.getItems().isEmpty());
-        assertEquals("D001", payload.getItems().get(0).getTensuCode());
+        assertEquals("ETENSU_UNAVAILABLE", payload.getCode());
     }
 
     @Test
-    void getEtensu_dbUnavailable_withCategoryFilter_degradesToNotFoundInsteadOf503() {
-        String missingRoot = "target/non-existent-master-fixture-" + System.nanoTime();
-        System.setProperty(MASTER_SNAPSHOT_ROOT_PROPERTY, missingRoot);
-        System.setProperty(MASTER_FIXTURE_ROOT_PROPERTY, missingRoot);
+    void getEtensu_dbUnavailable_withCategoryFilter_stillReturnsServiceUnavailable() {
         OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao() {
             @Override
             public EtensuSearchResult search(EtensuSearchCriteria criteria) {
@@ -659,10 +754,10 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getEtensu(null, uriInfo, authenticatedRequest());
 
-        assertEquals(404, response.getStatus());
+        assertEquals(503, response.getStatus());
         OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
-        assertEquals("TENSU_NOT_FOUND", payload.getCode());
+        assertEquals("ETENSU_UNAVAILABLE", payload.getCode());
     }
 
     @Test

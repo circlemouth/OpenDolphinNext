@@ -37,4 +37,18 @@ class OrcaGatewayExceptionMapperTest {
         assertEquals("run-orca-1", body.get("runId"));
         assertNotNull(body.get("timestamp"));
     }
+
+    @Test
+    void mapperReturns503ForUnavailableTransport() throws Exception {
+        OrcaGatewayExceptionMapper mapper = new OrcaGatewayExceptionMapper();
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/orca/patient");
+
+        Field field = OrcaGatewayExceptionMapper.class.getDeclaredField("request");
+        field.setAccessible(true);
+        field.set(mapper, request);
+
+        Response response = mapper.toResponse(new OrcaGatewayException("ORCA transport settings are incomplete"));
+        assertEquals(503, response.getStatus());
+    }
 }

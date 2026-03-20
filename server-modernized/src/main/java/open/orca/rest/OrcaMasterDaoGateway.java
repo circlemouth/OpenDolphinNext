@@ -1,20 +1,17 @@
 package open.orca.rest;
 
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+@ApplicationScoped
 public class OrcaMasterDaoGateway implements OrcaMasterGateway {
     private final EtensuDao etensuDao;
     private final OrcaMasterDao masterDao;
 
-    public OrcaMasterDaoGateway() {
-        this(new EtensuDao(), new OrcaMasterDao());
-    }
-
-    OrcaMasterDaoGateway(EtensuDao etensuDao) {
-        this(etensuDao, new OrcaMasterDao());
-    }
-
+    @Inject
     OrcaMasterDaoGateway(EtensuDao etensuDao, OrcaMasterDao masterDao) {
-        this.etensuDao = etensuDao != null ? etensuDao : new EtensuDao();
-        this.masterDao = masterDao != null ? masterDao : new OrcaMasterDao();
+        this.etensuDao = etensuDao;
+        this.masterDao = masterDao;
     }
 
     @Override

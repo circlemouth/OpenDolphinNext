@@ -13,7 +13,7 @@ class OrcaEndpointStubResourceTest {
     void everyEndpointStubResourceExistsOnClasspath() throws IOException {
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
         for (OrcaEndpoint endpoint : OrcaEndpoint.values()) {
-            String resourcePath = endpoint.getStubResource();
+            String resourcePath = StubOrcaPayloadCatalog.resourceFor(endpoint);
             assertNotNull(resourcePath, "Stub resource path is null for endpoint " + endpoint.name());
 
             try (InputStream stream = loader.getResourceAsStream(resourcePath)) {

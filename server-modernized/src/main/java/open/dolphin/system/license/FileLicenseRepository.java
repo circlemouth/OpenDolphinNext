@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 /**
  * ファイルシステム上の {@code license.properties} を扱う実装。
@@ -42,10 +43,25 @@ public class FileLicenseRepository implements LicenseRepository {
     }
 
     private File resolveLicenseFile() throws IOException {
-        String home = System.getProperty("jboss.home.dir");
+        String home = resolveConfigValue("opendolphin.license.dir");
         if (home == null || home.isBlank()) {
-            throw new IOException("System property 'jboss.home.dir' is not defined");
+            home = resolveConfigValue("jboss.server.data.dir");
+        }
+        if (home == null || home.isBlank()) {
+            throw new IOException("License directory is not configured. Set opendolphin.license.dir or jboss.server.data.dir.");
         }
         return new File(home, LICENSE_FILE_NAME);
+    }
+
+    private String resolveConfigValue(String key) {
+        try {
+            return ConfigProvider.getConfig()
+                    .getOptionalValue(key, String.class)
+                    .map(String::trim)
+                    .filter(token -> !token.isEmpty())
+                    .orElse(null);
+        } catch (IllegalStateException ex) {
+            return null;
+        }
     }
 }

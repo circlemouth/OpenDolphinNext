@@ -24,6 +24,7 @@ import open.dolphin.rest.masterupdate.MasterUpdateScheduler;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerConfigurationValidator;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.orca.rest.OrcaMasterSchemaValidator;
 
 /**
  * サーバー起動時の初期化と定期ジョブの実行を Jakarta Concurrency へ移行したライフサイクル管理コンポーネント。
@@ -55,6 +56,9 @@ public class ServletStartup {
     @Inject
     private ServerConfigurationValidator configurationValidator;
 
+    @Inject
+    private OrcaMasterSchemaValidator orcaMasterSchemaValidator;
+
     private ScheduledFuture<?> midnightRefreshTask;
     private ScheduledFuture<?> monthlyActivityTask;
 
@@ -63,6 +67,7 @@ public class ServletStartup {
         contextHolder.ensureDateInitialized();
         eventServiceBean.ensureInitialized();
         configurationValidator.validateOrThrow();
+        orcaMasterSchemaValidator.validateOrThrow();
         enforceStartupSecurityGuards();
         logRuntimeConfigurationSummary();
         if (scheduler == null) {

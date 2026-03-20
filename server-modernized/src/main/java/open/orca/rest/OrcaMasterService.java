@@ -1,19 +1,12 @@
 package open.orca.rest;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.core.EntityTag;
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.Response.Status;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -24,6 +17,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+@ApplicationScoped
 class OrcaMasterService {
 
     static final String DEFAULT_VERSION = "20240426";
@@ -33,19 +27,9 @@ class OrcaMasterService {
     private static final long CACHE_TTL_SHORT_SECONDS = 300;
     private static final long CACHE_STALE_REVALIDATE_SECONDS = 86400;
     private static final int MAX_PAGE_SIZE = 2000;
-    private static final Path SNAPSHOT_ROOT = Paths.get("artifacts", "api-stability", "20251124T000000Z",
-            "master-snapshots");
-    private static final Path MSW_FIXTURE_ROOT = Paths.get("artifacts", "api-stability", "20251124T000000Z",
-            "msw-fixture");
-    private static final String CLASSPATH_FIXTURE_ROOT = "orca/master/msw-fixture/";
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
-            .findAndRegisterModules()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     enum DataOrigin {
         ORCA_DB,
-        SNAPSHOT,
-        MSW_FIXTURE,
         FALLBACK
     }
 
@@ -65,20 +49,11 @@ class OrcaMasterService {
         }
     }
 
-    private static final class FixtureLoadResult<T> {
-        final OrcaMasterResource.FixtureListResponse<T> response;
-        final boolean loadFailed;
-
-        FixtureLoadResult(OrcaMasterResource.FixtureListResponse<T> response, boolean loadFailed) {
-            this.response = response;
-            this.loadFailed = loadFailed;
-        }
-    }
-
     private final OrcaMasterGateway masterGateway;
 
+    @Inject
     OrcaMasterService(OrcaMasterGateway masterGateway) {
-        this.masterGateway = masterGateway != null ? masterGateway : new OrcaMasterDaoGateway();
+        this.masterGateway = masterGateway;
     }
 
     OrcaMasterDao.GenericClassSearchResult searchGenericClass(OrcaMasterDao.GenericClassCriteria criteria) {
@@ -111,110 +86,6 @@ class OrcaMasterService {
 
     EtensuDao.EtensuSearchResult searchEtensu(EtensuDao.EtensuSearchCriteria criteria) {
         return masterGateway.searchEtensu(criteria);
-    }
-
-    <T> LoadedFixture<T> loadEntries(Class<T> entryType, String snapshotRelativePath, String fixtureFileName) {
-        Path snapshotFile = snapshotRoot().resolve(snapshotRelativePath);
-        FixtureLoadResult<T> snapshot = tryReadResponse(entryType, snapshotFile);
-        if (snapshot.response != null) {
-            return new LoadedFixture<>(safeList(snapshot.response.list), snapshot.response.snapshotVersion,
-                    snapshot.response.version, DataOrigin.SNAPSHOT, snapshot.loadFailed);
-        }
-        Path fixtureFile = fixtureRoot().resolve(fixtureFileName);
-        FixtureLoadResult<T> fixture = tryReadResponse(entryType, fixtureFile);
-        if (fixture.response != null) {
-            return new LoadedFixture<>(safeList(fixture.response.list), fixture.response.snapshotVersion,
-                    fixture.response.version, DataOrigin.MSW_FIXTURE, fixture.loadFailed);
-        }
-        FixtureLoadResult<T> bundledFixture = tryReadResponseFromClasspath(entryType, CLASSPATH_FIXTURE_ROOT + fixtureFileName);
-        if (bundledFixture.response != null) {
-            return new LoadedFixture<>(safeList(bundledFixture.response.list), bundledFixture.response.snapshotVersion,
-                    bundledFixture.response.version, DataOrigin.MSW_FIXTURE, bundledFixture.loadFailed);
-        }
-        return new LoadedFixture<>(Collections.emptyList(), null, null, DataOrigin.FALLBACK,
-                snapshot.loadFailed || fixture.loadFailed || bundledFixture.loadFailed);
-    }
-
-    Path snapshotRoot() {
-        return resolveRoot("ORCA_MASTER_SNAPSHOT_ROOT", SNAPSHOT_ROOT);
-    }
-
-    Path fixtureRoot() {
-        return resolveRoot("ORCA_MASTER_FIXTURE_ROOT", MSW_FIXTURE_ROOT);
-    }
-
-    private Path resolveRoot(String key, Path fallback) {
-        String override = System.getProperty(key);
-        if (override == null || override.isBlank()) {
-            override = System.getenv(key);
-        }
-        if (override != null && !override.isBlank()) {
-            return Path.of(override).toAbsolutePath().normalize();
-        }
-        return resolveProjectRelative(fallback);
-    }
-
-    private Path resolveProjectRelative(Path fallback) {
-        if (fallback == null || fallback.isAbsolute()) {
-            return fallback;
-        }
-        String multiModuleRoot = System.getProperty("maven.multiModuleProjectDirectory");
-        if (multiModuleRoot == null || multiModuleRoot.isBlank()) {
-            multiModuleRoot = null;
-        }
-        if (multiModuleRoot != null) {
-            Path candidate = Path.of(multiModuleRoot).resolve(fallback);
-            if (Files.exists(candidate)) {
-                return candidate;
-            }
-        }
-        Path current = Path.of("").toAbsolutePath();
-        while (current != null) {
-            Path candidate = current.resolve(fallback);
-            if (Files.exists(candidate)) {
-                return candidate;
-            }
-            current = current.getParent();
-        }
-        return fallback;
-    }
-
-    private <T> FixtureLoadResult<T> tryReadResponse(Class<T> entryType, Path file) {
-        if (file == null || !Files.exists(file)) {
-            return new FixtureLoadResult<>(null, false);
-        }
-        try (InputStream in = Files.newInputStream(file)) {
-            JavaType type = TypeFactory.defaultInstance()
-                    .constructParametricType(OrcaMasterResource.FixtureListResponse.class, entryType);
-            OrcaMasterResource.FixtureListResponse<T> response = OBJECT_MAPPER.readValue(in, type);
-            if (response == null || response.list == null) {
-                return new FixtureLoadResult<>(null, true);
-            }
-            return new FixtureLoadResult<>(response, false);
-        } catch (IOException ex) {
-            return new FixtureLoadResult<>(null, true);
-        }
-    }
-
-    private <T> FixtureLoadResult<T> tryReadResponseFromClasspath(Class<T> entryType, String resourcePath) {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        if (classLoader == null) {
-            classLoader = OrcaMasterResource.class.getClassLoader();
-        }
-        try (InputStream in = classLoader.getResourceAsStream(resourcePath)) {
-            if (in == null) {
-                return new FixtureLoadResult<>(null, false);
-            }
-            JavaType type = TypeFactory.defaultInstance()
-                    .constructParametricType(OrcaMasterResource.FixtureListResponse.class, entryType);
-            OrcaMasterResource.FixtureListResponse<T> response = OBJECT_MAPPER.readValue(in, type);
-            if (response == null || response.list == null) {
-                return new FixtureLoadResult<>(null, true);
-            }
-            return new FixtureLoadResult<>(response, false);
-        } catch (IOException ex) {
-            return new FixtureLoadResult<>(null, true);
-        }
     }
 
     <T> List<T> safeList(List<T> source) {

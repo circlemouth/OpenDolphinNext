@@ -1,6 +1,6 @@
 package open.orca.rest;
 
-import java.io.*;
+import java.io.File;
 import java.sql.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -9,7 +9,6 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import jakarta.annotation.PostConstruct;
@@ -29,11 +28,15 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import open.dolphin.common.OrcaConnect;
+import org.eclipse.microprofile.config.ConfigProvider;
 import open.dolphin.converter.*;
 import open.dolphin.infomodel.*;
+import open.dolphin.orca.OrcaGatewayException;
+import open.dolphin.orca.transport.OrcaEndpoint;
+import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.rest.dto.LegacyKarteListResponse;
 import open.dolphin.rest.support.KarteRevisionResponseMapper;
+import open.dolphin.rest.support.LegacyOrcaResponseMapper;
 
 /**
  *
@@ -64,6 +67,9 @@ public class OrcaResource {
 
     @Inject
     private ORCAConnection orcaConnection;
+
+    @Inject
+    private OrcaTransport orcaTransport;
     
     private static final String QUERY_FACILITYID_BY_1001
             ="select kanritbl from tbl_syskanri where kanricd='1001'";
@@ -115,6 +121,18 @@ public class OrcaResource {
         return params[index];
     }
 
+    private static String resolveConfigValue(String key) {
+        try {
+            return ConfigProvider.getConfig()
+                    .getOptionalValue(key, String.class)
+                    .map(String::trim)
+                    .filter(token -> !token.isEmpty())
+                    .orElse(null);
+        } catch (IllegalStateException ex) {
+            return null;
+        }
+    }
+
     private String defaultNow(String candidate) {
         if (candidate != null && !candidate.isBlank()) {
             return candidate;
@@ -143,13 +161,8 @@ public class OrcaResource {
         return Boolean.parseBoolean(value);
     }
 
-    private TensuListConverter toTensuConverter(List<TensuMaster> list) {
-        TensuList wrapper = new TensuList();
-        wrapper.setList(list != null ? list : new ArrayList<>());
-
-        TensuListConverter conv = new TensuListConverter();
-        conv.setModel(wrapper);
-        return conv;
+    private LegacyOrcaResponseMapper.TensuListResponse toTensuResponse(List<TensuMaster> list) {
+        return LegacyOrcaResponseMapper.toTensuListResponse(list != null ? list : new ArrayList<>());
     }
     
     //masuda^
@@ -167,29 +180,16 @@ public class OrcaResource {
         hospNum = 1;
         
         try {
-            // custom.properties から JMARI_CODEを読む
-            Properties config = new Properties();
-
-            // コンフィグファイルを読み込む
-            StringBuilder sb = new StringBuilder();
-            sb.append(System.getProperty("jboss.home.dir"));
-            sb.append(File.separator);
-            sb.append("custom.properties");
-            File f = new File(sb.toString());
-            FileInputStream fin = new FileInputStream(f);
-            InputStreamReader r = new InputStreamReader(fin, "JISAutoDetect");
-            config.load(r);
-            r.close();
-            
-            // JMARI code
-            String jmari = config.getProperty("jamri.code");
-            
-            // デフォルトの院内院外処方
-            String test = config.getProperty("rp.default.inout");
-            rpOut = (test!=null && test.equals("out"));
+            String jmari = resolveConfigValue("orca.facility.jmari-code");
+            String prescriptionMode = resolveConfigValue("orca.rp.default-inout");
+            rpOut = "out".equalsIgnoreCase(prescriptionMode);
 
             // 病院番号検索　JMARI<->HospNum
-            sb = new StringBuilder();
+            if (jmari == null || jmari.isBlank()) {
+                LOGGER.warning("ORCA facility JMARI code is not configured; using default hospNum=1.");
+                return;
+            }
+            StringBuilder sb = new StringBuilder();
             sb.append("select hospnum, kanritbl from tbl_syskanri where kanricd='1001' and kanritbl like '%");
             sb.append(jmari);
             sb.append("%'");
@@ -232,21 +232,8 @@ public class OrcaResource {
        
 //s.oh^ 2013/10/17 ローカルORCA対応
         try {
-            // custom.properties から 保健医療機関コードとJMARIコードを読む
-            Properties config = new Properties();
-            // コンフィグファイルを読み込む
-            StringBuilder sb = new StringBuilder();
-            sb.append(System.getProperty("jboss.home.dir"));
-            sb.append(File.separator);
-            sb.append("custom.properties");
-            File f = new File(sb.toString());
-            FileInputStream fin = new FileInputStream(f);
-            InputStreamReader r = new InputStreamReader(fin, "JISAutoDetect");
-            config.load(r);
-            r.close();
-            // JMARI code
-            String jmari = config.getProperty("jamri.code");
-            String hcfacility = config.getProperty("healthcarefacility.code");
+            String jmari = resolveConfigValue("orca.facility.jmari-code");
+            String hcfacility = resolveConfigValue("orca.facility.healthcarefacility-code");
             if(jmari != null && jmari.length() == 12 && hcfacility != null && hcfacility.length() == 10) {
                 StringBuilder ret = new StringBuilder();
                 ret.append(hcfacility);
@@ -254,11 +241,7 @@ public class OrcaResource {
                 ret.append(jmari);
                 return ret.toString();
             }
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(OrcaResource.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (UnsupportedEncodingException ex) {
-            Logger.getLogger(OrcaResource.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
+        } catch (RuntimeException ex) {
             Logger.getLogger(OrcaResource.class.getName()).log(Level.SEVERE, null, ex);
         }
 //s.oh$
@@ -310,7 +293,7 @@ public class OrcaResource {
     @GET
     @Path("/tensu/shinku/{param}/")
     @Produces(MediaType.APPLICATION_JSON)
-    public TensuListConverter getTensutensuByShinku(@PathParam("param") String param) {
+    public LegacyOrcaResponseMapper.TensuListResponse getTensutensuByShinku(@PathParam("param") String param) {
 
         // パラメーターを取得する
         String[] params = splitParamSafely(param);
@@ -318,7 +301,7 @@ public class OrcaResource {
         String now = defaultNow(pickParam(params, 1));
 
         if (shinku == null || shinku.isBlank()) {
-            return toTensuConverter(new ArrayList<>());
+            return toTensuResponse(new ArrayList<>());
         }
         
         if (!shinku.startsWith("^")) {
@@ -368,16 +351,7 @@ public class OrcaResource {
             rs.close();
             ps.close();
             
-            // Wrapper
-            TensuList wrapper = new TensuList();
-            wrapper.setList(list);
-            
-            // Converter
-            TensuListConverter conv = new TensuListConverter();
-            conv.setModel(wrapper);
-            
-            // JSON
-            return conv;
+            return toTensuResponse(list);
             
         } catch (Exception e) {
             processError(e);
@@ -392,7 +366,7 @@ public class OrcaResource {
     @GET
     @Path("/tensu/name/{param}/")
     @Produces(MediaType.APPLICATION_JSON)
-    public TensuListConverter getTensuMasterByName(@PathParam("param") String param) {
+    public LegacyOrcaResponseMapper.TensuListResponse getTensuMasterByName(@PathParam("param") String param) {
         
         // パラメーターを取得する
         String[] params = splitParamSafely(param);
@@ -401,7 +375,7 @@ public class OrcaResource {
         boolean partialMatch = parseBooleanOrDefault(pickParam(params, 2), true);
 
         if (name == null || name.isBlank()) {
-            return toTensuConverter(new ArrayList<>());
+            return toTensuResponse(new ArrayList<>());
         }
 
         // 結果を格納するリスト
@@ -460,16 +434,7 @@ public class OrcaResource {
             rs.close();
             ps.close();
             
-            // Wrapper
-            TensuList wrapper = new TensuList();
-            wrapper.setList(list);
-            
-            // Converter
-            TensuListConverter conv = new TensuListConverter();
-            conv.setModel(wrapper);
-            
-            // JSON
-            return conv;
+            return toTensuResponse(list);
 
         } catch (Exception e) {
             processError(e);
@@ -484,7 +449,7 @@ public class OrcaResource {
     @GET
     @Path("/tensu/code/{param}/")
     @Produces(MediaType.APPLICATION_JSON)
-    public TensuListConverter getTensuMasterByCode(@PathParam("param") String param) {
+    public LegacyOrcaResponseMapper.TensuListResponse getTensuMasterByCode(@PathParam("param") String param) {
         
         // パラメーターを取得する
         String[] params = splitParamSafely(param);
@@ -492,7 +457,7 @@ public class OrcaResource {
         String now = defaultNow(pickParam(params, 1));
 
         if (regExp == null || regExp.isBlank()) {
-            return toTensuConverter(new ArrayList<>());
+            return toTensuResponse(new ArrayList<>());
         }
 
         // 結果を格納するリスト
@@ -540,16 +505,7 @@ public class OrcaResource {
             rs.close();
             ps.close();
             
-            // Wrapper
-            TensuList wrapper = new TensuList();
-            wrapper.setList(list);
-            
-            // Converter
-            TensuListConverter conv = new TensuListConverter();
-            conv.setModel(wrapper);
-            
-            // JSON
-            return conv;
+            return toTensuResponse(list);
 
         } catch (Exception e) {
             processError(e);
@@ -562,7 +518,7 @@ public class OrcaResource {
     }
 
 
-    public DiseaseListConverter getDiseaseByName(String param) {
+    public LegacyOrcaResponseMapper.DiseaseListResponse getDiseaseByName(String param) {
         
         // パラメーターを取得する
         String[] params = param.split(CAMMA);
@@ -621,16 +577,7 @@ public class OrcaResource {
             rs.close();
             ps.close();
             
-            // Wrapper
-            DiseaseList wrapper = new DiseaseList();
-            wrapper.setList(list);
-            
-            // Converter
-            DiseaseListConverter conv = new DiseaseListConverter();
-            conv.setModel(wrapper);
-            
-            // JSON
-            return conv;
+            return LegacyOrcaResponseMapper.toDiseaseListResponse(list);
 
         } catch (Exception e) {
             processError(e);
@@ -682,7 +629,7 @@ public class OrcaResource {
     @GET
     @Path("/general/{param}")
     @Produces(MediaType.APPLICATION_JSON)
-    public CodeNamePackConverter getGeneralName(@PathParam("param") String param) throws Exception {
+    public LegacyOrcaResponseMapper.CodeNamePackResponse getGeneralName(@PathParam("param") String param) throws Exception {
         
         Connection con = null;
         PreparedStatement ps;
@@ -706,10 +653,7 @@ public class OrcaResource {
             rs.close();
             ps.close();
             
-            CodeNamePackConverter conv = new CodeNamePackConverter();
-            conv.setModel(ret);
-            
-            return conv;
+            return LegacyOrcaResponseMapper.toCodeNamePackResponse(ret);
             
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to resolve general name", e);
@@ -1228,7 +1172,7 @@ public class OrcaResource {
      * ORCA に登録してある病名を検索する。
      * @return RegisteredDiagnosisModelのリスト
      */
-    public RegisteredDiagnosisListConverter getOrcaDisease(
+    public LegacyOrcaResponseMapper.RegisteredDiagnosisListResponse getOrcaDisease(
             String param,
             String fromQuery,
             String toQuery,
@@ -1387,15 +1331,7 @@ public class OrcaResource {
             closeStatement(pt);
             closeConnection(con);
             
-            // Wrapper
-            RegisteredDiagnosisList rdl = new RegisteredDiagnosisList();
-            rdl.setList(collection);
-            
-            // Converter
-            RegisteredDiagnosisListConverter conv = new RegisteredDiagnosisListConverter();
-            conv.setModel(rdl);
-            
-            return conv;
+            return LegacyOrcaResponseMapper.toRegisteredDiagnosisListResponse(collection);
             
         } catch (Exception e) {
             warn(e.getMessage());
@@ -1412,7 +1348,7 @@ public class OrcaResource {
      * ORCA に登録してある直近の病名を検索する。
      * @return RegisteredDiagnosisModelのリスト
      */
-    public RegisteredDiagnosisListConverter getActiveOrcaDisease(String param) {
+    public LegacyOrcaResponseMapper.RegisteredDiagnosisListResponse getActiveOrcaDisease(String param) {
         
         String[] params = param.split(CAMMA);
         String patientId = params[0];
@@ -1537,15 +1473,7 @@ public class OrcaResource {
             closeStatement(pt);
             closeConnection(con);
             
-            // Wrapper
-            RegisteredDiagnosisList rdl = new RegisteredDiagnosisList();
-            rdl.setList(collection);
-
-            // Converter
-            RegisteredDiagnosisListConverter conv = new RegisteredDiagnosisListConverter();
-            conv.setModel(rdl);
-
-            return conv;
+            return LegacyOrcaResponseMapper.toRegisteredDiagnosisListResponse(collection);
             
         } catch (Exception e) {
             warn(e.getMessage());
@@ -1561,36 +1489,22 @@ public class OrcaResource {
     public Response getDeptInfo(HttpServletRequest request) {
         String ret = "";
         try {
-            // custom.properties から 保健医療機関コードとJMARIコードを読む
-            Properties config = new Properties();
-            // コンフィグファイルを読み込む
-            StringBuilder sb = new StringBuilder();
-            sb.append(System.getProperty("jboss.home.dir"));
-            sb.append(File.separator);
-            sb.append("custom.properties");
-            File f = new File(sb.toString());
-            FileInputStream fin = new FileInputStream(f);
-            InputStreamReader r = new InputStreamReader(fin, "JISAutoDetect");
-            config.load(r);
-            r.close();
-            String ip = trimToNull(config.getProperty("orca.orcaapi.ip"));
-            String port = config.getProperty("orca.orcaapi.port", "8000");
-            String id = trimToNull(config.getProperty("orca.id"));
-            String password = trimToNull(config.getProperty("orca.password"));
-            if (ip == null || id == null || password == null) {
+            if (orcaTransport == null) {
                 throw orcaConfigMissing(request);
             }
-            OrcaConnect orcaApi = new OrcaConnect(ip, port, id, password, null);
             SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd");
-            ret = orcaApi.getDepartmentInfo(sf.format(new Date()));
+            ret = orcaTransport.invoke(OrcaEndpoint.SYSTEM_MANAGEMENT_LIST,
+                    buildSystemManagementRequest(sf.format(new Date())));
             log(ret);
             ret = ret.replaceAll("\\<.*?>", ",");
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(OrcaResource.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (UnsupportedEncodingException ex) {
-            Logger.getLogger(OrcaResource.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IOException ex) {
-            Logger.getLogger(OrcaResource.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (WebApplicationException ex) {
+            throw ex;
+        } catch (OrcaGatewayException ex) {
+            LOGGER.log(Level.SEVERE, "Failed to resolve ORCA department info", ex);
+            throw orcaUnavailable("orca_unavailable", "ORCA 診療科情報の取得に失敗しました。");
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.SEVERE, "Failed to resolve ORCA department info", ex);
+            throw orcaUnavailable("orca_unavailable", "ORCA 診療科情報の取得に失敗しました。");
         }
 
         return Response.ok(ret, MediaType.TEXT_PLAIN_TYPE).build();
@@ -1609,6 +1523,26 @@ public class OrcaResource {
                 .type(MediaType.APPLICATION_JSON_TYPE)
                 .entity(body)
                 .build());
+    }
+
+    private WebApplicationException orcaUnavailable(String code, String message) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", code);
+        body.put("code", code);
+        body.put("errorCode", code);
+        body.put("message", message);
+        body.put("status", Response.Status.SERVICE_UNAVAILABLE.getStatusCode());
+        body.put("errorCategory", code);
+        return new WebApplicationException(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .entity(body)
+                .build());
+    }
+
+    private String buildSystemManagementRequest(String baseDate) {
+        return "<data><system01_managereq type=\"record\">"
+                + "<Base_Date type=\"string\">" + baseDate + "</Base_Date>"
+                + "</system01_managereq></data>";
     }
 
     private String trimToNull(String value) {
