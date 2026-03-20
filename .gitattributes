@@ -35,3 +35,12 @@ ops/tools/**/*.psm1    text eol=lf
 **/failsafe-reports/** export-ignore
 *.war                  export-ignore
 *.jar                  export-ignore
+artifacts/**           export-ignore
+output/**              export-ignore
+docs/archive/**        export-ignore
+docs/managerdocs/**    export-ignore
+docs/server-modernization/phase2/** export-ignore
+docs/server-modernized/phase2/**    export-ignore
+src/LEGACY:*           export-ignore
+src/server_modernized_*/** export-ignore
+src/webclient_*/**     export-ignore

@@ -18,7 +18,7 @@
 
 ## Legacy 参照（Phase2）
 - ロールオフ方針: `docs/server-modernization/phase2/PHASE2_DOCS_ROLLOFF.md`
-- Phase2 ドキュメント: `docs/web-client/planning/phase2/`, `docs/web-client/README.md`, `docs/server-modernization/phase2/`, `docs/server-modernized/phase2/`, `docs/managerdocs/PHASE2_*`
+- Phase2 ドキュメント: `docs/web-client/planning/phase2/`, `docs/web-client/README.md`, `docs/server-modernization/phase2/`, `docs/server-modernized/phase2/`, `docs/archive/2025Q4/managerdocs/PHASE2_*`
 - Archive 保管: `docs/archive/` 配下
 - server modernization 作業記録: `docs/server-modernization/planning/codex_automation_workplan_revised.md`, `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
 
@@ -34,7 +34,7 @@
 - module 永続化は将来的に `beanJson` 専用化を目標とし、`beanBytes` の PostgreSQL `oid` 回帰は採らない。互換を切る場合も `oid` ではなく JSON 系へ統一する。
 
 ## 保留（現時点で削除しない）
-- `docs/server-modernized_60117/` 配下は作業履歴の可能性があるため、現時点では **保全** する（判断保留）。
+- `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
 - 2026-03-21: Codex automation cleanup track の `A10`「packaging / CI / 品質ゲート強制」を完了した（RUN_ID=20260320T205337Z）。

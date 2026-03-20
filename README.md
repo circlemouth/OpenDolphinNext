@@ -32,6 +32,7 @@
 
 | ディレクトリ | 説明 | ステータス |
 | :--- | :--- | :--- |
+| **`server-modernized/`** | **モダナイズ版サーバー** (Jakarta EE 10) | **Active Development** |
 | **`web-client/`** | **新規 Web クライアント** (React, TypeScript) | **Active Development** |
 | **`docs/`** | プロジェクト全般のドキュメントハブ | **Active Development** |
 | `client/` | 旧 OpenDolphin クライアント (Java Swing) | ⛔️ Legacy (Read-only) |
@@ -41,6 +42,9 @@
 > **Legacy 資産 (`client/`, `server/`) について**
 > これらのディレクトリに含まれるコードは、機能比較や仕様確認のためにのみ残されています。
 > **修正・変更・保守作業は行いません。**
+>
+> `artifacts/`、`output/`、`docs/archive/`、`docs/server-modernization/phase2/`、`docs/managerdocs/`、`src/LEGACY:*` などの検証証跡・旧計画文書は、現行の主要開発対象ではありません。
+> 現在の実装作業は `server-modernized/` と `web-client/` を中心に進めます。
 
 
 ### 謝辞

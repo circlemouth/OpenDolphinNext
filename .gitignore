@@ -55,6 +55,7 @@ ORCAcertification/*アカウント情報*.txt
 # Build artifacts and temporary files
 build/
 tmp/
+output/
 web-client/tmp/
 .playwright-cli/
 artifacts/verification/
