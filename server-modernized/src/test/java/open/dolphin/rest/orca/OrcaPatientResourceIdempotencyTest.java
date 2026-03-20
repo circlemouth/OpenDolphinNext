@@ -140,6 +140,28 @@ class OrcaPatientResourceIdempotencyTest {
         assertFalse(service.updateCalled);
     }
 
+    @Test
+    void deleteReturnsExplicitUnsupportedError() {
+        StubPatientService service = new StubPatientService();
+
+        OrcaPatientResource resource = new OrcaPatientResource();
+        resource.setPatientServiceBean(service);
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRemoteUser()).thenReturn("facility:doctor1");
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
+
+        PatientMutationRequest payload = new PatientMutationRequest();
+        payload.setOperation("delete");
+        PatientMutationRequest.PatientPayload patient = new PatientMutationRequest.PatientPayload();
+        patient.setPatientId("00001");
+        payload.setPatient(patient);
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.mutatePatient(request, payload));
+        assertEquals(400, ex.getResponse().getStatus());
+    }
+
     private static PatientModel buildPatient(String facilityId, String patientId, String name, String kana) {
         PatientModel model = new PatientModel();
         model.setFacilityId(facilityId);

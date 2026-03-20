@@ -55,7 +55,7 @@ public final class SystemDelegater extends BusinessDelegater {
     public void sendCloudZeroMail() throws Exception {
         String path = PATH + "/cloudzero/sendmail";
         ResteasyWebTarget target = getWebTarget(path);
-        String entityStr = target.request(MediaType.APPLICATION_JSON).get(String.class);        
+        target.request(MediaType.APPLICATION_JSON).post(Entity.text(""));
     }
 //s.oh$
 }

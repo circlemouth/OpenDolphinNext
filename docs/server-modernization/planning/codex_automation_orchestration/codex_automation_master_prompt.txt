@@ -1,0 +1,59 @@
+あなたはこの repo のメインエージェントです。今回の作業は、あなた自身が全部実装するのではなく、未完了先頭タスクに対応するサブエージェントを **1 体だけ順次召喚** して進めてください。
+
+## 最初に必ず読むファイル
+- `docs/DEVELOPMENT_STATUS.md`
+- `AGENTS.md`
+- `docs/server-modernization/README.md`
+- `docs/server-modernization/planning/codex_automation_orchestration/README.md`
+- `docs/server-modernization/planning/codex_automation_orchestration/codex_automation_orchestration_plan.md`
+
+## 進捗判定ルール
+- 進捗判定は必ず `codex_automation_orchestration_plan.md` を正本とする
+- `docs/server-modernization/planning/codex_automation_workplan_revised.md` など旧 automation 文書は Legacy/Archive として扱い、今回の task selection には使わない
+- 未完了タスクは plan の A01 から A10 までを上から順に処理する
+- 1 実行で扱うタスクは 1 件だけに限定する
+
+## 実行手順
+1. 上記ファイルを読み、未完了先頭タスクを 1 件だけ特定する
+2. 対応する `prompts/Axx_*.txt` を読む
+3. サブエージェントを 1 体だけ召喚し、その task prompt を `【ワーカー指示】` として渡す
+4. サブエージェントの結果を待ち、変更内容とテスト結果をレビューする
+5. 必要なら同じサブエージェントへ追加修正を指示する
+6. メインエージェント自身で最終確認コマンドを実行する
+7. task 完了時のみ、plan の該当チェックと必要なメモを更新する
+8. `logs/` 配下へ RUN_ID 付き実行ログを追加する
+9. 完了したら次タスクへは進まず終了する
+
+## サブエージェント運用ルール
+- 並列召喚は許可するが、担当作業範囲と依存関係を考慮して可能な場合のみおこなうこと
+- サブエージェントには担当 task の責務だけを渡す
+- `pom.xml`、`OpenDolphinRestApplication.java`、`README.md`、`WebXmlEndpointExposureTest.java` など競合しやすいファイルを複数サブエージェントに触らせない
+- サブエージェントが blocker を返したら、メインエージェントが blocker の妥当性を確認し、plan と log に残す
+- サブエージェントが返した変更を鵜呑みにせず、メインエージェントが整合確認する
+- サブエージェントの最終返却は `【ワーカー報告】` ヘッダー付きで受け取る
+
+## blocker 条件
+以下のいずれかに当たった場合は、その task を完了扱いにせず停止し、plan と log に残してください。
+- 必要な source が存在しない
+- 変更が source のない module に波及する
+- `target/` 配下や生成物を編集しないと前に進めない
+- 既存コードと現行ドキュメントだけでは仕様を合理的に確定できない
+- 既存受け入れ条件が衝突している
+- 変更範囲外のテスト失敗で安全に切り分けできない
+- ORCA 実連携が必要だが既存資料だけでは判断できない
+
+## 絶対ルール
+- `target/`、zip 展開物、`__MACOSX`、`surefire-reports`、`failsafe-reports`、`*.war`、`*.jar` は編集・コミットしない
+- 後方互換レイヤーを追加しない
+- 不要な mock / stub / dead code は温存しない
+- Legacy `server/` は変更しない
+- 実装だけで終わらせず、テスト、plan 更新、log 作成まで完了してから終わる
+
+## 最終出力
+最後に以下を簡潔にまとめてください。
+1. 今回完了した task ID と名称
+2. 召喚したサブエージェントの役割
+3. 主な変更ファイル
+4. 実施コマンドとテスト結果
+5. blocker の有無
+6. 次回の先頭 task

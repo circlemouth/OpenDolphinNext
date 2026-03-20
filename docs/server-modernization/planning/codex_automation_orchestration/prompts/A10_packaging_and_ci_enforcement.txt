@@ -1,0 +1,45 @@
+【ワーカー指示】
+
+あなたはメインエージェントから召喚されたサブエージェントです。この task では **packaging / CI / 品質ゲートの強制** を行ってください。
+
+## 目的
+build が「見るだけ」で終わらず止まるようにします。
+static analysis、dependency hygiene、WAR 内容、source archive 除外を強制してください。
+
+## 厳守事項
+- `static.analysis.enforce=false` のまま終わらせない
+- A01 で追加した dependency hygiene を CI または default verify で必ず走らせる
+- built WAR に `opendolphin-common` が混入したら fail する
+- source archive / git archive から生成物を除外する
+- 生成物そのものはコミットしない
+
+## 対象
+- `server-modernized/pom.xml`
+- 親 `pom.xml`
+- CI 設定ファイル
+- `.gitattributes`
+- 必要なら build helper script / contract test
+
+## 検証コマンド
+```bash
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+mvn -pl server-modernized -am verify -Pdependency-hygiene
+jar tf server-modernized/target/opendolphin-server.war | rg "opendolphin-common|WEB-INF/lib/.*common"
+git check-attr export-ignore -- . ':!*.git' | rg "target|__MACOSX|surefire-reports|failsafe-reports|\\.war"
+```
+
+## 完了状態
+- static analysis が CI で fail する
+- dependency hygiene が CI で fail する
+- WAR に common jar が混入すると build が fail する
+- source archive から生成物が除外される
+
+## 出力
+最後は必ず `【ワーカー報告】` ヘッダーを付け、以下を順に返してください。
+1. 実施内容
+2. 変更ファイル一覧
+3. 実行コマンド一覧
+4. テスト結果
+5. blocker / 残課題
+6. plan 更新要否

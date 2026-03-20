@@ -1,0 +1,43 @@
+【ワーカー指示】
+
+あなたはメインエージェントから召喚されたサブエージェントです。この task では `server-modernized` の **admin 認可判定の一本化** を行ってください。
+
+## 目的
+resource 層で `request.isUserInRole("ADMIN")` を使っている箇所をすべて削除し、actor ベース判定に統一します。
+
+## 厳守事項
+- `BlockWrapper` へ新しい role bridge を足さない
+- 置換先は `requireAdmin(...)` または `userServiceBean.isAdmin(actor)` 系に統一する
+- production code に `isUserInRole(` を残さない
+- 生成物は触らない
+
+## 対象
+- `AbstractResource.java`
+- `KarteDocumentWriteResource.java`
+- `StampResource.java`
+- `KarteRevisionResource.java`
+- `SystemResource.java`
+- `LetterResource.java`
+- `PatientImagesResource.java`
+
+## 検証コマンド
+```bash
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+rg -n "isUserInRole\\(" server-modernized/src/main/java
+mvn -pl server-modernized -am -Dtest=StampResourceTest,KarteRevisionResourceAuthorizationTest,LetterResourceTest,PatientImagesResourceTest,SystemResourceTest -DfailIfNoTests=false test
+```
+
+## 完了状態
+- production code の `isUserInRole(` が 0 件
+- admin 判定が actor ベースに一本化
+- 関連テストが通る
+
+## 出力
+最後は必ず `【ワーカー報告】` ヘッダーを付け、以下を順に返してください。
+1. 実施内容
+2. 変更ファイル一覧
+3. 実行コマンド一覧
+4. テスト結果
+5. blocker / 残課題
+6. plan 更新要否

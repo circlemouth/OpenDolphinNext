@@ -4,7 +4,6 @@ public class AdminConfigSnapshot {
 
     private String orcaEndpoint;
     private Boolean mswEnabled;
-    private Boolean useMockOrcaQueue;
     private Boolean verifyAdminDelivery;
     private Boolean chartsDisplayEnabled;
     private Boolean chartsSendEnabled;
@@ -23,7 +22,6 @@ public class AdminConfigSnapshot {
         AdminConfigSnapshot copy = new AdminConfigSnapshot();
         copy.orcaEndpoint = orcaEndpoint;
         copy.mswEnabled = mswEnabled;
-        copy.useMockOrcaQueue = useMockOrcaQueue;
         copy.verifyAdminDelivery = verifyAdminDelivery;
         copy.chartsDisplayEnabled = chartsDisplayEnabled;
         copy.chartsSendEnabled = chartsSendEnabled;
@@ -54,14 +52,6 @@ public class AdminConfigSnapshot {
 
     public void setMswEnabled(Boolean mswEnabled) {
         this.mswEnabled = mswEnabled;
-    }
-
-    public Boolean getUseMockOrcaQueue() {
-        return useMockOrcaQueue;
-    }
-
-    public void setUseMockOrcaQueue(Boolean useMockOrcaQueue) {
-        this.useMockOrcaQueue = useMockOrcaQueue;
     }
 
     public Boolean getVerifyAdminDelivery() {

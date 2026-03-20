@@ -16,6 +16,7 @@ public final class RuntimeConfigurationSupport {
     public static final String PROP_ENVIRONMENT = "opendolphin.environment";
     public static final String ENV_ENVIRONMENT = "OPENDOLPHIN_ENVIRONMENT";
     public static final String PROP_SERVER_DATA_DIR = "jboss.server.data.dir";
+    public static final String PROP_FACILITY_ID = "dolphin.facilityId";
     public static final String PROP_TIMEZONE = "opendolphin.timezone";
     public static final String ENV_TIMEZONE = "OPENDOLPHIN_TIMEZONE";
     public static final String DEFAULT_TIMEZONE = "Asia/Tokyo";
@@ -109,6 +110,47 @@ public final class RuntimeConfigurationSupport {
                 return Boolean.FALSE;
             default:
                 return null;
+        }
+    }
+
+    public static String resolveOptional(String propertyKey, String envKey) {
+        return firstNonBlank(
+                propertyKey != null ? System.getProperty(propertyKey) : null,
+                envKey != null ? System.getenv(envKey) : null);
+    }
+
+    public static String resolveFacilityId(String envKey) {
+        return resolveOptional(PROP_FACILITY_ID, envKey);
+    }
+
+    public static boolean resolveBooleanFlag(String propertyKey, String envKey, boolean defaultValue) {
+        Boolean parsed = parseBooleanFlag(resolveOptional(propertyKey, envKey));
+        return parsed != null ? parsed : defaultValue;
+    }
+
+    public static int resolvePositiveInt(String propertyKey, String envKey, int defaultValue) {
+        String raw = resolveOptional(propertyKey, envKey);
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            int parsed = Integer.parseInt(raw.trim());
+            return parsed > 0 ? parsed : defaultValue;
+        } catch (NumberFormatException ex) {
+            return defaultValue;
+        }
+    }
+
+    public static long resolvePositiveLong(String propertyKey, String envKey, long defaultValue) {
+        String raw = resolveOptional(propertyKey, envKey);
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            long parsed = Long.parseLong(raw.trim());
+            return parsed > 0L ? parsed : defaultValue;
+        } catch (NumberFormatException ex) {
+            return defaultValue;
         }
     }
 

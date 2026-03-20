@@ -59,11 +59,6 @@ class OrcaWrapperServicePatientIdListPayloadTest {
         }
 
         @Override
-        public boolean isStub() {
-            return delegate != null && delegate.isStub();
-        }
-
-        @Override
         public String invoke(OrcaEndpoint endpoint, String requestXml) {
             lastEndpoint = endpoint;
             lastPayload = requestXml;
@@ -78,4 +73,3 @@ class OrcaWrapperServicePatientIdListPayloadTest {
         }
     }
 }
-

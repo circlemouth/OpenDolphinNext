@@ -483,7 +483,7 @@ public class StampResource extends AbstractResource {
             logAccessWarning("remote_user_missing", normalized, visibilitySegment, null);
             throw unauthorizedFacilityError("Remote user is not authenticated", normalized, visibilitySegment);
         }
-        boolean admin = httpServletRequest != null && httpServletRequest.isUserInRole("ADMIN");
+        boolean admin = userServiceBean != null && userServiceBean.isAdmin(remoteUser);
         if (!admin) {
             String facilityOfUser = getRemoteFacility(remoteUser);
             if (facilityOfUser == null || facilityOfUser.isEmpty()) {
@@ -764,9 +764,7 @@ public class StampResource extends AbstractResource {
         String actorId = resolveActorId();
         payload.setActorId(actorId);
         payload.setActorDisplayName(resolveActorDisplayName(actorId));
-        if (httpServletRequest != null && httpServletRequest.isUserInRole("ADMIN")) {
-            payload.setActorRole("ADMIN");
-        }
+        payload.setActorRole(resolveActorRole(httpServletRequest, userServiceBean));
         payload.setAction(action);
         payload.setResource(resolveResourcePath());
         String requestId = resolveRequestId();

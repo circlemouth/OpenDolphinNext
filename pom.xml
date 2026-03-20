@@ -14,7 +14,6 @@
 
   <modules>
     <module>persistence</module>
-    <module>common</module>
     <module>reporting</module>
     <module>server</module>
     <module>server-modernized</module>
@@ -23,6 +22,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <surefire.failIfNoSpecifiedTests>true</surefire.failIfNoSpecifiedTests>
   </properties>
 
   <dependencyManagement>
@@ -36,12 +36,6 @@
       <dependency>
         <groupId>opendolphin</groupId>
         <artifactId>opendolphin-persistence</artifactId>
-        <version>${project.version}</version>
-        <type>jar</type>
-      </dependency>
-      <dependency>
-        <groupId>opendolphin</groupId>
-        <artifactId>opendolphin-common</artifactId>
         <version>${project.version}</version>
         <type>jar</type>
       </dependency>
@@ -67,6 +61,24 @@
   </dependencyManagement>
 
   <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <failIfNoSpecifiedTests>${surefire.failIfNoSpecifiedTests}</failIfNoSpecifiedTests>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <failIfNoSpecifiedTests>${surefire.failIfNoSpecifiedTests}</failIfNoSpecifiedTests>
+        </configuration>
+      </plugin>
+    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
@@ -80,5 +92,19 @@
       </plugins>
     </pluginManagement>
   </build>
+
+  <profiles>
+    <profile>
+      <id>bridge-fail-if-no-tests-cli</id>
+      <activation>
+        <property>
+          <name>failIfNoTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.failIfNoSpecifiedTests>${failIfNoTests}</surefire.failIfNoSpecifiedTests>
+      </properties>
+    </profile>
+  </profiles>
 
 </project>

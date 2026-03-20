@@ -31,7 +31,7 @@ class DefaultOrcaPatientAdapterStubIntegrationTest {
         OrcaPatientAdapter.SearchResult result = adapter.searchPatients(query);
 
         assertNotNull(result);
-        assertEquals("stub", result.sourceSystem());
+        assertEquals("real", result.sourceSystem());
         assertFalse(result.patients().isEmpty());
         assertEquals("000001", result.patients().get(0).get("patientId"));
         assertEquals("山田太郎", result.patients().get(0).get("wholeName"));
@@ -108,11 +108,6 @@ class DefaultOrcaPatientAdapterStubIntegrationTest {
     }
 
     private static final class FailPatientModTransport implements OrcaTransport {
-
-        @Override
-        public boolean isStub() {
-            return true;
-        }
 
         @Override
         public String invoke(OrcaEndpoint endpoint, String requestXml) {

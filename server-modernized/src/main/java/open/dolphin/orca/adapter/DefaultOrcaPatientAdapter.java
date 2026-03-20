@@ -104,7 +104,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
 
         String sourceSystem = response != null ? normalizeText(response.getDataSource()) : null;
         if (sourceSystem == null) {
-            sourceSystem = requireTransport().isStub() ? "stub" : "real";
+            sourceSystem = "real";
         }
         String requestId = response != null ? normalizeText(response.getRequestId()) : null;
         String runId = response != null ? normalizeText(response.getRunId()) : null;

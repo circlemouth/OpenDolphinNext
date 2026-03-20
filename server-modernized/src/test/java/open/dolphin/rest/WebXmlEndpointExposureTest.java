@@ -30,7 +30,6 @@ class WebXmlEndpointExposureTest {
 
         assertThat(classNames)
                 .contains("open.dolphin.rest.KarteDocumentWriteResource")
-                .contains("open.dolphin.rest.PatientModV2OutpatientMockResource")
                 .contains("open.dolphin.rest.AdminAccessPasswordResetResource")
                 .contains("open.dolphin.rest.AdminOrcaUserLinkResource")
                 .contains("open.dolphin.rest.OperationsHealthResource")
@@ -48,6 +47,8 @@ class WebXmlEndpointExposureTest {
                 .doesNotContain("open.dolphin.rest.PVTResource2")
                 .doesNotContain("open.dolphin.rest.ScheduleResource")
                 .doesNotContain("open.dolphin.rest.ServerInfoResource")
+                .doesNotContain("open.dolphin.rest.AdminSecurityResource")
+                .doesNotContain("open.dolphin.rest.PatientModV2OutpatientMockResource")
                 .doesNotContain("open.orca.rest.OrcaMasterApiAliasResource")
                 .doesNotContain("open.dolphin.rest.OrcaAcceptanceListResource")
                 .doesNotContain("open.dolphin.rest.OrcaSystemManagementResource")
@@ -55,6 +56,7 @@ class WebXmlEndpointExposureTest {
                 .doesNotContain("open.dolphin.rest.OrcaDiseaseApiResource")
                 .doesNotContain("open.dolphin.rest.OrcaMedicalApiResource")
                 .doesNotContain("open.dolphin.rest.OrcaAdditionalApiResource")
+                .doesNotContain("open.dolphin.rest.orca.OrcaMedicalAdministrationResource")
                 .doesNotContain("open.dolphin.rest.OrcaBridgeResource");
     }
 }

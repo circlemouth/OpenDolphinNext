@@ -1,8 +1,9 @@
-# 開発状況（単一参照, 更新日: 2026-03-16）
+# 開発状況（単一参照, 更新日: 2026-03-21）
 
 ## 現行ステータス
 - Phase2 開発ドキュメントは **Legacy/Archive（参照専用）**。Phase2 を現行フェーズとして扱わない。
 - 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`。
+- `docs/server-modernization/planning/codex_automation_orchestration/` は、cleanup track をメインエージェント + サブエージェント順次実行で進めるための **現行 Codex automation 導線** である。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` は、server modernization automation の作業記録として保持する **Legacy/Archive** 扱いの開発ドキュメントである。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。
 - 現行の作業内容はフェーズ名では判断せず、最新のタスク指示/チケット/マネージャー指示に従う。
@@ -24,6 +25,7 @@
 ## 補足
 - Phase2 の文書は履歴・差分確認のために保持しているが、更新は原則行わない。
 - 例外的に Phase2 文書を更新する場合は、事前にマネージャー指示を明記すること。
+- cleanup track の automation 実行では、旧 `codex_automation_workplan_revised.md` 系ではなく `docs/server-modernization/planning/codex_automation_orchestration/codex_automation_orchestration_plan.md` を progress source とする。
 - ORCA 公式仕様の firecrawl 取得物は `docs/server-modernization/operations/ORCA_FIRECRAWL_INDEX.md` を入口に参照する（非Legacy 側の索引）。
 - ORCA 接続情報は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` を正本として運用する（Phase2 版は Legacy）。
 - ORCA オーダー仕様の実装要件は `docs/server-modernization/ORCA-order-system-rule.md` を参照する。
@@ -35,6 +37,61 @@
 - `docs/server-modernized_60117/` 配下は作業履歴の可能性があるため、現時点では **保全** する（判断保留）。
 
 ## 実施記録（最新）
+- 2026-03-21: Codex automation cleanup track の `A10`「packaging / CI / 品質ゲート強制」を完了した（RUN_ID=20260320T205337Z）。
+  - 変更: `server-modernized/pom.xml` に dependency hygiene の `verify` 組み込みと WAR 内容検査を追加し、`opendolphin-common` 混入を build fail 条件へ変更。
+  - 変更: `.github/workflows/server-modernized-static-analysis-gate.yml` を `-Pstatic-analysis,dependency-hygiene -Dstatic.analysis.enforce=true -pl server-modernized -am verify` 実行へ更新し、`.gitattributes` に source archive の `export-ignore` パターンを追加。
+  - 検証: `mvn -pl server-modernized -am verify -Pdependency-hygiene` は PASS。WAR 内 `opendolphin-common` / `open/dolphin/common/Orca*` は 0 件、代表パスの `git check-attr export-ignore` はすべて `set`。
+  - 進捗: orchestration plan の `A10` と最終確認チェックリストを ☑ 化し、`A01`-`A10` cleanup track を完了。
+- 2026-03-21: Codex automation cleanup track の `A09`「runtime config 正本化と文書同期」を完了した（RUN_ID=20260320T204706Z）。
+  - 変更: `server-modernized/README.md` と `server-modernized/config/server-modernized.env.sample` から `custom.properties` literal を除去し、typed config 正本運用の説明へ統一。
+  - 変更: `RuntimeConfigurationSupport` に facilityId 解決 helper を追加し、`OrcaPatientSyncScheduler` の facilityId 解決を helper 経由へ寄せた。`ChartEventHistoryPurgeScheduler` の default OFF は既存実装どおりで変更不要。
+  - 検証: `mvn -pl server-modernized -am -Dtest=RuntimeConfigurationSupportTest,ServerConfigurationValidatorTest,PatientImagesResourceTest -DfailIfNoTests=false test` は PASS。`rg -n "custom.properties" server-modernized/README.md server-modernized/config/server-modernized.env.sample` は 0 件。
+  - 進捗: orchestration plan の `A09` を ☑ 化し、次回先頭 task は `A10`「packaging / CI / 品質ゲート強制」。
+- 2026-03-21: Codex automation cleanup track の `A08`「audit 契約吸収と common 廃止」を完了した（RUN_ID=20260320T202306Z）。
+  - 変更: `open.dolphin.audit.AuditEventEnvelope` / `AuditTrailService` を `server-modernized` へ吸収し、`server-modernized` の `opendolphin-common` 依存と `copy-jakarta-common` packaging を削除した。
+  - 変更: root `pom.xml` / `pom.server-modernized.xml` / `client/pom.xml` から `common` module と `opendolphin-common` 参照を撤去し、`client` が唯一使っていた `OrcaConnect` / `OrcaApi` は `client` 側へ内包した。
+  - 変更: `common/` 配下の production/test source と POM を削除し、dead module を build から完全に外した。
+  - 検証: `mvn -pl server-modernized -am -Dtest=TotpHelperTest,AuditTrailServiceTest -DfailIfNoTests=false test` と `mvn -pl server-modernized -am -DskipTests package` は PASS。`jar tf server-modernized/target/opendolphin-server.war | rg "opendolphin-common|open/dolphin/common/Orca"` は 0 件。
+  - 進捗: orchestration plan の `A08` を ☑ 化し、次回先頭 task は `A09`「runtime config 正本化と文書同期」。
+- 2026-03-21: Codex automation cleanup track の `A07`「health / readiness の運用化」を完了した（RUN_ID=20260320T201118Z）。
+  - 変更: `LogFilter` に `/api/health` と `/api/health/readiness` の匿名許可を追加し、運用 probe が認証なしで到達できるようにした。
+  - 変更: `RestOrcaTransport` に 3 秒 timeout の ORCA readiness probe を追加し、`OperationsHealthResource` の ORCA readiness 判定を `auditSummary()` 文字列ベースから実 probe ベースへ置換した。`2xx/3xx/401/403` は reachable、`5xx`・IO例外・timeout は DOWN として扱う。
+  - 検証: `mvn -pl server-modernized -am -Dtest=OperationsHealthResourceTest,LogFilterTest -DfailIfNoTests=false clean test` は PASS。`rg -n "orca.host=unknown" server-modernized/src/main/java/open/dolphin/rest/OperationsHealthResource.java` は 0 件。
+  - 進捗: orchestration plan の `A07` を ☑ 化し、次回先頭 task は `A08`「audit 契約吸収と common 廃止」。
+- 2026-03-21: Codex automation cleanup track の `A06`「mock / stub / Trial-only 公開面の削除」を完了した（RUN_ID=20260320T200518Z）。
+  - 変更: `PatientModV2OutpatientMockResource` と `OrcaMedicalAdministrationResource` を削除し、`OpenDolphinRestApplication` と `WebXmlEndpointExposureTest` から公開面登録を除去。
+  - 変更: `OrcaPatientResource` の delete operation を explicit error へ変更し、production code から `OrcaTransport.isStub()` 依存を除去。`OrcaWrapperService` / `DefaultOrcaPatientAdapter` の `dataSource` 未設定時は `real` 扱いへ統一。
+  - 検証: `rg -n "PatientModV2OutpatientMockResource|OrcaMedicalAdministrationResource|isStub\\(" server-modernized/src/main` は 0 件。`mvn -pl server-modernized -am -Dtest=WebXmlEndpointExposureTest,PatientModV2OutpatientResourceIdempotencyTest,OrcaWrapperServicePatientIdListPayloadTest,OrcaPatientResourceIdempotencyTest,DefaultOrcaPatientAdapterStubIntegrationTest -DfailIfNoTests=false test` は PASS。
+  - 進捗: orchestration plan の `A06` を ☑ 化し、次回先頭 task は `A07`「health / readiness の運用化」。
+- 2026-03-21: Codex automation cleanup track の `A05`「ORCA queue mock 面の削除」を完了した（RUN_ID=20260320T200327Z）。
+  - 変更: `OrcaQueueResource` / `OrcaQueueStore` / `OrcaQueueResourceTest` を削除し、`OpenDolphinRestApplication` から queue resource 登録を削除。
+  - 変更: `AdminConfigSnapshot` / `AdminConfigStore` / `AdminConfigResource` / `AdminConfigResourceTest` から `useMockOrcaQueue`、`x-orca-queue-mode`、mock/live queue source 切替を除去。
+  - 検証: `rg -n "OrcaQueue|useMockOrcaQueue|orca/queue|x-orca-queue-mode|OPENDOLPHIN_ALLOW_MOCK_ORCA_QUEUE" server-modernized/src/main server-modernized/src/test` は 0 件。`mvn -pl server-modernized -am -Dtest=AdminConfigResourceTest,WebXmlEndpointExposureTest -DfailIfNoTests=false test` は PASS。
+  - 進捗: orchestration plan の `A05` を ☑ 化し、次回先頭 task は `A06`「mock / stub / Trial-only 公開面の削除」。
+- 2026-03-21: Codex automation cleanup track の `A04`「平文 credential cache と管理 API の削除」を完了した（RUN_ID=20260320T200222Z）。
+  - 変更: `AdminSecurityResource` と `UserCache`、および専用テスト `AdminSecurityResourceTest` / `UserCacheTest` を削除。
+  - 変更: `OpenDolphinRestApplication` から `AdminSecurityResource` を登録解除し、`WebXmlEndpointExposureTest` に非公開化の期待値を反映。
+  - 検証: `rg -n "UserCache|header-credentials/cache|HEADER_CREDENTIAL_CACHE" server-modernized/src/main server-modernized/src/test` は 0 件。`mvn -pl server-modernized -am -Dtest=WebXmlEndpointExposureTest -DfailIfNoTests=false test` は PASS。
+  - 進捗: orchestration plan の `A04` を ☑ 化し、次回先頭 task は `A05`「ORCA queue mock 面の削除」。
+- 2026-03-21: Codex automation cleanup track の `A03`「認可判定の一本化」を完了した（RUN_ID=20260320T195922Z）。
+  - 変更: `AbstractResource` に actor ベースの admin 判定 helper を追加し、resource 層の `request.isUserInRole("ADMIN")` を `userServiceBean.isAdmin(actor)` ベースへ統一。
+  - 変更: `StampResource` の施設アクセス判定と、`KarteDocumentWriteResource` / `KarteRevisionResource` / `SystemResource` / `LetterResource` / `PatientImagesResource` の audit payload 生成で `isUserInRole("ADMIN")` を除去。
+  - 検証: `rg -n "isUserInRole\\(" server-modernized/src/main/java` は 0 件。`mvn -pl server-modernized -am -Dtest=StampResourceTest,KarteRevisionResourceAuthorizationTest,LetterResourceTest,PatientImagesResourceTest,SystemResourceTest -DfailIfNoTests=false test` は PASS。
+  - 進捗: orchestration plan の `A03` を ☑ 化し、次回先頭 task は `A04`「平文 credential cache と管理 API の削除」。
+- 2026-03-21: Codex automation cleanup track の `A02`「状態変更 GET の全廃（まず CloudZero 送信）」を完了した（RUN_ID=20260320T195547Z）。
+  - 変更: `server-modernized/src/main/java/open/dolphin/rest/SystemResource.java` の `sendCloudZeroMail()` を `@POST /cloudzero/sendmail` のみに変更し、旧 GET 互換を撤去。
+  - 変更: `server-modernized/src/test/java/open/dolphin/rest/SystemResourceTest.java` に POST-only 公開を確認するテストを追加し、`client/src/main/java/open/dolphin/system/SystemDelegater.java` の caller も POST 化。
+  - 検証: `mvn -pl server-modernized -am -Dtest=SystemResourceTest,CsrfProtectionFilterTest -DfailIfNoTests=false test` は PASS。`rg -n "@GET|@POST|/cloudzero/sendmail" .../SystemResource.java` でも対象が `@POST` のみであることを確認。
+  - 補足: `mvn -pl client -am -DskipTests compile` は `SimpleDate` ほか既存の広範な欠落シンボルで失敗したが、今回変更に閉じた failure ではないため blocker にはしていない。次回先頭 task は `A03`。
+- 2026-03-21: Codex automation cleanup track の `A01`「直接依存の明示化と dependency hygiene の土台作成」を完了した（RUN_ID=20260320T194403Z）。
+  - 変更: `server-modernized/pom.xml` に `opendolphin-persistence` / `commons-codec` の direct dependency と `dependency-hygiene` profile を追加。
+  - 変更: 親 `pom.xml` に、`mvn -pl server-modernized -am -Dtest=TotpHelperTest -DfailIfNoTests=false test` を reactor 上流でも成立させる Surefire/Failsafe bridge を最小追加。
+  - 検証: `mvn -pl server-modernized -am -Dtest=TotpHelperTest -DfailIfNoTests=false test` と `mvn -pl server-modernized -am -Pdependency-hygiene -DskipTests dependency:analyze-only` はともに PASS。
+  - 進捗: orchestration plan の `A01` を ☑ 化し、次回先頭 task は `A02`「状態変更 GET の全廃（まず CloudZero 送信）」。
+- 2026-03-20: `codex_automation_bundle` の内容を、メインエージェントがサブエージェントを順次召喚して処理する現行 automation 導線へ再編した（RUN_ID=20260320T113001Z）。
+  - 追加（現行導線）: `docs/server-modernization/planning/codex_automation_orchestration/README.md` / `codex_automation_orchestration_plan.md` / `codex_automation_master_prompt.txt` / `prompts/` / `logs/README.md` を新規追加。
+  - 方針変更: automation 実行主体を単独エージェント前提から、メインエージェント + サブエージェント順次実行へ変更。未完了先頭 task を 1 件ずつ処理し、並列実行は禁止とした。
+  - 反映（導線）: `docs/server-modernization/README.md` に現行 Codex automation 入口を追加し、旧 `codex_automation_workplan_revised.md` 系と明確に分離した。
 - 2026-03-16: server internal modernization checklist の `CFG-03` / `CFG-04` を完了し、typed runtime config と ORCA datasource 解決を現行化した（RUN_ID=20260316T051958Z）。
   - 反映（runtime config）: `RuntimeConfigurationSupport` から legacy property loader / frontend env 名依存を削除し、`cloud.zero` / `facilityId` / `PVT listener` を `ServerConfigurationResolver#orcaRuntime()` へ移設。
   - 反映（ORCAConnection）: `open/orca/rest/ORCAConnection.java` を `@ApplicationScoped` + typed datasource config 前提へ置換し、singleton / `custom.properties` 直読を除去。

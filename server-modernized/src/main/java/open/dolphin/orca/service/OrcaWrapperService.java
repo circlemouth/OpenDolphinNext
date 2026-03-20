@@ -10,6 +10,7 @@ import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
+import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
@@ -107,7 +108,7 @@ public class OrcaWrapperService {
             aggregate.setAppointmentDate(from + "/" + to);
         }
         aggregate.setRecordsReturned(aggregate.getSlots().size());
-        enrich(aggregate);
+        enrich(aggregate, null);
         return aggregate;
     }
 
@@ -119,7 +120,7 @@ public class OrcaWrapperService {
         if (response != null) {
             response.setRecordsReturned(response.getReservations().size());
         }
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -129,7 +130,7 @@ public class OrcaWrapperService {
         String payload = buildBillingSimulationPayload(request, insurance);
         String xml = transport.invoke(OrcaEndpoint.BILLING_SIMULATION, payload);
         BillingSimulationResponse response = mapper.toBillingSimulation(xml);
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -147,7 +148,7 @@ public class OrcaWrapperService {
         } else {
             response.setVisitDate(range.from() + "/" + range.to());
         }
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -156,7 +157,7 @@ public class OrcaWrapperService {
         String payload = buildPatientIdListPayload(request);
         String xml = transport.invoke(OrcaEndpoint.PATIENT_ID_LIST, payload);
         PatientIdListResponse response = mapper.toPatientIdList(xml);
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -171,7 +172,7 @@ public class OrcaWrapperService {
                 detail.getPublicInsurances().clear();
             }
         }
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -181,7 +182,7 @@ public class OrcaWrapperService {
         String xml = transport.invoke(OrcaEndpoint.PATIENT_NAME_SEARCH, payload);
         String searchTerm = request.getName() != null ? request.getName() : request.getKana();
         PatientSearchResponse response = mapper.toPatientSearch(xml, searchTerm);
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -190,7 +191,7 @@ public class OrcaWrapperService {
         String payload = buildInsuranceCombinationPayload(request);
         String xml = transport.invoke(OrcaEndpoint.INSURANCE_COMBINATION, payload);
         InsuranceCombinationResponse response = mapper.toInsuranceCombination(xml);
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -199,7 +200,7 @@ public class OrcaWrapperService {
         String payload = buildFormerNameHistoryPayload(request);
         String xml = transport.invoke(OrcaEndpoint.FORMER_NAME_HISTORY, payload);
         FormerNameHistoryResponse response = mapper.toFormerNames(xml);
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -208,7 +209,7 @@ public class OrcaWrapperService {
         String payload = buildAppointmentMutationPayload(request);
         String xml = transport.invoke(OrcaEndpoint.APPOINTMENT_MUTATION, payload);
         AppointmentMutationResponse response = mapper.toAppointmentMutation(xml);
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
@@ -217,23 +218,35 @@ public class OrcaWrapperService {
         String payload = buildVisitMutationPayload(request);
         String xml = transport.invoke(OrcaEndpoint.ACCEPTANCE_MUTATION, payload);
         VisitMutationResponse response = mapper.toVisitMutation(xml);
-        enrich(response);
+        enrich(response, null);
         return response;
     }
 
-    private void enrich(OrcaApiResponse response) {
+    private void enrich(OrcaApiResponse response, OrcaTransportResult result) {
         if (response != null) {
             if (response.getRunId() == null || response.getRunId().isBlank()) {
                 response.setRunId(AbstractOrcaRestResource.resolveRunIdValue((String) null));
             }
-            boolean stub = transport != null && transport.isStub();
-            if (stub) {
-                response.setBlockerTag(BLOCKER_TAG);
-            } else {
-                response.setBlockerTag(null);
+            response.setBlockerTag(null);
+            if (response.getDataSource() == null || response.getDataSource().isBlank()) {
+                response.setDataSource(resolveDataSource(result));
             }
-            response.setDataSource(stub ? "stub" : "real");
         }
+    }
+
+    private String resolveDataSource(OrcaTransportResult result) {
+        if (result != null && result.getHeaders() != null) {
+            for (java.util.Map.Entry<String, java.util.List<String>> entry : result.getHeaders().entrySet()) {
+                if (entry.getKey() != null && "x-opendolphin-data-source".equalsIgnoreCase(entry.getKey())
+                        && entry.getValue() != null && !entry.getValue().isEmpty()) {
+                    String value = entry.getValue().get(0);
+                    if (value != null && !value.isBlank()) {
+                        return value.trim();
+                    }
+                }
+            }
+        }
+        return "real";
     }
 
     private void ensureNotNull(Object target, String label) {

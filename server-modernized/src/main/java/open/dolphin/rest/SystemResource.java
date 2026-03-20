@@ -272,7 +272,7 @@ public class SystemResource extends AbstractResource {
 //s.oh$
     
 //s.oh^ 2014/07/08 クラウド0対応
-    @GET
+    @POST
     @Path("/cloudzero/sendmail")
     public void sendCloudZeroMail() {
         requireSystemAdminOrThrow("SYSTEM_CLOUDZERO_SEND", null);
@@ -441,10 +441,7 @@ public class SystemResource extends AbstractResource {
     }
 
     private String resolveActorRole() {
-        if (httpServletRequest != null && httpServletRequest.isUserInRole("ADMIN")) {
-            return "ADMIN";
-        }
-        return null;
+        return resolveActorRole(httpServletRequest, userServiceBean);
     }
 
     private void enrichRemoteUserDetails(Map<String, Object> details) {

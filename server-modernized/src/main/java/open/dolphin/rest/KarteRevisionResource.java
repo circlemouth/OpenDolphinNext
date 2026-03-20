@@ -38,6 +38,7 @@ import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.KarteRevisionServiceBean;
+import open.dolphin.session.UserServiceBean;
 import open.dolphin.session.framework.SessionTraceContext;
 import open.dolphin.session.framework.SessionTraceManager;
 
@@ -57,6 +58,9 @@ public class KarteRevisionResource extends AbstractResource {
 
     @Inject
     private SessionTraceManager sessionTraceManager;
+
+    @Inject
+    private UserServiceBean userServiceBean;
 
     @Inject
     private ObjectMapper objectMapper;
@@ -431,9 +435,7 @@ public class KarteRevisionResource extends AbstractResource {
             String actorId = resolveActorId();
             payload.setActorId(actorId);
             payload.setActorDisplayName(resolveActorDisplayName(actorId));
-            if (httpServletRequest != null && httpServletRequest.isUserInRole("ADMIN")) {
-                payload.setActorRole("ADMIN");
-            }
+            payload.setActorRole(resolveActorRole(httpServletRequest, userServiceBean));
             payload.setAction(action);
             payload.setResource(httpServletRequest != null ? httpServletRequest.getRequestURI() : "/karte/revisions");
             String requestId = resolveRequestId();

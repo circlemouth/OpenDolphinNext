@@ -23,6 +23,7 @@ import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.session.LetterServiceBean;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.AuditTrailService;
+import open.dolphin.session.UserServiceBean;
 import open.dolphin.session.framework.SessionTraceContext;
 import open.dolphin.session.framework.SessionTraceManager;
 import open.dolphin.session.framework.SessionOperation;
@@ -43,6 +44,9 @@ public class LetterResource extends AbstractResource {
 
     @Inject
     private SessionTraceManager sessionTraceManager;
+
+    @Inject
+    private UserServiceBean userServiceBean;
 
     @Context
     private HttpServletRequest httpServletRequest;
@@ -172,9 +176,7 @@ public class LetterResource extends AbstractResource {
         String actorId = resolveActorId();
         payload.setActorId(actorId);
         payload.setActorDisplayName(resolveActorDisplayName(actorId));
-        if (httpServletRequest != null && httpServletRequest.isUserInRole("ADMIN")) {
-            payload.setActorRole("ADMIN");
-        }
+        payload.setActorRole(resolveActorRole(httpServletRequest, userServiceBean));
         payload.setAction(action);
         payload.setResource(resolveResourcePath());
         String traceId = resolveTraceId(httpServletRequest);

@@ -52,6 +52,8 @@ public class LogFilter implements Filter {
     private static final String SESSION_LOGIN_PATH = "/api/session/login";
     private static final String SESSION_FACTOR2_LOGIN_PATH = "/api/session/login/factor2";
     private static final String LOGOUT_PATH = "/api/logout";
+    private static final String HEALTH_PATH = "/api/health";
+    private static final String HEALTH_READINESS_PATH = "/api/health/readiness";
     private static final String API_ROOT = "/api";
     private static final Pattern SAFE_TOKEN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
 
@@ -159,7 +161,9 @@ public class LogFilter implements Filter {
         }
         return SESSION_LOGIN_PATH.equals(normalizedPath)
                 || SESSION_FACTOR2_LOGIN_PATH.equals(normalizedPath)
-                || LOGOUT_PATH.equals(normalizedPath);
+                || LOGOUT_PATH.equals(normalizedPath)
+                || HEALTH_PATH.equals(normalizedPath)
+                || HEALTH_READINESS_PATH.equals(normalizedPath);
     }
 
     private String normalizeRequestPath(HttpServletRequest request) {

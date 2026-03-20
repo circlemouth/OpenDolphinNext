@@ -65,28 +65,10 @@ public class ChartEventHistoryPurgeScheduler {
     }
 
     private boolean resolveEnabled() {
-        String raw = RuntimeConfigurationSupport.firstNonBlank(
-                System.getProperty(PROP_ENABLED),
-                System.getenv(ENV_ENABLED));
-        if (raw == null || raw.isBlank()) {
-            return true;
-        }
-        Boolean parsed = RuntimeConfigurationSupport.parseBooleanFlag(raw);
-        return parsed == null || parsed;
+        return RuntimeConfigurationSupport.resolveBooleanFlag(PROP_ENABLED, ENV_ENABLED, false);
     }
 
     private int resolveIntervalMinutes() {
-        String raw = RuntimeConfigurationSupport.firstNonBlank(
-                System.getProperty(PROP_INTERVAL_MINUTES),
-                System.getenv(ENV_INTERVAL_MINUTES));
-        if (raw == null || raw.isBlank()) {
-            return DEFAULT_INTERVAL_MINUTES;
-        }
-        try {
-            int parsed = Integer.parseInt(raw.trim());
-            return parsed > 0 ? parsed : DEFAULT_INTERVAL_MINUTES;
-        } catch (NumberFormatException ex) {
-            return DEFAULT_INTERVAL_MINUTES;
-        }
+        return RuntimeConfigurationSupport.resolvePositiveInt(PROP_INTERVAL_MINUTES, ENV_INTERVAL_MINUTES, DEFAULT_INTERVAL_MINUTES);
     }
 }

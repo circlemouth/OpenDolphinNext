@@ -129,6 +129,14 @@ public class AbstractResource {
         return actor;
     }
 
+    protected String resolveActorRole(HttpServletRequest request, UserServiceBean userServiceBean) {
+        String actor = request != null ? request.getRemoteUser() : null;
+        if (actor == null || actor.isBlank() || userServiceBean == null) {
+            return null;
+        }
+        return userServiceBean.isAdmin(actor) ? "ADMIN" : null;
+    }
+
     protected void ensureFacilityMatchOr404(String actorFacility, String targetFacility,
             String idName, Object idValue, HttpServletRequest request) {
         if (targetFacility == null || targetFacility.isBlank()

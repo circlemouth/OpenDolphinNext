@@ -143,51 +143,22 @@ public class OrcaPatientSyncScheduler {
     }
 
     public static boolean resolveEnabledFromEnvironment() {
-        String raw = RuntimeConfigurationSupport.firstNonBlank(
-                System.getProperty(PROP_ENABLED),
-                System.getenv(ENV_ENABLED));
-        if (raw == null || raw.isBlank()) {
-            return false;
-        }
-        Boolean parsed = RuntimeConfigurationSupport.parseBooleanFlag(raw);
-        return parsed != null && parsed;
+        return RuntimeConfigurationSupport.resolveBooleanFlag(PROP_ENABLED, ENV_ENABLED, false);
     }
 
     private static boolean resolveBooleanEnv(String key, boolean fallback) {
-        String raw = System.getenv(key);
-        if (raw == null || raw.isBlank()) {
-            return fallback;
-        }
-        String normalized = raw.trim().toLowerCase(Locale.ROOT);
-        if ("1".equals(normalized) || "true".equals(normalized) || "on".equals(normalized) || "yes".equals(normalized)) {
-            return true;
-        }
-        if ("0".equals(normalized) || "false".equals(normalized) || "off".equals(normalized) || "no".equals(normalized)) {
-            return false;
-        }
-        return fallback;
+        return RuntimeConfigurationSupport.resolveBooleanFlag(null, key, fallback);
     }
 
     private static int resolveIntEnv(String key, int fallback) {
-        String raw = System.getenv(key);
-        if (raw == null || raw.isBlank()) {
-            return fallback;
-        }
-        try {
-            return Integer.parseInt(raw.trim());
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
+        return RuntimeConfigurationSupport.resolvePositiveInt(null, key, fallback);
     }
 
     private String resolveFacilityId() {
-        String env = System.getenv(ENV_FACILITY_ID);
-        if (env != null && !env.isBlank()) {
-            return env.trim();
-        }
-        String systemProp = System.getProperty("dolphin.facilityId");
-        if (systemProp != null && !systemProp.isBlank()) {
-            return systemProp.trim();
+        String explicit = RuntimeConfigurationSupport.firstNonBlank(
+                RuntimeConfigurationSupport.resolveFacilityId(ENV_FACILITY_ID));
+        if (explicit != null) {
+            return explicit;
         }
         if (configurationResolver != null) {
             String value = configurationResolver.orcaRuntime().facilityId();

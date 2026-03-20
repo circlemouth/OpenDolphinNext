@@ -5,8 +5,11 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.WebApplicationException;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -165,6 +168,14 @@ class SystemResourceTest extends RuntimeDelegateTestSupport {
         verify(auditTrailService).record(auditCaptor.capture());
         Map<String, Object> details = auditCaptor.getValue().getDetails();
         assertThat(details.get("deniedReason")).isEqualTo("system_admin_privilege_required");
+    }
+
+    @Test
+    void sendCloudZeroMail_isExposedAsPostOnly() throws Exception {
+        Method method = SystemResource.class.getMethod("sendCloudZeroMail");
+
+        assertThat(method.isAnnotationPresent(POST.class)).isTrue();
+        assertThat(method.isAnnotationPresent(GET.class)).isFalse();
     }
 
     @Test

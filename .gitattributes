@@ -27,3 +27,11 @@ ops/tools/**/*.env.*   text eol=lf
 ops/tools/**/*.profile text eol=lf
 ops/tools/**/*.ps1     text eol=lf
 ops/tools/**/*.psm1    text eol=lf
+
+# Source archive exclusions
+**/target/**           export-ignore
+**/__MACOSX/**         export-ignore
+**/surefire-reports/** export-ignore
+**/failsafe-reports/** export-ignore
+*.war                  export-ignore
+*.jar                  export-ignore

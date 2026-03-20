@@ -32,11 +32,13 @@ import javax.imageio.ImageIO;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.rest.dto.PatientImageEntryResponse;
 import open.dolphin.rest.dto.PatientImageUploadResponse;
+import open.dolphin.runtime.RuntimeConfigurationSupport;
 import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.PatientServiceBean;
+import open.dolphin.session.UserServiceBean;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
@@ -76,6 +78,9 @@ public class PatientImagesResource extends AbstractResource {
 
     @Inject
     private AuditTrailService auditTrailService;
+
+    @Inject
+    private UserServiceBean userServiceBean;
 
     @Inject
     private AttachmentStorageManager attachmentStorageManager;
@@ -209,9 +214,7 @@ public class PatientImagesResource extends AbstractResource {
     }
 
     private void requireFeatureEnabled() {
-        String fromProperty = System.getProperty(FEATURE_PROPERTY);
-        String fromEnv = readEnvironmentValue(FEATURE_ENV);
-        if (isTruthy(fromProperty) || isTruthy(fromEnv)) {
+        if (RuntimeConfigurationSupport.resolveBooleanFlag(FEATURE_PROPERTY, FEATURE_ENV, false)) {
             return;
         }
         throw restError(httpServletRequest, Response.Status.NOT_FOUND,
@@ -236,18 +239,6 @@ public class PatientImagesResource extends AbstractResource {
         response.setHeader("Expires", EXPIRES_IMMEDIATELY);
     }
 
-    String readEnvironmentValue(String key) {
-        return System.getenv(key);
-    }
-
-    private boolean isTruthy(String value) {
-        if (value == null) {
-            return false;
-        }
-        String v = value.trim().toLowerCase();
-        return v.equals("1") || v.equals("true") || v.equals("yes") || v.equals("on");
-    }
-
     private void requirePatientAccessible(String facilityId, String patientId) {
         if (facilityId == null || facilityId.isBlank() || patientId == null || patientId.isBlank()) {
             throw restError(httpServletRequest, Response.Status.NOT_FOUND,
@@ -262,16 +253,7 @@ public class PatientImagesResource extends AbstractResource {
     }
 
     private long resolveMaxBytes() {
-        String raw = firstNonBlank(System.getProperty(MAX_BYTES_PROPERTY), System.getenv(MAX_BYTES_ENV));
-        if (raw == null || raw.isBlank()) {
-            return DEFAULT_MAX_BYTES;
-        }
-        try {
-            long parsed = Long.parseLong(raw.trim());
-            return parsed > 0 ? parsed : DEFAULT_MAX_BYTES;
-        } catch (Exception ex) {
-            return DEFAULT_MAX_BYTES;
-        }
+        return RuntimeConfigurationSupport.resolvePositiveLong(MAX_BYTES_PROPERTY, MAX_BYTES_ENV, DEFAULT_MAX_BYTES);
     }
 
     private UploadedFile extractFile(MultipartFormDataInput input, long maxBytes) {
@@ -421,26 +403,7 @@ public class PatientImagesResource extends AbstractResource {
     }
 
     private int resolveMaxDimension(String propertyKey, String envKey, int defaultValue) {
-        String raw = firstNonBlank(System.getProperty(propertyKey), System.getenv(envKey));
-        if (raw == null || raw.isBlank()) {
-            return defaultValue;
-        }
-        try {
-            int parsed = Integer.parseInt(raw.trim());
-            return parsed > 0 ? parsed : defaultValue;
-        } catch (Exception ex) {
-            return defaultValue;
-        }
-    }
-
-    private String firstNonBlank(String a, String b) {
-        if (a != null && !a.isBlank()) {
-            return a;
-        }
-        if (b != null && !b.isBlank()) {
-            return b;
-        }
-        return null;
+        return RuntimeConfigurationSupport.resolvePositiveInt(propertyKey, envKey, defaultValue);
     }
 
     private String extensionFor(String contentType) {
@@ -566,7 +529,7 @@ public class PatientImagesResource extends AbstractResource {
             String actorId = resolveActorId();
             payload.setActorId(actorId);
             payload.setActorDisplayName(actorId);
-            payload.setActorRole(httpServletRequest != null && httpServletRequest.isUserInRole("ADMIN") ? "ADMIN" : null);
+            payload.setActorRole(resolveActorRole(httpServletRequest, userServiceBean));
             payload.setAction(action);
             payload.setResource(httpServletRequest != null ? httpServletRequest.getRequestURI() : "/patients/*/images");
             payload.setRequestId(resolveRequestId());

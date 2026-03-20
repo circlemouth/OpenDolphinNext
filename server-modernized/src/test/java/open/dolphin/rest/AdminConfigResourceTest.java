@@ -63,7 +63,6 @@ class AdminConfigResourceTest {
         updated.setOrcaEndpoint("https://weborca-trial.orca.med.or.jp");
         updated.setDeliveryMode("manual");
         updated.setChartsMasterSource("auto");
-        updated.setUseMockOrcaQueue(Boolean.FALSE);
         updated.setVerifyAdminDelivery(Boolean.TRUE);
         when(adminConfigStore.updateFromPayload(any(AdminConfigSnapshot.class), eq("RUN-ADMIN-CONFIG")))
                 .thenReturn(updated);

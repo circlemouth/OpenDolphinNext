@@ -6,7 +6,11 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -35,9 +39,11 @@ public class RestOrcaTransport implements OrcaTransport {
 
     private static final Logger LOGGER = Logger.getLogger(RestOrcaTransport.class.getName());
     private static final String ORCA_ACCEPT = "application/xml";
+    public static final String UNKNOWN_AUDIT_SUMMARY = "orca.host=unknown";
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final long DEFAULT_CACHE_TTL_MS = 30_000L;
+    private static final Duration READINESS_PROBE_TIMEOUT = Duration.ofSeconds(3);
     private static final String ENV_CACHE_TTL_MS = "ORCA_TRANSPORT_CACHE_TTL_MS";
     private static final String PROP_CACHE_TTL_MS = "orca.transport.cache.ttl-ms";
 
@@ -181,6 +187,46 @@ public class RestOrcaTransport implements OrcaTransport {
 
     public HttpClient rawHttpClient() {
         return registry().rawHttpClient(resolveFacilityId());
+    }
+
+    public ProbeResult probeReadiness() {
+        String facilityId = resolveFacilityId();
+        OrcaTransportSettings settings = currentSettings(facilityId);
+        String auditSummary = settings != null ? settings.auditSummary() : UNKNOWN_AUDIT_SUMMARY;
+        if (settings == null || !settings.isReady()) {
+            return unavailableProbe("transport_not_ready", "ORCA transport settings are incomplete");
+        }
+
+        HttpClient client = registry().rawHttpClient(facilityId);
+        if (client == null) {
+            return new ProbeResult(false, null, null, auditSummary, "http_client_unavailable",
+                    "ORCA HTTP client is unavailable");
+        }
+
+        String url = settings.buildOrcaUrl("");
+        try {
+            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
+                    .GET()
+                    .timeout(READINESS_PROBE_TIMEOUT)
+                    .header("Accept", ORCA_ACCEPT);
+            String authHeader = settings.basicAuthHeader();
+            if (authHeader != null && !authHeader.isBlank()) {
+                builder.header("Authorization", authHeader);
+            }
+            HttpResponse<Void> response = client.send(builder.build(), HttpResponse.BodyHandlers.discarding());
+            int statusCode = response.statusCode();
+            boolean reachable = (statusCode >= 200 && statusCode < 400)
+                    || statusCode == 401
+                    || statusCode == 403;
+            return new ProbeResult(reachable, statusCode, url, auditSummary, null, null);
+        } catch (IOException ex) {
+            return new ProbeResult(false, null, url, auditSummary, ex.getClass().getSimpleName(), ex.getMessage());
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            return new ProbeResult(false, null, url, auditSummary, ex.getClass().getSimpleName(), ex.getMessage());
+        } catch (RuntimeException ex) {
+            return new ProbeResult(false, null, url, auditSummary, ex.getClass().getSimpleName(), ex.getMessage());
+        }
     }
 
     public String buildOrcaUrl(String path) {
@@ -331,6 +377,19 @@ public class RestOrcaTransport implements OrcaTransport {
             }
             return registry;
         }
+    }
+
+    public record ProbeResult(
+            boolean reachable,
+            Integer statusCode,
+            String url,
+            String auditSummary,
+            String error,
+            String message) {
+    }
+
+    public static ProbeResult unavailableProbe(String error, String message) {
+        return new ProbeResult(false, null, null, UNKNOWN_AUDIT_SUMMARY, error, message);
     }
 
     private static void logMissingBody(String traceId, OrcaEndpoint endpoint, OrcaTransportSettings settings) {

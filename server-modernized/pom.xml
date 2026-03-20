@@ -26,6 +26,7 @@
         <wildfly.serverId>wildfly-management</wildfly.serverId>
         <plivo.java.version>5.46.0</plivo.java.version>
         <okhttp.version>5.2.1</okhttp.version>
+        <commons.codec.version>1.17.1</commons.codec.version>
         <yubico.webauthn.version>2.6.0</yubico.webauthn.version>
         <openpdf.version>1.3.41</openpdf.version>
         <bouncycastle.version>1.82</bouncycastle.version>
@@ -107,12 +108,6 @@
                 <artifactId>opendolphin-reporting</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>opendolphin</groupId>
-                <artifactId>opendolphin-common</artifactId>
-                <classifier>jakarta</classifier>
-                <version>${project.version}</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -128,8 +123,12 @@
         </dependency>
         <dependency>
             <groupId>opendolphin</groupId>
-            <artifactId>opendolphin-common</artifactId>
-            <classifier>jakarta</classifier>
+            <artifactId>opendolphin-persistence</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>${commons.codec.version}</version>
         </dependency>
         <dependency>
             <groupId>jakarta.platform</groupId>
@@ -235,6 +234,36 @@
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
+            <artifactId>auth</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-core</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>http-client-spi</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>regions</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>sdk-core</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>utils</artifactId>
+            <version>${aws.sdk.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
             <artifactId>url-connection-client</artifactId>
             <version>${aws.sdk.version}</version>
         </dependency>
@@ -335,6 +364,12 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -536,47 +571,10 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.6.1</version>
-                <executions>
-                    <execution>
-                        <id>copy-jakarta-common</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>opendolphin</groupId>
-                                    <artifactId>opendolphin-common</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>jakarta</classifier>
-                                    <outputDirectory>${project.build.directory}/jakarta-libs</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                            <overWriteReleases>true</overWriteReleases>
-                            <overWriteSnapshots>true</overWriteSnapshots>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
                 <version>3.4.0</version>
                 <configuration>
                     <filteringDeploymentDescriptors>true</filteringDeploymentDescriptors>
-                    <packagingExcludes>WEB-INF/lib/opendolphin-common-${project.version}.jar</packagingExcludes>
-                    <webResources>
-                        <resource>
-                            <directory>${project.build.directory}/jakarta-libs</directory>
-                            <targetPath>WEB-INF/lib</targetPath>
-                            <includes>
-                                <include>*.jar</include>
-                            </includes>
-                        </resource>
-                    </webResources>
                 </configuration>
             </plugin>
         </plugins>
@@ -723,6 +721,124 @@
                                 <version>${pmd.version}</version>
                             </dependency>
                         </dependencies>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>dependency-hygiene</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.6.1</version>
+                        <configuration>
+                            <failOnWarning>true</failOnWarning>
+                            <ignoredUnusedDeclaredDependencies>
+                                <ignoredUnusedDeclaredDependency>com.fasterxml.jackson.datatype:jackson-datatype-jdk8</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.fasterxml.jackson.dataformat:jackson-dataformat-cbor</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.fasterxml.jackson.dataformat:jackson-dataformat-xml</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.fasterxml.jackson.jakarta.rs:jackson-jakarta-rs-json-provider</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.googlecode.jsontoken:jsontoken</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.github.librepdf:openpdf</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>commons-codec:commons-codec</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.apache.velocity:velocity-engine-core</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.postgresql:postgresql</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.plivo:plivo-java</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.squareup.okhttp3:okhttp</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.squareup.okhttp3:logging-interceptor</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.yubico:webauthn-server-core</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>com.yubico:webauthn-server-attestation</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>software.amazon.awssdk:auth</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>software.amazon.awssdk:aws-core</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>software.amazon.awssdk:regions</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>software.amazon.awssdk:utils</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>software.amazon.awssdk:url-connection-client</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.yaml:snakeyaml</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.eclipse.microprofile.config:microprofile-config-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>jakarta.jms:jakarta.jms-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>jakarta.enterprise.concurrent:jakarta.enterprise.concurrent-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>jakarta.mail:jakarta.mail-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>jakarta.websocket:jakarta.websocket-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>jakarta.websocket:jakarta.websocket-client-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.jboss.ejb3:jboss-ejb3-ext-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>io.agroal:agroal-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.bouncycastle:bcprov-jdk18on</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.bouncycastle:bcpkix-jdk18on</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>jakarta.persistence:jakarta.persistence-api</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.junit.jupiter:junit-jupiter-engine</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.glassfish.jersey.core:jersey-common</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.flywaydb:flyway-database-postgresql</ignoredUnusedDeclaredDependency>
+                            </ignoredUnusedDeclaredDependencies>
+                            <ignoredNonTestScopedDependencies>
+                                <ignoredNonTestScopedDependency>com.fasterxml.jackson.core:jackson-annotations</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.fasterxml.jackson.core:jackson-core</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>com.fasterxml.jackson.core:jackson-databind</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>io.micrometer:micrometer-core</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>opendolphin:opendolphin-api-contract</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>opendolphin:opendolphin-persistence</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>org.jdom:jdom</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>software.amazon.awssdk:http-client-spi</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>software.amazon.awssdk:s3</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>software.amazon.awssdk:sdk-core</ignoredNonTestScopedDependency>
+                                <ignoredNonTestScopedDependency>opendolphin:opendolphin-reporting</ignoredNonTestScopedDependency>
+                            </ignoredNonTestScopedDependencies>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>dependency-hygiene-check</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>analyze-only</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>fail-on-common-war-contents</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <delete dir="${project.build.directory}/war-audit"/>
+                                        <mkdir dir="${project.build.directory}/war-audit"/>
+                                        <unzip src="${project.build.directory}/${project.build.finalName}.war"
+                                               dest="${project.build.directory}/war-audit"/>
+                                        <fileset id="forbiddenCommonJar"
+                                                 dir="${project.build.directory}/war-audit/WEB-INF/lib"
+                                                 includes="opendolphin-common-*.jar"/>
+                                        <fileset id="forbiddenCommonClasses"
+                                                 dir="${project.build.directory}/war-audit/WEB-INF/classes"
+                                                 includes="open/dolphin/common/Orca*.class"/>
+                                        <resourcecount property="forbiddenCommonJarCount" refid="forbiddenCommonJar"/>
+                                        <resourcecount property="forbiddenCommonClassCount" refid="forbiddenCommonClasses"/>
+                                        <condition property="hasForbiddenCommonJar">
+                                            <not>
+                                                <equals arg1="${forbiddenCommonJarCount}" arg2="0"/>
+                                            </not>
+                                        </condition>
+                                        <condition property="hasForbiddenCommonClass">
+                                            <not>
+                                                <equals arg1="${forbiddenCommonClassCount}" arg2="0"/>
+                                            </not>
+                                        </condition>
+                                        <fail if="hasForbiddenCommonJar"
+                                              message="WAR must not contain opendolphin-common jars"/>
+                                        <fail if="hasForbiddenCommonClass"
+                                              message="WAR must not contain legacy open.dolphin.common Orca classes"/>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

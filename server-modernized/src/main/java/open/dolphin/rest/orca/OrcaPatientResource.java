@@ -166,11 +166,13 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
                 return response;
             }
             case "delete" -> {
-                response.setApiResult("79");
-                response.setApiResultMessage("Spec-based implementation / Trial未検証");
-                response.setWarningMessage("Trial では患者削除 API が閉鎖されているためローカル DB を変更していません。");
-                recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.FAILURE);
-                return response;
+                Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);
+                unsupportedAudit.put("validationError", Boolean.TRUE);
+                unsupportedAudit.put("field", "operation");
+                markFailureDetails(unsupportedAudit, Response.Status.BAD_REQUEST.getStatusCode(),
+                        "invalid_request", "delete operation is not supported");
+                recordAudit(request, "ORCA_PATIENT_MUTATION", unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
+                throw validationError(request, "operation", "delete operation is not supported");
             }
             default -> {
                 Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);

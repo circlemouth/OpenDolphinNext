@@ -49,7 +49,6 @@ import open.dolphin.rest.orca.AbstractOrcaRestResource;
 public class PatientModV2OutpatientResource extends AbstractResource {
 
     private static final String DATA_SOURCE_SERVER = "server";
-    private static final String DATA_SOURCE_MOCK = "mock";
     private static final String AUDIT_ACTION = "ORCA_PATIENT_MUTATION";
     private static final String ORCA_PATIENTMOD_CLASS = "02";
     private static final int ORCA_UPDATE_MAX_RETRY = 1;
@@ -91,10 +90,6 @@ public class PatientModV2OutpatientResource extends AbstractResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response mutatePatient(@Context HttpServletRequest request, Map<String, Object> payload) {
         return handleMutation(request, payload, DATA_SOURCE_SERVER, false);
-    }
-
-    public Response mutatePatientMock(@Context HttpServletRequest request, Map<String, Object> payload) {
-        return handleMutation(request, payload, DATA_SOURCE_MOCK, true);
     }
 
     private Response handleMutation(HttpServletRequest request,

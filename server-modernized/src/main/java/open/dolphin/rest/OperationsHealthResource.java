@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
 import open.dolphin.orca.transport.RestOrcaTransport;
+import open.dolphin.runtime.RuntimeConfigurationSupport;
 import open.dolphin.rest.dto.OperationsHealthResponse;
 import open.dolphin.rest.dto.OperationsReadinessCheck;
 import open.dolphin.rest.dto.OperationsReadinessResponse;
@@ -100,10 +101,27 @@ public class OperationsHealthResource extends AbstractResource {
     private boolean checkOrca(Map<String, OperationsReadinessCheck> checks) {
         OperationsReadinessCheck detail = new OperationsReadinessCheck();
         try {
-            String auditSummary = restOrcaTransport != null ? restOrcaTransport.auditSummary() : "orca.host=unknown";
-            boolean up = restOrcaTransport != null && !auditSummary.contains("orca.host=unknown");
+            RestOrcaTransport.ProbeResult probe = restOrcaTransport != null
+                    ? restOrcaTransport.probeReadiness()
+                    : RestOrcaTransport.unavailableProbe("transport_unavailable",
+                            "RestOrcaTransport is unavailable");
+            boolean up = probe.reachable();
             detail.setStatus(up ? "UP" : "DOWN");
-            detail.setAuditSummary(auditSummary);
+            detail.setAuditSummary(probe.auditSummary());
+            Map<String, Object> result = new LinkedHashMap<>();
+            if (probe.url() != null) {
+                result.put("url", probe.url());
+            }
+            if (probe.statusCode() != null) {
+                result.put("statusCode", probe.statusCode());
+            }
+            if (!result.isEmpty()) {
+                detail.setResult(result);
+            }
+            if (!up) {
+                detail.setError(probe.error());
+                detail.setMessage(probe.message());
+            }
             checks.put("orca", detail);
             return up;
         } catch (RuntimeException ex) {
@@ -182,38 +200,11 @@ public class OperationsHealthResource extends AbstractResource {
     }
 
     private boolean isPatientImagesEnabled() {
-        return isTruthy(System.getProperty(FEATURE_PROPERTY)) || isTruthy(System.getenv(FEATURE_ENV));
+        return RuntimeConfigurationSupport.resolveBooleanFlag(FEATURE_PROPERTY, FEATURE_ENV, false);
     }
 
     private long resolveLong(String propertyKey, String envKey, long defaultValue) {
-        String fromProperty = System.getProperty(propertyKey);
-        if (fromProperty != null && !fromProperty.isBlank()) {
-            return parseLongOrDefault(fromProperty, defaultValue);
-        }
-        String fromEnv = System.getenv(envKey);
-        if (fromEnv != null && !fromEnv.isBlank()) {
-            return parseLongOrDefault(fromEnv, defaultValue);
-        }
-        return defaultValue;
-    }
-
-    private long parseLongOrDefault(String value, long defaultValue) {
-        try {
-            return Long.parseLong(value.trim());
-        } catch (NumberFormatException ex) {
-            return defaultValue;
-        }
-    }
-
-    private boolean isTruthy(String value) {
-        if (value == null) {
-            return false;
-        }
-        String trimmed = value.trim();
-        return "1".equals(trimmed)
-                || "true".equalsIgnoreCase(trimmed)
-                || "yes".equalsIgnoreCase(trimmed)
-                || "on".equalsIgnoreCase(trimmed);
+        return RuntimeConfigurationSupport.resolvePositiveLong(propertyKey, envKey, defaultValue);
     }
 
     private List<String> asStringList(Object value) {

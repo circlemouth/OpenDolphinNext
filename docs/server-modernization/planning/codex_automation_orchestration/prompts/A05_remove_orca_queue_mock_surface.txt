@@ -1,0 +1,46 @@
+【ワーカー指示】
+
+あなたはメインエージェントから召喚されたサブエージェントです。この task では **ORCA queue mock 面の削除** を行ってください。
+
+## 目的
+live 実装が無い queue mock 面を本番コードから消します。
+
+## 厳守事項
+- `OrcaQueueResource` と `OrcaQueueStore` は削除する
+- `useMockOrcaQueue` を admin config から削除する
+- `x-orca-queue-mode` ヘッダや queue mock を示す response 項目を削除する
+- docs 更新はしない
+- 生成物は触らない
+
+## 対象
+- `OrcaQueueResource.java`
+- `OrcaQueueStore.java`
+- `OpenDolphinRestApplication.java`
+- `AdminConfigResource.java`
+- `AdminConfigSnapshot.java`
+- `AdminConfigStore.java`
+- `OrcaQueueResourceTest.java`
+- `AdminConfigResourceTest.java`
+- `WebXmlEndpointExposureTest.java`
+
+## 検証コマンド
+```bash
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+rg -n "OrcaQueue|useMockOrcaQueue|orca/queue|x-orca-queue-mode|OPENDOLPHIN_ALLOW_MOCK_ORCA_QUEUE" server-modernized/src/main server-modernized/src/test
+mvn -pl server-modernized -am -Dtest=AdminConfigResourceTest,WebXmlEndpointExposureTest -DfailIfNoTests=false test
+```
+
+## 完了状態
+- queue mock 面が production code / tests / admin config から消えている
+- 公開 resource 登録から外れている
+- 関連テストが通る
+
+## 出力
+最後は必ず `【ワーカー報告】` ヘッダーを付け、以下を順に返してください。
+1. 実施内容
+2. 変更ファイル一覧
+3. 実行コマンド一覧
+4. テスト結果
+5. blocker / 残課題
+6. plan 更新要否

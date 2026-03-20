@@ -30,6 +30,28 @@ class RuntimeConfigurationSupportTest {
     }
 
     @Test
+    void resolveBooleanFlagFallsBackWhenUnset() {
+        assertFalse(RuntimeConfigurationSupport.resolveBooleanFlag("missing.property", "MISSING_ENV", false));
+        assertTrue(RuntimeConfigurationSupport.resolveBooleanFlag("missing.property", "MISSING_ENV", true));
+    }
+
+    @Test
+    void resolvePositiveNumbersUseSystemPropertyFirst() {
+        System.setProperty("runtime.test.int", "7");
+        System.setProperty("runtime.test.long", "11");
+
+        assertEquals(7, RuntimeConfigurationSupport.resolvePositiveInt("runtime.test.int", "MISSING_ENV", 3));
+        assertEquals(11L, RuntimeConfigurationSupport.resolvePositiveLong("runtime.test.long", "MISSING_ENV", 5L));
+    }
+
+    @Test
+    void resolveFacilityIdUsesTypedProperty() {
+        System.setProperty(RuntimeConfigurationSupport.PROP_FACILITY_ID, "F001");
+
+        assertEquals("F001", RuntimeConfigurationSupport.resolveFacilityId("MISSING_ENV"));
+    }
+
+    @Test
     void resolveTimezoneFallsBackToDefaultWhenInvalid() {
         System.setProperty(RuntimeConfigurationSupport.PROP_TIMEZONE, "Invalid/Timezone");
         assertEquals(RuntimeConfigurationSupport.DEFAULT_TIMEZONE, RuntimeConfigurationSupport.resolveTimezoneId());

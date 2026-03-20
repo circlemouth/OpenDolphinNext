@@ -2,6 +2,7 @@ package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -49,7 +50,7 @@ class OrcaAppointmentResourceTest {
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertGeneratedRunId(response.getRunId());
-        assertEquals(OrcaWrapperService.BLOCKER_TAG, response.getBlockerTag());
+        assertNull(response.getBlockerTag());
         assertEquals(1, response.getRecordsReturned());
         assertEquals("server", response.getDataSourceTransition());
     }

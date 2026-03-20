@@ -11,11 +11,6 @@ import open.dolphin.orca.OrcaGatewayException;
 public class StubOrcaTransport implements OrcaTransport {
 
     @Override
-    public boolean isStub() {
-        return true;
-    }
-
-    @Override
     public String invoke(OrcaEndpoint endpoint, String requestXml) {
         String resource = StubOrcaPayloadCatalog.resourceFor(endpoint);
         try (InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resource)) {

@@ -58,7 +58,6 @@ public class AdminConfigStore {
             AdminConfigSnapshot merged = current != null ? current.copy() : defaultSnapshot();
             if (incoming.getOrcaEndpoint() != null) merged.setOrcaEndpoint(incoming.getOrcaEndpoint());
             if (incoming.getMswEnabled() != null) merged.setMswEnabled(incoming.getMswEnabled());
-            if (incoming.getUseMockOrcaQueue() != null) merged.setUseMockOrcaQueue(incoming.getUseMockOrcaQueue());
             if (incoming.getVerifyAdminDelivery() != null) merged.setVerifyAdminDelivery(incoming.getVerifyAdminDelivery());
             if (incoming.getChartsDisplayEnabled() != null) merged.setChartsDisplayEnabled(incoming.getChartsDisplayEnabled());
             if (incoming.getChartsSendEnabled() != null) merged.setChartsSendEnabled(incoming.getChartsSendEnabled());
@@ -80,7 +79,7 @@ public class AdminConfigStore {
                 merged.setDeliveryVersion(version);
                 merged.setDeliveryEtag(version);
             }
-            merged.setSource(Boolean.TRUE.equals(merged.getUseMockOrcaQueue()) ? "mock" : "live");
+            merged.setSource("live");
             merged.setVerified(Boolean.TRUE.equals(merged.getVerifyAdminDelivery()));
 
             current = merged;
@@ -125,7 +124,6 @@ public class AdminConfigStore {
         AdminConfigSnapshot snapshot = new AdminConfigSnapshot();
         snapshot.setOrcaEndpoint(resolveDefaultOrcaEndpoint());
         snapshot.setMswEnabled(Boolean.FALSE);
-        snapshot.setUseMockOrcaQueue(Boolean.FALSE);
         snapshot.setVerifyAdminDelivery(Boolean.FALSE);
         snapshot.setChartsDisplayEnabled(Boolean.TRUE);
         snapshot.setChartsSendEnabled(Boolean.TRUE);
@@ -140,7 +138,6 @@ public class AdminConfigStore {
     private AdminConfigSnapshot applyDefaults(AdminConfigSnapshot snapshot) {
         if (snapshot.getOrcaEndpoint() == null) snapshot.setOrcaEndpoint(resolveDefaultOrcaEndpoint());
         if (snapshot.getMswEnabled() == null) snapshot.setMswEnabled(Boolean.FALSE);
-        if (snapshot.getUseMockOrcaQueue() == null) snapshot.setUseMockOrcaQueue(Boolean.FALSE);
         if (snapshot.getVerifyAdminDelivery() == null) snapshot.setVerifyAdminDelivery(Boolean.FALSE);
         if (snapshot.getChartsDisplayEnabled() == null) snapshot.setChartsDisplayEnabled(Boolean.TRUE);
         if (snapshot.getChartsSendEnabled() == null) snapshot.setChartsSendEnabled(Boolean.TRUE);
@@ -161,9 +158,7 @@ public class AdminConfigStore {
         if (snapshot.getDeliveryEtag() == null || snapshot.getDeliveryEtag().isBlank()) {
             snapshot.setDeliveryEtag(snapshot.getDeliveryVersion());
         }
-        if (snapshot.getSource() == null) {
-            snapshot.setSource(Boolean.TRUE.equals(snapshot.getUseMockOrcaQueue()) ? "mock" : "live");
-        }
+        if (snapshot.getSource() == null) snapshot.setSource("live");
         if (snapshot.getVerified() == null) {
             snapshot.setVerified(Boolean.TRUE.equals(snapshot.getVerifyAdminDelivery()));
         }

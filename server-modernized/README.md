@@ -18,6 +18,7 @@
 - 詳細チェックリスト: `docs/web-client/operations/security-rollout-checklist-20260304.md`
 
 ## Typed config 運用メモ
-- `custom.properties` と `jboss.home.dir` 依存は段階的に廃止しており、起動時設定は `config/server-modernized.env.sample` にある typed config キーを正本として投入する。
+- 起動時設定は `config/server-modernized.env.sample` にある typed config キーを正本として投入する。補完用の旧設定ファイル運用は採らない。
 - FIDO2 は `FIDO2_RP_ID` / `FIDO2_RP_NAME` / `FIDO2_ALLOWED_ORIGINS` の 3 点が必須で、dev default は持たない。未設定時は startup validation で fail-fast する。
-- Plivo SMS は `PLIVO_*` キーだけで解決される。`PLIVO_LOG_LEVEL` / `PLIVO_LOG_MESSAGE_CONTENT` / `PLIVO_HTTP_*` / `PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE` を含めて環境ごとに明示投入し、`custom.properties` での補完は前提にしない。
+- Plivo SMS は `PLIVO_*` キーだけで解決される。`PLIVO_LOG_LEVEL` / `PLIVO_LOG_MESSAGE_CONTENT` / `PLIVO_HTTP_*` / `PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE` を含めて環境ごとに明示投入する。
+- `ChartEventHistoryPurgeScheduler` と `OrcaPatientSyncScheduler` の定期処理は既定 OFF。必要な環境だけ `CHART_EVENT_HISTORY_PURGE_ENABLED=true` / `ORCA_PATIENT_SYNC_ENABLED=true` を明示する。

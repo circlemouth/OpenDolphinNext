@@ -235,7 +235,6 @@ public class AdminConfigResource extends AbstractResource {
         Response.ResponseBuilder builder = Response.ok(body);
         builder.header("x-run-id", runId);
         builder.header("x-admin-delivery-verification", Boolean.TRUE.equals(snapshot.getVerified()) ? "enabled" : "disabled");
-        builder.header("x-orca-queue-mode", Boolean.TRUE.equals(snapshot.getUseMockOrcaQueue()) ? "mock" : "live");
         if (snapshot.getEnvironment() != null) {
             builder.header("x-environment", snapshot.getEnvironment());
         }
@@ -255,7 +254,6 @@ public class AdminConfigResource extends AbstractResource {
         body.put("runId", runId);
         body.put("orcaEndpoint", snapshot.getOrcaEndpoint());
         body.put("mswEnabled", snapshot.getMswEnabled());
-        body.put("useMockOrcaQueue", snapshot.getUseMockOrcaQueue());
         body.put("verifyAdminDelivery", snapshot.getVerifyAdminDelivery());
         body.put("chartsDisplayEnabled", snapshot.getChartsDisplayEnabled());
         body.put("chartsSendEnabled", snapshot.getChartsSendEnabled());
@@ -284,7 +282,6 @@ public class AdminConfigResource extends AbstractResource {
         }
         snapshot.setOrcaEndpoint(getString(payload, "orcaEndpoint", "endpoint"));
         snapshot.setMswEnabled(getBoolean(payload.get("mswEnabled"), payload.get("msw")));
-        snapshot.setUseMockOrcaQueue(getBoolean(payload.get("useMockOrcaQueue")));
         snapshot.setVerifyAdminDelivery(getBoolean(payload.get("verifyAdminDelivery")));
         snapshot.setChartsDisplayEnabled(getBoolean(payload.get("chartsDisplayEnabled")));
         snapshot.setChartsSendEnabled(getBoolean(payload.get("chartsSendEnabled")));

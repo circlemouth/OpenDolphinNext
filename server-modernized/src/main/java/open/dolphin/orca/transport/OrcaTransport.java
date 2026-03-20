@@ -25,10 +25,4 @@ public interface OrcaTransport {
         return OrcaTransportResult.fallback(body, contentType);
     }
 
-    /**
-     * Hint whether this transport is backed by stub payloads.
-     */
-    default boolean isStub() {
-        return false;
-    }
 }

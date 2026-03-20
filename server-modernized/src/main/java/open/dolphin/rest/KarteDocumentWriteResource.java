@@ -34,6 +34,7 @@ import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PVTServiceBean;
+import open.dolphin.session.UserServiceBean;
 import open.dolphin.session.framework.SessionTraceContext;
 import open.dolphin.session.framework.SessionTraceManager;
 
@@ -53,6 +54,9 @@ public class KarteDocumentWriteResource extends AbstractResource {
 
     @Inject
     private SessionTraceManager sessionTraceManager;
+
+    @Inject
+    private UserServiceBean userServiceBean;
 
     @Inject
     private ObjectMapper objectMapper;
@@ -310,9 +314,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
         String actorId = resolveActorId();
         payload.setActorId(actorId);
         payload.setActorDisplayName(resolveActorDisplayName(actorId));
-        if (httpServletRequest != null && httpServletRequest.isUserInRole("ADMIN")) {
-            payload.setActorRole("ADMIN");
-        }
+        payload.setActorRole(resolveActorRole(httpServletRequest, userServiceBean));
         payload.setAction(action);
         payload.setResource(resolveResourcePath());
         String requestId = resolveRequestId();

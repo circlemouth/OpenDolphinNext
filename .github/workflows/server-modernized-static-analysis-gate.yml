@@ -4,8 +4,10 @@ on:
   pull_request:
     paths:
       - "server-modernized/**"
-      - "common/**"
+      - "reporting/**"
+      - "pom.xml"
       - "pom.server-modernized.xml"
+      - ".gitattributes"
       - ".github/workflows/server-modernized-static-analysis-gate.yml"
   workflow_dispatch:
 
@@ -31,13 +33,13 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Run static analysis gate (common + server-modernized)
+      - name: Run packaging and quality gates
         run: >-
-          mvn -B -ntp -f pom.server-modernized.xml
-          -Pstatic-analysis
+          mvn -B -ntp
+          -Pstatic-analysis,dependency-hygiene
           -Dstatic.analysis.enforce=true
           -DskipTests
-          -pl common,server-modernized
+          -pl server-modernized
           -am verify
 
       - name: Upload static analysis reports
@@ -47,3 +49,4 @@ jobs:
           name: static-analysis-reports
           path: |
             server-modernized/target/static-analysis/**/*.xml
+            server-modernized/target/opendolphin-server.war
