@@ -2,7 +2,8 @@
 
 ## 現行ステータス
 - Phase2 開発ドキュメントは **Legacy/Archive（参照専用）**。Phase2 を現行フェーズとして扱わない。
-- 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`。
+- 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md` / `docs/server-modernization/planning/server-modernized-plan/README.md`。
+- `docs/server-modernization/planning/server-modernized-plan/` は、`server-modernized` の次の開発ドキュメント一式として扱う。入口は `README.md`、索引は `docs/README.md`。
 - `docs/server-modernization/planning/codex_automation_orchestration/` は、cleanup track をメインエージェント + サブエージェント順次実行で進めるための **現行 Codex automation 導線** である。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` は、server modernization automation の作業記録として保持する **Legacy/Archive** 扱いの開発ドキュメントである。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。

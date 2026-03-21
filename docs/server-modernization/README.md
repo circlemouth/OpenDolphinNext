@@ -6,6 +6,11 @@
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
 
+## 次の開発ドキュメント一式
+- `docs/server-modernization/planning/server-modernized-plan/README.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/README.md`
+- 用途: `server-modernized` の改修計画、契約文書、運用手順の入口。まず `README.md`、次に `docs/README.md` を読む。
+
 ## Legacy 計画書
 - 現行判断は `docs/DEVELOPMENT_STATUS.md`、`AGENTS.md`、最新のユーザー/マネージャー指示を優先する。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md`
