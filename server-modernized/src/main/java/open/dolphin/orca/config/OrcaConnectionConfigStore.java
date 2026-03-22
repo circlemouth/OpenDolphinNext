@@ -145,6 +145,8 @@ public class OrcaConnectionConfigStore {
         if (username != null) {
             merged.setUsername(username);
         }
+        merged.setPushUrl(normalizePushUrl(update.pushUrl(), merged.getPushUrl()));
+        merged.setPushTenantId(normalizePushTenantId(update.pushTenantId(), merged.getPushTenantId()));
         String passwordPlain = trimToNull(update.password());
         if (passwordPlain != null) {
             merged.setPasswordEncrypted(encryptText(passwordPlain));
@@ -219,13 +221,14 @@ public class OrcaConnectionConfigStore {
         return nextFacilities;
     }
     private void logUpdatedFacility(String runId, String actor, String facilityId, OrcaConnectionConfigRecord merged) {
-        LOGGER.info("ORCA connection config updated. runId={} actor={} facilityId={} weborca={} clientAuthEnabled={} caProvided={}",
+        LOGGER.info("ORCA connection config updated. runId={} actor={} facilityId={} weborca={} clientAuthEnabled={} caProvided={} pushConfigured={}",
                 safe(runId),
                 maskActor(actor),
                 facilityId,
                 Boolean.TRUE.equals(merged.getUseWeborca()),
                 Boolean.TRUE.equals(merged.getClientAuthEnabled()),
-                merged.getCaCertificateEncrypted() != null && !merged.getCaCertificateEncrypted().isBlank());
+                merged.getCaCertificateEncrypted() != null && !merged.getCaCertificateEncrypted().isBlank(),
+                trimToNull(merged.getPushUrl()) != null);
     }
     public String updateDefaultFacilityId(String facilityId, String runId, String actor) {
         String normalizedFacilityId = requireFacilityId(facilityId);
@@ -275,7 +278,9 @@ public class OrcaConnectionConfigStore {
                 clientAuthEnabled,
                 p12,
                 passphrase,
-                ca
+                ca,
+                resolvePushUrl(record),
+                trimToNull(record.getPushTenantId())
         );
     }
     private StoredState loadState() {
@@ -406,6 +411,11 @@ public class OrcaConnectionConfigStore {
 
         String username = trimToNull(resolved.getUsername());
         if (username != null) resolved.setUsername(username);
+        String pushUrl = trimToNull(resolved.getPushUrl());
+        if (pushUrl != null) {
+            resolved.setPushUrl(pushUrl);
+        }
+        resolved.setPushTenantId(trimToNull(resolved.getPushTenantId()));
 
         resolved.setFacilityId(normalizeFacilityId(resolved.getFacilityId()));
         resolved.setDefaultFacilityId(null);
@@ -433,6 +443,7 @@ public class OrcaConnectionConfigStore {
         }
         String baseUrl = buildBaseUrl(record.getServerUrl(), record.getPort(), Boolean.TRUE.equals(record.getUseWeborca()));
         OrcaTransportSecurityPolicy.validateBaseUrl(baseUrl, Boolean.TRUE.equals(record.getUseWeborca()));
+        validatePushConfiguration(record);
         if (record.getPasswordEncrypted() == null || record.getPasswordEncrypted().isBlank()) {
             throw new IllegalArgumentException("パスワードまたはAPIキーは必須です。");
         }
@@ -523,6 +534,8 @@ public class OrcaConnectionConfigStore {
         to.setServerUrl(from.getServerUrl());
         to.setPort(from.getPort());
         to.setUsername(from.getUsername());
+        to.setPushUrl(from.getPushUrl());
+        to.setPushTenantId(from.getPushTenantId());
         to.setPasswordEncrypted(from.getPasswordEncrypted());
         to.setPasswordUpdatedAt(from.getPasswordUpdatedAt());
         to.setClientAuthEnabled(from.getClientAuthEnabled());
@@ -543,6 +556,8 @@ public class OrcaConnectionConfigStore {
         return trimToNull(record.getServerUrl()) != null
                 || record.getPort() != null
                 || trimToNull(record.getUsername()) != null
+                || trimToNull(record.getPushUrl()) != null
+                || trimToNull(record.getPushTenantId()) != null
                 || (record.getPasswordEncrypted() != null && !record.getPasswordEncrypted().isBlank())
                 || record.getUseWeborca() != null
                 || record.getClientAuthEnabled() != null
@@ -583,6 +598,73 @@ public class OrcaConnectionConfigStore {
         } catch (Exception ex) {
             return null;
         }
+    }
+
+    private static void validatePushConfiguration(OrcaConnectionConfigRecord record) {
+        String pushUrl = trimToNull(record.getPushUrl());
+        String pushTenantId = trimToNull(record.getPushTenantId());
+        if (pushTenantId != null && pushUrl == null) {
+            throw new IllegalArgumentException("Push URL が未設定のため pushTenantId は保存できません。");
+        }
+        if (pushUrl != null) {
+            record.setPushUrl(buildPushUrl(pushUrl));
+        }
+        record.setPushTenantId(pushTenantId);
+    }
+
+    private static String resolvePushUrl(OrcaConnectionConfigRecord record) {
+        String pushUrl = trimToNull(record.getPushUrl());
+        if (pushUrl == null) {
+            return null;
+        }
+        return buildPushUrl(pushUrl);
+    }
+
+    private static String buildPushUrl(String pushUrl) {
+        String normalized = trimToNull(pushUrl);
+        if (normalized == null) {
+            throw new IllegalArgumentException("pushUrl is required");
+        }
+        URI uri;
+        try {
+            uri = URI.create(normalized);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Push URL が不正です。", ex);
+        }
+        String scheme = trimToNull(uri.getScheme());
+        String host = trimToNull(uri.getHost());
+        if (scheme == null || host == null) {
+            throw new IllegalArgumentException("Push URL は絶対 URI で指定してください。");
+        }
+        String normalizedScheme = scheme.toLowerCase(Locale.ROOT);
+        if (!"ws".equals(normalizedScheme) && !"wss".equals(normalizedScheme)) {
+            throw new IllegalArgumentException("Push URL は ws:// または wss:// のみ指定できます。");
+        }
+        if (trimToNull(uri.getUserInfo()) != null) {
+            throw new IllegalArgumentException("Push URL に userinfo は指定できません。");
+        }
+        if (uri.getPort() < -1 || uri.getPort() == 0 || uri.getPort() > 65535) {
+            throw new IllegalArgumentException("Push URL のポート番号が不正です。");
+        }
+        if (trimToNull(uri.getFragment()) != null) {
+            throw new IllegalArgumentException("Push URL に fragment は指定できません。");
+        }
+        return uri.normalize().toASCIIString();
+    }
+
+    private static String normalizePushUrl(String requestedPushUrl, String currentPushUrl) {
+        if (requestedPushUrl != null) {
+            String requested = trimToNull(requestedPushUrl);
+            return requested == null ? null : buildPushUrl(requested);
+        }
+        return currentPushUrl != null ? trimToNull(currentPushUrl) : null;
+    }
+
+    private static String normalizePushTenantId(String requestedPushTenantId, String currentPushTenantId) {
+        if (requestedPushTenantId != null) {
+            return trimToNull(requestedPushTenantId);
+        }
+        return currentPushTenantId != null ? trimToNull(currentPushTenantId) : null;
     }
 
     private static String buildBaseUrl(String serverUrl, Integer port, boolean useWeborca) {
@@ -668,6 +750,8 @@ public class OrcaConnectionConfigStore {
             String serverUrl,
             Integer port,
             String username,
+            String pushUrl,
+            String pushTenantId,
             String password,
             Boolean clientAuthEnabled,
             String clientCertificatePassphrase
@@ -689,8 +773,23 @@ public class OrcaConnectionConfigStore {
             boolean clientAuthEnabled,
             byte[] clientCertificateP12,
             String clientCertificatePassphrase,
-            byte[] caCertificate
-    ) {}
+            byte[] caCertificate,
+            String pushUrl,
+            String pushTenantId
+    ) {
+        public ResolvedOrcaConnection(
+                boolean useWeborca,
+                String baseUrl,
+                String username,
+                String password,
+                boolean clientAuthEnabled,
+                byte[] clientCertificateP12,
+                String clientCertificatePassphrase,
+                byte[] caCertificate) {
+            this(useWeborca, baseUrl, username, password, clientAuthEnabled,
+                    clientCertificateP12, clientCertificatePassphrase, caCertificate, null, null);
+        }
+    }
 
     private record StoredState(
             Map<String, OrcaConnectionConfigRecord> facilities,

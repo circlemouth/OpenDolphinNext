@@ -92,9 +92,21 @@ public class ServerConfigurationResolver {
     public static final String KEY_ORCA_PROXY_FORWARD_X_ORCA_HEADERS = "orca.proxy.forward.x-orca-headers";
     public static final String KEY_ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER =
             "orca.proxy.forward.api-result-message-header";
-    public static final String KEY_ORCA_PUSH_EVENT_CACHE_PATH = "orca.push-event-cache.path";
-    public static final String KEY_ORCA_PUSH_EVENT_CACHE_MAX = "orca.push-event-cache.max-entries";
-    public static final String KEY_ORCA_PUSH_EVENT_CACHE_TTL_DAYS = "orca.push-event-cache.ttl-days";
+    public static final String KEY_ORCA_PUSH_ENABLED = "orca.push.enabled";
+    public static final String KEY_ORCA_PUSH_SHADOW_MODE = "orca.push.shadow-mode";
+    public static final String KEY_ORCA_PUSH_RECEPTION_ENABLED = "orca.push.reception.enabled";
+    public static final String KEY_ORCA_PUSH_MEDICAL_ENABLED = "orca.push.medical.enabled";
+    public static final String KEY_ORCA_PUSH_CONNECT_TIMEOUT_MS = "orca.push.connect-timeout-ms";
+    public static final String KEY_ORCA_PUSH_PING_INTERVAL_SECONDS = "orca.push.ping-interval-seconds";
+    public static final String KEY_ORCA_PUSH_IDLE_TIMEOUT_SECONDS = "orca.push.idle-timeout-seconds";
+    public static final String KEY_ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS = "orca.push.reconnect.initial-delay-ms";
+    public static final String KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS = "orca.push.reconnect.max-delay-ms";
+    public static final String KEY_ORCA_PUSH_RECOVERY_ENABLED = "orca.push.recovery.enabled";
+    public static final String KEY_ORCA_PUSH_RECOVERY_USE_PUSHEVENTGET = "orca.push.recovery.use-pusheventget";
+    public static final String KEY_ORCA_PUSH_RECOVERY_INTERVAL_MINUTES = "orca.push.recovery.interval-minutes";
+    public static final String KEY_ORCA_PUSH_RECOVERY_INITIAL_LOOKBACK_MINUTES = "orca.push.recovery.initial-lookback-minutes";
+    public static final String KEY_ORCA_PUSH_RECOVERY_OVERLAP_MINUTES = "orca.push.recovery.overlap-minutes";
+    public static final String KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS = "orca.push.dedup.retention-days";
     public static final String KEY_MASTER_UPDATE_SCHEDULER_ENABLED = "master-update.scheduler.enabled";
     public static final String KEY_METRICS_REGISTRY_JNDI = "metrics.registry.jndi";
     public static final String KEY_BIND_ADDRESS = "jboss.bind.address";
@@ -279,11 +291,23 @@ public class ServerConfigurationResolver {
         );
     }
 
-    public ServerRuntimeConfiguration.PushEventCacheSettings orcaPushEventCache() {
-        return new ServerRuntimeConfiguration.PushEventCacheSettings(
-                optionalPath(KEY_ORCA_PUSH_EVENT_CACHE_PATH).orElse(null),
-                optionalInteger(KEY_ORCA_PUSH_EVENT_CACHE_MAX).orElse(null),
-                optionalLong(KEY_ORCA_PUSH_EVENT_CACHE_TTL_DAYS).orElse(null)
+    public ServerRuntimeConfiguration.OrcaPushSettings orcaPush() {
+        return new ServerRuntimeConfiguration.OrcaPushSettings(
+                optionalBoolean(KEY_ORCA_PUSH_ENABLED).orElse(false),
+                optionalBoolean(KEY_ORCA_PUSH_SHADOW_MODE).orElse(true),
+                optionalBoolean(KEY_ORCA_PUSH_RECEPTION_ENABLED).orElse(true),
+                optionalBoolean(KEY_ORCA_PUSH_MEDICAL_ENABLED).orElse(false),
+                optionalInteger(KEY_ORCA_PUSH_CONNECT_TIMEOUT_MS).orElse(null),
+                optionalInteger(KEY_ORCA_PUSH_PING_INTERVAL_SECONDS).orElse(null),
+                optionalInteger(KEY_ORCA_PUSH_IDLE_TIMEOUT_SECONDS).orElse(null),
+                optionalInteger(KEY_ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS).orElse(null),
+                optionalInteger(KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS).orElse(null),
+                optionalBoolean(KEY_ORCA_PUSH_RECOVERY_ENABLED).orElse(true),
+                optionalBoolean(KEY_ORCA_PUSH_RECOVERY_USE_PUSHEVENTGET).orElse(false),
+                optionalInteger(KEY_ORCA_PUSH_RECOVERY_INTERVAL_MINUTES).orElse(null),
+                optionalInteger(KEY_ORCA_PUSH_RECOVERY_INITIAL_LOOKBACK_MINUTES).orElse(null),
+                optionalInteger(KEY_ORCA_PUSH_RECOVERY_OVERLAP_MINUTES).orElse(null),
+                optionalInteger(KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS).orElse(null)
         );
     }
 

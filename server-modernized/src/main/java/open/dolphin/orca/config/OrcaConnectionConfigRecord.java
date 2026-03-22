@@ -24,6 +24,8 @@ public class OrcaConnectionConfigRecord {
     private String serverUrl;
     private Integer port;
     private String username;
+    private String pushUrl;
+    private String pushTenantId;
 
     private String passwordEncrypted;
     private String passwordUpdatedAt;
@@ -110,6 +112,22 @@ public class OrcaConnectionConfigRecord {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getPushUrl() {
+        return pushUrl;
+    }
+
+    public void setPushUrl(String pushUrl) {
+        this.pushUrl = pushUrl;
+    }
+
+    public String getPushTenantId() {
+        return pushTenantId;
+    }
+
+    public void setPushTenantId(String pushTenantId) {
+        this.pushTenantId = pushTenantId;
     }
 
     public String getPasswordEncrypted() {

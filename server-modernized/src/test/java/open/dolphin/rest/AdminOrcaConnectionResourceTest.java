@@ -91,6 +91,8 @@ class AdminOrcaConnectionResourceTest {
         record.setServerUrl("https://weborca-trial.orca.med.or.jp");
         record.setPort(443);
         record.setUsername("trial");
+        record.setPushUrl("wss://push.orca.med.or.jp/ws/notifications");
+        record.setPushTenantId("tenant-001");
         record.setPasswordEncrypted("encrypted-password");
         record.setPasswordUpdatedAt("2026-02-11T23:25:24Z");
         when(configStore.getSnapshot("FACILITY")).thenReturn(record);
@@ -108,6 +110,9 @@ class AdminOrcaConnectionResourceTest {
         assertEquals("https://weborca-trial.orca.med.or.jp", body.get("serverUrl"));
         assertEquals(443, body.get("port"));
         assertEquals("trial", body.get("username"));
+        assertEquals("wss://push.orca.med.or.jp/ws/notifications", body.get("pushUrl"));
+        assertEquals("tenant-001", body.get("pushTenantId"));
+        assertEquals(Boolean.TRUE, body.get("pushConfigured"));
         assertEquals(Boolean.TRUE, body.get("passwordConfigured"));
         assertTrue(!body.containsKey("password"));
     }
@@ -154,13 +159,15 @@ class AdminOrcaConnectionResourceTest {
         updated.setServerUrl("https://weborca-trial.orca.med.or.jp");
         updated.setPort(443);
         updated.setUsername("trial");
+        updated.setPushUrl("wss://push.orca.med.or.jp/ws/notifications");
+        updated.setPushTenantId("tenant-001");
         updated.setPasswordEncrypted("encrypted-password");
         when(configStore.update(eq("FACILITY"), org.mockito.ArgumentMatchers.any(), isNull(), isNull(), eq("RUN-SAVE"), eq("FACILITY:admin")))
                 .thenReturn(updated);
 
         Response response = resource.putConfig(
                 request,
-                multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://weborca-trial.orca.med.or.jp\",\"port\":443,\"username\":\"trial\"}")
+                multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://weborca-trial.orca.med.or.jp\",\"port\":443,\"username\":\"trial\",\"pushUrl\":\"wss://push.orca.med.or.jp/ws/notifications\",\"pushTenantId\":\"tenant-001\"}")
         );
 
         assertEquals(200, response.getStatus());
@@ -171,9 +178,32 @@ class AdminOrcaConnectionResourceTest {
         assertEquals("RUN-SAVE", body.get("runId"));
         assertEquals("FACILITY", body.get("facilityId"));
         assertEquals("FACILITY", body.get("defaultFacilityId"));
+        assertEquals("wss://push.orca.med.or.jp/ws/notifications", body.get("pushUrl"));
+        assertEquals("tenant-001", body.get("pushTenantId"));
+        assertEquals(Boolean.TRUE, body.get("pushConfigured"));
         assertEquals(Boolean.TRUE, body.get("passwordConfigured"));
         verify(configStore).update(eq("FACILITY"), org.mockito.ArgumentMatchers.any(), isNull(), isNull(), eq("RUN-SAVE"), eq("FACILITY:admin"));
         verify(restOrcaTransport).reloadSettings("FACILITY");
+    }
+
+    @Test
+    void putConfigReturnsBadRequestWhenPushUrlIsInvalid() throws Exception {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-PUSH");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/admin/orca/connection");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(configStore.update(eq("FACILITY"), org.mockito.ArgumentMatchers.any(), isNull(), isNull(), eq("RUN-PUSH"), eq("FACILITY:admin")))
+                .thenThrow(new IllegalArgumentException("Push URL は ws:// または wss:// のみ指定できます。"));
+
+        try {
+            resource.putConfig(
+                    request,
+                    multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://weborca-trial.orca.med.or.jp\",\"port\":443,\"username\":\"trial\",\"pushUrl\":\"https://push.orca.med.or.jp/ws\"}")
+            );
+            fail("Expected WebApplicationException");
+        } catch (WebApplicationException ex) {
+            assertEquals(400, ex.getResponse().getStatus());
+        }
     }
 
     @Test
@@ -189,6 +219,8 @@ class AdminOrcaConnectionResourceTest {
         record.setServerUrl("https://facility.example.orca");
         record.setPort(443);
         record.setUsername("facility-user");
+        record.setPushUrl("wss://facility.example.orca/push");
+        record.setPushTenantId("tenant-f001");
         record.setPasswordEncrypted("encrypted-password");
         when(configStore.getSnapshot("F001")).thenReturn(record);
 
@@ -199,6 +231,8 @@ class AdminOrcaConnectionResourceTest {
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
         assertEquals("F001", body.get("facilityId"));
         assertEquals("F001", body.get("defaultFacilityId"));
+        assertEquals("wss://facility.example.orca/push", body.get("pushUrl"));
+        assertEquals("tenant-f001", body.get("pushTenantId"));
         verify(configStore).updateDefaultFacilityId("F001", "RUN-DEFAULT", "FACILITY:admin");
         verify(restOrcaTransport).reloadSettings(null);
     }

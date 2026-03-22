@@ -117,10 +117,22 @@ public final class ServerRuntimeConfiguration {
     ) {
     }
 
-    public record PushEventCacheSettings(
-            Path cachePath,
-            Integer maxEntries,
-            Long ttlDays
+    public record OrcaPushSettings(
+            boolean enabled,
+            boolean shadowMode,
+            boolean receptionEnabled,
+            boolean medicalEnabled,
+            Integer connectTimeoutMs,
+            Integer pingIntervalSeconds,
+            Integer idleTimeoutSeconds,
+            Integer reconnectInitialDelayMs,
+            Integer reconnectMaxDelayMs,
+            boolean recoveryEnabled,
+            boolean recoveryUsePusheventget,
+            Integer recoveryIntervalMinutes,
+            Integer recoveryInitialLookbackMinutes,
+            Integer recoveryOverlapMinutes,
+            Integer dedupRetentionDays
     ) {
     }
 

@@ -18,7 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.orca.config.OrcaConnectionConfigRecord;
@@ -135,6 +134,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         }
 
         details.put("useWeborca", Boolean.TRUE.equals(updated.getUseWeborca()));
+        details.put("pushConfigured", updated.getPushUrl() != null && !updated.getPushUrl().isBlank());
         details.put("clientAuthEnabled", Boolean.TRUE.equals(updated.getClientAuthEnabled()));
         details.put("clientCertificateUpdated", p12 != null);
         details.put("caCertificateUpdated", ca != null);
@@ -229,6 +229,9 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         body.put("serverUrl", record.getServerUrl());
         body.put("port", record.getPort());
         body.put("username", record.getUsername());
+        body.put("pushUrl", record.getPushUrl());
+        body.put("pushTenantId", record.getPushTenantId());
+        body.put("pushConfigured", record.getPushUrl() != null && !record.getPushUrl().isBlank());
         body.put("passwordConfigured", record.getPasswordEncrypted() != null && !record.getPasswordEncrypted().isBlank());
         body.put("passwordUpdatedAt", record.getPasswordUpdatedAt());
         body.put("clientAuthEnabled", Boolean.TRUE.equals(record.getClientAuthEnabled()));
@@ -284,6 +287,8 @@ public class AdminOrcaConnectionResource extends AbstractResource {
             String serverUrl = trimToNull(asString(payload.get("serverUrl")));
             Integer port = asInteger(payload.get("port"));
             String username = trimToNull(asString(payload.get("username")));
+            String pushUrl = payload.containsKey("pushUrl") ? asString(payload.get("pushUrl")) : null;
+            String pushTenantId = payload.containsKey("pushTenantId") ? asString(payload.get("pushTenantId")) : null;
             String password = trimToNull(asString(payload.get("password")));
             Boolean clientAuthEnabled = asBoolean(payload.get("clientAuthEnabled"));
             String passphrase = trimToNull(asString(payload.get("clientCertificatePassphrase")));
@@ -292,6 +297,8 @@ public class AdminOrcaConnectionResource extends AbstractResource {
                     serverUrl,
                     port,
                     username,
+                    pushUrl,
+                    pushTenantId,
                     password,
                     clientAuthEnabled,
                     passphrase

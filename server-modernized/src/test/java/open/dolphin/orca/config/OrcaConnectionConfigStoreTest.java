@@ -50,6 +50,8 @@ class OrcaConnectionConfigStoreTest {
                 "https://weborca-trial.orca.med.or.jp",
                 443,
                 "trial",
+                "wss://push.orca.med.or.jp/ws/notifications",
+                "tenant-001",
                 "weborcatrial",
                 Boolean.FALSE,
                 null
@@ -74,12 +76,16 @@ class OrcaConnectionConfigStoreTest {
         assertEquals("https://weborca-trial.orca.med.or.jp", snapshot.getServerUrl());
         assertEquals(443, snapshot.getPort());
         assertEquals("trial", snapshot.getUsername());
+        assertEquals("wss://push.orca.med.or.jp/ws/notifications", snapshot.getPushUrl());
+        assertEquals("tenant-001", snapshot.getPushTenantId());
         assertEquals("F001", reloaded.getDefaultFacilityId());
 
         OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = reloaded.resolve();
         assertEquals("https://weborca-trial.orca.med.or.jp", resolved.baseUrl());
         assertEquals("trial", resolved.username());
         assertEquals("weborcatrial", resolved.password());
+        assertEquals("wss://push.orca.med.or.jp/ws/notifications", resolved.pushUrl());
+        assertEquals("tenant-001", resolved.pushTenantId());
     }
 
     @Test
@@ -93,6 +99,8 @@ class OrcaConnectionConfigStoreTest {
                 "https://default.example.orca",
                 443,
                 "default-user",
+                null,
+                null,
                 "default-pass",
                 Boolean.FALSE,
                 null
@@ -104,6 +112,8 @@ class OrcaConnectionConfigStoreTest {
                 "https://facility.example.orca",
                 443,
                 "facility-user",
+                "wss://facility.example.orca/push",
+                null,
                 "facility-pass",
                 Boolean.FALSE,
                 null
@@ -119,6 +129,7 @@ class OrcaConnectionConfigStoreTest {
         assertNotNull(facilitySnapshot);
         assertEquals("F001", facilitySnapshot.getFacilityId());
         assertEquals("https://facility.example.orca", facilitySnapshot.getServerUrl());
+        assertEquals("wss://facility.example.orca/push", facilitySnapshot.getPushUrl());
 
         assertNull(store.getSnapshot("UNKNOWN"));
         OrcaConnectionPolicyException unresolved = assertThrows(
@@ -140,6 +151,8 @@ class OrcaConnectionConfigStoreTest {
                     "http://weborca.example.test",
                     80,
                     "trial",
+                    null,
+                    null,
                     "weborcatrial",
                     Boolean.FALSE,
                     null
@@ -152,6 +165,32 @@ class OrcaConnectionConfigStoreTest {
 
             assertEquals("weborca_requires_https", ex.getErrorCategory());
         }
+    }
+
+    @Test
+    void updateRejectsInvalidPushUrlScheme() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
+        Map<String, String> db = new LinkedHashMap<>();
+        OrcaConnectionConfigStore store = newStore(protector, db);
+
+        OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
+                Boolean.TRUE,
+                "https://weborca-trial.orca.med.or.jp",
+                443,
+                "trial",
+                "https://push.orca.med.or.jp/ws",
+                null,
+                "weborcatrial",
+                Boolean.FALSE,
+                null
+        );
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> store.update("F001", update, null, null, "RUN-PUSH", "FACILITY:admin")
+        );
+
+        assertEquals("Push URL は ws:// または wss:// のみ指定できます。", ex.getMessage());
     }
 
     @Test
