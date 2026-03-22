@@ -851,3 +851,35 @@
   - なし。
 - 次の WS に渡す注意点:
   - WS-08 は完了。次は master checklist の未完了先頭を基準に、sample env / runbook / audit/log 観点を残件監査して次 WS へ進むこと。
+
+## 最終監査（README 起点残件の閉鎖）
+- 実施日: 2026-03-22
+- 変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/rest/LogFilter.java`
+  - `docs/contracts/runtime-config.md`
+  - `docs/development/server-modernized-remediation-master-checklist.md`
+  - `docs/development/execution-log.md`
+- 主要判断:
+  - `WS-07` 推奨統合テスト欄は、`ServerConfigurationValidatorTest` / `FreshSchemaBaselineTest` / `OrcaConnectionConfigStoreTest` / `DocumentIntegrityServiceTest` / `PatientImagesResourceTest` / `PatientImageServiceBeanTest` / `OperationsHealthResourceTest` / `OperationsReadinessResourceTest` / `LogFilterTest` の実測成功をもって完了へ更新した。
+  - `audit / logs` の secret 非露出は `LogFilterTest` の監査 detail sanitize と `ExternalServiceAuditLogger` の `Authorization` / cookie mask 実装で確認した。
+  - `sample env` と `release runbook` は root 側正本の網羅性監査で不整合なしを確認した。
+  - `X-Feature-Images` は受理済み legacy header として残さず、未使用定数も削除して正本コードから整理した。
+- 追加/更新したテスト:
+  - 再実行: `ServerConfigurationValidatorTest`
+  - 再実行: `FreshSchemaBaselineTest`
+  - 再実行: `OrcaConnectionConfigStoreTest`
+  - 再実行: `DocumentIntegrityServiceTest`
+  - 再実行: `PatientImagesResourceTest`
+  - 再実行: `PatientImageServiceBeanTest`
+  - 再実行: `OperationsHealthResourceTest`
+  - 再実行: `OperationsReadinessResourceTest`
+  - 再実行: `LogFilterTest`
+- verify 結果:
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=ServerConfigurationValidatorTest,FreshSchemaBaselineTest,OrcaConnectionConfigStoreTest,DocumentIntegrityServiceTest,PatientImagesResourceTest,PatientImageServiceBeanTest,OperationsHealthResourceTest,OperationsReadinessResourceTest,LogFilterTest -Dsurefire.failIfNoSpecifiedTests=false test` 成功
+  - 2026-03-22 10:45:46 JST に BUILD SUCCESS を確認
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify` 成功
+  - 2026-03-22 10:42:40 JST に BUILD SUCCESS を確認
+- 未解決事項:
+  - なし。
+- 次の WS に渡す注意点:
+  - 参照計画 `docs/server-modernization/planning/server-modernized-plan/README.md` 起点の root 側残件は閉鎖済み。以後は root 側正本文書を唯一の更新対象とする。

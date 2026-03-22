@@ -25,22 +25,22 @@
 ## 作業の大原則
 
 ### 1. 1 変更 1 契約
-- [ ] 仕様を変える PR は、対応する `docs/contracts/*.md` を同時に更新する。
-- [ ] 設定を変える PR は、`config/server-modernized.env.sample` を同時に更新する。
-- [ ] 運用手順を変える PR は、`docs/runbooks/release-validation.md` を同時に更新する。
+- [x] 仕様を変える PR は、対応する `docs/contracts/*.md` を同時に更新する。
+- [x] 設定を変える PR は、`config/server-modernized.env.sample` を同時に更新する。
+- [x] 運用手順を変える PR は、`docs/runbooks/release-validation.md` を同時に更新する。
 
 ### 2. 互換レイヤーを増やさない
-- [ ] 旧 property / 旧 env / legacy header / TODO parameter は削除する。
-- [ ] 「今は旧挙動も受ける」は原則禁止とする。
-- [ ] 移行のための temporary fallback を入れる場合は、PR 中に削除予定日と削除タスクを明記し、この文書に checkbox を追加する。
+- [x] 旧 property / 旧 env / legacy header / TODO parameter は削除する。
+- [x] 「今は旧挙動も受ける」は原則禁止とする。
+- [x] 移行のための temporary fallback を入れる場合は、PR 中に削除予定日と削除タスクを明記し、この文書に checkbox を追加する。
 
 ### 3. fail-fast / fail-closed
-- [ ] 起動時に設定不備を検知できるものは runtime ではなく startup validation へ寄せる。
-- [ ] facility 未解決・storage 未設定・keyring 不正は即時失敗にする。
+- [x] 起動時に設定不備を検知できるものは runtime ではなく startup validation へ寄せる。
+- [x] facility 未解決・storage 未設定・keyring 不正は即時失敗にする。
 
 ### 4. 情報最小公開
-- [ ] health / readiness / error response / audit log で接続先詳細と secret を露出しない。
-- [ ] fixed reasonCode を用い、raw exception message を返さない。
+- [x] health / readiness / error response / audit log で接続先詳細と secret を露出しない。
+- [x] fixed reasonCode を用い、raw exception message を返さない。
 
 ## 実施順序
 1. 文書同期基盤と CI ガード
@@ -360,12 +360,12 @@
 8. [x] `persistence.xml` と `@Entity` の整合性を検証するテストか CI スクリプトを追加する。
 
 ### 推奨統合テスト
-- [ ] startup validation failure cases
-- [ ] Flyway migrate + JPA boot
-- [ ] ORCA connection config resolution
-- [ ] document integrity key rotation
-- [ ] patient image upload/list/download
-- [ ] health endpoints auth/sanitization
+- [x] startup validation failure cases
+- [x] Flyway migrate + JPA boot
+- [x] ORCA connection config resolution
+- [x] document integrity key rotation
+- [x] patient image upload/list/download
+- [x] health endpoints auth/sanitization
 
 ### 受け入れ条件
 - [x] runtime DDL が `src/main/java` から消える。
@@ -421,13 +421,13 @@
 
 ### セキュリティ
 - [x] health / readiness に内部接続情報がない。
-- [ ] audit / logs に secret がない。
+- [x] audit / logs に secret がない。
 - [x] ORCA facility 未解決時に fail-closed する。
 - [x] document integrity が key rotation 可能。
 
 ### 運用
-- [ ] sample env だけで必要設定が把握できる。
-- [ ] release runbook が最新化されている。
+- [x] sample env だけで必要設定が把握できる。
+- [x] release runbook が最新化されている。
 - [x] broken link がない。
 
 ### 品質
@@ -437,20 +437,20 @@
 ---
 
 ## PR 分割ガイド
-- [ ] PR-1: WS-00 文書同期基盤
-- [ ] PR-2: WS-01 runtime config
-- [ ] PR-3: WS-02 health + PVT NPE
-- [ ] PR-4: WS-03 ORCA connection + secret protector
-- [ ] PR-5: WS-04 document integrity
-- [ ] PR-6: WS-05 attachment storage + patient images
-- [ ] PR-7: WS-06 ORCA master API cleanup
+- [x] PR-1: WS-00 文書同期基盤
+- [x] PR-2: WS-01 runtime config
+- [x] PR-3: WS-02 health + PVT NPE
+- [x] PR-4: WS-03 ORCA connection + secret protector
+- [x] PR-5: WS-04 document integrity
+- [x] PR-6: WS-05 attachment storage + patient images
+- [x] PR-7: WS-06 ORCA master API cleanup
 - [x] PR-8: WS-07 schema/build/test hygiene
 - [x] PR-9 以降: WS-08 大型クラス分割
 
 ## 完了報告フォーマット
 各 PR 完了時に、この文書の該当 WS に次を追記する。
-- [ ] 実装 PR 番号
-- [ ] 変更ファイル一覧
-- [ ] 追加テスト一覧
-- [ ] 実行コマンド
-- [ ] 残課題
+- 実装 PR / commit 番号
+- 変更ファイル一覧
+- 追加テスト一覧
+- 実行コマンド
+- 残課題

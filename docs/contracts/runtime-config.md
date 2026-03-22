@@ -15,7 +15,7 @@
 - 契約文書: 本ファイル
 
 ## 実装ルール
-- [ ] `System.getenv` / `System.getProperty` / `ConfigProvider.getConfig()` は `ServerConfigurationResolver` 以外で使用しない。
+- [x] `System.getenv` / `System.getProperty` / `ConfigProvider.getConfig()` は `ServerConfigurationResolver` 以外で使用しない。
 - [x] `ServerConfigurationResolver` は文字列取得だけでなく、型変換・列挙値検証・URI/Path/Duration 検証を行う。
 - [x] `RuntimeConfigurationSupport` は I/O を持たない pure utility のみ残し、設定解決責務は持たせない。
 - [x] 新しい設定キーを追加した場合、同 PR で本ファイルと sample env を更新する。
@@ -171,7 +171,7 @@
 - [x] 必須キー欠落を 1 件でも検出したら起動失敗にする。
 - [x] 列挙値不正・URI 不正・Base64 不正・Path 不正も起動失敗にする。
 - [x] PVT 無効時のみ PVT 詳細設定の欠落を許可する。
-- [ ] PVT worker health 閾値は未設定時に既定値を使用できる。
+- [x] PVT worker health 閾値は未設定時に利用側既定値（`staleSuccessSeconds=180`, `maxProcessingMillis=30000`）を使用できる。
 - [x] S3 無効時のみ S3 詳細設定の欠落を許可する。
 - [x] runtime 必須値として `opendolphin.environment` / `opendolphin.timezone` / `jboss.server.data.dir` を検証する。
 - [x] ORCA runtime 必須値として `opendolphin.facility-id` / `opendolphin.cloud.zero` と、PVT 有効時の listener 詳細を検証する。

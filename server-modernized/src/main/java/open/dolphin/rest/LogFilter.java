@@ -37,7 +37,6 @@ public class LogFilter implements Filter {
     private static final String REQUEST_ID_HEADER = "X-Request-Id";
     private static final String RUN_ID_HEADER = "X-Run-Id";
     public static final String FEATURE_CLIENT_HEADER = "X-Client-Feature-Images";
-    public static final String LEGACY_FEATURE_CLIENT_HEADER = "X-Feature-Images";
     public static final String TRACE_ID_ATTRIBUTE = LogFilter.class.getName() + ".TRACE_ID";
     public static final String REQUEST_ID_ATTRIBUTE = LogFilter.class.getName() + ".REQUEST_ID";
     public static final String RUN_ID_ATTRIBUTE = LogFilter.class.getName() + ".RUN_ID";
