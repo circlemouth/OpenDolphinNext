@@ -35,7 +35,7 @@ public class ServerConfigurationValidator {
         validateOrcaSecretProtection(errors, resolver.orcaSecretProtection(), resolver.factor2());
         validateOrcaApi(errors, resolver.orcaApi());
         validateOrcaTransportHttp(errors, resolver.orcaTransportHttp());
-        validateOrcaPushEventCache(errors, resolver.orcaPushEventCache());
+        validateOrcaPush(errors, resolver.orcaPush());
         validateMetrics(errors, resolver.metrics());
         validateSystemNetwork(errors, resolver.systemNetwork());
         validateAudit(errors, resolver.audit());
@@ -280,16 +280,52 @@ public class ServerConfigurationValidator {
         }
     }
 
-    private void validateOrcaPushEventCache(
-            List<String> errors, ServerRuntimeConfiguration.PushEventCacheSettings settings) {
+    private void validateOrcaPush(List<String> errors, ServerRuntimeConfiguration.OrcaPushSettings settings) {
         if (settings == null) {
             return;
         }
-        if (settings.maxEntries() != null && settings.maxEntries() < 1) {
-            errors.add(ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_MAX + " must be >= 1");
+        boolean explicitlyConfigured = settings.enabled()
+                || settings.connectTimeoutMs() != null
+                || settings.pingIntervalSeconds() != null
+                || settings.idleTimeoutSeconds() != null
+                || settings.reconnectInitialDelayMs() != null
+                || settings.reconnectMaxDelayMs() != null
+                || settings.recoveryIntervalMinutes() != null
+                || settings.recoveryInitialLookbackMinutes() != null
+                || settings.recoveryOverlapMinutes() != null
+                || settings.dedupRetentionDays() != null;
+        if (!explicitlyConfigured) {
+            return;
         }
-        if (settings.ttlDays() != null && settings.ttlDays() < 1L) {
-            errors.add(ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_TTL_DAYS + " must be >= 1");
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_CONNECT_TIMEOUT_MS,
+                settings.connectTimeoutMs(), settings.enabled());
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_PING_INTERVAL_SECONDS,
+                settings.pingIntervalSeconds(), settings.enabled());
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_IDLE_TIMEOUT_SECONDS,
+                settings.idleTimeoutSeconds(), settings.enabled());
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS,
+                settings.reconnectInitialDelayMs(), settings.enabled());
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS,
+                settings.reconnectMaxDelayMs(), settings.enabled());
+        if (settings.reconnectInitialDelayMs() != null
+                && settings.reconnectMaxDelayMs() != null
+                && settings.reconnectMaxDelayMs() < settings.reconnectInitialDelayMs()) {
+            errors.add(ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS
+                    + " must be >= " + ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS);
+        }
+        boolean recoveryActive = settings.enabled() && settings.recoveryEnabled();
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_INTERVAL_MINUTES,
+                settings.recoveryIntervalMinutes(), recoveryActive);
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_INITIAL_LOOKBACK_MINUTES,
+                settings.recoveryInitialLookbackMinutes(), recoveryActive);
+        requireNonNegativeIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_OVERLAP_MINUTES,
+                settings.recoveryOverlapMinutes(), recoveryActive);
+        requirePositiveIfEnabled(errors, ServerConfigurationResolver.KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS,
+                settings.dedupRetentionDays(), settings.enabled());
+        if (settings.enabled() && !settings.receptionEnabled() && !settings.medicalEnabled()) {
+            errors.add(ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED
+                    + " requires " + ServerConfigurationResolver.KEY_ORCA_PUSH_RECEPTION_ENABLED
+                    + " or " + ServerConfigurationResolver.KEY_ORCA_PUSH_MEDICAL_ENABLED);
         }
     }
 
@@ -534,9 +570,29 @@ public class ServerConfigurationValidator {
         }
     }
 
+    private void requirePositiveIfEnabled(List<String> errors, String key, Integer value, boolean required) {
+        if (value == null) {
+            if (required) {
+                errors.add(key + " is required");
+            }
+        } else if (value < 1) {
+            errors.add(key + " must be >= 1");
+        }
+    }
+
     private void requirePositive(List<String> errors, String key, Long value) {
         if (value == null) {
             errors.add(key + " is required");
+        } else if (value < 1L) {
+            errors.add(key + " must be >= 1");
+        }
+    }
+
+    private void requirePositiveIfEnabled(List<String> errors, String key, Long value, boolean required) {
+        if (value == null) {
+            if (required) {
+                errors.add(key + " is required");
+            }
         } else if (value < 1L) {
             errors.add(key + " must be >= 1");
         }
@@ -551,6 +607,16 @@ public class ServerConfigurationValidator {
     private void requireNonNegative(List<String> errors, String key, Integer value) {
         if (value == null) {
             errors.add(key + " is required");
+        } else if (value < 0) {
+            errors.add(key + " must be >= 0");
+        }
+    }
+
+    private void requireNonNegativeIfEnabled(List<String> errors, String key, Integer value, boolean required) {
+        if (value == null) {
+            if (required) {
+                errors.add(key + " is required");
+            }
         } else if (value < 0) {
             errors.add(key + " must be >= 0");
         }

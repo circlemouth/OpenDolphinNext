@@ -9,6 +9,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
+import open.dolphin.orca.config.OrcaConnectionConfigRecord;
+import open.dolphin.orca.config.OrcaConnectionConfigStore;
+import open.dolphin.orca.push.OrcaPushClientRegistry;
+import open.dolphin.orca.push.OrcaPushStateStore;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
@@ -22,6 +26,7 @@ public class OperationsReadinessEvaluator {
 
     static final String CHECK_DATABASE = "database";
     static final String CHECK_ORCA = "orca";
+    static final String CHECK_ORCA_PUSH = "orcaPush";
     static final String CHECK_ATTACHMENT_STORAGE = "attachmentStorage";
     static final String CHECK_PVT_QUEUE = "pvtQueue";
     static final String CHECK_PATIENT_IMAGES = "patientImages";
@@ -35,6 +40,8 @@ public class OperationsReadinessEvaluator {
     private static final String REASON_ATTACHMENT_STORAGE_NOT_READY = "attachment_storage_not_ready";
     private static final String REASON_ATTACHMENT_STORAGE_BACKEND_UNREACHABLE = "attachment_storage_backend_unreachable";
     private static final String REASON_PATIENT_IMAGES_STORAGE_UNAVAILABLE = "patient_images_storage_unavailable";
+    private static final String REASON_ORCA_PUSH_NOT_CONFIGURED = "orca_push_not_configured";
+    private static final String REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE = "orca_push_runtime_unavailable";
 
     @PersistenceContext
     EntityManager em;
@@ -51,15 +58,25 @@ public class OperationsReadinessEvaluator {
     @Inject
     ServerConfigurationResolver configurationResolver;
 
+    @Inject
+    OrcaConnectionConfigStore orcaConnectionConfigStore;
+
+    @Inject
+    OrcaPushClientRegistry orcaPushClientRegistry;
+
+    @Inject
+    OrcaPushStateStore orcaPushStateStore;
+
     public ReadinessSnapshot evaluate() {
         Map<String, OperationsReadinessCheck> checks = new LinkedHashMap<>();
         boolean databaseReady = checkDatabase(checks);
         boolean orcaReady = checkOrca(checks);
+        boolean orcaPushReady = checkOrcaPush(checks);
         boolean storageReady = checkAttachmentStorage(checks);
         boolean pvtQueueReady = checkPvtQueue(checks);
         boolean patientImagesReady = checkPatientImages(checks, storageReady);
 
-        boolean overallReady = databaseReady && orcaReady && storageReady && pvtQueueReady && patientImagesReady;
+        boolean overallReady = databaseReady && orcaReady && orcaPushReady && storageReady && pvtQueueReady && patientImagesReady;
         OperationsReadinessResponse body = new OperationsReadinessResponse();
         body.setStatus(overallReady ? STATUS_UP : STATUS_DOWN);
         body.setChecks(checks);
@@ -108,6 +125,66 @@ public class OperationsReadinessEvaluator {
             detail.setStatus(STATUS_DOWN);
             detail.setReasonCode(RestOrcaTransport.REASON_CODE_PROBE_FAILED);
             checks.put(CHECK_ORCA, detail);
+            return false;
+        }
+    }
+
+    private boolean checkOrcaPush(Map<String, OperationsReadinessCheck> checks) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            ServerRuntimeConfiguration.OrcaPushSettings settings = orcaPushSettings();
+            detail.setMode(settings.shadowMode() ? "shadow" : "live");
+            detail.setRecoveryEnabled(settings.recoveryEnabled());
+            if (!settings.enabled()) {
+                detail.setStatus(STATUS_DISABLED);
+                detail.setWorkerStatus(STATUS_DISABLED);
+                detail.setConnected(Boolean.FALSE);
+                detail.setFacilityCount(0);
+                checks.put(CHECK_ORCA_PUSH, detail);
+                return true;
+            }
+            List<OrcaPushStateStore.FacilityPushState> states = orcaPushStateStore != null ? orcaPushStateStore.listStates() : List.of();
+            detail.setFacilityCount(states.size());
+            OrcaPushStateStore.FacilityPushState latestState = states.stream()
+                    .max(java.util.Comparator.comparing(
+                            OrcaPushStateStore.FacilityPushState::lastEventAt,
+                            java.util.Comparator.nullsLast(String::compareTo)))
+                    .orElse(null);
+            if (latestState != null) {
+                detail.setLastConnectedAt(latestState.lastConnectedAt());
+                detail.setLastEventAt(latestState.lastEventAt());
+                detail.setLastError(latestState.lastError());
+                detail.setWorkerStatus(latestState.connectionStatus());
+                detail.setConnected(OrcaPushStateStore.STATUS_CONNECTED.equals(latestState.connectionStatus()));
+            } else {
+                detail.setWorkerStatus(STATUS_DOWN);
+                detail.setConnected(Boolean.FALSE);
+            }
+            if (!isPushConfigured()) {
+                detail.setStatus(STATUS_DOWN);
+                detail.setReasonCode(REASON_ORCA_PUSH_NOT_CONFIGURED);
+                checks.put(CHECK_ORCA_PUSH, detail);
+                return false;
+            }
+            boolean connected = orcaPushClientRegistry != null && orcaPushClientRegistry.isConnected();
+            detail.setConnected(connected);
+            if (connected) {
+                detail.setStatus(STATUS_UP);
+                checks.put(CHECK_ORCA_PUSH, detail);
+                return true;
+            }
+            detail.setStatus(STATUS_DOWN);
+            detail.setReasonCode(latestState != null && OrcaPushStateStore.STATUS_DEGRADED.equals(latestState.connectionStatus())
+                    ? REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE
+                    : REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE);
+            checks.put(CHECK_ORCA_PUSH, detail);
+            return false;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setWorkerStatus(STATUS_DOWN);
+            detail.setConnected(Boolean.FALSE);
+            detail.setReasonCode(REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE);
+            checks.put(CHECK_ORCA_PUSH, detail);
             return false;
         }
     }
@@ -180,11 +257,26 @@ public class OperationsReadinessEvaluator {
         }
     }
 
+    private ServerRuntimeConfiguration.OrcaPushSettings orcaPushSettings() {
+        if (configurationResolver == null) {
+            configurationResolver = new ServerConfigurationResolver();
+        }
+        return configurationResolver.orcaPush();
+    }
+
     private ServerRuntimeConfiguration.PatientImagesSettings patientImagesSettings() {
         if (configurationResolver == null) {
             configurationResolver = new ServerConfigurationResolver();
         }
         return configurationResolver.patientImages();
+    }
+
+    private boolean isPushConfigured() {
+        if (orcaConnectionConfigStore == null) {
+            return false;
+        }
+        OrcaConnectionConfigRecord snapshot = orcaConnectionConfigStore.getSnapshot();
+        return snapshot != null && snapshot.getPushUrl() != null && !snapshot.getPushUrl().isBlank();
     }
 
     private List<String> asStringList(Object value) {

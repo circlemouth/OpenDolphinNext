@@ -10,6 +10,7 @@ public class VisitMutationResponse extends OrcaApiResponse {
 
     private String resKey;
     private String acceptanceId;
+    private String claimSendInfo;
     private String acceptanceDate;
     private String acceptanceTime;
     private String departmentCode;
@@ -36,6 +37,14 @@ public class VisitMutationResponse extends OrcaApiResponse {
 
     public void setAcceptanceId(String acceptanceId) {
         this.acceptanceId = acceptanceId;
+    }
+
+    public String getClaimSendInfo() {
+        return claimSendInfo;
+    }
+
+    public void setClaimSendInfo(String claimSendInfo) {
+        this.claimSendInfo = claimSendInfo;
     }
 
     public String getAcceptanceDate() {

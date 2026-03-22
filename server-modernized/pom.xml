@@ -84,16 +84,6 @@
                 <version>${yubico.webauthn.version}</version>
             </dependency>
             <dependency>
-                <groupId>jakarta.websocket</groupId>
-                <artifactId>jakarta.websocket-api</artifactId>
-                <version>2.1.0</version>
-            </dependency>
-            <dependency>
-                <groupId>jakarta.websocket</groupId>
-                <artifactId>jakarta.websocket-client-api</artifactId>
-                <version>2.1.0</version>
-            </dependency>
-            <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
                 <version>${bouncycastle.version}</version>
@@ -291,18 +281,6 @@
         <dependency>
             <groupId>jakarta.mail</groupId>
             <artifactId>jakarta.mail-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.websocket</groupId>
-            <artifactId>jakarta.websocket-api</artifactId>
-            <version>2.1.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.websocket</groupId>
-            <artifactId>jakarta.websocket-client-api</artifactId>
-            <version>2.1.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -763,8 +741,6 @@
                                 <ignoredUnusedDeclaredDependency>jakarta.jms:jakarta.jms-api</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>jakarta.enterprise.concurrent:jakarta.enterprise.concurrent-api</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>jakarta.mail:jakarta.mail-api</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>jakarta.websocket:jakarta.websocket-api</ignoredUnusedDeclaredDependency>
-                                <ignoredUnusedDeclaredDependency>jakarta.websocket:jakarta.websocket-client-api</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.slf4j:slf4j-api</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>org.jboss.ejb3:jboss-ejb3-ext-api</ignoredUnusedDeclaredDependency>
                                 <ignoredUnusedDeclaredDependency>io.agroal:agroal-api</ignoredUnusedDeclaredDependency>

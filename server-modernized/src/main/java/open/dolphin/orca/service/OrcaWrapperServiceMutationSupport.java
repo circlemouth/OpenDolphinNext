@@ -52,9 +52,10 @@ final class OrcaWrapperServiceMutationSupport {
         String normalized = normalizeToken(value, "requestNumber");
         if (normalized.matches("\\d{1,2}")) {
             String code = padTwoDigits(normalized);
-            if (!"00".equals(code) && !"01".equals(code) && !"02".equals(code) && !"03".equals(code)) {
+            if (!"00".equals(code) && !"01".equals(code) && !"02".equals(code)
+                    && !"03".equals(code) && !"04".equals(code)) {
                 throw new OrcaGatewayException(
-                        "requestNumber must be 00/01/02/03 (acceptmodv2 Request_Number) or supported operation keyword");
+                        "requestNumber must be 00/01/02/03/04 (acceptmodv2 Request_Number) or supported operation keyword");
             }
             return code;
         }
@@ -62,9 +63,10 @@ final class OrcaWrapperServiceMutationSupport {
             case "create", "register", "add" -> "01";
             case "delete", "cancel", "remove" -> "02";
             case "update", "modify" -> "03";
+            case "claim", "claim-send", "claim-send-info", "send-claim" -> "04";
             case "query", "read", "get", "list", "inquiry" -> "00";
             default -> throw new OrcaGatewayException(
-                    "requestNumber must be 00/01/02/03 (acceptmodv2 Request_Number) or supported operation keyword");
+                    "requestNumber must be 00/01/02/03/04 (acceptmodv2 Request_Number) or supported operation keyword");
         };
     }
 
@@ -74,7 +76,9 @@ final class OrcaWrapperServiceMutationSupport {
         for (String prefix : new String[] {
                 "class=", "?class=",
                 "request_number=", "?request_number=",
-                "requestnumber=", "?requestnumber="
+                "requestnumber=", "?requestnumber=",
+                "claim_send_info=", "?claim_send_info=",
+                "claimsendinfo=", "?claimsendinfo="
         }) {
             if (normalized.startsWith(prefix)) {
                 raw = raw.substring(prefix.length());
@@ -349,6 +353,13 @@ final class OrcaWrapperServiceMutationSupport {
     String buildVisitMutationPayload(VisitMutationRequest request) {
         String requestNumber = normalizeAcceptRequestNumber(request.getRequestNumber());
         String patientId = requireText(request.getPatientId(), "patientId");
+        String claimSendInfo = "04".equals(requestNumber)
+                ? normalizeClaimSendInfo(request.getClaimSendInfo())
+                : null;
+        if ("04".equals(requestNumber) && (request.getAcceptanceId() == null || request.getAcceptanceId().isBlank())) {
+            requireText(request.getAcceptanceTime(), "acceptanceTime");
+            requireText(request.getDepartmentCode(), "departmentCode");
+        }
         StringBuilder builder = new StringBuilder();
         builder.append(buildOrcaMeta(OrcaEndpoint.ACCEPTANCE_MUTATION, null));
         builder.append("<data><acceptreq>");
@@ -359,6 +370,9 @@ final class OrcaWrapperServiceMutationSupport {
         }
         if (request.getAcceptancePush() != null && !request.getAcceptancePush().isBlank()) {
             builder.append("<Acceptance_Push>").append(request.getAcceptancePush()).append("</Acceptance_Push>");
+        }
+        if ("04".equals(requestNumber)) {
+            builder.append("<Claim_Send_Info>").append(claimSendInfo).append("</Claim_Send_Info>");
         }
         if (request.getAcceptanceDate() != null && !request.getAcceptanceDate().isBlank()) {
             builder.append("<Acceptance_Date>").append(request.getAcceptanceDate()).append("</Acceptance_Date>");
@@ -414,6 +428,18 @@ final class OrcaWrapperServiceMutationSupport {
         }
         builder.append("</acceptreq></data>");
         return builder.toString();
+    }
+
+    String normalizeClaimSendInfo(String value) {
+        String normalized = normalizeToken(value, "claimSendInfo");
+        if (!normalized.matches("\\d{1,2}")) {
+            throw new OrcaGatewayException("claimSendInfo must be 00/01/02/03");
+        }
+        String code = padTwoDigits(normalized);
+        if (!"00".equals(code) && !"01".equals(code) && !"02".equals(code) && !"03".equals(code)) {
+            throw new OrcaGatewayException("claimSendInfo must be 00/01/02/03");
+        }
+        return code;
     }
 
     void appendTag(StringBuilder builder, String tag, String value) {

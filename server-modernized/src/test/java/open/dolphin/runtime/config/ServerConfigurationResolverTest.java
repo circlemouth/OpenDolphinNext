@@ -283,13 +283,24 @@ class ServerConfigurationResolverTest {
 
     @Test
     void resolvesOperationalRuntimeSettingsAsTypedValues() {
-        Path cachePath = tempDir.resolve("orca-cache.json");
         ServerConfigurationResolver resolver = TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_ORCA_PROXY_FORWARD_X_ORCA_HEADERS, "false",
                 ServerConfigurationResolver.KEY_ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER, "false",
-                ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_PATH, cachePath.toString(),
-                ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_MAX, "500",
-                ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_TTL_DAYS, "7",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "true",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_SHADOW_MODE, "false",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECEPTION_ENABLED, "true",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_MEDICAL_ENABLED, "true",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_CONNECT_TIMEOUT_MS, "5000",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_PING_INTERVAL_SECONDS, "20",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_IDLE_TIMEOUT_SECONDS, "60",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS, "1000",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS, "30000",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_ENABLED, "true",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_USE_PUSHEVENTGET, "false",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_INTERVAL_MINUTES, "5",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_INITIAL_LOOKBACK_MINUTES, "30",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_OVERLAP_MINUTES, "5",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS, "14",
                 ServerConfigurationResolver.KEY_MASTER_UPDATE_SCHEDULER_ENABLED, "true",
                 ServerConfigurationResolver.KEY_METRICS_REGISTRY_JNDI, "java:global/test/metrics",
                 ServerConfigurationResolver.KEY_SMTP_HOST, "smtp.example.test",
@@ -304,9 +315,21 @@ class ServerConfigurationResolverTest {
 
         assertEquals(Boolean.FALSE, resolver.orcaProxy().forwardXOrcaHeaders());
         assertEquals(Boolean.FALSE, resolver.orcaProxy().forwardApiResultMessageHeader());
-        assertEquals(cachePath, resolver.orcaPushEventCache().cachePath());
-        assertEquals(500, resolver.orcaPushEventCache().maxEntries());
-        assertEquals(7L, resolver.orcaPushEventCache().ttlDays());
+        assertEquals(true, resolver.orcaPush().enabled());
+        assertEquals(false, resolver.orcaPush().shadowMode());
+        assertEquals(true, resolver.orcaPush().receptionEnabled());
+        assertEquals(true, resolver.orcaPush().medicalEnabled());
+        assertEquals(5000, resolver.orcaPush().connectTimeoutMs());
+        assertEquals(20, resolver.orcaPush().pingIntervalSeconds());
+        assertEquals(60, resolver.orcaPush().idleTimeoutSeconds());
+        assertEquals(1000, resolver.orcaPush().reconnectInitialDelayMs());
+        assertEquals(30000, resolver.orcaPush().reconnectMaxDelayMs());
+        assertEquals(true, resolver.orcaPush().recoveryEnabled());
+        assertEquals(false, resolver.orcaPush().recoveryUsePusheventget());
+        assertEquals(5, resolver.orcaPush().recoveryIntervalMinutes());
+        assertEquals(30, resolver.orcaPush().recoveryInitialLookbackMinutes());
+        assertEquals(5, resolver.orcaPush().recoveryOverlapMinutes());
+        assertEquals(14, resolver.orcaPush().dedupRetentionDays());
         assertEquals(true, resolver.masterUpdateScheduler().enabled());
         assertEquals("java:global/test/metrics", resolver.metrics().registryJndi());
         assertEquals("smtp.example.test", resolver.smtp().host());

@@ -11,7 +11,11 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
+import open.dolphin.orca.config.OrcaConnectionConfigStore;
+import open.dolphin.orca.push.OrcaPushClientRegistry;
+import open.dolphin.orca.push.OrcaPushStateStore;
 import open.dolphin.orca.transport.RestOrcaTransport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.rest.dto.OperationsHealthResponse;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
@@ -26,6 +30,8 @@ class OperationsHealthResourceTest {
     private StubRestOrcaTransport restOrcaTransport;
     private AttachmentStorageManager attachmentStorageManager;
     private PvtService pvtService;
+    private OrcaConnectionConfigStore orcaConnectionConfigStore;
+    private OperationsReadinessEvaluator evaluator;
     private OperationsHealthResource resource;
 
     @BeforeEach
@@ -34,15 +40,19 @@ class OperationsHealthResourceTest {
         query = org.mockito.Mockito.mock(Query.class);
         attachmentStorageManager = org.mockito.Mockito.mock(AttachmentStorageManager.class);
         pvtService = org.mockito.Mockito.mock(PvtService.class);
+        orcaConnectionConfigStore = org.mockito.Mockito.mock(OrcaConnectionConfigStore.class);
         restOrcaTransport = new StubRestOrcaTransport();
 
-        OperationsReadinessEvaluator evaluator = new OperationsReadinessEvaluator();
+        evaluator = new OperationsReadinessEvaluator();
         setField(OperationsReadinessEvaluator.class, evaluator, "em", em);
         setField(OperationsReadinessEvaluator.class, evaluator, "restOrcaTransport", restOrcaTransport);
         setField(OperationsReadinessEvaluator.class, evaluator, "attachmentStorageManager", attachmentStorageManager);
         setField(OperationsReadinessEvaluator.class, evaluator, "pvtService", pvtService);
         setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
                 TestServerConfigurationResolvers.resolver());
+        setField(OperationsReadinessEvaluator.class, evaluator, "orcaConnectionConfigStore", orcaConnectionConfigStore);
+        setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushClientRegistry", new StubPushClientRegistry(false));
+        setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushStateStore", new StubPushStateStore());
 
         resource = new OperationsHealthResource();
         setField(OperationsHealthResource.class, resource, "readinessEvaluator", evaluator);
@@ -94,6 +104,28 @@ class OperationsHealthResourceTest {
         assertThat(response.getEntity()).isEqualTo(Map.of("status", "DOWN"));
     }
 
+    @Test
+    void readinessReturnsDownWhenOrcaPushEnabledWithoutConfiguration() throws Exception {
+        setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
+                TestServerConfigurationResolvers.resolver(
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "true",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_MEDICAL_ENABLED, "true"));
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        restOrcaTransport.probeResult =
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DATABASE);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        assertThat(response.getEntity()).isEqualTo(Map.of("status", "DOWN"));
+    }
+
     private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {
         Field field = owner.getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -108,5 +140,21 @@ class OperationsHealthResourceTest {
         public RestOrcaTransport.ProbeResult probeReadiness() {
             return probeResult;
         }
+    }
+
+    private static final class StubPushClientRegistry extends OrcaPushClientRegistry {
+        private final boolean connected;
+
+        private StubPushClientRegistry(boolean connected) {
+            this.connected = connected;
+        }
+
+        @Override
+        public boolean isConnected() {
+            return connected;
+        }
+    }
+
+    private static final class StubPushStateStore extends OrcaPushStateStore {
     }
 }

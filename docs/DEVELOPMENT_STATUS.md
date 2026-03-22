@@ -1,4 +1,4 @@
-# 開発状況（単一参照, 更新日: 2026-03-21）
+# 開発状況（単一参照, 更新日: 2026-03-22）
 
 ## 現行ステータス
 - Phase2 開発ドキュメントは **Legacy/Archive（参照専用）**。Phase2 を現行フェーズとして扱わない。
@@ -39,6 +39,11 @@
 - `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
+- 2026-03-22: ORCA server recovery playbook の Phase 1-9 実装を進め、Push runtime / readiness / 送信系 wrapper 是正 / legacy 名称整理を完了した（RUN_ID=20260322T102015Z）。
+  - 変更: `server-modernized` に ORCA Push 用の DB state/dedup 基盤、`open.dolphin.orca.push` 一式、Micrometer metrics registrar、`ReceptionRealtimeSseSupport.publishReplayGap()`、`OperationsReadinessEvaluator` の `orcaPush` 詳細判定を追加した。
+  - 変更: `acceptmodv2` は `Request_Number=04` と `Claim_Send_Info`、`medicalmodv2` は `class=01/02/03/04`・`Medical_Push`・`Medical_Uid` を扱うよう是正し、ローカル外来 API は `OrcaLocalMedicalOutpatientResource` / `/api/orca/local-medical/outpatient` へ rename した。旧 `PushEventDeduplicator` と未使用 `jakarta.websocket*` 依存は削除した。
+  - 変更: `docs/contracts/runtime-config.md`、`docs/server-modernization/planning/server-modernized-plan/docs/contracts/runtime-config.md`、`docs/server-modernization/planning/server-modernized-plan/docs/contracts/orca-connection.md` を更新し、`orca.push.*` と `pushUrl` / `pushTenantId` を正本化した。
+  - 検証: `mvn -f api-contract/pom.xml install -DskipTests`、`mvn -pl server-modernized -am -Dtest=ReceptionRealtimeSseSupportTest,ReceptionPushHandlerTest,MedicalPushHandlerTest,OrcaPushEventRouterTest,OrcaVisitResourceRealtimeTest,OrcaVisitResourceTest,OrcaChartSupportResourceTest,OrcaChartSupportSupportTest,OperationsReadinessResourceTest,OperationsHealthResourceTest,ServerConfigurationResolverTest,ServerConfigurationValidatorTest,OrcaConnectionConfigStoreTest,AdminOrcaConnectionResourceTest,FlywayMigrationConsistencyTest,FreshSchemaBaselineTest -DfailIfNoTests=false test`、`mvn -pl server-modernized -am -DskipTests=false test` はすべて PASS（server-modernized 673 tests, failures 0, errors 0, skipped 3）。
 - 2026-03-21: Codex automation cleanup track の `A10`「packaging / CI / 品質ゲート強制」を完了した（RUN_ID=20260320T205337Z）。
   - 変更: `server-modernized/pom.xml` に dependency hygiene の `verify` 組み込みと WAR 内容検査を追加し、`opendolphin-common` 混入を build fail 条件へ変更。
   - 変更: `.github/workflows/server-modernized-static-analysis-gate.yml` を `-Pstatic-analysis,dependency-hygiene -Dstatic.analysis.enforce=true -pl server-modernized -am verify` 実行へ更新し、`.gitattributes` に source archive の `export-ignore` パターンを追加。

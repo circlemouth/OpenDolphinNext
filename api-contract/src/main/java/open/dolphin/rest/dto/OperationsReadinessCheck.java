@@ -12,8 +12,14 @@ public class OperationsReadinessCheck {
     private Boolean credentialConfigured;
     private Boolean clientAuthConfigured;
     private Boolean backendReachable;
+    private Boolean connected;
+    private Integer facilityCount;
     private String workerStatus;
     private String reasonCode;
+    private String lastConnectedAt;
+    private String lastEventAt;
+    private String lastError;
+    private Boolean recoveryEnabled;
     private List<String> reasonCodes = new ArrayList<>();
 
     public String getStatus() {
@@ -56,6 +62,22 @@ public class OperationsReadinessCheck {
         this.backendReachable = backendReachable;
     }
 
+    public Boolean getConnected() {
+        return connected;
+    }
+
+    public void setConnected(Boolean connected) {
+        this.connected = connected;
+    }
+
+    public Integer getFacilityCount() {
+        return facilityCount;
+    }
+
+    public void setFacilityCount(Integer facilityCount) {
+        this.facilityCount = facilityCount;
+    }
+
     public String getWorkerStatus() {
         return workerStatus;
     }
@@ -70,6 +92,38 @@ public class OperationsReadinessCheck {
 
     public void setReasonCode(String reasonCode) {
         this.reasonCode = reasonCode;
+    }
+
+    public String getLastConnectedAt() {
+        return lastConnectedAt;
+    }
+
+    public void setLastConnectedAt(String lastConnectedAt) {
+        this.lastConnectedAt = lastConnectedAt;
+    }
+
+    public String getLastEventAt() {
+        return lastEventAt;
+    }
+
+    public void setLastEventAt(String lastEventAt) {
+        this.lastEventAt = lastEventAt;
+    }
+
+    public String getLastError() {
+        return lastError;
+    }
+
+    public void setLastError(String lastError) {
+        this.lastError = lastError;
+    }
+
+    public Boolean getRecoveryEnabled() {
+        return recoveryEnabled;
+    }
+
+    public void setRecoveryEnabled(Boolean recoveryEnabled) {
+        this.recoveryEnabled = recoveryEnabled;
     }
 
     public List<String> getReasonCodes() {

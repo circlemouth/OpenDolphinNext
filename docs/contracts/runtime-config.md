@@ -89,10 +89,22 @@
 - ORCA proxy 応答ヘッダ転送の任意設定
   - `orca.proxy.forward.x-orca-headers` / `ORCA_PROXY_FORWARD_X_ORCA_HEADERS` は `true|false`。未設定時のみ `true`。
   - `orca.proxy.forward.api-result-message-header` / `ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER` は `true|false`。未設定時のみ `true`。
-- ORCA push event dedupe cache の任意設定
-  - `orca.push-event-cache.path` / `ORCA_PUSH_EVENT_CACHE_PATH` は絶対パス推奨。未設定時は `jboss.server.data.dir/orca/pushevent-cache.json` を使う。
-  - `orca.push-event-cache.max-entries` / `ORCA_PUSH_EVENT_CACHE_MAX_ENTRIES` は 100 以上。
-  - `orca.push-event-cache.ttl-days` / `ORCA_PUSH_EVENT_CACHE_TTL_DAYS` は 1 以上。
+- ORCA Push runtime 設定
+  - `orca.push.enabled` / `ORCA_PUSH_ENABLED` は `true|false`。未設定時は `false`。
+  - `orca.push.shadow-mode` / `ORCA_PUSH_SHADOW_MODE` は `true|false`。未設定時は `true`。
+  - `orca.push.reception.enabled` / `ORCA_PUSH_RECEPTION_ENABLED` は `true|false`。未設定時は `true`。
+  - `orca.push.medical.enabled` / `ORCA_PUSH_MEDICAL_ENABLED` は `true|false`。未設定時は `false`。
+  - Push を有効化する場合、以下を必須とする。
+    - `orca.push.connect-timeout-ms` / `ORCA_PUSH_CONNECT_TIMEOUT_MS`
+    - `orca.push.ping-interval-seconds` / `ORCA_PUSH_PING_INTERVAL_SECONDS`
+    - `orca.push.idle-timeout-seconds` / `ORCA_PUSH_IDLE_TIMEOUT_SECONDS`
+    - `orca.push.reconnect.initial-delay-ms` / `ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS`
+    - `orca.push.reconnect.max-delay-ms` / `ORCA_PUSH_RECONNECT_MAX_DELAY_MS`
+    - `orca.push.recovery.interval-minutes` / `ORCA_PUSH_RECOVERY_INTERVAL_MINUTES`
+    - `orca.push.recovery.initial-lookback-minutes` / `ORCA_PUSH_RECOVERY_INITIAL_LOOKBACK_MINUTES`
+    - `orca.push.recovery.overlap-minutes` / `ORCA_PUSH_RECOVERY_OVERLAP_MINUTES`
+    - `orca.push.dedup.retention-days` / `ORCA_PUSH_DEDUP_RETENTION_DAYS`
+  - `orca.push.recovery.use-pusheventget` / `ORCA_PUSH_RECOVERY_USE_PUSHEVENTGET` は cloud recovery 補助用途のみ。
 - 旧 ORCA リソース補助設定は必要時のみ明示投入する。
   - `orca.facility.jmari-code` / `ORCA_FACILITY_JMARI_CODE` は 12 桁。
   - `orca.facility.healthcarefacility-code` / `ORCA_FACILITY_HEALTHCAREFACILITY_CODE` は 10 桁。

@@ -33,12 +33,14 @@ import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.PVTServiceBean;
 
 /**
- * `/api/orca/medicalmodv2/outpatient` をモダナイズ版サーバー側で提供する。
+ * ローカル集約した外来情報を返す API。ORCA の medicalmodv2 送信 API ではない。
  */
-@Path("/orca/medicalmodv2")
-public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
+@Path("/orca/local-medical")
+public class OrcaLocalMedicalOutpatientResource extends AbstractOrcaRestResource {
 
     private static final String DATA_SOURCE = "server";
+    private static final String AUDIT_ACTION = "ORCA_LOCAL_MEDICAL_OUTPATIENT_GET";
+    private static final String DEFAULT_RESOURCE = "/api/orca/local-medical/outpatient";
 
     @Inject
     private PVTServiceBean pvtServiceBean;
@@ -95,10 +97,11 @@ public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
         response.setRecordsReturned(outpatientEntries.size());
         response.setOutcome(outpatientEntries.isEmpty() ? "MISSING" : "SUCCESS");
 
-        Map<String, Object> details = buildAuditDetails(facilityId, outpatientEntries, response);
+        String resourcePath = resolveResourcePath(request);
+        Map<String, Object> details = buildAuditDetails(facilityId, outpatientEntries, response, resourcePath);
         OutpatientFlagResponse.AuditEvent auditEvent = new OutpatientFlagResponse.AuditEvent();
-        auditEvent.setAction("ORCA_MEDICAL_GET");
-        auditEvent.setResource("/api/orca/medicalmodv2/outpatient");
+        auditEvent.setAction(AUDIT_ACTION);
+        auditEvent.setResource(resourcePath);
         auditEvent.setOutcome(response.getOutcome());
         auditEvent.setDetails(details);
         auditEvent.setTraceId(traceId);
@@ -107,13 +110,15 @@ public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
 
         Map<String, Object> auditPayload = new LinkedHashMap<>(details);
         auditPayload.put("recordsReturned", response.getRecordsReturned());
-        recordAudit(request, "ORCA_MEDICAL_GET", auditPayload, AuditEventEnvelope.Outcome.SUCCESS);
+        recordAudit(request, AUDIT_ACTION, auditPayload, AuditEventEnvelope.Outcome.SUCCESS);
 
         return response;
     }
 
     private Map<String, Object> buildAuditDetails(String facilityId,
-            List<MedicalOutpatientResponse.MedicalOutpatientEntry> entries, MedicalOutpatientResponse response) {
+            List<MedicalOutpatientResponse.MedicalOutpatientEntry> entries,
+            MedicalOutpatientResponse response,
+            String resourcePath) {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("facilityId", facilityId);
         details.put("runId", response.getRunId());
@@ -125,7 +130,7 @@ public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
         details.put("fetchedAt", response.getFetchedAt());
         details.put("recordsReturned", response.getRecordsReturned());
         details.put("outcome", response.getOutcome());
-        details.put("resource", "/api/orca/medicalmodv2/outpatient");
+        details.put("resource", resourcePath);
         details.put("telemetryFunnelStage", "charts_orchestration");
         if (entries != null && !entries.isEmpty()) {
             details.put("patientsReturned", entries.size());
@@ -159,6 +164,17 @@ public class OrcaMedicalModV2Resource extends AbstractOrcaRestResource {
             }
         }
         return traceId;
+    }
+
+    private String resolveResourcePath(HttpServletRequest request) {
+        if (request == null) {
+            return DEFAULT_RESOURCE;
+        }
+        String requestUri = request.getRequestURI();
+        if (requestUri == null || requestUri.isBlank()) {
+            return DEFAULT_RESOURCE;
+        }
+        return requestUri;
     }
 
     private List<PatientVisitModel> fetchVisits(String facilityId, LocalDate targetDate) {

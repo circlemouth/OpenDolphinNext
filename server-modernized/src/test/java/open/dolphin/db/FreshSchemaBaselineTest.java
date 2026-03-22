@@ -84,12 +84,14 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0304", appliedVersion(connection));
+                assertEquals("0305", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
                 assertTrue(tableExists(connection, "opendolphin", "d_orca_user_link"));
                 assertTrue(tableExists(connection, "opendolphin", "d_orca_patient_sync_state"));
+                assertTrue(tableExists(connection, "opendolphin", "d_orca_push_state"));
+                assertTrue(tableExists(connection, "opendolphin", "d_orca_push_seen_event"));
                 assertTrue(tableExists(connection, "opendolphin", "d_module_payload"));
                 assertTrue(tableExists(connection, "opendolphin", "runtime_state_store"));
                 assertFalse(tableExists(connection, "opendolphin", "phr_async_job"));
@@ -111,6 +113,7 @@ class FreshSchemaBaselineTest {
                 assertTrue(indexExists(connection, "opendolphin", "d_patient_facility_mobilephone_prefix_idx"));
                 assertTrue(indexExists(connection, "opendolphin", "d_patient_facility_zipcode_prefix_idx"));
                 assertTrue(indexExists(connection, "opendolphin", "d_patient_appmemo_trgm_idx"));
+                assertTrue(indexExists(connection, "opendolphin", "idx_d_orca_push_seen_event_expires_at"));
 
                 long nextFacilityNumber = nextVal(connection, "opendolphin.facility_num");
                 long nextUserId = nextVal(connection, "opendolphin.d_users_seq");

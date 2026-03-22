@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import open.dolphin.orca.service.OrcaWrapperService;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import org.junit.jupiter.api.Test;
@@ -29,6 +30,9 @@ class OrcaVisitResourceRealtimeTest {
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
         resource.setReceptionRealtimeSseSupportForTest(realtime);
+        resource.setConfigurationResolverForTest(new ServerConfigurationResolver(Map.of(
+                ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "false"
+        )));
 
         VisitMutationRequest request = new VisitMutationRequest();
         request.setRequestNumber("02");
@@ -57,10 +61,42 @@ class OrcaVisitResourceRealtimeTest {
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
         resource.setReceptionRealtimeSseSupportForTest(realtime);
+        resource.setConfigurationResolverForTest(new ServerConfigurationResolver(Map.of(
+                ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "false"
+        )));
 
         VisitMutationRequest request = new VisitMutationRequest();
         request.setRequestNumber("00");
         request.setPatientId("000001");
+
+        resource.mutateVisit(createRequest("F001:doctor01"), request);
+
+        assertNull(realtime.facilityId);
+    }
+
+    @Test
+    void skipsRealtimeUpdateWhenPushReceptionIsLive() {
+        StubWrapperService wrapperService = new StubWrapperService();
+        VisitMutationResponse response = new VisitMutationResponse();
+        response.setApiResult("0000");
+        response.setApiResultMessage("OK");
+        wrapperService.response = response;
+
+        RecordingRealtimeSupport realtime = new RecordingRealtimeSupport();
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.setReceptionRealtimeSseSupportForTest(realtime);
+        resource.setConfigurationResolverForTest(new ServerConfigurationResolver(Map.of(
+                ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "true",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_SHADOW_MODE, "false",
+                ServerConfigurationResolver.KEY_ORCA_PUSH_RECEPTION_ENABLED, "true"
+        )));
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("02");
+        request.setPatientId("000001");
+        request.setAcceptanceDate("2026-02-19");
+        request.setAcceptanceTime("09:00:00");
 
         resource.mutateVisit(createRequest("F001:doctor01"), request);
 

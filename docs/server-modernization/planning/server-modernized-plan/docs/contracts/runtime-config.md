@@ -62,14 +62,30 @@
   - `*.sslrootcert`
 
 ### 4. ORCA API
-- `orca.api.mode` は `weborca|onprem` のいずれか。
+- `orca.mode` は `weborca|onprem` のいずれか。
 - 接続先は次のどちらか一方のみ許可する。
-  - `orca.api.base-url`
+  - `orca.base-url`
   - `orca.api.host` + `orca.api.port` + `orca.api.scheme`
 - `orca.api.user` / `orca.api.password` は必須。
 - `orca.api.path-prefix` は空か `/` 始まり。
 - `orca.api.retry.max` は 0 以上。
 - `orca.api.retry.backoff-ms` は 0 以上。
+- ORCA Push runtime 設定
+  - `orca.push.enabled`
+  - `orca.push.shadow-mode`
+  - `orca.push.reception.enabled`
+  - `orca.push.medical.enabled`
+  - `orca.push.connect-timeout-ms`
+  - `orca.push.ping-interval-seconds`
+  - `orca.push.idle-timeout-seconds`
+  - `orca.push.reconnect.initial-delay-ms`
+  - `orca.push.reconnect.max-delay-ms`
+  - `orca.push.recovery.enabled`
+  - `orca.push.recovery.use-pusheventget`
+  - `orca.push.recovery.interval-minutes`
+  - `orca.push.recovery.initial-lookback-minutes`
+  - `orca.push.recovery.overlap-minutes`
+  - `orca.push.dedup.retention-days`
 
 ### 5. Attachment Storage
 - `attachment.storage.mode` は `database|s3` のいずれかで必須。

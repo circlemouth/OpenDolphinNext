@@ -52,6 +52,9 @@ final class OrcaChartSupportSupport {
         appendTag(builder, "Patient_ID", payload.getPatientId());
         appendTag(builder, "Perform_Date", datePart);
         appendTag(builder, "Perform_Time", timePart);
+        if (!isBlank(payload.getMedicalPush())) {
+            appendTag(builder, "Medical_Push", payload.getMedicalPush());
+        }
         if (!isBlank(payload.getMedicalUid())) {
             appendTag(builder, "Medical_Uid", payload.getMedicalUid());
         }
@@ -126,6 +129,7 @@ final class OrcaChartSupportSupport {
             response.setApiResultMessage(readFirst(document, "Api_Result_Message"));
             response.setInformationDate(readFirst(document, "Information_Date"));
             response.setInformationTime(readFirst(document, "Information_Time"));
+            response.setMedicalUid(readFirst(document, "Medical_Uid"));
             response.setInvoiceNumber(readFirst(document, "Invoice_Number"));
             response.setDataId(firstNonBlank(readFirst(document, "Data_Id"), readFirst(document, "DataID"), readFirst(document, "Data_ID")));
             List<Element> warningNodes = elements(document, "Medical_Warning_Info_child");
@@ -143,8 +147,8 @@ final class OrcaChartSupportSupport {
             boolean transportOk = result != null && result.getStatus() >= 200 && result.getStatus() < 300;
             boolean apiOk = response.getApiResult() != null && response.getApiResult().matches("0+");
             response.setApiOk(apiOk);
-            response.setOk(transportOk);
-            if (!transportOk && !isBlank(response.getApiResultMessage())) {
+            response.setOk(transportOk && apiOk);
+            if ((!transportOk || !apiOk) && !isBlank(response.getApiResultMessage())) {
                 response.setError(response.getApiResultMessage());
             }
         } catch (Exception ex) {

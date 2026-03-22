@@ -281,16 +281,23 @@ class ServerConfigurationValidatorTest {
                         ServerConfigurationResolver.KEY_FIDO2_RP_ID, "localhost",
                         ServerConfigurationResolver.KEY_FIDO2_RP_NAME, "OpenDolphin",
                         ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS, "https://localhost:8443",
-                        ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_MAX, "0",
-                        ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_TTL_DAYS, "0",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "true",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_RECEPTION_ENABLED, "false",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_MEDICAL_ENABLED, "false",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_CONNECT_TIMEOUT_MS, "0",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS, "5000",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS, "1000",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS, "0",
                         ServerConfigurationResolver.KEY_SMTP_AUTH, "true",
                         ServerConfigurationResolver.KEY_SMTP_HOST, "smtp.example.test",
                         ServerConfigurationResolver.KEY_SMTP_FROM, "noreply@example.test"));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
 
-        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_MAX));
-        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ORCA_PUSH_EVENT_CACHE_TTL_DAYS));
+        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ORCA_PUSH_CONNECT_TIMEOUT_MS));
+        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS));
+        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS));
+        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED));
         assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_SMTP_USERNAME));
         assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_SMTP_PASSWORD));
     }
