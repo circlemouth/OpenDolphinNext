@@ -80,15 +80,15 @@
 
 ### 2-2. これから実装するもの
 
-- [ ] Phase 1: DB と runtime config の基盤追加
-- [ ] Phase 2: ORCA 接続設定の拡張（pushUrl / pushTenantId）
-- [ ] Phase 3: Push クライアント基盤新設
-- [ ] Phase 4: 受付 Push (`patient_accept`) の本実装
-- [ ] Phase 5: 診療行為 Push (`patient_account`) の本実装
-- [ ] Phase 6: 送信系 API (`acceptmodv2` / `medicalmodv2`) の是正
-- [ ] Phase 7: readiness / metrics / 管理画面 / 運用面の整備
-- [ ] Phase 8: legacy 廃止と名称整理
-- [ ] Phase 9: テスト整備
+- [x] Phase 1: DB と runtime config の基盤追加
+- [x] Phase 2: ORCA 接続設定の拡張（pushUrl / pushTenantId）
+- [x] Phase 3: Push クライアント基盤新設
+- [x] Phase 4: 受付 Push (`patient_accept`) の本実装
+- [x] Phase 5: 診療行為 Push (`patient_account`) の本実装
+- [x] Phase 6: 送信系 API (`acceptmodv2` / `medicalmodv2`) の是正
+- [x] Phase 7: readiness / metrics / 管理画面 / 運用面の整備
+- [x] Phase 8: legacy 廃止と名称整理
+- [x] Phase 9: テスト整備
 - [ ] Phase 10: shadow mode → live の段階リリース
 
 ---

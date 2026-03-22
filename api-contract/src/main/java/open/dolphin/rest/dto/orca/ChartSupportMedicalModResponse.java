@@ -14,6 +14,7 @@ public class ChartSupportMedicalModResponse {
     private String apiResultMessage;
     private String informationDate;
     private String informationTime;
+    private String medicalUid;
     private String invoiceNumber;
     private String dataId;
     private List<MedicalWarning> medicalWarnings = new ArrayList<>();
@@ -75,6 +76,14 @@ public class ChartSupportMedicalModResponse {
 
     public void setInformationTime(String informationTime) {
         this.informationTime = informationTime;
+    }
+
+    public String getMedicalUid() {
+        return medicalUid;
+    }
+
+    public void setMedicalUid(String medicalUid) {
+        this.medicalUid = medicalUid;
     }
 
     public String getInvoiceNumber() {

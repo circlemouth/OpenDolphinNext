@@ -154,6 +154,21 @@ public class ReceptionRealtimeSseSupport {
         cleanupFacilityContextIfIdle(facilityId, context);
     }
 
+    public void publishReplayGap(String facilityId) {
+        if (facilityId == null || facilityId.isBlank()) {
+            return;
+        }
+        FacilityContext context = facilityContexts.get(facilityId);
+        if (context == null || context.hasNoClients()) {
+            cleanupFacilityContextIfIdle(facilityId, context);
+            return;
+        }
+        for (SseClient client : context.clients) {
+            sendReplayGapEvent(facilityId, context, client);
+        }
+        cleanupFacilityContextIfIdle(facilityId, context);
+    }
+
     private void broadcastKeepAlive() {
         try {
             facilityContexts.forEach((facilityId, context) -> {

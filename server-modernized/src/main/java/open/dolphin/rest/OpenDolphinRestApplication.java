@@ -51,7 +51,7 @@ public class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.orca.OrcaReportDocumentResource.class,
                 open.dolphin.rest.orca.OrcaSubjectiveResource.class,
                 open.dolphin.rest.orca.OrcaChartSupportResource.class,
-                open.dolphin.rest.orca.OrcaMedicalModV2Resource.class,
+                open.dolphin.rest.orca.OrcaLocalMedicalOutpatientResource.class,
                 open.orca.rest.OrcaResource.class,
                 open.orca.rest.OrcaFacilityResource.class,
                 open.orca.rest.OrcaPatientDiseaseResource.class,

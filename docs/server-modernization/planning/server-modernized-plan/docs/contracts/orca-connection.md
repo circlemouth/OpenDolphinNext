@@ -18,6 +18,8 @@
     "facility-a": {
       "mode": "weborca",
       "baseUrl": "https://example.invalid",
+      "pushUrl": "wss://push.example.invalid/ws",
+      "pushTenantId": "tenant-a",
       "username": "user-a",
       "passwordEncrypted": "...",
       "clientAuthEnabled": false,
@@ -32,6 +34,8 @@
 ```
 - `defaultFacilityId` は明示設定のみ許可する。
 - 施設更新時に `defaultFacilityId` を暗黙変更してはならない。
+- `pushUrl` は施設単位で保持し、`ws://` または `wss://` の絶対 URI 以外を拒否する。
+- `pushTenantId` は空許可。空でなければ Push 接続ヘッダへそのまま送るが、コード側でデフォルト注入しない。
 
 ## 解決順序
 1. 呼び出し引数の facilityId

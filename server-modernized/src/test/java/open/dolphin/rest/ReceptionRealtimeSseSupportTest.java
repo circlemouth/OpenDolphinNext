@@ -97,6 +97,18 @@ class ReceptionRealtimeSseSupportTest {
     }
 
     @Test
+    void publishReplayGapBroadcastsReplayGapEvent() {
+        RecordingSse sse = new RecordingSse();
+        RecordingSseEventSink sink = new RecordingSseEventSink();
+        support.register("F001", sse, sink, null);
+
+        support.publishReplayGap("F001");
+
+        assertFalse(sink.events.isEmpty());
+        assertEquals("reception.replay-gap", sink.events.get(0).getName());
+    }
+
+    @Test
     void reconnectAfterZeroClientCleanupAlwaysEmitsReplayGap() {
         RecordingSse bootstrapSse = new RecordingSse();
         RecordingSseEventSink bootstrapSink = new RecordingSseEventSink();

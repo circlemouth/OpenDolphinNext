@@ -15,7 +15,7 @@ import open.dolphin.rest.dto.outpatient.MedicalOutpatientResponse;
 public class OrcaMedicalOutpatientResource extends AbstractOrcaRestResource {
 
     @Inject
-    private OrcaMedicalModV2Resource delegate;
+    private OrcaLocalMedicalOutpatientResource delegate;
 
     @POST
     @Path("/outpatient")

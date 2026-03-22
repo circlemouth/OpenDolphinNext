@@ -14,6 +14,7 @@ public class VisitMutationRequest {
     private String patientId;
     private String wholeName;
     private String acceptancePush;
+    private String claimSendInfo;
     private String acceptanceDate;
     private String acceptanceTime;
     private String acceptanceId;
@@ -52,6 +53,14 @@ public class VisitMutationRequest {
 
     public void setAcceptancePush(String acceptancePush) {
         this.acceptancePush = acceptancePush;
+    }
+
+    public String getClaimSendInfo() {
+        return claimSendInfo;
+    }
+
+    public void setClaimSendInfo(String claimSendInfo) {
+        this.claimSendInfo = claimSendInfo;
     }
 
     public String getAcceptanceDate() {

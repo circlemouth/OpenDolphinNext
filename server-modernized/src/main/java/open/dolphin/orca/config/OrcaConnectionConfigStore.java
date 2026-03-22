@@ -75,6 +75,18 @@ public class OrcaConnectionConfigStore {
             lock.readLock().unlock();
         }
     }
+
+    public java.util.List<String> listConfiguredFacilityIds() {
+        lock.readLock().lock();
+        try {
+            if (facilities == null || facilities.isEmpty()) {
+                return java.util.List.of();
+            }
+            return java.util.List.copyOf(facilities.keySet());
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
     public ResolvedOrcaConnection resolve() {
         return resolve(null);
     }

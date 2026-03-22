@@ -2,6 +2,7 @@ package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -19,14 +20,42 @@ class OrcaChartSupportSupportTest {
         ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
         payload.setPatientId("12345");
         payload.setPerformDate("2026-03-22T08:00:00");
+        payload.setClassCode("01");
         payload.setDepartmentCode("01");
         payload.setIncludeInitialConsultation(true);
+        payload.setMedicalPush("Yes");
+        payload.setMedicalUid("M-001");
 
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
+        assertTrue(xml.contains("<Medical_Push type=\"string\">Yes</Medical_Push>"));
+        assertTrue(xml.contains("<Medical_Uid type=\"string\">M-001</Medical_Uid>"));
         assertTrue(xml.contains("<Medical_Class type=\"string\">11</Medical_Class>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">110000010</Medication_Code>"));
+    }
+
+    @Test
+    void parseMedicalModResponseMarksApiErrorAsFailure() {
+        String xml = """
+                <data>
+                  <medicalmodres type="record">
+                    <Api_Result>E90</Api_Result>
+                    <Api_Result_Message>busy</Api_Result_Message>
+                    <Medical_Uid>M-002</Medical_Uid>
+                  </medicalmodres>
+                </data>
+                """;
+
+        var response = support.parseMedicalModResponse(
+                OrcaTransportResult.fallback(xml, "application/xml"),
+                "run-1",
+                "trace-1");
+
+        assertFalse(response.isOk());
+        assertFalse(response.isApiOk());
+        assertEquals("M-002", response.getMedicalUid());
+        assertEquals("busy", response.getError());
     }
 
     @Test

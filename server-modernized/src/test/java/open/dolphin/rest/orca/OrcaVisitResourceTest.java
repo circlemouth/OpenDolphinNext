@@ -135,13 +135,55 @@ class OrcaVisitResourceTest {
     }
 
     @Test
-    void visitMutationRejectsMissingAcceptanceTimestampForNonQueryRequests() {
+    void visitMutationRejectsMissingAcceptanceTimestampForCreateRequests() {
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(createService());
 
         VisitMutationRequest request = new VisitMutationRequest();
         request.setRequestNumber("01");
         request.setPatientId("000001");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request));
+        assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "orca.visit.mutation.invalid");
+    }
+
+    @Test
+    void visitMutationAcceptsClaimSendInfoRequest() {
+        OrcaWrapperService wrapperService = mock(OrcaWrapperService.class);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("0000");
+        stub.setApiResultMessage("OK");
+        when(wrapperService.mutateVisit(any(VisitMutationRequest.class))).thenReturn(stub);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("04");
+        request.setPatientId("000001");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+        request.setDepartmentCode("01");
+        request.setClaimSendInfo("01");
+
+        VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("0000", response.getApiResult());
+        verify(wrapperService).mutateVisit(request);
+    }
+
+    @Test
+    void visitMutationRejectsClaimSendInfoRequestWithoutClaimSendInfo() {
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(createService());
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("04");
+        request.setPatientId("000001");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+        request.setDepartmentCode("01");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request));

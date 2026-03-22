@@ -7,9 +7,11 @@ public class ChartSupportMedicalModV2Request {
 
     private String patientId;
     private String performDate;
+    private String classCode;
     private String departmentCode;
     private String physicianCode;
     private String requestNumber;
+    private String medicalPush;
     private String medicalUid;
     private boolean includeInitialConsultation;
     private List<MedicalInformation> medicalInformation = new ArrayList<>();
@@ -28,6 +30,14 @@ public class ChartSupportMedicalModV2Request {
 
     public void setPerformDate(String performDate) {
         this.performDate = performDate;
+    }
+
+    public String getClassCode() {
+        return classCode;
+    }
+
+    public void setClassCode(String classCode) {
+        this.classCode = classCode;
     }
 
     public String getDepartmentCode() {
@@ -52,6 +62,14 @@ public class ChartSupportMedicalModV2Request {
 
     public void setRequestNumber(String requestNumber) {
         this.requestNumber = requestNumber;
+    }
+
+    public String getMedicalPush() {
+        return medicalPush;
+    }
+
+    public void setMedicalPush(String medicalPush) {
+        this.medicalPush = medicalPush;
     }
 
     public String getMedicalUid() {

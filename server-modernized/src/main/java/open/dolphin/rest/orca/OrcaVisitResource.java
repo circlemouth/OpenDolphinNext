@@ -18,6 +18,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.orca.service.OrcaWrapperService;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
@@ -37,6 +38,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
 
     private OrcaWrapperService wrapperService;
     private ReceptionRealtimeSseSupport receptionRealtimeSseSupport;
+    private ServerConfigurationResolver configurationResolver;
 
     public OrcaVisitResource() {
     }
@@ -49,6 +51,11 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     @Inject
     void setReceptionRealtimeSseSupport(ReceptionRealtimeSseSupport receptionRealtimeSseSupport) {
         this.receptionRealtimeSseSupport = receptionRealtimeSseSupport;
+    }
+
+    @Inject
+    void setConfigurationResolver(ServerConfigurationResolver configurationResolver) {
+        this.configurationResolver = configurationResolver;
     }
 
     @POST
@@ -85,27 +92,8 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.visit.mutation.invalid",
                     "requestNumber is required");
         }
-        if (body.getPatientId() == null || body.getPatientId().isBlank()) {
-            Map<String, Object> details = newAuditDetails(request);
-            details.put("operation", OPERATION_VISIT_MUTATION);
-            markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "orca.visit.mutation.invalid", "patientId is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.BAD_REQUEST, "orca.visit.mutation.invalid",
-                    "patientId is required");
-        }
-        if (!isQueryRequest(body.getRequestNumber())
-                && (body.getAcceptanceDate() == null || body.getAcceptanceDate().isBlank()
-                || body.getAcceptanceTime() == null || body.getAcceptanceTime().isBlank())) {
-            Map<String, Object> details = newAuditDetails(request);
-            details.put("operation", OPERATION_VISIT_MUTATION);
-            details.put("patientId", body.getPatientId());
-            markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "orca.visit.mutation.invalid", "acceptanceDate and acceptanceTime are required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.BAD_REQUEST, "orca.visit.mutation.invalid",
-                    "acceptanceDate and acceptanceTime are required");
-        }
+        validateVisitMutationRequest(request, body);
+        applyPushDefaults(body);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_VISIT_MUTATION);
         details.put("requestNumber", body.getRequestNumber());
@@ -218,11 +206,18 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         this.receptionRealtimeSseSupport = receptionRealtimeSseSupport;
     }
 
+    void setConfigurationResolverForTest(ServerConfigurationResolver configurationResolver) {
+        this.configurationResolver = configurationResolver;
+    }
+
     private void publishReceptionRealtimeUpdateIfNeeded(HttpServletRequest request,
             VisitMutationRequest body,
             VisitMutationResponse response,
             Map<String, Object> details) {
         if (receptionRealtimeSseSupport == null || body == null || response == null) {
+            return;
+        }
+        if (isPushReceptionLive()) {
             return;
         }
         String normalizedRequestNumber = normalizeRequestNumber(body.getRequestNumber());
@@ -303,9 +298,89 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             case "create", "register", "add" -> "01";
             case "delete", "cancel", "remove" -> "02";
             case "update", "modify" -> "03";
+            case "claim", "claim-send", "claim-send-info", "send-claim" -> "04";
             case "query", "read", "get", "list", "inquiry" -> "00";
             default -> normalized;
         };
+    }
+
+    private void validateVisitMutationRequest(HttpServletRequest request, VisitMutationRequest body) {
+        String normalizedRequestNumber = normalizeRequestNumber(body.getRequestNumber());
+        if (body.getPatientId() == null || body.getPatientId().isBlank()) {
+            rejectVisitMutationRequest(request, body, "patientId is required");
+        }
+        boolean hasAcceptanceId = body.getAcceptanceId() != null && !body.getAcceptanceId().isBlank();
+        boolean hasAcceptanceDate = body.getAcceptanceDate() != null && !body.getAcceptanceDate().isBlank();
+        boolean hasAcceptanceTime = body.getAcceptanceTime() != null && !body.getAcceptanceTime().isBlank();
+        boolean hasDepartmentCode = body.getDepartmentCode() != null && !body.getDepartmentCode().isBlank();
+        boolean hasPhysicianCode = body.getPhysicianCode() != null && !body.getPhysicianCode().isBlank();
+        switch (normalizedRequestNumber) {
+            case "00" -> {
+                // Query requests may use acceptanceId, acceptanceDate, or patientId-only lookup.
+            }
+            case "01" -> {
+                if (!hasAcceptanceDate || !hasAcceptanceTime) {
+                    rejectVisitMutationRequest(request, body, "acceptanceDate and acceptanceTime are required");
+                }
+            }
+            case "02" -> {
+                if (!hasAcceptanceId && (!hasAcceptanceDate || !hasAcceptanceTime)) {
+                    rejectVisitMutationRequest(request, body,
+                            "acceptanceId or acceptanceDate and acceptanceTime are required");
+                }
+            }
+            case "03" -> {
+                if (!hasAcceptanceDate || !hasAcceptanceTime || !hasDepartmentCode || !hasPhysicianCode) {
+                    rejectVisitMutationRequest(request, body,
+                            "acceptanceDate, acceptanceTime, departmentCode and physicianCode are required");
+                }
+            }
+            case "04" -> {
+                if (body.getClaimSendInfo() == null || body.getClaimSendInfo().isBlank()) {
+                    rejectVisitMutationRequest(request, body, "claimSendInfo is required");
+                }
+                if (!hasAcceptanceId && (!hasAcceptanceDate || !hasAcceptanceTime || !hasDepartmentCode)) {
+                    rejectVisitMutationRequest(request, body,
+                            "acceptanceId or acceptanceDate, acceptanceTime and departmentCode are required");
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    private void applyPushDefaults(VisitMutationRequest body) {
+        if (body == null) {
+            return;
+        }
+        if (isPushReceptionEnabled() && (body.getAcceptancePush() == null || body.getAcceptancePush().isBlank())) {
+            body.setAcceptancePush("Yes");
+        }
+    }
+
+    private boolean isPushReceptionLive() {
+        ServerConfigurationResolver resolver = configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
+        var settings = resolver.orcaPush();
+        return settings.enabled() && !settings.shadowMode() && settings.receptionEnabled();
+    }
+
+    private boolean isPushReceptionEnabled() {
+        ServerConfigurationResolver resolver = configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
+        var settings = resolver.orcaPush();
+        return settings.enabled() && settings.receptionEnabled();
+    }
+
+    private void rejectVisitMutationRequest(HttpServletRequest request, VisitMutationRequest body, String message) {
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_VISIT_MUTATION);
+        if (body != null) {
+            details.put("patientId", body.getPatientId());
+            details.put("requestNumber", body.getRequestNumber());
+        }
+        markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
+                "orca.visit.mutation.invalid", message);
+        recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+        throw restError(request, Response.Status.BAD_REQUEST, "orca.visit.mutation.invalid", message);
     }
 
     private String normalizeEventDate(String value) {

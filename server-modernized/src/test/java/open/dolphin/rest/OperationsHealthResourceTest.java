@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
+import open.dolphin.orca.push.OrcaPushClientRegistry;
+import open.dolphin.orca.push.OrcaPushStateStore;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
@@ -49,6 +51,8 @@ class OperationsHealthResourceTest {
         setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
                 TestServerConfigurationResolvers.resolver());
         setField(OperationsReadinessEvaluator.class, evaluator, "orcaConnectionConfigStore", orcaConnectionConfigStore);
+        setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushClientRegistry", new StubPushClientRegistry(false));
+        setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushStateStore", new StubPushStateStore());
 
         resource = new OperationsHealthResource();
         setField(OperationsHealthResource.class, resource, "readinessEvaluator", evaluator);
@@ -136,5 +140,21 @@ class OperationsHealthResourceTest {
         public RestOrcaTransport.ProbeResult probeReadiness() {
             return probeResult;
         }
+    }
+
+    private static final class StubPushClientRegistry extends OrcaPushClientRegistry {
+        private final boolean connected;
+
+        private StubPushClientRegistry(boolean connected) {
+            this.connected = connected;
+        }
+
+        @Override
+        public boolean isConnected() {
+            return connected;
+        }
+    }
+
+    private static final class StubPushStateStore extends OrcaPushStateStore {
     }
 }
