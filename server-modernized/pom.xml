@@ -569,13 +569,13 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <spotbugs.plugin.version>4.8.5.0</spotbugs.plugin.version>
+                <spotbugs.plugin.version>4.9.8.2</spotbugs.plugin.version>
                 <findsecbugs.plugin.version>1.12.0</findsecbugs.plugin.version>
                 <checkstyle.plugin.version>3.3.1</checkstyle.plugin.version>
                 <checkstyle.version>10.12.4</checkstyle.version>
                 <pmd.plugin.version>3.21.0</pmd.plugin.version>
                 <pmd.version>6.55.0</pmd.version>
-                <spotbugs.skip>true</spotbugs.skip>
+                <spotbugs.skip>false</spotbugs.skip>
                 <static.analysis.config.dir>${maven.multiModuleProjectDirectory}/server-modernized/config/static-analysis</static.analysis.config.dir>
                 <static.analysis.output.dir>${maven.multiModuleProjectDirectory}/server-modernized/target/static-analysis</static.analysis.output.dir>
                 <static.analysis.enforce>false</static.analysis.enforce>

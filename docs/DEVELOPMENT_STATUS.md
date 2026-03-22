@@ -39,6 +39,10 @@
 - `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
+- 2026-03-22: SpotBugs の `Unsupported class file major version 69` を解消し、static analysis を Java 25 実行環境でも有効化した（RUN_ID=20260322T112849Z）。
+  - 変更: `server-modernized/pom.xml` と `pom.server-modernized.xml` の SpotBugs plugin を `4.9.8.2` へ更新し、`spotbugs.skip` の既定値を解除した。
+  - 変更: deferred 前提で残していた execution log / remediation checklist / static-analysis 文書を、再有効化後の運用に合わせて同期した。
+  - 検証: Maven Java 25 で `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis -Dspotbugs.skip=false -Dcheckstyle.skip=true -Dpmd.skip=true -DskipTests verify` と `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify` を実行し、いずれも BUILD SUCCESS を確認した。
 - 2026-03-22: ORCA server recovery playbook の Phase 1-9 実装を進め、Push runtime / readiness / 送信系 wrapper 是正 / legacy 名称整理を完了した（RUN_ID=20260322T102015Z）。
   - 変更: `server-modernized` に ORCA Push 用の DB state/dedup 基盤、`open.dolphin.orca.push` 一式、Micrometer metrics registrar、`ReceptionRealtimeSseSupport.publishReplayGap()`、`OperationsReadinessEvaluator` の `orcaPush` 詳細判定を追加した。
   - 変更: `acceptmodv2` は `Request_Number=04` と `Claim_Send_Info`、`medicalmodv2` は `class=01/02/03/04`・`Medical_Push`・`Medical_Uid` を扱うよう是正し、ローカル外来 API は `OrcaLocalMedicalOutpatientResource` / `/api/orca/local-medical/outpatient` へ rename した。旧 `PushEventDeduplicator` と未使用 `jakarta.websocket*` 依存は削除した。
@@ -49,7 +53,7 @@
   - 変更: `check-no-generated-artifacts.sh` を tracked / untracked 両検査へ強化し、commit 済み generated artifact を検出する `RepoGuardScriptsIT` を追加した。tracked `opendolphin-server.war` も repo から除去した。
   - 変更: `docs/contracts/runtime-config.md` / `docs/runbooks/release-validation.md` / `docs/development/server-modernized-remediation-master-checklist.md` / `docs/development/execution-log.md` を closure 実績に同期し、clean archive 手順を固定した。
   - 検証: `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify`、runtime-config grep、guard script 2 本、`git archive --format=zip` + `zipinfo -1` 検査を実施し、禁止ファイル 0 件を確認した。
-  - 継続管理: SpotBugs `Unsupported class file major version 69` は closure 対象外の deferred として execution log / status に明記した。
+  - 継続管理: SpotBugs `Unsupported class file major version 69` は後続 RUN_ID=`20260322T112849Z` で解消済み。
 - 2026-03-21: Codex automation cleanup track の `A10`「packaging / CI / 品質ゲート強制」を完了した（RUN_ID=20260320T205337Z）。
   - 変更: `server-modernized/pom.xml` に dependency hygiene の `verify` 組み込みと WAR 内容検査を追加し、`opendolphin-common` 混入を build fail 条件へ変更。
   - 変更: `.github/workflows/server-modernized-static-analysis-gate.yml` を `-Pstatic-analysis,dependency-hygiene -Dstatic.analysis.enforce=true -pl server-modernized -am verify` 実行へ更新し、`.gitattributes` に source archive の `export-ignore` パターンを追加。

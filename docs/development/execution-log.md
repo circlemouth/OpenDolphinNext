@@ -558,7 +558,7 @@
   - 2026-03-22 08:02:03 JST に BUILD SUCCESS を確認
 - 未解決事項:
   - `OrcaMasterResource` / `OrcaMasterDao` / `EtensuDao` / `MasterUpdateService` / `PatientModV2OutpatientResource` / `OrcaOrderBundleResource` / `OrcaResource` / `KarteServiceBean` は 700 行未満に収まったが、WS-08 全体の総括 checkbox と自己監査更新が未完了である。
-  - `spotbugs` は現行実行環境で `Unsupported class file major version 69` を返すため、`server-modernized/pom.xml` では `spotbugs.skip=true` を既定化し、`checkstyle` / `pmd` は通常 verify で継続実行する。
+  - 後続 RUN_ID=`20260322T112849Z` で SpotBugs plugin を Java 25 対応版へ更新し、この deferred は解消済み。
 - 次の WS に渡す注意点:
   - 次段では checklist の総括項目を、execution-log と直近 verify 結果に基づいて整理し、4 点一致の自己監査を完了させること。
 
@@ -943,7 +943,7 @@
 - 主要判断:
   - 残件クローズの正本は root 側 docs に統一し、runtime-config 契約・generated artifact guard・clean archive 手順を同一変更単位で同期した。
   - full verify と manual audit を execution log に固定し、レビュー時に再現できる clean archive 手順を runbook へ昇格した。
-  - SpotBugs `Unsupported class file major version 69` は今回の closure 対象外として deferred 扱いを継続した。
+  - SpotBugs `Unsupported class file major version 69` は当時 closure 対象外として deferred としたが、後続 RUN_ID=`20260322T112849Z` で解消済み。
 - verify 結果:
   - `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify` 成功
   - 2026-03-22 19:31:20 JST に BUILD SUCCESS を確認
@@ -954,6 +954,26 @@
   - `git archive --format=zip --output /tmp/OpenDolphinNext-clean.zip HEAD` 成功
   - `zipinfo -1 /tmp/OpenDolphinNext-clean.zip | rg '(^|/)target(/|$)|\.war$|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$' && exit 1 || true` は 0 件
 - 未解決事項:
-  - SpotBugs `Unsupported class file major version 69` は deferred のまま。現行 verify では plugin skip で運用しており、本 closure の blocking issue にはしない。
+  - SpotBugs `Unsupported class file major version 69` は解消済み。現行 verify では `spotbugs.skip=false` が既定で、Java 25 実行環境でも SpotBugs が通る。
 - 次の WS に渡す注意点:
-  - SpotBugs toolchain cleanup は別 ticket / 別 PR で扱い、closure 系 docs の完了状態は reopen しないこと。
+  - static-analysis の運用は `spotbugs.skip=false` 前提へ戻ったため、新規変更では SpotBugs / Checkstyle / PMD の 3 系統を通常 verify の一部として確認すること。
+
+## SpotBugs toolchain cleanup
+- 実施日: 2026-03-22
+- RUN_ID: `20260322T112849Z`
+- 変更ファイル:
+  - `server-modernized/pom.xml`
+  - `pom.server-modernized.xml`
+  - `docs/modernization/p9-05-static-analysis-gate.md`
+  - `docs/development/server-modernized-remediation-master-checklist.md`
+  - `docs/development/execution-log.md`
+  - `docs/DEVELOPMENT_STATUS.md`
+- 主要判断:
+  - root cause は Maven が Java 25 で動作した際、SpotBugs plugin `4.8.5.0` が JDK 標準クラスの class file major version 69 を読めず異常終了することだった。
+  - SpotBugs plugin を `4.9.8.2` へ更新し、`spotbugs.skip` の既定値を root 側 / module 側の両 POM で解除した。
+  - 既存 docs に残っていた deferred 前提の記述は、再有効化後の static-analysis 運用へ同期した。
+- verify 結果:
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis -Dspotbugs.skip=false -Dcheckstyle.skip=true -Dpmd.skip=true -DskipTests verify` 成功
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify` 成功
+- 未解決事項:
+  - なし

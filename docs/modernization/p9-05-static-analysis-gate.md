@@ -45,3 +45,9 @@ SpotBugs / Checkstyle / PMD を PR 時の必須チェックに組み込み、静
 - 実行:
   - `JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home mvn -o -f pom.server-modernized.xml -pl common -am -Pstatic-analysis -Dstatic.analysis.enforce=false -DskipTests verify`
 - 結果: PASS（SpotBugs/Checkstyle/PMD 実行・レポート出力確認）
+
+## 2026-03-22 追記
+- RUN_ID: `20260322T112849Z`
+- `server-modernized/pom.xml` / `pom.server-modernized.xml` の SpotBugs plugin を `4.9.8.2` へ更新し、`spotbugs.skip` の既定値を解除した。
+- 根本原因は、Maven が Java 25 で動作したときに SpotBugs 4.8.5.0 が JDK 標準クラスの class file major version 69 を読めなかったことだった。
+- 修正後は Maven Java 25 で `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis -Dspotbugs.skip=false -Dcheckstyle.skip=true -Dpmd.skip=true -DskipTests verify` を実行し、SpotBugs 実行まで含めて BUILD SUCCESS を確認した。
