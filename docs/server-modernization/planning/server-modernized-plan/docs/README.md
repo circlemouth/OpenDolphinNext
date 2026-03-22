@@ -5,6 +5,8 @@
 
 ## 先に読む文書
 - `docs/development/server-modernized-remediation-master-checklist.md`
+- `docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- `docs/development/orca-server-recovery-implementation-playbook.md`
 - `docs/development/pull-request-checklist-template.md`
 
 ## 契約文書

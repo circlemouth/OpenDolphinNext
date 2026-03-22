@@ -28,5 +28,7 @@
 
 ## 改修用ドキュメント
 - マスターチェックリスト: `docs/development/server-modernized-remediation-master-checklist.md`
+- 残件クローズ実装チェックリスト: `docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- ORCA recovery 実装プレイブック: `docs/development/orca-server-recovery-implementation-playbook.md`
 - PR テンプレート: `docs/development/pull-request-checklist-template.md`
 - 契約文書索引: `docs/README.md`

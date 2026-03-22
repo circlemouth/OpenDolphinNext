@@ -9,6 +9,8 @@
 ## 次の開発ドキュメント一式
 - `docs/server-modernization/planning/server-modernized-plan/README.md`
 - `docs/server-modernization/planning/server-modernized-plan/docs/README.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/orca-server-recovery-implementation-playbook.md`
 - 用途: `server-modernized` の改修計画、契約文書、運用手順の入口。まず `README.md`、次に `docs/README.md` を読む。
 
 ## Legacy 計画書
