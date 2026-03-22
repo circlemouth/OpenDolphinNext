@@ -64,6 +64,7 @@ class OrcaXmlMapperTypedTextParsingTest {
                     <Api_Result type="string">K3</Api_Result>
                     <Api_Result_Message type="string">受付登録終了</Api_Result_Message>
                     <Acceptance_Id type="string">A-20260211-001</Acceptance_Id>
+                    <Claim_Send_Info type="string">02</Claim_Send_Info>
                     <Acceptance_Date type="string">2026-02-11</Acceptance_Date>
                     <Acceptance_Time type="string">09:12:34</Acceptance_Time>
                     <Department_Code type="string">11</Department_Code>
@@ -92,10 +93,10 @@ class OrcaXmlMapperTypedTextParsingTest {
         assertNotNull(response);
         assertEquals("K3", response.getApiResult());
         assertEquals("A-20260211-001", response.getAcceptanceId());
+        assertEquals("02", response.getClaimSendInfo());
         assertEquals("11", response.getDepartmentCode());
         assertEquals("10005", response.getPhysicianCode());
         assertEquals("00001", response.getPatient().getPatientId());
         assertEquals("1", response.getVisitNumber());
     }
 }
-

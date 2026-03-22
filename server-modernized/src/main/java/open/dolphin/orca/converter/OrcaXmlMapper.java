@@ -226,6 +226,7 @@ public class OrcaXmlMapper {
         populateCommon(body, response);
         response.setResKey(textValue(body, "Reskey"));
         response.setAcceptanceId(textValue(body, "Acceptance_Id"));
+        response.setClaimSendInfo(textValue(body, "Claim_Send_Info"));
         response.setAcceptanceDate(textValue(body, "Acceptance_Date"));
         response.setAcceptanceTime(textValue(body, "Acceptance_Time"));
         response.setDepartmentCode(textValue(body, "Department_Code"));

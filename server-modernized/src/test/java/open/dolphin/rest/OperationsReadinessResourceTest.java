@@ -11,6 +11,8 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
+import open.dolphin.orca.config.OrcaConnectionConfigRecord;
+import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
@@ -28,6 +30,8 @@ class OperationsReadinessResourceTest {
     private StubRestOrcaTransport restOrcaTransport;
     private AttachmentStorageManager attachmentStorageManager;
     private PvtService pvtService;
+    private OrcaConnectionConfigStore orcaConnectionConfigStore;
+    private OperationsReadinessEvaluator evaluator;
     private OperationsReadinessResource resource;
 
     @BeforeEach
@@ -36,16 +40,18 @@ class OperationsReadinessResourceTest {
         query = org.mockito.Mockito.mock(Query.class);
         attachmentStorageManager = org.mockito.Mockito.mock(AttachmentStorageManager.class);
         pvtService = org.mockito.Mockito.mock(PvtService.class);
+        orcaConnectionConfigStore = org.mockito.Mockito.mock(OrcaConnectionConfigStore.class);
         restOrcaTransport = new StubRestOrcaTransport();
 
         ServerConfigurationResolver resolver = TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_PATIENT_IMAGES_ENABLED, "false");
-        OperationsReadinessEvaluator evaluator = new OperationsReadinessEvaluator();
+        evaluator = new OperationsReadinessEvaluator();
         setField(OperationsReadinessEvaluator.class, evaluator, "em", em);
         setField(OperationsReadinessEvaluator.class, evaluator, "restOrcaTransport", restOrcaTransport);
         setField(OperationsReadinessEvaluator.class, evaluator, "attachmentStorageManager", attachmentStorageManager);
         setField(OperationsReadinessEvaluator.class, evaluator, "pvtService", pvtService);
         setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver", resolver);
+        setField(OperationsReadinessEvaluator.class, evaluator, "orcaConnectionConfigStore", orcaConnectionConfigStore);
 
         resource = new OperationsReadinessResource();
         setField(OperationsReadinessResource.class, resource, "readinessEvaluator", evaluator);
@@ -74,8 +80,37 @@ class OperationsReadinessResourceTest {
         assertThat(orca.getCredentialConfigured()).isTrue();
         assertThat(orca.getClientAuthConfigured()).isFalse();
         assertThat(orca.getReasonCode()).isNull();
+        OperationsReadinessCheck orcaPush = body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA_PUSH);
+        assertThat(orcaPush.getStatus()).isEqualTo("DISABLED");
         OperationsReadinessCheck patientImages = body.getChecks().get(OperationsReadinessEvaluator.CHECK_PATIENT_IMAGES);
         assertThat(patientImages.getStatus()).isEqualTo("DISABLED");
+    }
+
+    @Test
+    void readinessReturnsDownWhenOrcaPushEnabledWithoutPushConfiguration() throws Exception {
+        setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
+                TestServerConfigurationResolvers.resolver(
+                        ServerConfigurationResolver.KEY_PATIENT_IMAGES_ENABLED, "false",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "true",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_MEDICAL_ENABLED, "true"));
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        restOrcaTransport.probeResult =
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DATABASE);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+        when(orcaConnectionConfigStore.getSnapshot()).thenReturn(new OrcaConnectionConfigRecord());
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA_PUSH).getReasonCode())
+                .isEqualTo("orca_push_not_configured");
     }
 
     @Test

@@ -16,6 +16,7 @@ import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckRequest;
 import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckResponse;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoRequest;
@@ -32,6 +33,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
     @Inject
     private OrcaTransport orcaTransport;
 
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
+
     @POST
     @Path("/medical-mod-v2")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -42,8 +46,21 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         requireRemoteUser(request);
         requireFacilityId(request);
         if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getPerformDate())
-                || isBlank(payload.getDepartmentCode())) {
-            throw validationError(request, "payload", "patientId, performDate, departmentCode are required");
+                || isBlank(payload.getDepartmentCode()) || isBlank(payload.getClassCode())) {
+            throw validationError(request, "payload", "patientId, performDate, departmentCode, classCode are required");
+        }
+        String classCode;
+        try {
+            classCode = normalizeClassCode(payload.getClassCode());
+        } catch (IllegalArgumentException ex) {
+            throw validationError(request, "payload.classCode", ex.getMessage());
+        }
+        payload.setClassCode(classCode);
+        if (requiresMedicalUid(classCode) && isBlank(payload.getMedicalUid())) {
+            throw validationError(request, "payload", "medicalUid is required for classCode 02/03");
+        }
+        if (isPushMedicalEnabled() && isBlank(payload.getMedicalPush())) {
+            payload.setMedicalPush("Yes");
         }
 
         String runId = resolveRunId(request);
@@ -51,7 +68,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         String requestXml = support().buildMedicalModV2RequestXml(payload);
         OrcaTransportResult result = orcaTransport.invokeDetailed(
                 OrcaEndpoint.MEDICAL_MOD,
-                OrcaTransportRequest.post(requestXml).withQuery("class=01"));
+                OrcaTransportRequest.post(requestXml).withQuery("class=" + classCode));
         ChartSupportMedicalModResponse response = support().parseMedicalModResponse(result, runId, traceId);
 
         Map<String, Object> details = new LinkedHashMap<>();
@@ -59,8 +76,11 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("traceId", traceId);
         details.put("patientId", payload.getPatientId());
         details.put("departmentCode", payload.getDepartmentCode());
+        details.put("classCode", classCode);
         details.put("medicalInformationCount",
                 payload.getMedicalInformation() != null ? payload.getMedicalInformation().size() : 0);
+        details.put("medicalPush", payload.getMedicalPush());
+        details.put("medicalUidPresent", !isBlank(payload.getMedicalUid()));
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
         recordAudit(request, "ORCA_MEDICAL_MOD_V2", details,
@@ -209,5 +229,39 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String normalizeClassCode(String classCode) {
+        if (classCode == null || classCode.isBlank()) {
+            return classCode;
+        }
+        String normalized = classCode.trim();
+        String lower = normalized.toLowerCase(java.util.Locale.ROOT);
+        if (lower.startsWith("class=")) {
+            normalized = normalized.substring("class=".length());
+        } else if (lower.startsWith("?class=")) {
+            normalized = normalized.substring("?class=".length());
+        }
+        int ampIndex = normalized.indexOf('&');
+        if (ampIndex >= 0) {
+            normalized = normalized.substring(0, ampIndex);
+        }
+        if (normalized.length() == 1) {
+            normalized = "0" + normalized;
+        }
+        return switch (normalized) {
+            case "01", "02", "03", "04" -> normalized;
+            default -> throw new IllegalArgumentException("classCode must be 01/02/03/04");
+        };
+    }
+
+    private boolean requiresMedicalUid(String classCode) {
+        return "02".equals(classCode) || "03".equals(classCode);
+    }
+
+    private boolean isPushMedicalEnabled() {
+        ServerConfigurationResolver resolver = configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
+        var settings = resolver.orcaPush();
+        return settings.enabled() && settings.medicalEnabled() && !settings.shadowMode();
     }
 }

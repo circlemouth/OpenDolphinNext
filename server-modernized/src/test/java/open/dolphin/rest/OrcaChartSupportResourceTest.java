@@ -73,8 +73,10 @@ class OrcaChartSupportResourceTest {
         ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
         payload.setPatientId("P001");
         payload.setPerformDate("2026-03-15T09:30:00");
+        payload.setClassCode("class=04");
         payload.setDepartmentCode("01");
         payload.setIncludeInitialConsultation(true);
+        payload.setMedicalPush("Yes");
 
         ChartSupportMedicalModResponse response = resource.medicalModV2(request, payload);
 
@@ -84,6 +86,11 @@ class OrcaChartSupportResourceTest {
         assertEquals("INV-01", response.getInvoiceNumber());
         assertEquals("DATA-01", response.getDataId());
         assertEquals(1, response.getMedicalWarnings().size());
+
+        ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
+        verify(orcaTransport).invokeDetailed(eq(OrcaEndpoint.MEDICAL_MOD), captor.capture());
+        assertEquals("class=04", captor.getValue().getQuery());
+        assertTrue(captor.getValue().getBody().contains("<Medical_Push type=\"string\">Yes</Medical_Push>"));
     }
 
     @Test
@@ -93,6 +100,40 @@ class OrcaChartSupportResourceTest {
 
         try {
             resource.medicalModV23(request, payload);
+        } catch (jakarta.ws.rs.WebApplicationException ex) {
+            assertEquals(400, ex.getResponse().getStatus());
+            return;
+        }
+        throw new AssertionError("Expected validation error");
+    }
+
+    @Test
+    void medicalModV2RejectsInvalidClassCode() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("P001");
+        payload.setPerformDate("2026-03-15T09:30:00");
+        payload.setDepartmentCode("01");
+        payload.setClassCode("09");
+
+        try {
+            resource.medicalModV2(request, payload);
+        } catch (jakarta.ws.rs.WebApplicationException ex) {
+            assertEquals(400, ex.getResponse().getStatus());
+            return;
+        }
+        throw new AssertionError("Expected validation error");
+    }
+
+    @Test
+    void medicalModV2RequiresMedicalUidForClass02And03() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("P001");
+        payload.setPerformDate("2026-03-15T09:30:00");
+        payload.setDepartmentCode("01");
+        payload.setClassCode("02");
+
+        try {
+            resource.medicalModV2(request, payload);
         } catch (jakarta.ws.rs.WebApplicationException ex) {
             assertEquals(400, ex.getResponse().getStatus());
             return;
