@@ -20,13 +20,34 @@ if [[ -z "$ROOT_DIR" ]]; then
 fi
 cd "$ROOT_DIR"
 
+artifact_pattern='(^|/)target(/|$)|\.war$|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$'
+review_target_exclude_pattern='^artifacts/'
+
 if git rev-parse --git-dir >/dev/null 2>&1; then
-  offenders=$(git status --porcelain \
-    | awk '{print $2}' \
-    | rg '(^|/)target/|\.war$' || true)
+  offenders=$(
+    {
+      git ls-files -z
+      git ls-files --others --exclude-standard -z
+    } |
+      tr '\0' '\n' |
+      rg -v "$review_target_exclude_pattern" |
+      rg "$artifact_pattern" |
+      sort -u || true
+  )
 else
-  offenders=$(find . -type f \( -path '*/target/*' -o -name '*.war' \) -print \
-    | sed 's#^\./##' || true)
+  offenders=$(
+    find . -type f \( \
+      -path '*/target/*' -o \
+      -name '*.war' -o \
+      -path '*/__MACOSX/*' -o \
+      -name '.DS_Store' -o \
+      -name 'Thumbs.db' \
+    \) -print \
+      | sed 's#^\./##' \
+      | rg -v "$review_target_exclude_pattern" \
+      | rg "$artifact_pattern" \
+      | sort -u || true
+  )
 fi
 
 if [[ -n "$offenders" ]]; then

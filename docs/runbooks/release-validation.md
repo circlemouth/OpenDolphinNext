@@ -7,23 +7,27 @@
 - [ ] `README.md` のリンクが存在する。
 - [ ] `docs/` 以下の契約文書が今回の変更を反映している。
 - [ ] `config/server-modernized.env.sample` が今回の設定変更を反映している。
-- [ ] `target/` や WAR がレビュー対象に含まれていない。
+- [ ] `target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` がレビュー対象に含まれていない。
 
 ## 静的確認コマンド
 ```bash
 mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify
 bash server-modernized/tools/ci/check-doc-links.sh
 bash server-modernized/tools/ci/check-config-contract.sh
-bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh
+bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"
 bash server-modernized/tools/ci/check-no-runtime-ddl.sh
 bash server-modernized/tools/ci/check-persistence-entities.sh
-bash server-modernized/tools/ci/check-no-generated-artifacts.sh
+bash server-modernized/tools/ci/check-no-generated-artifacts.sh --root "$(git rev-parse --show-toplevel)"
+rg 'System\.get(env|Property)|ConfigProvider\.getConfig\(' server-modernized/src/main/java -n
+rg 'dolphin\.facilityId' server-modernized -n -g '!docs/server-modernization/planning/**'
 ```
 
 ## 期待結果
 - [ ] Surefire が成功する。
 - [ ] Failsafe で 1 件以上の統合テストが実行される。
 - [ ] CI 補助スクリプトがすべて成功する。
+- [ ] direct runtime lookup grep は `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` 1 件だけを返す。
+- [ ] `dolphin.facilityId` grep は 0 件。
 
 ## 手動確認
 ### Health
@@ -52,6 +56,25 @@ bash server-modernized/tools/ci/check-no-generated-artifacts.sh
 - [ ] Flyway migration のみで必要テーブルが揃う。
 - [ ] `server-modernized/pom.xml` に sibling source 追加 (`../api-contract/src/main/java`) が存在しない。
 - [ ] `persistence.xml` の entity 明示列挙と `@Entity` 実装が一致する。
+
+## Review / Release Archive
+- [ ] archive は repo root から作成する。
+- [ ] 第一候補は `git archive` を使う。
+- [ ] 手動 zip を作る場合も、`target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` を含めない。
+- [ ] archive 生成後に `zipinfo -1` で禁止パターンを再検査する。
+
+```bash
+git archive --format=zip --output /tmp/OpenDolphinNext-clean.zip HEAD
+```
+
+```bash
+zipinfo -1 /tmp/OpenDolphinNext-clean.zip | \
+  rg '(^|/)target(/|$)|\.war$|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$' && exit 1 || true
+```
+
+## 補足
+- `check-no-generated-artifacts.sh` は git 管理下の tracked / untracked の両方を検査し、commit 済み生成物でも fail させる。
+- `check-no-direct-runtime-lookup.sh` は `ServerConfigurationResolver.java` 以外の direct runtime lookup を許可しない。
 
 ## リリース判定
 - [ ] すべての必須項目が完了した。

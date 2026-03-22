@@ -22,6 +22,12 @@
 - [x] build が sibling source へ依存しない。
 - [x] Failsafe の統合テストが実行される。
 
+## 残件クローズ追補（2026-03-22）
+- [x] RC-01 Runtime Config strict closure: `ServerConfigurationResolver` だけを direct runtime lookup 許可対象に縮小し、raw property / env fallback と `dolphin.facilityId` を production tree から除去した。
+- [x] RC-02 Generated Artifact Guard Hardening: `check-no-generated-artifacts.sh` を tracked / untracked 両検査へ強化し、commit 済み generated artifact を fail させる IT を追加した。tracked WAR も repo から除去した。
+- [x] RC-03 Final Closure Audit / Handoff / Clean Archive: `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify`、manual grep、guard scripts、`git archive` + `zipinfo` 検査を実測し、clean archive 手順を runbook に固定した。
+- [x] SpotBugs `Unsupported class file major version 69` は今回の closure 対象外として deferred を継続し、execution log / development status へ明記する。
+
 ## 作業の大原則
 
 ### 1. 1 変更 1 契約

@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map;
+import open.dolphin.testsupport.MicroProfileConfigTestSupport;
 import org.eclipse.microprofile.config.Config;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -344,17 +346,35 @@ class ServerConfigurationResolverTest {
     }
 
     @Test
-    void optionalDoesNotFallbackToSystemPropertiesWhenConfigIsUnavailable() {
+    void rawAndOptionalDoNotFallbackToSystemProperties() {
         System.setProperty(ServerConfigurationResolver.KEY_ENVIRONMENT, "prod");
-        ServerConfigurationResolver resolver = new ServerConfigurationResolver() {
-            @Override
-            Config resolveConfig() {
-                return null;
-            }
-        };
+        try {
+            ServerConfigurationResolver resolver = new ServerConfigurationResolver() {
+                @Override
+                Config resolveConfig() {
+                    return null;
+                }
+            };
 
-        assertFalse(resolver.optional(ServerConfigurationResolver.KEY_ENVIRONMENT).isPresent());
-        System.clearProperty(ServerConfigurationResolver.KEY_ENVIRONMENT);
+            assertNull(resolver.raw(ServerConfigurationResolver.KEY_ENVIRONMENT));
+            assertFalse(resolver.optional(ServerConfigurationResolver.KEY_ENVIRONMENT).isPresent());
+        } finally {
+            System.clearProperty(ServerConfigurationResolver.KEY_ENVIRONMENT);
+        }
+    }
+
+    @Test
+    void optionalPrefersOverridesBeforeConfigAndFallsBackToEmpty() throws Exception {
+        try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "config-value")) {
+            ServerConfigurationResolver overridden = new ServerConfigurationResolver(Map.of(
+                    ServerConfigurationResolver.KEY_ENVIRONMENT, "override-value"));
+            ServerConfigurationResolver resolved = new ServerConfigurationResolver();
+
+            assertEquals("override-value", overridden.optional(ServerConfigurationResolver.KEY_ENVIRONMENT).orElseThrow());
+            assertEquals("config-value", resolved.optional(ServerConfigurationResolver.KEY_ENVIRONMENT).orElseThrow());
+            assertFalse(resolved.optional("missing.key").isPresent());
+        }
     }
 
     private Path writeKeyring(String fileName) throws IOException {
