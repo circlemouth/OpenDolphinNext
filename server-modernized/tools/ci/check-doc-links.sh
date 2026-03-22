@@ -34,7 +34,6 @@ FILES=(
   "docs/contracts/runtime-config.md"
   "docs/runbooks/release-validation.md"
   "docs/server-modernization/README.md"
-  "server-modernized/README.md"
 )
 
 status=0

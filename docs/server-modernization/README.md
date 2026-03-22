@@ -150,6 +150,15 @@
 - `docs/server-modernization/api-smoke-test.md`
 - [docs/README.md](../README.md)（server-modernized 契約文書・runbook・PR チェックリストの正本索引）
 
+### ORCA POST 系の現行運用
+- subjectives（`/api/orca/chart/subjectives`）を含む current ORCA POST 連携は、stub/real 切替なしの実運用モードで固定する。
+- 検証時は feature flag や system property で stub へ逃がさず、`docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` の接続設定を正しく投入して疎通確認する。
+- 施設別 ORCA 接続設定は `facilities` + `defaultFacilityId` を正本とし、`PUT /api/admin/orca/connection` は設定更新専用、`PUT /api/admin/orca/connection/default-facility` は default 切替専用とする。
+- `/api/orca/master/drug` は `scope` query parameter を受け付けず、指定時は 400 `unsupported_parameter` を返す。
+- 詳細契約:
+  - `docs/contracts/orca-connection.md`
+  - `docs/contracts/orca-master-api.md`
+
 ### P10-06 env 運用（サンプルから作成）
 - `server-modernized.production.env` はリポジトリへ直接コミットせず、毎回サンプルから作成する。
 - 作成手順:
@@ -210,6 +219,18 @@
 - unsafe method（`POST/PUT/PATCH/DELETE`）の CSRF 検証は `fetch` と `XMLHttpRequest`（upload）で同一に扱う。
 - `POST /api/logout` は `credentials` + CSRF を前提に冪等で処理する。
 - 画像ヘッダは `X-Client-Feature-Images` のみを使用し、旧 `X-Feature-Images` は廃止する。
+- session cookie は `Secure` / `HttpOnly` / `SameSite=Lax` を前提に配信する。
+- 本番相当環境は HTTPS 前提で運用し、TLS 終端プロキシ配下でも `Forwarded` / `X-Forwarded-*` を正しく渡す。
+- `Authorization: Basic` の fallback 認証は廃止済みであり、session / container principal のみを認証根拠として扱う。
+- ORCA credential は server 側設定からのみ供給し、未設定時は fail-closed で応答する。
+
+### Typed Config 運用メモ
+- 起動時設定の正本は `server-modernized/config/server-modernized.env.sample` と `docs/contracts/runtime-config.md` であり、補完用の旧設定ファイル運用は採らない。
+- `document.integrity.keyring-path` は absolute path の keyring JSON を前提とし、単一 HMAC 鍵の直指定は許可しない。
+- `patient-images.enabled=true` の場合は `max-bytes` / `max-width` / `max-height` を必須とし、upload は temp file 受信後に normalize する。
+- FIDO2 は `FIDO2_RP_ID` / `FIDO2_RP_NAME` / `FIDO2_ALLOWED_ORIGINS` の 3 点を必須とし、未設定時は startup validation で fail-fast する。
+- Plivo SMS は `PLIVO_*` キーのみで解決し、`PLIVO_LOG_LEVEL` / `PLIVO_LOG_MESSAGE_CONTENT` / `PLIVO_HTTP_*` / `PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE` を含めて環境ごとに明示投入する。
+- `ChartEventHistoryPurgeScheduler` と `OrcaPatientSyncScheduler` は既定 OFF とし、必要な環境だけ enable する。
 
 ### セキュリティ設定（Trusted Proxy）
 - 監査ログのクライアントIP解決で `X-Forwarded-For` / `X-Real-IP` を信用するには、trusted proxy を明示設定してください。

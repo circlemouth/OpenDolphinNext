@@ -114,6 +114,14 @@
 
 ### 5. Metrics / Scheduler / SMTP
 - `master-update.scheduler.enabled` / `MASTER_UPDATE_SCHEDULER_ENABLED` は `true|false`。未設定時は `false`。
+- `chart-event.history.purge.enabled` / `CHART_EVENT_HISTORY_PURGE_ENABLED` は `true|false`。未設定時は `false`。
+- `chart-event.history.purge.interval-minutes` / `CHART_EVENT_HISTORY_PURGE_INTERVAL_MINUTES` は 1 以上。purge を有効化した環境のみ指定する。
+- `orca.patient-sync.enabled` / `ORCA_PATIENT_SYNC_ENABLED` は `true|false`。未設定時は `false`。
+- `orca.patient-sync.interval-minutes` / `ORCA_PATIENT_SYNC_INTERVAL_MINUTES` は 1 以上。
+- `orca.patient-sync.initial-lookback-days` / `ORCA_PATIENT_SYNC_INITIAL_LOOKBACK_DAYS` は 0 以上。
+- `orca.patient-sync.include-test-patient` / `ORCA_PATIENT_SYNC_INCLUDE_TEST_PATIENT` は `true|false`。
+- `orca.patient-sync.include-insurance` / `ORCA_PATIENT_SYNC_INCLUDE_INSURANCE` は `true|false`。
+- `orca.patient-sync.facility-id` / `ORCA_PATIENT_SYNC_FACILITY_ID` は任意。未設定時は `opendolphin.facility-id` を使用する。
 - `metrics.registry.jndi` / `METRICS_REGISTRY_JNDI` は Micrometer `MeterRegistry` を引く JNDI 名。未設定時は `java:jboss/micrometer/registry`。
 - `jboss.bind.address` / `JBOSS_BIND_ADDRESS` は運用上表示する bind address を固定したい場合のみ指定する。未設定時はホスト解決値を使う。
 - `audit.trusted.proxies` / `AUDIT_TRUSTED_PROXIES` は CSV の IP/CIDR。未設定時は loopback のみ信頼する。
@@ -190,6 +198,7 @@
 - [x] runtime 必須値として `opendolphin.environment` / `opendolphin.timezone` / `jboss.server.data.dir` を検証する。
 - [x] ORCA runtime 必須値として `opendolphin.facility-id` / `opendolphin.cloud.zero` と、PVT 有効時の listener 詳細を検証する。
 - [x] datasource 必須値として `*.host` / `*.port` / `*.name` / `*.user` / `*.password` / `*.sslmode` / `*.sslrootcert` を検証する。
+- [x] scheduler は `chart-event.history.purge.enabled=false` / `orca.patient-sync.enabled=false` を既定とし、明示 enable なしで動かさない。
 - [x] `attachment.storage.mode=database` のとき `attachment.storage.database.lob-table` を必須とする。
 - [x] `attachment.storage.mode=s3` のとき bucket / region / access-key / secret-key を必須とする。
 - [x] `patient-images.enabled=true` のとき max-bytes / max-width / max-height を必須とする。
