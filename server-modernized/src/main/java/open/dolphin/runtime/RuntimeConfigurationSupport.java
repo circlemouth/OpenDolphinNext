@@ -8,10 +8,6 @@ import java.util.Set;
  */
 public final class RuntimeConfigurationSupport {
 
-    public static final String PROP_ENVIRONMENT = "opendolphin.environment";
-    public static final String PROP_SERVER_DATA_DIR = "jboss.server.data.dir";
-    public static final String PROP_FACILITY_ID = "dolphin.facilityId";
-
     private static final Set<String> PRODUCTION_LIKE_PREFIXES = Set.of(
             "prod", "prd", "production", "stage", "stg", "staging", "it", "uat");
 

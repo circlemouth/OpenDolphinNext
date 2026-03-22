@@ -883,3 +883,77 @@
   - なし。
 - 次の WS に渡す注意点:
   - 参照計画 `docs/server-modernization/planning/server-modernized-plan/README.md` 起点の root 側残件は閉鎖済み。以後は root 側正本文書を唯一の更新対象とする。
+
+## RC-01 Runtime Config strict closure
+- 実施日: 2026-03-22
+- 変更ファイル:
+  - `server-modernized/src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java`
+  - `server-modernized/src/main/java/open/dolphin/runtime/RuntimeConfigurationSupport.java`
+  - `server-modernized/tools/ci/check-no-direct-runtime-lookup.sh`
+  - `server-modernized/src/test/java/open/dolphin/runtime/config/ServerConfigurationResolverTest.java`
+  - `server-modernized/src/test/java/open/dolphin/mbean/ServletStartupSecurityGuardTest.java`
+  - `server-modernized/src/test/java/open/dolphin/orca/config/OrcaConnectionConfigStoreTest.java`
+  - `docs/contracts/runtime-config.md`
+  - `docs/development/server-modernized-remediation-master-checklist.md`
+- 主要判断:
+  - `ServerConfigurationResolver.raw()` / `optional()` から raw Java property / env fallback を除去し、lookup は test override と `ConfigProvider.getConfig()` のみに固定した。
+  - `RuntimeConfigurationSupport` から property key 定数を削除し、pure utility のみ残した。
+  - `check-no-direct-runtime-lookup.sh` の allowlist を `ServerConfigurationResolver.java` のみに縮小した。
+  - `ServletStartupSecurityGuardTest` は legacy credential を system property ではなく MicroProfile Config 経由で注入し、contract どおりの lookup 経路へ合わせた。
+  - `dolphin.facilityId` は production tree から 0 件になった。
+- 追加/更新したテスト:
+  - 更新: `ServerConfigurationResolverTest`
+  - 更新: `ServletStartupSecurityGuardTest`
+  - 更新: `OrcaConnectionConfigStoreTest`
+- verify 結果:
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=ServerConfigurationResolverTest,RepoGuardScriptsIT,ServletStartupSecurityGuardTest,OrcaConnectionConfigStoreTest -Dsurefire.failIfNoSpecifiedTests=false test` 成功
+  - 2026-03-22 19:29:27 JST に BUILD SUCCESS を確認
+- 未解決事項:
+  - なし
+
+## RC-02 Generated Artifact Guard Hardening
+- 実施日: 2026-03-22
+- 変更ファイル:
+  - `server-modernized/tools/ci/check-no-generated-artifacts.sh`
+  - `server-modernized/src/test/java/open/dolphin/tools/ci/RepoGuardScriptsIT.java`
+  - `artifacts/api-stability/20251124T111500Z/benchmarks/20251223T001200Z/opendolphin-server.war`
+  - `docs/runbooks/release-validation.md`
+  - `docs/development/server-modernized-remediation-master-checklist.md`
+- 主要判断:
+  - `check-no-generated-artifacts.sh` は `git ls-files` と `git ls-files --others --exclude-standard` を合成し、tracked / untracked の両方を検査する形へ変更した。
+  - 検出対象を `target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` へ拡張し、重複は `sort -u` で除去するようにした。
+  - `RepoGuardScriptsIT` に clean status の temp git repo へ committed offender を投入して fail させるケースを追加した。
+  - 実 repo に残っていた tracked `opendolphin-server.war` を削除し、guard を実際に通る状態へ戻した。
+- 追加/更新したテスト:
+  - 更新: `RepoGuardScriptsIT`
+- verify 結果:
+  - `bash server-modernized/tools/ci/check-no-generated-artifacts.sh --root "$(git rev-parse --show-toplevel)"` 成功
+  - `git ls-files | rg '(^|/)target(/|$)|\.war$|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$' || true` は 0 件
+- 未解決事項:
+  - なし
+
+## RC-03 Final Closure Audit / Handoff / Clean Archive
+- 実施日: 2026-03-22
+- 変更ファイル:
+  - `docs/contracts/runtime-config.md`
+  - `docs/runbooks/release-validation.md`
+  - `docs/development/server-modernized-remediation-master-checklist.md`
+  - `docs/development/execution-log.md`
+  - `docs/DEVELOPMENT_STATUS.md`
+- 主要判断:
+  - 残件クローズの正本は root 側 docs に統一し、runtime-config 契約・generated artifact guard・clean archive 手順を同一変更単位で同期した。
+  - full verify と manual audit を execution log に固定し、レビュー時に再現できる clean archive 手順を runbook へ昇格した。
+  - SpotBugs `Unsupported class file major version 69` は今回の closure 対象外として deferred 扱いを継続した。
+- verify 結果:
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify` 成功
+  - 2026-03-22 19:31:20 JST に BUILD SUCCESS を確認
+  - `rg 'System\.get(env|Property)|ConfigProvider\.getConfig\(' server-modernized/src/main/java -n` は `server-modernized/src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java:511:            return ConfigProvider.getConfig();` のみ
+  - `rg 'dolphin\.facilityId' server-modernized -n -g '!docs/server-modernization/planning/**'` は 0 件
+  - `bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"` 成功
+  - `bash server-modernized/tools/ci/check-no-generated-artifacts.sh --root "$(git rev-parse --show-toplevel)"` 成功
+  - `git archive --format=zip --output /tmp/OpenDolphinNext-clean.zip HEAD` 成功
+  - `zipinfo -1 /tmp/OpenDolphinNext-clean.zip | rg '(^|/)target(/|$)|\.war$|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$' && exit 1 || true` は 0 件
+- 未解決事項:
+  - SpotBugs `Unsupported class file major version 69` は deferred のまま。現行 verify では plugin skip で運用しており、本 closure の blocking issue にはしない。
+- 次の WS に渡す注意点:
+  - SpotBugs toolchain cleanup は別 ticket / 別 PR で扱い、closure 系 docs の完了状態は reopen しないこと。

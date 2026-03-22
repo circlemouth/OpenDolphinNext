@@ -39,6 +39,12 @@
 - `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
+- 2026-03-22: `server-modernized` 残件クローズ `RC-01`〜`RC-03` を完了した（RUN_ID=20260322T101947Z）。
+  - 変更: `ServerConfigurationResolver` の raw property / env fallback を削除し、`RuntimeConfigurationSupport` を pure utility のみに整理、`check-no-direct-runtime-lookup.sh` の allowlist を resolver のみに縮小した。
+  - 変更: `check-no-generated-artifacts.sh` を tracked / untracked 両検査へ強化し、commit 済み generated artifact を検出する `RepoGuardScriptsIT` を追加した。tracked `opendolphin-server.war` も repo から除去した。
+  - 変更: `docs/contracts/runtime-config.md` / `docs/runbooks/release-validation.md` / `docs/development/server-modernized-remediation-master-checklist.md` / `docs/development/execution-log.md` を closure 実績に同期し、clean archive 手順を固定した。
+  - 検証: `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify`、runtime-config grep、guard script 2 本、`git archive --format=zip` + `zipinfo -1` 検査を実施し、禁止ファイル 0 件を確認した。
+  - 継続管理: SpotBugs `Unsupported class file major version 69` は closure 対象外の deferred として execution log / status に明記した。
 - 2026-03-21: Codex automation cleanup track の `A10`「packaging / CI / 品質ゲート強制」を完了した（RUN_ID=20260320T205337Z）。
   - 変更: `server-modernized/pom.xml` に dependency hygiene の `verify` 組み込みと WAR 内容検査を追加し、`opendolphin-common` 混入を build fail 条件へ変更。
   - 変更: `.github/workflows/server-modernized-static-analysis-gate.yml` を `-Pstatic-analysis,dependency-hygiene -Dstatic.analysis.enforce=true -pl server-modernized -am verify` 実行へ更新し、`.gitattributes` に source archive の `export-ignore` パターンを追加。

@@ -17,7 +17,9 @@
 ## 実装ルール
 - [x] `System.getenv` / `System.getProperty` / `ConfigProvider.getConfig()` は `ServerConfigurationResolver` 以外で使用しない。
 - [x] `ServerConfigurationResolver` は文字列取得だけでなく、型変換・列挙値検証・URI/Path/Duration 検証を行う。
+- [x] `ServerConfigurationResolver.raw()` / `optional()` は test override と `ConfigProvider.getConfig()` のみを参照し、raw Java property / env fallback を持たない。
 - [x] `RuntimeConfigurationSupport` は I/O を持たない pure utility のみ残し、設定解決責務は持たせない。
+- [x] 旧 `dolphin.facilityId` は production tree から除去し、`opendolphin.facility-id` 以外の facility fallback を許容しない。
 - [x] 新しい設定キーを追加した場合、同 PR で本ファイルと sample env を更新する。
 
 ## 名前付けルール
@@ -197,6 +199,8 @@
 - [x] CI に `server-modernized/tools/ci/check-no-direct-runtime-lookup.sh` を追加する。
 
 ## 受け入れ条件
-- [x] `rg 'System\\.get(env|Property)|ConfigProvider\\.getConfig\\(' src/main/java` の結果が許可クラスのみに限定される。
+- [x] `rg 'System\\.get(env|Property)|ConfigProvider\\.getConfig\\(' server-modernized/src/main/java -n` の結果が `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` のみに限定される。
+- [x] `rg 'dolphin\\.facilityId' server-modernized -n -g '!docs/server-modernization/planning/**'` の結果が 0 件になる。
+- [x] `bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"` が、`ServerConfigurationResolver.java` のみを allowlist とした状態で成功する。
 - [x] `config/server-modernized.env.sample` に resolver の全キーが掲載される。
 - [x] 起動時 validation が attachment storage / patient images / document integrity / ORCA API / PVT を含めて失敗することをテストで確認する。

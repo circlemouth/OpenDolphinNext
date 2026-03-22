@@ -22,28 +22,6 @@ cd "$ROOT_DIR"
 
 allowed_files=(
   "server-modernized/src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java"
-  "server-modernized/src/main/java/open/dolphin/runtime/RuntimeConfigurationSupport.java"
-  "server-modernized/src/main/java/open/orca/rest/OrcaResource.java"
-  "server-modernized/src/main/java/open/dolphin/session/SystemServiceBean.java"
-  "server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java"
-  "server-modernized/src/main/java/open/dolphin/session/SessionMessageHandler.java"
-  "server-modernized/src/main/java/open/dolphin/mbean/ServletStartup.java"
-  "server-modernized/src/main/java/open/dolphin/mbean/PvtService.java"
-  "server-modernized/src/main/java/open/dolphin/system/license/FileLicenseRepository.java"
-  "server-modernized/src/main/java/open/dolphin/metrics/MeterRegistryProducer.java"
-  "server-modernized/src/main/java/open/dolphin/orca/config/OrcaConnectionConfigStore.java"
-  "server-modernized/src/main/java/open/dolphin/orca/transport/RestOrcaTransport.java"
-  "server-modernized/src/main/java/open/dolphin/orca/support/PushEventDeduplicator.java"
-  "server-modernized/src/main/java/open/dolphin/orca/transport/OrcaTransportSettings.java"
-  "server-modernized/src/main/java/open/dolphin/orca/transport/OrcaTransportSecurityPolicy.java"
-  "server-modernized/src/main/java/open/dolphin/msg/OidSender.java"
-  "server-modernized/src/main/java/open/dolphin/msg/VelocityHelper.java"
-  "server-modernized/src/main/java/open/dolphin/orca/transport/OrcaHttpClient.java"
-  "server-modernized/src/main/java/open/dolphin/rest/ChartEventHistorySettingsResolver.java"
-  "server-modernized/src/main/java/open/dolphin/rest/AbstractResource.java"
-  "server-modernized/src/main/java/open/dolphin/rest/OrcaApiProxySupport.java"
-  "server-modernized/src/main/java/open/dolphin/rest/admin/AdminConfigStore.java"
-  "server-modernized/src/main/java/open/dolphin/rest/masterupdate/MasterUpdateScheduler.java"
 )
 
 offender_found=0

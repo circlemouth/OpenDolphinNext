@@ -18,7 +18,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
-import open.dolphin.runtime.RuntimeConfigurationSupport;
 import open.dolphin.runtime.RuntimeStateRepository;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
@@ -26,18 +25,12 @@ import open.dolphin.security.OrcaCredentialSecurityConfig;
 import open.dolphin.security.SecondFactorSecurityConfig;
 import open.dolphin.security.totp.TotpSecretProtector;
 import open.dolphin.testsupport.MicroProfileConfigTestSupport;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class OrcaConnectionConfigStoreTest {
 
     private static final String STATE_CATEGORY = "orca_connection_config";
     private static final String STATE_KEY = "default";
-
-    @AfterEach
-    void tearDown() {
-        System.clearProperty(RuntimeConfigurationSupport.PROP_ENVIRONMENT);
-    }
 
     @Test
     void updatePersistsFacilitiesAndExplicitDefault() throws Exception {

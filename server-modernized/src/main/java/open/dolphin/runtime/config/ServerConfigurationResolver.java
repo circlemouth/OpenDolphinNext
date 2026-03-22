@@ -442,25 +442,13 @@ public class ServerConfigurationResolver {
     }
 
     public String raw(String key) {
-        Optional<String> resolved = optional(key);
-        if (resolved.isPresent()) {
-            return resolved.get();
-        }
-        if (key == null || key.isBlank()) {
-            return null;
-        }
-        String property = System.getProperty(key);
-        if (property != null && !property.isBlank()) {
-            return property.trim();
-        }
-        String env = System.getenv(key);
-        if (env != null && !env.isBlank()) {
-            return env.trim();
-        }
-        return null;
+        return key == null || key.isBlank() ? null : optional(key).orElse(null);
     }
 
     Optional<String> optional(String key) {
+        if (key == null || key.isBlank()) {
+            return Optional.empty();
+        }
         String override = overrides.get(key);
         if (override != null) {
             String trimmed = override.trim();
