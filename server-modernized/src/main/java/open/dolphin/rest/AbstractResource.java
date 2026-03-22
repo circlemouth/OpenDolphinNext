@@ -32,10 +32,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Locale;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infomodel.DiagnosisSendWrapper;
 import open.dolphin.infomodel.IInfoModel;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.session.UserServiceBean;
 
@@ -55,8 +57,7 @@ public class AbstractResource {
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
     private static final String X_FORWARDED_FOR_HEADER = "X-Forwarded-For";
     private static final String X_REAL_IP_HEADER = "X-Real-Ip";
-    private static final String TRUSTED_PROXY_PROP = "audit.trusted.proxies";
-    private static final String TRUSTED_PROXY_ENV = "AUDIT_TRUSTED_PROXIES";
+    private static volatile Supplier<Set<String>> trustedProxyRulesSupplier = AbstractResource::resolveTrustedProxyRulesFromConfig;
     public static final String ERROR_CODE_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_CODE";
     public static final String ERROR_MESSAGE_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_MESSAGE";
     public static final String ERROR_STATUS_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_STATUS";
@@ -265,18 +266,19 @@ public class AbstractResource {
     }
 
     private static Set<String> loadTrustedProxyRules() {
-        String fromProperty = System.getProperty(TRUSTED_PROXY_PROP);
-        String fromEnv = System.getenv(TRUSTED_PROXY_ENV);
-        String raw = firstNonBlank(fromProperty, fromEnv);
-        if (raw == null) {
+        return trustedProxyRulesSupplier.get();
+    }
+
+    static void setTrustedProxyRulesSupplier(Supplier<Set<String>> supplier) {
+        trustedProxyRulesSupplier = supplier != null ? supplier : AbstractResource::resolveTrustedProxyRulesFromConfig;
+    }
+
+    private static Set<String> resolveTrustedProxyRulesFromConfig() {
+        List<String> configuredRules = new ServerConfigurationResolver().audit().trustedProxyRules();
+        if (configuredRules.isEmpty()) {
             return Collections.emptySet();
         }
-        Set<String> rules = new LinkedHashSet<>();
-        Arrays.stream(raw.split(","))
-                .map(String::trim)
-                .filter(token -> !token.isEmpty())
-                .forEach(rules::add);
-        return rules;
+        return new LinkedHashSet<>(configuredRules);
     }
 
     private static boolean matchesTrustedRule(InetAddress candidate, String rule) {

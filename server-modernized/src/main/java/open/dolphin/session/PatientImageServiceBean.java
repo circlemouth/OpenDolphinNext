@@ -7,13 +7,16 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.util.HexFormat;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.io.ByteArrayInputStream;
 import java.util.Date;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -55,6 +58,25 @@ public class PatientImageServiceBean {
 
     @Inject
     private AttachmentStorageManager attachmentStorageManager;
+
+    public UploadResult uploadImage(String facilityId,
+                                    String patientId,
+                                    String actorUserId,
+                                    String fileName,
+                                    String contentType,
+                                    Path contentPath,
+                                    long contentLength) {
+        Objects.requireNonNull(contentPath, "contentPath");
+        try {
+            byte[] bytes = Files.readAllBytes(contentPath);
+            if (contentLength >= 0 && bytes.length != contentLength) {
+                throw new IllegalArgumentException("contentLength does not match file size");
+            }
+            return uploadImage(facilityId, patientId, actorUserId, fileName, contentType, bytes);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to read patient image payload", ex);
+        }
+    }
 
     public UploadResult uploadImage(String facilityId,
                                     String patientId,
@@ -133,7 +155,6 @@ public class PatientImageServiceBean {
             attachment.setDigest(sha256Hex(bytes));
         }
         document.addAttachment(attachment);
-
         long documentId = karteServiceBean.addDocument(document);
         long attachmentId = attachment.getId();
         if (attachmentId <= 0) {

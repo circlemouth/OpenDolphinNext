@@ -15,7 +15,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
 /**
  * Deduplicates ORCA push events by event id with optional persistence.
@@ -23,9 +24,6 @@ import open.dolphin.runtime.RuntimeConfigurationSupport;
 public final class PushEventDeduplicator {
 
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final String ENV_CACHE_PATH = "ORCA_PUSH_EVENT_CACHE_PATH";
-    private static final String ENV_CACHE_MAX = "ORCA_PUSH_EVENT_CACHE_MAX";
-    private static final String ENV_CACHE_TTL_DAYS = "ORCA_PUSH_EVENT_CACHE_TTL_DAYS";
     private static final int DEFAULT_CACHE_MAX = 10000;
     private static final long DEFAULT_TTL_DAYS = 30L;
 
@@ -42,23 +40,28 @@ public final class PushEventDeduplicator {
     }
 
     public static PushEventDeduplicator createDefault() {
-        String configured = System.getenv(ENV_CACHE_PATH);
+        return createDefault(new ServerConfigurationResolver());
+    }
+
+    static PushEventDeduplicator createDefault(ServerConfigurationResolver resolver) {
+        ServerRuntimeConfiguration.PushEventCacheSettings settings = resolver.orcaPushEventCache();
+        ServerRuntimeConfiguration.RuntimeSettings runtimeSettings = resolver.runtime();
+        Path configured = settings.cachePath();
         Path path;
-        if (configured != null && !configured.isBlank()) {
-            path = Path.of(configured.trim());
+        if (configured != null) {
+            path = configured.toAbsolutePath().normalize();
         } else {
-            String serverDataDir = System.getProperty(RuntimeConfigurationSupport.PROP_SERVER_DATA_DIR);
-            if (serverDataDir != null && !serverDataDir.isBlank()) {
-                path = RuntimeConfigurationSupport
-                        .resolveServerDataDirectoryOrThrow("PushEventDeduplicator")
-                        .resolve("orca")
-                        .resolve("pushevent-cache.json");
-            } else {
-                path = Path.of("runtime-state", "orca", "pushevent-cache.json").toAbsolutePath().normalize();
+            String serverDataDir = runtimeSettings.serverDataDirectory();
+            if (serverDataDir == null || serverDataDir.isBlank()) {
+                throw new IllegalStateException(
+                        "ORCA push event cache path requires orca.push-event-cache.path or jboss.server.data.dir");
             }
+            path = Path.of(serverDataDir.trim()).toAbsolutePath().normalize()
+                    .resolve("orca")
+                    .resolve("pushevent-cache.json");
         }
-        int max = parseIntEnv(ENV_CACHE_MAX, DEFAULT_CACHE_MAX);
-        long ttlDays = parseLongEnv(ENV_CACHE_TTL_DAYS, DEFAULT_TTL_DAYS);
+        int max = settings.maxEntries() != null ? settings.maxEntries() : DEFAULT_CACHE_MAX;
+        long ttlDays = settings.ttlDays() != null ? settings.ttlDays() : DEFAULT_TTL_DAYS;
         return new PushEventDeduplicator(path, max, Duration.ofDays(ttlDays));
     }
 
@@ -231,31 +234,6 @@ public final class PushEventDeduplicator {
             // ignore
         }
     }
-
-    private static int parseIntEnv(String key, int fallback) {
-        String value = System.getenv(key);
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
-    }
-
-    private static long parseLongEnv(String key, long fallback) {
-        String value = System.getenv(key);
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        try {
-            return Long.parseLong(value.trim());
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
-    }
-
     private static final class CacheEntry {
         public String id;
         public long timestamp;

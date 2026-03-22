@@ -146,7 +146,7 @@
 - `docs/server-modernization/operations/CODEX_ENV_SETUP.md`
 - `docs/server-modernization/operations/API_PARITY_RESPONSE_CHECK.md`
 - `docs/server-modernization/api-smoke-test.md`
-- `docs/web-client/operations/security-rollout-checklist-20260304.md`（Web client 連携の CSRF/Logout/画像ヘッダ運用条件）
+- [docs/README.md](../README.md)（server-modernized 契約文書・runbook・PR チェックリストの正本索引）
 
 ### P10-06 env 運用（サンプルから作成）
 - `server-modernized.production.env` はリポジトリへ直接コミットせず、毎回サンプルから作成する。
@@ -212,8 +212,8 @@
 ### セキュリティ設定（Trusted Proxy）
 - 監査ログのクライアントIP解決で `X-Forwarded-For` / `X-Real-IP` を信用するには、trusted proxy を明示設定してください。
 - 設定キー:
-  - system property: `audit.trusted.proxies`
-  - environment variable: `AUDIT_TRUSTED_PROXIES`
+  - runtime key: `audit.trusted.proxies`
+  - sample env: `AUDIT_TRUSTED_PROXIES`
 - 値はカンマ区切りで指定（単一IP または CIDR 例: `203.0.113.10,203.0.113.0/24`）。
 - 未設定時は forwarded ヘッダを信用せず、`remoteAddr` を採用します（loopback は開発用途として許容）。
 

@@ -47,6 +47,7 @@ export type OperationsReadinessChecks = {
   orca?: OperationsCheck;
   attachmentStorage?: OperationsCheck;
   pvtQueue?: OperationsCheck;
+  patientImages?: OperationsCheck;
 };
 
 export type OperationsHealthResponse = {
@@ -75,7 +76,7 @@ export type PvtWorkerHealthResponse = {
   ok: boolean;
   status: number;
   workerStatus?: string;
-  reasons: string[];
+  reasonCodes: string[];
   runId?: string;
   traceId?: string;
   error?: string;
@@ -85,7 +86,7 @@ export type PvtWorkerHealthResponse = {
 const ADMIN_CONFIG_ENDPOINT = '/api/admin/config';
 const ADMIN_DELIVERY_ENDPOINT = '/api/admin/delivery';
 const OPERATIONS_HEALTH_ENDPOINT = '/health';
-const OPERATIONS_READINESS_ENDPOINT = '/health/readiness';
+const OPERATIONS_READINESS_ENDPOINT = '/operations/readiness';
 const PVT_WORKER_HEALTH_ENDPOINT = '/health/worker/pvt';
 
 let adminEndpointUnavailable = false;
@@ -362,7 +363,7 @@ export async function fetchPvtWorkerHealth(): Promise<PvtWorkerHealthResponse> {
     ok,
     status: response.status,
     workerStatus,
-    reasons: getStringArray(body.reasons),
+    reasonCodes: getStringArray(body.reasonCodes),
     runId,
     traceId,
     error,

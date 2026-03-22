@@ -1,21 +1,11 @@
 package open.dolphin.mbean;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
 import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import javax.sql.DataSource;
 import open.dolphin.infomodel.AddressModel;
 import open.dolphin.infomodel.DepartmentModel;
 import open.dolphin.infomodel.FacilityModel;
@@ -45,8 +35,6 @@ public class InitialAccountMaker {
     private static final String ADMIN_PASS_RAW = "admin";
     private static final String ADMIN_SIR_NAME = "オープン";
     private static final String ADMIN_GIVEN_NAME = "ドルフィン";
-    static final String SET_SEARCH_PATH_SQL = "set search_path to opendolphin, public";
-
 //    private static final boolean DEVELOPMENT = true;
 //    private static final String UPDATE_MEMO     = "Initial user registered.";
 //    private static final String NO_UPDATE_MEMO  = "User account exists.";
@@ -56,25 +44,6 @@ public class InitialAccountMaker {
 
     @Inject
     private PasswordHashService passwordHashService;
-    
-//minagawa^ 2013/08/29
-    //@Resource(mappedName="java:jboss/datasources/OrcaDS")
-    //private DataSource ds;
-//minagawa$
-//s.oh^ 2014/07/08 クラウド0対応
-    @Resource(mappedName="java:jboss/datasources/PostgresDS")
-    private DataSource ds;
-//s.oh$
-    
-    @PostConstruct
-    public void init() {
-//minagawa^ WildFly        
-//        start();
-//minagawa$        
-//s.oh^ 2014/07/08 クラウド0対応
-        createIndexes();
-//s.oh$
-    }
     
     private void start() {
 //        boolean updated = false;
@@ -113,108 +82,6 @@ public class InitialAccountMaker {
 //minagawa$        
     }  
     
-//s.oh^ 2014/07/08 クラウド0対応
-   private void createIndexes() {
-       
-//       String[] names = {"pvt_idx3", "d_karte_idx", "d_document_idx", "d_diagnosis_idx", "d_patient_memo_idx",
-//       "d_letter_module_idx", "d_observation_idx", "d_module_idx", "d_image_idx","d_attachment_idx","d_nlabo_module_idx","d_nlabo_item_idx",
-//       "patient_idx1", "pvt_idx1", "pub_tree_idx1"};
-     
-//        String[] sqls = {
-//           "create index pvt_idx3 on d_patient_visit(patient_id)",
-//           "create index d_karte_idx on d_karte(patient_id)",
-//           "create index d_document_idx on d_document(karte_id)",
-//           "create index d_diagnosis_idx on d_diagnosis(karte_id)",
-//           "create index d_patient_memo_idx on d_patient_memo(karte_id)",
-//           "create index d_letter_module_idx on d_letter_module(karte_id)",
-//           "create index d_observation_idx on d_observation(karte_id)",
-//           "create index d_module_idx on d_module(doc_id)",
-//           "create index d_image_idx on d_image(doc_id)",
-//           "create index d_attachment_idx on d_attachment(doc_id)",
-//           "create index d_nlabo_module_idx on d_nlabo_module(patientid)",
-//           "create index d_nlabo_item_idx on d_nlabo_item(labomodule_id)",
-//           "create index patient_idx1 on d_patient(facilityId, patientid)",
-//           "create index pvt_idx1 on d_patient_visit(facilityid, pvtdate)",
-//           "create index pub_tree_idx1 on d_published_tree(publishtype)"
-//       };       
-       
-//minagawa^ d_patient に (facikityid,patientid) の unique index 名前=fid_pid_idx を作成する
-// unique 制約のない 旧indexは削除する        
-       String[] names = {"pvt_idx3", "d_karte_idx", "d_document_idx", "d_diagnosis_idx", "d_patient_memo_idx",
-       "d_letter_module_idx", "d_observation_idx", "d_module_idx", "d_image_idx","d_attachment_idx","d_nlabo_module_idx","d_nlabo_item_idx",
-       "fid_pid_idx", "pvt_idx1", "pub_tree_idx1"};
-       
-       String[] sqls = {
-           "create index pvt_idx3 on d_patient_visit(patient_id)",
-           "create index d_karte_idx on d_karte(patient_id)",
-           "create index d_document_idx on d_document(karte_id)",
-           "create index d_diagnosis_idx on d_diagnosis(karte_id)",
-           "create index d_patient_memo_idx on d_patient_memo(karte_id)",
-           "create index d_letter_module_idx on d_letter_module(karte_id)",
-           "create index d_observation_idx on d_observation(karte_id)",
-           "create index d_module_idx on d_module(doc_id)",
-           "create index d_image_idx on d_image(doc_id)",
-           "create index d_attachment_idx on d_attachment(doc_id)",
-           "create index d_nlabo_module_idx on d_nlabo_module(patientid)",
-           "create index d_nlabo_item_idx on d_nlabo_item(labomodule_id)",
-           "create unique index fid_pid_idx on d_patient(facilityid, patientid)",
-           "create index pvt_idx1 on d_patient_visit(facilityid, pvtdate)",
-           "create index pub_tree_idx1 on d_published_tree(publishtype)"
-       };
-       
-       Connection con;
-       PreparedStatement pt;
-       ResultSet rs;
-       Statement st;
-       
-        try {
-            con = ds.getConnection();
-            st = con.createStatement();
-            st.execute(SET_SEARCH_PATH_SQL);
-            pt = con.prepareStatement("select count(*) from pg_indexes where indexname=?");
-            st.close();
-            st = con.createStatement();
-            
-            for (int i=0; i < names.length; i++) {
-                pt.setString(1, names[i]);
-                rs = pt.executeQuery();
-                if (rs.next()) {
-                    int cnt = rs.getInt(1);
-                    if (cnt==0) {
-                        st.executeUpdate(sqls[i]);
-                        Logger.getLogger("open.dolphin").log(Level.INFO, "{0} dose not exists, created", names[i]);
-                    } else {
-                        Logger.getLogger("open.dolphin").log(Level.INFO, "{0} exists", names[i]);
-                    }
-                    rs.close();
-                }
-            }
-            
-//minagawa^ unique制約のない 旧indexを削除する
-            String oldIndex = "patient_idx1";
-            pt.setString(1, oldIndex);
-            rs = pt.executeQuery();
-            if (rs.next()) {
-                int cnt = rs.getInt(1);
-                if (cnt==1) {
-                    st.executeUpdate("drop index " + oldIndex);
-                    Logger.getLogger("open.dolphin").log(Level.INFO, "{0} exists, deleted", oldIndex);
-                
-                } else {
-                    Logger.getLogger("open.dolphin").log(Level.INFO, "{0} dose not exists", oldIndex);
-                }
-                rs.close();
-            }
-//minagawa$            
-            st.close();
-            pt.close();
-            con.close();
-        } catch (SQLException ex) {
-            Logger.getLogger(InitialAccountMaker.class.getName()).log(Level.SEVERE, null, ex);
-        }
-   }
-//s.oh$
-
    private void addFacilityAdmin() {
         
         Date date = new Date();

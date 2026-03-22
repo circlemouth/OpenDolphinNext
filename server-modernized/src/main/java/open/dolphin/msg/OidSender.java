@@ -17,6 +17,8 @@ import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
 import open.dolphin.infomodel.ActivityModel;
 import open.dolphin.msg.dto.AccountSummaryMessage;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.exception.MethodInvocationException;
@@ -39,37 +41,15 @@ public class OidSender {
     private static final String ASP_TESTER = "ASP_TESTER";
     private static final String ASP_MEMBER = "ASP_MEMBER";
 
-    private static final String SMTP_HOST_PROP = "opendolphin.smtp.host";
-    private static final String SMTP_HOST_ENV_PRIMARY = "OPENDOLPHIN_MAIL_SMTP_HOST";
-    private static final String SMTP_HOST_ENV = "OPENDOLPHIN_SMTP_HOST";
-    private static final String SMTP_PORT_PROP = "opendolphin.smtp.port";
-    private static final String SMTP_PORT_ENV_PRIMARY = "OPENDOLPHIN_MAIL_SMTP_PORT";
-    private static final String SMTP_PORT_ENV = "OPENDOLPHIN_SMTP_PORT";
-    private static final String SMTP_AUTH_PROP = "opendolphin.smtp.auth";
-    private static final String SMTP_AUTH_ENV = "OPENDOLPHIN_SMTP_AUTH";
-    private static final String SMTP_USERNAME_PROP = "opendolphin.smtp.username";
-    private static final String SMTP_USERNAME_ENV_PRIMARY = "OPENDOLPHIN_MAIL_SMTP_USER";
-    private static final String SMTP_USERNAME_ENV = "OPENDOLPHIN_SMTP_USERNAME";
-    private static final String SMTP_PASSWORD_PROP = "opendolphin.smtp.password";
-    private static final String SMTP_PASSWORD_ENV_PRIMARY = "OPENDOLPHIN_MAIL_SMTP_PASSWORD";
-    private static final String SMTP_PASSWORD_ENV = "OPENDOLPHIN_SMTP_PASSWORD";
-    private static final String SMTP_FROM_PROP = "opendolphin.smtp.from";
-    private static final String SMTP_FROM_ENV_PRIMARY = "OPENDOLPHIN_MAIL_FROM";
-    private static final String SMTP_FROM_ENV = "OPENDOLPHIN_SMTP_FROM";
-    private static final String SMTP_BCC_PROP = "opendolphin.smtp.bcc";
-    private static final String SMTP_BCC_ENV = "OPENDOLPHIN_SMTP_BCC";
-    private static final String SMTP_STARTTLS_PROP = "opendolphin.smtp.starttls";
-    private static final String SMTP_STARTTLS_ENV = "OPENDOLPHIN_SMTP_STARTTLS";
-    private static final String SMTP_ACTIVITY_TO_PROP = "opendolphin.smtp.activity.to";
-    private static final String SMTP_ACTIVITY_TO_ENV = "OPENDOLPHIN_SMTP_ACTIVITY_TO";
+    private final ServerConfigurationResolver configurationResolver;
 
-    private static final String LEGACY_SMTP_HOST_PROP = "cloud.zero.mail.host";
-    private static final String LEGACY_SMTP_PORT_PROP = "cloud.zero.mail.port";
-    private static final String LEGACY_SMTP_AUTH_PROP = "cloud.zero.mail.auth";
-    private static final String LEGACY_SMTP_ACCOUNT_PROP = "cloud.zero.mail.account";
-    private static final String LEGACY_SMTP_PASSWORD_PROP = "cloud.zero.mail.password";
-    private static final String LEGACY_SMTP_FROM_PROP = "cloud.zero.mail.from";
-    private static final String LEGACY_SMTP_TO_PROP = "cloud.zero.mail.to";
+    public OidSender() {
+        this(new ServerConfigurationResolver());
+    }
+
+    OidSender(ServerConfigurationResolver configurationResolver) {
+        this.configurationResolver = configurationResolver;
+    }
 
     public void send(AccountSummaryMessage account) {
         if (account == null || account.getUserEmail() == null || account.getUserEmail().isBlank()) {
@@ -77,7 +57,7 @@ public class OidSender {
             return;
         }
 
-        SmtpSettings smtp = resolveSmtpSettings();
+        ResolvedSmtpSettings smtp = resolveSmtpSettings();
         if (smtp == null) {
             return;
         }
@@ -105,7 +85,7 @@ public class OidSender {
             LOGGER.warning("SMTP activity mail skipped: activity payload is invalid.");
             return;
         }
-        SmtpSettings smtp = resolveSmtpSettings();
+        ResolvedSmtpSettings smtp = resolveSmtpSettings();
         if (smtp == null) {
             return;
         }
@@ -182,7 +162,7 @@ public class OidSender {
         return sb.toString();
     }
 
-    private Session createSession(SmtpSettings settings) {
+    private Session createSession(ResolvedSmtpSettings settings) {
         if (settings.authRequired()) {
             return Session.getDefaultInstance(settings.properties(), new jakarta.mail.Authenticator() {
                 @Override
@@ -194,53 +174,21 @@ public class OidSender {
         return Session.getDefaultInstance(settings.properties());
     }
 
-    private SmtpSettings resolveSmtpSettings() {
-        String host = firstNonBlank(
-                readEnv(SMTP_HOST_ENV_PRIMARY),
-                readSystem(SMTP_HOST_PROP),
-                readEnv(SMTP_HOST_ENV),
-                readSystem(LEGACY_SMTP_HOST_PROP),
-                readEnv("CLOUD_ZERO_MAIL_HOST"));
-        String port = firstNonBlank(
-                readEnv(SMTP_PORT_ENV_PRIMARY),
-                readSystem(SMTP_PORT_PROP),
-                readEnv(SMTP_PORT_ENV),
-                readSystem(LEGACY_SMTP_PORT_PROP),
-                readEnv("CLOUD_ZERO_MAIL_PORT"),
-                "25");
-        String from = firstNonBlank(
-                readEnv(SMTP_FROM_ENV_PRIMARY),
-                readSystem(SMTP_FROM_PROP),
-                readEnv(SMTP_FROM_ENV),
-                readSystem(LEGACY_SMTP_FROM_PROP),
-                readEnv("CLOUD_ZERO_MAIL_FROM"));
-        String authRaw = firstNonBlank(
-                readSystem(SMTP_AUTH_PROP),
-                readEnv(SMTP_AUTH_ENV),
-                readSystem(LEGACY_SMTP_AUTH_PROP),
-                readEnv("CLOUD_ZERO_MAIL_AUTH"));
-        String username = firstNonBlank(
-                readEnv(SMTP_USERNAME_ENV_PRIMARY),
-                readSystem(SMTP_USERNAME_PROP),
-                readEnv(SMTP_USERNAME_ENV),
-                readSystem(LEGACY_SMTP_ACCOUNT_PROP),
-                readEnv("CLOUD_ZERO_MAIL_ACCOUNT"));
-        String password = firstNonBlank(
-                readEnv(SMTP_PASSWORD_ENV_PRIMARY),
-                readSystem(SMTP_PASSWORD_PROP),
-                readEnv(SMTP_PASSWORD_ENV),
-                readSystem(LEGACY_SMTP_PASSWORD_PROP),
-                readEnv("CLOUD_ZERO_MAIL_PASSWORD"));
-        String bcc = firstNonBlank(
-                readSystem(SMTP_BCC_PROP),
-                readEnv(SMTP_BCC_ENV));
+    ResolvedSmtpSettings resolveSmtpSettings() {
+        ServerRuntimeConfiguration.SmtpSettings configured = configurationResolver.smtp();
+        String host = configured.host();
+        String port = firstNonBlank(configured.port(), "25");
+        String from = configured.from();
+        String username = configured.username();
+        String password = configured.password();
+        String bcc = configured.bcc();
 
         if (host == null || from == null) {
             LOGGER.warning("SMTP send skipped: required SMTP host/from is not configured.");
             return null;
         }
 
-        boolean authRequired = isTruthy(authRaw) || (username != null && password != null);
+        boolean authRequired = Boolean.TRUE.equals(configured.auth()) || (username != null && password != null);
         if (authRequired && (username == null || password == null)) {
             LOGGER.warning("SMTP send skipped: authentication is enabled but username/password are missing.");
             return null;
@@ -250,44 +198,20 @@ public class OidSender {
         props.put("mail.smtp.host", host);
         props.put("mail.smtp.port", port);
         props.put("mail.smtp.auth", Boolean.toString(authRequired));
-        String startTls = firstNonBlank(readSystem(SMTP_STARTTLS_PROP), readEnv(SMTP_STARTTLS_ENV));
-        if (isTruthy(startTls)) {
+        if (Boolean.TRUE.equals(configured.startTls())) {
             props.put("mail.smtp.starttls.enable", "true");
         }
 
-        return new SmtpSettings(props, authRequired, username, password, from, bcc);
+        return new ResolvedSmtpSettings(props, authRequired, username, password, from, bcc);
     }
 
-    private String resolveActivityRecipient() {
-        return firstNonBlank(
-                readSystem(SMTP_ACTIVITY_TO_PROP),
-                readEnv(SMTP_ACTIVITY_TO_ENV),
-                readSystem(LEGACY_SMTP_TO_PROP),
-                readEnv("CLOUD_ZERO_MAIL_TO"));
-    }
-
-    private String readSystem(String key) {
-        if (key == null || key.isBlank()) {
+    String resolveActivityRecipient() {
+        ServerRuntimeConfiguration.SmtpSettings configured = configurationResolver.smtp();
+        String value = configured.activityTo();
+        if (value == null || value.isBlank()) {
             return null;
         }
-        String value = System.getProperty(key);
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private String readEnv(String key) {
-        if (key == null || key.isBlank()) {
-            return null;
-        }
-        String value = System.getenv(key);
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return value.trim();
     }
 
     private String firstNonBlank(String... values) {
@@ -300,17 +224,6 @@ public class OidSender {
             }
         }
         return null;
-    }
-
-    private boolean isTruthy(String value) {
-        if (value == null) {
-            return false;
-        }
-        String normalized = value.trim().toLowerCase();
-        return "1".equals(normalized)
-                || "true".equals(normalized)
-                || "yes".equals(normalized)
-                || "on".equals(normalized);
     }
 
     private String targetDateFromDate(LocalDate date) {
@@ -326,7 +239,7 @@ public class OidSender {
         return nf.format(num);
     }
 
-    private record SmtpSettings(
+    record ResolvedSmtpSettings(
             Properties properties,
             boolean authRequired,
             String username,

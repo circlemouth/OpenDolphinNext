@@ -26,6 +26,8 @@ import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.transport.OrcaHttpClient.OrcaHttpResponse;
 import open.dolphin.orca.transport.OrcaTransportRegistry.OrcaResolvedTransport;
 import open.dolphin.rest.OrcaApiProxySupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 import open.dolphin.session.framework.SessionTraceAttributes;
 import open.dolphin.session.framework.SessionTraceContext;
 import open.dolphin.session.framework.SessionTraceManager;
@@ -39,15 +41,14 @@ public class RestOrcaTransport implements OrcaTransport {
 
     private static final Logger LOGGER = Logger.getLogger(RestOrcaTransport.class.getName());
     private static final String ORCA_ACCEPT = "application/xml";
-    public static final String UNKNOWN_AUDIT_SUMMARY = "orca.host=unknown";
+    public static final String UNKNOWN_AUDIT_SUMMARY = "orca.mode=unknown credentialConfigured=false clientAuthConfigured=false";
+    public static final String REASON_CODE_TRANSPORT_NOT_READY = "orca_transport_not_ready";
+    public static final String REASON_CODE_HTTP_CLIENT_UNAVAILABLE = "orca_http_client_unavailable";
+    public static final String REASON_CODE_PROBE_FAILED = "orca_probe_failed";
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final long DEFAULT_CACHE_TTL_MS = 30_000L;
     private static final Duration READINESS_PROBE_TIMEOUT = Duration.ofSeconds(3);
-    private static final String ENV_CACHE_TTL_MS = "ORCA_TRANSPORT_CACHE_TTL_MS";
-    private static final String PROP_CACHE_TTL_MS = "orca.transport.cache.ttl-ms";
-
-    private final long cacheTtlMs = resolveCacheTtlMs();
     private volatile OrcaTransportRegistry registry;
 
     @Inject
@@ -55,6 +56,9 @@ public class RestOrcaTransport implements OrcaTransport {
 
     @Inject
     OrcaConnectionConfigStore orcaConnectionConfigStore;
+
+    @Inject
+    ServerConfigurationResolver configurationResolver;
 
     @PostConstruct
     private void initialize() {
@@ -192,15 +196,16 @@ public class RestOrcaTransport implements OrcaTransport {
     public ProbeResult probeReadiness() {
         String facilityId = resolveFacilityId();
         OrcaTransportSettings settings = currentSettings(facilityId);
-        String auditSummary = settings != null ? settings.auditSummary() : UNKNOWN_AUDIT_SUMMARY;
+        String mode = settings != null ? settings.getMode() : "unknown";
+        boolean credentialConfigured = settings != null && settings.hasCredentials();
+        boolean clientAuthConfigured = settings != null && settings.isClientAuthConfigured();
         if (settings == null || !settings.isReady()) {
-            return unavailableProbe("transport_not_ready", "ORCA transport settings are incomplete");
+            return new ProbeResult(false, mode, credentialConfigured, clientAuthConfigured, REASON_CODE_TRANSPORT_NOT_READY);
         }
 
         HttpClient client = registry().rawHttpClient(facilityId);
         if (client == null) {
-            return new ProbeResult(false, null, null, auditSummary, "http_client_unavailable",
-                    "ORCA HTTP client is unavailable");
+            return new ProbeResult(false, mode, credentialConfigured, clientAuthConfigured, REASON_CODE_HTTP_CLIENT_UNAVAILABLE);
         }
 
         String url = settings.buildOrcaUrl("");
@@ -218,14 +223,15 @@ public class RestOrcaTransport implements OrcaTransport {
             boolean reachable = (statusCode >= 200 && statusCode < 400)
                     || statusCode == 401
                     || statusCode == 403;
-            return new ProbeResult(reachable, statusCode, url, auditSummary, null, null);
+            return new ProbeResult(reachable, mode, credentialConfigured, clientAuthConfigured,
+                    reachable ? null : REASON_CODE_PROBE_FAILED);
         } catch (IOException ex) {
-            return new ProbeResult(false, null, url, auditSummary, ex.getClass().getSimpleName(), ex.getMessage());
+            return new ProbeResult(false, mode, credentialConfigured, clientAuthConfigured, REASON_CODE_PROBE_FAILED);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            return new ProbeResult(false, null, url, auditSummary, ex.getClass().getSimpleName(), ex.getMessage());
+            return new ProbeResult(false, mode, credentialConfigured, clientAuthConfigured, REASON_CODE_PROBE_FAILED);
         } catch (RuntimeException ex) {
-            return new ProbeResult(false, null, url, auditSummary, ex.getClass().getSimpleName(), ex.getMessage());
+            return new ProbeResult(false, mode, credentialConfigured, clientAuthConfigured, REASON_CODE_PROBE_FAILED);
         }
     }
 
@@ -280,7 +286,7 @@ public class RestOrcaTransport implements OrcaTransport {
 
     public String auditSummary(String facilityId) {
         OrcaTransportSettings settings = currentSettings(facilityId);
-        return settings != null ? settings.auditSummary() : "orca.host=unknown";
+        return settings != null ? settings.auditSummary() : UNKNOWN_AUDIT_SUMMARY;
     }
 
     private OrcaTransportSettings currentSettings(String facilityId) {
@@ -340,30 +346,8 @@ public class RestOrcaTransport implements OrcaTransport {
         return facilityId != null ? facilityId : "default";
     }
 
-    private static long resolveCacheTtlMs() {
-        String raw = external(ENV_CACHE_TTL_MS, PROP_CACHE_TTL_MS);
-        if (raw == null || raw.isBlank()) {
-            return DEFAULT_CACHE_TTL_MS;
-        }
-        try {
-            long parsed = Long.parseLong(raw.trim());
-            return Math.max(0L, parsed);
-        } catch (NumberFormatException ex) {
-            LOGGER.log(Level.WARNING, "Invalid ORCA transport cache TTL: {0}", raw);
-            return DEFAULT_CACHE_TTL_MS;
-        }
-    }
-
-    private static String external(String envKey, String propKey) {
-        String fromEnv = envKey != null ? System.getenv(envKey) : null;
-        if (fromEnv != null && !fromEnv.isBlank()) {
-            return fromEnv;
-        }
-        return propKey != null ? System.getProperty(propKey) : null;
-    }
-
     private static String auditSummary(OrcaTransportSettings settings) {
-        return settings != null ? settings.auditSummary() : "orca.host=unknown";
+        return settings != null ? settings.auditSummary() : "orca.mode=unknown credentialConfigured=false clientAuthConfigured=false";
     }
 
     private OrcaTransportRegistry registry() {
@@ -373,23 +357,32 @@ public class RestOrcaTransport implements OrcaTransport {
         }
         synchronized (this) {
             if (registry == null) {
-                registry = new OrcaTransportRegistry(orcaConnectionConfigStore, cacheTtlMs);
+                registry = new OrcaTransportRegistry(orcaConnectionConfigStore, resolveCacheTtlMs(), resolver());
             }
             return registry;
         }
     }
 
-    public record ProbeResult(
-            boolean reachable,
-            Integer statusCode,
-            String url,
-            String auditSummary,
-            String error,
-            String message) {
+    private long resolveCacheTtlMs() {
+        ServerRuntimeConfiguration.OrcaTransportHttpSettings settings = resolver().orcaTransportHttp();
+        Long configured = settings != null ? settings.cacheTtlMs() : null;
+        return configured != null ? Math.max(0L, configured) : DEFAULT_CACHE_TTL_MS;
     }
 
-    public static ProbeResult unavailableProbe(String error, String message) {
-        return new ProbeResult(false, null, null, UNKNOWN_AUDIT_SUMMARY, error, message);
+    private ServerConfigurationResolver resolver() {
+        return configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
+    }
+
+    public record ProbeResult(
+            boolean reachable,
+            String mode,
+            boolean credentialConfigured,
+            boolean clientAuthConfigured,
+            String reasonCode) {
+    }
+
+    public static ProbeResult unavailableProbe(String reasonCode) {
+        return new ProbeResult(false, "unknown", false, false, reasonCode);
     }
 
     private static void logMissingBody(String traceId, OrcaEndpoint endpoint, OrcaTransportSettings settings) {
@@ -397,7 +390,7 @@ public class RestOrcaTransport implements OrcaTransport {
         String fieldSummary = fields.isEmpty() ? "unknown" : String.join(",", fields);
         LOGGER.log(Level.WARNING, "ORCA request body is missing traceId={0} path={1} requiredFields={2} target={3}",
                 new Object[]{traceId, endpoint != null ? endpoint.getPath() : "unknown", fieldSummary,
-                        settings != null ? settings.auditSummary() : "orca.host=unknown"});
+                        settings != null ? settings.auditSummary() : "orca.mode=unknown credentialConfigured=false clientAuthConfigured=false"});
     }
 
     private static void logMissingFields(String traceId, OrcaEndpoint endpoint, OrcaTransportSettings settings,
@@ -407,7 +400,7 @@ public class RestOrcaTransport implements OrcaTransport {
                 : String.join(",", missingFields);
         LOGGER.log(Level.WARNING, "ORCA request body missing required fields traceId={0} path={1} missing={2} target={3}",
                 new Object[]{traceId, endpoint != null ? endpoint.getPath() : "unknown", fieldSummary,
-                        settings != null ? settings.auditSummary() : "orca.host=unknown"});
+                        settings != null ? settings.auditSummary() : "orca.mode=unknown credentialConfigured=false clientAuthConfigured=false"});
     }
 
     private static List<String> findMissingFields(OrcaEndpoint endpoint, String payload) {

@@ -101,6 +101,26 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void getRecommendationsRejectsInvalidEntity() {
+        WebApplicationException exception = null;
+        try {
+            resource.getRecommendations(servletRequest, "00001", "invalidEntity", null, false, 8, 0, 100);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("entity", body.get("field"));
+        assertEquals("entity is invalid", body.get("message"));
+        assertNotNull(auditDispatcher.payload);
+        assertEquals("ORCA_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
+    }
+
+    @Test
     void getRecommendationsReturnsPatientOnlyRowsWhenFacilityDisabled() {
         OrderBundleRecommendationResponse response = resource.getRecommendations(
                 servletRequest,

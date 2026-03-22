@@ -1,6 +1,11 @@
 package open.dolphin.converter;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -79,186 +84,154 @@ public final class PlistParser {
      * @return InfoModelオブジェクト
      */
     public Object parse(String plist) {
-
         SAXParserFactory factory = SAXParserFactory.newInstance();
         StringReader reader = new StringReader(plist);
 
         try {
-
             SAXParser saxParser = factory.newSAXParser();
-
-            DefaultHandler handler = new DefaultHandler() {
-
-                @Override
-                public void startElement(String uri, String localName,
-                        String qName, Attributes attributes)
-                        throws SAXException {
-
-                    if (qName.equals(DICT)) {
-                        // currentKey=xxxx で <dict> が来た時
-                        // currentKeyはクラスの名前なのでそれからオブジェクトを生成する
-                        // stackの先頭オブジェクトに (クラス名=オブジェクト)をセットする
-                        // 生成したオブジェクトをstackに追加する
-                        // ただしplistのtop要素の<dict>の場合は何も行わない
-                        if (currentKey != null) {
-                            Object obj = createObject(currentKey);
-                            if (stack.size() > 0) {
-                                storeObject(currentKey, obj);
-                            }
-                            stack.add(0, obj);
-                        }
-
-                    } else if (qName.equals(ARRAY)) {
-                        // <array> が来た場合、Listを生成する
-                        // stackの先頭オブジェクトに (currentKey, List)をセットする
-                        // 生成したListをstackに追加する
-                        List list = new ArrayList();
-                        if (stack.size() > 0) {
-                            storeList(currentKey, list);
-                        }
-                        stack.add(0, list);
-                    }
-                }
-
-                @Override
-                public void endElement(String uri, String localName,
-                        String qName)
-                        throws SAXException {
-
-                    // パースした要素が何であるか調べる
-                    for (int i = 0; i < ELEMENTS.length; i++) {
-                        if (qName.equals(ELEMENTS[i])) {
-                            currentParsing = i;
-                            break;
-                        }
-                    }
-
-                    // 集積した charactor から文字列を取得
-                    String value = builderToString();
-
-                    // パースした要素で分岐する
-                    switch (currentParsing) {
-
-                        case TT_KEY:
-                            // <key>...</key> -> currentKey=...
-                            currentKey = value != null ? value : null;
-                            break;
-
-                        case TT_STRING:
-                            // <string>...</string> -> obj.set(currentKey, ...)
-                            if (value!=null && (!value.equals(""))) {
-                                value = value.replaceAll(XML_LT, STRING_LT);
-                                value = value.replaceAll(XML_GT, STRING_GT);
-                                value = value.replaceAll(XML_AND, STRING_AND);
-                                value = value.replaceAll(XML_QUOT, STRING_QUOT);
-                                value = value.replaceAll(XML_APOS, STRING_APOS);
-                                storeString(currentKey, value);
-                            }
-                            currentKey = null;
-                            break;
-
-                        case TT_INTEGER:
-                            // <integer>...</integer> -> obj.set(currentKey, ...)
-                            if (value != null) {
-                                storeInteger(currentKey, value);
-                            }
-                            currentKey = null;
-                            break;
-
-                        case TT_REAL:
-                            // <real>...</real> -> obj.set(currentKey, ...)
-                            if (value != null) {
-                                storeReal(currentKey, value);
-                            }
-                            currentKey = null;
-                            break;
-
-                        case TT_DATE:
-                            // <date>...</date> -> obj.set(currentKey, Date(...)) 
-                            if (value != null) {
-                                Date date = parseDate(value);
-                                storeDate(currentKey, date);
-                            }
-                            currentKey = null;
-                            break;
-
-                        case TT_DATA:
-                            // <data>...</data> -> obj.set(currentKey, Base64Decord(...))
-                            if (value != null) {
-                                try {
-                                    byte[] bytes = base64Decode(value.getBytes(StandardCharsets.UTF_8));
-                                    storeByte(currentKey, bytes);
-                                } catch (Exception e) {
-                                    System.err.println("TT_DATA Exception: " + e.getMessage());
-                                }
-                            }
-                            currentKey = null;
-                            break;
-
-                        case TT_TRUE:
-                            // <true/> -> obj.set(currentKey, true)
-                            storeBoolean(currentKey, true);
-                            currentKey = null;
-                            break;
-
-                        case TT_FALSE:
-                            // <false/> -> obj.set(currentKey, false)
-                            storeBoolean(currentKey, false);
-                            currentKey = null;
-                            break;
-
-                        case TT_DICT:
-                            // </dict> -> stack の先頭オブジェクト(InfoModel)を取り除く
-                            if (stack.size() > 1) {
-                                stack.remove(0);
-                                //System.err.println("dict removed from stack, size=" + stack.size());
-                            }
-                            currentKey = null;
-                            break;
-
-                        case TT_ARRAY:
-                            // </dict> -> stack の先頭オブジェクト(List)を取り除く
-                            if (stack.size() > 1) {
-                                stack.remove(0);
-                                //System.err.println("list removed from stack, size=" + stack.size());
-                            }
-                            currentKey = null;
-                            break;
-                    }
-                }
-
-                @Override
-                public void characters(char ch[], int start, int length)
-                        throws SAXException {
-
-                    // ゴミを除去する
-                    String parsedCharacterData = currentParsing == TT_DATA
-                                               ? new String(ch, start, length).trim()
-                                               : new String(ch, start, length);
-
-                    // 集積する
-                    if (characterBuffer == null) {
-                        characterBuffer = new StringBuilder();
-                        characterBuffer.append(parsedCharacterData);
-                    } else {
-                        characterBuffer.append(parsedCharacterData);
-                    }
-                }
-            };
-
-            saxParser.parse(new InputSource(reader), handler);
-
+            saxParser.parse(new InputSource(reader), new PlistContentHandler());
             reader.close();
-
         } catch (Exception e) {
             System.err.println("Exception at convert(): " + e.getMessage());
-            for (int i=0; i < stack.size(); i++) {
-                stack.remove(0);
-            }
+            clearStack();
         }
 
-        return (stack.size() > 0) ? stack.remove(0) : null;
-        
+        return !stack.isEmpty() ? stack.remove(0) : null;
+    }
+
+    private final class PlistContentHandler extends DefaultHandler {
+
+        @Override
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
+            handleStartElement(qName);
+        }
+
+        @Override
+        public void endElement(String uri, String localName, String qName) throws SAXException {
+            handleEndElement(qName);
+        }
+
+        @Override
+        public void characters(char[] ch, int start, int length) throws SAXException {
+            appendCharacters(ch, start, length);
+        }
+    }
+
+    private void handleStartElement(String qName) {
+        if (DICT.equals(qName)) {
+            if (currentKey != null) {
+                Object obj = createObject(currentKey);
+                if (!stack.isEmpty()) {
+                    storeObject(currentKey, obj);
+                }
+                stack.add(0, obj);
+            }
+        } else if (ARRAY.equals(qName)) {
+            List list = new ArrayList();
+            if (!stack.isEmpty()) {
+                storeList(currentKey, list);
+            }
+            stack.add(0, list);
+        }
+    }
+
+    private void handleEndElement(String qName) {
+        currentParsing = resolveCurrentParsing(qName);
+        String value = builderToString();
+
+        switch (currentParsing) {
+            case TT_KEY:
+                currentKey = value != null ? value : null;
+                break;
+            case TT_STRING:
+                if (value != null && !value.isEmpty()) {
+                    storeString(currentKey, unescapeXmlValue(value));
+                }
+                currentKey = null;
+                break;
+            case TT_INTEGER:
+                if (value != null) {
+                    storeInteger(currentKey, value);
+                }
+                currentKey = null;
+                break;
+            case TT_REAL:
+                if (value != null) {
+                    storeReal(currentKey, value);
+                }
+                currentKey = null;
+                break;
+            case TT_DATE:
+                if (value != null) {
+                    storeDate(currentKey, parseDate(value));
+                }
+                currentKey = null;
+                break;
+            case TT_DATA:
+                if (value != null) {
+                    try {
+                        storeByte(currentKey, base64Decode(value.getBytes(StandardCharsets.UTF_8)));
+                    } catch (Exception e) {
+                        System.err.println("TT_DATA Exception: " + e.getMessage());
+                    }
+                }
+                currentKey = null;
+                break;
+            case TT_TRUE:
+                storeBoolean(currentKey, true);
+                currentKey = null;
+                break;
+            case TT_FALSE:
+                storeBoolean(currentKey, false);
+                currentKey = null;
+                break;
+            case TT_DICT:
+            case TT_ARRAY:
+                removeStackHeadIfNeeded();
+                currentKey = null;
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void appendCharacters(char[] ch, int start, int length) {
+        String parsedCharacterData = currentParsing == TT_DATA
+                ? new String(ch, start, length).trim()
+                : new String(ch, start, length);
+
+        if (characterBuffer == null) {
+            characterBuffer = new StringBuilder();
+        }
+        characterBuffer.append(parsedCharacterData);
+    }
+
+    private int resolveCurrentParsing(String qName) {
+        for (int i = 0; i < ELEMENTS.length; i++) {
+            if (qName.equals(ELEMENTS[i])) {
+                return i;
+            }
+        }
+        return currentParsing;
+    }
+
+    private String unescapeXmlValue(String value) {
+        String escaped = value.replaceAll(XML_LT, STRING_LT);
+        escaped = escaped.replaceAll(XML_GT, STRING_GT);
+        escaped = escaped.replaceAll(XML_AND, STRING_AND);
+        escaped = escaped.replaceAll(XML_QUOT, STRING_QUOT);
+        return escaped.replaceAll(XML_APOS, STRING_APOS);
+    }
+
+    private void removeStackHeadIfNeeded() {
+        if (stack.size() > 1) {
+            stack.remove(0);
+        }
+    }
+
+    private void clearStack() {
+        stack.clear();
     }
 
     /**

@@ -33,7 +33,7 @@ class OrcaMasterResponseMapper {
         );
     }
 
-    OrcaDrugMasterEntry toGenericClassEntry(OrcaMasterResource.FixtureGenericClassEntry entry,
+    OrcaDrugMasterEntry toGenericClassEntry(OrcaMasterFixtureSupport.FixtureGenericClassEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         return buildDrugEntry(
                 entry.classCode,
@@ -54,7 +54,7 @@ class OrcaMasterResponseMapper {
         );
     }
 
-    OrcaDrugMasterEntry toGenericPriceEntry(OrcaMasterResource.FixtureGenericPriceEntry entry,
+    OrcaDrugMasterEntry toGenericPriceEntry(OrcaMasterFixtureSupport.FixtureGenericPriceEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         return buildDrugEntry(
                 firstNonBlank(entry.srycd, entry.code),
@@ -95,7 +95,7 @@ class OrcaMasterResponseMapper {
         );
     }
 
-    OrcaInsurerEntry toInsurerEntry(OrcaMasterResource.FixtureHokenjaEntry entry,
+    OrcaInsurerEntry toInsurerEntry(OrcaMasterFixtureSupport.FixtureHokenjaEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         String payerCode = firstNonBlank(entry.payerCode, entry.insurerNumber);
         String payerType = resolvePayerType(firstNonBlank(entry.payerType, entry.insurerType), payerCode);
@@ -113,7 +113,7 @@ class OrcaMasterResponseMapper {
         return response;
     }
 
-    OrcaAddressEntry toAddressEntry(OrcaMasterResource.FixtureAddressEntry entry,
+    OrcaAddressEntry toAddressEntry(OrcaMasterFixtureSupport.FixtureAddressEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         OrcaAddressEntry response = new OrcaAddressEntry();
         response.setZip(firstNonBlank(entry.zip, entry.zipCode));
@@ -161,7 +161,7 @@ class OrcaMasterResponseMapper {
         );
     }
 
-    OrcaDrugMasterEntry toYouhouEntry(OrcaMasterResource.FixtureYouhouEntry entry,
+    OrcaDrugMasterEntry toYouhouEntry(OrcaMasterFixtureSupport.FixtureYouhouEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         return buildDrugEntry(
                 entry.youhouCode,
@@ -202,7 +202,7 @@ class OrcaMasterResponseMapper {
         );
     }
 
-    OrcaDrugMasterEntry toMaterialEntry(OrcaMasterResource.FixtureMaterialEntry entry,
+    OrcaDrugMasterEntry toMaterialEntry(OrcaMasterFixtureSupport.FixtureMaterialEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         return buildDrugEntry(
                 entry.materialCode,
@@ -244,7 +244,7 @@ class OrcaMasterResponseMapper {
         );
     }
 
-    OrcaDrugMasterEntry toKensaSortEntry(OrcaMasterResource.FixtureKensaSortEntry entry,
+    OrcaDrugMasterEntry toKensaSortEntry(OrcaMasterFixtureSupport.FixtureKensaSortEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         return buildDrugEntry(
                 entry.kensaCode,
@@ -265,7 +265,7 @@ class OrcaMasterResponseMapper {
         );
     }
 
-    OrcaTensuEntry toEtensuEntry(OrcaMasterResource.FixtureEtensuEntry entry,
+    OrcaTensuEntry toEtensuEntry(OrcaMasterFixtureSupport.FixtureEtensuEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         OrcaTensuEntry response = new OrcaTensuEntry();
         response.setTensuCode(firstNonBlank(entry.tensuCode, entry.medicalFeeCode));

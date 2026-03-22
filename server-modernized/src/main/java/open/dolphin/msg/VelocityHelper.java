@@ -8,28 +8,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 
 /**
  *
  * @author kazushi
  */
 public class VelocityHelper {
-
-    private static String resolveConfigValue(String key) {
-        try {
-            return ConfigProvider.getConfig()
-                    .getOptionalValue(key, String.class)
-                    .map(String::trim)
-                    .filter(token -> !token.isEmpty())
-                    .orElse(null);
-        } catch (IllegalStateException ex) {
-            return null;
-        }
-    }
     
     static {
         
@@ -41,28 +29,7 @@ public class VelocityHelper {
             p.setProperty("output.encoding", "UTF-8");
             p.setProperty("runtime.log.logsystem.class", "org.apache.velocity.runtime.log.NullLogChute");
 
-            List<String> templatePaths = new ArrayList<>();
-            String configuredDir = resolveConfigValue("opendolphin.templates.dir");
-            if (configuredDir != null && !configuredDir.isBlank()) {
-                templatePaths.add(configuredDir);
-            }
-
-            String serverDataDir = resolveConfigValue("jboss.server.data.dir");
-            if (serverDataDir != null && !serverDataDir.isBlank()) {
-                templatePaths.add(Paths.get(serverDataDir, "templates").toString());
-            }
-
-            Path repoTemplates = Paths.get("").toAbsolutePath()
-                    .resolve("server-modernized")
-                    .resolve("reporting")
-                    .resolve("templates");
-            if (Files.isDirectory(repoTemplates)) {
-                templatePaths.add(repoTemplates.toString());
-            }
-
-            if (templatePaths.isEmpty()) {
-                templatePaths.add(Paths.get("templates").toAbsolutePath().toString());
-            }
+            List<String> templatePaths = resolveTemplatePaths(new ServerConfigurationResolver(), Paths.get("").toAbsolutePath());
 
             p.setProperty("file.resource.loader.path", String.join(File.pathSeparator, templatePaths));
             p.setProperty("file.resource.loader.cache", "false");
@@ -77,5 +44,32 @@ public class VelocityHelper {
     
     public static VelocityContext getContext() {
         return new VelocityContext();
+    }
+
+    static List<String> resolveTemplatePaths(ServerConfigurationResolver resolver, Path workingDirectory) {
+        List<String> templatePaths = new ArrayList<>();
+        ServerConfigurationResolver activeResolver = resolver != null ? resolver : new ServerConfigurationResolver();
+        if (activeResolver.templates().directory() != null) {
+            templatePaths.add(activeResolver.templates().directory().toString());
+        }
+
+        String serverDataDir = activeResolver.runtime().serverDataDirectory();
+        if (serverDataDir != null && !serverDataDir.isBlank()) {
+            templatePaths.add(Paths.get(serverDataDir, "templates").toString());
+        }
+
+        Path baseDirectory = workingDirectory != null ? workingDirectory : Paths.get("").toAbsolutePath();
+        Path repoTemplates = baseDirectory
+                .resolve("server-modernized")
+                .resolve("reporting")
+                .resolve("templates");
+        if (Files.isDirectory(repoTemplates)) {
+            templatePaths.add(repoTemplates.toString());
+        }
+
+        if (templatePaths.isEmpty()) {
+            templatePaths.add(baseDirectory.resolve("templates").toAbsolutePath().toString());
+        }
+        return templatePaths;
     }
 }

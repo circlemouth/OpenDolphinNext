@@ -6,6 +6,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
 /**
  * Shared configuration resolver for ORCA HTTP transport.
@@ -13,29 +15,6 @@ import java.util.logging.Logger;
 public final class OrcaTransportSettings {
 
     private static final Logger LOGGER = Logger.getLogger(OrcaTransportSettings.class.getName());
-
-    private static final String ENV_ORCA_API_HOST = "ORCA_API_HOST";
-    private static final String ENV_ORCA_API_PORT = "ORCA_API_PORT";
-    private static final String ENV_ORCA_API_SCHEME = "ORCA_API_SCHEME";
-    private static final String ENV_ORCA_API_USER = "ORCA_API_USER";
-    private static final String ENV_ORCA_API_PASSWORD = "ORCA_API_PASSWORD";
-    private static final String ENV_ORCA_API_PATH_PREFIX = "ORCA_API_PATH_PREFIX";
-    private static final String ENV_ORCA_API_WEBORCA = "ORCA_API_WEBORCA";
-    private static final String ENV_ORCA_API_RETRY_MAX = "ORCA_API_RETRY_MAX";
-    private static final String ENV_ORCA_API_RETRY_BACKOFF_MS = "ORCA_API_RETRY_BACKOFF_MS";
-    private static final String ENV_ORCA_BASE_URL = "ORCA_BASE_URL";
-    private static final String ENV_ORCA_MODE = "ORCA_MODE";
-    private static final String PROP_ORCA_BASE_URL = "orca.base-url";
-    private static final String PROP_ORCA_API_HOST = "orca.api.host";
-    private static final String PROP_ORCA_API_PORT = "orca.api.port";
-    private static final String PROP_ORCA_API_SCHEME = "orca.api.scheme";
-    private static final String PROP_ORCA_API_USER = "orca.api.user";
-    private static final String PROP_ORCA_API_PASSWORD = "orca.api.password";
-    private static final String PROP_ORCA_API_PATH_PREFIX = "orca.api.path-prefix";
-    private static final String PROP_ORCA_API_WEBORCA = "orca.api.weborca";
-    private static final String PROP_ORCA_API_RETRY_MAX = "orca.api.retry.max";
-    private static final String PROP_ORCA_API_RETRY_BACKOFF_MS = "orca.api.retry.backoff-ms";
-    private static final String PROP_ORCA_MODE = "orca.mode";
 
     private static final int DEFAULT_RETRY_MAX = 0;
     private static final long DEFAULT_RETRY_BACKOFF_MS = 200L;
@@ -73,18 +52,26 @@ public final class OrcaTransportSettings {
     }
 
     public static OrcaTransportSettings load() {
-        String baseUrl = trim(external(ENV_ORCA_BASE_URL, PROP_ORCA_BASE_URL));
-        String rawMode = trim(external(ENV_ORCA_MODE, PROP_ORCA_MODE));
+        return load(new ServerConfigurationResolver());
+    }
+
+    public static OrcaTransportSettings load(ServerConfigurationResolver resolver) {
+        ServerConfigurationResolver activeResolver = resolver != null ? resolver : new ServerConfigurationResolver();
+        ServerRuntimeConfiguration.OrcaApiSettings api = activeResolver.orcaApi();
+        ServerRuntimeConfiguration.RuntimeSettings runtime = activeResolver.runtime();
+        ServerRuntimeConfiguration.OrcaTransportHttpSettings transportHttp = activeResolver.orcaTransportHttp();
+        String baseUrl = trim(api.baseUrl());
+        String rawMode = trim(api.mode());
         String mode = rawMode != null && !rawMode.isBlank() ? rawMode : null;
-        String host = firstNonBlank(trim(external(ENV_ORCA_API_HOST, PROP_ORCA_API_HOST)));
-        int port = resolvePort(parsePort(external(ENV_ORCA_API_PORT, PROP_ORCA_API_PORT)), null);
-        String scheme = firstNonBlank(trim(external(ENV_ORCA_API_SCHEME, PROP_ORCA_API_SCHEME)));
-        String user = firstNonBlank(trim(external(ENV_ORCA_API_USER, PROP_ORCA_API_USER)));
-        String password = firstNonBlank(trim(external(ENV_ORCA_API_PASSWORD, PROP_ORCA_API_PASSWORD)));
-        PrefixSpec prefixSpec = parsePathPrefix(external(ENV_ORCA_API_PATH_PREFIX, PROP_ORCA_API_PATH_PREFIX));
+        String host = firstNonBlank(trim(api.host()));
+        int port = resolvePort(api.port(), (String[]) null);
+        String scheme = firstNonBlank(trim(api.scheme()));
+        String user = firstNonBlank(trim(api.user()));
+        String password = firstNonBlank(trim(api.password()));
+        PrefixSpec prefixSpec = parsePathPrefix(api.pathPrefix());
         String pathPrefix = prefixSpec.pathPrefix;
         boolean autoApiPrefixEnabled = prefixSpec.autoApiPrefixEnabled;
-        boolean weborcaExplicit = parseBoolean(external(ENV_ORCA_API_WEBORCA, PROP_ORCA_API_WEBORCA));
+        boolean weborcaExplicit = Boolean.TRUE.equals(api.weborca());
 
         HostSpec baseSpec = parseHostSpec(baseUrl, scheme);
         if (baseSpec != null) {
@@ -132,12 +119,12 @@ public final class OrcaTransportSettings {
                 pathPrefix,
                 weborcaExplicit,
                 autoApiPrefixEnabled,
-                parseInt(external(ENV_ORCA_API_RETRY_MAX, PROP_ORCA_API_RETRY_MAX), DEFAULT_RETRY_MAX),
-                parseLong(external(ENV_ORCA_API_RETRY_BACKOFF_MS, PROP_ORCA_API_RETRY_BACKOFF_MS), DEFAULT_RETRY_BACKOFF_MS),
+                api.retryMax() != null ? api.retryMax() : DEFAULT_RETRY_MAX,
+                api.retryBackoffMs() != null ? api.retryBackoffMs() : DEFAULT_RETRY_BACKOFF_MS,
                 baseUrl,
                 mode
         );
-        settings.validateSecurityPolicy();
+        settings.validateSecurityPolicy(runtime, transportHttp);
         return settings;
     }
 
@@ -151,6 +138,18 @@ public final class OrcaTransportSettings {
             boolean useWeborca,
             String user,
             String password) {
+        return fromAdminConfig(baseUrl, useWeborca, user, password, new ServerConfigurationResolver());
+    }
+
+    public static OrcaTransportSettings fromAdminConfig(String baseUrl,
+            boolean useWeborca,
+            String user,
+            String password,
+            ServerConfigurationResolver resolver) {
+        ServerConfigurationResolver activeResolver = resolver != null ? resolver : new ServerConfigurationResolver();
+        ServerRuntimeConfiguration.RuntimeSettings runtime = activeResolver.runtime();
+        ServerRuntimeConfiguration.OrcaTransportHttpSettings transportHttp = activeResolver.orcaTransportHttp();
+        ServerRuntimeConfiguration.OrcaApiSettings api = activeResolver.orcaApi();
         String resolvedBaseUrl = trim(baseUrl);
         if (resolvedBaseUrl == null || resolvedBaseUrl.isBlank()) {
             throw new IllegalArgumentException("baseUrl is required");
@@ -170,12 +169,12 @@ public final class OrcaTransportSettings {
                 null,
                 false,
                 autoApiPrefixEnabled,
-                parseInt(external(ENV_ORCA_API_RETRY_MAX, PROP_ORCA_API_RETRY_MAX), DEFAULT_RETRY_MAX),
-                parseLong(external(ENV_ORCA_API_RETRY_BACKOFF_MS, PROP_ORCA_API_RETRY_BACKOFF_MS), DEFAULT_RETRY_BACKOFF_MS),
+                api.retryMax() != null ? api.retryMax() : DEFAULT_RETRY_MAX,
+                api.retryBackoffMs() != null ? api.retryBackoffMs() : DEFAULT_RETRY_BACKOFF_MS,
                 resolvedBaseUrl,
                 mode
         );
-        settings.validateSecurityPolicy();
+        settings.validateSecurityPolicy(runtime, transportHttp);
         return settings;
     }
 
@@ -237,11 +236,20 @@ public final class OrcaTransportSettings {
     }
 
     public String auditSummary() {
-        String resolvedScheme = scheme != null ? scheme : "http";
-        if (hasBaseUrl()) {
-            return String.format(Locale.ROOT, "orca.baseUrl=%s orca.mode=%s", safe(baseUrl), safe(modeNormalized));
-        }
-        return String.format(Locale.ROOT, "orca.host=%s orca.port=%d orca.scheme=%s", safe(host), port, resolvedScheme);
+        return String.format(
+                Locale.ROOT,
+                "orca.mode=%s credentialConfigured=%s clientAuthConfigured=%s",
+                safe(getMode()),
+                hasCredentials(),
+                isClientAuthConfigured());
+    }
+
+    public String getMode() {
+        return modeNormalized != null ? modeNormalized : "unknown";
+    }
+
+    public boolean isClientAuthConfigured() {
+        return false;
     }
 
     public int getRetryMax() {
@@ -332,28 +340,17 @@ public final class OrcaTransportSettings {
         return builder.toString();
     }
 
-    private void validateSecurityPolicy() {
+    private void validateSecurityPolicy(ServerRuntimeConfiguration.RuntimeSettings runtime,
+            ServerRuntimeConfiguration.OrcaTransportHttpSettings transportHttp) {
         if (!hasBaseUrl() && (host == null || host.isBlank())) {
             return;
         }
         String effectiveBaseUrl = hasBaseUrl() ? baseUrl : buildOrcaUrl("");
-        OrcaTransportSecurityPolicy.validateBaseUrl(effectiveBaseUrl, isWebOrca());
+        OrcaTransportSecurityPolicy.validateBaseUrl(effectiveBaseUrl, isWebOrca(), runtime, transportHttp);
     }
 
     private boolean isHttps() {
         return isHttpsScheme(scheme);
-    }
-
-    private static String external(String envKey, String propertyKey) {
-        String fromEnv = envKey != null ? System.getenv(envKey) : null;
-        if (fromEnv != null && !fromEnv.isBlank()) {
-            return fromEnv;
-        }
-        String fromProp = propertyKey != null ? System.getProperty(propertyKey) : null;
-        if (fromProp != null && !fromProp.isBlank()) {
-            return fromProp;
-        }
-        return null;
     }
 
     private static String trim(String value) {
@@ -384,8 +381,8 @@ public final class OrcaTransportSettings {
         }
     }
 
-    private static int resolvePort(int primary, String... candidates) {
-        if (primary > 0) {
+    private static int resolvePort(Integer primary, String... candidates) {
+        if (primary != null && primary > 0) {
             return primary;
         }
         if (candidates != null) {
@@ -409,38 +406,6 @@ public final class OrcaTransportSettings {
 
     private static boolean isHttpsScheme(String value) {
         return value != null && value.toLowerCase(Locale.ROOT).startsWith("https");
-    }
-
-    private static boolean parseBoolean(String value) {
-        if (value == null) {
-            return false;
-        }
-        return "true".equalsIgnoreCase(value)
-                || "1".equals(value)
-                || "yes".equalsIgnoreCase(value)
-                || "on".equalsIgnoreCase(value);
-    }
-
-    private static int parseInt(String value, int fallback) {
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
-    }
-
-    private static long parseLong(String value, long fallback) {
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        try {
-            return Long.parseLong(value.trim());
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
     }
 
     private static boolean isWebOrcaMode(String mode) {

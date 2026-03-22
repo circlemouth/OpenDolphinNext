@@ -12,6 +12,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
 /**
  * Resolves facility-scoped ORCA transport settings and caches HttpClient instances.
@@ -24,11 +26,14 @@ final class OrcaTransportRegistry {
 
     private final OrcaConnectionConfigStore orcaConnectionConfigStore;
     private final long cacheTtlMs;
+    private final ServerConfigurationResolver configurationResolver;
     private final Map<String, CachedTransportEntry> facilityCache = new ConcurrentHashMap<>();
 
-    OrcaTransportRegistry(OrcaConnectionConfigStore orcaConnectionConfigStore, long cacheTtlMs) {
+    OrcaTransportRegistry(OrcaConnectionConfigStore orcaConnectionConfigStore, long cacheTtlMs,
+            ServerConfigurationResolver configurationResolver) {
         this.orcaConnectionConfigStore = orcaConnectionConfigStore;
         this.cacheTtlMs = cacheTtlMs;
+        this.configurationResolver = configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
     }
 
     OrcaResolvedTransport currentTransport(String facilityId) {
@@ -83,19 +88,18 @@ final class OrcaTransportRegistry {
     }
 
     private ResolvedTransportConfig loadSettingsWithFallback(String facilityId) {
-        ResolvedTransportConfig entry = null;
-        try {
-            entry = loadSettingsFromAdminConfig(facilityId);
-        } catch (RuntimeException ex) {
-            LOGGER.log(Level.WARNING,
-                    "Failed to load ORCA transport settings from admin config: " + ex.getMessage()
-                            + " facilityId=" + safeFacility(facilityId),
-                    ex);
+        if (orcaConnectionConfigStore != null) {
+            try {
+                return loadSettingsFromAdminConfig(facilityId);
+            } catch (RuntimeException ex) {
+                LOGGER.log(Level.WARNING,
+                        "Failed to load ORCA transport settings from admin config: " + ex.getMessage()
+                                + " facilityId=" + safeFacility(facilityId),
+                        ex);
+                return null;
+            }
         }
-        if (entry == null) {
-            entry = loadFallbackSettings();
-        }
-        return entry;
+        return loadFallbackSettings();
     }
 
     private ResolvedTransportConfig loadSettingsFromAdminConfig(String facilityId) {
@@ -112,7 +116,8 @@ final class OrcaTransportRegistry {
                 resolved.baseUrl(),
                 resolved.useWeborca(),
                 resolved.username(),
-                resolved.password());
+                resolved.password(),
+                configurationResolver);
         return ResolvedTransportConfig.forAdminConfig(
                 settings,
                 resolved.clientAuthEnabled(),
@@ -122,7 +127,7 @@ final class OrcaTransportRegistry {
     }
 
     private ResolvedTransportConfig loadFallbackSettings() {
-        OrcaTransportSettings settings = OrcaTransportSettings.load();
+        OrcaTransportSettings settings = OrcaTransportSettings.load(configurationResolver);
         if (settings == null) {
             return null;
         }
@@ -131,7 +136,7 @@ final class OrcaTransportRegistry {
 
     private CachedTransportEntry buildTransportEntry(ResolvedTransportConfig resolvedConfig) {
         HttpClient.Builder builder = HttpClient.newBuilder()
-                .connectTimeout(DEFAULT_CONNECT_TIMEOUT)
+                .connectTimeout(resolveConnectTimeout())
                 .followRedirects(HttpClient.Redirect.NEVER);
         if (resolvedConfig.requiresCustomSslContext()) {
             builder.sslContext(resolvedConfig.buildSslContext());
@@ -140,11 +145,20 @@ final class OrcaTransportRegistry {
         OrcaResolvedTransport transport = new OrcaResolvedTransport(
                 resolvedConfig.settings(),
                 raw,
-                new OrcaHttpClient(raw));
+                new OrcaHttpClient(raw, configurationResolver.orcaTransportHttp()));
         return new CachedTransportEntry(
                 transport,
                 System.currentTimeMillis(),
                 resolvedConfig.fingerprint());
+    }
+
+    private Duration resolveConnectTimeout() {
+        ServerRuntimeConfiguration.OrcaTransportHttpSettings settings = configurationResolver.orcaTransportHttp();
+        Duration configured = settings != null ? settings.connectTimeout() : null;
+        if (configured == null || configured.isZero() || configured.isNegative()) {
+            return DEFAULT_CONNECT_TIMEOUT;
+        }
+        return configured;
     }
 
     private static String cacheKey(String facilityId) {

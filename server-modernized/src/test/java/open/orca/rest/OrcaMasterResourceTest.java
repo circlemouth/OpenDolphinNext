@@ -101,6 +101,55 @@ class OrcaMasterResourceTest {
     }
 
     @Test
+    void getGenericClass_returnsEtagAndCacheControlHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public GenericClassSearchResult searchGenericClass(GenericClassCriteria criteria) {
+                GenericClassRecord record = new GenericClassRecord();
+                record.classCode = "101";
+                record.className = "Test Generic";
+                record.startDate = "20240401";
+                record.endDate = "99991231";
+                record.version = "20240426";
+                return new GenericClassSearchResult(List.of(record), 1, "20240426");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+
+        Response response = resource.getGenericClass(null, createUriInfo(new MultivaluedHashMap<>()), authenticatedRequest());
+
+        assertEquals(200, response.getStatus());
+        assertNotNull(response.getEntityTag());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", response.getHeaderString("Cache-Control"));
+    }
+
+    @Test
+    void getGenericClass_ifNoneMatch_returnsNotModifiedWithStableCacheHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public GenericClassSearchResult searchGenericClass(GenericClassCriteria criteria) {
+                GenericClassRecord record = new GenericClassRecord();
+                record.classCode = "101";
+                record.className = "Test Generic";
+                record.startDate = "20240401";
+                record.endDate = "99991231";
+                record.version = "20240426";
+                return new GenericClassSearchResult(List.of(record), 1, "20240426");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        UriInfo uriInfo = createUriInfo(new MultivaluedHashMap<>());
+
+        Response initial = resource.getGenericClass(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+        Response cached = resource.getGenericClass("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", cached.getHeaderString("Cache-Control"));
+    }
+
+    @Test
     void getDrug_returnsPagedResponseWithMeta() {
         OrcaMasterDao masterDao = new OrcaMasterDao() {
             @Override
@@ -159,6 +208,95 @@ class OrcaMasterResourceTest {
         OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
         assertEquals("MASTER_DRUG_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getDrug_rejectsUnsupportedScopeParameter() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<DrugRecord> searchDrug(DrugCriteria criteria) {
+                fail("scope 指定時は DAO を呼ばない");
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "ゲンタ");
+        params.add("scope", "outer");
+
+        Response response = resource.getDrug(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(400, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("unsupported_parameter", payload.getCode());
+        assertEquals("scope query parameter is not supported", payload.getMessage());
+    }
+
+    @Test
+    void getDrug_ifNoneMatch_returnsNotModifiedWithSameEtagAndCacheHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<DrugRecord> searchDrug(DrugCriteria criteria) {
+                DrugRecord record = new DrugRecord();
+                record.srycd = "622961200";
+                record.drugName = "ゲンタマイシン硫酸塩１０ｍｇ注射液";
+                record.unit = "管";
+                record.price = 109d;
+                record.startDate = "20250401";
+                record.endDate = "99999999";
+                record.version = "20250401";
+                return new ListSearchResult<>(List.of(record), 1, "20250401");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "ゲンタ");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response initial = resource.getDrug(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+
+        Response cached = resource.getDrug("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", cached.getHeaderString("Cache-Control"));
+    }
+
+    @Test
+    void getDrug_ifNoneMatch_returnsNotModifiedWithStableCacheHeaders() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<DrugRecord> searchDrug(DrugCriteria criteria) {
+                DrugRecord record = new DrugRecord();
+                record.srycd = "622961200";
+                record.drugName = "ゲンタマイシン硫酸塩１０ｍｇ注射液";
+                record.unit = "管";
+                record.price = 109d;
+                record.startDate = "20250401";
+                record.endDate = "99999999";
+                record.version = "20250401";
+                return new ListSearchResult<>(List.of(record), 1, "20250401");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "ゲンタ");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response initial = resource.getDrug(null, uriInfo, authenticatedRequest());
+
+        assertEquals(200, initial.getStatus());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", initial.getHeaderString("Cache-Control"));
+        EntityTag etag = initial.getEntityTag();
+        assertNotNull(etag);
+
+        Response cached = resource.getDrug("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", cached.getHeaderString("Cache-Control"));
     }
 
     @Test
@@ -222,6 +360,36 @@ class OrcaMasterResourceTest {
     }
 
     @Test
+    void getComment_ifNoneMatch_returnsNotModifiedWithStableCacheHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<CommentRecord> searchComment(CommentCriteria criteria) {
+                CommentRecord record = new CommentRecord();
+                record.tensuCode = "820000001";
+                record.name = "別途コメントあり";
+                record.category = "820";
+                record.unit = "回";
+                record.startDate = "00000000";
+                record.endDate = "99999999";
+                record.version = "20260125";
+                return new ListSearchResult<>(List.of(record), 1, "20260125");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "別途");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response initial = resource.getComment(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+        Response cached = resource.getComment("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", cached.getHeaderString("Cache-Control"));
+    }
+
+    @Test
     void getBodypart_returnsPagedResponseWithMeta() {
         OrcaMasterDao masterDao = new OrcaMasterDao() {
             @Override
@@ -278,6 +446,36 @@ class OrcaMasterResourceTest {
         OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
         assertEquals("MASTER_BODYPART_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getBodypart_ifNoneMatch_returnsNotModifiedWithStableCacheHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<CommentRecord> searchBodypart(CommentCriteria criteria) {
+                CommentRecord record = new CommentRecord();
+                record.tensuCode = "820183500";
+                record.name = "撮影部位（ＭＲＩ撮影）：膝";
+                record.category = "820";
+                record.unit = "部位";
+                record.startDate = "00000000";
+                record.endDate = "99999999";
+                record.version = "20260125";
+                return new ListSearchResult<>(List.of(record), 1, "20260125");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "膝");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response initial = resource.getBodypart(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+        Response cached = resource.getBodypart("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", cached.getHeaderString("Cache-Control"));
     }
 
     @Test
@@ -459,6 +657,29 @@ class OrcaMasterResourceTest {
     }
 
     @Test
+    void getYouhou_returnsStableCacheControlHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<YouhouRecord> searchYouhou(YouhouCriteria criteria) {
+                YouhouRecord record = new YouhouRecord();
+                record.youhouCode = "Y001";
+                record.youhouName = "Sample Youhou";
+                record.startDate = "20240401";
+                record.endDate = "99991231";
+                record.version = "20240426";
+                return new ListSearchResult<>(List.of(record), 1, "20240426");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+
+        Response response = resource.getYouhou(null, createUriInfo(new MultivaluedHashMap<>()), authenticatedRequest());
+
+        assertEquals(200, response.getStatus());
+        assertNotNull(response.getEntityTag());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", response.getHeaderString("Cache-Control"));
+    }
+
+    @Test
     void getMaterial_returnsListWithMeta() {
         OrcaMasterDao masterDao = new OrcaMasterDao() {
             @Override
@@ -511,6 +732,35 @@ class OrcaMasterResourceTest {
         OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
         assertEquals("MASTER_MATERIAL_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getMaterial_returnsStableCacheControlHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<MaterialRecord> searchMaterial(MaterialCriteria criteria) {
+                MaterialRecord record = new MaterialRecord();
+                record.materialCode = "710010004";
+                record.materialName = "中心静脈用カテーテル";
+                record.category = "700";
+                record.materialCategory = "700";
+                record.unit = "本";
+                record.price = 1234d;
+                record.startDate = "20200401";
+                record.endDate = "99999999";
+                record.version = "20250401";
+                return new ListSearchResult<>(List.of(record), 1, "20250401");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "カテーテル");
+
+        Response response = resource.getMaterial(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(200, response.getStatus());
+        assertNotNull(response.getEntityTag());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", response.getHeaderString("Cache-Control"));
     }
 
     @Test
@@ -567,6 +817,36 @@ class OrcaMasterResourceTest {
         OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
         assertNotNull(payload);
         assertEquals("MASTER_KENSA_SORT_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getKensaSort_ifNoneMatch_returnsNotModifiedWithStableCacheHeader() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<KensaSortRecord> searchKensaSort(KensaSortCriteria criteria) {
+                KensaSortRecord record = new KensaSortRecord();
+                record.kensaCode = "160008010";
+                record.kensaName = "末梢血液一般";
+                record.kensaSort = "2";
+                record.classification = "600";
+                record.startDate = "20240401";
+                record.endDate = "99999999";
+                record.version = "20250401";
+                return new ListSearchResult<>(List.of(record), 1, "20250401");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "血液");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response initial = resource.getKensaSort(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+        Response cached = resource.getKensaSort("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", cached.getHeaderString("Cache-Control"));
     }
 
 
@@ -915,6 +1195,18 @@ class OrcaMasterResourceTest {
         Response response = resource.getGenericClass(null, uriInfo, null);
 
         assertEquals(401, response.getStatus());
+    }
+
+    @Test
+    void getDrug_rejectsMissingPrincipal() {
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+
+        Response response = resource.getDrug(null, createUriInfo(new MultivaluedHashMap<>()), null);
+
+        assertEquals(401, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("ORCA_MASTER_UNAUTHORIZED", payload.getCode());
     }
 
     @Test

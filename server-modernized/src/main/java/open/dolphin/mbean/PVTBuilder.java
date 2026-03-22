@@ -1,15 +1,9 @@
 package open.dolphin.mbean;
 
 import java.io.BufferedReader;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infomodel.*;
@@ -32,14 +26,10 @@ public final class PVTBuilder {
     private static final Namespace mmlNm = Namespace.getNamespace("mmlNm","http://www.medxml.net/MML/SharedComponent/Name/1.0");
     private static final Namespace mmlFc = Namespace.getNamespace("mmlFc","http://www.medxml.net/MML/SharedComponent/Facility/1.0");
     private static final Namespace mmlDp = Namespace.getNamespace("mmlDp","http://www.medxml.net/MML/SharedComponent/Department/1.0");
-    private static final Namespace mmlAd = Namespace.getNamespace("mmlAd","http://www.medxml.net/MML/SharedComponent/Address/1.0");
-    private static final Namespace mmlPh = Namespace.getNamespace("mmlPh","http://www.medxml.net/MML/SharedComponent/Phone/1.0");
     private static final Namespace mmlPsi = Namespace.getNamespace("mmlPsi","http://www.medxml.net/MML/SharedComponent/PersonalizedInfo/1.0");
     private static final Namespace mmlCi = Namespace.getNamespace("mmlCi","http://www.medxml.net/MML/SharedComponent/CreatorInfo/1.0");
-    private static final Namespace mmlPi = Namespace.getNamespace("mmlPi","http://www.medxml.net/MML/ContentModule/PatientInfo/1.0");
-    private static final Namespace mmlHi = Namespace.getNamespace("mmlHi","http://www.medxml.net/MML/ContentModule/HealthInsurance/1.1");
-    private static final Namespace mmlSc = Namespace.getNamespace("mmlSc","http://www.medxml.net/MML/SharedComponent/Security/1.0");
     private static final Namespace claim = Namespace.getNamespace("claim","http://www.medxml.net/claim/claimModule/2.1");
+    private static final Namespace mmlHi = Namespace.getNamespace("mmlHi","http://www.medxml.net/MML/ContentModule/HealthInsurance/1.1");
     
     private static final String MmlBody = "MmlBody";
     private static final String MmlModuleItem = "MmlModuleItem";
@@ -159,122 +149,7 @@ public final class PVTBuilder {
      * @return パース結果の PatientVisitModel
      */
     public PatientVisitModel getProduct() {
-        
-        // Return Object = PatientVisitModel を生成する
-        PatientVisitModel model = new PatientVisitModel();
-        
-        // 患者モデルを設定する
-        if (patientModel != null) {
-            
-            model.setPatientModel(patientModel);
-            
-            // ORCA CLAIM 特有の処理を行う
-            // 全角のスペースを半角スペースに変換する
-            String fullName = patientModel.getFullName();
-            fullName = fullName.replace(FULL_SPACE, HALF_SPACE);
-            patientModel.setFullName(fullName);
-            
-            // FamilyName と GivenName を設定する
-            int index = fullName.indexOf(HALF_SPACE);
-            if (patientModel.getFamilyName() == null && index > 0) {
-                patientModel.setFamilyName(fullName.substring(0, index));
-            }
-            if (patientModel.getGivenName() == null && index > 0) {
-                patientModel.setGivenName(fullName.substring(index+1));
-            }
-            
-            // カナ
-            String kana = patientModel.getKanaName();
-            if (kana != null) {
-                // 全角スペース->半角スペース
-                kana = kana.replace(FULL_SPACE, HALF_SPACE);
-                patientModel.setKanaName(kana);
-                
-                // カナの FamilyName と GivenName を設定する
-                int index2 = kana.indexOf(HALF_SPACE);
-                if (patientModel.getKanaFamilyName() == null && index2 > 0) {
-                    patientModel.setKanaFamilyName(kana.substring(0, index2));
-                }
-                if (patientModel.getKanaGivenName() == null && index2 > 0) {
-                    patientModel.setKanaGivenName(kana.substring(index2+1));
-                }
-            }
-            
-            // 住所をEmbedded に変換する
-            Collection<AddressModel> addresses = patientModel.getAddresses();
-            if (addresses != null && addresses.size() > 0) {
-                for (AddressModel bean : addresses) {
-                    String addr = bean.getAddress().replace(FULL_SPACE, HALF_SPACE);
-                    addr = addr.replace('ー', '-');
-                    SimpleAddressModel simple = new SimpleAddressModel();
-                    simple.setZipCode(bean.getZipCode());
-                    simple.setAddress(addr);
-                    patientModel.setSimpleAddressModel(simple);
-                    break;  // TODO
-                }
-            }
-            
-            // 電話をフィールドにする
-            Collection<TelephoneModel> telephones = patientModel.getTelephones();
-            if (telephones != null) {
-                for (TelephoneModel bean : telephones) {
-                    // MEMO へ設定
-                    patientModel.setTelephone(bean.getMemo());
-                }
-            }
-            
-            // 健康保険モジュールを設定する
-            // Patient oneToMany HealthInsuranceModel(PVTHealthInsuranceModelのXMLバイトデータを保持）
-            if (pvtInsurnaces != null && pvtInsurnaces.size() > 0) {
-                for (PVTHealthInsuranceModel bean : pvtInsurnaces) {
-                    // 健康保険モジュールの BeanXml byte を生成し、
-                    // 永続化のためのホルダ HealthInsuranceModelに変換し
-                    // それを患者属性に追加する
-                    HealthInsuranceModel insModel = new HealthInsuranceModel();
-                    insModel.setBeanJson(ModelUtils.jsonEncode(bean));
-                    // EJB 3.0 の関連を設定する
-                    patientModel.addHealthInsurance(insModel);
-                    insModel.setPatient(patientModel);
-                }
-            }
-        }
-        
-        //------------------------------------------------------
-        // 受付情報を設定する
-        // status=info ありだって、ヤレヤレ...
-        //------------------------------------------------------
-        if (pvtClaim != null) {
-            
-//s.oh^ 2014/03/13 ORCA患者登録対応
-            if(pvtClaim.getClaimStatus() != null && pvtClaim.getClaimStatus().trim().equals("regist")) {
-                LOGGER.info("受付登録情報受信");
-            }else{
-                LOGGER.info("受付登録ではないため受信した情報を破棄");
-                return null;
-            }
-//s.oh$
-
-            // 2.0 から
-            model.setDeptCode(pvtClaim.getClaimDeptCode());             // 診療科コード
-            model.setDeptName(pvtClaim.getClaimDeptName());             // 診療科名
-            model.setDoctorId(pvtClaim.getAssignedDoctorId());          // 担当医コード
-            model.setDoctorName(pvtClaim.getAssignedDoctorName());      // 担当医名
-            model.setJmariNumber(pvtClaim.getJmariCode());              // JMARI
-            // (予定カルテ対応)
-            //model.setPvtDate(pvtClaim.getClaimRegistTime());            // 受付登録日時
-            if (isAfterToday(pvtClaim.getClaimRegistTime())) {
-                model.setPvtDate(ModelUtils.parseDateTime(dateAsSchedule(pvtClaim.getClaimRegistTime()))); // 受付登録日時
-            } else {
-                model.setPvtDate(ModelUtils.parseDateTime(pvtClaim.getClaimRegistTime()));            // 受付登録日時
-            }
-            model.setInsuranceUid(pvtClaim.getInsuranceUid());          // UUID
-            if (pvtInsurnaces != null && pvtInsurnaces.size() > 0) {
-                PVTHealthInsuranceModel bean = pvtInsurnaces.get(0);    // 受付た保険情報の toString()
-                model.setFirstInsurance(bean.toString());
-            }
-        }
-        
-        return model;
+        return PVTBuilderSupport.buildProduct(patientModel, pvtInsurnaces, pvtClaim, LOGGER);
     }
     
     // 在宅関連(在宅患者登録)
@@ -319,7 +194,7 @@ public final class PVTBuilder {
                     LOGGER.fine("Parsing patientInfo module");
                 }
                 patientModel = new PatientModel();
-                parsePatientInfo(docInfoEle, contentEle);
+                PVTBuilderSupport.parsePatientInfo(patientModel, docInfoEle, contentEle, DEBUG, LOGGER);
                 
             } else if (attr.equals(healthInsurance)) {
                 //------------------------------
@@ -334,10 +209,10 @@ public final class PVTBuilder {
                 if (pvtInsurnaces == null) {
                     pvtInsurnaces = new ArrayList<PVTHealthInsuranceModel>();
                 }
-                curInsurance = new PVTHealthInsuranceModel();
-                curInsurance.setGUID(uuid);
-                pvtInsurnaces.add(curInsurance);
-                parseHealthInsurance(docInfoEle, contentEle);
+                PVTHealthInsuranceModel currentInsurance = new PVTHealthInsuranceModel();
+                currentInsurance.setGUID(uuid);
+                pvtInsurnaces.add(currentInsurance);
+                PVTBuilderSupport.parseHealthInsurance(currentInsurance, docInfoEle, contentEle, DEBUG, LOGGER);
                 
             } else if (attr.equals(e_claim)) {
                 //------------------------------
@@ -366,159 +241,7 @@ public final class PVTBuilder {
      * @param content 患者要素
      */
     private void parsePatientInfo(Element docInfo, Element content) {
-        
-        //-------------------------------------
-        // 患者モジュールの要素をイテレートする
-        //-------------------------------------
-        List children = content.getChildren();
-
-        for (Iterator iterator = children.iterator(); iterator.hasNext();) {
-            
-            Element child = (Element) iterator.next();
-            String qname = child.getQualifiedName();
-            
-            if (qname.equals(mmlCm_Id)) {
-                String pid = child.getTextTrim();
-                patientModel.setPatientId(pid);
-                if (DEBUG) {
-                    LOGGER.fine("Parsed patient identifier");
-                }
-                
-            } else if (qname.equals(mmlNm_Name)) {
-                List attrs = child.getAttributes();
-                for (Iterator iter = attrs.iterator(); iter.hasNext(); ) {
-                    Attribute attr = (Attribute) iter.next();
-                    if (attr.getName().equals(repCode)) {
-                        curRepCode = attr.getValue();
-                        if (DEBUG) {
-                            LOGGER.fine("Parsed name representation code");
-                        }
-                    } else if (attr.getName().equals(tableId)) {
-                        if (DEBUG) {
-                            LOGGER.fine("Parsed name tableId");
-                        }
-                    }
-                }
-                
-            } else if (qname.equals(mmlNm_family)) {
-                if (curRepCode.equals(P)) {
-                    patientModel.setKanaFamilyName(child.getTextTrim());
-                } else if (curRepCode.equals(I)) {
-                    patientModel.setFamilyName(child.getTextTrim());
-                } else if (curRepCode.equals(A)) {
-                    patientModel.setRomanFamilyName(child.getTextTrim());
-                }
-                if (DEBUG) {
-                    LOGGER.fine("Parsed family name element");
-                }
-                
-            } else if (qname.equals(mmlNm_given)) {
-                if (curRepCode.equals(P)) {
-                    patientModel.setKanaGivenName(child.getTextTrim());
-                } else if (curRepCode.equals(I)) {
-                    patientModel.setGivenName(child.getTextTrim());
-                } else if (curRepCode.equals(A)) {
-                    patientModel.setRomanGivenName(child.getTextTrim());
-                }
-                if (DEBUG) {
-                    LOGGER.fine("Parsed given name element");
-                }
-                
-            } else if (qname.equals(mmlNm_fullname)) {
-                if (curRepCode.equals(P)) {
-                    patientModel.setKanaName(child.getTextTrim());
-                } else if (curRepCode.equals(I)) {
-                    patientModel.setFullName(child.getTextTrim());
-                } else if (curRepCode.equals(A)) {
-                    patientModel.setRomanName(child.getTextTrim());
-                }
-                if (DEBUG) {
-                    LOGGER.fine("Parsed full name element");
-                }
-                
-            } else if (qname.equals(mmlPi_birthday)) {
-                patientModel.setBirthday(ModelUtils.parseDate(child.getTextTrim()));
-                if (DEBUG) {
-                    LOGGER.fine("Parsed birthday element");
-                }
-                
-            } else if (qname.equals(mmlPi_sex)) {
-                patientModel.setGender(child.getTextTrim());
-                if (DEBUG) {
-                    LOGGER.fine("Parsed gender element");
-                }
-                
-            } else if (qname.equals(mmlAd_Address)) {
-                curAddress = new AddressModel();
-                patientModel.addAddress(curAddress);
-                
-                List attrs = child.getAttributes();
-                for (Iterator iter = attrs.iterator(); iter.hasNext(); ) {
-                    Attribute attr = (Attribute) iter.next();
-                    if (attr.getName().equals(addressClass)) {
-                        curRepCode = attr.getValue();
-                        curAddress.setAddressType(attr.getValue());
-                        if (DEBUG) {
-                            LOGGER.fine("Parsed addressClass");
-                        }
-                    } else if (attr.getName().equals(tableId)) {
-                        curAddress.setAddressTypeCodeSys(attr.getValue());
-                        if (DEBUG) {
-                            LOGGER.fine("Parsed address tableId");
-                        }
-                    }
-                }
-                
-            } else if (qname.equals(mmlAd_full)) {
-                curAddress.setAddress(child.getTextTrim());
-                if (DEBUG) {
-                    LOGGER.fine("Parsed address element");
-                }
-                
-            } else if (qname.equals(mmlAd_zip)) {
-                curAddress.setZipCode(child.getTextTrim());
-                if (DEBUG) {
-                    LOGGER.fine("Parsed zip element");
-                }
-                
-            } else if (qname.equals(mmlPh_Phone)) {
-                curTelephone = new TelephoneModel();
-                patientModel.addTelephone(curTelephone);
-                
-            } else if (qname.equals(mmlPh_area)) {
-                String val = child.getTextTrim();
-                //val = ZenkakuUtils.utf8Replace(val);
-                curTelephone.setArea(val);
-                if (DEBUG) {
-                    LOGGER.fine("Parsed phone area element");
-                }
-                
-            } else if (qname.equals(mmlPh_city)) {
-                String val = child.getTextTrim();
-                //val = ZenkakuUtils.utf8Replace(val);
-                curTelephone.setCity(val);
-                if (DEBUG) {
-                    LOGGER.fine("Parsed phone city element");
-                }
-                
-            } else if (qname.equals(mmlPh_number)) {
-                String val = child.getTextTrim();
-                //val = ZenkakuUtils.utf8Replace(val);
-                curTelephone.setNumber(val);
-                if (DEBUG) {
-                    LOGGER.fine("Parsed phone number element");
-                }
-                
-            } else if (qname.equals(mmlPh_memo)) {
-                // ORCA
-                curTelephone.setMemo(child.getTextTrim());
-                if (DEBUG) {
-                    LOGGER.fine("Parsed phone memo element");
-                }
-            }
-            
-            parsePatientInfo(docInfo, child);
-        }
+        PVTBuilderSupport.parsePatientInfo(patientModel, docInfo, content, DEBUG, LOGGER);
     }
     
     /**
@@ -527,131 +250,7 @@ public final class PVTBuilder {
      * @param content 健康保険要素
      */
     private void parseHealthInsurance(Element docInfo, Element content) {
-        
-        // HealthInsuranceModule を得る
-        Element hModule = content.getChild(HealthInsuranceModule, mmlHi);
-        if (hModule == null) {
-            LOGGER.warning("HealthInsuranceModule element not found");
-            return;
-        }
-        
-        // InsuranceClass を解析する
-        Element insuranceClassEle = hModule.getChild(insuranceClass, mmlHi);
-        if (insuranceClassEle != null) {
-            curInsurance.setInsuranceClass(insuranceClassEle.getTextTrim());
-            if (insuranceClassEle.getAttribute(ClassCode, mmlHi) != null) {
-                curInsurance.setInsuranceClassCode(insuranceClassEle.getAttributeValue(ClassCode, mmlHi));
-            }
-            if (insuranceClassEle.getAttribute(tableId, mmlHi) != null) {
-                curInsurance.setInsuranceClassCodeSys(insuranceClassEle.getAttributeValue(tableId, mmlHi));
-            }
-        }
-        
-        // insurance Number を得る
-        if (hModule.getChildTextTrim(insuranceNumber, mmlHi) != null) {
-            curInsurance.setInsuranceNumber(hModule.getChildTextTrim(insuranceNumber, mmlHi));
-        }
-        
-        // clientId を得る
-        Element clientIdEle = hModule.getChild(clientId, mmlHi);
-        if (clientIdEle != null) {
-            if (clientIdEle.getChild(group,mmlHi) != null) {
-                curInsurance.setClientGroup(clientIdEle.getChildTextTrim(group,mmlHi));
-            }
-            if (clientIdEle.getChild(number,mmlHi) != null) {
-                curInsurance.setClientNumber(clientIdEle.getChildTextTrim(number,mmlHi));
-            }
-        }
-        
-        // familyClass を得る
-        if (hModule.getChild(familyClass, mmlHi) != null) {
-            curInsurance.setFamilyClass(hModule.getChildTextTrim(familyClass, mmlHi));
-        }
-        
-        // startDateを得る
-        if (hModule.getChild(startDate, mmlHi) != null) {
-            curInsurance.setStartDate(hModule.getChildTextTrim(startDate, mmlHi));
-        }
-        
-        // expiredDateを得る
-        if (hModule.getChild(expiredDate, mmlHi) != null) {
-            curInsurance.setExpiredDate(hModule.getChildTextTrim(expiredDate, mmlHi));
-        }
-        
-        // payInRatio を得る
-        if (hModule.getChild(paymentInRatio, mmlHi) != null) {
-            curInsurance.setPayInRatio(hModule.getChildTextTrim(paymentInRatio, mmlHi));
-        }
-        
-        // payOutRatio を得る
-        if (hModule.getChild(paymentOutRatio, mmlHi) != null) {
-            curInsurance.setPayOutRatio(hModule.getChildTextTrim(paymentOutRatio, mmlHi));
-        }
-
-        if (DEBUG) {
-            LOGGER.fine("Parsed base healthInsurance fields");
-        }
-        
-        //--------------------------------
-        // publicInsurance をパースする
-        //--------------------------------
-        Element publicInsuranceEle = hModule.getChild(publicInsurance, mmlHi);
-        if (publicInsuranceEle != null) {
-            
-            List children = publicInsuranceEle.getChildren();
-            
-            for (Iterator iterator = children.iterator(); iterator.hasNext();) {
-                
-                // publicInsuranceItem を得る
-                Element publicInsuranceItem = (Element) iterator.next();
-                
-                curPublicItem = new PVTPublicInsuranceItemModel();
-                curInsurance.addPvtPublicInsuranceItem(curPublicItem);
-            
-                // priority
-                if (publicInsuranceItem.getAttribute(priority, mmlHi) != null) {
-                    curPublicItem.setPriority(publicInsuranceItem.getAttributeValue(priority, mmlHi));
-                }
-                
-                // providerName
-                if (publicInsuranceItem.getChild(providerName, mmlHi) != null) {
-                    curPublicItem.setProviderName(publicInsuranceItem.getChildTextTrim(providerName, mmlHi));
-                }
-                
-                // provider
-                if (publicInsuranceItem.getChild(provider, mmlHi) != null) {
-                    curPublicItem.setProvider(publicInsuranceItem.getChildTextTrim(provider, mmlHi));
-                }
-                
-                // recipient
-                if (publicInsuranceItem.getChild(recipient, mmlHi) != null) {
-                    curPublicItem.setRecipient(publicInsuranceItem.getChildTextTrim(recipient, mmlHi));
-                }
-                
-                // startDate
-                if (publicInsuranceItem.getChild(startDate, mmlHi) != null) {
-                    curPublicItem.setStartDate(publicInsuranceItem.getChildTextTrim(startDate, mmlHi));
-                }
-                
-                // expiredDate
-                if (publicInsuranceItem.getChild(expiredDate, mmlHi) != null) {
-                    curPublicItem.setExpiredDate(publicInsuranceItem.getChildTextTrim(expiredDate, mmlHi));
-                }
-                
-                // paymentRatio
-                Element paymentRatioEle = publicInsuranceItem.getChild(paymentRatio, mmlHi);
-                if (paymentRatioEle != null) {
-                    curPublicItem.setPaymentRatio(paymentRatioEle.getTextTrim());
-                    if (paymentRatioEle.getAttribute(ratioType, mmlHi) != null) {
-                        curPublicItem.setPaymentRatioType(paymentRatioEle.getAttributeValue(ratioType, mmlHi));
-                    }
-                }
-
-                if (DEBUG) {
-                    LOGGER.fine("Parsed public insurance item");
-                }
-            }
-        }
+        PVTBuilderSupport.parseHealthInsurance(curInsurance, docInfo, content, DEBUG, LOGGER);
     }
     
     /**
@@ -717,54 +316,4 @@ public final class PVTBuilder {
         }
     }
     
-    // (予定カルテ対応)
-    private boolean isAfterToday(String mmlDate) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            Date test = sdf.parse(mmlDate);
-            GregorianCalendar gc1 = new GregorianCalendar();
-            gc1.setTime(test);
-            gc1.clear(Calendar.HOUR_OF_DAY);
-            gc1.clear(Calendar.MINUTE);
-            gc1.clear(Calendar.SECOND);
-            gc1.clear(Calendar.MILLISECOND);
-            GregorianCalendar gc2 = new GregorianCalendar();
-            gc2.setTime(new Date());
-            gc2.clear(Calendar.HOUR_OF_DAY);
-            gc2.clear(Calendar.MINUTE);
-            gc2.clear(Calendar.SECOND);
-            gc2.clear(Calendar.MILLISECOND);
-//s.oh^ 2013/05/16 受付不具合修正
-            //return gc1.after(gc2);
-            boolean after = false;
-            if(gc1.get(Calendar.YEAR) > gc2.get(Calendar.YEAR)) {
-                after = true;
-            }else if(gc1.get(Calendar.MONTH) > gc2.get(Calendar.MONTH)) {
-                after = true;
-            }else if(gc1.get(Calendar.DAY_OF_MONTH) > gc2.get(Calendar.DAY_OF_MONTH)) {
-                after = true;
-            }
-            return after;
-//s.oh$
-        } catch (ParseException ex) {
-        }
-        return false;
-    }
-    
-    // (予定カルテ対応)
-    private String dateAsSchedule(String mmlDate) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            Date test = sdf.parse(mmlDate);
-            GregorianCalendar gc1 = new GregorianCalendar();
-            gc1.setTime(test);
-            gc1.set(Calendar.HOUR_OF_DAY, 0);
-            gc1.set(Calendar.MINUTE, 0);
-            gc1.set(Calendar.SECOND, 0);
-            gc1.set(Calendar.MILLISECOND, 0);
-            return sdf.format(gc1.getTime());
-        } catch (ParseException ex) {
-        }
-        return null;
-    }
 }

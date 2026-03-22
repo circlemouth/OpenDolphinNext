@@ -3,8 +3,8 @@ package open.dolphin.rest;
 import java.time.Duration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
 final class ChartEventHistorySettingsResolver {
 
@@ -18,31 +18,35 @@ final class ChartEventHistorySettingsResolver {
     }
 
     static ChartEventHistorySettings load() {
-        Config config = null;
-        try {
-            config = ConfigProvider.getConfig();
-        } catch (Exception ex) {
-            LOGGER.log(Level.FINE, "Failed to load config; using default chart-event history settings", ex);
-        }
-
-        int replayLimit = resolveIntConfig(config, "chartEvent.history.replayLimit", DEFAULT_REPLAY_LIMIT, 1);
-        int retentionCount = resolveIntConfig(config, "chartEvent.history.retentionCount", DEFAULT_RETENTION_COUNT, 0);
-        int retentionHours = resolveIntConfig(
-                config, "chartEvent.history.retentionHours", (int) DEFAULT_RETENTION_DURATION.toHours(), 0);
-        Duration retentionDuration = retentionHours > 0 ? Duration.ofHours(retentionHours) : Duration.ZERO;
-        return new ChartEventHistorySettings(replayLimit, retentionCount, retentionDuration);
+        return load(new ServerConfigurationResolver());
     }
 
-    private static int resolveIntConfig(Config config, String key, int defaultValue, int minValue) {
-        if (config == null) {
-            return defaultValue;
-        }
+    static ChartEventHistorySettings load(ServerConfigurationResolver resolver) {
         try {
-            Integer value = config.getOptionalValue(key, Integer.class).orElse(defaultValue);
-            return value >= minValue ? value : defaultValue;
-        } catch (Exception ex) {
-            LOGGER.log(Level.FINE, "Invalid config for " + key + ", using default.", ex);
+            ServerConfigurationResolver activeResolver = resolver != null ? resolver : new ServerConfigurationResolver();
+            ServerRuntimeConfiguration.ChartEventHistorySettings settings = activeResolver.chartEventHistory();
+            int replayLimit = resolveOrDefault(settings.replayLimit(), DEFAULT_REPLAY_LIMIT, 1);
+            int retentionCount = resolveOrDefault(settings.retentionCount(), DEFAULT_RETENTION_COUNT, 0);
+            Duration retentionDuration = settings.retentionDuration() != null
+                    ? settings.retentionDuration()
+                    : DEFAULT_RETENTION_DURATION;
+            if (retentionDuration.isNegative()) {
+                retentionDuration = DEFAULT_RETENTION_DURATION;
+            }
+            return new ChartEventHistorySettings(replayLimit, retentionCount, retentionDuration);
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.FINE, "Failed to load config; using default chart-event history settings", ex);
+            return new ChartEventHistorySettings(
+                    DEFAULT_REPLAY_LIMIT,
+                    DEFAULT_RETENTION_COUNT,
+                    DEFAULT_RETENTION_DURATION);
+        }
+    }
+
+    private static int resolveOrDefault(Integer value, int defaultValue, int minValue) {
+        if (value == null) {
             return defaultValue;
         }
+        return value >= minValue ? value : defaultValue;
     }
 }

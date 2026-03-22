@@ -10,21 +10,12 @@ import java.util.Date;
 import java.util.List;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.session.AccountSummary;
 import open.stamp.seed.CopyStampTreeBuilder;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class MessagingDefensiveCopyTest {
-
-    @AfterEach
-    void tearDown() {
-        System.clearProperty(ServerConfigurationResolver.KEY_FACILITY_ID);
-        System.clearProperty(ServerConfigurationResolver.KEY_CLOUD_ZERO);
-        System.clearProperty(ServerConfigurationResolver.KEY_PVT_ENABLED);
-        System.clearProperty(ServerConfigurationResolver.KEY_PVT_BIND_IP);
-        System.clearProperty(ServerConfigurationResolver.KEY_PVT_PORT);
-    }
 
     @Test
     void accountSummaryClonesDate() {
@@ -44,13 +35,13 @@ class MessagingDefensiveCopyTest {
 
     @Test
     void resolverExposesTypedOrcaRuntimeSettings() throws IOException {
-        System.setProperty(ServerConfigurationResolver.KEY_FACILITY_ID, "facility01");
-        System.setProperty(ServerConfigurationResolver.KEY_CLOUD_ZERO, "true");
-        System.setProperty(ServerConfigurationResolver.KEY_PVT_ENABLED, "true");
-        System.setProperty(ServerConfigurationResolver.KEY_PVT_BIND_IP, "127.0.0.1");
-        System.setProperty(ServerConfigurationResolver.KEY_PVT_PORT, "5001");
-
-        ServerRuntimeConfiguration.OrcaRuntimeSettings settings = new ServerConfigurationResolver().orcaRuntime();
+        ServerRuntimeConfiguration.OrcaRuntimeSettings settings = TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_FACILITY_ID, "facility01",
+                ServerConfigurationResolver.KEY_CLOUD_ZERO, "true",
+                ServerConfigurationResolver.KEY_PVT_ENABLED, "true",
+                ServerConfigurationResolver.KEY_PVT_BIND_IP, "127.0.0.1",
+                ServerConfigurationResolver.KEY_PVT_PORT, "5001")
+                .orcaRuntime();
 
         assertEquals("facility01", settings.facilityId());
         assertTrue(settings.cloudZero());

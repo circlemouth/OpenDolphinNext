@@ -449,6 +449,35 @@
                             </target>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>run-ci-contract-checks</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <exec executable="bash" failonerror="true" dir="${maven.multiModuleProjectDirectory}">
+                                    <arg value="server-modernized/tools/ci/check-doc-links.sh"/>
+                                </exec>
+                                <exec executable="bash" failonerror="true" dir="${maven.multiModuleProjectDirectory}">
+                                    <arg value="server-modernized/tools/ci/check-config-contract.sh"/>
+                                </exec>
+                                <exec executable="bash" failonerror="true" dir="${maven.multiModuleProjectDirectory}">
+                                    <arg value="server-modernized/tools/ci/check-no-direct-runtime-lookup.sh"/>
+                                </exec>
+                                <exec executable="bash" failonerror="true" dir="${maven.multiModuleProjectDirectory}">
+                                    <arg value="server-modernized/tools/ci/check-no-runtime-ddl.sh"/>
+                                </exec>
+                                <exec executable="bash" failonerror="true" dir="${maven.multiModuleProjectDirectory}">
+                                    <arg value="server-modernized/tools/ci/check-persistence-entities.sh"/>
+                                </exec>
+                                <exec executable="bash" failonerror="true" dir="${maven.multiModuleProjectDirectory}">
+                                    <arg value="server-modernized/tools/ci/check-no-generated-artifacts.sh"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -485,37 +514,6 @@
                     <showDeprecation>true</showDeprecation>
                     <release>${maven.compiler.release}</release>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
-                <executions>
-                    <execution>
-                        <id>add-workspace-api-contract-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${project.basedir}/../api-contract/src/main/java</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>add-workspace-api-contract-test-sources</id>
-                        <phase>generate-test-sources</phase>
-                        <goals>
-                            <goal>add-test-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${project.basedir}/../api-contract/src/main/java</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -589,6 +587,9 @@
         </profile>
         <profile>
             <id>static-analysis</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <properties>
                 <spotbugs.plugin.version>4.8.5.0</spotbugs.plugin.version>
                 <findsecbugs.plugin.version>1.12.0</findsecbugs.plugin.version>
@@ -596,6 +597,7 @@
                 <checkstyle.version>10.12.4</checkstyle.version>
                 <pmd.plugin.version>3.21.0</pmd.plugin.version>
                 <pmd.version>6.55.0</pmd.version>
+                <spotbugs.skip>true</spotbugs.skip>
                 <static.analysis.config.dir>${maven.multiModuleProjectDirectory}/server-modernized/config/static-analysis</static.analysis.config.dir>
                 <static.analysis.output.dir>${maven.multiModuleProjectDirectory}/server-modernized/target/static-analysis</static.analysis.output.dir>
                 <static.analysis.enforce>false</static.analysis.enforce>
@@ -628,6 +630,7 @@
                         <artifactId>spotbugs-maven-plugin</artifactId>
                         <version>${spotbugs.plugin.version}</version>
                         <configuration>
+                            <skip>${spotbugs.skip}</skip>
                             <effort>Max</effort>
                             <threshold>Medium</threshold>
                             <failOnError>${static.analysis.enforce}</failOnError>

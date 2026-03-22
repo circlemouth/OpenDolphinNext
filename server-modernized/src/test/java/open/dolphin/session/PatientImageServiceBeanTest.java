@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Date;
@@ -26,8 +28,12 @@ import open.dolphin.storage.attachment.AttachmentStorageManager;
 import open.dolphin.storage.attachment.AttachmentStorageMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class PatientImageServiceBeanTest {
+
+    @TempDir
+    Path tempDir;
 
     private PatientImageServiceBean service;
     private EntityManager em;
@@ -53,8 +59,9 @@ class PatientImageServiceBeanTest {
     }
 
     @Test
-    void uploadImage_usesAttachmentIdAssignedDuringSave() {
+    void uploadImage_usesAttachmentIdAssignedDuringSave() throws Exception {
         byte[] payload = new byte[] {1, 2, 3};
+        Path payloadPath = writePayload("image.png", payload);
         PatientModel patient = new PatientModel();
         patient.setId(1L);
         patient.setFacilityId("F001");
@@ -84,7 +91,8 @@ class PatientImageServiceBeanTest {
                 "F001:doctor01",
                 "image.png",
                 "image/png",
-                payload);
+                payloadPath,
+                payload.length);
 
         assertThat(result.documentId()).isEqualTo(10L);
         assertThat(result.attachmentId()).isEqualTo(99L);
@@ -92,8 +100,9 @@ class PatientImageServiceBeanTest {
     }
 
     @Test
-    void uploadImage_externalizesToS3BeforePersistWhenAttachmentStorageIsS3() {
+    void uploadImage_externalizesToS3BeforePersistWhenAttachmentStorageIsS3() throws Exception {
         byte[] payload = new byte[] {1, 2, 3, 4};
+        Path payloadPath = writePayload("image.png", payload);
         PatientModel patient = new PatientModel();
         patient.setId(1L);
         patient.setFacilityId("F001");
@@ -133,11 +142,18 @@ class PatientImageServiceBeanTest {
                 "F001:doctor01",
                 "image.png",
                 "image/png",
-                payload);
+                payloadPath,
+                payload.length);
 
         assertThat(result.documentId()).isEqualTo(10L);
         assertThat(result.attachmentId()).isEqualTo(99L);
         verify(attachmentStorageManager).prepareExternalAssetForPersist(any(), any(), eq((long) payload.length));
+    }
+
+    private Path writePayload(String fileName, byte[] bytes) throws Exception {
+        Path path = tempDir.resolve(fileName);
+        Files.write(path, bytes);
+        return path;
     }
 
     @Test

@@ -5,6 +5,7 @@ export type OrcaConnectionConfigResponse = {
   ok: boolean;
   status: number;
   facilityId?: string;
+  defaultFacilityId?: string;
   useWeborca?: boolean;
   serverUrl?: string;
   port?: number;
@@ -82,6 +83,7 @@ const normalizeConfig = (
     ok: resolvedOk,
     status,
     facilityId: getString(body.facilityId),
+    defaultFacilityId: getString(body.defaultFacilityId),
     useWeborca: getBoolean(body.useWeborca),
     serverUrl: getString(body.serverUrl),
     port: getNumber(body.port),

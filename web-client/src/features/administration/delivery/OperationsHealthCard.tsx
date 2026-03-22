@@ -37,10 +37,12 @@ const resolveStatusTone = (status?: string) => {
 
 const getCheckDetails = (check?: OperationsCheck) => {
   if (!check) return '―';
-  if (typeof check.auditSummary === 'string' && check.auditSummary) return check.auditSummary;
   if (typeof check.mode === 'string' && check.mode) return `mode=${check.mode}`;
+  if (typeof check.reasonCode === 'string' && check.reasonCode) return `reasonCode=${check.reasonCode}`;
+  if (typeof check.backendReachable === 'boolean') return `backendReachable=${check.backendReachable}`;
+  if (typeof check.credentialConfigured === 'boolean') return `credentialConfigured=${check.credentialConfigured}`;
   if (typeof check.workerStatus === 'string' && check.workerStatus) return `worker=${check.workerStatus}`;
-  if (Array.isArray(check.reasons) && check.reasons.length > 0) return `reasons=${check.reasons.join(', ')}`;
+  if (Array.isArray(check.reasonCodes) && check.reasonCodes.length > 0) return `reasonCodes=${check.reasonCodes.join(', ')}`;
   return 'OK';
 };
 
@@ -148,6 +150,11 @@ export function OperationsHealthCard({
               <td>{checks.pvtQueue?.status ?? '―'}</td>
               <td>{getCheckDetails(checks.pvtQueue)}</td>
             </tr>
+            <tr>
+              <td>patientImages</td>
+              <td>{checks.patientImages?.status ?? '―'}</td>
+              <td>{getCheckDetails(checks.patientImages)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -160,7 +167,7 @@ export function OperationsHealthCard({
           ORCA test: HTTP {orcaConnectionResult?.orcaHttpStatus ?? orcaConnectionResult?.status ?? '―'} / Api_Result=
           {orcaConnectionResult?.apiResult ?? '―'}
         </div>
-        {pvtWorkerResult?.reasons.length ? <div>PVT reasons: {pvtWorkerResult.reasons.join(' / ')}</div> : null}
+        {pvtWorkerResult?.reasonCodes.length ? <div>PVT reasonCodes: {pvtWorkerResult.reasonCodes.join(' / ')}</div> : null}
         {healthResult?.error ? <div className="admin-error">health error: {healthResult.error}</div> : null}
         {readinessResult?.error ? <div className="admin-error">readiness error: {readinessResult.error}</div> : null}
         {pvtWorkerResult?.error ? <div className="admin-error">pvt worker error: {pvtWorkerResult.error}</div> : null}

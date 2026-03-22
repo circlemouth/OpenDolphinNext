@@ -20,7 +20,7 @@ import java.util.Map;
 import open.dolphin.infomodel.ActivityModel;
 import open.dolphin.infomodel.FacilityModel;
 import open.dolphin.msg.OidSender;
-import org.junit.jupiter.api.AfterEach;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -51,12 +51,8 @@ class SystemServiceBeanBulkAggregationTest {
         when(em.createNativeQuery(DB_SIZE_SQL)).thenReturn(dbSizeQuery);
         when(dbSizeQuery.getSingleResult()).thenReturn("42 MB");
         when(facilityListQuery.getResultList()).thenReturn(facilities);
-        System.setProperty("jboss.bind.address", "127.0.0.1");
-    }
-
-    @AfterEach
-    void tearDown() {
-        System.clearProperty("jboss.bind.address");
+        setField(service, "configurationResolver",
+                TestServerConfigurationResolvers.resolver("jboss.bind.address", "127.0.0.1"));
     }
 
     @Test

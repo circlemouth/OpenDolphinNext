@@ -9,7 +9,7 @@ import java.time.Instant;
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import open.dolphin.rest.AbstractResource;
-import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.RuntimeStateRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +26,9 @@ public class AdminConfigStore {
 
     @Inject
     private RuntimeStateRepository stateRepository;
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
 
     private AdminConfigSnapshot current;
 
@@ -166,35 +169,24 @@ public class AdminConfigStore {
     }
 
     private String resolveDefaultOrcaEndpoint() {
-        String scheme = env("ORCA_API_SCHEME", "ORCA_SCHEME");
-        String host = env("ORCA_API_HOST", "ORCA_HOST");
-        String port = env("ORCA_API_PORT", "ORCA_PORT");
+        if (configurationResolver == null) {
+            return null;
+        }
+        String scheme = configurationResolver.orcaApi().scheme();
+        String host = configurationResolver.orcaApi().host();
+        Integer port = configurationResolver.orcaApi().port();
         if (host == null || host.isBlank()) {
             return null;
         }
         String resolvedScheme = (scheme == null || scheme.isBlank()) ? "http" : scheme.trim();
-        if (port == null || port.isBlank()) {
+        if (port == null) {
             return resolvedScheme + "://" + host.trim();
         }
-        return resolvedScheme + "://" + host.trim() + ":" + port.trim();
+        return resolvedScheme + "://" + host.trim() + ":" + port;
     }
 
     private String resolveEnvironment() {
-        String value = RuntimeConfigurationSupport.resolveEnvironment();
+        String value = configurationResolver != null ? configurationResolver.runtime().environment() : null;
         return value == null || value.isBlank() ? "dev" : value.trim();
-    }
-
-    private String env(String... keys) {
-        if (keys == null) {
-            return null;
-        }
-        for (String key : keys) {
-            if (key == null) continue;
-            String value = System.getenv(key);
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return null;
     }
 }

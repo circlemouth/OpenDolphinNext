@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,30 +20,18 @@ class OrcaTransportSettingsExternalConfigTest {
     @AfterEach
     void tearDown() {
         System.clearProperty("jboss.home.dir");
-        System.clearProperty("orca.base-url");
-        System.clearProperty("orca.api.host");
-        System.clearProperty("orca.api.port");
-        System.clearProperty("orca.api.scheme");
-        System.clearProperty("orca.api.user");
-        System.clearProperty("orca.api.password");
-        System.clearProperty("orca.api.path-prefix");
-        System.clearProperty("orca.api.weborca");
-        System.clearProperty("orca.mode");
-        System.clearProperty("orca.api.retry.max");
-        System.clearProperty("orca.api.retry.backoff-ms");
     }
 
     @Test
-    void loadUsesExternalSystemPropertiesWithoutCustomProperties() {
-        System.setProperty("orca.api.host", "weborca-trial.orca.med.or.jp");
-        System.setProperty("orca.api.port", "443");
-        System.setProperty("orca.api.scheme", "https");
-        System.setProperty("orca.api.user", "trial-user");
-        System.setProperty("orca.api.password", "trial-password");
-        System.setProperty("orca.mode", "weborca");
-        System.setProperty("orca.api.path-prefix", "/api");
-
-        OrcaTransportSettings settings = OrcaTransportSettings.load();
+    void loadUsesResolverBackedTypedConfiguration() {
+        OrcaTransportSettings settings = OrcaTransportSettings.load(TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ORCA_API_HOST, "weborca-trial.orca.med.or.jp",
+                ServerConfigurationResolver.KEY_ORCA_API_PORT, "443",
+                ServerConfigurationResolver.KEY_ORCA_API_SCHEME, "https",
+                ServerConfigurationResolver.KEY_ORCA_API_USER, "trial-user",
+                ServerConfigurationResolver.KEY_ORCA_API_PASSWORD, "trial-password",
+                ServerConfigurationResolver.KEY_ORCA_API_PATH_PREFIX, "/api",
+                ServerConfigurationResolver.KEY_ORCA_API_MODE, "weborca"));
 
         assertTrue(settings.isReady());
         assertEquals("https://weborca-trial.orca.med.or.jp/api/orca11/appointmodv2",

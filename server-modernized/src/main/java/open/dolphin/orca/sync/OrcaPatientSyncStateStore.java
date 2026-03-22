@@ -24,27 +24,16 @@ public class OrcaPatientSyncStateStore {
 
     private static final Logger LOGGER = Logger.getLogger(OrcaPatientSyncStateStore.class.getName());
     private static final String TABLE_NAME = "d_orca_patient_sync_state";
-
-    private static final String SQL_CREATE_TABLE = """
-            CREATE TABLE IF NOT EXISTS d_orca_patient_sync_state (
-                facility_id VARCHAR(128) NOT NULL,
-                last_sync_date DATE,
-                last_synced_at TIMESTAMPTZ,
-                last_run_id VARCHAR(64),
-                last_error TEXT,
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT d_orca_patient_sync_state_pkey PRIMARY KEY (facility_id)
-            )
-            """;
+    private static final String TABLE_REFERENCE = "opendolphin." + TABLE_NAME;
 
     private static final String SQL_SELECT = """
             SELECT last_sync_date, last_synced_at, last_run_id, last_error
-              FROM d_orca_patient_sync_state
+              FROM opendolphin.d_orca_patient_sync_state
              WHERE facility_id = ?
             """;
 
     private static final String SQL_UPSERT_SUCCESS = """
-            INSERT INTO d_orca_patient_sync_state (
+            INSERT INTO opendolphin.d_orca_patient_sync_state (
                 facility_id, last_sync_date, last_synced_at, last_run_id, last_error, updated_at
             ) VALUES (?, ?, ?, ?, NULL, CURRENT_TIMESTAMP)
             ON CONFLICT (facility_id) DO UPDATE SET
@@ -56,7 +45,7 @@ public class OrcaPatientSyncStateStore {
             """;
 
     private static final String SQL_UPSERT_FAILURE = """
-            INSERT INTO d_orca_patient_sync_state (
+            INSERT INTO opendolphin.d_orca_patient_sync_state (
                 facility_id, last_synced_at, last_run_id, last_error, updated_at
             ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT (facility_id) DO UPDATE SET
@@ -70,10 +59,9 @@ public class OrcaPatientSyncStateStore {
     private DataSource dataSource;
 
     private final ReentrantLock lock = new ReentrantLock();
-    private volatile boolean schemaEnsured;
 
     public String resolveStorageDescriptor() {
-        return "db:opendolphin." + TABLE_NAME;
+        return "db:" + TABLE_REFERENCE;
     }
 
     public FacilityState loadFacilityState(String facilityId) {
@@ -155,24 +143,7 @@ public class OrcaPatientSyncStateStore {
         if (dataSource == null) {
             throw new IllegalStateException("PostgresDS is not available for ORCA patient sync state store");
         }
-        Connection connection = dataSource.getConnection();
-        ensureSchema(connection);
-        return connection;
-    }
-
-    private void ensureSchema(Connection connection) throws SQLException {
-        if (schemaEnsured) {
-            return;
-        }
-        synchronized (this) {
-            if (schemaEnsured) {
-                return;
-            }
-            try (PreparedStatement statement = connection.prepareStatement(SQL_CREATE_TABLE)) {
-                statement.execute();
-                schemaEnsured = true;
-            }
-        }
+        return dataSource.getConnection();
     }
 
     private static String normalizeFacilityId(String facilityId) {

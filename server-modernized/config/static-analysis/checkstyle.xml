@@ -4,9 +4,15 @@
 <module name="Checker">
   <property name="charset" value="UTF-8"/>
   <property name="severity" value="warning"/>
+  <module name="FileLength">
+    <property name="max" value="700"/>
+  </module>
 
   <!-- 既存コードとの乖離を避けるため、軽量ルールのみを適用 -->
   <module name="TreeWalker">
+    <module name="MethodLength">
+      <property name="max" value="80"/>
+    </module>
     <module name="UnusedImports"/>
     <module name="AvoidStarImport"/>
     <module name="EmptyCatchBlock">

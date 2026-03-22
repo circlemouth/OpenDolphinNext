@@ -28,6 +28,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
 import open.dolphin.infomodel.*;
 import open.dolphin.msg.OidSender;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.session.framework.SessionOperation;
 import open.stamp.seed.CopyStampTreeBuilder;
 import open.stamp.seed.CopyStampTreeXmlCloner;
@@ -73,6 +74,9 @@ public class SystemServiceBean {
 
     @PersistenceContext
     private EntityManager em;
+
+    @jakarta.inject.Inject
+    private ServerConfigurationResolver configurationResolver;
     
 //s.oh^ 2014/02/21 Claim送信方法の変更
     //@Resource(mappedName = "java:/JmsXA")
@@ -89,178 +93,12 @@ public class SystemServiceBean {
      * @param user 施設管理者
      */
     public AccountSummary addFacilityAdmin(UserModel user) {
-
-        // シーケンサから次の施設番号を得る
-        Number nextId = (Number)em.createNativeQuery(QUERY_NEXT_FID).getSingleResult();
-        Long nextFnum = new Long(nextId.longValue());
-
-        // 施設OIDを生成する  base.next
-        StringBuilder sb = new StringBuilder();
-        sb.append(BASE_OID).append(String.valueOf(nextFnum));
-        String fid = sb.toString();
-
-        // OIDをセットし施設レコードを生成する
-        FacilityModel facility = user.getFacilityModel();
-        facility.setFacilityId(fid);
-        try {
-            em.createQuery(QUERY_FACILITY_BY_FID)
-            .setParameter(FID, fid)
-            .getSingleResult();
-
-            // すでに存在している場合は例外をスローする
-            throw new EntityExistsException();
-
-        } catch (NoResultException e) {
-            // 当たり前
-        }
-
-        // Persist the Facility
-        // このメソッドで facility が管理された状態になる
-        em.persist(facility);
-
-        // userId=fid:uid
-        sb = new StringBuilder();
-        sb.append(fid);
-        sb.append(IInfoModel.COMPOSITE_KEY_MAKER);
-        sb.append(user.getUserId());
-        user.setUserId(sb.toString());
-
-        // role
-        List<RoleModel> roles = user.getRoles();
-        user.setRoles(null);
-
-        // Persist the User
-        // Role には User から CascadeType.ALL が設定されているが、
-        // 順序制御のために手動で保存する
-        em.persist(user);
-        em.flush();
-
-        if (roles != null) {
-            user.setRoles(roles);
-            for (RoleModel role : roles) {
-                role.setUserModel(user);
-                role.setUserId(user.getUserId());
-                em.persist(role);
-            }
-        }
-
-        //-----------------------------------
-        // 評価ユーザなのでデモ用の患者を生成する
-        //-----------------------------------
-        Collection demoPatients = em.createQuery(QUERY_PATIENT_BY_FID)
-                                    .setParameter(FID, DEMO_FACILITY_ID)
-                                    .setFirstResult(1)
-                                    .setMaxResults(MAX_DEMO_PATIENTS)
-                                    .getResultList();
-
-        for (Iterator iter = demoPatients.iterator(); iter.hasNext(); ) {
-
-            PatientModel demoPatient = (PatientModel) iter.next();
-            PatientModel copyPatient = new PatientModel();
-            copyPatient.setFacilityId(fid);
-            copyPatient.setPatientId(ID_PREFIX + demoPatient.getPatientId()); // D_0001 ec
-            copyPatient.setFamilyName(demoPatient.getFamilyName());
-            copyPatient.setGivenName(demoPatient.getGivenName());
-            copyPatient.setFullName(demoPatient.getFullName());
-            copyPatient.setKanaFamilyName(demoPatient.getKanaFamilyName());
-            copyPatient.setKanaGivenName(demoPatient.getKanaGivenName());
-            copyPatient.setKanaName(demoPatient.getKanaName());
-            copyPatient.setGender(demoPatient.getGender());
-            copyPatient.setGenderDesc(demoPatient.getGenderDesc());
-            copyPatient.setBirthday(demoPatient.getBirthday());
-            copyPatient.setSimpleAddressModel(demoPatient.getSimpleAddressModel());
-            copyPatient.setTelephone(demoPatient.getTelephone());
-
-            // 健康保険を設定する
-            Collection demoInsurances = em.createQuery(QUERY_HEALTH_INSURANCE_BY_PATIENT_PK)
-                                          .setParameter(PK, demoPatient.getId()).getResultList();
-
-            for (Iterator iter2 = demoInsurances.iterator(); iter2.hasNext(); ) {
-                HealthInsuranceModel demoInsurance = (HealthInsuranceModel) iter2.next();
-                HealthInsuranceModel copyInsurance = new HealthInsuranceModel();
-                copyInsurance.setBeanJson(demoInsurance.getBeanJson());
-                copyInsurance.setPatient(copyPatient);
-                copyPatient.addHealthInsurance(copyInsurance);
-            }
-
-            // 永続化する
-            em.persist(copyPatient);
-
-            // カルテを生成する
-            KarteBean karte = new KarteBean();
-            karte.setPatientModel(copyPatient);
-            karte.setCreated(new Date());
-            em.persist(karte);
-        }
-        
-        //----------------------------------------
-        // StampTreeを生成する
-        //----------------------------------------
-        try {
-            // admin の StampTreeModel を取得する
-            UserModel admin = (UserModel)
-                em.createQuery("from UserModel u where u.userId=:uid")
-                  .setParameter("uid", TREE_SOURCE)
-                  .getSingleResult();
-            List<StampTreeModel> list = (List<StampTreeModel>)
-                em.createQuery("from StampTreeModel s where s.user.id=:userPK")
-                  .setParameter("userPK", admin.getId())
-                  .getResultList();
-            StampTreeModel st = list.remove(0);
-            
-            // 上記StampTreeModelのtreeXmlをコピーする
-            InputStream is = new ByteArrayInputStream(st.getTreeBytes());
-            BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-            CopyStampTreeBuilder builder = new CopyStampTreeBuilder();
-            CopyStampTreeXmlCloner director = new CopyStampTreeXmlCloner();
-            director.build(br, builder);
-            br.close();
-            
-            // copyした treeXml & bytes
-            String copiedTreeXml = builder.getStampTreeXML();
-            byte[] treeBytes = copiedTreeXml.getBytes("UTF-8");
-            
-            // copyした treeXml を登録ユーザーのTreeとして永続化する
-            StampTreeModel copyTree = new StampTreeModel();
-            copyTree.setTreeBytes(treeBytes);
-            copyTree.setUserModel(user);
-            copyTree.setName("個人用");
-            copyTree.setDescription("個人用のスタンプセットです");
-            copyTree.setPartyName(user.getFacilityModel().getFacilityName());
-            if (user.getFacilityModel().getUrl()!=null) {
-                copyTree.setUrl(user.getFacilityModel().getUrl());
-            }
-            em.persist(copyTree);
-            
-            // copy Treeに関連づけされているStampの実態を永続化する
-            List<StampModel> stampToPersist = builder.getStampModelToPersist();
-            List<String> seedStampIdList = builder.getSeedStampList();
-            
-            for (int i=0; i<stampToPersist.size();i++) {
-                String id = seedStampIdList.get(i);
-                StampModel seed = (StampModel)em.find(StampModel.class, id);
-                StampModel persist = stampToPersist.get(i);
-                persist.setStampBytes(seed.getStampBytes());
-                persist.setUserId(user.getId());
-                em.persist(persist);
-            }
-            
-        } catch (Exception e) {
-            e.printStackTrace(System.err);
-        }
-        
-        AccountSummary account = new AccountSummary();
-        account.setMemberType(ASP_TESTER);
-        account.setFacilityAddress(user.getFacilityModel().getAddress());
-        account.setFacilityId(user.getFacilityModel().getFacilityId());
-        account.setFacilityName(user.getFacilityModel().getFacilityName());
-        account.setFacilityTelephone(user.getFacilityModel().getTelephone());
-        account.setFacilityZipCode(user.getFacilityModel().getZipCode());
-        account.setUserEmail(user.getEmail());
-        account.setUserName(user.getCommonName());
-        account.setUserId(user.idAsLocal());
-        
-        return account;
+        String fid = allocateFacilityId();
+        persistFacility(user, fid);
+        persistUserWithRoles(user, fid);
+        copyDemoPatients(fid);
+        copyStampTree(user);
+        return buildAccountSummary(user);
     }
     
 //s.oh^ 2014/07/08 クラウド0対応
@@ -426,21 +264,11 @@ public class SystemServiceBean {
     }
 
     Map<String, ActivityModel> countMonthlyActivitiesBulk(List<FacilityModel> facilities, Date from, Date to) {
-        return countMonthlyActivitiesBulk(
-                facilities,
-                from,
-                to,
-                toLocalDate(from),
-                toLocalDate(to));
+        return countMonthlyActivitiesBulk(facilities, from, to, toLocalDate(from), toLocalDate(to));
     }
 
     Map<String, ActivityModel> countMonthlyActivitiesBulk(List<FacilityModel> facilities, LocalDate from, LocalDate to) {
-        return countMonthlyActivitiesBulk(
-                facilities,
-                toDateAtStartOfDay(from),
-                toDateAtEndOfDay(to),
-                from,
-                to);
+        return countMonthlyActivitiesBulk(facilities, toDateAtStartOfDay(from), toDateAtEndOfDay(to), from, to);
     }
 
     private Map<String, ActivityModel> countMonthlyActivitiesBulk(
@@ -460,87 +288,14 @@ public class SystemServiceBean {
             activity.setToLocalDate(toLocalDate);
         }
 
-        applyGroupedCount(
-                "select p.facilityId, count(p.id) from PatientModel p, KarteBean k "
-                        + "where p.id=k.patient.id and k.created between :fromDate and :toDate "
-                        + "group by p.facilityId",
-                activities,
-                ActivityModel::setNumOfPatients,
-                query -> {
-                    query.setParameter("fromDate", fromDate);
-                    query.setParameter("toDate", toDate);
-                });
-        applyGroupedCount(
-                "select p.facilityId, count(p.id) from PatientVisitModel p "
-                        + "where p.pvtDate between :fromDate and :toDate and p.status!=:status "
-                        + "group by p.facilityId",
-                activities,
-                ActivityModel::setNumOfPatientVisits,
-                query -> {
-                    query.setParameter("fromDate", toLocalDateTime(fromDate));
-                    query.setParameter("toDate", toLocalDateTime(toDate));
-                    query.setParameter("status", 6);
-                });
-        applyGroupedCount(
-                "select substring(d.creator.userId, 1, locate(':', d.creator.userId) - 1), count(d.id) "
-                        + "from DocumentModel d where d.started between :fromDate and :toDate and d.status='F' "
-                        + "group by substring(d.creator.userId, 1, locate(':', d.creator.userId) - 1)",
-                activities,
-                ActivityModel::setNumOfKarte,
-                query -> {
-                    query.setParameter("fromDate", fromDate);
-                    query.setParameter("toDate", toDate);
-                });
-        applyGroupedCount(
-                "select substring(s.creator.userId, 1, locate(':', s.creator.userId) - 1), count(s.id) "
-                        + "from SchemaModel s where s.started between :fromDate and :toDate and s.status='F' "
-                        + "group by substring(s.creator.userId, 1, locate(':', s.creator.userId) - 1)",
-                activities,
-                ActivityModel::setNumOfImages,
-                query -> {
-                    query.setParameter("fromDate", fromDate);
-                    query.setParameter("toDate", toDate);
-                });
-        applyGroupedCount(
-                "select substring(a.creator.userId, 1, locate(':', a.creator.userId) - 1), count(a.id) "
-                        + "from AttachmentModel a where a.started between :fromDate and :toDate and a.status='F' "
-                        + "group by substring(a.creator.userId, 1, locate(':', a.creator.userId) - 1)",
-                activities,
-                ActivityModel::setNumOfAttachments,
-                query -> {
-                    query.setParameter("fromDate", fromDate);
-                    query.setParameter("toDate", toDate);
-                });
-        applyGroupedCount(
-                "select substring(r.creator.userId, 1, locate(':', r.creator.userId) - 1), count(r.id) "
-                        + "from RegisteredDiagnosisModel r where r.started between :fromDate and :toDate "
-                        + "group by substring(r.creator.userId, 1, locate(':', r.creator.userId) - 1)",
-                activities,
-                ActivityModel::setNumOfDiagnosis,
-                query -> {
-                    query.setParameter("fromDate", fromDate);
-                    query.setParameter("toDate", toDate);
-                });
-        applyGroupedCount(
-                "select substring(l.creator.userId, 1, locate(':', l.creator.userId) - 1), count(l.id) "
-                        + "from LetterModule l where l.started between :fromDate and :toDate and l.status='F' "
-                        + "group by substring(l.creator.userId, 1, locate(':', l.creator.userId) - 1)",
-                activities,
-                ActivityModel::setNumOfLetters,
-                query -> {
-                    query.setParameter("fromDate", fromDate);
-                    query.setParameter("toDate", toDate);
-                });
-        applyGroupedCount(
-                "select substring(l.patientId, 1, locate(':', l.patientId) - 1), count(l.id) "
-                        + "from NLaboModule l where l.sampleDate between :fromDate and :toDate "
-                        + "group by substring(l.patientId, 1, locate(':', l.patientId) - 1)",
-                activities,
-                ActivityModel::setNumOfLabTests,
-                query -> {
-                    query.setParameter("fromDate", fromLocalDate.toString());
-                    query.setParameter("toDate", toLocalDate.toString());
-                });
+        applyMonthlyPatientCounts(activities, fromDate, toDate);
+        applyMonthlyVisitCounts(activities, fromDate, toDate);
+        applyMonthlyDocumentCounts(activities, fromDate, toDate);
+        applyMonthlyImageCounts(activities, fromDate, toDate);
+        applyMonthlyAttachmentCounts(activities, fromDate, toDate);
+        applyMonthlyDiagnosisCounts(activities, fromDate, toDate);
+        applyMonthlyLetterCounts(activities, fromDate, toDate);
+        applyMonthlyLabCounts(activities, fromLocalDate, toLocalDate);
 
         return activities;
     }
@@ -591,6 +346,149 @@ public class SystemServiceBean {
         return activities;
     }
 
+    private String allocateFacilityId() {
+        Number nextId = (Number) em.createNativeQuery(QUERY_NEXT_FID).getSingleResult();
+        Long nextFnum = Long.valueOf(nextId.longValue());
+        return new StringBuilder(BASE_OID).append(nextFnum).toString();
+    }
+
+    private void persistFacility(UserModel user, String fid) {
+        FacilityModel facility = user.getFacilityModel();
+        facility.setFacilityId(fid);
+        try {
+            em.createQuery(QUERY_FACILITY_BY_FID)
+                    .setParameter(FID, fid)
+                    .getSingleResult();
+            throw new EntityExistsException();
+        } catch (NoResultException e) {
+            // expected
+        }
+        em.persist(facility);
+    }
+
+    private void persistUserWithRoles(UserModel user, String fid) {
+        String originalUserId = user.getUserId();
+        user.setUserId(fid + IInfoModel.COMPOSITE_KEY_MAKER + originalUserId);
+        List<RoleModel> roles = user.getRoles();
+        user.setRoles(null);
+        em.persist(user);
+        em.flush();
+        if (roles == null) {
+            return;
+        }
+        user.setRoles(roles);
+        for (RoleModel role : roles) {
+            role.setUserModel(user);
+            role.setUserId(user.getUserId());
+            em.persist(role);
+        }
+    }
+
+    private void copyDemoPatients(String fid) {
+        Collection demoPatients = em.createQuery(QUERY_PATIENT_BY_FID)
+                .setParameter(FID, DEMO_FACILITY_ID)
+                .setFirstResult(1)
+                .setMaxResults(MAX_DEMO_PATIENTS)
+                .getResultList();
+
+        for (Iterator iter = demoPatients.iterator(); iter.hasNext(); ) {
+            PatientModel demoPatient = (PatientModel) iter.next();
+            PatientModel copyPatient = new PatientModel();
+            copyPatient.setFacilityId(fid);
+            copyPatient.setPatientId(ID_PREFIX + demoPatient.getPatientId());
+            copyPatient.setFamilyName(demoPatient.getFamilyName());
+            copyPatient.setGivenName(demoPatient.getGivenName());
+            copyPatient.setFullName(demoPatient.getFullName());
+            copyPatient.setKanaFamilyName(demoPatient.getKanaFamilyName());
+            copyPatient.setKanaGivenName(demoPatient.getKanaGivenName());
+            copyPatient.setKanaName(demoPatient.getKanaName());
+            copyPatient.setGender(demoPatient.getGender());
+            copyPatient.setGenderDesc(demoPatient.getGenderDesc());
+            copyPatient.setBirthday(demoPatient.getBirthday());
+            copyPatient.setSimpleAddressModel(demoPatient.getSimpleAddressModel());
+            copyPatient.setTelephone(demoPatient.getTelephone());
+            copyDemoPatientInsurances(demoPatient, copyPatient);
+            em.persist(copyPatient);
+
+            KarteBean karte = new KarteBean();
+            karte.setPatientModel(copyPatient);
+            karte.setCreated(new Date());
+            em.persist(karte);
+        }
+    }
+
+    private void copyDemoPatientInsurances(PatientModel demoPatient, PatientModel copyPatient) {
+        Collection demoInsurances = em.createQuery(QUERY_HEALTH_INSURANCE_BY_PATIENT_PK)
+                .setParameter(PK, demoPatient.getId())
+                .getResultList();
+        for (Iterator iter2 = demoInsurances.iterator(); iter2.hasNext(); ) {
+            HealthInsuranceModel demoInsurance = (HealthInsuranceModel) iter2.next();
+            HealthInsuranceModel copyInsurance = new HealthInsuranceModel();
+            copyInsurance.setBeanJson(demoInsurance.getBeanJson());
+            copyInsurance.setPatient(copyPatient);
+            copyPatient.addHealthInsurance(copyInsurance);
+        }
+    }
+
+    private void copyStampTree(UserModel user) {
+        try {
+            UserModel admin = (UserModel) em.createQuery("from UserModel u where u.userId=:uid")
+                    .setParameter("uid", TREE_SOURCE)
+                    .getSingleResult();
+            List<StampTreeModel> list = (List<StampTreeModel>) em.createQuery("from StampTreeModel s where s.user.id=:userPK")
+                    .setParameter("userPK", admin.getId())
+                    .getResultList();
+            StampTreeModel st = list.remove(0);
+
+            InputStream is = new ByteArrayInputStream(st.getTreeBytes());
+            BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
+            CopyStampTreeBuilder builder = new CopyStampTreeBuilder();
+            CopyStampTreeXmlCloner director = new CopyStampTreeXmlCloner();
+            director.build(br, builder);
+            br.close();
+
+            String copiedTreeXml = builder.getStampTreeXML();
+            byte[] treeBytes = copiedTreeXml.getBytes("UTF-8");
+            StampTreeModel copyTree = new StampTreeModel();
+            copyTree.setTreeBytes(treeBytes);
+            copyTree.setUserModel(user);
+            copyTree.setName("個人用");
+            copyTree.setDescription("個人用のスタンプセットです");
+            copyTree.setPartyName(user.getFacilityModel().getFacilityName());
+            if (user.getFacilityModel().getUrl() != null) {
+                copyTree.setUrl(user.getFacilityModel().getUrl());
+            }
+            em.persist(copyTree);
+
+            List<StampModel> stampToPersist = builder.getStampModelToPersist();
+            List<String> seedStampIdList = builder.getSeedStampList();
+            for (int i = 0; i < stampToPersist.size(); i++) {
+                String id = seedStampIdList.get(i);
+                StampModel seed = (StampModel) em.find(StampModel.class, id);
+                StampModel persist = stampToPersist.get(i);
+                persist.setStampBytes(seed.getStampBytes());
+                persist.setUserId(user.getId());
+                em.persist(persist);
+            }
+        } catch (Exception e) {
+            e.printStackTrace(System.err);
+        }
+    }
+
+    private AccountSummary buildAccountSummary(UserModel user) {
+        AccountSummary account = new AccountSummary();
+        account.setMemberType(ASP_TESTER);
+        account.setFacilityAddress(user.getFacilityModel().getAddress());
+        account.setFacilityId(user.getFacilityModel().getFacilityId());
+        account.setFacilityName(user.getFacilityModel().getFacilityName());
+        account.setFacilityTelephone(user.getFacilityModel().getTelephone());
+        account.setFacilityZipCode(user.getFacilityModel().getZipCode());
+        account.setUserEmail(user.getEmail());
+        account.setUserName(user.getCommonName());
+        account.setUserId(user.idAsLocal());
+        return account;
+    }
+
     private void applyGroupedCount(String jpql, Map<String, ActivityModel> activities, ObjLongConsumer<ActivityModel> setter) {
         applyGroupedCount(jpql, activities, setter, query -> {
         });
@@ -613,6 +511,111 @@ public class SystemServiceBean {
                 setter.accept(activity, ((Number) row[1]).longValue());
             }
         }
+    }
+
+    private void applyMonthlyPatientCounts(Map<String, ActivityModel> activities, Date fromDate, Date toDate) {
+        applyGroupedCount(
+                "select p.facilityId, count(p.id) from PatientModel p, KarteBean k "
+                        + "where p.id=k.patient.id and k.created between :fromDate and :toDate "
+                        + "group by p.facilityId",
+                activities,
+                ActivityModel::setNumOfPatients,
+                query -> {
+                    query.setParameter("fromDate", fromDate);
+                    query.setParameter("toDate", toDate);
+                });
+    }
+
+    private void applyMonthlyVisitCounts(Map<String, ActivityModel> activities, Date fromDate, Date toDate) {
+        applyGroupedCount(
+                "select p.facilityId, count(p.id) from PatientVisitModel p "
+                        + "where p.pvtDate between :fromDate and :toDate and p.status!=:status "
+                        + "group by p.facilityId",
+                activities,
+                ActivityModel::setNumOfPatientVisits,
+                query -> {
+                    query.setParameter("fromDate", toLocalDateTime(fromDate));
+                    query.setParameter("toDate", toLocalDateTime(toDate));
+                    query.setParameter("status", 6);
+                });
+    }
+
+    private void applyMonthlyDocumentCounts(Map<String, ActivityModel> activities, Date fromDate, Date toDate) {
+        applyGroupedCount(
+                "select substring(d.creator.userId, 1, locate(':', d.creator.userId) - 1), count(d.id) "
+                        + "from DocumentModel d where d.started between :fromDate and :toDate and d.status='F' "
+                        + "group by substring(d.creator.userId, 1, locate(':', d.creator.userId) - 1)",
+                activities,
+                ActivityModel::setNumOfKarte,
+                query -> {
+                    query.setParameter("fromDate", fromDate);
+                    query.setParameter("toDate", toDate);
+                });
+    }
+
+    private void applyMonthlyImageCounts(Map<String, ActivityModel> activities, Date fromDate, Date toDate) {
+        applyGroupedCount(
+                "select substring(s.creator.userId, 1, locate(':', s.creator.userId) - 1), count(s.id) "
+                        + "from SchemaModel s where s.started between :fromDate and :toDate and s.status='F' "
+                        + "group by substring(s.creator.userId, 1, locate(':', s.creator.userId) - 1)",
+                activities,
+                ActivityModel::setNumOfImages,
+                query -> {
+                    query.setParameter("fromDate", fromDate);
+                    query.setParameter("toDate", toDate);
+                });
+    }
+
+    private void applyMonthlyAttachmentCounts(Map<String, ActivityModel> activities, Date fromDate, Date toDate) {
+        applyGroupedCount(
+                "select substring(a.creator.userId, 1, locate(':', a.creator.userId) - 1), count(a.id) "
+                        + "from AttachmentModel a where a.started between :fromDate and :toDate and a.status='F' "
+                        + "group by substring(a.creator.userId, 1, locate(':', a.creator.userId) - 1)",
+                activities,
+                ActivityModel::setNumOfAttachments,
+                query -> {
+                    query.setParameter("fromDate", fromDate);
+                    query.setParameter("toDate", toDate);
+                });
+    }
+
+    private void applyMonthlyDiagnosisCounts(Map<String, ActivityModel> activities, Date fromDate, Date toDate) {
+        applyGroupedCount(
+                "select substring(r.creator.userId, 1, locate(':', r.creator.userId) - 1), count(r.id) "
+                        + "from RegisteredDiagnosisModel r where r.started between :fromDate and :toDate "
+                        + "group by substring(r.creator.userId, 1, locate(':', r.creator.userId) - 1)",
+                activities,
+                ActivityModel::setNumOfDiagnosis,
+                query -> {
+                    query.setParameter("fromDate", fromDate);
+                    query.setParameter("toDate", toDate);
+                });
+    }
+
+    private void applyMonthlyLetterCounts(Map<String, ActivityModel> activities, Date fromDate, Date toDate) {
+        applyGroupedCount(
+                "select substring(l.creator.userId, 1, locate(':', l.creator.userId) - 1), count(l.id) "
+                        + "from LetterModule l where l.started between :fromDate and :toDate and l.status='F' "
+                        + "group by substring(l.creator.userId, 1, locate(':', l.creator.userId) - 1)",
+                activities,
+                ActivityModel::setNumOfLetters,
+                query -> {
+                    query.setParameter("fromDate", fromDate);
+                    query.setParameter("toDate", toDate);
+                });
+    }
+
+    private void applyMonthlyLabCounts(Map<String, ActivityModel> activities, LocalDate fromLocalDate, LocalDate toLocalDate) {
+        applyGroupedCount(
+                "select substring(l.patientId, 1, locate(':', l.patientId) - 1), count(l.id) "
+                        + "from NLaboModule l where l.sampleDate between :fromDate and :toDate "
+                        + "group by substring(l.patientId, 1, locate(':', l.patientId) - 1)",
+                activities,
+                ActivityModel::setNumOfLabTests,
+                query -> {
+                    query.setParameter("fromDate", fromLocalDate.toString());
+                    query.setParameter("toDate", toLocalDate.toString());
+                });
     }
 
     private LocalDate toLocalDate(Date date) {
@@ -643,7 +646,10 @@ public class SystemServiceBean {
     }
 
     private String getBindAddress() {
-        String test = System.getProperty("jboss.bind.address");
+        String test = null;
+        if (configurationResolver != null) {
+            test = configurationResolver.systemNetwork().bindAddress();
+        }
         if (test==null) {
             try {
                 InetAddress ip = InetAddress.getLocalHost();

@@ -2,6 +2,8 @@ package open.dolphin.session;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -10,7 +12,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -155,7 +156,7 @@ class KarteServiceBeanGetDocumentsBulkFetchTest {
     @Test
     void getAllDocumentAppliesPagingAndSkipsBinaryPayloads() {
         KarteBean karte = karte(500L);
-        Query karteQuery = query(List.of(karte));
+        TypedQuery<KarteBean> karteQuery = typedQuery(List.of(karte));
         TypedQuery<Long> docIdQuery = typedLongQuery(List.of(20L, 10L));
 
         List<DocumentModel> documents = List.of(document(20L), document(10L));
@@ -167,7 +168,7 @@ class KarteServiceBeanGetDocumentsBulkFetchTest {
                 attachmentMetadataRow(documents.get(1), 3001L),
                 attachmentMetadataRow(documents.get(0), 4001L)));
 
-        when(em.createQuery(QUERY_KARTE)).thenReturn(karteQuery);
+        when(em.createQuery(QUERY_KARTE, KarteBean.class)).thenReturn(karteQuery);
         when(em.createQuery(QUERY_ALL_DOC_IDS, Long.class)).thenReturn(docIdQuery);
         when(em.createQuery(QUERY_DOCUMENT_BY_IDS, DocumentModel.class)).thenReturn(documentQuery);
         when(em.createQuery(QUERY_SCHEMA_METADATA_BY_DOC_IDS, Object[].class)).thenReturn(schemaMetadataQuery);
@@ -297,7 +298,9 @@ class KarteServiceBeanGetDocumentsBulkFetchTest {
     @SuppressWarnings("unchecked")
     private static <T> TypedQuery<T> typedQuery(List<T> results) {
         TypedQuery<T> query = mock(TypedQuery.class);
-        when(query.setParameter(eq("ids"), any())).thenReturn(query);
+        when(query.setParameter(anyString(), any())).thenReturn(query);
+        when(query.setFirstResult(anyInt())).thenReturn(query);
+        when(query.setMaxResults(anyInt())).thenReturn(query);
         when(query.getResultList()).thenReturn(new ArrayList<>(results));
         return query;
     }
@@ -307,15 +310,6 @@ class KarteServiceBeanGetDocumentsBulkFetchTest {
         TypedQuery<Long> query = mock(TypedQuery.class);
         when(query.setParameter(eq("karteId"), any())).thenReturn(query);
         when(query.setFirstResult(any(Integer.class))).thenReturn(query);
-        when(query.setMaxResults(any(Integer.class))).thenReturn(query);
-        when(query.getResultList()).thenReturn(new ArrayList<>(results));
-        return query;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Query query(List<?> results) {
-        Query query = mock(Query.class);
-        when(query.setParameter(eq("patientPk"), any())).thenReturn(query);
         when(query.setMaxResults(any(Integer.class))).thenReturn(query);
         when(query.getResultList()).thenReturn(new ArrayList<>(results));
         return query;

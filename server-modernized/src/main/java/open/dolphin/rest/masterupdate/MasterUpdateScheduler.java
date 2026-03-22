@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infrastructure.concurrent.ConcurrencyResourceNames;
-import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 
 /**
  * Auto scheduler for dataset updates.
@@ -21,14 +21,14 @@ import open.dolphin.runtime.RuntimeConfigurationSupport;
 public class MasterUpdateScheduler {
 
     private static final Logger LOGGER = Logger.getLogger(MasterUpdateScheduler.class.getName());
-    private static final String ENV_ENABLED = "MASTER_UPDATE_SCHEDULER_ENABLED";
-    private static final String PROP_ENABLED = "opendolphin.master.update.scheduler.enabled";
-
     @Resource(lookup = ConcurrencyResourceNames.DEFAULT_SCHEDULER)
     private ManagedScheduledExecutorService scheduler;
 
     @Inject
     private MasterUpdateService masterUpdateService;
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
 
     private ScheduledFuture<?> scheduled;
 
@@ -72,17 +72,6 @@ public class MasterUpdateScheduler {
     }
 
     private boolean resolveEnabled() {
-        return resolveEnabledFromEnvironment();
-    }
-
-    public static boolean resolveEnabledFromEnvironment() {
-        String raw = RuntimeConfigurationSupport.firstNonBlank(
-                System.getProperty(PROP_ENABLED),
-                System.getenv(ENV_ENABLED));
-        if (raw == null || raw.isBlank()) {
-            return false;
-        }
-        Boolean parsed = RuntimeConfigurationSupport.parseBooleanFlag(raw);
-        return parsed != null && parsed;
+        return configurationResolver != null && configurationResolver.masterUpdateScheduler().enabled();
     }
 }

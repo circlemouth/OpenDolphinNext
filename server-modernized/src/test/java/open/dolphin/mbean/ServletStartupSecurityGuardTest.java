@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.testsupport.MicroProfileConfigTestSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,20 +20,22 @@ class ServletStartupSecurityGuardTest {
     }
 
     @Test
-    void productionLikeEnvironmentRejectsLegacyOrcaMasterCredential() {
-        System.setProperty(RuntimeConfigurationSupport.PROP_ENVIRONMENT, "production");
+    void productionLikeEnvironmentRejectsLegacyOrcaMasterCredential() throws Exception {
         System.setProperty(ServletStartup.ORCA_MASTER_BASIC_PASSWORD_KEY, "legacy-secret");
+        try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "production")) {
+            IllegalStateException ex = assertThrows(IllegalStateException.class, ServletStartup::enforceStartupSecurityGuards);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, ServletStartup::enforceStartupSecurityGuards);
-
-        assertTrue(ex.getMessage().contains(ServletStartup.ORCA_MASTER_BASIC_PASSWORD_KEY));
+            assertTrue(ex.getMessage().contains(ServletStartup.ORCA_MASTER_BASIC_PASSWORD_KEY));
+        }
     }
 
     @Test
-    void nonProductionEnvironmentSkipsGuards() {
-        System.setProperty(RuntimeConfigurationSupport.PROP_ENVIRONMENT, "local");
+    void nonProductionEnvironmentSkipsGuards() throws Exception {
         System.setProperty(ServletStartup.ORCA_MASTER_BASIC_PASSWORD_KEY, "legacy-secret");
-
-        assertDoesNotThrow(ServletStartup::enforceStartupSecurityGuards);
+        try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "local")) {
+            assertDoesNotThrow(ServletStartup::enforceStartupSecurityGuards);
+        }
     }
 }

@@ -141,7 +141,7 @@ vi.mock('../api', () => ({
   fetchOperationsHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', raw: {} }),
   fetchOperationsReadiness: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', checks: {}, raw: {} }),
   fetchOrcaQueue: mockFetchOrcaQueue,
-  fetchPvtWorkerHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, workerStatus: 'UP', reasons: [], raw: {} }),
+  fetchPvtWorkerHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, workerStatus: 'UP', reasonCodes: [], raw: {} }),
   retryOrcaQueue: vi.fn().mockResolvedValue({ ok: true }),
   saveAdminConfig: vi.fn().mockResolvedValue({
     ok: true,

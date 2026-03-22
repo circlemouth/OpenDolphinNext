@@ -7,48 +7,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
-import org.junit.jupiter.api.AfterEach;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import org.junit.jupiter.api.Test;
 
 class SmsGatewayConfigTest {
 
-    private final ServerConfigurationResolver resolver = new ServerConfigurationResolver();
-    private final SmsGatewayConfig config = new SmsGatewayConfig(resolver);
-
-    @AfterEach
-    void tearDown() {
-        clear(
-                ServerConfigurationResolver.KEY_PLIVO_AUTH_ID,
-                ServerConfigurationResolver.KEY_PLIVO_AUTH_TOKEN,
-                ServerConfigurationResolver.KEY_PLIVO_SOURCE_NUMBER,
-                ServerConfigurationResolver.KEY_PLIVO_BASE_URL,
-                ServerConfigurationResolver.KEY_PLIVO_ENVIRONMENT,
-                ServerConfigurationResolver.KEY_PLIVO_DEFAULT_COUNTRY,
-                ServerConfigurationResolver.KEY_PLIVO_LOG_LEVEL,
-                ServerConfigurationResolver.KEY_PLIVO_LOG_MESSAGE_CONTENT,
-                ServerConfigurationResolver.KEY_PLIVO_HTTP_CONNECT_TIMEOUT,
-                ServerConfigurationResolver.KEY_PLIVO_HTTP_READ_TIMEOUT,
-                ServerConfigurationResolver.KEY_PLIVO_HTTP_WRITE_TIMEOUT,
-                ServerConfigurationResolver.KEY_PLIVO_HTTP_CALL_TIMEOUT,
-                ServerConfigurationResolver.KEY_PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE);
-    }
-
     @Test
     void resolvesPlivoSettingsFromTypedConfigOnly() {
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_AUTH_ID, "auth-id");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_AUTH_TOKEN, "auth-token");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_SOURCE_NUMBER, "+819012345678");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_ENVIRONMENT, "sandbox");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_LOG_LEVEL, "body");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_LOG_MESSAGE_CONTENT, "true");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_DEFAULT_COUNTRY, "81");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_CONNECT_TIMEOUT, "PT12S");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_READ_TIMEOUT, "2500ms");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_WRITE_TIMEOUT, "31s");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_CALL_TIMEOUT, "1m");
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE, "false");
-
-        SmsGatewayConfig.PlivoSettings settings = config.reload();
+        SmsGatewayConfig.PlivoSettings settings = new SmsGatewayConfig(TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_PLIVO_AUTH_ID, "auth-id",
+                ServerConfigurationResolver.KEY_PLIVO_AUTH_TOKEN, "auth-token",
+                ServerConfigurationResolver.KEY_PLIVO_SOURCE_NUMBER, "+819012345678",
+                ServerConfigurationResolver.KEY_PLIVO_ENVIRONMENT, "sandbox",
+                ServerConfigurationResolver.KEY_PLIVO_LOG_LEVEL, "body",
+                ServerConfigurationResolver.KEY_PLIVO_LOG_MESSAGE_CONTENT, "true",
+                ServerConfigurationResolver.KEY_PLIVO_DEFAULT_COUNTRY, "81",
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_CONNECT_TIMEOUT, "PT12S",
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_READ_TIMEOUT, "2500ms",
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_WRITE_TIMEOUT, "31s",
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_CALL_TIMEOUT, "1m",
+                ServerConfigurationResolver.KEY_PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE, "false"))
+                .reload();
 
         assertTrue(settings.isConfigured());
         assertEquals("https://api.sandbox.plivo.com/v1/", settings.baseUrl());
@@ -63,14 +42,8 @@ class SmsGatewayConfigTest {
 
     @Test
     void rejectsNonHttpsBaseUrl() {
-        System.setProperty(ServerConfigurationResolver.KEY_PLIVO_BASE_URL, "http://plivo.example.test");
-
+        SmsGatewayConfig config = new SmsGatewayConfig(TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_PLIVO_BASE_URL, "http://plivo.example.test"));
         assertThrows(IllegalArgumentException.class, config::reload);
-    }
-
-    private void clear(String... keys) {
-        for (String key : keys) {
-            System.clearProperty(key);
-        }
     }
 }

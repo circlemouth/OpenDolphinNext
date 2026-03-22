@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -40,6 +41,8 @@ import open.dolphin.worker.pvt.PvtSocketWorker;
 @Singleton
 @Startup
 public class PvtService {
+    public static final String REASON_CODE_PVT_QUEUE_OVER_CAPACITY = "pvt_queue_over_capacity";
+    public static final String REASON_CODE_PVT_WORKER_UNAVAILABLE = "pvt_worker_unavailable";
 
     private static final String UTF8 = "UTF-8";
     private static final int DEFAULT_ACCEPT_TIMEOUT_MILLIS = 1000;
@@ -80,8 +83,8 @@ public class PvtService {
 
     @PostConstruct
     public void register() {
-
-        DEBUG = Logger.getLogger("open.dolphin").getLevel().equals(java.util.logging.Level.FINE);
+        Logger appLogger = Logger.getLogger("open.dolphin");
+        DEBUG = Level.FINE.equals(appLogger.getLevel()) || appLogger.isLoggable(Level.FINE);
 
         try {
             startService();
@@ -189,32 +192,29 @@ public class PvtService {
         long maxProcessingThresholdMillis = maxProcessingThresholdMillis();
         long secondsSinceLastSuccess = secondsSince(snapshot.lastSuccessEpochMillis(), nowMillis);
 
-        List<String> reasons = new java.util.ArrayList<>();
+        List<String> reasonCodes = new java.util.ArrayList<>();
         String status = "UP";
         if (!workerEnabled) {
             status = "DISABLED";
-            reasons.add("pvt_worker_disabled");
         } else if (!snapshot.running()) {
             status = "DOWN";
-            reasons.add("worker_not_running");
+            addReasonCode(reasonCodes, REASON_CODE_PVT_WORKER_UNAVAILABLE);
         } else {
-            if (snapshot.lastSuccessEpochMillis() == 0L) {
-                reasons.add("no_success_yet");
-            } else if (secondsSinceLastSuccess > staleThresholdSeconds) {
+            if (snapshot.lastSuccessEpochMillis() > 0L && secondsSinceLastSuccess > staleThresholdSeconds) {
                 status = "DEGRADED";
-                reasons.add("last_success_stale");
+                addReasonCode(reasonCodes, REASON_CODE_PVT_WORKER_UNAVAILABLE);
             }
             if (snapshot.consecutiveFailureCount() >= Math.max(2, snapshot.maxHandleAttempts())) {
                 status = "DEGRADED";
-                reasons.add("consecutive_failures_high");
+                addReasonCode(reasonCodes, REASON_CODE_PVT_WORKER_UNAVAILABLE);
             }
             if (snapshot.processingCount() > 0 && snapshot.maxProcessingMillis() > maxProcessingThresholdMillis) {
                 status = "DEGRADED";
-                reasons.add("processing_delay_high");
+                addReasonCode(reasonCodes, REASON_CODE_PVT_WORKER_UNAVAILABLE);
             }
             if (snapshot.poisonQueueSize() > 0) {
                 status = "DEGRADED";
-                reasons.add("poison_queue_non_empty");
+                addReasonCode(reasonCodes, REASON_CODE_PVT_QUEUE_OVER_CAPACITY);
             }
         }
 
@@ -223,10 +223,16 @@ public class PvtService {
         body.put("checkedAt", formatInstant(nowMillis));
         body.put("workerEnabled", workerEnabled);
         body.put("running", snapshot.running());
-        body.put("reasons", reasons);
+        body.put("reasonCodes", reasonCodes);
         body.put("metrics", workerMetricsMap(snapshot, nowMillis));
         body.put("thresholds", workerThresholds());
         return body;
+    }
+
+    private void addReasonCode(List<String> reasonCodes, String code) {
+        if (!reasonCodes.contains(code)) {
+            reasonCodes.add(code);
+        }
     }
 
     private void log(String msg) {
@@ -349,11 +355,17 @@ public class PvtService {
     }
 
     private long staleSuccessThresholdSeconds() {
-        return parsePositiveLong(System.getProperty("pvt.worker.health.stale-success-seconds"), 180L);
+        Long configured = configurationResolver != null
+                ? configurationResolver.pvtWorkerHealth().staleSuccessSeconds()
+                : null;
+        return configured != null && configured > 0L ? configured : 180L;
     }
 
     private long maxProcessingThresholdMillis() {
-        return parsePositiveLong(System.getProperty("pvt.worker.health.max-processing-millis"), 30_000L);
+        Long configured = configurationResolver != null
+                ? configurationResolver.pvtWorkerHealth().maxProcessingMillis()
+                : null;
+        return configured != null && configured > 0L ? configured : 30_000L;
     }
 
     private long secondsSince(long timestampMillis, long nowMillis) {

@@ -6,7 +6,7 @@
     <persistence-unit name="opendolphinPU" transaction-type="JTA">
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
         <jta-data-source>java:jboss/datasources/PostgresDS</jta-data-source>
-        <!-- WildFly does not reliably auto-detect entities packaged in dependency jars inside this WAR. -->
+        <!-- Dependency JAR 内 Entity の自動検出には依存しない。明示列挙を正本とし、PersistenceXmlEntityRegistrationTest で drift を検出する。 -->
         <class>open.dolphin.infomodel.AppointmentModel</class>
         <class>open.dolphin.infomodel.AttachmentModel</class>
         <class>open.dolphin.infomodel.AuditEvent</class>

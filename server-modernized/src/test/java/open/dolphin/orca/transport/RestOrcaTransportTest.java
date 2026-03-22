@@ -12,20 +12,15 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
-import org.junit.jupiter.api.AfterEach;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class RestOrcaTransportTest {
 
-    @AfterEach
-    void tearDown() {
-        System.clearProperty("orca.transport.cache.ttl-ms");
-    }
-
     @Test
     void currentSettingsUsesAdminConfigAndReusesDefaultHttpClientWithinCacheTtl() throws Exception {
-        System.setProperty("orca.transport.cache.ttl-ms", "60000");
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
         when(store.resolve(null)).thenReturn(resolvedConnection(
                 "https://default.example.orca",
@@ -34,6 +29,7 @@ class RestOrcaTransportTest {
 
         RestOrcaTransport transport = new RestOrcaTransport();
         setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "configurationResolver", resolver());
 
         OrcaTransportSettings first = transport.currentSettingsInstance();
         HttpClient firstClient = transport.rawHttpClient();
@@ -51,7 +47,6 @@ class RestOrcaTransportTest {
 
     @Test
     void facilityScopedLookupUsesFacilitySpecificAdminConfig() throws Exception {
-        System.setProperty("orca.transport.cache.ttl-ms", "60000");
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
         when(store.resolve("F001")).thenReturn(resolvedConnection(
                 "https://facility.example.orca",
@@ -60,6 +55,7 @@ class RestOrcaTransportTest {
 
         RestOrcaTransport transport = new RestOrcaTransport();
         setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "configurationResolver", resolver());
 
         OrcaTransportSettings settings = transport.currentSettingsInstance("F001");
 
@@ -81,6 +77,7 @@ class RestOrcaTransportTest {
 
         RestOrcaTransport transport = new RestOrcaTransport();
         setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "configurationResolver", resolver());
 
         transport.reloadSettings();
         HttpClient firstClient = transport.rawHttpClient();
@@ -101,6 +98,7 @@ class RestOrcaTransportTest {
 
         RestOrcaTransport transport = new RestOrcaTransport();
         setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "configurationResolver", resolver());
 
         transport.reloadSettings();
         HttpClient firstClient = transport.rawHttpClient();
@@ -133,6 +131,11 @@ class RestOrcaTransportTest {
     private static String basicAuthHeader(String username, String password) {
         String credentials = username + ":" + password;
         return "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static ServerConfigurationResolver resolver() {
+        return TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ORCA_TRANSPORT_CACHE_TTL_MS, "60000");
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

@@ -57,108 +57,13 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
         String runId = resolveRunId(request);
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
-        if (payload == null || payload.getPatientId() == null || payload.getPatientId().isBlank()) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("runId", runId);
-            audit.put("validationError", Boolean.TRUE);
-            audit.put("field", "patientId");
-            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "patientId is required");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "patientId", "patientId is required");
-        }
-
-        String soapCategory = normalizeSoapCategory(payload.getSoapCategory());
-        if (soapCategory == null) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            audit.put("validationError", Boolean.TRUE);
-            audit.put("field", "soapCategory");
-            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "soapCategory is required");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "soapCategory", "soapCategory is required");
-        }
-        if (!isValidSoapCategory(soapCategory)) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            audit.put("validationError", Boolean.TRUE);
-            audit.put("field", "soapCategory");
-            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "soapCategory must be S/O/A/P");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "soapCategory", "soapCategory must be S/O/A/P");
-        }
-
-        String body = payload.getBody();
-        if (body == null || body.isBlank()) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            audit.put("validationError", Boolean.TRUE);
-            audit.put("field", "body");
-            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "body is required");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "body", "body is required");
-        }
-        if (body.length() > MAX_BODY_LENGTH) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            audit.put("validationError", Boolean.TRUE);
-            audit.put("field", "body");
-            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "body must be <= 1000 characters");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
-                    "body must be <= 1000 characters");
-        }
-
-        PatientModel patient = patientServiceBean.getPatientById(facilityId, payload.getPatientId());
-        if (patient == null) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
-                    "patient_not_found", "Patient not found");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found");
-        }
-
-        String remoteUser = request.getRemoteUser();
-        UserModel user = userServiceBean.getUser(remoteUser);
-        if (user == null) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            markFailureDetails(audit, Response.Status.UNAUTHORIZED.getStatusCode(),
-                    "user_not_found", "User not found");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.UNAUTHORIZED, "user_not_found", "User not found");
-        }
-
+        String patientId = requirePatientId(request, payload, facilityId, runId);
+        String soapCategory = requireSoapCategory(request, payload, facilityId, patientId, runId);
+        String body = requireBody(request, payload, facilityId, patientId, runId);
+        PatientModel patient = requirePatient(request, facilityId, patientId, runId);
+        UserModel user = requireUser(request, facilityId, patientId, runId);
         Date performDate = parseDate(payload.getPerformDate(), new Date());
-        KarteBean karte = patientServiceBean.ensureKarteByPatientPk(patient.getId());
-        if (karte == null) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
-                    "karte_not_found", "Karte not found");
-            recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found");
-        }
+        KarteBean karte = requireKarte(request, facilityId, patientId, runId, patient);
 
         DocumentModel document = buildSubjectiveDocument(karte, user, payload, performDate, body, soapCategory);
         long documentId = karteServiceBean.addDocument(document);
@@ -179,6 +84,95 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
         markSuccessDetails(audit);
         recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
+    }
+
+    private String requirePatientId(HttpServletRequest request, SubjectiveEntryRequest payload, String facilityId, String runId) {
+        if (payload == null || payload.getPatientId() == null || payload.getPatientId().isBlank()) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, null, runId);
+            failSubjectiveRequest(request, audit, "patientId", "patientId is required");
+        }
+        return payload.getPatientId().trim();
+    }
+
+    private String requireSoapCategory(HttpServletRequest request, SubjectiveEntryRequest payload, String facilityId,
+            String patientId, String runId) {
+        String soapCategory = normalizeSoapCategory(payload.getSoapCategory());
+        if (soapCategory == null) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveRequest(request, audit, "soapCategory", "soapCategory is required");
+        }
+        if (!isValidSoapCategory(soapCategory)) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveRequest(request, audit, "soapCategory", "soapCategory must be S/O/A/P");
+        }
+        return soapCategory;
+    }
+
+    private String requireBody(HttpServletRequest request, SubjectiveEntryRequest payload, String facilityId,
+            String patientId, String runId) {
+        String body = payload.getBody();
+        if (body == null || body.isBlank()) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveRequest(request, audit, "body", "body is required");
+        }
+        if (body.length() > MAX_BODY_LENGTH) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveRequest(request, audit, "body", "body must be <= 1000 characters");
+        }
+        return body;
+    }
+
+    private PatientModel requirePatient(HttpServletRequest request, String facilityId, String patientId, String runId) {
+        PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
+        if (patient == null) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveNotFound(request, audit, "patient_not_found", Response.Status.NOT_FOUND, "Patient not found");
+        }
+        return patient;
+    }
+
+    private UserModel requireUser(HttpServletRequest request, String facilityId, String patientId, String runId) {
+        UserModel user = userServiceBean.getUser(request.getRemoteUser());
+        if (user == null) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveNotFound(request, audit, "user_not_found", Response.Status.UNAUTHORIZED, "User not found");
+        }
+        return user;
+    }
+
+    private KarteBean requireKarte(HttpServletRequest request, String facilityId, String patientId, String runId,
+            PatientModel patient) {
+        KarteBean karte = patientServiceBean.ensureKarteByPatientPk(patient.getId());
+        if (karte == null) {
+            Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
+            failSubjectiveNotFound(request, audit, "karte_not_found", Response.Status.NOT_FOUND, "Karte not found");
+        }
+        return karte;
+    }
+
+    private Map<String, Object> buildSubjectiveAudit(String facilityId, String patientId, String runId) {
+        Map<String, Object> audit = new HashMap<>();
+        audit.put("facilityId", facilityId);
+        if (patientId != null) {
+            audit.put("patientId", patientId);
+        }
+        audit.put("runId", runId);
+        return audit;
+    }
+
+    private void failSubjectiveRequest(HttpServletRequest request, Map<String, Object> audit, String field, String message) {
+        audit.put("validationError", Boolean.TRUE);
+        audit.put("field", field);
+        markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", message);
+        recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+        throw validationError(request, field, message);
+    }
+
+    private void failSubjectiveNotFound(HttpServletRequest request, Map<String, Object> audit, String errorCode,
+            Response.Status status, String message) {
+        markFailureDetails(audit, status.getStatusCode(), errorCode, message);
+        recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+        throw restError(request, status, errorCode, message);
     }
 
     private DocumentModel buildSubjectiveDocument(KarteBean karte, UserModel user, SubjectiveEntryRequest payload,

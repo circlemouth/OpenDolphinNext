@@ -1,5 +1,4 @@
 package open.dolphin.orca.config;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -13,228 +12,242 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import open.dolphin.orca.transport.OrcaConnectionPolicyException;
+import open.dolphin.orca.transport.OrcaTransportSecurityPolicy;
 import open.dolphin.rest.AbstractResource;
 import open.dolphin.runtime.RuntimeStateRepository;
-import open.dolphin.security.SecondFactorSecurityConfig;
-import open.dolphin.orca.transport.OrcaTransportSecurityPolicy;
+import open.dolphin.security.OrcaCredentialSecurityConfig;
 import open.dolphin.security.totp.TotpSecretProtector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 @ApplicationScoped
 public class OrcaConnectionConfigStore {
-
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaConnectionConfigStore.class);
-
     private static final String STATE_CATEGORY = "orca_connection_config";
     private static final String STATE_KEY = "default";
-
-    private static final String ENV_ORCA_BASE_URL = "ORCA_BASE_URL";
-    private static final String ENV_ORCA_API_HOST = "ORCA_API_HOST";
-    private static final String ENV_ORCA_API_PORT = "ORCA_API_PORT";
-    private static final String ENV_ORCA_API_SCHEME = "ORCA_API_SCHEME";
-    private static final String ENV_ORCA_API_USER = "ORCA_API_USER";
-    private static final String ENV_ORCA_API_PASSWORD = "ORCA_API_PASSWORD";
-    private static final String ENV_ORCA_MODE = "ORCA_MODE";
-    private static final String ENV_ORCA_API_WEBORCA = "ORCA_API_WEBORCA";
-    private static final String PROP_ORCA_BASE_URL = "orca.base-url";
-    private static final String PROP_ORCA_API_HOST = "orca.api.host";
-    private static final String PROP_ORCA_API_PORT = "orca.api.port";
-    private static final String PROP_ORCA_API_SCHEME = "orca.api.scheme";
-    private static final String PROP_ORCA_API_USER = "orca.api.user";
-    private static final String PROP_ORCA_API_PASSWORD = "orca.api.password";
-    private static final String PROP_ORCA_MODE = "orca.mode";
-    private static final String PROP_ORCA_API_WEBORCA = "orca.api.weborca";
-
+    public static final String REASON_CODE_FACILITY_CONFIGURATION_MISSING = "facility_configuration_missing";
+    private static final int MULTI_FACILITY_FORMAT_VERSION = 2;
     private static final int DEFAULT_PORT_WEBORCA = 443;
     private static final int DEFAULT_PORT_ONPREM = 8000;
-
-    private static final long DEFAULT_MAX_P12_BYTES = 10L * 1024L * 1024L; // 10MiB
-    private static final long DEFAULT_MAX_CA_BYTES = 2L * 1024L * 1024L; // 2MiB
-
-    private static final String DEFAULT_FACILITY_RECORD_KEY = "_default";
-    private static final int MULTI_FACILITY_FORMAT_VERSION = 2;
-
+    private static final long DEFAULT_MAX_P12_BYTES = 10L * 1024L * 1024L;
+    private static final long DEFAULT_MAX_CA_BYTES = 2L * 1024L * 1024L;
     private final ObjectMapper mapper = AbstractResource.getSerializeMapper();
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-
     @Inject
-    private SecondFactorSecurityConfig secondFactorSecurityConfig;
-
+    private OrcaCredentialSecurityConfig orcaCredentialSecurityConfig;
     @Inject
     private RuntimeStateRepository stateRepository;
-
     private TotpSecretProtector protector;
-    private OrcaConnectionConfigRecord current;
-    private Map<String, OrcaConnectionConfigRecord> records = new LinkedHashMap<>();
-
+    private String defaultFacilityId;
+    private Map<String, OrcaConnectionConfigRecord> facilities = new LinkedHashMap<>();
     public OrcaConnectionConfigStore() {}
-
     @PostConstruct
     public void init() {
-        this.protector = secondFactorSecurityConfig != null ? secondFactorSecurityConfig.getTotpSecretProtector() : null;
+        this.protector = orcaCredentialSecurityConfig != null ? orcaCredentialSecurityConfig.getCredentialProtector() : null;
         lock.writeLock().lock();
         try {
-            Map<String, OrcaConnectionConfigRecord> loaded = loadRecords();
-            if (loaded == null || loaded.isEmpty()) {
-                OrcaConnectionConfigRecord initial = applyDefaults(defaultFromEnvironment());
-                initial.setFacilityId(null);
-                this.records = new LinkedHashMap<>();
-                this.records.put(DEFAULT_FACILITY_RECORD_KEY, copyWithoutRecords(initial));
-            } else {
-                this.records = loaded;
+            StoredState state = loadState();
+            this.defaultFacilityId = state != null ? normalizeFacilityId(state.defaultFacilityId()) : null;
+            this.facilities = state != null ? new LinkedHashMap<>(state.facilities()) : new LinkedHashMap<>();
+            if (state != null && !facilities.isEmpty()) {
+                persistBestEffort(buildStorageRecord(facilities, defaultFacilityId));
             }
-            refreshCurrentFromRecordsLocked();
-            persistBestEffort(buildStorageRecord(this.records));
         } finally {
             lock.writeLock().unlock();
         }
     }
-
-    public OrcaConnectionConfigRecord getSnapshot() {
-        return getSnapshot(null);
-    }
-
-    public OrcaConnectionConfigRecord getSnapshot(String facilityId) {
+    public String getDefaultFacilityId() {
         lock.readLock().lock();
         try {
-            OrcaConnectionConfigRecord snapshot = selectRecordForFacilityLocked(facilityId);
-            return copyWithoutRecords(snapshot);
+            return defaultFacilityId;
         } finally {
             lock.readLock().unlock();
         }
     }
-
+    public OrcaConnectionConfigRecord getSnapshot() {
+        return getSnapshot(null);
+    }
+    public OrcaConnectionConfigRecord getSnapshot(String facilityId) {
+        lock.readLock().lock();
+        try {
+            return copyWithoutFacilities(selectRecordForFacilityLocked(facilityId));
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
     public ResolvedOrcaConnection resolve() {
         return resolve(null);
     }
-
     public ResolvedOrcaConnection resolve(String facilityId) {
         OrcaConnectionConfigRecord snapshot = getSnapshot(facilityId);
         if (snapshot == null) {
-            throw new IllegalStateException("ORCA connection config is not available");
+            throw new OrcaConnectionPolicyException(
+                    REASON_CODE_FACILITY_CONFIGURATION_MISSING,
+                    "ORCA facility configuration is not available");
         }
         return resolveFromRecord(snapshot);
     }
-
-    public OrcaConnectionConfigRecord update(UpdateRequest update,
-                                             UploadedBinary clientCertificate,
-                                             UploadedBinary caCertificate,
-                                             String runId,
-                                             String actor) {
-        return update(null, update, clientCertificate, caCertificate, runId, actor);
+    public OrcaConnectionConfigRecord update(UpdateRequest update, UploadedBinary clientCertificate,
+            UploadedBinary caCertificate, String runId, String actor) {
+        String activeDefault = getDefaultFacilityId();
+        if (activeDefault == null) {
+            throw new OrcaConnectionPolicyException(
+                    REASON_CODE_FACILITY_CONFIGURATION_MISSING,
+                    "ORCA default facility is not configured");
+        }
+        return update(activeDefault, update, clientCertificate, caCertificate, runId, actor);
     }
-
-    public OrcaConnectionConfigRecord update(String facilityId,
-                                             UpdateRequest update,
-                                             UploadedBinary clientCertificate,
-                                             UploadedBinary caCertificate,
-                                             String runId,
-                                             String actor) {
+    public OrcaConnectionConfigRecord update(String facilityId, UpdateRequest update,
+            UploadedBinary clientCertificate, UploadedBinary caCertificate, String runId, String actor) {
         Objects.requireNonNull(update, "update");
-        String normalizedFacilityId = normalizeFacilityId(facilityId);
-        String recordKey = toRecordKey(normalizedFacilityId);
+        String normalizedFacilityId = requireFacilityId(facilityId);
 
         lock.writeLock().lock();
         try {
-            OrcaConnectionConfigRecord base = selectRecordForFacilityLocked(normalizedFacilityId);
-            OrcaConnectionConfigRecord merged = base != null ? copyWithoutRecords(base) : new OrcaConnectionConfigRecord();
-            merged.setFacilityId(fromRecordKey(recordKey));
+            OrcaConnectionConfigRecord base = facilities.get(normalizedFacilityId);
             String now = Instant.now().toString();
-
-            Boolean useWeborca = update.useWeborca();
-            if (useWeborca != null) merged.setUseWeborca(useWeborca);
-
-            String serverUrl = trimToNull(update.serverUrl());
-            if (serverUrl != null) merged.setServerUrl(serverUrl);
-
-            Integer port = update.port();
-            if (port != null) merged.setPort(port);
-
-            String username = trimToNull(update.username());
-            if (username != null) merged.setUsername(username);
-
-            String passwordPlain = trimToNull(update.password());
-            if (passwordPlain != null) {
-                merged.setPasswordEncrypted(encryptText(passwordPlain));
-                merged.setPasswordUpdatedAt(now);
-            }
-
-            Boolean clientAuthEnabled = update.clientAuthEnabled();
-            if (clientAuthEnabled != null) merged.setClientAuthEnabled(clientAuthEnabled);
-
-            String passphrasePlain = trimToNull(update.clientCertificatePassphrase());
-            if (passphrasePlain != null) {
-                merged.setClientCertificatePassphraseEncrypted(encryptText(passphrasePlain));
-                merged.setClientCertificatePassphraseUpdatedAt(now);
-            }
-
-            if (clientCertificate != null && clientCertificate.bytes != null && clientCertificate.bytes.length > 0) {
-                requireMaxBytes(clientCertificate.bytes.length, DEFAULT_MAX_P12_BYTES, "clientCertificate");
-                String fileName = trimToNull(clientCertificate.fileName);
-                if (fileName != null && !fileName.toLowerCase(Locale.ROOT).endsWith(".p12") && !fileName.toLowerCase(Locale.ROOT).endsWith(".pfx")) {
-                    throw new IllegalArgumentException("クライアント証明書は .p12（または .pfx）を指定してください。");
-                }
-                merged.setClientCertificateFileName(fileName);
-                merged.setClientCertificateUploadedAt(now);
-                merged.setClientCertificateP12Encrypted(encryptBytes(clientCertificate.bytes));
-            }
-
-            if (caCertificate != null && caCertificate.bytes != null && caCertificate.bytes.length > 0) {
-                requireMaxBytes(caCertificate.bytes.length, DEFAULT_MAX_CA_BYTES, "caCertificate");
-                String fileName = trimToNull(caCertificate.fileName);
-                merged.setCaCertificateFileName(fileName);
-                merged.setCaCertificateUploadedAt(now);
-                merged.setCaCertificateEncrypted(encryptBytes(caCertificate.bytes));
-            }
-
-            merged.setUpdatedAt(now);
-
+            OrcaConnectionConfigRecord merged = mergeUpdatedRecord(
+                    normalizedFacilityId, base, update, clientCertificate, caCertificate, now);
             merged = applyDefaults(merged);
             validateReadyForUpdate(merged);
-
-            // Validate TLS materials (when enabled) early so we can show a clear message on save.
-            if (Boolean.TRUE.equals(merged.getClientAuthEnabled())) {
-                ResolvedOrcaConnection resolved = resolveFromRecord(merged);
-                if (resolved.clientAuthEnabled()) {
-                    try {
-                        open.dolphin.orca.transport.OrcaTlsSupport.buildSslContext(
-                                resolved.clientCertificateP12(),
-                                resolved.clientCertificatePassphrase(),
-                                resolved.caCertificate());
-                    } catch (RuntimeException ex) {
-                        throw new IllegalArgumentException("クライアント証明書またはパスフレーズが不正です。", ex);
-                    }
-                }
-            } else if (merged.getCaCertificateEncrypted() != null && !merged.getCaCertificateEncrypted().isBlank()) {
-                byte[] caBytes = decryptToBytes(merged.getCaCertificateEncrypted(), "caCertificateEncrypted");
-                open.dolphin.orca.transport.OrcaTlsSupport.validateCaCertificateBundle(caBytes);
-            }
-
-            Map<String, OrcaConnectionConfigRecord> nextRecords = new LinkedHashMap<>(records != null ? records : Map.of());
-            nextRecords.put(recordKey, copyWithoutRecords(merged));
-            // Keep the unresolved-facility fallback in sync with the latest saved settings.
-            OrcaConnectionConfigRecord fallback = copyWithoutRecords(merged);
-            fallback.setFacilityId(null);
-            nextRecords.put(DEFAULT_FACILITY_RECORD_KEY, fallback);
-
-            persistStrict(buildStorageRecord(nextRecords));
-            this.records = nextRecords;
-            refreshCurrentFromRecordsLocked();
-
-            LOGGER.info("ORCA connection config updated. runId={} actor={} facilityId={} weborca={} clientAuthEnabled={} caProvided={}",
-                    safe(runId),
-                    maskActor(actor),
-                    safe(normalizedFacilityId),
-                    Boolean.TRUE.equals(merged.getUseWeborca()),
-                    Boolean.TRUE.equals(merged.getClientAuthEnabled()),
-                    merged.getCaCertificateEncrypted() != null && !merged.getCaCertificateEncrypted().isBlank());
-            return copyWithoutRecords(nextRecords.get(recordKey));
+            validateTlsMaterial(merged);
+            Map<String, OrcaConnectionConfigRecord> nextFacilities = persistUpdatedFacility(normalizedFacilityId, merged);
+            logUpdatedFacility(runId, actor, normalizedFacilityId, merged);
+            return copyWithoutFacilities(nextFacilities.get(normalizedFacilityId));
         } finally {
             lock.writeLock().unlock();
         }
     }
+    private OrcaConnectionConfigRecord mergeUpdatedRecord(String facilityId, OrcaConnectionConfigRecord base,
+            UpdateRequest update, UploadedBinary clientCertificate, UploadedBinary caCertificate, String now) {
+        OrcaConnectionConfigRecord merged = base != null ? copyWithoutFacilities(base) : new OrcaConnectionConfigRecord();
+        merged.setFacilityId(facilityId);
+        applyScalarUpdates(merged, update, now);
+        applyClientCertificateUpdate(merged, clientCertificate, now);
+        applyCaCertificateUpdate(merged, caCertificate, now);
+        merged.setUpdatedAt(now);
+        return merged;
+    }
+    private void applyScalarUpdates(OrcaConnectionConfigRecord merged, UpdateRequest update, String now) {
+        Boolean useWeborca = update.useWeborca();
+        if (useWeborca != null) {
+            merged.setUseWeborca(useWeborca);
+        }
+        String serverUrl = trimToNull(update.serverUrl());
+        if (serverUrl != null) {
+            merged.setServerUrl(serverUrl);
+        }
+        Integer port = update.port();
+        if (port != null) {
+            merged.setPort(port);
+        }
+        String username = trimToNull(update.username());
+        if (username != null) {
+            merged.setUsername(username);
+        }
+        String passwordPlain = trimToNull(update.password());
+        if (passwordPlain != null) {
+            merged.setPasswordEncrypted(encryptText(passwordPlain));
+            merged.setPasswordUpdatedAt(now);
+        }
+        Boolean clientAuthEnabled = update.clientAuthEnabled();
+        if (clientAuthEnabled != null) {
+            merged.setClientAuthEnabled(clientAuthEnabled);
+        }
+        String passphrasePlain = trimToNull(update.clientCertificatePassphrase());
+        if (passphrasePlain != null) {
+            merged.setClientCertificatePassphraseEncrypted(encryptText(passphrasePlain));
+            merged.setClientCertificatePassphraseUpdatedAt(now);
+        }
+    }
+    private void applyClientCertificateUpdate(OrcaConnectionConfigRecord merged, UploadedBinary clientCertificate,
+            String now) {
+        if (clientCertificate == null || clientCertificate.bytes == null || clientCertificate.bytes.length == 0) {
+            return;
+        }
+        requireMaxBytes(clientCertificate.bytes.length, DEFAULT_MAX_P12_BYTES, "clientCertificate");
+        String fileName = trimToNull(clientCertificate.fileName);
+        if (fileName != null && !fileName.toLowerCase(Locale.ROOT).endsWith(".p12")
+                && !fileName.toLowerCase(Locale.ROOT).endsWith(".pfx")) {
+            throw new IllegalArgumentException("クライアント証明書は .p12（または .pfx）を指定してください。");
+        }
+        merged.setClientCertificateFileName(fileName);
+        merged.setClientCertificateUploadedAt(now);
+        merged.setClientCertificateP12Encrypted(encryptBytes(clientCertificate.bytes));
+    }
+    private void applyCaCertificateUpdate(OrcaConnectionConfigRecord merged, UploadedBinary caCertificate,
+            String now) {
+        if (caCertificate == null || caCertificate.bytes == null || caCertificate.bytes.length == 0) {
+            return;
+        }
+        requireMaxBytes(caCertificate.bytes.length, DEFAULT_MAX_CA_BYTES, "caCertificate");
+        String fileName = trimToNull(caCertificate.fileName);
+        merged.setCaCertificateFileName(fileName);
+        merged.setCaCertificateUploadedAt(now);
+        merged.setCaCertificateEncrypted(encryptBytes(caCertificate.bytes));
+    }
+    private void validateTlsMaterial(OrcaConnectionConfigRecord merged) {
+        if (Boolean.TRUE.equals(merged.getClientAuthEnabled())) {
+            validateClientCertificate(merged);
+            return;
+        }
+        if (merged.getCaCertificateEncrypted() != null && !merged.getCaCertificateEncrypted().isBlank()) {
+            byte[] caBytes = decryptToBytes(merged.getCaCertificateEncrypted(), "caCertificateEncrypted");
+            open.dolphin.orca.transport.OrcaTlsSupport.validateCaCertificateBundle(caBytes);
+        }
+    }
+    private void validateClientCertificate(OrcaConnectionConfigRecord merged) {
+        ResolvedOrcaConnection resolved = resolveFromRecord(merged);
+        if (!resolved.clientAuthEnabled()) {
+            return;
+        }
+        try {
+            open.dolphin.orca.transport.OrcaTlsSupport.buildSslContext(
+                    resolved.clientCertificateP12(),
+                    resolved.clientCertificatePassphrase(),
+                    resolved.caCertificate());
+        } catch (RuntimeException ex) {
+            throw new IllegalArgumentException("クライアント証明書またはパスフレーズが不正です。", ex);
+        }
+    }
+    private Map<String, OrcaConnectionConfigRecord> persistUpdatedFacility(String facilityId,
+            OrcaConnectionConfigRecord merged) {
+        Map<String, OrcaConnectionConfigRecord> nextFacilities = new LinkedHashMap<>(facilities);
+        nextFacilities.put(facilityId, copyWithoutFacilities(merged));
+        persistStrict(buildStorageRecord(nextFacilities, defaultFacilityId));
+        this.facilities = nextFacilities;
+        return nextFacilities;
+    }
+    private void logUpdatedFacility(String runId, String actor, String facilityId, OrcaConnectionConfigRecord merged) {
+        LOGGER.info("ORCA connection config updated. runId={} actor={} facilityId={} weborca={} clientAuthEnabled={} caProvided={}",
+                safe(runId),
+                maskActor(actor),
+                facilityId,
+                Boolean.TRUE.equals(merged.getUseWeborca()),
+                Boolean.TRUE.equals(merged.getClientAuthEnabled()),
+                merged.getCaCertificateEncrypted() != null && !merged.getCaCertificateEncrypted().isBlank());
+    }
+    public String updateDefaultFacilityId(String facilityId, String runId, String actor) {
+        String normalizedFacilityId = requireFacilityId(facilityId);
 
+        lock.writeLock().lock();
+        try {
+            if (!facilities.containsKey(normalizedFacilityId)) {
+                throw new OrcaConnectionPolicyException(
+                        REASON_CODE_FACILITY_CONFIGURATION_MISSING,
+                        "ORCA facility configuration is not available");
+            }
+            persistStrict(buildStorageRecord(facilities, normalizedFacilityId));
+            this.defaultFacilityId = normalizedFacilityId;
+            LOGGER.info("ORCA default facility updated. runId={} actor={} facilityId={}",
+                    safe(runId),
+                    maskActor(actor),
+                    normalizedFacilityId);
+            return normalizedFacilityId;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
     private ResolvedOrcaConnection resolveFromRecord(OrcaConnectionConfigRecord record) {
         if (record == null) {
             throw new IllegalStateException("record is null");
@@ -265,47 +278,42 @@ public class OrcaConnectionConfigStore {
                 ca
         );
     }
-
-    private Map<String, OrcaConnectionConfigRecord> loadRecords() {
+    private StoredState loadState() {
         OrcaConnectionConfigRecord raw = loadRaw();
         if (raw == null) {
             return null;
         }
+        if (hasConnectionPayload(raw)) {
+            throw new IllegalStateException(
+                    "Legacy single-record ORCA connection config is no longer supported. Migrate to the facilities format.");
+        }
 
         Map<String, OrcaConnectionConfigRecord> loaded = new LinkedHashMap<>();
-        Map<String, OrcaConnectionConfigRecord> mapped = raw.getRecords();
+        Map<String, OrcaConnectionConfigRecord> mapped = raw.getFacilities();
         if (mapped != null && !mapped.isEmpty()) {
             for (Map.Entry<String, OrcaConnectionConfigRecord> entry : mapped.entrySet()) {
                 if (entry == null || entry.getValue() == null) {
                     continue;
                 }
-                String key = toRecordKey(entry.getKey());
-                OrcaConnectionConfigRecord scoped = applyDefaults(copyWithoutRecords(entry.getValue()));
-                scoped.setFacilityId(fromRecordKey(key));
+                String key = requireFacilityId(entry.getKey());
+                OrcaConnectionConfigRecord scoped = applyDefaults(copyWithoutFacilities(entry.getValue()));
+                scoped.setFacilityId(key);
                 loaded.put(key, scoped);
             }
         }
-
-        if (hasConnectionPayload(raw) && !loaded.containsKey(DEFAULT_FACILITY_RECORD_KEY)) {
-            throw new IllegalStateException(
-                    "Legacy single-record ORCA connection config is no longer supported. Migrate to the records format.");
-        }
-
         if (loaded.isEmpty()) {
             return null;
         }
-        if (!loaded.containsKey(DEFAULT_FACILITY_RECORD_KEY)) {
-            OrcaConnectionConfigRecord first = loaded.values().iterator().next();
-            OrcaConnectionConfigRecord fallback = copyWithoutRecords(first);
-            fallback.setFacilityId(null);
-            loaded.put(DEFAULT_FACILITY_RECORD_KEY, fallback);
-        }
-        return loaded;
-    }
 
+        String loadedDefaultFacilityId = normalizeFacilityId(raw.getDefaultFacilityId());
+        if (loadedDefaultFacilityId != null && !loaded.containsKey(loadedDefaultFacilityId)) {
+            throw new IllegalStateException("ORCA defaultFacilityId does not match any saved facility.");
+        }
+        return new StoredState(loaded, loadedDefaultFacilityId);
+    }
     private OrcaConnectionConfigRecord loadRaw() {
         if (stateRepository == null) {
-            LOGGER.warn("RuntimeStateRepository is unavailable. using default ORCA connection config");
+            LOGGER.warn("RuntimeStateRepository is unavailable. using empty ORCA connection config");
             return null;
         }
         return stateRepository.findPayload(STATE_CATEGORY, STATE_KEY)
@@ -342,9 +350,9 @@ public class OrcaConnectionConfigStore {
         }
     }
 
-    private OrcaConnectionConfigRecord buildStorageRecord(Map<String, OrcaConnectionConfigRecord> byFacility) {
+    private OrcaConnectionConfigRecord buildStorageRecord(Map<String, OrcaConnectionConfigRecord> byFacility, String activeDefaultFacilityId) {
         if (byFacility == null || byFacility.isEmpty()) {
-            throw new IllegalStateException("ORCA connection records are empty");
+            throw new IllegalStateException("ORCA connection facilities are empty");
         }
 
         OrcaConnectionConfigRecord root = new OrcaConnectionConfigRecord();
@@ -353,80 +361,27 @@ public class OrcaConnectionConfigStore {
             if (entry == null || entry.getValue() == null) {
                 continue;
             }
-            String key = toRecordKey(entry.getKey());
-            OrcaConnectionConfigRecord scoped = applyDefaults(copyWithoutRecords(entry.getValue()));
-            scoped.setFacilityId(fromRecordKey(key));
-            scoped.setRecords(null);
-            serialized.put(key, scoped);
+            String facilityId = requireFacilityId(entry.getKey());
+            OrcaConnectionConfigRecord scoped = applyDefaults(copyWithoutFacilities(entry.getValue()));
+            scoped.setFacilityId(facilityId);
+            scoped.setDefaultFacilityId(null);
+            scoped.setFacilities(null);
+            serialized.put(facilityId, scoped);
         }
         if (serialized.isEmpty()) {
-            throw new IllegalStateException("ORCA connection records are empty");
+            throw new IllegalStateException("ORCA connection facilities are empty");
         }
 
-        OrcaConnectionConfigRecord fallback = serialized.get(DEFAULT_FACILITY_RECORD_KEY);
-        if (fallback == null) {
-            fallback = copyWithoutRecords(serialized.values().iterator().next());
-            fallback.setFacilityId(null);
-            serialized.put(DEFAULT_FACILITY_RECORD_KEY, fallback);
+        String normalizedDefaultFacilityId = normalizeFacilityId(activeDefaultFacilityId);
+        if (normalizedDefaultFacilityId != null && !serialized.containsKey(normalizedDefaultFacilityId)) {
+            throw new IllegalStateException("ORCA default facility must reference a saved facility");
         }
-
-        copyFlatFields(fallback, root);
-        root.setVersion(Math.max(MULTI_FACILITY_FORMAT_VERSION, fallback.getVersion()));
+        root.setVersion(MULTI_FACILITY_FORMAT_VERSION);
         root.setUpdatedAt(Instant.now().toString());
         root.setFacilityId(null);
-        root.setRecords(serialized);
+        root.setDefaultFacilityId(normalizedDefaultFacilityId);
+        root.setFacilities(serialized);
         return root;
-    }
-
-    private OrcaConnectionConfigRecord defaultFromEnvironment() {
-        OrcaConnectionConfigRecord record = new OrcaConnectionConfigRecord();
-        record.setUpdatedAt(Instant.now().toString());
-
-        boolean useWeborca = resolveUseWeborca();
-        record.setUseWeborca(useWeborca);
-
-        String baseUrl = trimToNull(external(ENV_ORCA_BASE_URL, PROP_ORCA_BASE_URL));
-        String scheme = trimToNull(external(ENV_ORCA_API_SCHEME, PROP_ORCA_API_SCHEME));
-        String host = trimToNull(external(ENV_ORCA_API_HOST, PROP_ORCA_API_HOST));
-        Integer port = parsePort(external(ENV_ORCA_API_PORT, PROP_ORCA_API_PORT));
-
-        if (baseUrl != null) {
-            // Try to derive host/scheme/port from baseUrl, but keep baseUrl as-is for UI.
-            record.setServerUrl(baseUrl);
-            URI uri = tryParseUri(baseUrl);
-            if (uri != null) {
-                if (scheme == null && uri.getScheme() != null) scheme = uri.getScheme();
-                if (port == null && uri.getPort() > 0) port = uri.getPort();
-            }
-        } else if (host != null) {
-            String resolvedScheme = scheme != null ? scheme : (useWeborca ? "https" : "http");
-            if (host.contains("://")) {
-                record.setServerUrl(host);
-                URI uri = tryParseUri(host);
-                if (uri != null) {
-                    if (port == null && uri.getPort() > 0) port = uri.getPort();
-                }
-            } else {
-                record.setServerUrl(resolvedScheme + "://" + host);
-            }
-        }
-
-        if (port != null) {
-            record.setPort(port);
-        }
-
-        String username = trimToNull(external(ENV_ORCA_API_USER, PROP_ORCA_API_USER));
-        if (username != null) record.setUsername(username);
-
-        String password = trimToNull(external(ENV_ORCA_API_PASSWORD, PROP_ORCA_API_PASSWORD));
-        if (password != null) {
-            record.setPasswordEncrypted(encryptText(password));
-            record.setPasswordUpdatedAt(record.getUpdatedAt());
-        }
-
-        record.setClientAuthEnabled(Boolean.FALSE);
-        record.setFacilityId(null);
-        return applyDefaults(record);
     }
 
     private OrcaConnectionConfigRecord applyDefaults(OrcaConnectionConfigRecord record) {
@@ -453,7 +408,8 @@ public class OrcaConnectionConfigStore {
         if (username != null) resolved.setUsername(username);
 
         resolved.setFacilityId(normalizeFacilityId(resolved.getFacilityId()));
-        resolved.setRecords(null);
+        resolved.setDefaultFacilityId(null);
+        resolved.setFacilities(null);
 
         if (resolved.getUpdatedAt() == null || resolved.getUpdatedAt().isBlank()) {
             resolved.setUpdatedAt(Instant.now().toString());
@@ -477,7 +433,6 @@ public class OrcaConnectionConfigStore {
         }
         String baseUrl = buildBaseUrl(record.getServerUrl(), record.getPort(), Boolean.TRUE.equals(record.getUseWeborca()));
         OrcaTransportSecurityPolicy.validateBaseUrl(baseUrl, Boolean.TRUE.equals(record.getUseWeborca()));
-        // Password can be omitted only when it was previously configured.
         if (record.getPasswordEncrypted() == null || record.getPasswordEncrypted().isBlank()) {
             throw new IllegalArgumentException("パスワードまたはAPIキーは必須です。");
         }
@@ -486,44 +441,75 @@ public class OrcaConnectionConfigStore {
             if (record.getClientCertificateP12Encrypted() == null || record.getClientCertificateP12Encrypted().isBlank()) {
                 throw new IllegalArgumentException("クライアント証明書（.p12）は必須です。");
             }
-            if (record.getClientCertificatePassphraseEncrypted() == null || record.getClientCertificatePassphraseEncrypted().isBlank()) {
+            if (record.getClientCertificatePassphraseEncrypted() == null
+                    || record.getClientCertificatePassphraseEncrypted().isBlank()) {
                 throw new IllegalArgumentException("クライアント証明書のパスフレーズは必須です。");
             }
         }
     }
 
     private void validateReady(OrcaConnectionConfigRecord record) {
-        // Same as validateReadyForUpdate, but keep this method name for call-sites.
         validateReadyForUpdate(record);
     }
 
-    private static OrcaConnectionConfigRecord copy(OrcaConnectionConfigRecord record) {
-        if (record == null) {
+    private OrcaConnectionConfigRecord selectRecordForFacilityLocked(String facilityId) {
+        if (facilities == null || facilities.isEmpty()) {
             return null;
         }
-        OrcaConnectionConfigRecord copy = copyWithoutRecords(record);
-        Map<String, OrcaConnectionConfigRecord> sourceRecords = record.getRecords();
-        if (sourceRecords != null && !sourceRecords.isEmpty()) {
-            Map<String, OrcaConnectionConfigRecord> copiedRecords = new LinkedHashMap<>();
-            for (Map.Entry<String, OrcaConnectionConfigRecord> entry : sourceRecords.entrySet()) {
-                if (entry == null || entry.getValue() == null) {
-                    continue;
-                }
-                copiedRecords.put(entry.getKey(), copyWithoutRecords(entry.getValue()));
-            }
-            copy.setRecords(copiedRecords);
+        String normalizedFacilityId = normalizeFacilityId(facilityId);
+        if (normalizedFacilityId != null) {
+            return facilities.get(normalizedFacilityId);
         }
-        return copy;
+        String activeDefaultFacilityId = normalizeFacilityId(defaultFacilityId);
+        return activeDefaultFacilityId != null ? facilities.get(activeDefaultFacilityId) : null;
     }
 
-    private static OrcaConnectionConfigRecord copyWithoutRecords(OrcaConnectionConfigRecord record) {
+    private String encryptText(String plainText) {
+        if (plainText == null) {
+            return null;
+        }
+        return requireProtector().encrypt(plainText);
+    }
+
+    private String encryptBytes(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        return encryptText(Base64.getEncoder().encodeToString(bytes));
+    }
+
+    private String decryptToText(String cipherText, String field) {
+        if (cipherText == null || cipherText.isBlank()) {
+            throw new IllegalStateException(field + " is missing");
+        }
+        return requireProtector().decrypt(cipherText);
+    }
+
+    private byte[] decryptToBytes(String cipherText, String field) {
+        String base64 = decryptToText(cipherText, field);
+        try {
+            return Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("Failed to decode decrypted " + field + " as base64", ex);
+        }
+    }
+
+    private TotpSecretProtector requireProtector() {
+        if (protector == null) {
+            throw new IllegalStateException("ORCA credential protector is not available");
+        }
+        return protector;
+    }
+
+    private static OrcaConnectionConfigRecord copyWithoutFacilities(OrcaConnectionConfigRecord record) {
         if (record == null) {
             return null;
         }
         OrcaConnectionConfigRecord copy = new OrcaConnectionConfigRecord();
         copyFlatFields(record, copy);
         copy.setFacilityId(normalizeFacilityId(record.getFacilityId()));
-        copy.setRecords(null);
+        copy.setDefaultFacilityId(null);
+        copy.setFacilities(null);
         return copy;
     }
 
@@ -550,75 +536,30 @@ public class OrcaConnectionConfigStore {
         to.setCaCertificateEncrypted(from.getCaCertificateEncrypted());
     }
 
-    private OrcaConnectionConfigRecord selectRecordForFacilityLocked(String facilityId) {
-        String key = toRecordKey(facilityId);
-        if (records != null) {
-            OrcaConnectionConfigRecord scoped = records.get(key);
-            if (scoped != null) {
-                return scoped;
-            }
-            OrcaConnectionConfigRecord fallback = records.get(DEFAULT_FACILITY_RECORD_KEY);
-            if (fallback != null) {
-                return fallback;
-            }
-            if (!records.isEmpty()) {
-                return records.values().iterator().next();
-            }
+    private static boolean hasConnectionPayload(OrcaConnectionConfigRecord record) {
+        if (record == null) {
+            return false;
         }
-        return current;
+        return trimToNull(record.getServerUrl()) != null
+                || record.getPort() != null
+                || trimToNull(record.getUsername()) != null
+                || (record.getPasswordEncrypted() != null && !record.getPasswordEncrypted().isBlank())
+                || record.getUseWeborca() != null
+                || record.getClientAuthEnabled() != null
+                || (record.getClientCertificateP12Encrypted() != null && !record.getClientCertificateP12Encrypted().isBlank())
+                || (record.getCaCertificateEncrypted() != null && !record.getCaCertificateEncrypted().isBlank());
     }
 
-    private void refreshCurrentFromRecordsLocked() {
-        OrcaConnectionConfigRecord fallback = null;
-        if (records != null) {
-            fallback = records.get(DEFAULT_FACILITY_RECORD_KEY);
-            if (fallback == null && !records.isEmpty()) {
-                fallback = copyWithoutRecords(records.values().iterator().next());
-                fallback.setFacilityId(null);
-                records.put(DEFAULT_FACILITY_RECORD_KEY, fallback);
-            }
+    private static String requireFacilityId(String facilityId) {
+        String normalized = normalizeFacilityId(facilityId);
+        if (normalized == null) {
+            throw new IllegalArgumentException("facilityId is required");
         }
-        current = copyWithoutRecords(fallback);
+        return normalized;
     }
 
-    private String encryptText(String plainText) {
-        if (plainText == null) {
-            return null;
-        }
-        TotpSecretProtector p = requireProtector();
-        return p.encrypt(plainText);
-    }
-
-    private String encryptBytes(byte[] bytes) {
-        if (bytes == null) {
-            return null;
-        }
-        String base64 = Base64.getEncoder().encodeToString(bytes);
-        return encryptText(base64);
-    }
-
-    private String decryptToText(String cipherText, String field) {
-        if (cipherText == null || cipherText.isBlank()) {
-            throw new IllegalStateException(field + " is missing");
-        }
-        TotpSecretProtector p = requireProtector();
-        return p.decrypt(cipherText);
-    }
-
-    private byte[] decryptToBytes(String cipherText, String field) {
-        String base64 = decryptToText(cipherText, field);
-        try {
-            return Base64.getDecoder().decode(base64);
-        } catch (IllegalArgumentException ex) {
-            throw new IllegalStateException("Failed to decode decrypted " + field + " as base64", ex);
-        }
-    }
-
-    private TotpSecretProtector requireProtector() {
-        if (protector == null) {
-            throw new IllegalStateException("TotpSecretProtector is not available");
-        }
-        return protector;
+    private static String normalizeFacilityId(String facilityId) {
+        return trimToNull(facilityId);
     }
 
     private static String trimToNull(String value) {
@@ -629,18 +570,6 @@ public class OrcaConnectionConfigStore {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private static Integer parsePort(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            int parsed = Integer.parseInt(value.trim());
-            return parsed > 0 ? parsed : null;
-        } catch (NumberFormatException ex) {
-            return null;
-        }
-    }
-
     private static URI tryParseUri(String baseUrl) {
         if (baseUrl == null || baseUrl.isBlank()) {
             return null;
@@ -648,46 +577,12 @@ public class OrcaConnectionConfigStore {
         try {
             String trimmed = baseUrl.trim();
             if (!trimmed.contains("://")) {
-                // URI requires scheme.
                 return null;
             }
             return URI.create(trimmed);
         } catch (Exception ex) {
             return null;
         }
-    }
-
-    private boolean resolveUseWeborca() {
-        String mode = external(ENV_ORCA_MODE, PROP_ORCA_MODE);
-        if (mode != null && !mode.isBlank()) {
-            String normalized = mode.trim().toLowerCase(Locale.ROOT);
-            return "weborca".equals(normalized) || "cloud".equals(normalized);
-        }
-        String explicit = external(ENV_ORCA_API_WEBORCA, PROP_ORCA_API_WEBORCA);
-        if (explicit == null) {
-            return false;
-        }
-        String normalized = explicit.trim().toLowerCase(Locale.ROOT);
-        return "1".equals(normalized) || "true".equals(normalized) || "yes".equals(normalized) || "on".equals(normalized);
-    }
-
-    private String env(String key) {
-        return key != null ? System.getenv(key) : null;
-    }
-
-    private String external(String envKey, String propertyKey) {
-        String fromEnv = env(envKey);
-        if (fromEnv != null && !fromEnv.isBlank()) {
-            return fromEnv;
-        }
-        if (propertyKey == null) {
-            return null;
-        }
-        String fromProperty = System.getProperty(propertyKey);
-        if (fromProperty != null && !fromProperty.isBlank()) {
-            return fromProperty;
-        }
-        return null;
     }
 
     private static String buildBaseUrl(String serverUrl, Integer port, boolean useWeborca) {
@@ -707,7 +602,6 @@ public class OrcaConnectionConfigStore {
         String scheme = uri.getScheme() != null ? uri.getScheme() : "https";
         String host = uri.getHost();
         if (host == null || host.isBlank()) {
-            // URI parsing can treat raw "host:port" without scheme incorrectly; try fallback.
             host = uri.getAuthority();
         }
         if (host == null || host.isBlank()) {
@@ -721,13 +615,20 @@ public class OrcaConnectionConfigStore {
             builder.append(":").append(resolvedPort);
         }
         if (path != null && !path.isBlank() && !"/".equals(path)) {
-            // Keep base path if user provided one (e.g. reverse-proxy prefix or /api).
             if (!path.startsWith("/")) {
                 builder.append("/");
             }
             builder.append(trimTrailingSlash(path));
         }
         return builder.toString();
+    }
+
+    private static boolean isDefaultPort(String scheme, int port) {
+        if (scheme == null) {
+            return false;
+        }
+        String normalized = scheme.toLowerCase(Locale.ROOT);
+        return ("https".equals(normalized) && port == 443) || ("http".equals(normalized) && port == 80);
     }
 
     private static String trimTrailingSlash(String path) {
@@ -741,52 +642,10 @@ public class OrcaConnectionConfigStore {
         return resolved;
     }
 
-    private static boolean isDefaultPort(String scheme, int port) {
-        if (scheme == null) {
-            return false;
-        }
-        String normalized = scheme.toLowerCase(Locale.ROOT);
-        return ("https".equals(normalized) && port == 443) || ("http".equals(normalized) && port == 80);
-    }
-
     private static void requireMaxBytes(long actual, long limit, String field) {
-        if (limit <= 0) {
-            return;
-        }
-        if (actual > limit) {
+        if (limit > 0 && actual > limit) {
             throw new IllegalArgumentException(field + " が大きすぎます。最大 " + limit + " bytes までです。");
         }
-    }
-
-    private static boolean hasConnectionPayload(OrcaConnectionConfigRecord record) {
-        if (record == null) {
-            return false;
-        }
-        return trimToNull(record.getServerUrl()) != null
-                || record.getPort() != null
-                || trimToNull(record.getUsername()) != null
-                || (record.getPasswordEncrypted() != null && !record.getPasswordEncrypted().isBlank())
-                || record.getUseWeborca() != null
-                || record.getClientAuthEnabled() != null
-                || (record.getClientCertificateP12Encrypted() != null && !record.getClientCertificateP12Encrypted().isBlank())
-                || (record.getCaCertificateEncrypted() != null && !record.getCaCertificateEncrypted().isBlank());
-    }
-
-    private static String normalizeFacilityId(String facilityId) {
-        return trimToNull(facilityId);
-    }
-
-    private static String toRecordKey(String facilityId) {
-        String normalized = normalizeFacilityId(facilityId);
-        return normalized != null ? normalized : DEFAULT_FACILITY_RECORD_KEY;
-    }
-
-    private static String fromRecordKey(String key) {
-        String normalized = normalizeFacilityId(key);
-        if (normalized == null || DEFAULT_FACILITY_RECORD_KEY.equals(normalized)) {
-            return null;
-        }
-        return normalized;
     }
 
     private static String safe(String value) {
@@ -812,19 +671,16 @@ public class OrcaConnectionConfigStore {
             String password,
             Boolean clientAuthEnabled,
             String clientCertificatePassphrase
-    ) {
-    }
+    ) {}
 
     public static final class UploadedBinary {
         private final String fileName;
         private final byte[] bytes;
-
         public UploadedBinary(String fileName, byte[] bytes) {
             this.fileName = fileName;
             this.bytes = bytes;
         }
     }
-
     public record ResolvedOrcaConnection(
             boolean useWeborca,
             String baseUrl,
@@ -834,6 +690,10 @@ public class OrcaConnectionConfigStore {
             byte[] clientCertificateP12,
             String clientCertificatePassphrase,
             byte[] caCertificate
-    ) {
-    }
+    ) {}
+
+    private record StoredState(
+            Map<String, OrcaConnectionConfigRecord> facilities,
+            String defaultFacilityId
+    ) {}
 }

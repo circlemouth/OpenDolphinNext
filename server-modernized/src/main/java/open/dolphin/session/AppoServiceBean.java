@@ -51,6 +51,13 @@ public class AppoServiceBean {
     @Inject
     private SessionTraceManager traceManager;
 
+    private enum FacilityAppointmentOutcome {
+        CREATED,
+        UPDATED,
+        DELETED,
+        SKIPPED
+    }
+
     public int putAppointments(List<AppointmentModel> list) {
 
         List<AppointmentModel> appointments = list == null ? List.of() : list;
@@ -134,55 +141,23 @@ public class AppoServiceBean {
             String normalizedFid = fid.trim();
 
             for (AppointmentModel model : appointments) {
-                if (model == null) {
-                    skipped++;
-                    continue;
-                }
-
-                int state = model.getState();
-                String appoName = model.getName();
-
-                if (state == AppointmentModel.TT_NEW) {
-                    KarteBean targetKarte = resolveKarteForFacility(normalizedFid, model);
-                    if (targetKarte == null) {
-                        skipped++;
-                        continue;
+                FacilityAppointmentOutcome outcome = applyFacilityAppointment(normalizedFid, model);
+                switch (outcome) {
+                    case CREATED -> {
+                        cnt++;
+                        created++;
                     }
-                    model.setKarteBean(targetKarte);
-                    em.persist(model);
-                    cnt++;
-                    created++;
-
-                } else if (state == AppointmentModel.TT_REPLACE && appoName != null) {
-                    if (model.getId() <= 0) {
-                        skipped++;
-                        continue;
+                    case UPDATED -> {
+                        cnt++;
+                        updated++;
                     }
-                    AppointmentModel existing = findAppointmentForFacility(normalizedFid, model.getId());
-                    if (existing == null) {
-                        skipped++;
-                        continue;
+                    case DELETED -> {
+                        cnt++;
+                        deleted++;
                     }
-                    model.setKarteBean(existing.getKarteBean());
-                    em.merge(model);
-                    cnt++;
-                    updated++;
-
-                } else if (state == AppointmentModel.TT_REPLACE && appoName == null) {
-                    if (model.getId() <= 0) {
+                    case SKIPPED -> {
                         skipped++;
-                        continue;
                     }
-                    AppointmentModel target = findAppointmentForFacility(normalizedFid, model.getId());
-                    if (target == null) {
-                        skipped++;
-                        continue;
-                    }
-                    em.remove(target);
-                    cnt++;
-                    deleted++;
-                } else {
-                    skipped++;
                 }
             }
         } catch (RuntimeException ex) {
@@ -199,6 +174,49 @@ public class AppoServiceBean {
         }
 
         return cnt;
+    }
+
+    private FacilityAppointmentOutcome applyFacilityAppointment(String normalizedFid, AppointmentModel model) {
+        if (model == null) {
+            return FacilityAppointmentOutcome.SKIPPED;
+        }
+
+        int state = model.getState();
+        String appoName = model.getName();
+        if (state == AppointmentModel.TT_NEW) {
+            KarteBean targetKarte = resolveKarteForFacility(normalizedFid, model);
+            if (targetKarte == null) {
+                return FacilityAppointmentOutcome.SKIPPED;
+            }
+            model.setKarteBean(targetKarte);
+            em.persist(model);
+            return FacilityAppointmentOutcome.CREATED;
+        }
+
+        if (state != AppointmentModel.TT_REPLACE) {
+            return FacilityAppointmentOutcome.SKIPPED;
+        }
+
+        if (model.getId() <= 0) {
+            return FacilityAppointmentOutcome.SKIPPED;
+        }
+
+        if (appoName != null) {
+            AppointmentModel existing = findAppointmentForFacility(normalizedFid, model.getId());
+            if (existing == null) {
+                return FacilityAppointmentOutcome.SKIPPED;
+            }
+            model.setKarteBean(existing.getKarteBean());
+            em.merge(model);
+            return FacilityAppointmentOutcome.UPDATED;
+        }
+
+        AppointmentModel target = findAppointmentForFacility(normalizedFid, model.getId());
+        if (target == null) {
+            return FacilityAppointmentOutcome.SKIPPED;
+        }
+        em.remove(target);
+        return FacilityAppointmentOutcome.DELETED;
     }
 
     /**

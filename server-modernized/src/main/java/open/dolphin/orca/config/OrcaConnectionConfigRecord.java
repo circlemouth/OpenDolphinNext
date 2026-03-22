@@ -13,11 +13,12 @@ public class OrcaConnectionConfigRecord {
 
     private String updatedAt;
     private String facilityId;
+    private String defaultFacilityId;
 
     /**
      * Multi-facility container. When present in the top-level JSON, each entry is scoped by facilityId.
      */
-    private Map<String, OrcaConnectionConfigRecord> records;
+    private Map<String, OrcaConnectionConfigRecord> facilities;
 
     private Boolean useWeborca;
     private String serverUrl;
@@ -63,12 +64,20 @@ public class OrcaConnectionConfigRecord {
         this.facilityId = facilityId;
     }
 
-    public Map<String, OrcaConnectionConfigRecord> getRecords() {
-        return records;
+    public String getDefaultFacilityId() {
+        return defaultFacilityId;
     }
 
-    public void setRecords(Map<String, OrcaConnectionConfigRecord> records) {
-        this.records = records;
+    public void setDefaultFacilityId(String defaultFacilityId) {
+        this.defaultFacilityId = defaultFacilityId;
+    }
+
+    public Map<String, OrcaConnectionConfigRecord> getFacilities() {
+        return facilities;
+    }
+
+    public void setFacilities(Map<String, OrcaConnectionConfigRecord> facilities) {
+        this.facilities = facilities;
     }
 
     public Boolean getUseWeborca() {

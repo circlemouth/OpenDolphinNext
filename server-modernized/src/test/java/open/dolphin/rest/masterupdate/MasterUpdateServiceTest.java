@@ -53,6 +53,13 @@ class MasterUpdateServiceTest {
         assertThat(count).isEqualTo(2L);
     }
 
+    @Test
+    void estimateRecordCount_returnsZeroForEmptyPayload() {
+        long count = MasterUpdateService.estimateRecordCount(new byte[0], "csv", "text/csv");
+
+        assertThat(count).isZero();
+    }
+
     private static byte[] readAllBytes(Path path) throws Exception {
         return Files.readAllBytes(path);
     }

@@ -22,7 +22,7 @@ public class PvtWorkerHealthResource extends AbstractResource {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE)
                     .entity(Map.of(
                             "status", "DOWN",
-                            "reasons", java.util.List.of("pvt_service_unavailable")))
+                            "reasonCodes", java.util.List.of(PvtService.REASON_CODE_PVT_WORKER_UNAVAILABLE)))
                     .build();
         }
         Map<String, Object> body = pvtService.workerHealthBody();

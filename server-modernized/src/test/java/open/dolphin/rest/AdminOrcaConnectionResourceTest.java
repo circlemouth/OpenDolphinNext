@@ -84,6 +84,7 @@ class AdminOrcaConnectionResourceTest {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-ORCA");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(configStore.getDefaultFacilityId()).thenReturn("FACILITY");
 
         OrcaConnectionConfigRecord record = new OrcaConnectionConfigRecord();
         record.setUseWeborca(Boolean.TRUE);
@@ -102,6 +103,7 @@ class AdminOrcaConnectionResourceTest {
         assertNotNull(body);
         assertEquals("RUN-ORCA", body.get("runId"));
         assertEquals("FACILITY", body.get("facilityId"));
+        assertEquals("FACILITY", body.get("defaultFacilityId"));
         assertEquals(Boolean.TRUE, body.get("ok"));
         assertEquals("https://weborca-trial.orca.med.or.jp", body.get("serverUrl"));
         assertEquals(443, body.get("port"));
@@ -145,6 +147,7 @@ class AdminOrcaConnectionResourceTest {
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(request.getRequestURI()).thenReturn("/openDolphin/api/admin/orca/connection");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(configStore.getDefaultFacilityId()).thenReturn("FACILITY");
 
         OrcaConnectionConfigRecord updated = new OrcaConnectionConfigRecord();
         updated.setUseWeborca(Boolean.TRUE);
@@ -167,9 +170,37 @@ class AdminOrcaConnectionResourceTest {
         assertEquals(Boolean.TRUE, body.get("ok"));
         assertEquals("RUN-SAVE", body.get("runId"));
         assertEquals("FACILITY", body.get("facilityId"));
+        assertEquals("FACILITY", body.get("defaultFacilityId"));
         assertEquals(Boolean.TRUE, body.get("passwordConfigured"));
         verify(configStore).update(eq("FACILITY"), org.mockito.ArgumentMatchers.any(), isNull(), isNull(), eq("RUN-SAVE"), eq("FACILITY:admin"));
         verify(restOrcaTransport).reloadSettings("FACILITY");
+    }
+
+    @Test
+    void putDefaultFacilitySeparatesDefaultSwitchFromConfigSave() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-DEFAULT");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(configStore.updateDefaultFacilityId("F001", "RUN-DEFAULT", "FACILITY:admin")).thenReturn("F001");
+
+        OrcaConnectionConfigRecord record = new OrcaConnectionConfigRecord();
+        record.setFacilityId("F001");
+        record.setUseWeborca(Boolean.TRUE);
+        record.setServerUrl("https://facility.example.orca");
+        record.setPort(443);
+        record.setUsername("facility-user");
+        record.setPasswordEncrypted("encrypted-password");
+        when(configStore.getSnapshot("F001")).thenReturn(record);
+
+        Response response = resource.putDefaultFacility(request, "{\"defaultFacilityId\":\"F001\"}");
+
+        assertEquals(200, response.getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getEntity();
+        assertEquals("F001", body.get("facilityId"));
+        assertEquals("F001", body.get("defaultFacilityId"));
+        verify(configStore).updateDefaultFacilityId("F001", "RUN-DEFAULT", "FACILITY:admin");
+        verify(restOrcaTransport).reloadSettings(null);
     }
 
     private static MultipartFormDataInput multipartInputWithConfig(String configJson) throws Exception {

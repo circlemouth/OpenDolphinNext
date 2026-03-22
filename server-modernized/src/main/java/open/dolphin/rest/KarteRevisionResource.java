@@ -19,7 +19,6 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -176,17 +175,44 @@ public class KarteRevisionResource extends AbstractResource {
     }
 
     private KarteRevisionWriteResponse writeRevision(String operation, String json, String ifMatch) throws Exception {
+        validateRevisionOperation(operation);
+        KarteRevisionWriteRequest request = LegacyJsonSupport.readBody(json, KarteRevisionWriteRequest.class, objectMapper);
+        long sourceRevisionId = resolveSourceRevisionId(request);
+        long baseRevisionId = resolveBaseRevisionId(request, ifMatch);
+        validateRevisionIdentifiers(request, sourceRevisionId, baseRevisionId, ifMatch);
+        ensureRevisionFacilityAccess(sourceRevisionId);
+        ensureRevisionFacilityAccess(baseRevisionId);
+
+        DocumentModel source = requireRevisionSource(operation, sourceRevisionId, baseRevisionId);
+        LocalDate visitDate = requireRevisionVisitDate(source, sourceRevisionId);
+        Long karteId = source.getKarteBean().getId();
+        KarteRevisionHistoryResponse history = karteRevisionServiceBean.getRevisionHistory(karteId, visitDate);
+        GroupMatch match = findGroup(history, sourceRevisionId, baseRevisionId);
+        validateRevisionGroup(operation, source, sourceRevisionId, baseRevisionId, visitDate, karteId, match);
+        long createdRevisionId = karteRevisionServiceBean.createRevisionFromSource(sourceRevisionId, baseRevisionId, operation);
+        KarteRevisionWriteResponse response = buildRevisionWriteResponse(operation, karteId, visitDate, match,
+                sourceRevisionId, baseRevisionId, createdRevisionId);
+        recordRevisionWriteSuccess(operation, source, response, sourceRevisionId, baseRevisionId, karteId, visitDate, match);
+        return response;
+    }
+
+    private void validateRevisionOperation(String operation) {
         if (operation == null || operation.isBlank()) {
             throw validationError("REVISION_VALIDATION_ERROR", "operation is required", Map.of("operation", operation));
         }
-        KarteRevisionWriteRequest request = LegacyJsonSupport.readBody(json, KarteRevisionWriteRequest.class, objectMapper);
+    }
 
-        long sourceRevisionId = request != null && request.getSourceRevisionId() != null ? request.getSourceRevisionId() : 0L;
+    private long resolveSourceRevisionId(KarteRevisionWriteRequest request) {
+        return request != null && request.getSourceRevisionId() != null ? request.getSourceRevisionId() : 0L;
+    }
+
+    private long resolveBaseRevisionId(KarteRevisionWriteRequest request, String ifMatch) {
         long baseRevisionId = request != null && request.getBaseRevisionId() != null ? request.getBaseRevisionId() : 0L;
-        if (baseRevisionId <= 0) {
-            baseRevisionId = parseIfMatchRevisionId(ifMatch);
-        }
+        return baseRevisionId > 0 ? baseRevisionId : parseIfMatchRevisionId(ifMatch);
+    }
 
+    private void validateRevisionIdentifiers(KarteRevisionWriteRequest request, long sourceRevisionId,
+            long baseRevisionId, String ifMatch) {
         if (sourceRevisionId <= 0) {
             throw validationError("REVISION_VALIDATION_ERROR", "sourceRevisionId is required",
                     Map.of("sourceRevisionId", request != null ? request.getSourceRevisionId() : null));
@@ -196,34 +222,38 @@ public class KarteRevisionResource extends AbstractResource {
                     Map.of("baseRevisionId", request != null ? request.getBaseRevisionId() : null,
                             "ifMatch", ifMatch));
         }
-        ensureRevisionFacilityAccess(sourceRevisionId);
-        ensureRevisionFacilityAccess(baseRevisionId);
+    }
 
+    private DocumentModel requireRevisionSource(String operation, long sourceRevisionId, long baseRevisionId) {
         DocumentModel source = karteRevisionServiceBean.getRevisionSnapshot(sourceRevisionId);
-        if (source == null) {
-            recordAudit("KARTE_REVISION_" + operation.toUpperCase(), Map.of(
-                    "status", "MISSING_SOURCE",
-                    "operation", operation,
-                    "operationPhase", operation.equals("restore") ? "restore" : "edit",
-                    "sourceRevisionId", sourceRevisionId,
-                    "baseRevisionId", baseRevisionId
-            ));
-            throw restError(httpServletRequest, jakarta.ws.rs.core.Response.Status.NOT_FOUND,
-                    "revision_not_found", "Revision not found",
-                    Map.of("sourceRevisionId", sourceRevisionId),
-                    null);
+        if (source != null) {
+            return source;
         }
+        recordAudit("KARTE_REVISION_" + operation.toUpperCase(), Map.of(
+                "status", "MISSING_SOURCE",
+                "operation", operation,
+                "operationPhase", resolveOperationPhase(operation),
+                "sourceRevisionId", sourceRevisionId,
+                "baseRevisionId", baseRevisionId
+        ));
+        throw restError(httpServletRequest, jakarta.ws.rs.core.Response.Status.NOT_FOUND,
+                "revision_not_found", "Revision not found",
+                Map.of("sourceRevisionId", sourceRevisionId),
+                null);
+    }
 
-        // Conflict check: require baseRevisionId to match latestRevisionId in the relevant group.
+    private LocalDate requireRevisionVisitDate(DocumentModel source, long sourceRevisionId) {
         LocalDate visitDate = deriveVisitDate(source);
         Long karteId = source.getKarteBean() != null ? source.getKarteBean().getId() : null;
         if (karteId == null || karteId <= 0) {
             throw validationError("REVISION_VALIDATION_ERROR", "karteId missing on source revision",
                     Map.of("sourceRevisionId", sourceRevisionId));
         }
+        return visitDate;
+    }
 
-        KarteRevisionHistoryResponse history = karteRevisionServiceBean.getRevisionHistory(karteId, visitDate);
-        GroupMatch match = findGroup(history, sourceRevisionId, baseRevisionId);
+    private void validateRevisionGroup(String operation, DocumentModel source, long sourceRevisionId, long baseRevisionId,
+            LocalDate visitDate, Long karteId, GroupMatch match) {
         if (match == null || match.latestRevisionId == null || match.latestRevisionId <= 0) {
             throw restError(httpServletRequest, jakarta.ws.rs.core.Response.Status.NOT_FOUND,
                     "revision_group_not_found", "Revision group not found",
@@ -235,7 +265,7 @@ public class KarteRevisionResource extends AbstractResource {
             recordAudit("KARTE_REVISION_" + operation.toUpperCase(), withPatientId(Map.of(
                     "status", "CONFLICT",
                     "operation", operation,
-                    "operationPhase", operation.equals("restore") ? "restore" : "edit",
+                    "operationPhase", resolveOperationPhase(operation),
                     "sourceRevisionId", sourceRevisionId,
                     "baseRevisionId", baseRevisionId,
                     "parentRevisionId", baseRevisionId,
@@ -255,13 +285,13 @@ public class KarteRevisionResource extends AbstractResource {
                     ),
                     null);
         }
+    }
 
-        // Append-only: create a new revision as a new Document row. Parent is the current latest revision.
-        long createdRevisionId = karteRevisionServiceBean.createRevisionFromSource(sourceRevisionId, baseRevisionId, operation);
-
+    private KarteRevisionWriteResponse buildRevisionWriteResponse(String operation, Long karteId, LocalDate visitDate,
+            GroupMatch match, long sourceRevisionId, long baseRevisionId, long createdRevisionId) {
         KarteRevisionWriteResponse response = new KarteRevisionWriteResponse();
         response.setOperation(operation);
-        response.setOperationPhase(operation.equals("restore") ? "restore" : "edit");
+        response.setOperationPhase(resolveOperationPhase(operation));
         response.setKarteId(karteId);
         response.setVisitDate(visitDate.toString());
         response.setRootRevisionId(match.rootRevisionId);
@@ -270,7 +300,11 @@ public class KarteRevisionResource extends AbstractResource {
         response.setParentRevisionId(baseRevisionId);
         response.setCreatedRevisionId(createdRevisionId);
         response.setCreatedAt(Instant.now().toString());
+        return response;
+    }
 
+    private void recordRevisionWriteSuccess(String operation, DocumentModel source, KarteRevisionWriteResponse response,
+            long sourceRevisionId, long baseRevisionId, Long karteId, LocalDate visitDate, GroupMatch match) {
         recordAudit("KARTE_REVISION_" + operation.toUpperCase(), withPatientId(Map.of(
                 "status", "SUCCESS",
                 "operation", operation,
@@ -281,9 +315,12 @@ public class KarteRevisionResource extends AbstractResource {
                 "sourceRevisionId", sourceRevisionId,
                 "baseRevisionId", baseRevisionId,
                 "parentRevisionId", baseRevisionId,
-                "createdRevisionId", createdRevisionId
+                "createdRevisionId", response.getCreatedRevisionId()
         ), source));
-        return response;
+    }
+
+    private String resolveOperationPhase(String operation) {
+        return "restore".equals(operation) ? "restore" : "edit";
     }
 
     private void ensureKarteFacilityAccess(long karteId) {

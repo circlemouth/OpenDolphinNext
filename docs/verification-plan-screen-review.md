@@ -162,7 +162,7 @@
 `VITE_ENABLE_LEGACY_HEADER_AUTH=1` + `LOGFILTER_HEADER_AUTH_ENABLED=true`（Legacy ヘッダ認証を許可する場合のみ）
 `devPasswordPlain` を sessionStorage に保持するため再起動後は再ログイン
 - X-Orca-Api-Result-Message ヘッダ抑止（暫定・既定はON）:
-`ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER=0` または `-Dorca.proxy.forward.apiResultMessageHeader=false`
+`ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER=false`
 影響: `X-Orca-Api-Result-Message` が欠落し、ヘッダ参照の UI/ログで文言が表示されなくなる。必要なら XML body の `Api_Result_Message` を参照する。
 - Vite dev-only ヘッダ drop（開発環境限定の回避策）:
 `VITE_DEV_PROXY_DROP_ORCA_RESULT_MESSAGE=1`（または `VITE_PROXY_DROP_ORCA_RESULT_MESSAGE=1`）
@@ -175,9 +175,8 @@
   - docker compose 運用例:
     1) `docker-compose.override.dev.yml` の `server-modernized-dev.environment` に `ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER: "0"` を追加
     2) `docker compose -f docker-compose.modernized.dev.yml -f docker-compose.override.dev.yml up -d --force-recreate server-modernized-dev`
-  - System prop で指定する場合は `JAVA_OPTS_APPEND` に `-Dorca.proxy.forward.apiResultMessageHeader=false` を追加して再起動
 - X-Orca-* 全転送抑止（暫定・既定はON）:
-`ORCA_PROXY_FORWARD_X_ORCA_HEADERS=0` または `-Dorca.proxy.forward.xOrcaHeaders=false`
+`ORCA_PROXY_FORWARD_X_ORCA_HEADERS=false`
 影響: `X-Orca-Api-Result` / `X-Orca-Api-Result-Success` / `X-Orca-Warnings` も欠落する。
 - MSW 依存最小化 / 実 ORCA 経路の正常化手順（dev/proxy）:
   1) MSW 無効化: `VITE_DISABLE_MSW=1`（Service Worker を無効化して実経路へ）。

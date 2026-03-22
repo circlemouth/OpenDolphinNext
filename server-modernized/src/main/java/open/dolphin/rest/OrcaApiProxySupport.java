@@ -8,6 +8,8 @@ import java.util.regex.Pattern;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
 /**
  * Shared helpers for ORCA API proxy resources.
@@ -16,10 +18,6 @@ public final class OrcaApiProxySupport {
 
     private static final Logger LOGGER = Logger.getLogger(OrcaApiProxySupport.class.getName());
     private static final Pattern CONTROL_CHARS = Pattern.compile("[\\x00-\\x1F\\x7F]");
-    private static final String PROP_FORWARD_X_ORCA_HEADERS = "orca.proxy.forward.xOrcaHeaders";
-    private static final String ENV_FORWARD_X_ORCA_HEADERS = "ORCA_PROXY_FORWARD_X_ORCA_HEADERS";
-    private static final String PROP_FORWARD_API_RESULT_MESSAGE = "orca.proxy.forward.apiResultMessageHeader";
-    private static final String ENV_FORWARD_API_RESULT_MESSAGE = "ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER";
 
     private OrcaApiProxySupport() {
     }
@@ -86,43 +84,25 @@ public final class OrcaApiProxySupport {
     }
 
     public static boolean isForwardXOrcaHeadersEnabled() {
-        String value = firstNonBlank(System.getProperty(PROP_FORWARD_X_ORCA_HEADERS), System.getenv(ENV_FORWARD_X_ORCA_HEADERS));
-        if (value == null) {
-            return true;
-        }
-        return isTruthy(value);
+        return isForwardXOrcaHeadersEnabled(new ServerConfigurationResolver());
     }
 
     public static boolean isApiResultMessageHeaderEnabled() {
-        String value = firstNonBlank(System.getProperty(PROP_FORWARD_API_RESULT_MESSAGE), System.getenv(ENV_FORWARD_API_RESULT_MESSAGE));
-        if (value == null) {
-            return true;
-        }
-        return isTruthy(value);
+        return isApiResultMessageHeaderEnabled(new ServerConfigurationResolver());
+    }
+
+    static boolean isForwardXOrcaHeadersEnabled(ServerConfigurationResolver resolver) {
+        ServerRuntimeConfiguration.OrcaProxySettings settings = resolver.orcaProxy();
+        return settings.forwardXOrcaHeaders() == null || settings.forwardXOrcaHeaders();
+    }
+
+    static boolean isApiResultMessageHeaderEnabled(ServerConfigurationResolver resolver) {
+        ServerRuntimeConfiguration.OrcaProxySettings settings = resolver.orcaProxy();
+        return settings.forwardApiResultMessageHeader() == null || settings.forwardApiResultMessageHeader();
     }
 
     private static boolean isApiResultMessageHeader(String headerName) {
         return headerName != null && "X-Orca-Api-Result-Message".equalsIgnoreCase(headerName);
-    }
-
-    private static String firstNonBlank(String... candidates) {
-        if (candidates == null) {
-            return null;
-        }
-        for (String candidate : candidates) {
-            if (candidate != null && !candidate.isBlank()) {
-                return candidate.trim();
-            }
-        }
-        return null;
-    }
-
-    private static boolean isTruthy(String value) {
-        if (value == null) {
-            return false;
-        }
-        String normalized = value.trim().toLowerCase();
-        return "1".equals(normalized) || "true".equals(normalized) || "yes".equals(normalized) || "on".equals(normalized);
     }
 
     private static boolean containsControlChars(String value) {

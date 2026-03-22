@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import jakarta.jms.Message;
 import jakarta.jms.TextMessage;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -77,6 +79,18 @@ class SessionMessageHandlerTest {
         handler.onMessage(message);
 
         verify(pvtServiceBean, never()).addPvt(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void resolveFacilityIdUsesResolverOnly() throws Exception {
+        setField(handler, "configurationResolver",
+                TestServerConfigurationResolvers.resolver("opendolphin.facility-id", "facility-123"));
+
+        Method method = SessionMessageHandler.class.getDeclaredMethod("resolveFacilityId");
+        method.setAccessible(true);
+        Object resolved = method.invoke(handler);
+
+        org.junit.jupiter.api.Assertions.assertEquals("facility-123", resolved);
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

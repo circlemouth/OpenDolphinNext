@@ -24,8 +24,8 @@ class PatientServiceBeanSearchLoadFaultTest {
             "from PatientModel p where p.facilityId=:fid and p.patientId=:pid";
     private static final String QUERY_PATIENT_BY_FID_PID_PREFIX =
             "from PatientModel p where p.facilityId=:fid and p.patientId like :pid";
-    private static final String QUERY_INSURANCE_BY_PATIENT_IDS =
-            "from HealthInsuranceModel h where h.patient.id in (:ids)";
+    private static final String QUERY_INSURANCE_BY_PATIENT_PK =
+            "from HealthInsuranceModel h where h.patient.id=:pk";
 
     private PatientServiceBean service;
     private EntityManager em;
@@ -40,8 +40,7 @@ class PatientServiceBeanSearchLoadFaultTest {
     @Test
     void getPatientById_handlesBurstLoadWithExactLookupQuery() {
         Query patientQuery = mock(Query.class);
-        @SuppressWarnings("unchecked")
-        TypedQuery<HealthInsuranceModel> insuranceQuery = mock(TypedQuery.class);
+        Query insuranceQuery = mock(Query.class);
 
         PatientModel patient = new PatientModel();
         patient.setId(101L);
@@ -55,8 +54,8 @@ class PatientServiceBeanSearchLoadFaultTest {
         when(patientQuery.setParameter("pid", "P001")).thenReturn(patientQuery);
         when(patientQuery.getSingleResult()).thenReturn(patient);
 
-        when(em.createQuery(QUERY_INSURANCE_BY_PATIENT_IDS, HealthInsuranceModel.class)).thenReturn(insuranceQuery);
-        when(insuranceQuery.setParameter("ids", List.of(101L))).thenReturn(insuranceQuery);
+        when(em.createQuery(QUERY_INSURANCE_BY_PATIENT_PK)).thenReturn(insuranceQuery);
+        when(insuranceQuery.setParameter("pk", 101L)).thenReturn(insuranceQuery);
         when(insuranceQuery.getResultList()).thenReturn(List.of(insurance));
 
         long startedAt = System.nanoTime();
@@ -83,7 +82,7 @@ class PatientServiceBeanSearchLoadFaultTest {
         PatientModel actual = service.getPatientById("F001", "P404");
 
         assertThat(actual).isNull();
-        verify(em, never()).createQuery(QUERY_INSURANCE_BY_PATIENT_IDS, HealthInsuranceModel.class);
+        verify(em, never()).createQuery(QUERY_INSURANCE_BY_PATIENT_PK);
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

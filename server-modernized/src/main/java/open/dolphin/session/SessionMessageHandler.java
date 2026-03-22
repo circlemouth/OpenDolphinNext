@@ -160,10 +160,6 @@ public class SessionMessageHandler {
     }
 
     private String resolveFacilityId() {
-        String systemProp = System.getProperty("dolphin.facilityId");
-        if (systemProp != null && !systemProp.isBlank()) {
-            return systemProp;
-        }
         if (configurationResolver != null) {
             String configured = configurationResolver.orcaRuntime().facilityId();
             if (configured != null && !configured.isBlank()) {

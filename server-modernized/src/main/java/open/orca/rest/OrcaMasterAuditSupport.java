@@ -155,10 +155,6 @@ class OrcaMasterAuditSupport extends AbstractResource {
             if (method != null) {
                 details.put("method", method);
             }
-            String scope = normalizeDrugScope(getFirstValue(params, "scope"));
-            if (scope != null) {
-                details.put("scope", scope);
-            }
             if (shouldIncludeTotalCount(params)) {
                 details.put("includeTotalCount", true);
             }
@@ -320,17 +316,6 @@ class OrcaMasterAuditSupport extends AbstractResource {
         String normalized = value.trim().toLowerCase(Locale.ROOT);
         return switch (normalized) {
             case "name", "kana", "code" -> normalized;
-            default -> null;
-        };
-    }
-
-    private String normalizeDrugScope(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        String normalized = value.trim().toLowerCase(Locale.ROOT);
-        return switch (normalized) {
-            case "all", "brand", "generic" -> normalized;
             default -> null;
         };
     }

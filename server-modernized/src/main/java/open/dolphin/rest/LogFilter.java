@@ -54,6 +54,7 @@ public class LogFilter implements Filter {
     private static final String LOGOUT_PATH = "/api/logout";
     private static final String HEALTH_PATH = "/api/health";
     private static final String HEALTH_READINESS_PATH = "/api/health/readiness";
+    private static final String OPERATIONS_READINESS_PATH = "/api/operations/readiness";
     private static final String API_ROOT = "/api";
     private static final Pattern SAFE_TOKEN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
 
@@ -67,82 +68,40 @@ public class LogFilter implements Filter {
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-
         HttpServletRequest req = (HttpServletRequest)request;
         HttpServletResponse res = (HttpServletResponse) response;
         long startedNanos = System.nanoTime();
-
         String traceId = resolveTraceId(req);
         String requestId = resolveRequestId(req, traceId);
         String runId = resolveRunId(req);
-        req.setAttribute(TRACE_ID_ATTRIBUTE, traceId);
-        req.setAttribute(REQUEST_ID_ATTRIBUTE, requestId);
-        if (runId != null && !runId.isBlank()) {
-            req.setAttribute(RUN_ID_ATTRIBUTE, runId);
-        }
-        res.setHeader(TRACE_ID_HEADER, traceId);
-        res.setHeader(REQUEST_ID_HEADER, requestId);
-        if (runId != null && !runId.isBlank()) {
-            res.setHeader(RUN_ID_HEADER, runId);
-        }
+        applyTraceContext(req, res, traceId, requestId, runId);
         MdcSnapshot traceIdSnapshot = applyMdcValue(MDC_TRACE_ID_KEY, traceId);
         MdcSnapshot requestIdSnapshot = applyMdcValue(MDC_REQUEST_ID_KEY, requestId);
         MdcSnapshot runIdSnapshot = applyMdcValue(MDC_RUN_ID_KEY, runId);
         MdcSnapshot remoteUserSnapshot = null;
         MdcSnapshot userIdSnapshot = null;
         MdcSnapshot facilityIdSnapshot = null;
-        BlockWrapper wrapper = null;
-
         try {
             if (isAnonymousAllowed(req)) {
-                wrapper = wrapForAnonymous(req, traceId, requestId, runId);
-                chain.doFilter(wrapper, response);
-                logAccessResponse(res, wrapper, traceId, requestId, runId, startedNanos, null, null);
-                maybeRecordErrorAudit(wrapper, res, null);
+                handleAnonymousRequest(req, res, chain, startedNanos, traceId, requestId, runId);
                 return;
             }
-
-            Optional<String> principalUser = resolveSessionUser(req);
-            if (principalUser.isEmpty()) {
-                logUnauthorized(req, null, traceId);
-                recordUnauthorizedAudit(req, traceId, null, "unauthorized",
-                        "Authentication required", "authentication_failed", HttpServletResponse.SC_UNAUTHORIZED);
-                sendUnauthorized(req, res, "unauthorized", "Authentication required",
-                        unauthorizedDetails("authentication_failed"));
+            BlockWrapper wrapper = requireAuthenticatedWrapper(req, res, traceId, requestId, runId);
+            if (wrapper == null) {
                 return;
             }
-
-            String resolvedUser = normalize(principalUser.orElse(null));
-            if (!isCompositePrincipal(resolvedUser)) {
-                String candidateUser = resolvedUser;
-                logUnauthorized(req, candidateUser, traceId);
-                recordUnauthorizedAudit(req, traceId, candidateUser, "unauthorized",
-                        "Authenticated principal must be composite",
-                        "principal_not_composite", HttpServletResponse.SC_UNAUTHORIZED);
-                sendUnauthorized(req, res, "unauthorized", "Authenticated principal must be composite",
-                        unauthorizedDetails("principal_not_composite"));
-                return;
-            }
-
-            wrapper = new BlockWrapper(req);
-            wrapper.setRemoteUser(resolvedUser);
-            wrapper.setHeader(TRACE_ID_HEADER, traceId);
-            wrapper.setHeader(REQUEST_ID_HEADER, requestId);
-            wrapper.setHeader(RUN_ID_HEADER, runId);
+            String resolvedUser = wrapper.getRemoteUser();
             remoteUserSnapshot = applyMdcValue(SessionTraceAttributes.ACTOR_ID_MDC_KEY, resolvedUser);
             String facilityId = extractFacilitySegment(resolvedUser);
             String userId = extractUserSegment(resolvedUser);
             facilityIdSnapshot = applyMdcValue(MDC_FACILITY_ID_KEY, facilityId);
             userIdSnapshot = applyMdcValue(MDC_USER_ID_KEY, userId);
-
-            chain.doFilter(wrapper, response);
-            logAccessResponse(res, wrapper, traceId, requestId, runId, startedNanos, userId, facilityId);
-            maybeRecordErrorAudit(wrapper, res, null);
+            handleAuthenticatedRequest(wrapper, res, chain, startedNanos, traceId, requestId, runId, userId, facilityId);
         } catch (IOException | ServletException ex) {
-            maybeRecordErrorAudit(wrapper != null ? wrapper : req, res, ex);
+            maybeRecordErrorAudit(req, res, ex);
             throw ex;
         } catch (RuntimeException ex) {
-            maybeRecordErrorAudit(wrapper != null ? wrapper : req, res, ex);
+            maybeRecordErrorAudit(req, res, ex);
             throw ex;
         } finally {
             restoreMdcValue(traceIdSnapshot);
@@ -152,6 +111,94 @@ public class LogFilter implements Filter {
             restoreMdcValue(userIdSnapshot);
             restoreMdcValue(facilityIdSnapshot);
         }
+    }
+
+    private void applyTraceContext(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String traceId,
+            String requestId,
+            String runId) {
+        request.setAttribute(TRACE_ID_ATTRIBUTE, traceId);
+        request.setAttribute(REQUEST_ID_ATTRIBUTE, requestId);
+        if (runId != null && !runId.isBlank()) {
+            request.setAttribute(RUN_ID_ATTRIBUTE, runId);
+        }
+        response.setHeader(TRACE_ID_HEADER, traceId);
+        response.setHeader(REQUEST_ID_HEADER, requestId);
+        if (runId != null && !runId.isBlank()) {
+            response.setHeader(RUN_ID_HEADER, runId);
+        }
+    }
+
+    private void handleAnonymousRequest(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain,
+            long startedNanos,
+            String traceId,
+            String requestId,
+            String runId) throws IOException, ServletException {
+        BlockWrapper wrapper = wrapForAnonymous(request, traceId, requestId, runId);
+        chain.doFilter(wrapper, response);
+        logAccessResponse(response, wrapper, traceId, requestId, runId, startedNanos, null, null);
+        maybeRecordErrorAudit(wrapper, response, null);
+    }
+
+    private BlockWrapper requireAuthenticatedWrapper(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String traceId,
+            String requestId,
+            String runId) throws IOException {
+        Optional<String> principalUser = resolveSessionUser(request);
+        if (principalUser.isEmpty()) {
+            handleUnauthorizedRequest(request, response, traceId, null,
+                    "Authentication required", "authentication_failed");
+            return null;
+        }
+
+        String resolvedUser = normalize(principalUser.orElse(null));
+        if (!isCompositePrincipal(resolvedUser)) {
+            handleUnauthorizedRequest(request, response, traceId, resolvedUser,
+                    "Authenticated principal must be composite", "principal_not_composite");
+            return null;
+        }
+
+        BlockWrapper wrapper = new BlockWrapper(request);
+        wrapper.setRemoteUser(resolvedUser);
+        wrapper.setHeader(TRACE_ID_HEADER, traceId);
+        wrapper.setHeader(REQUEST_ID_HEADER, requestId);
+        wrapper.setHeader(RUN_ID_HEADER, runId);
+        return wrapper;
+    }
+
+    private void handleAuthenticatedRequest(
+            BlockWrapper wrapper,
+            HttpServletResponse response,
+            FilterChain chain,
+            long startedNanos,
+            String traceId,
+            String requestId,
+            String runId,
+            String userId,
+            String facilityId) throws IOException, ServletException {
+        chain.doFilter(wrapper, response);
+        logAccessResponse(response, wrapper, traceId, requestId, runId, startedNanos, userId, facilityId);
+        maybeRecordErrorAudit(wrapper, response, null);
+    }
+
+    private void handleUnauthorizedRequest(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            String traceId,
+            String candidateUser,
+            String message,
+            String detailCode) throws IOException {
+        logUnauthorized(request, candidateUser, traceId);
+        recordUnauthorizedAudit(request, traceId, candidateUser, "unauthorized",
+                message, detailCode, HttpServletResponse.SC_UNAUTHORIZED);
+        sendUnauthorized(request, response, "unauthorized", message, unauthorizedDetails(detailCode));
     }
 
     private boolean isAnonymousAllowed(HttpServletRequest request) {

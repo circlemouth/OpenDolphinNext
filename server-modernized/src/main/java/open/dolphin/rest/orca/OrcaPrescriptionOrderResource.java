@@ -19,23 +19,17 @@ import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.PatientModel;
-import open.dolphin.rest.dto.orca.PrescriptionDoInputMeta;
-import open.dolphin.rest.dto.orca.PrescriptionDoctorComment;
-import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
 import open.dolphin.rest.dto.orca.PrescriptionOrderDoImportRequest;
 import open.dolphin.rest.dto.orca.PrescriptionOrderDoImportResponse;
 import open.dolphin.rest.dto.orca.PrescriptionOrderFetchResponse;
 import open.dolphin.rest.dto.orca.PrescriptionOrderSaveResponse;
-import open.dolphin.rest.dto.orca.PrescriptionRp;
-import open.dolphin.rest.dto.orca.PrescriptionSetting;
 import open.dolphin.session.PatientServiceBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -194,7 +188,20 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         String runId = resolveRunId(request);
         String remoteUser = requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
+        DoImportContext context = validateDoImportRequest(request, payload, runId, facilityId);
+        PrescriptionOrder baseOrder = loadBaseOrder(request, context, facilityId, runId);
+        DoImportResult result = mergeDoImportOrder(request, payload, context, baseOrder, facilityId, remoteUser, runId);
+        long orderId = saveDoImportOrder(facilityId, context.patientId(), remoteUser, result);
+        PrescriptionOrderDoImportResponse response = buildDoImportResponse(runId, orderId, context.patientId(), result);
+        recordDoImportSuccess(request, facilityId, context.patientId(), runId, orderId, response);
+        return response;
+    }
 
+    private DoImportContext validateDoImportRequest(
+            HttpServletRequest request,
+            PrescriptionOrderDoImportRequest payload,
+            String runId,
+            String facilityId) {
         if (payload == null) {
             recordValidationFailure(request, facilityId, null, runId, "payload", "payload is required",
                     "ORCA_PRESCRIPTION_DO_IMPORT");
@@ -210,337 +217,139 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                     "ORCA_PRESCRIPTION_DO_IMPORT");
             throw validationError(request, "doOrder", "doOrder is required");
         }
-
         String patientId = payload.getPatientId().trim();
         ensurePatientExists(request, facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
-
         LocalDate targetEncounterDate = parseOptionalDate(request, "encounterDate", payload.getEncounterDate(),
                 facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         String targetEncounterId = trimToNull(payload.getEncounterId());
+        ensureDoImportUsageCodes(request, payload.getDoOrder(), facilityId, patientId, runId);
+        return new DoImportContext(patientId, targetEncounterId, targetEncounterDate);
+    }
 
-        validateDoImportUsageCodes(request, payload.getDoOrder(), facilityId, patientId, runId);
-
+    private PrescriptionOrder loadBaseOrder(
+            HttpServletRequest request,
+            DoImportContext context,
+            String facilityId,
+            String runId) {
         Optional<PrescriptionOrderRepository.StoredPrescriptionOrder> stored =
-                prescriptionOrderRepository.findLatest(facilityId, patientId, targetEncounterId, targetEncounterDate);
-        PrescriptionOrder baseOrder = stored
-                .map(row -> decodeOrderOrThrow(request, row, facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT"))
+                prescriptionOrderRepository.findLatest(
+                        facilityId, context.patientId(), context.targetEncounterId(), context.targetEncounterDate());
+        return stored
+                .map(row -> decodeOrderOrThrow(
+                        request, row, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT"))
                 .orElseGet(PrescriptionOrder::new);
+    }
 
-        List<String> warnings = new ArrayList<>();
+    private DoImportResult mergeDoImportOrder(
+            HttpServletRequest request,
+            PrescriptionOrderDoImportRequest payload,
+            DoImportContext context,
+            PrescriptionOrder baseOrder,
+            String facilityId,
+            String remoteUser,
+            String runId) {
         Instant now = Instant.now();
-        PrescriptionOrder merged = applyDoImport(
+        List<String> warnings = new ArrayList<>();
+        PrescriptionOrder merged = OrcaPrescriptionOrderImportSupport.applyDoImport(
                 baseOrder,
                 payload.getDoOrder(),
-                patientId,
-                targetEncounterId,
-                targetEncounterDate,
+                context.patientId(),
+                context.targetEncounterId(),
+                context.targetEncounterDate(),
                 remoteUser,
                 runId,
                 now,
-                warnings);
+                warnings,
+                OBJECT_MAPPER);
 
         LocalDate mergedEncounterDate = parseOptionalDate(request, "encounterDate", merged.getEncounterDate(),
-                facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+                facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         LocalDate performDate = parseOptionalDate(request, "performDate", merged.getPerformDate(),
-                facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+                facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
 
         merged.setEncounterDate(mergedEncounterDate != null ? mergedEncounterDate.toString() : null);
         merged.setPerformDate(performDate != null ? performDate.toString() : null);
+        String json = writeJsonOrThrow(
+                request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+        return new DoImportResult(merged, mergedEncounterDate, performDate, now, warnings, json);
+    }
 
-        String json = writeJsonOrThrow(request, merged, facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
-        long orderId = prescriptionOrderRepository.save(
+    private long saveDoImportOrder(
+            String facilityId,
+            String patientId,
+            String remoteUser,
+            DoImportResult result) {
+        return prescriptionOrderRepository.save(
                 facilityId,
                 patientId,
-                merged.getEncounterId(),
-                mergedEncounterDate,
-                performDate,
-                json,
-                now,
+                result.merged().getEncounterId(),
+                result.mergedEncounterDate(),
+                result.performDate(),
+                result.json(),
+                result.now(),
                 remoteUser);
+    }
 
+    private PrescriptionOrderDoImportResponse buildDoImportResponse(
+            String runId,
+            long orderId,
+            String patientId,
+            DoImportResult result) {
         PrescriptionOrderDoImportResponse response = new PrescriptionOrderDoImportResponse();
         response.setApiResult("00");
         response.setApiResultMessage("処理終了");
         response.setRunId(runId);
         response.setOrderId(orderId);
         response.setPatientId(patientId);
-        response.setEncounterId(merged.getEncounterId());
-        response.setEncounterDate(merged.getEncounterDate());
-        response.setOrder(merged);
-        response.setWarnings(warnings);
-
-        Map<String, Object> audit = new HashMap<>();
-        audit.put("facilityId", facilityId);
-        audit.put("patientId", patientId);
-        audit.put("encounterId", merged.getEncounterId());
-        audit.put("encounterDate", merged.getEncounterDate());
-        audit.put("orderId", orderId);
-        audit.put("warnings", warnings.size());
-        audit.put("runId", runId);
-        recordAudit(request, "ORCA_PRESCRIPTION_DO_IMPORT", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        response.setEncounterId(result.merged().getEncounterId());
+        response.setEncounterDate(result.merged().getEncounterDate());
+        response.setOrder(result.merged());
+        response.setWarnings(result.warnings());
         return response;
     }
 
-    private PrescriptionOrder applyDoImport(
-            PrescriptionOrder base,
-            PrescriptionOrder doOrder,
+    private void recordDoImportSuccess(
+            HttpServletRequest request,
+            String facilityId,
             String patientId,
-            String targetEncounterId,
-            LocalDate targetEncounterDate,
-            String remoteUser,
             String runId,
-            Instant now,
-            List<String> warnings) {
-
-        PrescriptionOrder merged = copyOrder(base);
-        PrescriptionOrder incoming = copyOrder(doOrder);
-        if (merged == null) {
-            merged = new PrescriptionOrder();
-        }
-        if (incoming == null) {
-            incoming = new PrescriptionOrder();
-        }
-
-        merged.setPatientId(patientId);
-        if (hasText(targetEncounterId)) {
-            merged.setEncounterId(targetEncounterId);
-        } else if (hasText(incoming.getEncounterId())) {
-            merged.setEncounterId(incoming.getEncounterId().trim());
-        } else {
-            merged.setEncounterId(trimToNull(merged.getEncounterId()));
-        }
-
-        LocalDate resolvedEncounterDate = targetEncounterDate;
-        if (resolvedEncounterDate == null) {
-            resolvedEncounterDate = parseFlexibleDate(incoming.getEncounterDate());
-        }
-        if (resolvedEncounterDate == null) {
-            resolvedEncounterDate = parseFlexibleDate(merged.getEncounterDate());
-        }
-        if (resolvedEncounterDate != null) {
-            merged.setEncounterDate(resolvedEncounterDate.toString());
-        }
-
-        LocalDate resolvedPerformDate = parseFlexibleDate(incoming.getPerformDate());
-        if (resolvedPerformDate == null) {
-            resolvedPerformDate = parseFlexibleDate(merged.getPerformDate());
-        }
-        if (resolvedPerformDate != null) {
-            merged.setPerformDate(resolvedPerformDate.toString());
-        }
-
-        if (incoming.getPatientRequested() != null) {
-            merged.setPatientRequested(incoming.getPatientRequested());
-        }
-
-        List<PrescriptionRp> incomingRps = safeList(incoming.getRps());
-        for (PrescriptionRp incomingRp : incomingRps) {
-            stampImportedRp(incomingRp, incoming, runId, remoteUser, now);
-        }
-        merged.setRps(mergeRps(merged.getRps(), incomingRps));
-
-        if (!safeList(incoming.getClaimComments()).isEmpty()) {
-            List<open.dolphin.rest.dto.orca.PrescriptionClaimComment> claimComments = safeList(merged.getClaimComments());
-            claimComments.addAll(safeList(incoming.getClaimComments()));
-            merged.setClaimComments(claimComments);
-        }
-
-        if (!safeList(incoming.getRemarks()).isEmpty()) {
-            merged.setRemarks(safeList(incoming.getRemarks()));
-        }
-
-        merged.setPrescriptionSettings(mergeSettings(merged.getPrescriptionSettings(), incoming.getPrescriptionSettings()));
-
-        List<PrescriptionDoctorComment> doctorComments = safeList(merged.getDoctorComments());
-        doctorComments.addAll(safeList(incoming.getDoctorComments()));
-        merged.setDoctorComments(doctorComments);
-
-        PrescriptionDoInputMeta doMeta = merged.getDoInputMeta();
-        if (doMeta == null) {
-            doMeta = new PrescriptionDoInputMeta();
-        }
-        doMeta.setImportedFromDo(Boolean.TRUE);
-        doMeta.setSourcePatientId(hasText(incoming.getPatientId()) ? incoming.getPatientId().trim() : patientId);
-        doMeta.setSourceEncounterId(trimToNull(incoming.getEncounterId()));
-        doMeta.setSourceEncounterDate(normalizeDateText(incoming.getEncounterDate()));
-        if (incoming.getDoInputMeta() != null && hasText(incoming.getDoInputMeta().getSourceOrderId())) {
-            doMeta.setSourceOrderId(incoming.getDoInputMeta().getSourceOrderId().trim());
-        }
-        doMeta.setImportedBy(remoteUser);
-        doMeta.setImportedAt(now.toString());
-        doMeta.setPolicyVersion("v1");
-        doMeta.setRunId(runId);
-        merged.setDoInputMeta(doMeta);
-
-        LocalDate effectiveDate = resolvedEncounterDate != null ? resolvedEncounterDate : LocalDate.now();
-        excludeExpiredImportedDrugs(merged, effectiveDate, warnings);
-        return merged;
+            long orderId,
+            PrescriptionOrderDoImportResponse response) {
+        Map<String, Object> audit = new HashMap<>();
+        audit.put("facilityId", facilityId);
+        audit.put("patientId", patientId);
+        audit.put("encounterId", response.getEncounterId());
+        audit.put("encounterDate", response.getEncounterDate());
+        audit.put("orderId", orderId);
+        audit.put("warnings", response.getWarnings().size());
+        audit.put("runId", runId);
+        recordAudit(request, "ORCA_PRESCRIPTION_DO_IMPORT", audit, AuditEventEnvelope.Outcome.SUCCESS);
     }
 
-    private void validateDoImportUsageCodes(
+    private void ensureDoImportUsageCodes(
             HttpServletRequest request,
             PrescriptionOrder doOrder,
             String facilityId,
             String patientId,
             String runId) {
-        if (doOrder == null || doOrder.getRps() == null) {
+        if (!OrcaPrescriptionOrderImportSupport.hasMissingUsageCode(doOrder)) {
             return;
         }
-        for (PrescriptionRp rp : doOrder.getRps()) {
-            if (rp == null || rp.getDrugs() == null || rp.getDrugs().isEmpty()) {
-                continue;
-            }
-            if (!hasText(rp.getUsageCode())) {
-                Map<String, Object> details = new HashMap<>();
-                details.put("facilityId", facilityId);
-                details.put("patientId", patientId);
-                details.put("runId", runId);
-                details.put("field", "usageCode");
-                details.put("rpNumber", rp.getRpNumber());
-                details.put("validationError", Boolean.TRUE);
-                markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(), "unregistered_usage",
-                        "未登録用法を含むためDo入力を反映できません");
-                recordAudit(request, "ORCA_PRESCRIPTION_DO_IMPORT", details, AuditEventEnvelope.Outcome.FAILURE);
-                throw restError(request,
-                        Response.Status.BAD_REQUEST,
-                        "unregistered_usage",
-                        "未登録用法を含むためDo入力を反映できません",
-                        details,
-                        null);
-            }
-        }
-    }
-
-    private void excludeExpiredImportedDrugs(PrescriptionOrder order, LocalDate asOf, List<String> warnings) {
-        if (order == null || order.getRps() == null) {
-            return;
-        }
-        for (PrescriptionRp rp : order.getRps()) {
-            if (rp == null || rp.getDrugs() == null) {
-                continue;
-            }
-            List<PrescriptionDrug> kept = new ArrayList<>();
-            for (PrescriptionDrug drug : rp.getDrugs()) {
-                if (drug == null) {
-                    continue;
-                }
-                PrescriptionDoInputMeta meta = drug.getDoInputMeta();
-                boolean imported = meta != null && Boolean.TRUE.equals(meta.getImportedFromDo());
-                if (!imported) {
-                    kept.add(drug);
-                    continue;
-                }
-                LocalDate validTo = parseFlexibleDate(drug.getValidTo());
-                if (validTo != null && validTo.isBefore(asOf)) {
-                    warnings.add("有効期限切れ薬剤を除外: rp="
-                            + trimToEmpty(rp.getRpNumber())
-                            + ", code=" + trimToEmpty(drug.getCode())
-                            + ", validTo=" + validTo);
-                    continue;
-                }
-                kept.add(drug);
-            }
-            rp.setDrugs(kept);
-        }
-    }
-
-    private void stampImportedRp(PrescriptionRp rp,
-            PrescriptionOrder sourceOrder,
-            String runId,
-            String remoteUser,
-            Instant now) {
-        if (rp == null || rp.getDrugs() == null) {
-            return;
-        }
-        for (PrescriptionDrug drug : rp.getDrugs()) {
-            if (drug == null) {
-                continue;
-            }
-            PrescriptionDoInputMeta meta = drug.getDoInputMeta();
-            if (meta == null) {
-                meta = new PrescriptionDoInputMeta();
-            }
-            meta.setImportedFromDo(Boolean.TRUE);
-            if (!hasText(meta.getSourcePatientId())) {
-                meta.setSourcePatientId(trimToNull(sourceOrder.getPatientId()));
-            }
-            if (!hasText(meta.getSourceEncounterId())) {
-                meta.setSourceEncounterId(trimToNull(sourceOrder.getEncounterId()));
-            }
-            if (!hasText(meta.getSourceEncounterDate())) {
-                meta.setSourceEncounterDate(normalizeDateText(sourceOrder.getEncounterDate()));
-            }
-            meta.setImportedBy(remoteUser);
-            meta.setImportedAt(now.toString());
-            if (!hasText(meta.getPolicyVersion())) {
-                meta.setPolicyVersion("v1");
-            }
-            meta.setRunId(runId);
-            drug.setDoInputMeta(meta);
-        }
-    }
-
-    private List<PrescriptionRp> mergeRps(List<PrescriptionRp> baseRps, List<PrescriptionRp> incomingRps) {
-        List<PrescriptionRp> merged = safeList(baseRps);
-        if (incomingRps == null || incomingRps.isEmpty()) {
-            return merged;
-        }
-        Map<String, Integer> byNumber = new LinkedHashMap<>();
-        for (int i = 0; i < merged.size(); i++) {
-            PrescriptionRp rp = merged.get(i);
-            String key = rp != null ? trimToNull(rp.getRpNumber()) : null;
-            if (key != null && !byNumber.containsKey(key)) {
-                byNumber.put(key, i);
-            }
-        }
-        for (PrescriptionRp incoming : incomingRps) {
-            if (incoming == null) {
-                continue;
-            }
-            String key = trimToNull(incoming.getRpNumber());
-            Integer index = key != null ? byNumber.get(key) : null;
-            if (index != null) {
-                merged.set(index, incoming);
-            } else {
-                merged.add(incoming);
-                if (key != null) {
-                    byNumber.put(key, merged.size() - 1);
-                }
-            }
-        }
-        return merged;
-    }
-
-    private List<PrescriptionSetting> mergeSettings(List<PrescriptionSetting> baseSettings,
-            List<PrescriptionSetting> incomingSettings) {
-        List<PrescriptionSetting> merged = safeList(baseSettings);
-        if (incomingSettings == null || incomingSettings.isEmpty()) {
-            return merged;
-        }
-        Map<String, Integer> byCode = new LinkedHashMap<>();
-        for (int i = 0; i < merged.size(); i++) {
-            PrescriptionSetting setting = merged.get(i);
-            String key = setting != null ? trimToNull(setting.getCode()) : null;
-            if (key != null && !byCode.containsKey(key)) {
-                byCode.put(key, i);
-            }
-        }
-        for (PrescriptionSetting incoming : incomingSettings) {
-            if (incoming == null) {
-                continue;
-            }
-            String key = trimToNull(incoming.getCode());
-            Integer index = key != null ? byCode.get(key) : null;
-            if (index != null) {
-                merged.set(index, incoming);
-            } else {
-                merged.add(incoming);
-                if (key != null) {
-                    byCode.put(key, merged.size() - 1);
-                }
-            }
-        }
-        return merged;
+        Map<String, Object> details = new HashMap<>();
+        details.put("facilityId", facilityId);
+        details.put("patientId", patientId);
+        details.put("runId", runId);
+        details.put("field", "usageCode");
+        details.put("validationError", Boolean.TRUE);
+        markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(), "unregistered_usage",
+                "未登録用法を含むためDo入力を反映できません");
+        recordAudit(request, "ORCA_PRESCRIPTION_DO_IMPORT", details, AuditEventEnvelope.Outcome.FAILURE);
+        throw restError(request,
+                Response.Status.BAD_REQUEST,
+                "unregistered_usage",
+                "未登録用法を含むためDo入力を反映できません",
+                details,
+                null);
     }
 
     private PrescriptionOrder decodeOrderOrThrow(HttpServletRequest request,
@@ -652,14 +461,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
     }
 
     private LocalDate parseFlexibleDate(String value) {
-        if (!hasText(value)) {
-            return null;
-        }
-        try {
-            return parseFlexibleDateStrict(value);
-        } catch (DateTimeParseException ex) {
-            return null;
-        }
+        return OrcaPrescriptionOrderImportSupport.parseFlexibleDate(value);
     }
 
     private LocalDate parseFlexibleDateStrict(String value) {
@@ -668,15 +470,13 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         }
         String normalized = value.trim();
         if (normalized.matches("\\d{8}")) {
-            return LocalDate.parse(normalized,
-                    java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+            return LocalDate.parse(normalized, java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
         }
         return LocalDate.parse(normalized);
     }
 
     private String normalizeDateText(String value) {
-        LocalDate parsed = parseFlexibleDate(value);
-        return parsed != null ? parsed.toString() : null;
+        return OrcaPrescriptionOrderImportSupport.normalizeDateText(value);
     }
 
     private PrescriptionOrder copyOrder(PrescriptionOrder source) {
@@ -691,14 +491,11 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
     }
 
     private String trimToNull(String value) {
-        if (!hasText(value)) {
-            return null;
-        }
-        return value.trim();
+        return OrcaPrescriptionOrderImportSupport.trimToNull(value);
     }
 
     private String trimToEmpty(String value) {
-        return value == null ? "" : value.trim();
+        return OrcaPrescriptionOrderImportSupport.trimToEmpty(value);
     }
 
     private <T> List<T> safeList(List<T> source) {
@@ -713,4 +510,14 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         }
         return copied;
     }
+
+    private record DoImportContext(String patientId, String targetEncounterId, LocalDate targetEncounterDate) {}
+
+    private record DoImportResult(
+            PrescriptionOrder merged,
+            LocalDate mergedEncounterDate,
+            LocalDate performDate,
+            Instant now,
+            List<String> warnings,
+            String json) {}
 }

@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 class AttachmentStorageManagerTest {
@@ -160,6 +161,20 @@ class AttachmentStorageManagerTest {
         assertThatThrownBy(() -> manager.populateBinary(attachment))
                 .isInstanceOf(AttachmentStorageException.class)
                 .hasMessageContaining("neither inline bytes nor external uri");
+    }
+
+    @Test
+    void isBackendReachable_returnsTrueWhenHeadBucketSucceeds() {
+        when(s3Client.headBucket(any(HeadBucketRequest.class))).thenReturn(null);
+
+        assertThat(manager.isBackendReachable()).isTrue();
+    }
+
+    @Test
+    void isBackendReachable_returnsFalseWhenHeadBucketFails() {
+        when(s3Client.headBucket(any(HeadBucketRequest.class))).thenThrow(new IllegalStateException("down"));
+
+        assertThat(manager.isBackendReachable()).isFalse();
     }
 
     @Test

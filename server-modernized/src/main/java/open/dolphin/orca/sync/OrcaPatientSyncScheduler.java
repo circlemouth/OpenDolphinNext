@@ -9,14 +9,15 @@ import jakarta.inject.Inject;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infrastructure.concurrent.ConcurrencyResourceNames;
-import open.dolphin.runtime.RuntimeConfigurationSupport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 import open.dolphin.rest.dto.orca.PatientSyncRequest;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 
@@ -35,7 +36,7 @@ public class OrcaPatientSyncScheduler {
     private static final String ENV_INCLUDE_TEST_PATIENT = "ORCA_PATIENT_SYNC_INCLUDE_TEST_PATIENT";
     private static final String ENV_INCLUDE_INSURANCE = "ORCA_PATIENT_SYNC_INCLUDE_INSURANCE";
     private static final String ENV_FACILITY_ID = "ORCA_PATIENT_SYNC_FACILITY_ID";
-    private static final java.time.ZoneId SYNC_ZONE = RuntimeConfigurationSupport.resolveTimezone();
+    private static final ZoneId SYNC_ZONE = defaultSyncZone();
 
     @Resource(lookup = ConcurrencyResourceNames.DEFAULT_SCHEDULER)
     private ManagedScheduledExecutorService scheduler;
@@ -61,7 +62,7 @@ public class OrcaPatientSyncScheduler {
             LOGGER.warning("ManagedScheduledExecutorService is not available. ORCA patient sync will not be scheduled.");
             return;
         }
-        int intervalMinutes = resolveIntEnv(ENV_INTERVAL_MINUTES, 5);
+        int intervalMinutes = resolveIntervalMinutes();
         if (intervalMinutes < 1) {
             intervalMinutes = 1;
         }
@@ -87,8 +88,9 @@ public class OrcaPatientSyncScheduler {
         }
         LocalDate today = LocalDate.now(SYNC_ZONE);
         LocalDate startDate = resolveStartDate(facilityId, today);
-        boolean includeTestPatient = resolveBooleanEnv(ENV_INCLUDE_TEST_PATIENT, false);
-        boolean includeInsurance = resolveBooleanEnv(ENV_INCLUDE_INSURANCE, false);
+        ServerRuntimeConfiguration.OrcaPatientSyncSettings settings = syncSettings();
+        boolean includeTestPatient = settings.includeTestPatient();
+        boolean includeInsurance = settings.includeInsurance();
         String runId = AbstractOrcaRestResource.resolveRunIdValue((String) null);
 
         PatientSyncRequest request = new PatientSyncRequest();
@@ -120,7 +122,7 @@ public class OrcaPatientSyncScheduler {
     }
 
     private LocalDate resolveStartDate(String facilityId, LocalDate today) {
-        int lookbackDays = resolveIntEnv(ENV_LOOKBACK_DAYS, 7);
+        int lookbackDays = resolveLookbackDays();
         if (lookbackDays < 0) {
             lookbackDays = 0;
         }
@@ -143,22 +145,26 @@ public class OrcaPatientSyncScheduler {
     }
 
     public static boolean resolveEnabledFromEnvironment() {
-        return RuntimeConfigurationSupport.resolveBooleanFlag(PROP_ENABLED, ENV_ENABLED, false);
+        return new ServerConfigurationResolver().orcaPatientSync().enabled();
     }
 
-    private static boolean resolveBooleanEnv(String key, boolean fallback) {
-        return RuntimeConfigurationSupport.resolveBooleanFlag(null, key, fallback);
+    private int resolveIntervalMinutes() {
+        Integer configured = syncSettings().intervalMinutes();
+        return configured != null && configured > 0 ? configured : 5;
     }
 
-    private static int resolveIntEnv(String key, int fallback) {
-        return RuntimeConfigurationSupport.resolvePositiveInt(null, key, fallback);
+    private int resolveLookbackDays() {
+        Integer configured = syncSettings().initialLookbackDays();
+        return configured != null && configured >= 0 ? configured : 7;
     }
 
     private String resolveFacilityId() {
-        String explicit = RuntimeConfigurationSupport.firstNonBlank(
-                RuntimeConfigurationSupport.resolveFacilityId(ENV_FACILITY_ID));
+        String explicit = syncSettings().facilityId();
         if (explicit != null) {
-            return explicit;
+            String normalized = explicit.trim();
+            if (!normalized.isEmpty()) {
+                return normalized;
+            }
         }
         if (configurationResolver != null) {
             String value = configurationResolver.orcaRuntime().facilityId();
@@ -167,5 +173,17 @@ public class OrcaPatientSyncScheduler {
             }
         }
         return null;
+    }
+
+    private ServerRuntimeConfiguration.OrcaPatientSyncSettings syncSettings() {
+        if (configurationResolver == null) {
+            configurationResolver = new ServerConfigurationResolver();
+        }
+        return configurationResolver.orcaPatientSync();
+    }
+
+    private static ZoneId defaultSyncZone() {
+        ZoneId configured = new ServerConfigurationResolver().runtime().timezone();
+        return configured != null ? configured : ZoneId.of("Asia/Tokyo");
     }
 }

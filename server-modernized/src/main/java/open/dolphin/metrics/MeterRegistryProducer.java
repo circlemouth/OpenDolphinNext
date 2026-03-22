@@ -5,8 +5,10 @@ import io.micrometer.core.instrument.Metrics;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
 import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,9 +20,17 @@ import org.slf4j.LoggerFactory;
 public class MeterRegistryProducer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MeterRegistryProducer.class);
-    private static final String PROPERTY_KEY = "open.dolphin.metrics.registry.jndi";
-    private static final String ENVIRONMENT_KEY = "OPEN_DOLPHIN_METRICS_REGISTRY_JNDI";
     private static final String DEFAULT_JNDI_NAME = "java:jboss/micrometer/registry";
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
+
+    MeterRegistryProducer(ServerConfigurationResolver configurationResolver) {
+        this.configurationResolver = configurationResolver;
+    }
+
+    public MeterRegistryProducer() {
+    }
 
     @Produces
     @Dependent
@@ -35,13 +45,9 @@ public class MeterRegistryProducer {
     }
 
     private String resolveJndiName() {
-        String fromProperty = System.getProperty(PROPERTY_KEY);
-        if (fromProperty != null && !fromProperty.isBlank()) {
-            return fromProperty;
-        }
-        String fromEnv = System.getenv(ENVIRONMENT_KEY);
-        if (fromEnv != null && !fromEnv.isBlank()) {
-            return fromEnv;
+        String configured = configurationResolver != null ? configurationResolver.metrics().registryJndi() : null;
+        if (configured != null && !configured.isBlank()) {
+            return configured;
         }
         return DEFAULT_JNDI_NAME;
     }

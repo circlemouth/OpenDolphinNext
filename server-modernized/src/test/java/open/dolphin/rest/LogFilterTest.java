@@ -153,6 +153,25 @@ class LogFilterTest {
     }
 
     @Test
+    void operationsReadinessRequiresAuthenticatedPrincipal() throws Exception {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain chain = mock(FilterChain.class);
+        stubResponseOutput(response);
+
+        when(request.getHeader(anyString())).thenReturn(null);
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/operations/readiness");
+        when(request.getContextPath()).thenReturn("/openDolphin");
+        when(request.getMethod()).thenReturn("GET");
+        when(request.getRemoteAddr()).thenReturn("192.0.2.23");
+
+        filter.doFilter(request, response, chain);
+
+        verify(chain, never()).doFilter(any(ServletRequest.class), eq(response));
+        verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    @Test
     void unauthorizedRequestGeneratesTraceIdAndLogs() throws Exception {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);

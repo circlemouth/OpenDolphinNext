@@ -42,148 +42,161 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
     @Produces(MediaType.APPLICATION_JSON)
     public PatientMutationResponse mutatePatient(@Context HttpServletRequest request,
             PatientMutationRequest payload) {
-
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
         String runId = resolveRunId(request);
+        String operation = requireMutationOperation(request, payload, facilityId, runId);
+        String patientId = requireMutationPatientId(request, payload, facilityId, operation, runId);
+        Map<String, Object> auditDetails = buildPatientMutationAudit(facilityId, patientId, operation, runId);
 
+        return switch (operation.toLowerCase()) {
+            case "create" -> createPatient(request, payload, facilityId, auditDetails);
+            case "update" -> updatePatient(request, payload, facilityId, auditDetails);
+            case "delete" -> rejectDeleteOperation(request, auditDetails);
+            default -> rejectUnsupportedOperation(request, payload.getOperation(), auditDetails);
+        };
+    }
+
+    private String requireMutationOperation(HttpServletRequest request, PatientMutationRequest payload,
+            String facilityId, String runId) {
         if (payload == null || payload.getOperation() == null) {
-            Map<String, Object> auditDetails = new HashMap<>();
-            auditDetails.put("facilityId", facilityId);
-            auditDetails.put("runId", runId);
-            auditDetails.put("validationError", Boolean.TRUE);
-            auditDetails.put("field", "operation");
-            markFailureDetails(auditDetails, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "operation is required");
-            recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "operation", "operation is required");
+            Map<String, Object> auditDetails = buildPatientMutationAudit(facilityId, null, null, runId);
+            failMutationRequest(request, auditDetails, "operation", "operation is required");
         }
+        return payload.getOperation().trim();
+    }
+
+    private String requireMutationPatientId(HttpServletRequest request, PatientMutationRequest payload,
+            String facilityId, String operation, String runId) {
         if (payload.getPatient() == null || payload.getPatient().getPatientId() == null
                 || payload.getPatient().getPatientId().isBlank()) {
-            Map<String, Object> auditDetails = new HashMap<>();
-            auditDetails.put("facilityId", facilityId);
-            auditDetails.put("operation", payload.getOperation());
-            auditDetails.put("runId", runId);
-            auditDetails.put("validationError", Boolean.TRUE);
-            auditDetails.put("field", "patient.patientId");
-            markFailureDetails(auditDetails, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "patientId is required");
-            recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "patient.patientId", "patientId is required");
+            Map<String, Object> auditDetails = buildPatientMutationAudit(facilityId, null, operation, runId);
+            failMutationRequest(request, auditDetails, "patient.patientId", "patientId is required");
         }
+        return payload.getPatient().getPatientId().trim();
+    }
 
-        PatientMutationResponse response = new PatientMutationResponse();
-        response.setRunId(runId);
-        response.setPatientId(payload.getPatient().getPatientId());
-
+    private Map<String, Object> buildPatientMutationAudit(String facilityId, String patientId, String operation,
+            String runId) {
         Map<String, Object> auditDetails = new HashMap<>();
         auditDetails.put("facilityId", facilityId);
-        auditDetails.put("patientId", payload.getPatient().getPatientId());
-        auditDetails.put("operation", payload.getOperation());
-        auditDetails.put("runId", runId);
-
-        switch (payload.getOperation().toLowerCase()) {
-            case "create" -> {
-                PatientModel existing = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
-                if (existing != null) {
-                    List<String> conflicts = resolveConflicts(existing, payload.getPatient());
-                    if (!conflicts.isEmpty()) {
-                        Map<String, Object> conflictAudit = new HashMap<>(auditDetails);
-                        conflictAudit.put("conflictFields", conflicts);
-                        markFailureDetails(conflictAudit, Response.Status.CONFLICT.getStatusCode(),
-                                "patient_conflict", "Patient already exists with different attributes");
-                        recordAudit(request, "ORCA_PATIENT_MUTATION", conflictAudit, AuditEventEnvelope.Outcome.FAILURE);
-                        Map<String, Object> errorDetails = new HashMap<>();
-                        errorDetails.put("patientId", payload.getPatient().getPatientId());
-                        errorDetails.put("conflictFields", conflicts);
-                        throw restError(request, Response.Status.CONFLICT, "patient_conflict",
-                                "Patient already exists with different attributes", errorDetails, null);
-                    }
-                    response.setApiResult("00");
-                    response.setApiResultMessage("登録済み");
-                    response.setPatientDbId(existing.getId());
-                    response.setIdempotent(Boolean.TRUE);
-                    response.setIdempotentReason("existing_patient");
-                    auditDetails.put("idempotent", Boolean.TRUE);
-                    auditDetails.put("idempotentReason", "existing_patient");
-                    recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
-                    return response;
-                }
-                PatientModel model = toPatientModel(payload.getPatient(), facilityId);
-                try {
-                    long id = patientServiceBean.addPatient(model);
-                    response.setApiResult("00");
-                    response.setApiResultMessage("登録完了");
-                    response.setPatientDbId(id);
-                    recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
-                    return response;
-                } catch (RuntimeException ex) {
-                    PatientModel retryExisting = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
-                    if (retryExisting != null) {
-                        List<String> conflicts = resolveConflicts(retryExisting, payload.getPatient());
-                        if (!conflicts.isEmpty()) {
-                            Map<String, Object> conflictAudit = new HashMap<>(auditDetails);
-                            conflictAudit.put("conflictFields", conflicts);
-                            markFailureDetails(conflictAudit, Response.Status.CONFLICT.getStatusCode(),
-                                    "patient_conflict", "Patient already exists with different attributes");
-                            recordAudit(request, "ORCA_PATIENT_MUTATION", conflictAudit, AuditEventEnvelope.Outcome.FAILURE);
-                            Map<String, Object> errorDetails = new HashMap<>();
-                            errorDetails.put("patientId", payload.getPatient().getPatientId());
-                            errorDetails.put("conflictFields", conflicts);
-                            throw restError(request, Response.Status.CONFLICT, "patient_conflict",
-                                    "Patient already exists with different attributes", errorDetails, null);
-                        }
-                        response.setApiResult("00");
-                        response.setApiResultMessage("登録済み");
-                        response.setPatientDbId(retryExisting.getId());
-                        response.setIdempotent(Boolean.TRUE);
-                        response.setIdempotentReason("duplicate_detected");
-                        auditDetails.put("idempotent", Boolean.TRUE);
-                        auditDetails.put("idempotentReason", "duplicate_detected");
-                        recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
-                        return response;
-                    }
-                    throw ex;
-                }
-            }
-            case "update" -> {
-                PatientModel existing = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
-                if (existing == null) {
-                    Map<String, Object> missingAudit = new HashMap<>(auditDetails);
-                    markFailureDetails(missingAudit, Response.Status.NOT_FOUND.getStatusCode(),
-                            "patient_not_found", "Patient not found");
-                    recordAudit(request, "ORCA_PATIENT_MUTATION", missingAudit, AuditEventEnvelope.Outcome.FAILURE);
-                    throw restError(request, Response.Status.NOT_FOUND, "patient_not_found",
-                            "Patient not found");
-                }
-                PatientModel update = toPatientModel(payload.getPatient(), facilityId);
-                update.setId(existing.getId());
-                patientServiceBean.update(update);
-                response.setApiResult("00");
-                response.setApiResultMessage("更新完了");
-                response.setPatientDbId(existing.getId());
-                recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
-                return response;
-            }
-            case "delete" -> {
-                Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);
-                unsupportedAudit.put("validationError", Boolean.TRUE);
-                unsupportedAudit.put("field", "operation");
-                markFailureDetails(unsupportedAudit, Response.Status.BAD_REQUEST.getStatusCode(),
-                        "invalid_request", "delete operation is not supported");
-                recordAudit(request, "ORCA_PATIENT_MUTATION", unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
-                throw validationError(request, "operation", "delete operation is not supported");
-            }
-            default -> {
-                Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);
-                unsupportedAudit.put("validationError", Boolean.TRUE);
-                unsupportedAudit.put("field", "operation");
-                markFailureDetails(unsupportedAudit, Response.Status.BAD_REQUEST.getStatusCode(),
-                        "invalid_request", "Unsupported operation: " + payload.getOperation());
-                recordAudit(request, "ORCA_PATIENT_MUTATION", unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
-                throw validationError(request, "operation", "Unsupported operation: " + payload.getOperation());
-            }
+        if (patientId != null) {
+            auditDetails.put("patientId", patientId);
         }
+        if (operation != null) {
+            auditDetails.put("operation", operation);
+        }
+        auditDetails.put("runId", runId);
+        return auditDetails;
+    }
+
+    private PatientMutationResponse createPatient(HttpServletRequest request, PatientMutationRequest payload,
+            String facilityId, Map<String, Object> auditDetails) {
+        PatientMutationResponse response = new PatientMutationResponse();
+        response.setRunId((String) auditDetails.get("runId"));
+        response.setPatientId(payload.getPatient().getPatientId());
+
+        PatientModel existing = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
+        if (existing != null) {
+            return resolveExistingPatientCreate(request, payload, auditDetails, existing, response, "existing_patient");
+        }
+
+        try {
+            long id = patientServiceBean.addPatient(toPatientModel(payload.getPatient(), facilityId));
+            response.setApiResult("00");
+            response.setApiResultMessage("登録完了");
+            response.setPatientDbId(id);
+            recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
+            return response;
+        } catch (RuntimeException ex) {
+            PatientModel retryExisting = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
+            if (retryExisting != null) {
+                return resolveExistingPatientCreate(request, payload, auditDetails, retryExisting, response,
+                        "duplicate_detected");
+            }
+            throw ex;
+        }
+    }
+
+    private PatientMutationResponse resolveExistingPatientCreate(HttpServletRequest request, PatientMutationRequest payload,
+            Map<String, Object> auditDetails, PatientModel existing, PatientMutationResponse response,
+            String idempotentReason) {
+        List<String> conflicts = resolveConflicts(existing, payload.getPatient());
+        if (!conflicts.isEmpty()) {
+            Map<String, Object> conflictAudit = new HashMap<>(auditDetails);
+            conflictAudit.put("conflictFields", conflicts);
+            markFailureDetails(conflictAudit, Response.Status.CONFLICT.getStatusCode(),
+                    "patient_conflict", "Patient already exists with different attributes");
+            recordAudit(request, "ORCA_PATIENT_MUTATION", conflictAudit, AuditEventEnvelope.Outcome.FAILURE);
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("patientId", payload.getPatient().getPatientId());
+            errorDetails.put("conflictFields", conflicts);
+            throw restError(request, Response.Status.CONFLICT, "patient_conflict",
+                    "Patient already exists with different attributes", errorDetails, null);
+        }
+        response.setApiResult("00");
+        response.setApiResultMessage("登録済み");
+        response.setPatientDbId(existing.getId());
+        response.setIdempotent(Boolean.TRUE);
+        response.setIdempotentReason(idempotentReason);
+        auditDetails.put("idempotent", Boolean.TRUE);
+        auditDetails.put("idempotentReason", idempotentReason);
+        recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
+        return response;
+    }
+
+    private PatientMutationResponse updatePatient(HttpServletRequest request, PatientMutationRequest payload,
+            String facilityId, Map<String, Object> auditDetails) {
+        PatientModel existing = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
+        if (existing == null) {
+            Map<String, Object> missingAudit = new HashMap<>(auditDetails);
+            markFailureDetails(missingAudit, Response.Status.NOT_FOUND.getStatusCode(),
+                    "patient_not_found", "Patient not found");
+            recordAudit(request, "ORCA_PATIENT_MUTATION", missingAudit, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found");
+        }
+        PatientModel update = toPatientModel(payload.getPatient(), facilityId);
+        update.setId(existing.getId());
+        patientServiceBean.update(update);
+        PatientMutationResponse response = new PatientMutationResponse();
+        response.setRunId((String) auditDetails.get("runId"));
+        response.setPatientId(payload.getPatient().getPatientId());
+        response.setApiResult("00");
+        response.setApiResultMessage("更新完了");
+        response.setPatientDbId(existing.getId());
+        recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
+        return response;
+    }
+
+    private PatientMutationResponse rejectDeleteOperation(HttpServletRequest request, Map<String, Object> auditDetails) {
+        Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);
+        unsupportedAudit.put("validationError", Boolean.TRUE);
+        unsupportedAudit.put("field", "operation");
+        markFailureDetails(unsupportedAudit, Response.Status.BAD_REQUEST.getStatusCode(),
+                "invalid_request", "delete operation is not supported");
+        recordAudit(request, "ORCA_PATIENT_MUTATION", unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
+        throw validationError(request, "operation", "delete operation is not supported");
+    }
+
+    private PatientMutationResponse rejectUnsupportedOperation(HttpServletRequest request, String operation,
+            Map<String, Object> auditDetails) {
+        Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);
+        unsupportedAudit.put("validationError", Boolean.TRUE);
+        unsupportedAudit.put("field", "operation");
+        markFailureDetails(unsupportedAudit, Response.Status.BAD_REQUEST.getStatusCode(),
+                "invalid_request", "Unsupported operation: " + operation);
+        recordAudit(request, "ORCA_PATIENT_MUTATION", unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
+        throw validationError(request, "operation", "Unsupported operation: " + operation);
+    }
+
+    private void failMutationRequest(HttpServletRequest request, Map<String, Object> auditDetails, String field,
+            String message) {
+        auditDetails.put("validationError", Boolean.TRUE);
+        auditDetails.put("field", field);
+        markFailureDetails(auditDetails, Response.Status.BAD_REQUEST.getStatusCode(),
+                "invalid_request", message);
+        recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.FAILURE);
+        throw validationError(request, field, message);
     }
 
     private PatientModel toPatientModel(PatientPayload payload, String facilityId) {

@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infrastructure.concurrent.ConcurrencyResourceNames;
-import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
 @ApplicationScoped
 public class ChartEventHistoryPurgeScheduler {
@@ -30,6 +31,9 @@ public class ChartEventHistoryPurgeScheduler {
 
     @Inject
     private ChartEventHistoryMaintenanceService maintenanceService;
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
 
     private ScheduledFuture<?> scheduled;
 
@@ -65,10 +69,18 @@ public class ChartEventHistoryPurgeScheduler {
     }
 
     private boolean resolveEnabled() {
-        return RuntimeConfigurationSupport.resolveBooleanFlag(PROP_ENABLED, ENV_ENABLED, false);
+        return purgeSettings().enabled();
     }
 
     private int resolveIntervalMinutes() {
-        return RuntimeConfigurationSupport.resolvePositiveInt(PROP_INTERVAL_MINUTES, ENV_INTERVAL_MINUTES, DEFAULT_INTERVAL_MINUTES);
+        Integer configured = purgeSettings().intervalMinutes();
+        return configured != null && configured > 0 ? configured : DEFAULT_INTERVAL_MINUTES;
+    }
+
+    private ServerRuntimeConfiguration.ChartEventHistoryPurgeSettings purgeSettings() {
+        if (configurationResolver == null) {
+            configurationResolver = new ServerConfigurationResolver();
+        }
+        return configurationResolver.chartEventHistoryPurge();
     }
 }

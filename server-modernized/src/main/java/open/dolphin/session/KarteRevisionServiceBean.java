@@ -196,10 +196,16 @@ public class KarteRevisionServiceBean {
             throw new IllegalStateException("Failed to clone source revision: " + sourceRevisionId);
         }
 
-        // Ensure the new snapshot is in the same logical visit group (started date drives Phase1 query).
         Date started = source.getStarted() != null ? source.getStarted() : new Date();
         Date now = new Date();
+        applyRevisionSnapshotMetadata(cloned, source, parentRevisionId, operation, started, now);
+        rebindRevisionChildren(cloned, parentRevisionId, operation, started, now);
+        syncRevisionDocInfo(cloned);
+        return karteServiceBean.addDocument(cloned);
+    }
 
+    private void applyRevisionSnapshotMetadata(DocumentModel cloned, DocumentModel source, long parentRevisionId,
+            String operation, Date started, Date now) {
         cloned.setId(0L);
         cloned.setKarteBean(source.getKarteBean());
         cloned.setUserModel(source.getUserModel());
@@ -211,87 +217,101 @@ public class KarteRevisionServiceBean {
         cloned.setStatus(IInfoModel.STATUS_FINAL);
         cloned.setLinkId(parentRevisionId);
         cloned.setLinkRelation(operation);
-
         DocInfoModel info = cloned.getDocInfoModel();
-        if (info != null) {
-            info.setDocPk(0L);
-            info.setParentPk(parentRevisionId);
-            info.setParentIdRelation(operation);
-            info.setConfirmDate(now);
-            info.setFirstConfirmDate(started);
-            info.setStatus(IInfoModel.STATUS_FINAL);
-            info.setDocId(UUID.randomUUID().toString().replace("-", ""));
+        if (info == null) {
+            return;
         }
+        info.setDocPk(0L);
+        info.setParentPk(parentRevisionId);
+        info.setParentIdRelation(operation);
+        info.setConfirmDate(now);
+        info.setFirstConfirmDate(started);
+        info.setStatus(IInfoModel.STATUS_FINAL);
+        info.setDocId(UUID.randomUUID().toString().replace("-", ""));
+    }
 
-        // Re-bind mandatory relations for child entities.
-        List<ModuleModel> modules = cloned.getModules();
-        if (modules != null) {
-            for (ModuleModel module : modules) {
-                if (module == null) {
-                    continue;
-                }
-                module.setDocumentModel(cloned);
-                module.setKarteBean(cloned.getKarteBean());
-                module.setUserModel(cloned.getUserModel());
-                module.setStarted(started);
-                module.setFirstConfirmed(started);
-                module.setConfirmed(now);
-                module.setRecorded(now);
-                module.setEnded(null);
-                module.setStatus(IInfoModel.STATUS_FINAL);
-                module.setLinkId(parentRevisionId);
-                module.setLinkRelation(operation);
+    private void rebindRevisionChildren(DocumentModel cloned, long parentRevisionId, String operation, Date started,
+            Date now) {
+        rebindModules(cloned.getModules(), cloned, parentRevisionId, operation, started, now);
+        rebindSchema(cloned.getSchema(), cloned, parentRevisionId, operation, started, now);
+        rebindAttachments(cloned.getAttachment(), cloned, parentRevisionId, operation, started, now);
+    }
+
+    private void rebindModules(List<ModuleModel> modules, DocumentModel cloned, long parentRevisionId,
+            String operation, Date started, Date now) {
+        if (modules == null) {
+            return;
+        }
+        for (ModuleModel module : modules) {
+            if (module == null) {
+                continue;
             }
+            module.setDocumentModel(cloned);
+            module.setKarteBean(cloned.getKarteBean());
+            module.setUserModel(cloned.getUserModel());
+            module.setStarted(started);
+            module.setFirstConfirmed(started);
+            module.setConfirmed(now);
+            module.setRecorded(now);
+            module.setEnded(null);
+            module.setStatus(IInfoModel.STATUS_FINAL);
+            module.setLinkId(parentRevisionId);
+            module.setLinkRelation(operation);
         }
+    }
 
-        List<SchemaModel> schema = cloned.getSchema();
-        if (schema != null) {
-            for (SchemaModel image : schema) {
-                if (image == null) {
-                    continue;
-                }
-                image.setDocumentModel(cloned);
-                image.setKarteBean(cloned.getKarteBean());
-                image.setUserModel(cloned.getUserModel());
-                image.setStarted(started);
-                image.setFirstConfirmed(started);
-                image.setConfirmed(now);
-                image.setRecorded(now);
-                image.setEnded(null);
-                image.setStatus(IInfoModel.STATUS_FINAL);
-                image.setLinkId(parentRevisionId);
-                image.setLinkRelation(operation);
+    private void rebindSchema(List<SchemaModel> schema, DocumentModel cloned, long parentRevisionId,
+            String operation, Date started, Date now) {
+        if (schema == null) {
+            return;
+        }
+        for (SchemaModel image : schema) {
+            if (image == null) {
+                continue;
             }
+            image.setDocumentModel(cloned);
+            image.setKarteBean(cloned.getKarteBean());
+            image.setUserModel(cloned.getUserModel());
+            image.setStarted(started);
+            image.setFirstConfirmed(started);
+            image.setConfirmed(now);
+            image.setRecorded(now);
+            image.setEnded(null);
+            image.setStatus(IInfoModel.STATUS_FINAL);
+            image.setLinkId(parentRevisionId);
+            image.setLinkRelation(operation);
         }
+    }
 
-        List<AttachmentModel> attachments = cloned.getAttachment();
-        if (attachments != null) {
-            for (AttachmentModel attachment : attachments) {
-                if (attachment == null) {
-                    continue;
-                }
-                attachment.setDocumentModel(cloned);
-                attachment.setKarteBean(cloned.getKarteBean());
-                attachment.setUserModel(cloned.getUserModel());
-                attachment.setStarted(started);
-                attachment.setFirstConfirmed(started);
-                attachment.setConfirmed(now);
-                attachment.setRecorded(now);
-                attachment.setEnded(null);
-                attachment.setStatus(IInfoModel.STATUS_FINAL);
-                attachment.setLinkId(parentRevisionId);
-                attachment.setLinkRelation(operation);
+    private void rebindAttachments(List<AttachmentModel> attachments, DocumentModel cloned, long parentRevisionId,
+            String operation, Date started, Date now) {
+        if (attachments == null) {
+            return;
+        }
+        for (AttachmentModel attachment : attachments) {
+            if (attachment == null) {
+                continue;
             }
+            attachment.setDocumentModel(cloned);
+            attachment.setKarteBean(cloned.getKarteBean());
+            attachment.setUserModel(cloned.getUserModel());
+            attachment.setStarted(started);
+            attachment.setFirstConfirmed(started);
+            attachment.setConfirmed(now);
+            attachment.setRecorded(now);
+            attachment.setEnded(null);
+            attachment.setStatus(IInfoModel.STATUS_FINAL);
+            attachment.setLinkId(parentRevisionId);
+            attachment.setLinkRelation(operation);
         }
+    }
 
-        // Keep embedded DocInfo and persisted columns in sync when possible.
+    private void syncRevisionDocInfo(DocumentModel cloned) {
         try {
             cloned.toPersist();
         } catch (Exception ignore) {
             // Best-effort: docInfo is mainly for client; persisted fields are already set above.
         }
-
-        return karteServiceBean.addDocument(cloned);
     }
 
     public KarteRevisionDiffResponse diffRevisions(long fromRevisionId, long toRevisionId) {

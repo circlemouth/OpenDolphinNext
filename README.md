@@ -13,6 +13,7 @@
 👉 **[docs/DEVELOPMENT_STATUS.md](docs/DEVELOPMENT_STATUS.md)**
 *   Phase2 ドキュメントの位置付け（Legacy/Archive）
 *   現行作業の参照順とルール
+*   `docs/` 正本索引: [docs/README.md](docs/README.md)
 
 ### Web クライアント開発
 👉 **[docs/web-client/CURRENT.md](docs/web-client/CURRENT.md)**
@@ -25,6 +26,7 @@
 *   Jakarta EE 10 移行、API 設計
 *   ORCA (WebORCA) 連携仕様・接続ルール
 *   サーバー運用・デプロイ手順（Phase2 は Legacy/Archive）
+*   root 側の契約索引: [docs/README.md](docs/README.md) から runtime config / health / ORCA connection / document integrity / patient images を参照
 
 ---
 
@@ -61,6 +63,7 @@
 *   PR [#68](https://github.com/circlemouth/OpenDolphinNext/pull/68)  により、サーバーデータ保存形式の見直しに関する具体的な修正、ご意見を頂けた H.Inomata 様(https://x.com/h_inomata?s=21)に感謝いたします。
 *   ライセンス上の検討およびサーバーデータ保存形式に関する有益な[議論](https://x.com/allnightnihon2b/status/2030508273812820403?s=61)に対し、[@allnightnihon2b](https://x.com/allnightnihon2b?s=21) 様に感謝いたします。
 *   カルテデータ保存形式に関する有益な[議論](https://x.com/air_h_128k_ilI/status/2030995854061142486?s=20)に対し、[@air_h_128k_ili](https://x.com/air_h_128k_ili?s=21) 様に感謝いたします。
+*   orca受付eventの処理周りでは、元町皮ふ科の松村先生の[リポジトリ](https://github.com/pinus/OpenDolphin-1.3.0)を参考にさせて頂きました。
 
 
 

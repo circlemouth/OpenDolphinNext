@@ -12,27 +12,20 @@ import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
 import open.dolphin.orca.transport.RestOrcaTransport;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.rest.dto.OperationsHealthResponse;
-import open.dolphin.rest.dto.OperationsReadinessCheck;
-import open.dolphin.rest.dto.OperationsReadinessResponse;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
 import open.dolphin.storage.attachment.AttachmentStorageMode;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class OperationsHealthResourceTest {
 
     private EntityManager em;
-
     private Query query;
-
     private StubRestOrcaTransport restOrcaTransport;
-
     private AttachmentStorageManager attachmentStorageManager;
-
     private PvtService pvtService;
-
     private OperationsHealthResource resource;
 
     @BeforeEach
@@ -42,16 +35,17 @@ class OperationsHealthResourceTest {
         attachmentStorageManager = org.mockito.Mockito.mock(AttachmentStorageManager.class);
         pvtService = org.mockito.Mockito.mock(PvtService.class);
         restOrcaTransport = new StubRestOrcaTransport();
-        resource = new OperationsHealthResource();
-        setField("em", em);
-        setField("restOrcaTransport", restOrcaTransport);
-        setField("attachmentStorageManager", attachmentStorageManager);
-        setField("pvtService", pvtService);
-    }
 
-    @AfterEach
-    void tearDown() {
-        System.clearProperty("opendolphin.patient.images.enabled");
+        OperationsReadinessEvaluator evaluator = new OperationsReadinessEvaluator();
+        setField(OperationsReadinessEvaluator.class, evaluator, "em", em);
+        setField(OperationsReadinessEvaluator.class, evaluator, "restOrcaTransport", restOrcaTransport);
+        setField(OperationsReadinessEvaluator.class, evaluator, "attachmentStorageManager", attachmentStorageManager);
+        setField(OperationsReadinessEvaluator.class, evaluator, "pvtService", pvtService);
+        setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
+                TestServerConfigurationResolvers.resolver());
+
+        resource = new OperationsHealthResource();
+        setField(OperationsHealthResource.class, resource, "readinessEvaluator", evaluator);
     }
 
     @Test
@@ -65,59 +59,50 @@ class OperationsHealthResourceTest {
     }
 
     @Test
-    void readinessReturnsOkWhenAllChecksAreUp() {
+    void readinessReturnsMinimalStatusOnlyWhenAllChecksAreUp() {
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
         restOrcaTransport.probeResult =
-                new RestOrcaTransport.ProbeResult(true, 401, "https://trial.orca.local/", "orca.host=trial.orca.local,orca.port=443", null, null);
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DATABASE);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
-                "reasons", List.of()));
+                "reasonCodes", List.of()));
 
         Response response = resource.readiness();
 
         assertThat(response.getStatus()).isEqualTo(200);
-        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
-        assertThat(body.getStatus()).isEqualTo("UP");
-        assertThat(body.getChecks().keySet()).containsExactly(
-                "database",
-                "orca",
-                "attachmentStorage",
-                "pvtQueue",
-                "patientImages");
-        OperationsReadinessCheck patientImages = body.getChecks().get("patientImages");
-        assertThat(patientImages).isNotNull();
-        assertThat(patientImages.getStatus()).isEqualTo("DISABLED");
-        assertThat(patientImages.getEnabled()).isFalse();
+        assertThat(response.getEntity()).isEqualTo(Map.of("status", "UP"));
     }
 
     @Test
-    void readinessReturnsServiceUnavailableWhenCriticalCheckFails() {
+    void readinessReturnsDownWithoutDetailedChecksWhenCriticalCheckFails() {
         when(em.createNativeQuery(anyString())).thenThrow(new IllegalStateException("db unavailable"));
         restOrcaTransport.probeResult =
-                new RestOrcaTransport.ProbeResult(false, null, null, RestOrcaTransport.UNKNOWN_AUDIT_SUMMARY, "SocketTimeoutException", "timed out");
-        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DATABASE);
+                new RestOrcaTransport.ProbeResult(false, "weborca", true, false,
+                        RestOrcaTransport.REASON_CODE_PROBE_FAILED);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(false);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "DEGRADED",
-                "reasons", List.of("poison_queue_non_empty")));
+                "reasonCodes", List.of(PvtService.REASON_CODE_PVT_QUEUE_OVER_CAPACITY)));
 
         Response response = resource.readiness();
 
         assertThat(response.getStatus()).isEqualTo(503);
-        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
-        assertThat(body.getStatus()).isEqualTo("DOWN");
+        assertThat(response.getEntity()).isEqualTo(Map.of("status", "DOWN"));
     }
 
-    private void setField(String fieldName, Object value) throws Exception {
-        Field field = OperationsHealthResource.class.getDeclaredField(fieldName);
+    private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {
+        Field field = owner.getDeclaredField(fieldName);
         field.setAccessible(true);
-        field.set(resource, value);
+        field.set(target, value);
     }
 
     private static final class StubRestOrcaTransport extends RestOrcaTransport {
         private RestOrcaTransport.ProbeResult probeResult =
-                RestOrcaTransport.unavailableProbe("transport_unavailable", "probe not configured");
+                RestOrcaTransport.unavailableProbe(RestOrcaTransport.REASON_CODE_TRANSPORT_NOT_READY);
 
         @Override
         public RestOrcaTransport.ProbeResult probeReadiness() {

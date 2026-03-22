@@ -4,7 +4,6 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -18,12 +17,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -110,100 +107,11 @@ public class AdminAccessResource extends AbstractResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
     public Response createUser(@jakarta.ws.rs.core.Context HttpServletRequest request, Map<String, Object> payload) {
-        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
-        String actor = requireAdminActor(request, runId);
-        String facilityId = getRemoteFacility(actor);
-
-        if (payload == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "payload_required", "payload が必要です。");
-        }
-
-        String loginId = trimToNull(asString(payload.get("loginId")));
-        if (loginId == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "loginId_required", "loginId は必須です。");
-        }
-        if (loginId.contains(IInfoModel.COMPOSITE_KEY_MAKER) || loginId.contains(" ")) {
-            throw restError(request, Response.Status.BAD_REQUEST, "loginId_invalid", "loginId に ':' や空白は使用できません。");
-        }
-
-        String password = trimToNull(asString(payload.get("password")));
-        if (password == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "password_required", "password は必須です。");
-        }
-        if (password.length() < 8) {
-            throw restError(request, Response.Status.BAD_REQUEST, "password_too_short", "password は 8 文字以上にしてください。");
-        }
-
-        String displayName = trimToNull(asString(payload.get("displayName")));
-        if (displayName == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "displayName_required", "氏名（displayName）は必須です。");
-        }
-
-        String sex = trimToNullableToken(asString(payload.get("sex")));
-        if (sex != null && !ALLOWED_SEX.contains(sex)) {
-            throw restError(request, Response.Status.BAD_REQUEST, "sex_invalid", "性別は M/F/O のいずれかです。", Map.of("sex", sex), null);
-        }
-        String staffRole = trimToNull(asString(payload.get("staffRole")));
-
-        String sirName = trimToNull(asString(payload.get("sirName")));
-        String givenName = trimToNull(asString(payload.get("givenName")));
-        String email = trimToEmpty(asString(payload.get("email")));
-
-        List<String> roles = normalizeRoles(payload.get("roles"));
-        if (!containsRole(roles, BASELINE_ROLE)) {
-            roles.add(BASELINE_ROLE);
-        }
-        String orcaUserId = trimToNull(asString(payload.get("orcaUserId")));
-        if (orcaUserId != null && !ORCA_USER_ID_PATTERN.matcher(orcaUserId).matches()) {
-            throw restError(request, Response.Status.BAD_REQUEST, "invalid_orca_user_id",
-                    "ORCA User_Id は半角英数字とアンダースコアのみ使用できます。");
-        }
-        if (hasPrivilegedRoles(roles) && orcaUserId == null) {
-            throw restError(request, Response.Status.CONFLICT, "orca_link_required",
-                    "電子カルテ側の権限付与は ORCA 連携済みユーザーのみ実行できます。ORCA User_Id を指定してください。");
-        }
-
-        String compositeUserId = facilityId + IInfoModel.COMPOSITE_KEY_MAKER + loginId;
-        if (userExists(compositeUserId)) {
-            throw restError(request, Response.Status.CONFLICT, "user_exists", "既に存在する loginId です。");
-        }
-
-        UserModel user = new UserModel();
-        user.setUserId(compositeUserId);
-        user.setPassword(passwordHashService.hashForStorage(password));
-        user.setCommonName(displayName);
-        user.setSirName(sirName);
-        user.setGivenName(givenName);
-        user.setEmail(email);
-        user.setMemberType("PROCESS");
-        user.setRegisteredDate(new java.util.Date());
-        user.setFacilityModel(resolveFacility(facilityId));
-        em.persist(user);
-        em.flush();
-
-        persistRoles(user, roles);
-        UserAccessProfileRow profile = upsertProfile(user.getId(), sex, staffRole, null, Instant.now());
-        OrcaLinkStatus orcaLink = null;
-        if (orcaUserId != null) {
-            orcaLink = upsertOrcaLink(request, user.getId(), orcaUserId, actor);
-        }
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("runId", runId);
-        body.put("user", toUserRow(user, profile, orcaLink));
-
-        Map<String, Object> auditDetails = new LinkedHashMap<>();
-        auditDetails.put("operation", "create");
-        auditDetails.put("facilityId", facilityId);
-        auditDetails.put("targetUserPk", user.getId());
-        auditDetails.put("targetLoginId", loginId);
-        auditDetails.put("roles", roles);
-        auditDetails.put("sex", sex);
-        auditDetails.put("staffRole", staffRole);
-        auditDetails.put("orcaUserId", orcaUserId);
-        recordAudit(request, "ADMIN_ACCESS_USER_CREATE", AuditEventEnvelope.Outcome.SUCCESS, runId, auditDetails, null, null);
-
-        return Response.status(Response.Status.CREATED).entity(body).header("x-run-id", runId).build();
+        return new AdminAccessMutationSupport(
+                em,
+                sessionAuditDispatcher,
+                passwordHashService)
+                .createUser(this, request, payload);
     }
 
     @PUT
@@ -214,140 +122,24 @@ public class AdminAccessResource extends AbstractResource {
     public Response updateUser(@jakarta.ws.rs.core.Context HttpServletRequest request,
                                @PathParam("userPk") long userPk,
                                Map<String, Object> payload) {
-        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
-        String actor = requireAdminActor(request, runId);
-        String facilityId = getRemoteFacility(actor);
-
-        if (payload == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "payload_required", "payload が必要です。");
-        }
-
-        UserModel user = em.find(UserModel.class, userPk);
-        if (user == null) {
-            throw restError(request, Response.Status.NOT_FOUND, "user_not_found", "ユーザーが見つかりません。");
-        }
-        requireSameFacility(request, facilityId, user.getUserId());
-
-        String displayName = trimToNull(asString(payload.get("displayName")));
-        String sirName = trimToNull(asString(payload.get("sirName")));
-        String givenName = trimToNull(asString(payload.get("givenName")));
-        String email = asString(payload.get("email")) != null ? trimToEmpty(asString(payload.get("email"))) : null;
-
-        if (displayName != null) user.setCommonName(displayName);
-        if (sirName != null) user.setSirName(sirName);
-        if (givenName != null) user.setGivenName(givenName);
-        if (email != null) user.setEmail(email);
-
-        String sexToken = trimToNullableToken(asString(payload.get("sex")));
-        if (sexToken != null && !ALLOWED_SEX.contains(sexToken) && !sexToken.isBlank()) {
-            throw restError(request, Response.Status.BAD_REQUEST, "sex_invalid", "性別は M/F/O のいずれかです。", Map.of("sex", sexToken), null);
-        }
-        String staffRole = asString(payload.get("staffRole")) != null ? trimToNull(asString(payload.get("staffRole"))) : null;
-
-        boolean rolesProvided = payload.containsKey("roles");
-        List<String> roles = rolesProvided ? normalizeRoles(payload.get("roles")) : List.of();
-        String orcaUserId = trimToNull(asString(payload.get("orcaUserId")));
-        if (orcaUserId != null && !ORCA_USER_ID_PATTERN.matcher(orcaUserId).matches()) {
-            throw restError(request, Response.Status.BAD_REQUEST, "invalid_orca_user_id",
-                    "ORCA User_Id は半角英数字とアンダースコアのみ使用できます。");
-        }
-        OrcaLinkStatus orcaLink = null;
-        if (orcaUserId != null) {
-            orcaLink = upsertOrcaLink(request, userPk, orcaUserId, actor);
-        }
-        if (rolesProvided) {
-            if (!containsRole(roles, BASELINE_ROLE)) {
-                roles.add(BASELINE_ROLE);
-            }
-            if (hasPrivilegedRoles(roles)) {
-                OrcaLinkStatus effectiveLink = orcaLink != null ? orcaLink : findOrcaLinkByUserPk(userPk);
-                if (effectiveLink == null) {
-                    throw restError(request, Response.Status.CONFLICT, "orca_link_required",
-                            "電子カルテ側の権限付与は ORCA 連携済みユーザーのみ実行できます。");
-                }
-                orcaLink = effectiveLink;
-            }
-            long actorPk = resolveActorUserPk(actor);
-            if (actorPk == userPk && !containsAdminRole(roles)) {
-                throw restError(request, Response.Status.BAD_REQUEST, "cannot_remove_own_admin_role",
-                        "自分自身の admin 権限は削除できません。別の管理者で実行してください。");
-            }
-            replaceRoles(user, roles);
-        }
-
-        Instant now = Instant.now();
-        UserAccessProfileRow profile = upsertProfile(userPk, sexToken, staffRole, null, now);
-        if (orcaLink == null) {
-            orcaLink = findOrcaLinkByUserPk(userPk);
-        }
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("runId", runId);
-        body.put("user", toUserRow(user, profile, orcaLink));
-
-        Map<String, Object> updateAuditDetails = new LinkedHashMap<>();
-        updateAuditDetails.put("operation", "update");
-        updateAuditDetails.put("facilityId", facilityId);
-        updateAuditDetails.put("targetUserPk", userPk);
-        updateAuditDetails.put("targetLoginId", extractLoginId(user.getUserId()));
-        updateAuditDetails.put("roles", rolesProvided ? roles : null);
-        updateAuditDetails.put("sex", sexToken);
-        updateAuditDetails.put("staffRole", staffRole);
-        updateAuditDetails.put("orcaUserId", orcaLink != null ? orcaLink.orcaUserId() : null);
-        recordAudit(request, "ADMIN_ACCESS_USER_UPDATE", AuditEventEnvelope.Outcome.SUCCESS, runId, updateAuditDetails, null, null);
-
-        return Response.ok(body).header("x-run-id", runId).build();
+        return new AdminAccessMutationSupport(
+                em,
+                sessionAuditDispatcher,
+                passwordHashService)
+                .updateUser(this, request, userPk, payload);
     }
 
     public Response resetPassword(@jakarta.ws.rs.core.Context HttpServletRequest request,
                                   @PathParam("userPk") long userPk,
                                   Map<String, Object> payload) {
-        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
-        String actor = requireAdminActor(request, runId);
-        String facilityId = getRemoteFacility(actor);
-
-        UserModel target = em.find(UserModel.class, userPk);
-        if (target == null) {
-            throw restError(request, Response.Status.NOT_FOUND, "user_not_found", "ユーザーが見つかりません。");
-        }
-        requireSameFacility(request, facilityId, target.getUserId());
-
-        String totpCode = payload != null ? trimToNull(asString(payload.get("totpCode"))) : null;
-        long actorPk = resolveActorUserPk(actor);
-        verifyAdminTotp(request, actorPk, totpCode);
-
-        if (payload == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "payload_required", "payload が必要です。");
-        }
-        String tempPassword = trimToNull(asString(payload.get("temporaryPassword")));
-        if (tempPassword == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "temporary_password_required",
-                    "temporaryPassword は必須です。");
-        }
-        validateTemporaryPassword(request, tempPassword);
-
-        target.setPassword(passwordHashService.hashForStorage(tempPassword));
-        em.merge(target);
-        upsertProfile(userPk, null, null, Boolean.TRUE, Instant.now());
-        boolean sessionInvalidated = invalidateCurrentSession(request);
-
-        Map<String, Object> resetAuditDetails = new LinkedHashMap<>();
-        resetAuditDetails.put("operation", "password-reset");
-        resetAuditDetails.put("facilityId", facilityId);
-        resetAuditDetails.put("targetUserPk", userPk);
-        resetAuditDetails.put("targetLoginId", extractLoginId(target.getUserId()));
-        resetAuditDetails.put("mustChangePassword", Boolean.TRUE);
-        resetAuditDetails.put("sessionInvalidated", sessionInvalidated);
-        recordAudit(request, "ADMIN_ACCESS_PASSWORD_RESET", AuditEventEnvelope.Outcome.SUCCESS, runId, resetAuditDetails, null, null);
-
-        return Response.noContent()
-                .header("x-run-id", runId)
-                .header("Cache-Control", "no-store")
-                .header("Pragma", "no-cache")
-                .build();
+        return new AdminAccessMutationSupport(
+                em,
+                sessionAuditDispatcher,
+                passwordHashService)
+                .resetPassword(this, request, userPk, payload);
     }
 
-    private String requireAdminActor(HttpServletRequest request, String runId) {
+    String requireAdminActor(HttpServletRequest request, String runId) {
         try {
             return AdminResourceSupport.requireAdminActor(this, request, userServiceBean);
         } catch (WebApplicationException ex) {
@@ -366,28 +158,11 @@ public class AdminAccessResource extends AbstractResource {
         }
     }
 
-    private boolean userExists(String userId) {
-        List<Long> list = em.createQuery("select u.id from UserModel u where u.userId=:uid", Long.class)
-                .setParameter("uid", userId)
-                .setMaxResults(1)
-                .getResultList();
-        return !list.isEmpty();
-    }
-
     protected long resolveActorUserPk(String actorUserId) {
         UserModel actor = em.createQuery("from UserModel u where u.userId=:uid", UserModel.class)
                 .setParameter("uid", actorUserId)
                 .getSingleResult();
         return actor.getId();
-    }
-
-    private void requireSameFacility(HttpServletRequest request, String facilityId, String targetUserId) {
-        if (facilityId == null || facilityId.isBlank() || targetUserId == null) {
-            throw restError(request, Response.Status.FORBIDDEN, "forbidden", "対象ユーザーの施設境界が不明です。");
-        }
-        if (!targetUserId.startsWith(facilityId + IInfoModel.COMPOSITE_KEY_MAKER)) {
-            throw restError(request, Response.Status.FORBIDDEN, "facility_mismatch", "他施設のユーザーは操作できません。");
-        }
     }
 
     private Map<Long, UserAccessProfileRow> loadProfiles(List<Long> userPks) {
@@ -444,7 +219,7 @@ public class AdminAccessResource extends AbstractResource {
         return new OrcaLinkStatus(row.orcaUserId(), toIsoTimestamp(row.updatedAt()));
     }
 
-    private Map<String, Object> toUserRow(UserModel user, UserAccessProfileRow profile, OrcaLinkStatus orcaLink) {
+    Map<String, Object> toUserRow(UserModel user, UserAccessProfileRow profile, OrcaLinkStatus orcaLink) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("userPk", user.getId());
         row.put("userId", user.getUserId());
@@ -482,65 +257,6 @@ public class AdminAccessResource extends AbstractResource {
             row.put("orcaLink", Map.of("linked", Boolean.FALSE));
         }
         return row;
-    }
-
-    private void persistRoles(UserModel user, List<String> roles) {
-        if (roles == null || roles.isEmpty()) {
-            return;
-        }
-        List<RoleModel> entities = new ArrayList<>();
-        for (String role : roles) {
-            RoleModel entity = new RoleModel();
-            entity.setRole(role);
-            entity.setUserModel(user);
-            entity.setUserId(user.getUserId());
-            em.persist(entity);
-            entities.add(entity);
-        }
-        user.setRoles(entities);
-        em.merge(user);
-    }
-
-    private void replaceRoles(UserModel user, List<String> desiredRoles) {
-        List<String> normalized = desiredRoles.stream()
-                .map(this::normalizeRoleToken)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-
-        List<RoleModel> current = user.getRoles() != null ? new ArrayList<>(user.getRoles()) : new ArrayList<>();
-        Set<String> currentNames = current.stream()
-                .map(RoleModel::getRole)
-                .filter(Objects::nonNull)
-                .map((v) -> v.trim().toLowerCase(Locale.ROOT))
-                .collect(java.util.stream.Collectors.toSet());
-        Set<String> desiredNames = normalized.stream()
-                .map((v) -> v.trim().toLowerCase(Locale.ROOT))
-                .collect(java.util.stream.Collectors.toSet());
-
-        for (RoleModel role : current) {
-            String name = role.getRole() != null ? role.getRole().trim().toLowerCase(Locale.ROOT) : "";
-            if (!desiredNames.contains(name)) {
-                em.remove(em.contains(role) ? role : em.merge(role));
-            }
-        }
-
-        for (String roleName : normalized) {
-            if (currentNames.contains(roleName.trim().toLowerCase(Locale.ROOT))) {
-                continue;
-            }
-            RoleModel entity = new RoleModel();
-            entity.setRole(roleName);
-            entity.setUserModel(user);
-            entity.setUserId(user.getUserId());
-            em.persist(entity);
-        }
-
-        em.flush();
-        user.setRoles(em.createQuery("from RoleModel r where r.userId=:uid", RoleModel.class)
-                .setParameter("uid", user.getUserId())
-                .getResultList());
-        em.merge(user);
     }
 
     protected UserAccessProfileRow upsertProfile(long userPk, String sex, String staffRole, Boolean mustChangePassword, Instant now) {
@@ -673,40 +389,6 @@ public class AdminAccessResource extends AbstractResource {
         return new OrcaUserLinkQueryService(em);
     }
 
-    private boolean containsRole(List<String> roles, String targetRole) {
-        String target = normalizeRoleKey(targetRole);
-        if (target == null) {
-            return false;
-        }
-        for (String role : roles) {
-            if (target.equals(normalizeRoleKey(role))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean hasPrivilegedRoles(List<String> roles) {
-        for (String role : roles) {
-            String normalized = normalizeRoleKey(role);
-            if (normalized == null) {
-                continue;
-            }
-            if (!BASELINE_ROLE.equals(normalized)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private String normalizeRoleKey(String role) {
-        if (role == null) {
-            return null;
-        }
-        String normalized = role.trim().toLowerCase(Locale.ROOT);
-        return normalized.isEmpty() ? null : normalized;
-    }
-
     private Long asLong(Object value) {
         if (value instanceof Number number) {
             return number.longValue();
@@ -764,55 +446,6 @@ public class AdminAccessResource extends AbstractResource {
         return false;
     }
 
-    private boolean containsAdminRole(List<String> roles) {
-        for (String role : roles) {
-            String normalized = normalizeRoleKey(role);
-            if (normalized == null) continue;
-            if (normalized.equals("admin")
-                    || normalized.equals("system_admin")
-                    || normalized.equals("system-admin")
-                    || normalized.equals("system-administrator")
-                    || normalized.equals("system_administrator")) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private open.dolphin.infomodel.FacilityModel resolveFacility(String facilityId) {
-        return em.createQuery("from FacilityModel f where f.facilityId=:fid", open.dolphin.infomodel.FacilityModel.class)
-                .setParameter("fid", facilityId)
-                .getSingleResult();
-    }
-
-    private List<String> normalizeRoles(Object value) {
-        if (!(value instanceof List<?> list)) {
-            return new ArrayList<>();
-        }
-        List<String> roles = new ArrayList<>();
-        for (Object entry : list) {
-            String token = normalizeRoleToken(entry);
-            if (token != null) {
-                roles.add(token);
-            }
-        }
-        return roles;
-    }
-
-    private String normalizeRoleToken(Object value) {
-        if (!(value instanceof String text)) {
-            return null;
-        }
-        String trimmed = text.trim();
-        if (trimmed.isEmpty()) {
-            return null;
-        }
-        if (trimmed.length() > 64) {
-            return null;
-        }
-        return trimmed;
-    }
-
     private static String extractLoginId(String userId) {
         if (userId == null) return null;
         int idx = userId.indexOf(IInfoModel.COMPOSITE_KEY_MAKER);
@@ -847,41 +480,6 @@ public class AdminAccessResource extends AbstractResource {
         return trimmed;
     }
 
-    private void validateTemporaryPassword(HttpServletRequest request, String temporaryPassword) {
-        String candidate = trimToNull(temporaryPassword);
-        if (candidate == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "temporary_password_required",
-                    "temporaryPassword は必須です。");
-        }
-        if (candidate.length() < 12) {
-            throw restError(request, Response.Status.BAD_REQUEST, "temporary_password_weak",
-                    "temporaryPassword は 12 文字以上で指定してください。");
-        }
-        if (!UPPERCASE_PATTERN.matcher(candidate).matches()
-                || !LOWERCASE_PATTERN.matcher(candidate).matches()
-                || !DIGIT_PATTERN.matcher(candidate).matches()
-                || !SYMBOL_PATTERN.matcher(candidate).matches()) {
-            throw restError(request, Response.Status.BAD_REQUEST, "temporary_password_weak",
-                    "temporaryPassword は英大文字・英小文字・数字・記号をすべて含めてください。");
-        }
-    }
-
-    private boolean invalidateCurrentSession(HttpServletRequest request) {
-        if (request == null) {
-            return false;
-        }
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            return false;
-        }
-        try {
-            session.invalidate();
-            return true;
-        } catch (IllegalStateException ex) {
-            return false;
-        }
-    }
-
     private void recordAudit(HttpServletRequest request,
                              String action,
                              AuditEventEnvelope.Outcome outcome,
@@ -903,7 +501,7 @@ public class AdminAccessResource extends AbstractResource {
                 "/api/admin/access");
     }
 
-    private record OrcaLinkStatus(
+    record OrcaLinkStatus(
             String orcaUserId,
             String updatedAt
     ) {

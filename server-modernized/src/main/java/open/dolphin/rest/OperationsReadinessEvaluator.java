@@ -1,0 +1,209 @@
+package open.dolphin.rest;
+
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.ws.rs.core.Response;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import open.dolphin.mbean.PvtService;
+import open.dolphin.orca.transport.RestOrcaTransport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
+import open.dolphin.rest.dto.OperationsReadinessCheck;
+import open.dolphin.rest.dto.OperationsReadinessResponse;
+import open.dolphin.storage.attachment.AttachmentStorageManager;
+import open.dolphin.storage.attachment.AttachmentStorageMode;
+
+@ApplicationScoped
+public class OperationsReadinessEvaluator {
+
+    static final String CHECK_DATABASE = "database";
+    static final String CHECK_ORCA = "orca";
+    static final String CHECK_ATTACHMENT_STORAGE = "attachmentStorage";
+    static final String CHECK_PVT_QUEUE = "pvtQueue";
+    static final String CHECK_PATIENT_IMAGES = "patientImages";
+
+    private static final String DB_PING_SQL = "select 1";
+    private static final String STATUS_UP = "UP";
+    private static final String STATUS_DOWN = "DOWN";
+    private static final String STATUS_DISABLED = "DISABLED";
+    private static final String STATUS_DEGRADED = "DEGRADED";
+    private static final String REASON_DATABASE_UNREACHABLE = "database_unreachable";
+    private static final String REASON_ATTACHMENT_STORAGE_NOT_READY = "attachment_storage_not_ready";
+    private static final String REASON_ATTACHMENT_STORAGE_BACKEND_UNREACHABLE = "attachment_storage_backend_unreachable";
+    private static final String REASON_PATIENT_IMAGES_STORAGE_UNAVAILABLE = "patient_images_storage_unavailable";
+
+    @PersistenceContext
+    EntityManager em;
+
+    @Inject
+    RestOrcaTransport restOrcaTransport;
+
+    @Inject
+    AttachmentStorageManager attachmentStorageManager;
+
+    @Inject
+    PvtService pvtService;
+
+    @Inject
+    ServerConfigurationResolver configurationResolver;
+
+    public ReadinessSnapshot evaluate() {
+        Map<String, OperationsReadinessCheck> checks = new LinkedHashMap<>();
+        boolean databaseReady = checkDatabase(checks);
+        boolean orcaReady = checkOrca(checks);
+        boolean storageReady = checkAttachmentStorage(checks);
+        boolean pvtQueueReady = checkPvtQueue(checks);
+        boolean patientImagesReady = checkPatientImages(checks, storageReady);
+
+        boolean overallReady = databaseReady && orcaReady && storageReady && pvtQueueReady && patientImagesReady;
+        OperationsReadinessResponse body = new OperationsReadinessResponse();
+        body.setStatus(overallReady ? STATUS_UP : STATUS_DOWN);
+        body.setChecks(checks);
+        return new ReadinessSnapshot(
+                overallReady ? STATUS_UP : STATUS_DOWN,
+                overallReady ? Response.Status.OK : Response.Status.SERVICE_UNAVAILABLE,
+                body);
+    }
+
+    private boolean checkDatabase(Map<String, OperationsReadinessCheck> checks) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            Object result = em != null ? em.createNativeQuery(DB_PING_SQL).getSingleResult() : null;
+            boolean up = result != null;
+            detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
+            if (!up) {
+                detail.setReasonCode(REASON_DATABASE_UNREACHABLE);
+            }
+            checks.put(CHECK_DATABASE, detail);
+            return up;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setReasonCode(REASON_DATABASE_UNREACHABLE);
+            checks.put(CHECK_DATABASE, detail);
+            return false;
+        }
+    }
+
+    private boolean checkOrca(Map<String, OperationsReadinessCheck> checks) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            RestOrcaTransport.ProbeResult probe = restOrcaTransport != null
+                    ? restOrcaTransport.probeReadiness()
+                    : RestOrcaTransport.unavailableProbe(RestOrcaTransport.REASON_CODE_HTTP_CLIENT_UNAVAILABLE);
+            boolean up = probe.reachable();
+            detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
+            detail.setMode(probe.mode());
+            detail.setCredentialConfigured(probe.credentialConfigured());
+            detail.setClientAuthConfigured(probe.clientAuthConfigured());
+            if (!up) {
+                detail.setReasonCode(probe.reasonCode());
+            }
+            checks.put(CHECK_ORCA, detail);
+            return up;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setReasonCode(RestOrcaTransport.REASON_CODE_PROBE_FAILED);
+            checks.put(CHECK_ORCA, detail);
+            return false;
+        }
+    }
+
+    private boolean checkAttachmentStorage(Map<String, OperationsReadinessCheck> checks) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            AttachmentStorageMode mode = attachmentStorageManager != null ? attachmentStorageManager.getMode() : null;
+            boolean backendReachable = attachmentStorageManager != null && attachmentStorageManager.isBackendReachable();
+            boolean up = mode != null && backendReachable;
+            detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
+            detail.setMode(mode != null ? mode.name().toLowerCase(java.util.Locale.ROOT) : null);
+            detail.setBackendReachable(backendReachable);
+            if (!up) {
+                detail.setReasonCode(mode == null
+                        ? REASON_ATTACHMENT_STORAGE_NOT_READY
+                        : REASON_ATTACHMENT_STORAGE_BACKEND_UNREACHABLE);
+            }
+            checks.put(CHECK_ATTACHMENT_STORAGE, detail);
+            return up;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setBackendReachable(Boolean.FALSE);
+            detail.setReasonCode(REASON_ATTACHMENT_STORAGE_BACKEND_UNREACHABLE);
+            checks.put(CHECK_ATTACHMENT_STORAGE, detail);
+            return false;
+        }
+    }
+
+    private boolean checkPvtQueue(Map<String, OperationsReadinessCheck> checks) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            Map<String, Object> workerHealth = pvtService != null ? pvtService.workerHealthBody() : Map.of();
+            String workerStatus = String.valueOf(workerHealth.getOrDefault("status", STATUS_DOWN));
+            boolean up = STATUS_UP.equalsIgnoreCase(workerStatus) || STATUS_DISABLED.equalsIgnoreCase(workerStatus);
+            detail.setStatus(workerStatus.toUpperCase(java.util.Locale.ROOT));
+            detail.setWorkerStatus(workerStatus);
+            detail.setReasonCodes(asStringList(workerHealth.getOrDefault("reasonCodes", List.of())));
+            checks.put(CHECK_PVT_QUEUE, detail);
+            return up;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setWorkerStatus(STATUS_DOWN);
+            detail.setReasonCodes(List.of(PvtService.REASON_CODE_PVT_WORKER_UNAVAILABLE));
+            checks.put(CHECK_PVT_QUEUE, detail);
+            return false;
+        }
+    }
+
+    private boolean checkPatientImages(Map<String, OperationsReadinessCheck> checks, boolean attachmentStorageReady) {
+        OperationsReadinessCheck detail = new OperationsReadinessCheck();
+        try {
+            ServerRuntimeConfiguration.PatientImagesSettings settings = patientImagesSettings();
+            if (!settings.enabled()) {
+                detail.setStatus(STATUS_DISABLED);
+                checks.put(CHECK_PATIENT_IMAGES, detail);
+                return true;
+            }
+            detail.setStatus(attachmentStorageReady ? STATUS_UP : STATUS_DOWN);
+            if (!attachmentStorageReady) {
+                detail.setReasonCode(REASON_PATIENT_IMAGES_STORAGE_UNAVAILABLE);
+            }
+            checks.put(CHECK_PATIENT_IMAGES, detail);
+            return attachmentStorageReady;
+        } catch (RuntimeException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setReasonCode(REASON_PATIENT_IMAGES_STORAGE_UNAVAILABLE);
+            checks.put(CHECK_PATIENT_IMAGES, detail);
+            return false;
+        }
+    }
+
+    private ServerRuntimeConfiguration.PatientImagesSettings patientImagesSettings() {
+        if (configurationResolver == null) {
+            configurationResolver = new ServerConfigurationResolver();
+        }
+        return configurationResolver.patientImages();
+    }
+
+    private List<String> asStringList(Object value) {
+        if (!(value instanceof Iterable<?> iterable)) {
+            return List.of();
+        }
+        java.util.ArrayList<String> result = new java.util.ArrayList<>();
+        for (Object item : iterable) {
+            if (item != null) {
+                result.add(String.valueOf(item));
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    public record ReadinessSnapshot(
+            String status,
+            Response.Status httpStatus,
+            OperationsReadinessResponse body
+    ) {
+    }
+}

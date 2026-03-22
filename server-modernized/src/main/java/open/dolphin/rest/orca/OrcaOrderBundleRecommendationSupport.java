@@ -1,0 +1,185 @@
+package open.dolphin.rest.orca;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import open.dolphin.infomodel.BundleDolphin;
+import open.dolphin.infomodel.ClaimItem;
+import open.dolphin.infomodel.IInfoModel;
+import open.dolphin.rest.dto.orca.OrderBundleFetchResponse;
+import open.dolphin.rest.dto.orca.OrderBundleRecommendationResponse;
+
+final class OrcaOrderBundleRecommendationSupport {
+
+    private static final String MATERIAL_CODE_PREFIX = "7";
+    private static final String BODY_PART_CODE_PREFIX = "002";
+    private static final String COMMENT_CODE_REGEX = "^(008[1-6]|8[1-6]|098|099|98|99).*";
+
+    private OrcaOrderBundleRecommendationSupport() {
+    }
+
+    static List<OrderBundleFetchResponse.OrderBundleItem> toItems(ClaimItem[] items) {
+        if (items == null || items.length == 0) {
+            return List.of();
+        }
+        List<OrderBundleFetchResponse.OrderBundleItem> list = new ArrayList<>();
+        for (ClaimItem item : items) {
+            if (item == null) {
+                continue;
+            }
+            OrderBundleFetchResponse.OrderBundleItem entry = new OrderBundleFetchResponse.OrderBundleItem();
+            entry.setCode(item.getCode());
+            entry.setName(item.getName());
+            entry.setQuantity(item.getNumber());
+            entry.setUnit(item.getUnit());
+            entry.setMemo(item.getMemo());
+            list.add(entry);
+        }
+        return list;
+    }
+
+    static OrderBundleFetchResponse.OrderBundleItem extractBodyPart(
+            List<OrderBundleFetchResponse.OrderBundleItem> items) {
+        if (items == null || items.isEmpty()) {
+            return null;
+        }
+        for (OrderBundleFetchResponse.OrderBundleItem item : items) {
+            if (item == null) {
+                continue;
+            }
+            if (isBodyPartCode(item.getCode())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+    static boolean isBodyPartCode(String code) {
+        return normalize(code).startsWith(BODY_PART_CODE_PREFIX);
+    }
+
+    static OrderBundleRecommendationResponse.OrderRecommendationTemplate toRecommendationTemplate(
+            String bundleName,
+            BundleDolphin bundle,
+            String entity) {
+        List<OrderBundleFetchResponse.OrderBundleItem> normalItems = new ArrayList<>();
+        List<OrderBundleFetchResponse.OrderBundleItem> materialItems = new ArrayList<>();
+        List<OrderBundleFetchResponse.OrderBundleItem> commentItems = new ArrayList<>();
+        OrderBundleFetchResponse.OrderBundleItem bodyPart = null;
+        for (OrderBundleFetchResponse.OrderBundleItem item : toItems(bundle.getClaimItem())) {
+            if (item == null) {
+                continue;
+            }
+            String code = normalize(item.getCode());
+            if (isBodyPartCode(code)) {
+                if (bodyPart == null) {
+                    bodyPart = item;
+                } else {
+                    normalItems.add(item);
+                }
+                continue;
+            }
+            if (code.startsWith(MATERIAL_CODE_PREFIX)) {
+                materialItems.add(item);
+                continue;
+            }
+            if (code.matches(COMMENT_CODE_REGEX)) {
+                commentItems.add(item);
+                continue;
+            }
+            normalItems.add(item);
+        }
+        PrescriptionMeta prescriptionMeta = resolvePrescriptionMeta(bundle.getClassCode());
+
+        OrderBundleRecommendationResponse.OrderRecommendationTemplate template =
+                new OrderBundleRecommendationResponse.OrderRecommendationTemplate();
+        template.setBundleName(bundleName);
+        template.setAdmin(normalize(bundle.getAdmin()));
+        template.setBundleNumber(hasText(bundle.getBundleNumber()) ? bundle.getBundleNumber().trim() : "1");
+        template.setAdminMemo(normalize(bundle.getAdminMemo()));
+        template.setMemo(normalize(bundle.getMemo()));
+        if (IInfoModel.ENTITY_MED_ORDER.equals(entity)) {
+            template.setPrescriptionLocation(prescriptionMeta.location());
+            template.setPrescriptionTiming(prescriptionMeta.timing());
+        }
+        template.setItems(normalItems);
+        template.setMaterialItems(materialItems);
+        template.setCommentItems(commentItems);
+        template.setBodyPart(bodyPart);
+        return template;
+    }
+
+    static String buildRecommendationKey(
+            String entity,
+            OrderBundleRecommendationResponse.OrderRecommendationTemplate template) {
+        StringBuilder builder = new StringBuilder();
+        appendNormalized(builder, entity);
+        appendNormalized(builder, template.getBundleName());
+        appendNormalized(builder, template.getAdmin());
+        appendNormalized(builder, template.getBundleNumber());
+        appendNormalized(builder, template.getAdminMemo());
+        appendNormalized(builder, template.getMemo());
+        appendNormalized(builder, template.getPrescriptionLocation());
+        appendNormalized(builder, template.getPrescriptionTiming());
+        appendItems(builder, template.getItems());
+        appendItems(builder, template.getMaterialItems());
+        appendItems(builder, template.getCommentItems());
+        appendItem(builder, template.getBodyPart());
+        String raw = builder.toString();
+        return Integer.toHexString(Objects.hash(raw)) + ":" + Integer.toString(raw.length(), 36);
+    }
+
+    private static void appendItems(StringBuilder builder, List<OrderBundleFetchResponse.OrderBundleItem> items) {
+        builder.append("|[");
+        if (items != null) {
+            for (OrderBundleFetchResponse.OrderBundleItem item : items) {
+                appendItem(builder, item);
+            }
+        }
+        builder.append("]");
+    }
+
+    private static void appendItem(StringBuilder builder, OrderBundleFetchResponse.OrderBundleItem item) {
+        if (item == null) {
+            builder.append("{}");
+            return;
+        }
+        builder.append("{");
+        appendNormalized(builder, item.getCode());
+        appendNormalized(builder, item.getName());
+        appendNormalized(builder, item.getQuantity());
+        appendNormalized(builder, item.getUnit());
+        appendNormalized(builder, item.getMemo());
+        builder.append("}");
+    }
+
+    private static void appendNormalized(StringBuilder builder, String value) {
+        builder.append(normalize(value)).append("|");
+    }
+
+    private static PrescriptionMeta resolvePrescriptionMeta(String classCode) {
+        String normalized = normalize(classCode);
+        if (normalized.isEmpty()) {
+            return new PrescriptionMeta("out", "regular");
+        }
+        String location = normalized.endsWith("2") ? "out" : "in";
+        String timing = "regular";
+        if (normalized.startsWith("22")) {
+            timing = "tonyo";
+        } else if (normalized.startsWith("29")) {
+            timing = "temporal";
+        }
+        return new PrescriptionMeta(location, timing);
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private record PrescriptionMeta(String location, String timing) {
+    }
+}

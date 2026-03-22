@@ -1,6 +1,7 @@
 package open.dolphin.system.license;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -9,7 +10,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
-import org.eclipse.microprofile.config.ConfigProvider;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 
 /**
  * ファイルシステム上の {@code license.properties} を扱う実装。
@@ -19,6 +20,9 @@ public class FileLicenseRepository implements LicenseRepository {
 
     private static final String LICENSE_FILE_NAME = "license.properties";
     private static final String COMMENT = "OpenDolphinZero License";
+
+    @Inject
+    ServerConfigurationResolver configurationResolver;
 
     @Override
     public Properties load() throws IOException {
@@ -43,25 +47,14 @@ public class FileLicenseRepository implements LicenseRepository {
     }
 
     private File resolveLicenseFile() throws IOException {
-        String home = resolveConfigValue("opendolphin.license.dir");
+        ServerConfigurationResolver resolver = configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
+        String home = resolver.license().directory() != null ? resolver.license().directory().toString() : null;
         if (home == null || home.isBlank()) {
-            home = resolveConfigValue("jboss.server.data.dir");
+            home = resolver.runtime().serverDataDirectory();
         }
         if (home == null || home.isBlank()) {
             throw new IOException("License directory is not configured. Set opendolphin.license.dir or jboss.server.data.dir.");
         }
         return new File(home, LICENSE_FILE_NAME);
-    }
-
-    private String resolveConfigValue(String key) {
-        try {
-            return ConfigProvider.getConfig()
-                    .getOptionalValue(key, String.class)
-                    .map(String::trim)
-                    .filter(token -> !token.isEmpty())
-                    .orElse(null);
-        } catch (IllegalStateException ex) {
-            return null;
-        }
     }
 }

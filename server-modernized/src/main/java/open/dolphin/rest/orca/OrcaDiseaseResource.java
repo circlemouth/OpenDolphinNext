@@ -164,118 +164,18 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
         String runId = resolveRunId(request);
         String remoteUser = requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
-        if (payload == null || payload.getPatientId() == null || payload.getPatientId().isBlank()) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("runId", runId);
-            audit.put("validationError", Boolean.TRUE);
-            audit.put("field", "patientId");
-            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "patientId is required");
-            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "patientId", "patientId is required");
-        }
-
-        PatientModel patient = patientServiceBean.getPatientById(facilityId, payload.getPatientId());
-        if (patient == null) {
-            Map<String, Object> audit = buildNotFoundAudit(facilityId, payload.getPatientId());
-            markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
-                    "patient_not_found", "Patient not found");
-            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.NOT_FOUND, "patient_not_found",
-                    "Patient not found", audit, null);
-        }
-        if (payload.getOperations() == null || payload.getOperations().isEmpty()) {
-            Map<String, Object> audit = new HashMap<>();
-            audit.put("facilityId", facilityId);
-            audit.put("patientId", payload.getPatientId());
-            audit.put("runId", runId);
-            audit.put("validationError", Boolean.TRUE);
-            audit.put("field", "operations");
-            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "invalid_request", "operations is required");
-            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw validationError(request, "operations", "operations is required");
-        }
-        KarteBean karte = karteServiceBean.getKarte(facilityId, payload.getPatientId(), ModelUtils.AD1800);
-        if (karte == null) {
-            Map<String, Object> audit = buildKarteNotFoundAudit(facilityId, payload.getPatientId());
-            markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
-                    "karte_not_found", "Karte not found");
-            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found", audit, null);
-        }
+        String patientId = requireDiseasePatientId(request, payload, facilityId, runId);
+        requireDiseasePatient(request, facilityId, patientId);
+        List<DiseaseMutationRequest.MutationEntry> operations = requireDiseaseOperations(request, payload, facilityId, patientId, runId);
+        KarteBean karte = requireDiseaseKarte(request, facilityId, patientId);
         UserModel user = userServiceBean.getUser(remoteUser);
 
         List<RegisteredDiagnosisModel> adds = new ArrayList<>();
         List<RegisteredDiagnosisModel> updates = new ArrayList<>();
         List<Long> removes = new ArrayList<>();
 
-        if (payload.getOperations() != null) {
-            for (DiseaseMutationRequest.MutationEntry entry : payload.getOperations()) {
-                if (entry == null || entry.getOperation() == null) {
-                    continue;
-                }
-                String operation = entry.getOperation().toLowerCase(Locale.ROOT);
-                if (!isSupportedOperation(operation)) {
-                    Map<String, Object> audit = new HashMap<>();
-                    audit.put("facilityId", facilityId);
-                    audit.put("patientId", payload.getPatientId());
-                    audit.put("validationError", Boolean.TRUE);
-                    audit.put("field", "operation");
-                    audit.put("operation", entry.getOperation());
-                    markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                            "invalid_request", "operation is invalid");
-                    recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-                    throw validationError(request, "operation", "operation is invalid");
-                }
-                if (("create".equals(operation) || "update".equals(operation))
-                        && (entry.getDiagnosisName() == null || entry.getDiagnosisName().isBlank())) {
-                    Map<String, Object> audit = new HashMap<>();
-                    audit.put("facilityId", facilityId);
-                    audit.put("patientId", payload.getPatientId());
-                    audit.put("validationError", Boolean.TRUE);
-                    audit.put("field", "diagnosisName");
-                    audit.put("operation", entry.getOperation());
-                    markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
-                            "invalid_request", "diagnosisName is required");
-                    recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
-                    throw validationError(request, "diagnosisName", "diagnosisName is required");
-                }
-                Date startDate = null;
-                Date endDate = null;
-                if ("create".equals(operation) || "update".equals(operation)) {
-                    startDate = requireMutationDate(request, facilityId, payload.getPatientId(), runId,
-                            entry.getOperation(), "startDate", entry.getStartDate(), true);
-                    endDate = requireMutationDate(request, facilityId, payload.getPatientId(), runId,
-                            entry.getOperation(), "endDate", entry.getEndDate(), false);
-                }
-                switch (operation) {
-                    case "create" -> adds.add(buildDiagnosis(
-                            entry,
-                            karte,
-                            user,
-                            startDate,
-                            endDate,
-                            resolveDiagnosisCodeIfNeeded(entry.getDiagnosisCode(), entry.getDiagnosisName(), entry.getStartDate())
-                    ));
-                    case "update" -> updates.add(buildDiagnosis(
-                            entry,
-                            karte,
-                            user,
-                            startDate,
-                            endDate,
-                            resolveDiagnosisCodeIfNeeded(entry.getDiagnosisCode(), entry.getDiagnosisName(), entry.getStartDate())
-                    ));
-                    case "delete" -> {
-                        if (entry.getDiagnosisId() != null) {
-                            removes.add(entry.getDiagnosisId());
-                        }
-                    }
-                    default -> {
-                    }
-                }
-            }
+        for (DiseaseMutationRequest.MutationEntry entry : operations) {
+            applyDiseaseMutationEntry(request, facilityId, patientId, runId, entry, karte, user, adds, updates, removes);
         }
 
         List<Long> createdIds = adds.isEmpty() ? List.of() : karteServiceBean.addDiagnosis(adds);
@@ -303,6 +203,127 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
         audit.put("removed", removes.size());
         recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
+    }
+
+    private String requireDiseasePatientId(HttpServletRequest request, DiseaseMutationRequest payload, String facilityId,
+            String runId) {
+        if (payload == null || payload.getPatientId() == null || payload.getPatientId().isBlank()) {
+            Map<String, Object> audit = buildDiseaseMutationAudit(facilityId, null, runId);
+            failDiseaseMutationRequest(request, audit, "patientId", "patientId is required");
+        }
+        return payload.getPatientId().trim();
+    }
+
+    private PatientModel requireDiseasePatient(HttpServletRequest request, String facilityId, String patientId) {
+        PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
+        if (patient == null) {
+            Map<String, Object> audit = buildNotFoundAudit(facilityId, patientId);
+            markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
+                    "patient_not_found", "Patient not found");
+            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found", audit, null);
+        }
+        return patient;
+    }
+
+    private List<DiseaseMutationRequest.MutationEntry> requireDiseaseOperations(HttpServletRequest request,
+            DiseaseMutationRequest payload, String facilityId, String patientId, String runId) {
+        if (payload.getOperations() == null || payload.getOperations().isEmpty()) {
+            Map<String, Object> audit = buildDiseaseMutationAudit(facilityId, patientId, runId);
+            failDiseaseMutationRequest(request, audit, "operations", "operations is required");
+        }
+        return payload.getOperations();
+    }
+
+    private KarteBean requireDiseaseKarte(HttpServletRequest request, String facilityId, String patientId) {
+        KarteBean karte = karteServiceBean.getKarte(facilityId, patientId, ModelUtils.AD1800);
+        if (karte == null) {
+            Map<String, Object> audit = buildKarteNotFoundAudit(facilityId, patientId);
+            markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
+                    "karte_not_found", "Karte not found");
+            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found", audit, null);
+        }
+        return karte;
+    }
+
+    private void applyDiseaseMutationEntry(HttpServletRequest request, String facilityId, String patientId, String runId,
+            DiseaseMutationRequest.MutationEntry entry, KarteBean karte, UserModel user, List<RegisteredDiagnosisModel> adds,
+            List<RegisteredDiagnosisModel> updates, List<Long> removes) {
+        if (entry == null || entry.getOperation() == null) {
+            return;
+        }
+        String operation = entry.getOperation().toLowerCase(Locale.ROOT);
+        if (!isSupportedOperation(operation)) {
+            Map<String, Object> audit = buildDiseaseMutationAudit(facilityId, patientId, runId);
+            audit.put("validationError", Boolean.TRUE);
+            audit.put("field", "operation");
+            audit.put("operation", entry.getOperation());
+            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
+                    "invalid_request", "operation is invalid");
+            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+            throw validationError(request, "operation", "operation is invalid");
+        }
+        if (("create".equals(operation) || "update".equals(operation))
+                && (entry.getDiagnosisName() == null || entry.getDiagnosisName().isBlank())) {
+            Map<String, Object> audit = buildDiseaseMutationAudit(facilityId, patientId, runId);
+            audit.put("validationError", Boolean.TRUE);
+            audit.put("field", "diagnosisName");
+            audit.put("operation", entry.getOperation());
+            markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
+                    "invalid_request", "diagnosisName is required");
+            recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+            throw validationError(request, "diagnosisName", "diagnosisName is required");
+        }
+
+        Date startDate = null;
+        Date endDate = null;
+        if ("create".equals(operation) || "update".equals(operation)) {
+            startDate = requireMutationDate(request, facilityId, patientId, runId,
+                    entry.getOperation(), "startDate", entry.getStartDate(), true);
+            endDate = requireMutationDate(request, facilityId, patientId, runId,
+                    entry.getOperation(), "endDate", entry.getEndDate(), false);
+        }
+
+        RegisteredDiagnosisModel diagnosis = buildDiagnosis(
+                entry,
+                karte,
+                user,
+                startDate,
+                endDate,
+                resolveDiagnosisCodeIfNeeded(entry.getDiagnosisCode(), entry.getDiagnosisName(), entry.getStartDate())
+        );
+        switch (operation) {
+            case "create" -> adds.add(diagnosis);
+            case "update" -> updates.add(diagnosis);
+            case "delete" -> {
+                if (entry.getDiagnosisId() != null) {
+                    removes.add(entry.getDiagnosisId());
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    private Map<String, Object> buildDiseaseMutationAudit(String facilityId, String patientId, String runId) {
+        Map<String, Object> audit = new HashMap<>();
+        audit.put("facilityId", facilityId);
+        if (patientId != null) {
+            audit.put("patientId", patientId);
+        }
+        audit.put("runId", runId);
+        return audit;
+    }
+
+    private void failDiseaseMutationRequest(HttpServletRequest request, Map<String, Object> audit, String field,
+            String message) {
+        audit.put("validationError", Boolean.TRUE);
+        audit.put("field", field);
+        markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
+                "invalid_request", message);
+        recordAudit(request, "ORCA_DISEASE_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+        throw validationError(request, field, message);
     }
 
     private RegisteredDiagnosisModel buildDiagnosis(DiseaseMutationRequest.MutationEntry entry,

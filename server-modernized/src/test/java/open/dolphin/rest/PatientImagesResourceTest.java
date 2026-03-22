@@ -19,12 +19,15 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.MultivaluedHashMap;
 import jakarta.ws.rs.core.StreamingOutput;
+import jakarta.ws.rs.core.UriInfo;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
@@ -32,16 +35,18 @@ import java.util.Map;
 import javax.imageio.ImageIO;
 import open.dolphin.rest.dto.PatientImageEntryResponse;
 import open.dolphin.rest.dto.PatientImageUploadResponse;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -71,6 +76,12 @@ class PatientImagesResourceTest {
     private HttpServletResponse response;
 
     @Mock
+    private UriInfo uriInfo;
+
+    @Mock
+    private jakarta.ws.rs.core.UriBuilder uriBuilder;
+
+    @Mock
     private MultipartFormDataInput input;
 
     @Mock
@@ -78,9 +89,11 @@ class PatientImagesResourceTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        System.setProperty("opendolphin.patient.images.enabled", "true");
         setField(resource, "httpServletRequest", request);
         setField(resource, "httpServletResponse", response);
+        setField(resource, "uriInfo", uriInfo);
+        setField(resource, "configurationResolver", configurationResolver(
+                String.valueOf(5L * 1024L * 1024L), "4096", "4096"));
 
         when(request.getRemoteUser()).thenReturn("F001:user01");
         lenient().when(request.getRemoteAddr()).thenReturn("127.0.0.1");
@@ -91,6 +104,10 @@ class PatientImagesResourceTest {
         lenient().when(request.getHeader(anyString()))
                 .thenAnswer(invocation -> headers.get(invocation.getArgument(0, String.class)));
         lenient().when(request.isUserInRole("ADMIN")).thenReturn(false);
+        lenient().when(uriInfo.getAbsolutePathBuilder()).thenReturn(uriBuilder);
+        lenient().when(uriBuilder.path(anyString())).thenReturn(uriBuilder);
+        lenient().when(uriBuilder.build())
+                .thenReturn(java.net.URI.create("https://example.test/app/api/patients/P001/images/10"));
         lenient().when(patientServiceBean.getPatientById("F001", "P001"))
                 .thenReturn(new open.dolphin.infomodel.PatientModel());
 
@@ -98,13 +115,6 @@ class PatientImagesResourceTest {
         MultivaluedHashMap<String, String> partHeaders = new MultivaluedHashMap<>();
         partHeaders.add("Content-Disposition", "form-data; name=\"file\"; filename=\"test.png\"");
         lenient().when(part.getHeaders()).thenReturn(partHeaders);
-    }
-
-    @AfterEach
-    void tearDown() {
-        System.clearProperty("opendolphin.patient.images.enabled");
-        System.clearProperty("opendolphin.images.max.width");
-        System.clearProperty("opendolphin.images.max.height");
     }
 
     @Test
@@ -140,15 +150,17 @@ class PatientImagesResourceTest {
         when(part.getMediaType()).thenReturn(MediaType.valueOf("image/png"));
         when(part.getBody(eq(java.io.InputStream.class), any())).thenReturn(new ByteArrayInputStream(png));
         when(patientImageServiceBean.uploadImage(eq("F001"), eq("P001"), eq("F001:user01"),
-                eq("test.png"), eq("image/png"), any()))
+                eq("test.png"), eq("image/png"), any(Path.class), any(Long.class)))
                 .thenReturn(new PatientImageServiceBean.UploadResult(10L, 20L, java.util.Date.from(Instant.parse("2024-01-01T00:00:00Z"))));
 
         PatientImageUploadResponse response = resource.upload("P001", input);
 
         assertThat(response.getImageId()).isEqualTo(20L);
         assertThat(response.getDocumentId()).isEqualTo(10L);
+        ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
         verify(patientImageServiceBean).uploadImage(eq("F001"), eq("P001"), eq("F001:user01"),
-                eq("test.png"), eq("image/png"), any());
+                eq("test.png"), eq("image/png"), pathCaptor.capture(), any(Long.class));
+        assertThat(Files.exists(pathCaptor.getValue())).isFalse();
     }
 
     @Test
@@ -162,9 +174,30 @@ class PatientImagesResourceTest {
     }
 
     @Test
+    void upload_rejectsOversizedPayloadDuringStreaming() throws Exception {
+        setField(resource, "configurationResolver", configurationResolver("1024", "4096", "4096"));
+        byte[] payload = new byte[2048];
+        payload[0] = (byte) 0x89;
+        payload[1] = 0x50;
+        payload[2] = 0x4E;
+        payload[3] = 0x47;
+        payload[4] = 0x0D;
+        payload[5] = 0x0A;
+        payload[6] = 0x1A;
+        payload[7] = 0x0A;
+        when(part.getMediaType()).thenReturn(MediaType.valueOf("image/png"));
+        when(part.getBody(eq(java.io.InputStream.class), any())).thenReturn(new ByteArrayInputStream(payload));
+
+        assertThatThrownBy(() -> resource.upload("P001", input))
+                .isInstanceOf(WebApplicationException.class)
+                .extracting(ex -> ((WebApplicationException) ex).getResponse().getStatus())
+                .isEqualTo(413);
+    }
+
+    @Test
     void upload_rejectsOversizedDimensions() throws Exception {
-        System.setProperty("opendolphin.images.max.width", "10");
-        System.setProperty("opendolphin.images.max.height", "10");
+        setField(resource, "configurationResolver", configurationResolver(
+                String.valueOf(5L * 1024L * 1024L), "10", "10"));
 
         byte[] png = createPng(100, 50);
         when(part.getMediaType()).thenReturn(MediaType.valueOf("image/png"));
@@ -184,7 +217,7 @@ class PatientImagesResourceTest {
                 .isInstanceOf(WebApplicationException.class)
                 .extracting(ex -> ((WebApplicationException) ex).getResponse().getStatus())
                 .isEqualTo(404);
-        verify(patientImageServiceBean, never()).uploadImage(anyString(), anyString(), anyString(), anyString(), anyString(), any());
+        verify(patientImageServiceBean, never()).uploadImage(anyString(), anyString(), anyString(), anyString(), anyString(), any(Path.class), any(Long.class));
     }
 
     @Test
@@ -202,7 +235,7 @@ class PatientImagesResourceTest {
         @SuppressWarnings("unchecked")
         List<PatientImageEntryResponse> items = (List<PatientImageEntryResponse>) actual.getEntity();
         assertThat(items).hasSize(1);
-        assertThat(items.get(0).getDownloadUrl()).isEqualTo("/openDolphin/api/patients/P001/images/10");
+        assertThat(items.get(0).getDownloadUrl()).isEqualTo("https://example.test/app/api/patients/P001/images/10");
         verify(response).setHeader("Cache-Control", "private, no-store, max-age=0, must-revalidate");
     }
 
@@ -330,5 +363,13 @@ class PatientImagesResourceTest {
         Field field = target.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private static ServerConfigurationResolver configurationResolver(String maxBytes, String maxWidth, String maxHeight) {
+        return TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_PATIENT_IMAGES_ENABLED, "true",
+                ServerConfigurationResolver.KEY_PATIENT_IMAGES_MAX_BYTES, maxBytes,
+                ServerConfigurationResolver.KEY_PATIENT_IMAGES_MAX_WIDTH, maxWidth,
+                ServerConfigurationResolver.KEY_PATIENT_IMAGES_MAX_HEIGHT, maxHeight);
     }
 }

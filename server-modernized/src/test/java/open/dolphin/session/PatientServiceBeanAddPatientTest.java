@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -124,8 +125,7 @@ class PatientServiceBeanAddPatientTest {
     void getPatientById_populatesHealthInsurancesAndKeepsOrder() {
         @SuppressWarnings("unchecked")
         TypedQuery<PatientModel> patientQuery = mock(TypedQuery.class);
-        @SuppressWarnings("unchecked")
-        TypedQuery<HealthInsuranceModel> insuranceQuery = mock(TypedQuery.class);
+        Query insuranceQuery = mock(Query.class);
         PatientModel patient = new PatientModel();
         patient.setId(101L);
         patient.setFacilityId("F001");
@@ -144,20 +144,16 @@ class PatientServiceBeanAddPatientTest {
         when(patientQuery.setParameter("pid", "P001")).thenReturn(patientQuery);
         when(patientQuery.getSingleResult()).thenReturn(patient);
 
-        when(em.createQuery(
-                "from HealthInsuranceModel h where h.patient.id in (:ids)",
-                HealthInsuranceModel.class))
+        when(em.createQuery("from HealthInsuranceModel h where h.patient.id=:pk"))
                 .thenReturn(insuranceQuery);
-        when(insuranceQuery.setParameter("ids", List.of(101L))).thenReturn(insuranceQuery);
+        when(insuranceQuery.setParameter("pk", 101L)).thenReturn(insuranceQuery);
         when(insuranceQuery.getResultList()).thenReturn(List.of(primary, secondary));
 
         PatientModel found = service.getPatientById("F001", "P001");
 
         assertThat(found).isNotNull();
         assertThat(found.getHealthInsurances()).containsExactly(primary, secondary);
-        verify(em, times(1)).createQuery(
-                "from HealthInsuranceModel h where h.patient.id in (:ids)",
-                HealthInsuranceModel.class);
+        verify(em, times(1)).createQuery("from HealthInsuranceModel h where h.patient.id=:pk");
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {

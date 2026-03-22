@@ -30,31 +30,25 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import open.dolphin.orca.OrcaGatewayException;
-import org.junit.jupiter.api.AfterEach;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import org.junit.jupiter.api.Test;
 
 class OrcaHttpClientResilienceTest {
 
     private static final OrcaTransportSettings SETTINGS =
-            OrcaTransportSettings.fromAdminConfig("http://localhost:18080", false, "orca", "orca");
-
-    @AfterEach
-    void clearProperties() {
-        System.clearProperty("orca.api.retry.network.max");
-        System.clearProperty("orca.api.retry.network.backoff-ms");
-        System.clearProperty("orca.api.read-timeout-ms");
-        System.clearProperty("orca.api.total-timeout-ms");
-    }
+            OrcaTransportSettings.fromAdminConfig("http://localhost:18080", false, "orca", "orca",
+                    TestServerConfigurationResolvers.resolver());
 
     @Test
     void getRetriesHttp5xxAndEventuallySucceeds() {
-        System.setProperty("orca.api.retry.network.max", "2");
-        System.setProperty("orca.api.retry.network.backoff-ms", "1");
-
         SequencedHttpClient httpClient = new SequencedHttpClient(List.of(
                 ResponseSpec.response(503, "<xmlio2><res><Api_Result>E900</Api_Result></res></xmlio2>", "application/xml", 0),
                 ResponseSpec.response(200, "<xmlio2><res><Api_Result>0000</Api_Result></res></xmlio2>", "application/xml", 0)));
-        OrcaHttpClient client = new OrcaHttpClient(httpClient);
+        OrcaHttpClient client = new OrcaHttpClient(httpClient, transportHttpSettings(
+                ServerConfigurationResolver.KEY_ORCA_API_RETRY_NETWORK_MAX, "2",
+                ServerConfigurationResolver.KEY_ORCA_API_RETRY_NETWORK_BACKOFF_MS, "1"));
 
         OrcaHttpClient.OrcaHttpResponse response = client.get(SETTINGS, "/api01rv2/systeminfv2", null,
                 "application/xml", "req-r1", "trace-r1");
@@ -65,13 +59,12 @@ class OrcaHttpClientResilienceTest {
 
     @Test
     void getTimesOutByDeadlineWhenNetworkErrorContinues() {
-        System.setProperty("orca.api.retry.network.max", "10");
-        System.setProperty("orca.api.retry.network.backoff-ms", "10");
-        System.setProperty("orca.api.total-timeout-ms", "40");
-
         SequencedHttpClient httpClient = new SequencedHttpClient(List.of(
                 ResponseSpec.failure(new IOException("network down"), 0)));
-        OrcaHttpClient client = new OrcaHttpClient(httpClient);
+        OrcaHttpClient client = new OrcaHttpClient(httpClient, transportHttpSettings(
+                ServerConfigurationResolver.KEY_ORCA_API_RETRY_NETWORK_MAX, "10",
+                ServerConfigurationResolver.KEY_ORCA_API_RETRY_NETWORK_BACKOFF_MS, "10",
+                ServerConfigurationResolver.KEY_ORCA_API_TOTAL_TIMEOUT_MS, "40ms"));
 
         OrcaGatewayException error = assertThrows(OrcaGatewayException.class,
                 () -> client.get(SETTINGS, "/api01rv2/systeminfv2", null,
@@ -83,12 +76,11 @@ class OrcaHttpClientResilienceTest {
 
     @Test
     void concurrentGetRequestsDoNotSerializeAllCalls() throws Exception {
-        System.setProperty("orca.api.retry.network.max", "0");
-        System.setProperty("orca.api.total-timeout-ms", "5000");
-
         SequencedHttpClient httpClient = new SequencedHttpClient(List.of(
                 ResponseSpec.response(200, "<xmlio2><res><Api_Result>0000</Api_Result></res></xmlio2>", "application/xml", 120)));
-        OrcaHttpClient client = new OrcaHttpClient(httpClient);
+        OrcaHttpClient client = new OrcaHttpClient(httpClient, transportHttpSettings(
+                ServerConfigurationResolver.KEY_ORCA_API_RETRY_NETWORK_MAX, "0",
+                ServerConfigurationResolver.KEY_ORCA_API_TOTAL_TIMEOUT_MS, "5000ms"));
 
         ExecutorService executor = Executors.newFixedThreadPool(4);
         try {
@@ -112,6 +104,10 @@ class OrcaHttpClientResilienceTest {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> OrcaTransportSettings.fromAdminConfig(null, false, null, null));
         assertTrue(error.getMessage().contains("baseUrl is required"));
+    }
+
+    private static ServerRuntimeConfiguration.OrcaTransportHttpSettings transportHttpSettings(String... entries) {
+        return TestServerConfigurationResolvers.resolver(entries).orcaTransportHttp();
     }
 
     private record ResponseSpec(int status, String body, String contentType, IOException failure, long delayMs) {

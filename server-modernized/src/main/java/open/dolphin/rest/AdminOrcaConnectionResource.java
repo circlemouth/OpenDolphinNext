@@ -14,26 +14,16 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.net.ConnectException;
-import java.net.UnknownHostException;
-import java.net.http.HttpTimeoutException;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.net.ssl.SSLException;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.IInfoModel;
-import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
-import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
-import open.dolphin.orca.transport.OrcaTransportRequest;
-import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.security.audit.AuditEventPayload;
@@ -41,6 +31,8 @@ import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Admin-only WebORCA / ORCA connection configuration API.
@@ -50,16 +42,11 @@ import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 @Path("/admin/orca/connection")
 public class AdminOrcaConnectionResource extends AbstractResource {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AdminOrcaConnectionResource.class);
+
     private static final long MAX_CONFIG_BYTES = 256 * 1024; // 256KiB
     private static final long MAX_P12_BYTES = 10L * 1024L * 1024L; // 10MiB
     private static final long MAX_CA_BYTES = 2L * 1024L * 1024L; // 2MiB
-
-    private static final Pattern API_RESULT_PATTERN =
-            Pattern.compile("<Api_Result\\b[^>]*>(.*?)</Api_Result>", Pattern.DOTALL);
-    private static final Pattern API_MESSAGE_PATTERN =
-            Pattern.compile("<Api_Result_Message\\b[^>]*>(.*?)</Api_Result_Message>", Pattern.DOTALL);
-    private static final Pattern ORCA_HTTP_STATUS_PATTERN =
-            Pattern.compile("response status\\s+(\\d+)");
 
     @Inject
     private OrcaConnectionConfigStore orcaConnectionConfigStore;
@@ -82,7 +69,8 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         String actor = requireAdminActor(request, runId);
         String facilityId = resolveActorFacilityId(actor);
         OrcaConnectionConfigRecord record = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getSnapshot(facilityId) : null;
-        Map<String, Object> body = buildView(record, runId, resolveTraceId(request), facilityId);
+        String defaultFacilityId = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getDefaultFacilityId() : null;
+        Map<String, Object> body = buildView(record, runId, resolveTraceId(request), facilityId, defaultFacilityId);
         return Response.ok(body).header("x-run-id", runId).build();
     }
 
@@ -155,10 +143,54 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         }
         recordAudit(request, "ADMIN_ORCA_CONNECTION_SAVE", details, AuditEventEnvelope.Outcome.SUCCESS, null, null);
 
-        Map<String, Object> body = buildView(updated, runId, resolveTraceId(request), facilityId);
+        String defaultFacilityId = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getDefaultFacilityId() : null;
+        Map<String, Object> body = buildView(updated, runId, resolveTraceId(request), facilityId, defaultFacilityId);
         if (auditSummary != null) {
             body.put("auditSummary", auditSummary);
         }
+        return Response.ok(body).header("x-run-id", runId).build();
+    }
+
+    @PUT
+    @Path("/default-facility")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response putDefaultFacility(@Context HttpServletRequest request, String payloadJson) {
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        String actor = requireAdminActor(request, runId);
+        String traceId = resolveTraceId(request);
+
+        String requestedDefaultFacilityId;
+        try {
+            requestedDefaultFacilityId = parseDefaultFacilityId(request, payloadJson);
+        } catch (jakarta.ws.rs.WebApplicationException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "defaultFacilityId の解析に失敗しました。");
+        }
+
+        String updatedDefaultFacilityId;
+        try {
+            updatedDefaultFacilityId = orcaConnectionConfigStore.updateDefaultFacilityId(requestedDefaultFacilityId, runId, actor);
+        } catch (OrcaConnectionPolicyException ex) {
+            throw restError(request, Response.Status.BAD_REQUEST, ex.getErrorCategory(), "指定した施設の ORCA 接続設定がありません。");
+        } catch (IllegalStateException ex) {
+            throw restError(request, Response.Status.INTERNAL_SERVER_ERROR,
+                    "persist_failed", "接続設定の永続化に失敗しました。サーバー設定を確認してください。");
+        }
+
+        if (restOrcaTransport != null) {
+            try {
+                restOrcaTransport.reloadSettings(null);
+            } catch (RuntimeException ex) {
+                LOGGER.debug("Failed to reload ORCA transport after default facility update", ex);
+            }
+        }
+
+        OrcaConnectionConfigRecord record = orcaConnectionConfigStore != null
+                ? orcaConnectionConfigStore.getSnapshot(updatedDefaultFacilityId)
+                : null;
+        Map<String, Object> body = buildView(record, runId, traceId, updatedDefaultFacilityId, updatedDefaultFacilityId);
         return Response.ok(body).header("x-run-id", runId).build();
     }
 
@@ -166,106 +198,24 @@ public class AdminOrcaConnectionResource extends AbstractResource {
     @Path("/test")
     @Produces(MediaType.APPLICATION_JSON)
     public Response testConnection(@Context HttpServletRequest request) {
-        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
-        String actor = requireAdminActor(request, runId);
-        String facilityId = resolveActorFacilityId(actor);
-        String traceId = resolveTraceId(request);
-
-        Map<String, Object> details = new LinkedHashMap<>();
-        details.put("operation", "test");
-        details.put("resource", "/api/admin/orca/connection/test");
-        details.put("runId", runId);
-        details.put("actor", actor);
-        details.put("facilityId", facilityId);
-        if (traceId != null && !traceId.isBlank()) {
-            details.put("traceId", traceId);
-        }
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("runId", runId);
-        body.put("facilityId", facilityId);
-        if (traceId != null && !traceId.isBlank()) {
-            body.put("traceId", traceId);
-        }
-
-        try {
-            if (restOrcaTransport == null) {
-                throw new IllegalStateException("ORCA transport is not available");
-            }
-            if (orcaConnectionConfigStore != null) {
-                orcaConnectionConfigStore.resolve(facilityId);
-            }
-            restOrcaTransport.reloadSettings(facilityId);
-
-            String payload = buildSystemListRequestXml("04");
-            OrcaTransportRequest transportRequest = OrcaTransportRequest.post(payload).withQuery("class=04");
-            OrcaTransportResult result = restOrcaTransport.invokeDetailed(OrcaEndpoint.SYSTEM_MANAGEMENT_LIST, transportRequest);
-
-            String responseXml = result != null ? result.getBody() : null;
-            String apiResult = extractFirst(API_RESULT_PATTERN, responseXml);
-            String apiMessage = extractFirst(API_MESSAGE_PATTERN, responseXml);
-            boolean ok = result != null
-                    && result.getStatus() >= 200
-                    && result.getStatus() < 300
-                    && OrcaApiProxySupport.isApiResultSuccess(apiResult);
-
-            body.put("ok", ok);
-            body.put("orcaHttpStatus", result != null ? result.getStatus() : null);
-            body.put("apiResult", apiResult);
-            body.put("apiResultMessage", apiMessage);
-            body.put("testedAt", Instant.now().toString());
-
-            details.put("status", ok ? "success" : "failed");
-            details.put("orcaHttpStatus", result != null ? result.getStatus() : null);
-            details.put("apiResult", apiResult);
-            recordAudit(request, "ADMIN_ORCA_CONNECTION_TEST", details,
-                    ok ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE,
-                    ok ? null : "orca.connection.test.failed",
-                    ok ? null : apiMessage);
-
-            return Response.ok(body).header("x-run-id", runId).build();
-        } catch (OrcaConnectionPolicyException ex) {
-            body.put("ok", false);
-            body.put("errorCategory", ex.getErrorCategory());
-            body.put("error", ex.getMessage());
-            body.put("testedAt", Instant.now().toString());
-
-            details.put("status", "failed");
-            details.put("errorCategory", ex.getErrorCategory());
-            details.put("error", ex.getMessage());
-            recordAudit(request, "ADMIN_ORCA_CONNECTION_TEST", details,
-                    AuditEventEnvelope.Outcome.FAILURE,
-                    "orca.connection.test.policy_violation",
-                    ex.getMessage());
-            return Response.status(Response.Status.BAD_REQUEST).entity(body).header("x-run-id", runId).build();
-        } catch (RuntimeException ex) {
-            Failure failure = classifyFailure(ex);
-            body.put("ok", false);
-            body.put("errorCategory", failure.category);
-            body.put("error", failure.message);
-            if (failure.orcaHttpStatus != null) {
-                body.put("orcaHttpStatus", failure.orcaHttpStatus);
-            }
-            body.put("testedAt", Instant.now().toString());
-
-            details.put("status", "failed");
-            details.put("errorCategory", failure.category);
-            details.put("error", failure.message);
-            if (failure.orcaHttpStatus != null) {
-                details.put("orcaHttpStatus", failure.orcaHttpStatus);
-            }
-            recordAudit(request, "ADMIN_ORCA_CONNECTION_TEST", details,
-                    AuditEventEnvelope.Outcome.FAILURE,
-                    "orca.connection.test.error",
-                    failure.message);
-            return Response.ok(body).header("x-run-id", runId).build();
-        }
+        return new AdminOrcaConnectionTestSupport(
+                request,
+                orcaConnectionConfigStore,
+                restOrcaTransport,
+                userServiceBean,
+                sessionAuditDispatcher
+        ).testConnection();
     }
 
-    private Map<String, Object> buildView(OrcaConnectionConfigRecord record, String runId, String traceId, String facilityId) {
+    private Map<String, Object> buildView(OrcaConnectionConfigRecord record,
+                                          String runId,
+                                          String traceId,
+                                          String facilityId,
+                                          String defaultFacilityId) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("runId", runId);
         body.put("facilityId", facilityId);
+        body.put("defaultFacilityId", defaultFacilityId);
         if (traceId != null && !traceId.isBlank()) {
             body.put("traceId", traceId);
         }
@@ -298,6 +248,25 @@ public class AdminOrcaConnectionResource extends AbstractResource {
             body.put("auditSummary", restOrcaTransport.auditSummary(facilityId));
         }
         return body;
+    }
+
+    private String parseDefaultFacilityId(HttpServletRequest request, String payloadJson) {
+        if (payloadJson == null || payloadJson.isBlank()) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "defaultFacilityId が必要です。");
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> payload = mapper.readValue(payloadJson, Map.class);
+            String defaultFacilityId = trimToNull(asString(payload.get("defaultFacilityId")));
+            if (defaultFacilityId == null) {
+                throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "defaultFacilityId が必要です。");
+            }
+            return defaultFacilityId;
+        } catch (jakarta.ws.rs.WebApplicationException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "defaultFacilityId のJSON解析に失敗しました。");
+        }
     }
 
     private OrcaConnectionConfigStore.UpdateRequest parseUpdateRequest(HttpServletRequest request, MultipartFormDataInput input) {
@@ -499,114 +468,6 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         sessionAuditDispatcher.record(payload, outcome, errorCode, errorMessage);
     }
 
-    private static String buildSystemListRequestXml(String requestNumber) {
-        String rn = requestNumber != null && !requestNumber.isBlank() ? requestNumber.trim() : "04";
-        return String.join("\n",
-                "<data>",
-                "  <system01lstv2req type=\"record\">",
-                "    <Request_Number type=\"string\">" + rn + "</Request_Number>",
-                "  </system01lstv2req>",
-                "</data>");
-    }
-
-    private static String extractFirst(Pattern pattern, String xml) {
-        if (pattern == null || xml == null || xml.isBlank()) {
-            return null;
-        }
-        Matcher matcher = pattern.matcher(xml);
-        if (!matcher.find()) {
-            return null;
-        }
-        String value = matcher.group(1);
-        return value != null ? value.trim() : null;
-    }
-
-    private Failure classifyFailure(Throwable ex) {
-        Throwable root = unwrap(ex);
-        Integer orcaHttpStatus = extractOrcaHttpStatus(ex != null ? ex.getMessage() : null);
-
-        if (orcaHttpStatus != null && (orcaHttpStatus == 401 || orcaHttpStatus == 403)) {
-            return new Failure("auth_failed",
-                    "認証に失敗しました。ユーザー名とパスワード(APIキー)を確認してください。",
-                    orcaHttpStatus);
-        }
-        if (hasCause(root, HttpTimeoutException.class)) {
-            return new Failure("timeout", "タイムアウトしました。接続先とネットワーク、証明書を確認してください。", orcaHttpStatus);
-        }
-        if (hasCause(root, UnknownHostException.class) || hasCause(root, ConnectException.class)) {
-            return new Failure("unreachable", "接続先に到達できません。URL/ポート/ネットワークを確認してください。", orcaHttpStatus);
-        }
-        if (hasCause(root, SSLException.class) || containsSslHint(root)) {
-            return new Failure("certificate_error", "証明書エラーの可能性があります。クライアント証明書/パスフレーズ/CA証明書を確認してください。", orcaHttpStatus);
-        }
-        if (root instanceof IllegalArgumentException) {
-            return new Failure("config_incomplete", root.getMessage(), orcaHttpStatus);
-        }
-        if (root instanceof OrcaGatewayException) {
-            return new Failure("http_error", root.getMessage(), orcaHttpStatus);
-        }
-        String message = root != null && root.getMessage() != null ? root.getMessage() : "不明なエラーです。";
-        return new Failure("unknown", message, orcaHttpStatus);
-    }
-
-    private Throwable unwrap(Throwable ex) {
-        if (ex == null) {
-            return null;
-        }
-        Throwable current = ex;
-        // Unwrap common wrappers.
-        while (current.getCause() != null && (current instanceof OrcaGatewayException || current instanceof RuntimeException)) {
-            if (current.getCause() == current) {
-                break;
-            }
-            current = current.getCause();
-        }
-        return current;
-    }
-
-    private boolean hasCause(Throwable ex, Class<? extends Throwable> type) {
-        if (ex == null || type == null) {
-            return false;
-        }
-        Throwable cur = ex;
-        int depth = 0;
-        while (cur != null && depth < 10) {
-            if (type.isInstance(cur)) {
-                return true;
-            }
-            cur = cur.getCause();
-            depth++;
-        }
-        return false;
-    }
-
-    private boolean containsSslHint(Throwable ex) {
-        if (ex == null) {
-            return false;
-        }
-        String msg = ex.getMessage();
-        if (msg == null) {
-            return false;
-        }
-        String normalized = msg.toLowerCase(Locale.ROOT);
-        return normalized.contains("ssl") || normalized.contains("pkix") || normalized.contains("handshake");
-    }
-
-    private Integer extractOrcaHttpStatus(String message) {
-        if (message == null || message.isBlank()) {
-            return null;
-        }
-        Matcher matcher = ORCA_HTTP_STATUS_PATTERN.matcher(message);
-        if (!matcher.find()) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(matcher.group(1));
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
     private static Boolean asBoolean(Object value) {
         if (value instanceof Boolean b) {
             return b;
@@ -653,8 +514,5 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private record Failure(String category, String message, Integer orcaHttpStatus) {
     }
 }

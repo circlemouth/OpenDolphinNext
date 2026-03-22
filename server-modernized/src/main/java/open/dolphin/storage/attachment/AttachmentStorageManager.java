@@ -32,6 +32,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
+import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
@@ -86,6 +87,27 @@ public class AttachmentStorageManager {
 
     public AttachmentStorageMode getMode() {
         return settings.getMode();
+    }
+
+    public boolean isBackendReachable() {
+        if (settings == null) {
+            return false;
+        }
+        if (!settings.getMode().isS3()) {
+            return true;
+        }
+        try {
+            AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
+                    .orElseThrow(() -> new AttachmentStorageException("S3 settings are missing"));
+            if (s3Client == null) {
+                return false;
+            }
+            s3Client.headBucket(HeadBucketRequest.builder().bucket(s3Settings.getBucket()).build());
+            return true;
+        } catch (Exception ex) {
+            LOGGER.warn("Attachment storage backend probe failed: {}", ex.getClass().getSimpleName());
+            return false;
+        }
     }
 
     public void persistExternalAssets(Collection<AttachmentModel> attachments) {

@@ -8,17 +8,13 @@ import java.util.List;
 public class OperationsReadinessCheck {
 
     private String status;
-    private Object result;
     private String mode;
-    private String auditSummary;
+    private Boolean credentialConfigured;
+    private Boolean clientAuthConfigured;
+    private Boolean backendReachable;
     private String workerStatus;
-    private List<String> reasons = new ArrayList<>();
-    private Boolean enabled;
-    private Long maxBytes;
-    private Integer maxWidth;
-    private Integer maxHeight;
-    private String error;
-    private String message;
+    private String reasonCode;
+    private List<String> reasonCodes = new ArrayList<>();
 
     public String getStatus() {
         return status;
@@ -26,14 +22,6 @@ public class OperationsReadinessCheck {
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public Object getResult() {
-        return result;
-    }
-
-    public void setResult(Object result) {
-        this.result = result;
     }
 
     public String getMode() {
@@ -44,12 +32,28 @@ public class OperationsReadinessCheck {
         this.mode = mode;
     }
 
-    public String getAuditSummary() {
-        return auditSummary;
+    public Boolean getCredentialConfigured() {
+        return credentialConfigured;
     }
 
-    public void setAuditSummary(String auditSummary) {
-        this.auditSummary = auditSummary;
+    public void setCredentialConfigured(Boolean credentialConfigured) {
+        this.credentialConfigured = credentialConfigured;
+    }
+
+    public Boolean getClientAuthConfigured() {
+        return clientAuthConfigured;
+    }
+
+    public void setClientAuthConfigured(Boolean clientAuthConfigured) {
+        this.clientAuthConfigured = clientAuthConfigured;
+    }
+
+    public Boolean getBackendReachable() {
+        return backendReachable;
+    }
+
+    public void setBackendReachable(Boolean backendReachable) {
+        this.backendReachable = backendReachable;
     }
 
     public String getWorkerStatus() {
@@ -60,59 +64,19 @@ public class OperationsReadinessCheck {
         this.workerStatus = workerStatus;
     }
 
-    public List<String> getReasons() {
-        return reasons;
+    public String getReasonCode() {
+        return reasonCode;
     }
 
-    public void setReasons(List<String> reasons) {
-        this.reasons = reasons;
+    public void setReasonCode(String reasonCode) {
+        this.reasonCode = reasonCode;
     }
 
-    public Boolean getEnabled() {
-        return enabled;
+    public List<String> getReasonCodes() {
+        return reasonCodes;
     }
 
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public Long getMaxBytes() {
-        return maxBytes;
-    }
-
-    public void setMaxBytes(Long maxBytes) {
-        this.maxBytes = maxBytes;
-    }
-
-    public Integer getMaxWidth() {
-        return maxWidth;
-    }
-
-    public void setMaxWidth(Integer maxWidth) {
-        this.maxWidth = maxWidth;
-    }
-
-    public Integer getMaxHeight() {
-        return maxHeight;
-    }
-
-    public void setMaxHeight(Integer maxHeight) {
-        this.maxHeight = maxHeight;
-    }
-
-    public String getError() {
-        return error;
-    }
-
-    public void setError(String error) {
-        this.error = error;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
+    public void setReasonCodes(List<String> reasonCodes) {
+        this.reasonCodes = reasonCodes;
     }
 }

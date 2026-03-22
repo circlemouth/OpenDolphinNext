@@ -234,82 +234,44 @@ public class KarteDocumentWriteService {
         Date recorded = document.getRecorded();
         String status = document.getStatus();
 
-        if (document.getModules() != null) {
-            for (ModuleModel module : document.getModules()) {
-                if (module == null) {
-                    continue;
-                }
+        synchronizeEntryCollection(document.getModules(), document, karte, creator, started, confirmed, recorded, status);
+        synchronizeEntryCollection(document.getSchema(), document, karte, creator, started, confirmed, recorded, status);
+        synchronizeEntryCollection(document.getAttachment(), document, karte, creator, started, confirmed, recorded, status);
+    }
+
+    private <T extends KarteEntryBean> void synchronizeEntryCollection(Collection<T> entries, DocumentModel document,
+            KarteBean karte, UserModel creator, Date started, Date confirmed, Date recorded, String status) {
+        if (entries == null) {
+            return;
+        }
+        for (T entry : entries) {
+            if (entry == null) {
+                continue;
+            }
+            if (entry instanceof ModuleModel module) {
                 module.setDocumentModel(document);
-                if (module.getKarteBean() == null) {
-                    module.setKarteBean(karte);
-                }
-                if (module.getUserModel() == null) {
-                    module.setUserModel(creator);
-                }
-                if (module.getStarted() == null) {
-                    module.setStarted(started);
-                }
-                if (module.getConfirmed() == null) {
-                    module.setConfirmed(confirmed);
-                }
-                if (module.getRecorded() == null) {
-                    module.setRecorded(recorded);
-                }
-                if (module.getStatus() == null) {
-                    module.setStatus(status);
-                }
-            }
-        }
-        if (document.getSchema() != null) {
-            for (SchemaModel schema : document.getSchema()) {
-                if (schema == null) {
-                    continue;
-                }
+            } else if (entry instanceof SchemaModel schema) {
                 schema.setDocumentModel(document);
-                if (schema.getKarteBean() == null) {
-                    schema.setKarteBean(karte);
-                }
-                if (schema.getUserModel() == null) {
-                    schema.setUserModel(creator);
-                }
-                if (schema.getStarted() == null) {
-                    schema.setStarted(started);
-                }
-                if (schema.getConfirmed() == null) {
-                    schema.setConfirmed(confirmed);
-                }
-                if (schema.getRecorded() == null) {
-                    schema.setRecorded(recorded);
-                }
-                if (schema.getStatus() == null) {
-                    schema.setStatus(status);
-                }
-            }
-        }
-        if (document.getAttachment() != null) {
-            for (AttachmentModel attachment : document.getAttachment()) {
-                if (attachment == null) {
-                    continue;
-                }
+            } else if (entry instanceof AttachmentModel attachment) {
                 attachment.setDocumentModel(document);
-                if (attachment.getKarteBean() == null) {
-                    attachment.setKarteBean(karte);
-                }
-                if (attachment.getUserModel() == null) {
-                    attachment.setUserModel(creator);
-                }
-                if (attachment.getStarted() == null) {
-                    attachment.setStarted(started);
-                }
-                if (attachment.getConfirmed() == null) {
-                    attachment.setConfirmed(confirmed);
-                }
-                if (attachment.getRecorded() == null) {
-                    attachment.setRecorded(recorded);
-                }
-                if (attachment.getStatus() == null) {
-                    attachment.setStatus(status);
-                }
+            }
+            if (entry.getKarteBean() == null) {
+                entry.setKarteBean(karte);
+            }
+            if (entry.getUserModel() == null) {
+                entry.setUserModel(creator);
+            }
+            if (entry.getStarted() == null) {
+                entry.setStarted(started);
+            }
+            if (entry.getConfirmed() == null) {
+                entry.setConfirmed(confirmed);
+            }
+            if (entry.getRecorded() == null) {
+                entry.setRecorded(recorded);
+            }
+            if (entry.getStatus() == null) {
+                entry.setStatus(status);
             }
         }
     }

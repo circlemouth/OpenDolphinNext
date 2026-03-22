@@ -24,11 +24,6 @@ import open.dolphin.session.framework.SessionTraceManager;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-/**
- *
- * @author Kazushi Minagawa, Digital Globe, Inc.
- */
 @Named
 @ApplicationScoped
 @Transactional
@@ -44,9 +39,7 @@ public class NLabServiceBean {
     private static final String QUERY_ITEM_BY_MID_ORDERBY_SORTKEY = "from NLaboItem l where l.laboModule.id=:mid order by l.sortKey";
     private static final String QUERY_ITEM_BY_FIDPID_ITEMCODE = "from NLaboItem l where l.patientId=:fidPid and l.itemCode=:itemCode order by l.sampleDate desc";
     private static final String QUERY_INSURANCE_BY_PATIENT_PK = "from HealthInsuranceModel h where h.patient.id=:pk";
-//s.oh^ 2013/09/18 ラボデータの高速化
     private static final String QUERY_MODULECOUNT_BY_FIDPID = "select count(*) from NLaboModule l where l.patientId=:fidPid";
-//s.oh$
 
     private static final String PK = "pk";
     private static final String FIDPID = "fidPid";
@@ -96,116 +89,88 @@ public class NLabServiceBean {
 
     
     public PatientModel create(String fid, NLaboModule module) {
-
         String fidPidBeforeNormalization = fid != null && module != null ? fid + ":" + module.getPatientId() : null;
         String previousPatientContext = setPatientContext(extractPatientId(fidPidBeforeNormalization));
         final String action = "LAB_TEST_CREATE";
         try {
-
-        String pid = module.getPatientId();
-
-        // 施設IDと LaboModule の患者IDで 患者を取得する
-        PatientModel patient = (PatientModel) em
-                .createQuery("from PatientModel p where p.facilityId=:fid and p.patientId=:pid")
-                .setParameter("fid", fid)
-                .setParameter("pid", pid)
-                .getSingleResult();
-
-
-        //--------------------------------------------------------
-        if (patient!=null) {
-
-            // 患者の健康保険を取得する
-            List<HealthInsuranceModel> insurances
-                    = (List<HealthInsuranceModel>)em.createQuery(QUERY_INSURANCE_BY_PATIENT_PK)
-                    .setParameter(PK, patient.getId()).getResultList();
-            patient.setHealthInsurances(insurances);
-        }
-        //--------------------------------------------------------
-
-        String fidPid = fid+":"+pid;
-        module.setPatientId(fidPid);
-
-        // item の patientId を変更する
-        Collection<NLaboItem> items = module.getItems();
-        for (NLaboItem item : items) {
-            item.setPatientId(fidPid);
-        }
-
-        //--------------------------------------------------------
-        // patientId & 検体採取日 & ラボコード で key
-        // これが一致しているモジュールは再報告として削除してから登録する。
-        //--------------------------------------------------------
-        String sampleDate = module.getSampleDate();
-        String laboCode = module.getLaboCenterCode();
-        String moduleKey = module.getModuleKey();
-        if (moduleKey!=null) {
-            StringBuilder sb = new StringBuilder();
-            sb.append(pid).append(".").append(sampleDate).append(".").append(laboCode);
-            String test = sb.toString();
-            if (test.equals(moduleKey)) {
-                sb = new StringBuilder();
-                sb.append(fid);
-                sb.append(":");
-                sb.append(moduleKey);
-                moduleKey = sb.toString();
-                module.setModuleKey(moduleKey);
-            } 
-        }
-
-        NLaboModule exist;
-
-        try {
-            if (moduleKey!=null) {
-                exist = (NLaboModule)em.createQuery(QUERY_MODULE_BY_MODULE_KEY)
-                                       .setParameter(MODULEKEY, moduleKey)
-                                       .getSingleResult();
-
-            } else {
-                exist = (NLaboModule)em.createQuery(QUERY_MODULE_BY_PID_SAMPLEDATE_LABCODE)
-                                       .setParameter(FIDPID, fidPid)
-                                       .setParameter(SAMPLEDATE, sampleDate)
-                                       .setParameter(LABOCODE, laboCode)
-                                       .getSingleResult();
-            }
-
-        } catch (Exception e) {
-            exist = null;
-        }
-
-        // Cascade.TYPE=ALL
-        if (exist != null) {
-            em.remove(exist);
-        }
-
-        // 永続化する
-        em.persist(module);
-
-        recordLabAudit(action, fidPidBeforeNormalization != null ? fidPidBeforeNormalization : module.getPatientId(),
-                module != null ? module.getLaboCenterCode() : null,
-                module != null && module.getItems() != null ? module.getItems().size() : 0,
-                null,
-                buildModuleDetails(module));
-        return patient;
+            String pid = module.getPatientId();
+            PatientModel patient = loadPatient(fid, pid);
+            attachInsurance(patient);
+            String fidPid = fid + ":" + pid;
+            remapModulePatientContext(fidPid, fid, pid, module);
+            NLaboModule exist = findExistingModule(fidPid, module.getSampleDate(), module.getLaboCenterCode(), module.getModuleKey());
+            if (exist != null) em.remove(exist);
+            em.persist(module);
+            recordLabAudit(action, fidPidBeforeNormalization != null ? fidPidBeforeNormalization : module.getPatientId(), module != null ? module.getLaboCenterCode() : null, module != null && module.getItems() != null ? module.getItems().size() : 0, null, buildModuleDetails(module));
+            return patient;
         } catch (RuntimeException ex) {
-            recordLabAudit(action, fidPidBeforeNormalization, module != null ? module.getLaboCenterCode() : null,
-                    module != null && module.getItems() != null ? module.getItems().size() : 0,
-                    ex,
-                    buildModuleDetails(module));
+            recordLabAudit(action, fidPidBeforeNormalization, module != null ? module.getLaboCenterCode() : null, module != null && module.getItems() != null ? module.getItems().size() : 0, ex, buildModuleDetails(module));
             throw ex;
         } finally {
             restorePatientContext(previousPatientContext);
         }
     }
 
+    private PatientModel loadPatient(String fid, String pid) {
+        return (PatientModel) em.createQuery("from PatientModel p where p.facilityId=:fid and p.patientId=:pid")
+                .setParameter("fid", fid)
+                .setParameter("pid", pid)
+                .getSingleResult();
+    }
 
-    /**
-     * ラボモジュールを検索する。
-     * @param patientId     対象患者のID
-     * @param firstResult   取得結果リストの最初の番号
-     * @param maxResult     取得する件数の最大値
-     * @return              ラボモジュールのリスト
-     */
+    private void attachInsurance(PatientModel patient) {
+        if (patient == null) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        List<HealthInsuranceModel> insurances = (List<HealthInsuranceModel>) em.createQuery(QUERY_INSURANCE_BY_PATIENT_PK)
+                .setParameter(PK, patient.getId())
+                .getResultList();
+        patient.setHealthInsurances(insurances);
+    }
+
+    private void remapModulePatientContext(String fidPid, String fid, String pid, NLaboModule module) {
+        if (module == null) {
+            return;
+        }
+        module.setPatientId(fidPid);
+        for (NLaboItem item : module.getItems()) {
+            item.setPatientId(fidPid);
+        }
+        String moduleKey = normalizeModuleKey(fid, pid, module);
+        if (moduleKey != null) {
+            module.setModuleKey(moduleKey);
+        }
+    }
+
+    private String normalizeModuleKey(String fid, String pid, NLaboModule module) {
+        String moduleKey = module.getModuleKey();
+        if (moduleKey == null) {
+            return null;
+        }
+        String expected = new StringBuilder().append(pid).append('.').append(module.getSampleDate()).append('.').append(module.getLaboCenterCode()).toString();
+        if (!expected.equals(moduleKey)) {
+            return moduleKey;
+        }
+        return new StringBuilder().append(fid).append(':').append(moduleKey).toString();
+    }
+
+    private NLaboModule findExistingModule(String fidPid, String sampleDate, String laboCode, String moduleKey) {
+        try {
+            if (moduleKey != null) {
+                return (NLaboModule) em.createQuery(QUERY_MODULE_BY_MODULE_KEY)
+                        .setParameter(MODULEKEY, moduleKey)
+                        .getSingleResult();
+            }
+            return (NLaboModule) em.createQuery(QUERY_MODULE_BY_PID_SAMPLEDATE_LABCODE)
+                    .setParameter(FIDPID, fidPid)
+                    .setParameter(SAMPLEDATE, sampleDate)
+                    .setParameter(LABOCODE, laboCode)
+                    .getSingleResult();
+        } catch (Exception e) {
+            return null;
+        }
+    }
     
     public List<NLaboModule> getLaboTest(String fidPid, int firstResult, int maxResult) {
 
@@ -247,25 +212,12 @@ public class NLabServiceBean {
             restorePatientContext(previousPatientContext);
         }
     }
-    
-//s.oh^ 2013/09/18 ラボデータの高速化
     public Long getLaboTestCount(String fidPid) {
         Long ret = (Long)em.createQuery(QUERY_MODULECOUNT_BY_FIDPID)
                 .setParameter(FIDPID, fidPid)
                 .getSingleResult();
         return ret;
     }
-//s.oh$
-
-
-    /**
-     * 指定された検査項目を検索する。
-     * @param patientId     患者ID
-     * @param firstResult   最初の結果
-     * @param maxResult     戻す件数の最大値
-     * @param itemCode      検索する検査項目コード
-     * @return              検査項目コードが降順に格納されたリスト
-     */
     
     public List<NLaboItem> getLaboTestItem(String fidPid, int firstResult, int maxResult, String itemCode) {
 
@@ -291,8 +243,6 @@ public class NLabServiceBean {
             restorePatientContext(previousPatientContext);
         }
     }
-   
-   // ラボデータの削除 2013/06/24
     public int deleteLabTestForFacility(String fid, long id) {
         if (fid == null || fid.isBlank()) {
             return 0;
@@ -324,10 +274,6 @@ public class NLabServiceBean {
             restorePatientContext(previousPatientContext);
         }
     }
-
-    /**
-     * @deprecated facility境界付きの {@link #deleteLabTestForFacility(String, long)} を使用すること。
-     */
     @Deprecated
     public int deleteLabTest(long id) {
         final String action = "LAB_TEST_DELETE";

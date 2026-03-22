@@ -3,16 +3,22 @@ package open.dolphin.orca.transport;
 import java.net.URI;
 import java.util.Locale;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 
 public final class OrcaTransportSecurityPolicy {
-
-    public static final String ENV_ALLOW_INSECURE_HTTP = "OPENDOLPHIN_ORCA_ALLOW_INSECURE_HTTP";
-    public static final String PROP_ALLOW_INSECURE_HTTP = "opendolphin.orca.allow.insecure.http";
 
     private OrcaTransportSecurityPolicy() {
     }
 
     public static void validateBaseUrl(String baseUrl, boolean useWeborca) {
+        ServerConfigurationResolver resolver = new ServerConfigurationResolver();
+        validateBaseUrl(baseUrl, useWeborca, resolver.runtime(), resolver.orcaTransportHttp());
+    }
+
+    public static void validateBaseUrl(String baseUrl, boolean useWeborca,
+            ServerRuntimeConfiguration.RuntimeSettings runtime,
+            ServerRuntimeConfiguration.OrcaTransportHttpSettings transportHttp) {
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new IllegalArgumentException("サーバURLは必須です。");
         }
@@ -22,10 +28,16 @@ public final class OrcaTransportSecurityPolicy {
         } catch (RuntimeException ex) {
             throw new IllegalArgumentException("サーバURLが不正です。", ex);
         }
-        validateUri(uri, useWeborca, RuntimeConfigurationSupport.resolveEnvironment());
+        String environment = runtime != null ? runtime.environment() : null;
+        boolean allowInsecureHttp = transportHttp != null && Boolean.TRUE.equals(transportHttp.allowInsecureHttp());
+        validateUri(uri, useWeborca, environment, allowInsecureHttp);
     }
 
     static void validateUri(URI uri, boolean useWeborca, String environment) {
+        validateUri(uri, useWeborca, environment, false);
+    }
+
+    static void validateUri(URI uri, boolean useWeborca, String environment, boolean allowInsecureHttp) {
         if (uri == null) {
             throw new IllegalArgumentException("サーバURLが不正です。");
         }
@@ -43,11 +55,11 @@ public final class OrcaTransportSecurityPolicy {
         if (!RuntimeConfigurationSupport.isProductionLikeEnvironment(environment)) {
             return;
         }
-        if (!allowInsecureHttp()) {
+        if (!allowInsecureHttp) {
             throw new OrcaConnectionPolicyException(
                     "insecure_http_disallowed",
                     "production-like 環境では HTTP 接続は既定で拒否されます。"
-                            + ENV_ALLOW_INSECURE_HTTP
+                            + " OPENDOLPHIN_ORCA_ALLOW_INSECURE_HTTP"
                             + "=1 を設定したうえで localhost/127.0.0.1/::1/RFC1918 private range に限定してください。");
         }
         if (!isLoopbackOrPrivateIpv4(host)) {
@@ -55,15 +67,6 @@ public final class OrcaTransportSecurityPolicy {
                     "insecure_http_target_not_allowed",
                     "HTTP 接続は localhost/127.0.0.1/::1/RFC1918 private range のみ許可されています。");
         }
-    }
-
-    static boolean allowInsecureHttp() {
-        Boolean fromEnv = RuntimeConfigurationSupport.parseBooleanFlag(System.getenv(ENV_ALLOW_INSECURE_HTTP));
-        if (fromEnv != null) {
-            return fromEnv;
-        }
-        Boolean fromProperty = RuntimeConfigurationSupport.parseBooleanFlag(System.getProperty(PROP_ALLOW_INSECURE_HTTP));
-        return Boolean.TRUE.equals(fromProperty);
     }
 
     static boolean isLoopbackOrPrivateIpv4(String host) {

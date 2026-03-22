@@ -21,8 +21,8 @@ import open.dolphin.orca.sync.OrcaPatientSyncScheduler;
 import open.dolphin.session.ChartEventServiceBean;
 import open.dolphin.session.SystemServiceBean;
 import open.dolphin.rest.masterupdate.MasterUpdateScheduler;
-import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerConfigurationValidator;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
 import open.orca.rest.OrcaMasterSchemaValidator;
 
@@ -34,7 +34,7 @@ public class ServletStartup {
 
     private static final Logger LOGGER = Logger.getLogger(ServletStartup.class.getSimpleName());
     private static final Logger DOLPHIN_LOGGER = Logger.getLogger("open.dolphin");
-    private static final ZoneId DEFAULT_ZONE = RuntimeConfigurationSupport.resolveTimezone();
+    private static final ZoneId DEFAULT_ZONE = defaultZone();
     static final String ORCA_MASTER_BASIC_USER_KEY = "ORCA_MASTER_BASIC_USER";
     static final String ORCA_MASTER_BASIC_PASSWORD_KEY = "ORCA_MASTER_BASIC_PASSWORD";
 
@@ -154,10 +154,14 @@ public class ServletStartup {
     }
 
     private void logRuntimeConfigurationSummary() {
-        String environment = configurationResolver.runtime().environment();
+        var runtime = configurationResolver.runtime();
+        String environment = runtime.environment();
         boolean orcaPatientSyncEnabled = OrcaPatientSyncScheduler.resolveEnabledFromEnvironment();
-        boolean masterUpdateSchedulerEnabled = MasterUpdateScheduler.resolveEnabledFromEnvironment();
-        String dataDir = RuntimeConfigurationSupport.describeServerDataDirectory();
+        boolean masterUpdateSchedulerEnabled = configurationResolver.masterUpdateScheduler().enabled();
+        String dataDir = runtime.serverDataDirectory();
+        if (dataDir == null || dataDir.isBlank()) {
+            dataDir = "MISSING(" + ServerConfigurationResolver.KEY_SERVER_DATA_DIR + ")";
+        }
         String configStorePath = dataDir.startsWith("MISSING(")
                 ? dataDir
                 : Path.of(dataDir, "opendolphin").toString();
@@ -169,7 +173,7 @@ public class ServletStartup {
     }
 
     static void enforceStartupSecurityGuards() {
-        String environment = RuntimeConfigurationSupport.resolveEnvironment();
+        String environment = new ServerConfigurationResolver().runtime().environment();
         if (!RuntimeConfigurationSupport.isProductionLikeEnvironment(environment)) {
             return;
         }
@@ -187,10 +191,15 @@ public class ServletStartup {
     }
 
     private static String resolveSetting(String key) {
-        return RuntimeConfigurationSupport.firstNonBlank(System.getProperty(key), System.getenv(key));
+        return new ServerConfigurationResolver().raw(key);
     }
 
     private static String safe(String value) {
         return value == null || value.isBlank() ? "unset" : value.trim();
+    }
+
+    private static ZoneId defaultZone() {
+        ZoneId configured = new ServerConfigurationResolver().runtime().timezone();
+        return configured != null ? configured : ZoneId.of("Asia/Tokyo");
     }
 }

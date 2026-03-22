@@ -27,6 +27,13 @@ public final class ServerRuntimeConfiguration {
     ) {
     }
 
+    public record OrcaLegacySettings(
+            String facilityJmariCode,
+            String healthcareFacilityCode,
+            String defaultPrescriptionInOut
+    ) {
+    }
+
     public record PvtListenerSettings(
             boolean enabled,
             String bindIp,
@@ -40,6 +47,12 @@ public final class ServerRuntimeConfiguration {
             Integer retryBackoffMillis,
             Long idempotencyWindowMillis,
             Integer poisonQueueCapacity
+    ) {
+    }
+
+    public record PvtWorkerHealthSettings(
+            Long staleSuccessSeconds,
+            Long maxProcessingMillis
     ) {
     }
 
@@ -64,6 +77,146 @@ public final class ServerRuntimeConfiguration {
     }
 
     public record Factor2Settings(String aesKeyBase64) {
+    }
+
+    public record OrcaSecretProtectionSettings(String aesKeyBase64) {
+    }
+
+    public record OrcaApiSettings(
+            String baseUrl,
+            String mode,
+            String host,
+            Integer port,
+            String scheme,
+            String user,
+            String password,
+            String pathPrefix,
+            Boolean weborca,
+            Integer retryMax,
+            Long retryBackoffMs
+    ) {
+    }
+
+    public record OrcaTransportHttpSettings(
+            Integer networkRetryMax,
+            Integer transientRetryMax,
+            Long networkRetryBackoffMs,
+            Long transientRetryBackoffMs,
+            Duration connectTimeout,
+            Duration readTimeout,
+            Duration totalTimeout,
+            String logMode,
+            Boolean allowInsecureHttp,
+            Long cacheTtlMs
+    ) {
+    }
+
+    public record OrcaProxySettings(
+            Boolean forwardXOrcaHeaders,
+            Boolean forwardApiResultMessageHeader
+    ) {
+    }
+
+    public record PushEventCacheSettings(
+            Path cachePath,
+            Integer maxEntries,
+            Long ttlDays
+    ) {
+    }
+
+    public record MasterUpdateSchedulerSettings(boolean enabled) {
+    }
+
+    public record MetricsSettings(String registryJndi) {
+    }
+
+    public record SystemNetworkSettings(String bindAddress) {
+    }
+
+    public record AuditSettings(List<String> trustedProxyRules) {
+        public AuditSettings {
+            trustedProxyRules = trustedProxyRules == null ? List.of() : List.copyOf(trustedProxyRules);
+        }
+    }
+
+    public record TemplatesSettings(Path directory) {
+    }
+
+    public record LicenseSettings(Path directory) {
+    }
+
+    public record PvtOperationSettings(boolean listClearEnabled) {
+    }
+
+    public record SmtpSettings(
+            String host,
+            String port,
+            Boolean auth,
+            String username,
+            String password,
+            String from,
+            String bcc,
+            Boolean startTls,
+            String activityTo
+    ) {
+    }
+
+    public record AttachmentStorageSettings(
+            String mode,
+            String databaseLobTable,
+            S3StorageSettings s3
+    ) {
+    }
+
+    public record S3StorageSettings(
+            String bucket,
+            String region,
+            String endpoint,
+            String basePath,
+            Boolean forcePathStyle,
+            String serverSideEncryption,
+            String kmsKeyId,
+            Integer multipartThresholdMb,
+            String accessKey,
+            String secretKey
+    ) {
+    }
+
+    public record DocumentIntegritySettings(
+            String mode,
+            Path keyringPath
+    ) {
+    }
+
+    public record PatientImagesSettings(
+            boolean enabled,
+            Long maxBytes,
+            Integer maxWidth,
+            Integer maxHeight
+    ) {
+    }
+
+    public record OrcaPatientSyncSettings(
+            boolean enabled,
+            Integer intervalMinutes,
+            Integer initialLookbackDays,
+            boolean includeTestPatient,
+            boolean includeInsurance,
+            String facilityId
+    ) {
+    }
+
+    public record ChartEventHistoryPurgeSettings(
+            boolean enabled,
+            Integer intervalMinutes
+    ) {
+    }
+
+    public record ChartEventHistorySettings(
+            Integer replayLimit,
+            Integer retentionCount,
+            Duration retentionDuration
+    ) {
     }
 
     public record Fido2Settings(

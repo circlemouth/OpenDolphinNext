@@ -2,6 +2,7 @@ package open.dolphin.orca.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,11 +18,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
-import open.dolphin.orca.transport.OrcaTransportSecurityPolicy;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
 import open.dolphin.runtime.RuntimeStateRepository;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.TestServerConfigurationResolvers;
+import open.dolphin.security.OrcaCredentialSecurityConfig;
 import open.dolphin.security.SecondFactorSecurityConfig;
 import open.dolphin.security.totp.TotpSecretProtector;
+import open.dolphin.testsupport.MicroProfileConfigTestSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -32,13 +36,12 @@ class OrcaConnectionConfigStoreTest {
 
     @AfterEach
     void tearDown() {
-        System.clearProperty(OrcaTransportSecurityPolicy.PROP_ALLOW_INSECURE_HTTP);
         System.clearProperty(RuntimeConfigurationSupport.PROP_ENVIRONMENT);
     }
 
     @Test
-    void updatePersistsEncryptedConfigAndReloadsOnRestart() throws Exception {
-        TotpSecretProtector protector = buildProtector();
+    void updatePersistsFacilitiesAndExplicitDefault() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
         Map<String, String> db = new LinkedHashMap<>();
         OrcaConnectionConfigStore store = newStore(protector, db);
 
@@ -52,14 +55,17 @@ class OrcaConnectionConfigStoreTest {
                 null
         );
 
-        OrcaConnectionConfigRecord saved = store.update(update, null, null, "RUN-TEST", "FACILITY:admin");
+        OrcaConnectionConfigRecord saved = store.update("F001", update, null, null, "RUN-TEST", "FACILITY:admin");
         assertNotNull(saved);
+        assertEquals("F001", saved.getFacilityId());
+
+        assertEquals("F001", store.updateDefaultFacilityId("F001", "RUN-DEFAULT", "FACILITY:admin"));
 
         String rawJson = db.get(STATE_CATEGORY + ":" + STATE_KEY);
         assertNotNull(rawJson);
-        assertTrue(rawJson.contains("\"serverUrl\":\"https://weborca-trial.orca.med.or.jp\""));
-        assertTrue(rawJson.contains("\"username\":\"trial\""));
-        assertTrue(rawJson.contains("passwordEncrypted"));
+        assertTrue(rawJson.contains("\"defaultFacilityId\":\"F001\""));
+        assertTrue(rawJson.contains("\"facilities\""));
+        assertTrue(rawJson.contains("\"F001\""));
         assertTrue(!rawJson.contains("\"passwordEncrypted\":\"weborcatrial\""));
 
         OrcaConnectionConfigStore reloaded = newStore(protector, db);
@@ -68,6 +74,7 @@ class OrcaConnectionConfigStoreTest {
         assertEquals("https://weborca-trial.orca.med.or.jp", snapshot.getServerUrl());
         assertEquals(443, snapshot.getPort());
         assertEquals("trial", snapshot.getUsername());
+        assertEquals("F001", reloaded.getDefaultFacilityId());
 
         OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = reloaded.resolve();
         assertEquals("https://weborca-trial.orca.med.or.jp", resolved.baseUrl());
@@ -76,89 +83,80 @@ class OrcaConnectionConfigStoreTest {
     }
 
     @Test
-    void updateFacilityAlsoRefreshesDefaultFallbackRecord() throws Exception {
-        TotpSecretProtector protector = buildProtector();
+    void facilitySpecificUpdateDoesNotMutateExplicitDefaultAndUnknownFacilityFailsClosed() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
         Map<String, String> db = new LinkedHashMap<>();
         OrcaConnectionConfigStore store = newStore(protector, db);
 
-        OrcaConnectionConfigStore.UpdateRequest initial = new OrcaConnectionConfigStore.UpdateRequest(
+        store.update("DEFAULT", new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
-                "https://old.example.orca",
+                "https://default.example.orca",
                 443,
-                "old-user",
-                "old-pass",
+                "default-user",
+                "default-pass",
                 Boolean.FALSE,
                 null
-        );
-        store.update(initial, null, null, "RUN-INITIAL", "FACILITY:admin");
+        ), null, null, "RUN-DEFAULT", "FACILITY:admin");
+        store.updateDefaultFacilityId("DEFAULT", "RUN-DEFAULT", "FACILITY:admin");
 
-        OrcaConnectionConfigStore.UpdateRequest facilityUpdate = new OrcaConnectionConfigStore.UpdateRequest(
+        store.update("F001", new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
-                "https://new.example.orca",
+                "https://facility.example.orca",
                 443,
-                "new-user",
-                "new-pass",
+                "facility-user",
+                "facility-pass",
                 Boolean.FALSE,
                 null
-        );
-        store.update("F001", facilityUpdate, null, null, "RUN-F001", "FACILITY:admin");
+        ), null, null, "RUN-F001", "FACILITY:admin");
 
         OrcaConnectionConfigRecord defaultSnapshot = store.getSnapshot();
         assertNotNull(defaultSnapshot);
-        assertEquals("https://new.example.orca", defaultSnapshot.getServerUrl());
-        assertEquals("new-user", defaultSnapshot.getUsername());
-
-        OrcaConnectionConfigRecord unresolvedFacilitySnapshot = store.getSnapshot("UNKNOWN");
-        assertNotNull(unresolvedFacilitySnapshot);
-        assertEquals("https://new.example.orca", unresolvedFacilitySnapshot.getServerUrl());
-        assertEquals("new-user", unresolvedFacilitySnapshot.getUsername());
+        assertEquals("https://default.example.orca", defaultSnapshot.getServerUrl());
+        assertEquals("default-user", defaultSnapshot.getUsername());
+        assertEquals("DEFAULT", store.getDefaultFacilityId());
 
         OrcaConnectionConfigRecord facilitySnapshot = store.getSnapshot("F001");
         assertNotNull(facilitySnapshot);
         assertEquals("F001", facilitySnapshot.getFacilityId());
-        assertEquals("https://new.example.orca", facilitySnapshot.getServerUrl());
+        assertEquals("https://facility.example.orca", facilitySnapshot.getServerUrl());
 
-        String rawJson = db.get(STATE_CATEGORY + ":" + STATE_KEY);
-        assertNotNull(rawJson);
-        assertTrue(rawJson.contains("\"records\""));
-        assertTrue(rawJson.contains("\"_default\""));
-        assertTrue(rawJson.contains("\"F001\""));
-
-        OrcaConnectionConfigStore.ResolvedOrcaConnection resolvedDefault = store.resolve();
-        assertEquals("new-user", resolvedDefault.username());
-        assertEquals("new-pass", resolvedDefault.password());
+        assertNull(store.getSnapshot("UNKNOWN"));
+        OrcaConnectionPolicyException unresolved = assertThrows(
+                OrcaConnectionPolicyException.class,
+                () -> store.resolve("UNKNOWN"));
+        assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, unresolved.getErrorCategory());
     }
 
     @Test
     void updateRejectsInsecureHttpInProduction() throws Exception {
-        System.setProperty(RuntimeConfigurationSupport.PROP_ENVIRONMENT, "production");
-        System.clearProperty(OrcaTransportSecurityPolicy.PROP_ALLOW_INSECURE_HTTP);
+        try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "production")) {
+            TotpSecretProtector protector = buildProtector(1);
+            Map<String, String> db = new LinkedHashMap<>();
+            OrcaConnectionConfigStore store = newStore(protector, db);
 
-        TotpSecretProtector protector = buildProtector();
-        Map<String, String> db = new LinkedHashMap<>();
-        OrcaConnectionConfigStore store = newStore(protector, db);
+            OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
+                    Boolean.TRUE,
+                    "http://weborca.example.test",
+                    80,
+                    "trial",
+                    "weborcatrial",
+                    Boolean.FALSE,
+                    null
+            );
 
-        OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
-                Boolean.TRUE,
-                "http://weborca.example.test",
-                80,
-                "trial",
-                "weborcatrial",
-                Boolean.FALSE,
-                null
-        );
+            OrcaConnectionPolicyException ex = assertThrows(
+                    OrcaConnectionPolicyException.class,
+                    () -> store.update("F001", update, null, null, "RUN-TEST", "FACILITY:admin")
+            );
 
-        OrcaConnectionPolicyException ex = assertThrows(
-                OrcaConnectionPolicyException.class,
-                () -> store.update(update, null, null, "RUN-TEST", "FACILITY:admin")
-        );
-
-        assertEquals("weborca_requires_https", ex.getErrorCategory());
+            assertEquals("weborca_requires_https", ex.getErrorCategory());
+        }
     }
 
     @Test
     void initRejectsLegacySingleRecordConfig() throws Exception {
-        TotpSecretProtector protector = buildProtector();
+        TotpSecretProtector protector = buildProtector(1);
         Map<String, String> db = new LinkedHashMap<>();
         db.put(STATE_CATEGORY + ":" + STATE_KEY, """
                 {
@@ -177,9 +175,41 @@ class OrcaConnectionConfigStoreTest {
         );
 
         assertEquals(
-                "Legacy single-record ORCA connection config is no longer supported. Migrate to the records format.",
+                "Legacy single-record ORCA connection config is no longer supported. Migrate to the facilities format.",
                 ex.getMessage()
         );
+    }
+
+    @Test
+    void updateDefaultFacilityRejectsUnknownFacility() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
+        OrcaConnectionConfigStore store = newStore(protector, new LinkedHashMap<>());
+
+        OrcaConnectionPolicyException ex = assertThrows(
+                OrcaConnectionPolicyException.class,
+                () -> store.updateDefaultFacilityId("UNKNOWN", "RUN-DEFAULT", "FACILITY:admin"));
+
+        assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, ex.getErrorCategory());
+    }
+
+    @Test
+    void orcaCredentialProtectorIsSeparatedFromTotpProtector() throws Exception {
+        OrcaCredentialSecurityConfig orcaConfig = new OrcaCredentialSecurityConfig();
+        setField(orcaConfig, "configurationResolver", TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ORCA_CREDENTIALS_AES_KEY_B64, keyBase64(11)));
+        orcaConfig.init();
+
+        SecondFactorSecurityConfig secondFactorConfig = new SecondFactorSecurityConfig();
+        setField(secondFactorConfig, "configurationResolver", TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, keyBase64(51),
+                ServerConfigurationResolver.KEY_FIDO2_RP_ID, "localhost",
+                ServerConfigurationResolver.KEY_FIDO2_RP_NAME, "OpenDolphin",
+                ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS, "https://localhost:8443"));
+        secondFactorConfig.init();
+
+        String cipher = orcaConfig.getCredentialProtector().encrypt("orca-secret");
+        assertEquals("orca-secret", orcaConfig.getCredentialProtector().decrypt(cipher));
+        assertThrows(IllegalStateException.class, () -> secondFactorConfig.getTotpSecretProtector().decrypt(cipher));
     }
 
     private OrcaConnectionConfigStore newStore(TotpSecretProtector protector, Map<String, String> db) throws Exception {
@@ -195,22 +225,25 @@ class OrcaConnectionConfigStoreTest {
             return null;
         }).when(repository).upsertPayload(any(String.class), any(String.class), any(String.class), any(Instant.class));
 
-        SecondFactorSecurityConfig secondFactorSecurityConfig = mock(SecondFactorSecurityConfig.class);
-        when(secondFactorSecurityConfig.getTotpSecretProtector()).thenReturn(protector);
+        OrcaCredentialSecurityConfig credentialSecurityConfig = mock(OrcaCredentialSecurityConfig.class);
+        when(credentialSecurityConfig.getCredentialProtector()).thenReturn(protector);
 
-        setField(store, "secondFactorSecurityConfig", secondFactorSecurityConfig);
+        setField(store, "orcaCredentialSecurityConfig", credentialSecurityConfig);
         setField(store, "stateRepository", repository);
         store.init();
         return store;
     }
 
-    private TotpSecretProtector buildProtector() {
+    private TotpSecretProtector buildProtector(int seed) {
+        return TotpSecretProtector.fromBase64(keyBase64(seed));
+    }
+
+    private String keyBase64(int seed) {
         byte[] key = new byte[32];
         for (int i = 0; i < key.length; i++) {
-            key[i] = (byte) (i + 1);
+            key[i] = (byte) (seed + i);
         }
-        String keyBase64 = Base64.getEncoder().encodeToString(key);
-        return TotpSecretProtector.fromBase64(keyBase64);
+        return Base64.getEncoder().encodeToString(key);
     }
 
     private static void setField(Object target, String name, Object value) throws Exception {

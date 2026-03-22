@@ -94,80 +94,11 @@ public class LetterServiceBean {
             }
             model.setUserModel(resolvedUser);
 
-            // 保存
             em.persist(model);
-            List<LetterItem> items = model.getLetterItems();
-            if (items != null) {
-                for (LetterItem item : items) {
-                    item.setModule(model);
-                    em.persist(item);
-                }
-            }
-            List<LetterText> texts = model.getLetterTexts();
-            if (texts != null) {
-                for (LetterText txt : texts) {
-                    txt.setModule(model);
-                    em.persist(txt);
-                }
-            }
-            List<LetterDate> dates = model.getLetterDates();
-            if (dates != null) {
-                for (LetterDate date : dates) {
-                    date.setModule(model);
-                    em.persist(date);
-                }
-            }
+            persistLetterChildren(model);
 
-            // 削除
-            if (model.getLinkId()!=0L) {
-
-                try {
-                    List<LetterItem> itemList = (List<LetterItem>)
-                         em.createQuery(QUERY_ITEM_BY_ID)
-                           .setParameter(ID, model.getLinkId())
-                           .getResultList();
-                    for (LetterItem item : itemList) {
-                        em.remove(item);
-                    }
-                }catch(NoResultException e) {
-                    LOGGER.warn("QUERY_ITEM_BY_ID : {}", e.toString());
-                }
-
-                try {
-                    List<LetterText> textList = (List<LetterText>)
-                         em.createQuery(QUERY_TEXT_BY_ID)
-                           .setParameter(ID, model.getLinkId())
-                           .getResultList();
-
-                    for (LetterText txt : textList) {
-                        em.remove(txt);
-                    }
-                }catch(NoResultException e) {
-                    LOGGER.warn("QUERY_TEXT_BY_ID : {}", e.toString());
-                }
-
-                try {
-                    List<LetterDate> dateList = (List<LetterDate>)
-                         em.createQuery(QUERY_DATE_BY_ID)
-                           .setParameter(ID, model.getLinkId())
-                           .getResultList();
-
-                    for (LetterDate date : dateList) {
-                        em.remove(date);
-                    }
-                }catch(NoResultException e) {
-                    LOGGER.warn("QUERY_DATE_BY_ID : {}", e.toString());
-                }
-
-                try {
-                    LetterModule delete = (LetterModule)
-                                em.createQuery(QUERY_LETTER_BY_ID)
-                                .setParameter(ID, model.getLinkId())
-                                .getSingleResult();
-                    em.remove(delete);
-                }catch(NoResultException e) {
-                    LOGGER.warn("QUERY_LETTER_BY_ID : {}", e.toString());
-                }
+            if (model.getLinkId() != 0L) {
+                deleteLegacyLetterArtifacts(model.getLinkId());
             }
 
             recordLetterMutation(model, resolvedKarte, action, null);
@@ -177,6 +108,102 @@ public class LetterServiceBean {
             throw ex;
         } finally {
             restorePatientContext(previousPatientContext);
+        }
+    }
+
+    private void persistLetterChildren(LetterModule model) {
+        persistLetterItems(model);
+        persistLetterTexts(model);
+        persistLetterDates(model);
+    }
+
+    private void persistLetterItems(LetterModule model) {
+        List<LetterItem> items = model.getLetterItems();
+        if (items == null) {
+            return;
+        }
+        for (LetterItem item : items) {
+            item.setModule(model);
+            em.persist(item);
+        }
+    }
+
+    private void persistLetterTexts(LetterModule model) {
+        List<LetterText> texts = model.getLetterTexts();
+        if (texts == null) {
+            return;
+        }
+        for (LetterText txt : texts) {
+            txt.setModule(model);
+            em.persist(txt);
+        }
+    }
+
+    private void persistLetterDates(LetterModule model) {
+        List<LetterDate> dates = model.getLetterDates();
+        if (dates == null) {
+            return;
+        }
+        for (LetterDate date : dates) {
+            date.setModule(model);
+            em.persist(date);
+        }
+    }
+
+    private void deleteLegacyLetterArtifacts(long linkId) {
+        deleteLegacyLetterItems(linkId);
+        deleteLegacyLetterTexts(linkId);
+        deleteLegacyLetterDates(linkId);
+        deleteLegacyLetterModule(linkId);
+    }
+
+    private void deleteLegacyLetterItems(long linkId) {
+        try {
+            List<LetterItem> itemList = (List<LetterItem>) em.createQuery(QUERY_ITEM_BY_ID)
+                    .setParameter(ID, linkId)
+                    .getResultList();
+            for (LetterItem item : itemList) {
+                em.remove(item);
+            }
+        } catch (NoResultException e) {
+            LOGGER.warn("QUERY_ITEM_BY_ID : {}", e.toString());
+        }
+    }
+
+    private void deleteLegacyLetterTexts(long linkId) {
+        try {
+            List<LetterText> textList = (List<LetterText>) em.createQuery(QUERY_TEXT_BY_ID)
+                    .setParameter(ID, linkId)
+                    .getResultList();
+            for (LetterText txt : textList) {
+                em.remove(txt);
+            }
+        } catch (NoResultException e) {
+            LOGGER.warn("QUERY_TEXT_BY_ID : {}", e.toString());
+        }
+    }
+
+    private void deleteLegacyLetterDates(long linkId) {
+        try {
+            List<LetterDate> dateList = (List<LetterDate>) em.createQuery(QUERY_DATE_BY_ID)
+                    .setParameter(ID, linkId)
+                    .getResultList();
+            for (LetterDate date : dateList) {
+                em.remove(date);
+            }
+        } catch (NoResultException e) {
+            LOGGER.warn("QUERY_DATE_BY_ID : {}", e.toString());
+        }
+    }
+
+    private void deleteLegacyLetterModule(long linkId) {
+        try {
+            LetterModule delete = (LetterModule) em.createQuery(QUERY_LETTER_BY_ID)
+                    .setParameter(ID, linkId)
+                    .getSingleResult();
+            em.remove(delete);
+        } catch (NoResultException e) {
+            LOGGER.warn("QUERY_LETTER_BY_ID : {}", e.toString());
         }
     }
 

@@ -14,10 +14,10 @@ import jakarta.servlet.AsyncContext;
 import jakarta.transaction.Transactional;
 import open.dolphin.infomodel.*;
 import open.dolphin.mbean.ServletContextHolder;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.session.framework.SessionOperation;
 import open.dolphin.session.support.ChartEventSessionKeys;
 import open.dolphin.session.support.ChartEventStreamPublisher;
-import org.eclipse.microprofile.config.ConfigProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +53,9 @@ public class ChartEventServiceBean {
 
     @Inject
     private ChartEventStreamPublisher chartEventStreamPublisher;
+
+    @Inject
+    private ServerConfigurationResolver configurationResolver;
     
     @PersistenceContext
     private EntityManager em;
@@ -186,7 +189,7 @@ public class ChartEventServiceBean {
         String memo = evt.getMemo();
         String ownerUUID = evt.getOwnerUUID();
         
-        if((state & (1 << PatientVisitModel.BIT_NOTUPDATE)) > 0) {
+        if (shouldSkipPvtStateUpdate(state)) {
             return false;
         }
 
@@ -197,95 +200,10 @@ public class ChartEventServiceBean {
         }
         List<PatientVisitModel> pvtList = getPvtList(fid);
 
-        if (pvt != null) {
-//s.oh^ 2013/08/29
-            //pvt.setState(state);
-            if(state <= 1 && pvt.getState() >= 2) {
-                if((state & (1 << PatientVisitModel.BIT_CANCEL)) == 0 && (pvt.getState() & (1 << PatientVisitModel.BIT_CANCEL)) > 0) {
-                    int status = pvt.getState();
-                    status &= ~(1 << PatientVisitModel.BIT_CANCEL);
-                    pvt.setState(status);
-                }else if((state & (1 << PatientVisitModel.BIT_TREATMENT)) == 0 && (pvt.getState() & (1 << PatientVisitModel.BIT_TREATMENT)) > 0) {
-                    int status = pvt.getState();
-                    status &= ~(1 << PatientVisitModel.BIT_TREATMENT);
-                    pvt.setState(status);
-                }else if((state & (1 << PatientVisitModel.BIT_GO_OUT)) == 0 && (pvt.getState() & (1 << PatientVisitModel.BIT_GO_OUT)) > 0) {
-                    int status = pvt.getState();
-                    status &= ~(1 << PatientVisitModel.BIT_GO_OUT);
-                    pvt.setState(status);
-                }else if((state & (1 << PatientVisitModel.BIT_HURRY)) == 0 && (pvt.getState() & (1 << PatientVisitModel.BIT_HURRY)) > 0) {
-                    int status = pvt.getState();
-                    status &= ~(1 << PatientVisitModel.BIT_HURRY);
-                    pvt.setState(status);
-                }else{
-                    log("state <= 1 && pvt.getState() >= 2 && pvt.getState() != BIT_CANCEL/BIT_TREATMENT/BIT_GO_OUT/BIT_HURRY");
-                }
-                // 正しい情報で通知するように設定
-                evt.setState(pvt.getState());
-            }else{
-                pvt.setState(state);
-            }
-//s.oh$
-            pvt.setByomeiCount(byomeiCount);
-            pvt.setByomeiCountToday(byomeiCountToday);
-            pvt.setMemo(memo);
-        }
+        long resolvedPtPk = updatePersistedPvtState(evt, pvt, state, byomeiCount, byomeiCountToday, memo, ownerUUID);
         // データベースのPatientModelを更新
-        PatientModel pm = pvt.getPatientModel();
-        long resolvedPtPk = pm != null ? pm.getId() : 0L;
-        if (pm != null) {
-            log("processPvtStateEvent : owner = " + ownerUUID + ", pvtPk = " + String.valueOf(pvtId) + ", ptId = " + pm.getPatientId() + ", state = " + String.valueOf(state));
-            pm.setOwnerUUID(ownerUUID);
-        }
-
-        // pvtListを更新
-        for (PatientVisitModel model : pvtList) {
-            if (model.getId() == pvtId) {
-//s.oh^ 2013/08/29
-                //model.setState(state);
-                if(state <= 1 && model.getState() >= 2) {
-                    if((state & (1 << PatientVisitModel.BIT_CANCEL)) == 0 && (model.getState() & (1 << PatientVisitModel.BIT_CANCEL)) > 0) {
-                        int status = model.getState();
-                        status &= ~(1 << PatientVisitModel.BIT_CANCEL);
-                        model.setState(status);
-                    }else if((state & (1 << PatientVisitModel.BIT_TREATMENT)) == 0 && (model.getState() & (1 << PatientVisitModel.BIT_TREATMENT)) > 0) {
-                        int status = model.getState();
-                        status &= ~(1 << PatientVisitModel.BIT_TREATMENT);
-                        model.setState(status);
-                    }else if((state & (1 << PatientVisitModel.BIT_GO_OUT)) == 0 && (model.getState() & (1 << PatientVisitModel.BIT_GO_OUT)) > 0) {
-                        int status = model.getState();
-                        status &= ~(1 << PatientVisitModel.BIT_GO_OUT);
-                        model.setState(status);
-                    }else if((state & (1 << PatientVisitModel.BIT_HURRY)) == 0 && (model.getState() & (1 << PatientVisitModel.BIT_HURRY)) > 0) {
-                        int status = model.getState();
-                        status &= ~(1 << PatientVisitModel.BIT_HURRY);
-                        model.setState(status);
-                    }else{
-                        log("state <= 1 && model.getState() >= 2 && model.getState() != BIT_CANCEL/BIT_TREATMENT/BIT_GO_OUT/BIT_HURRY");
-                    }
-                    // 正しい情報で通知するように設定
-                    evt.setState(model.getState());
-                }else{
-                    model.setState(state);
-                }
-//s.oh$
-                model.setByomeiCount(byomeiCount);
-                model.setByomeiCountToday(byomeiCountToday);
-                model.setMemo(memo);
-                if (model.getPatientModel() != null) {
-                    model.getPatientModel().setOwnerUUID(ownerUUID);
-                }
-                break;
-            }
-        }
-//s.oh^ 2013/08/13
-        for (PatientVisitModel model : pvtList) {
-            if (resolvedPtPk > 0 && model.getPatientModel() != null && model.getPatientModel().getId() == resolvedPtPk) {
-                model.setStateBit(PatientVisitModel.BIT_OPEN, ownerUUID != null);
-                model.getPatientModel().setOwnerUUID(ownerUUID);
-            }
-        }
-//s.oh$
+        updateCachedPvtState(evt, pvtList, pvtId, state, byomeiCount, byomeiCountToday, memo, ownerUUID);
+        updateCachedPatientOwner(pvtList, resolvedPtPk, ownerUUID);
         return true;
     }
     
@@ -327,6 +245,97 @@ public class ChartEventServiceBean {
         }
         String pvtFid = pvt.getFacilityId();
         return pvtFid != null && fid.trim().equals(pvtFid.trim());
+    }
+
+    private boolean shouldSkipPvtStateUpdate(int state) {
+        return (state & (1 << PatientVisitModel.BIT_NOTUPDATE)) > 0;
+    }
+
+    private long updatePersistedPvtState(
+            ChartEventModel evt,
+            PatientVisitModel pvt,
+            int requestedState,
+            int byomeiCount,
+            int byomeiCountToday,
+            String memo,
+            String ownerUUID) {
+        if (pvt == null) {
+            return 0L;
+        }
+        int resolvedState = normalizeLegacyState(requestedState, pvt.getState());
+        pvt.setState(resolvedState);
+        pvt.setByomeiCount(byomeiCount);
+        pvt.setByomeiCountToday(byomeiCountToday);
+        pvt.setMemo(memo);
+        evt.setState(resolvedState);
+
+        PatientModel pm = pvt.getPatientModel();
+        if (pm != null) {
+            log("processPvtStateEvent : owner = " + ownerUUID + ", pvtPk = " + String.valueOf(pvt.getId())
+                    + ", ptId = " + pm.getPatientId() + ", state = " + String.valueOf(requestedState));
+            pm.setOwnerUUID(ownerUUID);
+            return pm.getId();
+        }
+        return 0L;
+    }
+
+    private void updateCachedPvtState(
+            ChartEventModel evt,
+            List<PatientVisitModel> pvtList,
+            long pvtId,
+            int requestedState,
+            int byomeiCount,
+            int byomeiCountToday,
+            String memo,
+            String ownerUUID) {
+        int resolvedState = evt.getState();
+        for (PatientVisitModel model : pvtList) {
+            if (model.getId() != pvtId) {
+                continue;
+            }
+            model.setState(resolvedState);
+            model.setByomeiCount(byomeiCount);
+            model.setByomeiCountToday(byomeiCountToday);
+            model.setMemo(memo);
+            if (model.getPatientModel() != null) {
+                model.getPatientModel().setOwnerUUID(ownerUUID);
+            }
+            evt.setState(resolvedState);
+            break;
+        }
+    }
+
+    private void updateCachedPatientOwner(List<PatientVisitModel> pvtList, long resolvedPtPk, String ownerUUID) {
+        for (PatientVisitModel model : pvtList) {
+            if (resolvedPtPk > 0 && model.getPatientModel() != null && model.getPatientModel().getId() == resolvedPtPk) {
+                model.setStateBit(PatientVisitModel.BIT_OPEN, ownerUUID != null);
+                model.getPatientModel().setOwnerUUID(ownerUUID);
+            }
+        }
+    }
+
+    private int normalizeLegacyState(int requestedState, int currentState) {
+        if (requestedState <= 1 && currentState >= 2) {
+            if ((requestedState & (1 << PatientVisitModel.BIT_CANCEL)) == 0
+                    && (currentState & (1 << PatientVisitModel.BIT_CANCEL)) > 0) {
+                return currentState & ~(1 << PatientVisitModel.BIT_CANCEL);
+            }
+            if ((requestedState & (1 << PatientVisitModel.BIT_TREATMENT)) == 0
+                    && (currentState & (1 << PatientVisitModel.BIT_TREATMENT)) > 0) {
+                return currentState & ~(1 << PatientVisitModel.BIT_TREATMENT);
+            }
+            if ((requestedState & (1 << PatientVisitModel.BIT_GO_OUT)) == 0
+                    && (currentState & (1 << PatientVisitModel.BIT_GO_OUT)) > 0) {
+                return currentState & ~(1 << PatientVisitModel.BIT_GO_OUT);
+            }
+            if ((requestedState & (1 << PatientVisitModel.BIT_HURRY)) == 0
+                    && (currentState & (1 << PatientVisitModel.BIT_HURRY)) > 0) {
+                return currentState & ~(1 << PatientVisitModel.BIT_HURRY);
+            }
+            log("state <= 1 && currentState >= 2 && currentState != BIT_CANCEL/BIT_TREATMENT/BIT_GO_OUT/BIT_HURRY");
+            return currentState;
+        }
+        return requestedState;
     }
 
     public void start() {
@@ -555,17 +564,8 @@ public class ChartEventServiceBean {
         return karteIds;
     }
 
-    private static boolean isPvtListClearEnabled() {
-        try {
-            return ConfigProvider.getConfig()
-                    .getOptionalValue("opendolphin.pvt.list-clear", String.class)
-                    .map(String::trim)
-                    .filter(token -> !token.isEmpty())
-                    .map(Boolean::parseBoolean)
-                    .orElse(false);
-        } catch (IllegalStateException ex) {
-            return false;
-        }
+    private boolean isPvtListClearEnabled() {
+        return configurationResolver != null && configurationResolver.pvtOperations().listClearEnabled();
     }
     
     // ０時にpvtListをリニューアルする

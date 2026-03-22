@@ -83,6 +83,10 @@ public class DocumentIntegrityService {
         if (settings.getMode() == DocumentIntegrityConfig.Mode.OFF) {
             return;
         }
+        DocumentIntegrityConfig.KeyMaterial activeKey = settings.getActiveKey();
+        if (activeKey == null) {
+            throw new IllegalStateException("document integrity active key is not configured");
+        }
         long documentId = document.getId();
         if (documentId <= 0) {
             LOGGER.debug("Skip seal because document id is not assigned [id={}]", documentId);
@@ -91,7 +95,7 @@ public class DocumentIntegrityService {
 
         byte[] canonicalBytes = canonicalBytes(document);
         String currentHash = sha256Hex(canonicalBytes);
-        String seal = hmacSha256Hex(settings.getHmacKey(), currentHash);
+        String seal = hmacSha256Hex(activeKey.hmacKey(), currentHash);
 
         DocumentIntegrityEntity entity = em.find(DocumentIntegrityEntity.class, documentId);
         Instant now = Instant.now();
@@ -107,7 +111,7 @@ public class DocumentIntegrityService {
         entity.setContentHash(currentHash);
         entity.setSealAlg(SEAL_ALGORITHM);
         entity.setSeal(seal);
-        entity.setKeyId(settings.getKeyId());
+        entity.setKeyId(activeKey.keyId());
         entity.setSealedAt(now);
         entity.setSealedBy(resolveSealedBy(document));
         if (isNew) {
@@ -117,7 +121,7 @@ public class DocumentIntegrityService {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("documentId", documentId);
         details.put("currentHash", currentHash);
-        details.put("keyId", settings.getKeyId());
+        details.put("keyId", activeKey.keyId());
         recordAudit(EVENT_SEALED, "SUCCESS", document, details);
     }
 
@@ -137,14 +141,13 @@ public class DocumentIntegrityService {
         }
 
         String currentHash = sha256Hex(canonicalBytes(document));
-        String expectedSeal = hmacSha256Hex(settings.getHmacKey(), currentHash);
 
         DocumentIntegrityEntity stored = em.find(DocumentIntegrityEntity.class, documentId);
         if (stored == null) {
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("documentId", documentId);
             details.put("currentHash", currentHash);
-            details.put("reason", "integrity_record_missing");
+            details.put("reasonCode", "integrity_record_missing");
             recordAudit(EVENT_MISSING, "MISSING", document, details);
             if (mode == DocumentIntegrityConfig.Mode.ENFORCE) {
                 throw conflictMissing(details);
@@ -162,23 +165,26 @@ public class DocumentIntegrityService {
         if (!equalsIgnoreCase(stored.getSealAlg(), SEAL_ALGORITHM)) {
             reasons.add("seal_alg_mismatch");
         }
-        if (!equalsIgnoreCase(stored.getKeyId(), settings.getKeyId())) {
-            reasons.add("key_id_mismatch");
-        }
         if (!equalsIgnoreCase(stored.getContentHash(), currentHash)) {
             reasons.add("content_hash_mismatch");
         }
-        if (!equalsIgnoreCase(stored.getSeal(), expectedSeal)) {
-            reasons.add("seal_mismatch");
+        DocumentIntegrityConfig.KeyMaterial storedKey = settings.getKey(stored.getKeyId());
+        if (storedKey == null) {
+            reasons.add("key_not_found");
+        } else {
+            String expectedSeal = hmacSha256Hex(storedKey.hmacKey(), currentHash);
+            if (!equalsIgnoreCase(stored.getSeal(), expectedSeal)) {
+                reasons.add("seal_mismatch");
+            }
         }
 
         if (!reasons.isEmpty()) {
-            String reason = String.join(",", reasons);
             Map<String, Object> details = new LinkedHashMap<>();
             details.put("documentId", documentId);
             details.put("currentHash", currentHash);
             details.put("storedHash", nullSafe(stored.getContentHash()));
-            details.put("reason", reason);
+            details.put("reasonCode", reasons.get(0));
+            details.put("reasonCodes", List.copyOf(reasons));
             recordAudit(EVENT_FAIL, "FAILURE", document, details);
             if (mode == DocumentIntegrityConfig.Mode.ENFORCE) {
                 throw conflictMismatch(details);

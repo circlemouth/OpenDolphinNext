@@ -49,6 +49,10 @@ public class OrcaUserLinkQueryService {
         return !rows.isEmpty();
     }
 
+    public boolean isTableAvailable() {
+        return isLinkTablePresent();
+    }
+
     public Map<Long, OrcaLinkRow> findLinksByUserPks(List<Long> userPks) {
         if (userPks == null || userPks.isEmpty()) {
             return Map.of();
@@ -101,6 +105,10 @@ public class OrcaUserLinkQueryService {
             return null;
         }
         return asLong(rows.get(0));
+    }
+
+    public Long findEhrUserPkByOrcaUserId(String orcaUserId) {
+        return findOwnerByOrcaUserId(orcaUserId);
     }
 
     public void upsertLink(long ehrUserPk, String orcaUserId, Instant now, String updatedBy) {

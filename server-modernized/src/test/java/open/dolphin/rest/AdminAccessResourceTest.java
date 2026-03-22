@@ -116,6 +116,22 @@ class AdminAccessResourceTest {
     }
 
     @Test
+    void createUserRejectsInvalidLoginId() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-TEST");
+        when(request.getRemoteUser()).thenReturn("F001:admin");
+        when(userServiceBean.isAdmin("F001:admin")).thenReturn(true);
+        try {
+            resource.createUser(request, Map.of(
+                    "loginId", "bad id",
+                    "password", "TempPass123!",
+                    "displayName", "Test User"));
+            fail("Expected WebApplicationException");
+        } catch (WebApplicationException ex) {
+            assertEquals(400, ex.getResponse().getStatus());
+        }
+    }
+
+    @Test
     void resetPasswordReturnsNoContentAndNoSecretInResponse() {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-TEST");
         when(request.getRemoteUser()).thenReturn("F001:admin");

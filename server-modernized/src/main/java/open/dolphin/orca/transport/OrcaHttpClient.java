@@ -26,6 +26,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.rest.OrcaApiProxySupport;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
 /**
  * Shared HTTP client for ORCA API calls.
@@ -43,22 +45,6 @@ public class OrcaHttpClient {
     private static final String ORCA_EXTERNAL_REQUEST_COUNTER = "opendolphin_orca_external_request_total";
     private static final String ORCA_EXTERNAL_ERROR_COUNTER = "opendolphin_orca_external_error_total";
     private static final String ORCA_EXTERNAL_LATENCY_TIMER = "opendolphin_orca_external_latency";
-    private static final String ENV_NETWORK_RETRY_MAX = "ORCA_API_RETRY_NETWORK_MAX";
-    private static final String ENV_TRANSIENT_RETRY_MAX = "ORCA_API_RETRY_TRANSIENT_MAX";
-    private static final String ENV_NETWORK_RETRY_BACKOFF_MS = "ORCA_API_RETRY_NETWORK_BACKOFF_MS";
-    private static final String ENV_TRANSIENT_RETRY_BACKOFF_MS = "ORCA_API_RETRY_TRANSIENT_BACKOFF_MS";
-    private static final String ENV_CONNECT_TIMEOUT_MS = "ORCA_API_CONNECT_TIMEOUT_MS";
-    private static final String ENV_READ_TIMEOUT_MS = "ORCA_API_READ_TIMEOUT_MS";
-    private static final String ENV_TOTAL_TIMEOUT_MS = "ORCA_API_TOTAL_TIMEOUT_MS";
-    private static final String ENV_LOG_MODE = "ORCA_HTTP_LOG_MODE";
-    private static final String PROP_NETWORK_RETRY_MAX = "orca.api.retry.network.max";
-    private static final String PROP_TRANSIENT_RETRY_MAX = "orca.api.retry.transient.max";
-    private static final String PROP_NETWORK_RETRY_BACKOFF_MS = "orca.api.retry.network.backoff-ms";
-    private static final String PROP_TRANSIENT_RETRY_BACKOFF_MS = "orca.api.retry.transient.backoff-ms";
-    private static final String PROP_CONNECT_TIMEOUT_MS = "orca.api.connect-timeout-ms";
-    private static final String PROP_READ_TIMEOUT_MS = "orca.api.read-timeout-ms";
-    private static final String PROP_TOTAL_TIMEOUT_MS = "orca.api.total-timeout-ms";
-    private static final OrcaLogMode LOG_MODE = resolveLogMode();
     private static final int DEFAULT_NETWORK_RETRY_MAX = 3;
     private static final int DEFAULT_TRANSIENT_RETRY_MAX = 2;
     private static final long DEFAULT_NETWORK_BACKOFF_MS = 250L;
@@ -68,16 +54,30 @@ public class OrcaHttpClient {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final HttpClient client;
+    private final ServerRuntimeConfiguration.OrcaTransportHttpSettings settings;
+    private final OrcaLogMode logMode;
+    private final OrcaHttpClientSupport support = new OrcaHttpClientSupport();
 
     public OrcaHttpClient() {
+        this(new ServerConfigurationResolver().orcaTransportHttp());
+    }
+
+    OrcaHttpClient(ServerRuntimeConfiguration.OrcaTransportHttpSettings settings) {
         this(HttpClient.newBuilder()
-                .connectTimeout(resolveDuration(ENV_CONNECT_TIMEOUT_MS, PROP_CONNECT_TIMEOUT_MS, DEFAULT_CONNECT_TIMEOUT))
+                .connectTimeout(resolveDuration(settings != null ? settings.connectTimeout() : null, DEFAULT_CONNECT_TIMEOUT))
                 .followRedirects(HttpClient.Redirect.NEVER)
-                .build());
+                .build(),
+                settings);
     }
 
     public OrcaHttpClient(HttpClient client) {
+        this(client, null);
+    }
+
+    public OrcaHttpClient(HttpClient client, ServerRuntimeConfiguration.OrcaTransportHttpSettings settings) {
         this.client = client;
+        this.settings = settings;
+        this.logMode = resolveLogMode(settings != null ? settings.logMode() : null);
     }
 
     public OrcaHttpResponse postXml2(OrcaTransportSettings settings, String path, String body,
@@ -90,98 +90,35 @@ public class OrcaHttpClient {
         return execute(settings, "GET", path, null, query, accept, requestId, traceId);
     }
 
-    private OrcaHttpResponse execute(OrcaTransportSettings settings, String method, String path, String body,
+    private OrcaHttpResponse execute(OrcaTransportSettings transportSettings, String method, String path, String body,
             String query, String accept, String requestId, String traceId) {
-        if (settings == null || !settings.isReady()) {
-            throw new OrcaGatewayException("ORCA transport settings are incomplete");
-        }
-        String resolvedMethod = method != null && !method.isBlank()
-                ? method.trim().toUpperCase(Locale.ROOT)
-                : "POST";
-        boolean retryableMethod = isRetryableMethod(resolvedMethod);
-        String resolvedAccept = (accept == null || accept.isBlank()) ? ORCA_ACCEPT_XML : accept.trim();
-        String url = settings.buildOrcaUrl(path);
-        if (query != null && !query.isBlank()) {
-            url = url + "?" + query;
-        }
-        URI uri = toUri(url);
-        int networkRetryMax = retryableMethod ? resolveIntConfig(ENV_NETWORK_RETRY_MAX, PROP_NETWORK_RETRY_MAX, DEFAULT_NETWORK_RETRY_MAX) : 0;
-        int transientRetryMax = retryableMethod ? resolveIntConfig(ENV_TRANSIENT_RETRY_MAX, PROP_TRANSIENT_RETRY_MAX, DEFAULT_TRANSIENT_RETRY_MAX) : 0;
-        long networkBackoff = resolveLongConfig(ENV_NETWORK_RETRY_BACKOFF_MS, PROP_NETWORK_RETRY_BACKOFF_MS, DEFAULT_NETWORK_BACKOFF_MS);
-        long transientBackoff = resolveLongConfig(ENV_TRANSIENT_RETRY_BACKOFF_MS, PROP_TRANSIENT_RETRY_BACKOFF_MS, DEFAULT_TRANSIENT_BACKOFF_MS);
-        Duration readTimeout = resolveDuration(ENV_READ_TIMEOUT_MS, PROP_READ_TIMEOUT_MS, DEFAULT_READ_TIMEOUT);
-        Duration totalTimeout = resolveDuration(ENV_TOTAL_TIMEOUT_MS, PROP_TOTAL_TIMEOUT_MS, DEFAULT_TOTAL_DEADLINE);
-        Instant deadline = Instant.now().plus(totalTimeout);
+        RequestPlan plan = buildRequestPlan(transportSettings, method, path, body, query, accept);
+        RetryPlan retryPlan = buildRetryPlan(plan.retryableMethod());
+        Instant deadline = Instant.now().plus(retryPlan.totalTimeout());
         int networkAttempts = 0;
         int transientAttempts = 0;
         while (true) {
-            if (isDeadlineExceeded(deadline)) {
-                throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
-            }
+            ensureDeadline(deadline);
             Instant started = Instant.now();
             try {
-                Duration requestTimeout = resolveRequestTimeout(deadline, readTimeout);
-                HttpRequest.Builder builder = HttpRequest.newBuilder()
-                        .uri(uri)
-                        .timeout(requestTimeout)
-                        .header("Accept", resolvedAccept)
-                        .header("Authorization", settings.basicAuthHeader());
-                if (requestId != null && !requestId.isBlank()) {
-                    builder.header("X-Request-Id", requestId);
-                }
-                if (traceId != null && !traceId.isBlank()) {
-                    builder.header("X-Trace-Id", traceId);
-                }
-                if ("GET".equalsIgnoreCase(resolvedMethod)) {
-                    builder.GET();
-                } else {
-                    builder.header("Content-Type", resolveRequestContentType(body));
-                    builder.POST(HttpRequest.BodyPublishers.ofString(body != null ? body : "", StandardCharsets.UTF_8));
-                }
-                HttpRequest httpRequest = builder.build();
-                HttpResponse<String> response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-                long elapsedMs = Duration.between(started, Instant.now()).toMillis();
-                int status = response.statusCode();
-                String responseBody = response.body() != null ? response.body() : "";
-                String responseContentType = response.headers().firstValue("Content-Type").orElse(null);
-                OrcaApiResult apiResult = extractApiResult(responseBody, responseContentType);
-                recordExternalMetrics(resolvedMethod, path, status, elapsedMs, null);
-                logOrcaSummary(requestId, resolvedMethod, path, status, apiResult, elapsedMs);
-                if (status < 200 || status >= 300) {
-                    if (shouldRetryHttp(status, networkAttempts, networkRetryMax)) {
-                        networkAttempts++;
-                        if (!sleepUntilDeadline(deadline, networkBackoff * (1L << Math.min(networkAttempts, 6)))) {
-                            throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
-                        }
-                        continue;
-                    }
-                    throw failure(FailureCategory.HTTP_STATUS, "ORCA HTTP response status " + status);
-                }
-                if (responseBody.isBlank()) {
-                    if (shouldRetryHttp(status, networkAttempts, networkRetryMax)) {
-                        networkAttempts++;
-                        if (!sleepUntilDeadline(deadline, networkBackoff * (1L << Math.min(networkAttempts, 6)))) {
-                            throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
-                        }
-                        continue;
-                    }
-                    throw failure(FailureCategory.EMPTY_BODY, "ORCA HTTP response body is empty");
-                }
-                if (isTransientOrcaError(apiResult) && transientAttempts < transientRetryMax) {
-                    transientAttempts++;
-                    if (!sleepUntilDeadline(deadline, transientBackoff)) {
-                        throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
-                    }
+                HttpResponse<String> response = sendRequest(plan, requestId, traceId, deadline, retryPlan.readTimeout());
+                OrcaResponseOutcome outcome = evaluateResponse(plan, response, started, requestId, networkAttempts,
+                        transientAttempts, retryPlan, deadline);
+                if (outcome.retryNetwork()) {
+                    networkAttempts++;
                     continue;
                 }
-                return new OrcaHttpResponse(url, resolvedMethod, status, responseBody, responseContentType,
-                        response.headers().map(), elapsedMs, apiResult);
+                if (outcome.retryTransient()) {
+                    transientAttempts++;
+                    continue;
+                }
+                return outcome.response();
             } catch (IOException ex) {
                 long elapsedMs = Duration.between(started, Instant.now()).toMillis();
-                recordExternalMetrics(resolvedMethod, path, -1, elapsedMs, FailureCategory.NETWORK.code);
-                if (networkAttempts < networkRetryMax) {
+                recordExternalMetrics(plan.method(), plan.path(), -1, elapsedMs, FailureCategory.NETWORK.code);
+                if (networkAttempts < retryPlan.networkRetryMax()) {
                     networkAttempts++;
-                    if (!sleepUntilDeadline(deadline, networkBackoff * (1L << Math.min(networkAttempts, 6)))) {
+                    if (!sleepUntilDeadline(deadline, retryPlan.networkBackoffMs() * (1L << Math.min(networkAttempts, 6)))) {
                         throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded", ex);
                     }
                     continue;
@@ -190,9 +127,105 @@ public class OrcaHttpClient {
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
                 long elapsedMs = Duration.between(started, Instant.now()).toMillis();
-                recordExternalMetrics(resolvedMethod, path, -1, elapsedMs, FailureCategory.INTERRUPTED.code);
+                recordExternalMetrics(plan.method(), plan.path(), -1, elapsedMs, FailureCategory.INTERRUPTED.code);
                 throw failure(FailureCategory.INTERRUPTED, "ORCA API request interrupted", ex);
             }
+        }
+    }
+
+    private RequestPlan buildRequestPlan(OrcaTransportSettings transportSettings, String method, String path, String body,
+            String query, String accept) {
+        if (transportSettings == null || !transportSettings.isReady()) {
+            throw new OrcaGatewayException("ORCA transport settings are incomplete");
+        }
+        String resolvedMethod = method != null && !method.isBlank()
+                ? method.trim().toUpperCase(Locale.ROOT)
+                : "POST";
+        String resolvedAccept = (accept == null || accept.isBlank()) ? ORCA_ACCEPT_XML : accept.trim();
+        String url = transportSettings.buildOrcaUrl(path);
+        if (query != null && !query.isBlank()) {
+            url = url + "?" + query;
+        }
+        return new RequestPlan(transportSettings, resolvedMethod, path, body, resolvedAccept, url, toUri(url), isRetryableMethod(resolvedMethod));
+    }
+
+    private RetryPlan buildRetryPlan(boolean retryableMethod) {
+        int networkRetryMax = retryableMethod
+                ? resolveIntConfig(this.settings != null ? this.settings.networkRetryMax() : null, DEFAULT_NETWORK_RETRY_MAX)
+                : 0;
+        int transientRetryMax = retryableMethod
+                ? resolveIntConfig(this.settings != null ? this.settings.transientRetryMax() : null, DEFAULT_TRANSIENT_RETRY_MAX)
+                : 0;
+        long networkBackoff = resolveLongConfig(this.settings != null ? this.settings.networkRetryBackoffMs() : null, DEFAULT_NETWORK_BACKOFF_MS);
+        long transientBackoff = resolveLongConfig(this.settings != null ? this.settings.transientRetryBackoffMs() : null, DEFAULT_TRANSIENT_BACKOFF_MS);
+        Duration readTimeout = resolveDuration(this.settings != null ? this.settings.readTimeout() : null, DEFAULT_READ_TIMEOUT);
+        Duration totalTimeout = resolveDuration(this.settings != null ? this.settings.totalTimeout() : null, DEFAULT_TOTAL_DEADLINE);
+        return new RetryPlan(networkRetryMax, transientRetryMax, networkBackoff, transientBackoff, readTimeout, totalTimeout);
+    }
+
+    private HttpResponse<String> sendRequest(RequestPlan plan, String requestId, String traceId, Instant deadline, Duration readTimeout)
+            throws IOException, InterruptedException {
+        Duration requestTimeout = resolveRequestTimeout(deadline, readTimeout);
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(plan.uri())
+                .timeout(requestTimeout)
+                .header("Accept", plan.accept())
+                .header("Authorization", plan.transportSettings().basicAuthHeader());
+        if (requestId != null && !requestId.isBlank()) {
+            builder.header("X-Request-Id", requestId);
+        }
+        if (traceId != null && !traceId.isBlank()) {
+            builder.header("X-Trace-Id", traceId);
+        }
+        if ("GET".equalsIgnoreCase(plan.method())) {
+            builder.GET();
+        } else {
+            builder.header("Content-Type", resolveRequestContentType(plan.body()));
+            builder.POST(HttpRequest.BodyPublishers.ofString(plan.body() != null ? plan.body() : "", StandardCharsets.UTF_8));
+        }
+        return client.send(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+    }
+
+    private OrcaResponseOutcome evaluateResponse(RequestPlan plan, HttpResponse<String> response, Instant started,
+            String requestId, int networkAttempts, int transientAttempts, RetryPlan retryPlan, Instant deadline) {
+        long elapsedMs = Duration.between(started, Instant.now()).toMillis();
+        int status = response.statusCode();
+        String responseBody = response.body() != null ? response.body() : "";
+        String responseContentType = response.headers().firstValue("Content-Type").orElse(null);
+        OrcaApiResult apiResult = extractApiResult(responseBody, responseContentType);
+        recordExternalMetrics(plan.method(), plan.path(), status, elapsedMs, null);
+        logOrcaSummary(requestId, plan.method(), plan.path(), status, apiResult, elapsedMs);
+        if (status < 200 || status >= 300) {
+            if (shouldRetryHttp(status, networkAttempts, retryPlan.networkRetryMax())) {
+                if (!sleepUntilDeadline(deadline, retryPlan.networkBackoffMs() * (1L << Math.min(networkAttempts + 1, 6)))) {
+                    throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
+                }
+                return OrcaResponseOutcome.forNetworkRetryOutcome();
+            }
+            throw failure(FailureCategory.HTTP_STATUS, "ORCA HTTP response status " + status);
+        }
+        if (responseBody.isBlank()) {
+            if (shouldRetryHttp(status, networkAttempts, retryPlan.networkRetryMax())) {
+                if (!sleepUntilDeadline(deadline, retryPlan.networkBackoffMs() * (1L << Math.min(networkAttempts + 1, 6)))) {
+                    throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
+                }
+                return OrcaResponseOutcome.forNetworkRetryOutcome();
+            }
+            throw failure(FailureCategory.EMPTY_BODY, "ORCA HTTP response body is empty");
+        }
+        if (isTransientOrcaError(apiResult) && transientAttempts < retryPlan.transientRetryMax()) {
+            if (!sleepUntilDeadline(deadline, retryPlan.transientBackoffMs())) {
+                throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
+            }
+            return OrcaResponseOutcome.forTransientRetryOutcome();
+        }
+        return OrcaResponseOutcome.successOutcome(new OrcaHttpResponse(plan.url(), plan.method(), status, responseBody, responseContentType,
+                response.headers().map(), elapsedMs, apiResult));
+    }
+
+    private static void ensureDeadline(Instant deadline) {
+        if (isDeadlineExceeded(deadline)) {
+            throw failure(FailureCategory.DEADLINE, "ORCA API request deadline exceeded");
         }
     }
 
@@ -219,12 +252,12 @@ public class OrcaHttpClient {
         }
     }
 
-    private static void logOrcaSummary(String requestId, String method, String path, int status,
+    private void logOrcaSummary(String requestId, String method, String path, int status,
             OrcaApiResult apiResult, long elapsedMs) {
-        String logLine = formatSummaryLog(requestId, method, path, status, apiResult, elapsedMs);
+        String logLine = formatSummaryLog(requestId, method, path, status, apiResult, elapsedMs, logMode);
         LOGGER.log(Level.INFO, logLine);
-        if (LOG_MODE == OrcaLogMode.DETAIL && LOGGER.isLoggable(Level.FINE)) {
-            String detail = formatDetailLog(requestId, method, path, status, apiResult);
+        if (logMode == OrcaLogMode.DETAIL && LOGGER.isLoggable(Level.FINE)) {
+            String detail = formatDetailLog(requestId, method, path, status, apiResult, logMode);
             LOGGER.log(Level.FINE, detail);
         }
     }
@@ -271,183 +304,76 @@ public class OrcaHttpClient {
     }
 
     private static OrcaApiResult extractApiResult(String body, String contentType) {
-        if (body == null || body.isBlank()) {
-            return null;
-        }
-        String normalized = contentType != null ? contentType.toLowerCase(Locale.ROOT) : "";
-        if (normalized.contains("json") || body.trim().startsWith("{")) {
-            return extractApiResultFromJson(body);
-        }
-        return extractApiResultFromXml(body);
-    }
-
-    private static OrcaApiResult extractApiResultFromXml(String body) {
-        String apiResult = extractTagValue(body, "Api_Result");
-        String apiMessage = extractTagValue(body, "Api_Result_Message");
-        List<String> warnings = extractWarningsFromXml(body);
-        return new OrcaApiResult(apiResult, apiMessage, warnings);
-    }
-
-    private static OrcaApiResult extractApiResultFromJson(String body) {
-        try {
-            JsonNode root = JSON.readTree(body);
-            Optional<JsonNode> resultNode = findJsonValue(root, "Api_Result");
-            Optional<JsonNode> messageNode = findJsonValue(root, "Api_Result_Message");
-            String apiResult = resultNode.map(JsonNode::asText).orElse(null);
-            String apiMessage = messageNode.map(JsonNode::asText).orElse(null);
-            List<String> warnings = extractWarningsFromJson(root);
-            return new OrcaApiResult(apiResult, apiMessage, warnings);
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
-    private static Optional<JsonNode> findJsonValue(JsonNode node, String key) {
-        if (node == null || key == null) {
-            return Optional.empty();
-        }
-        if (node.has(key)) {
-            return Optional.ofNullable(node.get(key));
-        }
-        for (JsonNode child : node) {
-            Optional<JsonNode> found = findJsonValue(child, key);
-            if (found.isPresent()) {
-                return found;
-            }
-        }
-        return Optional.empty();
-    }
-
-    private static List<String> extractWarningsFromXml(String body) {
-        List<String> warnings = new ArrayList<>();
-        if (body == null || body.isBlank()) {
-            return warnings;
-        }
-        Pattern pattern = Pattern.compile("<Api_Warning_Message\\b[^>]*>(.*?)</Api_Warning_Message>",
-                Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(body);
-        while (matcher.find()) {
-            String value = matcher.group(1);
-            if (value != null && !value.trim().isEmpty()) {
-                warnings.add(value.trim());
-            }
-        }
-        return warnings;
-    }
-
-    private static List<String> extractWarningsFromJson(JsonNode node) {
-        List<String> warnings = new ArrayList<>();
-        if (node == null) {
-            return warnings;
-        }
-        if (node.has("Api_Warning_Message")) {
-            JsonNode value = node.get("Api_Warning_Message");
-            if (value != null && !value.isNull()) {
-                String text = value.asText(null);
-                if (text != null && !text.isBlank()) {
-                    warnings.add(text);
-                }
-            }
-        }
-        for (JsonNode child : node) {
-            warnings.addAll(extractWarningsFromJson(child));
-        }
-        return warnings;
-    }
-
-    private static String extractTagValue(String payload, String tag) {
-        if (payload == null || tag == null) {
-            return null;
-        }
-        Pattern pattern = Pattern.compile("<" + tag + "\\b[^>]*>(.*?)</" + tag + ">", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(payload);
-        if (matcher.find()) {
-            String value = matcher.group(1);
-            return value != null ? value.trim() : null;
-        }
-        return null;
+        return new OrcaHttpClientSupport().extractApiResult(body, contentType);
     }
 
     private static boolean isTransientOrcaError(OrcaApiResult result) {
-        if (result == null || result.apiResult == null) {
-            return false;
-        }
-        if (OrcaApiProxySupport.isApiResultSuccess(result.apiResult)) {
-            return false;
-        }
-        String message = result.message != null ? result.message : "";
-        String normalized = message.toLowerCase(Locale.ROOT);
-        return normalized.contains("排他")
-                || normalized.contains("他端末")
-                || normalized.contains("使用中")
-                || normalized.contains("ロック")
-                || normalized.contains("処理中")
-                || normalized.contains("一時")
-                || normalized.contains("timeout")
-                || normalized.contains("タイムアウト")
-                || normalized.contains("busy");
+        return new OrcaHttpClientSupport().isTransientOrcaError(result);
     }
 
     private static boolean sleepUntilDeadline(Instant deadline, long backoffMs) {
-        if (backoffMs <= 0) {
-            return !isDeadlineExceeded(deadline);
-        }
-        if (deadline == null) {
-            return false;
-        }
-        long remainingMs = Duration.between(Instant.now(), deadline).toMillis();
-        if (remainingMs <= 0) {
-            return false;
-        }
-        long sleepMs = Math.min(backoffMs, remainingMs);
-        long nanos = Duration.ofMillis(sleepMs).toNanos();
-        LockSupport.parkNanos(nanos);
-        if (Thread.currentThread().isInterrupted()) {
-            Thread.currentThread().interrupt();
-            return false;
-        }
-        return !isDeadlineExceeded(deadline);
+        return new OrcaHttpClientSupport().sleepUntilDeadline(deadline, backoffMs);
     }
 
-    private static int resolveIntConfig(String envKey, String propKey, int fallback) {
-        String value = external(envKey, propKey);
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
+    private static int resolveIntConfig(Integer value, int fallback) {
+        return new OrcaHttpClientSupport().resolveIntConfig(value, fallback);
     }
 
-    private static long resolveLongConfig(String envKey, String propKey, long fallback) {
-        String value = external(envKey, propKey);
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        try {
-            return Long.parseLong(value.trim());
-        } catch (NumberFormatException ex) {
-            return fallback;
-        }
+    private static long resolveLongConfig(Long value, long fallback) {
+        return new OrcaHttpClientSupport().resolveLongConfig(value, fallback);
     }
 
-    private static Duration resolveDuration(String envKey, String propKey, Duration fallback) {
-        long millis = resolveLongConfig(envKey, propKey, fallback.toMillis());
-        return Duration.ofMillis(Math.max(1L, millis));
+    private static Duration resolveDuration(Duration value, Duration fallback) {
+        return new OrcaHttpClientSupport().resolveDuration(value, fallback);
     }
 
-    private static String external(String envKey, String propKey) {
-        String fromEnv = envKey != null ? System.getenv(envKey) : null;
-        if (fromEnv != null && !fromEnv.isBlank()) {
-            return fromEnv;
+    private record RequestPlan(
+            OrcaTransportSettings transportSettings,
+            String method,
+            String path,
+            String body,
+            String accept,
+            String url,
+            URI uri,
+            boolean retryableMethod
+    ) {
+    }
+
+    private record RetryPlan(
+            int networkRetryMax,
+            int transientRetryMax,
+            long networkBackoffMs,
+            long transientBackoffMs,
+            Duration readTimeout,
+            Duration totalTimeout
+    ) {
+    }
+
+    private record OrcaResponseOutcome(
+            OrcaHttpResponse response,
+            boolean retryNetwork,
+            boolean retryTransient
+    ) {
+        private static OrcaResponseOutcome successOutcome(OrcaHttpResponse response) {
+            return new OrcaResponseOutcome(response, false, false);
         }
-        return propKey != null ? System.getProperty(propKey) : null;
+
+        private static OrcaResponseOutcome forNetworkRetryOutcome() {
+            return new OrcaResponseOutcome(null, true, false);
+        }
+
+        private static OrcaResponseOutcome forTransientRetryOutcome() {
+            return new OrcaResponseOutcome(null, false, true);
+        }
     }
 
     static String formatSummaryLog(String requestId, String method, String path, int status,
             OrcaApiResult apiResult, long elapsedMs) {
+        return formatSummaryLog(requestId, method, path, status, apiResult, elapsedMs, OrcaLogMode.SUMMARY);
+    }
+
+    static String formatSummaryLog(String requestId, String method, String path, int status,
+            OrcaApiResult apiResult, long elapsedMs, OrcaLogMode logMode) {
         String resolvedId = requestId != null && !requestId.isBlank() ? requestId : "-";
         String resolvedMethod = method != null && !method.isBlank() ? method : "POST";
         String resolvedPath = path != null && !path.isBlank() ? path : "-";
@@ -464,13 +390,18 @@ public class OrcaHttpClient {
                 .append(" status=").append(status)
                 .append(" apiResult=").append(apiResultCode)
                 .append(" durationMs=").append(elapsedMs);
-        appendText(builder, "apiMessage", apiMessage);
-        appendText(builder, "warnings", warnings);
+        appendText(builder, "apiMessage", apiMessage, logMode);
+        appendText(builder, "warnings", warnings, logMode);
         return builder.toString();
     }
 
     private static String formatDetailLog(String requestId, String method, String path, int status,
             OrcaApiResult apiResult) {
+        return formatDetailLog(requestId, method, path, status, apiResult, OrcaLogMode.DETAIL);
+    }
+
+    private static String formatDetailLog(String requestId, String method, String path, int status,
+            OrcaApiResult apiResult, OrcaLogMode logMode) {
         SanitizedText apiMessage = sanitizeLogText(apiResult != null ? apiResult.message : null);
         String warningsRaw = (apiResult != null && apiResult.warnings != null && !apiResult.warnings.isEmpty())
                 ? String.join(" | ", apiResult.warnings)
@@ -497,19 +428,19 @@ public class OrcaHttpClient {
         return builder.toString();
     }
 
-    private static void appendText(StringBuilder builder, String label, SanitizedText text) {
+    private static void appendText(StringBuilder builder, String label, SanitizedText text, OrcaLogMode logMode) {
         if (text == null) {
             return;
         }
-        if (LOG_MODE == OrcaLogMode.QUIET) {
+        if (logMode == OrcaLogMode.QUIET) {
             if (text.fingerprint != null) {
                 builder.append(' ').append(label).append("Hash=").append(text.fingerprint);
             }
             return;
         }
-        if (text.numericOnly || (LOG_MODE == OrcaLogMode.DETAIL && text.display != null)) {
+        if (text.numericOnly || (logMode == OrcaLogMode.DETAIL && text.display != null)) {
             builder.append(' ').append(label).append('=').append(text.display);
-            if (text.fingerprint != null && LOG_MODE == OrcaLogMode.DETAIL) {
+            if (text.fingerprint != null && logMode == OrcaLogMode.DETAIL) {
                 builder.append(' ').append(label).append("Hash=").append(text.fingerprint);
             }
             return;
@@ -570,11 +501,7 @@ public class OrcaHttpClient {
         }
     }
 
-    private static OrcaLogMode resolveLogMode() {
-        String value = System.getenv(ENV_LOG_MODE);
-        if (value == null || value.isBlank()) {
-            value = System.getProperty(ENV_LOG_MODE);
-        }
+    private static OrcaLogMode resolveLogMode(String value) {
         if (value == null) {
             return OrcaLogMode.SUMMARY;
         }
