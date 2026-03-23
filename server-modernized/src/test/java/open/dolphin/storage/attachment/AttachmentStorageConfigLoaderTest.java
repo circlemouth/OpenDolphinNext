@@ -10,23 +10,32 @@ import org.junit.jupiter.api.Test;
 class AttachmentStorageConfigLoaderTest {
 
     @Test
-    void loadsDatabaseSettingsFromResolverKeys() {
+    void rejectsDatabaseMode() {
         AttachmentStorageConfigLoader loader = new AttachmentStorageConfigLoader(TestServerConfigurationResolvers.resolver(
-                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "database",
-                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE, "d_attachment"));
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "database"));
 
-        AttachmentStorageSettings settings = loader.load();
+        assertThatThrownBy(loader::load)
+                .isInstanceOf(AttachmentStorageException.class)
+                .hasMessageContaining(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE);
+    }
 
-        assertThat(settings.getMode()).isEqualTo(AttachmentStorageMode.DATABASE);
-        assertThat(settings.getDatabase().getLobTable()).isEqualTo("d_attachment");
-        assertThat(settings.getS3()).isEmpty();
+    @Test
+    void rejectsDatabaseLobTableWhenS3ModeIsEnabled() {
+        AttachmentStorageConfigLoader loader = new AttachmentStorageConfigLoader(TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3",
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE, "d_attachment",
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_BUCKET, "bucket-a",
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_REGION, "ap-northeast-1"));
+
+        assertThatThrownBy(loader::load)
+                .isInstanceOf(AttachmentStorageException.class)
+                .hasMessageContaining(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE);
     }
 
     @Test
     void rejectsMissingS3CredentialWhenS3ModeIsEnabled() {
         AttachmentStorageConfigLoader loader = new AttachmentStorageConfigLoader(TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3",
-                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE, "d_attachment",
                 ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_BUCKET, "bucket-a",
                 ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_REGION, "ap-northeast-1"));
 

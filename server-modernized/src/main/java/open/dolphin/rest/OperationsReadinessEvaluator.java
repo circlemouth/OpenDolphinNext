@@ -194,12 +194,13 @@ public class OperationsReadinessEvaluator {
         try {
             AttachmentStorageMode mode = attachmentStorageManager != null ? attachmentStorageManager.getMode() : null;
             boolean backendReachable = attachmentStorageManager != null && attachmentStorageManager.isBackendReachable();
-            boolean up = mode != null && backendReachable;
+            boolean supportedMode = mode != null && mode.isS3();
+            boolean up = supportedMode && backendReachable;
             detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
             detail.setMode(mode != null ? mode.name().toLowerCase(java.util.Locale.ROOT) : null);
             detail.setBackendReachable(backendReachable);
             if (!up) {
-                detail.setReasonCode(mode == null
+                detail.setReasonCode(!supportedMode
                         ? REASON_ATTACHMENT_STORAGE_NOT_READY
                         : REASON_ATTACHMENT_STORAGE_BACKEND_UNREACHABLE);
             }

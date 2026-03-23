@@ -31,7 +31,6 @@ public final class UserMutationRequestMapper {
         model.setEmail(request.getEmail());
         model.setOrcaId(request.getOrcaId());
         model.setUseDrugId(request.getUseDrugId());
-        model.setFactor2Auth(request.getFactor2Auth());
         model.setMainMobile(request.getMainMobile());
         model.setSubMobile(request.getSubMobile());
 

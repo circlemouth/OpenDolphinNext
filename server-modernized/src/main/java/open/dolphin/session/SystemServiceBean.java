@@ -1,9 +1,5 @@
 package open.dolphin.session;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.LocalDate;
@@ -13,7 +9,6 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,8 +25,6 @@ import open.dolphin.infomodel.*;
 import open.dolphin.msg.OidSender;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.session.framework.SessionOperation;
-import open.stamp.seed.CopyStampTreeBuilder;
-import open.stamp.seed.CopyStampTreeXmlCloner;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,22 +48,14 @@ public class SystemServiceBean {
     //private static final boolean DolphinPro = true;
 
     //private static final String BASE_OID = "1.3.6.1.4.1.9414.3.";               // 3.xx
-    //private static final String DEMO_FACILITY_ID = "1.3.6.1.4.1.9414.2.1";
 
     private static final String BASE_OID = "1.3.6.1.4.1.9414.72.";
-    private static final String DEMO_FACILITY_ID = "1.3.6.1.4.1.9414.70.1";  //70.1
 
     private static final String QUERY_NEXT_FID = "select nextval('facility_num') as n";
     private static final String QUERY_FACILITY_BY_FID = "from FacilityModel f where f.facilityId=:fid";
     private static final String FID = "fid";
-    private static final String PK = "pk";
 
     private static final String ASP_TESTER = "ASP_TESTER";
-    private static final int MAX_DEMO_PATIENTS = 5;
-    private static final String ID_PREFIX = "D_";
-    private static final String QUERY_PATIENT_BY_FID = "from PatientModel p where p.facilityId=:fid order by p.patientId";
-    private static final String QUERY_HEALTH_INSURANCE_BY_PATIENT_PK = "from HealthInsuranceModel h where h.patient.id=:pk";
-    private static final String TREE_SOURCE = "1.3.6.1.4.1.9414.70.1:admin";    ////"1.3.6.1.4.1.9414.70.1:lsc_admin"
 
     @PersistenceContext
     private EntityManager em;
@@ -96,8 +81,6 @@ public class SystemServiceBean {
         String fid = allocateFacilityId();
         persistFacility(user, fid);
         persistUserWithRoles(user, fid);
-        copyDemoPatients(fid);
-        copyStampTree(user);
         return buildAccountSummary(user);
     }
     
@@ -381,97 +364,6 @@ public class SystemServiceBean {
             role.setUserModel(user);
             role.setUserId(user.getUserId());
             em.persist(role);
-        }
-    }
-
-    private void copyDemoPatients(String fid) {
-        Collection demoPatients = em.createQuery(QUERY_PATIENT_BY_FID)
-                .setParameter(FID, DEMO_FACILITY_ID)
-                .setFirstResult(1)
-                .setMaxResults(MAX_DEMO_PATIENTS)
-                .getResultList();
-
-        for (Iterator iter = demoPatients.iterator(); iter.hasNext(); ) {
-            PatientModel demoPatient = (PatientModel) iter.next();
-            PatientModel copyPatient = new PatientModel();
-            copyPatient.setFacilityId(fid);
-            copyPatient.setPatientId(ID_PREFIX + demoPatient.getPatientId());
-            copyPatient.setFamilyName(demoPatient.getFamilyName());
-            copyPatient.setGivenName(demoPatient.getGivenName());
-            copyPatient.setFullName(demoPatient.getFullName());
-            copyPatient.setKanaFamilyName(demoPatient.getKanaFamilyName());
-            copyPatient.setKanaGivenName(demoPatient.getKanaGivenName());
-            copyPatient.setKanaName(demoPatient.getKanaName());
-            copyPatient.setGender(demoPatient.getGender());
-            copyPatient.setGenderDesc(demoPatient.getGenderDesc());
-            copyPatient.setBirthday(demoPatient.getBirthday());
-            copyPatient.setSimpleAddressModel(demoPatient.getSimpleAddressModel());
-            copyPatient.setTelephone(demoPatient.getTelephone());
-            copyDemoPatientInsurances(demoPatient, copyPatient);
-            em.persist(copyPatient);
-
-            KarteBean karte = new KarteBean();
-            karte.setPatientModel(copyPatient);
-            karte.setCreated(new Date());
-            em.persist(karte);
-        }
-    }
-
-    private void copyDemoPatientInsurances(PatientModel demoPatient, PatientModel copyPatient) {
-        Collection demoInsurances = em.createQuery(QUERY_HEALTH_INSURANCE_BY_PATIENT_PK)
-                .setParameter(PK, demoPatient.getId())
-                .getResultList();
-        for (Iterator iter2 = demoInsurances.iterator(); iter2.hasNext(); ) {
-            HealthInsuranceModel demoInsurance = (HealthInsuranceModel) iter2.next();
-            HealthInsuranceModel copyInsurance = new HealthInsuranceModel();
-            copyInsurance.setBeanJson(demoInsurance.getBeanJson());
-            copyInsurance.setPatient(copyPatient);
-            copyPatient.addHealthInsurance(copyInsurance);
-        }
-    }
-
-    private void copyStampTree(UserModel user) {
-        try {
-            UserModel admin = (UserModel) em.createQuery("from UserModel u where u.userId=:uid")
-                    .setParameter("uid", TREE_SOURCE)
-                    .getSingleResult();
-            List<StampTreeModel> list = (List<StampTreeModel>) em.createQuery("from StampTreeModel s where s.user.id=:userPK")
-                    .setParameter("userPK", admin.getId())
-                    .getResultList();
-            StampTreeModel st = list.remove(0);
-
-            InputStream is = new ByteArrayInputStream(st.getTreeBytes());
-            BufferedReader br = new BufferedReader(new InputStreamReader(is, "UTF-8"));
-            CopyStampTreeBuilder builder = new CopyStampTreeBuilder();
-            CopyStampTreeXmlCloner director = new CopyStampTreeXmlCloner();
-            director.build(br, builder);
-            br.close();
-
-            String copiedTreeXml = builder.getStampTreeXML();
-            byte[] treeBytes = copiedTreeXml.getBytes("UTF-8");
-            StampTreeModel copyTree = new StampTreeModel();
-            copyTree.setTreeBytes(treeBytes);
-            copyTree.setUserModel(user);
-            copyTree.setName("個人用");
-            copyTree.setDescription("個人用のスタンプセットです");
-            copyTree.setPartyName(user.getFacilityModel().getFacilityName());
-            if (user.getFacilityModel().getUrl() != null) {
-                copyTree.setUrl(user.getFacilityModel().getUrl());
-            }
-            em.persist(copyTree);
-
-            List<StampModel> stampToPersist = builder.getStampModelToPersist();
-            List<String> seedStampIdList = builder.getSeedStampList();
-            for (int i = 0; i < stampToPersist.size(); i++) {
-                String id = seedStampIdList.get(i);
-                StampModel seed = (StampModel) em.find(StampModel.class, id);
-                StampModel persist = stampToPersist.get(i);
-                persist.setStampBytes(seed.getStampBytes());
-                persist.setUserId(user.getId());
-                em.persist(persist);
-            }
-        } catch (Exception e) {
-            e.printStackTrace(System.err);
         }
     }
 

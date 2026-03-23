@@ -119,6 +119,7 @@ class CsrfProtectionFilterTest {
         FilterChain chain = mock(FilterChain.class);
         when(request.getHeader("Origin")).thenReturn("https://forwarded.example.test");
         when(request.getHeader("Forwarded")).thenReturn("proto=https;host=forwarded.example.test");
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(request.getScheme()).thenReturn("http");
         when(request.getServerName()).thenReturn("internal.local");
         when(request.getServerPort()).thenReturn(8080);
@@ -128,19 +129,35 @@ class CsrfProtectionFilterTest {
         verify(chain).doFilter(request, response);
     }
 
+    @Test
+    void ignoresForwardedHeadersFromUntrustedRemote() throws Exception {
+        FailureResult result = executeForbidden(
+                "https://forwarded.example.test",
+                null,
+                "http",
+                "internal.local",
+                8080,
+                "proto=https;host=forwarded.example.test",
+                "198.51.100.20");
+
+        assertThat(result.details()).containsEntry("reason", "csrf_origin_mismatch");
+    }
+
     private FailureResult executeForbidden(
             String origin,
             String referer,
             String scheme,
             String host,
             int port,
-            String forwarded) throws Exception {
+            String forwarded,
+            String remoteAddr) throws Exception {
         HttpServletRequest request = requestWithToken("POST", "csrf-token");
         HttpServletResponse response = mock(HttpServletResponse.class);
         FilterChain chain = mock(FilterChain.class);
         when(request.getHeader("Origin")).thenReturn(origin);
         when(request.getHeader("Referer")).thenReturn(referer);
         when(request.getHeader("Forwarded")).thenReturn(forwarded);
+        when(request.getRemoteAddr()).thenReturn(remoteAddr);
         when(request.getScheme()).thenReturn(scheme);
         when(request.getServerName()).thenReturn(host);
         when(request.getServerPort()).thenReturn(port);
@@ -155,6 +172,16 @@ class CsrfProtectionFilterTest {
         @SuppressWarnings("unchecked")
         Map<String, Object> details = (Map<String, Object>) attrs.get(AbstractResource.ERROR_DETAILS_ATTRIBUTE);
         return new FailureResult(details, body.toString(StandardCharsets.UTF_8));
+    }
+
+    private FailureResult executeForbidden(
+            String origin,
+            String referer,
+            String scheme,
+            String host,
+            int port,
+            String forwarded) throws Exception {
+        return executeForbidden(origin, referer, scheme, host, port, forwarded, "127.0.0.1");
     }
 
     private HttpServletRequest requestWithToken(String method, String token) {

@@ -3,6 +3,7 @@ package open.dolphin.orca.transport;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,21 +15,25 @@ import java.util.Base64;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
+import open.dolphin.session.framework.SessionTraceAttributes;
+import open.dolphin.session.framework.SessionTraceContext;
+import open.dolphin.session.framework.SessionTraceManager;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 class RestOrcaTransportTest {
 
     @Test
-    void currentSettingsUsesAdminConfigAndReusesDefaultHttpClientWithinCacheTtl() throws Exception {
+    void currentSettingsUsesTraceFacilityAndReusesHttpClientWithinCacheTtl() throws Exception {
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
-        when(store.resolve(null)).thenReturn(resolvedConnection(
+        when(store.resolve("F001")).thenReturn(resolvedConnection(
                 "https://default.example.orca",
                 "default-user",
                 "default-pass"));
 
         RestOrcaTransport transport = new RestOrcaTransport();
         setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "traceManager", traceManager("F001"));
         setField(transport, "configurationResolver", resolver());
 
         OrcaTransportSettings first = transport.currentSettingsInstance();
@@ -42,7 +47,7 @@ class RestOrcaTransportTest {
         assertEquals(basicAuthHeader("default-user", "default-pass"), transport.resolveBasicAuthHeader());
         assertSame(first, second);
         assertSame(firstClient, secondClient);
-        verify(store, times(1)).resolve(null);
+        verify(store, times(1)).resolve("F001");
     }
 
     @Test
@@ -70,47 +75,63 @@ class RestOrcaTransportTest {
     @Test
     void reloadSettingsReusesHttpClientWhenResolvedConfigUnchanged() throws Exception {
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
-        when(store.resolve(null)).thenReturn(resolvedConnection(
+        when(store.resolve("F001")).thenReturn(resolvedConnection(
                 "https://same.example.orca",
                 "same-user",
                 "same-pass"));
 
         RestOrcaTransport transport = new RestOrcaTransport();
         setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "traceManager", traceManager("F001"));
         setField(transport, "configurationResolver", resolver());
 
-        transport.reloadSettings();
+        transport.reloadSettings("F001");
         HttpClient firstClient = transport.rawHttpClient();
 
-        transport.reloadSettings();
+        transport.reloadSettings("F001");
         HttpClient secondClient = transport.rawHttpClient();
 
         assertSame(firstClient, secondClient);
-        verify(store, times(2)).resolve(null);
+        verify(store, times(2)).resolve("F001");
     }
 
     @Test
     void reloadSettingsReplacesHttpClientWhenResolvedConfigChanges() throws Exception {
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
-        when(store.resolve(null))
+        when(store.resolve("F001"))
                 .thenReturn(resolvedConnection("https://first.example.orca", "user-a", "pass-a"))
                 .thenReturn(resolvedConnection("https://second.example.orca", "user-b", "pass-b"));
 
         RestOrcaTransport transport = new RestOrcaTransport();
         setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "traceManager", traceManager("F001"));
         setField(transport, "configurationResolver", resolver());
 
-        transport.reloadSettings();
+        transport.reloadSettings("F001");
         HttpClient firstClient = transport.rawHttpClient();
 
-        transport.reloadSettings();
+        transport.reloadSettings("F001");
         HttpClient secondClient = transport.rawHttpClient();
 
         assertNotSame(firstClient, secondClient);
         assertEquals("https://second.example.orca/api/api01rv2/systeminfv2",
                 transport.buildOrcaUrl("/api01rv2/systeminfv2"));
         assertEquals(basicAuthHeader("user-b", "pass-b"), transport.resolveBasicAuthHeader());
-        verify(store, times(2)).resolve(null);
+        verify(store, times(2)).resolve("F001");
+    }
+
+    @Test
+    void missingFacilityFailsFastForNoArgAccessorsAndInvoke() throws Exception {
+        RestOrcaTransport transport = new RestOrcaTransport();
+        setField(transport, "orcaConnectionConfigStore", Mockito.mock(OrcaConnectionConfigStore.class));
+        setField(transport, "configurationResolver", resolver());
+
+        assertThrows(IllegalStateException.class, transport::currentSettingsInstance);
+        assertThrows(IllegalStateException.class, transport::rawHttpClient);
+        assertThrows(IllegalStateException.class, () -> transport.buildOrcaUrl("/api01rv2/systeminfv2"));
+        assertThrows(IllegalStateException.class, transport::resolveBasicAuthHeader);
+        assertThrows(IllegalStateException.class, transport::auditSummary);
+        assertThrows(IllegalStateException.class, () -> transport.invoke(null, "<request/>"));
     }
 
     private static OrcaConnectionConfigStore.ResolvedOrcaConnection resolvedConnection(
@@ -136,6 +157,14 @@ class RestOrcaTransportTest {
     private static ServerConfigurationResolver resolver() {
         return TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_ORCA_TRANSPORT_CACHE_TTL_MS, "60000");
+    }
+
+    private static SessionTraceManager traceManager(String facilityId) {
+        SessionTraceManager traceManager = Mockito.mock(SessionTraceManager.class);
+        SessionTraceContext context = Mockito.mock(SessionTraceContext.class);
+        when(traceManager.current()).thenReturn(context);
+        when(context.getAttribute(SessionTraceAttributes.FACILITY_ID)).thenReturn(facilityId);
+        return traceManager;
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

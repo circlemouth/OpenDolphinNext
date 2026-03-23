@@ -1,6 +1,9 @@
 package open.dolphin.rest;
 
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.Consumes;
@@ -13,7 +16,9 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.CurrentUserResponse;
 import open.dolphin.rest.support.CurrentUserResponseMapper;
 import open.dolphin.session.UserServiceBean;
@@ -26,6 +31,9 @@ public class SessionAuthResource extends AbstractResource {
 
     @Inject
     private TotpVerificationSupport totpVerificationSupport;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private static final String FACTOR2_REQUIRED_CODE = "factor2_required";
     private static final String FACTOR2_INVALID_CODE = "factor2_invalid";
@@ -61,6 +69,10 @@ public class SessionAuthResource extends AbstractResource {
         }
         if (!result.authenticated()) {
             if (result.secondFactorRequired()) {
+                UserModel actorUser = loadActorUser(actorId);
+                if (!hasVerifiedTotpCredential(actorUser)) {
+                    throw restError(request, Response.Status.UNAUTHORIZED, "unauthorized", "認証に失敗しました。");
+                }
                 HttpSession session = AuthSessionSupport.rotateSession(request);
                 AuthSessionSupport.clearSession(session);
                 AuthSessionSupport.populatePendingSecondFactorSession(session, actorId, facilityId, loginId, clientUuid);
@@ -114,10 +126,15 @@ public class SessionAuthResource extends AbstractResource {
             return buildFactor2SessionError(FACTOR2_SESSION_EXPIRED_CODE);
         }
 
-        open.dolphin.infomodel.UserModel actorUser;
+        UserModel actorUser;
         try {
             actorUser = userService.getUser(pending.actorId());
         } catch (RuntimeException ex) {
+            AuthSessionSupport.clearSession(currentSession);
+            return buildFactor2SessionError(FACTOR2_SESSION_EXPIRED_CODE);
+        }
+
+        if (!hasVerifiedTotpCredential(actorUser)) {
             AuthSessionSupport.clearSession(currentSession);
             return buildFactor2SessionError(FACTOR2_SESSION_EXPIRED_CODE);
         }
@@ -173,6 +190,35 @@ public class SessionAuthResource extends AbstractResource {
             return CurrentUserResponseMapper.from(userServiceBean.getUser(actorId));
         } catch (RuntimeException ex) {
             return null;
+        }
+    }
+
+    private UserModel loadActorUser(String actorId) {
+        try {
+            return userServiceBean.getUser(actorId);
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private boolean hasVerifiedTotpCredential(UserModel user) {
+        if (user == null || entityManager == null || user.getId() <= 0) {
+            return false;
+        }
+        String factor2Auth = trimToNull(user.getFactor2Auth());
+        if (!"totp".equalsIgnoreCase(factor2Auth)) {
+            return false;
+        }
+        try {
+            Query query = entityManager.createQuery(
+                    "from Factor2Credential f where f.userPK=:userPK and f.credentialType=:type and f.verified=true order by f.updatedAt desc");
+            query.setParameter("userPK", user.getId());
+            query.setParameter("type", "totp");
+            query.setMaxResults(1);
+            List<?> results = query.getResultList();
+            return results != null && !results.isEmpty();
+        } catch (RuntimeException ex) {
+            return false;
         }
     }
 

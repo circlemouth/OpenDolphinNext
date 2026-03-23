@@ -132,32 +132,13 @@ class KarteServiceBeanDocPkTest {
     }
 
     @Test
-    void addDocument_externalizesAttachmentsAfterAssigningIdsAndBeforeMerge() {
+    void addDocument_rejectsAttachmentWithoutPreExternalizedUriAndDigest() {
         DocumentModel document = buildDocumentWithAttachment();
-        document.setId(0L);
-        AttachmentModel attachment = document.getAttachment().get(0);
+        Throwable thrown = catchThrowable(() -> service.addDocument(document));
 
-        doAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            Collection<AttachmentModel> attachments = invocation.getArgument(0, Collection.class);
-            AttachmentModel uploaded = attachments.iterator().next();
-            assertThat(uploaded.getId()).isEqualTo(101L);
-            assertThat(uploaded.getDocumentModel().getId()).isEqualTo(100L);
-            uploaded.setDigest("digest-101");
-            uploaded.setUri("s3://bucket/doc-100/att-101.txt");
-            uploaded.setContentBytes(null);
-            return null;
-        }).when(attachmentStorageManager).persistExternalAssets(any());
-
-        long result = service.addDocument(document);
-
-        assertThat(result).isEqualTo(100L);
-        assertThat(document.getDocInfoModel().getDocPk()).isEqualTo(100L);
-        assertThat(attachment.getId()).isEqualTo(101L);
-        assertThat(attachment.getContentBytes()).isNull();
-        assertThat(attachment.getDigest()).isEqualTo("digest-101");
-        assertThat(attachment.getUri()).isEqualTo("s3://bucket/doc-100/att-101.txt");
-        verify(em).persist(document);
+        assertThat(thrown)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Attachment must be externalized before persist");
     }
 
     @Test

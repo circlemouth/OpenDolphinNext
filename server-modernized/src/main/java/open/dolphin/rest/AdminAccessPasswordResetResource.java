@@ -13,6 +13,8 @@ import java.util.Map;
 
 /**
  * Password reset endpoint split from AdminAccessResource.
+ * Remains intentionally unregistered from the public JAX-RS application until truthful session revoke exists.
+ * Do not re-expose this route until password reset revokes all active sessions and tokens.
  */
 @Path("/admin/access/users/{userPk}/password-reset")
 public class AdminAccessPasswordResetResource extends AdminAccessResource {

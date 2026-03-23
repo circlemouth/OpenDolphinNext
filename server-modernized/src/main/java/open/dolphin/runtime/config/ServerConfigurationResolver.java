@@ -294,7 +294,7 @@ public class ServerConfigurationResolver {
     public ServerRuntimeConfiguration.OrcaPushSettings orcaPush() {
         return new ServerRuntimeConfiguration.OrcaPushSettings(
                 optionalBoolean(KEY_ORCA_PUSH_ENABLED).orElse(false),
-                optionalBoolean(KEY_ORCA_PUSH_SHADOW_MODE).orElse(true),
+                optionalBoolean(KEY_ORCA_PUSH_SHADOW_MODE).orElse(false),
                 optionalBoolean(KEY_ORCA_PUSH_RECEPTION_ENABLED).orElse(true),
                 optionalBoolean(KEY_ORCA_PUSH_MEDICAL_ENABLED).orElse(false),
                 optionalInteger(KEY_ORCA_PUSH_CONNECT_TIMEOUT_MS).orElse(null),
@@ -302,7 +302,7 @@ public class ServerConfigurationResolver {
                 optionalInteger(KEY_ORCA_PUSH_IDLE_TIMEOUT_SECONDS).orElse(null),
                 optionalInteger(KEY_ORCA_PUSH_RECONNECT_INITIAL_DELAY_MS).orElse(null),
                 optionalInteger(KEY_ORCA_PUSH_RECONNECT_MAX_DELAY_MS).orElse(null),
-                optionalBoolean(KEY_ORCA_PUSH_RECOVERY_ENABLED).orElse(true),
+                optionalBoolean(KEY_ORCA_PUSH_RECOVERY_ENABLED).orElse(false),
                 optionalBoolean(KEY_ORCA_PUSH_RECOVERY_USE_PUSHEVENTGET).orElse(false),
                 optionalInteger(KEY_ORCA_PUSH_RECOVERY_INTERVAL_MINUTES).orElse(null),
                 optionalInteger(KEY_ORCA_PUSH_RECOVERY_INITIAL_LOOKBACK_MINUTES).orElse(null),

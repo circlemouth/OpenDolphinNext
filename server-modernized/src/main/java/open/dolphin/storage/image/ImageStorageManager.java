@@ -47,7 +47,7 @@ public class ImageStorageManager {
     void init() {
         settings = configLoader.load();
         if (!settings.getMode().isS3()) {
-            return;
+            throw new AttachmentStorageException("Unsupported image storage mode: " + settings.getMode());
         }
         AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
                 .orElseThrow(() -> new AttachmentStorageException("S3 settings are missing"));
@@ -62,9 +62,10 @@ public class ImageStorageManager {
     }
 
     public void persistExternalAssets(Collection<SchemaModel> schemas) {
-        if (!isS3Enabled() || schemas == null || schemas.isEmpty()) {
+        if (schemas == null || schemas.isEmpty()) {
             return;
         }
+        requireS3Mode();
         for (SchemaModel schema : schemas) {
             uploadToS3(schema);
         }
@@ -91,9 +92,10 @@ public class ImageStorageManager {
     }
 
     public void deleteExternalAsset(SchemaModel schema) {
-        if (!isS3Enabled() || schema == null || !hasText(schema.getUri())) {
+        if (schema == null || !hasText(schema.getUri())) {
             return;
         }
+        requireS3Mode();
         resolveLocation(schema.getUri()).ifPresent(location -> {
             try {
                 s3Client.deleteObject(DeleteObjectRequest.builder()
@@ -212,6 +214,13 @@ public class ImageStorageManager {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private void requireS3Mode() {
+        if (!isS3Enabled()) {
+            throw new AttachmentStorageException("Unsupported image storage mode: "
+                    + (settings != null ? settings.getMode() : "null"));
+        }
     }
 
     private record S3ObjectLocation(String bucket, String key) {

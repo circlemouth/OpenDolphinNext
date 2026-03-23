@@ -2,9 +2,13 @@ package open.dolphin.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import jakarta.ws.rs.GET;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 
@@ -30,15 +34,11 @@ class WebXmlEndpointExposureTest {
 
         assertThat(classNames)
                 .contains("open.dolphin.rest.KarteDocumentWriteResource")
-                .contains("open.dolphin.rest.AdminAccessPasswordResetResource")
-                .contains("open.dolphin.rest.AdminOrcaUserLinkResource")
                 .contains("open.dolphin.rest.OperationsHealthResource")
+                .contains("open.dolphin.rest.AdminOrcaUserLinkResource")
                 .contains("open.dolphin.rest.PvtWorkerHealthResource")
                 .contains("open.dolphin.rest.orca.OrcaChartSupportResource")
-                .contains("open.dolphin.rest.orca.OrcaMedicalOutpatientResource")
                 .contains("open.dolphin.rest.orca.OrcaReportDocumentResource")
-                .contains("open.orca.rest.OrcaFacilityResource")
-                .contains("open.orca.rest.OrcaPatientDiseaseResource")
                 .doesNotContain("open.dolphin.touch.DolphinResourceASP")
                 .doesNotContain("open.dolphin.rest.PatientResource")
                 .doesNotContain("open.dolphin.rest.NLabResource")
@@ -57,6 +57,28 @@ class WebXmlEndpointExposureTest {
                 .doesNotContain("open.dolphin.rest.OrcaMedicalApiResource")
                 .doesNotContain("open.dolphin.rest.OrcaAdditionalApiResource")
                 .doesNotContain("open.dolphin.rest.orca.OrcaMedicalAdministrationResource")
-                .doesNotContain("open.dolphin.rest.OrcaBridgeResource");
+                .doesNotContain("open.dolphin.rest.OrcaBridgeResource")
+                .doesNotContain("open.dolphin.rest.AdminAccessPasswordResetResource")
+                .doesNotContain("open.dolphin.rest.orca.OrcaMedicalOutpatientResource")
+                .doesNotContain("open.dolphin.rest.orca.OrcaDiseaseResource")
+                .doesNotContain("open.dolphin.rest.orca.OrcaLocalMedicalOutpatientResource")
+                .doesNotContain("open.orca.rest.OrcaResource")
+                .doesNotContain("open.orca.rest.OrcaFacilityResource")
+                .doesNotContain("open.orca.rest.OrcaPatientDiseaseResource")
+                .doesNotContain("open.dolphin.rest.OperationsReadinessResource");
+
+        assertThat(OperationsHealthResource.class.getAnnotation(jakarta.ws.rs.Path.class))
+                .isNotNull()
+                .extracting(jakarta.ws.rs.Path::value)
+                .isEqualTo("/health");
+        String readinessPath = Arrays.stream(OperationsHealthResource.class.getDeclaredMethods())
+                .filter(method -> method.getName().equals("readiness"))
+                .filter(method -> method.isAnnotationPresent(GET.class))
+                .map(method -> method.getAnnotation(jakarta.ws.rs.Path.class))
+                .filter(Objects::nonNull)
+                .map(jakarta.ws.rs.Path::value)
+                .findFirst()
+                .orElseThrow();
+        assertThat(readinessPath).isEqualTo("/readiness");
     }
 }

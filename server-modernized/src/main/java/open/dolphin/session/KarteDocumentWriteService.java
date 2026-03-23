@@ -208,6 +208,7 @@ public class KarteDocumentWriteService {
         }
         synchronizeDocumentGraph(document);
         encodeModulePayloads(document.getModules());
+        validateExternalAssetContracts(document);
     }
 
     private void finalizePersistedDocument(DocumentModel document) {
@@ -218,8 +219,6 @@ public class KarteDocumentWriteService {
             document.getDocInfoModel().setDocPk(document.getId());
         }
         synchronizeDocumentGraph(document);
-        imageStorageManager.persistExternalAssets(document.getSchema());
-        attachmentStorageManager.persistExternalAssets(document.getAttachment());
         em.flush();
     }
 
@@ -317,6 +316,53 @@ public class KarteDocumentWriteService {
         }
         String trimmed = status.trim();
         return trimmed.isEmpty() ? null : trimmed.toUpperCase(java.util.Locale.ROOT);
+    }
+
+    private void validateExternalAssetContracts(DocumentModel document) {
+        validateAttachments(document != null ? document.getAttachment() : null);
+        validateSchemas(document != null ? document.getSchema() : null);
+    }
+
+    private void validateAttachments(Collection<AttachmentModel> attachments) {
+        if (attachments == null) {
+            return;
+        }
+        for (AttachmentModel attachment : attachments) {
+            if (attachment == null) {
+                continue;
+            }
+            if (!hasText(attachment.getUri()) || !hasText(attachment.getDigest())) {
+                throw new IllegalStateException("Attachment must be externalized before persist: attachmentId="
+                        + attachment.getId());
+            }
+            if (attachment.getContentBytes() != null && attachment.getContentBytes().length > 0) {
+                throw new IllegalStateException("Attachment inline bytes are not accepted for persist: attachmentId="
+                        + attachment.getId());
+            }
+        }
+    }
+
+    private void validateSchemas(Collection<SchemaModel> schemas) {
+        if (schemas == null) {
+            return;
+        }
+        for (SchemaModel schema : schemas) {
+            if (schema == null) {
+                continue;
+            }
+            if (!hasText(schema.getUri()) || !hasText(schema.getDigest())) {
+                throw new IllegalStateException("Schema image must be externalized before persist: schemaId="
+                        + schema.getId());
+            }
+            if (schema.getImageBytes() != null && schema.getImageBytes().length > 0) {
+                throw new IllegalStateException("Schema inline bytes are not accepted for persist: schemaId="
+                        + schema.getId());
+            }
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private void markRevisionSourceAsModified(long parentPk, Date ended) {

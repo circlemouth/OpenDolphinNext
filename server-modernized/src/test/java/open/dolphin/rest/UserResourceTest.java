@@ -111,6 +111,24 @@ class UserResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postUserRejectsFactor2AuthInputBeforeAdminCheck() throws Exception {
+        String payload = """
+                {
+                  "userId":"F001:user03",
+                  "commonName":"New User",
+                  "factor2Auth":"totp",
+                  "roles":[{"role":"user"}]
+                }
+                """;
+
+        assertThatThrownBy(() -> resource.postUser(request, payload))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(400));
+
+        verify(userServiceBean, never()).addUser(any());
+    }
+
+    @Test
     void nonAdminCannotUpdateOtherUser() throws Exception {
         when(request.getRemoteUser()).thenReturn(USER_01);
         when(userServiceBean.isAdmin(USER_01)).thenReturn(false);
@@ -128,6 +146,25 @@ class UserResourceTest extends RuntimeDelegateTestSupport {
         assertThatThrownBy(() -> resource.putUser(request, payload))
                 .isInstanceOf(WebApplicationException.class)
                 .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(403));
+
+        verify(userServiceBean, never()).updateUser(any());
+    }
+
+    @Test
+    void putUserRejectsFactor2AuthInput() throws Exception {
+        String payload = """
+                {
+                  "id":1,
+                  "userId":"F001:user01",
+                  "commonName":"Self Update",
+                  "factor2Auth":"totp",
+                  "roles":[{"role":"user"}]
+                }
+                """;
+
+        assertThatThrownBy(() -> resource.putUser(request, payload))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(400));
 
         verify(userServiceBean, never()).updateUser(any());
     }
@@ -258,6 +295,22 @@ class UserResourceTest extends RuntimeDelegateTestSupport {
         ArgumentCaptor<UserModel> captor = ArgumentCaptor.forClass(UserModel.class);
         verify(userServiceBean).updateFacility(captor.capture());
         assertThat(captor.getValue().getFacilityModel().getFacilityId()).isEqualTo("F001");
+    }
+
+    @Test
+    void putFacilityRejectsFactor2AuthInput() {
+        String payload = """
+                {
+                  "facilityModel":{"id":10,"facilityId":"F001","facilityName":"Updated"},
+                  "factor2Auth":"totp"
+                }
+                """;
+
+        assertThatThrownBy(() -> resource.putFacility(request, payload))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(400));
+
+        verify(userServiceBean, never()).updateFacility(any());
     }
 
     @Test

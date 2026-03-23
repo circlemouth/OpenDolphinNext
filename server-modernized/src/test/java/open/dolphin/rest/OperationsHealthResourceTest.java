@@ -74,7 +74,7 @@ class OperationsHealthResourceTest {
         when(query.getSingleResult()).thenReturn(1);
         restOrcaTransport.probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
-        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DATABASE);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",
@@ -114,7 +114,7 @@ class OperationsHealthResourceTest {
         when(query.getSingleResult()).thenReturn(1);
         restOrcaTransport.probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
-        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.DATABASE);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
         when(pvtService.workerHealthBody()).thenReturn(Map.of(
                 "status", "UP",

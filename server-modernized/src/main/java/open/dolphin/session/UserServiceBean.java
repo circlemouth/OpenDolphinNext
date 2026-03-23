@@ -462,9 +462,17 @@ public class UserServiceBean {
             return false;
         }
         String factor2Auth = user.getFactor2Auth();
-        return factor2Auth != null
-                && !factor2Auth.isBlank()
-                && !"off".equalsIgnoreCase(factor2Auth.trim());
+        if (factor2Auth == null) {
+            return false;
+        }
+        String normalized = factor2Auth.trim();
+        if (normalized.isEmpty() || "off".equalsIgnoreCase(normalized)) {
+            return false;
+        }
+        if ("totp".equalsIgnoreCase(normalized)) {
+            return true;
+        }
+        throw new IllegalStateException("Unsupported factor2Auth mode: " + normalized);
     }
 
     private boolean isAdminRole(String role) {

@@ -12,20 +12,10 @@ import java.util.List;
 import java.util.Map;
 import open.dolphin.reporting.SigningConfig;
 import open.dolphin.security.audit.AuditEventPayload;
-import open.dolphin.security.fido.Fido2Config;
 import open.dolphin.session.framework.SessionTraceContext;
 import org.junit.jupiter.api.Test;
 
 class SecurityDefensiveCopyTest {
-
-    @Test
-    void fido2ConfigProtectsAllowedOrigins() {
-        List<String> origins = List.of("https://localhost:8443");
-        Fido2Config config = new Fido2Config("rpId", "rpName", origins);
-
-        assertThrows(UnsupportedOperationException.class, () -> config.getAllowedOrigins().add("https://example.com"));
-        assertEquals(origins, config.getAllowedOrigins());
-    }
 
     @Test
     void auditPayloadProtectsDetails() {

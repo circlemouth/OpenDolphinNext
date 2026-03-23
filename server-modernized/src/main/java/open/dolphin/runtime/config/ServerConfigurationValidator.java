@@ -47,7 +47,6 @@ public class ServerConfigurationValidator {
         validateDocumentIntegrity(errors, resolver.documentIntegrity());
         validatePatientImages(errors, resolver.patientImages());
         validateChartEventHistory(errors, resolver.chartEventHistory());
-        validateFido2(errors, resolver.fido2());
 
         if (!errors.isEmpty()) {
             throw new IllegalStateException("Startup configuration validation failed: " + String.join(" | ", errors));
@@ -420,15 +419,14 @@ public class ServerConfigurationValidator {
             errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " is required");
             return;
         }
+        if (!isBlank(settings.databaseLobTable())) {
+            errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE + " must not be configured");
+        }
         String mode = settings.mode().trim().toLowerCase();
         switch (mode) {
-            case "database" -> {
-                if (isBlank(settings.databaseLobTable())) {
-                    errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE + " is required");
-                }
-            }
             case "s3" -> validateAttachmentS3(errors, settings.s3());
-            default -> errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " must be database or s3");
+            case "database" -> errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " must be s3");
+            default -> errors.add(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " must be s3");
         }
     }
 
@@ -463,22 +461,8 @@ public class ServerConfigurationValidator {
         }
         String mode = settings.mode().trim().toLowerCase();
         switch (mode) {
-            case "off" -> {
+            case "off", "permissive", "enforce" -> {
                 return;
-            }
-            case "permissive", "enforce" -> {
-                if (settings.keyringPath() == null) {
-                    errors.add(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH + " is required");
-                    return;
-                }
-                try {
-                    open.dolphin.security.integrity.DocumentIntegrityConfig.validateKeyring(
-                            open.dolphin.security.integrity.DocumentIntegrityConfig.requireAbsolutePath(
-                                    settings.keyringPath(),
-                                    ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH));
-                } catch (IllegalStateException ex) {
-                    errors.add(ex.getMessage());
-                }
             }
             default -> errors.add(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " must be off, permissive or enforce");
         }

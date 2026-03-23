@@ -224,6 +224,15 @@ class ServerConfigurationResolverTest {
     }
 
     @Test
+    void resolvesOrcaPushSafeDefaults() {
+        ServerRuntimeConfiguration.OrcaPushSettings settings = TestServerConfigurationResolvers.resolver().orcaPush();
+
+        assertFalse(settings.enabled());
+        assertFalse(settings.shadowMode());
+        assertFalse(settings.recoveryEnabled());
+    }
+
+    @Test
     void resolvesOrcaApiSettingsAsTypedValues() {
         ServerRuntimeConfiguration.OrcaApiSettings settings = TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_ORCA_API_BASE_URL, "https://orca.example.test",

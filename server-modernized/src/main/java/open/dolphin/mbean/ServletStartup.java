@@ -18,11 +18,13 @@ import java.util.logging.Logger;
 import open.dolphin.infrastructure.concurrent.ConcurrencyResourceNames;
 import open.dolphin.orca.transport.OrcaTransportSettings;
 import open.dolphin.orca.sync.OrcaPatientSyncScheduler;
+import open.dolphin.security.integrity.DocumentIntegrityConfig;
 import open.dolphin.session.ChartEventServiceBean;
 import open.dolphin.session.SystemServiceBean;
 import open.dolphin.rest.masterupdate.MasterUpdateScheduler;
 import open.dolphin.runtime.config.ServerConfigurationValidator;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.runtime.config.StoragePersistenceContractValidator;
 import open.dolphin.runtime.RuntimeConfigurationSupport;
 import open.orca.rest.OrcaMasterSchemaValidator;
 
@@ -59,6 +61,9 @@ public class ServletStartup {
     @Inject
     private OrcaMasterSchemaValidator orcaMasterSchemaValidator;
 
+    @Inject
+    private StoragePersistenceContractValidator storagePersistenceContractValidator;
+
     private ScheduledFuture<?> midnightRefreshTask;
     private ScheduledFuture<?> monthlyActivityTask;
 
@@ -68,6 +73,7 @@ public class ServletStartup {
         eventServiceBean.ensureInitialized();
         configurationValidator.validateOrThrow();
         orcaMasterSchemaValidator.validateOrThrow();
+        storagePersistenceContractValidator.validateOrThrow();
         enforceStartupSecurityGuards();
         logRuntimeConfigurationSummary();
         if (scheduler == null) {
@@ -173,7 +179,8 @@ public class ServletStartup {
     }
 
     static void enforceStartupSecurityGuards() {
-        String environment = new ServerConfigurationResolver().runtime().environment();
+        ServerConfigurationResolver resolver = new ServerConfigurationResolver();
+        String environment = resolver.runtime().environment();
         if (!RuntimeConfigurationSupport.isProductionLikeEnvironment(environment)) {
             return;
         }
@@ -181,12 +188,66 @@ public class ServletStartup {
                 "ORCA master legacy credential is configured in a production-like environment. Remove the leaked value before startup.");
         failIfConfigured(ORCA_MASTER_BASIC_PASSWORD_KEY,
                 "ORCA master legacy credential is configured in a production-like environment. Remove the leaked value before startup.");
+        failIfEnabled(ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, resolver.orcaPush().enabled());
+        failIfEnabled(ServerConfigurationResolver.KEY_ORCA_PUSH_SHADOW_MODE, resolver.orcaPush().shadowMode());
+        failIfEnabled(ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_ENABLED, resolver.orcaPush().recoveryEnabled());
+        failIfEnabled(ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_ENABLED, resolver.orcaPatientSync().enabled());
+        requireEnforcedDocumentIntegrity(resolver);
+        rejectIfConfigured(resolver, ServerConfigurationResolver.KEY_FIDO2_RP_ID);
+        rejectIfConfigured(resolver, ServerConfigurationResolver.KEY_FIDO2_RP_NAME);
+        rejectIfConfigured(resolver, ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS);
+        requireS3AttachmentStorage(resolver);
+        // AdminAccessPasswordResetResource remains unregistered until truthful session revoke is implemented.
         OrcaTransportSettings.load();
     }
 
     private static void failIfConfigured(String key, String message) {
         if (RuntimeConfigurationSupport.firstNonBlank(resolveSetting(key)) != null) {
             throw new IllegalStateException(message + " key=" + key);
+        }
+    }
+
+    private static void failIfEnabled(String key, boolean enabled) {
+        if (enabled) {
+            throw new IllegalStateException("production-like startup rejected: " + key + " must be false key=" + key);
+        }
+    }
+
+    private static void rejectIfConfigured(ServerConfigurationResolver resolver, String key) {
+        if (resolver.raw(key) != null) {
+            throw new IllegalStateException("production-like startup rejected: " + key + " must not be configured key=" + key);
+        }
+    }
+
+    private static void requireEnforcedDocumentIntegrity(ServerConfigurationResolver resolver) {
+        String rawMode = resolver.raw(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE);
+        if (rawMode == null) {
+            throw new IllegalStateException("production-like startup rejected: "
+                    + ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE
+                    + " must be enforce key=" + ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE);
+        }
+        String normalizedMode = rawMode.trim().toLowerCase();
+        if (!"enforce".equals(normalizedMode)) {
+            throw new IllegalStateException("production-like startup rejected: "
+                    + ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE
+                    + " must be enforce key=" + ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE);
+        }
+        DocumentIntegrityConfig.validateKeyring(DocumentIntegrityConfig.requireAbsolutePath(
+                resolver.documentIntegrity().keyringPath(),
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH));
+    }
+
+    private static void requireS3AttachmentStorage(ServerConfigurationResolver resolver) {
+        String rawMode = resolver.raw(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE);
+        if (rawMode == null || !"s3".equalsIgnoreCase(rawMode.trim())) {
+            throw new IllegalStateException("production-like startup rejected: "
+                    + ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE
+                    + " must be s3 key=" + ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE);
+        }
+        if (resolver.raw(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE) != null) {
+            throw new IllegalStateException("production-like startup rejected: "
+                    + ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE
+                    + " must not be configured key=" + ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE);
         }
     }
 

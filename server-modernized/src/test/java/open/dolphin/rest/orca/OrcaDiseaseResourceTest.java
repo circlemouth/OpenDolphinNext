@@ -22,6 +22,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.rest.dto.orca.DiseaseImportResponse;
 import open.dolphin.rest.dto.orca.DiseaseMutationRequest;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
@@ -29,6 +30,7 @@ import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
+import open.orca.rest.ORCAConnection;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -219,6 +221,27 @@ class OrcaDiseaseResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void getDiseasesFailsClosedWhenOrcaDatasourceUnavailable() throws Exception {
+        resetFixture();
+        injectField(resource, "orcaConnection", new UnavailableOrcaConnection());
+
+        WebApplicationException ex = catchThrowableOfType(
+                () -> resource.getDiseases(servletRequest, "00001", null, null, false),
+                WebApplicationException.class);
+
+        assertNotNull(ex);
+        assertEquals(503, ex.getResponse().getStatus());
+        DiseaseImportResponse body = (DiseaseImportResponse) ex.getResponse().getEntity();
+        assertNotNull(body);
+        assertEquals("E90", body.getApiResult());
+        assertEquals("orca_datasource_unavailable", body.getErrorCode());
+        assertEquals("ORCA datasource is unavailable", body.getErrorMessage());
+        assertNotNull(auditDispatcher.payload);
+        assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
+        assertThat(auditDispatcher.payload.getDetails()).containsEntry("status", "orca_unavailable");
+    }
+
+    @Test
     void postDiseaseReturns404WhenKarteMissing() throws Exception {
         resetFixture();
         injectField(resource, "karteServiceBean", new NullKarteServiceBean());
@@ -353,6 +376,13 @@ class OrcaDiseaseResourceTest extends RuntimeDelegateTestSupport {
             user.setUserId(userId);
             user.setCommonName("テスト医師");
             return user;
+        }
+    }
+
+    private static final class UnavailableOrcaConnection extends ORCAConnection {
+        @Override
+        public java.sql.Connection getConnection() throws java.sql.SQLException {
+            throw new java.sql.SQLException("ORCA datasource unavailable");
         }
     }
 }

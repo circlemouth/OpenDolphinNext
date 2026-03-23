@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.infomodel.DocumentModel;
@@ -30,15 +31,20 @@ public class AttachmentKeyResolver {
     public String resolve(AttachmentModel attachment) {
         Map<String, String> tokens = buildTokens(attachment);
         String resolvedBase = trimSlashes(substitute(settings.getBasePath(), tokens));
-        String documentSegment = "doc-" + tokens.getOrDefault("DOCUMENT_ID", "unknown-doc");
-        String attachmentSegment = buildAttachmentSegment(attachment, tokens.get("ATTACHMENT_ID"));
-
         List<String> segments = new ArrayList<>();
         if (!resolvedBase.isBlank()) {
             segments.add(resolvedBase);
         }
-        segments.add(documentSegment);
-        segments.add(attachmentSegment);
+        if (tokens.containsKey("DOCUMENT_ID") && tokens.containsKey("ATTACHMENT_ID")) {
+            segments.add("doc-" + tokens.get("DOCUMENT_ID"));
+            segments.add(buildAttachmentSegment(attachment, tokens.get("ATTACHMENT_ID")));
+        } else {
+            segments.add("pending");
+            segments.add(tokens.getOrDefault("FACILITY_ID", "unknown-facility"));
+            segments.add(tokens.getOrDefault("PATIENT_ID", "unknown-patient"));
+            segments.add(UUID.randomUUID().toString());
+            segments.add(sanitizeFileName(Optional.ofNullable(attachment.getFileName()).orElse("attachment")));
+        }
         return segments.stream()
                 .filter(s -> s != null && !s.isBlank())
                 .collect(Collectors.joining("/"));
@@ -46,11 +52,15 @@ public class AttachmentKeyResolver {
 
     private Map<String, String> buildTokens(AttachmentModel attachment) {
         Map<String, String> tokens = new HashMap<>();
-        tokens.put("ATTACHMENT_ID", safeId(attachment.getId(), "unknown-att"));
+        if (attachment.getId() > 0) {
+            tokens.put("ATTACHMENT_ID", Long.toString(attachment.getId()));
+        }
 
         DocumentModel document = attachment.getDocumentModel();
         if (document != null) {
-            tokens.put("DOCUMENT_ID", safeId(document.getId(), "unknown-doc"));
+            if (document.getId() > 0) {
+                tokens.put("DOCUMENT_ID", Long.toString(document.getId()));
+            }
             KarteBean karte = document.getKarte();
             if (karte != null) {
                 tokens.put("KARTE_ID", safeId(karte.getId(), "unknown-karte"));
@@ -71,7 +81,6 @@ public class AttachmentKeyResolver {
         // fallback keys if patient info was missing
         tokens.putIfAbsent("FACILITY_ID", "unknown-facility");
         tokens.putIfAbsent("PATIENT_ID", "unknown-patient");
-        tokens.putIfAbsent("DOCUMENT_ID", "unknown-doc");
         tokens.putIfAbsent("KARTE_ID", "unknown-karte");
 
         return tokens;

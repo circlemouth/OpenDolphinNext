@@ -232,6 +232,30 @@ class AttachmentStorageManagerTest {
     }
 
     @Test
+    void prepareExternalAssetForPersist_rejectsUnsupportedMode() throws Exception {
+        AttachmentStorageManager databaseModeManager = new AttachmentStorageManager();
+        AttachmentStorageSettings settings = new AttachmentStorageSettings(
+                AttachmentStorageMode.valueOf("S3"),
+                new AttachmentStorageSettings.DatabaseSettings(null),
+                null,
+                null);
+        setField(databaseModeManager, "settings", settings);
+        AttachmentModel attachment = buildAttachment("report.txt", "text/plain", null);
+
+        setField(databaseModeManager, "settings", new AttachmentStorageSettings(
+                AttachmentStorageMode.valueOf("S3"),
+                new AttachmentStorageSettings.DatabaseSettings(null),
+                null,
+                null));
+
+        setField(databaseModeManager, "settings", new AttachmentStorageSettings(
+                AttachmentStorageMode.S3,
+                new AttachmentStorageSettings.DatabaseSettings(null),
+                null,
+                null));
+    }
+
+    @Test
     void scheduleDeleteExternalAssetAfterCommit_deletesImmediatelyWhenNoTransaction() throws Exception {
         TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
         when(registry.getTransactionStatus()).thenReturn(Status.STATUS_NO_TRANSACTION);

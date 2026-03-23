@@ -138,10 +138,10 @@ public class PatientImagesResource extends AbstractResource {
         }
 
         boolean hasUri = handle.uri() != null && !handle.uri().isBlank();
-        boolean hasInlineBytes = handle.contentBytes() != null && handle.contentBytes().length > 0;
-        if (!hasUri && !hasInlineBytes) {
+        boolean hasDigest = handle.digest() != null && !handle.digest().isBlank();
+        if (!hasUri || !hasDigest) {
             throw restError(httpServletRequest, Response.Status.INTERNAL_SERVER_ERROR,
-                    "image_bytes_missing", "Image bytes are not available",
+                    "image_contract_violation", "Image uri or digest is not available",
                     java.util.Map.of("patientId", patientId, "imageId", imageId), null);
         }
 

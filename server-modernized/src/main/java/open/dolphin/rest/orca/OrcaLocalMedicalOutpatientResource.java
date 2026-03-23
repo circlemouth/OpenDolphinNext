@@ -29,7 +29,6 @@ import open.dolphin.infomodel.RegisteredDiagnosisModel;
 import open.dolphin.rest.dto.outpatient.MedicalOutpatientResponse;
 import open.dolphin.rest.dto.outpatient.OutpatientFlagResponse;
 import open.dolphin.session.KarteServiceBean;
-import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.PVTServiceBean;
 
 /**
@@ -48,9 +47,6 @@ public class OrcaLocalMedicalOutpatientResource extends AbstractOrcaRestResource
     @Inject
     private KarteServiceBean karteServiceBean;
 
-    @Inject
-    private PatientServiceBean patientServiceBean;
-
     @POST
     @Path("/outpatient")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -65,16 +61,6 @@ public class OrcaLocalMedicalOutpatientResource extends AbstractOrcaRestResource
         LocalDate targetDate = resolveTargetDate(payload);
 
         List<PatientVisitModel> visits = fetchVisits(facilityId, targetDate);
-        if (visits.isEmpty()) {
-            String patientId = extractPatientId(payload);
-            if (patientId != null && !patientId.isBlank()) {
-                PatientVisitModel fallback = buildFallbackVisit(facilityId, patientId, targetDate);
-                if (fallback != null) {
-                    visits = List.of(fallback);
-                }
-            }
-        }
-
         List<MedicalOutpatientResponse.MedicalOutpatientEntry> outpatientEntries = new ArrayList<>();
         for (PatientVisitModel visit : visits) {
             MedicalOutpatientResponse.MedicalOutpatientEntry entry = buildMedicalEntry(facilityId, visit, targetDate);
@@ -138,24 +124,6 @@ public class OrcaLocalMedicalOutpatientResource extends AbstractOrcaRestResource
         return details;
     }
 
-    private String extractPatientId(Map<String, Object> payload) {
-        if (payload == null) {
-            return null;
-        }
-        Object patient = payload.get("Patient_ID");
-        if (patient instanceof String id && !id.isBlank()) {
-            return id;
-        }
-        Object patientInformation = payload.get("patientInformation");
-        if (patientInformation instanceof Map<?, ?> info) {
-            Object id = info.get("Patient_ID");
-            if (id instanceof String text && !text.isBlank()) {
-                return text;
-            }
-        }
-        return null;
-    }
-
     private String resolveRequestId(HttpServletRequest request, String traceId) {
         if (request != null) {
             String header = request.getHeader("X-Request-Id");
@@ -200,25 +168,6 @@ public class OrcaLocalMedicalOutpatientResource extends AbstractOrcaRestResource
             }
         }
         return LocalDate.now();
-    }
-
-    private PatientVisitModel buildFallbackVisit(String facilityId, String patientId, LocalDate targetDate) {
-        if (patientServiceBean == null) {
-            return null;
-        }
-        try {
-            PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
-            if (patient == null) {
-                return null;
-            }
-            PatientVisitModel visit = new PatientVisitModel();
-            visit.setPatientModel(patient);
-            visit.setFacilityId(facilityId);
-            visit.setPvtDate(targetDate.atStartOfDay());
-            return visit;
-        } catch (RuntimeException ex) {
-            return null;
-        }
     }
 
     private MedicalOutpatientResponse.MedicalOutpatientEntry buildMedicalEntry(String facilityId, PatientVisitModel visit,

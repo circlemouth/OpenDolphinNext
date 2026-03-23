@@ -94,6 +94,26 @@ class DocumentIntegrityConfigTest {
                 .hasMessageContaining("valid JSON");
     }
 
+    @Test
+    void rejectsMissingMode() {
+        DocumentIntegrityConfig config = new DocumentIntegrityConfig(TestServerConfigurationResolvers.resolver());
+
+        assertThatThrownBy(config::resolveMode)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE);
+    }
+
+    @Test
+    void rejectsUnknownMode() {
+        DocumentIntegrityConfig config = new DocumentIntegrityConfig(TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "legacy"));
+
+        assertThatThrownBy(config::resolveMode)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE)
+                .hasMessageContaining("off, permissive or enforce");
+    }
+
     private Path writeKeyring(String fileName, String json) throws IOException {
         Path path = tempDir.resolve(fileName).toAbsolutePath();
         Files.writeString(path, json);

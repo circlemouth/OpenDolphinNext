@@ -3,7 +3,6 @@ package open.dolphin.security;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import open.dolphin.security.fido.Fido2Config;
 import open.dolphin.security.totp.TotpSecretProtector;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import org.slf4j.Logger;
@@ -21,20 +20,14 @@ public class SecondFactorSecurityConfig {
     private ServerConfigurationResolver configurationResolver;
 
     private TotpSecretProtector totpSecretProtector;
-    private Fido2Config fido2Config;
 
     @PostConstruct
     public void init() {
         this.totpSecretProtector = TotpSecretProtector.fromBase64(resolveTotpKey());
-        this.fido2Config = Fido2Config.fromSettings(configurationResolver.fido2());
     }
 
     public TotpSecretProtector getTotpSecretProtector() {
         return totpSecretProtector;
-    }
-
-    public Fido2Config getFido2Config() {
-        return fido2Config;
     }
 
     private String resolveTotpKey() {

@@ -86,7 +86,9 @@ public class UserResource extends AbstractResource {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
     public String postUser(@Context HttpServletRequest servletReq, String json) throws IOException {
-        
+        UserMutationRequest requestPayload = readJson(json, UserMutationRequest.class);
+        rejectFactor2AuthInput(servletReq, requestPayload);
+
 //s.oh^ 脆弱性対応
         // 管理者権限かチェック
         HttpServletRequest req = (HttpServletRequest)servletReq;
@@ -96,11 +98,10 @@ public class UserResource extends AbstractResource {
             return "0";
         }
 //s.oh$
-
+        
         String fid = getRemoteFacility(servletReq.getRemoteUser());
         debug(fid);
 
-        UserMutationRequest requestPayload = readJson(json, UserMutationRequest.class);
         UserModel model = UserMutationRequestMapper.toModel(requestPayload);
 
         if (model.getFacilityModel() == null) {
@@ -129,6 +130,7 @@ public class UserResource extends AbstractResource {
     public String putUser(@Context HttpServletRequest servletReq, String json) throws IOException {
 
         UserMutationRequest requestPayload = readJson(json, UserMutationRequest.class);
+        rejectFactor2AuthInput(servletReq, requestPayload);
         UserModel model = UserMutationRequestMapper.toModel(requestPayload);
 
         HttpServletRequest req = (HttpServletRequest)servletReq;
@@ -195,10 +197,11 @@ public class UserResource extends AbstractResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String putFacility(@Context HttpServletRequest servletReq, String json) throws IOException {
         HttpServletRequest req = (HttpServletRequest) servletReq;
+        UserMutationRequest requestPayload = readJson(json, UserMutationRequest.class);
+        rejectFactor2AuthInput(req, requestPayload);
         requireAdmin(req, userServiceBean);
         String actorFacility = requireActorFacility(req);
 
-        UserMutationRequest requestPayload = readJson(json, UserMutationRequest.class);
         UserModel model = UserMutationRequestMapper.toModel(requestPayload);
         FacilityModel requestedFacility = model != null ? model.getFacilityModel() : null;
         FacilityModel currentFacility = loadFacilityByPkQuietly(requestedFacility != null ? requestedFacility.getId() : 0L);
@@ -214,6 +217,13 @@ public class UserResource extends AbstractResource {
         debug(cntStr);
 
         return cntStr;
+    }
+
+    private void rejectFactor2AuthInput(HttpServletRequest request, UserMutationRequest requestPayload) {
+        if (requestPayload == null || requestPayload.getFactor2Auth() == null) {
+            return;
+        }
+        throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "factor2Auth は受け付けません。");
     }
     
 //s.oh^ 脆弱性対応

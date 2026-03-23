@@ -78,7 +78,7 @@ public class RestOrcaTransport implements OrcaTransport {
 
     @Override
     public OrcaTransportResult invokeDetailed(OrcaEndpoint endpoint, OrcaTransportRequest request) {
-        String facilityId = resolveFacilityId();
+        String facilityId = requireResolvedFacilityId();
         OrcaResolvedTransport transport = registry().currentTransport(facilityId);
         OrcaTransportSettings resolved = transport != null ? transport.settings() : null;
         OrcaHttpClient activeHttpClient = transport != null ? transport.httpClient() : null;
@@ -190,11 +190,11 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     public HttpClient rawHttpClient() {
-        return registry().rawHttpClient(resolveFacilityId());
+        return registry().rawHttpClient(requireResolvedFacilityId());
     }
 
     public ProbeResult probeReadiness() {
-        String facilityId = resolveFacilityId();
+        String facilityId = requireResolvedFacilityId();
         OrcaTransportSettings settings = currentSettings(facilityId);
         String mode = settings != null ? settings.getMode() : "unknown";
         boolean credentialConfigured = settings != null && settings.hasCredentials();
@@ -236,7 +236,7 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     public String buildOrcaUrl(String path) {
-        return buildOrcaUrl(resolveFacilityId(), path);
+        return buildOrcaUrl(requireResolvedFacilityId(), path);
     }
 
     public String buildOrcaUrl(String facilityId, String path) {
@@ -245,7 +245,7 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     public String resolveBasicAuthHeader() {
-        return resolveBasicAuthHeader(resolveFacilityId());
+        return resolveBasicAuthHeader(requireResolvedFacilityId());
     }
 
     public String resolveBasicAuthHeader(String facilityId) {
@@ -273,7 +273,7 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     public OrcaTransportSettings currentSettingsInstance() {
-        return currentSettings(resolveFacilityId());
+        return currentSettings();
     }
 
     public OrcaTransportSettings currentSettingsInstance(String facilityId) {
@@ -281,7 +281,7 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     public String auditSummary() {
-        return auditSummary(resolveFacilityId());
+        return auditSummary(requireResolvedFacilityId());
     }
 
     public String auditSummary(String facilityId) {
@@ -289,8 +289,12 @@ public class RestOrcaTransport implements OrcaTransport {
         return settings != null ? settings.auditSummary() : UNKNOWN_AUDIT_SUMMARY;
     }
 
+    private OrcaTransportSettings currentSettings() {
+        return currentSettings(requireResolvedFacilityId());
+    }
+
     private OrcaTransportSettings currentSettings(String facilityId) {
-        return registry().currentSettings(facilityId);
+        return registry().currentSettings(requireFacilityId(facilityId));
     }
 
     private String resolveFacilityId() {
@@ -308,6 +312,18 @@ public class RestOrcaTransport implements OrcaTransport {
 
         String mdcActor = resolveActorFromMdc();
         return extractFacilityFromCompositeActor(mdcActor);
+    }
+
+    private String requireResolvedFacilityId() {
+        return requireFacilityId(resolveFacilityId());
+    }
+
+    private static String requireFacilityId(String facilityId) {
+        String normalized = normalizeFacilityId(facilityId);
+        if (normalized == null || "default".equalsIgnoreCase(normalized)) {
+            throw new IllegalStateException("ORCA facilityId is not resolved");
+        }
+        return normalized;
     }
 
     private String resolveActorFromMdc() {

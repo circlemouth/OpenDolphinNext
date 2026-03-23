@@ -201,11 +201,12 @@ public class AbstractResource {
             return "unknown";
         }
         String remoteAddr = normalizeIpCandidate(request.getRemoteAddr());
+        boolean trustForwardedHeaders = shouldTrustForwardedHeaders(request);
         String forwardedFor = request.getHeader(X_FORWARDED_FOR_HEADER);
         if (forwardedFor != null && !forwardedFor.isBlank()) {
             List<String> chain = parseForwardedFor(forwardedFor);
             if (!chain.isEmpty()) {
-                if (!isTrustedProxy(remoteAddr)) {
+                if (!trustForwardedHeaders) {
                     return remoteAddr != null ? remoteAddr : chain.get(0);
                 }
                 String resolved = resolveClientFromForwardedChain(chain, remoteAddr);
@@ -215,7 +216,7 @@ public class AbstractResource {
             }
         }
         String realIp = normalizeIpCandidate(request.getHeader(X_REAL_IP_HEADER));
-        if (realIp != null && isTrustedProxy(remoteAddr)) {
+        if (realIp != null && trustForwardedHeaders) {
             return realIp;
         }
         return remoteAddr != null ? remoteAddr : "unknown";
@@ -249,7 +250,7 @@ public class AbstractResource {
         return parsed;
     }
 
-    private static boolean isTrustedProxy(String candidate) {
+    static boolean isTrustedProxy(String candidate) {
         InetAddress address = parseAddress(candidate);
         if (address == null) {
             return false;
@@ -263,6 +264,10 @@ public class AbstractResource {
             }
         }
         return false;
+    }
+
+    static boolean shouldTrustForwardedHeaders(HttpServletRequest request) {
+        return request != null && isTrustedProxy(request.getRemoteAddr());
     }
 
     private static Set<String> loadTrustedProxyRules() {

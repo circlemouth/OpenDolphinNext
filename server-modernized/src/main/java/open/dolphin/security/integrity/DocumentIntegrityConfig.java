@@ -14,8 +14,6 @@ import java.util.Locale;
 import java.util.Map;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Resolves runtime configuration for document integrity sealing and verification.
@@ -23,7 +21,6 @@ import org.slf4j.LoggerFactory;
 @ApplicationScoped
 public class DocumentIntegrityConfig {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DocumentIntegrityConfig.class);
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MIN_HMAC_KEY_BYTES = 32;
     private static final String KEYRING_ALGORITHM = "HMAC-SHA256";
@@ -42,18 +39,15 @@ public class DocumentIntegrityConfig {
     public Mode resolveMode() {
         String raw = configuration().mode();
         if (raw == null) {
-            return Mode.PERMISSIVE;
+            throw new IllegalStateException(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " is required");
         }
         String normalized = raw.trim().toLowerCase(Locale.ROOT);
         return switch (normalized) {
             case "off" -> Mode.OFF;
             case "permissive" -> Mode.PERMISSIVE;
             case "enforce" -> Mode.ENFORCE;
-            default -> {
-                LOGGER.warn("Unknown {}='{}'. Fallback to permissive.",
-                        ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, raw);
-                yield Mode.PERMISSIVE;
-            }
+            default -> throw new IllegalStateException(
+                    ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " must be off, permissive or enforce");
         };
     }
 

@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
@@ -29,14 +31,19 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
     private SessionAuthResource resource;
     private UserServiceBean userServiceBean;
     private TotpVerificationSupport totpVerificationSupport;
+    private EntityManager entityManager;
+    private Query query;
 
     @BeforeEach
     void setUp() throws Exception {
         resource = new SessionAuthResource();
         userServiceBean = mock(UserServiceBean.class);
         totpVerificationSupport = mock(TotpVerificationSupport.class);
+        entityManager = mock(EntityManager.class);
+        query = mock(Query.class);
         setField(resource, "userServiceBean", userServiceBean);
         setField(resource, "totpVerificationSupport", totpVerificationSupport);
+        setField(resource, "entityManager", entityManager);
     }
 
     @Test
@@ -94,6 +101,8 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
         when(userServiceBean.authenticateWithPolicy(USER_ID, "plain-password", "192.0.2.30"))
                 .thenReturn(UserServiceBean.AuthenticationResult.needsSecondFactor());
+        when(userServiceBean.getUser(USER_ID)).thenReturn(userWithFactor2Auth(USER_ID, "system_admin", "totp"));
+        allowVerifiedTotpCredential(101L);
 
         Response response = resource.login(request,
                 new SessionAuthResource.LoginRequest("F001", "user01", "plain-password", "client-2"));
@@ -117,6 +126,23 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void loginRejectsSecondFactorWhenVerifiedTotpCredentialIsMissing() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRemoteAddr()).thenReturn("192.0.2.31");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/session/login");
+        when(userServiceBean.authenticateWithPolicy(USER_ID, "plain-password", "192.0.2.31"))
+                .thenReturn(UserServiceBean.AuthenticationResult.needsSecondFactor());
+        when(userServiceBean.getUser(USER_ID)).thenReturn(userWithFactor2Auth(USER_ID, "system_admin", "totp"));
+        denyVerifiedTotpCredential(101L);
+
+        assertThatThrownBy(() -> resource.login(request,
+                new SessionAuthResource.LoginRequest("F001", "user01", "plain-password", "client-2")))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> assertThat(((WebApplicationException) ex).getResponse().getStatus()).isEqualTo(401));
+        verify(request, never()).getSession(true);
+    }
+
+    @Test
     void loginFactor2EstablishesAuthenticatedSession() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpSession pendingSession = mock(HttpSession.class);
@@ -130,9 +156,10 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_CLIENT_UUID)).thenReturn("client-3");
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_CREATED_AT)).thenReturn(java.time.Instant.now().toString());
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_ATTEMPT_COUNT)).thenReturn(0);
-        UserModel user = userWithRole(USER_ID, "doctor");
+        UserModel user = userWithFactor2Auth(USER_ID, "doctor", "totp");
         user.setId(77L);
         when(userServiceBean.getUser(USER_ID)).thenReturn(user);
+        allowVerifiedTotpCredential(77L);
         when(totpVerificationSupport.verifyCurrentCode(77L, "654321"))
                 .thenReturn(TotpVerificationSupport.VerificationResult.success());
 
@@ -160,9 +187,10 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_CLIENT_UUID)).thenReturn("client-3");
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_CREATED_AT)).thenReturn(java.time.Instant.now().toString());
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_ATTEMPT_COUNT)).thenReturn(0);
-        UserModel user = userWithRole(USER_ID, "doctor");
+        UserModel user = userWithFactor2Auth(USER_ID, "doctor", "totp");
         user.setId(77L);
         when(userServiceBean.getUser(USER_ID)).thenReturn(user);
+        allowVerifiedTotpCredential(77L);
         when(totpVerificationSupport.verifyCurrentCode(77L, "000000"))
                 .thenReturn(TotpVerificationSupport.VerificationResult.invalid());
 
@@ -206,6 +234,10 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_CREATED_AT))
                 .thenReturn(java.time.Instant.now().minus(java.time.Duration.ofMinutes(6)).toString());
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_ATTEMPT_COUNT)).thenReturn(0);
+        UserModel user = userWithFactor2Auth(USER_ID, "doctor", "totp");
+        user.setId(77L);
+        when(userServiceBean.getUser(USER_ID)).thenReturn(user);
+        allowVerifiedTotpCredential(77L);
 
         Response response = resource.loginFactor2(request, new SessionAuthResource.LoginFactor2Request("123456"));
 
@@ -227,6 +259,10 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_CREATED_AT)).thenReturn(java.time.Instant.now().toString());
         when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_ATTEMPT_COUNT))
                 .thenReturn(AuthSessionSupport.PENDING_SECOND_FACTOR_MAX_ATTEMPTS);
+        UserModel user = userWithFactor2Auth(USER_ID, "doctor", "totp");
+        user.setId(77L);
+        when(userServiceBean.getUser(USER_ID)).thenReturn(user);
+        allowVerifiedTotpCredential(77L);
 
         Response response = resource.loginFactor2(request, new SessionAuthResource.LoginFactor2Request("123456"));
 
@@ -234,6 +270,30 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         @SuppressWarnings("unchecked")
         java.util.Map<String, Object> body = (java.util.Map<String, Object>) response.getEntity();
         assertThat(body).containsEntry("error", "factor2_session_expired");
+    }
+
+    @Test
+    void loginFactor2ExpiresSessionWhenVerifiedTotpCredentialMissing() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpSession pendingSession = mock(HttpSession.class);
+        when(request.getSession(false)).thenReturn(pendingSession);
+        when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_ACTOR_ID)).thenReturn(USER_ID);
+        when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_FACILITY_ID)).thenReturn("F001");
+        when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_LOGIN_ID)).thenReturn("user01");
+        when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_CREATED_AT)).thenReturn(java.time.Instant.now().toString());
+        when(pendingSession.getAttribute(AuthSessionSupport.PENDING_FACTOR2_ATTEMPT_COUNT)).thenReturn(0);
+        UserModel user = userWithFactor2Auth(USER_ID, "doctor", "totp");
+        user.setId(77L);
+        when(userServiceBean.getUser(USER_ID)).thenReturn(user);
+        denyVerifiedTotpCredential(77L);
+
+        Response response = resource.loginFactor2(request, new SessionAuthResource.LoginFactor2Request("123456"));
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> body = (java.util.Map<String, Object>) response.getEntity();
+        assertThat(body).containsEntry("error", "factor2_session_expired");
+        verify(pendingSession).removeAttribute(AuthSessionSupport.PENDING_FACTOR2_ACTOR_ID);
     }
 
     @Test
@@ -276,6 +336,32 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         user.setFacilityModel(facility);
         user.setRoles(List.of(role));
         return user;
+    }
+
+    private static UserModel userWithFactor2Auth(String userId, String roleValue, String factor2Auth) {
+        UserModel user = userWithRole(userId, roleValue);
+        user.setFactor2Auth(factor2Auth);
+        return user;
+    }
+
+    private void allowVerifiedTotpCredential(long userPk) {
+        when(entityManager.createQuery(
+                "from Factor2Credential f where f.userPK=:userPK and f.credentialType=:type and f.verified=true order by f.updatedAt desc"))
+                .thenReturn(query);
+        when(query.setParameter("userPK", userPk)).thenReturn(query);
+        when(query.setParameter("type", "totp")).thenReturn(query);
+        when(query.setMaxResults(1)).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(new Object()));
+    }
+
+    private void denyVerifiedTotpCredential(long userPk) {
+        when(entityManager.createQuery(
+                "from Factor2Credential f where f.userPK=:userPK and f.credentialType=:type and f.verified=true order by f.updatedAt desc"))
+                .thenReturn(query);
+        when(query.setParameter("userPK", userPk)).thenReturn(query);
+        when(query.setParameter("type", "totp")).thenReturn(query);
+        when(query.setMaxResults(1)).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of());
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

@@ -19,13 +19,15 @@ final class RequestSecuritySupport {
     }
 
     static boolean isSecureRequest(HttpServletRequest request) {
-        ForwardedValues forwarded = parseForwarded(firstHeaderValue(request, FORWARDED_HEADER));
-        if (forwarded.proto() != null) {
-            return "https".equalsIgnoreCase(forwarded.proto());
-        }
-        String forwardedProto = normalizeToken(firstHeaderValue(request, X_FORWARDED_PROTO_HEADER));
-        if (forwardedProto != null) {
-            return "https".equalsIgnoreCase(forwardedProto);
+        if (AbstractResource.shouldTrustForwardedHeaders(request)) {
+            ForwardedValues forwarded = parseForwarded(firstHeaderValue(request, FORWARDED_HEADER));
+            if (forwarded.proto() != null) {
+                return "https".equalsIgnoreCase(forwarded.proto());
+            }
+            String forwardedProto = normalizeToken(firstHeaderValue(request, X_FORWARDED_PROTO_HEADER));
+            if (forwardedProto != null) {
+                return "https".equalsIgnoreCase(forwardedProto);
+            }
         }
         return request != null && request.isSecure();
     }
@@ -35,20 +37,22 @@ final class RequestSecuritySupport {
             return null;
         }
 
-        ForwardedValues forwarded = parseForwarded(firstHeaderValue(request, FORWARDED_HEADER));
-        if (forwarded.host() != null) {
-            HostPort hostPort = parseHostPort(forwarded.host(), forwarded.proto());
-            String scheme = forwarded.proto() != null ? forwarded.proto() : "http";
-            return buildOrigin(scheme, hostPort.host(), hostPort.port());
-        }
+        if (AbstractResource.shouldTrustForwardedHeaders(request)) {
+            ForwardedValues forwarded = parseForwarded(firstHeaderValue(request, FORWARDED_HEADER));
+            if (forwarded.host() != null) {
+                HostPort hostPort = parseHostPort(forwarded.host(), forwarded.proto());
+                String scheme = forwarded.proto() != null ? forwarded.proto() : "http";
+                return buildOrigin(scheme, hostPort.host(), hostPort.port());
+            }
 
-        String xfHost = normalizeToken(firstHeaderValue(request, X_FORWARDED_HOST_HEADER));
-        if (xfHost != null) {
-            String scheme = normalizeToken(firstHeaderValue(request, X_FORWARDED_PROTO_HEADER));
-            HostPort hostPort = parseHostPort(xfHost, scheme);
-            Integer forwardedPort = parsePort(firstHeaderValue(request, X_FORWARDED_PORT_HEADER));
-            Integer port = forwardedPort != null ? forwardedPort : hostPort.port();
-            return buildOrigin(scheme != null ? scheme : "http", hostPort.host(), port);
+            String xfHost = normalizeToken(firstHeaderValue(request, X_FORWARDED_HOST_HEADER));
+            if (xfHost != null) {
+                String scheme = normalizeToken(firstHeaderValue(request, X_FORWARDED_PROTO_HEADER));
+                HostPort hostPort = parseHostPort(xfHost, scheme);
+                Integer forwardedPort = parsePort(firstHeaderValue(request, X_FORWARDED_PORT_HEADER));
+                Integer port = forwardedPort != null ? forwardedPort : hostPort.port();
+                return buildOrigin(scheme != null ? scheme : "http", hostPort.host(), port);
+            }
         }
 
         return buildOrigin(request.getScheme(), request.getServerName(), request.getServerPort());

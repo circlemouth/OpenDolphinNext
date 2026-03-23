@@ -1,10 +1,8 @@
 # 添付ファイル保存先の設定例
-# storage.type: database|s3
+# storage.type: s3
+# database / LOB table mode は stopgap 契約で禁止。
 storage:
   type: s3
-  database:
-    # database モード時に使用する LOB テーブル名
-    lobTable: d_attachment
   s3:
     bucket: opendolphin-attachments
     region: ap-northeast-1

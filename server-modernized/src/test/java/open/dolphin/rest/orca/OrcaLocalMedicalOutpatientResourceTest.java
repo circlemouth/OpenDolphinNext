@@ -30,7 +30,6 @@ import open.dolphin.rest.dto.outpatient.OutpatientFlagResponse;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.KarteServiceBean;
-import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.PVTServiceBean;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,7 +51,6 @@ class OrcaLocalMedicalOutpatientResourceTest extends RuntimeDelegateTestSupport 
         injectField(resource, "sessionAuditDispatcher", auditDispatcher);
         injectField(resource, "pvtServiceBean", new FakePVTServiceBean());
         injectField(resource, "karteServiceBean", new FakeKarteServiceBean());
-        injectField(resource, "patientServiceBean", new FakePatientServiceBean());
 
         servletRequest = (HttpServletRequest)
                 Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{HttpServletRequest.class}, (proxy, method, args) -> {
@@ -148,6 +146,21 @@ class OrcaLocalMedicalOutpatientResourceTest extends RuntimeDelegateTestSupport 
         MedicalOutpatientResponse.MedicalOutpatientEntry entry = response.getOutpatientList().get(0);
         assertEquals(1, entry.getSections().get("prescription").getRecordsReturned());
         assertEquals(1, entry.getSections().get("memo").getRecordsReturned());
+    }
+
+    @Test
+    void postOutpatientMedical_returnsMissingWhenNoVisitExists() throws Exception {
+        injectField(resource, "pvtServiceBean", new EmptyPVTServiceBean());
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("Patient_ID", "00001");
+
+        MedicalOutpatientResponse response = resource.postOutpatientMedical(servletRequest, payload);
+
+        assertNotNull(response);
+        assertEquals("MISSING", response.getOutcome());
+        assertEquals(0, response.getRecordsReturned());
+        assertTrue(response.getOutpatientList().isEmpty());
+        assertFalse(response.isFallbackUsed());
     }
 
     private static void injectField(Object target, String fieldName, Object value) throws Exception {
@@ -264,16 +277,11 @@ class OrcaLocalMedicalOutpatientResourceTest extends RuntimeDelegateTestSupport 
         }
     }
 
-    private static final class FakePatientServiceBean extends PatientServiceBean {
+    private static final class EmptyPVTServiceBean extends PVTServiceBean {
         @Override
-        public PatientModel getPatientById(String fid, String pid) {
-            PatientModel patient = new PatientModel();
-            patient.setPatientId(pid);
-            patient.setFullName("テスト患者");
-            patient.setKanaName("テスト");
-            patient.setBirthday(LocalDate.parse("1990-01-01"));
-            patient.setGender("F");
-            return patient;
+        public List<PatientVisitModel> getPvt(
+                String fid, String date, int firstResult, int maxResult, String appoDateFrom, String appoDateTo) {
+            return List.of();
         }
     }
 }

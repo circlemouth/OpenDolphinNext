@@ -25,18 +25,14 @@ public class AttachmentStorageConfigLoader {
     public AttachmentStorageSettings load() {
         ServerRuntimeConfiguration.AttachmentStorageSettings configuration = configuration();
         AttachmentStorageMode mode = resolveMode(configuration.mode());
-        AttachmentStorageSettings.DatabaseSettings databaseSettings = new AttachmentStorageSettings.DatabaseSettings(
-                mode == AttachmentStorageMode.DATABASE
-                        ? requireNonBlank(configuration.databaseLobTable(),
-                                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE + " is required")
-                        : blankToNull(configuration.databaseLobTable()));
+        rejectDatabaseLobTable(configuration.databaseLobTable());
 
         AttachmentStorageSettings.S3Settings s3Settings = null;
         if (mode.isS3()) {
             s3Settings = buildS3Settings(configuration.s3());
         }
 
-        return new AttachmentStorageSettings(mode, databaseSettings, s3Settings, null);
+        return new AttachmentStorageSettings(mode, null, s3Settings, null);
     }
 
     private ServerRuntimeConfiguration.AttachmentStorageSettings configuration() {
@@ -50,7 +46,18 @@ public class AttachmentStorageConfigLoader {
         if (rawMode == null || rawMode.isBlank()) {
             throw new AttachmentStorageException(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE + " is required");
         }
-        return AttachmentStorageMode.from(rawMode);
+        try {
+            return AttachmentStorageMode.from(rawMode);
+        } catch (IllegalArgumentException ex) {
+            throw new AttachmentStorageException(ex.getMessage(), ex);
+        }
+    }
+
+    private void rejectDatabaseLobTable(String databaseLobTable) {
+        if (blankToNull(databaseLobTable) != null) {
+            throw new AttachmentStorageException(
+                    ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_DATABASE_LOB_TABLE + " is not supported");
+        }
     }
 
     private AttachmentStorageSettings.S3Settings buildS3Settings(ServerRuntimeConfiguration.S3StorageSettings settings) {

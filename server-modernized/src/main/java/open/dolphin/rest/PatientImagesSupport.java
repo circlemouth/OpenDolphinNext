@@ -276,7 +276,6 @@ final class PatientImagesSupport {
         attachment.setContentSize(handle.contentSize());
         attachment.setUri(handle.uri());
         attachment.setDigest(handle.digest());
-        attachment.setContentBytes(handle.contentBytes());
         return attachment;
     }
 

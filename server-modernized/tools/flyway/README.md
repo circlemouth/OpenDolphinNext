@@ -89,20 +89,7 @@ SELECT con.conname,
 - `V0244__patient_facility_patientid_unique.sql`: 患者複合キーの一意化。
 - `V0245__validate_not_valid_foreign_keys.sql`: NOT VALID FK の VALIDATE。
 
-## P6-09 one-shot 移行（d_module_payload）
-- スクリプト:
-  - `server-modernized/tools/flyway/scripts/run-module-payload-migration.sh`
-  - `server-modernized/tools/flyway/scripts/module-payload-migrate-once.sql`
-  - `server-modernized/tools/flyway/scripts/module-payload-verify.sql`
-- 前提環境変数:
-  - `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
-  - 任意: `DB_PORT`（既定 `5432`）, `DB_SSLMODE`（既定 `require`）, `RUN_ID`
-- 実行例:
-```bash
-DB_HOST=127.0.0.1 DB_NAME=opendolphin DB_USER=postgres DB_PASSWORD=secret DB_SSLMODE=disable \
-RUN_ID=20260311T210122Z \
-server-modernized/tools/flyway/scripts/run-module-payload-migration.sh
-```
-- 照合ポイント:
-  - `module-payload-verify.sql` の `missing_payload_rows` が `0` であること。
-  - `opendolphin.d_module_payload_migration_run` に `run_id` ごとの実行結果が残ること。
+## module 永続化 stopgap 契約
+- `bean_json` が module payload の唯一の正本。
+- `d_module_payload` は stopgap リリースでは使用しない。作成・移行・検証手順は削除済み。
+- startup 時に `d_module_payload` テーブルが存在すると fail-fast で起動拒否される。

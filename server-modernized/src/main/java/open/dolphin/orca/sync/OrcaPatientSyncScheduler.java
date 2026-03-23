@@ -81,11 +81,8 @@ public class OrcaPatientSyncScheduler {
     }
 
     private void runSyncSafely() {
+        // In prod-like deployments, ServletStartup is expected to block this scheduler before it runs.
         String facilityId = resolveFacilityId();
-        if (facilityId == null || facilityId.isBlank()) {
-            LOGGER.warning("ORCA patient sync skipped: facilityId is not configured.");
-            return;
-        }
         LocalDate today = LocalDate.now(SYNC_ZONE);
         LocalDate startDate = resolveStartDate(facilityId, today);
         ServerRuntimeConfiguration.OrcaPatientSyncSettings settings = syncSettings();
@@ -166,13 +163,7 @@ public class OrcaPatientSyncScheduler {
                 return normalized;
             }
         }
-        if (configurationResolver != null) {
-            String value = configurationResolver.orcaRuntime().facilityId();
-            if (value != null && !value.isBlank()) {
-                return value.trim();
-            }
-        }
-        return null;
+        throw new IllegalStateException("ORCA patient sync facilityId is not resolved");
     }
 
     private ServerRuntimeConfiguration.OrcaPatientSyncSettings syncSettings() {

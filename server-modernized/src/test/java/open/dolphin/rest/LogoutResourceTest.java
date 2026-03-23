@@ -79,6 +79,7 @@ class LogoutResourceTest {
         when(request.getSession(false)).thenReturn(null);
         when(request.getContextPath()).thenReturn("/openDolphin");
         when(request.isSecure()).thenReturn(false);
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
         when(request.getHeader("Forwarded")).thenReturn("proto=https;host=app.example.test");
 
         Response response = resource.logout(request);
@@ -86,5 +87,21 @@ class LogoutResourceTest {
         NewCookie cookie = response.getCookies().get("JSESSIONID");
         assertThat(cookie).isNotNull();
         assertThat(cookie.isSecure()).isTrue();
+    }
+
+    @Test
+    void logoutIgnoresUntrustedForwardedSecureFlag() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getSession(false)).thenReturn(null);
+        when(request.getContextPath()).thenReturn("/openDolphin");
+        when(request.isSecure()).thenReturn(false);
+        when(request.getRemoteAddr()).thenReturn("198.51.100.20");
+        when(request.getHeader("Forwarded")).thenReturn("proto=https;host=app.example.test");
+
+        Response response = resource.logout(request);
+
+        NewCookie cookie = response.getCookies().get("JSESSIONID");
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.isSecure()).isFalse();
     }
 }

@@ -139,20 +139,15 @@ public class PatientImageServiceBean {
         attachment.setKarteBean(karte);
         attachment.setDocumentModel(document);
         AttachmentStorageMode storageMode = attachmentStorageManager != null ? attachmentStorageManager.getMode() : null;
-        boolean externalizedBeforePersist = false;
-        if (storageMode != null && storageMode.isS3()) {
-            try (ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
-                externalizedBeforePersist = attachmentStorageManager.prepareExternalAssetForPersist(
-                        attachment,
-                        in,
-                        bytes.length);
-            } catch (Exception ex) {
-                throw new IllegalStateException("Failed to externalize patient image before persist", ex);
-            }
+        if (storageMode == null || !storageMode.isS3()) {
+            throw new IllegalStateException("Patient image upload requires S3 attachment storage");
         }
-        if (!externalizedBeforePersist) {
-            attachment.setContentBytes(bytes);
-            attachment.setDigest(sha256Hex(bytes));
+        try (ByteArrayInputStream in = new ByteArrayInputStream(bytes)) {
+            if (!attachmentStorageManager.prepareExternalAssetForPersist(attachment, in, bytes.length)) {
+                throw new IllegalStateException("Patient image upload requires pre-externalized attachment");
+            }
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to externalize patient image before persist", ex);
         }
         document.addAttachment(attachment);
         long documentId = karteServiceBean.addDocument(document);
@@ -208,7 +203,7 @@ public class PatientImageServiceBean {
         }
         try {
             Object[] row = em.createQuery(
-                            "select a.id, a.fileName, a.contentType, a.contentSize, a.uri, a.digest, a.contentBytes " +
+                            "select a.id, a.fileName, a.contentType, a.contentSize, a.uri, a.digest " +
                                     "from AttachmentModel a " +
                                     "where a.id=:id " +
                                     "and a.document.karte.patient.facilityId=:fid " +
@@ -242,7 +237,7 @@ public class PatientImageServiceBean {
     }
 
     private DownloadHandle toDownloadHandle(Object[] row) {
-        if (row == null || row.length < 7) {
+        if (row == null || row.length < 6) {
             return null;
         }
         long attachmentId = row[0] instanceof Number value ? value.longValue() : 0L;
@@ -251,8 +246,11 @@ public class PatientImageServiceBean {
         long contentSize = row[3] instanceof Number value ? value.longValue() : 0L;
         String uri = row[4] != null ? row[4].toString() : null;
         String digest = row[5] != null ? row[5].toString() : null;
-        byte[] contentBytes = row[6] instanceof byte[] value ? value : null;
-        return new DownloadHandle(attachmentId, fileName, contentType, contentSize, uri, digest, contentBytes);
+        if (uri == null || uri.isBlank() || digest == null || digest.isBlank()) {
+            throw new IllegalStateException("Patient image attachment must contain uri and digest: attachmentId="
+                    + attachmentId);
+        }
+        return new DownloadHandle(attachmentId, fileName, contentType, contentSize, uri, digest);
     }
 
     public record DownloadHandle(long attachmentId,
@@ -260,8 +258,7 @@ public class PatientImageServiceBean {
                                  String contentType,
                                  long contentSize,
                                  String uri,
-                                 String digest,
-                                 byte[] contentBytes) {}
+                                 String digest) {}
 
     public record UploadResult(long documentId, long attachmentId, Date createdAt) {}
 }

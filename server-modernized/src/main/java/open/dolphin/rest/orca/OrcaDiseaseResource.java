@@ -119,7 +119,14 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
             recordAudit(request, "ORCA_DISEASE_IMPORT", audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found", audit, null);
         }
-        boolean orcaDatasourceAvailable = isOrcaDatasourceAvailable();
+        if (!isOrcaDatasourceAvailable()) {
+            recordUnavailableAudit(request, facilityId, patientId, runId, "orca_datasource_unavailable");
+            throw new jakarta.ws.rs.WebApplicationException(Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity(buildUnavailableResponse(runId, patientId, fromDate,
+                            "orca_datasource_unavailable", "ORCA datasource is unavailable"))
+                    .type(MediaType.APPLICATION_JSON)
+                    .build());
+        }
         List<RegisteredDiagnosisModel> diagnoses = karteServiceBean.getDiagnosis(karte.getId(), fromDate, activeOnly);
 
         DiseaseImportResponse response = new DiseaseImportResponse();
@@ -132,10 +139,6 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
                 .filter(model -> model.getStarted() == null || !model.getStarted().after(toDate))
                 .map(this::toEntry)
                 .forEach(response::addDisease);
-        if (!orcaDatasourceAvailable) {
-            response.addWarning("ORCA datasource unavailable; returning local disease list");
-        }
-
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
         audit.put("patientId", patientId);
@@ -295,7 +298,11 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
         );
         switch (operation) {
             case "create" -> adds.add(diagnosis);
-            case "update" -> updates.add(diagnosis);
+            case "update" -> {
+                // design-wait: update/delete still accept bare diagnosisId. Do not re-expose this mutation publicly
+                // until the identifier contract is redesigned with stronger server-side ownership binding.
+                updates.add(diagnosis);
+            }
             case "delete" -> {
                 if (entry.getDiagnosisId() != null) {
                     removes.add(entry.getDiagnosisId());
@@ -589,7 +596,6 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
         response.setPatientId(patientId);
         response.setBaseDate(formatDate(baseDate));
         response.setDiseases(new ArrayList<>());
-        response.addWarning("ORCA datasource unavailable; returning empty list");
         return response;
     }
 

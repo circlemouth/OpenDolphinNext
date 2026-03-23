@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import org.junit.jupiter.api.Test;
 
 class RepoGuardScriptsIT {
@@ -55,6 +58,26 @@ class RepoGuardScriptsIT {
     @Test
     void checkNoGeneratedArtifactsFailsForCommittedThumbsDbFile() throws Exception {
         assertCommittedGeneratedArtifactIsRejected("assets/Thumbs.db");
+    }
+
+    @Test
+    void packagedWarDoesNotContainInitialAccountMakerClass() throws Exception {
+        Path repoRoot = findRepoRoot();
+        CommandResult packageResult = runCommand(
+                repoRoot,
+                List.of("mvn", "-q", "-pl", "server-modernized", "-am", "-DskipTests", "package"));
+
+        assertThat(packageResult.exitCode()).isZero();
+
+        Path warFile = findPackagedWar(repoRoot);
+        assertThat(warFile).isNotNull();
+        assertThat(warFile.toString()).endsWith(".war");
+
+        try (ZipFile zipFile = new ZipFile(warFile.toFile())) {
+            List<String> entries = new ArrayList<>();
+            zipFile.stream().map(ZipEntry::getName).forEach(entries::add);
+            assertThat(entries).doesNotContain("WEB-INF/classes/open/dolphin/mbean/InitialAccountMaker.class");
+        }
     }
 
     private static void assertScriptSucceeds(Path repoRoot, String relativeScriptPath) throws Exception {
@@ -152,6 +175,16 @@ class RepoGuardScriptsIT {
             cursor = cursor.getParent();
         }
         throw new IllegalStateException("Repository root not found");
+    }
+
+    private static Path findPackagedWar(Path repoRoot) throws Exception {
+        Path targetDir = repoRoot.resolve("server-modernized/target");
+        try (var paths = Files.list(targetDir)) {
+            return paths
+                    .filter(path -> path.getFileName().toString().endsWith(".war"))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException("Packaged WAR not found in " + targetDir));
+        }
     }
 
     private record CommandResult(int exitCode, String output) {

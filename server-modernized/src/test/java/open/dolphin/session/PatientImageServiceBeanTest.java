@@ -76,10 +76,19 @@ class PatientImageServiceBeanTest {
         when(patientServiceBean.getPatientById("F001", "P001")).thenReturn(patient);
         when(patientServiceBean.ensureKarteByPatientPk(1L)).thenReturn(karte);
         when(userServiceBean.getUser("F001:doctor01")).thenReturn(actor);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.prepareExternalAssetForPersist(any(), any(), eq((long) payload.length)))
+                .thenAnswer(invocation -> {
+                    AttachmentModel attachment = invocation.getArgument(0);
+                    attachment.setUri("s3://test-bucket/attachments/pending/F001/P001/image.png");
+                    attachment.setDigest(sha256Hex(payload));
+                    return true;
+                });
         when(karteServiceBean.addDocument(any())).thenAnswer(invocation -> {
             open.dolphin.infomodel.DocumentModel document = invocation.getArgument(0);
             AttachmentModel attachment = document.getAttachment().get(0);
             assertThat(attachment.getDigest()).isEqualTo(sha256Hex(payload));
+            assertThat(attachment.getContentBytes()).isNull();
             attachment.setId(99L);
             document.setId(10L);
             return 10L;
@@ -97,6 +106,7 @@ class PatientImageServiceBeanTest {
         assertThat(result.documentId()).isEqualTo(10L);
         assertThat(result.attachmentId()).isEqualTo(99L);
         verify(em, never()).createQuery(anyString(), eq(Long.class));
+        verify(attachmentStorageManager).prepareExternalAssetForPersist(any(), any(), eq((long) payload.length));
     }
 
     @Test
@@ -200,30 +210,24 @@ class PatientImageServiceBeanTest {
         assertThat(result.contentSize()).isEqualTo(123L);
         assertThat(result.uri()).isEqualTo("s3://bucket/patient/image.png");
         assertThat(result.digest()).isEqualTo("digest-1");
-        assertThat(result.contentBytes()).isNull();
     }
 
     @Test
-    void getImageForDownload_returnsInlineBytesForDatabaseModeRows() {
+    void getImageForDownload_rejectsRowWithoutExternalUriAndDigest() {
         @SuppressWarnings("unchecked")
         TypedQuery<Object[]> query = mock(TypedQuery.class);
-        byte[] payload = new byte[] {9, 8, 7};
         when(em.createQuery(anyString(), eq(Object[].class))).thenReturn(query);
         when(query.setParameter("id", 11L)).thenReturn(query);
         when(query.setParameter("fid", "F001")).thenReturn(query);
         when(query.setParameter("pid", "P001")).thenReturn(query);
         when(query.setParameter("rel", PatientImageServiceBean.LINK_RELATION_PATIENT_IMAGE_PHASEA)).thenReturn(query);
         when(query.getSingleResult()).thenReturn(new Object[] {
-                11L, "scan.png", "image/png", 3L, null, "digest-inline", payload
+                11L, "scan.png", "image/png", 3L, null, "digest-inline"
         });
 
-        PatientImageServiceBean.DownloadHandle result = service.getImageForDownload("F001", "P001", 11L);
-
-        assertThat(result).isNotNull();
-        assertThat(result.attachmentId()).isEqualTo(11L);
-        assertThat(result.uri()).isNull();
-        assertThat(result.digest()).isEqualTo("digest-inline");
-        assertThat(result.contentBytes()).containsExactly(payload);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.getImageForDownload("F001", "P001", 11L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("uri and digest");
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {

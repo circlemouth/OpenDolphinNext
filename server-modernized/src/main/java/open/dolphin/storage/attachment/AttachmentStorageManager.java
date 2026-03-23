@@ -73,8 +73,7 @@ public class AttachmentStorageManager {
             LOGGER.info("Attachment storage initialized in S3 mode (bucket={}, region={}, config={})",
                     s3Settings.getBucket(), s3Settings.getRegion(), settings.getSourcePath().orElse(null));
         } else {
-            LOGGER.info("Attachment storage initialized in database mode (config={})",
-                    settings.getSourcePath().orElse(null));
+            throw new AttachmentStorageException("Unsupported attachment storage mode: " + settings.getMode());
         }
     }
 
@@ -93,9 +92,7 @@ public class AttachmentStorageManager {
         if (settings == null) {
             return false;
         }
-        if (!settings.getMode().isS3()) {
-            return true;
-        }
+        requireS3Mode();
         try {
             AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
                     .orElseThrow(() -> new AttachmentStorageException("S3 settings are missing"));
@@ -111,9 +108,10 @@ public class AttachmentStorageManager {
     }
 
     public void persistExternalAssets(Collection<AttachmentModel> attachments) {
-        if (!settings.getMode().isS3() || attachments == null || attachments.isEmpty()) {
+        if (attachments == null || attachments.isEmpty()) {
             return;
         }
+        requireS3Mode();
         AttachmentStorageManager invoker = selfReference != null && !selfReference.isUnsatisfied()
                 ? selfReference.get()
                 : this;
@@ -137,9 +135,10 @@ public class AttachmentStorageManager {
     }
 
     public boolean prepareExternalAssetForPersist(AttachmentModel attachment, InputStream contentStream, long contentLength) {
-        if (!settings.getMode().isS3() || attachment == null) {
+        if (attachment == null) {
             return false;
         }
+        requireS3Mode();
         AttachmentStorageManager invoker = selfReference != null && !selfReference.isUnsatisfied()
                 ? selfReference.get()
                 : this;
@@ -219,9 +218,10 @@ public class AttachmentStorageManager {
     }
 
     public void deleteExternalAsset(AttachmentModel attachment) {
-        if (!settings.getMode().isS3() || attachment == null) {
+        if (attachment == null) {
             return;
         }
+        requireS3Mode();
         resolveLocation(attachment).ifPresent(location -> {
             try {
                 s3Client.deleteObject(DeleteObjectRequest.builder()
@@ -236,9 +236,10 @@ public class AttachmentStorageManager {
     }
 
     public void scheduleDeleteExternalAssetAfterCommit(AttachmentModel attachment) {
-        if (!settings.getMode().isS3() || attachment == null || !hasText(attachment.getUri())) {
+        if (attachment == null || !hasText(attachment.getUri())) {
             return;
         }
+        requireS3Mode();
         AttachmentStorageManager invoker = selfReference != null && !selfReference.isUnsatisfied()
                 ? selfReference.get()
                 : this;
@@ -269,6 +270,13 @@ public class AttachmentStorageManager {
             return;
         }
         invoker.deleteExternalAssetOutsideTransaction(attachment);
+    }
+
+    private void requireS3Mode() {
+        if (settings == null || !settings.getMode().isS3()) {
+            throw new AttachmentStorageException("Unsupported attachment storage mode: "
+                    + (settings != null ? settings.getMode() : "null"));
+        }
     }
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
