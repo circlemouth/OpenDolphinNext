@@ -2,9 +2,10 @@
 
 ## 現行ステータス
 - Phase2 開発ドキュメントは **Legacy/Archive（参照専用）**。Phase2 を現行フェーズとして扱わない。
-- 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md` / `docs/server-modernization/planning/server-modernized-plan/README.md`。
-- `docs/server-modernization/planning/server-modernized-plan/` は、`server-modernized` の次の開発ドキュメント一式として扱う。入口は `README.md`、索引は `docs/README.md`。
-- `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md` と `docs/server-modernization/planning/server-modernized-plan/docs/development/orca-server-recovery-implementation-playbook.md` は、そのフォローアップ計画として同パッケージ配下で運用する。
+- 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md` / `docs/server-modernization/planning/server-modernized-plan/README.md` / `docs/server-modernization/planning/server-modernized-plan/docs/development/README.md`。
+- `docs/server-modernization/planning/server-modernized-plan/` は、`server-modernized` の次の開発ドキュメント一式として扱う。入口は `README.md`、索引は `docs/README.md`、現行計画の索引は `docs/development/README.md`。
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md` は、現行の開発計画正本である。
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` と `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md` は、完遂済みの Legacy/Archive 扱いである。
 - `docs/server-modernization/planning/codex_automation_orchestration/` は、cleanup track をメインエージェント + サブエージェント順次実行で進めるための **現行 Codex automation 導線** である。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` は、server modernization automation の作業記録として保持する **Legacy/Archive** 扱いの開発ドキュメントである。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。
@@ -51,7 +52,7 @@
 - 2026-03-22: `server-modernized` 残件クローズ `RC-01`〜`RC-03` を完了した（RUN_ID=20260322T101947Z）。
   - 変更: `ServerConfigurationResolver` の raw property / env fallback を削除し、`RuntimeConfigurationSupport` を pure utility のみに整理、`check-no-direct-runtime-lookup.sh` の allowlist を resolver のみに縮小した。
   - 変更: `check-no-generated-artifacts.sh` を tracked / untracked 両検査へ強化し、commit 済み generated artifact を検出する `RepoGuardScriptsIT` を追加した。tracked `opendolphin-server.war` も repo から除去した。
-  - 変更: `docs/contracts/runtime-config.md` / `docs/runbooks/release-validation.md` / `docs/development/server-modernized-remediation-master-checklist.md` / `docs/development/execution-log.md` を closure 実績に同期し、clean archive 手順を固定した。
+  - 変更: `docs/contracts/runtime-config.md` / `docs/runbooks/release-validation.md` / `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` / `docs/DEVELOPMENT_STATUS.md` を closure 実績に同期し、clean archive 手順を固定した。
   - 検証: `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify`、runtime-config grep、guard script 2 本、`git archive --format=zip` + `zipinfo -1` 検査を実施し、禁止ファイル 0 件を確認した。
   - 継続管理: SpotBugs `Unsupported class file major version 69` は後続 RUN_ID=`20260322T112849Z` で解消済み。
 - 2026-03-21: Codex automation cleanup track の `A10`「packaging / CI / 品質ゲート強制」を完了した（RUN_ID=20260320T205337Z）。

@@ -9,7 +9,8 @@
 ## 次の開発ドキュメント一式
 - `docs/server-modernization/planning/server-modernized-plan/README.md`
 - `docs/server-modernization/planning/server-modernized-plan/docs/README.md`
-- `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/README.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md`
 - `docs/server-modernization/planning/server-modernized-plan/docs/development/orca-server-recovery-implementation-playbook.md`
 - 用途: `server-modernized` の改修計画、契約文書、運用手順の入口。まず `README.md`、次に `docs/README.md` を読む。
 
@@ -19,6 +20,9 @@
 - Legacy/Archive 扱い。server modernization automation の進捗判定ルールと実施記録を確認するときだけ参照する。
 - `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
 - Legacy/Archive 扱い。当時の WBS、背景、依存関係、切替後運用タスクの履歴確認用途に限定して参照する。
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- Legacy/Archive 扱い。完遂済みのため、現行の進捗判定には使用しない。
 
 ## 現行 Codex automation（サブエージェント順次実行）
 - `docs/server-modernization/planning/codex_automation_orchestration/README.md`

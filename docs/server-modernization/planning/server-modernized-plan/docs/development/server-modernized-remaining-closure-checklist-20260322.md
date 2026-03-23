@@ -1,13 +1,15 @@
 # server-modernized 残件クローズ実装チェックリスト
 
+> Legacy/Archive。完遂済みのため、現行の進捗判定や次作業決定には使用しない。最新の開発計画は `dangerous-path-remediation-execution-checklist.md` を参照する。
+
 作成日: 2026-03-22  
 対象リポジトリ: `circlemouth/OpenDolphinNext` の `server-modernized`  
 配置先: `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md`
 
 ## 0-a. 参照パスの読み方
 
-- 本書中の `docs/contracts/...` / `docs/development/server-modernized-remediation-master-checklist.md` / `docs/runbooks/...` は、`docs/server-modernization/planning/server-modernized-plan/docs/` 配下を指す。
-- `docs/development/execution-log.md` と `docs/DEVELOPMENT_STATUS.md` は、リポジトリ直下 `docs/` 配下の現行運用ログ/総合ステータスを指す。
+- 本書中の `docs/contracts/...` / `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` / `docs/runbooks/...` は、`docs/server-modernization/planning/server-modernized-plan/docs/` 配下を指す。
+- `docs/DEVELOPMENT_STATUS.md` と `docs/DEVELOPMENT_STATUS.md` は、リポジトリ直下 `docs/` 配下の現行運用ログ/総合ステータスを指す。
 - 迷った場合は、まず `docs/server-modernization/planning/server-modernized-plan/README.md`、次に `docs/server-modernization/planning/server-modernized-plan/docs/README.md` を読む。
 
 ---
@@ -29,11 +31,11 @@
 - [ ] 先に `docs/server-modernization/planning/server-modernized-plan/docs/README.md` を読む
 - [ ] 先に `docs/server-modernization/planning/server-modernized-plan/docs/contracts/runtime-config.md` を読む
 - [ ] 先に `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` を読む
-- [ ] 先に `docs/development/execution-log.md` を読む
+- [ ] 先に `docs/DEVELOPMENT_STATUS.md` を読む
 - [ ] 先に `docs/server-modernization/planning/server-modernized-plan/docs/runbooks/release-validation.md` を読む
 - [ ] この文書の **RC-01 → RC-02 → RC-03** の順で進める
 - [ ] 各 RC は **コード / docs / tests / verify 結果** を同じ PR にまとめる
-- [ ] 各 RC 完了後に `docs/development/execution-log.md` を更新する
+- [ ] 各 RC 完了後に `docs/DEVELOPMENT_STATUS.md` を更新する
 - [ ] 各 RC 完了後に `mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify` を実行する
 
 **禁止事項**
@@ -71,7 +73,7 @@
 - [ ] SpotBugs の `Unsupported class file major version 69` 解消
   - 今回の最終クローズ作業とは分離する
   - 別 PR / 別チケットで扱う
-  - ただし `docs/development/execution-log.md` には deferred として明記する
+  - ただし `docs/DEVELOPMENT_STATUS.md` には deferred として明記する
 
 ---
 
@@ -111,8 +113,8 @@
 - [ ] `server-modernized/src/test/java/open/dolphin/runtime/config/ServerConfigurationResolverTest.java`
 - [ ] `server-modernized/src/test/java/open/dolphin/tools/ci/RepoGuardScriptsIT.java`
 - [ ] `docs/contracts/runtime-config.md`
-- [ ] `docs/development/execution-log.md`
-- [ ] `docs/development/server-modernized-remediation-master-checklist.md`
+- [ ] `docs/DEVELOPMENT_STATUS.md`
+- [ ] `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md`
 
 #### allowlist を縮めた後に違反が出た場合だけ編集する候補ファイル
 
@@ -210,8 +212,8 @@ rg 'dolphin\.facilityId' server-modernized -n -g '!docs/server-modernization/pla
 #### F. 文書を同期する
 
 - [ ] `docs/contracts/runtime-config.md` の実装ルールと受け入れ条件を **現実に一致する表現** に更新する
-- [ ] `docs/development/execution-log.md` に `RC-01 Runtime Config strict closure` の項を追加する
-- [ ] `docs/development/server-modernized-remediation-master-checklist.md` に追補 or 完了メモを追加する
+- [ ] `docs/DEVELOPMENT_STATUS.md` に `RC-01 Runtime Config strict closure` の項を追加する
+- [ ] `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` に追補 or 完了メモを追加する
 
 ### 4-6. 完了判定コマンド
 
@@ -262,8 +264,8 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify
 - [ ] `server-modernized/src/test/java/open/dolphin/tools/ci/RepoGuardScriptsIT.java`
 - [ ] `server-modernized/pom.xml`（必要な場合のみ）
 - [ ] `docs/runbooks/release-validation.md`
-- [ ] `docs/development/execution-log.md`
-- [ ] `docs/development/server-modernized-remediation-master-checklist.md`
+- [ ] `docs/DEVELOPMENT_STATUS.md`
+- [ ] `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md`
 
 ### 5-4. 事前確認コマンド
 
@@ -373,8 +375,8 @@ zipinfo -1 /tmp/OpenDolphinNext-clean.zip | \
 
 #### E. 文書を同期する
 
-- [ ] `docs/development/execution-log.md` に `RC-02 Generated Artifact Guard Hardening` の項を追加する
-- [ ] `docs/development/server-modernized-remediation-master-checklist.md` に追補 or 完了メモを追加する
+- [ ] `docs/DEVELOPMENT_STATUS.md` に `RC-02 Generated Artifact Guard Hardening` の項を追加する
+- [ ] `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` に追補 or 完了メモを追加する
 
 ### 5-6. 完了判定コマンド
 
@@ -408,8 +410,8 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am clean verify
 
 ### 6-3. 対象ファイル
 
-- [ ] `docs/development/server-modernized-remediation-master-checklist.md`
-- [ ] `docs/development/execution-log.md`
+- [ ] `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md`
+- [ ] `docs/DEVELOPMENT_STATUS.md`
 - [ ] `docs/runbooks/release-validation.md`
 - [ ] `docs/DEVELOPMENT_STATUS.md`（必要なら「残件クローズ完了」を追記）
 - [ ] `README.md`（必要なら docs への導線を最小更新）
@@ -465,8 +467,8 @@ zipinfo -1 /tmp/OpenDolphinNext-clean.zip | \
 
 #### D. 文書を閉じる
 
-- [ ] `docs/development/execution-log.md` に `RC-03 Final Closure Audit` の項を追加する
-- [ ] `docs/development/server-modernized-remediation-master-checklist.md` に「残件クローズ完了」追補を追加する
+- [ ] `docs/DEVELOPMENT_STATUS.md` に `RC-03 Final Closure Audit` の項を追加する
+- [ ] `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` に「残件クローズ完了」追補を追加する
 - [ ] `docs/runbooks/release-validation.md` を最終手順に合わせて更新する
 - [ ] `docs/DEVELOPMENT_STATUS.md` が現行運用上の入口として使われている場合は、closure 状態を一文だけ追記する
 
@@ -500,7 +502,7 @@ zipinfo -1 /tmp/OpenDolphinNext-clean.zip | \
 
 **この RC を今やらない場合の完了条件**
 
-- [ ] `docs/development/execution-log.md` に deferred 理由が残っている
+- [ ] `docs/DEVELOPMENT_STATUS.md` に deferred 理由が残っている
 - [ ] `docs/DEVELOPMENT_STATUS.md` または相応のトラッキング場所に未完了理由が記録されている
 
 ---

@@ -1,7 +1,7 @@
 # server-modernized 開発ドキュメント一式
 
 このディレクトリは、`server-modernized` の改修計画・契約文書・運用手順をまとめた次の開発ドキュメント一式の入口である。
-まずこの `README.md` を読み、必要に応じて `docs/README.md` を索引として使う。
+まずこの `README.md` を読み、必要に応じて `docs/README.md` と `docs/development/README.md` を索引として使う。
 
 ## ORCA POST 系の既定動作
 - subjectives（`/api/orca/chart/subjectives`）を含む current ORCA POST 連携は **常に実運用モード** で動作する。
@@ -27,8 +27,10 @@
 - `ChartEventHistoryPurgeScheduler` と `OrcaPatientSyncScheduler` の定期処理は既定 OFF。必要な環境だけ `CHART_EVENT_HISTORY_PURGE_ENABLED=true` / `ORCA_PATIENT_SYNC_ENABLED=true` を明示する。
 
 ## 改修用ドキュメント
-- マスターチェックリスト: `docs/development/server-modernized-remediation-master-checklist.md`
-- 残件クローズ実装チェックリスト: `docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- 現行の開発計画索引: `docs/development/README.md`
+- 現行の開発計画: `docs/development/dangerous-path-remediation-execution-checklist.md`
+- Legacy/Archive: `docs/development/server-modernized-remediation-master-checklist.md`
+- Legacy/Archive: `docs/development/server-modernized-remaining-closure-checklist-20260322.md`
 - ORCA recovery 実装プレイブック: `docs/development/orca-server-recovery-implementation-playbook.md`
 - PR テンプレート: `docs/development/pull-request-checklist-template.md`
 - 契約文書索引: `docs/README.md`

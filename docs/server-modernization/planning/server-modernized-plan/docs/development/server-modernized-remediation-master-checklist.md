@@ -1,5 +1,7 @@
 # server-modernized 改修マスターチェックリスト
 
+> Legacy/Archive。完遂済みのため、現行の進捗判定や次作業決定には使用しない。最新の開発計画は `dangerous-path-remediation-execution-checklist.md` を参照する。
+
 ## 文書の目的
 この文書は、`server-modernized` の明らかなムダと欠点を、本番運用前提・非互換許容の方針で整理し直すための実行計画である。単なる指摘メモではなく、担当者がそのまま着手できる粒度まで落とした開発仕様・作業順序・受け入れ条件・文書同期ルールを一体化している。
 
@@ -62,7 +64,7 @@
 
 ### 成果物
 - `docs/README.md`
-- `docs/development/server-modernized-remediation-master-checklist.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md`
 - `docs/development/pull-request-checklist-template.md`
 - `docs/contracts/*.md`
 - `docs/runbooks/release-validation.md`
@@ -454,4 +456,3 @@
 - [ ] 追加テスト一覧
 - [ ] 実行コマンド
 - [ ] 残課題
-

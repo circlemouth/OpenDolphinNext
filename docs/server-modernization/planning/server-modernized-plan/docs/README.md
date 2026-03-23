@@ -4,8 +4,8 @@
 `README.md` を入口にして、必要な契約文書と運用文書へ進む。
 
 ## 先に読む文書
-- `docs/development/server-modernized-remediation-master-checklist.md`
-- `docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- `docs/development/README.md`
+- `docs/development/dangerous-path-remediation-execution-checklist.md`
 - `docs/development/orca-server-recovery-implementation-playbook.md`
 - `docs/development/pull-request-checklist-template.md`
 

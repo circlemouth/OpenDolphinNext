@@ -3,7 +3,7 @@
 このテンプレートは `server-modernized` のコードと文書の乖離を防ぐための最低要件である。PR 作成時に本文へ貼り付け、各項目を埋めること。
 
 ## 1. 対象作業
-- [ ] 変更対象のワークストリーム番号を `docs/development/server-modernized-remediation-master-checklist.md` へ反映した。
+- [ ] 変更対象のワークストリーム番号を `docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md` へ反映した。
 - [ ] 対応対象の契約文書を特定した。
 - [ ] 契約変更がある場合、コード変更前に文書へ目標仕様を反映した。
 
