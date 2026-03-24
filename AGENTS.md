@@ -119,11 +119,13 @@
 - 「この設定を有効にしないと危険」という事項は、ドキュメントに明記すること。
 
 ## 5. 開発・ドキュメントルール
-- **正本ドキュメント**: 現行状況は `docs/DEVELOPMENT_STATUS.md` のみが正本。
-  - `Phase2` と名のつくドキュメントは全て **過去の遺物 (Legacy/Archive)** である。参照してもよいが、現行ルールとして従ってはならない。
+- **正本ドキュメント**:
+  - 実装着手と進捗判定の正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md`。
+  - 現行状況と索引は `docs/DEVELOPMENT_STATUS.md` を参照する。
+  - `Phase2` と名のつくドキュメントは原則 **過去の遺物 (Legacy/Archive)** だが、`docs/development/phase2_current_coding_tasks_checklist_v1.md` のみ現行計画として扱う。
 - **現行ハブ**: `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md` を入口とする。
 - **当面の server-modernized 作業計画**: `docs/server-modernization/planning/server_modernization_wbs_detailed.md` を参照する。
-  - WBS 記載タスクを順番に進める場合の作業根拠とし、`docs/DEVELOPMENT_STATUS.md`・`AGENTS.md`・最新指示と矛盾する場合はそちらを優先する。
+  - WBS 記載タスクを順番に進める場合の作業根拠とし、`docs/development/phase2_current_coding_tasks_checklist_v1.md`・`docs/DEVELOPMENT_STATUS.md`・`AGENTS.md`・最新指示と矛盾する場合はそちらを優先する。
 - **文字コード**: 日本語を含むファイルは **UTF-8 (BOMなし)** で保存。
 - **RUN_ID**: 作業開始時に `YYYYMMDDThhmmssZ` を採番し、ログや報告で使用する。
 - **セキュリティ変更時のドキュメント更新は必須**:
@@ -144,7 +146,7 @@
 
 ## 7. ワーキングフロー (作業手順)
 1. **理解**:
-   - 指示内容と `docs/DEVELOPMENT_STATUS.md` を確認する。
+   - 指示内容と `docs/development/phase2_current_coding_tasks_checklist_v1.md`、`docs/DEVELOPMENT_STATUS.md` を確認する。
    - `server-modernized` の当面作業では `docs/server-modernization/planning/server_modernization_wbs_detailed.md` も確認する。
    - 対象変更の **資産・信頼境界・攻撃面** を把握する。
 2. **脅威モデリング**:

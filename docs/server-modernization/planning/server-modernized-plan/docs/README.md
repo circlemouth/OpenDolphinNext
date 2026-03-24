@@ -5,8 +5,8 @@
 
 ## 先に読む文書
 - `docs/development/README.md`
-- `docs/development/dangerous-path-remediation-execution-checklist.md`
-- `docs/development/orca-server-recovery-implementation-playbook.md`
+- `docs/development/phase2_current_coding_tasks_checklist_v1.md`
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/orca-server-recovery-implementation-playbook.md`
 - `docs/development/pull-request-checklist-template.md`
 
 ## 契約文書

@@ -1,29 +1,33 @@
-# 開発状況（単一参照, 更新日: 2026-03-22）
+# 開発状況（単一参照, 更新日: 2026-03-24）
 
 ## 現行ステータス
-- Phase2 開発ドキュメントは **Legacy/Archive（参照専用）**。Phase2 を現行フェーズとして扱わない。
+- `docs/development/phase2_current_coding_tasks_checklist_v1.md` は、2026-03-24 以降の `server-modernized` 現行開発計画正本である。
+- Phase2 開発ドキュメントは原則 **Legacy/Archive（参照専用）**。ただし `docs/development/phase2_current_coding_tasks_checklist_v1.md` は例外として現行計画扱いとする。
 - 現行のドキュメント入口は `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md` / `docs/server-modernization/planning/server-modernized-plan/README.md` / `docs/server-modernization/planning/server-modernized-plan/docs/development/README.md`。
 - `docs/server-modernization/planning/server-modernized-plan/` は、`server-modernized` の次の開発ドキュメント一式として扱う。入口は `README.md`、索引は `docs/README.md`、現行計画の索引は `docs/development/README.md`。
-- `docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md` は、現行の開発計画正本である。
+- `docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md` は、旧「現行計画」。2026-03-24 以降は **Legacy/Archive** 扱いである。
 - `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remediation-master-checklist.md` と `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md` は、完遂済みの Legacy/Archive 扱いである。
 - `docs/server-modernization/planning/codex_automation_orchestration/` は、cleanup track をメインエージェント + サブエージェント順次実行で進めるための **現行 Codex automation 導線** である。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` は、server modernization automation の作業記録として保持する **Legacy/Archive** 扱いの開発ドキュメントである。
+- `docs/development/supporting/phase2a_handoff_docs_bundle/` は、現行計画を補助する追加資料置き場である。正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md` のまま変更しない。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。
 - 現行の作業内容はフェーズ名では判断せず、最新のタスク指示/チケット/マネージャー指示に従う。
 
 ## 参照の優先順
-1. `docs/DEVELOPMENT_STATUS.md`（本ファイル）
-2. `AGENTS.md` / `GEMINI.md`（共通ルールと制約）
-3. 現行ハブ: `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`
-4. 環境手順: `web-client/README.md` と `setup-modernized-env.sh`
-5. Web クライアント設計: `docs/web-client/`（`planning/phase2/` と `docs/web-client/README.md` は Legacy）
-6. サーバーモダナイズ: `docs/server-modernization/`（`phase2/` と `docs/server-modernized/phase2/` は Legacy）
+1. `docs/development/phase2_current_coding_tasks_checklist_v1.md`
+2. `docs/DEVELOPMENT_STATUS.md`（本ファイル）
+3. `AGENTS.md` / `GEMINI.md`（共通ルールと制約）
+4. 現行ハブ: `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md`
+5. 環境手順: `web-client/README.md` と `setup-modernized-env.sh`
+6. Web クライアント設計: `docs/web-client/`（`planning/phase2/` と `docs/web-client/README.md` は Legacy）
+7. サーバーモダナイズ: `docs/server-modernization/`（`phase2/` と `docs/server-modernized/phase2/` は Legacy）
 
 ## Legacy 参照（Phase2）
 - ロールオフ方針: `docs/server-modernization/phase2/PHASE2_DOCS_ROLLOFF.md`
 - Phase2 ドキュメント: `docs/web-client/planning/phase2/`, `docs/web-client/README.md`, `docs/server-modernization/phase2/`, `docs/server-modernized/phase2/`, `docs/archive/2025Q4/managerdocs/PHASE2_*`
 - Archive 保管: `docs/archive/` 配下
 - server modernization 作業記録: `docs/server-modernization/planning/codex_automation_workplan_revised.md`, `docs/server-modernization/planning/server_modernization_wbs_detailed.md`
+- 例外: `docs/development/phase2_current_coding_tasks_checklist_v1.md` はファイル名に `phase2` を含むが、Legacy ではなく現行計画正本として扱う。
 
 ## 補足
 - Phase2 の文書は履歴・差分確認のために保持しているが、更新は原則行わない。
@@ -40,6 +44,13 @@
 - `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
+- 2026-03-24: `phase2a_handoff_docs_bundle` を整理し、補助資料のみを `docs/development/supporting/phase2a_handoff_docs_bundle/` へ移設した。重複していた `phase2_current_coding_tasks_checklist_v1.md` 複製は削除し、現行正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md` に一本化した。
+- 2026-03-24: `phase2_current_coding_tasks_checklist_v1.md` を `docs/development/phase2_current_coding_tasks_checklist_v1.md` へ移設し、`server-modernized` の現行開発計画正本へ昇格した。旧「現行計画」`docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md` は Legacy/Archive 扱いへ切り替えた（RUN_ID=20260324T111046Z）。
+- 2026-03-24: `server-modernized` の A3 Slice-1 として、ORCA runtime path の facility implicit/default 解決を除去し、facility explicit compile-break を成立させた（RUN_ID=20260324T073030Z）。
+  - 変更: `OrcaTransport.invoke(...)` を `invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request)` へ固定し、`RestOrcaTransport` / `OrcaTransportRegistry` から request/session/MDC/composite actor 由来の facility 解決と `_default` fallback を除去した。
+  - 変更: `OrcaWrapperService`、adapter / sync / push / recovery / request-edge resource を facility 必須 API へ追随させ、request edge で確定した facility を call stack 上で保持したまま ORCA call する構成へ統一した。runtime path で facility 未指定時は fail-fast / fail-closed とした。
+  - 変更: `AbstractOrcaWrapperResource` の trace context 同期から facility 書込を外し、trace/requestId と facility の混同を防止した。`AdminOrcaConnectionResource` の設定 reload も explicit facility 指定へ変更した。
+  - 検証: `mvn -f pom.server-modernized.xml -pl server-modernized -am -DskipTests compile`、`mvn -f pom.server-modernized.xml -pl server-modernized -DskipTests test-compile`、`mvn -f pom.server-modernized.xml -pl server-modernized -Dtest=RestOrcaTransportTest,OrcaWrapperServiceFailClosedTest,OrcaPatientSyncServiceTest,ReceptionPushHandlerTest,MedicalPushHandlerTest,OrcaVisitResourceTest,OrcaChartSupportResourceTest,OrcaReportDocumentResourceTest,AdminOrcaUserResourceTest test`、`mvn -f pom.server-modernized.xml -pl server-modernized -Dtest=AdminOrcaConnectionResourceTest,RestOrcaTransportTest,OrcaTransportRegistryTest test` はすべて PASS。`rg -n "reloadSettings\\(null\\)|invoke\\(null|requireResolvedFacilityId\\(|resolveFacilityId\\(" server-modernized/src/main/java/open/dolphin/orca server-modernized/src/main/java/open/dolphin/rest` で runtime path に残る implicit facility 解決がないことを確認した。
 - 2026-03-22: SpotBugs の `Unsupported class file major version 69` を解消し、static analysis を Java 25 実行環境でも有効化した（RUN_ID=20260322T112849Z）。
   - 変更: `server-modernized/pom.xml` と `pom.server-modernized.xml` の SpotBugs plugin を `4.9.8.2` へ更新し、`spotbugs.skip` の既定値を解除した。
   - 変更: deferred 前提で残していた execution log / remediation checklist / static-analysis 文書を、再有効化後の運用に合わせて同期した。

@@ -1,6 +1,6 @@
 # server-modernized 改修マスターチェックリスト
 
-> Legacy/Archive。完遂済みのため、現行の進捗判定や次作業決定には使用しない。最新の開発計画は `dangerous-path-remediation-execution-checklist.md` を参照する。
+> Legacy/Archive。完遂済みのため、現行の進捗判定や次作業決定には使用しない。最新の開発計画は `docs/development/phase2_current_coding_tasks_checklist_v1.md` を参照する。
 
 ## 文書の目的
 この文書は、`server-modernized` の明らかなムダと欠点を、本番運用前提・非互換許容の方針で整理し直すための実行計画である。単なる指摘メモではなく、担当者がそのまま着手できる粒度まで落とした開発仕様・作業順序・受け入れ条件・文書同期ルールを一体化している。

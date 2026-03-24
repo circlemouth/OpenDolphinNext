@@ -28,9 +28,10 @@
 
 ## 改修用ドキュメント
 - 現行の開発計画索引: `docs/development/README.md`
-- 現行の開発計画: `docs/development/dangerous-path-remediation-execution-checklist.md`
+- 現行の開発計画: `docs/development/phase2_current_coding_tasks_checklist_v1.md`
+- Legacy/Archive: `docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md`
 - Legacy/Archive: `docs/development/server-modernized-remediation-master-checklist.md`
-- Legacy/Archive: `docs/development/server-modernized-remaining-closure-checklist-20260322.md`
-- ORCA recovery 実装プレイブック: `docs/development/orca-server-recovery-implementation-playbook.md`
+- Legacy/Archive: `docs/server-modernization/planning/server-modernized-plan/docs/development/server-modernized-remaining-closure-checklist-20260322.md`
+- ORCA recovery 実装プレイブック: `docs/server-modernization/planning/server-modernized-plan/docs/development/orca-server-recovery-implementation-playbook.md`
 - PR テンプレート: `docs/development/pull-request-checklist-template.md`
 - 契約文書索引: `docs/README.md`

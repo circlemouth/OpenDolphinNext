@@ -1,6 +1,6 @@
 # server-modernized 残件クローズ実装チェックリスト
 
-> Legacy/Archive。完遂済みのため、現行の進捗判定や次作業決定には使用しない。最新の開発計画は `dangerous-path-remediation-execution-checklist.md` を参照する。
+> Legacy/Archive。完遂済みのため、現行の進捗判定や次作業決定には使用しない。最新の開発計画は `docs/development/phase2_current_coding_tasks_checklist_v1.md` を参照する。
 
 作成日: 2026-03-22  
 対象リポジトリ: `circlemouth/OpenDolphinNext` の `server-modernized`  

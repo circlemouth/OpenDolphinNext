@@ -2,7 +2,7 @@
 更新日: 2026-03-23  
 目的: 危険経路修正統合方針を、担当者が追加判断なしで実装できる粒度まで分解する  
 対象: `server-modernized` バックエンド stopgap patch  
-位置付け: `server-modernized` の現行開発計画の正本  
+位置付け: 旧 `server-modernized` 現行開発計画。2026-03-24 以降は Legacy/Archive  
 前提:
 - D1〜D11 は承認済み。再議論しない
 - 後方互換性は考慮しない
@@ -16,7 +16,7 @@
 - 危険経路修正スコープでは、この文書を実装正本として扱う
 - 既存 WBS や過去メモに、`d_module_payload`、attachment DATABASE mode、FIDO2、public fallback route を残す方向の古い作業案があっても採用しない
 - 設計改善系の古いタスクは Phase2-A へ送る
-- 現行の入口は `docs/server-modernization/planning/server-modernized-plan/README.md` → `docs/server-modernization/planning/server-modernized-plan/docs/README.md` → 本書の順で読む
+- 現行の入口は `docs/development/phase2_current_coding_tasks_checklist_v1.md`。本書は履歴確認時のみ参照する
 
 ---
 
