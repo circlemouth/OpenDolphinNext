@@ -110,7 +110,7 @@ public class ServerConfigurationResolver {
     public static final String KEY_MASTER_UPDATE_SCHEDULER_ENABLED = "master-update.scheduler.enabled";
     public static final String KEY_METRICS_REGISTRY_JNDI = "metrics.registry.jndi";
     public static final String KEY_BIND_ADDRESS = "jboss.bind.address";
-    public static final String KEY_AUDIT_TRUSTED_PROXIES = "audit.trusted.proxies";
+    public static final String KEY_SECURITY_TRUSTED_PROXIES = "security.trusted-proxies";
     public static final String KEY_TEMPLATES_DIR = "opendolphin.templates.dir";
     public static final String KEY_LICENSE_DIR = "opendolphin.license.dir";
     public static final String KEY_SMTP_HOST = "smtp.host";
@@ -147,16 +147,11 @@ public class ServerConfigurationResolver {
     public static final String KEY_ORCA_PATIENT_SYNC_INITIAL_LOOKBACK_DAYS = "orca.patient-sync.initial-lookback-days";
     public static final String KEY_ORCA_PATIENT_SYNC_INCLUDE_TEST_PATIENT = "orca.patient-sync.include-test-patient";
     public static final String KEY_ORCA_PATIENT_SYNC_INCLUDE_INSURANCE = "orca.patient-sync.include-insurance";
-    public static final String KEY_ORCA_PATIENT_SYNC_FACILITY_ID = "orca.patient-sync.facility-id";
     public static final String KEY_CHART_EVENT_HISTORY_PURGE_ENABLED = "chart-event.history.purge.enabled";
     public static final String KEY_CHART_EVENT_HISTORY_PURGE_INTERVAL_MINUTES = "chart-event.history.purge.interval-minutes";
     public static final String KEY_CHART_EVENT_HISTORY_REPLAY_LIMIT = "chartEvent.history.replayLimit";
     public static final String KEY_CHART_EVENT_HISTORY_RETENTION_COUNT = "chartEvent.history.retentionCount";
     public static final String KEY_CHART_EVENT_HISTORY_RETENTION_HOURS = "chartEvent.history.retentionHours";
-
-    public static final String KEY_FIDO2_RP_ID = "fido2.rp.id";
-    public static final String KEY_FIDO2_RP_NAME = "fido2.rp.name";
-    public static final String KEY_FIDO2_ALLOWED_ORIGINS = "fido2.allowed.origins";
 
     public static final String KEY_PLIVO_AUTH_ID = "plivo.auth.id";
     public static final String KEY_PLIVO_AUTH_TOKEN = "plivo.auth.token";
@@ -329,8 +324,8 @@ public class ServerConfigurationResolver {
         );
     }
 
-    public ServerRuntimeConfiguration.AuditSettings audit() {
-        return new ServerRuntimeConfiguration.AuditSettings(parseList(optional(KEY_AUDIT_TRUSTED_PROXIES).orElse(null)));
+    public ServerRuntimeConfiguration.SecuritySettings security() {
+        return new ServerRuntimeConfiguration.SecuritySettings(parseList(optional(KEY_SECURITY_TRUSTED_PROXIES).orElse(null)));
     }
 
     public ServerRuntimeConfiguration.TemplatesSettings templates() {
@@ -406,8 +401,7 @@ public class ServerConfigurationResolver {
                 optionalInteger(KEY_ORCA_PATIENT_SYNC_INTERVAL_MINUTES).orElse(null),
                 optionalInteger(KEY_ORCA_PATIENT_SYNC_INITIAL_LOOKBACK_DAYS).orElse(null),
                 optionalBoolean(KEY_ORCA_PATIENT_SYNC_INCLUDE_TEST_PATIENT).orElse(false),
-                optionalBoolean(KEY_ORCA_PATIENT_SYNC_INCLUDE_INSURANCE).orElse(false),
-                optional(KEY_ORCA_PATIENT_SYNC_FACILITY_ID).orElse(null)
+                optionalBoolean(KEY_ORCA_PATIENT_SYNC_INCLUDE_INSURANCE).orElse(false)
         );
     }
 
@@ -432,19 +426,6 @@ public class ServerConfigurationResolver {
                 optionalLong(KEY_PVT_WORKER_HEALTH_STALE_SUCCESS_SECONDS).orElse(null),
                 optionalLong(KEY_PVT_WORKER_HEALTH_MAX_PROCESSING_MILLIS).orElse(null)
         );
-    }
-
-    public ServerRuntimeConfiguration.Fido2Settings fido2() {
-        List<String> allowedOrigins = optional(KEY_FIDO2_ALLOWED_ORIGINS)
-                .map(value -> Arrays.stream(value.split(","))
-                        .map(String::trim)
-                        .filter(token -> !token.isEmpty())
-                        .collect(Collectors.toList()))
-                .orElse(List.of());
-        return new ServerRuntimeConfiguration.Fido2Settings(
-                optional(KEY_FIDO2_RP_ID).orElse(null),
-                optional(KEY_FIDO2_RP_NAME).orElse(null),
-                allowedOrigins);
     }
 
     public ServerRuntimeConfiguration.PlivoSettings plivo() {

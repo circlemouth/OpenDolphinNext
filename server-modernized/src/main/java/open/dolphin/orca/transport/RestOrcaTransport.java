@@ -19,7 +19,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.msg.gateway.ExternalServiceAuditLogger;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
@@ -28,10 +27,6 @@ import open.dolphin.orca.transport.OrcaTransportRegistry.OrcaResolvedTransport;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
-import open.dolphin.session.framework.SessionTraceAttributes;
-import open.dolphin.session.framework.SessionTraceContext;
-import open.dolphin.session.framework.SessionTraceManager;
-import org.jboss.logmanager.MDC;
 
 /**
  * HTTP transport for ORCA API endpoints using Basic auth.
@@ -52,9 +47,6 @@ public class RestOrcaTransport implements OrcaTransport {
     private volatile OrcaTransportRegistry registry;
 
     @Inject
-    SessionTraceManager traceManager;
-
-    @Inject
     OrcaConnectionConfigStore orcaConnectionConfigStore;
 
     @Inject
@@ -62,23 +54,12 @@ public class RestOrcaTransport implements OrcaTransport {
 
     @PostConstruct
     private void initialize() {
-        OrcaTransportSettings settings = reloadSettings();
-        if (settings != null) {
-            LOGGER.log(Level.INFO, "ORCA transport settings loaded: {0}", settings.auditSummary());
-        } else {
-            LOGGER.log(Level.WARNING, "ORCA transport settings could not be loaded during initialization");
-        }
+        LOGGER.info("ORCA transport initialized; facility-specific settings will be loaded on demand");
     }
 
     @Override
-    public String invoke(OrcaEndpoint endpoint, String requestXml) {
-        OrcaTransportResult result = invokeDetailed(endpoint, OrcaTransportRequest.post(requestXml));
-        return result != null ? result.getBody() : null;
-    }
-
-    @Override
-    public OrcaTransportResult invokeDetailed(OrcaEndpoint endpoint, OrcaTransportRequest request) {
-        String facilityId = requireResolvedFacilityId();
+    public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+        facilityId = requireFacilityId(facilityId);
         OrcaResolvedTransport transport = registry().currentTransport(facilityId);
         OrcaTransportSettings resolved = transport != null ? transport.settings() : null;
         OrcaHttpClient activeHttpClient = transport != null ? transport.httpClient() : null;
@@ -182,20 +163,16 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     private String resolveTraceId() {
-        if (traceManager == null) {
-            return null;
-        }
-        SessionTraceContext context = traceManager.current();
-        return context != null ? context.getTraceId() : null;
+        return null;
     }
 
-    public HttpClient rawHttpClient() {
-        return registry().rawHttpClient(requireResolvedFacilityId());
+    public HttpClient rawHttpClient(String facilityId) {
+        return registry().rawHttpClient(requireFacilityId(facilityId));
     }
 
-    public ProbeResult probeReadiness() {
-        String facilityId = requireResolvedFacilityId();
-        OrcaTransportSettings settings = currentSettings(facilityId);
+    public ProbeResult probeReadiness(String facilityId) {
+        facilityId = requireFacilityId(facilityId);
+        OrcaTransportSettings settings = currentSettingsInternal(facilityId);
         String mode = settings != null ? settings.getMode() : "unknown";
         boolean credentialConfigured = settings != null && settings.hasCredentials();
         boolean clientAuthConfigured = settings != null && settings.isClientAuthConfigured();
@@ -235,29 +212,17 @@ public class RestOrcaTransport implements OrcaTransport {
         }
     }
 
-    public String buildOrcaUrl(String path) {
-        return buildOrcaUrl(requireResolvedFacilityId(), path);
-    }
-
     public String buildOrcaUrl(String facilityId, String path) {
-        OrcaTransportSettings settings = currentSettings(facilityId);
+        OrcaTransportSettings settings = currentSettingsInternal(facilityId);
         return settings != null ? settings.buildOrcaUrl(path) : null;
     }
 
-    public String resolveBasicAuthHeader() {
-        return resolveBasicAuthHeader(requireResolvedFacilityId());
-    }
-
     public String resolveBasicAuthHeader(String facilityId) {
-        OrcaTransportSettings settings = currentSettings(facilityId);
+        OrcaTransportSettings settings = currentSettingsInternal(facilityId);
         if (settings == null || !settings.hasCredentials()) {
             return null;
         }
         return settings.basicAuthHeader();
-    }
-
-    public OrcaTransportSettings reloadSettings() {
-        return reloadSettings(null);
     }
 
     public OrcaTransportSettings reloadSettings(String facilityId) {
@@ -272,50 +237,13 @@ public class RestOrcaTransport implements OrcaTransport {
         return settings;
     }
 
-    public OrcaTransportSettings currentSettingsInstance() {
-        return currentSettings();
-    }
-
-    public OrcaTransportSettings currentSettingsInstance(String facilityId) {
-        return currentSettings(facilityId);
-    }
-
-    public String auditSummary() {
-        return auditSummary(requireResolvedFacilityId());
+    public OrcaTransportSettings currentSettings(String facilityId) {
+        return currentSettingsInternal(facilityId);
     }
 
     public String auditSummary(String facilityId) {
-        OrcaTransportSettings settings = currentSettings(facilityId);
+        OrcaTransportSettings settings = currentSettingsInternal(facilityId);
         return settings != null ? settings.auditSummary() : UNKNOWN_AUDIT_SUMMARY;
-    }
-
-    private OrcaTransportSettings currentSettings() {
-        return currentSettings(requireResolvedFacilityId());
-    }
-
-    private OrcaTransportSettings currentSettings(String facilityId) {
-        return registry().currentSettings(requireFacilityId(facilityId));
-    }
-
-    private String resolveFacilityId() {
-        SessionTraceContext context = traceManager != null ? traceManager.current() : null;
-        if (context != null) {
-            String fromFacilityAttr = normalizeFacilityId(context.getAttribute(SessionTraceAttributes.FACILITY_ID));
-            if (fromFacilityAttr != null) {
-                return fromFacilityAttr;
-            }
-            String fromActor = extractFacilityFromCompositeActor(context.getAttribute(SessionTraceAttributes.ACTOR_ID));
-            if (fromActor != null) {
-                return fromActor;
-            }
-        }
-
-        String mdcActor = resolveActorFromMdc();
-        return extractFacilityFromCompositeActor(mdcActor);
-    }
-
-    private String requireResolvedFacilityId() {
-        return requireFacilityId(resolveFacilityId());
     }
 
     private static String requireFacilityId(String facilityId) {
@@ -326,30 +254,6 @@ public class RestOrcaTransport implements OrcaTransport {
         return normalized;
     }
 
-    private String resolveActorFromMdc() {
-        Object fromJboss = MDC.get(SessionTraceAttributes.ACTOR_ID_MDC_KEY);
-        if (fromJboss instanceof String actor && !actor.isBlank()) {
-            return actor;
-        }
-        String fromSlf4j = org.slf4j.MDC.get(SessionTraceAttributes.ACTOR_ID_MDC_KEY);
-        if (fromSlf4j != null && !fromSlf4j.isBlank()) {
-            return fromSlf4j;
-        }
-        return null;
-    }
-
-    private static String extractFacilityFromCompositeActor(String actorId) {
-        String normalized = normalizeFacilityId(actorId);
-        if (normalized == null) {
-            return null;
-        }
-        int idx = normalized.indexOf(IInfoModel.COMPOSITE_KEY_MAKER);
-        if (idx <= 0) {
-            return null;
-        }
-        return normalizeFacilityId(normalized.substring(0, idx));
-    }
-
     private static String normalizeFacilityId(String value) {
         if (value == null) {
             return null;
@@ -358,8 +262,12 @@ public class RestOrcaTransport implements OrcaTransport {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    private OrcaTransportSettings currentSettingsInternal(String facilityId) {
+        return registry().currentSettings(requireFacilityId(facilityId));
+    }
+
     private static String safeFacility(String facilityId) {
-        return facilityId != null ? facilityId : "default";
+        return facilityId != null ? facilityId : "missing";
     }
 
     private static String auditSummary(OrcaTransportSettings settings) {

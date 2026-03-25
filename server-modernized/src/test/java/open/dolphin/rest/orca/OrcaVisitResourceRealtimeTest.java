@@ -8,7 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Proxy;
 import java.util.HashMap;
 import java.util.Map;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.DefaultOrcaLiveGateway;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
@@ -132,11 +133,11 @@ class OrcaVisitResourceRealtimeTest {
                 });
     }
 
-    private static final class StubWrapperService extends OrcaWrapperService {
+    private static final class StubWrapperService extends DefaultOrcaLiveGateway {
         private VisitMutationResponse response;
 
         @Override
-        public VisitMutationResponse mutateVisit(VisitMutationRequest request) {
+        public VisitMutationResponse mutateVisit(String facilityId, VisitMutationRequest request) {
             return response;
         }
     }

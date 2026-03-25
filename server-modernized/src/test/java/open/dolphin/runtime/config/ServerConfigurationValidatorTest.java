@@ -4,10 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ServerConfigurationValidatorTest {
 
@@ -16,6 +19,9 @@ class ServerConfigurationValidatorTest {
     private static final String VALID_ORCA_AES_KEY_B64 =
             Base64.getEncoder().encodeToString("abcdef0123456789abcdef0123456789".getBytes());
     private static final String VALID_SSL_ROOT_CERT = "/tmp/opendolphin-test/root-ca.pem";
+
+    @TempDir
+    Path tempDir;
 
     @Test
     void rejectsMissingRequiredStartupConfiguration() {
@@ -38,7 +44,7 @@ class ServerConfigurationValidatorTest {
     }
 
     @Test
-    void acceptsCompleteStartupConfigurationWithoutFido2() {
+    void acceptsCompleteStartupConfiguration() {
         ServerConfigurationValidator validator = new ServerConfigurationValidator(
                 resolverWithBaseConfig(
                         ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce"));
@@ -98,12 +104,14 @@ class ServerConfigurationValidatorTest {
     }
 
     @Test
-    void acceptsDocumentIntegrityPermissiveWithoutKeyringAtValidatorStage() {
+    void rejectsDocumentIntegrityWithoutKeyring() {
         ServerConfigurationValidator validator = new ServerConfigurationValidator(
                 resolverWithBaseConfig(
-                        ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "permissive"));
+                        ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, ""));
 
-        assertDoesNotThrow(validator::validateOrThrow);
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
+
+        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH));
     }
 
     @Test
@@ -115,6 +123,7 @@ class ServerConfigurationValidatorTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
 
         assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE));
+        assertTrue(ex.getMessage().contains("must be enforce"));
     }
 
     @Test
@@ -211,7 +220,29 @@ class ServerConfigurationValidatorTest {
         assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_ORCA_TRANSPORT_CACHE_TTL_MS));
     }
 
-    private static ServerConfigurationResolver resolverWithBaseConfig(String... overrides) {
+    @Test
+    void rejectsInvalidTrustedProxyRule() {
+        ServerConfigurationValidator validator = new ServerConfigurationValidator(
+                resolverWithBaseConfig(
+                        ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "10.0.0.0/33"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
+
+        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES));
+    }
+
+    @Test
+    void rejectsMissingTrustedProxyRules() {
+        ServerConfigurationValidator validator = new ServerConfigurationValidator(
+                resolverWithBaseConfig(
+                        ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, ""));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
+
+        assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES));
+    }
+
+    private ServerConfigurationResolver resolverWithBaseConfig(String... overrides) {
         Map<String, String> values = new LinkedHashMap<>();
         values.put(ServerConfigurationResolver.KEY_ENVIRONMENT, "dev");
         values.put(ServerConfigurationResolver.KEY_TIMEZONE, "Asia/Tokyo");
@@ -230,15 +261,34 @@ class ServerConfigurationValidatorTest {
         values.put(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_REGION, "ap-northeast-1");
         values.put(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_ACCESS_KEY, "access");
         values.put(ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_S3_SECRET_KEY, "secret");
-        values.put(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "off");
+        values.put(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce");
         values.put(ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, VALID_AES_KEY_B64);
         values.put(ServerConfigurationResolver.KEY_ORCA_CREDENTIALS_AES_KEY_B64, VALID_ORCA_AES_KEY_B64);
         values.put(ServerConfigurationResolver.KEY_ORCA_API_BASE_URL, "https://orca.example.test");
         values.put(ServerConfigurationResolver.KEY_ORCA_API_MODE, "weborca");
         values.put(ServerConfigurationResolver.KEY_ORCA_API_USER, "orca-user");
         values.put(ServerConfigurationResolver.KEY_ORCA_API_PASSWORD, "orca-pass");
+        values.put(ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "127.0.0.1/32");
+        try {
+            values.put(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, writeDefaultKeyring());
+        } catch (Exception ex) {
+            throw new IllegalStateException(ex);
+        }
         applyOverrides(values, overrides);
         return new ServerConfigurationResolver(values);
+    }
+
+    private String writeDefaultKeyring() throws Exception {
+        Path path = tempDir.resolve("validator-keyring.json").toAbsolutePath();
+        Files.writeString(path, """
+                {
+                  "algorithm": "HMAC-SHA256",
+                  "keys": [
+                    {"keyId":"key-v1","status":"active","hmacKeyB64":"MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE="}
+                  ]
+                }
+                """);
+        return path.toString();
     }
 
     private static void applyOverrides(Map<String, String> values, String... overrides) {

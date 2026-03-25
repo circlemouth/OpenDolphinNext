@@ -2,6 +2,9 @@ package open.dolphin.orca.push;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
 import open.dolphin.metrics.OrcaPushMetricsRegistrar;
 import open.dolphin.orca.push.dto.OrcaPushEventData;
 import open.dolphin.orca.push.dto.OrcaPushMedicalBody;
@@ -20,16 +23,19 @@ class MedicalPushHandlerTest {
         MedicalPushHandler handler = new MedicalPushHandler();
         RecordingTransport transport = new RecordingTransport();
         handler.orcaTransport = transport;
-        handler.seenEventStore = new StubSeenEventStore(true);
-        handler.stateStore = new RecordingStateStore();
+        RecordingInboxStore inboxStore = new RecordingInboxStore();
+        handler.eventInboxStore = inboxStore;
+        handler.connectionStateStore = new RecordingConnectionStateStore();
         handler.metricsRegistrar = new OrcaPushMetricsRegistrar();
         handler.configurationResolver = new ServerConfigurationResolver(java.util.Map.of());
 
         handler.handle("F001", eventWithInvoices("INV-1", "INV-2"));
 
+        assertEquals("F001", transport.lastFacilityId);
         assertEquals(2, transport.invocationCount);
         assertEquals(OrcaEndpoint.MEDICAL_GET, transport.lastEndpoint);
         assertEquals("class=02", transport.lastRequest.getQuery());
+        assertEquals("applied", inboxStore.status("F001", "U-1"));
     }
 
     @Test
@@ -37,13 +43,14 @@ class MedicalPushHandlerTest {
         MedicalPushHandler handler = new MedicalPushHandler();
         RecordingTransport transport = new RecordingTransport();
         handler.orcaTransport = transport;
-        handler.seenEventStore = new StubSeenEventStore(true);
-        handler.stateStore = new RecordingStateStore();
+        handler.eventInboxStore = new RecordingInboxStore();
+        handler.connectionStateStore = new RecordingConnectionStateStore();
         handler.metricsRegistrar = new OrcaPushMetricsRegistrar();
         handler.configurationResolver = new ServerConfigurationResolver(java.util.Map.of());
 
         handler.handle("F001", eventWithInvoices((String) null));
 
+        assertEquals("F001", transport.lastFacilityId);
         assertEquals(1, transport.invocationCount);
         assertEquals(true, transport.lastRequest.getBody().contains("<Sequential_Number type=\"string\">1</Sequential_Number>"));
     }
@@ -71,16 +78,13 @@ class MedicalPushHandlerTest {
 
     private static final class RecordingTransport implements OrcaTransport {
         private int invocationCount;
+        private String lastFacilityId;
         private OrcaEndpoint lastEndpoint;
         private OrcaTransportRequest lastRequest;
 
         @Override
-        public String invoke(OrcaEndpoint endpoint, String requestXml) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public OrcaTransportResult invokeDetailed(OrcaEndpoint endpoint, OrcaTransportRequest request) {
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            lastFacilityId = facilityId;
             invocationCount++;
             lastEndpoint = endpoint;
             lastRequest = request;
@@ -88,19 +92,61 @@ class MedicalPushHandlerTest {
         }
     }
 
-    private static final class RecordingStateStore extends OrcaPushStateStore {
+    private static final class RecordingConnectionStateStore extends OrcaPushConnectionStateStore {
     }
 
-    private static final class StubSeenEventStore extends OrcaPushSeenEventStore {
-        private final boolean markSeen;
+    private static final class RecordingInboxStore extends OrcaPushEventInboxStore {
+        private final Map<String, EventInboxRow> rows = new HashMap<>();
 
-        private StubSeenEventStore(boolean markSeen) {
-            this.markSeen = markSeen;
+        @Override
+        public boolean isApplied(String facilityId, String streamKind, String eventUuid) {
+            EventInboxRow row = rows.get(facilityId + ":" + eventUuid);
+            return row != null && row.appliedAt() != null;
         }
 
         @Override
-        public boolean markSeen(String facilityId, String eventUuid, String eventName, java.time.Instant eventTime, int retentionDays) {
-            return markSeen;
+        public void markReceived(String facilityId, String streamKind, String eventUuid, String eventName, Instant eventTime,
+                String payloadJson, String lastRecoveryRunId) {
+            rows.put(facilityId + ":" + eventUuid, new EventInboxRow(
+                    facilityId, streamKind, eventUuid, eventName, eventTime, "received",
+                    Instant.now(), null, null, null, null, null, payloadJson, lastRecoveryRunId));
+        }
+
+        @Override
+        public void markFetched(String facilityId, String streamKind, String eventUuid, Instant fetchedAt, String lastRecoveryRunId) {
+            EventInboxRow row = rows.get(facilityId + ":" + eventUuid);
+            rows.put(facilityId + ":" + eventUuid, new EventInboxRow(
+                    facilityId, streamKind, eventUuid, row.eventName(), row.eventTime(), "fetched",
+                    row.receivedAt(), fetchedAt, row.appliedAt(), row.failedAt(), row.errorCode(), row.errorMessage(),
+                    row.payloadJson(), lastRecoveryRunId));
+        }
+
+        @Override
+        public void markApplied(String facilityId, String streamKind, String eventUuid, Instant appliedAt, String lastRecoveryRunId) {
+            EventInboxRow row = rows.get(facilityId + ":" + eventUuid);
+            if (row == null) {
+                row = new EventInboxRow(
+                        facilityId, streamKind, eventUuid, "patient_account", null, "received",
+                        Instant.now(), null, null, null, null, null, "{}", lastRecoveryRunId);
+            }
+            rows.put(facilityId + ":" + eventUuid, new EventInboxRow(
+                    facilityId, streamKind, eventUuid, row.eventName(), row.eventTime(), "applied",
+                    row.receivedAt(), row.fetchedAt(), appliedAt, null, null, null, row.payloadJson(), lastRecoveryRunId));
+        }
+
+        @Override
+        public void markFailed(String facilityId, String streamKind, String eventUuid, Instant failedAt, String errorCode,
+                String errorMessage, String lastRecoveryRunId) {
+            EventInboxRow row = rows.get(facilityId + ":" + eventUuid);
+            rows.put(facilityId + ":" + eventUuid, new EventInboxRow(
+                    facilityId, streamKind, eventUuid, row.eventName(), row.eventTime(), "failed",
+                    row.receivedAt(), row.fetchedAt(), row.appliedAt(), failedAt, errorCode, errorMessage,
+                    row.payloadJson(), lastRecoveryRunId));
+        }
+
+        private String status(String facilityId, String eventUuid) {
+            EventInboxRow row = rows.get(facilityId + ":" + eventUuid);
+            return row != null ? row.status() : null;
         }
     }
 }

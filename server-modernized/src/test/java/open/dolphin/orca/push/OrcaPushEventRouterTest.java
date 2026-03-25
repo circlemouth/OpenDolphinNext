@@ -14,7 +14,7 @@ class OrcaPushEventRouterTest {
     void subscribedUpdatesState() {
         OrcaPushEventRouter router = new OrcaPushEventRouter();
         RecordingStateStore stateStore = new RecordingStateStore();
-        router.stateStore = stateStore;
+        router.connectionStateStore = stateStore;
         router.receptionPushHandler = new NoopReceptionPushHandler();
         router.medicalPushHandler = new NoopMedicalPushHandler();
         router.metricsRegistrar = new OrcaPushMetricsRegistrar();
@@ -25,14 +25,14 @@ class OrcaPushEventRouterTest {
 
         router.handle("F001", "wss://push.example", envelope);
 
-        assertEquals(OrcaPushStateStore.STATUS_CONNECTED, stateStore.lastStatus);
+        assertEquals(OrcaPushConnectionStateStore.STATUS_CONNECTED, stateStore.lastStatus);
     }
 
     @Test
     void patientAcceptIsDispatchedToReceptionHandler() {
         OrcaPushEventRouter router = new OrcaPushEventRouter();
         RecordingReceptionHandler receptionHandler = new RecordingReceptionHandler();
-        router.stateStore = new RecordingStateStore();
+        router.connectionStateStore = new RecordingStateStore();
         router.receptionPushHandler = receptionHandler;
         router.medicalPushHandler = new NoopMedicalPushHandler();
         router.metricsRegistrar = new OrcaPushMetricsRegistrar();
@@ -50,21 +50,21 @@ class OrcaPushEventRouterTest {
         assertEquals("F001", receptionHandler.facilityId);
     }
 
-    private static final class RecordingStateStore extends OrcaPushStateStore {
+    private static final class RecordingStateStore extends OrcaPushConnectionStateStore {
         private String lastStatus;
 
         @Override
-        public void markConnected(String facilityId, String websocketUrl) {
+        public void markConnected(String facilityId, String streamKind, String websocketUrl) {
             lastStatus = STATUS_CONNECTED;
         }
 
         @Override
-        public void markDisconnected(String facilityId, String websocketUrl, String error) {
+        public void markDisconnected(String facilityId, String streamKind, String websocketUrl, String error) {
             lastStatus = STATUS_DISCONNECTED;
         }
 
         @Override
-        public void markDegraded(String facilityId, String websocketUrl, String error) {
+        public void markDegraded(String facilityId, String streamKind, String websocketUrl, String error) {
             lastStatus = STATUS_DEGRADED;
         }
     }

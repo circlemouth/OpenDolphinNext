@@ -1,83 +1,47 @@
 package open.dolphin.security.audit;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.HexFormat;
-import java.util.Locale;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Locale;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.AuditEvent;
 
-/**
- * 改ざん検知付きの監査ログを記録するサービス。
- */
 @ApplicationScoped
 @Transactional(Transactional.TxType.REQUIRES_NEW)
 public class AuditTrailService implements open.dolphin.audit.AuditTrailService {
 
-    private static final Logger LOG = Logger.getLogger(AuditTrailService.class.getName());
-    private static final String PREVIOUS_HASH_SQL =
-            "select event_hash from opendolphin.d_audit_event order by event_time desc limit 1";
+    @Inject
+    private AuthoritativeAuditRepository authoritativeAuditRepository;
 
-    @PersistenceContext
-    private EntityManager em;
-
-    private final ObjectMapper objectMapper;
-
-    public AuditTrailService() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        this.objectMapper = mapper;
-    }
+    @Inject
+    private AuditHashService auditHashService;
 
     public AuditEvent record(AuditEventPayload payload) {
-        Instant now = Instant.now();
-        Object previousHashValue = em.createNativeQuery(PREVIOUS_HASH_SQL, String.class)
-                .getResultStream()
-                .findFirst()
-                .orElse("");
-        String previousHash = previousHashValue != null ? previousHashValue.toString() : "";
-
-        Map<String, Object> sanitizedDetails = AuditDetailSanitizer.sanitizeDetails(payload.getAction(), payload.getDetails());
-        String serializedPayload = serializePayload(sanitizedDetails);
-        String payloadHash = hash(serializedPayload);
-
+        AuditCommand auditCommand = buildCommand(payload);
+        AuthoritativeAuditRepository.AuditWriteResult result = authoritativeAuditRepository.append(auditCommand.command());
         AuditEvent event = new AuditEvent();
-        event.setEventTime(now);
-        event.setActorId(payload.getActorId());
-        event.setActorDisplayName(payload.getActorDisplayName());
-        event.setActorRole(payload.getActorRole());
-        event.setAction(payload.getAction());
-        event.setResource(payload.getResource());
-        event.setPatientId(AuditDetailSanitizer.resolvePatientId(payload.getPatientId(), sanitizedDetails));
-        event.setRequestId(payload.getRequestId());
-        event.setTraceId(determineTraceId(payload));
-        event.setRunId(resolveRunId(payload, sanitizedDetails));
-        event.setScreen(resolveScreen(payload, sanitizedDetails));
-        event.setUiAction(resolveUiAction(payload, sanitizedDetails));
-        event.setIpAddress(payload.getIpAddress());
-        event.setUserAgent(payload.getUserAgent());
-        event.setOutcome(resolveOutcome(payload, sanitizedDetails));
-        event.setPayload(serializedPayload);
-        event.setPayloadHash(payloadHash);
-        event.setPreviousHash(previousHash);
-        event.setEventHash(hash(buildEventHashMaterial(event)));
-
-        em.persist(event);
-        em.flush();
+        event.setEventTime(auditCommand.eventTime());
+        event.setActorId(auditCommand.command().actorId());
+        event.setActorDisplayName(payload != null ? payload.getActorDisplayName() : null);
+        event.setActorRole(auditCommand.command().actorRole());
+        event.setAction(auditCommand.command().action());
+        event.setResource(auditCommand.command().resource());
+        event.setPatientId(auditCommand.patientId());
+        event.setRequestId(auditCommand.command().requestId());
+        event.setTraceId(auditCommand.command().traceId());
+        event.setRunId(payload != null ? payload.getRunId() : null);
+        event.setScreen(payload != null ? payload.getScreen() : null);
+        event.setUiAction(payload != null ? payload.getUiAction() : null);
+        event.setIpAddress(auditCommand.command().ipAddress());
+        event.setUserAgent(payload != null ? payload.getUserAgent() : null);
+        event.setOutcome(auditCommand.command().outcome());
+        event.setPayload(auditCommand.payloadJson());
+        event.setPayloadHash(result.payloadHash());
+        event.setPreviousHash(result.previousHash());
+        event.setEventHash(result.eventHash());
         return event;
     }
 
@@ -99,96 +63,132 @@ public class AuditTrailService implements open.dolphin.audit.AuditTrailService {
         payload.setIpAddress(envelope.getIpAddress());
         payload.setUserAgent(envelope.getUserAgent());
         payload.setDetails(envelope.getDetails());
+        payload.setDetails(envelope.getDetails());
         record(payload);
         return envelope;
     }
 
-    private String determineRequestId(AuditEventEnvelope envelope) {
-        if (envelope.getRequestId() != null && !envelope.getRequestId().isBlank()) {
-            return envelope.getRequestId();
+    private AuditCommand buildCommand(AuditEventPayload payload) {
+        Instant eventTime = Instant.now();
+        String patientId = resolvePatientSubject(payload);
+        Map<String, Object> sanitizedDetails =
+                AuditDetailSanitizer.sanitizeDetails(payload != null ? payload.getAction() : null,
+                        payload != null ? payload.getDetails() : null);
+        String subjectType = resolveSubjectType(sanitizedDetails, patientId);
+        String subjectId = resolveSubjectId(sanitizedDetails, patientId);
+        String payloadJson = auditHashService.canonicalizePayload(sanitizedDetails);
+        return new AuditCommand(
+                eventTime,
+                patientId,
+                payloadJson,
+                new AuthoritativeAuditRepository.AuditWriteCommand(
+                        eventTime,
+                        requiredText(payload != null ? payload.getAction() : null, "UNSPECIFIED_ACTION"),
+                        requiredText(payload != null ? payload.getResource() : null, "/api"),
+                        trimToNull(payload != null ? payload.getActorId() : null),
+                        trimToNull(payload != null ? payload.getActorRole() : null),
+                        extractFacilityId(sanitizedDetails),
+                        subjectType,
+                        subjectId,
+                        resolveOutcome(payload, sanitizedDetails),
+                        resolveHttpStatus(sanitizedDetails),
+                        determineTraceId(payload),
+                        determineRequestId(payload),
+                        trimToNull(payload != null ? payload.getIpAddress() : null),
+                        trimToNull(payload != null ? payload.getUserAgent() : null),
+                        sanitizedDetails));
+    }
+
+    private String resolvePatientSubject(AuditEventPayload payload) {
+        String explicitPatientId = trimToNull(payload != null ? payload.getPatientId() : null);
+        if (explicitPatientId != null) {
+            return explicitPatientId;
         }
-        return envelope.getTraceId();
+        Object detailPatientId = payload != null && payload.getDetails() != null ? payload.getDetails().get("patientId") : null;
+        if (detailPatientId instanceof String text && !text.isBlank()) {
+            return text.trim();
+        }
+        return null;
+    }
+
+    private String determineRequestId(AuditEventEnvelope envelope) {
+        return trimToNull(envelope.getRequestId()) != null ? envelope.getRequestId() : envelope.getTraceId();
     }
 
     private String determineTraceId(AuditEventEnvelope envelope) {
-        if (envelope.getTraceId() != null && !envelope.getTraceId().isBlank()) {
-            return envelope.getTraceId();
-        }
-        return envelope.getRequestId();
+        return trimToNull(envelope.getTraceId()) != null ? envelope.getTraceId() : envelope.getRequestId();
+    }
+
+    private String determineRequestId(AuditEventPayload payload) {
+        String requestId = trimToNull(payload != null ? payload.getRequestId() : null);
+        return requestId != null ? requestId : determineTraceId(payload);
     }
 
     private String determineTraceId(AuditEventPayload payload) {
-        if (payload.getTraceId() != null && !payload.getTraceId().isBlank()) {
-            return payload.getTraceId();
-        }
-        return payload.getRequestId();
+        String traceId = trimToNull(payload != null ? payload.getTraceId() : null);
+        return traceId != null ? traceId : trimToNull(payload != null ? payload.getRequestId() : null);
     }
 
-    private String resolveRunId(AuditEventPayload payload, Map<String, Object> details) {
-        if (payload == null) {
-            return null;
-        }
-        if (payload.getRunId() != null && !payload.getRunId().isBlank()) {
-            return payload.getRunId();
-        }
-        return resolveDetailString(details, "runId");
+    private String extractFacilityId(Map<String, Object> details) {
+        Object facilityId = details != null ? details.get("facilityId") : null;
+        return facilityId instanceof String value && !value.isBlank() ? value.trim() : null;
     }
 
-    private String resolveScreen(AuditEventPayload payload, Map<String, Object> details) {
-        if (payload == null) {
-            return null;
+    private Integer resolveHttpStatus(Map<String, Object> details) {
+        Object value = details != null ? details.get("httpStatus") : null;
+        if (value instanceof Integer integer) {
+            return integer;
         }
-        if (payload.getScreen() != null && !payload.getScreen().isBlank()) {
-            return payload.getScreen();
+        if (value instanceof Number number) {
+            return number.intValue();
         }
-        return resolveDetailString(details, "screen");
+        return null;
     }
 
-    private String resolveUiAction(AuditEventPayload payload, Map<String, Object> details) {
-        if (payload == null) {
-            return null;
+    private String resolveSubjectType(Map<String, Object> details, String patientId) {
+        Object value = details != null ? details.get("subjectType") : null;
+        if (value instanceof String text && !text.isBlank()) {
+            return text.trim();
         }
-        if (payload.getUiAction() != null && !payload.getUiAction().isBlank()) {
-            return payload.getUiAction();
+        return patientId != null ? "patient" : null;
+    }
+
+    private String resolveSubjectId(Map<String, Object> details, String patientId) {
+        Object value = details != null ? details.get("subjectId") : null;
+        if (value instanceof String text && !text.isBlank()) {
+            return text.trim();
         }
-        return resolveDetailString(details, "uiAction");
+        return patientId;
     }
 
     private String resolveOutcome(AuditEventPayload payload, Map<String, Object> details) {
-        if (payload == null) {
-            return null;
+        String payloadOutcome = normalizeOutcome(payload != null ? payload.getOutcome() : null);
+        if (payloadOutcome != null) {
+            return payloadOutcome;
         }
-        String outcome = normalizeOutcome(payload.getOutcome());
-        if (outcome != null) {
-            return outcome;
+        Object detailOutcome = details != null ? details.get("outcome") : null;
+        if (detailOutcome instanceof String text) {
+            String normalized = normalizeOutcome(text);
+            if (normalized != null) {
+                return normalized;
+            }
         }
-        outcome = normalizeOutcome(resolveDetailString(details, "outcome"));
-        if (outcome != null) {
-            return outcome;
+        Object status = details != null ? details.get("status") : null;
+        if (status instanceof String text) {
+            return switch (text.trim().toUpperCase(Locale.ROOT)) {
+                case "FAILED", "FAILURE", "ERROR" -> "FAILURE";
+                case "BLOCKED" -> "BLOCKED";
+                default -> "SUCCESS";
+            };
         }
-        String status = resolveDetailString(details, "status");
-        if (status == null) {
-            return null;
-        }
-        String normalized = status.trim().toUpperCase(Locale.ROOT);
-        if ("FAILED".equals(normalized) || "FAILURE".equals(normalized) || "ERROR".equals(normalized)) {
-            return "FAILURE";
-        }
-        if ("BLOCKED".equals(normalized)) {
-            return "BLOCKED";
-        }
-        if ("SUCCESS".equals(normalized)) {
-            return "SUCCESS";
-        }
-        return null;
+        return "SUCCESS";
     }
 
     private String normalizeOutcome(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
-        String normalized = value.trim().toUpperCase(Locale.ROOT);
-        return switch (normalized) {
+        return switch (value.trim().toUpperCase(Locale.ROOT)) {
             case "SUCCESS" -> "SUCCESS";
             case "MISSING" -> "MISSING";
             case "BLOCKED" -> "BLOCKED";
@@ -197,70 +197,23 @@ public class AuditTrailService implements open.dolphin.audit.AuditTrailService {
         };
     }
 
-    private String resolveDetailString(Map<String, Object> details, String key) {
-        if (details == null || key == null) {
+    private String requiredText(String value, String fallback) {
+        String normalized = trimToNull(value);
+        return normalized != null ? normalized : fallback;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
             return null;
         }
-        Object value = details.get(key);
-        if (value instanceof String text && !text.isBlank()) {
-            return text;
-        }
-        return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private String serializePayload(Map<String, Object> details) {
-        if (details == null || details.isEmpty()) {
-            return "{}";
-        }
-        try {
-            return objectMapper.writeValueAsString(details);
-        } catch (JsonProcessingException e) {
-            LOG.log(Level.WARNING, "Failed to serialize audit payload; falling back to toString", e);
-            return details.toString();
-        }
-    }
-
-    private String hash(String value) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashed = digest.digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashed);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("Missing SHA-256 implementation", e);
-        }
-    }
-
-    private String safe(String value) {
-        return value == null ? "" : value;
-    }
-
-    private String buildEventHashMaterial(AuditEvent event) {
-        StringBuilder builder = new StringBuilder(512);
-        appendHashField(builder, "version", "v2");
-        appendHashField(builder, "eventTimeEpochMillis",
-                event.getEventTime() != null ? Long.toString(event.getEventTime().toEpochMilli()) : "");
-        appendHashField(builder, "previousHash", safe(event.getPreviousHash()));
-        appendHashField(builder, "payloadHash", safe(event.getPayloadHash()));
-        appendHashField(builder, "action", safe(event.getAction()));
-        appendHashField(builder, "resource", safe(event.getResource()));
-        appendHashField(builder, "patientId", safe(event.getPatientId()));
-        appendHashField(builder, "outcome", safe(event.getOutcome()));
-        appendHashField(builder, "ipAddress", safe(event.getIpAddress()));
-        appendHashField(builder, "traceId", safe(event.getTraceId()));
-        appendHashField(builder, "requestId", safe(event.getRequestId()));
-        appendHashField(builder, "runId", safe(event.getRunId()));
-        appendHashField(builder, "actorId", safe(event.getActorId()));
-        appendHashField(builder, "actorRole", safe(event.getActorRole()));
-        return builder.toString();
-    }
-
-    private void appendHashField(StringBuilder builder, String key, String value) {
-        String safeValue = safe(value);
-        builder.append(key)
-                .append('=')
-                .append(safeValue.length())
-                .append(':')
-                .append(safeValue)
-                .append('|');
+    private record AuditCommand(
+            Instant eventTime,
+            String patientId,
+            String payloadJson,
+            AuthoritativeAuditRepository.AuditWriteCommand command) {
     }
 }

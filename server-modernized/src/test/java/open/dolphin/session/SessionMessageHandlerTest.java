@@ -82,11 +82,11 @@ class SessionMessageHandlerTest {
     }
 
     @Test
-    void resolveFacilityIdUsesResolverOnly() throws Exception {
+    void configuredFacilityIdUsesResolverOnly() throws Exception {
         setField(handler, "configurationResolver",
                 TestServerConfigurationResolvers.resolver("opendolphin.facility-id", "facility-123"));
 
-        Method method = SessionMessageHandler.class.getDeclaredMethod("resolveFacilityId");
+        Method method = SessionMessageHandler.class.getDeclaredMethod("configuredFacilityId");
         method.setAccessible(true);
         Object resolved = method.invoke(handler);
 

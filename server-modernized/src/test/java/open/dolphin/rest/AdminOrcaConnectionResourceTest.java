@@ -25,6 +25,7 @@ import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.RestOrcaTransport;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
@@ -51,6 +52,7 @@ class AdminOrcaConnectionResourceTest {
         setField(resource, "orcaConnectionConfigStore", configStore);
         setField(resource, "restOrcaTransport", restOrcaTransport);
         setField(resource, "userServiceBean", userServiceBean);
+        setField(resource, "adminStepUpGuard", mock(AdminStepUpGuard.class));
         setField(resource, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
     }
 
@@ -234,7 +236,7 @@ class AdminOrcaConnectionResourceTest {
         assertEquals("wss://facility.example.orca/push", body.get("pushUrl"));
         assertEquals("tenant-f001", body.get("pushTenantId"));
         verify(configStore).updateDefaultFacilityId("F001", "RUN-DEFAULT", "FACILITY:admin");
-        verify(restOrcaTransport).reloadSettings(null);
+        verify(restOrcaTransport).reloadSettings("F001");
     }
 
     private static MultipartFormDataInput multipartInputWithConfig(String configJson) throws Exception {

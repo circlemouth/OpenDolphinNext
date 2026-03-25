@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -16,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.rest.dto.orca.PatientBatchResponse;
@@ -75,7 +76,7 @@ class PatientModV2OutpatientSupportTest {
     void updateOrcaAndSyncLocalReimportsWhenNoEditableChanges() {
         PatientServiceBean patientServiceBean = mock(PatientServiceBean.class);
         OrcaTransport orcaTransport = mock(OrcaTransport.class);
-        OrcaWrapperService orcaWrapperService = mock(OrcaWrapperService.class);
+        OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
         OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
         PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
                 patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService);
@@ -111,7 +112,7 @@ class PatientModV2OutpatientSupportTest {
 
         PatientModel synced = buildPatient("facility", "00001");
 
-        when(orcaWrapperService.getPatientBatch(any())).thenReturn(batchResponse);
+        when(orcaWrapperService.getPatientBatch(anyString(), any())).thenReturn(batchResponse);
         when(orcaPatientSyncService.importPatients(any(), any(), any())).thenReturn(importResponse);
         when(patientServiceBean.getPatientById("facility", "00001")).thenReturn(synced);
 

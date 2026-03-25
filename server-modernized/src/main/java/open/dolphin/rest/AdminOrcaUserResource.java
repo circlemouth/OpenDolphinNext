@@ -33,6 +33,7 @@ import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.persistence.query.OrcaUserLinkQueryService;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 
@@ -53,6 +54,9 @@ public class AdminOrcaUserResource extends AbstractResource {
 
     @Inject
     private SessionAuditDispatcher sessionAuditDispatcher;
+
+    @Inject
+    private AdminStepUpGuard adminStepUpGuard;
 
     private final AtomicReference<AdminOrcaUserSupport.SyncState> syncStateRef =
             new AtomicReference<>(AdminOrcaUserSupport.SyncState.idle());
@@ -98,6 +102,7 @@ public class AdminOrcaUserResource extends AbstractResource {
     public Response syncOrcaUsers(@Context HttpServletRequest request, Map<String, Object> payload) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request);
+        adminStepUpGuard.require(request, "admin:mutation");
 
         syncStateRef.set(syncStateRef.get().withRunning(true));
         try {
@@ -134,6 +139,7 @@ public class AdminOrcaUserResource extends AbstractResource {
     public Response createOrcaUser(@Context HttpServletRequest request, Map<String, Object> payload) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request);
+        adminStepUpGuard.require(request, "admin:mutation");
 
         String userId = AdminOrcaUserSupport.requiredOrcaUserId(this, request, payload, "userId", "User_Id");
         String password = AdminOrcaUserSupport.requiredToken(this, request, payload, "password", "Password");
@@ -177,6 +183,7 @@ public class AdminOrcaUserResource extends AbstractResource {
                                    Map<String, Object> payload) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request);
+        adminStepUpGuard.require(request, "admin:mutation");
 
         String currentUserId = requireValidUserId(request, orcaUserId);
         String newUserId = AdminOrcaUserSupport.optionalToken(payload, "userId", "User_Id", "newUserId");
@@ -231,6 +238,7 @@ public class AdminOrcaUserResource extends AbstractResource {
                                    @PathParam("orcaUserId") String orcaUserId) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request);
+        adminStepUpGuard.require(request, "admin:mutation");
         String facilityId = getRemoteFacility(actor);
         String userId = requireValidUserId(request, orcaUserId);
 
@@ -239,9 +247,7 @@ public class AdminOrcaUserResource extends AbstractResource {
         AdminOrcaUserSupport.ensureManageUsersSuccess(this, request, result);
 
         if (isLinkTablePresent()) {
-            orcaUserLinks().deleteByOrcaUserIdAndFacilityPrefix(
-                    userId,
-                    facilityId + IInfoModel.COMPOSITE_KEY_MAKER + "%");
+            orcaUserLinks().deleteByOrcaUserId(facilityId, userId);
         }
 
         Map<String, Object> body =
@@ -266,6 +272,7 @@ public class AdminOrcaUserResource extends AbstractResource {
                                       Map<String, Object> payload) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request);
+        adminStepUpGuard.require(request, "admin:mutation");
         String facilityId = getRemoteFacility(actor);
         requireLinkTableAvailable(request);
 
@@ -281,13 +288,13 @@ public class AdminOrcaUserResource extends AbstractResource {
             throw restError(request, Response.Status.NOT_FOUND, "orca_user_not_found", "指定した ORCA User_Id が見つかりません。");
         }
 
-        Long existingOwner = findOwnerByOrcaUserId(orcaUserId);
+        Long existingOwner = findOwnerByOrcaUserId(facilityId, orcaUserId);
         if (existingOwner != null && existingOwner.longValue() != ehrUser.getId()) {
             throw restError(request, Response.Status.CONFLICT, "orca_user_already_linked",
                     "指定した ORCA User_Id は別の電子カルテユーザーにリンク済みです。");
         }
 
-        orcaUserLinks().upsertLink(ehrUser.getId(), orcaUserId, Instant.now(), actor);
+        orcaUserLinks().upsertLink(facilityId, ehrUser.getId(), orcaUserId, Instant.now(), actor);
 
         Map<String, Object> body = AdminOrcaUserSupport.baseEnvelope(runId, request, "0000", "linked", true);
         body.put("status", Response.Status.OK.getStatusCode());
@@ -308,11 +315,12 @@ public class AdminOrcaUserResource extends AbstractResource {
                                           @PathParam("ehrUserId") String ehrUserId) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request);
+        adminStepUpGuard.require(request, "admin:mutation");
         String facilityId = getRemoteFacility(actor);
         requireLinkTableAvailable(request);
 
         UserModel ehrUser = resolveEhrUser(request, facilityId, ehrUserId);
-        orcaUserLinks().deleteByEhrUserPk(ehrUser.getId());
+        orcaUserLinks().deleteByEhrUserPk(facilityId, ehrUser.getId());
 
         Map<String, Object> body = AdminOrcaUserSupport.baseEnvelope(runId, request, "0000", "unlinked", true);
         body.put("status", Response.Status.OK.getStatusCode());
@@ -344,7 +352,9 @@ public class AdminOrcaUserResource extends AbstractResource {
                     "orca_transport_unavailable", "ORCA transport が利用できません。");
         }
         try {
-            OrcaTransportResult response = orcaTransport.invokeDetailed(
+            String facilityId = getRemoteFacility(request != null ? request.getRemoteUser() : null);
+            OrcaTransportResult response = orcaTransport.invoke(
+                    facilityId,
                     OrcaEndpoint.MANAGE_USERS,
                     OrcaTransportRequest.post(requestXml));
             return AdminOrcaUserSupport.parseManageUsersResult(response);
@@ -362,7 +372,7 @@ public class AdminOrcaUserResource extends AbstractResource {
             return Map.of();
         }
         Map<String, OrcaUserLinkQueryService.OrcaFacilityLinkRow> rows =
-                orcaUserLinks().findLinksByFacilityPrefix(facilityId + IInfoModel.COMPOSITE_KEY_MAKER + "%");
+                orcaUserLinks().findLinksByFacilityId(facilityId);
         Map<String, Map<String, Object>> map = new LinkedHashMap<>();
         for (OrcaUserLinkQueryService.OrcaFacilityLinkRow row : rows.values()) {
             if (row == null) {
@@ -417,8 +427,8 @@ public class AdminOrcaUserResource extends AbstractResource {
         return em != null && orcaUserLinks().isLinkTablePresent();
     }
 
-    private Long findOwnerByOrcaUserId(String orcaUserId) {
-        return em == null || !isLinkTablePresent() ? null : orcaUserLinks().findOwnerByOrcaUserId(orcaUserId);
+    private Long findOwnerByOrcaUserId(String facilityId, String orcaUserId) {
+        return em == null || !isLinkTablePresent() ? null : orcaUserLinks().findOwnerByOrcaUserId(facilityId, orcaUserId);
     }
 
     private OrcaUserLinkQueryService orcaUserLinks() {

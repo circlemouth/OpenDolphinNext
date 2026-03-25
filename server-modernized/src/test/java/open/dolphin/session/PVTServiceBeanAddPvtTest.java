@@ -36,10 +36,6 @@ class PVTServiceBeanAddPvtTest {
             "select k.id from KarteBean k where k.patient.id = :id";
     private static final String QUERY_APPO_BY_KARTE_ID_DATE =
             "from AppointmentModel a where a.karte.id=:id and a.date=:date";
-    private static final String QUERY_PVT_BY_FID_PID_PVT_DATE =
-            "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate=:pvtDate and p.patient.patientId=:pid order by p.id";
-    private static final String QUERY_PVT_BY_FID_PID_DATE =
-            "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate and p.patient.patientId=:pid";
 
     private PVTServiceBean service;
     private EntityManager em;
@@ -73,20 +69,16 @@ class PVTServiceBeanAddPvtTest {
         AppointmentModel appointment = new AppointmentModel();
         appointment.setName("09:00 予約");
         Query appointmentQuery = queryReturningList(List.of(appointment));
-        Query duplicateQuery = queryReturningList(List.of());
-
         when(em.createQuery(QUERY_PATIENT_BY_FID_PID)).thenReturn(patientQuery);
         when(em.createQuery(QUERY_INSURANCE_BY_PATIENT_ID)).thenReturn(insuranceQuery);
         when(em.createQuery(QUERY_KARTE_ID_BY_PATIENT_ID)).thenReturn(karteIdQuery);
         when(em.createQuery(QUERY_APPO_BY_KARTE_ID_DATE)).thenReturn(appointmentQuery);
-        when(em.createQuery(QUERY_PVT_BY_FID_PID_PVT_DATE)).thenReturn(duplicateQuery);
 
         int added = service.addPvt(incoming);
 
         assertEquals(1, added);
         assertSame(existingPatient, incoming.getPatientModel());
         assertEquals("09:00 予約", incoming.getAppointment());
-        assertSame(incoming, contextHolder.getPvtList("F001").get(0));
         verify(eventServiceBean).setByomeiCount(501L, incoming);
         verify(em).persist(incoming);
 
@@ -97,7 +89,7 @@ class PVTServiceBeanAddPvtTest {
     }
 
     @Test
-    void addPvt_mergesDuplicateTodayVisitUsingDatabaseLookupEvenWhenCacheIsEmpty() {
+    void addPvt_persistsTodayVisitEvenWhenSamePatientAndTimestampAlreadyExist() {
         PatientModel existingPatient = patient(101L, "F001", "P001", "owner-existing");
         PatientVisitModel existingVisit = visit(existingPatient.getPatientId(), todayAt(9, 0));
         existingVisit.setId(900L);
@@ -111,28 +103,24 @@ class PVTServiceBeanAddPvtTest {
         Query insuranceQuery = queryReturningList(List.of());
         Query karteIdQuery = queryReturningSingle(501L);
         Query appointmentQuery = queryReturningList(List.of());
-        Query duplicateQuery = queryReturningList(List.of(existingVisit));
 
         when(em.createQuery(QUERY_PATIENT_BY_FID_PID)).thenReturn(patientQuery);
         when(em.createQuery(QUERY_INSURANCE_BY_PATIENT_ID)).thenReturn(insuranceQuery);
         when(em.createQuery(QUERY_KARTE_ID_BY_PATIENT_ID)).thenReturn(karteIdQuery);
         when(em.createQuery(QUERY_APPO_BY_KARTE_ID_DATE)).thenReturn(appointmentQuery);
-        when(em.createQuery(QUERY_PVT_BY_FID_PID_PVT_DATE)).thenReturn(duplicateQuery);
 
         int added = service.addPvt(incoming);
 
-        assertEquals(0, added);
-        assertEquals(900L, incoming.getId());
-        assertEquals(3, incoming.getState());
-        assertEquals("owner-existing", incoming.getPatientModel().getOwnerUUID());
-        assertSame(incoming, contextHolder.getPvtList("F001").get(0));
-        verify(em).merge(incoming);
-        verify(em, never()).persist(incoming);
-        verify(eventServiceBean, never()).setByomeiCount(any(Long.class), any(PatientVisitModel.class));
+        assertEquals(1, added);
+        assertEquals(0L, incoming.getId());
+        assertEquals(0, incoming.getState());
+        verify(em).persist(incoming);
+        verify(em, never()).merge(incoming);
+        verify(eventServiceBean).setByomeiCount(501L, incoming);
 
         ArgumentCaptor<ChartEventModel> eventCaptor = ArgumentCaptor.forClass(ChartEventModel.class);
         verify(eventServiceBean).notifyEvent(eventCaptor.capture());
-        assertEquals(ChartEventModel.PVT_MERGE, eventCaptor.getValue().getEventType());
+        assertEquals(ChartEventModel.PVT_ADD, eventCaptor.getValue().getEventType());
         assertSame(incoming, eventCaptor.getValue().getPatientVisitModel());
         assertNull(incoming.getAppointment());
     }
@@ -155,7 +143,7 @@ class PVTServiceBeanAddPvtTest {
     }
 
     @Test
-    void addPvt_updatesExistingScheduledVisitWithoutTouchingTodayFlow() {
+    void addPvt_persistsScheduledVisitWithoutMergingByPatientAndDay() {
         PatientModel existingPatient = patient(101L, "F001", "P001", "owner-existing");
         PatientVisitModel existingVisit = visit(existingPatient.getPatientId(), LocalDate.now().plusDays(1).atTime(9, 0));
         existingVisit.setFacilityId("F001");
@@ -167,17 +155,15 @@ class PVTServiceBeanAddPvtTest {
 
         Query patientQuery = queryReturningSingle(existingPatient);
         Query insuranceQuery = queryReturningList(List.of());
-        Query scheduledQuery = queryReturningList(List.of(existingVisit));
 
         when(em.createQuery(QUERY_PATIENT_BY_FID_PID)).thenReturn(patientQuery);
         when(em.createQuery(QUERY_INSURANCE_BY_PATIENT_ID)).thenReturn(insuranceQuery);
-        when(em.createQuery(QUERY_PVT_BY_FID_PID_DATE)).thenReturn(scheduledQuery);
 
         int added = service.addPvt(incoming);
 
         assertEquals(1, added);
-        assertEquals("新医師", existingVisit.getDoctorName());
-        verify(em, never()).persist(incoming);
+        assertEquals("旧医師", existingVisit.getDoctorName());
+        verify(em).persist(incoming);
         verify(eventServiceBean, never()).setByomeiCount(any(Long.class), any(PatientVisitModel.class));
         verify(eventServiceBean, never()).notifyEvent(any(ChartEventModel.class));
     }

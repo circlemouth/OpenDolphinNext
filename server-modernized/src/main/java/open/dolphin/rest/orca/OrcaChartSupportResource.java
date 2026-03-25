@@ -65,8 +65,10 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
         String requestXml = support().buildMedicalModV2RequestXml(payload);
-        OrcaTransportResult result = orcaTransport.invokeDetailed(
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
                 OrcaEndpoint.MEDICAL_MOD,
                 OrcaTransportRequest.post(requestXml).withQuery("class=" + classCode));
         ChartSupportMedicalModResponse response = support().parseMedicalModResponse(result, runId, traceId);
@@ -103,8 +105,10 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
         String requestXml = support().buildMedicalModV23RequestXml(payload);
-        OrcaTransportResult result = orcaTransport.invokeDetailed(
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
                 OrcaEndpoint.MEDICAL_MOD_V23,
                 OrcaTransportRequest.post(requestXml));
         ChartSupportMedicalModResponse response = support().parseMedicalModResponse(result, runId, traceId);
@@ -136,8 +140,10 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
         String requestXml = support().buildMedicationGetRequestXml(payload);
-        OrcaTransportResult result = orcaTransport.invokeDetailed(
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
                 OrcaEndpoint.MEDICATION_GET,
                 OrcaTransportRequest.post(requestXml));
         ChartSupportMedicationGetResponse response = support().parseMedicationGetResponse(result, runId, traceId);
@@ -169,8 +175,10 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
         String requestXml = support().buildContraindicationCheckRequestXml(payload);
-        OrcaTransportResult result = orcaTransport.invokeDetailed(
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
                 OrcaEndpoint.CONTRAINDICATION_CHECK,
                 OrcaTransportRequest.post(requestXml));
         ChartSupportContraindicationCheckResponse response = support().parseContraindicationCheckResponse(result, runId, traceId);
@@ -204,8 +212,10 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
         String requestXml = support().buildIncomeInfoRequestXml(payload);
-        OrcaTransportResult result = orcaTransport.invokeDetailed(
+        OrcaTransportResult result = orcaTransport.invoke(
+                facilityId,
                 OrcaEndpoint.INCOME_INFO,
                 OrcaTransportRequest.post(requestXml));
         ChartSupportIncomeInfoResponse response = support().parseIncomeInfoResponse(result, runId, traceId);

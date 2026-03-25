@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -51,7 +52,7 @@ class OrcaChartSupportResourceTest {
 
     @Test
     void medicalModV2BuildsTransportRequestAndParsesResponse() {
-        when(orcaTransport.invokeDetailed(any(), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MEDICAL_MOD), any(OrcaTransportRequest.class)))
                 .thenReturn(OrcaTransportResult.fallback(
                         """
                         <xmlio2>
@@ -88,7 +89,7 @@ class OrcaChartSupportResourceTest {
         assertEquals(1, response.getMedicalWarnings().size());
 
         ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
-        verify(orcaTransport).invokeDetailed(eq(OrcaEndpoint.MEDICAL_MOD), captor.capture());
+        verify(orcaTransport).invoke(anyString(), eq(OrcaEndpoint.MEDICAL_MOD), captor.capture());
         assertEquals("class=04", captor.getValue().getQuery());
         assertTrue(captor.getValue().getBody().contains("<Medical_Push type=\"string\">Yes</Medical_Push>"));
     }
@@ -143,7 +144,7 @@ class OrcaChartSupportResourceTest {
 
     @Test
     void medicalModV23MarksTransportFailure() {
-        when(orcaTransport.invokeDetailed(any(), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MEDICAL_MOD_V23), any(OrcaTransportRequest.class)))
                 .thenReturn(new OrcaTransportResult(
                         null,
                         "POST",
@@ -173,7 +174,7 @@ class OrcaChartSupportResourceTest {
 
     @Test
     void medicationGetBuildsRequestAndParsesResponse() {
-        when(orcaTransport.invokeDetailed(any(), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MEDICATION_GET), any(OrcaTransportRequest.class)))
                 .thenReturn(OrcaTransportResult.fallback(
                         """
                         <xmlio2>
@@ -215,7 +216,7 @@ class OrcaChartSupportResourceTest {
         assertEquals("C01", response.getSelections().get(0).getCommentCode());
 
         ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
-        verify(orcaTransport).invokeDetailed(eq(OrcaEndpoint.MEDICATION_GET), captor.capture());
+        verify(orcaTransport).invoke(anyString(), eq(OrcaEndpoint.MEDICATION_GET), captor.capture());
         assertTrue(captor.getValue().getBody().contains("<Request_Code type=\"string\">123456</Request_Code>"));
         assertTrue(captor.getValue().getBody().contains("<medicationgetreq"));
     }
@@ -234,7 +235,7 @@ class OrcaChartSupportResourceTest {
 
     @Test
     void contraindicationCheckBuildsRequestAndParsesResponse() {
-        when(orcaTransport.invokeDetailed(any(), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.CONTRAINDICATION_CHECK), any(OrcaTransportRequest.class)))
                 .thenReturn(OrcaTransportResult.fallback(
                         """
                         <xmlio2>
@@ -290,7 +291,7 @@ class OrcaChartSupportResourceTest {
         assertEquals("S01", response.getSymptomInfo().get(0).getCode());
 
         ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
-        verify(orcaTransport).invokeDetailed(eq(OrcaEndpoint.CONTRAINDICATION_CHECK), captor.capture());
+        verify(orcaTransport).invoke(anyString(), eq(OrcaEndpoint.CONTRAINDICATION_CHECK), captor.capture());
         assertTrue(captor.getValue().getBody().contains("<contraindication_checkreq"));
         assertTrue(captor.getValue().getBody().contains("<Medication_Code type=\"string\">123456</Medication_Code>"));
     }
@@ -310,7 +311,7 @@ class OrcaChartSupportResourceTest {
 
     @Test
     void incomeInfoBuildsRequestAndParsesResponse() {
-        when(orcaTransport.invokeDetailed(any(), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.INCOME_INFO), any(OrcaTransportRequest.class)))
                 .thenReturn(OrcaTransportResult.fallback(
                         """
                         <xmlio2>
@@ -353,7 +354,7 @@ class OrcaChartSupportResourceTest {
         assertEquals(100d, response.getEntries().get(0).getAcMoney());
 
         ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
-        verify(orcaTransport).invokeDetailed(eq(OrcaEndpoint.INCOME_INFO), captor.capture());
+        verify(orcaTransport).invoke(anyString(), eq(OrcaEndpoint.INCOME_INFO), captor.capture());
         assertTrue(captor.getValue().getBody().contains("<incomeinfreq"));
         assertTrue(captor.getValue().getBody().contains("<Perform_Month type=\"string\">2026-03</Perform_Month>"));
     }

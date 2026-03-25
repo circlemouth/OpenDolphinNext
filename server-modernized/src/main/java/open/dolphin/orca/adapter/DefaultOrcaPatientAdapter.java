@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import open.dolphin.orca.OrcaGatewayException;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -26,12 +26,12 @@ import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 
 /**
- * Default ORCA adapter implementation backed by {@link OrcaWrapperService} and {@link OrcaTransport}.
+ * Default ORCA adapter implementation backed by {@link OrcaLiveGateway} and {@link OrcaTransport}.
  */
 @ApplicationScoped
 public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
 
-    private final OrcaWrapperService wrapperService;
+    private final OrcaLiveGateway wrapperService;
     private final OrcaTransport transport;
 
     public DefaultOrcaPatientAdapter() {
@@ -40,7 +40,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
     }
 
     @Inject
-    public DefaultOrcaPatientAdapter(OrcaWrapperService wrapperService, OrcaTransport transport) {
+    public DefaultOrcaPatientAdapter(OrcaLiveGateway wrapperService, OrcaTransport transport) {
         this.wrapperService = wrapperService;
         this.transport = transport;
     }
@@ -50,6 +50,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
         if (query == null) {
             throw new OrcaGatewayException("query is required");
         }
+        String facilityId = requireText(query.facilityId(), "facilityId");
         OrcaApiResponse response;
         List<PatientDetail> details;
         String patientId = normalizeText(query.patientId());
@@ -57,7 +58,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
             PatientBatchRequest request = new PatientBatchRequest();
             request.getPatientIds().add(patientId);
             request.setIncludeInsurance(false);
-            var batch = requireWrapperService().getPatientBatch(request);
+            var batch = requireWrapperService().getPatientBatch(facilityId, request);
             response = batch;
             details = batch != null ? batch.getPatients() : Collections.emptyList();
         } else {
@@ -76,7 +77,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
                     throw new OrcaGatewayException("birthDate must be yyyy-MM-dd");
                 }
             }
-            PatientSearchResponse searchResponse = requireWrapperService().searchPatients(request);
+            PatientSearchResponse searchResponse = requireWrapperService().searchPatients(facilityId, request);
             response = searchResponse;
             details = searchResponse != null ? searchResponse.getPatients() : Collections.emptyList();
         }
@@ -116,6 +117,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
         if (command == null) {
             throw new OrcaGatewayException("command is required");
         }
+        String facilityId = requireText(command.facilityId(), "facilityId");
         String patientId = requireText(command.patientId(), "patientId");
         Map<String, Object> payload = command.patientPayload() != null ? command.patientPayload() : Map.of();
 
@@ -140,7 +142,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
         String requestXml = buildPatientModPayload(modKey, patientId, wholeName, wholeNameKana,
                 birthDate, sex, zipCode, address, phone1, phone2);
         String payloadWithMeta = OrcaApiProxySupport.applyQueryMeta(requestXml, OrcaEndpoint.PATIENT_MOD, classCode);
-        OrcaTransportResult result = requireTransport().invokeDetailed(OrcaEndpoint.PATIENT_MOD,
+        OrcaTransportResult result = requireTransport().invoke(facilityId, OrcaEndpoint.PATIENT_MOD,
                 OrcaTransportRequest.post(payloadWithMeta));
 
         String body = result != null ? result.getBody() : null;
@@ -175,6 +177,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
         if (command == null) {
             throw new OrcaGatewayException("command is required");
         }
+        String facilityId = requireText(command.facilityId(), "facilityId");
         String patientId = requireText(command.patientId(), "patientId");
         Map<String, Object> payload = command.payload() != null ? command.payload() : Map.of();
 
@@ -190,7 +193,7 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
         request.setWholeName(normalizeText(asText(payload, "wholeName")));
         request.setMedicalInformation(normalizeText(asText(payload, "medicalInformation")));
 
-        VisitMutationResponse response = requireWrapperService().mutateVisit(request);
+        VisitMutationResponse response = requireWrapperService().mutateVisit(facilityId, request);
         if (response == null || !OrcaApiProxySupport.isApiResultSuccess(response.getApiResult())) {
             String apiResult = response != null ? response.getApiResult() : null;
             String apiResultMessage = response != null ? response.getApiResultMessage() : null;
@@ -205,9 +208,9 @@ public class DefaultOrcaPatientAdapter implements OrcaPatientAdapter {
         return new ReceptionResult(receptionId, patientId, requestId, runId, status);
     }
 
-    private OrcaWrapperService requireWrapperService() {
+    private OrcaLiveGateway requireWrapperService() {
         if (wrapperService == null) {
-            throw new OrcaGatewayException("OrcaWrapperService is not available");
+            throw new OrcaGatewayException("OrcaLiveGateway is not available");
         }
         return wrapperService;
     }

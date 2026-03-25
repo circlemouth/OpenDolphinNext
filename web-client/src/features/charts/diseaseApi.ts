@@ -26,6 +26,7 @@ export type DiseaseImportResponse = {
   errorKind?: OrcaResponseErrorKind;
   routeMismatch?: boolean;
   patientId?: string;
+  karteId?: number;
   baseDate?: string;
   apiResult?: string;
   apiResultMessage?: string;
@@ -65,6 +66,19 @@ export type DiseaseMutationResult = {
   updatedDiagnosisIds?: number[];
   removedDiagnosisIds?: number[];
   raw?: unknown;
+};
+
+const assignMutationScopedDiagnosisIds = (operations: DiseaseMutationOperation[]): DiseaseMutationOperation[] => {
+  let nextTemporaryId = -1;
+  return operations.map((operation) => {
+    if (typeof operation.diagnosisId === 'number' && Number.isFinite(operation.diagnosisId)) {
+      return operation;
+    }
+    return {
+      ...operation,
+      diagnosisId: nextTemporaryId--,
+    };
+  });
 };
 
 type DiseaseMasterEntry = {
@@ -174,7 +188,7 @@ async function fetchDiseaseMasterByName(params: {
     return [];
   }
   const requestParam = `${encodeURIComponent(term)},${encodeURIComponent(params.referenceDate)},${params.partialMatch ? 'true' : 'false'}`;
-  const response = await httpFetch(`/api/orca/disease/name/${requestParam}/`);
+  const response = await httpFetch(`/api/orca-live/disease-master/name/${requestParam}/`);
   if (!response.ok) {
     return [];
   }
@@ -402,7 +416,7 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
   if (params.to) query.set('to', params.to);
   if (params.activeOnly) query.set('activeOnly', 'true');
   const queryString = query.toString();
-  const response = await httpFetch(`/api/orca/disease/import/${encodeURIComponent(params.patientId)}${queryString ? `?${queryString}` : ''}`);
+  const response = await httpFetch(`/api/local-summary/diagnoses/${encodeURIComponent(params.patientId)}${queryString ? `?${queryString}` : ''}`);
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '病名情報の取得に失敗しました。' });
   if (parsed.ok && !parsed.json) {
     return {
@@ -478,14 +492,16 @@ export async function fetchDiseasesWithPatientImportRecovery(
 
 export async function mutateDiseases(params: {
   patientId: string;
+  karteId: number;
   operations: DiseaseMutationOperation[];
 }): Promise<DiseaseMutationResult> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
-  const response = await httpFetch('/api/orca/disease', {
+  const normalizedOperations = assignMutationScopedDiagnosisIds(params.operations);
+  const response = await httpFetch('/api/local-summary/diagnoses', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patientId: params.patientId, operations: params.operations }),
+    body: JSON.stringify({ patientId: params.patientId, karteId: params.karteId, operations: normalizedOperations }),
   });
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const message =

@@ -164,6 +164,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
     },
     enabled: !!patientId,
   });
+  const karteId = diagnosisQuery.data?.karteId;
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -260,8 +261,10 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           suffix: payload.suffix,
           referenceDate: payload.startDate,
         }));
+      if (!karteId) throw new Error('karteId is required');
       return mutateDiseases({
         patientId,
+        karteId,
         operations: [
           {
             operation,
@@ -375,8 +378,10 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   const deleteMutation = useMutation({
     mutationFn: async (entry: DiseaseEntry) => {
       if (!patientId) throw new Error('patientId is required');
+      if (!karteId) throw new Error('karteId is required');
       return mutateDiseases({
         patientId,
+        karteId,
         operations: [
           {
             operation: 'delete',

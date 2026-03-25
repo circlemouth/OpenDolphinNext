@@ -9,7 +9,7 @@ import open.dolphin.metrics.OrcaPushMetricsRegistrar;
 import open.dolphin.orca.push.dto.OrcaPushBody;
 import open.dolphin.orca.push.dto.OrcaPushEventData;
 import open.dolphin.orca.push.dto.OrcaPushReceptionBody;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -20,9 +20,10 @@ public class ReceptionPushHandler implements OrcaPushEventHandler {
 
     private static final Logger LOGGER = Logger.getLogger(ReceptionPushHandler.class.getName());
     private static final long[] RETRY_BACKOFF_MILLIS = {250L, 500L, 1000L};
+    static final String STREAM_KIND = "reception";
 
     @Inject
-    OrcaWrapperService wrapperService;
+    OrcaLiveGateway wrapperService;
 
     @Inject
     ReceptionRealtimeSseSupport realtimeSseSupport;
@@ -31,34 +32,35 @@ public class ReceptionPushHandler implements OrcaPushEventHandler {
     ServerConfigurationResolver configurationResolver;
 
     @Inject
-    OrcaPushSeenEventStore seenEventStore;
+    OrcaPushEventInboxStore eventInboxStore;
 
     @Inject
     OrcaPushMetricsRegistrar metricsRegistrar;
 
     @Override
     public void handle(String facilityId, OrcaPushEventData eventData) {
+        facilityId = requireFacilityId(facilityId);
         OrcaPushReceptionBody body = asReceptionBody(eventData != null ? eventData.getBody() : null);
         if (body == null) {
             metricsRegistrar.recordFailure(facilityId, "patient_accept", mode());
             return;
         }
+        String eventUuid = normalize(eventData != null ? eventData.getUuid() : null);
+        String eventName = normalize(eventData != null ? eventData.getEvent() : null);
         Instant eventTime = parseInstant(eventData.getTime());
-        if (!seenEventStore.markSeen(
-                facilityId,
-                eventData.getUuid(),
-                eventData.getEvent(),
-                eventTime,
-                dedupRetentionDays())) {
-            metricsRegistrar.recordDuplicate(facilityId, eventData.getEvent(), mode());
+        if (eventInboxStore.isApplied(facilityId, STREAM_KIND, eventUuid)) {
+            metricsRegistrar.recordDuplicate(facilityId, eventName, mode());
             return;
         }
+        eventInboxStore.markReceived(facilityId, STREAM_KIND, eventUuid, eventName, eventTime, "{}", null);
 
         String patientMode = normalizeMode(body.getPatient_Mode());
         if (patientMode == null) {
             LOGGER.log(Level.WARNING, "Unexpected patient_accept mode. facilityId={0} mode={1}",
                     new Object[]{facilityId, body.getPatient_Mode()});
-            metricsRegistrar.recordFailure(facilityId, eventData.getEvent(), mode());
+            eventInboxStore.markFailed(facilityId, STREAM_KIND, eventUuid, Instant.now(),
+                    "invalid_mode", "Unexpected patient mode", null);
+            metricsRegistrar.recordFailure(facilityId, eventName, mode());
             return;
         }
         String requestNumber = switch (patientMode) {
@@ -69,17 +71,21 @@ public class ReceptionPushHandler implements OrcaPushEventHandler {
         };
         if ("delete".equals(patientMode)) {
             if (isBlank(body.getPatient_ID()) || isBlank(body.getAccept_Date())) {
+                eventInboxStore.markFailed(facilityId, STREAM_KIND, eventUuid, Instant.now(),
+                        "missing_delete_payload", "Delete push payload is incomplete", null);
                 realtimeSseSupport.publishReplayGap(facilityId);
-                metricsRegistrar.recordFailure(facilityId, eventData.getEvent(), mode());
+                metricsRegistrar.recordFailure(facilityId, eventName, mode());
                 return;
             }
+            eventInboxStore.markFetched(facilityId, STREAM_KIND, eventUuid, Instant.now(), null);
             realtimeSseSupport.publishReceptionUpdate(
                     facilityId,
                     body.getAccept_Date(),
                     body.getPatient_ID(),
                     requestNumber,
                     null);
-            metricsRegistrar.recordReceived(facilityId, eventData.getEvent(), mode());
+            eventInboxStore.markApplied(facilityId, STREAM_KIND, eventUuid, Instant.now(), null);
+            metricsRegistrar.recordReceived(facilityId, eventName, mode());
             return;
         }
 
@@ -99,25 +105,29 @@ public class ReceptionPushHandler implements OrcaPushEventHandler {
             request.getInsurances().add(insurance);
         }
 
-        VisitMutationResponse response = retryQuery(request);
+        VisitMutationResponse response = retryQuery(facilityId, request);
         if (response == null || !isSuccess(response) || isBlank(response.getAcceptanceDate())) {
+            eventInboxStore.markFailed(facilityId, STREAM_KIND, eventUuid, Instant.now(),
+                    "visit_pull_failed", "Visit mutation pull failed", null);
             realtimeSseSupport.publishReplayGap(facilityId);
-            metricsRegistrar.recordFailure(facilityId, eventData.getEvent(), mode());
+            metricsRegistrar.recordFailure(facilityId, eventName, mode());
             return;
         }
+        eventInboxStore.markFetched(facilityId, STREAM_KIND, eventUuid, Instant.now(), null);
         realtimeSseSupport.publishReceptionUpdate(
                 facilityId,
                 response.getAcceptanceDate(),
                 request.getPatientId(),
                 requestNumber,
                 response.getRunId());
-        metricsRegistrar.recordReceived(facilityId, eventData.getEvent(), mode());
+        eventInboxStore.markApplied(facilityId, STREAM_KIND, eventUuid, Instant.now(), null);
+        metricsRegistrar.recordReceived(facilityId, eventName, mode());
     }
 
-    private VisitMutationResponse retryQuery(VisitMutationRequest request) {
+    private VisitMutationResponse retryQuery(String facilityId, VisitMutationRequest request) {
         for (int attempt = 0; attempt <= RETRY_BACKOFF_MILLIS.length; attempt++) {
             try {
-                VisitMutationResponse response = wrapperService.mutateVisit(request);
+                VisitMutationResponse response = wrapperService.mutateVisit(facilityId, request);
                 if (response != null && isSuccess(response)) {
                     return response;
                 }
@@ -180,5 +190,19 @@ public class ReceptionPushHandler implements OrcaPushEventHandler {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return "unknown";
+        }
+        return value.trim();
+    }
+
+    private static String requireFacilityId(String facilityId) {
+        if (facilityId == null || facilityId.isBlank()) {
+            throw new IllegalStateException("facilityId is required");
+        }
+        return facilityId.trim();
     }
 }

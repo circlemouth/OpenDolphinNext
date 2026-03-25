@@ -32,7 +32,10 @@ import open.dolphin.infomodel.RoleModel;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.persistence.query.OrcaUserLinkQueryService;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.auth.PasswordHashService;
+import open.dolphin.security.auth.SessionRevocationService;
+import open.dolphin.security.auth.StepUpSessionService;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
@@ -62,13 +65,16 @@ public class AdminAccessResource extends AbstractResource {
     private UserServiceBean userServiceBean;
 
     @Inject
-    private TotpVerificationSupport totpVerificationSupport;
-
-    @Inject
     private SessionAuditDispatcher sessionAuditDispatcher;
 
     @Inject
     private PasswordHashService passwordHashService;
+
+    @Inject
+    private AdminStepUpGuard adminStepUpGuard;
+
+    @Inject
+    private SessionRevocationService sessionRevocationService;
 
     @GET
     @Path("/users")
@@ -81,7 +87,7 @@ public class AdminAccessResource extends AbstractResource {
         List<UserModel> users = userServiceBean.getAllUser(facilityId);
         List<Long> userPks = users.stream().mapToLong(UserModel::getId).boxed().toList();
         Map<Long, UserAccessProfileRow> profileMap = loadProfiles(userPks);
-        Map<Long, OrcaLinkStatus> orcaLinkMap = loadOrcaLinks(userPks);
+        Map<Long, OrcaLinkStatus> orcaLinkMap = loadOrcaLinks(facilityId, userPks);
 
         List<Map<String, Object>> rows = users.stream()
                 .sorted(Comparator.comparing((UserModel u) -> extractLoginId(u.getUserId()),
@@ -107,10 +113,15 @@ public class AdminAccessResource extends AbstractResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Transactional
     public Response createUser(@jakarta.ws.rs.core.Context HttpServletRequest request, Map<String, Object> payload) {
+        rejectDeprecatedTotpCode(request, payload);
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         return new AdminAccessMutationSupport(
                 em,
                 sessionAuditDispatcher,
-                passwordHashService)
+                passwordHashService,
+                sessionRevocationService)
                 .createUser(this, request, payload);
     }
 
@@ -122,20 +133,30 @@ public class AdminAccessResource extends AbstractResource {
     public Response updateUser(@jakarta.ws.rs.core.Context HttpServletRequest request,
                                @PathParam("userPk") long userPk,
                                Map<String, Object> payload) {
+        rejectDeprecatedTotpCode(request, payload);
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         return new AdminAccessMutationSupport(
                 em,
                 sessionAuditDispatcher,
-                passwordHashService)
+                passwordHashService,
+                sessionRevocationService)
                 .updateUser(this, request, userPk, payload);
     }
 
     public Response resetPassword(@jakarta.ws.rs.core.Context HttpServletRequest request,
                                   @PathParam("userPk") long userPk,
                                   Map<String, Object> payload) {
+        rejectDeprecatedTotpCode(request, payload);
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         return new AdminAccessMutationSupport(
                 em,
                 sessionAuditDispatcher,
-                passwordHashService)
+                passwordHashService,
+                sessionRevocationService)
                 .resetPassword(this, request, userPk, payload);
     }
 
@@ -163,6 +184,12 @@ public class AdminAccessResource extends AbstractResource {
                 .setParameter("uid", actorUserId)
                 .getSingleResult();
         return actor.getId();
+    }
+
+    private void rejectDeprecatedTotpCode(HttpServletRequest request, Map<String, Object> payload) {
+        if (payload != null && payload.containsKey(StepUpSessionService.DEPRECATED_OTP_FIELD)) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "廃止された認証フィールドは受け付けません。");
+        }
     }
 
     private Map<Long, UserAccessProfileRow> loadProfiles(List<Long> userPks) {
@@ -193,11 +220,11 @@ public class AdminAccessResource extends AbstractResource {
         return map;
     }
 
-    private Map<Long, OrcaLinkStatus> loadOrcaLinks(List<Long> userPks) {
+    private Map<Long, OrcaLinkStatus> loadOrcaLinks(String facilityId, List<Long> userPks) {
         if (userPks == null || userPks.isEmpty() || !isOrcaLinkTablePresent()) {
             return Map.of();
         }
-        Map<Long, OrcaUserLinkQueryService.OrcaLinkRow> rows = orcaUserLinks().findLinksByUserPks(userPks);
+        Map<Long, OrcaUserLinkQueryService.OrcaLinkRow> rows = orcaUserLinks().findLinksByUserPks(facilityId, userPks);
         Map<Long, OrcaLinkStatus> map = new HashMap<>();
         for (OrcaUserLinkQueryService.OrcaLinkRow row : rows.values()) {
             if (row == null) {
@@ -208,11 +235,11 @@ public class AdminAccessResource extends AbstractResource {
         return map;
     }
 
-    private OrcaLinkStatus findOrcaLinkByUserPk(long userPk) {
+    private OrcaLinkStatus findOrcaLinkByUserPk(String facilityId, long userPk) {
         if (!isOrcaLinkTablePresent()) {
             return null;
         }
-        OrcaUserLinkQueryService.OrcaLinkRow row = orcaUserLinks().findLinkByUserPk(userPk);
+        OrcaUserLinkQueryService.OrcaLinkRow row = orcaUserLinks().findLinkByUserPk(facilityId, userPk);
         if (row == null) {
             return null;
         }
@@ -328,32 +355,17 @@ public class AdminAccessResource extends AbstractResource {
                 asInstant(row[5]));
     }
 
-    protected void verifyAdminTotp(HttpServletRequest request, long actorPk, String totpCode) {
-        if (totpCode == null || totpCode.isBlank()) {
-            throw restError(request, Response.Status.PRECONDITION_FAILED, "totp_required",
-                    "パスワードリセットには管理者の Authenticator（TOTP）コードが必要です。");
-        }
-
-        TotpVerificationSupport.VerificationResult result = totpVerificationSupport.verifyCurrentCode(actorPk, totpCode);
-        if (result.status() == TotpVerificationSupport.VerificationStatus.MISSING_CREDENTIAL) {
-            throw restError(request, Response.Status.PRECONDITION_FAILED, "totp_missing",
-                    "Authenticator（TOTP）が未登録のためパスワードリセットできません。");
-        }
-        if (!result.succeeded()) {
-            throw restError(request, Response.Status.FORBIDDEN, "totp_invalid", "TOTP コードが不正です。");
-        }
-    }
-
     private OrcaLinkStatus upsertOrcaLink(HttpServletRequest request, long userPk, String orcaUserId, String actor) {
         requireOrcaLinkTableAvailable(request);
-        Long owner = findOwnerByOrcaUserId(orcaUserId);
+        String facilityId = getRemoteFacility(actor);
+        Long owner = findOwnerByOrcaUserId(facilityId, orcaUserId);
         if (owner != null && owner.longValue() != userPk) {
             throw restError(request, Response.Status.CONFLICT, "orca_user_already_linked",
                     "指定した ORCA User_Id は別の電子カルテユーザーにリンク済みです。");
         }
 
         Instant now = Instant.now();
-        orcaUserLinks().upsertLink(userPk, orcaUserId, now, actor);
+        orcaUserLinks().upsertLink(facilityId, userPk, orcaUserId, now, actor);
         return new OrcaLinkStatus(orcaUserId, now.toString());
     }
 
@@ -378,11 +390,11 @@ public class AdminAccessResource extends AbstractResource {
         return !rows.isEmpty();
     }
 
-    private Long findOwnerByOrcaUserId(String orcaUserId) {
+    private Long findOwnerByOrcaUserId(String facilityId, String orcaUserId) {
         if (!isOrcaLinkTablePresent()) {
             return null;
         }
-        return orcaUserLinks().findOwnerByOrcaUserId(orcaUserId);
+        return orcaUserLinks().findOwnerByOrcaUserId(facilityId, orcaUserId);
     }
 
     private OrcaUserLinkQueryService orcaUserLinks() {

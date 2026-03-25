@@ -7,6 +7,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import open.dolphin.security.auth.TrustedProxyPolicy;
 
 /**
  * Startup validation for required runtime settings.
@@ -38,7 +39,7 @@ public class ServerConfigurationValidator {
         validateOrcaPush(errors, resolver.orcaPush());
         validateMetrics(errors, resolver.metrics());
         validateSystemNetwork(errors, resolver.systemNetwork());
-        validateAudit(errors, resolver.audit());
+        validateSecurity(errors, resolver.security());
         validateTemplates(errors, resolver.templates());
         validateLicense(errors, resolver.license());
         validatePvtOperations(errors, resolver.pvtOperations());
@@ -346,13 +347,23 @@ public class ServerConfigurationValidator {
         }
     }
 
-    private void validateAudit(List<String> errors, ServerRuntimeConfiguration.AuditSettings settings) {
+    private void validateSecurity(List<String> errors, ServerRuntimeConfiguration.SecuritySettings settings) {
         if (settings == null) {
+            return;
+        }
+        if (settings.trustedProxyRules().isEmpty()) {
+            errors.add(ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES + " is required");
             return;
         }
         for (String rule : settings.trustedProxyRules()) {
             if (rule == null || rule.isBlank()) {
-                errors.add(ServerConfigurationResolver.KEY_AUDIT_TRUSTED_PROXIES + " must not contain blank rules");
+                errors.add(ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES + " must not contain blank rules");
+                continue;
+            }
+            try {
+                TrustedProxyPolicy.validateRule(rule);
+            } catch (IllegalArgumentException ex) {
+                errors.add(ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES + " contains invalid rule: " + rule);
             }
         }
     }
@@ -460,11 +471,17 @@ public class ServerConfigurationValidator {
             return;
         }
         String mode = settings.mode().trim().toLowerCase();
-        switch (mode) {
-            case "off", "permissive", "enforce" -> {
-                return;
-            }
-            default -> errors.add(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " must be off, permissive or enforce");
+        if (!"enforce".equals(mode)) {
+            errors.add(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " must be enforce");
+            return;
+        }
+        try {
+            open.dolphin.security.integrity.DocumentIntegrityConfig.validateKeyring(
+                    open.dolphin.security.integrity.DocumentIntegrityConfig.requireAbsolutePath(
+                            settings.keyringPath(),
+                            ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH));
+        } catch (IllegalStateException ex) {
+            errors.add(ex.getMessage());
         }
     }
 
@@ -486,30 +503,6 @@ public class ServerConfigurationValidator {
             errors.add(ServerConfigurationResolver.KEY_PATIENT_IMAGES_MAX_HEIGHT + " is required");
         } else if (settings.maxHeight() < 1 || settings.maxHeight() > 8192) {
             errors.add(ServerConfigurationResolver.KEY_PATIENT_IMAGES_MAX_HEIGHT + " must be between 1 and 8192");
-        }
-    }
-
-    private void validateFido2(List<String> errors, ServerRuntimeConfiguration.Fido2Settings settings) {
-        if (isBlank(settings.relyingPartyId())) {
-            errors.add(ServerConfigurationResolver.KEY_FIDO2_RP_ID + " is required");
-        }
-        if (isBlank(settings.relyingPartyName())) {
-            errors.add(ServerConfigurationResolver.KEY_FIDO2_RP_NAME + " is required");
-        }
-        if (settings.allowedOrigins().isEmpty()) {
-            errors.add(ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS + " must contain at least one origin");
-            return;
-        }
-        for (String origin : settings.allowedOrigins()) {
-            try {
-                URI uri = new URI(origin);
-                String scheme = uri.getScheme();
-                if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-                    errors.add("Invalid FIDO2 origin scheme: " + origin);
-                }
-            } catch (URISyntaxException ex) {
-                errors.add("Invalid FIDO2 origin: " + origin);
-            }
         }
     }
 

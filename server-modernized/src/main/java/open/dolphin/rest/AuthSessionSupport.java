@@ -9,13 +9,16 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.rest.dto.CurrentUserResponse;
 
-final class AuthSessionSupport {
+public final class AuthSessionSupport {
 
-    static final String AUTH_ACTOR_ID = AuthSessionSupport.class.getName() + ".AUTH_ACTOR_ID";
-    static final String AUTH_FACILITY_ID = AuthSessionSupport.class.getName() + ".AUTH_FACILITY_ID";
-    static final String AUTH_LOGIN_ID = AuthSessionSupport.class.getName() + ".AUTH_LOGIN_ID";
-    static final String AUTH_CLIENT_UUID = AuthSessionSupport.class.getName() + ".AUTH_CLIENT_UUID";
-    static final String AUTH_AUTHENTICATED_AT = AuthSessionSupport.class.getName() + ".AUTH_AUTHENTICATED_AT";
+    public static final String AUTH_ACTOR_ID = AuthSessionSupport.class.getName() + ".AUTH_ACTOR_ID";
+    public static final String AUTH_FACILITY_ID = AuthSessionSupport.class.getName() + ".AUTH_FACILITY_ID";
+    public static final String AUTH_LOGIN_ID = AuthSessionSupport.class.getName() + ".AUTH_LOGIN_ID";
+    public static final String AUTH_CLIENT_UUID = AuthSessionSupport.class.getName() + ".AUTH_CLIENT_UUID";
+    public static final String AUTH_AUTHENTICATED_AT = AuthSessionSupport.class.getName() + ".AUTH_AUTHENTICATED_AT";
+    public static final String AUTH_STEP_UP_SCOPE = AuthSessionSupport.class.getName() + ".AUTH_STEP_UP_SCOPE";
+    public static final String AUTH_STEP_UP_VERIFIED_AT = AuthSessionSupport.class.getName() + ".AUTH_STEP_UP_VERIFIED_AT";
+    public static final String AUTH_STEP_UP_EXPIRES_AT = AuthSessionSupport.class.getName() + ".AUTH_STEP_UP_EXPIRES_AT";
     static final String PENDING_FACTOR2_ACTOR_ID = AuthSessionSupport.class.getName() + ".PENDING_FACTOR2_ACTOR_ID";
     static final String PENDING_FACTOR2_FACILITY_ID = AuthSessionSupport.class.getName() + ".PENDING_FACTOR2_FACILITY_ID";
     static final String PENDING_FACTOR2_LOGIN_ID = AuthSessionSupport.class.getName() + ".PENDING_FACTOR2_LOGIN_ID";
@@ -51,7 +54,7 @@ final class AuthSessionSupport {
         }
     }
 
-    static void populateAuthenticatedSession(HttpSession session,
+    public static void populateAuthenticatedSession(HttpSession session,
             String actorId,
             String facilityId,
             String loginId,
@@ -69,6 +72,28 @@ final class AuthSessionSupport {
             session.removeAttribute(AUTH_CLIENT_UUID);
         }
         session.setAttribute(AUTH_AUTHENTICATED_AT, Instant.now().toString());
+        clearStepUpSession(session);
+    }
+
+    public static void populateStepUpSession(HttpSession session,
+            String scope,
+            Instant verifiedAt,
+            Instant expiresAt) {
+        if (session == null) {
+            throw new IllegalArgumentException("session is required");
+        }
+        if (scope == null || scope.isBlank()) {
+            throw new IllegalArgumentException("scope is required");
+        }
+        if (verifiedAt == null) {
+            throw new IllegalArgumentException("verifiedAt is required");
+        }
+        if (expiresAt == null) {
+            throw new IllegalArgumentException("expiresAt is required");
+        }
+        session.setAttribute(AUTH_STEP_UP_SCOPE, scope.trim());
+        session.setAttribute(AUTH_STEP_UP_VERIFIED_AT, verifiedAt.toString());
+        session.setAttribute(AUTH_STEP_UP_EXPIRES_AT, expiresAt.toString());
     }
 
     static void populatePendingSecondFactorSession(HttpSession session,
@@ -105,7 +130,7 @@ final class AuthSessionSupport {
         session.setAttribute(PENDING_FACTOR2_ATTEMPT_COUNT, Math.max(0, pending.attemptCount()));
     }
 
-    static void clearAuthenticatedSession(HttpSession session) {
+    public static void clearAuthenticatedSession(HttpSession session) {
         if (session == null) {
             return;
         }
@@ -114,6 +139,7 @@ final class AuthSessionSupport {
         session.removeAttribute(AUTH_LOGIN_ID);
         session.removeAttribute(AUTH_CLIENT_UUID);
         session.removeAttribute(AUTH_AUTHENTICATED_AT);
+        clearStepUpSession(session);
     }
 
     static void clearPendingSecondFactorSession(HttpSession session) {
@@ -128,12 +154,12 @@ final class AuthSessionSupport {
         session.removeAttribute(PENDING_FACTOR2_ATTEMPT_COUNT);
     }
 
-    static void clearSession(HttpSession session) {
+    public static void clearSession(HttpSession session) {
         clearAuthenticatedSession(session);
         clearPendingSecondFactorSession(session);
     }
 
-    static String resolveActorId(HttpServletRequest request) {
+    public static String resolveActorId(HttpServletRequest request) {
         if (request == null) {
             return null;
         }
@@ -141,7 +167,7 @@ final class AuthSessionSupport {
         return resolveActorId(session);
     }
 
-    static String resolveActorId(HttpSession session) {
+    public static String resolveActorId(HttpSession session) {
         if (session == null) {
             return null;
         }
@@ -149,7 +175,7 @@ final class AuthSessionSupport {
         return actor instanceof String text && !text.isBlank() ? text.trim() : null;
     }
 
-    static String resolveClientUuid(HttpServletRequest request) {
+    public static String resolveClientUuid(HttpServletRequest request) {
         if (request == null) {
             return null;
         }
@@ -242,6 +268,29 @@ final class AuthSessionSupport {
         response.setHeader("Expires", "0");
     }
 
+    public static StepUpSession loadStepUpSession(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        String scope = normalizeStringAttribute(session.getAttribute(AUTH_STEP_UP_SCOPE));
+        Instant verifiedAt = parseInstantAttribute(session.getAttribute(AUTH_STEP_UP_VERIFIED_AT));
+        Instant expiresAt = parseInstantAttribute(session.getAttribute(AUTH_STEP_UP_EXPIRES_AT));
+        if (scope == null || verifiedAt == null || expiresAt == null) {
+            return null;
+        }
+        long ttlSeconds = Math.max(0L, java.time.Duration.between(verifiedAt, expiresAt).toSeconds());
+        return new StepUpSession(scope, verifiedAt, expiresAt, ttlSeconds);
+    }
+
+    public static void clearStepUpSession(HttpSession session) {
+        if (session == null) {
+            return;
+        }
+        session.removeAttribute(AUTH_STEP_UP_SCOPE);
+        session.removeAttribute(AUTH_STEP_UP_VERIFIED_AT);
+        session.removeAttribute(AUTH_STEP_UP_EXPIRES_AT);
+    }
+
     private static Map<String, Object> snapshotAttributes(HttpSession session) {
         Map<String, Object> snapshot = new LinkedHashMap<>();
         if (session == null) {
@@ -318,5 +367,12 @@ final class AuthSessionSupport {
             String clientUuid,
             Instant createdAt,
             int attemptCount) {
+    }
+
+    public record StepUpSession(
+            String scope,
+            Instant verifiedAt,
+            Instant expiresAt,
+            long ttlSeconds) {
     }
 }

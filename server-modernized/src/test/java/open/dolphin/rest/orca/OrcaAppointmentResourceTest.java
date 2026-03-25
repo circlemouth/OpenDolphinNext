@@ -8,12 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.time.LocalDate;
 import java.util.Map;
 import open.dolphin.orca.converter.OrcaXmlMapper;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.DefaultOrcaLiveGateway;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
@@ -32,8 +34,8 @@ import org.junit.jupiter.api.Test;
 
 class OrcaAppointmentResourceTest {
 
-    private OrcaWrapperService createService() {
-        return new OrcaWrapperService(new StubOrcaTransport(), new OrcaXmlMapper());
+    private OrcaLiveGateway createService() {
+        return new DefaultOrcaLiveGateway(new StubOrcaTransport(), new OrcaXmlMapper());
     }
 
     @Test
@@ -44,7 +46,8 @@ class OrcaAppointmentResourceTest {
         OrcaAppointmentListRequest request = new OrcaAppointmentListRequest();
         request.setAppointmentDate(LocalDate.of(2025, 11, 13));
 
-        OrcaAppointmentListResponse response = resource.listAppointments(null, request);
+        OrcaAppointmentListResponse response = resource.listAppointments(
+                createRequest("F001:doctor01", "/api/orca/appointments/list", Map.of()), request);
         assertEquals("2025-11-13", response.getAppointmentDate());
         assertEquals(1, response.getSlots().size());
         assertEquals("0000", response.getApiResult());
@@ -64,7 +67,8 @@ class OrcaAppointmentResourceTest {
         request.setFromDate(LocalDate.of(2025, 11, 13));
         request.setToDate(LocalDate.of(2025, 11, 14));
 
-        OrcaAppointmentListResponse response = resource.listAppointments(null, request);
+        OrcaAppointmentListResponse response = resource.listAppointments(
+                createRequest("F001:doctor01", "/api/orca/appointments/list", Map.of()), request);
         assertEquals("2025-11-13/2025-11-14", response.getAppointmentDate());
         assertEquals(2, response.getSlots().size());
         assertEquals("0000", response.getApiResult());
@@ -83,9 +87,23 @@ class OrcaAppointmentResourceTest {
         request.setFromDate(LocalDate.of(2025, 1, 1));
         request.setToDate(LocalDate.of(2025, 1, 31));
 
-        OrcaAppointmentListResponse response = resource.listAppointments(null, request);
+        OrcaAppointmentListResponse response = resource.listAppointments(
+                createRequest("F001:doctor01", "/api/orca/appointments/list", Map.of()), request);
         assertEquals("2025-01-01/2025-01-31", response.getAppointmentDate());
         assertEquals(31, response.getSlots().size());
+    }
+
+    @Test
+    void listAppointmentsRejectsMissingFacility() {
+        OrcaAppointmentResource resource = new OrcaAppointmentResource();
+        resource.setWrapperService(createService());
+
+        OrcaAppointmentListRequest request = new OrcaAppointmentListRequest();
+        request.setAppointmentDate(LocalDate.of(2025, 11, 13));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.listAppointments(createRequest(null, "/api/orca/appointments/list", Map.of()), request));
+        assertRestError(ex, Response.Status.UNAUTHORIZED.getStatusCode(), "facility_missing");
     }
 
     @Test
@@ -109,7 +127,8 @@ class OrcaAppointmentResourceTest {
         request.setPatientId("000001");
         request.setBaseDate(LocalDate.of(2025, 11, 12));
 
-        PatientAppointmentListResponse response = resource.patientAppointments(null, request);
+        PatientAppointmentListResponse response = resource.patientAppointments(
+                createRequest("F001:doctor01", "/api/orca/appointments/patient", Map.of()), request);
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals(1, response.getReservations().size());
@@ -146,7 +165,8 @@ class OrcaAppointmentResourceTest {
         item.setQuantity(1);
         request.getItems().add(item);
 
-        BillingSimulationResponse response = resource.estimateBilling(null, request);
+        BillingSimulationResponse response = resource.estimateBilling(
+                createRequest("F001:doctor01", "/api/orca/billing/estimate", Map.of()), request);
         assertEquals(450, response.getTotalPoint());
         assertEquals(2, response.getBreakdown().size());
         assertNotNull(response.getPatient());
@@ -248,6 +268,16 @@ class OrcaAppointmentResourceTest {
     private void assertGeneratedRunId(String runId) {
         assertNotNull(runId);
         assertTrue(runId.matches("\\d{8}T\\d{6}Z"));
+    }
+
+    private void assertRestError(WebApplicationException ex, int status, String code) {
+        assertEquals(status, ex.getResponse().getStatus());
+        Object entity = ex.getResponse().getEntity();
+        assertNotNull(entity);
+        assertTrue(entity instanceof Map);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) entity;
+        assertEquals(code, body.get("errorCode"));
     }
 
     private static final class RecordingSessionAuditDispatcher extends SessionAuditDispatcher {

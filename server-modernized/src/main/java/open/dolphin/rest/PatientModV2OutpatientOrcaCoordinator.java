@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.OrcaGatewayException;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
@@ -28,12 +28,12 @@ final class PatientModV2OutpatientOrcaCoordinator {
 
     private final PatientServiceBean patientServiceBean;
     private final OrcaTransport orcaTransport;
-    private final OrcaWrapperService orcaWrapperService;
+    private final OrcaLiveGateway orcaWrapperService;
     private final OrcaPatientSyncService orcaPatientSyncService;
 
     PatientModV2OutpatientOrcaCoordinator(PatientServiceBean patientServiceBean,
             OrcaTransport orcaTransport,
-            OrcaWrapperService orcaWrapperService,
+            OrcaLiveGateway orcaWrapperService,
             OrcaPatientSyncService orcaPatientSyncService) {
         this.patientServiceBean = patientServiceBean;
         this.orcaTransport = orcaTransport;
@@ -47,7 +47,7 @@ final class PatientModV2OutpatientOrcaCoordinator {
             String runId,
             Map<String, Object> details) {
         ensureDependencies();
-        PatientModV2OutpatientSupport.OrcaPatientBaseline baseline = fetchOrcaPatientBaseline(patch.patientId);
+        PatientModV2OutpatientSupport.OrcaPatientBaseline baseline = fetchOrcaPatientBaseline(facilityId, patch.patientId);
         Set<String> changeSet = PatientModV2OutpatientSupport.resolveChangeSet(patch, baseline);
         details.put("editableKeys", List.copyOf(PatientModV2OutpatientSupport.EDITABLE_KEYS));
         details.put("appliedKeys", List.copyOf(changeSet));
@@ -68,9 +68,9 @@ final class PatientModV2OutpatientOrcaCoordinator {
         for (int attempt = 0; attempt <= ORCA_UPDATE_MAX_RETRY; attempt++) {
             if (attempt > 0) {
                 details.put("orcaRetryAttempt", attempt);
-                currentBaseline = fetchOrcaPatientBaseline(patch.patientId);
+                currentBaseline = fetchOrcaPatientBaseline(facilityId, patch.patientId);
             }
-            PatientModV2OutpatientSupport.OrcaUpdateExecution execution = executeOrcaUpdate(currentBaseline, desired, changeSet);
+            PatientModV2OutpatientSupport.OrcaUpdateExecution execution = executeOrcaUpdate(facilityId, currentBaseline, desired, changeSet);
             last = execution.last;
             if (execution.success) {
                 updated = true;
@@ -137,6 +137,7 @@ final class PatientModV2OutpatientOrcaCoordinator {
     }
 
     private PatientModV2OutpatientSupport.OrcaUpdateExecution executeOrcaUpdate(
+            String facilityId,
             PatientModV2OutpatientSupport.OrcaPatientBaseline baseline,
             PatientModV2OutpatientSupport.OrcaDesired desired,
             Set<String> changeSet) {
@@ -152,7 +153,7 @@ final class PatientModV2OutpatientOrcaCoordinator {
         String matchKana = baseline.wholeNameKana;
 
         if (sendKey1) {
-            last = postPatientMod(PatientModV2OutpatientSupport.buildPatientModPayload("1",
+            last = postPatientMod(facilityId, PatientModV2OutpatientSupport.buildPatientModPayload("1",
                     baseline.patientId,
                     desired.wholeName,
                     desired.wholeNameKana,
@@ -170,7 +171,7 @@ final class PatientModV2OutpatientOrcaCoordinator {
         }
 
         if (sendKey2) {
-            last = postPatientMod(PatientModV2OutpatientSupport.buildPatientModPayload("2",
+            last = postPatientMod(facilityId, PatientModV2OutpatientSupport.buildPatientModPayload("2",
                     baseline.patientId,
                     matchName,
                     matchKana,
@@ -195,14 +196,14 @@ final class PatientModV2OutpatientOrcaCoordinator {
         return new PatientModV2OutpatientSupport.OrcaUpdateExecution(true, last);
     }
 
-    private PatientModV2OutpatientSupport.OrcaPatientBaseline fetchOrcaPatientBaseline(String patientId) {
+    private PatientModV2OutpatientSupport.OrcaPatientBaseline fetchOrcaPatientBaseline(String facilityId, String patientId) {
         if (orcaWrapperService == null) {
-            throw new IllegalStateException("OrcaWrapperService is not available");
+            throw new IllegalStateException("OrcaLiveGateway is not available");
         }
         PatientBatchRequest req = new PatientBatchRequest();
         req.getPatientIds().add(patientId);
         req.setIncludeInsurance(false);
-        PatientBatchResponse res = orcaWrapperService.getPatientBatch(req);
+        PatientBatchResponse res = orcaWrapperService.getPatientBatch(facilityId, req);
         if (res == null) {
             throw new OrcaGatewayException("ORCA patientlst2v2 response is empty");
         }
@@ -245,12 +246,12 @@ final class PatientModV2OutpatientOrcaCoordinator {
         return baseline;
     }
 
-    private PatientModV2OutpatientSupport.OrcaApiResult postPatientMod(String payloadWithoutMeta) {
+    private PatientModV2OutpatientSupport.OrcaApiResult postPatientMod(String facilityId, String payloadWithoutMeta) {
         if (orcaTransport == null) {
             throw new IllegalStateException("OrcaTransport is not available");
         }
         String payload = OrcaApiProxySupport.applyQueryMeta(payloadWithoutMeta, OrcaEndpoint.PATIENT_MOD, ORCA_PATIENTMOD_CLASS);
-        OrcaTransportResult result = orcaTransport.invokeDetailed(OrcaEndpoint.PATIENT_MOD, OrcaTransportRequest.post(payload));
+        OrcaTransportResult result = orcaTransport.invoke(facilityId, OrcaEndpoint.PATIENT_MOD, OrcaTransportRequest.post(payload));
         PatientModV2OutpatientSupport.OrcaApiResult parsed = new PatientModV2OutpatientSupport.OrcaApiResult();
         parsed.httpStatus = result != null ? result.getStatus() : 0;
         parsed.url = result != null ? result.getUrl() : null;

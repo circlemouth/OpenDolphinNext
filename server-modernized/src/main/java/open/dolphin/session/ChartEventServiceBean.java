@@ -126,216 +126,17 @@ public class ChartEventServiceBean {
      * ChartEventModelを処理する
      */
     public int processChartEvent(ChartEventModel evt) {
-        
+        if (evt == null) {
+            return 0;
+        }
         int eventType = evt.getEventType();
-        
-        if (DEBUG) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("ChartEventServiceBean: ").append(eventType).append(" will issue");
-            debug(sb.toString());
+        if (eventType == ChartEventModel.PVT_DELETE
+                || eventType == ChartEventModel.PVT_STATE
+                || eventType == ChartEventModel.PVT_MEMO) {
+            warn("Legacy PVT mutation event was ignored after encounter cutover: eventType=" + eventType);
+            return 0;
         }
-        
-        boolean sendEvent = true;
-        switch(eventType) {
-            case ChartEventModel.PVT_DELETE:
-                sendEvent = processPvtDeleteEvent(evt);
-                break;
-            case ChartEventModel.PVT_STATE:
-                sendEvent = processPvtStateEvent(evt);
-                break;
-//s.oh^ 2014/10/14 診察終了後のメモ対応
-            case ChartEventModel.PVT_MEMO:
-                sendEvent = processPvtMemoEvent(evt);
-                break;
-//s.oh$
-            default:
-                return 0;
-        }
-        // クライアントに通知
-        if(sendEvent) notifyEvent(evt);
-
-        return 1;
-    }
-
-    private boolean processPvtDeleteEvent(ChartEventModel evt) {
-        
-        long pvtPk = evt.getPvtPk();
-        String fid = evt.getFacilityId();
-
-        // データベースから削除
-        PatientVisitModel exist = em.find(PatientVisitModel.class, pvtPk);
-        if (!isPvtFacilityMatched(exist, fid)) {
-            return false;
-        }
-        // WatingListから開いていないとexist = nullなので。
-        PatientModel pm = exist.getPatientModel();
-        if(pm != null) {
-            log("processPvtDeleteEvent : pvtPk = " + String.valueOf(pvtPk) + ", ptId = " + pm.getPatientId() + ", pvtDate = " + exist.getPvtDate());
-        }
-        em.remove(exist);
-        // pvtListから削除
-        contextHolder.removePvtById(fid, pvtPk);
-        return true;
-    }
-    
-    private boolean processPvtStateEvent(ChartEventModel evt) {
-        
-        // msgからパラメーターを取得
-        String fid = evt.getFacilityId();
-        long pvtId = evt.getPvtPk();
-        int state = evt.getState();
-        int byomeiCount = evt.getByomeiCount();
-        int byomeiCountToday = evt.getByomeiCountToday();
-        String memo = evt.getMemo();
-        String ownerUUID = evt.getOwnerUUID();
-        
-        if (shouldSkipPvtStateUpdate(state)) {
-            return false;
-        }
-
-        // データベースのPatientVisitModelを更新
-        PatientVisitModel pvt = em.find(PatientVisitModel.class, pvtId);
-        if (!isPvtFacilityMatched(pvt, fid)) {
-            return false;
-        }
-        List<PatientVisitModel> pvtList = getPvtList(fid);
-
-        long resolvedPtPk = updatePersistedPvtState(evt, pvt, state, byomeiCount, byomeiCountToday, memo, ownerUUID);
-        // データベースのPatientModelを更新
-        updateCachedPvtState(evt, pvtList, pvtId, state, byomeiCount, byomeiCountToday, memo, ownerUUID);
-        updateCachedPatientOwner(pvtList, resolvedPtPk, ownerUUID);
-        return true;
-    }
-    
-//s.oh^ 2014/10/14 診察終了後のメモ対応
-    private boolean processPvtMemoEvent(ChartEventModel evt) {
-        
-        String fid = evt.getFacilityId();
-        long pvtId = evt.getPvtPk();
-        int state = evt.getState();
-        String memo = evt.getMemo();
-        
-        if((state & (1 << PatientVisitModel.BIT_NOTUPDATE)) > 0) {
-            return false;
-        }
-
-        PatientVisitModel pvt = em.find(PatientVisitModel.class, pvtId);
-        if (!isPvtFacilityMatched(pvt, fid)) {
-            return false;
-        }
-
-        List<PatientVisitModel> pvtList = getPvtList(fid);
-        pvt.setMemo(memo);
-        
-        log("processPvtMemoEvent : pvtPk = " + String.valueOf(pvtId) + ", memo = " + memo);
-
-        for(PatientVisitModel model : pvtList) {
-            if(model.getId() == pvtId) {
-                model.setMemo(memo);
-                break;
-            }
-        }
-        return true;
-    }
-//s.oh$
-
-    private boolean isPvtFacilityMatched(PatientVisitModel pvt, String fid) {
-        if (pvt == null || fid == null || fid.isBlank()) {
-            return false;
-        }
-        String pvtFid = pvt.getFacilityId();
-        return pvtFid != null && fid.trim().equals(pvtFid.trim());
-    }
-
-    private boolean shouldSkipPvtStateUpdate(int state) {
-        return (state & (1 << PatientVisitModel.BIT_NOTUPDATE)) > 0;
-    }
-
-    private long updatePersistedPvtState(
-            ChartEventModel evt,
-            PatientVisitModel pvt,
-            int requestedState,
-            int byomeiCount,
-            int byomeiCountToday,
-            String memo,
-            String ownerUUID) {
-        if (pvt == null) {
-            return 0L;
-        }
-        int resolvedState = normalizeLegacyState(requestedState, pvt.getState());
-        pvt.setState(resolvedState);
-        pvt.setByomeiCount(byomeiCount);
-        pvt.setByomeiCountToday(byomeiCountToday);
-        pvt.setMemo(memo);
-        evt.setState(resolvedState);
-
-        PatientModel pm = pvt.getPatientModel();
-        if (pm != null) {
-            log("processPvtStateEvent : owner = " + ownerUUID + ", pvtPk = " + String.valueOf(pvt.getId())
-                    + ", ptId = " + pm.getPatientId() + ", state = " + String.valueOf(requestedState));
-            pm.setOwnerUUID(ownerUUID);
-            return pm.getId();
-        }
-        return 0L;
-    }
-
-    private void updateCachedPvtState(
-            ChartEventModel evt,
-            List<PatientVisitModel> pvtList,
-            long pvtId,
-            int requestedState,
-            int byomeiCount,
-            int byomeiCountToday,
-            String memo,
-            String ownerUUID) {
-        int resolvedState = evt.getState();
-        for (PatientVisitModel model : pvtList) {
-            if (model.getId() != pvtId) {
-                continue;
-            }
-            model.setState(resolvedState);
-            model.setByomeiCount(byomeiCount);
-            model.setByomeiCountToday(byomeiCountToday);
-            model.setMemo(memo);
-            if (model.getPatientModel() != null) {
-                model.getPatientModel().setOwnerUUID(ownerUUID);
-            }
-            evt.setState(resolvedState);
-            break;
-        }
-    }
-
-    private void updateCachedPatientOwner(List<PatientVisitModel> pvtList, long resolvedPtPk, String ownerUUID) {
-        for (PatientVisitModel model : pvtList) {
-            if (resolvedPtPk > 0 && model.getPatientModel() != null && model.getPatientModel().getId() == resolvedPtPk) {
-                model.setStateBit(PatientVisitModel.BIT_OPEN, ownerUUID != null);
-                model.getPatientModel().setOwnerUUID(ownerUUID);
-            }
-        }
-    }
-
-    private int normalizeLegacyState(int requestedState, int currentState) {
-        if (requestedState <= 1 && currentState >= 2) {
-            if ((requestedState & (1 << PatientVisitModel.BIT_CANCEL)) == 0
-                    && (currentState & (1 << PatientVisitModel.BIT_CANCEL)) > 0) {
-                return currentState & ~(1 << PatientVisitModel.BIT_CANCEL);
-            }
-            if ((requestedState & (1 << PatientVisitModel.BIT_TREATMENT)) == 0
-                    && (currentState & (1 << PatientVisitModel.BIT_TREATMENT)) > 0) {
-                return currentState & ~(1 << PatientVisitModel.BIT_TREATMENT);
-            }
-            if ((requestedState & (1 << PatientVisitModel.BIT_GO_OUT)) == 0
-                    && (currentState & (1 << PatientVisitModel.BIT_GO_OUT)) > 0) {
-                return currentState & ~(1 << PatientVisitModel.BIT_GO_OUT);
-            }
-            if ((requestedState & (1 << PatientVisitModel.BIT_HURRY)) == 0
-                    && (currentState & (1 << PatientVisitModel.BIT_HURRY)) > 0) {
-                return currentState & ~(1 << PatientVisitModel.BIT_HURRY);
-            }
-            log("state <= 1 && currentState >= 2 && currentState != BIT_CANCEL/BIT_TREATMENT/BIT_GO_OUT/BIT_HURRY");
-            return currentState;
-        }
-        return requestedState;
+        return 0;
     }
 
     public void start() {
@@ -595,18 +396,12 @@ public class ChartEventServiceBean {
 
             for (String fid : contextHolder.getPvtFacilityIds()) {
                 List<PatientVisitModel> pvtList = getPvtList(fid);
-                List<Long> pvtIdsToRemove = new ArrayList<Long>();
-                for (PatientVisitModel pvt : pvtList) {
+                contextHolder.removePvtIf(fid, pvt -> {
                     boolean legacyFinalized =
                             pvt.getStateBit(LEGACY_FINALIZED_SAVE_BIT)
                                     || pvt.getStateBit(LEGACY_FINALIZED_MODIFY_BIT);
-                    if (legacyFinalized || pvt.getStateBit(PatientVisitModel.BIT_CANCEL)) {
-                        pvtIdsToRemove.add(pvt.getId());
-                    }
-                }
-                for (Long pvtId : pvtIdsToRemove) {
-                    contextHolder.removePvtById(fid, pvtId);
-                }
+                    return legacyFinalized || pvt.getStateBit(PatientVisitModel.BIT_CANCEL);
+                });
 
                 // クライアントに伝える。
                 String uuid = contextHolder.getServerUUID();

@@ -2,6 +2,7 @@ package open.dolphin.rest.orca;
 
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.time.temporal.TemporalAccessor;
 import java.util.LinkedHashMap;
@@ -9,8 +10,6 @@ import java.util.Map;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.rest.dto.orca.OrcaApiResponse;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
-import open.dolphin.session.framework.SessionTraceAttributes;
-import open.dolphin.session.framework.SessionTraceManager;
 
 /**
  * Shared audit helpers for ORCA wrapper endpoints.
@@ -21,10 +20,6 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
     protected static final String ACTION_PATIENT_SYNC = "ORCA_PATIENT_SYNC";
     private static final String DATA_SOURCE_SERVER = "server";
     private static final String TRACE_HEADER = "X-Request-Id";
-    private static final String FACILITY_HEADER = "X-Facility-Id";
-    @Inject
-    protected SessionTraceManager sessionTraceManager;
-
     protected Map<String, Object> newAuditDetails(HttpServletRequest request) {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runId", resolveRunId(request));
@@ -35,7 +30,7 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
         details.put("fallbackUsed", false);
         details.put("fetchedAt", Instant.now().toString());
 
-        String facilityId = resolveFacilityId(request);
+        String facilityId = actorFacilityId(request);
         if (facilityId != null && !facilityId.isBlank()) {
             details.put("facilityId", facilityId);
         }
@@ -55,7 +50,6 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
                 details.put("requestId", traceId);
             }
         }
-        syncTraceContext(request, facilityId, traceId, requestId);
         return details;
     }
 
@@ -177,58 +171,25 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
         details.put(key, value);
     }
 
-    private String resolveFacilityId(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
-        String remoteUser = request.getRemoteUser();
-        String facility = null;
-        if (remoteUser != null && remoteUser.indexOf(IInfoModel.COMPOSITE_KEY_MAKER) >= 0) {
-            facility = getRemoteFacility(remoteUser);
-        }
+    @Override
+    protected String requireFacilityId(HttpServletRequest request) {
+        String facility = actorFacilityId(request);
         if (facility == null || facility.isBlank()) {
-            facility = resolveFacilityHeader(request);
+            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing",
+                    "Facility is required");
         }
         return facility;
     }
 
-    private String resolveFacilityHeader(HttpServletRequest request) {
+    protected String actorFacilityId(HttpServletRequest request) {
         if (request == null) {
             return null;
         }
-        String header = request.getHeader(FACILITY_HEADER);
-        if (header != null && !header.trim().isEmpty()) {
-            return header.trim();
+        String remoteUser = request.getRemoteUser();
+        if (remoteUser == null || remoteUser.indexOf(IInfoModel.COMPOSITE_KEY_MAKER) < 0) {
+            return null;
         }
-        return null;
-    }
-
-    private void syncTraceContext(HttpServletRequest request, String facilityId, String traceId, String requestId) {
-        if (sessionTraceManager == null || sessionTraceManager.current() == null) {
-            return;
-        }
-        if (request != null) {
-            String remoteUser = request.getRemoteUser();
-            if (remoteUser != null && !remoteUser.isBlank()) {
-                String existingActor = sessionTraceManager.getAttribute(SessionTraceAttributes.ACTOR_ID);
-                if (existingActor == null || existingActor.isBlank()) {
-                    sessionTraceManager.putAttribute(SessionTraceAttributes.ACTOR_ID, remoteUser);
-                }
-            }
-        }
-        if (facilityId != null && !facilityId.isBlank()) {
-            String existingFacility = sessionTraceManager.getAttribute(SessionTraceAttributes.FACILITY_ID);
-            if (existingFacility == null || existingFacility.isBlank()) {
-                sessionTraceManager.putAttribute(SessionTraceAttributes.FACILITY_ID, facilityId);
-            }
-        }
-        String candidateRequestId = (requestId != null && !requestId.isBlank()) ? requestId : traceId;
-        if (candidateRequestId != null && !candidateRequestId.isBlank()) {
-            String existingRequest = sessionTraceManager.getAttribute(SessionTraceAttributes.REQUEST_ID);
-            if (existingRequest == null || existingRequest.isBlank()) {
-                sessionTraceManager.putAttribute(SessionTraceAttributes.REQUEST_ID, candidateRequestId);
-            }
-        }
+        return getRemoteFacility(remoteUser);
     }
 
     private String extractDetailText(Map<String, Object> details, String key) {

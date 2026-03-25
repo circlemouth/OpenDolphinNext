@@ -580,9 +580,16 @@ public class OrcaResource {
             if (orcaTransport == null) {
                 throw OrcaDepartmentInfoSupport.orcaConfigMissing();
             }
-            ret = orcaTransport.invoke(OrcaEndpoint.SYSTEM_MANAGEMENT_LIST,
-                    OrcaDepartmentInfoSupport.buildSystemManagementRequest(
-                            OrcaDepartmentInfoSupport.currentBaseDate()));
+            String actor = request != null ? request.getRemoteUser() : null;
+            String facilityId = actor != null && actor.contains(":")
+                    ? actor.substring(0, actor.indexOf(':'))
+                    : null;
+            ret = orcaTransport.invoke(facilityId,
+                    OrcaEndpoint.SYSTEM_MANAGEMENT_LIST,
+                    open.dolphin.orca.transport.OrcaTransportRequest.post(
+                            OrcaDepartmentInfoSupport.buildSystemManagementRequest(
+                                    OrcaDepartmentInfoSupport.currentBaseDate())))
+                    .getBody();
             log(ret);
             ret = OrcaDepartmentInfoSupport.sanitizeResponse(ret);
         } catch (WebApplicationException ex) {

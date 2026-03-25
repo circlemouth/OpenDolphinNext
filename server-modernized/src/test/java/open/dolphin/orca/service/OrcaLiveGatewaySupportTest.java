@@ -6,11 +6,11 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
 
-class OrcaWrapperServiceSupportTest {
+class OrcaLiveGatewaySupportTest {
 
     @Test
     void insuranceCombinationPayloadUsesBaseDateContract() {
-        OrcaWrapperServiceSupport support = new OrcaWrapperServiceSupport();
+        OrcaLiveGatewaySupport support = new OrcaLiveGatewaySupport();
         InsuranceCombinationRequest request = new InsuranceCombinationRequest();
         request.setPatientId("000019");
         request.setBaseDate(LocalDate.of(2025, 3, 21).toString());

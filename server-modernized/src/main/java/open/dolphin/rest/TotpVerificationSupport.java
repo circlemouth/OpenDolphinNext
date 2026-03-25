@@ -25,12 +25,12 @@ public class TotpVerificationSupport {
     @Inject
     private SecondFactorSecurityConfig secondFactorSecurityConfig;
 
-    public VerificationResult verifyCurrentCode(long userPk, String totpCode) {
-        if (userPk <= 0L || totpCode == null || totpCode.isBlank()) {
+    public VerificationResult verifyCurrentCode(long userPk, String code) {
+        if (userPk <= 0L || code == null || code.isBlank()) {
             return VerificationResult.invalid();
         }
 
-        String normalizedCode = totpCode.trim();
+        String normalizedCode = code.trim();
         if (!normalizedCode.matches("\\d{6}")) {
             return VerificationResult.invalid();
         }

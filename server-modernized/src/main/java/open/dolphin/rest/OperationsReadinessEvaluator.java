@@ -12,7 +12,7 @@ import open.dolphin.mbean.PvtService;
 import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.push.OrcaPushClientRegistry;
-import open.dolphin.orca.push.OrcaPushStateStore;
+import open.dolphin.orca.push.OrcaPushConnectionStateStore;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
@@ -65,7 +65,7 @@ public class OperationsReadinessEvaluator {
     OrcaPushClientRegistry orcaPushClientRegistry;
 
     @Inject
-    OrcaPushStateStore orcaPushStateStore;
+    OrcaPushConnectionStateStore orcaPushStateStore;
 
     public ReadinessSnapshot evaluate() {
         Map<String, OperationsReadinessCheck> checks = new LinkedHashMap<>();
@@ -108,8 +108,9 @@ public class OperationsReadinessEvaluator {
     private boolean checkOrca(Map<String, OperationsReadinessCheck> checks) {
         OperationsReadinessCheck detail = new OperationsReadinessCheck();
         try {
+            String facilityId = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getDefaultFacilityId() : null;
             RestOrcaTransport.ProbeResult probe = restOrcaTransport != null
-                    ? restOrcaTransport.probeReadiness()
+                    ? restOrcaTransport.probeReadiness(facilityId)
                     : RestOrcaTransport.unavailableProbe(RestOrcaTransport.REASON_CODE_HTTP_CLIENT_UNAVAILABLE);
             boolean up = probe.reachable();
             detail.setStatus(up ? STATUS_UP : STATUS_DOWN);
@@ -143,19 +144,19 @@ public class OperationsReadinessEvaluator {
                 checks.put(CHECK_ORCA_PUSH, detail);
                 return true;
             }
-            List<OrcaPushStateStore.FacilityPushState> states = orcaPushStateStore != null ? orcaPushStateStore.listStates() : List.of();
+            List<OrcaPushConnectionStateStore.FacilityPushConnectionState> states =
+                    orcaPushStateStore != null ? orcaPushStateStore.listStates() : List.of();
             detail.setFacilityCount(states.size());
-            OrcaPushStateStore.FacilityPushState latestState = states.stream()
+            OrcaPushConnectionStateStore.FacilityPushConnectionState latestState = states.stream()
                     .max(java.util.Comparator.comparing(
-                            OrcaPushStateStore.FacilityPushState::lastEventAt,
+                            OrcaPushConnectionStateStore.FacilityPushConnectionState::lastConnectedAt,
                             java.util.Comparator.nullsLast(String::compareTo)))
                     .orElse(null);
             if (latestState != null) {
                 detail.setLastConnectedAt(latestState.lastConnectedAt());
-                detail.setLastEventAt(latestState.lastEventAt());
                 detail.setLastError(latestState.lastError());
                 detail.setWorkerStatus(latestState.connectionStatus());
-                detail.setConnected(OrcaPushStateStore.STATUS_CONNECTED.equals(latestState.connectionStatus()));
+                detail.setConnected(OrcaPushConnectionStateStore.STATUS_CONNECTED.equals(latestState.connectionStatus()));
             } else {
                 detail.setWorkerStatus(STATUS_DOWN);
                 detail.setConnected(Boolean.FALSE);
@@ -174,7 +175,7 @@ public class OperationsReadinessEvaluator {
                 return true;
             }
             detail.setStatus(STATUS_DOWN);
-            detail.setReasonCode(latestState != null && OrcaPushStateStore.STATUS_DEGRADED.equals(latestState.connectionStatus())
+            detail.setReasonCode(latestState != null && OrcaPushConnectionStateStore.STATUS_DEGRADED.equals(latestState.connectionStatus())
                     ? REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE
                     : REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE);
             checks.put(CHECK_ORCA_PUSH, detail);

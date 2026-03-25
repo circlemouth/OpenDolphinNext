@@ -29,9 +29,9 @@ import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
 import open.dolphin.rest.dto.orca.VisitPatientListResponse;
 
-final class OrcaWrapperServiceSupport {
+final class OrcaLiveGatewaySupport {
 
-    private final OrcaWrapperServiceMutationSupport mutationSupport = new OrcaWrapperServiceMutationSupport();
+    private final OrcaLiveGatewayMutationSupport mutationSupport = new OrcaLiveGatewayMutationSupport();
 
     void enrich(OrcaApiResponse response, OrcaTransportResult result) {
         if (response != null) {
@@ -149,7 +149,7 @@ final class OrcaWrapperServiceSupport {
         if (to.isBefore(from)) {
             to = from;
         }
-        enforceRangeLimit(from, to, OrcaWrapperService.MAX_APPOINTMENT_RANGE_DAYS, "appointmentDate");
+        enforceRangeLimit(from, to, OrcaLiveGateway.MAX_APPOINTMENT_RANGE_DAYS, "appointmentDate");
         return new DateRange(from, to);
     }
 
@@ -203,7 +203,7 @@ final class OrcaWrapperServiceSupport {
         if (to.isBefore(from)) {
             to = from;
         }
-        enforceRangeLimit(from, to, OrcaWrapperService.MAX_VISIT_RANGE_DAYS, "visitDate");
+        enforceRangeLimit(from, to, OrcaLiveGateway.MAX_VISIT_RANGE_DAYS, "visitDate");
         return new DateRange(from, to);
     }
 
@@ -226,8 +226,26 @@ final class OrcaWrapperServiceSupport {
         return mutationSupport.buildBillingSimulationPayload(request, selection);
     }
 
-    InsuranceSelection resolveInsuranceSelection(BillingSimulationRequest request, OrcaWrapperService owner) {
-        return mutationSupport.resolveInsuranceSelection(request, owner);
+    InsuranceSelection resolveInsuranceSelection(String facilityId, BillingSimulationRequest request, OrcaLiveGateway owner) {
+        String resolvedFacilityId = requireText(facilityId, "facilityId");
+        String patientId = requireNumericId(request.getPatientId(), "patientId");
+        LocalDate performDate = request.getPerformDate() != null ? request.getPerformDate() : LocalDate.now();
+        PatientBatchRequest batchRequest = new PatientBatchRequest();
+        batchRequest.getPatientIds().add(patientId);
+        PatientBatchResponse batchResponse = owner.getPatientBatch(resolvedFacilityId, batchRequest);
+        PatientDetail detail = null;
+        if (batchResponse != null && batchResponse.getPatients() != null) {
+            for (PatientDetail candidate : batchResponse.getPatients()) {
+                if (candidate != null && candidate.getSummary() != null
+                        && patientId.equals(candidate.getSummary().getPatientId())) {
+                    detail = candidate;
+                    break;
+                }
+            }
+        }
+        InsuranceCombination insurance = selectInsurance(detail, performDate);
+        List<PublicInsuranceInfo> publicInsurances = selectPublicInsurances(detail, insurance, performDate);
+        return new OrcaLiveGatewaySupport.InsuranceSelection(insurance, publicInsurances);
     }
 
     InsuranceCombination selectInsurance(PatientDetail detail, LocalDate performDate) {

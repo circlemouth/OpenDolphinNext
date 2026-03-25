@@ -70,16 +70,13 @@ public class KarteRevisionResource extends AbstractResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public KarteRevisionHistoryResponse getHistory(@QueryParam("karteId") Long karteId,
-                                                   @QueryParam("visitDate") String visitDate,
-                                                   @QueryParam("encounterId") String encounterId) {
-        // Phase1: prefer visitDate; allow encounterId as alias for compatibility with earlier drafts.
-        String effectiveVisitDate = (visitDate != null && !visitDate.isBlank()) ? visitDate : encounterId;
+                                                   @QueryParam("visitDate") String visitDate) {
 
         if (karteId == null || karteId <= 0) {
             throw validationError("REVISION_VALIDATION_ERROR", "karteId is required", Map.of("karteId", karteId));
         }
         ensureKarteFacilityAccess(karteId);
-        LocalDate day = parseLocalDateOrThrow(effectiveVisitDate, "visitDate");
+        LocalDate day = parseLocalDateOrThrow(visitDate, "visitDate");
 
         KarteRevisionHistoryResponse response = karteRevisionServiceBean.getRevisionHistory(karteId, day);
         recordAudit("KARTE_REVISION_HISTORY_READ", Map.of(

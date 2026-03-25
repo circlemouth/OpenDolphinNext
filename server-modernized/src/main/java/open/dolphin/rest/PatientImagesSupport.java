@@ -94,7 +94,7 @@ final class PatientImagesSupport {
                 null);
     }
 
-    String resolveFacilityId() {
+    String requireActorFacilityId() {
         String remoteUser = request != null ? request.getRemoteUser() : null;
         String facility = AbstractResource.getRemoteFacility(remoteUser);
         if (facility == null || facility.isBlank()) {

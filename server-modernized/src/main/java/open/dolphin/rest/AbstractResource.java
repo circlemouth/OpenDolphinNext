@@ -12,24 +12,18 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
 import java.util.Locale;
 import java.util.function.Supplier;
@@ -38,6 +32,9 @@ import java.util.logging.Logger;
 import open.dolphin.infomodel.DiagnosisSendWrapper;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.security.auth.TrustedProxyPolicy;
+import open.dolphin.security.auth.TrustedRequestContextResolver;
+import open.dolphin.security.auth.TrustedRequestContextResolver.TrustedRequestContext;
 import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.session.UserServiceBean;
 
@@ -55,9 +52,8 @@ public class AbstractResource {
             .toFormatter(Locale.ROOT);
     private static final ObjectMapper SERIALIZE_MAPPER = createLegacyAwareMapper();
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
-    private static final String X_FORWARDED_FOR_HEADER = "X-Forwarded-For";
-    private static final String X_REAL_IP_HEADER = "X-Real-Ip";
-    private static volatile Supplier<Set<String>> trustedProxyRulesSupplier = AbstractResource::resolveTrustedProxyRulesFromConfig;
+    private static volatile Supplier<TrustedRequestContextResolver> trustedRequestContextResolverSupplier =
+            AbstractResource::buildTrustedRequestContextResolverFromConfig;
     public static final String ERROR_CODE_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_CODE";
     public static final String ERROR_MESSAGE_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_MESSAGE";
     public static final String ERROR_STATUS_ATTRIBUTE = AbstractResource.class.getName() + ".ERROR_STATUS";
@@ -197,174 +193,22 @@ public class AbstractResource {
     }
 
     public static String resolveClientIp(HttpServletRequest request) {
-        if (request == null) {
-            return "unknown";
-        }
-        String remoteAddr = normalizeIpCandidate(request.getRemoteAddr());
-        boolean trustForwardedHeaders = shouldTrustForwardedHeaders(request);
-        String forwardedFor = request.getHeader(X_FORWARDED_FOR_HEADER);
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            List<String> chain = parseForwardedFor(forwardedFor);
-            if (!chain.isEmpty()) {
-                if (!trustForwardedHeaders) {
-                    return remoteAddr != null ? remoteAddr : chain.get(0);
-                }
-                String resolved = resolveClientFromForwardedChain(chain, remoteAddr);
-                if (resolved != null) {
-                    return resolved;
-                }
-            }
-        }
-        String realIp = normalizeIpCandidate(request.getHeader(X_REAL_IP_HEADER));
-        if (realIp != null && trustForwardedHeaders) {
-            return realIp;
-        }
-        return remoteAddr != null ? remoteAddr : "unknown";
+        TrustedRequestContext context = resolveTrustedRequestContext(request);
+        return context.clientIp() != null ? context.clientIp() : "unknown";
     }
 
-    private static String resolveClientFromForwardedChain(List<String> forwardedChain, String remoteAddr) {
-        List<String> chain = new ArrayList<>(forwardedChain);
-        if (remoteAddr != null) {
-            chain.add(remoteAddr);
-        }
-        for (int i = chain.size() - 1; i >= 0; i--) {
-            String candidate = chain.get(i);
-            if (!isTrustedProxy(candidate)) {
-                return candidate;
-            }
-        }
-        return chain.isEmpty() ? null : chain.get(0);
+    static TrustedRequestContext resolveTrustedRequestContext(HttpServletRequest request) {
+        return trustedRequestContextResolverSupplier.get().resolve(request);
     }
 
-    private static List<String> parseForwardedFor(String headerValue) {
-        if (headerValue == null || headerValue.isBlank()) {
-            return Collections.emptyList();
-        }
-        List<String> parsed = new ArrayList<>();
-        for (String candidate : headerValue.split(",")) {
-            String normalized = normalizeIpCandidate(candidate);
-            if (normalized != null) {
-                parsed.add(normalized);
-            }
-        }
-        return parsed;
+    static void setTrustedRequestContextResolverSupplier(Supplier<TrustedRequestContextResolver> supplier) {
+        trustedRequestContextResolverSupplier =
+                supplier != null ? supplier : AbstractResource::buildTrustedRequestContextResolverFromConfig;
     }
 
-    static boolean isTrustedProxy(String candidate) {
-        InetAddress address = parseAddress(candidate);
-        if (address == null) {
-            return false;
-        }
-        if (address.isLoopbackAddress()) {
-            return true;
-        }
-        for (String rule : loadTrustedProxyRules()) {
-            if (matchesTrustedRule(address, rule)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static boolean shouldTrustForwardedHeaders(HttpServletRequest request) {
-        return request != null && isTrustedProxy(request.getRemoteAddr());
-    }
-
-    private static Set<String> loadTrustedProxyRules() {
-        return trustedProxyRulesSupplier.get();
-    }
-
-    static void setTrustedProxyRulesSupplier(Supplier<Set<String>> supplier) {
-        trustedProxyRulesSupplier = supplier != null ? supplier : AbstractResource::resolveTrustedProxyRulesFromConfig;
-    }
-
-    private static Set<String> resolveTrustedProxyRulesFromConfig() {
-        List<String> configuredRules = new ServerConfigurationResolver().audit().trustedProxyRules();
-        if (configuredRules.isEmpty()) {
-            return Collections.emptySet();
-        }
-        return new LinkedHashSet<>(configuredRules);
-    }
-
-    private static boolean matchesTrustedRule(InetAddress candidate, String rule) {
-        if (candidate == null || rule == null || rule.isBlank()) {
-            return false;
-        }
-        if (!rule.contains("/")) {
-            InetAddress exact = parseAddress(rule);
-            return exact != null && Arrays.equals(candidate.getAddress(), exact.getAddress());
-        }
-        String[] parts = rule.split("/", 2);
-        if (parts.length != 2) {
-            return false;
-        }
-        InetAddress networkAddress = parseAddress(parts[0]);
-        if (networkAddress == null) {
-            return false;
-        }
-        int prefix;
-        try {
-            prefix = Integer.parseInt(parts[1].trim());
-        } catch (NumberFormatException ex) {
-            return false;
-        }
-        byte[] candidateBytes = candidate.getAddress();
-        byte[] networkBytes = networkAddress.getAddress();
-        if (candidateBytes.length != networkBytes.length) {
-            return false;
-        }
-        int maxPrefix = candidateBytes.length * 8;
-        if (prefix < 0 || prefix > maxPrefix) {
-            return false;
-        }
-        int fullBytes = prefix / 8;
-        int remainderBits = prefix % 8;
-        for (int i = 0; i < fullBytes; i++) {
-            if (candidateBytes[i] != networkBytes[i]) {
-                return false;
-            }
-        }
-        if (remainderBits == 0) {
-            return true;
-        }
-        int mask = 0xFF << (8 - remainderBits);
-        return (candidateBytes[fullBytes] & mask) == (networkBytes[fullBytes] & mask);
-    }
-
-    private static InetAddress parseAddress(String value) {
-        String normalized = normalizeIpCandidate(value);
-        if (normalized == null) {
-            return null;
-        }
-        try {
-            return InetAddress.getByName(normalized);
-        } catch (UnknownHostException ex) {
-            return null;
-        }
-    }
-
-    private static String normalizeIpCandidate(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty() || "unknown".equalsIgnoreCase(trimmed)) {
-            return null;
-        }
-        if (trimmed.startsWith("[") && trimmed.contains("]")) {
-            return trimmed.substring(1, trimmed.indexOf(']'));
-        }
-        int colonCount = 0;
-        for (int i = 0; i < trimmed.length(); i++) {
-            if (trimmed.charAt(i) == ':') {
-                colonCount++;
-            }
-        }
-        if (colonCount == 1 && trimmed.contains(".")) {
-            int idx = trimmed.indexOf(':');
-            return idx > 0 ? trimmed.substring(0, idx) : trimmed;
-        }
-        return trimmed;
+    private static TrustedRequestContextResolver buildTrustedRequestContextResolverFromConfig() {
+        return new TrustedRequestContextResolver(
+                TrustedProxyPolicy.fromRules(new ServerConfigurationResolver().security().trustedProxyRules()));
     }
 
     private static String firstNonBlank(String... values) {

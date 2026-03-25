@@ -20,6 +20,7 @@ import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.rest.admin.AdminConfigSnapshot;
 import open.dolphin.rest.admin.AdminConfigStore;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
@@ -39,6 +40,9 @@ public class AdminConfigResource extends AbstractResource {
     @Inject
     private UserServiceBean userServiceBean;
 
+    @Inject
+    private AdminStepUpGuard adminStepUpGuard;
+
     @GET
     @Path("/config")
     @Produces(MediaType.APPLICATION_JSON)
@@ -55,6 +59,7 @@ public class AdminConfigResource extends AbstractResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response putConfig(@Context HttpServletRequest request, Map<String, Object> payload) {
         requireAdmin(request, userServiceBean);
+        adminStepUpGuard.require(request, "admin:mutation");
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = request != null ? request.getRemoteUser() : null;
         String facilityId = resolveActorFacilityId(actor);
@@ -95,6 +100,7 @@ public class AdminConfigResource extends AbstractResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response reloadOrcaTransport(@Context HttpServletRequest request) {
         requireAdmin(request, userServiceBean);
+        adminStepUpGuard.require(request, "admin:mutation");
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "orcaTransportReload");
         details.put("resource", "/api/admin/orca/transport/reload");
@@ -107,7 +113,8 @@ public class AdminConfigResource extends AbstractResource {
         String remoteUser = request != null ? request.getRemoteUser() : null;
         details.put("remoteUser", remoteUser);
         try {
-            var settings = restOrcaTransport.reloadSettings();
+            String facilityId = getRemoteFacility(remoteUser);
+            var settings = restOrcaTransport.reloadSettings(facilityId);
             String summary = settings != null ? settings.auditSummary() : "unknown";
             details.put("auditSummary", summary);
             details.put("status", "success");

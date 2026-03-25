@@ -10,7 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
-import java.util.Set;
+import open.dolphin.security.auth.TrustedProxyPolicy;
+import open.dolphin.security.auth.TrustedRequestContextResolver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,7 @@ class AbstractResourceErrorResponseTest {
 
     @AfterEach
     void tearDown() {
-        AbstractResource.setTrustedProxyRulesSupplier(null);
+        AbstractResource.setTrustedRequestContextResolverSupplier(null);
     }
 
     @Test
@@ -72,7 +73,8 @@ class AbstractResourceErrorResponseTest {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteAddr()).thenReturn("10.0.0.5");
         when(request.getHeader("X-Forwarded-For")).thenReturn("198.51.100.7, 10.0.0.5");
-        AbstractResource.setTrustedProxyRulesSupplier(() -> Set.of("10.0.0.0/8"));
+        AbstractResource.setTrustedRequestContextResolverSupplier(
+                () -> new TrustedRequestContextResolver(TrustedProxyPolicy.fromRules(java.util.List.of("10.0.0.0/8"))));
 
         assertEquals("198.51.100.7", AbstractResource.resolveClientIp(request));
     }

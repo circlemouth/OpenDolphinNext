@@ -25,6 +25,7 @@ import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
@@ -59,6 +60,9 @@ public class AdminOrcaConnectionResource extends AbstractResource {
     @Inject
     private SessionAuditDispatcher sessionAuditDispatcher;
 
+    @Inject
+    private AdminStepUpGuard adminStepUpGuard;
+
     private final ObjectMapper mapper = getSerializeMapper();
 
     @GET
@@ -79,6 +83,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
     public Response putConfig(@Context HttpServletRequest request, MultipartFormDataInput input) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         String facilityId = resolveActorFacilityId(actor);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "save");
@@ -158,6 +163,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
     public Response putDefaultFacility(@Context HttpServletRequest request, String payloadJson) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         String traceId = resolveTraceId(request);
 
         String requestedDefaultFacilityId;
@@ -181,7 +187,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
 
         if (restOrcaTransport != null) {
             try {
-                restOrcaTransport.reloadSettings(null);
+                restOrcaTransport.reloadSettings(updatedDefaultFacilityId);
             } catch (RuntimeException ex) {
                 LOGGER.debug("Failed to reload ORCA transport after default facility update", ex);
             }
@@ -198,6 +204,9 @@ public class AdminOrcaConnectionResource extends AbstractResource {
     @Path("/test")
     @Produces(MediaType.APPLICATION_JSON)
     public Response testConnection(@Context HttpServletRequest request) {
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         return new AdminOrcaConnectionTestSupport(
                 request,
                 orcaConnectionConfigStore,

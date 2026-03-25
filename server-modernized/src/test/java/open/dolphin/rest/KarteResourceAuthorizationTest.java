@@ -88,26 +88,6 @@ class KarteResourceAuthorizationTest {
     }
 
     @Test
-    void deleteDiagnosisAllowsSameFacilityIds() {
-        when(karteServiceBean.findFacilityIdByDiagnosisId(11L)).thenReturn("FAC_A");
-        when(karteServiceBean.findFacilityIdByDiagnosisId(12L)).thenReturn("FAC_A");
-        when(karteServiceBean.removeDiagnosis(List.of(11L, 12L))).thenReturn(2);
-
-        resource.deleteDiagnosis("11,12");
-
-        verify(karteServiceBean).removeDiagnosis(List.of(11L, 12L));
-    }
-
-    @Test
-    void deleteDiagnosisRejectsWholeBatchOnCrossFacilityId() {
-        when(karteServiceBean.findFacilityIdByDiagnosisId(11L)).thenReturn("FAC_A");
-        when(karteServiceBean.findFacilityIdByDiagnosisId(12L)).thenReturn("FAC_B");
-
-        assertForbidden(() -> resource.deleteDiagnosis("11,12"));
-        verify(karteServiceBean, never()).removeDiagnosis(anyList());
-    }
-
-    @Test
     void deleteObservationsAllowsSameFacilityIds() {
         when(karteServiceBean.findFacilityIdByObservationId(21L)).thenReturn("FAC_A");
         when(karteServiceBean.findFacilityIdByObservationId(22L)).thenReturn("FAC_A");

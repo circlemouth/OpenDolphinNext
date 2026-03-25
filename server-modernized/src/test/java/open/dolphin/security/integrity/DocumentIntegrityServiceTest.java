@@ -176,17 +176,6 @@ class DocumentIntegrityServiceTest {
     }
 
     @Test
-    void verifyContinuesInPermissiveModeWhenStoredKeyMissing() throws Exception {
-        DocumentModel document = buildDocument(false);
-        DocumentIntegrityEntity stored = buildStoredSeal(service, document, PRIMARY_KEY_B64, "v1");
-        stored.setKeyId("missing-key");
-        when(em.find(DocumentIntegrityEntity.class, document.getId())).thenReturn(stored);
-        setField(service, "config", configFor("permissive", enforceKeyringPath));
-
-        assertThatCode(() -> service.verifyDocumentOnRead(document)).doesNotThrowAnyException();
-    }
-
-    @Test
     void canonical_moduleHash_ignoresJsonKeyOrder() throws Exception {
         DocumentModel left = buildDocument(false);
         left.getModules().get(0).setBeanJson("{\"z\":1,\"a\":2}");

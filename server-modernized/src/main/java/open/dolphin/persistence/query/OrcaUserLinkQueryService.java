@@ -15,26 +15,25 @@ public class OrcaUserLinkQueryService {
     private static final String TABLE_EXISTS_SQL =
             "select 1 from information_schema.tables where table_schema='opendolphin' and table_name='d_orca_user_link'";
     private static final String SELECT_BY_USER_PKS_SQL =
-            "select ehr_user_pk, orca_user_id, updated_at from opendolphin.d_orca_user_link where ehr_user_pk in :ids";
+            "select ehr_user_pk, orca_user_id, updated_at from opendolphin.d_orca_user_link where facility_id=:facilityId and ehr_user_pk in :ids";
     private static final String SELECT_ONE_BY_USER_PK_SQL =
-            "select ehr_user_pk, orca_user_id, updated_at from opendolphin.d_orca_user_link where ehr_user_pk=:ehrUserPk";
+            "select ehr_user_pk, orca_user_id, updated_at from opendolphin.d_orca_user_link where facility_id=:facilityId and ehr_user_pk=:ehrUserPk";
     private static final String SELECT_OWNER_BY_ORCA_USER_SQL =
-            "select ehr_user_pk from opendolphin.d_orca_user_link where orca_user_id=:orcaUserId";
+            "select ehr_user_pk from opendolphin.d_orca_user_link where facility_id=:facilityId and orca_user_id=:orcaUserId";
     private static final String UPSERT_SQL =
-            "insert into opendolphin.d_orca_user_link (ehr_user_pk, orca_user_id, created_at, updated_at, updated_by) "
-                    + "values (:ehrUserPk, :orcaUserId, :createdAt, :updatedAt, :updatedBy) "
-                    + "on conflict (ehr_user_pk) do update set "
+            "insert into opendolphin.d_orca_user_link (facility_id, ehr_user_pk, orca_user_id, created_at, updated_at, updated_by) "
+                    + "values (:facilityId, :ehrUserPk, :orcaUserId, :createdAt, :updatedAt, :updatedBy) "
+                    + "on conflict (facility_id, ehr_user_pk) do update set "
                     + "orca_user_id=excluded.orca_user_id, updated_at=excluded.updated_at, updated_by=excluded.updated_by";
     private static final String DELETE_BY_EHR_USER_PK_SQL =
-            "delete from opendolphin.d_orca_user_link where ehr_user_pk=:ehrUserPk";
-    private static final String DELETE_BY_ORCA_USER_AND_FACILITY_SQL =
-            "delete from opendolphin.d_orca_user_link l using opendolphin.d_users u "
-                    + "where l.ehr_user_pk=u.id and l.orca_user_id=:orcaUserId and u.userid like :facilityPrefix";
+            "delete from opendolphin.d_orca_user_link where facility_id=:facilityId and ehr_user_pk=:ehrUserPk";
+    private static final String DELETE_BY_ORCA_USER_SQL =
+            "delete from opendolphin.d_orca_user_link where facility_id=:facilityId and orca_user_id=:orcaUserId";
     private static final String SELECT_BY_FACILITY_SQL =
             "select l.orca_user_id, u.userid, u.commonname "
                     + "from opendolphin.d_orca_user_link l "
                     + "join opendolphin.d_users u on u.id=l.ehr_user_pk "
-                    + "where u.userid like :facilityPrefix";
+                    + "where l.facility_id=:facilityId";
 
     private final EntityManager em;
 
@@ -53,11 +52,12 @@ public class OrcaUserLinkQueryService {
         return isLinkTablePresent();
     }
 
-    public Map<Long, OrcaLinkRow> findLinksByUserPks(List<Long> userPks) {
-        if (userPks == null || userPks.isEmpty()) {
+    public Map<Long, OrcaLinkRow> findLinksByUserPks(String facilityId, List<Long> userPks) {
+        if (facilityId == null || facilityId.isBlank() || userPks == null || userPks.isEmpty()) {
             return Map.of();
         }
         List<?> rows = em.createNativeQuery(SELECT_BY_USER_PKS_SQL)
+                .setParameter("facilityId", facilityId)
                 .setParameter("ids", userPks)
                 .getResultList();
 
@@ -76,8 +76,9 @@ public class OrcaUserLinkQueryService {
         return map;
     }
 
-    public OrcaLinkRow findLinkByUserPk(long userPk) {
+    public OrcaLinkRow findLinkByUserPk(String facilityId, long userPk) {
         List<?> rows = em.createNativeQuery(SELECT_ONE_BY_USER_PK_SQL)
+                .setParameter("facilityId", facilityId)
                 .setParameter("ehrUserPk", userPk)
                 .setMaxResults(1)
                 .getResultList();
@@ -96,8 +97,9 @@ public class OrcaUserLinkQueryService {
         return new OrcaLinkRow(foundPk, orcaUserId, asInstant(row[2]));
     }
 
-    public Long findOwnerByOrcaUserId(String orcaUserId) {
+    public Long findOwnerByOrcaUserId(String facilityId, String orcaUserId) {
         List<?> rows = em.createNativeQuery(SELECT_OWNER_BY_ORCA_USER_SQL)
+                .setParameter("facilityId", facilityId)
                 .setParameter("orcaUserId", orcaUserId)
                 .setMaxResults(1)
                 .getResultList();
@@ -107,12 +109,13 @@ public class OrcaUserLinkQueryService {
         return asLong(rows.get(0));
     }
 
-    public Long findEhrUserPkByOrcaUserId(String orcaUserId) {
-        return findOwnerByOrcaUserId(orcaUserId);
+    public Long findEhrUserPkByOrcaUserId(String facilityId, String orcaUserId) {
+        return findOwnerByOrcaUserId(facilityId, orcaUserId);
     }
 
-    public void upsertLink(long ehrUserPk, String orcaUserId, Instant now, String updatedBy) {
+    public void upsertLink(String facilityId, long ehrUserPk, String orcaUserId, Instant now, String updatedBy) {
         em.createNativeQuery(UPSERT_SQL)
+                .setParameter("facilityId", facilityId)
                 .setParameter("ehrUserPk", ehrUserPk)
                 .setParameter("orcaUserId", orcaUserId)
                 .setParameter("createdAt", Timestamp.from(now))
@@ -121,22 +124,23 @@ public class OrcaUserLinkQueryService {
                 .executeUpdate();
     }
 
-    public void deleteByEhrUserPk(long ehrUserPk) {
+    public void deleteByEhrUserPk(String facilityId, long ehrUserPk) {
         em.createNativeQuery(DELETE_BY_EHR_USER_PK_SQL)
+                .setParameter("facilityId", facilityId)
                 .setParameter("ehrUserPk", ehrUserPk)
                 .executeUpdate();
     }
 
-    public int deleteByOrcaUserIdAndFacilityPrefix(String orcaUserId, String facilityPrefix) {
-        return em.createNativeQuery(DELETE_BY_ORCA_USER_AND_FACILITY_SQL)
+    public int deleteByOrcaUserId(String facilityId, String orcaUserId) {
+        return em.createNativeQuery(DELETE_BY_ORCA_USER_SQL)
+                .setParameter("facilityId", facilityId)
                 .setParameter("orcaUserId", orcaUserId)
-                .setParameter("facilityPrefix", facilityPrefix)
                 .executeUpdate();
     }
 
-    public Map<String, OrcaFacilityLinkRow> findLinksByFacilityPrefix(String facilityPrefix) {
+    public Map<String, OrcaFacilityLinkRow> findLinksByFacilityId(String facilityId) {
         List<?> rows = em.createNativeQuery(SELECT_BY_FACILITY_SQL)
-                .setParameter("facilityPrefix", facilityPrefix)
+                .setParameter("facilityId", facilityId)
                 .getResultList();
 
         Map<String, OrcaFacilityLinkRow> map = new LinkedHashMap<>();

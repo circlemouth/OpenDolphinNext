@@ -36,6 +36,7 @@ import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.ModelUtils;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.RegisteredDiagnosisModel;
+import open.dolphin.orca.service.DiseaseProjectionService;
 import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.orca.DiseaseImportResponse;
 import open.dolphin.rest.dto.orca.DiseaseImportResponse.DiseaseEntry;
@@ -73,6 +74,9 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
 
     @Inject
     private ORCAConnection orcaConnection;
+
+    @Inject
+    private DiseaseProjectionService diseaseProjectionService;
 
     @GET
     @Path("/import/{patientId}")
@@ -129,16 +133,12 @@ public class OrcaDiseaseResource extends AbstractOrcaRestResource {
         }
         List<RegisteredDiagnosisModel> diagnoses = karteServiceBean.getDiagnosis(karte.getId(), fromDate, activeOnly);
 
-        DiseaseImportResponse response = new DiseaseImportResponse();
-        response.setApiResult("00");
-        response.setApiResultMessage("処理終了");
-        response.setRunId(runId);
-        response.setPatientId(patientId);
-        response.setBaseDate(formatDate(fromDate));
-        diagnoses.stream()
-                .filter(model -> model.getStarted() == null || !model.getStarted().after(toDate))
-                .map(this::toEntry)
-                .forEach(response::addDisease);
+        DiseaseImportResponse response = diseaseProjectionService.buildImportResponse(
+                diagnoses,
+                runId,
+                patientId,
+                fromDate,
+                toDate);
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
         audit.put("patientId", patientId);

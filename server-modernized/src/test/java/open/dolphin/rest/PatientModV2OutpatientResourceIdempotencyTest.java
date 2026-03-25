@@ -103,6 +103,27 @@ class PatientModV2OutpatientResourceIdempotencyTest {
         assertFalse(service.addCalled);
     }
 
+    @Test
+    void mutateRejectsMissingFacility() {
+        StubPatientService service = new StubPatientService();
+        PatientModV2OutpatientResource resource = new PatientModV2OutpatientResource();
+        resource.setPatientServiceBean(service);
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRemoteUser()).thenReturn(null);
+        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("operation", "create");
+        payload.put("patientId", "00001");
+        payload.put("name", "山田 花子");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.mutatePatient(request, payload));
+        assertEquals(401, ex.getResponse().getStatus());
+        assertFalse(service.addCalled);
+    }
+
     private static PatientModel buildPatient(String facilityId, String patientId, String name, String kana) {
         PatientModel model = new PatientModel();
         model.setFacilityId(facilityId);

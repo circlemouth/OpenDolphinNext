@@ -290,7 +290,7 @@ public class LetterServiceBean {
     }
 
     private KarteBean findKarteByIdentifiers(LetterModule model) {
-        return findKarteByIdentifiers(resolveFacilityId(model), model.getPatientId());
+        return findKarteByIdentifiers(extractFacilityId(model), model.getPatientId());
     }
 
     private KarteBean findKarteByIdentifiers(String facilityId, String patientIdentifier) {
@@ -323,7 +323,7 @@ public class LetterServiceBean {
         return hits.isEmpty() ? null : hits.get(0);
     }
 
-    private String resolveFacilityId(LetterModule model) {
+    private String extractFacilityId(LetterModule model) {
         if (model.getUserModel()!=null && model.getUserModel().getFacilityModel()!=null) {
             return model.getUserModel().getFacilityModel().getFacilityId();
         }
@@ -334,7 +334,7 @@ public class LetterServiceBean {
         SessionTraceContext context = traceManager != null ? traceManager.current() : null;
         if (context != null) {
             String actorId = context.getAttribute(SessionTraceAttributes.ACTOR_ID);
-            return resolveFacilityId(actorId);
+            return extractFacilityIdFromActor(actorId);
         }
         return null;
     }
@@ -576,7 +576,7 @@ public class LetterServiceBean {
         builder.actorId(actorId);
         builder.actorDisplayName(resolveActorDisplayName(actorId));
         builder.actorRole(context != null ? context.getActorRole() : null);
-        builder.facilityId(resolveFacilityId(actorId));
+        builder.facilityId(extractFacilityIdFromActor(actorId));
         String traceId = resolveTraceId(context);
         builder.traceId(traceId);
         builder.requestId(resolveRequestId(context, traceId));
@@ -604,7 +604,7 @@ public class LetterServiceBean {
         return actorId;
     }
 
-    private String resolveFacilityId(String actorId) {
+    private String extractFacilityIdFromActor(String actorId) {
         if (actorId == null) {
             return null;
         }

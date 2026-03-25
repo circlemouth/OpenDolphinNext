@@ -28,7 +28,10 @@ public class OrcaPushRecoveryService {
     OrcaPushEventRouter router;
 
     @Inject
-    OrcaPushStateStore stateStore;
+    OrcaPushConnectionStateStore connectionStateStore;
+
+    @Inject
+    OrcaPushCursorStore cursorStore;
 
     @Inject
     OrcaPushMetricsRegistrar metricsRegistrar;
@@ -46,6 +49,7 @@ public class OrcaPushRecoveryService {
     }
 
     void recover(String facilityId, String websocketUrl, String reason) {
+        facilityId = requireFacilityId(facilityId);
         if (configurationResolver == null || !configurationResolver.orcaPush().recoveryEnabled()) {
             return;
         }
@@ -54,15 +58,16 @@ public class OrcaPushRecoveryService {
                 ? configurationResolver.orcaPush().recoveryInitialLookbackMinutes()
                 : 30;
         Instant windowStart = windowEnd.minusSeconds(lookbackMinutes * 60L);
-        stateStore.markRecoveryStarted(facilityId, windowStart, windowEnd);
+        String recoveryRunId = "PUSHREC-" + facilityId + "-" + windowEnd.toEpochMilli();
         try {
-            if (!configurationResolver.orcaPush().recoveryUsePusheventget()) {
-                stateStore.markRecoveryFinished(facilityId, windowStart, windowEnd, null);
-                return;
-            }
             for (String event : enabledEvents()) {
+                bootstrapCursor(facilityId, streamKind(event), recoveryRunId);
+                if (!configurationResolver.orcaPush().recoveryUsePusheventget()) {
+                    continue;
+                }
                 String payload = "{\"pusheventgetv2req\":{\"event\":\"" + event + "\"}}";
-                String body = orcaTransport.invokeDetailed(
+                String body = orcaTransport.invoke(
+                        facilityId,
                         OrcaEndpoint.PUSH_EVENT_GET,
                         OrcaTransportRequest.post(payload).withAccept("application/json"))
                         .getBody();
@@ -70,11 +75,10 @@ public class OrcaPushRecoveryService {
                     router.route(facilityId, websocketUrl, body);
                 }
             }
-            stateStore.markRecoveryFinished(facilityId, windowStart, windowEnd, null);
             metricsRegistrar.recordRecovery(facilityId, mode(), "success");
         } catch (RuntimeException ex) {
             LOGGER.log(Level.WARNING, "ORCA push recovery failed. facilityId=" + facilityId + " reason=" + reason, ex);
-            stateStore.markRecoveryFinished(facilityId, windowStart, windowEnd, "recovery_failed");
+            connectionStateStore.markDegraded(facilityId, "recovery", websocketUrl, "recovery_failed");
             metricsRegistrar.recordRecovery(facilityId, mode(), "failed");
         }
     }
@@ -90,7 +94,28 @@ public class OrcaPushRecoveryService {
         return events;
     }
 
+    private void bootstrapCursor(String facilityId, String streamKind, String recoveryRunId) {
+        if (cursorStore.load(facilityId, streamKind) == null) {
+            cursorStore.save(facilityId, streamKind, null, null, null, null, recoveryRunId);
+        }
+    }
+
+    private String streamKind(String event) {
+        return switch (event) {
+            case "patient_accept" -> ReceptionPushHandler.STREAM_KIND;
+            case "patient_account" -> MedicalPushHandler.STREAM_KIND;
+            default -> "unknown";
+        };
+    }
+
     private String mode() {
         return configurationResolver != null && configurationResolver.orcaPush().shadowMode() ? "shadow" : "live";
+    }
+
+    private static String requireFacilityId(String facilityId) {
+        if (facilityId == null || facilityId.isBlank()) {
+            throw new IllegalStateException("facilityId is required");
+        }
+        return facilityId.trim();
     }
 }

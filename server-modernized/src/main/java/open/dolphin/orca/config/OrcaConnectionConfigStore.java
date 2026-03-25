@@ -87,9 +87,6 @@ public class OrcaConnectionConfigStore {
             lock.readLock().unlock();
         }
     }
-    public ResolvedOrcaConnection resolve() {
-        return resolve(null);
-    }
     public ResolvedOrcaConnection resolve(String facilityId) {
         OrcaConnectionConfigRecord snapshot = getSnapshot(facilityId);
         if (snapshot == null) {

@@ -51,8 +51,10 @@ public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
+        String facilityId = requireFacilityId(request);
         String requestXml = buildRequestXml(type, payload);
-        OrcaTransportResult transportResult = orcaTransport.invokeDetailed(
+        OrcaTransportResult transportResult = orcaTransport.invoke(
+                facilityId,
                 endpoint,
                 OrcaTransportRequest.post(requestXml).withAccept(MediaType.APPLICATION_JSON));
 

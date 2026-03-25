@@ -33,7 +33,6 @@ import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.KarteServiceBean;
-import open.dolphin.session.PVTServiceBean;
 import open.dolphin.session.UserServiceBean;
 import open.dolphin.session.framework.SessionTraceContext;
 import open.dolphin.session.framework.SessionTraceManager;
@@ -45,9 +44,6 @@ public class KarteDocumentWriteResource extends AbstractResource {
 
     @Inject
     private KarteServiceBean karteServiceBean;
-
-    @Inject
-    private PVTServiceBean pvtServiceBean;
 
     @Inject
     private AuditTrailService auditTrailService;
@@ -91,35 +87,6 @@ public class KarteDocumentWriteResource extends AbstractResource {
 
         long result = karteServiceBean.updateDocument(document);
         return String.valueOf(result);
-    }
-
-    @POST
-    @Path("/document/pvt/{params}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.TEXT_PLAIN)
-    public String postDocument(@PathParam("params") String param, String json) throws IOException {
-
-        String[] params = param.split(CAMMA);
-        long pvtPK = Long.parseLong(params[0]);
-        int state = Integer.parseInt(params[1]);
-
-        DocumentModel document = readJson(json, DocumentModel.class);
-        ensureDocumentPayloadFacility(document, null);
-        populateDocumentRelations(document);
-
-        long result = karteServiceBean.addDocument(document);
-        String pkStr = String.valueOf(result);
-
-        if (params.length == 2) {
-            try {
-                pvtServiceBean.updatePvtState(pvtPK, state);
-                Logger.getLogger("open.dolphin").info("PVT state did update: " + pvtPK + " = " + state);
-            } catch (Throwable t) {
-                Logger.getLogger("open.dolphin").warning(t.getMessage());
-            }
-        }
-
-        return pkStr;
     }
 
     @PUT
@@ -179,7 +146,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
         return explicit != null ? explicit : httpServletRequest;
     }
 
-    private String resolveFacilityId(HttpServletRequest request) {
+    private String requireActorFacilityId(HttpServletRequest request) {
         String remoteUser = request != null ? request.getRemoteUser() : null;
         String facility = getRemoteFacility(remoteUser);
         if (facility == null || facility.isBlank()) {
@@ -196,7 +163,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
             return;
         }
         HttpServletRequest effectiveRequest = resolveRequest(request);
-        String actorFacility = resolveFacilityId(effectiveRequest);
+        String actorFacility = requireActorFacilityId(effectiveRequest);
         String targetFacility = karteServiceBean.findFacilityIdByKarteId(karteId);
         ensureFacilityMatch(actorFacility, targetFacility, "karteId", karteId, effectiveRequest);
     }
@@ -206,7 +173,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
             return;
         }
         HttpServletRequest effectiveRequest = resolveRequest(request);
-        String actorFacility = resolveFacilityId(effectiveRequest);
+        String actorFacility = requireActorFacilityId(effectiveRequest);
         String targetFacility = karteServiceBean.findFacilityIdByDocId(docId);
         ensureFacilityMatch(actorFacility, targetFacility, "docId", docId, effectiveRequest);
     }

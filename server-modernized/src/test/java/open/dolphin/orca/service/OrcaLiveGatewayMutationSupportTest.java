@@ -8,9 +8,9 @@ import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import org.junit.jupiter.api.Test;
 
-class OrcaWrapperServiceMutationSupportTest {
+class OrcaLiveGatewayMutationSupportTest {
 
-    private final OrcaWrapperServiceMutationSupport support = new OrcaWrapperServiceMutationSupport();
+    private final OrcaLiveGatewayMutationSupport support = new OrcaLiveGatewayMutationSupport();
 
     @Test
     void normalizeAcceptRequestNumberAcceptsRequestNumber04() {

@@ -9,16 +9,24 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
+import open.dolphin.security.auth.AuthSessionRegistryService;
+import open.dolphin.security.audit.SessionAuditDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class LogoutResourceTest {
 
     private LogoutResource resource;
+    private AuthSessionRegistryService authSessionRegistryService;
+    private SessionAuditDispatcher sessionAuditDispatcher;
 
     @BeforeEach
     void setUp() {
         resource = new LogoutResource();
+        authSessionRegistryService = mock(AuthSessionRegistryService.class);
+        sessionAuditDispatcher = mock(SessionAuditDispatcher.class);
+        setField(resource, "authSessionRegistryService", authSessionRegistryService);
+        setField(resource, "sessionAuditDispatcher", sessionAuditDispatcher);
     }
 
     @Test
@@ -28,6 +36,7 @@ class LogoutResourceTest {
         when(request.getSession(false)).thenReturn(session);
         when(request.getContextPath()).thenReturn("/openDolphin");
         when(request.isSecure()).thenReturn(true);
+        when(authSessionRegistryService.revokeCurrentSession(session, "logout")).thenReturn(true);
 
         Response response = resource.logout(request);
 
@@ -43,6 +52,7 @@ class LogoutResourceTest {
         verify(session).removeAttribute(AuthSessionSupport.PENDING_FACTOR2_CREATED_AT);
         verify(session).removeAttribute(AuthSessionSupport.PENDING_FACTOR2_ATTEMPT_COUNT);
         verify(session).invalidate();
+        verify(authSessionRegistryService).revokeCurrentSession(session, "logout");
         assertThat(response.getStatus()).isEqualTo(Response.Status.NO_CONTENT.getStatusCode());
         NewCookie cookie = response.getCookies().get("JSESSIONID");
         assertThat(cookie).isNotNull();
@@ -103,5 +113,15 @@ class LogoutResourceTest {
         NewCookie cookie = response.getCookies().get("JSESSIONID");
         assertThat(cookie).isNotNull();
         assertThat(cookie.isSecure()).isFalse();
+    }
+
+    private static void setField(Object target, String name, Object value) {
+        try {
+            java.lang.reflect.Field field = target.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
     }
 }

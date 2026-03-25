@@ -30,8 +30,6 @@ public class PVTServiceBean {
     private static final Logger LOGGER = LoggerFactory.getLogger(PVTServiceBean.class);
 
     private static final String QUERY_PATIENT_BY_FID_PID        = "from PatientModel p where p.facilityId=:fid and p.patientId=:pid";
-    private static final String QUERY_PVT_BY_FID_PID_DATE       = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate and p.patient.patientId=:pid";
-    private static final String QUERY_PVT_BY_FID_PID_PVT_DATE   = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate=:pvtDate and p.patient.patientId=:pid order by p.id";
     private static final String QUERY_PVT_BY_FID_DATE           = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate order by p.pvtDate";
     private static final String QUERY_PVT_BY_FID_DID_DATE       = "from PatientVisitModel p where p.facilityId=:fid and p.pvtDate >= :fromDate and p.pvtDate < :toDate and (doctorId=:did or doctorId=:unassigned) order by p.pvtDate";
     private static final String QUERY_INSURANCE_BY_PATIENT_ID   = "from HealthInsuranceModel h where h.patient.id=:id";
@@ -49,7 +47,6 @@ public class PVTServiceBean {
     private static final String DATE = "date";
     private static final String FROM_DATE = "fromDate";
     private static final String TO_DATE = "toDate";
-    private static final String PVT_DATE = "pvtDate";
     private static final String PERCENT = "%";
     private static final int LEGACY_FINALIZED_SAVE_BIT   = 1;
     private static final int LEGACY_FINALIZED_MODIFY_BIT = 2;
@@ -72,7 +69,7 @@ public class PVTServiceBean {
         eventServiceBean.ensureInitialized();
         String fid = prepareIncomingPvt(pvt);
         synchronizePatientAndAttach(fid, pvt);
-        pvt.setPvtDate(normalizePvtDateForStorage(pvt.getPvtDate()));
+        pvt.setPvtDate(normalizeVisitTimestamp(pvt.getPvtDate()));
         return registerVisit(fid, pvt);
     }
 
@@ -123,21 +120,38 @@ public class PVTServiceBean {
 
     private void persistNewPatientAndKarte(PatientModel patient) { em.persist(patient); KarteBean karte = new KarteBean(); karte.setPatientModel(patient); karte.setCreated(new Date()); em.persist(karte); }
 
-    private int registerVisit(String fid, PatientVisitModel pvt) { if (pvt.getPvtDate() == null) return 0; return isToday(pvt.getPvtDate()) ? registerTodayVisit(fid, pvt) : registerScheduledVisit(fid, pvt); }
+    private int registerVisit(String fid, PatientVisitModel pvt) {
+        if (pvt.getPvtDate() == null) {
+            return 0;
+        }
+        return isToday(pvt.getPvtDate()) ? persistTodayVisit(fid, pvt) : persistScheduledVisit(pvt);
+    }
 
-    private int registerScheduledVisit(String fid, PatientVisitModel pvt) { LOGGER.info("scheduled PVT: {}", pvt.getPvtDate()); LocalDate visitDate = extractPvtDatePart(pvt.getPvtDate()); if (visitDate == null) { LOGGER.warn("skip scheduled PVT registration because pvtDate is invalid: {}", pvt.getPvtDate()); return 0; } @SuppressWarnings("unchecked") List<PatientVisitModel> list = em.createQuery(QUERY_PVT_BY_FID_PID_DATE).setParameter(FID, fid).setParameter(FROM_DATE, visitDate.atStartOfDay()).setParameter(TO_DATE, visitDate.plusDays(1).atStartOfDay()).setParameter(PID, pvt.getPatientId()).getResultList(); if (list.isEmpty()) { em.persist(pvt); return 1; } updateScheduledVisit(list.get(0), pvt); return 1; }
+    private int persistScheduledVisit(PatientVisitModel pvt) {
+        LOGGER.info("scheduled PVT: {}", pvt.getPvtDate());
+        LocalDate visitDate = resolveVisitDate(pvt.getPvtDate());
+        if (visitDate == null) {
+            LOGGER.warn("skip scheduled PVT registration because visit timestamp is invalid: {}", pvt.getPvtDate());
+            return 0;
+        }
+        em.persist(pvt);
+        return 1;
+    }
 
-    private void updateScheduledVisit(PatientVisitModel target, PatientVisitModel incoming) { target.setDepartment(incoming.getDepartment()); target.setDeptCode(incoming.getDeptCode()); target.setDeptName(incoming.getDeptName()); target.setDoctorId(incoming.getDoctorId()); target.setDoctorName(incoming.getDoctorName()); target.setFirstInsurance(incoming.getFirstInsurance()); target.setInsuranceUid(incoming.getInsuranceUid()); target.setJmariNumber(incoming.getJmariNumber()); }
-
-    private int registerTodayVisit(String fid, PatientVisitModel pvt) { long karteId = findKarteId(pvt); applyTodayAppointment(pvt, karteId); PatientVisitModel existingToday = findActiveVisitByFacilityPatientAndPvtDate(fid, pvt.getPatientId(), pvt.getPvtDate()); if (existingToday != null) { mergeTodayVisit(fid, existingToday, pvt); return 0; } persistTodayVisit(fid, pvt, karteId); return 1; }
+    private int persistTodayVisit(String fid, PatientVisitModel pvt) {
+        long karteId = findKarteId(pvt);
+        applyTodayAppointment(pvt, karteId);
+        eventServiceBean.setByomeiCount(karteId, pvt);
+        em.persist(pvt);
+        notifyPvtEvent(pvt, ChartEventModel.PVT_ADD);
+        return 1;
+    }
 
     private long findKarteId(PatientVisitModel pvt) { return (Long) em.createQuery(QUERY_KARTE_ID_BY_PATIENT_ID).setParameter(ID, pvt.getPatientModel().getId()).getSingleResult(); }
 
     private void applyTodayAppointment(PatientVisitModel pvt, long karteId) { @SuppressWarnings("unchecked") List<AppointmentModel> appointments = em.createQuery(QUERY_APPO_BY_KARTE_ID_DATE).setParameter(ID, karteId).setParameter(DATE, contextHolder.getToday().getTime()).getResultList(); if (appointments != null && !appointments.isEmpty()) pvt.setAppointment(appointments.get(0).getName()); }
 
-    private void persistTodayVisit(String fid, PatientVisitModel pvt, long karteId) { eventServiceBean.setByomeiCount(karteId, pvt); em.persist(pvt); contextHolder.addPvt(fid, pvt); notifyPvtEvent(pvt, ChartEventModel.PVT_ADD); }
-
-    private boolean isToday(LocalDateTime pvtDate) { LocalDate test = extractPvtDatePart(pvtDate); return test != null && test.equals(LocalDate.now()); }
+    private boolean isToday(LocalDateTime pvtDate) { LocalDate test = resolveVisitDate(pvtDate); return test != null && test.equals(LocalDate.now()); }
 
     static InsuranceMergeResult mergeInsurances(List<HealthInsuranceModel> existing,
             List<HealthInsuranceModel> incoming) {
@@ -180,69 +194,12 @@ public class PVTServiceBean {
         return new InsuranceMergeResult(updates, additions, merged);
     }
 
-    static LocalDateTime normalizePvtDateForStorage(LocalDateTime rawPvtDate) {
+    static LocalDateTime normalizeVisitTimestamp(LocalDateTime rawPvtDate) {
         return rawPvtDate == null ? null : rawPvtDate.withNano(0);
     }
 
-    static LocalDate extractPvtDatePart(LocalDateTime pvtDate) {
+    static LocalDate resolveVisitDate(LocalDateTime pvtDate) {
         return pvtDate == null ? null : pvtDate.toLocalDate();
-    }
-
-    private PatientVisitModel findActiveVisitByFacilityPatientAndPvtDate(String fid, String patientId,
-            LocalDateTime pvtDate) {
-        if (fid == null || fid.isBlank() || patientId == null || patientId.isBlank() || pvtDate == null) {
-            return null;
-        }
-        @SuppressWarnings("unchecked")
-        List<PatientVisitModel> matches = em.createQuery(QUERY_PVT_BY_FID_PID_PVT_DATE)
-                .setParameter(FID, fid)
-                .setParameter(PID, patientId)
-                .setParameter(PVT_DATE, pvtDate)
-                .getResultList();
-        for (PatientVisitModel model : matches) {
-            if (!model.getStateBit(PatientVisitModel.BIT_CANCEL)) {
-                return model;
-            }
-        }
-        return null;
-    }
-
-    private void mergeTodayVisit(String fid, PatientVisitModel existingToday, PatientVisitModel incoming) {
-        List<PatientVisitModel> pvtList = contextHolder.getPvtList(fid);
-        PatientVisitModel cached = findCachedVisitById(pvtList, existingToday.getId());
-        PatientVisitModel source = cached != null ? cached : existingToday;
-
-        incoming.setId(existingToday.getId());
-        incoming.setState(existingToday.getState());
-        incoming.getPatientModel().setOwnerUUID(resolveOwnerUuid(source, existingToday));
-        incoming.setByomeiCount(source.getByomeiCount());
-        incoming.setByomeiCountToday(source.getByomeiCountToday());
-
-        em.merge(incoming);
-        contextHolder.replaceOrAddPvt(fid, incoming);
-notifyPvtEvent(incoming, ChartEventModel.PVT_MERGE);
-    }
-
-    private PatientVisitModel findCachedVisitById(List<PatientVisitModel> pvtList, long pvtId) {
-        if (pvtList == null) {
-            return null;
-        }
-        for (PatientVisitModel model : pvtList) {
-            if (model.getId() == pvtId) {
-                return model;
-            }
-        }
-        return null;
-    }
-
-    private String resolveOwnerUuid(PatientVisitModel primary, PatientVisitModel fallback) {
-        if (primary != null && primary.getPatientModel() != null && primary.getPatientModel().getOwnerUUID() != null) {
-            return primary.getPatientModel().getOwnerUUID();
-        }
-        if (fallback != null && fallback.getPatientModel() != null) {
-            return fallback.getPatientModel().getOwnerUUID();
-        }
-        return null;
     }
 
     private void notifyPvtEvent(PatientVisitModel pvt, int eventType) {
@@ -286,7 +243,7 @@ notifyPvtEvent(incoming, ChartEventModel.PVT_MERGE);
 
     public int removePvt(long id, String fid) { return removePvtForFacility(fid, id); }
 
-    public int removePvtForFacility(String fid, long id) { if (fid == null || fid.isBlank()) return 0; try { PatientVisitModel exist = findPvtForFacility(fid, id); if (exist == null) return 0; em.remove(exist); contextHolder.removePvtById(fid, id); return 1; } catch (Exception e) { return 0; } }
+    public int removePvtForFacility(String fid, long id) { if (fid == null || fid.isBlank()) return 0; try { PatientVisitModel exist = findPvtForFacility(fid, id); if (exist == null) return 0; em.remove(exist); return 1; } catch (Exception e) { return 0; } }
 
     public int removePvt(long id) { PatientVisitModel exist = (PatientVisitModel) em.find(PatientVisitModel.class, new Long(id)); em.remove(exist); return 1; }
 

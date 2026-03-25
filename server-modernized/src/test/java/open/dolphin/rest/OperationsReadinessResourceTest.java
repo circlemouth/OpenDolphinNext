@@ -14,7 +14,7 @@ import open.dolphin.mbean.PvtService;
 import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.push.OrcaPushClientRegistry;
-import open.dolphin.orca.push.OrcaPushStateStore;
+import open.dolphin.orca.push.OrcaPushConnectionStateStore;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
@@ -168,10 +168,9 @@ class OperationsReadinessResourceTest {
         when(orcaConnectionConfigStore.getSnapshot()).thenReturn(configured);
         setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushClientRegistry", new StubPushClientRegistry(true));
         setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushStateStore", new StubPushStateStore(List.of(
-                new OrcaPushStateStore.FacilityPushState(
-                        "F001", "CONNECTED", "wss://push.example",
-                        "2026-03-22T10:00:00Z", null, "2026-03-22T10:01:00Z",
-                        "U-1", "patient_accept", null, null, null, null, null))));
+                new OrcaPushConnectionStateStore.FacilityPushConnectionState(
+                        "F001", "push", "CONNECTED", "wss://push.example",
+                        "2026-03-22T10:00:00Z", null, null))));
 
         Response response = resource.readiness();
 
@@ -182,7 +181,6 @@ class OperationsReadinessResourceTest {
         assertThat(orcaPush.getConnected()).isTrue();
         assertThat(orcaPush.getFacilityCount()).isEqualTo(1);
         assertThat(orcaPush.getLastConnectedAt()).isEqualTo("2026-03-22T10:00:00Z");
-        assertThat(orcaPush.getLastEventAt()).isEqualTo("2026-03-22T10:01:00Z");
     }
 
     private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {
@@ -196,7 +194,7 @@ class OperationsReadinessResourceTest {
                 RestOrcaTransport.unavailableProbe(RestOrcaTransport.REASON_CODE_TRANSPORT_NOT_READY);
 
         @Override
-        public RestOrcaTransport.ProbeResult probeReadiness() {
+        public RestOrcaTransport.ProbeResult probeReadiness(String facilityId) {
             return probeResult;
         }
     }
@@ -214,15 +212,15 @@ class OperationsReadinessResourceTest {
         }
     }
 
-    private static final class StubPushStateStore extends OrcaPushStateStore {
-        private final List<FacilityPushState> states;
+    private static final class StubPushStateStore extends OrcaPushConnectionStateStore {
+        private final List<FacilityPushConnectionState> states;
 
-        private StubPushStateStore(List<FacilityPushState> states) {
+        private StubPushStateStore(List<FacilityPushConnectionState> states) {
             this.states = states;
         }
 
         @Override
-        public List<FacilityPushState> listStates() {
+        public List<FacilityPushConnectionState> listStates() {
             return states;
         }
     }

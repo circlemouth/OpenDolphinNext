@@ -22,6 +22,7 @@ import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.orca.service.DiseaseProjectionService;
 import open.dolphin.rest.dto.orca.DiseaseImportResponse;
 import open.dolphin.rest.dto.orca.DiseaseMutationRequest;
 import open.dolphin.security.audit.AuditEventPayload;
@@ -52,6 +53,7 @@ class OrcaDiseaseResourceTest extends RuntimeDelegateTestSupport {
         injectField(resource, "patientServiceBean", new FakePatientServiceBean());
         injectField(resource, "karteServiceBean", new FakeKarteServiceBean());
         injectField(resource, "userServiceBean", new FakeUserServiceBean());
+        injectField(resource, "diseaseProjectionService", new DiseaseProjectionService());
 
         servletRequest = (HttpServletRequest)
                 Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{HttpServletRequest.class}, (proxy, method, args) -> {
@@ -64,6 +66,18 @@ class OrcaDiseaseResourceTest extends RuntimeDelegateTestSupport {
                     }
                     if ("getRequestURI".equals(name)) {
                         return "/api/orca/disease";
+                    }
+                    if ("isSecure".equals(name)) {
+                        return false;
+                    }
+                    if ("getScheme".equals(name)) {
+                        return "http";
+                    }
+                    if ("getServerName".equals(name)) {
+                        return "localhost";
+                    }
+                    if ("getServerPort".equals(name)) {
+                        return 8080;
                     }
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         String header = String.valueOf(args[0]);

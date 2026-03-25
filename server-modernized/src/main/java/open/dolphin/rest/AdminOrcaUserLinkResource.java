@@ -12,12 +12,16 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
+import open.dolphin.security.auth.AdminStepUpGuard;
 
 /**
  * EHR-ORCA user link endpoint split from AdminOrcaUserResource.
  */
 @Path("/admin")
 public class AdminOrcaUserLinkResource extends AdminOrcaUserResource {
+
+    @jakarta.inject.Inject
+    private AdminStepUpGuard adminStepUpGuard;
 
     @PUT
     @Path("/users/{ehrUserId}/orca-link")

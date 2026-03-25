@@ -13,6 +13,7 @@ import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.rest.masterupdate.MasterUpdateService;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,7 @@ class AdminMasterUpdateResourceTest {
 
         setField(resource, "userServiceBean", userServiceBean);
         setField(resource, "masterUpdateService", masterUpdateService);
+        setField(resource, "adminStepUpGuard", mock(AdminStepUpGuard.class));
         setField(resource, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
     }
 

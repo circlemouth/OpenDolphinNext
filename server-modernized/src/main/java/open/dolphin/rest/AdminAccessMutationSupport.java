@@ -2,7 +2,6 @@ package open.dolphin.rest;
 
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.core.Response;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -22,6 +21,8 @@ import open.dolphin.infomodel.UserModel;
 import open.dolphin.persistence.query.OrcaUserLinkQueryService;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.security.auth.PasswordHashService;
+import open.dolphin.security.auth.SessionRevocationService;
+import open.dolphin.security.auth.StepUpSessionService;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 
 import static open.dolphin.rest.AdminAccessMutationSupportUtils.*;
@@ -39,14 +40,17 @@ final class AdminAccessMutationSupport {
     private final EntityManager em;
     private final SessionAuditDispatcher sessionAuditDispatcher;
     private final PasswordHashService passwordHashService;
+    private final SessionRevocationService sessionRevocationService;
 
     AdminAccessMutationSupport(
             EntityManager em,
             SessionAuditDispatcher sessionAuditDispatcher,
-            PasswordHashService passwordHashService) {
+            PasswordHashService passwordHashService,
+            SessionRevocationService sessionRevocationService) {
         this.em = em;
         this.sessionAuditDispatcher = sessionAuditDispatcher;
         this.passwordHashService = passwordHashService;
+        this.sessionRevocationService = sessionRevocationService;
     }
 
     Response createUser(
@@ -81,12 +85,12 @@ final class AdminAccessMutationSupport {
             orcaLink = upsertOrcaLink(resource, request, userPk, input.orcaUserId(), actor);
         }
         if (input.rolesProvided()) {
-            applyUpdatedRoles(resource, request, user, userPk, actor, input, orcaLink);
+            applyUpdatedRoles(resource, request, facilityId, user, userPk, actor, input, orcaLink);
         }
         AdminAccessResource.UserAccessProfileRow profile =
                 resource.upsertProfile(userPk, input.sexToken(), input.staffRole(), null, Instant.now());
         if (orcaLink == null) {
-            orcaLink = findOrcaLinkByUserPk(userPk);
+            orcaLink = findOrcaLinkByUserPk(facilityId, userPk);
         }
         Response response = buildUpdateUserResponse(resource, user, profile, orcaLink, runId);
         recordUpdateUserAudit(resource, request, runId, facilityId, userPk, user, input, orcaLink);
@@ -108,12 +112,11 @@ final class AdminAccessMutationSupport {
         }
         requireSameFacility(resource, request, facilityId, target.getUserId());
 
-        String totpCode = payload != null ? trimToNull(asString(payload.get("totpCode"))) : null;
-        long actorPk = resource.resolveActorUserPk(actor);
-        resource.verifyAdminTotp(request, actorPk, totpCode);
-
         if (payload == null) {
             throw resource.restError(request, Response.Status.BAD_REQUEST, "payload_required", "payload が必要です。");
+        }
+        if (payload.containsKey(StepUpSessionService.DEPRECATED_OTP_FIELD)) {
+            throw resource.restError(request, Response.Status.BAD_REQUEST, "invalid_request", "廃止された認証フィールドは受け付けません。");
         }
         String tempPassword = trimToNull(asString(payload.get("temporaryPassword")));
         if (tempPassword == null) {
@@ -124,8 +127,15 @@ final class AdminAccessMutationSupport {
 
         target.setPassword(passwordHashService.hashForStorage(tempPassword));
         em.merge(target);
-        resource.upsertProfile(userPk, null, null, Boolean.TRUE, Instant.now());
-        boolean sessionInvalidated = invalidateCurrentSession(request);
+        Instant now = Instant.now();
+        resource.upsertProfile(userPk, null, null, Boolean.TRUE, now);
+        sessionRevocationService.incrementSessionEpoch(userPk, now);
+        sessionRevocationService.markPasswordChanged(userPk, now);
+        int revokedCount = sessionRevocationService.revokeAllForUser(
+                userPk,
+                facilityId,
+                SessionRevocationService.REASON_PASSWORD_RESET,
+                request);
 
         Map<String, Object> resetAuditDetails = new LinkedHashMap<>();
         resetAuditDetails.put("operation", "password-reset");
@@ -133,7 +143,7 @@ final class AdminAccessMutationSupport {
         resetAuditDetails.put("targetUserPk", userPk);
         resetAuditDetails.put("targetLoginId", extractLoginId(target.getUserId()));
         resetAuditDetails.put("mustChangePassword", Boolean.TRUE);
-        resetAuditDetails.put("sessionInvalidated", sessionInvalidated);
+        resetAuditDetails.put("revokedCount", revokedCount);
         AdminResourceSupport.recordAudit(
                 resource,
                 sessionAuditDispatcher,
@@ -323,17 +333,19 @@ final class AdminAccessMutationSupport {
     private void applyUpdatedRoles(
             AdminAccessResource resource,
             HttpServletRequest request,
+            String facilityId,
             UserModel user,
             long userPk,
             String actor,
             UpdateUserInput input,
             AdminAccessResource.OrcaLinkStatus orcaLink) {
+        boolean hadAdminRole = containsAdminRole(currentRoleNames(user));
         List<String> roles = new ArrayList<>(input.roles());
         if (!containsRole(roles, BASELINE_ROLE)) {
             roles.add(BASELINE_ROLE);
         }
         if (hasPrivilegedRoles(roles)) {
-            AdminAccessResource.OrcaLinkStatus effectiveLink = orcaLink != null ? orcaLink : findOrcaLinkByUserPk(userPk);
+            AdminAccessResource.OrcaLinkStatus effectiveLink = orcaLink != null ? orcaLink : findOrcaLinkByUserPk(facilityId, userPk);
             if (effectiveLink == null) {
                 throw resource.restError(request, Response.Status.CONFLICT, "orca_link_required",
                         "電子カルテ側の権限付与は ORCA 連携済みユーザーのみ実行できます。");
@@ -345,6 +357,15 @@ final class AdminAccessMutationSupport {
                     "自分自身の admin 権限は削除できません。別の管理者で実行してください。");
         }
         replaceRoles(user, roles);
+        if (hadAdminRole && !containsAdminRole(roles)) {
+            Instant now = Instant.now();
+            sessionRevocationService.incrementSessionEpoch(userPk, now);
+            sessionRevocationService.revokeAllForUser(
+                    userPk,
+                    facilityId,
+                    SessionRevocationService.REASON_PRIVILEGE_DOWNGRADE,
+                    request);
+        }
     }
 
     private Response buildUpdateUserResponse(
@@ -450,6 +471,16 @@ final class AdminAccessMutationSupport {
         em.merge(user);
     }
 
+    private List<String> currentRoleNames(UserModel user) {
+        if (user == null || user.getRoles() == null) {
+            return List.of();
+        }
+        return user.getRoles().stream()
+                .map(RoleModel::getRole)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
     private FacilityModel resolveFacility(String facilityId) {
         return em.createQuery("from FacilityModel f where f.facilityId=:fid", FacilityModel.class)
                 .setParameter("fid", facilityId)
@@ -473,11 +504,11 @@ final class AdminAccessMutationSupport {
         }
     }
 
-    private AdminAccessResource.OrcaLinkStatus findOrcaLinkByUserPk(long userPk) {
+    private AdminAccessResource.OrcaLinkStatus findOrcaLinkByUserPk(String facilityId, long userPk) {
         if (!isOrcaLinkTablePresent()) {
             return null;
         }
-        OrcaUserLinkQueryService.OrcaLinkRow row = orcaUserLinks().findLinkByUserPk(userPk);
+        OrcaUserLinkQueryService.OrcaLinkRow row = orcaUserLinks().findLinkByUserPk(facilityId, userPk);
         if (row == null) {
             return null;
         }
@@ -491,14 +522,15 @@ final class AdminAccessMutationSupport {
             String orcaUserId,
             String actor) {
         requireOrcaLinkTableAvailable(resource, request);
-        Long owner = findOwnerByOrcaUserId(orcaUserId);
+        String facilityId = resource.getRemoteFacility(actor);
+        Long owner = findOwnerByOrcaUserId(facilityId, orcaUserId);
         if (owner != null && owner.longValue() != userPk) {
             throw resource.restError(request, Response.Status.CONFLICT, "orca_user_already_linked",
                     "指定した ORCA User_Id は別の電子カルテユーザーにリンク済みです。");
         }
 
         Instant now = Instant.now();
-        orcaUserLinks().upsertLink(userPk, orcaUserId, now, actor);
+        orcaUserLinks().upsertLink(facilityId, userPk, orcaUserId, now, actor);
         return new AdminAccessResource.OrcaLinkStatus(orcaUserId, now.toString());
     }
 
@@ -515,11 +547,11 @@ final class AdminAccessMutationSupport {
         return orcaUserLinks().isLinkTablePresent();
     }
 
-    private Long findOwnerByOrcaUserId(String orcaUserId) {
+    private Long findOwnerByOrcaUserId(String facilityId, String orcaUserId) {
         if (!isOrcaLinkTablePresent()) {
             return null;
         }
-        return orcaUserLinks().findOwnerByOrcaUserId(orcaUserId);
+        return orcaUserLinks().findOwnerByOrcaUserId(facilityId, orcaUserId);
     }
 
     private OrcaUserLinkQueryService orcaUserLinks() {
@@ -542,22 +574,6 @@ final class AdminAccessMutationSupport {
                 || !SYMBOL_PATTERN.matcher(candidate).matches()) {
             throw resource.restError(request, Response.Status.BAD_REQUEST, "temporary_password_weak",
                     "temporaryPassword は英大文字・英小文字・数字・記号をすべて含めてください。");
-        }
-    }
-
-    private boolean invalidateCurrentSession(HttpServletRequest request) {
-        if (request == null) {
-            return false;
-        }
-        HttpSession session = request.getSession(false);
-        if (session == null) {
-            return false;
-        }
-        try {
-            session.invalidate();
-            return true;
-        } catch (IllegalStateException ex) {
-            return false;
         }
     }
 

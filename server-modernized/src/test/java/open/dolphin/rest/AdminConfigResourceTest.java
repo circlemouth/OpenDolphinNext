@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
 import java.util.Map;
 import open.dolphin.rest.admin.AdminConfigSnapshot;
 import open.dolphin.rest.admin.AdminConfigStore;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,7 @@ class AdminConfigResourceTest {
 
         setField(resource, "userServiceBean", userServiceBean);
         setField(resource, "adminConfigStore", adminConfigStore);
+        setField(resource, "adminStepUpGuard", mock(AdminStepUpGuard.class));
         setField(resource, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
     }
 

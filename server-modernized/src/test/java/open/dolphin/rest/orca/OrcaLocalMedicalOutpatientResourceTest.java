@@ -25,6 +25,7 @@ import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.PatientVisitModel;
 import open.dolphin.infomodel.ProgressCourse;
 import open.dolphin.infomodel.RegisteredDiagnosisModel;
+import open.dolphin.orca.service.OutpatientProjectionService;
 import open.dolphin.rest.dto.outpatient.MedicalOutpatientResponse;
 import open.dolphin.rest.dto.outpatient.OutpatientFlagResponse;
 import open.dolphin.security.audit.AuditEventPayload;
@@ -49,8 +50,10 @@ class OrcaLocalMedicalOutpatientResourceTest extends RuntimeDelegateTestSupport 
         resource = new OrcaLocalMedicalOutpatientResource();
         auditDispatcher = new RecordingSessionAuditDispatcher();
         injectField(resource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(resource, "pvtServiceBean", new FakePVTServiceBean());
-        injectField(resource, "karteServiceBean", new FakeKarteServiceBean());
+        OutpatientProjectionService projectionService = new OutpatientProjectionService();
+        injectField(projectionService, "pvtServiceBean", new FakePVTServiceBean());
+        injectField(projectionService, "karteServiceBean", new FakeKarteServiceBean());
+        injectField(resource, "outpatientProjectionService", projectionService);
 
         servletRequest = (HttpServletRequest)
                 Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{HttpServletRequest.class}, (proxy, method, args) -> {
@@ -63,6 +66,18 @@ class OrcaLocalMedicalOutpatientResourceTest extends RuntimeDelegateTestSupport 
                     }
                     if ("getRequestURI".equals(name)) {
                         return "/api/orca/local-medical/outpatient";
+                    }
+                    if ("isSecure".equals(name)) {
+                        return false;
+                    }
+                    if ("getScheme".equals(name)) {
+                        return "http";
+                    }
+                    if ("getServerName".equals(name)) {
+                        return "localhost";
+                    }
+                    if ("getServerPort".equals(name)) {
+                        return 8080;
                     }
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         String header = String.valueOf(args[0]);
@@ -150,7 +165,10 @@ class OrcaLocalMedicalOutpatientResourceTest extends RuntimeDelegateTestSupport 
 
     @Test
     void postOutpatientMedical_returnsMissingWhenNoVisitExists() throws Exception {
-        injectField(resource, "pvtServiceBean", new EmptyPVTServiceBean());
+        OutpatientProjectionService projectionService = new OutpatientProjectionService();
+        injectField(projectionService, "pvtServiceBean", new EmptyPVTServiceBean());
+        injectField(projectionService, "karteServiceBean", new FakeKarteServiceBean());
+        injectField(resource, "outpatientProjectionService", projectionService);
         Map<String, Object> payload = new HashMap<>();
         payload.put("Patient_ID", "00001");
 

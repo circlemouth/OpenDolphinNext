@@ -30,6 +30,13 @@ class PublicRouteInventoryContractTest {
     private static final Pattern PATH_PARAMETER_PATTERN = Pattern.compile("\\{[^}]+\\}");
     private static final Set<String> BLOCKED_ROUTE_KEYS = Set.of(
             "POST /api/admin/access/users/{*}/password-reset",
+            "GET /api/pvt/{*}",
+            "POST /api/pvt",
+            "PUT /api/pvt/{*}",
+            "PUT /api/pvt/memo/{*}",
+            "DELETE /api/pvt/{*}",
+            "POST /api/orca/patientmodv2/outpatient",
+            "POST /api/karte/document/pvt/{*}",
             "POST /api/orca/medical/outpatient",
             "POST /api/orca/local-medical/outpatient",
             "GET /api/orca/disease/import/{*}",
@@ -69,6 +76,8 @@ class PublicRouteInventoryContractTest {
 
         assertThat(classNames).doesNotContain(
                 "open.dolphin.rest.AdminAccessPasswordResetResource",
+                "open.dolphin.rest.PVTResource",
+                "open.dolphin.rest.PatientModV2OutpatientResource",
                 "open.dolphin.rest.orca.OrcaMedicalOutpatientResource",
                 "open.dolphin.rest.orca.OrcaDiseaseResource",
                 "open.dolphin.rest.orca.OrcaLocalMedicalOutpatientResource",

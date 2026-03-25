@@ -28,7 +28,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
     private final ServerRuntimeConfiguration.OrcaPushSettings settings;
     private final OrcaPushSocketFactory socketFactory;
     private final OrcaPushEventRouter router;
-    private final OrcaPushStateStore stateStore;
+    private final OrcaPushConnectionStateStore connectionStateStore;
     private final OrcaPushRecoveryService recoveryService;
     private final OrcaPushMetricsRegistrar metricsRegistrar;
     private final ScheduledExecutorService scheduler;
@@ -45,7 +45,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
             ServerRuntimeConfiguration.OrcaPushSettings settings,
             OrcaPushSocketFactory socketFactory,
             OrcaPushEventRouter router,
-            OrcaPushStateStore stateStore,
+            OrcaPushConnectionStateStore connectionStateStore,
             OrcaPushRecoveryService recoveryService,
             OrcaPushMetricsRegistrar metricsRegistrar) {
         this.facilityId = facilityId;
@@ -53,7 +53,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
         this.settings = settings;
         this.socketFactory = socketFactory;
         this.router = router;
-        this.stateStore = stateStore;
+        this.connectionStateStore = connectionStateStore;
         this.recoveryService = recoveryService;
         this.metricsRegistrar = metricsRegistrar;
         this.scheduler = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
@@ -70,7 +70,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
         if (closed.get() || connection == null || connection.pushUrl() == null || connection.pushUrl().isBlank()) {
             return;
         }
-        stateStore.markConnecting(facilityId, connection.pushUrl());
+        connectionStateStore.markConnecting(facilityId, "push", connection.pushUrl());
         socketFactory.open(new OrcaPushSocketFactory.ConnectRequest(
                 connection.pushUrl(),
                 connection.pushTenantId(),
@@ -81,7 +81,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
                 connection.caCertificate()), this)
                 .whenComplete((socket, throwable) -> {
                     if (throwable != null) {
-                        stateStore.markDisconnected(facilityId, connection.pushUrl(), throwable.getMessage());
+                        connectionStateStore.markDisconnected(facilityId, "push", connection.pushUrl(), throwable.getMessage());
                         scheduleReconnect();
                     } else {
                         this.webSocket = socket;
@@ -93,7 +93,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
     public void onOpen(WebSocket webSocket) {
         this.webSocket = webSocket;
         reconnectAttempt = 0;
-        stateStore.markConnected(facilityId, connection.pushUrl());
+        connectionStateStore.markConnected(facilityId, "push", connection.pushUrl());
         metricsRegistrar.markConnected(facilityId);
         sendSubscribe();
         schedulePing();
@@ -116,7 +116,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
     @Override
     public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
         metricsRegistrar.markDisconnected(facilityId);
-        stateStore.markDisconnected(facilityId, connection.pushUrl(), reason);
+        connectionStateStore.markDisconnected(facilityId, "push", connection.pushUrl(), reason);
         if (!closed.get()) {
             scheduleReconnect();
         }
@@ -126,7 +126,11 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
     @Override
     public void onError(WebSocket webSocket, Throwable error) {
         metricsRegistrar.markDisconnected(facilityId);
-        stateStore.markDisconnected(facilityId, connection.pushUrl(), error != null ? error.getMessage() : "websocket_error");
+        connectionStateStore.markDisconnected(
+                facilityId,
+                "push",
+                connection.pushUrl(),
+                error != null ? error.getMessage() : "websocket_error");
         if (!closed.get()) {
             scheduleReconnect();
         }

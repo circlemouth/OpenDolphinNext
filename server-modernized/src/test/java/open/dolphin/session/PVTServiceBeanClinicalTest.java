@@ -15,19 +15,19 @@ import org.junit.jupiter.api.Test;
 class PVTServiceBeanClinicalTest {
 
     @Test
-    void normalizePvtDateForStorage_stripsNanos() {
-        LocalDateTime normalized = PVTServiceBean.normalizePvtDateForStorage(
+    void normalizeVisitTimestamp_stripsNanos() {
+        LocalDateTime normalized = PVTServiceBean.normalizeVisitTimestamp(
                 LocalDateTime.of(2025, 11, 3, 0, 0, 0, 123_000_000));
         assertEquals(LocalDateTime.of(2025, 11, 3, 0, 0, 0), normalized);
-        assertEquals(LocalDate.of(2025, 11, 3), PVTServiceBean.extractPvtDatePart(normalized));
+        assertEquals(LocalDate.of(2025, 11, 3), PVTServiceBean.resolveVisitDate(normalized));
     }
 
     @Test
-    void normalizePvtDateForStorage_keepsDateTime() {
-        LocalDateTime normalized = PVTServiceBean.normalizePvtDateForStorage(
+    void normalizeVisitTimestamp_keepsDateTime() {
+        LocalDateTime normalized = PVTServiceBean.normalizeVisitTimestamp(
                 LocalDateTime.of(2025, 11, 3, 12, 34, 56));
         assertEquals(LocalDateTime.of(2025, 11, 3, 12, 34, 56), normalized);
-        assertEquals(LocalDate.of(2025, 11, 3), PVTServiceBean.extractPvtDatePart(normalized));
+        assertEquals(LocalDate.of(2025, 11, 3), PVTServiceBean.resolveVisitDate(normalized));
     }
 
     @Test

@@ -58,6 +58,7 @@ beforeEach(() => {
   vi.mocked(fetchDiseases).mockResolvedValue({
     ok: true,
     patientId: 'P-TEST-001',
+    karteId: 1001,
     diseases: [],
   });
   vi.mocked(mutateDiseases).mockResolvedValue({
@@ -108,9 +109,10 @@ describe('DiagnosisEditPanel quick add candidates', () => {
     await user.click(screen.getByRole('button', { name: 'クイック追加' }));
 
     await waitFor(() => {
-      expect(mutateDiseases).toHaveBeenCalledWith(
+        expect(mutateDiseases).toHaveBeenCalledWith(
         expect.objectContaining({
           patientId: 'P-TEST-001',
+          karteId: 1001,
           operations: [
             expect.objectContaining({
               operation: 'create',

@@ -13,7 +13,7 @@ import java.util.Map;
 import open.dolphin.mbean.PvtService;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.push.OrcaPushClientRegistry;
-import open.dolphin.orca.push.OrcaPushStateStore;
+import open.dolphin.orca.push.OrcaPushConnectionStateStore;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
@@ -137,7 +137,7 @@ class OperationsHealthResourceTest {
                 RestOrcaTransport.unavailableProbe(RestOrcaTransport.REASON_CODE_TRANSPORT_NOT_READY);
 
         @Override
-        public RestOrcaTransport.ProbeResult probeReadiness() {
+        public RestOrcaTransport.ProbeResult probeReadiness(String facilityId) {
             return probeResult;
         }
     }
@@ -155,6 +155,6 @@ class OperationsHealthResourceTest {
         }
     }
 
-    private static final class StubPushStateStore extends OrcaPushStateStore {
+    private static final class StubPushStateStore extends OrcaPushConnectionStateStore {
     }
 }

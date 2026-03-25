@@ -51,7 +51,7 @@ class DocumentIntegrityConfigTest {
                 }
                 """);
         DocumentIntegrityConfig config = new DocumentIntegrityConfig(TestServerConfigurationResolvers.resolver(
-                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "permissive",
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString()));
 
         assertThatThrownBy(config::resolveSettings)
@@ -71,7 +71,7 @@ class DocumentIntegrityConfigTest {
                 }
                 """);
         DocumentIntegrityConfig config = new DocumentIntegrityConfig(TestServerConfigurationResolvers.resolver(
-                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "permissive",
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString()));
 
         assertThatThrownBy(config::resolveSettings)
@@ -85,7 +85,7 @@ class DocumentIntegrityConfigTest {
         Files.writeString(keyring, "{not-json");
 
         DocumentIntegrityConfig config = new DocumentIntegrityConfig(TestServerConfigurationResolvers.resolver(
-                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "permissive",
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString()));
 
         assertThatThrownBy(config::resolveSettings)
@@ -111,7 +111,7 @@ class DocumentIntegrityConfigTest {
         assertThatThrownBy(config::resolveMode)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE)
-                .hasMessageContaining("off, permissive or enforce");
+                .hasMessageContaining("must be enforce");
     }
 
     private Path writeKeyring(String fileName, String json) throws IOException {

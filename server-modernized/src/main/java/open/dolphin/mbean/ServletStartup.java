@@ -192,10 +192,9 @@ public class ServletStartup {
         failIfEnabled(ServerConfigurationResolver.KEY_ORCA_PUSH_SHADOW_MODE, resolver.orcaPush().shadowMode());
         failIfEnabled(ServerConfigurationResolver.KEY_ORCA_PUSH_RECOVERY_ENABLED, resolver.orcaPush().recoveryEnabled());
         failIfEnabled(ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_ENABLED, resolver.orcaPatientSync().enabled());
+        requireConfigured(resolver, ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES);
+        requireConfigured(resolver, ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64);
         requireEnforcedDocumentIntegrity(resolver);
-        rejectIfConfigured(resolver, ServerConfigurationResolver.KEY_FIDO2_RP_ID);
-        rejectIfConfigured(resolver, ServerConfigurationResolver.KEY_FIDO2_RP_NAME);
-        rejectIfConfigured(resolver, ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS);
         requireS3AttachmentStorage(resolver);
         // AdminAccessPasswordResetResource remains unregistered until truthful session revoke is implemented.
         OrcaTransportSettings.load();
@@ -213,9 +212,9 @@ public class ServletStartup {
         }
     }
 
-    private static void rejectIfConfigured(ServerConfigurationResolver resolver, String key) {
-        if (resolver.raw(key) != null) {
-            throw new IllegalStateException("production-like startup rejected: " + key + " must not be configured key=" + key);
+    private static void requireConfigured(ServerConfigurationResolver resolver, String key) {
+        if (resolver.raw(key) == null) {
+            throw new IllegalStateException("production-like startup rejected: " + key + " is required key=" + key);
         }
     }
 

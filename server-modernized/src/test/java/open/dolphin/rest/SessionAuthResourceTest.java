@@ -16,9 +16,14 @@ import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import open.dolphin.infomodel.FacilityModel;
 import open.dolphin.infomodel.RoleModel;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.security.auth.AuthSessionRegistryRepository;
+import open.dolphin.security.auth.AuthSessionRegistryService;
+import open.dolphin.security.auth.StepUpSessionService;
+import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +36,9 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
     private SessionAuthResource resource;
     private UserServiceBean userServiceBean;
     private TotpVerificationSupport totpVerificationSupport;
+    private AuthSessionRegistryService authSessionRegistryService;
+    private StepUpSessionService stepUpSessionService;
+    private SessionAuditDispatcher sessionAuditDispatcher;
     private EntityManager entityManager;
     private Query query;
 
@@ -39,10 +47,16 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         resource = new SessionAuthResource();
         userServiceBean = mock(UserServiceBean.class);
         totpVerificationSupport = mock(TotpVerificationSupport.class);
+        authSessionRegistryService = mock(AuthSessionRegistryService.class);
+        stepUpSessionService = mock(StepUpSessionService.class);
+        sessionAuditDispatcher = mock(SessionAuditDispatcher.class);
         entityManager = mock(EntityManager.class);
         query = mock(Query.class);
         setField(resource, "userServiceBean", userServiceBean);
         setField(resource, "totpVerificationSupport", totpVerificationSupport);
+        setField(resource, "authSessionRegistryService", authSessionRegistryService);
+        setField(resource, "stepUpSessionService", stepUpSessionService);
+        setField(resource, "sessionAuditDispatcher", sessionAuditDispatcher);
         setField(resource, "entityManager", entityManager);
     }
 
@@ -273,6 +287,31 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void meRejectsRevokedSession() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpSession session = mock(HttpSession.class);
+        when(request.getSession(false)).thenReturn(session);
+        when(session.getAttribute(AuthSessionSupport.AUTH_ACTOR_ID)).thenReturn(USER_ID);
+        when(authSessionRegistryService.validateCurrentSession(session))
+                .thenReturn(AuthSessionRegistryService.SessionValidationResult.revoked());
+
+        assertThatThrownBy(() -> resource.me(request))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(ex -> {
+                    Response response = ((WebApplicationException) ex).getResponse();
+                    assertThat(response.getStatus()).isEqualTo(401);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> body = (Map<String, Object>) response.getEntity();
+                    assertThat(body)
+                            .containsEntry("error", "session_revoked")
+                            .containsEntry("code", "session_revoked")
+                            .containsEntry("message", "セッションは無効化されました。再ログインしてください。")
+                            .containsEntry("status", 401);
+                });
+        verify(session).invalidate();
+    }
+
+    @Test
     void loginFactor2ExpiresSessionWhenVerifiedTotpCredentialMissing() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpSession pendingSession = mock(HttpSession.class);
@@ -297,6 +336,35 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void stepUpReturnsProofEnvelopeFromService() {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(stepUpSessionService.stepUp(request, Map.of(
+                "method", "totp",
+                "code", "123456",
+                "scope", "admin:mutation")))
+                .thenReturn(new StepUpSessionService.StepUpResult(
+                        "admin:mutation",
+                        java.time.Instant.parse("2026-03-25T10:00:00Z"),
+                        java.time.Instant.parse("2026-03-25T10:05:00Z"),
+                        300L));
+
+        Response response = resource.stepUp(request, Map.of(
+                "method", "totp",
+                "code", "123456",
+                "scope", "admin:mutation"));
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeaderString("Cache-Control")).isEqualTo("private, no-store, max-age=0, must-revalidate");
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> body = (java.util.Map<String, Object>) response.getEntity();
+        assertThat(body)
+                .containsEntry("scope", "admin:mutation")
+                .containsEntry("verifiedAt", "2026-03-25T10:00:00Z")
+                .containsEntry("expiresAt", "2026-03-25T10:05:00Z")
+                .containsEntry("ttlSeconds", 300L);
+    }
+
+    @Test
     void meRequiresAuthenticatedSession() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getSession(false)).thenReturn(null);
@@ -313,6 +381,25 @@ class SessionAuthResourceTest extends RuntimeDelegateTestSupport {
         when(request.getSession(false)).thenReturn(session);
         when(session.getAttribute(AuthSessionSupport.AUTH_ACTOR_ID)).thenReturn(USER_ID);
         when(session.getAttribute(AuthSessionSupport.AUTH_CLIENT_UUID)).thenReturn("client-2");
+        AuthSessionRegistryRepository.SessionRow row = new AuthSessionRegistryRepository.SessionRow(
+                "sess-me",
+                101L,
+                USER_ID,
+                "F001",
+                "client-2",
+                "password",
+                java.time.Instant.parse("2026-03-25T10:00:00Z"),
+                java.time.Instant.parse("2026-03-25T10:00:00Z"),
+                null,
+                null,
+                0L,
+                0L,
+                null,
+                null,
+                null,
+                java.time.Instant.parse("2026-03-25T10:00:00Z"));
+        when(authSessionRegistryService.validateCurrentSession(session))
+                .thenReturn(AuthSessionRegistryService.SessionValidationResult.valid(row));
         when(userServiceBean.getUser(USER_ID)).thenReturn(userWithRole(USER_ID, "user"));
 
         Response response = resource.me(request);

@@ -17,8 +17,6 @@
 - `db.*`
 - `orca.db.*`
 - `factor2.aes-key-b64`
-- `fido2.rp.*`
-- `fido2.allowed.origins`
 - `plivo.*`
 
 環境変数で投入する場合は MicroProfile Config の標準変換に従い、大文字 + `_` 区切りを使用する。例:
@@ -34,12 +32,12 @@
 - `opendolphin.environment`
 - `db.*` または `orca.db.*` の `host/name/user/password`
 - `factor2.aes-key-b64`
-- `fido2.rp.id`
-- `fido2.rp.name`
-- `fido2.allowed.origins`
+- `security.trusted-proxies`
+- `document.integrity.mode`
+- `document.integrity.keyring-path`
 
 ## 段階移行
 
 - `CFG-01/02` で typed config の集約点と起動時 validation を導入済み。
 - `CFG-03/04` で `RuntimeConfigurationSupport` を bootstrap helper に縮退し、`ORCAConnection` を typed datasource config + CDI 管理へ移行済み。
-- 2026-03-16 時点の残タスクは `SmsGatewayConfig` など一部コンポーネントの直読除去と sample / README の追随である。
+- 2026-03-25 時点で FIDO2 typed config surface は削除済み。document integrity は `enforce` 固定、`security.trusted-proxies` と `factor2.aes-key-b64` は production-like 起動の必須条件である。

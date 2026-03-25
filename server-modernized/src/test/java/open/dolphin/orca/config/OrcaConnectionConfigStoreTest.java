@@ -73,7 +73,7 @@ class OrcaConnectionConfigStoreTest {
         assertEquals("tenant-001", snapshot.getPushTenantId());
         assertEquals("F001", reloaded.getDefaultFacilityId());
 
-        OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = reloaded.resolve();
+        OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = reloaded.resolve("F001");
         assertEquals("https://weborca-trial.orca.med.or.jp", resolved.baseUrl());
         assertEquals("trial", resolved.username());
         assertEquals("weborcatrial", resolved.password());
@@ -233,10 +233,7 @@ class OrcaConnectionConfigStoreTest {
 
         SecondFactorSecurityConfig secondFactorConfig = new SecondFactorSecurityConfig();
         setField(secondFactorConfig, "configurationResolver", TestServerConfigurationResolvers.resolver(
-                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, keyBase64(51),
-                ServerConfigurationResolver.KEY_FIDO2_RP_ID, "localhost",
-                ServerConfigurationResolver.KEY_FIDO2_RP_NAME, "OpenDolphin",
-                ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS, "https://localhost:8443"));
+                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, keyBase64(51)));
         secondFactorConfig.init();
 
         String cipher = orcaConfig.getCredentialProtector().encrypt("orca-secret");

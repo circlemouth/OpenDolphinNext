@@ -39,11 +39,13 @@ class ChartEventServiceBeanPvtStateEventTest {
     }
 
     @Test
-    void processChartEvent_normalizesLegacyStateAndUpdatesCachedVisits() {
-        PatientModel patient = patient(200L);
-        PatientVisitModel persisted = visit(10L, patient, "F001", 1 << PatientVisitModel.BIT_CANCEL);
-        PatientVisitModel cached = visit(10L, patient, "F001", 1 << PatientVisitModel.BIT_CANCEL);
-        PatientVisitModel samePatient = visit(11L, patient, "F001", 0);
+    void processChartEvent_rejectsLegacyPvtStateMutationAfterEncounterCutover() {
+        PatientModel persistedPatient = patient(200L);
+        PatientModel cachedPatient = patient(200L);
+        PatientModel siblingPatient = patient(200L);
+        PatientVisitModel persisted = visit(10L, persistedPatient, "F001", 1 << PatientVisitModel.BIT_CANCEL);
+        PatientVisitModel cached = visit(10L, cachedPatient, "F001", 1 << PatientVisitModel.BIT_CANCEL);
+        PatientVisitModel samePatient = visit(11L, siblingPatient, "F001", 0);
         contextHolder.addPvt("F001", cached);
         contextHolder.addPvt("F001", samePatient);
         when(em.find(PatientVisitModel.class, 10L)).thenReturn(persisted);
@@ -60,24 +62,24 @@ class ChartEventServiceBeanPvtStateEventTest {
 
         int result = service.processChartEvent(evt);
 
-        assertThat(result).isEqualTo(1);
-        assertThat(evt.getState()).isZero();
-        assertThat(persisted.getState()).isZero();
-        assertThat(persisted.getByomeiCount()).isEqualTo(3);
-        assertThat(persisted.getByomeiCountToday()).isEqualTo(1);
-        assertThat(persisted.getMemo()).isEqualTo("memo");
-        assertThat(persisted.getPatientModel().getOwnerUUID()).isEqualTo("owner-1");
-        assertThat(cached.getPatientModel().getOwnerUUID()).isEqualTo("owner-1");
-        assertThat(samePatient.getStateBit(PatientVisitModel.BIT_OPEN)).isTrue();
-        assertThat(samePatient.getPatientModel().getOwnerUUID()).isEqualTo("owner-1");
-        verify(publisher).broadcast(evt);
+        assertThat(result).isEqualTo(0);
+        assertThat(evt.getState()).isEqualTo(1);
+        assertThat(persisted.getState()).isEqualTo(1 << PatientVisitModel.BIT_CANCEL);
+        assertThat(persisted.getByomeiCount()).isEqualTo(0);
+        assertThat(persisted.getByomeiCountToday()).isEqualTo(0);
+        assertThat(persisted.getMemo()).isNull();
+        assertThat(persisted.getPatientModel().getOwnerUUID()).isNull();
+        assertThat(cached.getPatientModel().getOwnerUUID()).isNull();
+        assertThat(samePatient.getStateBit(PatientVisitModel.BIT_OPEN)).isFalse();
+        assertThat(samePatient.getPatientModel().getOwnerUUID()).isNull();
+        verify(publisher, never()).broadcast(evt);
     }
 
     @Test
     void processChartEvent_rejectsWhenFacilityDoesNotMatch() {
-        PatientModel patient = patient(200L);
-        PatientVisitModel persisted = visit(10L, patient, "F999", 0);
-        contextHolder.addPvt("F001", visit(10L, patient, "F001", 0));
+        PatientModel persistedPatient = patient(200L);
+        PatientVisitModel persisted = visit(10L, persistedPatient, "F999", 0);
+        contextHolder.addPvt("F001", visit(10L, patient(200L), "F001", 0));
         when(em.find(PatientVisitModel.class, 10L)).thenReturn(persisted);
 
         ChartEventModel evt = new ChartEventModel("issuer-1");
@@ -89,7 +91,7 @@ class ChartEventServiceBeanPvtStateEventTest {
 
         int result = service.processChartEvent(evt);
 
-        assertThat(result).isEqualTo(1);
+        assertThat(result).isEqualTo(0);
         assertThat(persisted.getState()).isZero();
         verify(publisher, never()).broadcast(evt);
     }

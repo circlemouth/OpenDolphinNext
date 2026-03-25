@@ -123,7 +123,7 @@ public class SessionMessageHandler {
             LOGGER.warn("PVT XML payload was empty [traceId={}]", traceId);
             return;
         }
-        String facilityId = resolveFacilityId();
+        String facilityId = configuredFacilityId();
         if (facilityId == null || facilityId.isBlank()) {
             LOGGER.warn("Facility ID unavailable; skipping PVT import [traceId={}]", traceId);
             return;
@@ -159,7 +159,7 @@ public class SessionMessageHandler {
         return model;
     }
 
-    private String resolveFacilityId() {
+    private String configuredFacilityId() {
         if (configurationResolver != null) {
             String configured = configurationResolver.orcaRuntime().facilityId();
             if (configured != null && !configured.isBlank()) {

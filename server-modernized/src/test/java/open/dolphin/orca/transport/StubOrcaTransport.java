@@ -11,24 +11,19 @@ import open.dolphin.orca.OrcaGatewayException;
 public class StubOrcaTransport implements OrcaTransport {
 
     @Override
-    public String invoke(OrcaEndpoint endpoint, String requestXml) {
+    public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
         String resource = StubOrcaPayloadCatalog.resourceFor(endpoint);
         try (InputStream stream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resource)) {
             if (stream == null) {
                 throw new OrcaGatewayException("Stub payload not found: " + resource);
             }
-            return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            String body = new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            String contentType = endpoint != null && endpoint.getAccept() != null
+                    ? endpoint.getAccept()
+                    : "application/xml";
+            return OrcaTransportResult.fallback(body, contentType);
         } catch (IOException ex) {
             throw new OrcaGatewayException("Failed to read stub payload for " + endpoint.name(), ex);
         }
-    }
-
-    @Override
-    public OrcaTransportResult invokeDetailed(OrcaEndpoint endpoint, OrcaTransportRequest request) {
-        String body = invoke(endpoint, request != null ? request.getBody() : null);
-        String contentType = endpoint != null && endpoint.getAccept() != null
-                ? endpoint.getAccept()
-                : "application/xml";
-        return OrcaTransportResult.fallback(body, contentType);
     }
 }

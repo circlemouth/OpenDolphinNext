@@ -3245,6 +3245,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       if (diseaseOperations.length > 0) {
         const diseaseResult = await mutateDiseases({
           patientId,
+          karteId: karteId!,
           operations: diseaseOperations,
         });
         if (!diseaseResult.ok) {

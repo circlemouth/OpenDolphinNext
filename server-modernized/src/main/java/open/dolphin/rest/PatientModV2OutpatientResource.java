@@ -16,7 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.PatientModel;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
@@ -46,7 +46,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
     private OrcaTransport orcaTransport;
 
     @Inject
-    private OrcaWrapperService orcaWrapperService;
+    private OrcaLiveGateway orcaWrapperService;
 
     @Inject
     private OrcaPatientSyncService orcaPatientSyncService;
@@ -59,7 +59,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         this.orcaTransport = orcaTransport;
     }
 
-    void setOrcaWrapperService(OrcaWrapperService orcaWrapperService) {
+    void setOrcaLiveGateway(OrcaLiveGateway orcaWrapperService) {
         this.orcaWrapperService = orcaWrapperService;
     }
 
@@ -81,7 +81,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String traceId = resolveTraceId(request);
         String requestId = resolveRequestId(request, traceId);
-        String facilityId = resolveFacilityId(request);
+        String facilityId = requireFacilityId(request);
         if (facilityId == null || facilityId.isBlank()) {
             throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
         }
@@ -284,7 +284,7 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         return traceId;
     }
 
-    private String resolveFacilityId(HttpServletRequest request) {
+    private String requireFacilityId(HttpServletRequest request) {
         if (request == null) {
             return null;
         }

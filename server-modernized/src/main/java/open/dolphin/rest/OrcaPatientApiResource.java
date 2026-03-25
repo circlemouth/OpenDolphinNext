@@ -74,7 +74,9 @@ public class OrcaPatientApiResource extends AbstractResource {
             details.put("format", "json");
 
             details.put("patientId", patientId);
-            OrcaTransportResult result = orcaTransport.invokeDetailed(
+            String facilityId = getRemoteFacility(request != null ? request.getRemoteUser() : null);
+            OrcaTransportResult result = orcaTransport.invoke(
+                    facilityId,
                     OrcaEndpoint.PATIENT_GET,
                     OrcaTransportRequest.get(query));
             markSuccess(details);

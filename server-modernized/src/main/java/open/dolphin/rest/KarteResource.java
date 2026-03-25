@@ -63,7 +63,7 @@ public class KarteResource extends AbstractResource {
         String pid = params[0];
         Date fromDate = parseDate(params[1]);
 
-        String fid = support().resolveFacilityId(servletReq);
+        String fid = support().requireActorFacilityId(servletReq);
         KarteBean bean = karteServiceBean.getKarte(fid, pid, fromDate);
 
         return support().toConverter(servletReq, bean, "pid_lookup");
@@ -258,81 +258,6 @@ public class KarteResource extends AbstractResource {
         conv.setModel(result);
 
         return conv;
-    }
-
-    //-------------------------------------------------------
-
-    @GET
-    @Path("/diagnosis/{param}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public LegacyOrcaResponseMapper.RegisteredDiagnosisListResponse getDiagnosis(@PathParam("param") String param) {
-
-        debug(param);
-        String[] params = param.split(CAMMA);
-        long karteId = Long.parseLong(params[0]);
-        Date fromDate = parseDate(params[1]);
-        boolean activeOnly = false;
-        if (params.length==3) {
-            activeOnly = Boolean.parseBoolean(params[2]);
-        }
-        support().ensureKarteFacilityAccess(karteId, null);
-
-        List<RegisteredDiagnosisModel> result = karteServiceBean.getDiagnosis(karteId, fromDate, activeOnly);
-        return LegacyOrcaResponseMapper.toRegisteredDiagnosisListResponse(result);
-    }
-    
-    @POST
-    @Path("/diagnosis")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.TEXT_PLAIN)
-    public String postDiagnosis(String json) throws IOException {
-        RegisteredDiagnosisList list = support().readJson(json, RegisteredDiagnosisList.class);
-        support().ensureDiagnosisFacilityAccess(list != null ? list.getList() : null, null);
-
-        List<Long> result = karteServiceBean.addDiagnosis(list.getList());
-
-        StringBuilder sb = new StringBuilder();
-        for (Long l : result) {
-            sb.append(String.valueOf(l));
-            sb.append(CAMMA);
-        }
-        String text = sb.substring(0, sb.length()-1);
-        debug(text);
-
-        return text;
-    }
-
-    @PUT
-    @Path("/diagnosis")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.TEXT_PLAIN)
-    public String putDiagnosis(String json) throws IOException {
-        RegisteredDiagnosisList list = support().readJson(json, RegisteredDiagnosisList.class);
-        support().ensureDiagnosisFacilityAccess(list != null ? list.getList() : null, null);
-
-        int result = karteServiceBean.updateDiagnosis(list.getList());
-        String text = String.valueOf(result);
-        debug(text);
-
-        return text;
-    }
-
-    @DELETE
-    @Path("/diagnosis/{param}")
-    public void deleteDiagnosis(@PathParam("param") String param) {
-
-        debug(param);
-        String[] params = param.split(CAMMA);
-        List<Long> list = new ArrayList<Long>(params.length);
-        for (String s : params) {
-            long diagnosisId = Long.parseLong(s);
-            support().ensureDiagnosisIdFacilityAccess(diagnosisId, null);
-            list.add(diagnosisId);
-        }
-
-        int result = karteServiceBean.removeDiagnosis(list);
-
-        debug(String.valueOf(result));
     }
 
     //-------------------------------------------------------

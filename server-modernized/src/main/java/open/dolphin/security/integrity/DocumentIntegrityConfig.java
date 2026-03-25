@@ -42,21 +42,15 @@ public class DocumentIntegrityConfig {
             throw new IllegalStateException(ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " is required");
         }
         String normalized = raw.trim().toLowerCase(Locale.ROOT);
-        return switch (normalized) {
-            case "off" -> Mode.OFF;
-            case "permissive" -> Mode.PERMISSIVE;
-            case "enforce" -> Mode.ENFORCE;
-            default -> throw new IllegalStateException(
-                    ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " must be off, permissive or enforce");
-        };
+        if (!"enforce".equals(normalized)) {
+            throw new IllegalStateException(
+                    ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE + " must be enforce");
+        }
+        return Mode.ENFORCE;
     }
 
     public Settings resolveSettings() {
         Mode mode = resolveMode();
-        if (mode == Mode.OFF) {
-            return Settings.disabled(mode);
-        }
-
         Path keyringPath = requireAbsolutePath(configuration().keyringPath(),
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH);
         ValidatedKeyring keyring = loadValidatedKeyringInternal(keyringPath);
@@ -158,7 +152,7 @@ public class DocumentIntegrityConfig {
 
     public static Path requireAbsolutePath(Path path, String key) {
         if (path == null) {
-            throw new IllegalStateException(key + " is required when document integrity mode is not off");
+            throw new IllegalStateException(key + " is required");
         }
         if (!path.isAbsolute()) {
             throw new IllegalStateException(key + " must be an absolute path");
@@ -175,8 +169,6 @@ public class DocumentIntegrityConfig {
     }
 
     public enum Mode {
-        OFF,
-        PERMISSIVE,
         ENFORCE
     }
 
@@ -190,10 +182,6 @@ public class DocumentIntegrityConfig {
             this.mode = mode;
             this.activeKey = activeKey;
             this.keysById = keysById == null ? Map.of() : Map.copyOf(keysById);
-        }
-
-        static Settings disabled(Mode mode) {
-            return new Settings(mode, null, Map.of());
         }
 
         public Mode getMode() {

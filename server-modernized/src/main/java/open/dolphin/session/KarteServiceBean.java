@@ -383,10 +383,6 @@ public class KarteServiceBean {
         return medicationSummarySupport().toSafetySummary(observations, diagnoses, routineMeds);
     }
 
-    public long addDocumentAndUpdatePVTState(DocumentModel document, long pvtPK, int state) {
-        return karteDocumentWriteService.addDocumentAndUpdatePVTState(document, pvtPK, state);
-    }
-
     /**
      * ドキュメントを論理削除する。
      * @param id

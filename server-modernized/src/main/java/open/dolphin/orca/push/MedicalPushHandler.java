@@ -20,15 +20,16 @@ import open.dolphin.runtime.config.ServerConfigurationResolver;
 public class MedicalPushHandler implements OrcaPushEventHandler {
 
     private static final Logger LOGGER = Logger.getLogger(MedicalPushHandler.class.getName());
+    static final String STREAM_KIND = "medical";
 
     @Inject
     OrcaTransport orcaTransport;
 
     @Inject
-    OrcaPushSeenEventStore seenEventStore;
+    OrcaPushEventInboxStore eventInboxStore;
 
     @Inject
-    OrcaPushStateStore stateStore;
+    OrcaPushConnectionStateStore connectionStateStore;
 
     @Inject
     OrcaPushMetricsRegistrar metricsRegistrar;
@@ -38,31 +39,34 @@ public class MedicalPushHandler implements OrcaPushEventHandler {
 
     @Override
     public void handle(String facilityId, OrcaPushEventData eventData) {
+        facilityId = requireFacilityId(facilityId);
         OrcaPushMedicalBody body = asMedicalBody(eventData != null ? eventData.getBody() : null);
         if (body == null) {
             metricsRegistrar.recordFailure(facilityId, "patient_account", mode());
             return;
         }
-        if (!seenEventStore.markSeen(
-                facilityId,
-                eventData.getUuid(),
-                eventData.getEvent(),
-                parseInstant(eventData.getTime()),
-                dedupRetentionDays())) {
-            metricsRegistrar.recordDuplicate(facilityId, eventData.getEvent(), mode());
+        String eventUuid = normalize(eventData != null ? eventData.getUuid() : null);
+        String eventName = normalize(eventData != null ? eventData.getEvent() : null);
+        Instant eventTime = parseInstant(eventData.getTime());
+        if (eventInboxStore.isApplied(facilityId, STREAM_KIND, eventUuid)) {
+            metricsRegistrar.recordDuplicate(facilityId, eventName, mode());
             return;
         }
+        eventInboxStore.markReceived(facilityId, STREAM_KIND, eventUuid, eventName, eventTime, "{}", null);
         List<OrcaPushMedicalInformation> items = body.getMedical_Information();
         if (items == null || items.isEmpty()) {
             LOGGER.log(Level.WARNING, "patient_account event has no invoice payload. facilityId={0}", facilityId);
-            metricsRegistrar.recordFailure(facilityId, eventData.getEvent(), mode());
+            eventInboxStore.markFailed(facilityId, STREAM_KIND, eventUuid, Instant.now(),
+                    "missing_invoice_payload", "patient_account event has no invoice payload", null);
+            metricsRegistrar.recordFailure(facilityId, eventName, mode());
             return;
         }
         boolean anyFailure = false;
         for (OrcaPushMedicalInformation item : items) {
             try {
                 String xml = buildMedicalGetPayload(body, item);
-                orcaTransport.invokeDetailed(
+                orcaTransport.invoke(
+                        facilityId,
                         OrcaEndpoint.MEDICAL_GET,
                         OrcaTransportRequest.post(xml).withQuery("class=02"));
             } catch (RuntimeException ex) {
@@ -71,11 +75,14 @@ public class MedicalPushHandler implements OrcaPushEventHandler {
             }
         }
         if (anyFailure) {
-            stateStore.markDegraded(facilityId, null, "medical_push_partial_failure");
-            metricsRegistrar.recordFailure(facilityId, eventData.getEvent(), mode());
+            eventInboxStore.markFailed(facilityId, STREAM_KIND, eventUuid, Instant.now(),
+                    "medical_push_partial_failure", "One or more invoice pulls failed", null);
+            connectionStateStore.markDegraded(facilityId, STREAM_KIND, null, "medical_push_partial_failure");
+            metricsRegistrar.recordFailure(facilityId, eventName, mode());
         } else {
-            stateStore.markEvent(facilityId, null, eventData.getUuid(), eventData.getEvent(), parseInstant(eventData.getTime()));
-            metricsRegistrar.recordReceived(facilityId, eventData.getEvent(), mode());
+            eventInboxStore.markFetched(facilityId, STREAM_KIND, eventUuid, Instant.now(), null);
+            eventInboxStore.markApplied(facilityId, STREAM_KIND, eventUuid, Instant.now(), null);
+            metricsRegistrar.recordReceived(facilityId, eventName, mode());
         }
     }
 
@@ -131,5 +138,19 @@ public class MedicalPushHandler implements OrcaPushEventHandler {
 
     private String mode() {
         return configurationResolver != null && configurationResolver.orcaPush().shadowMode() ? "shadow" : "live";
+    }
+
+    private static String requireFacilityId(String facilityId) {
+        if (facilityId == null || facilityId.isBlank()) {
+            throw new IllegalStateException("facilityId is required");
+        }
+        return facilityId.trim();
+    }
+
+    private static String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return "unknown";
+        }
+        return value.trim();
     }
 }

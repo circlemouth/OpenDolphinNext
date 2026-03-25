@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.audit.AuditEventEnvelope;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
@@ -36,7 +36,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     private static final String OPERATION_VISIT_MUTATION = "visit_mutation";
     private static final String OPERATION_VISIT_LIST = "visit_list";
 
-    private OrcaWrapperService wrapperService;
+    private OrcaLiveGateway wrapperService;
     private ReceptionRealtimeSseSupport receptionRealtimeSseSupport;
     private ServerConfigurationResolver configurationResolver;
 
@@ -44,7 +44,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     }
 
     @Inject
-    public OrcaVisitResource(OrcaWrapperService wrapperService) {
+    public OrcaVisitResource(OrcaLiveGateway wrapperService) {
         this.wrapperService = wrapperService;
     }
 
@@ -94,6 +94,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         }
         validateVisitMutationRequest(request, body);
         applyPushDefaults(body);
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_VISIT_MUTATION);
         details.put("requestNumber", body.getRequestNumber());
@@ -101,13 +102,13 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         details.put("acceptanceDate", body.getAcceptanceDate());
         details.put("acceptanceTime", body.getAcceptanceTime());
         try {
-            VisitMutationResponse response = wrapperService.mutateVisit(body);
+            VisitMutationResponse response = wrapperService.mutateVisit(facilityId, body);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             if (response.getAcceptanceId() != null && !response.getAcceptanceId().isBlank()) {
                 details.put("acceptanceId", response.getAcceptanceId());
             }
-            publishReceptionRealtimeUpdateIfNeeded(request, body, response, details);
+            publishReceptionRealtimeUpdateIfNeeded(request, facilityId, body, response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
@@ -135,16 +136,16 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                     "visitDate or fromDate/toDate is required");
         }
         if (body.getFromDate() != null && body.getToDate() != null
-                && body.getToDate().isAfter(body.getFromDate().plusDays(OrcaWrapperService.MAX_VISIT_RANGE_DAYS - 1))) {
+                && body.getToDate().isAfter(body.getFromDate().plusDays(OrcaLiveGateway.MAX_VISIT_RANGE_DAYS - 1))) {
             Map<String, Object> details = newAuditDetails(request);
             details.put("operation", OPERATION_VISIT_LIST);
             putAuditDetail(details, "visitDate", body.getVisitDate());
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.visit.range.tooWide",
-                    "visitDate range too wide; up to " + OrcaWrapperService.MAX_VISIT_RANGE_DAYS + " days are allowed");
+                    "visitDate range too wide; up to " + OrcaLiveGateway.MAX_VISIT_RANGE_DAYS + " days are allowed");
             recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.visit.range.tooWide",
-                    "visitDate range too wide; up to " + OrcaWrapperService.MAX_VISIT_RANGE_DAYS + " days are allowed");
+                    "visitDate range too wide; up to " + OrcaLiveGateway.MAX_VISIT_RANGE_DAYS + " days are allowed");
         }
         if (body.getRequestNumber() == null || body.getRequestNumber().isBlank()) {
             Map<String, Object> details = newAuditDetails(request);
@@ -156,11 +157,12 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.visit.invalid",
                     "requestNumber is required");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_VISIT_LIST);
         putAuditDetail(details, "visitDate", body.getVisitDate());
         try {
-            VisitPatientListResponse response = wrapperService.getVisitList(body);
+            VisitPatientListResponse response = wrapperService.getVisitList(facilityId, body);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -198,7 +200,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         };
     }
 
-    void setWrapperService(OrcaWrapperService wrapperService) {
+    void setWrapperService(OrcaLiveGateway wrapperService) {
         this.wrapperService = wrapperService;
     }
 
@@ -211,6 +213,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     }
 
     private void publishReceptionRealtimeUpdateIfNeeded(HttpServletRequest request,
+            String facilityId,
             VisitMutationRequest body,
             VisitMutationResponse response,
             Map<String, Object> details) {
@@ -227,7 +230,6 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         if (!OrcaApiProxySupport.isApiResultSuccess(response.getApiResult())) {
             return;
         }
-        String facilityId = resolveFacilityIdForRealtime(request, details);
         if (facilityId == null || facilityId.isBlank()) {
             return;
         }
@@ -246,22 +248,6 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             LOGGER.log(Level.FINE, "Failed to publish reception realtime update", ex);
         }
-    }
-
-    private String resolveFacilityIdForRealtime(HttpServletRequest request, Map<String, Object> details) {
-        String remoteUser = request != null ? request.getRemoteUser() : null;
-        String facilityId = getRemoteFacility(remoteUser);
-        if (facilityId != null && !facilityId.isBlank()) {
-            return facilityId;
-        }
-        if (details == null) {
-            return null;
-        }
-        Object fromAudit = details.get("facilityId");
-        if (fromAudit instanceof String text && !text.isBlank()) {
-            return text.trim();
-        }
-        return null;
     }
 
     private String resolvePatientId(VisitMutationRequest body, VisitMutationResponse response) {

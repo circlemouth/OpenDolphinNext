@@ -18,7 +18,7 @@
 - client IP 解決を共通化。
   - `AbstractResource.resolveClientIp(request)` を追加。
   - `X-Forwarded-For` は「remoteAddr が trusted proxy の場合のみ採用」。
-  - trusted proxy は loopback/site-local/link-local + `audit.trusted.proxies` / `AUDIT_TRUSTED_PROXIES`（CSV, IP/CIDR）をサポート。
+  - trusted proxy は loopback/site-local/link-local + `security.trusted-proxies` / `SECURITY_TRUSTED_PROXIES`（CSV, IP/CIDR）をサポート。
 - 監査 details のサニタイズ導入。
   - `AuditDetailSanitizer` を追加し、`*token* / password / authorization / cookie / secret` 系キーを `***` に置換（`tokenHash`/`tokenPresent` は許可）。
 - 外部監査ログの個人情報削減。
@@ -33,4 +33,3 @@
    - バッチ/実行単位の証跡抽出を高速化。
 4. `d_audit_event(action, event_time DESC)`
    - 監査アクション単位の抽出を高速化。
-

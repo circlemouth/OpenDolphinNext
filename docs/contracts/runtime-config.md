@@ -121,10 +121,10 @@
 - `orca.patient-sync.initial-lookback-days` / `ORCA_PATIENT_SYNC_INITIAL_LOOKBACK_DAYS` は 0 以上。
 - `orca.patient-sync.include-test-patient` / `ORCA_PATIENT_SYNC_INCLUDE_TEST_PATIENT` は `true|false`。
 - `orca.patient-sync.include-insurance` / `ORCA_PATIENT_SYNC_INCLUDE_INSURANCE` は `true|false`。
-- `orca.patient-sync.facility-id` / `ORCA_PATIENT_SYNC_FACILITY_ID` は任意。未設定時は `opendolphin.facility-id` を使用する。
+- patient sync の施設単位スケジュールは `orca_job_schedule` を正本とし、single-facility fallback は持たない。
 - `metrics.registry.jndi` / `METRICS_REGISTRY_JNDI` は Micrometer `MeterRegistry` を引く JNDI 名。未設定時は `java:jboss/micrometer/registry`。
 - `jboss.bind.address` / `JBOSS_BIND_ADDRESS` は運用上表示する bind address を固定したい場合のみ指定する。未設定時はホスト解決値を使う。
-- `audit.trusted.proxies` / `AUDIT_TRUSTED_PROXIES` は CSV の IP/CIDR。未設定時は loopback のみ信頼する。
+- `security.trusted-proxies` / `SECURITY_TRUSTED_PROXIES` は CSV の IP/CIDR。未設定時は forwarded ヘッダを信用しない。
 - `opendolphin.templates.dir` / `OPENDOLPHIN_TEMPLATES_DIR` は帳票テンプレートの最優先探索パス。絶対パス推奨。
 - `opendolphin.license.dir` / `OPENDOLPHIN_LICENSE_DIR` は `license.properties` の配置先。未設定時は `jboss.server.data.dir` を使う。
 - SMTP 利用時は以下を指定する。
@@ -169,14 +169,8 @@
 - `factor2.aes-key-b64` 必須。
 - Base64 デコード後 32 bytes 以上。
 
-### 9. FIDO2
-- `fido2.rp.id` 必須。
-- `fido2.rp.name` 必須。
-- `fido2.allowed.origins` は 1 件以上の `http|https` URI を必須。
-
-### 10. Document Integrity
-- `document.integrity.mode` は `off|permissive|enforce`。
-- `mode != off` の場合、`document.integrity.keyring-path` が必須。
+### 9. Document Integrity
+- `document.integrity.mode` は `enforce` 固定。
 - `document.integrity.keyring-path` は絶対パスで、`algorithm=HMAC-SHA256` / active ちょうど 1 件 / `keyId` 重複不可 / `hmacKeyB64` 32 bytes 以上を満たす keyring JSON を指す。
 
 ### 11. Secret Protector 分離

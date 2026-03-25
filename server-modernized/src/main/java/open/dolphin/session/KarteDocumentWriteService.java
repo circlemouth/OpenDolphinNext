@@ -118,29 +118,6 @@ public class KarteDocumentWriteService {
         return merged.getId();
     }
 
-    public long addDocumentAndUpdatePVTState(DocumentModel document, long pvtPK, int state) {
-        prepareDocumentForInsert(document);
-        em.persist(document);
-        em.flush();
-        finalizePersistedDocument(document);
-        sealDocument(document);
-
-        long id = document.getId();
-        long parentPk = document.getDocInfoModel().getParentPk();
-        if (parentPk != 0L) {
-            markRevisionSourceAsModified(parentPk, document.getConfirmed());
-        }
-
-        try {
-            PatientVisitModel exist = em.find(PatientVisitModel.class, pvtPK);
-            exist.setState(state);
-        } catch (Throwable e) {
-            LOGGER.warn("Failed to update PVT state [pvtPK={}, state={}]", pvtPK, state, e);
-        }
-
-        return id;
-    }
-
     public List<String> deleteDocument(long id) {
         Collection<?> refs = em.createQuery(QUERY_DOCUMENT_BY_LINK_ID)
                 .setParameter(ID, id)

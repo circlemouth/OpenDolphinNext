@@ -9,7 +9,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.converter.OrcaXmlMapper;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.DefaultOrcaLiveGateway;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -22,7 +23,7 @@ class DefaultOrcaPatientAdapterStubIntegrationTest {
     @Test
     void searchPatients_usesStubAndReturnsNormalizedRows() {
         StubOrcaTransport transport = new StubOrcaTransport();
-        OrcaWrapperService wrapperService = new OrcaWrapperService(transport, new OrcaXmlMapper());
+        OrcaLiveGateway wrapperService = new DefaultOrcaLiveGateway(transport, new OrcaXmlMapper());
         DefaultOrcaPatientAdapter adapter = new DefaultOrcaPatientAdapter(wrapperService, transport);
 
         OrcaPatientAdapter.PatientSearchQuery query = new OrcaPatientAdapter.PatientSearchQuery(
@@ -40,7 +41,7 @@ class DefaultOrcaPatientAdapterStubIntegrationTest {
     @Test
     void upsertPatient_usesStubPatientModAndReturnsSuccess() {
         StubOrcaTransport transport = new StubOrcaTransport();
-        OrcaWrapperService wrapperService = new OrcaWrapperService(transport, new OrcaXmlMapper());
+        OrcaLiveGateway wrapperService = new DefaultOrcaLiveGateway(transport, new OrcaXmlMapper());
         DefaultOrcaPatientAdapter adapter = new DefaultOrcaPatientAdapter(wrapperService, transport);
 
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -69,7 +70,7 @@ class DefaultOrcaPatientAdapterStubIntegrationTest {
     @Test
     void registerReception_usesStubAcceptmodAndReturnsAcceptanceId() {
         StubOrcaTransport transport = new StubOrcaTransport();
-        OrcaWrapperService wrapperService = new OrcaWrapperService(transport, new OrcaXmlMapper());
+        OrcaLiveGateway wrapperService = new DefaultOrcaLiveGateway(transport, new OrcaXmlMapper());
         DefaultOrcaPatientAdapter adapter = new DefaultOrcaPatientAdapter(wrapperService, transport);
 
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -92,7 +93,7 @@ class DefaultOrcaPatientAdapterStubIntegrationTest {
     @Test
     void upsertPatient_throwsWhenApiResultIsFailure() {
         OrcaTransport transport = new FailPatientModTransport();
-        OrcaWrapperService wrapperService = new OrcaWrapperService(transport, new OrcaXmlMapper());
+        OrcaLiveGateway wrapperService = new DefaultOrcaLiveGateway(transport, new OrcaXmlMapper());
         DefaultOrcaPatientAdapter adapter = new DefaultOrcaPatientAdapter(wrapperService, transport);
 
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -110,12 +111,7 @@ class DefaultOrcaPatientAdapterStubIntegrationTest {
     private static final class FailPatientModTransport implements OrcaTransport {
 
         @Override
-        public String invoke(OrcaEndpoint endpoint, String requestXml) {
-            return invokeDetailed(endpoint, OrcaTransportRequest.post(requestXml)).getBody();
-        }
-
-        @Override
-        public OrcaTransportResult invokeDetailed(OrcaEndpoint endpoint, OrcaTransportRequest request) {
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
             if (endpoint == OrcaEndpoint.PATIENT_MOD) {
                 String body = "<xmlio2><patientmodres><Api_Result>E999</Api_Result>"
                         + "<Api_Result_Message>validation error</Api_Result_Message></patientmodres></xmlio2>";

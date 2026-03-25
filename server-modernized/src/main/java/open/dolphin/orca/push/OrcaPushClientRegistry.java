@@ -31,7 +31,7 @@ public class OrcaPushClientRegistry {
     OrcaPushEventRouter router;
 
     @Inject
-    OrcaPushStateStore stateStore;
+    OrcaPushConnectionStateStore connectionStateStore;
 
     @Inject
     OrcaPushRecoveryService recoveryService;
@@ -94,12 +94,12 @@ public class OrcaPushClientRegistry {
     }
 
     public boolean isConnected() {
-        return !stateStore.listStates().isEmpty() && stateStore.listStates().stream()
-                .allMatch(state -> OrcaPushStateStore.STATUS_CONNECTED.equals(state.connectionStatus()));
+        return !connectionStateStore.listStates().isEmpty() && connectionStateStore.listStates().stream()
+                .allMatch(state -> OrcaPushConnectionStateStore.STATUS_CONNECTED.equals(state.connectionStatus()));
     }
 
     public int facilityCount() {
-        return stateStore.listStates().size();
+        return connectionStateStore.listStates().size();
     }
 
     @PreDestroy
@@ -125,7 +125,7 @@ public class OrcaPushClientRegistry {
                 settings(),
                 socketFactory,
                 router,
-                stateStore,
+                connectionStateStore,
                 recoveryService,
                 metricsRegistrar);
         clients.put(facilityId, client);

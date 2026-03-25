@@ -10,16 +10,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Locale;
+import java.util.List;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infrastructure.concurrent.ConcurrencyResourceNames;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
-import open.dolphin.runtime.config.ServerRuntimeConfiguration;
-import open.dolphin.rest.dto.orca.PatientSyncRequest;
-import open.dolphin.rest.orca.AbstractOrcaRestResource;
 
 /**
  * Periodic ORCA patient sync scheduler (patientlst1v2 -> patientlst2v2 -> upsert local DB).
@@ -35,17 +32,16 @@ public class OrcaPatientSyncScheduler {
     private static final String ENV_LOOKBACK_DAYS = "ORCA_PATIENT_SYNC_INITIAL_LOOKBACK_DAYS";
     private static final String ENV_INCLUDE_TEST_PATIENT = "ORCA_PATIENT_SYNC_INCLUDE_TEST_PATIENT";
     private static final String ENV_INCLUDE_INSURANCE = "ORCA_PATIENT_SYNC_INCLUDE_INSURANCE";
-    private static final String ENV_FACILITY_ID = "ORCA_PATIENT_SYNC_FACILITY_ID";
     private static final ZoneId SYNC_ZONE = defaultSyncZone();
 
     @Resource(lookup = ConcurrencyResourceNames.DEFAULT_SCHEDULER)
     private ManagedScheduledExecutorService scheduler;
 
     @Inject
-    private OrcaPatientSyncService syncService;
+    private OrcaPatientSyncPlanner syncPlanner;
 
     @Inject
-    private OrcaPatientSyncStateStore stateStore;
+    private OrcaPatientSyncRunner syncRunner;
 
     @Inject
     private ServerConfigurationResolver configurationResolver;
@@ -81,59 +77,27 @@ public class OrcaPatientSyncScheduler {
     }
 
     private void runSyncSafely() {
-        // In prod-like deployments, ServletStartup is expected to block this scheduler before it runs.
-        String facilityId = resolveFacilityId();
-        LocalDate today = LocalDate.now(SYNC_ZONE);
-        LocalDate startDate = resolveStartDate(facilityId, today);
-        ServerRuntimeConfiguration.OrcaPatientSyncSettings settings = syncSettings();
-        boolean includeTestPatient = settings.includeTestPatient();
-        boolean includeInsurance = settings.includeInsurance();
-        String runId = AbstractOrcaRestResource.resolveRunIdValue((String) null);
-
-        PatientSyncRequest request = new PatientSyncRequest();
-        request.setStartDate(startDate);
-        request.setEndDate(today);
-        request.setClassCode("01");
-        request.setIncludeTestPatient(includeTestPatient);
-        request.setIncludeInsurance(includeInsurance);
-
-        Instant started = Instant.now();
-        try {
-            var response = syncService.syncPatients(facilityId, request, runId);
-            long elapsedMs = Duration.between(started, Instant.now()).toMillis();
-            LOGGER.log(Level.INFO,
-                    "ORCA patient sync finished. facilityId={0} startDate={1} endDate={2} apiResult={3} created={4} updated={5} fetched={6} elapsedMs={7}",
-                    new Object[]{
-                            facilityId,
-                            startDate,
-                            today,
-                            response != null ? response.getApiResult() : null,
-                            response != null ? response.getCreatedCount() : 0,
-                            response != null ? response.getUpdatedCount() : 0,
-                            response != null ? response.getFetchedCount() : 0,
-                            elapsedMs
-                    });
-        } catch (Exception ex) {
-            LOGGER.log(Level.WARNING, "ORCA patient sync failed. facilityId=" + facilityId + " err=" + ex.getMessage(), ex);
-        }
-    }
-
-    private LocalDate resolveStartDate(String facilityId, LocalDate today) {
-        int lookbackDays = resolveLookbackDays();
-        if (lookbackDays < 0) {
-            lookbackDays = 0;
-        }
-        if (stateStore == null) {
-            return today.minusDays(lookbackDays);
-        }
-        OrcaPatientSyncStateStore.FacilityState state = stateStore.loadFacilityState(facilityId);
-        if (state == null || state.lastSyncDate == null || state.lastSyncDate.isBlank()) {
-            return today.minusDays(lookbackDays);
-        }
-        try {
-            return LocalDate.parse(state.lastSyncDate.trim());
-        } catch (Exception ex) {
-            return today.minusDays(lookbackDays);
+        List<OrcaPatientSyncPlanner.PlannedSync> plans = syncPlanner.planDueRuns(LocalDate.now(SYNC_ZONE), Instant.now());
+        for (OrcaPatientSyncPlanner.PlannedSync plan : plans) {
+            Instant started = Instant.now();
+            try {
+                var response = syncRunner.run(plan.facilityId(), plan.request(), "scheduler", plan.runId());
+                long elapsedMs = Duration.between(started, Instant.now()).toMillis();
+                LOGGER.log(Level.INFO,
+                        "ORCA patient sync finished. facilityId={0} startDate={1} endDate={2} apiResult={3} created={4} updated={5} fetched={6} elapsedMs={7}",
+                        new Object[]{
+                                plan.facilityId(),
+                                plan.request().getStartDate(),
+                                plan.request().getEndDate(),
+                                response != null ? response.getApiResult() : null,
+                                response != null ? response.getCreatedCount() : 0,
+                                response != null ? response.getUpdatedCount() : 0,
+                                response != null ? response.getFetchedCount() : 0,
+                                elapsedMs
+                        });
+            } catch (Exception ex) {
+                LOGGER.log(Level.WARNING, "ORCA patient sync failed. facilityId=" + plan.facilityId() + " err=" + ex.getMessage(), ex);
+            }
         }
     }
 
@@ -146,31 +110,8 @@ public class OrcaPatientSyncScheduler {
     }
 
     private int resolveIntervalMinutes() {
-        Integer configured = syncSettings().intervalMinutes();
+        Integer configured = configurationResolver != null ? configurationResolver.orcaPatientSync().intervalMinutes() : null;
         return configured != null && configured > 0 ? configured : 5;
-    }
-
-    private int resolveLookbackDays() {
-        Integer configured = syncSettings().initialLookbackDays();
-        return configured != null && configured >= 0 ? configured : 7;
-    }
-
-    private String resolveFacilityId() {
-        String explicit = syncSettings().facilityId();
-        if (explicit != null) {
-            String normalized = explicit.trim();
-            if (!normalized.isEmpty()) {
-                return normalized;
-            }
-        }
-        throw new IllegalStateException("ORCA patient sync facilityId is not resolved");
-    }
-
-    private ServerRuntimeConfiguration.OrcaPatientSyncSettings syncSettings() {
-        if (configurationResolver == null) {
-            configurationResolver = new ServerConfigurationResolver();
-        }
-        return configurationResolver.orcaPatientSync();
     }
 
     private static ZoneId defaultSyncZone() {

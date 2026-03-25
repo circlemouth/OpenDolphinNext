@@ -1,13 +1,7 @@
 package open.dolphin.security.audit;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.annotation.Resource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.jms.ConnectionFactory;
-import jakarta.jms.JMSContext;
-import jakarta.jms.Queue;
-import jakarta.jms.TextMessage;
 import jakarta.transaction.Transactional;
 import java.util.Collections;
 import java.util.HashMap;
@@ -17,39 +11,26 @@ import java.util.Optional;
 import java.util.UUID;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.audit.AuditEventEnvelope.Outcome;
-import open.dolphin.msg.dto.JmsEnvelopeMessage;
-import open.dolphin.msg.gateway.MessagingHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * AuditTrailService が生成した監査イベントを JMS へも多重送信し、
- * Appo/Schedule など REST 経由の操作で traceId 付きの証跡を確実に残すディスパッチャ。
+ * AuditTrailService 経由で authoritative audit に append するディスパッチャ。
  */
 @ApplicationScoped
 public class SessionAuditDispatcher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SessionAuditDispatcher.class);
-    private static final String PAYLOAD_TYPE_AUDIT = "AUDIT_EVENT";
-    private static final ObjectMapper JSON = new ObjectMapper().findAndRegisterModules();
 
     @Inject
     private AuditTrailService auditTrailService;
-
-    @Resource(lookup = "java:/JmsXA")
-    private ConnectionFactory connectionFactory;
-
-    @Resource(lookup = "java:/queue/dolphin")
-    private Queue dolphinQueue;
 
     @Transactional(Transactional.TxType.NOT_SUPPORTED)
     public AuditEventEnvelope dispatch(AuditEventEnvelope envelope) {
         if (envelope == null) {
             throw new IllegalArgumentException("AuditEventEnvelope must not be null");
         }
-        AuditEventEnvelope persisted = auditTrailService.write(envelope);
-        publishToJms(persisted);
-        return persisted;
+        return auditTrailService.write(envelope);
     }
 
     public AuditEventEnvelope record(AuditEventPayload payload) {
@@ -70,26 +51,6 @@ public class SessionAuditDispatcher {
             builder.error(errorCode, errorMessage);
         }
         return dispatch(builder.build());
-    }
-
-    private void publishToJms(AuditEventEnvelope envelope) {
-        if (connectionFactory == null || dolphinQueue == null) {
-            LOGGER.debug("JMS resources unavailable; skipping audit JMS publish [action={}, traceId={}]", envelope.getAction(), envelope.getTraceId());
-            return;
-        }
-        try (JMSContext context = connectionFactory.createContext(JMSContext.AUTO_ACKNOWLEDGE)) {
-            String body = JSON.writeValueAsString(JmsEnvelopeMessage.forAudit(envelope));
-            TextMessage message = context.createTextMessage(body);
-            String traceId = envelope.getTraceId();
-            if (traceId != null && !traceId.isBlank()) {
-                message.setStringProperty(MessagingHeaders.TRACE_ID, traceId);
-            }
-            message.setStringProperty(MessagingHeaders.PAYLOAD_TYPE, PAYLOAD_TYPE_AUDIT);
-            context.createProducer().send(dolphinQueue, message);
-            LOGGER.debug("Audit envelope enqueued to JMS queue [action={}, traceId={}]", envelope.getAction(), traceId);
-        } catch (Exception ex) {
-            LOGGER.warn("Failed to publish audit envelope to JMS [traceId={}]", envelope.getTraceId(), ex);
-        }
     }
 
     private AuditEventEnvelope.Builder buildEnvelopeFromPayload(AuditEventPayload payload, Map<String, Object> sanitizedDetails) {

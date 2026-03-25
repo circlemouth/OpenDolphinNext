@@ -52,20 +52,6 @@ class ServerConfigurationResolverTest {
     }
 
     @Test
-    void resolvesFido2OriginsAsList() {
-        ServerRuntimeConfiguration.Fido2Settings settings = TestServerConfigurationResolvers.resolver(
-                ServerConfigurationResolver.KEY_FIDO2_RP_ID, "example.local",
-                ServerConfigurationResolver.KEY_FIDO2_RP_NAME, "OpenDolphin",
-                ServerConfigurationResolver.KEY_FIDO2_ALLOWED_ORIGINS, "https://example.local, http://localhost:8080")
-                .fido2();
-
-        assertEquals("example.local", settings.relyingPartyId());
-        assertEquals("OpenDolphin", settings.relyingPartyName());
-        assertEquals(2, settings.allowedOrigins().size());
-        assertEquals("https://example.local", settings.allowedOrigins().get(0));
-    }
-
-    @Test
     void resolvesOrcaRuntimeSettingsAsTypedValues() {
         ServerRuntimeConfiguration.OrcaRuntimeSettings settings = TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_FACILITY_ID, "facility01",
@@ -90,7 +76,7 @@ class ServerConfigurationResolverTest {
                 ServerConfigurationResolver.KEY_ORCA_RP_DEFAULT_INOUT, "out",
                 ServerConfigurationResolver.KEY_PVT_LIST_CLEAR, "true",
                 ServerConfigurationResolver.KEY_BIND_ADDRESS, "127.0.0.1",
-                ServerConfigurationResolver.KEY_AUDIT_TRUSTED_PROXIES, "10.0.0.0/8,192.168.0.10",
+                ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "10.0.0.0/8,192.168.0.10",
                 ServerConfigurationResolver.KEY_LICENSE_DIR, tempDir.toString(),
                 ServerConfigurationResolver.KEY_TEMPLATES_DIR, tempDir.resolve("templates").toString(),
                 ServerConfigurationResolver.KEY_CHART_EVENT_HISTORY_REPLAY_LIMIT, "25",
@@ -102,7 +88,7 @@ class ServerConfigurationResolverTest {
         assertEquals("out", resolver.orcaLegacy().defaultPrescriptionInOut());
         assertEquals(true, resolver.pvtOperations().listClearEnabled());
         assertEquals("127.0.0.1", resolver.systemNetwork().bindAddress());
-        assertEquals(2, resolver.audit().trustedProxyRules().size());
+        assertEquals(2, resolver.security().trustedProxyRules().size());
         assertEquals(tempDir, resolver.license().directory());
         assertEquals(tempDir.resolve("templates"), resolver.templates().directory());
         assertEquals(25, resolver.chartEventHistory().replayLimit());
@@ -179,6 +165,15 @@ class ServerConfigurationResolverTest {
     }
 
     @Test
+    void resolvesBlankTrustedProxyConfigAsEmptyRuleList() {
+        ServerRuntimeConfiguration.SecuritySettings settings = TestServerConfigurationResolvers.resolver(
+                ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "")
+                .security();
+
+        assertEquals(0, settings.trustedProxyRules().size());
+    }
+
+    @Test
     void resolvesPatientImagesSettingsAsTypedValues() {
         ServerRuntimeConfiguration.PatientImagesSettings settings = TestServerConfigurationResolvers.resolver(
                 ServerConfigurationResolver.KEY_PATIENT_IMAGES_ENABLED, "true",
@@ -211,8 +206,7 @@ class ServerConfigurationResolverTest {
                 ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_INTERVAL_MINUTES, "15",
                 ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_INITIAL_LOOKBACK_DAYS, "3",
                 ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_INCLUDE_TEST_PATIENT, "true",
-                ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_INCLUDE_INSURANCE, "true",
-                ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_FACILITY_ID, "facility-sync")
+                ServerConfigurationResolver.KEY_ORCA_PATIENT_SYNC_INCLUDE_INSURANCE, "true")
                 .orcaPatientSync();
 
         assertEquals(true, settings.enabled());
@@ -220,16 +214,15 @@ class ServerConfigurationResolverTest {
         assertEquals(3, settings.initialLookbackDays());
         assertEquals(true, settings.includeTestPatient());
         assertEquals(true, settings.includeInsurance());
-        assertEquals("facility-sync", settings.facilityId());
     }
 
     @Test
     void resolvesOrcaPushSafeDefaults() {
         ServerRuntimeConfiguration.OrcaPushSettings settings = TestServerConfigurationResolvers.resolver().orcaPush();
 
-        assertFalse(settings.enabled());
-        assertFalse(settings.shadowMode());
-        assertFalse(settings.recoveryEnabled());
+        assertEquals(false, settings.enabled());
+        assertEquals(false, settings.shadowMode());
+        assertEquals(false, settings.recoveryEnabled());
     }
 
     @Test

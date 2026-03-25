@@ -145,8 +145,8 @@ public final class ServerRuntimeConfiguration {
     public record SystemNetworkSettings(String bindAddress) {
     }
 
-    public record AuditSettings(List<String> trustedProxyRules) {
-        public AuditSettings {
+    public record SecuritySettings(List<String> trustedProxyRules) {
+        public SecuritySettings {
             trustedProxyRules = trustedProxyRules == null ? List.of() : List.copyOf(trustedProxyRules);
         }
     }
@@ -213,8 +213,7 @@ public final class ServerRuntimeConfiguration {
             Integer intervalMinutes,
             Integer initialLookbackDays,
             boolean includeTestPatient,
-            boolean includeInsurance,
-            String facilityId
+            boolean includeInsurance
     ) {
     }
 
@@ -229,16 +228,6 @@ public final class ServerRuntimeConfiguration {
             Integer retentionCount,
             Duration retentionDuration
     ) {
-    }
-
-    public record Fido2Settings(
-            String relyingPartyId,
-            String relyingPartyName,
-            List<String> allowedOrigins
-    ) {
-        public Fido2Settings {
-            allowedOrigins = allowedOrigins == null ? List.of() : List.copyOf(allowedOrigins);
-        }
     }
 
     public record PlivoSettings(

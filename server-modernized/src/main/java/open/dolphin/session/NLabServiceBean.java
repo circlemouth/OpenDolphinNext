@@ -336,7 +336,7 @@ public class NLabServiceBean {
         builder.actorId(actorId);
         builder.actorDisplayName(resolveActorDisplayName(actorId));
         builder.actorRole(context != null ? context.getActorRole() : null);
-        builder.facilityId(resolveFacilityId(actorId));
+        builder.facilityId(extractFacilityIdFromActor(actorId));
         String traceId = resolveTraceId(context);
         builder.traceId(traceId);
         builder.requestId(resolveRequestId(context, traceId));
@@ -364,7 +364,7 @@ public class NLabServiceBean {
         return actorId;
     }
 
-    private String resolveFacilityId(String actorId) {
+    private String extractFacilityIdFromActor(String actorId) {
         if (actorId == null) {
             return null;
         }

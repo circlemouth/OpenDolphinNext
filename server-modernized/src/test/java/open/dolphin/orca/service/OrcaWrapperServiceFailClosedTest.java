@@ -19,14 +19,14 @@ import org.junit.jupiter.api.Test;
 class OrcaWrapperServiceFailClosedTest {
 
     private final OrcaTransport failingTransport = new AlwaysFailTransport();
-    private final OrcaWrapperService service = new OrcaWrapperService(failingTransport, new OrcaXmlMapper());
+    private final OrcaLiveGateway service = new DefaultOrcaLiveGateway(failingTransport, new OrcaXmlMapper());
 
     @Test
     void appointmentListDoesNotFallbackToSamplePayloadWhenTransportFails() {
         OrcaAppointmentListRequest request = new OrcaAppointmentListRequest();
         request.setAppointmentDate(LocalDate.of(2025, 11, 13));
 
-        assertThrows(OrcaGatewayException.class, () -> service.getAppointmentList(request));
+        assertThrows(OrcaGatewayException.class, () -> service.getAppointmentList("F001", request));
     }
 
     @Test
@@ -34,7 +34,7 @@ class OrcaWrapperServiceFailClosedTest {
         PatientBatchRequest request = new PatientBatchRequest();
         request.getPatientIds().add("000001");
 
-        assertThrows(OrcaGatewayException.class, () -> service.getPatientBatch(request));
+        assertThrows(OrcaGatewayException.class, () -> service.getPatientBatch("F001", request));
     }
 
     @Test
@@ -42,7 +42,7 @@ class OrcaWrapperServiceFailClosedTest {
         PatientNameSearchRequest request = new PatientNameSearchRequest();
         request.setName("山田");
 
-        assertThrows(OrcaGatewayException.class, () -> service.searchPatients(request));
+        assertThrows(OrcaGatewayException.class, () -> service.searchPatients("F001", request));
     }
 
     @Test
@@ -53,7 +53,7 @@ class OrcaWrapperServiceFailClosedTest {
         request.setAcceptanceDate("2025-11-16");
         request.setAcceptanceTime("09:00:00");
 
-        assertThrows(OrcaGatewayException.class, () -> service.mutateVisit(request));
+        assertThrows(OrcaGatewayException.class, () -> service.mutateVisit("F001", request));
     }
 
     @Test
@@ -66,18 +66,21 @@ class OrcaWrapperServiceFailClosedTest {
         item.setQuantity(1);
         request.getItems().add(item);
 
-        assertThrows(OrcaGatewayException.class, () -> service.simulateBilling(request));
+        assertThrows(OrcaGatewayException.class, () -> service.simulateBilling("F001", request));
+    }
+
+    @Test
+    void missingFacilityFailsClosedBeforeTransportInvocation() {
+        PatientBatchRequest request = new PatientBatchRequest();
+        request.getPatientIds().add("000001");
+
+        assertThrows(OrcaGatewayException.class, () -> service.getPatientBatch(" ", request));
     }
 
     private static final class AlwaysFailTransport implements OrcaTransport {
 
         @Override
-        public String invoke(OrcaEndpoint endpoint, String requestXml) {
-            throw new OrcaGatewayException("transport unavailable for " + endpoint.name());
-        }
-
-        @Override
-        public OrcaTransportResult invokeDetailed(OrcaEndpoint endpoint, OrcaTransportRequest request) {
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
             throw new OrcaGatewayException("transport unavailable for " + endpoint.name());
         }
     }

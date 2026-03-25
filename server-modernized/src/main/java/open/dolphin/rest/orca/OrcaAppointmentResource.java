@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
 import open.dolphin.rest.dto.orca.BillingSimulationRequest;
@@ -34,13 +34,13 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
     private static final String OPERATION_BILLING_ESTIMATE = "billing_estimate";
     private static final String OPERATION_APPOINTMENT_MUTATION = "appointment_mutation";
 
-    private OrcaWrapperService wrapperService;
+    private OrcaLiveGateway wrapperService;
 
     public OrcaAppointmentResource() {
     }
 
     @Inject
-    public OrcaAppointmentResource(OrcaWrapperService wrapperService) {
+    public OrcaAppointmentResource(OrcaLiveGateway wrapperService) {
         this.wrapperService = wrapperService;
     }
 
@@ -60,18 +60,19 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
                     "appointmentDate or fromDate/toDate is required");
         }
         if (body.getFromDate() != null && body.getToDate() != null
-                && body.getToDate().isAfter(body.getFromDate().plusDays(OrcaWrapperService.MAX_APPOINTMENT_RANGE_DAYS - 1))) {
+                && body.getToDate().isAfter(body.getFromDate().plusDays(OrcaLiveGateway.MAX_APPOINTMENT_RANGE_DAYS - 1))) {
             Map<String, Object> details = newAuditDetails(request);
             details.put("operation", OPERATION_APPOINTMENT_LIST);
             details.put("fromDate", body.getFromDate());
             details.put("toDate", body.getToDate());
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.range.tooWide",
-                    "appointmentDate range too wide; up to " + OrcaWrapperService.MAX_APPOINTMENT_RANGE_DAYS + " days are allowed");
+                    "appointmentDate range too wide; up to " + OrcaLiveGateway.MAX_APPOINTMENT_RANGE_DAYS + " days are allowed");
             recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.range.tooWide",
-                    "appointmentDate range too wide; up to " + OrcaWrapperService.MAX_APPOINTMENT_RANGE_DAYS + " days are allowed");
+                    "appointmentDate range too wide; up to " + OrcaLiveGateway.MAX_APPOINTMENT_RANGE_DAYS + " days are allowed");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_APPOINTMENT_LIST);
         putAuditDetail(details, "appointmentDate", body.getAppointmentDate());
@@ -82,7 +83,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             putAuditDetail(details, "toDate", body.getToDate());
         }
         try {
-            OrcaAppointmentListResponse response = wrapperService.getAppointmentList(body);
+            OrcaAppointmentListResponse response = wrapperService.getAppointmentList(facilityId, body);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -111,11 +112,12 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.patient.invalid",
                     "patientId is required");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_PATIENT_APPOINTMENTS);
         details.put("patientId", body.getPatientId());
         try {
-            PatientAppointmentListResponse response = wrapperService.getPatientAppointments(body);
+            PatientAppointmentListResponse response = wrapperService.getPatientAppointments(facilityId, body);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -154,12 +156,13 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.billing.invalid",
                     "At least one billing item is required");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_BILLING_ESTIMATE);
         details.put("patientId", body.getPatientId());
         details.put("itemCount", body.getItems().size());
         try {
-            BillingSimulationResponse response = wrapperService.simulateBilling(body);
+            BillingSimulationResponse response = wrapperService.simulateBilling(facilityId, body);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -228,6 +231,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.mutation.invalid",
                     "appointmentDate and appointmentTime are required");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_APPOINTMENT_MUTATION);
         details.put("requestNumber", body.getRequestNumber());
@@ -235,7 +239,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         details.put("appointmentDate", body.getAppointmentDate());
         details.put("appointmentTime", body.getAppointmentTime());
         try {
-            AppointmentMutationResponse response = wrapperService.mutateAppointment(body);
+            AppointmentMutationResponse response = wrapperService.mutateAppointment(facilityId, body);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             if (response.getAppointmentId() != null && !response.getAppointmentId().isBlank()) {
@@ -252,7 +256,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         }
     }
 
-    void setWrapperService(OrcaWrapperService wrapperService) {
+    void setWrapperService(OrcaLiveGateway wrapperService) {
         this.wrapperService = wrapperService;
     }
 }

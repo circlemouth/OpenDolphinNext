@@ -48,7 +48,7 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         String requestId = resolveRequestId(request, traceId);
 
         String resourcePath = resolveResourcePath(request, getDefaultResourcePath());
-        String facilityId = resolveFacilityId(request);
+        String facilityId = requireActorFacility(request);
         String keyword = payload != null ? toString(payload.get("keyword")) : null;
         PatientSearchType searchType = resolveSearchType(payload, keyword);
         String paymentMode = payload != null ? toString(payload.get("paymentMode")) : null;
@@ -165,22 +165,6 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
             }
         }
         return fallback;
-    }
-
-    private String resolveFacilityId(HttpServletRequest request) {
-        if (request == null) {
-            return null;
-        }
-        String remoteUser = request.getRemoteUser();
-        String facilityId = getRemoteFacility(remoteUser);
-        if (facilityId != null && !facilityId.isBlank()) {
-            return facilityId;
-        }
-        String header = request.getHeader("X-Facility-Id");
-        if (header != null && !header.isBlank()) {
-            return header.trim();
-        }
-        return null;
     }
 
     private List<PatientModel> resolvePatients(String facilityId, String keyword, PatientSearchType searchType) {

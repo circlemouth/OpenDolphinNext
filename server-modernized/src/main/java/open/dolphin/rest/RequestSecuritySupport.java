@@ -2,16 +2,11 @@ package open.dolphin.rest;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
-import java.util.LinkedHashMap;
 import java.util.Locale;
-import java.util.Map;
+import open.dolphin.security.auth.TrustedRequestContextResolver.TrustedRequestContext;
 
 final class RequestSecuritySupport {
 
-    private static final String FORWARDED_HEADER = "Forwarded";
-    private static final String X_FORWARDED_PROTO_HEADER = "X-Forwarded-Proto";
-    private static final String X_FORWARDED_HOST_HEADER = "X-Forwarded-Host";
-    private static final String X_FORWARDED_PORT_HEADER = "X-Forwarded-Port";
     private static final String ORIGIN_HEADER = "Origin";
     private static final String REFERER_HEADER = "Referer";
 
@@ -19,43 +14,15 @@ final class RequestSecuritySupport {
     }
 
     static boolean isSecureRequest(HttpServletRequest request) {
-        if (AbstractResource.shouldTrustForwardedHeaders(request)) {
-            ForwardedValues forwarded = parseForwarded(firstHeaderValue(request, FORWARDED_HEADER));
-            if (forwarded.proto() != null) {
-                return "https".equalsIgnoreCase(forwarded.proto());
-            }
-            String forwardedProto = normalizeToken(firstHeaderValue(request, X_FORWARDED_PROTO_HEADER));
-            if (forwardedProto != null) {
-                return "https".equalsIgnoreCase(forwardedProto);
-            }
-        }
-        return request != null && request.isSecure();
+        return AbstractResource.resolveTrustedRequestContext(request).secure();
     }
 
     static String resolveExpectedOrigin(HttpServletRequest request) {
         if (request == null) {
             return null;
         }
-
-        if (AbstractResource.shouldTrustForwardedHeaders(request)) {
-            ForwardedValues forwarded = parseForwarded(firstHeaderValue(request, FORWARDED_HEADER));
-            if (forwarded.host() != null) {
-                HostPort hostPort = parseHostPort(forwarded.host(), forwarded.proto());
-                String scheme = forwarded.proto() != null ? forwarded.proto() : "http";
-                return buildOrigin(scheme, hostPort.host(), hostPort.port());
-            }
-
-            String xfHost = normalizeToken(firstHeaderValue(request, X_FORWARDED_HOST_HEADER));
-            if (xfHost != null) {
-                String scheme = normalizeToken(firstHeaderValue(request, X_FORWARDED_PROTO_HEADER));
-                HostPort hostPort = parseHostPort(xfHost, scheme);
-                Integer forwardedPort = parsePort(firstHeaderValue(request, X_FORWARDED_PORT_HEADER));
-                Integer port = forwardedPort != null ? forwardedPort : hostPort.port();
-                return buildOrigin(scheme != null ? scheme : "http", hostPort.host(), port);
-            }
-        }
-
-        return buildOrigin(request.getScheme(), request.getServerName(), request.getServerPort());
+        TrustedRequestContext context = AbstractResource.resolveTrustedRequestContext(request);
+        return buildOrigin(context.scheme(), context.host(), context.port());
     }
 
     static SameOriginCheckResult validateSameOrigin(HttpServletRequest request) {
@@ -170,35 +137,6 @@ final class RequestSecuritySupport {
         return port;
     }
 
-    private static HostPort parseHostPort(String rawHost, String schemeHint) {
-        String normalized = normalizeHost(rawHost);
-        if (normalized == null) {
-            return new HostPort(null, null);
-        }
-        try {
-            URI uri = URI.create((schemeHint != null ? schemeHint : "http") + "://" + normalized);
-            return new HostPort(normalizeHost(uri.getHost()), uri.getPort() > 0 ? uri.getPort() : null);
-        } catch (RuntimeException ex) {
-            if (normalized.startsWith("[") && normalized.contains("]")) {
-                int close = normalized.indexOf(']');
-                String host = normalizeHost(normalized.substring(0, close + 1));
-                Integer port = null;
-                if (close + 1 < normalized.length() && normalized.charAt(close + 1) == ':') {
-                    port = parsePort(normalized.substring(close + 2));
-                }
-                return new HostPort(host, port);
-            }
-            int lastColon = normalized.lastIndexOf(':');
-            if (lastColon > 0 && normalized.indexOf(':') == lastColon) {
-                Integer port = parsePort(normalized.substring(lastColon + 1));
-                if (port != null) {
-                    return new HostPort(normalizeHost(normalized.substring(0, lastColon)), port);
-                }
-            }
-            return new HostPort(normalized, null);
-        }
-    }
-
     private static Integer parsePort(String value) {
         String normalized = normalizeToken(value);
         if (normalized == null) {
@@ -210,32 +148,6 @@ final class RequestSecuritySupport {
         } catch (NumberFormatException ex) {
             return null;
         }
-    }
-
-    private static ForwardedValues parseForwarded(String headerValue) {
-        String normalized = normalizeToken(headerValue);
-        if (normalized == null) {
-            return ForwardedValues.EMPTY;
-        }
-        String firstElement = normalized.split(",", 2)[0].trim();
-        Map<String, String> params = new LinkedHashMap<>();
-        for (String part : firstElement.split(";")) {
-            String token = part.trim();
-            if (token.isEmpty()) {
-                continue;
-            }
-            int separator = token.indexOf('=');
-            if (separator <= 0 || separator >= token.length() - 1) {
-                continue;
-            }
-            String key = token.substring(0, separator).trim().toLowerCase(Locale.ROOT);
-            String value = token.substring(separator + 1).trim();
-            if (value.startsWith("\"") && value.endsWith("\"") && value.length() >= 2) {
-                value = value.substring(1, value.length() - 1);
-            }
-            params.put(key, value);
-        }
-        return new ForwardedValues(normalizeToken(params.get("proto")), normalizeToken(params.get("host")));
     }
 
     private static String firstHeaderValue(HttpServletRequest request, String headerName) {
@@ -278,13 +190,6 @@ final class RequestSecuritySupport {
                 || "127.0.0.1".equals(normalized)
                 || "::1".equals(normalized)
                 || "0:0:0:0:0:0:0:1".equals(normalized);
-    }
-
-    private record HostPort(String host, Integer port) {
-    }
-
-    private record ForwardedValues(String proto, String host) {
-        private static final ForwardedValues EMPTY = new ForwardedValues(null, null);
     }
 
     record SameOriginCheckResult(boolean allowed, String code, String expectedOrigin, String actualOrigin) {

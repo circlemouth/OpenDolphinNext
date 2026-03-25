@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -19,6 +20,7 @@ import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +42,7 @@ class AdminOrcaUserResourceTest {
 
         setField(resource, "userServiceBean", userServiceBean);
         setField(resource, "orcaTransport", orcaTransport);
+        setField(resource, "adminStepUpGuard", mock(AdminStepUpGuard.class));
         setField(resource, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
     }
 
@@ -73,7 +76,7 @@ class AdminOrcaUserResourceTest {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-ORCA-USERS");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
-        when(orcaTransport.invokeDetailed(eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
                 .thenReturn(okManageUsersResponse());
 
         Response response = resource.listOrcaUsers(request);
@@ -105,7 +108,7 @@ class AdminOrcaUserResourceTest {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-ORCA-SYNC");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
-        when(orcaTransport.invokeDetailed(eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
                 .thenReturn(okManageUsersResponse());
 
         Response response = resource.syncOrcaUsers(request, Map.of());

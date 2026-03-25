@@ -54,7 +54,7 @@ class KarteRevisionResourceAuthorizationTest {
     void historyReturnsForbiddenForCrossFacilityKarte() {
         when(karteRevisionServiceBean.findFacilityIdByKarteId(10L)).thenReturn("FAC_B");
 
-        assertForbidden(() -> resource.getHistory(10L, "2026-03-01", null));
+        assertForbidden(() -> resource.getHistory(10L, "2026-03-01"));
         verify(karteRevisionServiceBean, never()).getRevisionHistory(anyLong(), any(LocalDate.class));
     }
 

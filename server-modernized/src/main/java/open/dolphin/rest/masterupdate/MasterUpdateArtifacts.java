@@ -78,7 +78,8 @@ final class MasterUpdateArtifacts {
             throw new MasterUpdateService.MasterUpdateException(503, "orca_transport_unavailable", "ORCA transport が利用できません。");
         }
 
-        restOrcaTransport.reloadSettings();
+        String facilityId = configurationResolver.orcaRuntime().facilityId();
+        restOrcaTransport.reloadSettings(facilityId);
         String requestXml = String.join("\n",
                 "<data>",
                 "  <masterlastupdatev3req type=\"record\">",
@@ -86,7 +87,8 @@ final class MasterUpdateArtifacts {
                 "  </masterlastupdatev3req>",
                 "</data>");
 
-        OrcaTransportResult result = restOrcaTransport.invokeDetailed(
+        OrcaTransportResult result = restOrcaTransport.invoke(
+                facilityId,
                 OrcaEndpoint.MASTER_LAST_UPDATE,
                 OrcaTransportRequest.post(requestXml)
         );

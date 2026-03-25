@@ -170,7 +170,7 @@ final class KarteResourceSupport {
                 model.getComment());
     }
 
-    String resolveFacilityId(HttpServletRequest request) {
+    String requireActorFacilityId(HttpServletRequest request) {
         String remoteUser = request != null ? request.getRemoteUser() : null;
         String facility = resource.getRemoteFacility(remoteUser);
         if (facility == null || facility.isBlank()) {
@@ -212,7 +212,7 @@ final class KarteResourceSupport {
     void ensurePatientFacilityAccess(long patientPk, HttpServletRequest request) {
         if (patientPk > 0) {
             HttpServletRequest effectiveRequest = resolveRequest(request);
-            ensureFacilityMatch(resolveFacilityId(effectiveRequest),
+            ensureFacilityMatch(requireActorFacilityId(effectiveRequest),
                     karteServiceBean.findFacilityIdByPatientPk(patientPk), "patientPk", patientPk, effectiveRequest);
         }
     }
@@ -220,7 +220,7 @@ final class KarteResourceSupport {
     void ensureKarteFacilityAccess(long karteId, HttpServletRequest request) {
         if (karteId > 0) {
             HttpServletRequest effectiveRequest = resolveRequest(request);
-            ensureFacilityMatch(resolveFacilityId(effectiveRequest),
+            ensureFacilityMatch(requireActorFacilityId(effectiveRequest),
                     karteServiceBean.findFacilityIdByKarteId(karteId), "karteId", karteId, effectiveRequest);
         }
     }
@@ -228,7 +228,7 @@ final class KarteResourceSupport {
     void ensureDocumentFacilityAccess(long docId, HttpServletRequest request) {
         if (docId > 0) {
             HttpServletRequest effectiveRequest = resolveRequest(request);
-            ensureFacilityMatch(resolveFacilityId(effectiveRequest),
+            ensureFacilityMatch(requireActorFacilityId(effectiveRequest),
                     karteServiceBean.findFacilityIdByDocId(docId), "docId", docId, effectiveRequest);
         }
     }
@@ -236,7 +236,7 @@ final class KarteResourceSupport {
     void ensureAttachmentFacilityAccess(long attachmentId, HttpServletRequest request) {
         if (attachmentId > 0) {
             HttpServletRequest effectiveRequest = resolveRequest(request);
-            ensureFacilityMatch(resolveFacilityId(effectiveRequest),
+            ensureFacilityMatch(requireActorFacilityId(effectiveRequest),
                     karteServiceBean.findFacilityIdByAttachmentId(attachmentId), "attachmentId", attachmentId, effectiveRequest);
         }
     }
@@ -244,7 +244,7 @@ final class KarteResourceSupport {
     void ensureSchemaFacilityAccess(long schemaId, HttpServletRequest request) {
         if (schemaId > 0) {
             HttpServletRequest effectiveRequest = resolveRequest(request);
-            ensureFacilityMatch(resolveFacilityId(effectiveRequest),
+            ensureFacilityMatch(requireActorFacilityId(effectiveRequest),
                     karteServiceBean.findFacilityIdBySchemaId(schemaId), "schemaId", schemaId, effectiveRequest);
         }
     }
@@ -266,7 +266,7 @@ final class KarteResourceSupport {
     void ensureDiagnosisIdFacilityAccess(long diagnosisId, HttpServletRequest request) {
         if (diagnosisId > 0) {
             HttpServletRequest effectiveRequest = resolveRequest(request);
-            ensureFacilityMatch(resolveFacilityId(effectiveRequest),
+            ensureFacilityMatch(requireActorFacilityId(effectiveRequest),
                     karteServiceBean.findFacilityIdByDiagnosisId(diagnosisId), "diagnosisId", diagnosisId, effectiveRequest);
         }
     }
@@ -288,7 +288,7 @@ final class KarteResourceSupport {
     void ensureObservationFacilityAccess(long observationId, HttpServletRequest request) {
         if (observationId > 0) {
             HttpServletRequest effectiveRequest = resolveRequest(request);
-            ensureFacilityMatch(resolveFacilityId(effectiveRequest),
+            ensureFacilityMatch(requireActorFacilityId(effectiveRequest),
                     karteServiceBean.findFacilityIdByObservationId(observationId), "observationId", observationId, effectiveRequest);
         }
     }

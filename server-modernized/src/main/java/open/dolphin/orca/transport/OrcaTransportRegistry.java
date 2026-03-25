@@ -22,7 +22,6 @@ final class OrcaTransportRegistry {
 
     private static final Logger LOGGER = Logger.getLogger(OrcaTransportRegistry.class.getName());
     private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(5);
-    private static final String DEFAULT_FACILITY_KEY = "_default";
 
     private final OrcaConnectionConfigStore orcaConnectionConfigStore;
     private final long cacheTtlMs;
@@ -57,7 +56,7 @@ final class OrcaTransportRegistry {
     }
 
     private CachedTransportEntry currentEntry(String facilityId) {
-        String key = cacheKey(facilityId);
+        String key = cacheKey(requireFacilityId(facilityId));
         CachedTransportEntry entry = facilityCache.get(key);
         if (entry == null || entry.isExpired(cacheTtlMs)) {
             entry = reloadCache(facilityId, entry);
@@ -66,12 +65,14 @@ final class OrcaTransportRegistry {
     }
 
     private CachedTransportEntry reloadCache(String facilityId) {
-        return reloadCache(facilityId, facilityCache.get(cacheKey(facilityId)));
+        String key = cacheKey(requireFacilityId(facilityId));
+        return reloadCache(facilityId, facilityCache.get(key));
     }
 
     private CachedTransportEntry reloadCache(String facilityId, CachedTransportEntry existingEntry) {
+        facilityId = requireFacilityId(facilityId);
         String key = cacheKey(facilityId);
-        ResolvedTransportConfig resolvedConfig = loadSettingsWithFallback(facilityId);
+        ResolvedTransportConfig resolvedConfig = loadSettingsExplicit(facilityId);
         if (resolvedConfig == null) {
             LOGGER.warning("ORCA transport settings load returned null");
             facilityCache.remove(key);
@@ -87,19 +88,19 @@ final class OrcaTransportRegistry {
         return entry;
     }
 
-    private ResolvedTransportConfig loadSettingsWithFallback(String facilityId) {
-        if (orcaConnectionConfigStore != null) {
-            try {
-                return loadSettingsFromAdminConfig(facilityId);
-            } catch (RuntimeException ex) {
-                LOGGER.log(Level.WARNING,
-                        "Failed to load ORCA transport settings from admin config: " + ex.getMessage()
-                                + " facilityId=" + safeFacility(facilityId),
-                        ex);
-                return null;
-            }
+    private ResolvedTransportConfig loadSettingsExplicit(String facilityId) {
+        if (orcaConnectionConfigStore == null) {
+            return loadFallbackSettings();
         }
-        return loadFallbackSettings();
+        try {
+            return loadSettingsFromAdminConfig(facilityId);
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.WARNING,
+                    "Failed to load ORCA transport settings from admin config: " + ex.getMessage()
+                            + " facilityId=" + safeFacility(facilityId),
+                    ex);
+            return null;
+        }
     }
 
     private ResolvedTransportConfig loadSettingsFromAdminConfig(String facilityId) {
@@ -162,8 +163,7 @@ final class OrcaTransportRegistry {
     }
 
     private static String cacheKey(String facilityId) {
-        String normalized = normalizeFacilityId(facilityId);
-        return normalized != null ? normalized : DEFAULT_FACILITY_KEY;
+        return requireFacilityId(facilityId);
     }
 
     private static String normalizeFacilityId(String value) {
@@ -174,8 +174,16 @@ final class OrcaTransportRegistry {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    private static String requireFacilityId(String facilityId) {
+        String normalized = normalizeFacilityId(facilityId);
+        if (normalized == null || "default".equalsIgnoreCase(normalized)) {
+            throw new IllegalStateException("ORCA facilityId is required");
+        }
+        return normalized;
+    }
+
     private static String safeFacility(String facilityId) {
-        return facilityId != null ? facilityId : "default";
+        return facilityId != null ? facilityId : "missing";
     }
 
     record OrcaResolvedTransport(

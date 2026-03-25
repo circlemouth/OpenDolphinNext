@@ -11,7 +11,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.dto.orca.FormerNameHistoryRequest;
 import open.dolphin.rest.dto.orca.FormerNameHistoryResponse;
 import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
@@ -31,13 +31,13 @@ import open.dolphin.session.framework.SessionOperation;
 @SessionOperation
 public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
 
-    private OrcaWrapperService wrapperService;
+    private OrcaLiveGateway wrapperService;
 
     public OrcaPatientBatchResource() {
     }
 
     @Inject
-    public OrcaPatientBatchResource(OrcaWrapperService wrapperService) {
+    public OrcaPatientBatchResource(OrcaLiveGateway wrapperService) {
         this.wrapperService = wrapperService;
     }
 
@@ -69,6 +69,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
         if (body.getEndDate() == null) {
             body.setEndDate(resolvedEndDate);
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "patientIdList");
         putAuditDetail(details, "startDate", body.getStartDate());
@@ -78,7 +79,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("classCode", body.getClassCode());
         }
         try {
-            PatientIdListResponse response = wrapperService.getPatientIdList(body);
+            PatientIdListResponse response = wrapperService.getPatientIdList(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
@@ -106,11 +107,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.batch.invalid",
                     "patientIds must contain at least one entry");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "patientBatch");
         details.put("patientIdCount", body.getPatientIds().size());
         try {
-            PatientBatchResponse response = wrapperService.getPatientBatch(body);
+            PatientBatchResponse response = wrapperService.getPatientBatch(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
@@ -158,6 +160,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.search.invalid",
                     "birthEndDate must be after birthStartDate");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "patientNameSearch");
         if (body.getName() != null && !body.getName().isBlank()) {
@@ -185,7 +188,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("inOut", body.getInOut());
         }
         try {
-            PatientSearchResponse response = wrapperService.searchPatients(body);
+            PatientSearchResponse response = wrapperService.searchPatients(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
@@ -231,6 +234,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
                     : java.time.LocalDate.now().toString();
             body.setBaseDate(resolvedBaseDate);
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "insuranceCombinations");
         details.put("patientId", body.getPatientId());
@@ -242,7 +246,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("rangeEnd", body.getRangeEnd());
         }
         try {
-            InsuranceCombinationResponse response = wrapperService.getInsuranceCombinations(body);
+            InsuranceCombinationResponse response = wrapperService.getInsuranceCombinations(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
@@ -270,11 +274,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.former-name.invalid",
                     "patientId is required");
         }
+        String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "formerNames");
         details.put("patientId", body.getPatientId());
         try {
-            FormerNameHistoryResponse response = wrapperService.getFormerNames(body);
+            FormerNameHistoryResponse response = wrapperService.getFormerNames(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
@@ -287,7 +292,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
         }
     }
 
-    void setWrapperService(OrcaWrapperService wrapperService) {
+    void setWrapperService(OrcaLiveGateway wrapperService) {
         this.wrapperService = wrapperService;
     }
 

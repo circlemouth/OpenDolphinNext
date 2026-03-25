@@ -42,6 +42,8 @@ class ServletStartupSecurityGuardTest {
         Path keyring = writeKeyring("guard-valid.json");
         try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
                 ServerConfigurationResolver.KEY_ENVIRONMENT, "production",
+                ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "127.0.0.1/32",
+                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, validAesKey(),
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString(),
                 ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3",
@@ -56,6 +58,8 @@ class ServletStartupSecurityGuardTest {
     void productionLikeEnvironmentRejectsNonEnforcedIntegrityMode() throws Exception {
         try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
                 ServerConfigurationResolver.KEY_ENVIRONMENT, "production",
+                ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "127.0.0.1/32",
+                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, validAesKey(),
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "permissive",
                 ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3")) {
             IllegalStateException ex = assertThrows(IllegalStateException.class, ServletStartup::enforceStartupSecurityGuards);
@@ -65,17 +69,32 @@ class ServletStartupSecurityGuardTest {
     }
 
     @Test
-    void productionLikeEnvironmentRejectsFido2Configuration() throws Exception {
-        Path keyring = writeKeyring("guard-fido2.json");
+    void productionLikeEnvironmentRejectsMissingTrustedProxyRules() throws Exception {
+        Path keyring = writeKeyring("guard-trusted-proxies.json");
         try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
                 ServerConfigurationResolver.KEY_ENVIRONMENT, "production",
+                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, validAesKey(),
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString(),
-                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3",
-                ServerConfigurationResolver.KEY_FIDO2_RP_ID, "localhost")) {
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3")) {
             IllegalStateException ex = assertThrows(IllegalStateException.class, ServletStartup::enforceStartupSecurityGuards);
 
-            assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_FIDO2_RP_ID));
+            assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES));
+        }
+    }
+
+    @Test
+    void productionLikeEnvironmentRejectsMissingFactor2Key() throws Exception {
+        Path keyring = writeKeyring("guard-factor2.json");
+        try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
+                ServerConfigurationResolver.KEY_ENVIRONMENT, "production",
+                ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "127.0.0.1/32",
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
+                ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString(),
+                ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "s3")) {
+            IllegalStateException ex = assertThrows(IllegalStateException.class, ServletStartup::enforceStartupSecurityGuards);
+
+            assertTrue(ex.getMessage().contains(ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64));
         }
     }
 
@@ -84,6 +103,8 @@ class ServletStartupSecurityGuardTest {
         Path keyring = writeKeyring("guard-storage.json");
         try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
                 ServerConfigurationResolver.KEY_ENVIRONMENT, "production",
+                ServerConfigurationResolver.KEY_SECURITY_TRUSTED_PROXIES, "127.0.0.1/32",
+                ServerConfigurationResolver.KEY_FACTOR2_AES_KEY_B64, validAesKey(),
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_MODE, "enforce",
                 ServerConfigurationResolver.KEY_DOCUMENT_INTEGRITY_KEYRING_PATH, keyring.toString(),
                 ServerConfigurationResolver.KEY_ATTACHMENT_STORAGE_MODE, "database",
@@ -105,5 +126,10 @@ class ServletStartupSecurityGuardTest {
                 }
                 """);
         return path;
+    }
+
+    private String validAesKey() {
+        return java.util.Base64.getEncoder()
+                .encodeToString("0123456789abcdef0123456789abcdef".getBytes());
     }
 }

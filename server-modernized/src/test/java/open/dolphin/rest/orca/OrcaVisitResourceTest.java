@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,7 +18,8 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import open.dolphin.orca.converter.OrcaXmlMapper;
-import open.dolphin.orca.service.OrcaWrapperService;
+import open.dolphin.orca.service.DefaultOrcaLiveGateway;
+import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -27,8 +29,8 @@ import org.junit.jupiter.api.Test;
 
 class OrcaVisitResourceTest {
 
-    private OrcaWrapperService createService() {
-        return new OrcaWrapperService(new StubOrcaTransport(), new OrcaXmlMapper());
+    private OrcaLiveGateway createService() {
+        return new DefaultOrcaLiveGateway(new StubOrcaTransport(), new OrcaXmlMapper());
     }
 
     @Test
@@ -40,7 +42,8 @@ class OrcaVisitResourceTest {
         request.setRequestNumber("01");
         request.setVisitDate(LocalDate.of(2025, 11, 12));
 
-        VisitPatientListResponse response = resource.visitList(null, request);
+        VisitPatientListResponse response = resource.visitList(
+                createRequest("F001:doctor01", Map.of()), request);
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals(1, response.getVisits().size());
@@ -87,6 +90,20 @@ class OrcaVisitResourceTest {
 
         WebApplicationException ex = assertThrows(WebApplicationException.class, () -> resource.visitList(null, request));
         assertRestError(ex, Response.Status.BAD_REQUEST.getStatusCode(), "orca.visit.range.tooWide");
+    }
+
+    @Test
+    void visitListRejectsMissingFacility() {
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(createService());
+
+        VisitPatientListRequest request = new VisitPatientListRequest();
+        request.setRequestNumber("01");
+        request.setVisitDate(LocalDate.of(2025, 11, 12));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.visitList(createRequest(null, Map.of()), request));
+        assertRestError(ex, Response.Status.UNAUTHORIZED.getStatusCode(), "facility_missing");
     }
 
     @Test
@@ -150,11 +167,11 @@ class OrcaVisitResourceTest {
 
     @Test
     void visitMutationAcceptsClaimSendInfoRequest() {
-        OrcaWrapperService wrapperService = mock(OrcaWrapperService.class);
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
         VisitMutationResponse stub = new VisitMutationResponse();
         stub.setApiResult("0000");
         stub.setApiResultMessage("OK");
-        when(wrapperService.mutateVisit(any(VisitMutationRequest.class))).thenReturn(stub);
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
 
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
@@ -170,7 +187,7 @@ class OrcaVisitResourceTest {
         VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
 
         assertEquals("0000", response.getApiResult());
-        verify(wrapperService).mutateVisit(request);
+        verify(wrapperService).mutateVisit("F001", request);
     }
 
     @Test
@@ -192,11 +209,11 @@ class OrcaVisitResourceTest {
 
     @Test
     void visitMutationAllowsQueryRequestWithoutAcceptanceTimestamp() {
-        OrcaWrapperService wrapperService = mock(OrcaWrapperService.class);
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
         VisitMutationResponse stub = new VisitMutationResponse();
         stub.setApiResult("0000");
         stub.setApiResultMessage("OK");
-        when(wrapperService.mutateVisit(any(VisitMutationRequest.class))).thenReturn(stub);
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
 
         OrcaVisitResource resource = new OrcaVisitResource();
         resource.setWrapperService(wrapperService);
@@ -209,7 +226,7 @@ class OrcaVisitResourceTest {
         assertEquals("0000", response.getApiResult());
         assertGeneratedRunId(response.getRunId());
         assertEquals("server", response.getDataSourceTransition());
-        verify(wrapperService).mutateVisit(request);
+        verify(wrapperService).mutateVisit("F001", request);
     }
 
     private HttpServletRequest createRequest(String remoteUser, Map<String, String> headers) {

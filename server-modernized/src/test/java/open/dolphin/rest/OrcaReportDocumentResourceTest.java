@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +41,7 @@ class OrcaReportDocumentResourceTest {
 
     @Test
     void createReportBuildsJsonContractAndParsesJsonResponse() {
-        when(orcaTransport.invokeDetailed(any(), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), any(), any(OrcaTransportRequest.class)))
                 .thenReturn(OrcaTransportResult.fallback(
                         """
                         {
@@ -83,7 +84,7 @@ class OrcaReportDocumentResourceTest {
 
     @Test
     void createReportMarksJsonParseFailure() {
-        when(orcaTransport.invokeDetailed(any(), any(OrcaTransportRequest.class)))
+        when(orcaTransport.invoke(anyString(), any(), any(OrcaTransportRequest.class)))
                 .thenReturn(new OrcaTransportResult(null, "POST", 200, "not-json", "application/json", null));
 
         OrcaReportRequest payload = new OrcaReportRequest();

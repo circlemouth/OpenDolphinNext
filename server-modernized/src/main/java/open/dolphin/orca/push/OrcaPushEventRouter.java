@@ -26,7 +26,7 @@ public class OrcaPushEventRouter {
     MedicalPushHandler medicalPushHandler;
 
     @Inject
-    OrcaPushStateStore stateStore;
+    OrcaPushConnectionStateStore connectionStateStore;
 
     @Inject
     OrcaPushMetricsRegistrar metricsRegistrar;
@@ -53,12 +53,13 @@ public class OrcaPushEventRouter {
         }
         String command = envelope.getCommand().trim().toLowerCase(java.util.Locale.ROOT);
         switch (command) {
-            case "subscribed" -> stateStore.markConnected(facilityId, websocketUrl);
-            case "error" -> stateStore.markDegraded(
+            case "subscribed" -> connectionStateStore.markConnected(facilityId, "push", websocketUrl);
+            case "error" -> connectionStateStore.markDegraded(
                     facilityId,
+                    "push",
                     websocketUrl,
                     envelope.getMessage() != null ? envelope.getMessage() : "push_command_error");
-            case "unsubscribe" -> stateStore.markDisconnected(facilityId, websocketUrl, envelope.getMessage());
+            case "unsubscribe" -> connectionStateStore.markDisconnected(facilityId, "push", websocketUrl, envelope.getMessage());
             case "event" -> routeEvent(facilityId, websocketUrl, envelope.getData());
             default -> LOGGER.log(Level.WARNING, "Ignoring unknown ORCA push command. facilityId={0} command={1}",
                     new Object[]{facilityId, envelope.getCommand()});
@@ -70,24 +71,12 @@ public class OrcaPushEventRouter {
             metricsRegistrar.recordFailure(facilityId, "missing_event_name", mode());
             return;
         }
-        stateStore.markEvent(facilityId, websocketUrl, eventData.getUuid(), eventData.getEvent(), parseInstant(eventData.getTime()));
         String eventName = eventData.getEvent().trim();
         switch (eventName) {
             case "patient_accept" -> receptionPushHandler.handle(facilityId, eventData);
             case "patient_account" -> medicalPushHandler.handle(facilityId, eventData);
             default -> LOGGER.log(Level.WARNING, "Ignoring unknown ORCA push event. facilityId={0} event={1}",
                     new Object[]{facilityId, eventName});
-        }
-    }
-
-    private Instant parseInstant(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        try {
-            return Instant.parse(value);
-        } catch (RuntimeException ex) {
-            return null;
         }
     }
 

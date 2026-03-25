@@ -28,6 +28,7 @@ class OrcaTrialIntegrationTest {
     @Test
     void systemAndMedicalApis_shouldRespondOrSkipWhenClosed() throws Exception {
         RestOrcaTransport transport = buildTransport();
+        String facilityId = facilityId();
 
         List<RequestSpec> specs = List.of(
                 new RequestSpec(OrcaEndpoint.SYSTEM_DAILY, readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/xml/44_system01dailyv2_request.xml")),
@@ -43,19 +44,20 @@ class OrcaTrialIntegrationTest {
         );
 
         for (RequestSpec spec : specs) {
-            assertOrSkip(transport, spec);
+            assertOrSkip(transport, facilityId, spec);
         }
     }
 
     @Test
     void patientGetAndPatientMod_shouldRespondOrSkipWhenClosed() throws Exception {
         RestOrcaTransport transport = buildTransport();
-        OrcaTransportResult getResult = invokeOrSkip(transport, OrcaEndpoint.PATIENT_GET,
+        String facilityId = facilityId();
+        OrcaTransportResult getResult = invokeOrSkip(transport, facilityId, OrcaEndpoint.PATIENT_GET,
                 OrcaTransportRequest.get("id=00001"));
         assertNotNull(getResult);
         assertTrue(getResult.getBody().contains("Api_Result"));
 
-        OrcaTransportResult modResult = invokeOrSkip(transport, OrcaEndpoint.PATIENT_MOD,
+        OrcaTransportResult modResult = invokeOrSkip(transport, facilityId, OrcaEndpoint.PATIENT_MOD,
                 OrcaTransportRequest.post(readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/14_patientmodv2_request.xml")));
         assertNotNull(modResult);
         assertTrue(modResult.getBody().contains("Api_Result"));
@@ -64,21 +66,22 @@ class OrcaTrialIntegrationTest {
     @Test
     void reportApi_shouldReturnJsonOrPdfWhenAvailable() throws Exception {
         RestOrcaTransport transport = buildTransport();
-        OrcaTransportResult result = invokeOrSkip(transport, OrcaEndpoint.PRESCRIPTION_REPORT,
+        String facilityId = facilityId();
+        OrcaTransportResult result = invokeOrSkip(transport, facilityId, OrcaEndpoint.PRESCRIPTION_REPORT,
                 OrcaTransportRequest.post(readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/xml/44_system01dailyv2_request.xml")));
         assertNotNull(result);
         assertTrue(result.getBody().contains("Api_Result") || result.getBody().contains("Data_Id"));
         String dataId = extractDataId(result.getBody());
         if (dataId != null) {
-            byte[] blob = fetchBlob(transport, dataId);
+            byte[] blob = fetchBlob(transport, facilityId, dataId);
             assertNotNull(blob);
             assertTrue(blob.length > 0);
         }
     }
 
-    private void assertOrSkip(RestOrcaTransport transport, RequestSpec spec) {
+    private void assertOrSkip(RestOrcaTransport transport, String facilityId, RequestSpec spec) {
         try {
-            OrcaTransportResult result = transport.invokeDetailed(spec.endpoint, OrcaTransportRequest.post(spec.payload));
+            OrcaTransportResult result = transport.invoke(facilityId, spec.endpoint, OrcaTransportRequest.post(spec.payload));
             assertNotNull(result);
             String body = result.getBody();
             assertNotNull(body);
@@ -102,10 +105,10 @@ class OrcaTrialIntegrationTest {
         }
     }
 
-    private OrcaTransportResult invokeOrSkip(RestOrcaTransport transport, OrcaEndpoint endpoint,
+    private OrcaTransportResult invokeOrSkip(RestOrcaTransport transport, String facilityId, OrcaEndpoint endpoint,
             OrcaTransportRequest request) {
         try {
-            return transport.invokeDetailed(endpoint, request);
+            return transport.invoke(facilityId, endpoint, request);
         } catch (Exception ex) {
             String message = ex.getMessage() != null ? ex.getMessage() : "";
             if (message.contains("HTTP response status 404")
@@ -152,13 +155,13 @@ class OrcaTrialIntegrationTest {
         return Optional.empty();
     }
 
-    private byte[] fetchBlob(RestOrcaTransport transport, String dataId) throws IOException, InterruptedException {
-        String authHeader = transport != null ? transport.resolveBasicAuthHeader() : null;
+    private byte[] fetchBlob(RestOrcaTransport transport, String facilityId, String dataId) throws IOException, InterruptedException {
+        String authHeader = transport != null ? transport.resolveBasicAuthHeader(facilityId) : null;
         Assumptions.assumeTrue(authHeader != null && !authHeader.isBlank(), "basic auth missing");
-        String url = transport != null ? transport.buildOrcaUrl("/blobapi/" + dataId) : null;
+        String url = transport != null ? transport.buildOrcaUrl(facilityId, "/blobapi/" + dataId) : null;
         Assumptions.assumeTrue(url != null && !url.isBlank(), "ORCA url missing");
-        java.net.http.HttpClient client = transport != null && transport.rawHttpClient() != null
-                ? transport.rawHttpClient()
+        java.net.http.HttpClient client = transport != null && transport.rawHttpClient(facilityId) != null
+                ? transport.rawHttpClient(facilityId)
                 : java.net.http.HttpClient.newBuilder().build();
         java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                 .uri(java.net.URI.create(url))
@@ -171,6 +174,15 @@ class OrcaTrialIntegrationTest {
             Assumptions.assumeTrue(false, "blobapi closed");
         }
         return response.body();
+    }
+
+    private String facilityId() {
+        String facilityId = System.getProperty("opendolphin.facility-id");
+        if (facilityId == null || facilityId.isBlank()) {
+            facilityId = System.getenv("OPENDOLPHIN_FACILITY_ID");
+        }
+        Assumptions.assumeTrue(facilityId != null && !facilityId.isBlank(), "facility id missing");
+        return facilityId.trim();
     }
 
     private String readXml(String path) {

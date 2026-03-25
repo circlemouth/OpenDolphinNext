@@ -80,9 +80,6 @@ public class DocumentIntegrityService {
             return;
         }
         DocumentIntegrityConfig.Settings settings = config.resolveSettings();
-        if (settings.getMode() == DocumentIntegrityConfig.Mode.OFF) {
-            return;
-        }
         DocumentIntegrityConfig.KeyMaterial activeKey = settings.getActiveKey();
         if (activeKey == null) {
             throw new IllegalStateException("document integrity active key is not configured");
@@ -130,11 +127,6 @@ public class DocumentIntegrityService {
             return;
         }
         DocumentIntegrityConfig.Settings settings = config.resolveSettings();
-        DocumentIntegrityConfig.Mode mode = settings.getMode();
-        if (mode == DocumentIntegrityConfig.Mode.OFF) {
-            return;
-        }
-
         long documentId = document.getId();
         if (documentId <= 0) {
             return;
@@ -149,10 +141,7 @@ public class DocumentIntegrityService {
             details.put("currentHash", currentHash);
             details.put("reasonCode", "integrity_record_missing");
             recordAudit(EVENT_MISSING, "MISSING", document, details);
-            if (mode == DocumentIntegrityConfig.Mode.ENFORCE) {
-                throw conflictMissing(details);
-            }
-            return;
+            throw conflictMissing(details);
         }
 
         List<String> reasons = new ArrayList<>();
@@ -186,10 +175,7 @@ public class DocumentIntegrityService {
             details.put("reasonCode", reasons.get(0));
             details.put("reasonCodes", List.copyOf(reasons));
             recordAudit(EVENT_FAIL, "FAILURE", document, details);
-            if (mode == DocumentIntegrityConfig.Mode.ENFORCE) {
-                throw conflictMismatch(details);
-            }
-            return;
+            throw conflictMismatch(details);
         }
 
         Map<String, Object> details = new LinkedHashMap<>();
@@ -365,7 +351,7 @@ public class DocumentIntegrityService {
             if (traceId != null) {
                 mergedDetails.put("traceId", traceId);
             }
-            String facilityId = resolveFacilityId(actorId);
+            String facilityId = extractFacilityIdFromActor(actorId);
             if (facilityId != null) {
                 mergedDetails.put("facilityId", facilityId);
             }
@@ -417,7 +403,7 @@ public class DocumentIntegrityService {
         return actorId;
     }
 
-    private String resolveFacilityId(String actorId) {
+    private String extractFacilityIdFromActor(String actorId) {
         if (actorId == null) {
             return null;
         }

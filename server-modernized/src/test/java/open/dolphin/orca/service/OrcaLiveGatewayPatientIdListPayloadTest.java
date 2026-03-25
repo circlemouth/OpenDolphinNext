@@ -14,20 +14,21 @@ import open.dolphin.orca.transport.StubOrcaTransport;
 import open.dolphin.rest.dto.orca.PatientIdListRequest;
 import org.junit.jupiter.api.Test;
 
-class OrcaWrapperServicePatientIdListPayloadTest {
+class OrcaLiveGatewayPatientIdListPayloadTest {
 
     @Test
     void includeTestPatientTrueSetsExcludeFlagOff() {
         CapturingTransport transport = new CapturingTransport(new StubOrcaTransport());
-        OrcaWrapperService service = new OrcaWrapperService(transport, new OrcaXmlMapper());
+        OrcaLiveGateway service = new DefaultOrcaLiveGateway(transport, new OrcaXmlMapper());
 
         PatientIdListRequest request = new PatientIdListRequest();
         request.setStartDate(LocalDate.of(2026, 2, 1));
         request.setEndDate(LocalDate.of(2026, 2, 1));
         request.setIncludeTestPatient(true);
 
-        service.getPatientIdList(request);
+        service.getPatientIdList("F001", request);
 
+        assertEquals("F001", transport.lastFacilityId);
         assertEquals(OrcaEndpoint.PATIENT_ID_LIST, transport.lastEndpoint);
         assertNotNull(transport.lastPayload);
         assertTrue(transport.lastPayload.contains("query=class=01"));
@@ -37,20 +38,22 @@ class OrcaWrapperServicePatientIdListPayloadTest {
     @Test
     void includeTestPatientFalseSetsExcludeFlagOn() {
         CapturingTransport transport = new CapturingTransport(new StubOrcaTransport());
-        OrcaWrapperService service = new OrcaWrapperService(transport, new OrcaXmlMapper());
+        OrcaLiveGateway service = new DefaultOrcaLiveGateway(transport, new OrcaXmlMapper());
 
         PatientIdListRequest request = new PatientIdListRequest();
         request.setStartDate(LocalDate.of(2026, 2, 1));
         request.setEndDate(LocalDate.of(2026, 2, 1));
         request.setIncludeTestPatient(false);
 
-        service.getPatientIdList(request);
+        service.getPatientIdList("F001", request);
 
+        assertEquals("F001", transport.lastFacilityId);
         assertTrue(transport.lastPayload.contains("<Contain_TestPatient_Flag>1</Contain_TestPatient_Flag>"));
     }
 
     private static final class CapturingTransport implements OrcaTransport {
         private final OrcaTransport delegate;
+        private String lastFacilityId;
         private OrcaEndpoint lastEndpoint;
         private String lastPayload;
 
@@ -59,17 +62,11 @@ class OrcaWrapperServicePatientIdListPayloadTest {
         }
 
         @Override
-        public String invoke(OrcaEndpoint endpoint, String requestXml) {
-            lastEndpoint = endpoint;
-            lastPayload = requestXml;
-            return delegate.invoke(endpoint, requestXml);
-        }
-
-        @Override
-        public OrcaTransportResult invokeDetailed(OrcaEndpoint endpoint, OrcaTransportRequest request) {
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            lastFacilityId = facilityId;
             lastEndpoint = endpoint;
             lastPayload = request != null ? request.getBody() : null;
-            return delegate.invokeDetailed(endpoint, request);
+            return delegate.invoke(facilityId, endpoint, request);
         }
     }
 }

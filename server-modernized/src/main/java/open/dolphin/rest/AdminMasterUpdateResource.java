@@ -21,6 +21,7 @@ import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.rest.masterupdate.MasterUpdateService;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.security.auth.AdminStepUpGuard;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
@@ -43,6 +44,9 @@ public class AdminMasterUpdateResource extends AbstractResource {
 
     @Inject
     private SessionAuditDispatcher sessionAuditDispatcher;
+
+    @Inject
+    private AdminStepUpGuard adminStepUpGuard;
 
     @GET
     @Path("/datasets")
@@ -87,6 +91,7 @@ public class AdminMasterUpdateResource extends AbstractResource {
                                Map<String, Object> payload) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         boolean force = payload != null && Boolean.TRUE.equals(readBoolean(payload.get("force")));
         try {
             Map<String, Object> body = masterUpdateService.runDataset(datasetCode, "MANUAL", actor, runId, force);
@@ -111,6 +116,7 @@ public class AdminMasterUpdateResource extends AbstractResource {
                                     Map<String, Object> payload) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         String versionId = payload != null && payload.get("versionId") instanceof String text ? text : null;
         Map<String, Object> rollbackAuditDetails = new LinkedHashMap<>();
         rollbackAuditDetails.put("datasetCode", datasetCode);
@@ -141,6 +147,7 @@ public class AdminMasterUpdateResource extends AbstractResource {
                                   MultipartFormDataInput input) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         UploadedFile uploaded = extractUploadFile(request, input, "file", MAX_UPLOAD_BYTES);
 
         try {
@@ -184,6 +191,7 @@ public class AdminMasterUpdateResource extends AbstractResource {
                                    Map<String, Object> payload) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
+        adminStepUpGuard.require(request, "admin:mutation");
         try {
             Map<String, Object> body = masterUpdateService.updateSchedule(payload, actor, runId);
             recordAudit(request, "MASTER_UPDATE_SCHEDULE_PUT", actor, runId,

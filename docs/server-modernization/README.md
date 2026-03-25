@@ -236,15 +236,15 @@
 - 起動時設定の正本は `server-modernized/config/server-modernized.env.sample` と `docs/contracts/runtime-config.md` であり、補完用の旧設定ファイル運用は採らない。
 - `document.integrity.keyring-path` は absolute path の keyring JSON を前提とし、単一 HMAC 鍵の直指定は許可しない。
 - `patient-images.enabled=true` の場合は `max-bytes` / `max-width` / `max-height` を必須とし、upload は temp file 受信後に normalize する。
-- FIDO2 は `FIDO2_RP_ID` / `FIDO2_RP_NAME` / `FIDO2_ALLOWED_ORIGINS` の 3 点を必須とし、未設定時は startup validation で fail-fast する。
+- FIDO2 typed config surface は削除済み。`SECURITY_TRUSTED_PROXIES` と `FACTOR2_AES_KEY_B64` は production-like startup の必須条件として fail-fast する。
 - Plivo SMS は `PLIVO_*` キーのみで解決し、`PLIVO_LOG_LEVEL` / `PLIVO_LOG_MESSAGE_CONTENT` / `PLIVO_HTTP_*` / `PLIVO_HTTP_RETRY_ON_CONNECTION_FAILURE` を含めて環境ごとに明示投入する。
 - `ChartEventHistoryPurgeScheduler` と `OrcaPatientSyncScheduler` は既定 OFF とし、必要な環境だけ enable する。
 
 ### セキュリティ設定（Trusted Proxy）
 - 監査ログのクライアントIP解決で `X-Forwarded-For` / `X-Real-IP` を信用するには、trusted proxy を明示設定してください。
 - 設定キー:
-  - runtime key: `audit.trusted.proxies`
-  - sample env: `AUDIT_TRUSTED_PROXIES`
+  - runtime key: `security.trusted-proxies`
+  - sample env: `SECURITY_TRUSTED_PROXIES`
 - 値はカンマ区切りで指定（単一IP または CIDR 例: `203.0.113.10,203.0.113.0/24`）。
 - 未設定時は forwarded ヘッダを信用せず、`remoteAddr` を採用します（loopback は開発用途として許容）。
 

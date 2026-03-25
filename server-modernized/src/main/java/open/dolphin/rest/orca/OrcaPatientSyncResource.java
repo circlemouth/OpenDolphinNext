@@ -10,10 +10,15 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.Instant;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.orca.sync.OrcaPatientImportService;
+import open.dolphin.orca.sync.OrcaPatientSyncPlanner;
+import open.dolphin.orca.sync.OrcaPatientSyncRunner;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
-import open.dolphin.orca.sync.OrcaPatientSyncStateStore;
+import open.dolphin.orca.sync.OrcaSyncCursorStore;
+import open.dolphin.orca.sync.OrcaSyncRunStore;
 import open.dolphin.rest.dto.orca.PatientImportRequest;
 import open.dolphin.rest.dto.orca.PatientImportResponse;
 import open.dolphin.rest.dto.orca.PatientSyncRequest;
@@ -27,24 +32,39 @@ import open.dolphin.session.framework.SessionOperation;
 @SessionOperation
 public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
 
-    private OrcaPatientSyncService syncService;
-    private OrcaPatientSyncStateStore stateStore;
+    private OrcaPatientImportService importService;
+    private OrcaPatientSyncRunner syncRunner;
+    private OrcaSyncCursorStore cursorStore;
+    private OrcaSyncRunStore runStore;
 
     public OrcaPatientSyncResource() {
     }
 
     @Inject
-    public OrcaPatientSyncResource(OrcaPatientSyncService syncService, OrcaPatientSyncStateStore stateStore) {
-        this.syncService = syncService;
-        this.stateStore = stateStore;
+    public OrcaPatientSyncResource(OrcaPatientImportService importService,
+            OrcaPatientSyncRunner syncRunner,
+            OrcaSyncCursorStore cursorStore,
+            OrcaSyncRunStore runStore) {
+        this.importService = importService;
+        this.syncRunner = syncRunner;
+        this.cursorStore = cursorStore;
+        this.runStore = runStore;
     }
 
-    void setSyncService(OrcaPatientSyncService syncService) {
-        this.syncService = syncService;
+    void setImportService(OrcaPatientImportService importService) {
+        this.importService = importService;
     }
 
-    void setStateStore(OrcaPatientSyncStateStore stateStore) {
-        this.stateStore = stateStore;
+    void setSyncRunner(OrcaPatientSyncRunner syncRunner) {
+        this.syncRunner = syncRunner;
+    }
+
+    void setCursorStore(OrcaSyncCursorStore cursorStore) {
+        this.cursorStore = cursorStore;
+    }
+
+    void setRunStore(OrcaSyncRunStore runStore) {
+        this.runStore = runStore;
     }
 
     @POST
@@ -64,16 +84,11 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "patientImport");
         details.put("patientIdCount", body.getPatientIds().size());
-        String facilityId = (String) details.get("facilityId");
-        if (facilityId == null || facilityId.isBlank()) {
-            markFailureDetails(details, Response.Status.UNAUTHORIZED.getStatusCode(),
-                    "facility_missing", "Facility is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
-        }
+        String facilityId = requireFacilityId(request);
+        details.put("facilityId", facilityId);
         String runId = (String) details.get("runId");
         try {
-            PatientImportResponse response = syncService.importPatients(facilityId, body, runId);
+            PatientImportResponse response = importService.importPatients(facilityId, body, runId);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
@@ -116,16 +131,11 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
         details.put("classCode", body.getClassCode());
         details.put("includeTestPatient", body.isIncludeTestPatient());
         details.put("includeInsurance", body.isIncludeInsurance());
-        String facilityId = (String) details.get("facilityId");
-        if (facilityId == null || facilityId.isBlank()) {
-            markFailureDetails(details, Response.Status.UNAUTHORIZED.getStatusCode(),
-                    "facility_missing", "Facility is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
-        }
+        String facilityId = requireFacilityId(request);
+        details.put("facilityId", facilityId);
         String runId = (String) details.get("runId");
         try {
-            PatientImportResponse response = syncService.syncPatients(facilityId, body, runId);
+            PatientImportResponse response = syncRunner.run(facilityId, body, "api", runId);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
@@ -144,24 +154,32 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
     public PatientSyncStatusResponse syncStatus(@Context HttpServletRequest request) {
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "patientSyncStatus");
-        String facilityId = (String) details.get("facilityId");
-        if (facilityId == null || facilityId.isBlank()) {
-            markFailureDetails(details, Response.Status.UNAUTHORIZED.getStatusCode(),
-                    "facility_missing", "Facility is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
-            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
-        }
+        String facilityId = requireFacilityId(request);
+        details.put("facilityId", facilityId);
 
         PatientSyncStatusResponse response = new PatientSyncStatusResponse();
         response.setFacilityId(facilityId);
-        response.setStatePath(stateStore != null ? stateStore.resolveStorageDescriptor() : null);
-        if (stateStore != null) {
-            OrcaPatientSyncStateStore.FacilityState state = stateStore.loadFacilityState(facilityId);
-            if (state != null) {
-                response.setLastSyncDate(state.lastSyncDate);
-                response.setLastSyncedAt(state.lastSyncedAt);
-                response.setLastRunId(state.lastRunId);
-                response.setLastError(state.lastError);
+        response.setStatePath("db:opendolphin.d_orca_sync_cursor,db:opendolphin.d_orca_sync_run");
+        if (cursorStore != null) {
+            OrcaSyncCursorStore.CursorRow cursor = cursorStore.load(facilityId, OrcaPatientSyncPlanner.STREAM_KIND);
+            if (cursor != null) {
+                response.setLastSyncDate(cursor.cursorValue());
+                response.setLastRunId(cursor.lastAppliedRunId());
+            }
+        }
+        if (runStore != null) {
+            OrcaSyncRunStore.RunRow run = runStore.findLatest(facilityId, OrcaPatientSyncPlanner.STREAM_KIND);
+            if (run != null) {
+                if (response.getLastRunId() == null || response.getLastRunId().isBlank()) {
+                    response.setLastRunId(run.runId());
+                }
+                Instant finishedAt = run.finishedAt();
+                if (finishedAt != null) {
+                    response.setLastSyncedAt(finishedAt.toString());
+                }
+                if ("partial".equals(run.status()) || "failed".equals(run.status())) {
+                    response.setLastError(run.errorMessage());
+                }
             }
         }
         response.setApiResult("00");
