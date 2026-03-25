@@ -30,6 +30,7 @@ import {
   type PatientMasterRecord,
   type PatientMasterSearchResponse,
 } from '../patientSearchApi';
+import { buildDepartmentOptions } from '../departmentOptions';
 import { receptionStyles } from '../styles';
 import { applyAuthServicePatch, useAuthService, type AuthServiceFlags } from '../../charts/authService';
 import { getChartToneDetails } from '../../../ux/charts/tones';
@@ -895,7 +896,6 @@ export function ReceptionPage({
     source: 'selection' | 'card' | 'table';
     reason: string;
   } | null>(null);
-  const [deptInfoOptions, setDeptInfoOptions] = useState<Array<[string, string]>>([]);
   const [xhrDebugState, setXhrDebugState] = useState<{
     lastAttemptAt?: string;
     status?: number | null;
@@ -1749,58 +1749,6 @@ export function ReceptionPage({
     collect(rawRecord.visits);
     return map;
   }, [appointmentQuery.data?.raw]);
-  useEffect(() => {
-    let active = true;
-    const parseDeptInfo = (text: string): Array<[string, string]> => {
-      const tokens = text
-        .split(',')
-        .map((token) => token.trim())
-        .filter(Boolean);
-      const byCode = new Map<string, string>();
-      let pendingCode: string | null = null;
-      for (const token of tokens) {
-        if (/^\d{1,3}$/.test(token)) {
-          pendingCode = token;
-          continue;
-        }
-        if (pendingCode) {
-          if (!byCode.has(pendingCode)) {
-            byCode.set(pendingCode, token);
-          }
-          pendingCode = null;
-          continue;
-        }
-        const leadingMatch = token.match(/^(\d{1,3})\s*(.*)$/);
-        if (leadingMatch) {
-          const code = leadingMatch[1];
-          const rawName = leadingMatch[2]?.trim();
-          const name = rawName && rawName !== code ? rawName : '';
-          if (!byCode.has(code)) {
-            byCode.set(code, name || code);
-          }
-        }
-      }
-      return Array.from(byCode.entries());
-    };
-    const fetchDeptInfo = async () => {
-      try {
-        const response = await httpFetch('/api/orca/deptinfo');
-        if (response.status === 404) return;
-        if (!response.ok) return;
-        const text = await response.text();
-        const parsed = parseDeptInfo(text);
-        if (active && parsed.length > 0) {
-          setDeptInfoOptions(parsed);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    void fetchDeptInfo();
-    return () => {
-      active = false;
-    };
-  }, []);
   const uniqueDepartments = useMemo(
     () => Array.from(new Set(visibleAppointmentEntries.map((entry) => entry.department).filter(Boolean))) as string[],
     [visibleAppointmentEntries],
@@ -1810,43 +1758,11 @@ export function ReceptionPage({
     [visibleAppointmentEntries],
   );
   const departmentOptions = useMemo(() => {
-    const byCode = new Map<string, string>();
-    deptInfoOptions.forEach(([code, name]) => {
-      if (!code) return;
-      if (!byCode.has(code)) {
-        const trimmedName = (name ?? '').trim();
-        byCode.set(code, trimmedName && trimmedName !== code ? trimmedName : code);
-      }
+    return buildDepartmentOptions({
+      departmentCodeMap,
+      visibleDepartments: uniqueDepartments,
     });
-    departmentCodeMap.forEach((code, name) => {
-      if (code && !byCode.has(code)) {
-        const trimmedName = (name ?? '').trim();
-        byCode.set(code, trimmedName && trimmedName !== code ? trimmedName : code);
-      }
-    });
-    uniqueDepartments.forEach((dept) => {
-      if (!dept) return;
-      const trimmed = dept.trim();
-      if (!trimmed) return;
-      const leadingMatch = trimmed.match(/^(\d{1,3})\s*(.*)$/);
-      if (leadingMatch) {
-        const code = leadingMatch[1];
-        const rawName = leadingMatch[2]?.trim();
-        const name = rawName && rawName !== code ? rawName : code;
-        if (!byCode.has(code)) byCode.set(code, name);
-        return;
-      }
-      if (/^\d+$/.test(trimmed) && !byCode.has(trimmed)) {
-        byCode.set(trimmed, trimmed);
-      }
-    });
-    if (byCode.size === 0) {
-      byCode.set('01', '01');
-    }
-    return Array.from(byCode.entries())
-      .sort(([aCode, aName], [bCode, bName]) => `${aCode} ${aName}`.localeCompare(`${bCode} ${bName}`, 'ja'))
-      .slice(0, 200);
-  }, [deptInfoOptions, departmentCodeMap, uniqueDepartments]);
+  }, [departmentCodeMap, uniqueDepartments]);
   const filteredEntries = useMemo(
     () => filterEntries(visibleAppointmentEntries, keyword, departmentFilter, physicianFilter, paymentMode),
     [departmentFilter, keyword, paymentMode, physicianFilter, visibleAppointmentEntries],

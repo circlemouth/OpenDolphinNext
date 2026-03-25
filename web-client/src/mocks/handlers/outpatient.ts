@@ -2,7 +2,6 @@ import { http, HttpResponse } from 'msw';
 
 import {
   buildAppointmentFixture,
-  buildMedicalSummaryFixture,
   buildPatientListFixture,
   buildVisitListFixture,
   getOutpatientScenario,
@@ -215,44 +214,6 @@ export const outpatientHandlers = [
       return respond(mismatch);
     }
     return respond(buildVisitListFixture(scenario.flags));
-  }),
-  http.post('/api/orca/medical/outpatient', async ({ request }) => {
-    const fault = parseFaultSpec(request);
-    const scenario = applyRequestScenario(request);
-    await applyFaultDelay(fault);
-    if (hasNetworkFault(fault)) {
-      return HttpResponse.error();
-    }
-    const httpFaultStatus = resolveHttpFaultStatus(fault);
-    if (httpFaultStatus) {
-      return respond(buildMedicalSummaryFixture({ ...scenario.flags, status: httpFaultStatus }));
-    }
-    if (fault.tokens.has('timeout')) {
-      return respond(buildMedicalSummaryFixture({ ...scenario.flags, status: 504 }));
-    }
-    if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond(buildMedicalSummaryFixture({ ...scenario.flags, status: 500 }));
-    }
-    if (fault.tokens.has('schema-mismatch')) {
-      const mismatch = {
-        runId: scenario.flags.runId,
-        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
-        requestId: `req-${scenario.flags.runId}`,
-        cacheHit: scenario.flags.cacheHit,
-        missingMaster: scenario.flags.missingMaster,
-        dataSourceTransition: scenario.flags.dataSourceTransition,
-        fallbackUsed: scenario.flags.fallbackUsed,
-        fetchedAt: new Date().toISOString(),
-        recordsReturned: 0,
-        outcome: 'ERROR',
-        outpatientList: 'schema-mismatch',
-        apiResult: 'ERROR_SCHEMA_MISMATCH',
-        apiResultMessage: 'MSW injected schema mismatch for medicalmodv2/outpatient',
-        status: 200,
-      } as any;
-      return respond(mismatch);
-    }
-    return respond(buildMedicalSummaryFixture(scenario.flags));
   }),
   http.post('/api/orca/patients/local-search', async ({ request }) => {
     const fault = parseFaultSpec(request);

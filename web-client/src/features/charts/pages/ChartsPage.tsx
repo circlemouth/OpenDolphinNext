@@ -34,7 +34,7 @@ import { receptionStyles } from '../../reception/styles';
 import { fetchAppointmentOutpatients, fetchClaimFlags, type AppointmentPayload, type ReceptionEntry } from '../../reception/api';
 import { fetchPatients, type PatientRecord } from '../../patients/api';
 import { getAuditEventLog, logAuditEvent, logUiState, type AuditEventRecord } from '../../../libs/audit/auditLogger';
-import { fetchOrcaOutpatientSummary } from '../api';
+import { fetchChartsMedicalSummary } from '../api';
 import { fetchKarteIdByPatientId, type LetterModulePayload } from '../letterApi';
 import { fetchOrderBundlesWithPatientImportRecovery, mutateOrderBundles, type OrderBundle } from '../orderBundleApi';
 import { fetchPrescriptionOrderBundlesWithPatientImportRecovery, mutatePrescriptionOrderBundles } from '../prescriptionOrderApi';
@@ -1729,15 +1729,15 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     },
   });
 
-  const orcaSummaryQueryKey = ['orca-outpatient-summary', flags.runId, chartsMasterSourcePolicy];
-  const orcaSummaryQuery = useQuery({
-    queryKey: orcaSummaryQueryKey,
-    queryFn: (context) => fetchOrcaOutpatientSummary(context, { preferredSourceOverride }),
+  const medicalSummaryQueryKey = ['charts-medical-summary', flags.runId, chartsMasterSourcePolicy];
+  const medicalSummaryQuery = useQuery({
+    queryKey: medicalSummaryQueryKey,
+    queryFn: (context) => fetchChartsMedicalSummary(context, { preferredSourceOverride }),
     refetchInterval: 120_000,
     staleTime: 120_000,
     meta: {
-      servedFromCache: !!queryClient.getQueryState(orcaSummaryQueryKey)?.dataUpdatedAt,
-      retryCount: queryClient.getQueryState(orcaSummaryQueryKey)?.fetchFailureCount ?? 0,
+      servedFromCache: !!queryClient.getQueryState(medicalSummaryQueryKey)?.dataUpdatedAt,
+      retryCount: queryClient.getQueryState(medicalSummaryQueryKey)?.fetchFailureCount ?? 0,
     },
   });
 
@@ -1752,13 +1752,13 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     if (previous && previous !== chartsMasterSourcePolicy) {
       queryClient.invalidateQueries({ queryKey: ['charts-claim-flags'] });
       queryClient.invalidateQueries({ queryKey: ['charts-appointments'] });
-      queryClient.invalidateQueries({ queryKey: ['orca-outpatient-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['charts-medical-summary'] });
     }
     lastMasterSourcePolicy.current = chartsMasterSourcePolicy;
   }, [chartsMasterSourcePolicy, queryClient]);
 
   const mergedFlags = useMemo(() => {
-    const resolvedFlags = resolveOutpatientFlags(claimQuery.data, orcaSummaryQuery.data, appointmentMeta, flags);
+    const resolvedFlags = resolveOutpatientFlags(claimQuery.data, medicalSummaryQuery.data, appointmentMeta, flags);
     const runId = resolvedFlags.runId ?? flags.runId;
     const cacheHit = resolvedFlags.cacheHit ?? flags.cacheHit;
     const missingMaster = resolvedFlags.missingMaster ?? flags.missingMaster;
@@ -1783,11 +1783,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     flags.fallbackUsed,
     flags.missingMaster,
     flags.runId,
-    orcaSummaryQuery.data?.cacheHit,
-    orcaSummaryQuery.data?.dataSourceTransition,
-    orcaSummaryQuery.data?.missingMaster,
-    orcaSummaryQuery.data?.runId,
-    orcaSummaryQuery.data?.fallbackUsed,
+    medicalSummaryQuery.data?.cacheHit,
+    medicalSummaryQuery.data?.dataSourceTransition,
+    medicalSummaryQuery.data?.missingMaster,
+    medicalSummaryQuery.data?.runId,
+    medicalSummaryQuery.data?.fallbackUsed,
   ]);
 
   const resolvedRunId = resolveRunId(mergedFlags.runId ?? flags.runId);
@@ -1949,12 +1949,12 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const networkDegradedReason = useMemo(() => {
     const firstError =
       (claimQuery.isError && isNetworkError(claimQuery.error) ? claimQuery.error : undefined) ??
-      (orcaSummaryQuery.isError && isNetworkError(orcaSummaryQuery.error) ? orcaSummaryQuery.error : undefined) ??
+      (medicalSummaryQuery.isError && isNetworkError(medicalSummaryQuery.error) ? medicalSummaryQuery.error : undefined) ??
       (appointmentQuery.isError && isNetworkError(appointmentQuery.error) ? appointmentQuery.error : undefined);
     if (!firstError) return undefined;
     const message = firstError instanceof Error ? firstError.message : String(firstError);
     return `直近の取得でネットワークエラーを検知: ${message}`;
-  }, [appointmentQuery.error, appointmentQuery.isError, claimQuery.error, claimQuery.isError, orcaSummaryQuery.error, orcaSummaryQuery.isError]);
+  }, [appointmentQuery.error, appointmentQuery.isError, claimQuery.error, claimQuery.isError, medicalSummaryQuery.error, medicalSummaryQuery.isError]);
 
   const handleRetryClaim = () => {
     logAuditEvent({
@@ -2917,11 +2917,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const handleRefreshSummary = useCallback(async () => {
     setIsManualRefreshing(true);
     try {
-      await Promise.all([claimQuery.refetch(), orcaSummaryQuery.refetch(), appointmentQuery.refetch()]);
+      await Promise.all([claimQuery.refetch(), medicalSummaryQuery.refetch(), appointmentQuery.refetch()]);
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [appointmentQuery, claimQuery, orcaSummaryQuery]);
+  }, [appointmentQuery, claimQuery, medicalSummaryQuery]);
 
   useEffect(() => {
     // カルテを開いた時点で「診察中」扱いに寄せる（受付ボードの運用優先）。
@@ -4575,7 +4575,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       documentPanel={documentPanel}
                       orcaPanel={
                         <OrcaSummary
-                          summary={orcaSummaryQuery.data}
+                          summary={medicalSummaryQuery.data}
                           claim={claimQuery.data as ClaimOutpatientPayload | undefined}
                           appointments={patientEntries}
                           appointmentMeta={appointmentMeta}
@@ -4668,7 +4668,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       <details className="charts-card charts-fold">
                         <summary className="charts-fold__summary">ORCA 記録（要約）</summary>
                         <div className="charts-fold__content">
-                          <MedicalOutpatientRecordPanel summary={orcaSummaryQuery.data} selectedPatientId={encounterContext.patientId} />
+                          <MedicalOutpatientRecordPanel summary={medicalSummaryQuery.data} selectedPatientId={encounterContext.patientId} />
                         </div>
                       </details>
                     </>

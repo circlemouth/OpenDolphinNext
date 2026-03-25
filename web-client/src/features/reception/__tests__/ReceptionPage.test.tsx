@@ -4,6 +4,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 
 import { ReceptionPage } from '../pages/ReceptionPage';
+import { buildDepartmentOptions } from '../departmentOptions';
 import type { AppointmentPayload, ClaimOutpatientPayload, ReceptionEntry } from '../../outpatient/types';
 import { postOrcaMedicalModV2Xml } from '../../charts/orcaClaimApi';
 
@@ -296,6 +297,44 @@ const renderReceptionPage = () => {
   );
   screen.getByRole('heading', { name: '診察待ち' });
 };
+
+describe('buildDepartmentOptions', () => {
+  it('appointment raw 由来の code/name から診療科候補を構成する', () => {
+    const options = buildDepartmentOptions({
+      departmentCodeMap: new Map([
+        ['内科', '01'],
+        ['外科', '02'],
+      ]),
+      visibleDepartments: [],
+    });
+
+    expect(options).toEqual([
+      ['01', '内科'],
+      ['02', '外科'],
+    ]);
+  });
+
+  it('visible entry の coded department 文字列から code/name を補完する', () => {
+    const options = buildDepartmentOptions({
+      departmentCodeMap: new Map(),
+      visibleDepartments: ['01 内科', '02 外科'],
+    });
+
+    expect(options).toEqual([
+      ['01', '内科'],
+      ['02', '外科'],
+    ]);
+  });
+
+  it('source が空でも 01 fallback を維持する', () => {
+    const options = buildDepartmentOptions({
+      departmentCodeMap: new Map(),
+      visibleDepartments: [],
+    });
+
+    expect(options).toEqual([['01', '01']]);
+  });
+});
 
 const getToolbar = () => {
   return screen.getByRole('region', { name: '受付ツールバー' });

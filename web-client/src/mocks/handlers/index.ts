@@ -5,7 +5,6 @@ import { orcaReportHandlers } from './orcaReport';
 import { orcaClaimHandlers } from './orcaClaim';
 import { orcaReceptionHandlers } from './orcaReception';
 import { orcaMasterHandlers } from './orcaMaster';
-import { orcaDeptInfoHandlers } from './orcaDeptInfo';
 import { orcaDiseaseHandlers } from './orcaDisease';
 import { orcaOrderBundleHandlers } from './orcaOrderBundles';
 import { orcaOrderSupportHandlers } from './orcaOrderSupport';
@@ -22,7 +21,6 @@ export const handlers = [
   ...orcaClaimHandlers,
   ...orcaReceptionHandlers,
   ...orcaMasterHandlers,
-  ...orcaDeptInfoHandlers,
   ...orcaDiseaseHandlers,
   ...orcaOrderBundleHandlers,
   ...orcaOrderSupportHandlers,

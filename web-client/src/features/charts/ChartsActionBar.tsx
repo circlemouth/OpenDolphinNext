@@ -977,22 +977,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     return details;
   };
 
-  const buildOutpatientPayload = () => {
-    const payload: Record<string, unknown> = {};
-    if (resolvedVisitDate) {
-      payload.appointmentDate = resolvedVisitDate;
-      payload.date = resolvedVisitDate;
-    }
-    if (resolvedAppointmentId) payload.appointmentId = resolvedAppointmentId;
-    if (resolvedReceptionId) payload.receptionId = resolvedReceptionId;
-    if (resolvedPatientId) {
-      payload.Patient_ID = resolvedPatientId;
-      payload.patientId = resolvedPatientId;
-      payload.patientInformation = { Patient_ID: resolvedPatientId };
-    }
-    return payload;
-  };
-
   const logAudit = (
     action: ChartAction,
     outcome: 'success' | 'error' | 'blocked' | 'started',
@@ -1667,78 +1651,19 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           });
           return;
         } else {
-          const endpoint = '/api/orca/medical/outpatient';
-          const payload = buildOutpatientPayload();
-          const response = await httpFetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal,
-          });
-          const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-          const responseRunId = typeof json.runId === 'string' ? json.runId : undefined;
-          const responseTraceId = typeof json.traceId === 'string' ? json.traceId : undefined;
-          const responseRequestId = typeof json.requestId === 'string' ? json.requestId : undefined;
-          const responseOutcome = typeof json.outcome === 'string' ? json.outcome : undefined;
-          const responseApiResult = typeof json.apiResult === 'string' ? json.apiResult : undefined;
-          const responseApiResultMessage = typeof json.apiResultMessage === 'string' ? json.apiResultMessage : undefined;
-          if (response.status === 401 || response.status === 403) {
-            setPermissionDenied(true);
-            const authError = new Error(`権限不足（HTTP ${response.status}）。再ログインまたは権限設定を確認してください。`) as Error & {
-              apiDetails?: Record<string, unknown>;
-            };
-            authError.apiDetails = {
-              endpoint,
-              httpStatus: response.status,
-              runId: responseRunId,
-              traceId: responseTraceId,
-              requestId: responseRequestId,
-              outcome: responseOutcome,
-              apiResult: responseApiResult,
-              apiResultMessage: responseApiResultMessage,
-            };
-            throw authError;
-          }
-          if (!response.ok) {
-            const detailParts = [
-              `HTTP ${response.status}`,
-              responseApiResult ? `apiResult=${responseApiResult}` : undefined,
-              responseApiResultMessage ? `message=${responseApiResultMessage}` : undefined,
-              responseOutcome ? `outcome=${responseOutcome}` : undefined,
-            ].filter((part): part is string => typeof part === 'string' && part.length > 0);
-            const apiError = new Error(`${ACTION_LABEL[action]} API に失敗（${detailParts.join(' / ')}）`) as Error & {
-              apiDetails?: Record<string, unknown>;
-            };
-            apiError.apiDetails = {
-              endpoint,
-              httpStatus: response.status,
-              runId: responseRunId,
-              traceId: responseTraceId,
-              requestId: responseRequestId,
-              outcome: responseOutcome,
-              apiResult: responseApiResult,
-              apiResultMessage: responseApiResultMessage,
-            };
-            throw apiError;
-          }
-
           const after = getObservabilityMeta();
-          const nextRunId = responseRunId ?? after.runId ?? runId;
-          const nextTraceId = responseTraceId ?? after.traceId ?? resolvedTraceId;
-
-          const responseDetailParts = [
+          const nextRunId = after.runId ?? runId;
+          const nextTraceId = after.traceId ?? resolvedTraceId;
+          const finishDetailParts = [
             `runId=${nextRunId}`,
             `traceId=${nextTraceId ?? 'unknown'}`,
-            responseRequestId ? `requestId=${responseRequestId}` : undefined,
-            responseOutcome ? `outcome=${responseOutcome}` : undefined,
-            responseApiResult ? `apiResult=${responseApiResult}` : undefined,
-          ].filter((part): part is string => typeof part === 'string' && part.length > 0);
-
+            'postFinish=medicalmodv23',
+          ];
           setBanner(null);
           setToast({
             tone: 'success',
             message: `${ACTION_LABEL[action]}を完了`,
-            detail: responseDetailParts.join(' / '),
+            detail: finishDetailParts.join(' / '),
           });
 
           const durationMs = Math.round(performance.now() - startedAt);
@@ -1746,12 +1671,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           logAudit(action, 'success', undefined, durationMs, {
             phase: 'do',
             details: {
-              endpoint,
-              httpStatus: response.status,
-              requestId: responseRequestId,
-              outcome: responseOutcome,
-              apiResult: responseApiResult,
-              apiResultMessage: responseApiResultMessage,
+              completionMode: 'local_finish',
+              postFinishAction: 'medicalmodv23',
+              traceId: nextTraceId,
             },
           });
 

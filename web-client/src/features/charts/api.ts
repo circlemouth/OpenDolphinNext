@@ -1,16 +1,15 @@
 import type { QueryFunctionContext } from '@tanstack/react-query';
 
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
-import { updateObservabilityMeta } from '../../libs/observability/observability';
+import { ensureObservabilityMeta, updateObservabilityMeta } from '../../libs/observability/observability';
 import type { DataSourceTransition, ResolveMasterSource } from '../../libs/observability/types';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
-import { fetchWithResolver } from '../outpatient/fetchWithResolver';
-import { mergeOutpatientMeta } from '../outpatient/transformers';
-import { extractMedicalOutpatientRecord } from './medicalOutpatient';
 import type { OrcaOutpatientSummary } from '../outpatient/types';
 export type { OrcaOutpatientSummary } from '../outpatient/types';
 
-const orcaSummaryCandidates = [{ path: '/api/orca/medical/outpatient', source: 'server' as ResolveMasterSource }];
+const MEDICAL_SUMMARY_DESCRIPTION = 'charts_medical_summary';
+const MEDICAL_SUMMARY_SOURCE_PATH = 'contract_removed';
+const MEDICAL_SUMMARY_NOTE = 'server replacement route unavailable';
 
 const preferredSource = (): ResolveMasterSource | undefined =>
   import.meta.env.VITE_DISABLE_MSW === '1' ? 'server' : undefined;
@@ -18,113 +17,90 @@ const preferredSource = (): ResolveMasterSource | undefined =>
 const resolvedDataSource = (transition?: DataSourceTransition, fallback?: ResolveMasterSource): ResolveMasterSource | undefined =>
   (transition as ResolveMasterSource | undefined) ?? fallback;
 
-export async function fetchOrcaOutpatientSummary(
+export function buildUnavailableMedicalSummary(
+  _context?: QueryFunctionContext,
+  options: { preferredSourceOverride?: ResolveMasterSource } = {},
+): OrcaOutpatientSummary {
+  const observability = ensureObservabilityMeta();
+  const fetchedAt = new Date().toISOString();
+  const transition = options.preferredSourceOverride ?? preferredSource() ?? 'snapshot';
+  const payload = { outpatientList: [] as unknown[] };
+  return {
+    runId: observability.runId,
+    traceId: observability.traceId,
+    cacheHit: false,
+    missingMaster: false,
+    fallbackUsed: false,
+    dataSourceTransition: transition,
+    resolveMasterSource: resolvedDataSource(transition, options.preferredSourceOverride),
+    fetchedAt,
+    recordsReturned: 0,
+    outcome: 'MISSING',
+    sourcePath: MEDICAL_SUMMARY_SOURCE_PATH,
+    note: MEDICAL_SUMMARY_NOTE,
+    payload,
+  };
+}
+
+export async function fetchChartsMedicalSummary(
   context?: QueryFunctionContext,
   options: { preferredSourceOverride?: ResolveMasterSource } = {},
 ): Promise<OrcaOutpatientSummary> {
-  const result = await fetchWithResolver({
-    candidates: orcaSummaryCandidates,
-    queryContext: context,
-    preferredSource: options.preferredSourceOverride ?? preferredSource(),
-    description: 'medical_outpatient_summary',
-  });
-  const notFoundFallback = result.meta.httpStatus === 404;
-
-  const payload = (result.raw as Record<string, unknown>) ?? {};
-  const recordsReturned = Array.isArray((payload as any)?.outpatientList)
-    ? ((payload as any).outpatientList as unknown[]).length
-    : typeof payload.recordsReturned === 'number'
-      ? (payload.recordsReturned as number)
-      : undefined;
-
-  const meta = mergeOutpatientMeta(payload, {
-    ...result.meta,
-    recordsReturned,
-    resolveMasterSource: resolvedDataSource(result.meta.dataSourceTransition, result.meta.resolveMasterSource),
-  });
-
-  const derivedFromSections = extractMedicalOutpatientRecord(payload, undefined);
-  const resolvedOutcome =
-    typeof (payload as any).outcome === 'string'
-      ? ((payload as any).outcome as string)
-      : derivedFromSections?.outcome
-        ? derivedFromSections.outcome
-        : notFoundFallback
-          ? 'MISSING'
-          : result.ok
-          ? 'SUCCESS'
-          : 'ERROR';
-
-  const summary: OrcaOutpatientSummary = {
-    ...meta,
-    note: typeof payload.apiResultMessage === 'string' ? (payload.apiResultMessage as string) : undefined,
-    payload,
-    outcome: meta.outcome ?? resolvedOutcome,
-  };
-
+  const summary = buildUnavailableMedicalSummary(context, options);
   recordOutpatientFunnel('charts_orchestration', {
     runId: summary.runId,
-    cacheHit: summary.cacheHit ?? result.meta.fromCache ?? false,
+    cacheHit: summary.cacheHit ?? false,
     missingMaster: summary.missingMaster ?? false,
     dataSourceTransition: summary.dataSourceTransition ?? 'snapshot',
     fallbackUsed: summary.fallbackUsed ?? false,
     action: 'medical_fetch',
-    outcome: result.ok || notFoundFallback ? 'success' : 'error',
+    outcome: 'success',
     note: summary.sourcePath,
-    reason:
-      result.ok || notFoundFallback
-        ? undefined
-        : result.error ?? summary.note ?? summary.sourcePath,
+    reason: summary.note,
   });
 
   logUiState({
     action: 'outpatient_fetch',
     screen: 'charts',
     runId: summary.runId,
-    cacheHit: summary.cacheHit ?? result.meta.fromCache,
+    cacheHit: summary.cacheHit,
     missingMaster: summary.missingMaster,
     dataSourceTransition: summary.dataSourceTransition,
     fallbackUsed: summary.fallbackUsed,
     details: {
-      endpoint: summary.sourcePath ?? result.meta.sourcePath,
+      endpoint: summary.sourcePath,
       fetchedAt: summary.fetchedAt,
       recordsReturned: summary.recordsReturned,
       outcome: summary.outcome,
       resolveMasterSource: summary.resolveMasterSource,
-      fromCache: result.meta.fromCache,
-      retryCount: result.meta.retryCount,
-      description: 'medical_outpatient_summary',
+      description: MEDICAL_SUMMARY_DESCRIPTION,
+      note: summary.note,
     },
   });
 
   logAuditEvent({
     runId: summary.runId,
-    cacheHit: summary.cacheHit ?? result.meta.fromCache,
+    cacheHit: summary.cacheHit,
     missingMaster: summary.missingMaster,
     fallbackUsed: summary.fallbackUsed,
     dataSourceTransition: summary.dataSourceTransition,
     payload: {
-      action: 'ORCA_MEDICAL_OUTPATIENT_FETCH',
-      outcome: result.ok || notFoundFallback ? 'success' : 'error',
+      action: 'CHARTS_MEDICAL_SUMMARY_FETCH',
+      outcome: 'success',
       details: {
         runId: summary.runId,
-        traceId: summary.traceId ?? result.meta.traceId,
+        traceId: summary.traceId,
         requestId: summary.requestId,
         dataSourceTransition: summary.dataSourceTransition,
-        cacheHit: summary.cacheHit ?? result.meta.fromCache ?? false,
+        cacheHit: summary.cacheHit ?? false,
         missingMaster: summary.missingMaster ?? false,
         fallbackUsed: summary.fallbackUsed ?? false,
         fetchedAt: summary.fetchedAt,
         recordsReturned: summary.recordsReturned,
         outcome: summary.outcome,
-        sectionOutcomes: derivedFromSections?.sections?.map((section) => ({
-          key: section.key,
-          outcome: section.outcome,
-          recordsReturned: section.recordsReturned ?? section.items.length,
-        })),
         resolveMasterSource: summary.resolveMasterSource,
-        sourcePath: summary.sourcePath ?? result.meta.sourcePath,
-        error: result.ok || notFoundFallback ? undefined : result.error,
+        sourcePath: summary.sourcePath,
+        note: summary.note,
       },
     },
   });

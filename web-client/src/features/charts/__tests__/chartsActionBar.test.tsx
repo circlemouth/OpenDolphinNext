@@ -5,8 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { ChartsActionBar } from '../ChartsActionBar';
 import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
+import { postOrcaMedicalModV23Xml } from '../orcaMedicalModApi';
 import { fetchOrderBundles } from '../orderBundleApi';
-import { httpFetch } from '../../../libs/http/httpClient';
 import { recordChartsAuditEvent } from '../audit';
 
 vi.mock('../../../routes/useAppNavigation', () => ({
@@ -49,10 +49,6 @@ vi.mock('../orderBundleApi', () => ({
   fetchOrderBundles: vi.fn().mockResolvedValue({ ok: true, bundles: [] }),
 }));
 
-vi.mock('../../../libs/http/httpClient', () => ({
-  httpFetch: vi.fn(),
-}));
-
 vi.mock('../../../libs/audit/auditLogger', () => ({
   logAuditEvent: vi.fn(),
   logUiState: vi.fn(),
@@ -76,6 +72,7 @@ const baseProps = {
 
 describe('ChartsActionBar', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(fetchOrderBundles).mockResolvedValue({ ok: true, bundles: [] } as any);
   });
 
@@ -170,40 +167,59 @@ describe('ChartsActionBar', () => {
     expect(screen.getByText('2件')).toBeInTheDocument();
   });
 
-  it('診察終了の失敗を明示し監査ログにapiResultを残す', async () => {
+  it('診察終了で blocked route を叩かず local after-finish フローを完了する', async () => {
     const user = userEvent.setup();
-    vi.mocked(httpFetch).mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: vi.fn().mockResolvedValue({
-        runId: 'RUN-NG',
-        traceId: 'TRACE-NG',
-        outcome: 'FAILURE',
-        apiResult: 'ERR',
-        apiResultMessage: 'server error',
-      }),
-    } as unknown as Response);
+    const onAfterFinish = vi.fn();
 
     render(
       <MemoryRouter>
-        <ChartsActionBar {...baseProps} patientId="P-200" visitDate="2026-01-04" />
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-200"
+          visitDate="2026-01-04"
+          selectedEntry={{ patientId: 'P-200', department: '01 内科', visitDate: '2026-01-04' } as any}
+          onAfterFinish={onAfterFinish}
+        />
       </MemoryRouter>,
     );
 
     await user.click(screen.getByRole('button', { name: '診察終了' }));
 
-    await waitFor(() => expect(httpFetch).toHaveBeenCalled());
-    expect(screen.getByText('診察終了に失敗')).toBeInTheDocument();
+    await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
+    expect(postOrcaMedicalModV23Xml).toHaveBeenCalled();
+    expect(screen.getByText('診察終了を完了')).toBeInTheDocument();
     expect(recordChartsAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        outcome: 'error',
+        action: 'ENCOUNTER_CLOSE',
+        outcome: 'success',
         details: expect.objectContaining({
-          endpoint: '/api/orca/medical/outpatient',
-          httpStatus: 500,
-          apiResult: 'ERR',
-          apiResultMessage: 'server error',
-          outcome: 'FAILURE',
+          completionMode: 'local_finish',
+          postFinishAction: 'medicalmodv23',
           visitDate: '2026-01-04',
+        }),
+      }),
+    );
+  });
+
+  it('診察終了後の追加更新で必須項目不足時は warning banner を出す', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar {...baseProps} patientId="P-201" visitDate="2026-01-04" selectedEntry={{ patientId: 'P-201' } as any} />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '診察終了' }));
+
+    expect(await screen.findByText(/診療終了後の追加更新を停止/)).toBeInTheDocument();
+    expect(postOrcaMedicalModV23Xml).not.toHaveBeenCalled();
+    expect(recordChartsAuditEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'ORCA_MEDICAL_MOD_V23',
+        outcome: 'blocked',
+        details: expect.objectContaining({
+          endpoint: '/api/orca/chart-support/medical-mod-v23',
         }),
       }),
     );

@@ -86,21 +86,6 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     sourceDocs: ['docs/server-modernization/api-architecture-consolidation-plan.md'],
   },
   {
-    id: 'medicalOutpatient',
-    group: 'outpatient',
-    method: 'ANY',
-    path: '/api/orca/medical/outpatient',
-    purpose: 'Charts/DocumentTimeline が表示する外来の Medical record を取得し、`auditEvent` に `recordsReturned`/`outcome` を記録する。',
-    auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'recordsReturned'],
-    sourceDocs: [
-      'docs/server-modernization/phase2/operations/logs/20251208T124645Z-api-gap-implementation.md',
-      'docs/server-modernization/phase2/operations/logs/20251124T073245Z-webclient-master-bridge.md',
-      'docs/web-client/architecture/web-client-api-mapping.md',
-      'docs/server-modernization/phase2/operations/logs/20251205T090000Z-integration-implementation.md',
-      'docs/server-modernization/phase2/operations/logs/20251205T150000Z-integration-implementation.md',
-    ],
-  },
-  {
     id: 'diseaseMutation',
     group: 'outpatient',
     method: 'ANY',

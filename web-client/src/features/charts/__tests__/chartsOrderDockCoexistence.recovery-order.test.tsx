@@ -97,7 +97,7 @@ vi.mock('../../reception/api', () => ({
 }));
 
 vi.mock('../api', () => ({
-  fetchOrcaOutpatientSummary: vi.fn(async () => ({
+  fetchChartsMedicalSummary: vi.fn(async () => ({
     runId: 'RUN-SUMMARY',
     cacheHit: true,
     missingMaster: false,

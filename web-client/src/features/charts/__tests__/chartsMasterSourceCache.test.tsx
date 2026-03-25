@@ -121,7 +121,7 @@ vi.mock('../../reception/api', () => ({
 }));
 
 vi.mock('../api', () => ({
-  fetchOrcaOutpatientSummary: vi.fn(async () => {
+  fetchChartsMedicalSummary: vi.fn(async () => {
     fetchCounters.summary += 1;
     return buildSummaryPayload(currentPolicy);
   }),
@@ -242,7 +242,7 @@ describe('Charts masterSource cache refresh', () => {
       expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['charts-appointments'] })),
     );
     await waitFor(() =>
-      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['orca-outpatient-summary'] })),
+      expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['charts-medical-summary'] })),
     );
 
     await waitFor(() => expect(fetchCounters.claim).toBeGreaterThan(1));
