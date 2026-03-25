@@ -10,6 +10,9 @@
   - 現行の開発計画正本。
   - ファイル名に `phase2` を含むが、2026-03-24 時点では legacy ではなく現行計画として扱う。
   - `server-modernized` の着手可能タスク、依存関係、PR 粒度、検証観点をここに集約する。
+- [web_client_contract_followup_checklist.md](web_client_contract_followup_checklist.md)
+  - Web クライアントの契約追随用チェックリスト。
+  - `server-modernized` の公開契約に合わせて `web-client` 側の blocked route 除去や契約整合を進める際の現行参照。
 
 ## Legacy/Archive の開発計画
 - [server-modernized-remediation-master-checklist.md](server-modernized-remediation-master-checklist.md)
