@@ -35,6 +35,7 @@ import { fetchAppointmentOutpatients, fetchClaimFlags, type AppointmentPayload, 
 import { fetchPatients, type PatientRecord } from '../../patients/api';
 import { getAuditEventLog, logAuditEvent, logUiState, type AuditEventRecord } from '../../../libs/audit/auditLogger';
 import { fetchChartsMedicalSummary } from '../api';
+import { openChartEncounter } from '../encounterTransitionApi';
 import { fetchKarteIdByPatientId, type LetterModulePayload } from '../letterApi';
 import { fetchOrderBundlesWithPatientImportRecovery, mutateOrderBundles, type OrderBundle } from '../orderBundleApi';
 import { fetchPrescriptionOrderBundlesWithPatientImportRecovery, mutatePrescriptionOrderBundles } from '../prescriptionOrderApi';
@@ -2926,26 +2927,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     }
   }, [appointmentQuery, claimQuery, medicalSummaryQuery]);
 
-  useEffect(() => {
-    // カルテを開いた時点で「診察中」扱いに寄せる（受付ボードの運用優先）。
-    if (!patientId || !actionVisitDate) return;
-    upsertReceptionStatusOverride({
-      date: actionVisitDate,
-      patientId,
-      status: '診療中',
-      source: 'charts_open',
-      runId: resolvedRunId ?? flags.runId,
-      scope: storageScope,
-      fallbackEntry: selectedEntry
-      ? {
-          ...selectedEntry,
-          patientId,
-          visitDate: actionVisitDate,
-        }
-      : undefined,
-    });
-  }, [actionVisitDate, flags.runId, patientId, resolvedRunId, selectedEntry, storageScope]);
-
   const requestEncounterExitChoice = useCallback(
     (action: EncounterExitAction) =>
       new Promise<EncounterExitChoice>((resolve) => {
@@ -3042,6 +3023,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   );
 
   const handleAfterStart = useCallback(async () => {
+    const transition = await openChartEncounter({
+      encounterKey: encounterContext.encounterKey,
+      patientId,
+      karteId,
+    });
     if (patientId && actionVisitDate) {
       upsertReceptionStatusOverride({
         date: actionVisitDate,
@@ -3060,10 +3046,19 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       });
     }
     await handleRefreshSummary();
+    return {
+      requestId: transition.requestId,
+      traceId: transition.traceId,
+      encounterKey: transition.encounterKey,
+      idempotencyKey: transition.idempotencyKey,
+      detail: `checked_in -> ${transition.businessState} / encounterKey=${transition.encounterKey} / requestId=${transition.requestId} / traceId=${transition.traceId ?? 'unknown'} / idempotencyKey=${transition.idempotencyKey}`,
+    };
   }, [
     actionVisitDate,
+    encounterContext.encounterKey,
     flags.runId,
     handleRefreshSummary,
+    karteId,
     patientId,
     resolvedRunId,
     selectedEntry,

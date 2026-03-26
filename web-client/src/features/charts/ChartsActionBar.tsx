@@ -45,6 +45,15 @@ type ToastState = {
   detail?: string;
 };
 
+type ActionCompletionMeta = {
+  requestId?: string;
+  traceId?: string;
+  runId?: string;
+  encounterKey?: string;
+  idempotencyKey?: string;
+  detail?: string;
+};
+
 type BannerState = {
   tone: BannerTone;
   message: string;
@@ -233,9 +242,9 @@ export interface ChartsActionBarProps {
   onDiscardChanges?: () => void;
   onForceTakeover?: () => void;
   onAfterSend?: () => void | Promise<void>;
-  onAfterStart?: () => void | Promise<void>;
-  onAfterPause?: () => void | Promise<void>;
-  onAfterFinish?: () => void | Promise<void>;
+  onAfterStart?: () => ActionCompletionMeta | void | Promise<ActionCompletionMeta | void>;
+  onAfterPause?: () => ActionCompletionMeta | void | Promise<ActionCompletionMeta | void>;
+  onAfterFinish?: () => ActionCompletionMeta | void | Promise<ActionCompletionMeta | void>;
   onDraftSaved?: () => void;
   onLockChange?: (locked: boolean, reason?: string) => void;
   onApprovalConfirmed?: (meta: { action: 'send'; actor?: string }) => void;
@@ -1852,50 +1861,88 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           }
         }
 
-        void Promise.resolve(onAfterFinish?.()).catch((error) => {
-          const detail = error instanceof Error ? error.message : String(error);
+        const finishMeta = await Promise.resolve(onAfterFinish?.());
+        if (finishMeta) {
+          const nextTraceId = finishMeta.traceId ?? getObservabilityMeta().traceId ?? resolvedTraceId;
           logUiState({
             action: 'finish',
             screen: 'charts/action-bar',
             controlId: 'action-finish',
-            runId,
+            runId: finishMeta.runId ?? runId,
             cacheHit,
             missingMaster,
             dataSourceTransition,
             fallbackUsed,
-            details: { operationPhase: 'after_finish', error: detail },
+            details: {
+              operationPhase: 'after_finish',
+              requestId: finishMeta.requestId,
+              traceId: nextTraceId,
+              detail: finishMeta.detail,
+            },
           });
-        });
+        }
         return;
       } else if (action === 'start') {
-        void Promise.resolve(onAfterStart?.()).catch((error) => {
-          const detail = error instanceof Error ? error.message : String(error);
-          logUiState({
-            action: 'start',
-            screen: 'charts/action-bar',
-            controlId: 'action-start',
-            runId,
-            cacheHit,
-            missingMaster,
-            dataSourceTransition,
-            fallbackUsed,
-            details: { operationPhase: 'after_start', error: detail },
-          });
+        const startMeta = await Promise.resolve(onAfterStart?.());
+        const nextTraceId = startMeta?.traceId ?? getObservabilityMeta().traceId ?? resolvedTraceId;
+        logUiState({
+          action: 'start',
+          screen: 'charts/action-bar',
+          controlId: 'action-start',
+          runId: startMeta?.runId ?? runId,
+          cacheHit,
+          missingMaster,
+          dataSourceTransition,
+          fallbackUsed,
+          details: {
+            operationPhase: 'after_start',
+            requestId: startMeta?.requestId,
+            traceId: nextTraceId,
+            encounterKey: startMeta?.encounterKey,
+            idempotencyKey: startMeta?.idempotencyKey,
+            detail: startMeta?.detail,
+          },
         });
+        const durationMs = Math.round(performance.now() - startedAt);
+        const after = getObservabilityMeta();
+        const nextRunId = startMeta?.runId ?? after.runId ?? runId;
+        setBanner(null);
+        setToast({
+          tone: 'success',
+          message: `${ACTION_LABEL[action]}を完了`,
+          detail:
+            startMeta?.detail ??
+            `runId=${nextRunId} / traceId=${nextTraceId ?? 'unknown'} / requestId=${startMeta?.requestId ?? 'unknown'} / transition=${dataSourceTransition}`,
+        });
+        logTelemetry(action, 'success', durationMs, startMeta?.detail, undefined, { runId: nextRunId, traceId: nextTraceId });
+        logAudit(action, 'success', undefined, durationMs, {
+          phase: 'do',
+          details: {
+            requestId: startMeta?.requestId,
+            traceId: nextTraceId,
+            encounterKey: startMeta?.encounterKey,
+            idempotencyKey: startMeta?.idempotencyKey,
+          },
+        });
+        return;
       } else if (action === 'pause') {
-        void Promise.resolve(onAfterPause?.()).catch((error) => {
-          const detail = error instanceof Error ? error.message : String(error);
-          logUiState({
-            action: 'pause',
-            screen: 'charts/action-bar',
-            controlId: 'action-pause',
-            runId,
-            cacheHit,
-            missingMaster,
-            dataSourceTransition,
-            fallbackUsed,
-            details: { operationPhase: 'after_pause', error: detail },
-          });
+        const pauseMeta = await Promise.resolve(onAfterPause?.());
+        const nextTraceId = pauseMeta?.traceId ?? getObservabilityMeta().traceId ?? resolvedTraceId;
+        logUiState({
+          action: 'pause',
+          screen: 'charts/action-bar',
+          controlId: 'action-pause',
+          runId: pauseMeta?.runId ?? runId,
+          cacheHit,
+          missingMaster,
+          dataSourceTransition,
+          fallbackUsed,
+          details: {
+            operationPhase: 'after_pause',
+            requestId: pauseMeta?.requestId,
+            traceId: nextTraceId,
+            detail: pauseMeta?.detail,
+          },
         });
       } else if (action === 'draft') {
         // TODO: 本実装では localStorage / server に保存。現段階は送信前チェック用のガード連携を優先。

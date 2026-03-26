@@ -12,6 +12,7 @@
 - `POST /api/admin/access/users/{userPk}/password-reset` は public route contract から除外されたままとし、web-client の password reset 導線は fail-closed に変更した。
 - `/api/orca/queue` と `/api/orca/pusheventgetv2` は public route contract に存在しないため、web-client からの直接 call を停止した。internal/downstream ORCA path の public 流用は行わない。
 - server は `GET /api/schedules/{scheduleKey}` で `scheduleKey` を常時返し、結合済み row では `encounterKey` も返す。`GET /api/encounters/{encounterKey}` は常時 `encounterKey` と `scheduleKey` を返す。Reception → Charts の client pass-through も `useAppNavigation` / `AppRouter` / `ReceptionPage` / `ChartsPage` に通っており、`scheduleKey` / `encounterKey` がない受付行は fail-closed、`appointmentId` / `receptionId` / `visitDate` は権威 identity ではなく volatile carryover のまま扱う。
+- Charts の `start` は `POST /api/encounters/{encounterKey}/transitions` にのみ接続し、request body は `operation=chart_open` と canonical `patientId` / `karteId` / `requestId` / `traceId` / `idempotencyKey` を送る。`pause` / `finish` は encounter transition に接続しない。`encounterKey` / `patientId` / `karteId` が欠ける場合は fail-closed で止め、server success 前に success toast や `診療中` override を出さない。
 
 ## 最新変更（2026-03-15 / ORCA 境界整流と運用 UI 最終形）
 - RUN_ID: `20260315T060323Z`

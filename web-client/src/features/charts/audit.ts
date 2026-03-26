@@ -89,6 +89,8 @@ const ALLOWED_DETAIL_KEYS = new Set([
   'runId',
   'traceId',
   'requestId',
+  'encounterKey',
+  'idempotencyKey',
   'actor',
   'facilityId',
   'userId',

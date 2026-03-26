@@ -15,6 +15,11 @@
 - `docs/server-modernization/planning/server-modernized-plan/docs/development/orca-server-recovery-implementation-playbook.md`
 - 用途: `server-modernized` の改修計画、契約文書、運用手順の入口。まず `docs/development/phase2_current_coding_tasks_checklist_v1.md`、次に `docs/development/README.md` と `docs/README.md` を読む。
 
+## 最新変更（2026-03-26 / encounter transition contract）
+- `EncounterResource` の public route は `POST /api/encounters/{encounterKey}/transitions` を維持し、request body の transition field は `operation` を正本とする。
+- `EncounterTransitionService` は `chart_open` を受理して `chart_opened` へ遷移させる。`pause` / `finish` はこの contract に接続しない。
+- `EncounterResourceTest` / `PublicRouteInventoryContractTest` / `WebXmlEndpointExposureTest` を baseline とし、summary blocker の removed route 復活や ORCA namespace の guessed replacement route 追加は行わない。
+
 ## Legacy 計画書
 - 現行判断は `docs/DEVELOPMENT_STATUS.md`、`AGENTS.md`、最新のユーザー/マネージャー指示を優先する。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md`

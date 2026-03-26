@@ -44,6 +44,7 @@
 - `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
+- 2026-03-26: Charts の encounter transition start-only 接続を current public contract に合わせて実装した。`POST /api/encounters/{encounterKey}/transitions` に `operation=chart_open` を送る専用 helper を `web-client` に追加し、`ChartsActionBar` は server success 後のみ success UI を出す await 制御へ変更した。`pause` / `finish` は従来どおり local/UI flow のみを維持し、transition request は送らない。`encounterKey` / `patientId` / `karteId` 欠落時は fail-closed とし、summary placeholder / removed-route guard は維持した。
 - 2026-03-26: Reception → Charts の canonical key feed について、`scheduleKey` / `encounterKey` の server 供給と web-client の pass-through を test と docs で固定した。`docs/development/public_route_key_feed_contract_20260326.md` を追加し、`ScheduleResourceTest` / `CanonicalEncounterKeysTest` / `useAppNavigation.test.tsx` / `encounterContext.test.ts` を canonical payload 仕様へ強化した。
 - 2026-03-24: `phase2a_handoff_docs_bundle` を整理し、補助資料のみを `docs/development/supporting/phase2a_handoff_docs_bundle/` へ移設した。重複していた `phase2_current_coding_tasks_checklist_v1.md` 複製は削除し、現行正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md` に一本化した。
 - 2026-03-24: `phase2_current_coding_tasks_checklist_v1.md` を `docs/development/phase2_current_coding_tasks_checklist_v1.md` へ移設し、`server-modernized` の現行開発計画正本へ昇格した。旧「現行計画」`docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md` は Legacy/Archive 扱いへ切り替えた（RUN_ID=20260324T111046Z）。

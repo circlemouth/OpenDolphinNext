@@ -225,6 +225,107 @@ describe('ChartsActionBar', () => {
     );
   });
 
+  it('診察開始は afterStart 成功後のみ success toast を出す', async () => {
+    const user = userEvent.setup();
+    const onAfterStart = vi.fn().mockResolvedValue({
+      requestId: 'req-start-1',
+      traceId: 'trace-start-1',
+      encounterKey: 'F001:E100',
+      idempotencyKey: 'idem-start-1',
+      detail: 'checked_in -> chart_opened / encounterKey=F001:E100 / requestId=req-start-1',
+    });
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-101"
+          visitDate="2026-01-03"
+          selectedEntry={{ patientId: 'P-101', status: '受付済み', visitDate: '2026-01-03' } as any}
+          onAfterStart={onAfterStart}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '診察開始' }));
+
+    await waitFor(() => expect(onAfterStart).toHaveBeenCalledTimes(1));
+    expect(screen.getByText('診察開始を完了')).toBeInTheDocument();
+    expect(screen.getByText(/checked_in -> chart_opened/)).toBeInTheDocument();
+  });
+
+  it('診察開始の afterStart が失敗した場合は success toast を出さない', async () => {
+    const user = userEvent.setup();
+    const onAfterStart = vi.fn().mockRejectedValue(new Error('encounterKey がないため診察開始を実行できません。'));
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-102"
+          visitDate="2026-01-03"
+          selectedEntry={{ patientId: 'P-102', status: '受付済み', visitDate: '2026-01-03' } as any}
+          onAfterStart={onAfterStart}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '診察開始' }));
+
+    await waitFor(() => expect(onAfterStart).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText('診察開始を完了')).not.toBeInTheDocument();
+    expect(screen.getByText('診察開始に失敗')).toBeInTheDocument();
+    expect(screen.getAllByText(/encounterKey がないため診察開始を実行できません。/).length).toBeGreaterThan(0);
+  });
+
+  it('診察中断では start hook を呼ばない', async () => {
+    const user = userEvent.setup();
+    const onAfterStart = vi.fn();
+    const onAfterPause = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-103"
+          visitDate="2026-01-03"
+          selectedEntry={{ patientId: 'P-103', status: '診療中', visitDate: '2026-01-03' } as any}
+          onAfterStart={onAfterStart}
+          onAfterPause={onAfterPause}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '診察中断' }));
+
+    await waitFor(() => expect(onAfterPause).toHaveBeenCalledTimes(1));
+    expect(onAfterStart).not.toHaveBeenCalled();
+  });
+
+  it('診察終了では start hook を呼ばない', async () => {
+    const user = userEvent.setup();
+    const onAfterStart = vi.fn();
+    const onAfterFinish = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-104"
+          visitDate="2026-01-04"
+          selectedEntry={{ patientId: 'P-104', status: '診療中', visitDate: '2026-01-04', department: '01 内科' } as any}
+          onAfterStart={onAfterStart}
+          onAfterFinish={onAfterFinish}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '診察終了' }));
+
+    await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
+    expect(onAfterStart).not.toHaveBeenCalled();
+  });
+
   it('承認ロック中は印刷がガードされる', () => {
     render(
       <MemoryRouter>
