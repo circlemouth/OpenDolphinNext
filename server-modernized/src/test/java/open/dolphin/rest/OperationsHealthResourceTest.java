@@ -18,6 +18,7 @@ import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import open.dolphin.rest.dto.OperationsHealthResponse;
+import open.dolphin.rest.dto.OperationsReadinessResponse;
 import open.dolphin.storage.attachment.AttachmentStorageManager;
 import open.dolphin.storage.attachment.AttachmentStorageMode;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +70,7 @@ class OperationsHealthResourceTest {
     }
 
     @Test
-    void readinessReturnsMinimalStatusOnlyWhenAllChecksAreUp() {
+    void readinessReturnsDetailedChecksOnPublicHealthReadinessRoute() {
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
         restOrcaTransport.probeResult =
@@ -83,11 +84,19 @@ class OperationsHealthResourceTest {
         Response response = resource.readiness();
 
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getEntity()).isEqualTo(Map.of("status", "UP"));
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("UP");
+        assertThat(body.getChecks()).containsKeys(
+                OperationsReadinessEvaluator.CHECK_DATABASE,
+                OperationsReadinessEvaluator.CHECK_ORCA,
+                OperationsReadinessEvaluator.CHECK_ORCA_PUSH,
+                OperationsReadinessEvaluator.CHECK_ATTACHMENT_STORAGE,
+                OperationsReadinessEvaluator.CHECK_PVT_QUEUE,
+                OperationsReadinessEvaluator.CHECK_PATIENT_IMAGES);
     }
 
     @Test
-    void readinessReturnsDownWithoutDetailedChecksWhenCriticalCheckFails() {
+    void readinessReturnsDownWithSanitizedCheckPayloadWhenCriticalCheckFails() {
         when(em.createNativeQuery(anyString())).thenThrow(new IllegalStateException("db unavailable"));
         restOrcaTransport.probeResult =
                 new RestOrcaTransport.ProbeResult(false, "weborca", true, false,
@@ -101,7 +110,12 @@ class OperationsHealthResourceTest {
         Response response = resource.readiness();
 
         assertThat(response.getStatus()).isEqualTo(503);
-        assertThat(response.getEntity()).isEqualTo(Map.of("status", "DOWN"));
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_DATABASE).getReasonCode())
+                .isEqualTo("database_unreachable");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA).getReasonCode())
+                .isEqualTo(RestOrcaTransport.REASON_CODE_PROBE_FAILED);
     }
 
     @Test
@@ -123,7 +137,10 @@ class OperationsHealthResourceTest {
         Response response = resource.readiness();
 
         assertThat(response.getStatus()).isEqualTo(503);
-        assertThat(response.getEntity()).isEqualTo(Map.of("status", "DOWN"));
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getStatus()).isEqualTo("DOWN");
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA_PUSH).getReasonCode())
+                .isEqualTo("orca_push_not_configured");
     }
 
     private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {

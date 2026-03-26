@@ -504,7 +504,7 @@ export function DocumentTimeline({
           disabled:
             !selectedPatientId ||
             (queueRetryState.status === 'loading' && queueRetryState.patientId === selectedPatientId),
-          note: selectedPatientId ? '/api/orca/queue で再送' : '患者を選択してください',
+          note: selectedPatientId ? 'ORCA queue 情報で再送' : '患者を選択してください',
         };
       }
       return null;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { AccessManagementPanel } from '../AccessManagementPanel';
@@ -7,22 +7,17 @@ import type { AccessManagedUser, AccessUsersResponse } from '../accessManagement
 
 const {
   mockFetchAccessUsers,
-  mockCreateAccessUser,
-  mockUpdateAccessUser,
   mockResetAccessUserPassword,
-  mockLogAuditEvent,
 } = vi.hoisted(() => ({
   mockFetchAccessUsers: vi.fn<() => Promise<AccessUsersResponse>>(),
-  mockCreateAccessUser: vi.fn(),
-  mockUpdateAccessUser: vi.fn(),
   mockResetAccessUserPassword: vi.fn(),
-  mockLogAuditEvent: vi.fn(),
 }));
 
 vi.mock('../accessManagementApi', () => ({
+  ACCESS_PASSWORD_RESET_PUBLIC_ROUTE_AVAILABLE: false,
   fetchAccessUsers: mockFetchAccessUsers,
-  createAccessUser: mockCreateAccessUser,
-  updateAccessUser: mockUpdateAccessUser,
+  createAccessUser: vi.fn(),
+  updateAccessUser: vi.fn(),
   resetAccessUserPassword: mockResetAccessUserPassword,
 }));
 
@@ -30,9 +25,7 @@ vi.mock('../../../AppRouter', () => ({
   useSession: () => ({ facilityId: 'FAC-TEST', userId: 'system-admin', role: 'system_admin' }),
 }));
 
-vi.mock('../../../libs/audit/auditLogger', () => ({
-  logAuditEvent: mockLogAuditEvent,
-}));
+vi.mock('../../../libs/audit/auditLogger', () => ({ logAuditEvent: vi.fn() }));
 
 const TARGET_USER: AccessManagedUser = {
   userPk: 101,
@@ -72,7 +65,7 @@ afterEach(() => {
 });
 
 describe('AccessManagementPanel password reset', () => {
-  it('一時パスワード未入力では送信しない', async () => {
+  it('password reset public route が無効な間は導線を表示しない', async () => {
     mockFetchAccessUsers.mockResolvedValue({
       runId: 'RUN-LIST',
       facilityId: 'FAC-TEST',
@@ -81,58 +74,8 @@ describe('AccessManagementPanel password reset', () => {
 
     renderPanel();
 
-    fireEvent.click(await screen.findByRole('button', { name: 'パスワードリセット' }));
-    const dialog = await screen.findByRole('dialog', { name: 'パスワードリセット' });
-
-    fireEvent.change(within(dialog).getByLabelText('管理者 Authenticator（TOTP）コード'), {
-      target: { value: '123456' },
-    });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'パスワードリセット' }));
-
-    expect(await screen.findByText('一時パスワードを入力してください。')).toBeInTheDocument();
+    expect(await screen.findByText(/パスワードリセット route は現行 public contract では未公開/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'パスワードリセット' })).not.toBeInTheDocument();
     expect(mockResetAccessUserPassword).not.toHaveBeenCalled();
-    expect(within(dialog).queryByRole('button', { name: 'コピー' })).not.toBeInTheDocument();
-  });
-
-  it('temporaryPassword と TOTP を送信し、監査ログに resetTarget.userPk を使う', async () => {
-    mockFetchAccessUsers.mockResolvedValue({
-      runId: 'RUN-LIST',
-      facilityId: 'FAC-TEST',
-      users: [TARGET_USER],
-    });
-    mockResetAccessUserPassword.mockResolvedValue(undefined);
-
-    renderPanel();
-
-    fireEvent.click(await screen.findByRole('button', { name: 'パスワードリセット' }));
-    const dialog = await screen.findByRole('dialog', { name: 'パスワードリセット' });
-
-    fireEvent.change(within(dialog).getByLabelText('一時パスワード'), {
-      target: { value: 'TempPass#2026' },
-    });
-    fireEvent.change(within(dialog).getByLabelText('管理者 Authenticator（TOTP）コード'), {
-      target: { value: '654321' },
-    });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'パスワードリセット' }));
-
-    await waitFor(() => {
-      expect(mockResetAccessUserPassword).toHaveBeenCalledWith(101, {
-        totpCode: '654321',
-        temporaryPassword: 'TempPass#2026',
-      });
-    });
-
-    await waitFor(() => {
-      expect(mockLogAuditEvent).toHaveBeenCalledWith(
-        expect.objectContaining({
-          payload: expect.objectContaining({
-            operation: 'password-reset',
-            targetUserPk: 101,
-          }),
-        }),
-      );
-    });
-
-    expect(screen.queryByText(/一時パスワード:/)).not.toBeInTheDocument();
   });
 });

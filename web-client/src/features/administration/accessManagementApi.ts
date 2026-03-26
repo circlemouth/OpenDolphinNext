@@ -52,6 +52,14 @@ export type AccessPasswordResetPayload = {
 export type ApiFailure = Error & { status?: number; errorCode?: string };
 
 const ACCESS_USERS_ENDPOINT = '/api/admin/access/users';
+export const ACCESS_PASSWORD_RESET_PUBLIC_ROUTE_AVAILABLE = false;
+
+const buildRouteBlockedError = (): ApiFailure => {
+  const error: ApiFailure = new Error('現行 public contract ではパスワードリセット route は公開されていません。');
+  error.status = 410;
+  error.errorCode = 'route_blocked';
+  return error;
+};
 
 const safeJson = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? '';
@@ -124,13 +132,7 @@ export async function resetAccessUserPassword(
   userPk: number,
   payload: AccessPasswordResetPayload,
 ): Promise<void> {
-  const response = await httpFetch(`${ACCESS_USERS_ENDPOINT}/${encodeURIComponent(String(userPk))}/password-reset`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(payload ?? {}),
-    notifySessionExpired: false,
-  });
-  if (!response.ok) {
-    throw await readApiError(response);
-  }
+  void userPk;
+  void payload;
+  throw buildRouteBlockedError();
 }

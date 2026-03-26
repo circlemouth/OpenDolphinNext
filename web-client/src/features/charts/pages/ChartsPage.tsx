@@ -1902,7 +1902,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       fallbackUsed: resolvedFallbackUsed,
       patientId: encounterContext.patientId ?? undefined,
       details: {
-        endpoint: '/api/orca/queue',
+        endpoint: 'orca-queue-public-route',
         fetchedAt: orcaQueueQuery.data.fetchedAt,
         queueSource: orcaQueueQuery.data.source,
         queueEntries: orcaQueueQuery.data.queue?.length ?? 0,

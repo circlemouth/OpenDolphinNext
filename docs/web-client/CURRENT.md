@@ -6,6 +6,13 @@
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
 
+## 最新変更（2026-03-26 / public route contract freeze）
+- RUN_ID: `20260325T233036Z`
+- Administration の operations 監視は current public contract に合わせ、`GET /api/health`、`GET /api/health/readiness`、`GET /api/health/worker/pvt` を利用する。旧 `/health/*` 相対 path と未登録 `GET /api/operations/readiness` は使用しない。
+- `POST /api/admin/access/users/{userPk}/password-reset` は public route contract から除外されたままとし、web-client の password reset 導線は fail-closed に変更した。
+- `/api/orca/queue` と `/api/orca/pusheventgetv2` は public route contract に存在しないため、web-client からの直接 call を停止した。internal/downstream ORCA path の public 流用は行わない。
+- Reception → Charts handoff は `appointmentId` / `receptionId` / `visitDate` を volatile context と router state で保持する現状を維持し、authoritative public contract は `GET /api/schedules/{scheduleKey}` と `GET|POST /api/encounters/*` を次タスクの実装先として固定した。
+
 ## 最新変更（2026-03-15 / ORCA 境界整流と運用 UI 最終形）
 - RUN_ID: `20260315T060323Z`
 - Charts claim 送信の `medicalmodv2` / `medicalmodv23` は、browser で XML を組み立てず `POST /api/orca/chart-support/medical-mod-v2` / `POST /api/orca/chart-support/medical-mod-v23` の JSON 契約へ統一した。`server-modernized` 側には `OrcaChartSupportResource` と chart-support DTO 群を追加し、XML 組み立て・応答解析は server 側へ集約した。

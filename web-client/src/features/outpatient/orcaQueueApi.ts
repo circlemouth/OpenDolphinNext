@@ -74,6 +74,8 @@ export type OrcaPushEventResponse = {
 
 const ORCA_QUEUE_ENDPOINT = '/api/orca/queue';
 const ORCA_PUSH_EVENT_ENDPOINT = '/api/orca/pusheventgetv2';
+export const ORCA_QUEUE_PUBLIC_ROUTE_AVAILABLE = false;
+export const ORCA_PUSH_EVENT_PUBLIC_ROUTE_AVAILABLE = false;
 const isOrcaPollingDisabled = () => import.meta.env.VITE_DISABLE_ORCA_POLLING === '1';
 let orcaQueueUnavailable = false;
 let orcaPushEventUnavailable = false;
@@ -83,22 +85,28 @@ type OrcaQueueRequestOptions = {
 
 const buildUnavailableQueueResponse = (): OrcaQueueResponse => ({
   ok: false,
-  status: 0,
+  status: 410,
   runId: getObservabilityMeta().runId,
   traceId: getObservabilityMeta().traceId,
   fetchedAt: new Date().toISOString(),
   source: 'live',
+  error: 'HTTP 410',
+  message: 'ORCA queue public route は現行 contract では利用できません。',
+  retrySupported: false,
+  discardSupported: false,
+  adminOnly: true,
   queue: [],
 });
 
 const buildUnavailablePushEventResponse = (status = 0, warning?: string): OrcaPushEventResponse => ({
   ok: false,
-  status,
+  status: status || 410,
   runId: getObservabilityMeta().runId,
   traceId: getObservabilityMeta().traceId,
   fetchedAt: new Date().toISOString(),
   events: [],
-  warning,
+  error: status || warning ? `HTTP ${status || 410}` : 'HTTP 410',
+  warning: warning ?? 'ORCA push event public route は現行 contract では利用できません。',
 });
 
 const getString = (value: unknown) => (typeof value === 'string' ? value : undefined);
@@ -211,6 +219,9 @@ export const resolveOrcaQueueRetryUiFeedback = (response: OrcaQueueResponse): Or
   }
   if (response.status === 403) {
     return { tone: 'error', message: 'ORCA再送の権限がありません。' };
+  }
+  if (response.status === 410) {
+    return { tone: 'info', message: 'ORCA queue public route は現行 contract では利用できません。' };
   }
   if (response.status === 501) {
     return { tone: 'info', message: 'この環境では ORCA 再送は未実装です。', detail: formatRetryReason(response.retryReason) };
@@ -330,6 +341,8 @@ const isQueueRequestDisabled = (options?: OrcaQueueRequestOptions) =>
   options?.enabled === false || isOrcaPollingDisabled() || orcaQueueUnavailable;
 
 export async function fetchOrcaQueue(patientId?: string, options?: OrcaQueueRequestOptions): Promise<OrcaQueueResponse> {
+  void patientId;
+  if (!ORCA_QUEUE_PUBLIC_ROUTE_AVAILABLE) return buildUnavailableQueueResponse();
   if (isQueueRequestDisabled(options)) return buildUnavailableQueueResponse();
   const endpoint = patientId ? `${ORCA_QUEUE_ENDPOINT}?patientId=${encodeURIComponent(patientId)}` : ORCA_QUEUE_ENDPOINT;
   const response = await httpFetch(endpoint, {
@@ -345,6 +358,8 @@ export async function fetchOrcaQueue(patientId?: string, options?: OrcaQueueRequ
 }
 
 export async function retryOrcaQueue(patientId: string, options?: OrcaQueueRequestOptions): Promise<OrcaQueueResponse> {
+  void patientId;
+  if (!ORCA_QUEUE_PUBLIC_ROUTE_AVAILABLE) return buildUnavailableQueueResponse();
   if (isQueueRequestDisabled(options)) return buildUnavailableQueueResponse();
   const endpoint = `${ORCA_QUEUE_ENDPOINT}?patientId=${encodeURIComponent(patientId)}&retry=1`;
   const response = await httpFetch(endpoint, {
@@ -360,6 +375,8 @@ export async function retryOrcaQueue(patientId: string, options?: OrcaQueueReque
 }
 
 export async function discardOrcaQueue(patientId: string, options?: OrcaQueueRequestOptions): Promise<OrcaQueueResponse> {
+  void patientId;
+  if (!ORCA_QUEUE_PUBLIC_ROUTE_AVAILABLE) return buildUnavailableQueueResponse();
   if (isQueueRequestDisabled(options)) return buildUnavailableQueueResponse();
   const endpoint = `${ORCA_QUEUE_ENDPOINT}?patientId=${encodeURIComponent(patientId)}`;
   const response = await httpFetch(endpoint, {
@@ -379,6 +396,10 @@ export async function discardOrcaQueue(patientId: string, options?: OrcaQueueReq
 }
 
 export async function fetchOrcaPushEvents(params?: OrcaPushEventRequestParams): Promise<OrcaPushEventResponse> {
+  void params;
+  if (!ORCA_PUSH_EVENT_PUBLIC_ROUTE_AVAILABLE) {
+    return buildUnavailablePushEventResponse(410);
+  }
   if (isOrcaPollingDisabled() || orcaPushEventUnavailable) {
     return buildUnavailablePushEventResponse(0, 'orca-push-events disabled');
   }

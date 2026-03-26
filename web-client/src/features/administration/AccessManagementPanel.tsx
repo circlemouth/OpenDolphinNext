@@ -7,6 +7,7 @@ import { logAuditEvent } from '../../libs/audit/auditLogger';
 import { resolveAriaLive } from '../../libs/observability/observability';
 import { useSession } from '../../AppRouter';
 import {
+  ACCESS_PASSWORD_RESET_PUBLIC_ROUTE_AVAILABLE,
   createAccessUser,
   fetchAccessUsers,
   resetAccessUserPassword,
@@ -214,6 +215,8 @@ export function AccessManagementPanel({ runId, role, mode = 'full' }: AccessMana
             ? 'TOTP コードが必要です。'
             : api?.errorCode === 'totp_invalid'
               ? 'TOTP コードが不正です。'
+              : api?.errorCode === 'route_blocked'
+                ? '現行 public contract では未公開のため実行できません。'
               : undefined;
       setFeedback({ tone: 'error', message: `パスワードリセットに失敗しました: ${extra ?? toErrorMessage(error)}` });
     },
@@ -333,7 +336,9 @@ export function AccessManagementPanel({ runId, role, mode = 'full' }: AccessMana
       <p className="admin-quiet" role="status" aria-live={infoLive}>
         {linkedOnlyMode
           ? `ORCA連携済みユーザー（${linkedUsers.length}件）の電子カルテ権限のみ編集できます。`
-          : '職員ユーザーの作成/編集、パスワードリセットを行います。パスワードリセットは管理者の Authenticator（TOTP）を必須とします。'}
+          : ACCESS_PASSWORD_RESET_PUBLIC_ROUTE_AVAILABLE
+            ? '職員ユーザーの作成/編集、パスワードリセットを行います。パスワードリセットは管理者の Authenticator（TOTP）を必須とします。'
+            : '職員ユーザーの作成/編集を行います。パスワードリセット route は現行 public contract では未公開のため fail-closed です。'}
       </p>
 
       {feedback ? (
@@ -398,7 +403,7 @@ export function AccessManagementPanel({ runId, role, mode = 'full' }: AccessMana
                   <button type="button" className="admin-button admin-button--secondary" onClick={() => openEdit(user)}>
                     {linkedOnlyMode ? '権限編集' : '編集'}
                   </button>{' '}
-                  {!linkedOnlyMode ? (
+                  {!linkedOnlyMode && ACCESS_PASSWORD_RESET_PUBLIC_ROUTE_AVAILABLE ? (
                     <button type="button" className="admin-button admin-button--danger" onClick={() => openReset(user)}>
                       パスワードリセット
                     </button>
@@ -666,7 +671,7 @@ export function AccessManagementPanel({ runId, role, mode = 'full' }: AccessMana
         ) : null}
       </FocusTrapDialog>
 
-      {!linkedOnlyMode ? (
+      {!linkedOnlyMode && ACCESS_PASSWORD_RESET_PUBLIC_ROUTE_AVAILABLE ? (
         <FocusTrapDialog
           open={Boolean(resetTarget)}
           title="パスワードリセット"

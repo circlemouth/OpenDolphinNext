@@ -14,7 +14,6 @@ import jakarta.ws.rs.core.MediaType;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -49,7 +48,10 @@ class PublicRouteInventoryContractTest {
             "GET /api/orca/tensu/code/{*}",
             "GET /api/orca/general/{*}",
             "GET /api/orca/stamp/{*}",
-            "GET /api/operations/readiness");
+            "GET /api/operations/readiness",
+            "GET /api/orca/queue",
+            "DELETE /api/orca/queue",
+            "POST /api/orca/pusheventgetv2");
 
     @Test
     void publicRoutesRemainNormalizedAndExcludeBlockedRoutes() {

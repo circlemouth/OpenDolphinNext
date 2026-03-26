@@ -18,6 +18,7 @@ const {
 }));
 
 vi.mock('../accessManagementApi', () => ({
+  ACCESS_PASSWORD_RESET_PUBLIC_ROUTE_AVAILABLE: false,
   fetchAccessUsers: mockFetchAccessUsers,
   createAccessUser: mockCreateAccessUser,
   updateAccessUser: mockUpdateAccessUser,

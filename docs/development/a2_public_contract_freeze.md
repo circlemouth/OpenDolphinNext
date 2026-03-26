@@ -148,3 +148,25 @@ rename-first:
 ## A2 Freeze Statement
 
 以後の public contract は本書を正本とする。CT-H01〜CT-H04 は、本書と `docs/development/hidden_consumer_inventory.md` を根拠に rename/delete/cutover を実行してよい。
+
+## 2026-03-26 Current Public Route Freeze
+
+- authoritative public route:
+  - `GET /api/health`
+  - `GET /api/health/readiness`
+  - `GET /api/health/worker/pvt`
+  - `GET /api/schedules/{scheduleKey}`
+  - `GET /api/encounters/{encounterKey}`
+  - `POST /api/encounters/{encounterKey}/transitions`
+  - `GET /api/admin/access/users`
+  - `POST /api/admin/access/users`
+  - `PUT /api/admin/access/users/{userPk}`
+- blocked / intentionally unavailable:
+  - `GET /api/operations/readiness`
+  - `POST /api/admin/access/users/{userPk}/password-reset`
+  - `GET /api/orca/queue`
+  - `DELETE /api/orca/queue`
+  - `POST /api/orca/pusheventgetv2`
+- handoff 決定事項:
+  - Reception -> Charts の今後の public contract は `scheduleKey` / `encounterKey` を正本とする。
+  - `appointmentId` / `receptionId` / `visitDate` の carryover は次タスクで置換対象とし、現行 task では key 生成を client へ逃がさない。

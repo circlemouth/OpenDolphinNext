@@ -159,6 +159,19 @@
 - [docs/README.md](../README.md)（server-modernized 契約文書・runbook・PR チェックリストの正本索引）
 
 ### ORCA POST 系の現行運用
+- 2026-03-26 時点の public route contract freeze:
+  - `GET /api/health`
+  - `GET /api/health/readiness`
+  - `GET /api/health/worker/pvt`
+  - `GET /api/schedules/{scheduleKey}`
+  - `GET /api/encounters/{encounterKey}`
+  - `POST /api/encounters/{encounterKey}/transitions`
+- intentionally unavailable:
+  - `POST /api/admin/access/users/{userPk}/password-reset`
+  - `GET /api/operations/readiness`
+  - `/api/orca/queue`
+  - `/api/orca/pusheventgetv2`
+- Reception/Charts handoff の key feed は未実装のため、client は `appointmentId` / `receptionId` / `visitDate` を権威 route とみなさない。次タスクでは `scheduleKey` / `encounterKey` ベースの public contract を実装入口とする。
 - subjectives（`/api/orca/chart/subjectives`）を含む current ORCA POST 連携は、stub/real 切替なしの実運用モードで固定する。
 - 検証時は feature flag や system property で stub へ逃がさず、`docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` の接続設定を正しく投入して疎通確認する。
 - 施設別 ORCA 接続設定は `facilities` + `defaultFacilityId` を正本とし、`PUT /api/admin/orca/connection` は設定更新専用、`PUT /api/admin/orca/connection/default-facility` は default 切替専用とする。

@@ -14,29 +14,18 @@ beforeEach(() => {
 });
 
 describe('accessManagementApi', () => {
-  it('パスワードリセットは 204 No Content を本文なしで成功扱いにする', async () => {
-    mockHttpFetch.mockResolvedValue(new Response(null, { status: 204 }));
-
+  it('パスワードリセットは public route unavailable として fail-closed する', async () => {
     await expect(
       resetAccessUserPassword(101, {
         totpCode: '123456',
         temporaryPassword: 'TempPass#2026',
       }),
-    ).resolves.toBeUndefined();
+    ).rejects.toMatchObject({
+      message: '現行 public contract ではパスワードリセット route は公開されていません。',
+      status: 410,
+      errorCode: 'route_blocked',
+    });
 
-    expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/api/admin/access/users/101/password-reset',
-      expect.objectContaining({
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        notifySessionExpired: false,
-      }),
-    );
-    expect(mockHttpFetch.mock.calls[0]?.[1]?.body).toBe(
-      JSON.stringify({
-        totpCode: '123456',
-        temporaryPassword: 'TempPass#2026',
-      }),
-    );
+    expect(mockHttpFetch).not.toHaveBeenCalled();
   });
 });

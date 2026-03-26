@@ -16,11 +16,11 @@ export const CHART_EVENT_REPLAY_TARGETS: ReplayGapTarget[] = [
   },
   {
     key: ['orca-queue'],
-    label: '/api/orca/queue',
+    label: 'ORCA queue public route (intentionally unavailable)',
   },
   {
     key: ['orca-push-events'],
-    label: '/api/orca/pusheventgetv2',
+    label: 'ORCA push-event public route (intentionally unavailable)',
   },
 ];
 

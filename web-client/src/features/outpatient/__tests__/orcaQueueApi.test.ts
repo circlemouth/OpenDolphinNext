@@ -43,99 +43,14 @@ describe('orcaQueueApi fetchOrcaPushEvents', () => {
     vi.unstubAllEnvs();
   });
 
-  it('pusheventgetv2 に JSON リクエストを POST し、必須ヘッダーを送る', async () => {
-    mockHttpFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          pusheventgetv2res: {
-            Api_Result: '00',
-            Api_Result_Message: 'OK',
-            Event_Information: [],
-          },
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
-    );
-
-    await fetchOrcaPushEvents({
-      event: 'medical',
-      user: 'ORCAUSER',
-      startTime: '090000',
-      endTime: '180000',
-    });
-
-    expect(mockHttpFetch).toHaveBeenCalledTimes(1);
-    const [endpoint, init] = mockHttpFetch.mock.calls[0] ?? [];
-    expect(endpoint).toBe('/api/orca/pusheventgetv2');
-    expect(init).toMatchObject({
-      method: 'POST',
-      notifySessionExpired: false,
-      headers: {
-        'Content-Type': 'application/json; charset=UTF-8',
-        Accept: 'application/json',
-      },
-    });
-
-    const bodyText = String((init as RequestInit).body ?? '');
-    const requestBody = JSON.parse(bodyText) as Record<string, unknown>;
-    expect(requestBody).toEqual({
-      pusheventgetv2req: {
-        event: 'medical',
-        user: 'ORCAUSER',
-        start_time: '090000',
-        end_time: '180000',
-      },
-    });
-  });
-
-  it('Api_Result と Event_Information を従来どおり正規化する', async () => {
-    mockHttpFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          pusheventgetv2res: {
-            Api_Result: '00',
-            Api_Result_Message: '処理終了',
-            Event_Information: [
-              {
-                id: 'event-1',
-                event: 'medical',
-                user: 'operator',
-                timestamp: '2026-02-22T09:00:00+09:00',
-                body: {
-                  Patient_ID: '000001',
-                },
-              },
-            ],
-          },
-        }),
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'x-run-id': 'RUN-PUSH-1',
-            'x-trace-id': 'TRACE-PUSH-1',
-          },
-        },
-      ),
-    );
-
+  it('pusheventgetv2 public route は fail-closed で network call しない', async () => {
     const result = await fetchOrcaPushEvents();
 
-    expect(result.ok).toBe(true);
-    expect(result.apiOk).toBe(true);
-    expect(result.apiResult).toBe('00');
-    expect(result.apiResultMessage).toBe('処理終了');
-    expect(result.warning).toBeUndefined();
-    expect(result.runId).toBe('RUN-PUSH-1');
-    expect(result.traceId).toBe('TRACE-PUSH-1');
-    expect(result.events).toHaveLength(1);
-    expect(result.events[0]).toMatchObject({
-      eventId: 'event-1',
-      event: 'medical',
-      user: 'operator',
-      timestamp: '2026-02-22T09:00:00+09:00',
-      patientId: '000001',
-    });
+    expect(mockHttpFetch).not.toHaveBeenCalled();
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(410);
+    expect(result.warning).toContain('現行 contract');
+    expect(result.events).toEqual([]);
   });
 });
 
@@ -162,47 +77,22 @@ describe('orcaQueueApi fetchOrcaQueue', () => {
     expect(result.traceId).toBe('TRACE-OLD');
   });
 
-  it('403 は status と権限エラーを保持する', async () => {
-    mockHttpFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ error: 'forbidden', message: 'Access denied' }),
-        { status: 403, headers: { 'x-run-id': 'RUN-403', 'Content-Type': 'application/json' } },
-      ),
-    );
-
+  it('queue public route は fail-closed で network call しない', async () => {
     const result = await fetchOrcaQueue();
 
-    expect(mockHttpFetch).toHaveBeenCalledTimes(1);
+    expect(mockHttpFetch).not.toHaveBeenCalled();
     expect(result.queue).toEqual([]);
     expect(result.ok).toBe(false);
-    expect(result.status).toBe(403);
-    expect(result.runId).toBe('RUN-403');
-    expect(result.message).toContain('権限');
+    expect(result.status).toBe(410);
+    expect(result.message).toContain('現行 contract');
   });
 
-  it('retry response の capability と retry 結果を保持する', async () => {
-    mockHttpFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          retrySupported: true,
-          discardSupported: true,
-          adminOnly: true,
-          retryRequested: true,
-          retryApplied: false,
-          retryReason: 'mock_noop',
-          queue: [],
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      ),
-    );
-
+  it('retry も fail-closed で network call しない', async () => {
     const result = await retryOrcaQueue('P001');
 
-    expect(mockHttpFetch).toHaveBeenCalledTimes(1);
-    expect(result.status).toBe(200);
-    expect(result.retrySupported).toBe(true);
-    expect(result.retryApplied).toBe(false);
-    expect(result.retryReason).toBe('mock_noop');
+    expect(mockHttpFetch).not.toHaveBeenCalled();
+    expect(result.status).toBe(410);
+    expect(result.retrySupported).toBe(false);
   });
 
   it('retry feedback は 200 + retryApplied=true のときだけ成功になる', () => {
@@ -236,13 +126,13 @@ describe('orcaQueueApi fetchOrcaQueue', () => {
     ).toMatchObject({ tone: 'info', message: 'この環境では ORCA 再送は未実装です。' });
   });
 
-  it('404 は status を保持した空レスポンスを返す', async () => {
-    mockHttpFetch.mockResolvedValueOnce(new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } }));
-
+  it('fail-closed 応答は unavailable 状態を保持する', async () => {
     const result = await fetchOrcaQueue();
 
     expect(result.queue).toEqual([]);
-    expect(result.status).toBe(404);
+    expect(result.status).toBe(410);
     expect(result.ok).toBe(false);
+    expect(result.retrySupported).toBe(false);
+    expect(result.discardSupported).toBe(false);
   });
 });

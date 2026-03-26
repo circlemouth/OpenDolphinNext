@@ -6,7 +6,6 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.util.Map;
 import open.dolphin.rest.dto.OperationsHealthResponse;
 
 @Path("/health")
@@ -30,7 +29,7 @@ public class OperationsHealthResource extends AbstractResource {
     public Response readiness() {
         OperationsReadinessEvaluator.ReadinessSnapshot snapshot = readinessEvaluator.evaluate();
         return Response.status(snapshot.httpStatus())
-                .entity(Map.of("status", snapshot.status()))
+                .entity(snapshot.body())
                 .build();
     }
 }

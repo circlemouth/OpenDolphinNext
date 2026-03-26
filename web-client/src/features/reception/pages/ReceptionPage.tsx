@@ -394,7 +394,7 @@ const resolveRec001MvpDecision = (options: {
       nextAction: retryable ? '再送' : options.retrySupported ? '原因確認' : '再送未対応',
       canRetry: retryable,
       retryTitle: retryable
-        ? 'ORCA再送を要求します（/api/orca/queue?retry=1）'
+        ? 'ORCA再送を要求します'
         : !options.isSystemAdmin
           ? 'system_admin のみ再送できます'
           : !options.retrySupported
@@ -412,7 +412,7 @@ const resolveRec001MvpDecision = (options: {
       nextAction: retryable ? '再送' : options.retrySupported ? '待機/滞留確認' : '再送未対応',
       canRetry: retryable,
       retryTitle: retryable
-        ? '滞留のため ORCA再送を要求します（/api/orca/queue?retry=1）'
+        ? '滞留のため ORCA再送を要求します'
         : !options.isSystemAdmin
           ? 'system_admin のみ再送できます'
           : !options.retrySupported

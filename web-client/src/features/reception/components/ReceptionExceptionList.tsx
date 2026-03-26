@@ -77,7 +77,7 @@ export function ReceptionExceptionList({
               <h2>例外一覧</h2>
               <p>未承認・送信エラー・遅延の対象を優先順に表示します。</p>
               <p className="reception-exceptions__note">
-                判定は /api/orca/queue を主に使用し、送信キャッシュは補助確認として表示します。
+                判定は ORCA queue 情報を主に使用し、送信キャッシュは補助確認として表示します。
                 取得失敗時は再送キューが更新されません。
               </p>
             </>
@@ -191,7 +191,7 @@ export function ReceptionExceptionList({
                       {item.orcaQueueDetail ? <small>{item.orcaQueueDetail}</small> : null}
                     </span>
                     <span className="reception-exception__queue-source">
-                      /api/orca/queue{item.orcaQueueSource ? ` (${item.orcaQueueSource})` : ''}
+                      ORCA queue{item.orcaQueueSource ? ` (${item.orcaQueueSource})` : ''}
                     </span>
                   </div>
                 </div>

@@ -85,9 +85,9 @@ export type PvtWorkerHealthResponse = {
 
 const ADMIN_CONFIG_ENDPOINT = '/api/admin/config';
 const ADMIN_DELIVERY_ENDPOINT = '/api/admin/delivery';
-const OPERATIONS_HEALTH_ENDPOINT = '/health';
-const OPERATIONS_READINESS_ENDPOINT = '/operations/readiness';
-const PVT_WORKER_HEALTH_ENDPOINT = '/health/worker/pvt';
+const OPERATIONS_HEALTH_ENDPOINT = '/api/health';
+const OPERATIONS_READINESS_ENDPOINT = '/api/health/readiness';
+const PVT_WORKER_HEALTH_ENDPOINT = '/api/health/worker/pvt';
 
 let adminEndpointUnavailable = false;
 
