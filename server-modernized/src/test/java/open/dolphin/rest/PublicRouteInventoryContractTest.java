@@ -68,6 +68,7 @@ class PublicRouteInventoryContractTest {
                 .filteredOn(route -> route.produces().stream().anyMatch(PublicRouteInventoryContractTest::isTextPlain))
                 .isEmpty();
         assertThat(routeKeys).doesNotContain("GET /api/operations/readiness");
+        assertThat(routeKeys).contains("GET /api/local-summary/encounters/{*}/medical-summary");
     }
 
     @Test

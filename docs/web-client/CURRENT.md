@@ -1,10 +1,17 @@
 # Webクライアント ドキュメントハブ（現行）
 
 - 更新日: 2026-03-26
-- RUN_ID: 20260326T005423Z
+- RUN_ID: 20260326T030254Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
+
+## 最新変更（2026-03-26 / charts medical summary replacement）
+- RUN_ID: `20260326T030254Z`
+- Charts medical summary は `GET /api/local-summary/encounters/{encounterKey}/medical-summary` を正本 route とし、query は `encounterKey` がある場合だけ起動する。`scheduleKey` 単独では summary fetch を開始しない。
+- `fetchChartsMedicalSummary` / `medicalSummaryQuery` / `CHARTS_MEDICAL_SUMMARY_FETCH` の neutral naming は維持し、`encounterKey` 不在時は `recordsReturned=0`、`outcome=MISSING`、`sourcePath=key_unavailable`、`payload.outpatientList=[]` の local fail-closed placeholder を返す。
+- non-2xx は renderable shape に正規化し、Charts UI を永続 loading にしない。`404` / `409` / `503` / `500` は error banner 側で扱える summary shape に落とし込む。
+- summary refresh は start success 後の同一 `encounterKey` だけに接続し、`pause` / `finish` / `bill` とは結び付けない。old removed route `/api/orca/medical/outpatient` と guessed endpoint は再混入させない。
 
 ## 最新変更（2026-03-26 / scheduleKey / encounterKey feed contract）
 - RUN_ID: `20260326T005423Z`

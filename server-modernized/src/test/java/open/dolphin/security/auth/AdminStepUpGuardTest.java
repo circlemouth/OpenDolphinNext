@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Field;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import open.dolphin.rest.AuthSessionSupport;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,10 +32,12 @@ class AdminStepUpGuardTest {
     void requirePassesWhenProofIsValid() {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpSession session = mock(HttpSession.class);
+        Instant verifiedAt = Instant.now().plus(10, ChronoUnit.MINUTES);
+        Instant expiresAt = verifiedAt.plus(5, ChronoUnit.MINUTES);
         when(request.getSession(false)).thenReturn(session);
         when(session.getAttribute(AuthSessionSupport.AUTH_STEP_UP_SCOPE)).thenReturn("admin:mutation");
-        when(session.getAttribute(AuthSessionSupport.AUTH_STEP_UP_VERIFIED_AT)).thenReturn("2026-03-25T10:00:00Z");
-        when(session.getAttribute(AuthSessionSupport.AUTH_STEP_UP_EXPIRES_AT)).thenReturn("2026-03-25T10:05:00Z");
+        when(session.getAttribute(AuthSessionSupport.AUTH_STEP_UP_VERIFIED_AT)).thenReturn(verifiedAt.toString());
+        when(session.getAttribute(AuthSessionSupport.AUTH_STEP_UP_EXPIRES_AT)).thenReturn(expiresAt.toString());
 
         guard.require(request, "admin:mutation");
     }

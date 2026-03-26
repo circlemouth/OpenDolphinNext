@@ -34,7 +34,7 @@ import { receptionStyles } from '../../reception/styles';
 import { fetchAppointmentOutpatients, fetchClaimFlags, type AppointmentPayload, type ReceptionEntry } from '../../reception/api';
 import { fetchPatients, type PatientRecord } from '../../patients/api';
 import { getAuditEventLog, logAuditEvent, logUiState, type AuditEventRecord } from '../../../libs/audit/auditLogger';
-import { fetchChartsMedicalSummary } from '../api';
+import { buildUnavailableMedicalSummary, fetchChartsMedicalSummary } from '../api';
 import { openChartEncounter } from '../encounterTransitionApi';
 import { fetchKarteIdByPatientId, type LetterModulePayload } from '../letterApi';
 import { fetchOrderBundlesWithPatientImportRecovery, mutateOrderBundles, type OrderBundle } from '../orderBundleApi';
@@ -556,6 +556,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     });
   });
   const hasEncounterHandoffKey = hasHandoffEncounterKey(encounterContext);
+  const medicalSummaryEncounterKey = encounterContext.encounterKey?.trim() ?? '';
+  const hasMedicalSummaryEncounterKey = medicalSummaryEncounterKey.length > 0;
   const [patientTabsState, setPatientTabsState] = useState<ChartsPatientTabsStorage>(() => {
     return (
       readChartsPatientTabsStorage(storageScope) ?? {
@@ -1765,11 +1767,15 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     },
   });
 
-  const medicalSummaryQueryKey = ['charts-medical-summary', flags.runId, chartsMasterSourcePolicy];
+  const medicalSummaryQueryKey = ['charts-medical-summary', medicalSummaryEncounterKey || 'missing', chartsMasterSourcePolicy];
   const medicalSummaryQuery = useQuery({
     queryKey: medicalSummaryQueryKey,
-    queryFn: (context) => fetchChartsMedicalSummary(context, { preferredSourceOverride }),
-    enabled: hasEncounterHandoffKey,
+    queryFn: (context) =>
+      fetchChartsMedicalSummary(context, {
+        encounterKey: medicalSummaryEncounterKey,
+        preferredSourceOverride,
+      }),
+    enabled: hasMedicalSummaryEncounterKey,
     refetchInterval: 120_000,
     staleTime: 120_000,
     meta: {
@@ -1777,6 +1783,15 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       retryCount: queryClient.getQueryState(medicalSummaryQueryKey)?.fetchFailureCount ?? 0,
     },
   });
+  const medicalSummaryPanelSummary = useMemo(
+    () =>
+      medicalSummaryQuery.data ??
+      buildUnavailableMedicalSummary(undefined, {
+        encounterKey: hasMedicalSummaryEncounterKey ? medicalSummaryEncounterKey : undefined,
+        preferredSourceOverride,
+      }),
+    [hasMedicalSummaryEncounterKey, medicalSummaryEncounterKey, medicalSummaryQuery.data, preferredSourceOverride],
+  );
 
   const appointmentMeta = useMemo(() => {
     const pages = appointmentQuery.data?.pages ?? [];
@@ -2921,11 +2936,24 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const handleRefreshSummary = useCallback(async () => {
     setIsManualRefreshing(true);
     try {
-      await Promise.all([claimQuery.refetch(), medicalSummaryQuery.refetch(), appointmentQuery.refetch()]);
+      const refreshes: Promise<unknown>[] = [claimQuery.refetch(), appointmentQuery.refetch()];
+      if (hasMedicalSummaryEncounterKey) {
+        refreshes.push(medicalSummaryQuery.refetch());
+      }
+      await Promise.all(refreshes);
     } finally {
       setIsManualRefreshing(false);
     }
-  }, [appointmentQuery, claimQuery, medicalSummaryQuery]);
+  }, [appointmentQuery, claimQuery, hasMedicalSummaryEncounterKey, medicalSummaryQuery]);
+
+  const handleRefreshWithoutSummary = useCallback(async () => {
+    setIsManualRefreshing(true);
+    try {
+      await Promise.all([claimQuery.refetch(), appointmentQuery.refetch()]);
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  }, [appointmentQuery, claimQuery]);
 
   const requestEncounterExitChoice = useCallback(
     (action: EncounterExitAction) =>
@@ -3083,7 +3111,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           : undefined,
       });
     }
-    await handleRefreshSummary();
+    await handleRefreshWithoutSummary();
     setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }));
     const activeKey = activePatientTabKey;
     if (!activeKey) return;
@@ -3093,7 +3121,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     activePatientTabKey,
     flags.runId,
     forceClosePatientTab,
-    handleRefreshSummary,
+    handleRefreshWithoutSummary,
     patientId,
     resolvedRunId,
     selectedEntry,
@@ -3118,7 +3146,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           : undefined,
       });
     }
-    await handleRefreshSummary();
+    await handleRefreshWithoutSummary();
     const activeKey = activePatientTabKey;
     if (!activeKey) return;
     setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }));
@@ -3128,7 +3156,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     activePatientTabKey,
     flags.runId,
     forceClosePatientTab,
-    handleRefreshSummary,
+    handleRefreshWithoutSummary,
     patientId,
     resolvedRunId,
     selectedEntry,
@@ -4572,8 +4600,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       onDocumentHistoryCopyConsumed={handleDocumentHistoryCopyConsumed}
                       documentPanel={documentPanel}
                       orcaPanel={
-                        <OrcaSummary
-                          summary={medicalSummaryQuery.data}
+                          <OrcaSummary
+                          summary={medicalSummaryPanelSummary}
                           claim={claimQuery.data as ClaimOutpatientPayload | undefined}
                           appointments={patientEntries}
                           appointmentMeta={appointmentMeta}
@@ -4666,7 +4694,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                       <details className="charts-card charts-fold">
                         <summary className="charts-fold__summary">ORCA 記録（要約）</summary>
                         <div className="charts-fold__content">
-                          <MedicalOutpatientRecordPanel summary={medicalSummaryQuery.data} selectedPatientId={encounterContext.patientId} />
+                          <MedicalOutpatientRecordPanel summary={medicalSummaryPanelSummary} selectedPatientId={encounterContext.patientId} />
                         </div>
                       </details>
                     </>

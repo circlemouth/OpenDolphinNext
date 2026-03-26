@@ -1,4 +1,4 @@
-# 開発状況（単一参照, 更新日: 2026-03-24）
+# 開発状況（単一参照, 更新日: 2026-03-26）
 
 ## 現行ステータス
 - `docs/development/phase2_current_coding_tasks_checklist_v1.md` は、2026-03-24 以降の `server-modernized` 現行開発計画正本である。
@@ -44,6 +44,7 @@
 - `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
+- 2026-03-26: task 7 の formal local summary route を実装し、Charts medical summary replacement を placeholder から正式 GET 契約へ切り替えた。public route は `GET /api/local-summary/encounters/{encounterKey}/medical-summary`、canonical target は `encounterKey` のみ、`sourcePath` は固定文字列、top-level envelope は `recordsReturned` / `outcome` / `sourcePath` / `payload.outpatientList` を維持する。old blocked route `/api/orca/medical/outpatient`、`/api/orca/local-medical/outpatient`、`/api/orca/deptinfo` は未登録のまま維持し、client は `encounterKey` 不在時に `sourcePath=key_unavailable` の fail-closed placeholder を返す。`pause` / `finish` を summary refresh trigger に使わず、task 8 の start-only transition 契約も維持した。
 - 2026-03-26: Charts の encounter transition start-only 接続を current public contract に合わせて実装した。`POST /api/encounters/{encounterKey}/transitions` に `operation=chart_open` を送る専用 helper を `web-client` に追加し、`ChartsActionBar` は server success 後のみ success UI を出す await 制御へ変更した。`pause` / `finish` は従来どおり local/UI flow のみを維持し、transition request は送らない。`encounterKey` / `patientId` / `karteId` 欠落時は fail-closed とし、summary placeholder / removed-route guard は維持した。
 - 2026-03-26: Reception → Charts の canonical key feed について、`scheduleKey` / `encounterKey` の server 供給と web-client の pass-through を test と docs で固定した。`docs/development/public_route_key_feed_contract_20260326.md` を追加し、`ScheduleResourceTest` / `CanonicalEncounterKeysTest` / `useAppNavigation.test.tsx` / `encounterContext.test.ts` を canonical payload 仕様へ強化した。
 - 2026-03-24: `phase2a_handoff_docs_bundle` を整理し、補助資料のみを `docs/development/supporting/phase2a_handoff_docs_bundle/` へ移設した。重複していた `phase2_current_coding_tasks_checklist_v1.md` 複製は削除し、現行正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md` に一本化した。

@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 class OrcaPatientSyncResourceTest {
 
     @Test
-    void importPatientsUsesFacilityHeaderFallback() {
+    void importPatientsUsesRemoteUserFacility() {
         OrcaPatientImportService importService = mock(OrcaPatientImportService.class);
         OrcaPatientSyncRunner syncRunner = mock(OrcaPatientSyncRunner.class);
         OrcaSyncCursorStore cursorStore = mock(OrcaSyncCursorStore.class);
@@ -43,7 +43,7 @@ class OrcaPatientSyncResourceTest {
         request.getPatientIds().add("000001");
 
         PatientImportResponse actual = resource.importPatients(
-                createRequest(null, "/api/orca/patients/import", Map.of("X-Facility-Id", "F001")), request);
+                createRequest("F001:doctor01", "/api/orca/patients/import", Map.of()), request);
 
         assertEquals("00", actual.getApiResult());
         verify(importService).importPatients(eq("F001"), any(PatientImportRequest.class), anyString());

@@ -36,6 +36,7 @@ class WebXmlEndpointExposureTest {
                 .contains("open.dolphin.rest.KarteDocumentWriteResource")
                 .contains("open.dolphin.rest.ScheduleResource")
                 .contains("open.dolphin.rest.EncounterResource")
+                .contains("open.dolphin.rest.LocalMedicalSummaryResource")
                 .contains("open.dolphin.rest.LocalDiagnosisResource")
                 .contains("open.dolphin.rest.OperationsHealthResource")
                 .contains("open.dolphin.rest.AdminOrcaUserLinkResource")

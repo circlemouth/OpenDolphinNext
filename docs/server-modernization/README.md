@@ -1,7 +1,7 @@
 # Server-Modernization ドキュメントハブ（現行）
 
 - 更新日: 2026-03-26
-- RUN_ID: 20260326T005423Z
+- RUN_ID: 20260326T030254Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
@@ -14,6 +14,12 @@
 - `docs/server-modernization/planning/server-modernized-plan/docs/development/README.md`
 - `docs/server-modernization/planning/server-modernized-plan/docs/development/orca-server-recovery-implementation-playbook.md`
 - 用途: `server-modernized` の改修計画、契約文書、運用手順の入口。まず `docs/development/phase2_current_coding_tasks_checklist_v1.md`、次に `docs/development/README.md` と `docs/README.md` を読む。
+
+## 最新変更（2026-03-26 / local summary formal route）
+- `GET /api/local-summary/encounters/{encounterKey}/medical-summary` を public read-only route として追加した。canonical target は `encounterKey` のみで、`facilityId` は request に持たせず認証文脈で解決する。
+- response envelope は `requestId` / `traceId?` / `runId?` / `fetchedAt` / `recordsReturned` / `outcome` / `sourcePath` / `payload.outpatientList` を返し、`sourcePath` は固定文字列 `/api/local-summary/encounters/{encounterKey}/medical-summary` とする。`payload.outpatientList` は v1 で 0 または 1 item。
+- error envelope は `error.code` / `error.message` / `error.httpStatus` / `error.requestId` / `error.traceId?` / `error.details?` を返す。code は `LOCAL_SUMMARY_TARGET_NOT_FOUND` / `LOCAL_SUMMARY_PROJECTION_CONFLICT` / `LOCAL_SUMMARY_READ_MODEL_UNAVAILABLE` / `LOCAL_SUMMARY_INTERNAL_ERROR` を使用する。
+- old blocked route `/api/orca/medical/outpatient`、`/api/orca/local-medical/outpatient`、`/api/orca/deptinfo` は public surface に戻さない。summary route は ORCA namespace、transition、billing、document save API と混ぜない。
 
 ## 最新変更（2026-03-26 / encounter transition contract）
 - `EncounterResource` の public route は `POST /api/encounters/{encounterKey}/transitions` を維持し、request body の transition field は `operation` を正本とする。

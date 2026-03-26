@@ -19,6 +19,8 @@ export type MedicalSectionState = {
 };
 
 export type MedicalOutpatientRecord = {
+  encounterKey?: string;
+  scheduleKey?: string;
   patientId?: string;
   patientName?: string;
   department?: string;
@@ -270,6 +272,8 @@ export function extractMedicalOutpatientRecord(
   const derivedOutcome = deriveOverallOutcome(sections, fallbackOutcome);
 
   return {
+    encounterKey: extractString(record.encounterKey ?? root.encounterKey),
+    scheduleKey: extractString(record.scheduleKey ?? root.scheduleKey),
     patientId: extractString(patient.patientId ?? record.patientId),
     patientName: extractString(patient.wholeName ?? record.patientName),
     department: extractString(record.department ?? record.departmentName),

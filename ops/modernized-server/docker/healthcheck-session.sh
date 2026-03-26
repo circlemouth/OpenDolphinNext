@@ -44,14 +44,14 @@ curl -fsS \
   -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H "Origin: $ORIGIN" \
   -X POST \
-  "$BASE_URL/resources/api/session/login" \
+  "$BASE_URL/api/session/login" \
   --data "$LOGIN_PAYLOAD" \
   -o "$LOGIN_BODY"
 
 curl -fsS \
   $CURL_TLS_ARGS \
   -b "$COOKIE_JAR" \
-  "$BASE_URL/resources/health/readiness" \
+  "$BASE_URL/api/health/readiness" \
   -o "$READY_BODY"
 
 grep -q '"status":"UP"' "$READY_BODY"

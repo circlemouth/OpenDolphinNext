@@ -30,8 +30,14 @@ describe('medicalOutpatient', () => {
   it('patientId 指定で対象レコードを選択する', () => {
     const payload = {
       outpatientList: [
-        { patient: { patientId: '0001', wholeName: 'A' }, sections: { diagnosis: { outcome: 'SUCCESS', items: [] } } },
         {
+          encounterKey: 'F001:E100',
+          scheduleKey: 'F001:S100',
+          patient: { patientId: '0001', wholeName: 'A' },
+          sections: { diagnosis: { outcome: 'SUCCESS', items: [] } },
+        },
+        {
+          encounterKey: 'F001:E200',
           patient: { patientId: '0002', wholeName: 'B' },
           sections: { diagnosis: { outcome: 'SUCCESS', items: [{ name: '脂質異常症', code: 'E78' }] } },
         },
@@ -39,9 +45,28 @@ describe('medicalOutpatient', () => {
     };
 
     const record = extractMedicalOutpatientRecord(payload, '0002');
+    expect(record?.encounterKey).toBe('F001:E200');
+    expect(record?.scheduleKey).toBeUndefined();
     expect(record?.patientId).toBe('0002');
     expect(record?.patientName).toBe('B');
     expect(record?.sections.find((s) => s.key === 'diagnosis')?.items[0]?.headline).toContain('脂質異常症');
+  });
+
+  it('encounterKey / scheduleKey をレコードへ引き継ぐ', () => {
+    const payload = {
+      outpatientList: [
+        {
+          encounterKey: 'F001:E100',
+          scheduleKey: 'F001:S100',
+          patient: { patientId: '0001', wholeName: 'A' },
+          sections: { diagnosis: { outcome: 'SUCCESS', items: [] } },
+        },
+      ],
+    };
+
+    const record = extractMedicalOutpatientRecord(payload, '0001');
+    expect(record?.encounterKey).toBe('F001:E100');
+    expect(record?.scheduleKey).toBe('F001:S100');
   });
 
   it('セクションに ERROR がある場合は overall outcome=PARTIAL または ERROR になる', () => {
@@ -61,4 +86,3 @@ describe('medicalOutpatient', () => {
     expect(record?.outcome).toBe('PARTIAL');
   });
 });
-

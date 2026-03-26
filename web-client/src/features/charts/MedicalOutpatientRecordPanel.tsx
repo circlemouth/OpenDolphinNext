@@ -68,6 +68,8 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
             destination="OrcaSummary"
             runId={summary.runId}
             traceId={summary.traceId}
+            apiResult={summary.apiResult}
+            apiResultMessage={summary.apiResultMessage}
             nextAction="OrcaSummary で再取得"
             {...errorContext}
           />

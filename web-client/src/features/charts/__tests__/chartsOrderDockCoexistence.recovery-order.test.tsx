@@ -97,6 +97,19 @@ vi.mock('../../reception/api', () => ({
 }));
 
 vi.mock('../api', () => ({
+  buildUnavailableMedicalSummary: vi.fn(() => ({
+    runId: 'RUN-SUMMARY-UNAVAILABLE',
+    traceId: 'TRACE-SUMMARY-UNAVAILABLE',
+    cacheHit: false,
+    missingMaster: false,
+    fallbackUsed: false,
+    dataSourceTransition: 'snapshot',
+    fetchedAt: '2026-02-16T10:00:00.000Z',
+    recordsReturned: 0,
+    outcome: 'MISSING',
+    sourcePath: 'key_unavailable',
+    payload: { outpatientList: [] },
+  })),
   fetchChartsMedicalSummary: vi.fn(async () => ({
     runId: 'RUN-SUMMARY',
     cacheHit: true,

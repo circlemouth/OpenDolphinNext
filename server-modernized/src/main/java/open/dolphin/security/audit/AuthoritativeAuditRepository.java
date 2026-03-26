@@ -80,7 +80,10 @@ public class AuthoritativeAuditRepository {
         String userAgentHash = hashOptional(command.userAgent());
 
         try (Connection connection = requireDataSource().getConnection()) {
-            connection.setAutoCommit(false);
+            boolean manageLocalTransaction = connection.getAutoCommit();
+            if (manageLocalTransaction) {
+                connection.setAutoCommit(false);
+            }
             try {
                 ChainHead head = lockChainHead(connection);
                 String eventHash = hashService().computeEventHash(new AuditHashService.EventHashInput(
@@ -101,13 +104,19 @@ public class AuthoritativeAuditRepository {
                 long eventId = insertEvent(connection, command, eventTime, payloadJson, payloadHash, userAgentHash, head, eventHash);
                 updateChainHead(connection, eventId, eventHash, eventTime);
                 outboxRepository().enqueue(connection, eventId, AuditOutboxRepository.DESTINATION_JMS_DOLPHIN);
-                connection.commit();
+                if (manageLocalTransaction) {
+                    connection.commit();
+                }
                 return new AuditWriteResult(eventId, payloadHash, eventHash, head.headEventId(), head.headHash());
             } catch (Exception ex) {
-                connection.rollback();
+                if (manageLocalTransaction) {
+                    connection.rollback();
+                }
                 throw ex;
             } finally {
-                connection.setAutoCommit(true);
+                if (manageLocalTransaction) {
+                    connection.setAutoCommit(true);
+                }
             }
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to append authoritative audit event", ex);

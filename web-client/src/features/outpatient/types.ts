@@ -29,6 +29,8 @@ export type OutpatientMeta = {
   runId?: string;
   traceId?: string;
   requestId?: string;
+  apiResult?: string;
+  apiResultMessage?: string;
   dataSourceTransition?: DataSourceTransition;
   resolveMasterSource?: ResolveMasterSource;
   cacheHit?: boolean;

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 
 import { AuthServiceProvider } from '../authService';
+import { clearChartsEncounterContext, storeChartsEncounterContext } from '../encounterContext';
 import { ChartsPage } from '../pages/ChartsPage';
 import { NavigationGuardProvider } from '../../../routes/NavigationGuardProvider';
 
@@ -88,6 +89,19 @@ vi.mock('../../reception/api', () => ({
 }));
 
 vi.mock('../api', () => ({
+  buildUnavailableMedicalSummary: vi.fn(() => ({
+    runId: 'RUN-SUMMARY-UNAVAILABLE',
+    traceId: 'TRACE-SUMMARY-UNAVAILABLE',
+    cacheHit: false,
+    missingMaster: false,
+    fallbackUsed: false,
+    dataSourceTransition: 'snapshot',
+    fetchedAt: '2026-02-16T10:00:00.000Z',
+    recordsReturned: 0,
+    outcome: 'MISSING',
+    sourcePath: 'key_unavailable',
+    payload: { outpatientList: [] },
+  })),
   fetchChartsMedicalSummary: vi.fn(async () => ({
     runId: 'RUN-SUMMARY',
     cacheHit: true,
@@ -180,6 +194,7 @@ vi.mock('../../outpatient/appointmentDataBanner', () => ({ getAppointmentDataBan
 
 beforeEach(() => {
   vi.clearAllMocks();
+  clearChartsEncounterContext();
   shared.fetchOrderBundlesWithPatientImportRecovery.mockResolvedValue({
     ok: false,
     bundles: [],
@@ -201,11 +216,16 @@ describe('ChartsPage ORCA recovery alert', () => {
         queries: { retry: false },
       },
     });
+    storeChartsEncounterContext({
+      patientId: '000001',
+      encounterKey: 'F001:E100',
+      visitDate: '2026-02-22',
+    });
 
     render(
       <QueryClientProvider client={queryClient}>
         <AuthServiceProvider initialFlags={{ runId: 'RUN-AUTH', cacheHit: true, missingMaster: false, dataSourceTransition: 'server' }}>
-          <MemoryRouter initialEntries={['/f/facility/charts?patientId=000001&visitDate=2026-02-22']}>
+          <MemoryRouter initialEntries={['/f/facility/charts']}>
             <NavigationGuardProvider>
               <ChartsPage />
             </NavigationGuardProvider>

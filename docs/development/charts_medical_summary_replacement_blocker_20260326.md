@@ -6,15 +6,41 @@ RUN_ID: `20260326T030254Z`
 
 ## 結論
 
-current branch の source truth からは、Charts medical summary replacement 用の **exact formal route** を確定できない。
+この blocker は 2026-03-26 の manager-frozen spec により解消済みである。
 
-そのため、この task では guessed endpoint を追加せず、既存の fail-closed placeholder を維持する。
+current branch の formal route は `GET /api/local-summary/encounters/{encounterKey}/medical-summary` に確定し、Charts medical summary replacement は fail-closed placeholder から正式 GET contract へ移行した。
 
 ## 判定
 
-- 実装可否: **No-Go**
-- コード変更方針: **server / web-client の route 実装変更なし**
-- 許容変更: **blocker memo の追加のみ**
+- 実装可否: **Go**
+- コード変更方針: **server / web-client の formal route 実装へ更新**
+- 残存制約: **old blocked route は復活させない**
+
+## 更新後の確定事項
+
+### 1. formal route
+
+- method: `GET`
+- exact path: `/api/local-summary/encounters/{encounterKey}/medical-summary`
+- canonical request target: `encounterKey` のみ
+- `scheduleKey` fallback / dual-key / query parameter は v1 で採用しない
+
+### 2. top-level envelope
+
+- `recordsReturned`
+- `outcome`
+- `sourcePath`
+- `payload.outpatientList`
+
+を維持しつつ、`requestId` / `traceId?` / `runId?` / `fetchedAt` を含む success envelope を返す。
+
+### 3. blocked route は引き続き未公開
+
+- `/api/orca/medical/outpatient`
+- `/api/orca/local-medical/outpatient`
+- `/api/orca/deptinfo`
+
+はいずれも public exposure に戻していない。
 
 ## 確定できた事項
 
@@ -113,13 +139,7 @@ current branch の source には、Charts medical summary replacement として 
 
 ## 必要な意思決定
 
-次タスクで最低限、以下を source truth として固定する必要がある。
-
-1. exact formal path
-2. request target が `scheduleKey` 主体か `encounterKey` 主体か、または両対応か
-3. `outpatientList[]` の最小 schema
-4. 404 / 409 / 5xx structured error contract
-5. 409 trigger と error code enum
+manager decision により本 memo の未決事項は解消済み。以後の変更は current code truth と contract test を正本として扱う。
 
 ## 現 branch で維持すべきこと
 

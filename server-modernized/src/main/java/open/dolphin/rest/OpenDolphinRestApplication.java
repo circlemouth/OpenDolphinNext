@@ -20,6 +20,7 @@ public class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.AppoResource.class,
                 open.dolphin.rest.ScheduleResource.class,
                 open.dolphin.rest.EncounterResource.class,
+                open.dolphin.rest.LocalMedicalSummaryResource.class,
                 open.dolphin.rest.LocalDiagnosisResource.class,
                 open.dolphin.rest.KarteResource.class,
                 open.dolphin.rest.KarteDocumentWriteResource.class,

@@ -11,7 +11,6 @@ COPY pom.server-modernized.xml ./pom.server-modernized.xml
 COPY domain ./domain
 COPY api-contract ./api-contract
 COPY persistence ./persistence
-COPY common ./common
 COPY reporting ./reporting
 COPY server-modernized ./server-modernized
 COPY ext_lib ./ext_lib

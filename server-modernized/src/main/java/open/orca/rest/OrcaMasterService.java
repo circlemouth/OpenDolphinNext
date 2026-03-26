@@ -1,6 +1,6 @@
 package open.orca.rest;
 
-import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.Dependent;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.core.EntityTag;
 import jakarta.ws.rs.core.MultivaluedMap;
@@ -17,7 +17,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
-@ApplicationScoped
+@Dependent
 class OrcaMasterService {
 
     static final String DEFAULT_VERSION = "20240426";

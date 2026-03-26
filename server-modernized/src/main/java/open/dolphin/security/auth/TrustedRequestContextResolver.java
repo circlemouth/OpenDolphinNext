@@ -28,8 +28,8 @@ public final class TrustedRequestContextResolver {
     public TrustedRequestContext resolve(HttpServletRequest request) {
         String remoteAddr = normalizeIpCandidate(request != null ? request.getRemoteAddr() : null);
         String fallbackScheme = resolveFallbackScheme(request);
-        String fallbackHost = normalizeHost(request != null ? request.getServerName() : null);
-        int fallbackPort = request != null ? normalizePort(request.getServerPort()) : -1;
+        String fallbackHost = normalizeHost(safeServerName(request));
+        int fallbackPort = normalizePort(safeServerPort(request));
         boolean fallbackSecure = "https".equalsIgnoreCase(fallbackScheme);
         if (request == null) {
             return new TrustedRequestContext(null, null, fallbackScheme, fallbackHost, fallbackPort, fallbackSecure, false, false);
@@ -108,9 +108,9 @@ public final class TrustedRequestContextResolver {
             ForwardedElement first = elements.get(0);
             HostPort hostPort = parseHostPort(first.host());
             String scheme = normalizeToken(first.proto());
-            String host = hostPort.host() != null ? hostPort.host() : normalizeHost(request.getServerName());
-            int port = hostPort.port() != null ? hostPort.port() : defaultPort(scheme, normalizePort(request.getServerPort()));
-            return new ForwardedResolution(clientIp, scheme != null ? scheme : normalizeToken(request.getScheme()), host, port);
+            String host = hostPort.host() != null ? hostPort.host() : normalizeHost(safeServerName(request));
+            int port = hostPort.port() != null ? hostPort.port() : defaultPort(scheme, normalizePort(safeServerPort(request)));
+            return new ForwardedResolution(clientIp, scheme != null ? scheme : safeScheme(request), host, port);
         } catch (IllegalArgumentException ex) {
             return null;
         }
@@ -332,11 +332,43 @@ public final class TrustedRequestContextResolver {
         if (request == null) {
             return null;
         }
-        String scheme = normalizeToken(request.getScheme());
+        String scheme = normalizeToken(safeScheme(request));
         if (scheme != null) {
             return scheme;
         }
-        return request.isSecure() ? "https" : "http";
+        return safeIsSecure(request) ? "https" : "http";
+    }
+
+    private static boolean safeIsSecure(HttpServletRequest request) {
+        try {
+            return request != null && request.isSecure();
+        } catch (RuntimeException ex) {
+            return false;
+        }
+    }
+
+    private static String safeServerName(HttpServletRequest request) {
+        try {
+            return request != null ? request.getServerName() : null;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private static String safeScheme(HttpServletRequest request) {
+        try {
+            return request != null ? request.getScheme() : null;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private static int safeServerPort(HttpServletRequest request) {
+        try {
+            return request != null ? request.getServerPort() : -1;
+        } catch (RuntimeException ex) {
+            return -1;
+        }
     }
 
     public record TrustedRequestContext(
