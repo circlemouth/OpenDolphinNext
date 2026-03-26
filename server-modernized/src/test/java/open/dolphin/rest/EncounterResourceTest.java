@@ -41,6 +41,8 @@ class EncounterResourceTest {
         Map<String, Object> response = resource.getEncounter(request, "F001:A100");
 
         assertEquals("F001:A100", response.get("encounterKey"));
+        assertEquals("F001:S100", response.get("scheduleKey"));
+        assertEquals("A100", response.get("orcaAcceptanceId"));
         assertEquals("checked_in", response.get("businessState"));
         @SuppressWarnings("unchecked")
         Map<String, Object> metadata = (Map<String, Object>) response.get("metadata");
@@ -68,6 +70,8 @@ class EncounterResourceTest {
         assertEquals(200, response.getStatus());
         @SuppressWarnings("unchecked")
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
+        assertEquals("F001:A100", body.get("encounterKey"));
+        assertEquals("F001:S100", body.get("scheduleKey"));
         assertEquals("chart_opened", body.get("businessState"));
         assertEquals("idem-001", body.get("idempotencyKey"));
     }

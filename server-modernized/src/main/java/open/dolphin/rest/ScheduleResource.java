@@ -37,7 +37,7 @@ public class ScheduleResource extends AbstractResource {
         response.put("orcaAppointmentId", row.orcaAppointmentId());
         response.put("state", row.state());
         response.put("scheduledAt", row.scheduledDatetime().toString());
-        response.put("linkedEncounterKey", row.linkedEncounterKey());
+        response.put("encounterKey", row.linkedEncounterKey());
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("departmentCode", row.departmentCode());
         metadata.put("physicianCode", row.physicianCode());

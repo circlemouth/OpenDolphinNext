@@ -167,6 +167,9 @@ rename-first:
   - `GET /api/orca/queue`
   - `DELETE /api/orca/queue`
   - `POST /api/orca/pusheventgetv2`
+- payload contract:
+  - `GET /api/schedules/{scheduleKey}` は `scheduleKey` を返し、紐づく encounter がある場合は `encounterKey` も返す。
+  - `GET /api/encounters/{encounterKey}` は `encounterKey` と `scheduleKey` を返す。
 - handoff 決定事項:
   - Reception -> Charts の今後の public contract は `scheduleKey` / `encounterKey` を正本とする。
   - `appointmentId` / `receptionId` / `visitDate` の carryover は次タスクで置換対象とし、現行 task では key 生成を client へ逃がさない。
