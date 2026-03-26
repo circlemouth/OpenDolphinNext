@@ -57,7 +57,7 @@ const parseJson = async (response: Response): Promise<unknown> => {
 
 export async function fetchSafetySummary({ karteId }: { karteId: number }): Promise<ApiResultBase & { payload?: SafetySummaryPayload }> {
   const runId = ensureRunId();
-  const endpoint = `/karte/safety/${encodeURIComponent(String(karteId))}`;
+  const endpoint = `/api/karte/safety/${encodeURIComponent(String(karteId))}`;
   const response = await httpFetch(endpoint);
   const json = (await parseJson(response)) as Record<string, unknown>;
   if (!response.ok) {
@@ -83,7 +83,7 @@ export async function fetchRpHistory(params: {
   if (params.fromDate) query.set('fromDate', params.fromDate);
   if (params.toDate) query.set('toDate', params.toDate);
   if (typeof params.lastOnly === 'boolean') query.set('lastOnly', params.lastOnly ? 'true' : 'false');
-  const endpoint = `/karte/rpHistory/list/${encodeURIComponent(String(params.karteId))}${query.toString() ? `?${query.toString()}` : ''}`;
+  const endpoint = `/api/karte/rpHistory/list/${encodeURIComponent(String(params.karteId))}${query.toString() ? `?${query.toString()}` : ''}`;
   const response = await httpFetch(endpoint);
   const json = await parseJson(response);
   if (!response.ok) {
@@ -104,4 +104,3 @@ export async function fetchRpHistory(params: {
     entries: Array.isArray(json) ? (json as RpHistoryEntry[]) : [],
   };
 }
-

@@ -135,7 +135,7 @@ export async function fetchKarteIdByPatientId({
 }): Promise<KarteIdResult> {
   const runId = ensureRunId();
   const param = `${encodeURIComponent(patientId)},${encodeURIComponent(fromDate)}`;
-  const endpoint = `/karte/pid/${param}`;
+  const endpoint = `/api/karte/pid/${param}`;
   const response = await httpFetch(endpoint);
   const json = (await parseJson(response)) as Record<string, unknown>;
   return {

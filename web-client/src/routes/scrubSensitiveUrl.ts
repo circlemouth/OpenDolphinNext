@@ -2,6 +2,8 @@ export const SENSITIVE_QUERY_KEYS = [
   'patientId',
   'appointmentId',
   'receptionId',
+  'scheduleKey',
+  'encounterKey',
   'visitDate',
   'invoiceNumber',
   'kw',

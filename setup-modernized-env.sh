@@ -65,17 +65,22 @@ export OPENDOLPHIN_SCHEMA_ACTION
 SCHEMA_INITIALIZED=0
 FLYWAY_APPLIED=0
 
-ADMIN_USER="1.3.6.1.4.1.9414.10.1:dolphin"
-ADMIN_PASS="36cdf8b887a5cffc78dcd5c08991b993" # dolphin (MD5)
-
-NEW_USER_ID="${DEV_ADMIN_USER_ID:-ormaster}"
-NEW_USER_PASS="${DEV_ADMIN_USER_PASS:-}"
-NEW_USER_NAME="${DEV_ADMIN_USER_NAME:-OR Master Admin}"
-NEW_USER_SIR_NAME="${DEV_ADMIN_SIR_NAME:-ORCA}"
-NEW_USER_GIVEN_NAME="${DEV_ADMIN_GIVEN_NAME:-Master}"
-NEW_USER_EMAIL="${DEV_ADMIN_EMAIL:-ormaster@example.com}"
-NEW_USER_PASS_SOURCE="env:DEV_ADMIN_USER_PASS"
-FACILITY_ID="1.3.6.1.4.1.9414.10.1"
+SMOKE_USER_ID="${DEV_SMOKE_USER_ID:-doctor1}"
+SMOKE_USER_PASS="${DEV_SMOKE_USER_PASS:-doctor2025}"
+SMOKE_USER_NAME="${DEV_SMOKE_USER_NAME:-Doctor One}"
+SMOKE_USER_SIR_NAME="${DEV_SMOKE_SIR_NAME:-Takagi}"
+SMOKE_USER_GIVEN_NAME="${DEV_SMOKE_GIVEN_NAME:-Kaoru}"
+SMOKE_USER_EMAIL="${DEV_SMOKE_EMAIL:-doctor1@example.com}"
+SMOKE_USER_PASS_CURRENT_HASH="${DEV_SMOKE_USER_PASSWORD_HASH:-pbkdf2_sha256_v1\$310000\$Iy73ehQDQ6j1pqxP7fpnpw==\$NQj7UL55NKB2QY+ojvhHxV+Cyr98koplDjaFo3ymyiE=}"
+SMOKE_USER_PASS_SOURCE="default:doctor2025"
+FACILITY_ID="${OPENDOLPHIN_FACILITY_ID:-1.3.6.1.4.1.9414.72.103}"
+SMOKE_PATIENT_ID="${DEV_SMOKE_PATIENT_ID:-0000001}"
+SMOKE_PATIENT_FULL_NAME="${DEV_SMOKE_PATIENT_FULL_NAME:-スモーク 患者}"
+SMOKE_PATIENT_FAMILY_NAME="${DEV_SMOKE_PATIENT_FAMILY_NAME:-スモーク}"
+SMOKE_PATIENT_GIVEN_NAME="${DEV_SMOKE_PATIENT_GIVEN_NAME:-患者}"
+SMOKE_PATIENT_KANA_NAME="${DEV_SMOKE_PATIENT_KANA_NAME:-スモーク カンジャ}"
+SMOKE_PATIENT_KANA_FAMILY_NAME="${DEV_SMOKE_PATIENT_KANA_FAMILY_NAME:-スモーク}"
+SMOKE_PATIENT_KANA_GIVEN_NAME="${DEV_SMOKE_PATIENT_KANA_GIVEN_NAME:-カンジャ}"
 
 WEB_CLIENT_MODE="${WEB_CLIENT_MODE:-npm}"
 WEB_CLIENT_DEV_HOST="${WEB_CLIENT_DEV_HOST:-localhost}"
@@ -111,8 +116,8 @@ fi
 FLYWAY_LOG_FILE="$FLYWAY_LOG_DIR_PATH/flyway-${DB_INIT_RUN_ID}.log"
 WEB_CLIENT_DEV_PID_FILE="${WEB_CLIENT_DEV_PID_FILE:-tmp/web-client-dev.pid}"
 WEB_CLIENT_DEV_PROXY_TARGET_RAW="${WEB_CLIENT_DEV_PROXY_TARGET:-}"
-WEB_CLIENT_DEV_PROXY_TARGET_DEFAULT="http://localhost:${MODERNIZED_APP_HTTP_PORT}/openDolphin/resources"
-WEB_CLIENT_DOCKER_PROXY_TARGET_DEFAULT="http://host.docker.internal:${MODERNIZED_APP_HTTP_PORT}/openDolphin/resources"
+WEB_CLIENT_DEV_PROXY_TARGET_DEFAULT="http://localhost:${MODERNIZED_APP_HTTP_PORT}/openDolphin"
+WEB_CLIENT_DOCKER_PROXY_TARGET_DEFAULT="http://host.docker.internal:${MODERNIZED_APP_HTTP_PORT}/openDolphin"
 WEB_CLIENT_DEV_PROXY_TARGET="${WEB_CLIENT_DEV_PROXY_TARGET_RAW:-$WEB_CLIENT_DEV_PROXY_TARGET_DEFAULT}"
 WEB_CLIENT_DEV_API_BASE="${WEB_CLIENT_DEV_API_BASE:-/api}"
 # ENVs for npm dev server overrides
@@ -455,23 +460,18 @@ read_orca_info() {
 }
 
 resolve_dev_admin_credentials() {
-  if [[ -n "$NEW_USER_PASS" ]]; then
-    log "DEV_ADMIN account=${NEW_USER_ID} pass_source=${NEW_USER_PASS_SOURCE}"
-    return
+  if [[ -n "${DEV_SMOKE_USER_PASSWORD_HASH:-}" ]]; then
+    SMOKE_USER_PASS_SOURCE="env:DEV_SMOKE_USER_PASSWORD_HASH"
+  elif [[ -n "${DEV_SMOKE_USER_PASS:-}" ]]; then
+    if [[ "$SMOKE_USER_PASS" == "doctor2025" ]]; then
+      SMOKE_USER_PASS_SOURCE="env:DEV_SMOKE_USER_PASS(known-doctor2025)"
+    else
+      echo "DEV_SMOKE_USER_PASS is set to a non-default value, but setup-modernized-env.sh no longer generates legacy hashes." >&2
+      echo "Provide DEV_SMOKE_USER_PASSWORD_HASH with pbkdf2_sha256_v1 format instead." >&2
+      exit 1
+    fi
   fi
-
-  if [[ -n "${ORCA_API_USER:-}" && -n "${ORCA_API_PASSWORD:-}" && "$NEW_USER_ID" == "$ORCA_API_USER" ]]; then
-    NEW_USER_PASS="${ORCA_API_PASSWORD}"
-    NEW_USER_PASS_SOURCE="ORCA_API_PASSWORD"
-  elif [[ -n "${ORMASTER_PASS:-}" ]]; then
-    NEW_USER_PASS="${ORMASTER_PASS}"
-    NEW_USER_PASS_SOURCE="env:ORMASTER_PASS"
-  else
-    NEW_USER_PASS="change_me"
-    NEW_USER_PASS_SOURCE="default:change_me"
-  fi
-
-  log "DEV_ADMIN account=${NEW_USER_ID} pass_source=${NEW_USER_PASS_SOURCE}"
+  log "SMOKE_USER account=${SMOKE_USER_ID} facility=${FACILITY_ID} pass_source=${SMOKE_USER_PASS_SOURCE}"
 }
 
 generate_custom_properties() {
@@ -505,6 +505,7 @@ services:
     container_name: ${SERVER_CONTAINER_NAME}
     environment:
       OPENDOLPHIN_ENVIRONMENT: ${OPENDOLPHIN_ENVIRONMENT:-production}
+      OPENDOLPHIN_FACILITY_ID: ${FACILITY_ID}
       OPENDOLPHIN_STUB_ENDPOINTS_MODE: ${OPENDOLPHIN_STUB_ENDPOINTS_MODE:-block}
       ORCA_API_HOST: ${ORCA_API_HOST}
       ORCA_API_PORT: ${ORCA_API_PORT}
@@ -513,6 +514,7 @@ services:
       ORCA_API_PASSWORD: ${ORCA_API_PASSWORD:-}
       ORCA_BASE_URL: ${ORCA_BASE_URL}
       ORCA_MODE: ${ORCA_MODE}
+      ORCA_CREDENTIALS_AES_KEY_B64: ${ORCA_CREDENTIALS_AES_KEY_B64:-b3BlbmRvbHBoaW4tZGV2LW9yY2EtY3JlZC1rZXktMzJieXRlcw==}
       ORCA_API_PATH_PREFIX: ${ORCA_API_PATH_PREFIX:-}
       ORCA_API_WEBORCA: ${ORCA_API_WEBORCA:-}
       ORCA_API_RETRY_MAX: ${ORCA_API_RETRY_MAX:-}
@@ -866,7 +868,7 @@ apply_baseline_seed() {
 }
 
 register_initial_user() {
-  log "Registering initial user ($NEW_USER_ID) via SQL..."
+  log "Registering smoke user ($SMOKE_USER_ID) via SQL..."
   if [[ "$(has_modernized_table d_users)" != "1" ]]; then
     log "Warning: d_users table not found; skipping initial user registration."
     return
@@ -882,9 +884,6 @@ register_initial_user() {
   if [[ "$seed_schema" != "public" ]]; then
     seed_search_path="${seed_schema},public"
   fi
-  local pass_hash
-  pass_hash=$(printf "%s" "$NEW_USER_PASS" | md5sum | awk '{print $1}')
-
   local tmp_sql
   tmp_sql=$(mktemp)
   cat > "$tmp_sql" <<EOF
@@ -929,47 +928,194 @@ INSERT INTO d_users (
 )
 SELECT
     nextval('hibernate_sequence'),
-    '$FACILITY_ID:$NEW_USER_ID',
-    '$pass_hash',
-    '$NEW_USER_NAME',
+    '$FACILITY_ID:$SMOKE_USER_ID',
+    '$SMOKE_USER_PASS_CURRENT_HASH',
+    '$SMOKE_USER_NAME',
     (SELECT id FROM d_facility WHERE facilityid = '$FACILITY_ID'),
     'PROCESS',
     now(),
-    '$NEW_USER_SIR_NAME', '$NEW_USER_GIVEN_NAME', '$NEW_USER_EMAIL'
-WHERE NOT EXISTS (SELECT 1 FROM d_users WHERE userid = '$FACILITY_ID:$NEW_USER_ID');
+    '$SMOKE_USER_SIR_NAME', '$SMOKE_USER_GIVEN_NAME', '$SMOKE_USER_EMAIL'
+WHERE NOT EXISTS (SELECT 1 FROM d_users WHERE userid = '$FACILITY_ID:$SMOKE_USER_ID');
 
--- Keep default dev admin account aligned with configured credentials
+-- Keep smoke user aligned with current auth contract (PBKDF2 only).
 UPDATE d_users
 SET
-    password = '$pass_hash',
-    commonname = '$NEW_USER_NAME',
-    sirname = '$NEW_USER_SIR_NAME',
-    givenname = '$NEW_USER_GIVEN_NAME',
-    email = '$NEW_USER_EMAIL',
+    password = '$SMOKE_USER_PASS_CURRENT_HASH',
+    commonname = '$SMOKE_USER_NAME',
+    sirname = '$SMOKE_USER_SIR_NAME',
+    givenname = '$SMOKE_USER_GIVEN_NAME',
+    email = '$SMOKE_USER_EMAIL',
+    factor2auth = NULL,
     facility_id = (SELECT id FROM d_facility WHERE facilityid = '$FACILITY_ID')
-WHERE userid = '$FACILITY_ID:$NEW_USER_ID';
+WHERE userid = '$FACILITY_ID:$SMOKE_USER_ID';
 
 -- Create roles if missing
 INSERT INTO d_roles (id, c_role, user_id, c_user)
-SELECT nextval('hibernate_sequence'), 'admin', '$FACILITY_ID:$NEW_USER_ID', id
-FROM d_users WHERE userid = '$FACILITY_ID:$NEW_USER_ID'
-AND NOT EXISTS (SELECT 1 FROM d_roles WHERE user_id = '$FACILITY_ID:$NEW_USER_ID' AND c_role = 'admin');
+SELECT nextval('hibernate_sequence'), 'admin', '$FACILITY_ID:$SMOKE_USER_ID', id
+FROM d_users WHERE userid = '$FACILITY_ID:$SMOKE_USER_ID'
+AND NOT EXISTS (SELECT 1 FROM d_roles WHERE user_id = '$FACILITY_ID:$SMOKE_USER_ID' AND c_role = 'admin');
 
 INSERT INTO d_roles (id, c_role, user_id, c_user)
-SELECT nextval('hibernate_sequence'), 'user', '$FACILITY_ID:$NEW_USER_ID', id
-FROM d_users WHERE userid = '$FACILITY_ID:$NEW_USER_ID'
-AND NOT EXISTS (SELECT 1 FROM d_roles WHERE user_id = '$FACILITY_ID:$NEW_USER_ID' AND c_role = 'user');
+SELECT nextval('hibernate_sequence'), 'user', '$FACILITY_ID:$SMOKE_USER_ID', id
+FROM d_users WHERE userid = '$FACILITY_ID:$SMOKE_USER_ID'
+AND NOT EXISTS (SELECT 1 FROM d_roles WHERE user_id = '$FACILITY_ID:$SMOKE_USER_ID' AND c_role = 'user');
 
 INSERT INTO d_roles (id, c_role, user_id, c_user)
-SELECT nextval('hibernate_sequence'), 'doctor', '$FACILITY_ID:$NEW_USER_ID', id
-FROM d_users WHERE userid = '$FACILITY_ID:$NEW_USER_ID'
-AND NOT EXISTS (SELECT 1 FROM d_roles WHERE user_id = '$FACILITY_ID:$NEW_USER_ID' AND c_role = 'doctor');
+SELECT nextval('hibernate_sequence'), 'doctor', '$FACILITY_ID:$SMOKE_USER_ID', id
+FROM d_users WHERE userid = '$FACILITY_ID:$SMOKE_USER_ID'
+AND NOT EXISTS (SELECT 1 FROM d_roles WHERE user_id = '$FACILITY_ID:$SMOKE_USER_ID' AND c_role = 'doctor');
 EOF
 
   docker cp "$tmp_sql" "${POSTGRES_CONTAINER_NAME}":/tmp/modern_user_seed.sql
   docker exec "${POSTGRES_CONTAINER_NAME}" psql -U opendolphin -d opendolphin_modern -v ON_ERROR_STOP=1 -f /tmp/modern_user_seed.sql
   rm -f "$tmp_sql"
   log "User registration SQL executed successfully."
+}
+
+seed_smoke_runtime_projection() {
+  log "Seeding smoke runtime projection..."
+  if [[ "$(has_modernized_table schedule_projection)" != "1" || "$(has_modernized_table encounter_projection)" != "1" ]]; then
+    log "Warning: projection tables not found; skipping smoke runtime projection seed."
+    return
+  fi
+  local tmp_sql
+  tmp_sql=$(mktemp)
+  cat > "$tmp_sql" <<EOF
+SET search_path = opendolphin,public;
+
+WITH runtime_clock AS (
+    SELECT (date_trunc('day', timezone('Asia/Tokyo', now())) + interval '9 hours') AT TIME ZONE 'Asia/Tokyo' AS smoke_ts
+),
+patient_ctx AS (
+    SELECT
+        p.facilityid AS facility_id,
+        p.patientid AS patient_id,
+        (SELECT k.id FROM d_karte k WHERE k.patient_id = p.id ORDER BY k.id DESC LIMIT 1) AS karte_id
+    FROM d_patient p
+    WHERE p.facilityid = '$FACILITY_ID'
+      AND p.patientid = '0000001'
+)
+INSERT INTO schedule_projection (
+    schedule_key, facility_id, patient_id, karte_id, orca_appointment_id, scheduled_datetime,
+    department_code, physician_code, state, linked_encounter_key, source_updated_at, projected_at
+)
+SELECT
+    'SMOKE-SCHEDULE-20251129-0001',
+    facility_id,
+    patient_id,
+    karte_id,
+    'SMOKE-SCHEDULE-20251129-0001',
+    smoke_ts,
+    NULL,
+    NULL,
+    'scheduled',
+    '$FACILITY_ID:SMOKE-20251129-0001',
+    smoke_ts,
+    smoke_ts
+FROM patient_ctx
+CROSS JOIN runtime_clock
+WHERE karte_id IS NOT NULL
+ON CONFLICT (schedule_key) DO UPDATE SET
+    facility_id = EXCLUDED.facility_id,
+    patient_id = EXCLUDED.patient_id,
+    karte_id = EXCLUDED.karte_id,
+    orca_appointment_id = EXCLUDED.orca_appointment_id,
+    scheduled_datetime = EXCLUDED.scheduled_datetime,
+    department_code = EXCLUDED.department_code,
+    physician_code = EXCLUDED.physician_code,
+    state = EXCLUDED.state,
+    linked_encounter_key = EXCLUDED.linked_encounter_key,
+    source_updated_at = EXCLUDED.source_updated_at,
+    projected_at = EXCLUDED.projected_at;
+
+WITH runtime_clock AS (
+  SELECT (date_trunc('day', timezone('Asia/Tokyo', now())) + interval '9 hours') AT TIME ZONE 'Asia/Tokyo' AS smoke_ts
+), patient_ctx AS (
+  SELECT
+    p.facilityid AS facility_id,
+    p.patientid AS patient_id,
+    (SELECT k.id FROM d_karte k WHERE k.patient_id = p.id ORDER BY k.id DESC LIMIT 1) AS karte_id
+  FROM d_patient p
+  WHERE p.facilityid = '${FACILITY_ID}'
+    AND p.patientid = '${SMOKE_PATIENT_ID}'
+)
+INSERT INTO encounter_projection (
+    encounter_key, facility_id, patient_id, karte_id, schedule_key, orca_acceptance_id,
+    acceptance_datetime, business_state, chart_opened_at, billed_at, cancelled_at,
+    owner_user_id, memo, worklist_flags, last_orca_sync_at, state_version, projected_at
+)
+SELECT
+    '$FACILITY_ID:SMOKE-20251129-0001',
+    facility_id,
+    patient_id,
+    karte_id,
+    'SMOKE-SCHEDULE-20251129-0001',
+    'SMOKE-ACCEPT-20251129-0001',
+    smoke_ts,
+    'checked_in',
+    NULL,
+    NULL,
+    NULL,
+    '$FACILITY_ID:$SMOKE_USER_ID',
+    'dev smoke runtime encounter',
+    '{}'::jsonb,
+    smoke_ts,
+    0,
+    smoke_ts
+FROM patient_ctx
+CROSS JOIN runtime_clock
+WHERE karte_id IS NOT NULL
+ON CONFLICT (encounter_key) DO UPDATE SET
+    facility_id = EXCLUDED.facility_id,
+    patient_id = EXCLUDED.patient_id,
+    karte_id = EXCLUDED.karte_id,
+    schedule_key = EXCLUDED.schedule_key,
+    orca_acceptance_id = EXCLUDED.orca_acceptance_id,
+    acceptance_datetime = EXCLUDED.acceptance_datetime,
+    business_state = EXCLUDED.business_state,
+    chart_opened_at = EXCLUDED.chart_opened_at,
+    billed_at = EXCLUDED.billed_at,
+    cancelled_at = EXCLUDED.cancelled_at,
+    owner_user_id = EXCLUDED.owner_user_id,
+    memo = EXCLUDED.memo,
+    worklist_flags = EXCLUDED.worklist_flags,
+    last_orca_sync_at = EXCLUDED.last_orca_sync_at,
+    state_version = EXCLUDED.state_version,
+    projected_at = EXCLUDED.projected_at;
+EOF
+
+  docker cp "$tmp_sql" "${POSTGRES_CONTAINER_NAME}":/tmp/modern_smoke_runtime_projection.sql
+  docker exec "${POSTGRES_CONTAINER_NAME}" psql -U opendolphin -d opendolphin_modern -v ON_ERROR_STOP=1 -f /tmp/modern_smoke_runtime_projection.sql
+  rm -f "$tmp_sql"
+  log "Smoke runtime projection seed executed successfully."
+}
+
+seed_smoke_patient_identity() {
+  log "Seeding smoke patient identity..."
+  if [[ "$(has_modernized_table d_patient)" != "1" ]]; then
+    log "Warning: d_patient not found; skipping smoke patient identity seed."
+    return
+  fi
+  local tmp_sql
+  tmp_sql=$(mktemp)
+  cat > "$tmp_sql" <<EOF
+SET search_path = opendolphin,public;
+
+UPDATE d_patient
+   SET familyname = '$SMOKE_PATIENT_FAMILY_NAME',
+       givenname = '$SMOKE_PATIENT_GIVEN_NAME',
+       fullname = '$SMOKE_PATIENT_FULL_NAME',
+       kanafamilyname = '$SMOKE_PATIENT_KANA_FAMILY_NAME',
+       kanagivenname = '$SMOKE_PATIENT_KANA_GIVEN_NAME',
+       kananame = '$SMOKE_PATIENT_KANA_NAME'
+ WHERE facilityid = '$FACILITY_ID'
+   AND patientid = '$SMOKE_PATIENT_ID';
+EOF
+
+  docker cp "$tmp_sql" "${POSTGRES_CONTAINER_NAME}":/tmp/modern_smoke_patient_identity.sql
+  docker exec "${POSTGRES_CONTAINER_NAME}" psql -U opendolphin -d opendolphin_modern -v ON_ERROR_STOP=1 -f /tmp/modern_smoke_patient_identity.sql
+  rm -f "$tmp_sql"
+  log "Smoke patient identity seed executed successfully."
 }
 
 stop_existing_web_client_dev_server() {
@@ -1058,7 +1204,7 @@ start_web_client_npm() {
   stop_existing_web_client_dev_server
 
   local dev_proxy_target="$WEB_CLIENT_DEV_PROXY_TARGET"
-  local dev_use_https="${VITE_DEV_USE_HTTPS:-0}"
+  local dev_use_https="${VITE_DEV_USE_HTTPS:-1}"
   local dev_disable_msw="${VITE_DISABLE_MSW:-1}"
   local dev_enable_telemetry="${VITE_ENABLE_TELEMETRY:-0}"
   local dev_disable_security="${VITE_DISABLE_SECURITY:-0}"
@@ -1168,26 +1314,28 @@ main() {
   verify_api_health
   apply_baseline_seed
   register_initial_user
+  seed_smoke_patient_identity
+  seed_smoke_runtime_projection
   start_web_client
   if [[ "$WEB_CLIENT_MODE_LOWER" == npm* || "$WEB_CLIENT_MODE_LOWER" == dev* ]]; then
-    log "All set! Web Client dev server is listening at http://${WEB_CLIENT_DEV_HOST}:${WEB_CLIENT_DEV_PORT}"
+    local scheme="http"
+    if [[ "${VITE_DEV_USE_HTTPS:-1}" == "1" ]]; then
+      scheme="https"
+    fi
+    log "All set! Web Client dev server is listening at ${scheme}://${WEB_CLIENT_DEV_HOST}:${WEB_CLIENT_DEV_PORT}"
     log "Logs: $WEB_CLIENT_DEV_LOG_PATH"
   else
     log "All set! Web Client is running at http://localhost:${WEB_CLIENT_DEV_PORT}"
   fi
-  log "Login with User: $NEW_USER_ID / Pass: $NEW_USER_PASS"
+  log "Login with User: $SMOKE_USER_ID / Pass: $SMOKE_USER_PASS"
 }
 
 # ---------------------------------------------------------
-# ログイン情報 (開発用)
-# 施設ID: 1.3.6.1.4.1.9414.10.1
-# ユーザーID: ormaster
-# パスワード: ORCA Basic パスワード（未設定時は change_me / "_" あり）
-#
-# 医師アカウント (既存)
+# ログイン情報 (開発用 smoke)
 # 施設ID: 1.3.6.1.4.1.9414.72.103
 # ユーザーID: doctor1
 # パスワード: doctor2025
+# d_users.userId は 1.3.6.1.4.1.9414.72.103:doctor1 として current PBKDF2 hash を使う
 # ---------------------------------------------------------
 
 main "$@"

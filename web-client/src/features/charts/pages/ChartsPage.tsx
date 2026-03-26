@@ -112,6 +112,9 @@ const parseDate = (value?: string): Date | null => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const formatLocalDateYmd = (date: Date): string =>
+  `${date.getFullYear().toString().padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
 const formatAge = (birthDate?: string, baseDate: Date = new Date()): string => {
   const birth = parseDate(birthDate);
   if (!birth) return '—';
@@ -147,7 +150,7 @@ const formatJapaneseEra = (date: Date): string => {
 const formatBirthDateParts = (value?: string): { iso: string; era: string; display: string } => {
   const date = parseDate(value);
   if (!date) return { iso: '—', era: '—', display: '—' };
-  const iso = date.toISOString().slice(0, 10);
+  const iso = formatLocalDateYmd(date);
   const era = formatJapaneseEra(date);
   return { iso, era, display: `${iso}（${era}）` };
 };
@@ -444,7 +447,7 @@ const toDateOnly = (value?: string) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString().slice(0, 10);
+  return formatLocalDateYmd(parsed);
 };
 
 const filterSameDayOrderBundles = (bundles: OrderBundle[], visitDate?: string) => {
@@ -525,7 +528,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 	    | 'radiologyOrder'
 	    | 'instractionChargeOrder'
 	    | 'baseChargeOrder';
-	  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => formatLocalDateYmd(new Date()), []);
   const [encounterContext, setEncounterContext] = useState<OutpatientEncounterContext>(() => {
     const urlContext = parseChartsEncounterContext(location.search);
     if (hasEncounterContext(urlContext)) return normalizeEncounterContext(urlContext);

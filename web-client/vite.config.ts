@@ -51,6 +51,21 @@ const normalizeBasePath = (raw?: string): string => {
   const withoutTrailingSlash = withLeadingSlash.replace(/\/+$/, '');
   return withoutTrailingSlash || '/';
 };
+const stripResourceSuffix = (rawPath: string): string => rawPath.replace(/\/resources\/?$/, '') || '/';
+const isHtmlNavigationRequest = (url: string, acceptHeader?: string) => {
+  const pathname = url.split('?')[0] ?? '/';
+  if (pathname.startsWith('/api') || pathname.startsWith('/@') || pathname.startsWith('/src/') || pathname.startsWith('/node_modules/')) {
+    return false;
+  }
+  if (/\.[a-z0-9]+$/i.test(pathname)) {
+    return false;
+  }
+  return (acceptHeader ?? '').includes('text/html');
+};
+const rewriteCookiePath = (setCookie: string, fromPath: string, toPath: string) => {
+  const normalizedFrom = fromPath === '/' ? '/' : fromPath.replace(/\/+$/, '');
+  return setCookie.replace(new RegExp(`(;\\s*Path=)${normalizedFrom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=;|$)`, 'i'), `$1${toPath}`);
+};
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -109,14 +124,31 @@ export default defineConfig(({ mode }) => {
   const orcaPathPrefixSpec = parsePathPrefix(getEnv('VITE_ORCA_API_PATH_PREFIX') ?? getEnv('ORCA_API_PATH_PREFIX'));
   const resolvedOrcaPrefix = orcaPathPrefixSpec.auto ? (isWebOrca ? '/api' : '') : orcaPathPrefixSpec.prefix;
   const targetPath = resolveTargetPath(apiProxyTarget);
+  const targetOrigin = (() => {
+    try {
+      return new URL(apiProxyTarget).origin;
+    } catch {
+      return '';
+    }
+  })();
   const targetHasOrcaPrefix =
     resolvedOrcaPrefix && (targetPath === resolvedOrcaPrefix || targetPath.startsWith(`${resolvedOrcaPrefix}/`));
+  const targetHasResourcePrefix =
+    Boolean(resourcePathPrefix) && (targetPath === resourcePathPrefix || targetPath.startsWith(`${resourcePathPrefix}/`));
   const shouldAddOrcaPrefix = Boolean(resolvedOrcaPrefix) && !targetHasOrcaPrefix;
   // When the proxy target is an origin (e.g. `http://localhost:9080`), we still need to reach the
   // JAX-RS resources mounted under `/openDolphin/resources` (server-modernized/legacy both).
   // Previously this was gated by `!isWebOrca`, which caused `/orca/*` (and other API paths) to 404
   // under WebORCA mode unless the env already included the resource path.
   const shouldAddResourcePrefix = Boolean(resourcePathPrefix) && (!targetPath || targetPath === '/');
+  const shouldAddLegacyResourcePrefix = Boolean(resourcePathPrefix) && !targetHasResourcePrefix;
+  const backendBootstrapPath =
+    targetPath && targetPath !== '/'
+      ? stripResourceSuffix(targetPath)
+      : resourcePathPrefix
+        ? stripResourceSuffix(resourcePathPrefix)
+        : '/';
+  const backendBootstrapUrl = targetOrigin ? new URL(backendBootstrapPath || '/', targetOrigin).toString() : '';
 
   const addOrcaPrefix = (rawPath: string) => {
     const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
@@ -130,7 +162,13 @@ export default defineConfig(({ mode }) => {
     if (normalizedPath === resourcePathPrefix || normalizedPath.startsWith(`${resourcePathPrefix}/`)) return normalizedPath;
     return `${resourcePathPrefix}${normalizedPath}`;
   };
-  const rewriteOrcaPath = (rawPath: string) => addResourcePrefix(isWebOrca ? addOrcaPrefix(rawPath) : rawPath);
+  const addLegacyResourcePrefix = (rawPath: string) => {
+    const normalizedPath = rawPath.startsWith('/') ? rawPath : `/${rawPath}`;
+    if (!shouldAddLegacyResourcePrefix || !resourcePathPrefix) return normalizedPath;
+    if (normalizedPath === resourcePathPrefix || normalizedPath.startsWith(`${resourcePathPrefix}/`)) return normalizedPath;
+    return `${resourcePathPrefix}${normalizedPath}`;
+  };
+  const rewriteOrcaPath = (rawPath: string) => addLegacyResourcePrefix(isWebOrca ? addOrcaPrefix(rawPath) : rawPath);
   const stripApiPrefix = (rawPath: string) => rawPath.replace(/^\/api(?=\/|$)/, '');
 
   const orcaPrefixedPaths = [
@@ -161,10 +199,15 @@ export default defineConfig(({ mode }) => {
     const trimmed = rawPath.trim();
     return trimmed === '/api/orca' || trimmed.startsWith('/api/orca/');
   };
+  const shouldPreserveApiPrefix =
+    Boolean(targetPath) &&
+    targetPath !== '/' &&
+    targetPath !== resourcePathPrefix &&
+    !targetPath.startsWith(`${resourcePathPrefix}/`);
   const rewriteApiPath = (rawPath: string) => {
     if (isAdminApiPath(rawPath) || isSessionApiPath(rawPath) || isApiOrcaQueuePath(rawPath)) return addResourcePrefix(rawPath);
     if (resolvedOrcaPrefix && isOrcaApiPath(rawPath)) return addOrcaPrefix(stripApiPrefix(rawPath));
-    return addResourcePrefix(stripApiPrefix(rawPath));
+    return addResourcePrefix(shouldPreserveApiPrefix ? rawPath : stripApiPrefix(rawPath));
   };
 
   const createProxyConfig = (rewrite?: (p: string) => string) => ({
@@ -172,6 +215,7 @@ export default defineConfig(({ mode }) => {
     changeOrigin: true,
     secure: !insecureProxyTls,
     agent: orcaClientAgent,
+    cookiePathRewrite: backendBootstrapPath ? { [backendBootstrapPath]: '/' } : undefined,
     ...(needsProxyConfigure
       ? {
           configure: (proxy: any) => {
@@ -205,23 +249,61 @@ export default defineConfig(({ mode }) => {
         }
       : {}),
     ...(rewrite ? { rewrite } : {}),
+    configure: (proxy: any) => {
+      proxy.on('proxyReq', (proxyReq: any, req: any) => {
+        if (targetOrigin && req.headers?.origin) {
+          proxyReq.setHeader('Origin', targetOrigin);
+        }
+        if (backendBootstrapUrl && req.headers?.referer) {
+          proxyReq.setHeader('Referer', backendBootstrapUrl);
+        }
+      });
+      if (needsProxyConfigure) {
+        if (shouldAttachOrcaAuth) {
+          proxy.on('proxyReq', (proxyReq: any, req: any) => {
+            const proxyAuth =
+              typeof proxyReq.getHeader === 'function' ? proxyReq.getHeader('authorization') : undefined;
+            const existingAuth = proxyAuth ?? req.headers?.authorization;
+            if (!existingAuth && orcaAuthHeader?.Authorization) {
+              proxyReq.setHeader('Authorization', orcaAuthHeader.Authorization);
+            }
+          });
+        }
+        if (shouldDropOrcaHeaders || shouldDropOrcaResultMessage) {
+          proxy.on('proxyRes', (proxyRes: any) => {
+            const headers = proxyRes.headers;
+            if (!headers) return;
+            Object.keys(headers).forEach((key) => {
+              const normalized = key.toLowerCase();
+              if (shouldDropOrcaHeaders && normalized.startsWith('x-orca-')) {
+                delete headers[key];
+                return;
+              }
+              if (shouldDropOrcaResultMessage && normalized === 'x-orca-api-result-message') {
+                delete headers[key];
+              }
+            });
+          });
+        }
+      }
+    },
   });
 
   const apiProxy = {
     '/api': createProxyConfig(rewriteApiPath),
-    '/user': createProxyConfig(addResourcePrefix),
-    '/karte': createProxyConfig(addResourcePrefix),
-    '/odletter': createProxyConfig(addResourcePrefix),
+    '/user': createProxyConfig(addLegacyResourcePrefix),
+    '/karte': createProxyConfig(addLegacyResourcePrefix),
+    '/odletter': createProxyConfig(addLegacyResourcePrefix),
     // ORCA / 外来 API 群を開発プロキシ経由でモダナイズ版サーバーへ中継する。
-    '/api21': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca06': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca12': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca21': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca22': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca25': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca51': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca101': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
-    '/orca102': createProxyConfig((p: string) => addResourcePrefix(addOrcaPrefix(p))),
+    '/api21': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca06': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca12': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca21': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca22': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca25': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca51': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca101': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
+    '/orca102': createProxyConfig((p: string) => addLegacyResourcePrefix(addOrcaPrefix(p))),
     '/orca': createProxyConfig(rewriteOrcaPath),
   } as const;
 
@@ -283,6 +365,45 @@ export default defineConfig(({ mode }) => {
               res.statusCode = 204;
               res.end();
             });
+          });
+        },
+      },
+      {
+        name: 'dev-backend-bootstrap-bridge',
+        configureServer(server) {
+          server.middlewares.use(async (req, res, next) => {
+            if (!backendBootstrapUrl) return next();
+            if ((req.method ?? 'GET').toUpperCase() !== 'GET') return next();
+            if (!isHtmlNavigationRequest(req.url ?? '/', req.headers.accept)) return next();
+
+            try {
+              const response = await fetch(backendBootstrapUrl, {
+                headers: {
+                  accept: 'text/html',
+                  cookie: req.headers.cookie ?? '',
+                },
+              });
+              const backendHtml = await response.text();
+              const csrfToken = backendHtml.match(/<meta\s+name="csrf-token"\s+content="([^"]+)"/i)?.[1] ?? '__CSRF_TOKEN__';
+              const htmlPath = path.resolve(__dirname, 'index.html');
+              const sourceHtml = fs.readFileSync(htmlPath, 'utf8').replace('__CSRF_TOKEN__', csrfToken);
+              const transformedHtml = await server.transformIndexHtml(req.url ?? '/', sourceHtml, req.originalUrl);
+              const setCookies =
+                typeof (response.headers as any).getSetCookie === 'function'
+                  ? (response.headers as any).getSetCookie()
+                  : response.headers.get('set-cookie')
+                    ? [response.headers.get('set-cookie') as string]
+                    : [];
+
+              for (const cookie of setCookies) {
+                res.appendHeader('Set-Cookie', rewriteCookiePath(cookie, backendBootstrapPath, '/'));
+              }
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'text/html; charset=utf-8');
+              res.end(transformedHtml);
+            } catch {
+              next();
+            }
           });
         },
       },

@@ -65,7 +65,7 @@ const resolveBackendTarget = () => {
     origin: target.origin,
     resourcePrefix,
     appRootUrl: new URL(appRootPath, target.origin).toString(),
-    loginUrl: new URL(`${resourcePrefix}/api/session/login`, target.origin).toString(),
+    loginUrl: new URL('api/session/login', new URL(appRootPath, target.origin)).toString(),
   };
 };
 

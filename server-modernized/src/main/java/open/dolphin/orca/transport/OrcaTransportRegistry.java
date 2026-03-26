@@ -12,6 +12,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLContext;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
+import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
 
@@ -92,8 +93,23 @@ final class OrcaTransportRegistry {
         if (orcaConnectionConfigStore == null) {
             return loadFallbackSettings();
         }
+        if (orcaConnectionConfigStore.listConfiguredFacilityIds().isEmpty()) {
+            return loadFallbackSettings();
+        }
         try {
             return loadSettingsFromAdminConfig(facilityId);
+        } catch (OrcaConnectionPolicyException ex) {
+            if (OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING.equals(ex.getErrorCategory())) {
+                LOGGER.log(Level.INFO,
+                        "ORCA admin config is not bootstrapped for facilityId={0}; using external runtime config fallback",
+                        safeFacility(facilityId));
+                return loadFallbackSettings();
+            }
+            LOGGER.log(Level.WARNING,
+                    "Failed to load ORCA transport settings from admin config: " + ex.getMessage()
+                            + " facilityId=" + safeFacility(facilityId),
+                    ex);
+            return null;
         } catch (RuntimeException ex) {
             LOGGER.log(Level.WARNING,
                     "Failed to load ORCA transport settings from admin config: " + ex.getMessage()

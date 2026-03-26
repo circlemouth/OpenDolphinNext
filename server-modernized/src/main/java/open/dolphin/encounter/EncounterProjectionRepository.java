@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import javax.sql.DataSource;
 
 @ApplicationScoped
@@ -59,6 +61,17 @@ public class EncounterProjectionRepository {
                    owner_user_id, memo, worklist_flags::text, last_orca_sync_at, state_version, projected_at
               FROM opendolphin.encounter_projection
              WHERE encounter_key = ?
+            """;
+
+    private static final String SQL_SELECT_BY_RANGE = """
+            SELECT encounter_key, facility_id, patient_id, karte_id, schedule_key, orca_acceptance_id,
+                   acceptance_datetime, business_state, chart_opened_at, billed_at, cancelled_at,
+                   owner_user_id, memo, worklist_flags::text, last_orca_sync_at, state_version, projected_at
+              FROM opendolphin.encounter_projection
+             WHERE facility_id = ?
+               AND acceptance_datetime >= ?
+               AND acceptance_datetime < ?
+             ORDER BY acceptance_datetime ASC, encounter_key ASC
             """;
 
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
@@ -142,28 +155,53 @@ public class EncounterProjectionRepository {
                 if (!resultSet.next()) {
                     return null;
                 }
-                return new EncounterRow(
-                        resultSet.getString(1),
-                        resultSet.getString(2),
-                        resultSet.getString(3),
-                        (Long) resultSet.getObject(4),
-                        resultSet.getString(5),
-                        resultSet.getString(6),
-                        resultSet.getTimestamp(7).toInstant(),
-                        resultSet.getString(8),
-                        toInstant(resultSet.getTimestamp(9)),
-                        toInstant(resultSet.getTimestamp(10)),
-                        toInstant(resultSet.getTimestamp(11)),
-                        resultSet.getString(12),
-                        resultSet.getString(13),
-                        resultSet.getString(14),
-                        toInstant(resultSet.getTimestamp(15)),
-                        resultSet.getLong(16),
-                        resultSet.getTimestamp(17).toInstant());
+                return mapRow(resultSet);
             }
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to load encounter projection", ex);
         }
+    }
+
+    public List<EncounterRow> findByFacilityAndAcceptanceRange(String facilityId, Instant fromInclusive, Instant toExclusive) {
+        if (normalize(facilityId) == null || fromInclusive == null || toExclusive == null || dataSource == null) {
+            return List.of();
+        }
+        List<EncounterRow> rows = new ArrayList<>();
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(SQL_SELECT_BY_RANGE)) {
+            statement.setString(1, facilityId.trim());
+            statement.setTimestamp(2, Timestamp.from(fromInclusive));
+            statement.setTimestamp(3, Timestamp.from(toExclusive));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    rows.add(mapRow(resultSet));
+                }
+            }
+            return rows;
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Failed to load encounter projections by range", ex);
+        }
+    }
+
+    private EncounterRow mapRow(ResultSet resultSet) throws SQLException {
+        return new EncounterRow(
+                resultSet.getString(1),
+                resultSet.getString(2),
+                resultSet.getString(3),
+                (Long) resultSet.getObject(4),
+                resultSet.getString(5),
+                resultSet.getString(6),
+                resultSet.getTimestamp(7).toInstant(),
+                resultSet.getString(8),
+                toInstant(resultSet.getTimestamp(9)),
+                toInstant(resultSet.getTimestamp(10)),
+                toInstant(resultSet.getTimestamp(11)),
+                resultSet.getString(12),
+                resultSet.getString(13),
+                resultSet.getString(14),
+                toInstant(resultSet.getTimestamp(15)),
+                resultSet.getLong(16),
+                resultSet.getTimestamp(17).toInstant());
     }
 
     private DataSource requireDataSource() {

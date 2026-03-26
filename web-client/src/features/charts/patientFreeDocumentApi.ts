@@ -54,7 +54,7 @@ const resolveErrorText = (raw: string, fallback: string): string => {
 
 export async function fetchPatientFreeDocument({ patientId }: { patientId: string }): Promise<PatientFreeDocumentFetchResult> {
   const runId = ensureRunId();
-  const endpoint = `/karte/freedocument/${encodeURIComponent(patientId)}`;
+  const endpoint = `/api/karte/freedocument/${encodeURIComponent(patientId)}`;
   const response = await httpFetch(endpoint);
   const status = response.status;
   const raw = await response.text().catch(() => '');
@@ -116,7 +116,7 @@ export async function savePatientFreeDocument(params: {
   comment: string;
 }): Promise<PatientFreeDocumentSaveResult> {
   const runId = ensureRunId();
-  const endpoint = '/karte/freedocument';
+  const endpoint = '/api/karte/freedocument';
   const response = await httpFetch(endpoint, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -138,4 +138,3 @@ export async function savePatientFreeDocument(params: {
   }
   return { ok: true, supported: true, runId, status };
 }
-

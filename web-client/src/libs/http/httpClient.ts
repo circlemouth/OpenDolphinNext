@@ -243,6 +243,12 @@ const applyCsrfHeaders = (init?: RequestInit, url?: URL | null): RequestInit => 
   }
 
   headers.set('X-CSRF-Token', token);
+  if (!headers.has('Origin')) {
+    headers.set('Origin', url.origin);
+  }
+  if (!headers.has('Referer') && typeof window !== 'undefined' && window.location?.href) {
+    headers.set('Referer', window.location.href);
+  }
   return { ...(init ?? {}), headers };
 };
 

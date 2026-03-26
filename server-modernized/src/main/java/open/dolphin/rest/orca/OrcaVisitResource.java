@@ -10,12 +10,18 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.encounter.CanonicalEncounterKeys;
+import open.dolphin.encounter.EncounterProjectionRepository;
+import open.dolphin.encounter.ProjectionPatientSummaryRepository;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
@@ -36,10 +42,16 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     private static final Logger LOGGER = Logger.getLogger(OrcaVisitResource.class.getName());
     private static final String OPERATION_VISIT_MUTATION = "visit_mutation";
     private static final String OPERATION_VISIT_LIST = "visit_list";
+    private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
+    private static final DateTimeFormatter ORCA_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm").withZone(TOKYO_ZONE);
 
     private OrcaLiveGateway wrapperService;
     private ReceptionRealtimeSseSupport receptionRealtimeSseSupport;
     private ServerConfigurationResolver configurationResolver;
+    @Inject
+    EncounterProjectionRepository encounterProjectionRepository;
+    @Inject
+    ProjectionPatientSummaryRepository projectionPatientSummaryRepository;
 
     public OrcaVisitResource() {
     }
@@ -166,6 +178,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         try {
             VisitPatientListResponse response = wrapperService.getVisitList(facilityId, body);
             enrichVisitKeys(facilityId, response);
+            mergeRuntimeProjectedVisits(facilityId, body, response);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -406,5 +419,88 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         }
         response.setScheduleKey(CanonicalEncounterKeys.optionalScheduleKey(facilityId, response.getVisitNumber()));
         response.setEncounterKey(CanonicalEncounterKeys.optionalEncounterKey(facilityId, response.getAcceptanceId()));
+    }
+
+    private void mergeRuntimeProjectedVisits(String facilityId,
+            VisitPatientListRequest body,
+            VisitPatientListResponse response) {
+        if (response == null || encounterProjectionRepository == null || body == null) {
+            return;
+        }
+        LocalDate fromDate = body.getVisitDate() != null ? body.getVisitDate() : body.getFromDate();
+        LocalDate toDate = body.getVisitDate() != null ? body.getVisitDate() : body.getToDate();
+        if (fromDate == null || toDate == null) {
+            return;
+        }
+        List<EncounterProjectionRepository.EncounterRow> projectedRows =
+                encounterProjectionRepository.findByFacilityAndAcceptanceRange(
+                        facilityId,
+                        fromDate.atStartOfDay(TOKYO_ZONE).toInstant(),
+                        toDate.plusDays(1).atStartOfDay(TOKYO_ZONE).toInstant());
+        if (projectedRows.isEmpty()) {
+            return;
+        }
+
+        HashSet<String> seenEncounterKeys = new HashSet<>();
+        HashSet<String> seenAcceptanceIds = new HashSet<>();
+        HashSet<String> seenScheduleKeys = new HashSet<>();
+        for (VisitPatientListResponse.VisitEntry visit : response.getVisits()) {
+            collectKey(seenEncounterKeys, visit.getEncounterKey());
+            collectKey(seenAcceptanceIds, visit.getVoucherNumber());
+            collectKey(seenScheduleKeys, visit.getScheduleKey());
+        }
+
+        boolean merged = false;
+        for (EncounterProjectionRepository.EncounterRow row : projectedRows) {
+            if ("cancelled".equalsIgnoreCase(normalize(row.businessState()))) {
+                continue;
+            }
+            boolean alreadyPresent =
+                    containsKey(seenEncounterKeys, row.encounterKey())
+                            || containsKey(seenAcceptanceIds, row.orcaAcceptanceId())
+                            || containsKey(seenScheduleKeys, row.scheduleKey());
+            if (alreadyPresent) {
+                continue;
+            }
+            VisitPatientListResponse.VisitEntry visit = new VisitPatientListResponse.VisitEntry();
+            visit.setScheduleKey(row.scheduleKey());
+            visit.setEncounterKey(row.encounterKey());
+            visit.setVoucherNumber(row.orcaAcceptanceId());
+            visit.setSequentialNumber(row.scheduleKey() != null ? row.scheduleKey() : row.orcaAcceptanceId());
+            visit.setUpdateDate(fromDate.toString());
+            visit.setUpdateTime(ORCA_TIME_FORMAT.format(row.acceptanceDatetime()));
+            visit.setPatient(projectionPatientSummaryRepository != null
+                    ? projectionPatientSummaryRepository.findByFacilityAndPatientId(facilityId, row.patientId())
+                    : null);
+            response.getVisits().add(visit);
+            collectKey(seenEncounterKeys, row.encounterKey());
+            collectKey(seenAcceptanceIds, row.orcaAcceptanceId());
+            collectKey(seenScheduleKeys, row.scheduleKey());
+            merged = true;
+        }
+        if (merged) {
+            response.setRecordsReturned(response.getVisits().size());
+            response.setFallbackUsed(true);
+        }
+    }
+
+    private void collectKey(HashSet<String> sink, String value) {
+        String normalized = normalize(value);
+        if (normalized != null) {
+            sink.add(normalized);
+        }
+    }
+
+    private boolean containsKey(HashSet<String> keys, String value) {
+        String normalized = normalize(value);
+        return normalized != null && keys.contains(normalized);
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

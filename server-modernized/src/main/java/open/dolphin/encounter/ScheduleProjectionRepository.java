@@ -4,9 +4,12 @@ import jakarta.annotation.Resource;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import javax.sql.DataSource;
 
 @ApplicationScoped
@@ -43,6 +46,16 @@ public class ScheduleProjectionRepository {
                    department_code, physician_code, state, linked_encounter_key, source_updated_at, projected_at
               FROM opendolphin.schedule_projection
              WHERE schedule_key = ?
+            """;
+
+    private static final String SQL_SELECT_BY_RANGE = """
+            SELECT schedule_key, facility_id, patient_id, karte_id, orca_appointment_id, scheduled_datetime,
+                   department_code, physician_code, state, linked_encounter_key, source_updated_at, projected_at
+              FROM opendolphin.schedule_projection
+             WHERE facility_id = ?
+               AND scheduled_datetime >= ?
+               AND scheduled_datetime < ?
+             ORDER BY scheduled_datetime ASC, schedule_key ASC
             """;
 
     @Resource(lookup = "java:jboss/datasources/PostgresDS")
@@ -107,23 +120,48 @@ public class ScheduleProjectionRepository {
                 if (!resultSet.next()) {
                     return null;
                 }
-                return new ScheduleRow(
-                        resultSet.getString(1),
-                        resultSet.getString(2),
-                        resultSet.getString(3),
-                        (Long) resultSet.getObject(4),
-                        resultSet.getString(5),
-                        resultSet.getTimestamp(6).toInstant(),
-                        resultSet.getString(7),
-                        resultSet.getString(8),
-                        resultSet.getString(9),
-                        resultSet.getString(10),
-                        resultSet.getTimestamp(11) != null ? resultSet.getTimestamp(11).toInstant() : null,
-                        resultSet.getTimestamp(12).toInstant());
+                return mapRow(resultSet);
             }
         } catch (SQLException ex) {
             throw new IllegalStateException("Failed to load schedule projection", ex);
         }
+    }
+
+    public List<ScheduleRow> findByFacilityAndScheduledRange(String facilityId, Instant fromInclusive, Instant toExclusive) {
+        if (normalize(facilityId) == null || fromInclusive == null || toExclusive == null || dataSource == null) {
+            return List.of();
+        }
+        List<ScheduleRow> rows = new ArrayList<>();
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(SQL_SELECT_BY_RANGE)) {
+            statement.setString(1, facilityId.trim());
+            statement.setTimestamp(2, Timestamp.from(fromInclusive));
+            statement.setTimestamp(3, Timestamp.from(toExclusive));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    rows.add(mapRow(resultSet));
+                }
+            }
+            return rows;
+        } catch (SQLException ex) {
+            throw new IllegalStateException("Failed to load schedule projections by range", ex);
+        }
+    }
+
+    private ScheduleRow mapRow(ResultSet resultSet) throws SQLException {
+        return new ScheduleRow(
+                resultSet.getString(1),
+                resultSet.getString(2),
+                resultSet.getString(3),
+                (Long) resultSet.getObject(4),
+                resultSet.getString(5),
+                resultSet.getTimestamp(6).toInstant(),
+                resultSet.getString(7),
+                resultSet.getString(8),
+                resultSet.getString(9),
+                resultSet.getString(10),
+                resultSet.getTimestamp(11) != null ? resultSet.getTimestamp(11).toInstant() : null,
+                resultSet.getTimestamp(12).toInstant());
     }
 
     private DataSource requireDataSource() {

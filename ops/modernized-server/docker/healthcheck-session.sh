@@ -6,7 +6,14 @@ FACILITY_ID="${HEALTHCHECK_FACILITY_ID:-1.3.6.1.4.1.9414.72.103}"
 USER_ID="${HEALTHCHECK_USER_ID:-doctor1}"
 PASSWORD="${HEALTHCHECK_PASSWORD:-doctor2025}"
 CLIENT_UUID="${HEALTHCHECK_CLIENT_UUID:-container-healthcheck}"
-ORIGIN="${HEALTHCHECK_ORIGIN:-$(printf '%s\n' "$BASE_URL" | sed 's#^\(https\?://[^/]*\).*$#\1#')}"
+DEFAULT_ORIGIN="$(printf '%s\n' "$BASE_URL" | sed 's#^\(https\?://[^/]*\).*$#\1#')"
+case "$DEFAULT_ORIGIN" in
+  https://localhost:8443)
+    DEFAULT_ORIGIN="https://localhost"
+    ;;
+esac
+ORIGIN="${HEALTHCHECK_ORIGIN:-$DEFAULT_ORIGIN}"
+REFERER="${HEALTHCHECK_REFERER:-$ORIGIN/openDolphin/}"
 if [ "${HEALTHCHECK_TLS_INSECURE:-true}" = "true" ]; then
   CURL_TLS_ARGS="-k"
 else
@@ -43,6 +50,7 @@ curl -fsS \
   -H "Content-Type: application/json" \
   -H "X-CSRF-Token: $CSRF_TOKEN" \
   -H "Origin: $ORIGIN" \
+  -H "Referer: $REFERER" \
   -X POST \
   "$BASE_URL/api/session/login" \
   --data "$LOGIN_PAYLOAD" \

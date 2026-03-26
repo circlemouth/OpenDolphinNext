@@ -185,7 +185,9 @@ public class RestOrcaTransport implements OrcaTransport {
             return new ProbeResult(false, mode, credentialConfigured, clientAuthConfigured, REASON_CODE_HTTP_CLIENT_UNAVAILABLE);
         }
 
-        String url = settings.buildOrcaUrl("");
+        String url = settings.isWebOrca()
+                ? settings.getBaseUrl()
+                : settings.buildOrcaUrl("");
         try {
             HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
                     .GET()
