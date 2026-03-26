@@ -24,6 +24,8 @@ public class OrcaAppointmentListResponse extends OrcaApiResponse {
     }
 
     public static class AppointmentSlot {
+        private String scheduleKey;
+        private String encounterKey;
         private String appointmentTime;
         private String medicalInformation;
         private String departmentCode;
@@ -33,6 +35,22 @@ public class OrcaAppointmentListResponse extends OrcaApiResponse {
         private String visitInformation;
         private String appointmentId;
         private PatientSummary patient;
+
+        public String getScheduleKey() {
+            return scheduleKey;
+        }
+
+        public void setScheduleKey(String scheduleKey) {
+            this.scheduleKey = scheduleKey;
+        }
+
+        public String getEncounterKey() {
+            return encounterKey;
+        }
+
+        public void setEncounterKey(String encounterKey) {
+            this.encounterKey = encounterKey;
+        }
 
         public String getAppointmentTime() {
             return appointmentTime;

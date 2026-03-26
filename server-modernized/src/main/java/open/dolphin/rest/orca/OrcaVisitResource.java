@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.encounter.CanonicalEncounterKeys;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.OrcaApiProxySupport;
 import open.dolphin.rest.ReceptionRealtimeSseSupport;
@@ -103,6 +104,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         details.put("acceptanceTime", body.getAcceptanceTime());
         try {
             VisitMutationResponse response = wrapperService.mutateVisit(facilityId, body);
+            enrichVisitMutationKeys(facilityId, response);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             if (response.getAcceptanceId() != null && !response.getAcceptanceId().isBlank()) {
@@ -163,6 +165,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         putAuditDetail(details, "visitDate", body.getVisitDate());
         try {
             VisitPatientListResponse response = wrapperService.getVisitList(facilityId, body);
+            enrichVisitKeys(facilityId, response);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -385,5 +388,23 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             return null;
         }
+    }
+
+    private void enrichVisitKeys(String facilityId, VisitPatientListResponse response) {
+        if (response == null) {
+            return;
+        }
+        response.getVisits().forEach(visit -> {
+            visit.setScheduleKey(CanonicalEncounterKeys.optionalScheduleKey(facilityId, visit.getSequentialNumber()));
+            visit.setEncounterKey(CanonicalEncounterKeys.optionalEncounterKey(facilityId, visit.getVoucherNumber()));
+        });
+    }
+
+    private void enrichVisitMutationKeys(String facilityId, VisitMutationResponse response) {
+        if (response == null) {
+            return;
+        }
+        response.setScheduleKey(CanonicalEncounterKeys.optionalScheduleKey(facilityId, response.getVisitNumber()));
+        response.setEncounterKey(CanonicalEncounterKeys.optionalEncounterKey(facilityId, response.getAcceptanceId()));
     }
 }

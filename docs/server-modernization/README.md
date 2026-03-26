@@ -1,7 +1,7 @@
 # Server-Modernization ドキュメントハブ（現行）
 
-- 更新日: 2026-03-21
-- RUN_ID: 20260320T205337Z
+- 更新日: 2026-03-26
+- RUN_ID: 20260326T005423Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
@@ -166,12 +166,14 @@
   - `GET /api/schedules/{scheduleKey}`
   - `GET /api/encounters/{encounterKey}`
   - `POST /api/encounters/{encounterKey}/transitions`
+- schedule projection は `scheduleKey` を常時返し、linked row では `encounterKey` も返す。
+- encounter projection は `encounterKey` と `scheduleKey` を常時返す。
 - intentionally unavailable:
   - `POST /api/admin/access/users/{userPk}/password-reset`
   - `GET /api/operations/readiness`
   - `/api/orca/queue`
   - `/api/orca/pusheventgetv2`
-- Reception/Charts handoff の key feed は未実装のため、client は `appointmentId` / `receptionId` / `visitDate` を権威 route とみなさない。次タスクでは `scheduleKey` / `encounterKey` ベースの public contract を実装入口とする。
+- Reception/Charts handoff の key feed は `useAppNavigation` / `AppRouter` / `ReceptionPage` / `ChartsPage` まで通し込み済みで、client は `scheduleKey` / `encounterKey` を pass-through で扱う。`scheduleKey` / `encounterKey` がない受付行は fail-closed。`appointmentId` / `receptionId` / `visitDate` は権威 route とみなさない。
 - subjectives（`/api/orca/chart/subjectives`）を含む current ORCA POST 連携は、stub/real 切替なしの実運用モードで固定する。
 - 検証時は feature flag や system property で stub へ逃がさず、`docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` の接続設定を正しく投入して疎通確認する。
 - 施設別 ORCA 接続設定は `facilities` + `defaultFacilityId` を正本とし、`PUT /api/admin/orca/connection` は設定更新専用、`PUT /api/admin/orca/connection/default-facility` は default 切替専用とする。

@@ -35,12 +35,20 @@ class ScheduleResourceTest {
         Map<String, Object> response = resource.getSchedule(request, "F001:S100");
 
         assertEquals("F001:S100", response.get("scheduleKey"));
-        assertEquals("F001:E100", response.get("encounterKey"));
+        assertEquals("F001", response.get("facilityId"));
+        assertEquals("P001", response.get("patientId"));
+        assertEquals(10L, response.get("karteId"));
+        assertEquals("A100", response.get("orcaAppointmentId"));
         assertEquals("scheduled", response.get("state"));
+        assertEquals("2026-03-25T09:00:00Z", response.get("scheduledAt"));
+        assertEquals("F001:E100", response.get("encounterKey"));
         @SuppressWarnings("unchecked")
         Map<String, Object> metadata = (Map<String, Object>) response.get("metadata");
         assertNotNull(metadata);
         assertEquals("01", metadata.get("departmentCode"));
+        assertEquals("DR01", metadata.get("physicianCode"));
+        assertEquals("2026-03-25T08:59:00Z", metadata.get("sourceUpdatedAt"));
+        assertEquals("2026-03-25T09:01:00Z", metadata.get("projectedAt"));
     }
 
     @Test

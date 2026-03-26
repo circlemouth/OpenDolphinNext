@@ -60,7 +60,16 @@ const DO_COPY_SECTIONS: SoapSectionKey[] = ['subjective', 'objective', 'assessme
 
 const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 
-const resolveEntryId = (entry: ReceptionEntry) => entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
+const resolveEntryId = (entry: ReceptionEntry) =>
+  entry.encounterKey ?? entry.scheduleKey ?? entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
+
+const resolveEncounterSelectionKey = (context: OutpatientEncounterContext) =>
+  context.encounterKey ??
+  context.scheduleKey ??
+  context.receptionId ??
+  context.appointmentId ??
+  context.patientId ??
+  context.visitDate;
 
 const resolveVisitDate = (entry: ReceptionEntry): string => {
   const date = normalizeVisitDate(entry.visitDate) ?? '';
@@ -187,13 +196,15 @@ export function PastHubPanel({
   }, [bundlesQuery.data]);
 
   const selectedEncounterKey = useMemo(() => {
-    return [
-      selectedContext.patientId ?? 'none',
-      selectedContext.appointmentId ?? 'none',
-      selectedContext.receptionId ?? 'none',
-      selectedContext.visitDate ?? 'none',
-    ].join('::');
-  }, [selectedContext.appointmentId, selectedContext.patientId, selectedContext.receptionId, selectedContext.visitDate]);
+    return resolveEncounterSelectionKey(selectedContext) ?? 'none';
+  }, [
+    selectedContext.appointmentId,
+    selectedContext.encounterKey,
+    selectedContext.patientId,
+    selectedContext.receptionId,
+    selectedContext.scheduleKey,
+    selectedContext.visitDate,
+  ]);
 
   const soapLatestBySection = useMemo(() => getLatestSoapEntries(soapHistory), [soapHistory]);
   const canDoCopy = Boolean(doCopyEnabled && onRequestDoCopy);
@@ -301,12 +312,13 @@ export function PastHubPanel({
                         <ul className="charts-past-hub__encounters" aria-label="受診一覧">
                           {group.entries.slice(0, 6).map((entry) => {
                             const id = resolveEntryId(entry);
-                            const key = [
-                              entry.patientId ?? entry.id,
-                              entry.appointmentId ?? 'none',
-                              entry.receptionId ?? 'none',
-                              resolveVisitDate(entry) || 'none',
-                            ].join('::');
+                            const key =
+                              entry.encounterKey ??
+                              entry.scheduleKey ??
+                              entry.receptionId ??
+                              entry.appointmentId ??
+                              entry.patientId ??
+                              entry.id;
                             const active = key === selectedEncounterKey;
                             return (
                               <li key={id} className="charts-past-hub__encounter" data-active={active ? '1' : '0'}>
@@ -322,6 +334,8 @@ export function PastHubPanel({
                                         patientId: entry.patientId ?? entry.id,
                                         appointmentId: entry.appointmentId,
                                         receptionId: entry.receptionId,
+                                        scheduleKey: entry.scheduleKey,
+                                        encounterKey: entry.encounterKey,
                                         visitDate: normalizeVisitDate(entry.visitDate),
                                       };
                                       onSelectEncounter(next);

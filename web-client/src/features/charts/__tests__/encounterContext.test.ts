@@ -4,6 +4,7 @@ import {
   buildChartsEncounterSearch,
   clearChartsEncounterContext,
   hasEncounterContext,
+  hasHandoffEncounterKey,
   loadChartsEncounterContext,
   normalizeEncounterContext,
   parseChartsEncounterContext,
@@ -25,6 +26,8 @@ describe('charts encounterContext', () => {
       patientId: undefined,
       appointmentId: undefined,
       receptionId: undefined,
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: undefined,
     });
     expect(buildChartsEncounterSearch({})).toBe('');
@@ -36,6 +39,8 @@ describe('charts encounterContext', () => {
       patientId: '0001',
       appointmentId: undefined,
       receptionId: 'R-9',
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: '2025-12-18',
     });
 
@@ -59,12 +64,16 @@ describe('charts encounterContext', () => {
         patientId: ' 0001 ',
         appointmentId: ' A-1 ',
         receptionId: ' R-1 ',
+        scheduleKey: ' F001:S100 ',
+        encounterKey: ' F001:E100 ',
         visitDate: '20260225',
       }),
     ).toEqual({
       patientId: '0001',
       appointmentId: 'A-1',
       receptionId: 'R-1',
+      scheduleKey: 'F001:S100',
+      encounterKey: 'F001:E100',
       visitDate: undefined,
     });
   });
@@ -90,11 +99,28 @@ describe('charts encounterContext', () => {
     expect(search).toBe('');
   });
 
+  it('hasEncounterContext / hasHandoffEncounterKey は scheduleKey / encounterKey のみでも true になる', () => {
+    expect(
+      hasEncounterContext({
+        scheduleKey: 'F001:S100',
+        encounterKey: undefined,
+      }),
+    ).toBe(true);
+    expect(
+      hasHandoffEncounterKey({
+        scheduleKey: 'F001:S100',
+        encounterKey: undefined,
+      }),
+    ).toBe(true);
+  });
+
   it('store/load: volatile memory round-trip only', () => {
     storeChartsEncounterContext({
       patientId: 'PX-1',
       appointmentId: 'A-1',
       receptionId: 'R-1',
+      scheduleKey: 'F001:S100',
+      encounterKey: 'F001:E100',
       visitDate: '2025-12-18',
     });
     expect(sessionStorage.length).toBe(0);
@@ -102,6 +128,8 @@ describe('charts encounterContext', () => {
       patientId: 'PX-1',
       appointmentId: 'A-1',
       receptionId: 'R-1',
+      scheduleKey: 'F001:S100',
+      encounterKey: 'F001:E100',
       visitDate: '2025-12-18',
     });
   });
@@ -132,6 +160,8 @@ describe('charts encounterContext', () => {
       patientId: 'PX-1',
       appointmentId: undefined,
       receptionId: undefined,
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: undefined,
     });
     expect(parsed).not.toHaveProperty('runId');

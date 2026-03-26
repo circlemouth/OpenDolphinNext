@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { buildFacilityPath } from '../../routes/facilityRoutes';
 import { useAppNavigation } from '../../routes/useAppNavigation';
+import { hasHandoffEncounterKey } from '../charts/encounterContext';
 import {
   readChartsPatientTabsStorage,
   writeChartsPatientTabsStorage,
@@ -181,11 +182,16 @@ export function WorkspaceTabBar({
         dispatchWorkspaceChartsTabRequest({ action: 'select', key: tab.key });
         return;
       }
+      if (!hasHandoffEncounterKey(tab)) {
+        return;
+      }
       appNav.openCharts({
         encounter: {
           patientId: tab.patientId,
           appointmentId: tab.appointmentId,
           receptionId: tab.receptionId,
+          scheduleKey: tab.scheduleKey,
+          encounterKey: tab.encounterKey,
           visitDate: tab.visitDate,
         },
       });

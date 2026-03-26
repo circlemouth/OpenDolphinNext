@@ -28,6 +28,14 @@ const resolveEntryPatientId = (
   entry?: Pick<ReceptionEntry, 'patientId' | 'id' | 'appointmentId' | 'receptionId'>,
 ): string | undefined => resolveEncounterPatientIdFromEntry(entry);
 
+const resolveEncounterSelectionKey = (
+  value?: Partial<Pick<OutpatientEncounterContext, 'encounterKey' | 'scheduleKey' | 'receptionId' | 'appointmentId' | 'patientId'>>,
+): string | undefined =>
+  value?.encounterKey ?? value?.scheduleKey ?? value?.receptionId ?? value?.appointmentId ?? value?.patientId;
+
+const resolveEntrySelectionKey = (entry?: ReceptionEntry): string | undefined =>
+  entry?.encounterKey ?? entry?.scheduleKey ?? entry?.receptionId ?? entry?.appointmentId ?? resolveEntryPatientId(entry) ?? entry?.id;
+
 type PatientListSortKey = 'time' | 'status' | 'name' | 'id';
 
 const STATUS_SORT_RANK: Record<ReceptionStatus, number> = {
@@ -120,6 +128,8 @@ export interface PatientsTabProps {
     patientId?: string;
     appointmentId?: string;
     receptionId?: string;
+    scheduleKey?: string;
+    encounterKey?: string;
     visitDate?: string;
     dirtySources?: DraftDirtySource[];
   }) => void;
@@ -166,7 +176,7 @@ export function PatientsTab({
   const [physFilter, setPhysFilter] = useState('');
   const [sortKey, setSortKey] = useState<PatientListSortKey>('time');
   const [localSelectedKey, setLocalSelectedKey] = useState<string | undefined>(
-    selectedContext?.receptionId ?? selectedContext?.appointmentId ?? selectedContext?.patientId,
+    resolveEncounterSelectionKey(selectedContext),
   );
   const [memoDraft, setMemoDraft] = useState('');
   const [memoEditing, setMemoEditing] = useState(false);
@@ -378,6 +388,12 @@ export function PatientsTab({
   }, [baseCandidates, sortKey, statusFilter]);
 
   const selected = useMemo(() => {
+    if (selectedContext?.encounterKey) {
+      return entries.find((entry) => entry.encounterKey === selectedContext.encounterKey);
+    }
+    if (selectedContext?.scheduleKey) {
+      return entries.find((entry) => entry.scheduleKey === selectedContext.scheduleKey);
+    }
     if (selectedContext?.receptionId) {
       return entries.find((entry) => entry.receptionId === selectedContext.receptionId);
     }
@@ -391,6 +407,8 @@ export function PatientsTab({
       return entries.find((entry) => {
         const entryPid = resolveEntryPatientId(entry);
         return (
+          entry.encounterKey === localSelectedKey ||
+          entry.scheduleKey === localSelectedKey ||
           entry.receptionId === localSelectedKey ||
           entry.appointmentId === localSelectedKey ||
           entry.patientId === localSelectedKey ||
@@ -400,7 +418,15 @@ export function PatientsTab({
       });
     }
     return entries[0];
-  }, [entries, localSelectedKey, selectedContext?.appointmentId, selectedContext?.patientId, selectedContext?.receptionId]);
+  }, [
+    entries,
+    localSelectedKey,
+    selectedContext?.appointmentId,
+    selectedContext?.encounterKey,
+    selectedContext?.patientId,
+    selectedContext?.receptionId,
+    selectedContext?.scheduleKey,
+  ]);
 
   const selectedPatientId = resolveEntryPatientId(selected) ?? selectedContext?.patientId ?? undefined;
 
@@ -577,8 +603,7 @@ export function PatientsTab({
 
   useEffect(() => {
     const hasSelection =
-      Boolean(selectedContext?.receptionId || selectedContext?.appointmentId || selectedContext?.patientId) ||
-      Boolean(localSelectedKey);
+      Boolean(resolveEncounterSelectionKey(selectedContext)) || Boolean(localSelectedKey);
     if (hasSelection || entries.length === 0) {
       lastAutoSelectSignature.current = null;
       return;
@@ -586,8 +611,9 @@ export function PatientsTab({
     const head = entries[0];
     const fallbackId = resolveEntryPatientId(head);
     if (!fallbackId) return;
-    const nextKey = head.receptionId ?? head.appointmentId ?? fallbackId;
-    const signature = `${fallbackId}:${nextKey}:${head.receptionId ?? ''}:${head.appointmentId ?? ''}:${head.visitDate ?? ''}`;
+    const nextKey = resolveEntrySelectionKey(head);
+    if (!nextKey) return;
+    const signature = `${fallbackId}:${nextKey}:${head.encounterKey ?? ''}:${head.scheduleKey ?? ''}:${head.receptionId ?? ''}:${head.appointmentId ?? ''}:${head.visitDate ?? ''}`;
     if (lastAutoSelectSignature.current === signature) return;
     lastAutoSelectSignature.current = signature;
     setLocalSelectedKey(nextKey);
@@ -595,6 +621,8 @@ export function PatientsTab({
       patientId: fallbackId,
       appointmentId: head.appointmentId,
       receptionId: head.receptionId,
+      scheduleKey: head.scheduleKey,
+      encounterKey: head.encounterKey,
       visitDate: head.visitDate,
     });
     onDraftDirtyChange?.({
@@ -602,6 +630,8 @@ export function PatientsTab({
       patientId: fallbackId,
       appointmentId: head.appointmentId,
       receptionId: head.receptionId,
+      scheduleKey: head.scheduleKey,
+      encounterKey: head.encounterKey,
       visitDate: head.visitDate,
       dirtySources: [],
     });
@@ -664,11 +694,14 @@ export function PatientsTab({
       }
       const nextId = resolveEntryPatientId(entry);
       if (!nextId) return false;
-      setLocalSelectedKey(entry.receptionId ?? entry.appointmentId ?? nextId);
+      const nextKey = resolveEntrySelectionKey(entry) ?? nextId;
+      setLocalSelectedKey(nextKey);
       onSelectEncounter?.({
         patientId: nextId,
         appointmentId: entry.appointmentId,
         receptionId: entry.receptionId,
+        scheduleKey: entry.scheduleKey,
+        encounterKey: entry.encounterKey,
         visitDate: entry.visitDate,
       });
       onDraftDirtyChange?.({
@@ -676,6 +709,8 @@ export function PatientsTab({
         patientId: nextId,
         appointmentId: entry.appointmentId,
         receptionId: entry.receptionId,
+        scheduleKey: entry.scheduleKey,
+        encounterKey: entry.encounterKey,
         visitDate: entry.visitDate,
         dirtySources: [],
       });
@@ -728,8 +763,8 @@ export function PatientsTab({
       }
       const nextId = resolveEntryPatientId(entry);
       if (!nextId) return false;
-      const nextKey = entry.receptionId ?? entry.appointmentId ?? nextId;
-      const currentKey = selectedContext?.receptionId ?? selectedContext?.appointmentId ?? selectedContext?.patientId ?? localSelectedKey;
+      const nextKey = resolveEntrySelectionKey(entry) ?? nextId;
+      const currentKey = resolveEncounterSelectionKey(selectedContext) ?? localSelectedKey;
       const isSwitchingKey = Boolean(currentKey && nextKey && currentKey !== nextKey);
       const currentPatientId = resolveEntryPatientId(selected) ?? selectedContext?.patientId ?? undefined;
       const isSwitchingPatient = Boolean(currentPatientId && nextId && currentPatientId !== nextId);
@@ -847,10 +882,16 @@ export function PatientsTab({
   ]);
 
   useEffect(() => {
-    const nextKey = selectedContext?.receptionId ?? selectedContext?.appointmentId ?? selectedContext?.patientId;
+    const nextKey = resolveEncounterSelectionKey(selectedContext);
     if (!nextKey) return;
     setLocalSelectedKey((prev) => (prev === nextKey ? prev : nextKey));
-  }, [selectedContext?.appointmentId, selectedContext?.patientId, selectedContext?.receptionId]);
+  }, [
+    selectedContext?.appointmentId,
+    selectedContext?.encounterKey,
+    selectedContext?.patientId,
+    selectedContext?.receptionId,
+    selectedContext?.scheduleKey,
+  ]);
 
   useEffect(() => {
     if (!auditOpen) return;

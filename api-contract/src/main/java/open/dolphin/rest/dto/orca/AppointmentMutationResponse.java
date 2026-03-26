@@ -9,6 +9,8 @@ import java.util.List;
 public class AppointmentMutationResponse extends OrcaApiResponse {
 
     private String resKey;
+    private String scheduleKey;
+    private String encounterKey;
     private String appointmentId;
     private String appointmentDate;
     private String appointmentTime;
@@ -29,6 +31,22 @@ public class AppointmentMutationResponse extends OrcaApiResponse {
 
     public void setResKey(String resKey) {
         this.resKey = resKey;
+    }
+
+    public String getScheduleKey() {
+        return scheduleKey;
+    }
+
+    public void setScheduleKey(String scheduleKey) {
+        this.scheduleKey = scheduleKey;
+    }
+
+    public String getEncounterKey() {
+        return encounterKey;
+    }
+
+    public void setEncounterKey(String encounterKey) {
+        this.encounterKey = encounterKey;
     }
 
     public String getAppointmentId() {

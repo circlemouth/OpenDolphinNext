@@ -11,6 +11,10 @@ vi.mock('../../outpatient/fetchWithResolver', () => ({
   fetchWithResolver: vi.fn(),
 }));
 
+vi.mock('../../outpatient/orcaPatientImportApi', () => ({
+  importPatientsFromOrca: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../../libs/telemetry/telemetryClient', () => ({
   recordOutpatientFunnel,
 }));
@@ -40,6 +44,8 @@ describe('acceptmodv2 mutateVisit', () => {
         acceptanceId: 'A123',
         acceptanceDate: '2026-01-20',
         acceptanceTime: '09:00:00',
+        scheduleKey: 'F001:S100',
+        encounterKey: 'F001:E100',
         apiResult: '00',
         apiResultMessage: 'OK',
         patient: { patientId: '000001', wholeName: '山田' },
@@ -57,6 +63,8 @@ describe('acceptmodv2 mutateVisit', () => {
     });
 
     expect(result.acceptanceId).toBe('A123');
+    expect(result.scheduleKey).toBe('F001:S100');
+    expect(result.encounterKey).toBe('F001:E100');
     expect(result.patient?.patientId).toBe('000001');
     expect(mockFetch).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -234,7 +242,26 @@ describe('buildVisitEntryFromMutation', () => {
     );
     expect(entry).not.toBeNull();
     expect(entry?.receptionId).toBe('A1');
+    expect(entry?.scheduleKey).toBeUndefined();
+    expect(entry?.encounterKey).toBeUndefined();
     expect(entry?.insurance).toBe('自費');
     expect(entry?.status).toBe('受付中');
+  });
+
+  it('canonical key が返ってきた場合は ReceptionEntry にそのまま載せる', () => {
+    const entry = buildVisitEntryFromMutation(
+      {
+        requestNumber: '01',
+        acceptanceId: 'A2',
+        acceptanceDate: '2026-01-21',
+        acceptanceTime: '10:00:00',
+        scheduleKey: 'F001:S200',
+        encounterKey: 'F001:E200',
+        patient: { patientId: '000002', name: '佐藤' },
+      },
+      { paymentMode: 'insurance' },
+    );
+    expect(entry?.scheduleKey).toBe('F001:S200');
+    expect(entry?.encounterKey).toBe('F001:E200');
   });
 });

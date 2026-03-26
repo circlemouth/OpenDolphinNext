@@ -205,6 +205,8 @@ describe('AppRouter charts query scrub', () => {
       patientId: '00001',
       appointmentId: undefined,
       receptionId: undefined,
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: '2026-01-01',
     });
     expect(sessionStorage.getItem('opendolphin:web-client:charts:encounter-context:v2:0001:user-1')).toBeNull();
@@ -224,6 +226,8 @@ describe('AppRouter charts query scrub', () => {
       patientId: '00002',
       appointmentId: undefined,
       receptionId: undefined,
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: undefined,
     });
     expect(loadDeepLinkContext()?.values).toEqual({
@@ -246,6 +250,8 @@ describe('AppRouter charts query scrub', () => {
       patientId: '00003',
       appointmentId: undefined,
       receptionId: undefined,
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: undefined,
     });
     expect(loadDeepLinkContext()?.values).toEqual(

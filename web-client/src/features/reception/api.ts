@@ -59,6 +59,8 @@ export type VisitMutationPayload = OutpatientMeta & {
   medicalInformation?: string;
   appointmentDate?: string;
   visitNumber?: string;
+  scheduleKey?: string;
+  encounterKey?: string;
   patient?: {
     patientId?: string;
     name?: string;
@@ -384,6 +386,8 @@ export const buildVisitEntryFromMutation = (
     id: payload.acceptanceId ?? payload.visitNumber ?? patientId ?? `visit-${Date.now()}`,
     appointmentId: payload.visitNumber ?? payload.appointmentDate,
     receptionId: payload.acceptanceId,
+    scheduleKey: payload.scheduleKey,
+    encounterKey: payload.encounterKey,
     patientId: patientId ?? undefined,
     name: payload.patient?.name,
     kana: payload.patient?.kana,
@@ -456,6 +460,8 @@ export async function mutateVisit(
   const physicianCodeRaw = (raw as any).physicianCode ?? (raw as any).Physician_Code ?? (raw as any).physician_code;
   const physicianNameRaw =
     (raw as any).physicianName ?? (raw as any).Physician_WholeName ?? (raw as any).physician_name;
+  const scheduleKeyRaw = (raw as any).scheduleKey ?? (raw as any).Schedule_Key ?? (raw as any).schedule_key;
+  const encounterKeyRaw = (raw as any).encounterKey ?? (raw as any).Encounter_Key ?? (raw as any).encounter_key;
   const fallbackAcceptanceDate = normalizeOptionalString(params.acceptanceDate);
   const fallbackAcceptanceTime = normalizeOptionalString(params.acceptanceTime);
   const fallbackDepartmentCode = normalizeOptionalString(params.departmentCode);
@@ -476,6 +482,8 @@ export async function mutateVisit(
     departmentName: normalizeOptionalString(departmentNameRaw),
     physicianCode: normalizeOptionalString(physicianCodeRaw) ?? fallbackPhysicianCode,
     physicianName: normalizeOptionalString(physicianNameRaw),
+    scheduleKey: normalizeOptionalString(scheduleKeyRaw),
+    encounterKey: normalizeOptionalString(encounterKeyRaw),
     medicalInformation:
       (raw as any).medicalInformation ??
       (raw as any).Medical_Information ??

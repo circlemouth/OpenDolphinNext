@@ -4,6 +4,8 @@ const DEEPLINK_VALUE_KEYS = [
   'patientId',
   'appointmentId',
   'receptionId',
+  'scheduleKey',
+  'encounterKey',
   'visitDate',
 ] as const;
 

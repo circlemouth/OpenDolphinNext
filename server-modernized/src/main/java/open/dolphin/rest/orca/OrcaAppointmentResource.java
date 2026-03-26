@@ -11,6 +11,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
+import open.dolphin.encounter.CanonicalEncounterKeys;
+import open.dolphin.encounter.ScheduleProjectionRepository;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.rest.dto.orca.AppointmentMutationRequest;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
@@ -35,6 +37,8 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
     private static final String OPERATION_APPOINTMENT_MUTATION = "appointment_mutation";
 
     private OrcaLiveGateway wrapperService;
+    @Inject
+    ScheduleProjectionRepository scheduleProjectionRepository;
 
     public OrcaAppointmentResource() {
     }
@@ -84,6 +88,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         }
         try {
             OrcaAppointmentListResponse response = wrapperService.getAppointmentList(facilityId, body);
+            enrichAppointmentKeys(facilityId, response);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -118,6 +123,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         details.put("patientId", body.getPatientId());
         try {
             PatientAppointmentListResponse response = wrapperService.getPatientAppointments(facilityId, body);
+            enrichPatientAppointmentKeys(facilityId, response);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
@@ -240,6 +246,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         details.put("appointmentTime", body.getAppointmentTime());
         try {
             AppointmentMutationResponse response = wrapperService.mutateAppointment(facilityId, body);
+            enrichAppointmentMutationKeys(facilityId, response);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             if (response.getAppointmentId() != null && !response.getAppointmentId().isBlank()) {
@@ -258,5 +265,44 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
 
     void setWrapperService(OrcaLiveGateway wrapperService) {
         this.wrapperService = wrapperService;
+    }
+
+    private void enrichAppointmentKeys(String facilityId, OrcaAppointmentListResponse response) {
+        if (response == null) {
+            return;
+        }
+        response.getSlots().forEach(slot -> {
+            String scheduleKey = CanonicalEncounterKeys.optionalScheduleKey(facilityId, slot.getAppointmentId());
+            slot.setScheduleKey(scheduleKey);
+            slot.setEncounterKey(resolveEncounterKey(scheduleKey));
+        });
+    }
+
+    private void enrichPatientAppointmentKeys(String facilityId, PatientAppointmentListResponse response) {
+        if (response == null) {
+            return;
+        }
+        response.getReservations().forEach(reservation -> {
+            String scheduleKey = CanonicalEncounterKeys.optionalScheduleKey(facilityId, reservation.getAppointmentId());
+            reservation.setScheduleKey(scheduleKey);
+            reservation.setEncounterKey(resolveEncounterKey(scheduleKey));
+        });
+    }
+
+    private void enrichAppointmentMutationKeys(String facilityId, AppointmentMutationResponse response) {
+        if (response == null) {
+            return;
+        }
+        String scheduleKey = CanonicalEncounterKeys.optionalScheduleKey(facilityId, response.getAppointmentId());
+        response.setScheduleKey(scheduleKey);
+        response.setEncounterKey(resolveEncounterKey(scheduleKey));
+    }
+
+    private String resolveEncounterKey(String scheduleKey) {
+        if (scheduleKey == null || scheduleProjectionRepository == null) {
+            return null;
+        }
+        ScheduleProjectionRepository.ScheduleRow row = scheduleProjectionRepository.findByScheduleKey(scheduleKey);
+        return row != null ? row.linkedEncounterKey() : null;
     }
 }

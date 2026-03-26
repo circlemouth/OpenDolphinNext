@@ -4,6 +4,8 @@ export type OutpatientEncounterContext = {
   patientId?: string;
   appointmentId?: string;
   receptionId?: string;
+  scheduleKey?: string;
+  encounterKey?: string;
   visitDate?: string; // YYYY-MM-DD
 };
 
@@ -35,6 +37,8 @@ const cloneContext = (context: OutpatientEncounterContext): OutpatientEncounterC
   patientId: context.patientId,
   appointmentId: context.appointmentId,
   receptionId: context.receptionId,
+  scheduleKey: context.scheduleKey,
+  encounterKey: context.encounterKey,
   visitDate: context.visitDate,
 });
 
@@ -59,21 +63,36 @@ export const normalizeEncounterId = (value?: string | null): string | undefined 
   return trimmed.length > 0 ? trimmed : undefined;
 };
 
+export const normalizeEncounterKey = normalizeEncounterId;
+
 export const normalizeEncounterContext = (context?: OutpatientEncounterContext | null): OutpatientEncounterContext => {
   if (!context) {
     return {
       patientId: undefined,
       appointmentId: undefined,
       receptionId: undefined,
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: undefined,
     };
   }
-  return {
+  const normalized: OutpatientEncounterContext = {
     patientId: normalizeEncounterId(context.patientId),
     appointmentId: normalizeEncounterId(context.appointmentId),
     receptionId: normalizeEncounterId(context.receptionId),
+    scheduleKey: undefined,
+    encounterKey: undefined,
     visitDate: normalizeVisitDate(context.visitDate),
   };
+  const scheduleKey = normalizeEncounterId(context.scheduleKey);
+  const encounterKey = normalizeEncounterId(context.encounterKey);
+  if (scheduleKey) {
+    normalized.scheduleKey = scheduleKey;
+  }
+  if (encounterKey) {
+    normalized.encounterKey = encounterKey;
+  }
+  return normalized;
 };
 
 type EncounterEntryLike = {
@@ -136,8 +155,18 @@ export const normalizeRunId = (value?: string): string | undefined => {
 export const hasEncounterContext = (context?: OutpatientEncounterContext | null): boolean => {
   const normalized = normalizeEncounterContext(context);
   return Boolean(
-    normalized.receptionId || normalized.appointmentId || normalized.patientId || normalized.visitDate,
+    normalized.receptionId ||
+      normalized.appointmentId ||
+      normalized.patientId ||
+      normalized.visitDate ||
+      normalized.scheduleKey ||
+      normalized.encounterKey,
   );
+};
+
+export const hasHandoffEncounterKey = (context?: OutpatientEncounterContext | null): boolean => {
+  const normalized = normalizeEncounterContext(context);
+  return Boolean(normalized.scheduleKey || normalized.encounterKey);
 };
 
 export const parseChartsEncounterContext = (search: string): OutpatientEncounterContext => {
@@ -146,7 +175,14 @@ export const parseChartsEncounterContext = (search: string): OutpatientEncounter
   const appointmentId = normalizeEncounterId(params.get(CHARTS_CONTEXT_QUERY_KEYS.appointmentId));
   const receptionId = normalizeEncounterId(params.get(CHARTS_CONTEXT_QUERY_KEYS.receptionId));
   const visitDate = normalizeVisitDate(params.get(CHARTS_CONTEXT_QUERY_KEYS.visitDate) ?? undefined);
-  return { patientId, appointmentId, receptionId, visitDate };
+  return {
+    patientId,
+    appointmentId,
+    receptionId,
+    scheduleKey: undefined,
+    encounterKey: undefined,
+    visitDate,
+  };
 };
 
 export const stripChartsEncounterParams = (search: string): string => {

@@ -1,17 +1,17 @@
 # Webクライアント ドキュメントハブ（現行）
 
-- 更新日: 2026-03-15
-- RUN_ID: 20260315T060323Z
+- 更新日: 2026-03-26
+- RUN_ID: 20260326T005423Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
 
-## 最新変更（2026-03-26 / public route contract freeze）
-- RUN_ID: `20260325T233036Z`
+## 最新変更（2026-03-26 / scheduleKey / encounterKey feed contract）
+- RUN_ID: `20260326T005423Z`
 - Administration の operations 監視は current public contract に合わせ、`GET /api/health`、`GET /api/health/readiness`、`GET /api/health/worker/pvt` を利用する。旧 `/health/*` 相対 path と未登録 `GET /api/operations/readiness` は使用しない。
 - `POST /api/admin/access/users/{userPk}/password-reset` は public route contract から除外されたままとし、web-client の password reset 導線は fail-closed に変更した。
 - `/api/orca/queue` と `/api/orca/pusheventgetv2` は public route contract に存在しないため、web-client からの直接 call を停止した。internal/downstream ORCA path の public 流用は行わない。
-- Reception → Charts handoff は `appointmentId` / `receptionId` / `visitDate` を volatile context と router state で保持する現状を維持し、authoritative public contract は `GET /api/schedules/{scheduleKey}` と `GET|POST /api/encounters/*` を次タスクの実装先として固定した。
+- server は `GET /api/schedules/{scheduleKey}` で `scheduleKey` を常時返し、結合済み row では `encounterKey` も返す。`GET /api/encounters/{encounterKey}` は常時 `encounterKey` と `scheduleKey` を返す。Reception → Charts の client pass-through も `useAppNavigation` / `AppRouter` / `ReceptionPage` / `ChartsPage` に通っており、`scheduleKey` / `encounterKey` がない受付行は fail-closed、`appointmentId` / `receptionId` / `visitDate` は権威 identity ではなく volatile carryover のまま扱う。
 
 ## 最新変更（2026-03-15 / ORCA 境界整流と運用 UI 最終形）
 - RUN_ID: `20260315T060323Z`

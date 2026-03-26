@@ -5,6 +5,7 @@ import { useAuthService } from '../features/charts/authService';
 import {
   buildChartsUrl,
   hasEncounterContext,
+  hasHandoffEncounterKey,
   loadChartsEncounterContext,
   normalizeEncounterContext,
   normalizeRunId,
@@ -49,6 +50,8 @@ type NavigationLocationState = {
   patientId?: string;
   appointmentId?: string;
   receptionId?: string;
+  scheduleKey?: string;
+  encounterKey?: string;
   visitDate?: string;
   chartsScreenId?: string;
   returnTo?: string;
@@ -80,6 +83,8 @@ const mergeEncounter = (base: OutpatientEncounterContext, override?: OutpatientE
     patientId: override.patientId ?? base.patientId,
     appointmentId: override.appointmentId ?? base.appointmentId,
     receptionId: override.receptionId ?? base.receptionId,
+    scheduleKey: override.scheduleKey ?? base.scheduleKey,
+    encounterKey: override.encounterKey ?? base.encounterKey,
     visitDate: override.visitDate ?? base.visitDate,
   };
 };
@@ -168,6 +173,8 @@ const readStateEncounter = (state: unknown): OutpatientEncounterContext => {
     patientId: encounter.patientId ?? locationState.patientId,
     appointmentId: encounter.appointmentId ?? locationState.appointmentId,
     receptionId: encounter.receptionId ?? locationState.receptionId,
+    scheduleKey: encounter.scheduleKey ?? locationState.scheduleKey,
+    encounterKey: encounter.encounterKey ?? locationState.encounterKey,
     visitDate: encounter.visitDate ?? locationState.visitDate,
   });
 };
@@ -306,6 +313,8 @@ export function useAppNavigation(scope: AppNavigationScope) {
           patientId: encounter.patientId,
           appointmentId: encounter.appointmentId,
           receptionId: encounter.receptionId,
+          scheduleKey: encounter.scheduleKey,
+          encounterKey: encounter.encounterKey,
           visitDate: normalizedEncounterDate,
         },
       });
@@ -341,6 +350,8 @@ export function useAppNavigation(scope: AppNavigationScope) {
         patientId: opts?.patientId ?? encounter.patientId,
         appointmentId: encounter.appointmentId,
         receptionId: encounter.receptionId,
+        scheduleKey: encounter.scheduleKey,
+        encounterKey: encounter.encounterKey,
         visitDate: normalizeVisitDate(encounter.visitDate),
         intent: opts?.intent,
         external: mergeExternal(baseExternal, opts?.external),
@@ -357,6 +368,8 @@ export function useAppNavigation(scope: AppNavigationScope) {
           patientId: encounter.patientId,
           appointmentId: encounter.appointmentId,
           receptionId: encounter.receptionId,
+          scheduleKey: encounter.scheduleKey,
+          encounterKey: encounter.encounterKey,
           visitDate: normalizeVisitDate(encounter.visitDate),
         },
       });
@@ -373,6 +386,9 @@ export function useAppNavigation(scope: AppNavigationScope) {
       navigate?: NavigateExtras;
     }) => {
       const encounter = mergeEncounter(baseEncounter, opts?.encounter);
+      if (!hasHandoffEncounterKey(encounter)) {
+        return;
+      }
       if (hasEncounterContext(encounter)) {
         storeChartsEncounterContext(encounter, { facilityId, userId });
       }
@@ -400,6 +416,8 @@ export function useAppNavigation(scope: AppNavigationScope) {
           patientId: encounter.patientId,
           appointmentId: encounter.appointmentId,
           receptionId: encounter.receptionId,
+          scheduleKey: encounter.scheduleKey,
+          encounterKey: encounter.encounterKey,
           visitDate: normalizeVisitDate(encounter.visitDate),
         },
       });

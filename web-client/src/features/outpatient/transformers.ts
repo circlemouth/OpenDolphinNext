@@ -57,6 +57,8 @@ const sourcePriority: Record<ReceptionEntry['source'], number> = {
 };
 
 const buildDedupKey = (entry: ReceptionEntry) => {
+  if (entry.encounterKey) return `encounter:${entry.encounterKey}`;
+  if (entry.scheduleKey) return `schedule:${entry.scheduleKey}`;
   if (entry.receptionId) return `reception:${entry.receptionId}`;
   if (entry.appointmentId) return `appointment:${entry.appointmentId}`;
   if (entry.patientId && entry.appointmentTime) return `patientTime:${entry.patientId}:${entry.appointmentTime}`;
@@ -96,6 +98,20 @@ const pickReceptionId = (value: any): string | undefined =>
   value?.voucherNumber ??
   value?.acceptanceId ??
   value?.acceptance_id;
+
+const pickScheduleKey = (value: any): string | undefined =>
+  value?.scheduleKey ??
+  value?.schedule_key ??
+  value?.Schedule_Key ??
+  value?.linkedScheduleKey ??
+  value?.linked_schedule_key;
+
+const pickEncounterKey = (value: any): string | undefined =>
+  value?.encounterKey ??
+  value?.encounter_key ??
+  value?.Encounter_Key ??
+  value?.linkedEncounterKey ??
+  value?.linked_encounter_key;
 
 const toClaimStatus = (statusText?: unknown): ClaimBundleStatus | undefined => {
   if (typeof statusText !== 'string') return undefined;
@@ -221,6 +237,8 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
       id: buildEntryId(slot.appointmentId, `slot-${index}`),
       appointmentId: slot.appointmentId,
       receptionId: pickReceptionId(slot),
+      scheduleKey: pickScheduleKey(slot),
+      encounterKey: pickEncounterKey(slot),
       patientId: patient.patientId,
       name: patient.wholeName,
       kana: patient.wholeNameKana,
@@ -244,6 +262,8 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
       id: buildEntryId(reservation.appointmentId, `reservation-${index}`),
       appointmentId: reservation.appointmentId,
       receptionId: pickReceptionId(reservation),
+      scheduleKey: pickScheduleKey(reservation),
+      encounterKey: pickEncounterKey(reservation),
       patientId: patient.patientId,
       name: patient.wholeName,
       kana: patient.wholeNameKana,
@@ -274,6 +294,8 @@ export const parseAppointmentEntries = (json: any): ReceptionEntry[] => {
       id: buildEntryId(receptionId, `visit-${index}`),
       appointmentId: visit.sequentialNumber,
       receptionId,
+      scheduleKey: pickScheduleKey(visit),
+      encounterKey: pickEncounterKey(visit),
       patientId: patient.patientId,
       name: patient.wholeName,
       kana: patient.wholeNameKana,

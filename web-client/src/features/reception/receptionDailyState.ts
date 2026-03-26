@@ -90,6 +90,8 @@ const normalizeReceptionEntry = (value: unknown): ReceptionEntry | null => {
   const patientId = normalizeOptionalString(raw.patientId);
   const appointmentId = normalizeOptionalString(raw.appointmentId);
   const receptionId = normalizeOptionalString(raw.receptionId);
+  const scheduleKey = normalizeOptionalString(raw.scheduleKey);
+  const encounterKey = normalizeOptionalString(raw.encounterKey);
   const id =
     normalizeOptionalString(raw.id) ??
     receptionId ??
@@ -102,6 +104,8 @@ const normalizeReceptionEntry = (value: unknown): ReceptionEntry | null => {
     id,
     appointmentId,
     receptionId,
+    scheduleKey,
+    encounterKey,
     patientId,
     appointmentTime: normalizeOptionalString(raw.appointmentTime),
     reservationTime: normalizeOptionalString(raw.reservationTime),
@@ -117,6 +121,8 @@ const toPersistedEntry = (entry: ReceptionEntry): ReceptionEntry => {
     id: normalizeOptionalString(entry.id) ?? `snapshot-${Math.random().toString(36).slice(2, 8)}`,
     appointmentId: normalizeOptionalString(entry.appointmentId),
     receptionId: normalizeOptionalString(entry.receptionId),
+    scheduleKey: normalizeOptionalString(entry.scheduleKey),
+    encounterKey: normalizeOptionalString(entry.encounterKey),
     patientId: normalizeOptionalString(entry.patientId),
     appointmentTime: normalizeOptionalString(entry.appointmentTime),
     reservationTime: normalizeOptionalString(entry.reservationTime),

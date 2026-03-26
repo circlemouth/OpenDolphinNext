@@ -31,7 +31,7 @@ class EncounterProjectionRepositoryTest {
             setField(reconciliationTaskRepository, "dataSource", dataSource);
 
             scheduleRepository.upsertFromOrca(new ScheduleProjectionRepository.ScheduleUpsertCommand(
-                    "schedule:F001:A100",
+                    "F001:A100",
                     "F001",
                     "P001",
                     10L,
@@ -45,11 +45,11 @@ class EncounterProjectionRepositoryTest {
                     Instant.parse("2026-03-25T09:01:00Z")));
 
             encounterRepository.upsertCheckedIn(new EncounterProjectionRepository.EncounterUpsertCommand(
-                    "encounter:F001:E100",
+                    "F001:E100",
                     "F001",
                     "P001",
                     10L,
-                    "schedule:F001:A100",
+                    "F001:A100",
                     "E100",
                     Instant.parse("2026-03-25T09:05:00Z"),
                     "checked_in",
@@ -64,12 +64,12 @@ class EncounterProjectionRepositoryTest {
                     Instant.parse("2026-03-25T09:06:00Z")));
 
             scheduleRepository.linkEncounter(
-                    "schedule:F001:A100",
-                    "encounter:F001:E100",
+                    "F001:A100",
+                    "F001:E100",
                     Instant.parse("2026-03-25T09:07:00Z"));
 
             encounterRepository.transitionState(
-                    "encounter:F001:E100",
+                    "F001:E100",
                     "billed",
                     Instant.parse("2026-03-25T09:10:00Z"),
                     Instant.parse("2026-03-25T09:15:00Z"),
@@ -81,10 +81,10 @@ class EncounterProjectionRepositoryTest {
                     Instant.parse("2026-03-25T09:15:01Z"));
 
             EncounterProjectionRepository.EncounterRow row =
-                    encounterRepository.findByEncounterKey("encounter:F001:E100");
+                    encounterRepository.findByEncounterKey("F001:E100");
             assertThat(row).isNotNull();
-            assertThat(row.encounterKey()).isEqualTo("encounter:F001:E100");
-            assertThat(row.scheduleKey()).isEqualTo("schedule:F001:A100");
+            assertThat(row.encounterKey()).isEqualTo("F001:E100");
+            assertThat(row.scheduleKey()).isEqualTo("F001:A100");
             assertThat(row.businessState()).isEqualTo("billed");
             assertThat(row.stateVersion()).isEqualTo(1L);
             assertThat(row.billedAt()).isEqualTo(Instant.parse("2026-03-25T09:15:00Z"));
@@ -92,7 +92,7 @@ class EncounterProjectionRepositoryTest {
 
             transitionLogRepository.insertAttempt(
                     "F001",
-                    "encounter:F001:E100",
+                    "F001:E100",
                     "bill",
                     "checked_in",
                     "billed",
@@ -103,29 +103,29 @@ class EncounterProjectionRepositoryTest {
                     false);
             transitionLogRepository.markReconciliationRequired(
                     "F001",
-                    "encounter:F001:E100",
+                    "F001:E100",
                     "idem-100",
                     "orca mismatch");
 
             reconciliationTaskRepository.openTask(
                     "F001",
                     "encounter",
-                    "encounter:F001:E100",
+                    "F001:E100",
                     "orca_mismatch",
                     "open",
                     "high",
-                    "{\"encounterKey\":\"encounter:F001:E100\"}");
+                    "{\"encounterKey\":\"F001:E100\"}");
 
             try (Connection connection = dataSource.getConnection()) {
                 assertThat(queryString(connection,
                         "select linked_encounter_key from opendolphin.schedule_projection where schedule_key = ?",
-                        "schedule:F001:A100")).isEqualTo("encounter:F001:E100");
+                        "F001:A100")).isEqualTo("F001:E100");
                 assertThat(queryBoolean(connection,
                         "select reconciliation_required from opendolphin.encounter_transition_log where facility_id = ? and encounter_key = ? and idempotency_key = ?",
-                        "F001", "encounter:F001:E100", "idem-100")).isTrue();
+                        "F001", "F001:E100", "idem-100")).isTrue();
                 assertThat(queryString(connection,
                         "select subject_key from opendolphin.reconciliation_task where facility_id = ? and subject_type = ?",
-                        "F001", "encounter")).isEqualTo("encounter:F001:E100");
+                        "F001", "encounter")).isEqualTo("F001:E100");
             }
         }
     }

@@ -48,6 +48,8 @@ class OrcaVisitResourceTest {
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals(1, response.getVisits().size());
         assertEquals("2025-11-12", response.getVisitDate());
+        assertEquals("F001:20251112001", response.getVisits().get(0).getEncounterKey());
+        assertEquals("F001:1", response.getVisits().get(0).getScheduleKey());
         assertNotNull(response.getVisits().get(0).getPatient());
         assertGeneratedRunId(response.getRunId());
         assertEquals(1, response.getRecordsReturned());
@@ -122,6 +124,7 @@ class OrcaVisitResourceTest {
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals("A20251116001", response.getAcceptanceId());
+        assertEquals("F001:A20251116001", response.getEncounterKey());
         assertEquals("000001", response.getPatient().getPatientId());
         assertEquals("RUN-VISIT-001", response.getRunId());
     }

@@ -50,6 +50,8 @@ class OrcaAppointmentResourceTest {
                 createRequest("F001:doctor01", "/api/orca/appointments/list", Map.of()), request);
         assertEquals("2025-11-13", response.getAppointmentDate());
         assertEquals(1, response.getSlots().size());
+        assertEquals("F001:AP-20251113-001", response.getSlots().get(0).getScheduleKey());
+        assertNull(response.getSlots().get(0).getEncounterKey());
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertGeneratedRunId(response.getRunId());
@@ -132,6 +134,7 @@ class OrcaAppointmentResourceTest {
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals(1, response.getReservations().size());
+        assertEquals("F001:AP-20251113-001", response.getReservations().get(0).getScheduleKey());
         assertEquals("000001", response.getPatient().getPatientId());
         assertGeneratedRunId(response.getRunId());
     }
@@ -194,6 +197,8 @@ class OrcaAppointmentResourceTest {
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals("AP-20251120-001", response.getAppointmentId());
+        assertEquals("F001:AP-20251120-001", response.getScheduleKey());
+        assertNull(response.getEncounterKey());
         assertEquals("000001", response.getPatient().getPatientId());
         assertEquals("RUN-APPT-001", response.getRunId());
     }
@@ -236,6 +241,12 @@ class OrcaAppointmentResourceTest {
                             return uri;
                         case "getRemoteAddr":
                             return "127.0.0.1";
+                        case "isSecure":
+                            return Boolean.FALSE;
+                        case "getScheme":
+                            return "http";
+                        case "getServerPort":
+                            return 80;
                         case "getHeader":
                             if (args != null && args.length == 1) {
                                 String key = String.valueOf(args[0]);

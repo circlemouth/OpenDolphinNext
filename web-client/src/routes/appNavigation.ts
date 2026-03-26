@@ -138,6 +138,8 @@ export const buildPatientsUrl = (opts: {
   patientId?: string;
   appointmentId?: string;
   receptionId?: string;
+  scheduleKey?: string;
+  encounterKey?: string;
   visitDate?: string;
   intent?: string;
   external?: ExternalParams;

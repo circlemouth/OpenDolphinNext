@@ -111,7 +111,7 @@ export function ReceptionExceptionList({
       ) : (
         <div className="reception-exceptions__list" role="list">
           {items.map((item) => {
-            const canOpenCharts = Boolean(item.entry.patientId);
+            const canOpenCharts = Boolean(item.entry.scheduleKey || item.entry.encounterKey);
             const canRetryQueue = Boolean(item.entry.patientId) && item.kind !== 'unapproved';
             const isRetrying = Boolean(retryingPatientId && retryingPatientId === item.entry.patientId);
             const reasonItems = [
@@ -225,7 +225,11 @@ export function ReceptionExceptionList({
                       className="reception-exception__action-button primary"
                       onClick={() => onOpenCharts?.(item.entry, item.chartsUrl)}
                       disabled={!canOpenCharts}
-                      title={canOpenCharts ? 'Charts を新規タブで開く' : '患者IDが未登録のため新規タブを開けません'}
+                      title={
+                        canOpenCharts
+                          ? 'Charts を新規タブで開く'
+                          : 'canonical key が未設定のため新規タブを開けません'
+                      }
                     >
                       Charts へ
                     </button>

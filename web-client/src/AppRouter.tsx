@@ -576,12 +576,16 @@ export function AppRouterWithNavigation() {
       patientId: removed.patientId,
       appointmentId: removed.appointmentId,
       receptionId: removed.receptionId,
+      scheduleKey: removed.scheduleKey,
+      encounterKey: removed.encounterKey,
       visitDate: normalizeVisitDate(removed.visitDate),
     };
     if (
       encounterContext.patientId ||
       encounterContext.appointmentId ||
       encounterContext.receptionId ||
+      encounterContext.scheduleKey ||
+      encounterContext.encounterKey ||
       encounterContext.visitDate
     ) {
       storeChartsEncounterContext(
@@ -609,6 +613,8 @@ export function AppRouterWithNavigation() {
       ...(encounterContext.patientId ? { patientId: encounterContext.patientId } : {}),
       ...(encounterContext.appointmentId ? { appointmentId: encounterContext.appointmentId } : {}),
       ...(encounterContext.receptionId ? { receptionId: encounterContext.receptionId } : {}),
+      ...(encounterContext.scheduleKey ? { scheduleKey: encounterContext.scheduleKey } : {}),
+      ...(encounterContext.encounterKey ? { encounterKey: encounterContext.encounterKey } : {}),
       ...(encounterContext.visitDate ? { visitDate: encounterContext.visitDate } : {}),
     };
 
@@ -627,6 +633,8 @@ export function AppRouterWithNavigation() {
           ...(encounterContext.patientId ? { patientId: encounterContext.patientId } : {}),
           ...(encounterContext.appointmentId ? { appointmentId: encounterContext.appointmentId } : {}),
           ...(encounterContext.receptionId ? { receptionId: encounterContext.receptionId } : {}),
+          ...(encounterContext.scheduleKey ? { scheduleKey: encounterContext.scheduleKey } : {}),
+          ...(encounterContext.encounterKey ? { encounterKey: encounterContext.encounterKey } : {}),
           ...(encounterContext.visitDate ? { visitDate: encounterContext.visitDate } : {}),
           ...(removed.kw || removed.keyword ? { kw: removed.kw ?? removed.keyword, keyword: removed.kw ?? removed.keyword } : {}),
         },

@@ -1,16 +1,23 @@
 import { buildScopedStorageKey, toScopeSuffix } from '../../libs/session/storageScope';
 
-import { normalizeEncounterId, normalizeVisitDate } from './encounterContext';
+import { normalizeEncounterId, normalizeEncounterKey, normalizeVisitDate } from './encounterContext';
 
 export type ChartsPatientTab = {
   key: string;
   patientId: string;
   visitDate: string; // YYYY-MM-DD
+  scheduleKey?: string;
+  encounterKey?: string;
   appointmentId?: string;
   receptionId?: string;
   name?: string;
   department?: string;
   openedAt: string; // ISO
+};
+
+type EncounterTabIdentity = {
+  scheduleKey?: string;
+  encounterKey?: string;
 };
 
 export type ChartsPatientTabsStorage = {
@@ -31,12 +38,24 @@ const sanitizePersistedTab = (tab: ChartsPatientTab): ChartsPatientTab => ({
   key: tab.key,
   patientId: tab.patientId,
   visitDate: tab.visitDate,
+  scheduleKey: tab.scheduleKey,
+  encounterKey: tab.encounterKey,
   appointmentId: tab.appointmentId,
   receptionId: tab.receptionId,
   openedAt: tab.openedAt,
 });
 
-export const buildPatientTabKey = (patientId: string, visitDate: string) => `${patientId}::${visitDate}`;
+export const buildPatientTabKey = (
+  patientId: string,
+  visitDate: string,
+  identity?: EncounterTabIdentity,
+) => {
+  const encounterKey = normalizeEncounterKey(identity?.encounterKey);
+  if (encounterKey) return `encounter:${encounterKey}`;
+  const scheduleKey = normalizeEncounterKey(identity?.scheduleKey);
+  if (scheduleKey) return `schedule:${scheduleKey}`;
+  return `${patientId}::${visitDate}`;
+};
 
 const resolveScopeKey = (scope?: { facilityId?: string; userId?: string }) => toScopeSuffix(scope) ?? GLOBAL_SCOPE_KEY;
 
@@ -66,6 +85,8 @@ export const applyEncounterTabState = (
   params: {
     patientId: string;
     visitDate: string;
+    scheduleKey?: string;
+    encounterKey?: string;
     appointmentId?: string;
     receptionId?: string;
     name?: string;
@@ -75,8 +96,12 @@ export const applyEncounterTabState = (
   const patientId = normalizeEncounterId(params.patientId);
   const visitDate = normalizeVisitDate(params.visitDate);
   if (!patientId || !visitDate) return prev;
-  const key = buildPatientTabKey(patientId, visitDate);
-  const existing = prev.tabs.find((tab) => tab.key === key);
+  const legacyKey = buildPatientTabKey(patientId, visitDate);
+  const fallbackExisting = prev.tabs.find((tab) => tab.key === legacyKey);
+  const scheduleKey = normalizeEncounterKey(params.scheduleKey) ?? fallbackExisting?.scheduleKey;
+  const encounterKey = normalizeEncounterKey(params.encounterKey) ?? fallbackExisting?.encounterKey;
+  const key = buildPatientTabKey(patientId, visitDate, { scheduleKey, encounterKey });
+  const existing = prev.tabs.find((tab) => tab.key === key) ?? fallbackExisting;
   const appointmentId = normalizeEncounterId(params.appointmentId) ?? existing?.appointmentId;
   const receptionId = normalizeEncounterId(params.receptionId) ?? existing?.receptionId;
   const name = typeof params.name === 'string' && params.name.trim() ? params.name.trim() : existing?.name;
@@ -88,6 +113,8 @@ export const applyEncounterTabState = (
     key,
     patientId,
     visitDate,
+    scheduleKey,
+    encounterKey,
     appointmentId,
     receptionId,
     name,
@@ -98,6 +125,8 @@ export const applyEncounterTabState = (
     existing !== undefined &&
     existing.patientId === nextTab.patientId &&
     existing.visitDate === nextTab.visitDate &&
+    (existing.scheduleKey ?? undefined) === (nextTab.scheduleKey ?? undefined) &&
+    (existing.encounterKey ?? undefined) === (nextTab.encounterKey ?? undefined) &&
     (existing.appointmentId ?? undefined) === (nextTab.appointmentId ?? undefined) &&
     (existing.receptionId ?? undefined) === (nextTab.receptionId ?? undefined) &&
     (existing.name ?? undefined) === (nextTab.name ?? undefined) &&

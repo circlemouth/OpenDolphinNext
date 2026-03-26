@@ -52,6 +52,7 @@ import {
 import { MISSING_MASTER_RECOVERY_NEXT_ACTION } from '../../shared/missingMasterRecovery';
 import {
   buildChartsUrl,
+  hasHandoffEncounterKey,
   normalizeVisitDate,
   type ReceptionCarryoverParams,
 } from '../../charts/encounterContext';
@@ -143,7 +144,7 @@ const resolveInitialStatusTab = (section?: string | null): ReceptionStatus => {
 };
 
 const entryKey = (entry: ReceptionEntry) =>
-  entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
+  entry.encounterKey ?? entry.scheduleKey ?? entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
 
 const queuePhaseLabel: Record<ClaimQueuePhase, string> = {
   pending: '待ち',
@@ -1373,6 +1374,8 @@ export function ReceptionPage({
         const nextEntry = buildVisitEntryFromMutation(payload, { paymentMode: params.paymentMode });
         if (!nextEntry) return base;
         const deduped = baseEntries.filter((entry) => {
+          if (entry.encounterKey && nextEntry.encounterKey && entry.encounterKey === nextEntry.encounterKey) return false;
+          if (entry.scheduleKey && nextEntry.scheduleKey && entry.scheduleKey === nextEntry.scheduleKey) return false;
           if (entry.receptionId && nextEntry.receptionId && entry.receptionId === nextEntry.receptionId) return false;
           if (entry.id && nextEntry.id && entry.id === nextEntry.id) return false;
           return true;
@@ -1969,6 +1972,8 @@ export function ReceptionPage({
           patientId: entry.patientId,
           appointmentId: entry.appointmentId,
           receptionId: entry.receptionId,
+          scheduleKey: entry.scheduleKey,
+          encounterKey: entry.encounterKey,
           visitDate: entry.visitDate,
         },
         receptionCarryover,
@@ -3487,6 +3492,8 @@ export function ReceptionPage({
           patientId: entry.patientId,
           appointmentId: entry.appointmentId,
           receptionId: entry.receptionId,
+          scheduleKey: entry.scheduleKey,
+          encounterKey: entry.encounterKey,
           visitDate: entry.visitDate,
         },
         carryover: receptionCarryover,
@@ -3497,6 +3504,8 @@ export function ReceptionPage({
             patientId: entry.patientId,
             appointmentId: entry.appointmentId,
             receptionId: entry.receptionId,
+            scheduleKey: entry.scheduleKey,
+            encounterKey: entry.encounterKey,
             visitDate: entry.visitDate,
           },
         },
@@ -3872,12 +3881,14 @@ export function ReceptionPage({
   const handleOpenCharts = useCallback(
     (entry: ReceptionEntry, _urlOverride?: string) => {
       const guardRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
-      if (!entry.patientId) {
+      const scheduleKey = entry.scheduleKey?.trim() || undefined;
+      const encounterKey = entry.encounterKey?.trim() || undefined;
+      if (!scheduleKey && !encounterKey) {
         enqueue({
           id: `reception-open-charts-blocked-${entryKey(entry)}`,
           tone: 'warning',
-          message: '患者IDが未設定のためカルテを開けません。',
-          detail: '受付情報の患者IDを確認してください。',
+          message: 'カルテを開くための canonical key が未設定です。',
+          detail: 'scheduleKey / encounterKey のある受付情報を使用してください。',
         });
         logAuditEvent({
           runId: guardRunId,
@@ -3893,7 +3904,7 @@ export function ReceptionPage({
               entryKey: entryKey(entry),
               appointmentId: entry.appointmentId,
               receptionId: entry.receptionId,
-              blockedReasons: ['missing_patient_id'],
+              blockedReasons: ['missing_schedule_key', 'missing_encounter_key'],
             },
           },
         });
@@ -3903,8 +3914,8 @@ export function ReceptionPage({
           controlId: 'open-charts',
           runId: guardRunId,
           details: {
-            blockedReason: 'missing_patient_id',
-            blockedReasons: ['missing_patient_id'],
+            blockedReason: 'missing_schedule_key',
+            blockedReasons: ['missing_schedule_key', 'missing_encounter_key'],
             entryKey: entryKey(entry),
           },
         });
@@ -3917,6 +3928,8 @@ export function ReceptionPage({
           patientId: entry.patientId,
           appointmentId: entry.appointmentId,
           receptionId: entry.receptionId,
+          scheduleKey,
+          encounterKey,
           visitDate: entry.visitDate,
         },
         carryover: receptionCarryover,
@@ -3927,6 +3940,8 @@ export function ReceptionPage({
             patientId: entry.patientId,
             appointmentId: entry.appointmentId,
             receptionId: entry.receptionId,
+            scheduleKey,
+            encounterKey,
             visitDate: entry.visitDate,
           },
         },
@@ -5042,7 +5057,7 @@ export function ReceptionPage({
                           const status = activeStatusTab;
                           const bundle = resolveBundleForEntry(entry);
                           const paymentLabel = paymentModeLabel(entry.insurance);
-                          const canOpenCharts = Boolean(entry.patientId);
+                          const canOpenCharts = hasHandoffEncounterKey(entry);
                           const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
                           const orcaQueueStatus = orcaQueueErrorStatus ?? resolveOrcaQueueStatus(orcaQueueEntry);
                           const mvpDecision = isReceptionStatusMvpEnabled
@@ -5423,7 +5438,7 @@ export function ReceptionPage({
                             const queueStatus = resolveQueueStatusForEntry(entry);
                             const bundle = resolveBundleForEntry(entry);
                             const paymentLabel = paymentModeLabel(entry.insurance);
-                            const canOpenCharts = Boolean(entry.patientId);
+                            const canOpenCharts = hasHandoffEncounterKey(entry);
                             const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
                             const orcaQueueStatus = orcaQueueErrorStatus ?? resolveOrcaQueueStatus(orcaQueueEntry);
                             const displayedQueueStatus = isReceptionStatusMvpEnabled ? orcaQueueStatus : queueStatus;
@@ -5883,6 +5898,7 @@ export function ReceptionPage({
                                 ? sortedEntries.find((entry) => entry.patientId === resolvedPatientId)
                                 : undefined;
                               const matchedTodayEntry = matchedEntry && matchedEntry.status !== '予約' ? matchedEntry : undefined;
+                              const canOpenCharts = Boolean(matchedTodayEntry && hasHandoffEncounterKey(matchedTodayEntry));
                               return (
                                 <div
                                   key={key}
@@ -5931,36 +5947,26 @@ export function ReceptionPage({
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           if (!resolvedPatientId) return;
-                                          if (matchedTodayEntry) {
+                                          if (matchedTodayEntry && hasHandoffEncounterKey(matchedTodayEntry)) {
                                             handleOpenCharts(matchedTodayEntry);
                                             return;
                                           }
-                                          const guardRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
-                                          if (guardRunId) bumpRunId(guardRunId);
-                                          const visitDate = patient.lastVisit?.trim() || undefined;
-                                          appNav.openCharts({
-                                            encounter: { patientId: resolvedPatientId, visitDate },
-                                            carryover: receptionCarryover,
-                                            runId: guardRunId,
-                                            navigate: {
-                                              state: {
-                                                runId: guardRunId,
-                                                patientId: resolvedPatientId,
-                                                visitDate,
-                                              },
-                                            },
+                                          enqueue({
+                                            tone: 'warning',
+                                            message: 'カルテを開くための canonical key が見つかりません。',
+                                            detail: '当日の受付/予約から key を受け取れる患者のみカルテを開けます。',
                                           });
                                         }}
                                         onKeyDown={(event) => {
                                           event.stopPropagation();
                                         }}
-                                        disabled={!resolvedPatientId}
+                                        disabled={!canOpenCharts}
                                         title={
-                                          resolvedPatientId
-                                            ? matchedTodayEntry
-                                              ? '当日のカルテを開く'
-                                              : '直近来院日のカルテを開く'
-                                            : '患者IDが未登録のためカルテを開けません'
+                                          canOpenCharts
+                                            ? '当日のカルテを開く'
+                                            : matchedTodayEntry
+                                              ? '当日の受付に canonical key がないためカルテを開けません'
+                                              : '直近来院日の受付に canonical key がないためカルテを開けません'
                                         }
                                       >
                                         カルテを開く

@@ -1,7 +1,7 @@
 # Public Route Contract Matrix
 
 作成日: 2026-03-26  
-RUN_ID: 20260325T233045Z  
+RUN_ID: 20260326T005423Z
 authority HEAD: `b4eccfcd199283230806f3a0f43bf20e37a4940b`
 
 ## 根拠
@@ -43,10 +43,10 @@ authority HEAD: `b4eccfcd199283230806f3a0f43bf20e37a4940b`
 - `GET /api/operations/readiness` は class 存在のみで未登録のため current public REST に含めない。
 - `password-reset` は current public REST に含めない。session revoke 実装済みでも、再公開判断は別 task で `OpenDolphinRestApplication` と contract test の両方を更新して行う。
 - `orca/queue` と `pusheventgetv2` は current public REST に含めない。upstream/downstream ORCA path を web-client public route へ流用しない。
-- Reception -> Charts handoff は今回 `appointmentId / receptionId / visitDate` の volatile carryover を維持するが、次 task の authoritative target は `scheduleKey` / `encounterKey` contract である。
+- Reception -> Charts handoff は server truth として `scheduleKey` / `encounterKey` を供給済みで、client 側 pass-through も `useAppNavigation` / `AppRouter` / `ReceptionPage` / `ChartsPage` に通している。`scheduleKey` / `encounterKey` がない受付行は fail-closed。`appointmentId / receptionId / visitDate` は volatile carryover のまま、権威 identity にはしない。
 
 ## Next Task Handoff
 
-- `OutpatientEncounterContext` はまだ `scheduleKey` / `encounterKey` を持たない。次 task では `web-client` 側の optional 受け皿追加から始める。
+- `OutpatientEncounterContext` は `scheduleKey` / `encounterKey` を持つ。今後も client の key builder / resolver は追加しない。
 - `finish` / `bill` / `chart_opened` など operation mapping は今回固定しない。`POST /api/encounters/{encounterKey}/transitions` を authoritative write target とする点だけ確定。
 - `queue` / `push-event` が必要なら、別 task で server 側 public registration・authz・sanitized contract・tests を揃えてから client を再接続する。

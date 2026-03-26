@@ -82,6 +82,34 @@ function NavigationHarness() {
       >
         open-mobile-images
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          appNav.openCharts({
+            encounter: {
+              patientId: 'P-001',
+              scheduleKey: 'F001:S100',
+              encounterKey: 'F001:E100',
+              visitDate: '2026-03-26',
+            },
+          })
+        }
+      >
+        open-charts
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          appNav.openCharts({
+            encounter: {
+              patientId: 'P-002',
+              visitDate: '2026-03-26',
+            },
+          })
+        }
+      >
+        open-charts-blocked
+      </button>
     </div>
   );
 }
@@ -164,6 +192,8 @@ describe('useAppNavigation print routing', () => {
       patientId: 'P-001',
       appointmentId: undefined,
       receptionId: undefined,
+      scheduleKey: undefined,
+      encounterKey: undefined,
       visitDate: undefined,
     });
   });
@@ -195,5 +225,53 @@ describe('useAppNavigation print routing', () => {
         patientId: '12345',
       }),
     );
+  });
+
+  it('openCharts は scheduleKey / encounterKey を state と volatile context に pass-through する', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/reception']}>
+        <NavigationHarness />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'open-charts' }));
+
+    expect(guardedNavigateMock).toHaveBeenCalledTimes(1);
+    const [to, options] = guardedNavigateMock.mock.calls[0] as [string, { state?: Record<string, unknown> }];
+    const parsed = new URL(to, 'https://app.invalid');
+    expect(parsed.pathname).toBe('/f/0001/charts');
+    expect(options.state).toEqual(
+      expect.objectContaining({
+        patientId: 'P-001',
+        scheduleKey: 'F001:S100',
+        encounterKey: 'F001:E100',
+        visitDate: '2026-03-26',
+      }),
+    );
+    expect(loadChartsEncounterContext({ facilityId: '0001', userId: 'user01' })).toEqual(
+      expect.objectContaining({
+        patientId: 'P-001',
+        scheduleKey: 'F001:S100',
+        encounterKey: 'F001:E100',
+        visitDate: '2026-03-26',
+      }),
+    );
+  });
+
+  it('openCharts は canonical key がないと遷移しない', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/reception']}>
+        <NavigationHarness />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'open-charts-blocked' }));
+
+    expect(guardedNavigateMock).not.toHaveBeenCalled();
+    expect(loadChartsEncounterContext({ facilityId: '0001', userId: 'user01' })).toBeNull();
   });
 });

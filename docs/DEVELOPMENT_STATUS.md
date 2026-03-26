@@ -44,6 +44,7 @@
 - `docs/archive/2025Q4/server-modernized_60117/` 配下は旧作業履歴として archive へ退避済み。現時点では **参照専用で保全** する。
 
 ## 実施記録（最新）
+- 2026-03-26: Reception → Charts の canonical key feed について、`scheduleKey` / `encounterKey` の server 供給と web-client の pass-through を test と docs で固定した。`docs/development/public_route_key_feed_contract_20260326.md` を追加し、`ScheduleResourceTest` / `CanonicalEncounterKeysTest` / `useAppNavigation.test.tsx` / `encounterContext.test.ts` を canonical payload 仕様へ強化した。
 - 2026-03-24: `phase2a_handoff_docs_bundle` を整理し、補助資料のみを `docs/development/supporting/phase2a_handoff_docs_bundle/` へ移設した。重複していた `phase2_current_coding_tasks_checklist_v1.md` 複製は削除し、現行正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md` に一本化した。
 - 2026-03-24: `phase2_current_coding_tasks_checklist_v1.md` を `docs/development/phase2_current_coding_tasks_checklist_v1.md` へ移設し、`server-modernized` の現行開発計画正本へ昇格した。旧「現行計画」`docs/server-modernization/planning/server-modernized-plan/docs/development/dangerous-path-remediation-execution-checklist.md` は Legacy/Archive 扱いへ切り替えた（RUN_ID=20260324T111046Z）。
 - 2026-03-24: `server-modernized` の A3 Slice-1 として、ORCA runtime path の facility implicit/default 解決を除去し、facility explicit compile-break を成立させた（RUN_ID=20260324T073030Z）。

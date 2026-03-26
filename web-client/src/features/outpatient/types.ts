@@ -6,6 +6,8 @@ export type ReceptionEntry = {
   id: string;
   appointmentId?: string;
   receptionId?: string;
+  scheduleKey?: string;
+  encounterKey?: string;
   patientId?: string;
   name?: string;
   kana?: string;
@@ -60,6 +62,8 @@ export type ClaimQueueEntry = {
   holdReason?: string;
   requestId?: string;
   patientId?: string;
+  scheduleKey?: string;
+  encounterKey?: string;
   appointmentId?: string;
   fallbackUsed?: boolean;
 };

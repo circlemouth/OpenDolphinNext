@@ -60,6 +60,7 @@ import { fetchRpHistory } from '../karteExtrasApi';
 import {
   buildChartsEncounterSearch,
   hasEncounterContext,
+  hasHandoffEncounterKey,
   loadChartsEncounterContext,
   normalizeEncounterContext,
   normalizeEncounterId,
@@ -537,6 +538,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         patientId: activeTab.patientId,
         appointmentId: activeTab.appointmentId,
         receptionId: activeTab.receptionId,
+        scheduleKey: activeTab.scheduleKey,
+        encounterKey: activeTab.encounterKey,
         visitDate: normalizeVisitDate(activeTab.visitDate) ?? undefined,
       });
     }
@@ -546,9 +549,12 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       patientId: typeof navigationState.patientId === 'string' ? navigationState.patientId : undefined,
       appointmentId: typeof navigationState.appointmentId === 'string' ? navigationState.appointmentId : undefined,
       receptionId: typeof navigationState.receptionId === 'string' ? navigationState.receptionId : undefined,
+      scheduleKey: typeof navigationState.scheduleKey === 'string' ? navigationState.scheduleKey : undefined,
+      encounterKey: typeof navigationState.encounterKey === 'string' ? navigationState.encounterKey : undefined,
       visitDate: normalizeVisitDate(typeof navigationState.visitDate === 'string' ? navigationState.visitDate : undefined),
     });
   });
+  const hasEncounterHandoffKey = hasHandoffEncounterKey(encounterContext);
   const [patientTabsState, setPatientTabsState] = useState<ChartsPatientTabsStorage>(() => {
     return (
       readChartsPatientTabsStorage(storageScope) ?? {
@@ -586,14 +592,26 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         visitDate,
         appointmentId: encounterContext.appointmentId,
         receptionId: encounterContext.receptionId,
+        scheduleKey: encounterContext.scheduleKey,
+        encounterKey: encounterContext.encounterKey,
       }),
     );
-  }, [encounterContext.appointmentId, encounterContext.patientId, encounterContext.receptionId, encounterContext.visitDate, today]);
+  }, [
+    encounterContext.appointmentId,
+    encounterContext.encounterKey,
+    encounterContext.patientId,
+    encounterContext.receptionId,
+    encounterContext.scheduleKey,
+    encounterContext.visitDate,
+    today,
+  ]);
   const [draftState, setDraftState] = useState<{
     dirty: boolean;
     patientId?: string;
     appointmentId?: string;
     receptionId?: string;
+    scheduleKey?: string;
+    encounterKey?: string;
     visitDate?: string;
     dirtySources?: DraftDirtySource[];
   }>({ dirty: false, dirtySources: [] });
@@ -810,6 +828,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           visitDate,
           appointmentId: normalizedNext.appointmentId,
           receptionId: normalizedNext.receptionId,
+          scheduleKey: normalizedNext.scheduleKey,
+          encounterKey: normalizedNext.encounterKey,
           name,
           department,
         }),
@@ -819,6 +839,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         patientId,
         appointmentId: normalizedNext.appointmentId,
         receptionId: normalizedNext.receptionId,
+        scheduleKey: normalizedNext.scheduleKey,
+        encounterKey: normalizedNext.encounterKey,
         visitDate,
       }));
       setContextAlert(null);
@@ -835,6 +857,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           patientId: tab.patientId,
           appointmentId: tab.appointmentId,
           receptionId: tab.receptionId,
+          scheduleKey: tab.scheduleKey,
+          encounterKey: tab.encounterKey,
           visitDate: tab.visitDate,
         },
         { name: tab.name, department: tab.department },
@@ -865,6 +889,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           patientId: nextActive.patientId,
           appointmentId: nextActive.appointmentId,
           receptionId: nextActive.receptionId,
+          scheduleKey: nextActive.scheduleKey,
+          encounterKey: nextActive.encounterKey,
           visitDate: nextActive.visitDate,
         }));
         setContextAlert(null);
@@ -1011,13 +1037,17 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const soapEncounterKey = useMemo(
     () =>
       [
+        encounterContext.encounterKey ?? 'none',
+        encounterContext.scheduleKey ?? 'none',
         encounterContext.patientId ?? 'none',
         encounterContext.appointmentId ?? 'none',
         encounterContext.receptionId ?? 'none',
         encounterContext.visitDate ?? 'none',
       ].join('::'),
     [
+      encounterContext.encounterKey,
       encounterContext.appointmentId,
+      encounterContext.scheduleKey,
       encounterContext.patientId,
       encounterContext.receptionId,
       encounterContext.visitDate,
@@ -1332,6 +1362,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     const leftNormalized = normalizeEncounterContext(left);
     const rightNormalized = normalizeEncounterContext(right);
     return (
+      (leftNormalized.scheduleKey ?? '') === (rightNormalized.scheduleKey ?? '') &&
+      (leftNormalized.encounterKey ?? '') === (rightNormalized.encounterKey ?? '') &&
       (leftNormalized.patientId ?? '') === (rightNormalized.patientId ?? '') &&
       (leftNormalized.appointmentId ?? '') === (rightNormalized.appointmentId ?? '') &&
       (leftNormalized.receptionId ?? '') === (rightNormalized.receptionId ?? '') &&
@@ -1670,6 +1702,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const claimQuery = useQuery({
     queryKey: claimQueryKey,
     queryFn: (context) => fetchClaimFlags(context, { screen: 'charts', preferredSourceOverride }),
+    enabled: hasEncounterHandoffKey,
     refetchInterval: 120_000,
     staleTime: 120_000,
     meta: {
@@ -1682,7 +1715,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const orcaQueueQuery = useQuery({
     queryKey: orcaQueueQueryKey,
     queryFn: () => fetchOrcaQueue(undefined, { enabled: isSystemAdmin }),
-    enabled: isSystemAdmin,
+    enabled: isSystemAdmin && hasEncounterHandoffKey,
     refetchInterval: isSystemAdmin ? 30_000 : false,
     staleTime: isSystemAdmin ? 30_000 : Infinity,
     retry: 1,
@@ -1696,6 +1729,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const orcaPushEventQuery = useQuery({
     queryKey: orcaPushEventQueryKey,
     queryFn: () => fetchOrcaPushEvents(),
+    enabled: hasEncounterHandoffKey,
     refetchInterval: 30_000,
     staleTime: 30_000,
     retry: 1,
@@ -1714,6 +1748,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         context,
         { preferredSourceOverride, screen: 'charts' },
       ),
+    enabled: hasEncounterHandoffKey,
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.hasNextPage === false) return undefined;
       if (lastPage.hasNextPage === true) return (lastPage.page ?? allPages.length) + 1;
@@ -1733,6 +1768,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const medicalSummaryQuery = useQuery({
     queryKey: medicalSummaryQueryKey,
     queryFn: (context) => fetchChartsMedicalSummary(context, { preferredSourceOverride }),
+    enabled: hasEncounterHandoffKey,
     refetchInterval: 120_000,
     staleTime: 120_000,
     meta: {
@@ -2052,21 +2088,17 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   );
 
   const selectedEntry = useMemo(() => {
-    if (!encounterContext.patientId && !encounterContext.appointmentId && !encounterContext.receptionId) return undefined;
-    const byReception = encounterContext.receptionId
-      ? patientEntries.find((entry) => entry.receptionId === encounterContext.receptionId)
+    if (!hasEncounterHandoffKey) return undefined;
+    const byEncounterKey = encounterContext.encounterKey
+      ? patientEntries.find((entry) => (entry.encounterKey ?? '').trim() === encounterContext.encounterKey)
       : undefined;
-    if (byReception) return byReception;
-    const byAppointment = encounterContext.appointmentId
-      ? patientEntries.find((entry) => entry.appointmentId === encounterContext.appointmentId)
+    if (byEncounterKey) return byEncounterKey;
+    const byScheduleKey = encounterContext.scheduleKey
+      ? patientEntries.find((entry) => (entry.scheduleKey ?? '').trim() === encounterContext.scheduleKey)
       : undefined;
-    if (byAppointment) return byAppointment;
-    if (!encounterContext.patientId) return undefined;
-    return patientEntries.find((entry) => {
-      const pid = (entry.patientId ?? '').trim();
-      return pid && pid === encounterContext.patientId;
-    });
-  }, [encounterContext.appointmentId, encounterContext.patientId, encounterContext.receptionId, patientEntries]);
+    if (byScheduleKey) return byScheduleKey;
+    return undefined;
+  }, [encounterContext.encounterKey, encounterContext.scheduleKey, hasEncounterHandoffKey, patientEntries]);
 
   const selectedEntryPatientId = selectedEntry
     ? (() => {
@@ -2075,9 +2107,9 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         return undefined;
       })()
     : undefined;
-  const patientId = selectedEntryPatientId ?? encounterContext.patientId;
-  const receptionId = selectedEntry?.receptionId ?? encounterContext.receptionId;
-  const appointmentId = selectedEntry?.appointmentId ?? encounterContext.appointmentId;
+  const patientId = selectedEntryPatientId ?? (hasEncounterHandoffKey ? encounterContext.patientId : undefined);
+  const receptionId = selectedEntry?.receptionId ?? (hasEncounterHandoffKey ? encounterContext.receptionId : undefined);
+  const appointmentId = selectedEntry?.appointmentId ?? (hasEncounterHandoffKey ? encounterContext.appointmentId : undefined);
   const actionVisitDate = useMemo(
     () =>
       normalizeVisitDate(selectedEntry?.visitDate) ??
@@ -2094,7 +2126,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       const exact = result.patients.find((p) => (p.patientId ?? '').trim() === patientId);
       return exact ?? result.patients[0] ?? null;
     },
-    enabled: Boolean(patientId) && !selectedEntry,
+    enabled: hasEncounterHandoffKey && Boolean(patientId) && !selectedEntry,
     staleTime: 60_000,
     retry: 1,
   });
@@ -2107,7 +2139,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       const result = await fetchKarteIdByPatientId({ patientId });
       return { ok: result.ok, karteId: result.karteId ?? null, error: result.error };
     },
-    enabled: Boolean(patientId),
+    enabled: hasEncounterHandoffKey && Boolean(patientId),
     staleTime: 60_000,
   });
   const karteId = karteIdQuery.data?.karteId ?? null;
@@ -2123,7 +2155,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         lastOnly: true,
       });
     },
-    enabled: Boolean(karteId),
+    enabled: hasEncounterHandoffKey && Boolean(karteId),
     staleTime: 60_000,
   });
 
@@ -2138,7 +2170,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         return { ok: false as const, bundles: [] as OrderBundle[], message };
       }
     },
-    enabled: Boolean(patientId),
+    enabled: hasEncounterHandoffKey && Boolean(patientId),
     staleTime: 30_000,
     retry: false,
   });
@@ -2153,7 +2185,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         return { ok: false as const, bundles: [] as OrderBundle[], message };
       }
     },
-    enabled: Boolean(patientId) && orderBundleSummaryQuery.isSuccess && orderBundleSummaryQuery.data?.ok === true,
+    enabled:
+      hasEncounterHandoffKey &&
+      Boolean(patientId) &&
+      orderBundleSummaryQuery.isSuccess &&
+      orderBundleSummaryQuery.data?.ok === true,
     staleTime: 30_000,
     retry: false,
   });
@@ -2188,7 +2224,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         } satisfies DiseaseImportResponse;
       }
     },
-    enabled: Boolean(patientId && actionVisitDate),
+    enabled: hasEncounterHandoffKey && Boolean(patientId && actionVisitDate),
     staleTime: 30_000,
     retry: false,
   });
@@ -2395,8 +2431,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     const pid = (patientId ?? '').trim();
     if (!pid) return null;
     const visitDate = normalizeVisitDate(encounterContext.visitDate) ?? actionVisitDate ?? today;
-    return buildPatientTabKey(pid, visitDate);
-  }, [actionVisitDate, encounterContext.visitDate, patientId, today]);
+    return buildPatientTabKey(pid, visitDate, {
+      scheduleKey: encounterContext.scheduleKey,
+      encounterKey: encounterContext.encounterKey,
+    });
+  }, [actionVisitDate, encounterContext.encounterKey, encounterContext.scheduleKey, encounterContext.visitDate, patientId, today]);
 
   useEffect(() => {
     const key = patientTabKeyForContext;
@@ -2822,75 +2861,29 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   useEffect(() => {
     if (patientEntries.length === 0) return;
     if (draftState.dirty || lockState.locked || tabLock.isReadOnly) return;
-    const resolve = (entries: ReceptionEntry[], context: OutpatientEncounterContext) => {
-      if (context.receptionId) return entries.find((entry) => entry.receptionId === context.receptionId);
-      if (context.appointmentId) return entries.find((entry) => entry.appointmentId === context.appointmentId);
-      if (context.patientId) return entries.find((entry) => resolveEncounterPatientIdFromEntry(entry) === context.patientId);
-      return undefined;
-    };
-
-    const resolved = resolve(patientEntries, encounterContext);
-    const head = patientEntries[0];
-    const headPatientId = resolveEncounterPatientIdFromEntry(head);
-    if (!resolved && hasEncounterContext(encounterContext)) {
-      // If an explicit patientId is already present (e.g. deep link), don't auto-switch to a synthetic row id.
-      if (encounterContext.patientId) return;
-      if (!headPatientId) return;
-      setContextAlert({
-        tone: 'warning',
-        message: `指定された外来コンテキストが見つかりません（patientId=${encounterContext.patientId ?? '―'} receptionId=${encounterContext.receptionId ?? '―'}）。先頭の患者へ切替えました。`,
-      });
-      recordChartsAuditEvent({
-        action: 'CHARTS_PATIENT_SWITCH',
-        outcome: 'warning',
-        subject: 'charts-context',
-        patientId: headPatientId,
-        appointmentId: head.appointmentId,
-        note: 'auto-resolve missing encounter context',
-        runId: resolvedRunId ?? flags.runId,
-        cacheHit: resolvedCacheHit,
-        missingMaster: resolvedMissingMaster,
-        fallbackUsed: resolvedFallbackUsed,
-        dataSourceTransition: resolvedTransition,
-        details: {
-          operationPhase: 'do',
-          trigger: 'auto_resolve',
-          receptionId: head.receptionId,
-        },
-      });
-      logUiState({
-        action: 'navigate',
-        screen: 'charts',
-        controlId: 'patient-switch-auto-resolve',
-        runId: resolvedRunId ?? flags.runId,
-        cacheHit: resolvedCacheHit,
-        missingMaster: resolvedMissingMaster,
-        dataSourceTransition: resolvedTransition,
-        fallbackUsed: resolvedFallbackUsed,
-        patientId: headPatientId,
-        appointmentId: head.appointmentId,
-        details: {
-          operationPhase: 'do',
-          trigger: 'auto_resolve',
-          receptionId: head.receptionId,
-          previousContext: encounterContext,
-        },
-      });
-      suppressUrlContextSyncRef.current = true;
-      setEncounterContext(normalizeEncounterContext({
-        patientId: headPatientId,
-        appointmentId: head.appointmentId,
-        receptionId: head.receptionId,
-        visitDate: normalizeVisitDate(head.visitDate) ?? today,
-      }));
+    if (!hasEncounterHandoffKey) {
+      if (hasEncounterContext(encounterContext)) {
+        setContextAlert({
+          tone: 'warning',
+          message: 'scheduleKey / encounterKey が未設定のためカルテを開けません。',
+        });
+      }
       return;
     }
-
-    const chosen = resolved ?? head;
+    const chosen = selectedEntry;
+    if (!chosen) {
+      setContextAlert({
+        tone: 'warning',
+        message: `指定された scheduleKey / encounterKey が見つかりません（scheduleKey=${encounterContext.scheduleKey ?? '―'} encounterKey=${encounterContext.encounterKey ?? '―'}）。`,
+      });
+      return;
+    }
     const nextContext = normalizeEncounterContext({
       patientId: resolveEncounterPatientIdFromEntry(chosen) ?? encounterContext.patientId,
       appointmentId: chosen.appointmentId,
       receptionId: chosen.receptionId,
+      scheduleKey: chosen.scheduleKey ?? encounterContext.scheduleKey,
+      encounterKey: chosen.encounterKey ?? encounterContext.encounterKey,
       visitDate: normalizeVisitDate(chosen.visitDate) ?? encounterContext.visitDate ?? today,
     });
     if (!sameEncounterContext(nextContext, encounterContext)) {
@@ -2898,7 +2891,17 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       setEncounterContext(nextContext);
       setContextAlert(null);
     }
-  }, [draftState.dirty, encounterContext, lockState.locked, patientEntries, sameEncounterContext, tabLock.isReadOnly, today]);
+  }, [
+    draftState.dirty,
+    encounterContext,
+    hasEncounterHandoffKey,
+    lockState.locked,
+    patientEntries,
+    sameEncounterContext,
+    selectedEntry,
+    tabLock.isReadOnly,
+    today,
+  ]);
 
   const latestAuditEvent = useMemo(() => {
     const auditMeta = {

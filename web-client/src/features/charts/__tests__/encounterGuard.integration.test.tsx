@@ -16,6 +16,8 @@ afterEach(cleanup);
 const RUN_ID = '20251227T133020Z';
 
 const sameEncounterContext = (left: OutpatientEncounterContext, right: OutpatientEncounterContext) =>
+  (left.scheduleKey ?? '') === (right.scheduleKey ?? '') &&
+  (left.encounterKey ?? '') === (right.encounterKey ?? '') &&
   (left.patientId ?? '') === (right.patientId ?? '') &&
   (left.appointmentId ?? '') === (right.appointmentId ?? '') &&
   (left.receptionId ?? '') === (right.receptionId ?? '') &&

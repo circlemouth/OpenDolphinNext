@@ -17,6 +17,8 @@ import {
 const RUN_ID = '20260302T132338Z';
 
 const sameEncounterContext = (left: OutpatientEncounterContext, right: OutpatientEncounterContext) =>
+  (left.scheduleKey ?? '') === (right.scheduleKey ?? '') &&
+  (left.encounterKey ?? '') === (right.encounterKey ?? '') &&
   (left.patientId ?? '') === (right.patientId ?? '') &&
   (left.appointmentId ?? '') === (right.appointmentId ?? '') &&
   (left.receptionId ?? '') === (right.receptionId ?? '') &&
@@ -73,6 +75,8 @@ function EncounterUrlSyncGuardHarness() {
             patientId: 'PX-2',
             appointmentId: 'A-2',
             receptionId: 'R-2',
+            scheduleKey: 'F001:S200',
+            encounterKey: 'F001:E200',
             visitDate: '2026-03-02',
           })
         }
@@ -86,6 +90,8 @@ function EncounterUrlSyncGuardHarness() {
             patientId: 'PX-3',
             appointmentId: 'A-3',
             receptionId: 'R-3',
+            scheduleKey: 'F001:S300',
+            encounterKey: 'F001:E300',
             visitDate: '2026-03-02',
           })
         }
@@ -99,6 +105,8 @@ function EncounterUrlSyncGuardHarness() {
             patientId: 'PX-4',
             appointmentId: 'A-4',
             receptionId: 'R-4',
+            scheduleKey: 'F001:S400',
+            encounterKey: 'F001:E400',
             visitDate: '2026-03-02',
           })
         }

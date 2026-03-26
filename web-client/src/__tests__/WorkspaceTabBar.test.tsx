@@ -79,6 +79,8 @@ const setPatientTabsStorage = () => {
         key: tabKey,
         patientId: '00000001',
         visitDate: '2026-03-01',
+        scheduleKey: '0001:AP-20260301-001',
+        encounterKey: '0001:AC-20260301-001',
         appointmentId: '1001',
         receptionId: '2001',
         openedAt: now,
