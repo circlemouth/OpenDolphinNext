@@ -24,7 +24,6 @@ const facilityId = String(facilityJson.facilityId ?? '0001');
 
 const authUserId = process.env.QA_USER_ID ?? 'doctor1';
 const authPasswordPlain = process.env.QA_PASSWORD_PLAIN ?? 'doctor2025';
-const authPasswordMd5 = process.env.QA_PASSWORD_MD5 ?? '632080fabdb968f9ac4f31fb55104648';
 
 // Default is an MSW fixture patient (see src/mocks/fixtures/outpatient.ts).
 const patientId = process.env.QA_PATIENT_ID ?? '01415';
@@ -144,7 +143,6 @@ const run = async () => {
       window.sessionStorage.setItem(key, value);
       window.sessionStorage.setItem('devFacilityId', auth.facilityId);
       window.sessionStorage.setItem('devUserId', auth.userId);
-      window.sessionStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.sessionStorage.setItem('devClientUuid', auth.clientUuid);
       window.sessionStorage.setItem(
         `opendolphin:web-client:charts:encounter-context:v2:${auth.facilityId}:${auth.userId}`,
@@ -152,7 +150,6 @@ const run = async () => {
       );
       window.localStorage.setItem('devFacilityId', auth.facilityId);
       window.localStorage.setItem('devUserId', auth.userId);
-      window.localStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.localStorage.setItem('devClientUuid', auth.clientUuid);
 
       // Log /orca/order/bundles traffic at fetch() level (works even when MSW intercepts).
@@ -225,7 +222,6 @@ const run = async () => {
       {
         facilityId,
         userId: authUserId,
-        passwordMd5: authPasswordMd5,
         passwordPlain: authPasswordPlain,
         clientUuid: session.clientUuid,
         patientId,

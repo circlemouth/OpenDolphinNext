@@ -434,7 +434,7 @@ export function buildVisitListFixture(flags: OutpatientFlagSet) {
   };
 }
 
-export function buildPatientListFixture(flags: OutpatientFlagSet, endpoint = '/api/orca/patients/local-search/mock') {
+export function buildPatientListFixture(flags: OutpatientFlagSet, endpoint = '/api/orca/patients/local-search') {
   return {
     patients: OUTPATIENT_PATIENTS,
     runId: flags.runId,

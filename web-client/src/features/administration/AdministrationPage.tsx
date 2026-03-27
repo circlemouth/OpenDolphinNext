@@ -131,8 +131,6 @@ const DEFAULT_ORCA_ENDPOINT =
   (import.meta.env as Record<string, string | undefined>).VITE_ORCA_ENDPOINT ?? 'https://localhost:9080/openDolphin/resources';
 const DEFAULT_FORM: AdminConfigPayload = {
   orcaEndpoint: DEFAULT_ORCA_ENDPOINT,
-  mswEnabled: import.meta.env.VITE_DISABLE_MSW !== '1',
-  useMockOrcaQueue: false,
   verifyAdminDelivery: false,
   chartsDisplayEnabled: true,
   chartsSendEnabled: true,
@@ -470,8 +468,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   );
   const environmentLabel = normalizeEnvironmentLabel(configQuery.data?.environment) ?? envFallback ?? 'unknown';
   const warningThresholdMinutes = Math.round(ORCA_QUEUE_STALL_THRESHOLD_MS / 60000);
-  const rawConfig = configQuery.data?.rawConfig ?? configQuery.data;
-  const rawDelivery = configQuery.data?.rawDelivery;
+  const rawConfig = configQuery.data;
   const latestAuditEvent = useMemo(() => {
     const snapshot = getAuditEventLog();
     const latest = snapshot[snapshot.length - 1];
@@ -503,8 +500,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     if (!rawConfig) return false;
     return (
       rawConfig.orcaEndpoint !== form.orcaEndpoint ||
-      rawConfig.mswEnabled !== form.mswEnabled ||
-      rawConfig.useMockOrcaQueue !== form.useMockOrcaQueue ||
       rawConfig.verifyAdminDelivery !== form.verifyAdminDelivery ||
       rawConfig.chartsDisplayEnabled !== form.chartsDisplayEnabled ||
       rawConfig.chartsSendEnabled !== form.chartsSendEnabled ||
@@ -516,13 +511,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     () =>
       [
         { key: 'orcaEndpoint', label: 'orcaEndpoint', before: rawConfig?.orcaEndpoint, after: form.orcaEndpoint },
-        { key: 'mswEnabled', label: 'mswEnabled', before: rawConfig?.mswEnabled, after: form.mswEnabled },
-        {
-          key: 'useMockOrcaQueue',
-          label: 'useMockOrcaQueue',
-          before: rawConfig?.useMockOrcaQueue,
-          after: form.useMockOrcaQueue,
-        },
         {
           key: 'verifyAdminDelivery',
           label: 'verifyAdminDelivery',
@@ -619,8 +607,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     setForm((prev) => ({
       ...prev,
       orcaEndpoint: data.orcaEndpoint || prev.orcaEndpoint,
-      mswEnabled: data.mswEnabled ?? prev.mswEnabled,
-      useMockOrcaQueue: data.useMockOrcaQueue ?? prev.useMockOrcaQueue,
       verifyAdminDelivery: data.verifyAdminDelivery ?? prev.verifyAdminDelivery,
       chartsDisplayEnabled: data.chartsDisplayEnabled ?? prev.chartsDisplayEnabled,
       chartsSendEnabled: data.chartsSendEnabled ?? prev.chartsSendEnabled,
@@ -1077,9 +1063,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     setConnectivitySummary({ testedAt: new Date().toISOString(), success, failure, details });
   };
 
-  const syncMismatch = configQuery.data?.syncMismatch;
-  const syncMismatchFields = configQuery.data?.syncMismatchFields?.length ? configQuery.data.syncMismatchFields.join(', ') : undefined;
-  const isForbidden = configQuery.data?.status === 403 || rawConfig?.status === 403 || rawDelivery?.status === 403;
+  const isForbidden = configQuery.data?.status === 403 || rawConfig?.status === 403;
 
   useEffect(() => {
     if (!isForbidden) return;
@@ -1101,31 +1085,31 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     });
   }, [actorId, isForbidden, resolvedRunId, role]);
 
-  const deliveryMode = configQuery.data?.deliveryMode ?? rawDelivery?.deliveryMode ?? rawConfig?.deliveryMode;
+  const deliveryMode = configQuery.data?.deliveryMode ?? rawConfig?.deliveryMode;
   const effectiveDeliveryEtag = configQuery.data?.deliveryEtag ?? configQuery.data?.deliveryVersion;
-  const deliveryStatus = buildChartsDeliveryStatus(rawConfig, rawDelivery);
+  const deliveryStatus = buildChartsDeliveryStatus(rawConfig, rawConfig);
   const deliverySummary = summarizeDeliveryStatus(deliveryStatus);
-  const lastDeliveredAt = rawDelivery?.deliveredAt ?? configQuery.data?.deliveredAt;
+  const lastDeliveredAt = configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt;
   const deliveryFlagRows = [
     {
       key: 'chartsDisplayEnabled',
       label: 'Charts表示',
       configValue: rawConfig?.chartsDisplayEnabled,
-      deliveryValue: rawDelivery?.chartsDisplayEnabled,
+      deliveryValue: rawConfig?.chartsDisplayEnabled,
       state: deliveryStatus.chartsDisplayEnabled,
     },
     {
       key: 'chartsSendEnabled',
       label: 'Charts送信',
       configValue: rawConfig?.chartsSendEnabled,
-      deliveryValue: rawDelivery?.chartsSendEnabled,
+      deliveryValue: rawConfig?.chartsSendEnabled,
       state: deliveryStatus.chartsSendEnabled,
     },
     {
       key: 'chartsMasterSource',
       label: 'Charts master',
       configValue: rawConfig?.chartsMasterSource,
-      deliveryValue: rawDelivery?.chartsMasterSource,
+      deliveryValue: rawConfig?.chartsMasterSource,
       state: deliveryStatus.chartsMasterSource,
     },
   ];
@@ -1215,17 +1199,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 </span>
                 <span className="administration-page__pill">運用状態: {abnormalSummary}</span>
                 <span className="administration-page__pill">環境: {environmentLabel}</span>
-                {syncMismatch ? (
-                  <button
-                    type="button"
-                    className="administration-page__pill administration-page__pill--warn"
-                    onClick={() => setSearchParams(new URLSearchParams({ section: 'config' }), { replace: false })}
-                  >
-                    不整合あり
-                  </button>
-                ) : (
-                  <span className="administration-page__pill">不整合なし</span>
-                )}
+                <span className="administration-page__pill">単一路線: config only</span>
               </div>
             </section>
 
@@ -1372,14 +1346,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 runId={resolvedRunId}
                 nextAction="再送/破棄・再取得"
               />
-            ) : syncMismatch ? (
-              <ToneBanner
-                tone="warning"
-                message={`config/delivery の不一致を検知しました。fields: ${syncMismatchFields ?? 'unknown'}`}
-                destination="Administration"
-                runId={resolvedRunId}
-                nextAction="再取得 / 再配信で解消"
-              />
             ) : null}
 
             {activeDeliverySection === 'dashboard' ? (
@@ -1390,8 +1356,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 webOrcaConnection={webOrcaConnectionLabel}
                 queueSummary={queueSummary}
                 environmentLabel={environmentLabel}
-                syncMismatch={syncMismatch}
-                syncMismatchFields={syncMismatchFields}
                 warningThresholdMinutes={warningThresholdMinutes}
                 onNavigate={(next) => {
                   const params = new URLSearchParams(searchParams);
@@ -1435,7 +1399,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                   isSystemAdmin={isSystemAdmin}
                   showAdminDebugToggles={showAdminDebugToggles}
                   dirty={configDirty}
-                  updatedAt={rawDelivery?.deliveredAt ?? rawConfig?.deliveredAt}
+                  updatedAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
                   feedback={feedback}
                   note={configQuery.data?.note}
                   guardDetailsId={guardDetailsId}
@@ -1450,7 +1414,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                   deliveryId={configQuery.data?.deliveryId}
                   deliveryVersion={configQuery.data?.deliveryVersion}
                   deliveryEtag={effectiveDeliveryEtag}
-                  deliveredAt={rawDelivery?.deliveredAt ?? configQuery.data?.deliveredAt}
+                  deliveredAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
                   environmentLabel={environmentLabel}
                   deliveryMode={deliveryMode}
                   verified={configQuery.data?.verifyAdminDelivery}

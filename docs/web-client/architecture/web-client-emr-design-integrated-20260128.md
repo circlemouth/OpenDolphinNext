@@ -193,8 +193,7 @@ RUN_ID=20260130T125310Z PLAYWRIGHT_DISABLE_MSW=1 npx playwright test tests/e2e/c
 **実装方針**
 - 入力: 施設ID / ユーザーID / パスワード / clientUUID。
 - `/api/user/{facilityId}:{userId}` でログイン検証。
-- 認証は **Basic** を優先し、Legacy ヘッダ認証は `VITE_ENABLE_LEGACY_HEADER_AUTH=1` の場合に強制またはフォールバックする。
-- `VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK=1` の場合のみ Basic 失敗時に限定フォールバックを許可する。
+- 認証は `/session/login` と `/session/login/factor2` を使う current session contract を正とし、旧認証切替は current runtime contract に含めない。
 - RUN_ID をログイン時に生成し、以後の画面へ伝播。
 - ログイン成功後は `/f/:facilityId/reception` へ遷移。
 
@@ -299,7 +298,7 @@ RUN_ID=20260130T125310Z PLAYWRIGHT_DISABLE_MSW=1 npx playwright test tests/e2e/c
 - **Charts UI**: 上部タブではなく、3カラム + ドロワー + セクション移動を採用。
 - **SSE**: ChartEventStream は既に実装済みのため **標準機能**として維持。
 - **画像API**: `/karte/images` を正とし、`/karte/iamges` は typo 互換フォールバック扱い。
-- **Login API**: `/api/user/{facilityId}:{userId}` を正とし、Legacy ヘッダ認証は `VITE_ENABLE_LEGACY_HEADER_AUTH=1` で強制/フォールバック、`VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK=1` の場合のみ Basic 失敗時に限定フォールバックする。
+- **Login API**: `/session/login` を正とし、必要時のみ `/session/login/factor2` で 6 桁コードを送る。旧認証切替の案内は current contract から外す。
 
 ## 6. 非対象/保留（明示的に実装しない）
 - 入院・病棟スコープ。

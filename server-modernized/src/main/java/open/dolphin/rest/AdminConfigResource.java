@@ -173,8 +173,8 @@ public class AdminConfigResource extends AbstractResource {
         String chartsMasterSource = getString(payload, "chartsMasterSource");
         if (chartsMasterSource != null) {
             String normalized = chartsMasterSource.trim().toLowerCase(Locale.ROOT);
-            if (!List.of("auto", "orca", "local").contains(normalized)) {
-                throw new IllegalArgumentException("chartsMasterSource は auto/orca/local のいずれかを指定してください。");
+            if (!List.of("auto", "server", "mock", "snapshot", "fallback").contains(normalized)) {
+                throw new IllegalArgumentException("chartsMasterSource は auto/server/mock/snapshot/fallback のいずれかを指定してください。");
             }
         }
         String deliveryMode = getString(payload, "deliveryMode", "deliveryState", "deliveryStatus");
@@ -223,16 +223,6 @@ public class AdminConfigResource extends AbstractResource {
         return actor;
     }
 
-    @GET
-    @Path("/delivery")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getDelivery(@Context HttpServletRequest request) {
-        requireAdmin(request, userServiceBean);
-        AdminConfigSnapshot snapshot = resolveSnapshot();
-        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
-        return buildResponse(snapshot, runId);
-    }
-
     private AdminConfigSnapshot resolveSnapshot() {
         return adminConfigStore.getSnapshot();
     }
@@ -260,7 +250,6 @@ public class AdminConfigResource extends AbstractResource {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("runId", runId);
         body.put("orcaEndpoint", snapshot.getOrcaEndpoint());
-        body.put("mswEnabled", snapshot.getMswEnabled());
         body.put("verifyAdminDelivery", snapshot.getVerifyAdminDelivery());
         body.put("chartsDisplayEnabled", snapshot.getChartsDisplayEnabled());
         body.put("chartsSendEnabled", snapshot.getChartsSendEnabled());
@@ -288,7 +277,6 @@ public class AdminConfigResource extends AbstractResource {
             return snapshot;
         }
         snapshot.setOrcaEndpoint(getString(payload, "orcaEndpoint", "endpoint"));
-        snapshot.setMswEnabled(getBoolean(payload.get("mswEnabled"), payload.get("msw")));
         snapshot.setVerifyAdminDelivery(getBoolean(payload.get("verifyAdminDelivery")));
         snapshot.setChartsDisplayEnabled(getBoolean(payload.get("chartsDisplayEnabled")));
         snapshot.setChartsSendEnabled(getBoolean(payload.get("chartsSendEnabled")));

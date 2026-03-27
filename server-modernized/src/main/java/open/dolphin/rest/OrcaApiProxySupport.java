@@ -33,7 +33,9 @@ public final class OrcaApiProxySupport {
         if (sanitizedRunId != null) {
             builder.header("X-Run-Id", sanitizedRunId);
         }
-        if (!isForwardXOrcaHeadersEnabled()) {
+        boolean forwardXOrcaHeaders = isForwardXOrcaHeadersEnabled();
+        boolean forwardApiResultMessageHeader = isApiResultMessageHeaderEnabled();
+        if (!forwardXOrcaHeaders && !forwardApiResultMessageHeader) {
             return builder.build();
         }
         if (result.getHeaders() != null) {
@@ -47,6 +49,14 @@ public final class OrcaApiProxySupport {
                     return;
                 }
                 if (isApiResultMessageHeader(trimmed)) {
+                    if (forwardApiResultMessageHeader) {
+                        for (String value : values) {
+                            String sanitized = sanitizeHeaderValue(trimmed, value);
+                            if (sanitized != null) {
+                                builder.header(trimmed, sanitized);
+                            }
+                        }
+                    }
                     return;
                 }
                 for (String value : values) {
@@ -54,7 +64,7 @@ public final class OrcaApiProxySupport {
                     if (sanitized == null) {
                         continue;
                     }
-                    if (trimmed.startsWith("X-Orca-")) {
+                    if (forwardXOrcaHeaders && trimmed.startsWith("X-Orca-")) {
                         builder.header(trimmed, sanitized);
                     }
                 }
@@ -93,12 +103,12 @@ public final class OrcaApiProxySupport {
 
     static boolean isForwardXOrcaHeadersEnabled(ServerConfigurationResolver resolver) {
         ServerRuntimeConfiguration.OrcaProxySettings settings = resolver.orcaProxy();
-        return settings.forwardXOrcaHeaders() == null || settings.forwardXOrcaHeaders();
+        return Boolean.TRUE.equals(settings.forwardXOrcaHeaders());
     }
 
     static boolean isApiResultMessageHeaderEnabled(ServerConfigurationResolver resolver) {
         ServerRuntimeConfiguration.OrcaProxySettings settings = resolver.orcaProxy();
-        return settings.forwardApiResultMessageHeader() == null || settings.forwardApiResultMessageHeader();
+        return Boolean.TRUE.equals(settings.forwardApiResultMessageHeader());
     }
 
     private static boolean isApiResultMessageHeader(String headerName) {

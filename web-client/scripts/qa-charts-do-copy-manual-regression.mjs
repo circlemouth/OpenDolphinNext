@@ -30,7 +30,6 @@ const facilityId = String(facilityJson.facilityId ?? '0001');
 
 const authUserId = 'doctor1';
 const authPasswordPlain = 'doctor2025';
-const authPasswordMd5 = '632080fabdb968f9ac4f31fb55104648';
 
 const session = {
   facilityId,
@@ -61,11 +60,9 @@ const createSessionContext = async (browser, viewport) => {
       window.sessionStorage.setItem(key, value);
       window.sessionStorage.setItem('devFacilityId', auth.facilityId);
       window.sessionStorage.setItem('devUserId', auth.userId);
-      window.sessionStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.sessionStorage.setItem('devClientUuid', auth.clientUuid);
       window.localStorage.setItem('devFacilityId', auth.facilityId);
       window.localStorage.setItem('devUserId', auth.userId);
-      window.localStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.localStorage.setItem('devClientUuid', auth.clientUuid);
     },
     [
@@ -74,7 +71,6 @@ const createSessionContext = async (browser, viewport) => {
       {
         facilityId,
         userId: authUserId,
-        passwordMd5: authPasswordMd5,
         passwordPlain: authPasswordPlain,
         clientUuid: session.clientUuid,
       },

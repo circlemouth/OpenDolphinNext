@@ -8,8 +8,6 @@ export type ChartsMasterSourcePolicy = 'auto' | 'server' | 'mock' | 'snapshot' |
 
 export type AdminConfigPayload = {
   orcaEndpoint: string;
-  mswEnabled: boolean;
-  useMockOrcaQueue: boolean;
   verifyAdminDelivery: boolean;
   chartsDisplayEnabled: boolean;
   chartsSendEnabled: boolean;
@@ -30,12 +28,7 @@ export type AdminConfigResponse = Partial<AdminConfigPayload> & {
   deliveryMode?: string;
 };
 
-export type EffectiveAdminConfigResponse = AdminConfigResponse & {
-  rawConfig?: AdminConfigResponse;
-  rawDelivery?: AdminConfigResponse;
-  syncMismatch?: boolean;
-  syncMismatchFields?: Array<keyof AdminConfigPayload>;
-};
+export type EffectiveAdminConfigResponse = AdminConfigResponse;
 
 export type OperationsCheck = {
   status?: string;
@@ -84,7 +77,6 @@ export type PvtWorkerHealthResponse = {
 };
 
 const ADMIN_CONFIG_ENDPOINT = '/api/admin/config';
-const ADMIN_DELIVERY_ENDPOINT = '/api/admin/delivery';
 const OPERATIONS_HEALTH_ENDPOINT = '/api/health';
 const OPERATIONS_READINESS_ENDPOINT = '/api/health/readiness';
 const PVT_WORKER_HEALTH_ENDPOINT = '/api/health/worker/pvt';
@@ -172,8 +164,6 @@ const normalizeConfig = (json: unknown, headers: Headers, status?: number): Admi
 
   const payload: AdminConfigResponse = {
     orcaEndpoint: getString(body.orcaEndpoint) ?? getString(body.endpoint),
-    mswEnabled: getBoolean(body.mswEnabled) ?? getBoolean(body.msw),
-    useMockOrcaQueue: getBoolean(body.useMockOrcaQueue) ?? (queueMode === null ? undefined : queueMode === 'mock'),
     verifyAdminDelivery: getBoolean(body.verifyAdminDelivery) ?? normalizeBooleanHeader(verifyHeader),
     chartsDisplayEnabled: getBoolean(body.chartsDisplayEnabled) ?? getBoolean(charts.displayEnabled),
     chartsSendEnabled: getBoolean(body.chartsSendEnabled) ?? getBoolean(charts.sendEnabled),
@@ -225,74 +215,8 @@ export async function saveAdminConfig(payload: AdminConfigPayload): Promise<Admi
   return normalizeConfig(json, response.headers, response.status);
 }
 
-export async function fetchAdminDelivery(): Promise<AdminConfigResponse> {
-  if (adminEndpointUnavailable) return buildAdminUnavailableResponse();
-  const response = await httpFetch(ADMIN_DELIVERY_ENDPOINT, { method: 'GET', notifySessionExpired: false });
-  const json = await response.json().catch(() => ({}));
-  if (response.status === 401 || response.status === 403) {
-    return buildAdminUnavailableResponse(response.status);
-  }
-  if (response.status === 404) {
-    adminEndpointUnavailable = true;
-    return buildAdminUnavailableResponse(response.status);
-  }
-  return normalizeConfig(json, response.headers, response.status);
-}
-
-const ADMIN_SYNC_FIELDS: Array<keyof AdminConfigPayload> = [
-  'orcaEndpoint',
-  'mswEnabled',
-  'useMockOrcaQueue',
-  'verifyAdminDelivery',
-  'chartsDisplayEnabled',
-  'chartsSendEnabled',
-  'chartsMasterSource',
-];
-
-const detectSyncMismatch = (config: AdminConfigResponse, delivery: AdminConfigResponse) => {
-  const mismatched: Array<keyof AdminConfigPayload> = [];
-  for (const key of ADMIN_SYNC_FIELDS) {
-    const a = config[key];
-    const b = delivery[key];
-    if (a === undefined || b === undefined) continue;
-    if (a !== b) mismatched.push(key);
-  }
-  return mismatched;
-};
-
-export function mergeAdminConfigResponses(
-  config: AdminConfigResponse,
-  delivery: AdminConfigResponse,
-): EffectiveAdminConfigResponse {
-  const syncMismatchFields = detectSyncMismatch(config, delivery);
-  return {
-    ...config,
-    ...delivery,
-    status: delivery.status ?? config.status,
-    orcaEndpoint: delivery.orcaEndpoint || config.orcaEndpoint,
-    mswEnabled: delivery.mswEnabled ?? config.mswEnabled,
-    useMockOrcaQueue: delivery.useMockOrcaQueue ?? config.useMockOrcaQueue,
-    verifyAdminDelivery: delivery.verifyAdminDelivery ?? config.verifyAdminDelivery,
-    chartsDisplayEnabled: delivery.chartsDisplayEnabled ?? config.chartsDisplayEnabled,
-    chartsSendEnabled: delivery.chartsSendEnabled ?? config.chartsSendEnabled,
-    chartsMasterSource: delivery.chartsMasterSource ?? config.chartsMasterSource,
-    environment: delivery.environment ?? config.environment,
-    deliveryMode: delivery.deliveryMode ?? config.deliveryMode,
-    deliveryVersion: delivery.deliveryVersion ?? config.deliveryVersion,
-    deliveryEtag: delivery.deliveryEtag ?? config.deliveryEtag,
-    rawConfig: config,
-    rawDelivery: delivery,
-    syncMismatch: syncMismatchFields.length > 0 ? true : false,
-    syncMismatchFields,
-  };
-}
-
 export async function fetchEffectiveAdminConfig(): Promise<EffectiveAdminConfigResponse> {
-  const config = await fetchAdminConfig();
-  if (adminEndpointUnavailable) return config;
-  const delivery = await fetchAdminDelivery().catch(() => null);
-  if (!delivery) return config;
-  return mergeAdminConfigResponses(config, delivery);
+  return fetchAdminConfig();
 }
 
 export async function fetchOperationsHealth(): Promise<OperationsHealthResponse> {

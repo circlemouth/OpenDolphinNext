@@ -31,7 +31,6 @@ const facilityId = String(facilityJson.facilityId ?? '0001');
 
 const authUserId = 'doctor1';
 const authPasswordPlain = 'doctor2025';
-const authPasswordMd5 = '632080fabdb968f9ac4f31fb55104648';
 
 const envOrDefault = (value, fallback) =>
   typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
@@ -136,7 +135,6 @@ const createSessionContext = async (browser) => {
       window.sessionStorage.setItem(key, value);
       window.sessionStorage.setItem('devFacilityId', auth.facilityId);
       window.sessionStorage.setItem('devUserId', auth.userId);
-      window.sessionStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.sessionStorage.setItem('devClientUuid', auth.clientUuid);
       if (auth.seedChartsContext) {
         window.sessionStorage.setItem(
@@ -146,7 +144,6 @@ const createSessionContext = async (browser) => {
       }
       window.localStorage.setItem('devFacilityId', auth.facilityId);
       window.localStorage.setItem('devUserId', auth.userId);
-      window.localStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.localStorage.setItem('devClientUuid', auth.clientUuid);
 
       // Seed auth-service flags so initial requests use the server route (avoid being stuck on snapshot/missingMaster=true).
@@ -210,7 +207,6 @@ const createSessionContext = async (browser) => {
       {
         facilityId,
         userId: authUserId,
-        passwordMd5: authPasswordMd5,
         passwordPlain: authPasswordPlain,
         clientUuid: `qa-${runId}`,
         patientId,

@@ -26,7 +26,6 @@ const facilityId = String(facilityJson.facilityId ?? '0001');
 // dev-only creds commonly used in this repo.
 const authUserId = process.env.QA_USER_ID ?? 'doctor1';
 const authPasswordPlain = process.env.QA_PASSWORD_PLAIN ?? 'doctor2025';
-const authPasswordMd5 = process.env.QA_PASSWORD_MD5 ?? '632080fabdb968f9ac4f31fb55104648';
 
 const patientId = process.env.QA_PATIENT_ID ?? '01415';
 const visitDate = process.env.QA_VISIT_DATE ?? '2026-02-06';
@@ -54,7 +53,6 @@ const startDevServer = async ({ port }) => {
       env: {
         ...process.env,
         VITE_CHARTS_REVISION_HISTORY: '1',
-        VITE_ENABLE_LEGACY_HEADER_AUTH: '1',
         // Ensure proxy reaches the modernized server used by prior curl proof.
         VITE_DEV_PROXY_TARGET: process.env.VITE_DEV_PROXY_TARGET ?? 'http://localhost:9080',
       },
@@ -136,12 +134,10 @@ const main = async () => {
 
         window.sessionStorage.setItem('devFacilityId', auth.facilityId);
         window.sessionStorage.setItem('devUserId', auth.userId);
-        window.sessionStorage.setItem('devPasswordMd5', auth.passwordMd5);
         window.sessionStorage.setItem('devClientUuid', auth.clientUuid);
 
         window.localStorage.setItem('devFacilityId', auth.facilityId);
         window.localStorage.setItem('devUserId', auth.userId);
-        window.localStorage.setItem('devPasswordMd5', auth.passwordMd5);
         window.localStorage.setItem('devClientUuid', auth.clientUuid);
 
         window.sessionStorage.setItem(encKey, encValue);
@@ -152,7 +148,6 @@ const main = async () => {
         {
           facilityId,
           userId: authUserId,
-          passwordMd5: authPasswordMd5,
           passwordPlain: authPasswordPlain,
           clientUuid: session.clientUuid,
         },

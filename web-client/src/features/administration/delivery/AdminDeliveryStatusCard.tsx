@@ -59,7 +59,7 @@ export function AdminDeliveryStatusCard({
     <AdminCard
       id="admin-delivery-status"
       title="配信ステータス"
-      description="rawConfig と rawDelivery の差分を明示し、未反映時の対処を示します。"
+      description="単一の config 応答から配信状態を確認し、未反映時の対処を示します。"
     >
       <div className="admin-result admin-result--stack">
         <div className="admin-inline-meta">

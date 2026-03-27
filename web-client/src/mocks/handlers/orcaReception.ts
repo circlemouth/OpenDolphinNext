@@ -105,5 +105,4 @@ const buildPayload = async (request: Request) => {
 
 export const orcaReceptionHandlers = [
   http.post('/api/orca/visits/mutation', async ({ request }) => buildPayload(request)),
-  http.post('/api/orca/visits/mutation/mock', async ({ request }) => buildPayload(request)),
 ];

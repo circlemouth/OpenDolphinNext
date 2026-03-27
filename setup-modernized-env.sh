@@ -1176,8 +1176,6 @@ resolve_web_client_orca_path_prefix() {
 start_web_client_docker() {
   log "Starting Web Client container via docker-compose..."
   local dev_proxy_target="${WEB_CLIENT_DEV_PROXY_TARGET_RAW:-$WEB_CLIENT_DOCKER_PROXY_TARGET_DEFAULT}"
-  local dev_enable_legacy_header_auth="${VITE_ENABLE_LEGACY_HEADER_AUTH:-0}"
-  local dev_allow_legacy_header_auth_fallback="${VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK:-$LEGACY_HEADER_AUTH_FALLBACK_DEFAULT}"
   local dev_enable_facility_header="${VITE_ENABLE_FACILITY_HEADER:-1}"
   local dev_orca_mode="${ORCA_MODE:-}"
   local dev_orca_path_prefix
@@ -1186,8 +1184,6 @@ start_web_client_docker() {
   local dev_orca_basic_password="${ORCA_PROXY_BASIC_PASSWORD:-${ORCA_BASIC_PASSWORD:-${ORCA_API_PASSWORD:-${ORCA_TRIAL_PASS:-}}}}"
   local base_path="$VITE_BASE_PATH_NORMALIZED"
   VITE_DEV_PROXY_TARGET="$dev_proxy_target" \
-    VITE_ENABLE_LEGACY_HEADER_AUTH="$dev_enable_legacy_header_auth" \
-    VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK="$dev_allow_legacy_header_auth_fallback" \
     VITE_ENABLE_FACILITY_HEADER="$dev_enable_facility_header" \
     VITE_ORCA_MODE="$dev_orca_mode" \
     VITE_ORCA_API_PATH_PREFIX="$dev_orca_path_prefix" \
@@ -1209,8 +1205,6 @@ start_web_client_npm() {
   local dev_enable_telemetry="${VITE_ENABLE_TELEMETRY:-0}"
   local dev_disable_security="${VITE_DISABLE_SECURITY:-0}"
   local dev_disable_audit="${VITE_DISABLE_AUDIT:-0}"
-  local dev_enable_legacy_header_auth="${VITE_ENABLE_LEGACY_HEADER_AUTH:-0}"
-  local dev_allow_legacy_header_auth_fallback="${VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK:-$LEGACY_HEADER_AUTH_FALLBACK_DEFAULT}"
   local dev_enable_facility_header="${VITE_ENABLE_FACILITY_HEADER:-1}"
   local dev_api_base_url="${WEB_CLIENT_DEV_API_BASE:-/api}"
   local dev_orca_master_user="${VITE_ORCA_MASTER_USER:-1.3.6.1.4.1.9414.70.1:admin}"
@@ -1236,8 +1230,6 @@ VITE_DISABLE_MSW=$dev_disable_msw
 VITE_ENABLE_TELEMETRY=$dev_enable_telemetry
 VITE_DISABLE_SECURITY=$dev_disable_security
 VITE_DISABLE_AUDIT=$dev_disable_audit
-VITE_ENABLE_LEGACY_HEADER_AUTH=$dev_enable_legacy_header_auth
-VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK=$dev_allow_legacy_header_auth_fallback
 VITE_ENABLE_FACILITY_HEADER=$dev_enable_facility_header
 VITE_ORCA_MASTER_USER=$dev_orca_master_user
 VITE_ORCA_MASTER_PASSWORD=$dev_orca_master_password
@@ -1256,10 +1248,8 @@ EOF
       VITE_DEV_USE_HTTPS="$dev_use_https" \
       VITE_DISABLE_MSW="$dev_disable_msw" \
       VITE_ENABLE_TELEMETRY="$dev_enable_telemetry" \
-      VITE_DISABLE_SECURITY="$dev_disable_security" \
+    VITE_DISABLE_SECURITY="$dev_disable_security" \
       VITE_DISABLE_AUDIT="$dev_disable_audit" \
-      VITE_ENABLE_LEGACY_HEADER_AUTH="$dev_enable_legacy_header_auth" \
-      VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK="$dev_allow_legacy_header_auth_fallback" \
       VITE_ENABLE_FACILITY_HEADER="$dev_enable_facility_header" \
     VITE_ORCA_MASTER_USER="$dev_orca_master_user" \
     VITE_ORCA_MASTER_PASSWORD="$dev_orca_master_password" \

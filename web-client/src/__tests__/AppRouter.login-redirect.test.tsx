@@ -178,8 +178,59 @@ describe('AppRouter login redirect', () => {
     expect(router.state.location.state).toEqual(fromState.state);
   });
 
+  it('state.from が facility-scoped でない場合でも認証済みなら reception に落とす', async () => {
+    sessionStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        facilityId: '123',
+        userId: 'user-1',
+        role: 'doctor',
+        runId: 'run-login-state',
+      }),
+    );
+    const router = buildRouter([{ pathname: '/login', state: { from: '/charts' } }]);
+
+    render(<RouterProvider router={router} />);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/f/123/reception');
+    });
+  });
+
+  it('未認証の root-level arbitrary path は /login に寄せ、state.from を持ち込まない', async () => {
+    globalThis.__mockAutoLogin = false;
+    const router = buildRouter(['/charts']);
+
+    render(<RouterProvider router={router} />);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/login');
+    });
+    expect(screen.getByTestId('login-screen')).toBeInTheDocument();
+  });
+
   it('/f/:id/login 直アクセス時は reception へ即リダイレクトする', async () => {
     const router = buildRouter(['/f/123/login']);
+
+    render(<RouterProvider router={router} />);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/f/123/reception');
+    });
+  });
+
+  it('root-level の arbitrary path は reception の固定 fallback に寄せる', async () => {
+    sessionStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        facilityId: '123',
+        userId: 'user-1',
+        role: 'doctor',
+        runId: 'run-root',
+      }),
+    );
+
+    const router = buildRouter(['/charts']);
 
     render(<RouterProvider router={router} />);
 

@@ -26,7 +26,6 @@ const facilityId = String(facilityJson.facilityId ?? '0001');
 // NOTE: dev-only creds commonly used in this repo's QA scripts.
 const authUserId = process.env.QA_USER_ID ?? 'doctor1';
 const authPasswordPlain = process.env.QA_PASSWORD_PLAIN ?? 'doctor2025';
-const authPasswordMd5 = process.env.QA_PASSWORD_MD5 ?? '632080fabdb968f9ac4f31fb55104648';
 
 const patientId = process.env.QA_PATIENT_ID ?? '01415';
 const encounterContextKey = `opendolphin:web-client:charts:encounter-context:v2:${facilityId}:${authUserId}`;
@@ -130,12 +129,10 @@ const runScenario = async ({ baseURL, expectImagesEntry, uploadAndInsertSoap }) 
 
       window.sessionStorage.setItem('devFacilityId', auth.facilityId);
       window.sessionStorage.setItem('devUserId', auth.userId);
-      window.sessionStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.sessionStorage.setItem('devClientUuid', auth.clientUuid);
 
       window.localStorage.setItem('devFacilityId', auth.facilityId);
       window.localStorage.setItem('devUserId', auth.userId);
-      window.localStorage.setItem('devPasswordMd5', auth.passwordMd5);
       window.localStorage.setItem('devClientUuid', auth.clientUuid);
 
       window.sessionStorage.setItem(encKey, encValue);
@@ -146,7 +143,6 @@ const runScenario = async ({ baseURL, expectImagesEntry, uploadAndInsertSoap }) 
       {
         facilityId,
         userId: authUserId,
-        passwordMd5: authPasswordMd5,
         passwordPlain: authPasswordPlain,
         clientUuid: session.clientUuid,
       },

@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.servlet.AsyncContext;
 import open.dolphin.infomodel.PatientVisitModel;
 
 /**
@@ -22,46 +21,12 @@ public class ServletContextHolder {
     private GregorianCalendar today;
     private GregorianCalendar tomorrow;
 
-    // Legacy long-poll fallback only. New realtime subscriptions must use SSE.
-    private final List<AsyncContext> acList = new ArrayList<>();
-    
     // facilityIdとpvtListのマップ
     private final Map<String, List<PatientVisitModel>> pvtListMap 
             = new ConcurrentHashMap<>();
     
     // サーバーのUUID
     private String serverUUID;
-
-    /**
-     * @deprecated AsyncContext based delivery is frozen as a legacy fallback.
-     * Use the SSE resources instead of registering new long-poll clients.
-     */
-    @Deprecated(forRemoval = false)
-    public List<AsyncContext> getAsyncContextList() {
-        return acList;
-    }
-
-    /**
-     * @deprecated AsyncContext based delivery is frozen as a legacy fallback.
-     * Use the SSE resources instead of registering new long-poll clients.
-     */
-    @Deprecated(forRemoval = false)
-    public void addAsyncContext(AsyncContext ac) {
-        synchronized (acList) {
-            acList.add(ac);
-        }
-    }
-
-    /**
-     * @deprecated AsyncContext based delivery is frozen as a legacy fallback.
-     * Use the SSE resources instead of registering new long-poll clients.
-     */
-    @Deprecated(forRemoval = false)
-    public void removeAsyncContext(AsyncContext ac) {
-        synchronized (acList) {
-            acList.remove(ac);
-        }
-    }
     
     public String getServerUUID() {
         return serverUUID;

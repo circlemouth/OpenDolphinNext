@@ -58,11 +58,11 @@ const walk = (currentDir) => {
 walk(srcDir);
 
 if (findings.length > 0) {
-  console.error('[verify:no-removed-routes] blocked route の再混入を検出しました。');
+  console.error('[verify:no-blocked-orca-route-strings] blocked ORCA route string の再混入を検出しました。');
   findings.forEach((finding) => {
     console.error(` - ${path.relative(projectRootDir, finding.filePath)}:${finding.line} ${finding.route}`);
   });
   process.exit(2);
 }
 
-console.log('[verify:no-removed-routes] blocked route の再混入は検出されませんでした。');
+console.log('[verify:no-blocked-orca-route-strings] blocked ORCA route string の再混入は検出されませんでした。');

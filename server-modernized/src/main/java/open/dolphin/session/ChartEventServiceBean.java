@@ -10,7 +10,6 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
-import jakarta.servlet.AsyncContext;
 import jakarta.transaction.Transactional;
 import open.dolphin.infomodel.*;
 import open.dolphin.mbean.ServletContextHolder;
@@ -73,45 +72,7 @@ public class ChartEventServiceBean {
             return;
         }
 
-        // Modernized realtime notifications must go through SSE first.
-        // The AsyncContext list is retained only as a frozen fallback for legacy long-poll clients.
         chartEventStreamPublisher.broadcast(evt);
-        dispatchLegacyAsyncContexts(evt, fid);
-    }
-
-    private void dispatchLegacyAsyncContexts(ChartEventModel evt, String fid) {
-        List<AsyncContext> acList = contextHolder.getAsyncContextList();
-        if (acList.isEmpty()) {
-            return;
-        }
-        synchronized (acList) {
-            for (Iterator<AsyncContext> itr = acList.iterator(); itr.hasNext();) {
-                
-                AsyncContext ac = itr.next();
-                String acFid = (String) ac.getRequest().getAttribute(ChartEventSessionKeys.FACILITY_ID);
-                String acUUID = (String) ac.getRequest().getAttribute(ChartEventSessionKeys.CLIENT_UUID);
-                String issuerUUID = evt.getIssuerUUID();
-                
-                // 同一施設かつChartEventModelの発行者でないクライアントに通知する
-                if (fid.equals(acFid) && !acUUID.equals(issuerUUID)) {
-                    itr.remove();
-                    try {
-                        ac.getRequest().setAttribute(ChartEventSessionKeys.EVENT_ATTRIBUTE, evt);
-                        ac.dispatch(ChartEventSessionKeys.DISPATCH_URL);
-//minagawa^                        
-                        if (true) {
-                            StringBuilder sb = new StringBuilder();
-                            sb.append(acFid).append(":").append(acUUID);
-                            sb.append(" did notified by ").append(issuerUUID);
-                            debug(sb.toString());
-                        }
-//minagawa$                        
-                    } catch (Exception ex) {
-                        warn("Exception in ac.dispatch.", ex);
-                    }
-                }
-            }
-        }
     }
     
     public String getServerUUID() {

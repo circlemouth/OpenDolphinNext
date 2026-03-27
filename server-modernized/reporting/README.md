@@ -1,34 +1,57 @@
-# 帳票テンプレート運用ガイド
+# 帳票テンプレート運用メモ
+
+この README は、この checkout で確認できる実装とテンプレートだけを前提にした現行契約をまとめる。
+CI ワークフローの実行手順、外部レンダラー前提の説明、repo で再現できない運用手順は載せない。
 
 ## テンプレート配置
-- すべての Velocity テンプレートは `server-modernized/reporting/templates/` に配置する。ビルド時に `reporting/templates` として WAR 内へ同梱される。
-- 多言語対応はファイルサフィックスで区別し、`patient_summary_ja_JP.vm` のようにロケールコードを付与する。
-- 共通パーツは `common/` ディレクトリへまとめ、`#parse("common/header.vm")` のように読み込む。
-- 実行時の読み込みディレクトリは `open.dolphin.templates.dir`（システムプロパティ）または環境変数 `OPENDOLPHIN_TEMPLATES_DIR` で上書きできる。未設定の場合は `server-modernized/reporting/templates` が自動検出される。
 
-## ビルド設定
-- `server-modernized/pom.xml` の通常ビルドに OpenPDF と Velocity 2.3 を組み込んでおり、WAR 生成時に最新テンプレートが同梱される。
-- プレビュー生成・アクセシビリティ検証の具体的な手順は `docs/server-modernization/reporting/3_5-reporting-modernization.md` の CI セクションを参照する。
+- 実テンプレートは `server-modernized/reporting/templates/` に置く。
+- ここにあるテンプレートは build 時に `reporting/templates` として同梱される。
+- 現在 repo で確認できるテンプレートは次のとおり。
+- `patient_summary_ja_JP.vm`
+- `patient_summary_en_US.vm`
+- `receipt_export_ja_JP.vm`
+- `receipt_export_en_US.vm`
+- `common/header.vm`
+- `common/footer.vm`
+- `common/karte_helpers.vm`
 
-## テンプレート更新フロー
-1. `templates/` で変更を行い、CI の `Reporting Preview` ワークフロー結果を確認して Velocity 構文エラーがないことを確認。
-2. ローカルでプレビューが必要な場合は下記の `PdfRendererKt` を利用し、OpenPDF ベースの PDF を生成してアクセシビリティを確認。
-3. 生成物を Git LFS に登録し、Pull Request に貼付した上で QA チームへレビュー依頼。
+## テンプレート解決順
 
-### ローカルプレビュー（例）
+`ReportTemplateEngine` は locale に応じて次の順に候補を探す。
 
-```
-mvn -pl server-modernized -am -DskipTests package
-java \
-  -cp "$(find server-modernized/target -name 'classes' -o -name '*.jar' -print | paste -sd: -)" \
-  open.dolphin.reporting.PdfRendererKt \
-  --templates server-modernized/reporting/templates \
-  --output reporting/output/sample-ja.pdf \
-  --locale ja-JP
-```
+- `baseName_<locale>.vm`
+- `baseName_<language>.vm`
+- `baseName_<defaultLocale>.vm`
+- `baseName.vm`
 
-署名設定を併用する場合は `--config server-modernized/reporting/signing-config.sample.json` を追加する。
+テンプレート本体はさらに次の場所から解決される。
 
-## Secrets
-- PDF 署名鍵は `reporting/secrets/signature.p12` をデプロイパイプラインでマウントし、ローカルではダミー鍵 (`reporting/secrets/sample-signature.p12`) を利用する。
-- 署名設定 (`signing-config.json`) に TSA 情報が含まれていて接続に失敗した場合でも、自動的に署名無しの PDF を生成しつつ警告ログを出力する。
+- `--templates` で明示されたディレクトリ
+- `open.dolphin.templates.dir`
+- `OPENDOLPHIN_TEMPLATES_DIR`
+- `jboss.home.dir/templates`
+- `server-modernized/reporting/templates`
+- `reporting/src/main/resources/reporting/templates`
+
+`common/*.vm` は `#parse` で共通化してよい。
+
+## absolute path の扱い
+
+- `ReportTemplateEngine` は最終的にテンプレートルートを絶対パスとして扱う。
+- `SigningConfig.fromJson()` は `keystorePath` を config ファイル基準で解決する。
+- 運用では cwd 依存を避けるため、テンプレートルートも keystore も絶対パスを使うこと。
+
+## 署名ポリシー
+
+- 署名は `--config` もしくは API 側の signing 設定が渡された場合にだけ行う。
+- `signing-config.sample.json` はサンプルであり、秘密情報の保存先として扱わない。
+- TSA が設定されている場合、timestamp 失敗を無視して unsigned に落とす挙動は取らない。
+- TSA 不達、無効な key alias、keystore 読み込み失敗は fail-closed として扱う。
+- 署名不要の local preview は signing config を渡さずに行う。
+
+## 現在 repo で確認できる補足
+
+- `reporting` モジュールには `PdfRendererKt` の CLI 入口がある。
+- `server-modernized/reporting/signing-config.sample.json` は field 名を固定したまま使う。
+- この README は repo の現物に合わせることを優先し、未確認の運用フローは追加しない。

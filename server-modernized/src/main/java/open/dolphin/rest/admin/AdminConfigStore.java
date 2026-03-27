@@ -60,7 +60,6 @@ public class AdminConfigStore {
         try {
             AdminConfigSnapshot merged = current != null ? current.copy() : defaultSnapshot();
             if (incoming.getOrcaEndpoint() != null) merged.setOrcaEndpoint(incoming.getOrcaEndpoint());
-            if (incoming.getMswEnabled() != null) merged.setMswEnabled(incoming.getMswEnabled());
             if (incoming.getVerifyAdminDelivery() != null) merged.setVerifyAdminDelivery(incoming.getVerifyAdminDelivery());
             if (incoming.getChartsDisplayEnabled() != null) merged.setChartsDisplayEnabled(incoming.getChartsDisplayEnabled());
             if (incoming.getChartsSendEnabled() != null) merged.setChartsSendEnabled(incoming.getChartsSendEnabled());
@@ -126,7 +125,6 @@ public class AdminConfigStore {
     private AdminConfigSnapshot defaultSnapshot() {
         AdminConfigSnapshot snapshot = new AdminConfigSnapshot();
         snapshot.setOrcaEndpoint(resolveDefaultOrcaEndpoint());
-        snapshot.setMswEnabled(Boolean.FALSE);
         snapshot.setVerifyAdminDelivery(Boolean.FALSE);
         snapshot.setChartsDisplayEnabled(Boolean.TRUE);
         snapshot.setChartsSendEnabled(Boolean.TRUE);
@@ -140,7 +138,6 @@ public class AdminConfigStore {
 
     private AdminConfigSnapshot applyDefaults(AdminConfigSnapshot snapshot) {
         if (snapshot.getOrcaEndpoint() == null) snapshot.setOrcaEndpoint(resolveDefaultOrcaEndpoint());
-        if (snapshot.getMswEnabled() == null) snapshot.setMswEnabled(Boolean.FALSE);
         if (snapshot.getVerifyAdminDelivery() == null) snapshot.setVerifyAdminDelivery(Boolean.FALSE);
         if (snapshot.getChartsDisplayEnabled() == null) snapshot.setChartsDisplayEnabled(Boolean.TRUE);
         if (snapshot.getChartsSendEnabled() == null) snapshot.setChartsSendEnabled(Boolean.TRUE);

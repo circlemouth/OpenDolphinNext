@@ -57,7 +57,6 @@ import {
   buildFacilityUrl,
   decodeFacilityParam,
   describeFacilityId,
-  ensureFacilityUrl,
   isFacilityMatch,
   normalizeFacilityId,
   parseFacilityPath,
@@ -1203,12 +1202,10 @@ function LegacyRootRedirect({ session }: { session: Session | null }) {
   }
 
   if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{}} replace />;
   }
 
-  const facilityId = session.facilityId;
-  const legacyRedirect = ensureFacilityUrl(facilityId, location.pathname, location.search);
-  return <Navigate to={legacyRedirect} replace />;
+  return <Navigate to={buildFacilityPath(session.facilityId, '/reception')} replace />;
 }
 
 type LoginRedirectIntent = { to: string; state?: unknown };
@@ -1220,12 +1217,15 @@ const resolveLoginRedirect = (location: Location): LoginRedirectIntent | null =>
   const from = state?.from;
   if (!from) return null;
   if (typeof from === 'string') {
-    if (isLoginPath(from)) return null;
+    const pathname = from.split('?')[0]?.split('#')[0] ?? '';
+    if (!pathname || isLoginPath(pathname)) return null;
+    if (!parseFacilityPath(pathname)) return null;
     return { to: from };
   }
   const path = from.pathname ?? '';
   if (!path) return null;
   if (isLoginPath(path)) return null;
+  if (!parseFacilityPath(path)) return null;
   return { to: `${path}${from.search ?? ''}${from.hash ?? ''}`, state: from.state };
 };
 

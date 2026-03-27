@@ -42,7 +42,7 @@ vi.mock('../../../libs/observability/runIdCopy', () => ({
 
 vi.mock('../../../libs/http/header-flags', () => ({
   persistHeaderFlags: vi.fn(),
-  resolveHeaderFlags: vi.fn(() => ({ useMockOrcaQueue: false, verifyAdminDelivery: true })),
+  resolveHeaderFlags: vi.fn(() => ({ verifyAdminDelivery: true })),
 }));
 
 vi.mock('../../../libs/auth/roles', () => ({
@@ -150,7 +150,6 @@ vi.mock('../api', () => ({
     chartsSendEnabled: true,
     chartsMasterSource: 'auto',
     verifyAdminDelivery: true,
-    useMockOrcaQueue: false,
   }),
 }));
 
@@ -211,37 +210,13 @@ beforeEach(() => {
     deliveryEtag: 'etag-1',
     deliveredAt: '2026-02-21T00:00:00Z',
     verifyAdminDelivery: true,
-    syncMismatch: false,
-    syncMismatchFields: [],
     note: '',
     deliveryId: 'DELIVERY-1',
     environment: 'dev',
     orcaEndpoint: 'https://example.invalid/openDolphin/resources',
-    mswEnabled: false,
-    useMockOrcaQueue: false,
     chartsDisplayEnabled: true,
     chartsSendEnabled: true,
     chartsMasterSource: 'auto',
-    rawConfig: {
-      status: 200,
-      deliveryMode: 'immediate',
-      deliveredAt: '2026-02-21T00:00:00Z',
-      orcaEndpoint: 'https://example.invalid/openDolphin/resources',
-      mswEnabled: false,
-      useMockOrcaQueue: false,
-      verifyAdminDelivery: true,
-      chartsDisplayEnabled: true,
-      chartsSendEnabled: true,
-      chartsMasterSource: 'auto',
-    },
-    rawDelivery: {
-      status: 200,
-      deliveryMode: 'immediate',
-      deliveredAt: '2026-02-21T00:00:00Z',
-      chartsDisplayEnabled: true,
-      chartsSendEnabled: true,
-      chartsMasterSource: 'auto',
-    },
   });
   mockFetchOrcaQueue.mockResolvedValue({
     runId: 'RUN-QUEUE',

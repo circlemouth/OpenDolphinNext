@@ -89,8 +89,8 @@
   - `opendolphin.orca.allow.insecure.http` / `OPENDOLPHIN_ORCA_ALLOW_INSECURE_HTTP` は production-like 環境では既定 `false`。`true` は localhost / loopback / RFC1918 private range 向け HTTP 接続の限定例外のみ。
   - `orca.transport.cache.ttl-ms` / `ORCA_TRANSPORT_CACHE_TTL_MS` は 0 以上。
 - ORCA proxy 応答ヘッダ転送の任意設定
-  - `orca.proxy.forward.x-orca-headers` / `ORCA_PROXY_FORWARD_X_ORCA_HEADERS` は `true|false`。未設定時のみ `true`。
-  - `orca.proxy.forward.api-result-message-header` / `ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER` は `true|false`。未設定時のみ `true`。
+  - `orca.proxy.forward.x-orca-headers` / `ORCA_PROXY_FORWARD_X_ORCA_HEADERS` は `true|false`。未設定時は `false`。
+  - `orca.proxy.forward.api-result-message-header` / `ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER` は `true|false`。未設定時は `false`。
 - ORCA Push runtime 設定
   - `orca.push.enabled` / `ORCA_PUSH_ENABLED` は `true|false`。未設定時は `false`。
   - `orca.push.shadow-mode` / `ORCA_PUSH_SHADOW_MODE` は `true|false`。未設定時は `true`。

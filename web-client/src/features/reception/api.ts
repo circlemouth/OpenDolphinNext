@@ -79,19 +79,16 @@ const isMswRuntimeEnabled = () => {
   return readMockRuntimeState()?.mswStarted === true;
 };
 
-const buildAppointmentCandidates = (mswEnabled: boolean): Array<{ path: string; source: ResolveMasterSource }> => [
+const buildAppointmentCandidates = (): Array<{ path: string; source: ResolveMasterSource }> => [
   { path: '/api/orca/appointments/list', source: 'server' as ResolveMasterSource },
-  ...(mswEnabled ? [{ path: '/api/orca/appointments/list/mock', source: 'mock' as ResolveMasterSource }] : []),
 ];
 
-const buildVisitCandidates = (mswEnabled: boolean): Array<{ path: string; source: ResolveMasterSource }> => [
+const buildVisitCandidates = (): Array<{ path: string; source: ResolveMasterSource }> => [
   { path: '/api/orca/visits/list', source: 'server' as ResolveMasterSource },
-  ...(mswEnabled ? [{ path: '/api/orca/visits/list/mock', source: 'mock' as ResolveMasterSource }] : []),
 ];
 
-const buildVisitMutationCandidates = (mswEnabled: boolean): Array<{ path: string; source: ResolveMasterSource }> => [
+const buildVisitMutationCandidates = (): Array<{ path: string; source: ResolveMasterSource }> => [
   { path: '/api/orca/visits/mutation', source: 'server' as ResolveMasterSource },
-  ...(mswEnabled ? [{ path: '/api/orca/visits/mutation/mock', source: 'mock' as ResolveMasterSource }] : []),
 ];
 
 const preferredSource = (mswEnabled: boolean): ResolveMasterSource | undefined => (mswEnabled ? 'mock' : 'server');
@@ -158,8 +155,8 @@ export async function fetchAppointmentOutpatients(
   options: { preferredSourceOverride?: ResolveMasterSource; screen?: string } = {},
 ): Promise<AppointmentPayload> {
   const mswEnabled = isMswRuntimeEnabled();
-  const appointmentCandidates = buildAppointmentCandidates(mswEnabled);
-  const visitCandidates = buildVisitCandidates(mswEnabled);
+  const appointmentCandidates = buildAppointmentCandidates();
+  const visitCandidates = buildVisitCandidates();
   const page = params.page ?? 1;
   const size = params.size ?? 50;
   const preferred = options.preferredSourceOverride ?? preferredSource(mswEnabled);
@@ -435,7 +432,7 @@ export async function mutateVisit(
   };
 
   const result = await fetchWithResolver({
-    candidates: buildVisitMutationCandidates(mswEnabled),
+    candidates: buildVisitMutationCandidates(),
     body,
     queryContext: context,
     preferredSource: options.preferredSourceOverride ?? preferredSource(mswEnabled),

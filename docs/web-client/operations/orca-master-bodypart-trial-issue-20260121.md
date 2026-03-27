@@ -26,7 +26,7 @@ RUN_ID: 20260121T062542Z
   - ORCA master 用の `userName/password` を常時送信（デフォルトは server 既定値）。
 - `setup-modernized-env.sh`
   - VITE_ORCA_MASTER_USER/PASSWORD を dev env に反映。
-  - VITE_ENABLE_LEGACY_HEADER_AUTH=0 / VITE_ENABLE_FACILITY_HEADER=1 を標準化（Basic 認証 + facility header を送る）。
+  - VITE_ENABLE_FACILITY_HEADER=1 を標準化（current session auth と ORCA 用 header の分離を維持する）。
 
 ## 再現/確認手順（後続向け）
 1. 起動  

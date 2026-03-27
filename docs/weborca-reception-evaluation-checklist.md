@@ -41,7 +41,7 @@
   - `ORCA_MODE=weborca`（WebORCA 利用時）
   - `ORCA_API_PATH_PREFIX`（必要なら `/api` を明示）
   - `LOGFILTER_HEADER_AUTH_ENABLED=false`（認証モーダル回避が必要な場合）
-  - `VITE_ENABLE_FACILITY_HEADER=1` / `VITE_ENABLE_LEGACY_HEADER_AUTH=1`（必要時）
+  - `VITE_ENABLE_FACILITY_HEADER=1`（必要時）
 
 ## 2.3 再検証の最小データ条件（8.1.4）
 

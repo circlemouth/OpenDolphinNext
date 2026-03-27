@@ -804,8 +804,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     deliveryId?: string;
     deliveryVersion?: string;
     deliveryEtag?: string;
-    syncMismatch?: boolean;
-    syncMismatchFields?: string;
   } | null>(null);
   const appliedMeta = useRef<Partial<AuthServiceFlags>>({});
   const { broadcast } = useAdminBroadcast({ facilityId: session.facilityId, userId: session.userId });
@@ -1526,7 +1524,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     navigate({ pathname: chartsBasePath, search: nextSearch }, { replace: true });
   }, [chartsBasePath, encounterContext, location.search, navigate, receptionCarryover, runIdForUrl, storageScope, urlContext]);
 
-  const adminQueryKey = ['admin-effective-config'];
+  const adminQueryKey = ['admin-config'];
   const adminConfigQuery = useQuery({
     queryKey: adminQueryKey,
     queryFn: fetchEffectiveAdminConfig,
@@ -1585,8 +1583,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
     const appliedAt = new Date().toISOString();
     const appliedTo = `${session.facilityId}:${session.userId}`;
-    const resolvedDeliveryMode = data.deliveryMode ?? data.rawDelivery?.deliveryMode ?? data.rawConfig?.deliveryMode;
-    const resolvedEnvironment = data.environment ?? data.rawDelivery?.environment ?? data.rawConfig?.environment;
+    const resolvedDeliveryMode = data.deliveryMode;
+    const resolvedEnvironment = data.environment;
     setDeliveryAppliedMeta({
       appliedAt,
       appliedTo,
@@ -1596,8 +1594,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       deliveryId: data.deliveryId,
       deliveryVersion: data.deliveryVersion,
       deliveryEtag: data.deliveryEtag ?? data.deliveryVersion,
-      syncMismatch: data.syncMismatch,
-      syncMismatchFields: data.syncMismatchFields?.length ? data.syncMismatchFields.join(', ') : undefined,
     });
     logAuditEvent({
       runId: data.runId ?? flags.runId,
@@ -1620,12 +1616,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           chartsDisplayEnabled: data.chartsDisplayEnabled,
           chartsSendEnabled: data.chartsSendEnabled,
           chartsMasterSource: data.chartsMasterSource,
-        },
-        syncMismatch: data.syncMismatch,
-        syncMismatchFields: data.syncMismatchFields,
-        raw: {
-          config: data.rawConfig,
-          delivery: data.rawDelivery,
         },
       },
     });
@@ -4357,11 +4347,10 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
             />
             <StatusPill
               className="charts-page__pill"
-              label="syncMismatch"
-              value={deliveryAppliedMeta.syncMismatch === undefined ? '―' : String(deliveryAppliedMeta.syncMismatch)}
+              label="config"
+              value="single-source"
               tone="info"
             />
-            <StatusPill className="charts-page__pill" label="mismatchFields" value={deliveryAppliedMeta.syncMismatchFields ?? '―'} tone="info" />
           </div>
         </section>
       ) : null}

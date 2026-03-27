@@ -112,40 +112,6 @@ export const outpatientHandlers = [
     }
     return respond(buildAppointmentFixture(scenario.flags));
   }),
-  http.post('/api/orca/appointments/list/mock', async ({ request }) => {
-    const fault = parseFaultSpec(request);
-    const scenario = applyRequestScenario(request);
-    await applyFaultDelay(fault);
-    if (hasNetworkFault(fault)) {
-      return HttpResponse.error();
-    }
-    const httpFaultStatus = resolveHttpFaultStatus(fault);
-    if (httpFaultStatus) {
-      return respond({ ...(buildAppointmentFixture({ ...scenario.flags, status: httpFaultStatus }) as any), status: httpFaultStatus } as any);
-    }
-    if (fault.tokens.has('timeout')) {
-      return respond({ ...(buildAppointmentFixture({ ...scenario.flags, status: 504 }) as any), status: 504 } as any);
-    }
-    if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond({ ...(buildAppointmentFixture({ ...scenario.flags, status: 500 }) as any), status: 500 } as any);
-    }
-    if (fault.tokens.has('schema-mismatch')) {
-      const mismatch = {
-        runId: scenario.flags.runId,
-        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
-        cacheHit: scenario.flags.cacheHit,
-        missingMaster: scenario.flags.missingMaster,
-        dataSourceTransition: scenario.flags.dataSourceTransition,
-        fallbackUsed: scenario.flags.fallbackUsed,
-        appointmentDate: null,
-        apiResult: 'ERROR_SCHEMA_MISMATCH',
-        apiResultMessage: 'MSW injected schema mismatch for orca/appointments/list/mock',
-        status: 200,
-      } as any;
-      return respond(mismatch);
-    }
-    return respond(buildAppointmentFixture(scenario.flags));
-  }),
   http.post('/api/orca/visits/list', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
@@ -174,41 +140,6 @@ export const outpatientHandlers = [
         visits: 'schema-mismatch',
         apiResult: 'ERROR_SCHEMA_MISMATCH',
         apiResultMessage: 'MSW injected schema mismatch for orca/visits/list',
-        status: 200,
-      } as any;
-      return respond(mismatch);
-    }
-    return respond(buildVisitListFixture(scenario.flags));
-  }),
-  http.post('/api/orca/visits/list/mock', async ({ request }) => {
-    const fault = parseFaultSpec(request);
-    const scenario = applyRequestScenario(request);
-    await applyFaultDelay(fault);
-    if (hasNetworkFault(fault)) {
-      return HttpResponse.error();
-    }
-    const httpFaultStatus = resolveHttpFaultStatus(fault);
-    if (httpFaultStatus) {
-      return respond({ ...(buildVisitListFixture({ ...scenario.flags, status: httpFaultStatus }) as any), status: httpFaultStatus } as any);
-    }
-    if (fault.tokens.has('timeout')) {
-      return respond({ ...(buildVisitListFixture({ ...scenario.flags, status: 504 }) as any), status: 504 } as any);
-    }
-    if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond({ ...(buildVisitListFixture({ ...scenario.flags, status: 500 }) as any), status: 500 } as any);
-    }
-    if (fault.tokens.has('schema-mismatch')) {
-      const mismatch = {
-        runId: scenario.flags.runId,
-        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
-        cacheHit: scenario.flags.cacheHit,
-        missingMaster: scenario.flags.missingMaster,
-        dataSourceTransition: scenario.flags.dataSourceTransition,
-        fallbackUsed: scenario.flags.fallbackUsed,
-        visitDate: null,
-        visits: [{ voucherNumber: null }],
-        apiResult: 'ERROR_SCHEMA_MISMATCH',
-        apiResultMessage: 'MSW injected schema mismatch for orca/visits/list/mock',
         status: 200,
       } as any;
       return respond(mismatch);
@@ -259,52 +190,6 @@ export const outpatientHandlers = [
       return respond(mismatch);
     }
     return respond(buildPatientListFixture(scenario.flags, '/api/orca/patients/local-search'));
-  }),
-  http.post('/api/orca/patients/local-search/mock', async ({ request }) => {
-    const fault = parseFaultSpec(request);
-    const scenario = applyRequestScenario(request);
-    await applyFaultDelay(fault);
-    if (hasNetworkFault(fault)) {
-      return HttpResponse.error();
-    }
-    const httpFaultStatus = resolveHttpFaultStatus(fault);
-    if (httpFaultStatus) {
-      const base = buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }, '/api/orca/patients/local-search/mock');
-      if (httpFaultStatus === 404) {
-        return respond({
-          ...base,
-          patients: [],
-          recordsReturned: 0,
-          auditEvent: base.auditEvent
-            ? { ...base.auditEvent, details: { ...(base.auditEvent as any).details, recordsReturned: 0 } }
-            : base.auditEvent,
-        });
-      }
-      return respond(base);
-    }
-    if (fault.tokens.has('timeout')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }, '/api/orca/patients/local-search/mock'));
-    }
-    if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }, '/api/orca/patients/local-search/mock'));
-    }
-    if (fault.tokens.has('schema-mismatch')) {
-      const mismatch = {
-        runId: scenario.flags.runId,
-        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
-        cacheHit: scenario.flags.cacheHit,
-        missingMaster: scenario.flags.missingMaster,
-        dataSourceTransition: scenario.flags.dataSourceTransition,
-        fallbackUsed: scenario.flags.fallbackUsed,
-        patients: [],
-        patientInfo: 123,
-        apiResult: 'ERROR_SCHEMA_MISMATCH',
-        apiResultMessage: 'MSW injected schema mismatch for patients/local-search/mock',
-        status: 200,
-      } as any;
-      return respond(mismatch);
-    }
-    return respond(buildPatientListFixture(scenario.flags, '/api/orca/patients/local-search/mock'));
   }),
   http.post('/api/orca/patients/import', async ({ request }) => {
     const fault = parseFaultSpec(request);
@@ -412,40 +297,6 @@ export const outpatientHandlers = [
         patients: [{ patientId: 1 }],
         apiResult: 'ERROR_SCHEMA_MISMATCH',
         apiResultMessage: 'MSW injected schema mismatch for patientmodv2/outpatient',
-        status: 200,
-      } as any;
-      return respond(mismatch);
-    }
-    return respond(buildPatientListFixture(scenario.flags));
-  }),
-  http.post('/api/orca/patient/mutation/mock', async ({ request }) => {
-    const fault = parseFaultSpec(request);
-    const scenario = applyRequestScenario(request);
-    await applyFaultDelay(fault);
-    if (hasNetworkFault(fault)) {
-      return HttpResponse.error();
-    }
-    const httpFaultStatus = resolveHttpFaultStatus(fault);
-    if (httpFaultStatus) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }));
-    }
-    if (fault.tokens.has('timeout')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }));
-    }
-    if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }));
-    }
-    if (fault.tokens.has('schema-mismatch')) {
-      const mismatch = {
-        runId: scenario.flags.runId,
-        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
-        cacheHit: scenario.flags.cacheHit,
-        missingMaster: scenario.flags.missingMaster,
-        dataSourceTransition: scenario.flags.dataSourceTransition,
-        fallbackUsed: scenario.flags.fallbackUsed,
-        patients: null,
-        apiResult: 'ERROR_SCHEMA_MISMATCH',
-        apiResultMessage: 'MSW injected schema mismatch for patientmodv2/outpatient/mock',
         status: 200,
       } as any;
       return respond(mismatch);

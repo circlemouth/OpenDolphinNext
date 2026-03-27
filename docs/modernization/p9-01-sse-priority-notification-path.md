@@ -5,14 +5,13 @@
 
 ## 決定
 - `ChartEventServiceBean.notifyEvent()` の主経路は `ChartEventStreamPublisher` による SSE 配信とする。
-- `ServletContextHolder` の `AsyncContext` リストは、既存 long-poll 系クライアント向けの legacy fallback としてのみ保持する。
+- 旧 `AsyncContext` ベースの long-poll fallback は削除済みとし、新規 realtime 経路は SSE のみに統一する。
 
 ## コード上の扱い
 - `server-modernized/src/main/java/open/dolphin/session/ChartEventServiceBean.java`
-  - `notifyEvent()` は最初に SSE broadcast を実行し、その後で legacy `AsyncContext` を補助 helper に閉じ込めて処理する。
+  - `notifyEvent()` は SSE broadcast のみを行う。
 - `server-modernized/src/main/java/open/dolphin/mbean/ServletContextHolder.java`
-  - `AsyncContext` accessor は deprecated comment を付け、新規 realtime 実装では SSE を使うことを明記した。
+  - `AsyncContext` 関連 API と legacy list を削除した。
 
 ## 今回あえて据え置いたもの
-- 旧 long-poll 経路自体の物理削除は行っていない。
-- 既存クライアント互換の判断が文書化されていないため、P9-01 では「主経路の明確化」と「新規利用の凍結」までに留めた。
+- chart-event の他 realtime 機構には踏み込んでいない。

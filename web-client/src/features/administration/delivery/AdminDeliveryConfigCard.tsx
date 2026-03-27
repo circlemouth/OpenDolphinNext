@@ -119,20 +119,6 @@ export function AdminDeliveryConfigCard({
           <div className="admin-form__toggles">
             <div className="admin-toggle">
               <div className="admin-toggle__label">
-                <span>MSW（モック）優先</span>
-                <span className="admin-toggle__hint">開発検証で使用</span>
-              </div>
-              <input
-                id="admin-use-mock-orca-queue"
-                type="checkbox"
-                checked={form.useMockOrcaQueue}
-                onChange={(event) => onFieldChange('useMockOrcaQueue', event.target.checked)}
-                disabled={readOnly}
-                aria-describedby={readOnly ? guardDetailsId : undefined}
-              />
-            </div>
-            <div className="admin-toggle">
-              <div className="admin-toggle__label">
                 <span>配信検証フラグ</span>
                 <span className="admin-toggle__hint">x-admin-delivery-verification</span>
               </div>
@@ -141,20 +127,6 @@ export function AdminDeliveryConfigCard({
                 type="checkbox"
                 checked={form.verifyAdminDelivery}
                 onChange={(event) => onFieldChange('verifyAdminDelivery', event.target.checked)}
-                disabled={readOnly}
-                aria-describedby={readOnly ? guardDetailsId : undefined}
-              />
-            </div>
-            <div className="admin-toggle">
-              <div className="admin-toggle__label">
-                <span>MSW ローカルキャッシュ</span>
-                <span className="admin-toggle__hint">UI モック許可</span>
-              </div>
-              <input
-                id="admin-msw-enabled"
-                type="checkbox"
-                checked={form.mswEnabled}
-                onChange={(event) => onFieldChange('mswEnabled', event.target.checked)}
                 disabled={readOnly}
                 aria-describedby={readOnly ? guardDetailsId : undefined}
               />

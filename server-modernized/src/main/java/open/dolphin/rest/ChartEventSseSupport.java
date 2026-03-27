@@ -36,10 +36,9 @@ import open.dolphin.session.support.ChartEventStreamPublisher;
  * Support component that bridges {@link ChartEventResource} SSE subscriptions
  * with {@link ChartEventServiceBean} notifications.
  *
- * <p>The implementation keeps the legacy long-poll based dispatcher intact
- * while providing a dedicated Server-Sent Events channel. Facilities receive
- * an independent event history buffer so that reconnecting clients can request
- * missed events through the {@code Last-Event-ID} header.</p>
+ * <p>The implementation provides a dedicated Server-Sent Events channel.
+ * Facilities receive an independent event history buffer so that reconnecting
+ * clients can request missed events through the {@code Last-Event-ID} header.</p>
  */
 @ApplicationScoped
 public class ChartEventSseSupport implements ChartEventStreamPublisher {

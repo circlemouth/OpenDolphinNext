@@ -15,8 +15,6 @@ type DeliveryDashboardProps = {
     delayed: number;
   };
   environmentLabel: string;
-  syncMismatch?: boolean;
-  syncMismatchFields?: string;
   warningThresholdMinutes: number;
   onNavigate: (section: DeliverySection) => void;
 };
@@ -42,8 +40,6 @@ export function DeliveryDashboard({
   webOrcaConnection,
   queueSummary,
   environmentLabel,
-  syncMismatch,
-  syncMismatchFields,
   warningThresholdMinutes,
   onNavigate,
 }: DeliveryDashboardProps) {
@@ -91,15 +87,7 @@ export function DeliveryDashboard({
       </AdminCard>
 
       <AdminCard title="次アクション" description="異常の解消導線を明示します。">
-        {syncMismatch ? (
-          <AdminAlert
-            tone="warn"
-            message="設定と配信済み値に不整合があります。"
-            detail={`fields: ${syncMismatchFields ?? 'unknown'}`}
-          />
-        ) : (
-          <AdminAlert tone="ok" message="config と delivery の不整合は検知されていません。" />
-        )}
+        <AdminAlert tone="ok" message="config は単一正本として扱われます。" />
         <div className="admin-actions">
           <button type="button" className="admin-button admin-button--secondary" onClick={() => onNavigate('connection')}>
             接続設定を確認

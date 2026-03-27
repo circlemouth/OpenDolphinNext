@@ -18,8 +18,6 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import com.lowagie.text.pdf.PdfDate;
 import com.lowagie.text.pdf.PdfDictionary;
@@ -32,13 +30,12 @@ import com.lowagie.text.pdf.PdfStamper;
 import com.lowagie.text.pdf.PdfString;
 import com.lowagie.text.pdf.TSAClient;
 import com.lowagie.text.pdf.TSAClientBouncyCastle;
+import com.lowagie.text.ExceptionConverter;
 
 /**
  * Applies digital signatures (and optional timestamps) to generated PDFs.
  */
 public final class PdfSigningService {
-
-    private static final Logger LOGGER = Logger.getLogger(PdfSigningService.class.getName());
 
     static {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
@@ -50,26 +47,19 @@ public final class PdfSigningService {
         Objects.requireNonNull(pdfPath, "pdfPath must not be null");
         Objects.requireNonNull(config, "config must not be null");
         try {
-            signInternal(pdfPath, config, true);
+            signInternal(pdfPath, config);
+        } catch (ExceptionConverter ex) {
+            Exception cause = ex.getException();
+            if (cause == null) {
+                cause = ex;
+            }
+            throw new IOException("Failed to sign PDF", cause);
         } catch (GeneralSecurityException | IOException ex) {
-            if (!isBlank(config.getTsaUrl())) {
-                LOGGER.log(Level.WARNING, "Timestamp signing failed. Falling back to signature without TSA.", ex);
-                try {
-                    signInternal(pdfPath, config, false);
-                    return;
-                } catch (GeneralSecurityException | IOException retryEx) {
-                    throw new IOException("Failed to sign PDF", retryEx);
-                }
-            }
-            if (ex instanceof IOException) {
-                throw (IOException) ex;
-            }
             throw new IOException("Failed to sign PDF", ex);
         }
     }
 
-    private void signInternal(Path pdfPath, SigningConfig config, boolean applyTsa)
-            throws GeneralSecurityException, IOException {
+    private void signInternal(Path pdfPath, SigningConfig config) throws GeneralSecurityException, IOException {
         KeyStore keyStore = loadKeyStore(config);
         if (!keyStore.containsAlias(config.getKeyAlias())) {
             throw new GeneralSecurityException("Key alias not found: " + config.getKeyAlias());
@@ -139,7 +129,7 @@ public final class PdfSigningService {
                 pkcs7.setExternalDigest(signedDigest, null, encryptionAlgorithm);
 
                 TSAClient tsaClient = null;
-                if (applyTsa && !isBlank(config.getTsaUrl())) {
+                if (!isBlank(config.getTsaUrl())) {
                     TSAClientBouncyCastle client = new TSAClientBouncyCastle(config.getTsaUrl(), config.getTsaUsername(),
                             toNullableString(config.getTsaPassword()));
                     client.setDigestName("SHA-256");

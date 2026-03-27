@@ -1,7 +1,5 @@
 import type { Location } from 'react-router-dom';
 
-import { parseFacilityPath } from '../../routes/facilityRoutes';
-
 export type LoginSwitchContext = {
   mode: 'switch';
   reason?: 'manual' | 'facility' | 'user' | 'role';
@@ -34,7 +32,7 @@ export const resolveSwitchContext = (state: unknown): LoginSwitchContext | undef
 
 export const isLegacyFrom = (from?: string | Location) => {
   if (!from) return false;
-  const pathname = typeof from === 'string' ? from.split('?')[0] ?? '' : from.pathname ?? '';
+  const pathname = typeof from === 'string' ? from.split('?')[0]?.split('#')[0] ?? '' : from.pathname ?? '';
   if (!pathname || pathname === '/login') return false;
-  return parseFacilityPath(pathname) === null;
+  return false;
 };

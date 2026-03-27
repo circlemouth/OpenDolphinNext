@@ -35,12 +35,12 @@ describe('FacilityLoginEntry', () => {
   });
 
   it('手入力した施設IDで facility ログインへ遷移し、from を引き継ぐ', async () => {
-    const from = { pathname: '/charts', search: '?from=login' };
+    const from = { pathname: '/f/0002/charts', search: '?from=login' };
     const router = buildRouter({ pathname: '/login', state: { from } });
     const user = userEvent.setup();
 
     render(<RouterProvider router={router} />);
-    expect(screen.getByText(/旧URLからアクセスされています/)).toBeInTheDocument();
+    expect(screen.queryByText(/旧URLからアクセスされています/)).toBeNull();
     await user.type(screen.getByLabelText('施設ID'), 'FAC-9');
     await user.click(screen.getByRole('button', { name: 'ログインへ進む' }));
 

@@ -1,9 +1,11 @@
 package open.dolphin.rest.admin;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class AdminConfigSnapshot {
 
     private String orcaEndpoint;
-    private Boolean mswEnabled;
     private Boolean verifyAdminDelivery;
     private Boolean chartsDisplayEnabled;
     private Boolean chartsSendEnabled;
@@ -21,7 +23,6 @@ public class AdminConfigSnapshot {
     public AdminConfigSnapshot copy() {
         AdminConfigSnapshot copy = new AdminConfigSnapshot();
         copy.orcaEndpoint = orcaEndpoint;
-        copy.mswEnabled = mswEnabled;
         copy.verifyAdminDelivery = verifyAdminDelivery;
         copy.chartsDisplayEnabled = chartsDisplayEnabled;
         copy.chartsSendEnabled = chartsSendEnabled;
@@ -44,14 +45,6 @@ public class AdminConfigSnapshot {
 
     public void setOrcaEndpoint(String orcaEndpoint) {
         this.orcaEndpoint = orcaEndpoint;
-    }
-
-    public Boolean getMswEnabled() {
-        return mswEnabled;
-    }
-
-    public void setMswEnabled(Boolean mswEnabled) {
-        this.mswEnabled = mswEnabled;
     }
 
     public Boolean getVerifyAdminDelivery() {

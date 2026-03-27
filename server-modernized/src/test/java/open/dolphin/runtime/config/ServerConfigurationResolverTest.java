@@ -348,6 +348,14 @@ class ServerConfigurationResolverTest {
     }
 
     @Test
+    void rawOrcaProxyHeaderForwardingSettingsRemainUnsetWithoutConfig() {
+        ServerConfigurationResolver resolver = new ServerConfigurationResolver();
+
+        assertEquals(null, resolver.orcaProxy().forwardXOrcaHeaders());
+        assertEquals(null, resolver.orcaProxy().forwardApiResultMessageHeader());
+    }
+
+    @Test
     void rawAndOptionalDoNotFallbackToSystemProperties() {
         System.setProperty(ServerConfigurationResolver.KEY_ENVIRONMENT, "prod");
         try {

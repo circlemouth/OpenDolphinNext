@@ -32,7 +32,6 @@ const facilityId = String(facilityJson.facilityId ?? '0001');
 
 const authUserId = process.env.QA_USER_ID ?? 'doctor1';
 const authPasswordPlain = process.env.QA_PASSWORD_PLAIN ?? 'doctor2025';
-const authPasswordMd5 = process.env.QA_PASSWORD_MD5 ?? '632080fabdb968f9ac4f31fb55104648';
 
 const patientId = process.env.QA_PATIENT_ID ?? '01415';
 const visitDate = process.env.QA_VISIT_DATE ?? new Date().toISOString().slice(0, 10);
@@ -71,14 +70,12 @@ const createSessionContext = async (browser, viewport) => {
       window.sessionStorage.setItem(authKey, authPayload);
       window.sessionStorage.setItem('devFacilityId', devAuth.facilityId);
       window.sessionStorage.setItem('devUserId', devAuth.userId);
-      window.sessionStorage.setItem('devPasswordMd5', devAuth.passwordMd5);
       window.sessionStorage.setItem('devClientUuid', devAuth.clientUuid);
       window.sessionStorage.setItem(encounterKey, encounterPayload);
 
       window.localStorage.setItem(authKey, authPayload);
       window.localStorage.setItem('devFacilityId', devAuth.facilityId);
       window.localStorage.setItem('devUserId', devAuth.userId);
-      window.localStorage.setItem('devPasswordMd5', devAuth.passwordMd5);
       window.localStorage.setItem('devClientUuid', devAuth.clientUuid);
     },
     [
@@ -87,7 +84,6 @@ const createSessionContext = async (browser, viewport) => {
       {
         facilityId,
         userId: authUserId,
-        passwordMd5: authPasswordMd5,
         passwordPlain: authPasswordPlain,
         clientUuid: session.clientUuid,
       },

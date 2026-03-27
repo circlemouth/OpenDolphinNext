@@ -304,7 +304,7 @@ const createFlagAwareMiddleware = (): NextHandleFunction => (req, res, next) => 
   const url = new URL(req.url ?? '/', 'http://localhost');
   const useMock = shouldUseMockOrcaQueue(req);
   const verifyAdmin = shouldVerifyAdminDelivery(req);
-  const isAdminConfig = url.pathname.startsWith('/api/admin/config') || url.pathname.startsWith('/api/admin/delivery');
+  const isAdminConfig = url.pathname.startsWith('/api/admin/config');
   const chartsDisplayEnabled = readBooleanFromHeaderOrEnv(req, 'x-charts-display-enabled', 'VITE_CHARTS_DISPLAY_ENABLED', true);
   const chartsSendEnabled = readBooleanFromHeaderOrEnv(req, 'x-charts-send-enabled', 'VITE_CHARTS_SEND_ENABLED', true);
   const chartsMasterSource = readChartsMasterSource(req);

@@ -78,11 +78,8 @@ export type PatientMutationResult = {
   sourcePath?: string;
 };
 
-const mswEnabled = import.meta.env.DEV && import.meta.env.VITE_DISABLE_MSW !== '1';
-
 const patientInfoCandidates = [
   '/api/orca/patients/local-search',
-  ...(mswEnabled ? ['/api/orca/patients/local-search/mock'] : []),
 ];
 const patientMutationCandidates = [
   '/api/orca/patient/mutation',
