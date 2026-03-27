@@ -38,15 +38,15 @@ class OrcaPatientSyncStateStoreIT {
             OrcaPatientSyncStateStore.FacilityState state = store.loadFacilityState("F001");
 
             assertThat(state).isNotNull();
-            assertThat(state.lastSyncDate).isEqualTo("2026-03-21");
-            assertThat(state.lastRunId).isEqualTo("RUN-AFTER");
-            assertThat(state.lastError).isNull();
+            assertThat(state.lastSyncDate()).isEqualTo("2026-03-21");
+            assertThat(state.lastRunId()).isEqualTo("RUN-AFTER");
+            assertThat(state.lastError()).isNull();
 
             store.markFailure("F001", "sync failed", "RUN-FAIL");
             OrcaPatientSyncStateStore.FacilityState failed = store.loadFacilityState("F001");
             assertThat(failed).isNotNull();
-            assertThat(failed.lastRunId).isEqualTo("RUN-FAIL");
-            assertThat(failed.lastError).isEqualTo("sync failed");
+            assertThat(failed.lastRunId()).isEqualTo("RUN-FAIL");
+            assertThat(failed.lastError()).isEqualTo("sync failed");
         }
     }
 

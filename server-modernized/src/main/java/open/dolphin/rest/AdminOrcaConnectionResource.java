@@ -13,11 +13,14 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.orca.config.OrcaConnectionConfigRecord;
@@ -71,8 +74,9 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
         String facilityId = resolveActorFacilityId(actor);
-        OrcaConnectionConfigRecord record = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getSnapshot(facilityId) : null;
-        String defaultFacilityId = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getDefaultFacilityId() : null;
+        OrcaConnectionConfigStore store = requireOrcaConnectionConfigStore();
+        OrcaConnectionConfigRecord record = store.getSnapshot(facilityId);
+        String defaultFacilityId = store.getDefaultFacilityId();
         Map<String, Object> body = buildView(record, runId, resolveTraceId(request), facilityId, defaultFacilityId);
         return Response.ok(body).header("x-run-id", runId).build();
     }
@@ -85,6 +89,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         String actor = requireAdminActor(request, runId);
         adminStepUpGuard.require(request, "admin:mutation");
         String facilityId = resolveActorFacilityId(actor);
+        OrcaConnectionConfigStore store = requireOrcaConnectionConfigStore();
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "save");
         details.put("resource", "/api/admin/orca/connection");
@@ -110,7 +115,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
 
         OrcaConnectionConfigRecord updated;
         try {
-            updated = orcaConnectionConfigStore.update(facilityId, update, p12, ca, runId, actor);
+            updated = store.update(facilityId, update, p12, ca, runId, actor);
         } catch (IllegalArgumentException ex) {
             details.put("status", "failed");
             details.put("error", ex.getMessage());
@@ -148,7 +153,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         }
         recordAudit(request, "ADMIN_ORCA_CONNECTION_SAVE", details, AuditEventEnvelope.Outcome.SUCCESS, null, null);
 
-        String defaultFacilityId = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getDefaultFacilityId() : null;
+        String defaultFacilityId = store.getDefaultFacilityId();
         Map<String, Object> body = buildView(updated, runId, resolveTraceId(request), facilityId, defaultFacilityId);
         if (auditSummary != null) {
             body.put("auditSummary", auditSummary);
@@ -165,6 +170,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         String actor = requireAdminActor(request, runId);
         adminStepUpGuard.require(request, "admin:mutation");
         String traceId = resolveTraceId(request);
+        OrcaConnectionConfigStore store = requireOrcaConnectionConfigStore();
 
         String requestedDefaultFacilityId;
         try {
@@ -177,7 +183,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
 
         String updatedDefaultFacilityId;
         try {
-            updatedDefaultFacilityId = orcaConnectionConfigStore.updateDefaultFacilityId(requestedDefaultFacilityId, runId, actor);
+            updatedDefaultFacilityId = store.updateDefaultFacilityId(requestedDefaultFacilityId, runId, actor);
         } catch (OrcaConnectionPolicyException ex) {
             throw restError(request, Response.Status.BAD_REQUEST, ex.getErrorCategory(), "指定した施設の ORCA 接続設定がありません。");
         } catch (IllegalStateException ex) {
@@ -193,9 +199,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
             }
         }
 
-        OrcaConnectionConfigRecord record = orcaConnectionConfigStore != null
-                ? orcaConnectionConfigStore.getSnapshot(updatedDefaultFacilityId)
-                : null;
+        OrcaConnectionConfigRecord record = store.getSnapshot(updatedDefaultFacilityId);
         Map<String, Object> body = buildView(record, runId, traceId, updatedDefaultFacilityId, updatedDefaultFacilityId);
         return Response.ok(body).header("x-run-id", runId).build();
     }
@@ -292,14 +296,14 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = mapper.readValue(configJson, Map.class);
-            Boolean useWeborca = asBoolean(payload.get("useWeborca"));
+            Boolean useWeborca = asBoolean(payload.get("useWeborca")).orElse(null);
             String serverUrl = trimToNull(asString(payload.get("serverUrl")));
             Integer port = asInteger(payload.get("port"));
             String username = trimToNull(asString(payload.get("username")));
             String pushUrl = payload.containsKey("pushUrl") ? asString(payload.get("pushUrl")) : null;
             String pushTenantId = payload.containsKey("pushTenantId") ? asString(payload.get("pushTenantId")) : null;
             String password = trimToNull(asString(payload.get("password")));
-            Boolean clientAuthEnabled = asBoolean(payload.get("clientAuthEnabled"));
+            Boolean clientAuthEnabled = asBoolean(payload.get("clientAuthEnabled")).orElse(null);
             String passphrase = trimToNull(asString(payload.get("clientCertificatePassphrase")));
             return new OrcaConnectionConfigStore.UpdateRequest(
                     useWeborca,
@@ -312,7 +316,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
                     clientAuthEnabled,
                     passphrase
             );
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "config のJSON解析に失敗しました。");
         }
     }
@@ -484,23 +488,23 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         sessionAuditDispatcher.record(payload, outcome, errorCode, errorMessage);
     }
 
-    private static Boolean asBoolean(Object value) {
+    private static Optional<Boolean> asBoolean(Object value) {
         if (value instanceof Boolean b) {
-            return b;
+            return Optional.of(b);
         }
         if (value instanceof Number n) {
-            return n.intValue() != 0;
+            return Optional.of(n.intValue() != 0);
         }
         if (value instanceof String s) {
             String normalized = s.trim().toLowerCase(Locale.ROOT);
             if ("true".equals(normalized) || "1".equals(normalized) || "yes".equals(normalized) || "on".equals(normalized)) {
-                return Boolean.TRUE;
+                return Optional.of(Boolean.TRUE);
             }
             if ("false".equals(normalized) || "0".equals(normalized) || "no".equals(normalized) || "off".equals(normalized)) {
-                return Boolean.FALSE;
+                return Optional.of(Boolean.FALSE);
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     private static Integer asInteger(Object value) {
@@ -530,5 +534,9 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private OrcaConnectionConfigStore requireOrcaConnectionConfigStore() {
+        return Objects.requireNonNull(orcaConnectionConfigStore, "orcaConnectionConfigStore");
     }
 }

@@ -59,9 +59,17 @@ public class AuditChainVerifier {
         if (!java.util.Objects.equals(expectedPreviousHash, head.headHash())) {
             errors.add("chain head hash mismatch");
         }
-        return new VerificationResult(errors.isEmpty(), rows.size(), List.copyOf(errors));
+        return new VerificationResult(errors.isEmpty(), rows.size(), errors);
     }
 
     public record VerificationResult(boolean valid, int verifiedEvents, List<String> errors) {
+        public VerificationResult {
+            errors = errors == null ? List.of() : List.copyOf(errors);
+        }
+
+        @Override
+        public List<String> errors() {
+            return List.copyOf(errors);
+        }
     }
 }

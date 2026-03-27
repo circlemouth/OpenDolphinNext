@@ -224,9 +224,13 @@ public class StampResource extends AbstractResource {
 
         SubscribedTreeList list = readJson(json, SubscribedTreeList.class);
         UserModel actorUser = support().resolveActorUser();
-        support().applyActorToSubscribedTrees(list != null ? list.getList() : null, actorUser);
+        List<SubscribedTreeModel> trees = list != null ? list.getList() : null;
+        if (trees == null) {
+            throw restError(null, Response.Status.BAD_REQUEST, "invalid_request", "subscribed trees が必要です。");
+        }
+        support().applyActorToSubscribedTrees(trees, actorUser);
         
-        List<Long> result = stampServiceBean.subscribeTreesForActor(list.getList(), actorUser.getId());
+        List<Long> result = stampServiceBean.subscribeTreesForActor(trees, actorUser.getId());
 
         StringBuilder sb = new StringBuilder();
         for (Long l : result) {
@@ -317,9 +321,13 @@ public class StampResource extends AbstractResource {
 
         StampList list = readJson(json, StampList.class);
         long actorUserPk = support().resolveActorUserPk();
-        support().applyActorToStamps(list != null ? list.getList() : null, actorUserPk);
+        List<StampModel> stamps = list != null ? list.getList() : null;
+        if (stamps == null) {
+            throw restError(null, Response.Status.BAD_REQUEST, "invalid_request", "stamps が必要です。");
+        }
+        support().applyActorToStamps(stamps, actorUserPk);
 
-        List<String> ret = stampServiceBean.putStampForActor(list.getList(), actorUserPk);
+        List<String> ret = stampServiceBean.putStampForActor(stamps, actorUserPk);
 
         StringBuilder sb = new StringBuilder();
         for (String str : ret) {

@@ -294,9 +294,13 @@ public class KarteResource extends AbstractResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String postObservations(String json) throws IOException {
         ObservationList list = support().readJson(json, ObservationList.class);
-        support().ensureObservationFacilityAccess(list != null ? list.getList() : null, null);
+        List<ObservationModel> observations = list != null ? list.getList() : null;
+        if (observations == null) {
+            throw restError(null, Response.Status.BAD_REQUEST, "invalid_request", "observations が必要です。");
+        }
+        support().ensureObservationFacilityAccess(observations, null);
 
-        List<Long> result = karteServiceBean.addObservations(list.getList());
+        List<Long> result = karteServiceBean.addObservations(observations);
 
         StringBuilder sb = new StringBuilder();
         for (Long l : result) {
@@ -315,9 +319,13 @@ public class KarteResource extends AbstractResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String putObservations(String json) throws IOException {
         ObservationList list = support().readJson(json, ObservationList.class);
-        support().ensureObservationFacilityAccess(list != null ? list.getList() : null, null);
+        List<ObservationModel> observations = list != null ? list.getList() : null;
+        if (observations == null) {
+            throw restError(null, Response.Status.BAD_REQUEST, "invalid_request", "observations が必要です。");
+        }
+        support().ensureObservationFacilityAccess(observations, null);
         
-        int result = karteServiceBean.updateObservations(list.getList());
+        int result = karteServiceBean.updateObservations(observations);
 
         String text = String.valueOf(result);
         debug(text);

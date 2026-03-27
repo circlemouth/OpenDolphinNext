@@ -150,9 +150,6 @@ public class MasterUpdateStore {
             if (currentState.defaultIntervalMinutes <= 0) {
                 currentState.defaultIntervalMinutes = definition.getDefaultIntervalMinutes();
             }
-            if (currentState.lockJobId == null) {
-                currentState.lockStartedAt = null;
-            }
         }
         if (snapshot.schedule == null) {
             snapshot.schedule = ScheduleConfig.defaults();
@@ -206,7 +203,6 @@ public class MasterUpdateStore {
         public String lastSuccessfulAt;
         public String lastFailureAt;
         public String lastFailureReason;
-        public String lastFailureDetail;
         public String latestRunId;
         public String latestJobMessage;
         public String currentVersionId;
@@ -215,7 +211,6 @@ public class MasterUpdateStore {
         public String lastAutoRunAt;
         public String lastPolledAt;
         public String lockJobId;
-        public String lockStartedAt;
         public List<DatasetVersion> versions = new ArrayList<>();
 
         public DatasetVersion currentVersion() {

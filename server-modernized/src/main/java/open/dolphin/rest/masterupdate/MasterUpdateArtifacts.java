@@ -180,7 +180,6 @@ final class MasterUpdateArtifacts {
             artifact.note = contentType;
             artifact.suggestedExtension = extension;
             artifact.sourceUrl = sourceUrl;
-            artifact.payloadSize = streamed.size;
             return artifact;
         } catch (MasterUpdateService.MasterUpdateException ex) {
             deleteTempFileQuietly(tempFile);
@@ -200,19 +199,20 @@ final class MasterUpdateArtifacts {
         String safeExtension = extension != null && !extension.isBlank() ? extension : "bin";
         String timestamp = java.time.Instant.now().toString().replace(':', '-');
         String fileName = timestamp + "-" + triggerType.toLowerCase(Locale.ROOT) + "-" + runId + "." + safeExtension;
-        Path path = resolveArtifactRoot().resolve(datasetCode).resolve(fileName);
+        Path datasetDirectory = resolveArtifactRoot().resolve(datasetCode);
         try {
-            Files.createDirectories(path.getParent());
+            Files.createDirectories(datasetDirectory);
+            Path path = datasetDirectory.resolve(fileName);
             if (tempFile != null) {
                 Files.move(tempFile, path);
             } else {
                 Files.write(path, payload);
             }
+            return path.toString();
         } catch (IOException ex) {
             deleteTempFileQuietly(tempFile);
             throw new MasterUpdateService.MasterUpdateException(500, "artifact_write_failed", "取得ファイル保存に失敗しました: " + ex.getMessage());
         }
-        return path.toString();
     }
 
     private Path resolveArtifactRoot() {
@@ -445,7 +445,6 @@ final class MasterUpdateArtifacts {
     static final class UpdateArtifact {
         byte[] payload;
         Path tempFile;
-        long payloadSize;
         String hash;
         long recordCount;
         String summary;

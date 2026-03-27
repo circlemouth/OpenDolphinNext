@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.rest.admin.AdminConfigSnapshot;
 import open.dolphin.rest.admin.AdminConfigStore;
@@ -277,9 +278,9 @@ public class AdminConfigResource extends AbstractResource {
             return snapshot;
         }
         snapshot.setOrcaEndpoint(getString(payload, "orcaEndpoint", "endpoint"));
-        snapshot.setVerifyAdminDelivery(getBoolean(payload.get("verifyAdminDelivery")));
-        snapshot.setChartsDisplayEnabled(getBoolean(payload.get("chartsDisplayEnabled")));
-        snapshot.setChartsSendEnabled(getBoolean(payload.get("chartsSendEnabled")));
+        snapshot.setVerifyAdminDelivery(parseBoolean(payload.get("verifyAdminDelivery")).orElse(null));
+        snapshot.setChartsDisplayEnabled(parseBoolean(payload.get("chartsDisplayEnabled")).orElse(null));
+        snapshot.setChartsSendEnabled(parseBoolean(payload.get("chartsSendEnabled")).orElse(null));
         snapshot.setChartsMasterSource(getString(payload, "chartsMasterSource"));
         snapshot.setNote(getString(payload, "note"));
         snapshot.setEnvironment(getString(payload, "environment", "env", "stage"));
@@ -290,8 +291,8 @@ public class AdminConfigResource extends AbstractResource {
             Object display = map.get("displayEnabled");
             Object send = map.get("sendEnabled");
             Object master = map.get("masterSource");
-            if (snapshot.getChartsDisplayEnabled() == null) snapshot.setChartsDisplayEnabled(getBoolean(display));
-            if (snapshot.getChartsSendEnabled() == null) snapshot.setChartsSendEnabled(getBoolean(send));
+            if (snapshot.getChartsDisplayEnabled() == null) snapshot.setChartsDisplayEnabled(parseBoolean(display).orElse(null));
+            if (snapshot.getChartsSendEnabled() == null) snapshot.setChartsSendEnabled(parseBoolean(send).orElse(null));
             if (snapshot.getChartsMasterSource() == null) snapshot.setChartsMasterSource(getString(master));
         }
         return snapshot;
@@ -315,24 +316,13 @@ public class AdminConfigResource extends AbstractResource {
         return null;
     }
 
-    private Boolean getBoolean(Object... values) {
-        if (values == null) return null;
-        for (Object value : values) {
-            Boolean parsed = getBoolean(value);
-            if (parsed != null) {
-                return parsed;
-            }
-        }
-        return null;
-    }
-
-    private Boolean getBoolean(Object value) {
-        if (value instanceof Boolean bool) return bool;
+    private Optional<Boolean> parseBoolean(Object value) {
+        if (value instanceof Boolean bool) return Optional.of(bool);
         if (value instanceof String text) {
-            if ("true".equalsIgnoreCase(text) || "1".equals(text)) return Boolean.TRUE;
-            if ("false".equalsIgnoreCase(text) || "0".equals(text)) return Boolean.FALSE;
+            if ("true".equalsIgnoreCase(text) || "1".equals(text)) return Optional.of(Boolean.TRUE);
+            if ("false".equalsIgnoreCase(text) || "0".equals(text)) return Optional.of(Boolean.FALSE);
         }
-        return null;
+        return Optional.empty();
     }
 
 }

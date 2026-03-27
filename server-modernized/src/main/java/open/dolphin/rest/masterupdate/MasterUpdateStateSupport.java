@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 final class MasterUpdateStateSupport {
@@ -61,7 +62,6 @@ final class MasterUpdateStateSupport {
                 throw new MasterUpdateService.MasterUpdateException(409, "dataset_running", "更新処理は既に実行中です。");
             }
             state.lockJobId = jobId;
-            state.lockStartedAt = now;
             state.status = "running";
             state.latestRunId = runId;
             state.latestJobMessage = "更新処理を開始しました";
@@ -86,9 +86,7 @@ final class MasterUpdateStateSupport {
             state.latestRunId = runId;
             state.lastFailureAt = null;
             state.lastFailureReason = null;
-            state.lastFailureDetail = null;
             state.lockJobId = null;
-            state.lockStartedAt = null;
             if ("AUTO".equalsIgnoreCase(triggerType) || "AUTO_POLL".equalsIgnoreCase(triggerType)) {
                 state.lastAutoRunAt = now;
                 state.lastPolledAt = now;
@@ -155,7 +153,6 @@ final class MasterUpdateStateSupport {
             state.lastSuccessfulAt = now;
             state.lastFailureAt = null;
             state.lastFailureReason = null;
-            state.lastFailureDetail = null;
             state.latestRunId = runId;
             state.latestJobMessage = "アップロード版を反映しました";
             state.updateDetected = false;
@@ -237,7 +234,8 @@ final class MasterUpdateStateSupport {
                     for (Map.Entry<String, Object> entry : overrides.entrySet()) {
                         String code = normalizeDatasetCode(entry.getKey());
                         if (code != null) {
-                            schedule.datasetAutoEnabledOverrides.put(code, MasterUpdatePayloads.asBoolean(entry.getValue()));
+                            Optional<Boolean> parsed = MasterUpdatePayloads.asBoolean(entry.getValue());
+                            parsed.ifPresent(value -> schedule.datasetAutoEnabledOverrides.put(code, value));
                         }
                     }
                 }
@@ -294,11 +292,9 @@ final class MasterUpdateStateSupport {
             state.lastCheckedAt = now;
             state.lastFailureAt = now;
             state.lastFailureReason = summarizeFailure(message);
-            state.lastFailureDetail = message;
             state.latestRunId = runId;
             state.latestJobMessage = "更新処理に失敗しました";
             state.lockJobId = null;
-            state.lockStartedAt = null;
             return null;
         });
     }

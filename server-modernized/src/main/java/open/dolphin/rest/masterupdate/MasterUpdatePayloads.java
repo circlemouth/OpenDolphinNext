@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 
 final class MasterUpdatePayloads {
 
@@ -108,20 +109,20 @@ final class MasterUpdatePayloads {
         return null;
     }
 
-    static Boolean asBoolean(Object value) {
+    static Optional<Boolean> asBoolean(Object value) {
         if (value instanceof Boolean bool) {
-            return bool;
+            return Optional.of(bool);
         }
         if (value instanceof String text) {
             String normalized = text.trim().toLowerCase(Locale.ROOT);
             if ("1".equals(normalized) || "true".equals(normalized) || "on".equals(normalized)) {
-                return true;
+                return Optional.of(Boolean.TRUE);
             }
             if ("0".equals(normalized) || "false".equals(normalized) || "off".equals(normalized)) {
-                return false;
+                return Optional.of(Boolean.FALSE);
             }
         }
-        return null;
+        return Optional.empty();
     }
 
     static Instant parseInstant(String value) {
