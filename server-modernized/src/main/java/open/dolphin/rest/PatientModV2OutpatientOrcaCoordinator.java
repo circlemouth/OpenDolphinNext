@@ -21,25 +21,14 @@ import open.dolphin.rest.dto.orca.PatientImportResponse;
 import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.session.PatientServiceBean;
 
-final class PatientModV2OutpatientOrcaCoordinator {
+record PatientModV2OutpatientOrcaCoordinator(
+        PatientServiceBean patientServiceBean,
+        OrcaTransport orcaTransport,
+        OrcaLiveGateway orcaWrapperService,
+        OrcaPatientSyncService orcaPatientSyncService) {
 
     private static final String ORCA_PATIENTMOD_CLASS = "02";
     private static final int ORCA_UPDATE_MAX_RETRY = 1;
-
-    private final PatientServiceBean patientServiceBean;
-    private final OrcaTransport orcaTransport;
-    private final OrcaLiveGateway orcaWrapperService;
-    private final OrcaPatientSyncService orcaPatientSyncService;
-
-    PatientModV2OutpatientOrcaCoordinator(PatientServiceBean patientServiceBean,
-            OrcaTransport orcaTransport,
-            OrcaLiveGateway orcaWrapperService,
-            OrcaPatientSyncService orcaPatientSyncService) {
-        this.patientServiceBean = patientServiceBean;
-        this.orcaTransport = orcaTransport;
-        this.orcaWrapperService = orcaWrapperService;
-        this.orcaPatientSyncService = orcaPatientSyncService;
-    }
 
     PatientModV2OutpatientSupport.OrcaMutationResult updateOrcaAndSyncLocal(
             String facilityId,
@@ -104,7 +93,7 @@ final class PatientModV2OutpatientOrcaCoordinator {
         PatientImportRequest request = new PatientImportRequest();
         request.getPatientIds().add(patientId);
         request.setIncludeInsurance(false);
-        PatientImportResponse response = orcaPatientSyncService.importPatients(facilityId, request, runId);
+        PatientImportResponse response = orcaPatientSyncService().importPatients(facilityId, request, runId);
         if (response != null) {
             details.put("importApiResult", response.getApiResult());
             details.put("importApiResultMessage", response.getApiResultMessage());
@@ -129,7 +118,7 @@ final class PatientModV2OutpatientOrcaCoordinator {
                     "ORCA patient import failed", Map.of("errors", response.getErrors()), null);
         }
 
-        PatientModel model = patientServiceBean.getPatientById(facilityId, patientId);
+        PatientModel model = patientServiceBean().getPatientById(facilityId, patientId);
         if (model == null) {
             throw new IllegalStateException("Local patient record not found after import. patientId=" + patientId);
         }
@@ -197,13 +186,13 @@ final class PatientModV2OutpatientOrcaCoordinator {
     }
 
     private PatientModV2OutpatientSupport.OrcaPatientBaseline fetchOrcaPatientBaseline(String facilityId, String patientId) {
-        if (orcaWrapperService == null) {
+        if (orcaWrapperService() == null) {
             throw new IllegalStateException("OrcaLiveGateway is not available");
         }
         PatientBatchRequest req = new PatientBatchRequest();
         req.getPatientIds().add(patientId);
         req.setIncludeInsurance(false);
-        PatientBatchResponse res = orcaWrapperService.getPatientBatch(facilityId, req);
+        PatientBatchResponse res = orcaWrapperService().getPatientBatch(facilityId, req);
         if (res == null) {
             throw new OrcaGatewayException("ORCA patientlst2v2 response is empty");
         }
@@ -247,14 +236,13 @@ final class PatientModV2OutpatientOrcaCoordinator {
     }
 
     private PatientModV2OutpatientSupport.OrcaApiResult postPatientMod(String facilityId, String payloadWithoutMeta) {
-        if (orcaTransport == null) {
+        if (orcaTransport() == null) {
             throw new IllegalStateException("OrcaTransport is not available");
         }
         String payload = OrcaApiProxySupport.applyQueryMeta(payloadWithoutMeta, OrcaEndpoint.PATIENT_MOD, ORCA_PATIENTMOD_CLASS);
-        OrcaTransportResult result = orcaTransport.invoke(facilityId, OrcaEndpoint.PATIENT_MOD, OrcaTransportRequest.post(payload));
+        OrcaTransportResult result = orcaTransport().invoke(facilityId, OrcaEndpoint.PATIENT_MOD, OrcaTransportRequest.post(payload));
         PatientModV2OutpatientSupport.OrcaApiResult parsed = new PatientModV2OutpatientSupport.OrcaApiResult();
         parsed.httpStatus = result != null ? result.getStatus() : 0;
-        parsed.url = result != null ? result.getUrl() : null;
         String body = result != null ? result.getBody() : null;
         parsed.apiResult = PatientModV2OutpatientSupport.extractTagValue(body, "Api_Result");
         parsed.apiResultMessage = PatientModV2OutpatientSupport.extractTagValue(body, "Api_Result_Message");
@@ -266,10 +254,10 @@ final class PatientModV2OutpatientOrcaCoordinator {
     }
 
     private void ensureDependencies() {
-        if (patientServiceBean == null) {
+        if (patientServiceBean() == null) {
             throw new IllegalStateException("PatientServiceBean is not available");
         }
-        if (orcaPatientSyncService == null) {
+        if (orcaPatientSyncService() == null) {
             throw new IllegalStateException("OrcaPatientSyncService is not available");
         }
     }

@@ -33,6 +33,9 @@ public class StampTreeListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (StampTreeList)model;
+        StampTreeList source = (StampTreeList) model;
+        StampTreeList copy = new StampTreeList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

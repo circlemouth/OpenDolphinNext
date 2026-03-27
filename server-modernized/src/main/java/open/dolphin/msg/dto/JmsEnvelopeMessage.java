@@ -1,5 +1,7 @@
 package open.dolphin.msg.dto;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
 
@@ -53,141 +55,92 @@ public class JmsEnvelopeMessage {
         this.audit = audit;
     }
 
-    public static class AuditMessage {
-        private String action;
-        private String resource;
-        private String requestId;
-        private String traceId;
-        private String runId;
-        private String actorId;
-        private String facilityId;
-        private String patientId;
-        private String operation;
-        private String outcome;
-        private String errorCode;
-        private String errorMessage;
-        private Map<String, Object> details;
-
-        public static AuditMessage fromEnvelope(AuditEventEnvelope envelope) {
-            AuditMessage payload = new AuditMessage();
-            payload.setAction(envelope.getAction());
-            payload.setResource(envelope.getResource());
-            payload.setRequestId(envelope.getRequestId());
-            payload.setTraceId(envelope.getTraceId());
-            payload.setRunId(envelope.getRunId());
-            payload.setActorId(envelope.getActorId());
-            payload.setFacilityId(envelope.getFacilityId());
-            payload.setPatientId(envelope.getPatientId());
-            payload.setOperation(envelope.getOperation());
-            payload.setOutcome(envelope.getOutcome() != null ? envelope.getOutcome().name() : null);
-            payload.setErrorCode(envelope.getErrorCode());
-            payload.setErrorMessage(envelope.getErrorMessage());
-            payload.setDetails(envelope.getDetails());
-            return payload;
+    public static record AuditMessage(
+            String action,
+            String resource,
+            String requestId,
+            String traceId,
+            String runId,
+            String actorId,
+            String facilityId,
+            String patientId,
+            String operation,
+            String outcome,
+            String errorCode,
+            String errorMessage,
+            Map<String, Object> details
+    ) {
+        public AuditMessage {
+            details = details == null ? null : Collections.unmodifiableMap(new LinkedHashMap<>(details));
         }
 
         public String getAction() {
             return action;
         }
 
-        public void setAction(String action) {
-            this.action = action;
-        }
-
         public String getResource() {
             return resource;
-        }
-
-        public void setResource(String resource) {
-            this.resource = resource;
         }
 
         public String getRequestId() {
             return requestId;
         }
 
-        public void setRequestId(String requestId) {
-            this.requestId = requestId;
-        }
-
         public String getTraceId() {
             return traceId;
-        }
-
-        public void setTraceId(String traceId) {
-            this.traceId = traceId;
         }
 
         public String getRunId() {
             return runId;
         }
 
-        public void setRunId(String runId) {
-            this.runId = runId;
-        }
-
         public String getActorId() {
             return actorId;
-        }
-
-        public void setActorId(String actorId) {
-            this.actorId = actorId;
         }
 
         public String getFacilityId() {
             return facilityId;
         }
 
-        public void setFacilityId(String facilityId) {
-            this.facilityId = facilityId;
-        }
-
         public String getPatientId() {
             return patientId;
-        }
-
-        public void setPatientId(String patientId) {
-            this.patientId = patientId;
         }
 
         public String getOperation() {
             return operation;
         }
 
-        public void setOperation(String operation) {
-            this.operation = operation;
-        }
-
         public String getOutcome() {
             return outcome;
-        }
-
-        public void setOutcome(String outcome) {
-            this.outcome = outcome;
         }
 
         public String getErrorCode() {
             return errorCode;
         }
 
-        public void setErrorCode(String errorCode) {
-            this.errorCode = errorCode;
-        }
-
         public String getErrorMessage() {
             return errorMessage;
-        }
-
-        public void setErrorMessage(String errorMessage) {
-            this.errorMessage = errorMessage;
         }
 
         public Map<String, Object> getDetails() {
             return details;
         }
 
-        public void setDetails(Map<String, Object> details) {
-            this.details = details;
+        public static AuditMessage fromEnvelope(AuditEventEnvelope envelope) {
+            return new AuditMessage(
+                    envelope.getAction(),
+                    envelope.getResource(),
+                    envelope.getRequestId(),
+                    envelope.getTraceId(),
+                    envelope.getRunId(),
+                    envelope.getActorId(),
+                    envelope.getFacilityId(),
+                    envelope.getPatientId(),
+                    envelope.getOperation(),
+                    envelope.getOutcome() != null ? envelope.getOutcome().name() : null,
+                    envelope.getErrorCode(),
+                    envelope.getErrorMessage(),
+                    envelope.getDetails());
         }
     }
 }

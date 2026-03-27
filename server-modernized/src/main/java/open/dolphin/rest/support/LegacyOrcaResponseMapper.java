@@ -1,5 +1,7 @@
 package open.dolphin.rest.support;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 import open.dolphin.infomodel.CodeNamePack;
@@ -126,6 +128,14 @@ public final class LegacyOrcaResponseMapper {
     }
 
     public record TensuListResponse(List<TensuMasterResponse> list) {
+        public TensuListResponse {
+            list = copyList(list);
+        }
+
+        @Override
+        public List<TensuMasterResponse> list() {
+            return copyList(list);
+        }
     }
 
     public record TensuMasterResponse(
@@ -147,6 +157,14 @@ public final class LegacyOrcaResponseMapper {
     }
 
     public record DiseaseListResponse(List<DiseaseEntryResponse> list) {
+        public DiseaseListResponse {
+            list = copyList(list);
+        }
+
+        @Override
+        public List<DiseaseEntryResponse> list() {
+            return copyList(list);
+        }
     }
 
     public record DiseaseEntryResponse(
@@ -163,6 +181,14 @@ public final class LegacyOrcaResponseMapper {
     }
 
     public record RegisteredDiagnosisListResponse(List<RegisteredDiagnosisResponse> list) {
+        public RegisteredDiagnosisListResponse {
+            list = copyList(list);
+        }
+
+        @Override
+        public List<RegisteredDiagnosisResponse> list() {
+            return copyList(list);
+        }
     }
 
     public record RegisteredDiagnosisResponse(
@@ -185,6 +211,32 @@ public final class LegacyOrcaResponseMapper {
             DiagnosisOutcomeResponse diagnosisOutcomeModel,
             String department,
             String departmentDesc) {
+        public RegisteredDiagnosisResponse {
+            confirmed = copyDate(confirmed);
+            started = copyDate(started);
+            ended = copyDate(ended);
+            recorded = copyDate(recorded);
+        }
+
+        @Override
+        public Date confirmed() {
+            return copyDate(confirmed);
+        }
+
+        @Override
+        public Date started() {
+            return copyDate(started);
+        }
+
+        @Override
+        public Date ended() {
+            return copyDate(ended);
+        }
+
+        @Override
+        public Date recorded() {
+            return copyDate(recorded);
+        }
     }
 
     public record UserIdReference(long id) {
@@ -203,5 +255,13 @@ public final class LegacyOrcaResponseMapper {
             String outcome,
             String outcomeDesc,
             String outcomeCodeSys) {
+    }
+
+    private static <T> List<T> copyList(List<T> source) {
+        return source == null ? null : List.copyOf(new ArrayList<>(source));
+    }
+
+    private static Date copyDate(Date source) {
+        return source == null ? null : new Date(source.getTime());
     }
 }

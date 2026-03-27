@@ -64,6 +64,20 @@ public final class ExtRefModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (ExtRefModel)model;
+        ExtRefModel source = (ExtRefModel) model;
+        ExtRefModel copy = new ExtRefModel();
+        copy.setContentType(source.getContentType());
+        copy.setTitle(source.getTitle());
+        copy.setHref(source.getHref());
+        copy.setMedicalRole(source.getMedicalRole());
+        copy.setSop(source.getSop());
+        copy.setUrl(source.getUrl());
+        copy.setBucket(source.getBucket());
+        copy.setImageTime(source.getImageTime());
+        copy.setBodyPart(source.getBodyPart());
+        copy.setShutterNum(source.getShutterNum());
+        copy.setSeqNum(source.getSeqNum());
+        copy.setExtension(source.getExtension());
+        this.model = copy;
     }
 }

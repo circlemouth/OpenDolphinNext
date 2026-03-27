@@ -6,6 +6,7 @@ import jakarta.inject.Inject;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -777,7 +778,7 @@ public class OrcaConnectionConfigStore {
         private final byte[] bytes;
         public UploadedBinary(String fileName, byte[] bytes) {
             this.fileName = fileName;
-            this.bytes = bytes;
+            this.bytes = bytes == null ? null : Arrays.copyOf(bytes, bytes.length);
         }
     }
     public record ResolvedOrcaConnection(
@@ -792,6 +793,11 @@ public class OrcaConnectionConfigStore {
             String pushUrl,
             String pushTenantId
     ) {
+        public ResolvedOrcaConnection {
+            clientCertificateP12 = copyBytes(clientCertificateP12);
+            caCertificate = copyBytes(caCertificate);
+        }
+
         public ResolvedOrcaConnection(
                 boolean useWeborca,
                 String baseUrl,
@@ -804,6 +810,20 @@ public class OrcaConnectionConfigStore {
             this(useWeborca, baseUrl, username, password, clientAuthEnabled,
                     clientCertificateP12, clientCertificatePassphrase, caCertificate, null, null);
         }
+
+        @Override
+        public byte[] clientCertificateP12() {
+            return copyBytes(clientCertificateP12);
+        }
+
+        @Override
+        public byte[] caCertificate() {
+            return copyBytes(caCertificate);
+        }
+    }
+
+    private static byte[] copyBytes(byte[] bytes) {
+        return bytes == null ? null : Arrays.copyOf(bytes, bytes.length);
     }
 
     private record StoredState(

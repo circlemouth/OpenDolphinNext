@@ -154,19 +154,19 @@ public class IDiagnosisSendWrapper<T extends IRegisteredDiagnosis> extends InfoM
     }
 
     public List<T> getAddedDiagnosis() {
-        return addedDiagnosis;
+        return addedDiagnosis == null ? null : new ArrayList<>(addedDiagnosis);
     }
 
     public void setAddedDiagnosis(List<T> addedDiagnosis) {
-        this.addedDiagnosis = addedDiagnosis;
+        this.addedDiagnosis = addedDiagnosis == null ? null : new ArrayList<>(addedDiagnosis);
     }
 
     public List<T> getUpdatedDiagnosis() {
-        return updatedDiagnosis;
+        return updatedDiagnosis == null ? null : new ArrayList<>(updatedDiagnosis);
     }
 
     public void setUpdatedDiagnosis(List<T> updatedDiagnosis) {
-        this.updatedDiagnosis = updatedDiagnosis;
+        this.updatedDiagnosis = updatedDiagnosis == null ? null : new ArrayList<>(updatedDiagnosis);
     }
 
     public DiagnosisSendWrapper toModel() {

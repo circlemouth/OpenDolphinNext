@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -165,6 +166,11 @@ public class EncounterTransitionService {
             String memo,
             Map<String, Object> worklistFlags
     ) {
+        public TransitionCommand {
+            worklistFlags = worklistFlags == null
+                    ? null
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(worklistFlags));
+        }
     }
 
     public record TransitionResult(

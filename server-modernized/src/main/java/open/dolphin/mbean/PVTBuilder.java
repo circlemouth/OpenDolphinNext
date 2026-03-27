@@ -2,8 +2,10 @@ package open.dolphin.mbean;
 
 import java.io.BufferedReader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Iterator;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infomodel.*;
@@ -154,7 +156,7 @@ public final class PVTBuilder {
     
     // 在宅関連(在宅患者登録)
     public PVTClaim getPvtClaim() {
-        return pvtClaim;
+        return copyPvtClaim(pvtClaim);
     }
     
     /**
@@ -315,5 +317,33 @@ public final class PVTBuilder {
             LOGGER.fine("Parsed claim metadata");
         }
     }
-    
+
+    private static PVTClaim copyPvtClaim(PVTClaim source) {
+        if (source == null) {
+            return null;
+        }
+        PVTClaim copy = new PVTClaim();
+        copy.setClaimStatus(source.getClaimStatus());
+        copy.setClaimRegistTime(source.getClaimRegistTime());
+        copy.setClaimAdmitFlag(source.getClaimAdmitFlag());
+        copy.setClaimDeptName(source.getClaimDeptName());
+        copy.setClaimDeptCode(source.getClaimDeptCode());
+        copy.setAssignedDoctorId(source.getAssignedDoctorId());
+        copy.setAssignedDoctorName(source.getAssignedDoctorName());
+        Vector claimAppNames = source.getClaimAppName();
+        if (claimAppNames != null) {
+            for (Object value : Collections.list(claimAppNames.elements())) {
+                if (value != null) {
+                    copy.addClaimAppName(String.valueOf(value));
+                }
+            }
+        }
+        copy.setClaimAppMemo(source.getClaimAppMemo());
+        copy.setClaimItemCode(source.getClaimItemCode());
+        copy.setClaimItemName(source.getClaimItemName());
+        copy.setInsuranceUid(source.getInsuranceUid());
+        copy.setJmariCode(source.getJmariCode());
+        return copy;
+    }
+
 }

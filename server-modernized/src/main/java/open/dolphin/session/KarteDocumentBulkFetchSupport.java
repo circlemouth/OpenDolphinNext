@@ -42,7 +42,7 @@ final class KarteDocumentBulkFetchSupport {
 
     KarteDocumentBulkFetchSupport(EntityManager em, Consumer<Collection<ModuleModel>> moduleDecoder) {
         this.em = em;
-        this.queryService = new KarteDocumentQueryService(em);
+        this.queryService = new KarteDocumentQueryService(() -> em);
         this.moduleDecoder = moduleDecoder;
     }
 

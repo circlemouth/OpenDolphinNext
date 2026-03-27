@@ -181,14 +181,14 @@ final class OrcaMasterDaoTypes {
     }
 
     static class GenericClassRecordBase {
-        public String classCode;
-        public String className;
-        public String kanaName;
-        public String categoryCode;
-        public String parentClassCode;
-        public String startDate;
-        public String endDate;
-        public String version;
+        String classCode;
+        String className;
+        String kanaName;
+        String categoryCode;
+        String parentClassCode;
+        String startDate;
+        String endDate;
+        String version;
 
         public String getClassCode() {
             return classCode;
@@ -224,16 +224,16 @@ final class OrcaMasterDaoTypes {
     }
 
     static class DrugRecordBase {
-        public String srycd;
-        public String drugName;
-        public String kanaName;
-        public String category;
-        public String unit;
-        public Double price;
-        public String note;
-        public String startDate;
-        public String endDate;
-        public String version;
+        String srycd;
+        String drugName;
+        String kanaName;
+        String category;
+        String unit;
+        Double price;
+        String note;
+        String startDate;
+        String endDate;
+        String version;
 
         public String getSrycd() {
             return srycd;
@@ -277,14 +277,14 @@ final class OrcaMasterDaoTypes {
     }
 
     static class CommentRecordBase {
-        public String tensuCode;
-        public String name;
-        public String kanaName;
-        public String category;
-        public String unit;
-        public String startDate;
-        public String endDate;
-        public String version;
+        String tensuCode;
+        String name;
+        String kanaName;
+        String category;
+        String unit;
+        String startDate;
+        String endDate;
+        String version;
 
         public String getTensuCode() {
             return tensuCode;
@@ -320,12 +320,12 @@ final class OrcaMasterDaoTypes {
     }
 
     static class YouhouRecordBase {
-        public String youhouCode;
-        public String youhouName;
-        public String kanaName;
-        public String startDate;
-        public String endDate;
-        public String version;
+        String youhouCode;
+        String youhouName;
+        String kanaName;
+        String startDate;
+        String endDate;
+        String version;
 
         public String getYouhouCode() {
             return youhouCode;
@@ -353,17 +353,17 @@ final class OrcaMasterDaoTypes {
     }
 
     static class MaterialRecordBase {
-        public String materialCode;
-        public String materialName;
-        public String kanaName;
-        public String category;
-        public String materialCategory;
-        public String unit;
-        public Double price;
-        public String maker;
-        public String startDate;
-        public String endDate;
-        public String version;
+        String materialCode;
+        String materialName;
+        String kanaName;
+        String category;
+        String materialCategory;
+        String unit;
+        Double price;
+        String maker;
+        String startDate;
+        String endDate;
+        String version;
 
         public String getMaterialCode() {
             return materialCode;
@@ -411,14 +411,14 @@ final class OrcaMasterDaoTypes {
     }
 
     static class KensaSortRecordBase {
-        public String kensaCode;
-        public String kensaName;
-        public String kanaName;
-        public String kensaSort;
-        public String classification;
-        public String startDate;
-        public String endDate;
-        public String version;
+        String kensaCode;
+        String kensaName;
+        String kanaName;
+        String kensaSort;
+        String classification;
+        String startDate;
+        String endDate;
+        String version;
 
         public String getKensaCode() {
             return kensaCode;

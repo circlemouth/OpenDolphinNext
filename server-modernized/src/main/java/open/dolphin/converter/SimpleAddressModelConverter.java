@@ -24,6 +24,10 @@ public final class SimpleAddressModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (SimpleAddressModel)model;
+        SimpleAddressModel source = (SimpleAddressModel) model;
+        SimpleAddressModel copy = new SimpleAddressModel();
+        copy.setZipCode(source.getZipCode());
+        copy.setAddress(source.getAddress());
+        this.model = copy;
     }
 }

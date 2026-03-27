@@ -260,5 +260,14 @@ public class PatientImageServiceBean {
                                  String uri,
                                  String digest) {}
 
-    public record UploadResult(long documentId, long attachmentId, Date createdAt) {}
+    public record UploadResult(long documentId, long attachmentId, Date createdAt) {
+        public UploadResult {
+            createdAt = createdAt == null ? null : new Date(createdAt.getTime());
+        }
+
+        @Override
+        public Date createdAt() {
+            return createdAt == null ? null : new Date(createdAt.getTime());
+        }
+    }
 }

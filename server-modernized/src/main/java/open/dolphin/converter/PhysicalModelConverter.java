@@ -43,6 +43,14 @@ public final class PhysicalModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PhysicalModel)model;
+        PhysicalModel source = (PhysicalModel) model;
+        PhysicalModel copy = new PhysicalModel();
+        copy.setHeightId(source.getHeightId());
+        copy.setWeightId(source.getWeightId());
+        copy.setHeight(source.getHeight());
+        copy.setIdentifiedDate(source.getIdentifiedDate());
+        copy.setMemo(source.getMemo());
+        copy.setWeight(source.getWeight());
+        this.model = copy;
     }
 }

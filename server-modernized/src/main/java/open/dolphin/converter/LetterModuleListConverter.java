@@ -33,6 +33,9 @@ public class LetterModuleListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (LetterModuleList)model;
+        LetterModuleList source = (LetterModuleList) model;
+        LetterModuleList copy = new LetterModuleList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

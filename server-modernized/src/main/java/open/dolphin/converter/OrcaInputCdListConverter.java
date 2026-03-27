@@ -33,6 +33,9 @@ public class OrcaInputCdListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (OrcaInputCdList)model;
+        OrcaInputCdList source = (OrcaInputCdList) model;
+        OrcaInputCdList copy = new OrcaInputCdList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

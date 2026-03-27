@@ -103,11 +103,11 @@ public class KarteServiceBean {
     private KarteObservationService karteObservationService;
 
     private PatientQueryService patientQueries() {
-        return new PatientQueryService(em);
+        return new PatientQueryService(() -> em);
     }
 
     private UserQueryService userQueries() {
-        return new UserQueryService(em);
+        return new UserQueryService(() -> em);
     }
 
     private KarteDetailAssemblySupport karteDetailAssemblySupport() {

@@ -33,6 +33,9 @@ public class UserListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (UserList)model;
+        UserList source = (UserList) model;
+        UserList copy = new UserList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

@@ -33,6 +33,9 @@ public class SubscribedTreeListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (SubscribedTreeList)model;
+        SubscribedTreeList source = (SubscribedTreeList) model;
+        SubscribedTreeList copy = new SubscribedTreeList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

@@ -21,7 +21,7 @@ import { MasterUpdatesPanel } from './MasterUpdatesPanel';
 import { OrcaUserManagementPanel } from './OrcaUserManagementPanel';
 import {
   discardOrcaQueue,
-  fetchEffectiveAdminConfig,
+  fetchAdminConfig,
   fetchOperationsHealth,
   fetchOperationsReadiness,
   fetchOrcaQueue,
@@ -424,7 +424,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
   const configQuery = useQuery({
     queryKey: ['admin-config'],
-    queryFn: fetchEffectiveAdminConfig,
+    queryFn: fetchAdminConfig,
     staleTime: 60_000,
   });
   const orcaConnectionQuery = useQuery({

@@ -555,7 +555,7 @@ final class AdminAccessMutationSupport {
     }
 
     private OrcaUserLinkQueryService orcaUserLinks() {
-        return new OrcaUserLinkQueryService(em);
+        return new OrcaUserLinkQueryService(() -> em);
     }
 
     private void validateTemporaryPassword(AdminAccessResource resource, HttpServletRequest request, String temporaryPassword) {

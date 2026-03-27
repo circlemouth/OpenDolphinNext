@@ -182,11 +182,8 @@ public class EtensuDao {
                     record.noticeDate = rs.getString("chgYmd");
                     record.effectiveDate = record.startDate;
                     record.points = record.tanka;
-                    record.hTani1 = EtensuDaoSupport.getInteger(rs, "hTani1");
                     record.hGroup1 = rs.getString("hGroup1");
-                    record.hTani2 = EtensuDaoSupport.getInteger(rs, "hTani2");
                     record.hGroup2 = rs.getString("hGroup2");
-                    record.hTani3 = EtensuDaoSupport.getInteger(rs, "hTani3");
                     record.hGroup3 = rs.getString("hGroup3");
                     record.rDay = EtensuDaoSupport.getInteger(rs, "rDay");
                     record.rMonth = EtensuDaoSupport.getInteger(rs, "rMonth");
@@ -344,7 +341,7 @@ public class EtensuDao {
 
         public EtensuSearchResult(List<EtensuRecord> records, Integer totalCount, String version, long dbTimeMs,
                 boolean loadFailed) {
-            this.records = records;
+            this.records = records == null ? List.of() : List.copyOf(records);
             this.totalCount = totalCount;
             this.version = version;
             this.dbTimeMs = dbTimeMs;
@@ -385,11 +382,8 @@ public class EtensuDao {
         String tensuVersion;
         String noticeDate;
         String effectiveDate;
-        Integer hTani1;
         String hGroup1;
-        Integer hTani2;
         String hGroup2;
-        Integer hTani3;
         String hGroup3;
         Integer rDay;
         Integer rMonth;
@@ -452,23 +446,23 @@ public class EtensuDao {
         }
 
         public List<OrcaEtensuConflict> getConflicts() {
-            return conflicts;
+            return List.copyOf(conflicts);
         }
 
         public List<OrcaEtensuAddition> getAdditions() {
-            return additions;
+            return List.copyOf(additions);
         }
 
         public List<OrcaEtensuCalcUnit> getCalcUnits() {
-            return calcUnits;
+            return List.copyOf(calcUnits);
         }
 
         public List<OrcaEtensuBundlingMember> getBundlingMembers() {
-            return bundlingMembers;
+            return List.copyOf(bundlingMembers);
         }
 
         public List<OrcaEtensuSpecimen> getSpecimens() {
-            return specimens;
+            return List.copyOf(specimens);
         }
 
         boolean isConflictScopeEnabled(String scope) {

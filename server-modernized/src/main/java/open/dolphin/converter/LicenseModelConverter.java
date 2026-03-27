@@ -31,6 +31,11 @@ public final class LicenseModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (LicenseModel)model;
+        LicenseModel source = (LicenseModel) model;
+        LicenseModel copy = new LicenseModel();
+        copy.setLicense(source.getLicense());
+        copy.setLicenseDesc(source.getLicenseDesc());
+        copy.setLicenseCodeSys(source.getLicenseCodeSys());
+        this.model = copy;
     }
 }

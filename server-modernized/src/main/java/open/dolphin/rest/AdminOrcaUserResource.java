@@ -22,7 +22,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.UserModel;
@@ -41,7 +40,7 @@ import open.dolphin.session.UserServiceBean;
  * Administration APIs for ORCA user management and EHR-ORCA user linking.
  */
 @Path("/admin")
-public class AdminOrcaUserResource extends AbstractResource {
+public final class AdminOrcaUserResource extends AbstractResource {
 
     @PersistenceContext
     private EntityManager em;
@@ -58,8 +57,7 @@ public class AdminOrcaUserResource extends AbstractResource {
     @Inject
     private AdminStepUpGuard adminStepUpGuard;
 
-    private final AtomicReference<AdminOrcaUserSupport.SyncState> syncStateRef =
-            new AtomicReference<>(AdminOrcaUserSupport.SyncState.idle());
+    private volatile AdminOrcaUserSupport.SyncState syncState = AdminOrcaUserSupport.SyncState.idle();
 
     @GET
     @Path("/orca/users")
@@ -82,7 +80,7 @@ public class AdminOrcaUserResource extends AbstractResource {
                 AdminOrcaUserSupport.baseEnvelope(runId, request, result.apiResult(), result.apiResultMessage(), true);
         body.put("status", Response.Status.OK.getStatusCode());
         body.put("users", users);
-        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncStateRef.get()));
+        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "list");
@@ -104,11 +102,11 @@ public class AdminOrcaUserResource extends AbstractResource {
         String actor = requireAdminActor(request);
         adminStepUpGuard.require(request, "admin:mutation");
 
-        syncStateRef.set(syncStateRef.get().withRunning(true));
+        syncState = syncState.withRunning(true);
         try {
             AdminOrcaUserSupport.ManageUsersResult result = fetchOrcaUsers(request, runId);
             AdminOrcaUserSupport.SyncState updated = AdminOrcaUserSupport.SyncState.completed(result.users().size());
-            syncStateRef.set(updated);
+            syncState = updated;
 
             Map<String, Object> body =
                     AdminOrcaUserSupport.baseEnvelope(runId, request, result.apiResult(), result.apiResultMessage(), true);
@@ -125,9 +123,9 @@ public class AdminOrcaUserResource extends AbstractResource {
 
             return Response.ok(body).header("x-run-id", runId).build();
         } catch (RuntimeException ex) {
-            AdminOrcaUserSupport.SyncState current = syncStateRef.get();
-            syncStateRef.set(new AdminOrcaUserSupport.SyncState(
-                    false, current.lastSyncedAt(), current.syncedCount(), AdminOrcaUserSupport.summarizeError(ex)));
+            AdminOrcaUserSupport.SyncState current = syncState;
+            syncState = new AdminOrcaUserSupport.SyncState(
+                    false, current.lastSyncedAt(), current.syncedCount(), AdminOrcaUserSupport.summarizeError(ex));
             throw ex;
         }
     }
@@ -161,7 +159,7 @@ public class AdminOrcaUserResource extends AbstractResource {
         body.put("status", Response.Status.OK.getStatusCode());
         body.put("user", AdminOrcaUserSupport.toUserPayload(
                 AdminOrcaUserSupport.findUser(result.users(), userId), null));
-        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncStateRef.get()));
+        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "create");
@@ -192,13 +190,14 @@ public class AdminOrcaUserResource extends AbstractResource {
         String newFullName = AdminOrcaUserSupport.optionalToken(payload, "fullName", "WholeName");
         String newFullNameKana = AdminOrcaUserSupport.optionalToken(payload, "fullNameKana", "WholeName_inKana", "newKanaName", "New_Kana_Name");
         String newStaffNumber = AdminOrcaUserSupport.optionalToken(payload, "staffNumber", "Staff_Number", "newUserNumber");
-        Boolean newAdmin = AdminOrcaUserSupport.optionalBoolean(payload, "isAdmin", "Admin_Flag");
+        boolean newAdminSpecified = AdminOrcaUserSupport.hasAnyKey(payload, "isAdmin", "Admin_Flag");
+        Boolean newAdmin = newAdminSpecified ? AdminOrcaUserSupport.optionalBoolean(payload, "isAdmin", "Admin_Flag") : null;
 
         if (newUserId != null && !newUserId.matches("^[A-Za-z0-9_]+$")) {
             throw restError(request, Response.Status.BAD_REQUEST, "invalid_user_id", "ORCA User_Id が不正です。");
         }
         if (newUserId == null && newPassword == null && newStaffClass == null
-                && newFullName == null && newFullNameKana == null && newStaffNumber == null && newAdmin == null) {
+                && newFullName == null && newFullNameKana == null && newStaffNumber == null && !newAdminSpecified) {
             throw restError(request, Response.Status.BAD_REQUEST, "update_required", "更新項目が指定されていません。");
         }
 
@@ -216,7 +215,7 @@ public class AdminOrcaUserResource extends AbstractResource {
         body.put("status", Response.Status.OK.getStatusCode());
         body.put("user", AdminOrcaUserSupport.toUserPayload(
                 AdminOrcaUserSupport.findUser(result.users(), effectiveUserId), null));
-        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncStateRef.get()));
+        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "update");
@@ -254,7 +253,7 @@ public class AdminOrcaUserResource extends AbstractResource {
                 AdminOrcaUserSupport.baseEnvelope(runId, request, result.apiResult(), result.apiResultMessage(), true);
         body.put("status", Response.Status.OK.getStatusCode());
         body.put("user", Map.of("userId", userId));
-        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncStateRef.get()));
+        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "delete");
@@ -299,7 +298,7 @@ public class AdminOrcaUserResource extends AbstractResource {
         Map<String, Object> body = AdminOrcaUserSupport.baseEnvelope(runId, request, "0000", "linked", true);
         body.put("status", Response.Status.OK.getStatusCode());
         body.put("user", Map.of("userId", orcaUserId));
-        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncStateRef.get()));
+        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "link");
@@ -324,7 +323,7 @@ public class AdminOrcaUserResource extends AbstractResource {
 
         Map<String, Object> body = AdminOrcaUserSupport.baseEnvelope(runId, request, "0000", "unlinked", true);
         body.put("status", Response.Status.OK.getStatusCode());
-        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncStateRef.get()));
+        body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "unlink");
@@ -432,7 +431,7 @@ public class AdminOrcaUserResource extends AbstractResource {
     }
 
     private OrcaUserLinkQueryService orcaUserLinks() {
-        return new OrcaUserLinkQueryService(em);
+        return new OrcaUserLinkQueryService(() -> em);
     }
 
     private String requireValidUserId(HttpServletRequest request, String orcaUserId) {

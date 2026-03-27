@@ -27,29 +27,6 @@ public final class RuntimeConfigurationSupport {
         return false;
     }
 
-    public static Boolean parseBooleanFlag(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        String normalized = value.trim().toLowerCase(Locale.ROOT);
-        switch (normalized) {
-            case "1":
-            case "true":
-            case "yes":
-            case "y":
-            case "on":
-                return Boolean.TRUE;
-            case "0":
-            case "false":
-            case "no":
-            case "n":
-            case "off":
-                return Boolean.FALSE;
-            default:
-                return null;
-        }
-    }
-
     public static String firstNonBlank(String... candidates) {
         if (candidates == null) {
             return null;

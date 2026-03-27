@@ -150,7 +150,7 @@ public class AbstractResource {
 
     // 2013/06/24    
     public static ObjectMapper getSerializeMapper() {
-        return SERIALIZE_MAPPER;
+        return SERIALIZE_MAPPER.copy();
     }
 
     protected <T> T readJson(String payload, Class<T> valueType) throws IOException {

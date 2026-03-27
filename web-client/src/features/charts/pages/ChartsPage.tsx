@@ -51,7 +51,7 @@ import { upsertReceptionStatusOverride } from '../../reception/receptionDailySta
 import { useSession } from '../../../AppRouter';
 import { ensureObservabilityMeta, getObservabilityMeta, resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
 import { buildFacilityPath } from '../../../routes/facilityRoutes';
-import { fetchEffectiveAdminConfig, type ChartsMasterSourcePolicy } from '../../administration/api';
+import { fetchAdminConfig, type ChartsMasterSourcePolicy } from '../../administration/api';
 import type { ClaimOutpatientPayload } from '../../outpatient/types';
 import { hasStoredAuth } from '../../../libs/http/httpClient';
 import { isSystemAdminRole } from '../../../libs/auth/roles';
@@ -1527,7 +1527,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const adminQueryKey = ['admin-config'];
   const adminConfigQuery = useQuery({
     queryKey: adminQueryKey,
-    queryFn: fetchEffectiveAdminConfig,
+    queryFn: fetchAdminConfig,
     staleTime: 60_000,
     refetchInterval: 120_000,
     retry: 1,
@@ -1597,7 +1597,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     });
     logAuditEvent({
       runId: data.runId ?? flags.runId,
-      source: 'admin/delivery',
+      source: 'admin/config',
       note: 'admin delivery applied',
       payload: {
         operation: 'apply',

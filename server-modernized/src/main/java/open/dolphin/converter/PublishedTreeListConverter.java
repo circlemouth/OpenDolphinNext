@@ -33,6 +33,9 @@ public class PublishedTreeListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PublishedTreeList)model;
+        PublishedTreeList source = (PublishedTreeList) model;
+        PublishedTreeList copy = new PublishedTreeList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

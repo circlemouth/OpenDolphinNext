@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -452,10 +453,6 @@ public class LocalMedicalSummaryService {
         }
     }
 
-    private static LocalMedicalSummaryFailure unavailable(String code, String message) {
-        return unavailable(code, message, Map.of());
-    }
-
     private static LocalMedicalSummaryFailure unavailable(String code, String message, Map<String, Object> details) {
         return new LocalMedicalSummaryFailure(503, code, message, details);
     }
@@ -487,7 +484,9 @@ public class LocalMedicalSummaryService {
             this.httpStatus = httpStatus;
             this.code = code;
             this.detailsMessage = message;
-            this.details = details != null ? new LinkedHashMap<>(details) : new LinkedHashMap<>();
+            this.details = details == null
+                    ? Collections.emptyMap()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(details));
         }
 
         public int httpStatus() {
@@ -503,7 +502,7 @@ public class LocalMedicalSummaryService {
         }
 
         public Map<String, Object> details() {
-            return details;
+            return Map.copyOf(details);
         }
     }
 

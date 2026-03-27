@@ -1,5 +1,6 @@
 package open.dolphin.orca.config;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -75,11 +76,11 @@ public class OrcaConnectionConfigRecord {
     }
 
     public Map<String, OrcaConnectionConfigRecord> getFacilities() {
-        return facilities;
+        return facilities == null ? null : new LinkedHashMap<>(facilities);
     }
 
     public void setFacilities(Map<String, OrcaConnectionConfigRecord> facilities) {
-        this.facilities = facilities;
+        this.facilities = facilities == null ? null : new LinkedHashMap<>(facilities);
     }
 
     public Boolean getUseWeborca() {

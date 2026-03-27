@@ -10,11 +10,11 @@ import java.util.Set;
  * Single public REST entrypoint for the modernized server.
  */
 @ApplicationPath("/api")
-public class OpenDolphinRestApplication extends Application {
+public final class OpenDolphinRestApplication extends Application {
 
-    private final Set<Class<?>> classes;
+    private static final Set<Class<?>> REGISTERED_CLASSES = createRegisteredClasses();
 
-    public OpenDolphinRestApplication() {
+    private static Set<Class<?>> createRegisteredClasses() {
         LinkedHashSet<Class<?>> registered = new LinkedHashSet<>();
         Collections.addAll(registered,
                 open.dolphin.rest.AppoResource.class,
@@ -63,11 +63,11 @@ public class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.jackson.ResteasyObjectMapperResolver.class,
                 open.dolphin.rest.RestExceptionMapper.class,
                 open.dolphin.rest.OrcaGatewayExceptionMapper.class);
-        classes = Collections.unmodifiableSet(registered);
+        return Collections.unmodifiableSet(registered);
     }
 
     @Override
     public Set<Class<?>> getClasses() {
-        return classes;
+        return new LinkedHashSet<>(REGISTERED_CLASSES);
     }
 }

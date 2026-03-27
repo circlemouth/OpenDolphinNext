@@ -33,6 +33,9 @@ public class PatientListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PatientList)model;
+        PatientList source = (PatientList) model;
+        PatientList copy = new PatientList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

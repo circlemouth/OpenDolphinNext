@@ -109,7 +109,6 @@ const run = async () => {
   };
 
   await page.route('**/api/admin/config**', (route) => respondJson(route, adminConfigPayload));
-  await page.route('**/api/admin/delivery**', (route) => respondJson(route, adminConfigPayload));
 
   page.on('console', (msg) => {
     const type = msg.type();

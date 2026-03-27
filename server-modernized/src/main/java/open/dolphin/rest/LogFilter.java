@@ -564,7 +564,7 @@ public class LogFilter implements Filter {
         if (!details.containsKey("validationError") && (status == 400 || status == 422)) {
             details.put("validationError", Boolean.TRUE);
         }
-        String facilityFromPrincipal = extractFacilitySegment(request != null ? request.getRemoteUser() : null);
+        String facilityFromPrincipal = extractFacilitySegment(request.getRemoteUser());
         if (facilityFromPrincipal != null) {
             details.put(PRINCIPAL_FACILITY_DETAILS_KEY, facilityFromPrincipal);
         }

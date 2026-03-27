@@ -77,13 +77,12 @@ public class OrcaPatientSyncStateStore {
                 if (!resultSet.next()) {
                     return null;
                 }
-                FacilityState state = new FacilityState();
                 Date lastSyncDate = resultSet.getDate(1);
-                state.lastSyncDate = lastSyncDate != null ? lastSyncDate.toLocalDate().toString() : null;
-                state.lastSyncedAt = timestampToIso(resultSet.getTimestamp(2));
-                state.lastRunId = resultSet.getString(3);
-                state.lastError = resultSet.getString(4);
-                return state;
+                return new FacilityState(
+                        lastSyncDate != null ? lastSyncDate.toLocalDate().toString() : null,
+                        timestampToIso(resultSet.getTimestamp(2)),
+                        resultSet.getString(3),
+                        resultSet.getString(4));
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING,
@@ -162,10 +161,10 @@ public class OrcaPatientSyncStateStore {
         return instant.toString();
     }
 
-    public static class FacilityState {
-        public String lastSyncDate;
-        public String lastSyncedAt;
-        public String lastRunId;
-        public String lastError;
+    public record FacilityState(
+            String lastSyncDate,
+            String lastSyncedAt,
+            String lastRunId,
+            String lastError) {
     }
 }

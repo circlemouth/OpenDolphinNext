@@ -102,6 +102,28 @@ public final class VitalModelConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (VitalModel)model;
+        VitalModel source = (VitalModel) model;
+        VitalModel copy = new VitalModel();
+        copy.setId(source.getId());
+        copy.setFacilityPatId(source.getFacilityPatId());
+        copy.setKarteID(source.getKarteID());
+        copy.setBodyTemperature(source.getBodyTemperature());
+        copy.setBloodPressureSystolic(source.getBloodPressureSystolic());
+        copy.setBloodPressureDiastolic(source.getBloodPressureDiastolic());
+        copy.setPulseRate(source.getPulseRate());
+        copy.setSpO2(source.getSpO2());
+        copy.setRespirationRate(source.getRespirationRate());
+        copy.setAlgia(source.getAlgia());
+        copy.setFeel(source.getFeel());
+        copy.setSleep(source.getSleep());
+        copy.setMeal(source.getMeal());
+        copy.setEgestion(source.getEgestion());
+        copy.setPS(source.getPS());
+        copy.setDate(source.getDate());
+        copy.setTime(source.getTime());
+        copy.setHeight(source.getHeight());
+        copy.setWeight(source.getWeight());
+        copy.setSaveDate(source.getSaveDate());
+        this.model = copy;
     }
 }

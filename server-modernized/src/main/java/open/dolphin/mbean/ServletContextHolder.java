@@ -129,10 +129,10 @@ public class ServletContextHolder {
     }
     
     public GregorianCalendar getToday() {
-        return today;
+        return copyCalendar(today);
     }
     public GregorianCalendar getTomorrow() {
-        return tomorrow;
+        return copyCalendar(tomorrow);
     }
 
     /**
@@ -143,5 +143,15 @@ public class ServletContextHolder {
         if (today == null || tomorrow == null) {
             setToday();
         }
+    }
+
+    private static GregorianCalendar copyCalendar(GregorianCalendar source) {
+        if (source == null) {
+            return null;
+        }
+        GregorianCalendar copy = new GregorianCalendar(source.getTimeZone());
+        copy.setLenient(source.isLenient());
+        copy.setTimeInMillis(source.getTimeInMillis());
+        return copy;
     }
 }

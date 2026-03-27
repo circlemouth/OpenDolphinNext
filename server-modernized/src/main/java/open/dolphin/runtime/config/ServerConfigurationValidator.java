@@ -565,16 +565,6 @@ public class ServerConfigurationValidator {
         }
     }
 
-    private void requirePositiveIfEnabled(List<String> errors, String key, Long value, boolean required) {
-        if (value == null) {
-            if (required) {
-                errors.add(key + " is required");
-            }
-        } else if (value < 1L) {
-            errors.add(key + " must be >= 1");
-        }
-    }
-
     private void requirePositiveDuration(List<String> errors, String key, java.time.Duration value) {
         if (value != null && (value.isNegative() || value.isZero())) {
             errors.add(key + " must be > 0");

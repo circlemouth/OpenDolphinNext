@@ -18,13 +18,13 @@ public final class StringTool {
     private static final char FIRST_KATAKANA = 'ァ';
     private static final char LAST_KATAKANA = 'ヶ';
     
-    private static final Character[] ZENKAKU_UPPER = {new Character('Ａ'), new Character('Ｚ')};
+    private static final Character[] ZENKAKU_UPPER = {Character.valueOf('Ａ'), Character.valueOf('Ｚ')};
     
-    private static final Character[] ZENKAKU_LOWER = {new Character('ａ'), new Character('ｚ')};
+    private static final Character[] ZENKAKU_LOWER = {Character.valueOf('ａ'), Character.valueOf('ｚ')};
     
-    private static final Character[] HANKAKU_UPPER = {new Character('A'), new Character('Z')};
+    private static final Character[] HANKAKU_UPPER = {Character.valueOf('A'), Character.valueOf('Z')};
     
-    private static final Character[] HANKAKU_LOWER = {new Character('a'), new Character('z')};
+    private static final Character[] HANKAKU_LOWER = {Character.valueOf('a'), Character.valueOf('z')};
 
     
     /** Creates new StringTool */
@@ -55,6 +55,9 @@ public final class StringTool {
                 case 1:
                     // DELIM_STATE
                     state = 0;
+                    break;
+
+                default:
                     break;
             }
         }
@@ -180,22 +183,22 @@ public final class StringTool {
     }
     
     public static boolean isZenkakuUpper(char c) {
-        Character test = new Character(c);
+        Character test = Character.valueOf(c);
         return (test.compareTo(ZENKAKU_UPPER[0]) >= 0 && test.compareTo(ZENKAKU_UPPER[1]) <= 0) ? true : false;
     }
     
     public static boolean isZenkakuLower(char c) {
-        Character test = new Character(c);
+        Character test = Character.valueOf(c);
         return (test.compareTo(ZENKAKU_LOWER[0]) >= 0 && test.compareTo(ZENKAKU_LOWER[1]) <= 0) ? true : false;
     }
     
     public static boolean isHankakuUpper(char c) {
-        Character test = new Character(c);
+        Character test = Character.valueOf(c);
         return (test.compareTo(HANKAKU_UPPER[0]) >= 0 && test.compareTo(HANKAKU_UPPER[1]) <= 0) ? true : false;
     }
     
     public static boolean isHanakuLower(char c) {
-        Character test = new Character(c);
+        Character test = Character.valueOf(c);
         return (test.compareTo(HANKAKU_LOWER[0]) >= 0 && test.compareTo(HANKAKU_LOWER[1]) <= 0) ? true : false;
     }
     

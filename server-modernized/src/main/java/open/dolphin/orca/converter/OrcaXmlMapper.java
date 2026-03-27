@@ -7,6 +7,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.rest.dto.orca.AbstractPatientListResponse;
@@ -418,6 +419,9 @@ public class OrcaXmlMapper {
 
             @Override
             public JsonNode next() {
+                if (!hasNext) {
+                    throw new NoSuchElementException();
+                }
                 hasNext = false;
                 return node;
             }

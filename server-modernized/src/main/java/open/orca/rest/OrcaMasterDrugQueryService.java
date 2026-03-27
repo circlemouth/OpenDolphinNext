@@ -54,13 +54,13 @@ class OrcaMasterDrugQueryService {
 
     OrcaMasterDao.ListSearchResult<OrcaMasterDao.MaterialRecord> searchMaterial(Connection connection,
             OrcaMasterDao.MaterialCriteria criteria, String tableName, String codeColumn, String nameColumn,
-            String kanaColumn, String categoryColumn, String unitColumn, String priceColumn, String startDateColumn,
-            String endDateColumn, String versionColumn) throws SQLException {
+            String kanaColumn, String categoryColumn, String unitColumn, String priceColumn, String makerColumn,
+            String startDateColumn, String endDateColumn, String versionColumn) throws SQLException {
         OrcaMasterQuerySupport.Query query = querySupport.buildMaterialQuery(criteria, tableName, codeColumn, nameColumn,
                 kanaColumn, startDateColumn, endDateColumn);
         List<OrcaMasterDao.MaterialRecord> records = fetchMaterialRecordsFromTensu(connection, query, codeColumn,
-                nameColumn, kanaColumn, categoryColumn, unitColumn, priceColumn, startDateColumn, endDateColumn,
-                versionColumn);
+                nameColumn, kanaColumn, categoryColumn, unitColumn, priceColumn, makerColumn, startDateColumn,
+                endDateColumn, versionColumn);
         return new OrcaMasterDao.ListSearchResult<>(records, records.size(), resolveVersion(records, null));
     }
 
@@ -159,8 +159,8 @@ class OrcaMasterDrugQueryService {
 
     private List<OrcaMasterDao.MaterialRecord> fetchMaterialRecordsFromTensu(Connection connection,
             OrcaMasterQuerySupport.Query query, String codeColumn, String nameColumn, String kanaColumn,
-            String categoryColumn, String unitColumn, String priceColumn, String startDateColumn, String endDateColumn,
-            String versionColumn) throws SQLException {
+            String categoryColumn, String unitColumn, String priceColumn, String makerColumn, String startDateColumn,
+            String endDateColumn, String versionColumn) throws SQLException {
         String sql = "SELECT "
                 + selectColumn(codeColumn) + " AS code, "
                 + selectColumn(nameColumn) + " AS name, "
@@ -168,6 +168,7 @@ class OrcaMasterDrugQueryService {
                 + selectColumn(categoryColumn) + " AS category, "
                 + selectColumn(unitColumn) + " AS unit, "
                 + selectColumn(priceColumn) + " AS price, "
+                + selectColumn(makerColumn) + " AS maker, "
                 + selectColumn(startDateColumn) + " AS startDate, "
                 + selectColumn(endDateColumn) + " AS endDate, "
                 + selectColumn(versionColumn) + " AS version "
@@ -186,7 +187,7 @@ class OrcaMasterDrugQueryService {
                     record.materialCategory = rs.getString("category");
                     record.unit = rs.getString("unit");
                     record.price = getDouble(rs, "price");
-                    record.maker = null;
+                    record.maker = rs.getString("maker");
                     record.startDate = rs.getString("startDate");
                     record.endDate = rs.getString("endDate");
                     record.version = rs.getString("version");

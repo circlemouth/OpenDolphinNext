@@ -311,7 +311,6 @@ final class PatientModV2OutpatientSupport {
     static final class OrcaApiResult {
         boolean success;
         int httpStatus;
-        String url;
         String apiResult;
         String apiResultMessage;
     }

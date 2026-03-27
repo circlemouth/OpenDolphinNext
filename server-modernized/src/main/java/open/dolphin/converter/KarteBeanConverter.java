@@ -72,7 +72,8 @@ public final class KarteBeanConverter implements IInfoModelConverter {
     }
 
     public List<String> getPatientVisits() {
-        return model.getPatientVisits();
+        List<String> visits = model.getPatientVisits();
+        return visits == null ? null : new ArrayList<>(visits);
     }
 
     public List<DocInfoModelConverter> getDocInfoList() {

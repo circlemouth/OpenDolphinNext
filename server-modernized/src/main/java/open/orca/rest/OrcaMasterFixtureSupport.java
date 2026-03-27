@@ -66,168 +66,109 @@ class OrcaMasterFixtureSupport {
         }
     }
 
-    static final class FixtureListResponse<T> {
-        public List<T> list;
-        public Integer totalCount;
-        public String snapshotVersion;
-        public String version;
-    }
-
     static final class FixtureGenericClassEntry {
-        public String classCode;
-        public String className;
-        public String kanaName;
-        public String categoryCode;
-        public String parentClassCode;
-        public Boolean isLeaf;
-        public String startDate;
-        public String endDate;
-        public String validFrom;
-        public String validTo;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String classCode;
+        String className;
+        String kanaName;
+        String startDate;
+        String endDate;
+        String validFrom;
+        String validTo;
     }
 
     static final class FixtureGenericPriceEntry {
-        public String code;
-        public String srycd;
-        public String name;
-        public String drugName;
-        public String unit;
-        public Double price;
-        public Double minPrice;
-        public String youhouCode;
-        public String startDate;
-        public String endDate;
-        public String validFrom;
-        public String validTo;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String code;
+        String srycd;
+        String name;
+        String drugName;
+        String unit;
+        Double price;
+        Double minPrice;
+        String startDate;
+        String endDate;
+        String validFrom;
+        String validTo;
     }
 
     static final class FixtureHokenjaEntry {
-        public String payerCode;
-        public String insurerNumber;
-        public String payerName;
-        public String insurerName;
-        public String insurerKana;
-        public String payerType;
-        public String insurerType;
-        public Double payerRatio;
-        public String prefCode;
-        public String prefectureCode;
-        public String cityCode;
-        public String zip;
-        public String zipCode;
-        public String addressLine;
-        public String address;
-        public String phone;
-        public String startDate;
-        public String endDate;
-        public String validFrom;
-        public String validTo;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String payerCode;
+        String insurerNumber;
+        String payerName;
+        String insurerName;
+        String payerType;
+        String insurerType;
+        Double payerRatio;
+        String prefCode;
+        String prefectureCode;
+        String cityCode;
+        String startDate;
+        String endDate;
+        String validFrom;
+        String validTo;
     }
 
     static final class FixtureAddressEntry {
-        public String zip;
-        public String zipCode;
-        public String prefCode;
-        public String prefectureCode;
-        public String cityCode;
-        public String city;
-        public String town;
-        public String kana;
-        public String roman;
-        public String fullAddress;
-        public String addressLine;
-        public String address;
-        public String startDate;
-        public String endDate;
-        public String validFrom;
-        public String validTo;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String zip;
+        String zipCode;
+        String prefCode;
+        String prefectureCode;
+        String cityCode;
+        String city;
+        String town;
+        String kana;
+        String fullAddress;
+        String addressLine;
+        String address;
     }
 
     static final class FixtureYouhouEntry {
-        public String youhouCode;
-        public String youhouName;
-        public String timingCode;
-        public String routeCode;
-        public Integer daysLimit;
-        public Integer dosePerDay;
-        public String comment;
-        public String validFrom;
-        public String validTo;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String youhouCode;
+        String youhouName;
+        String comment;
+        String validFrom;
+        String validTo;
     }
 
     static final class FixtureMaterialEntry {
-        public String materialCode;
-        public String materialName;
-        public String category;
-        public String materialCategory;
-        public String insuranceType;
-        public String unit;
-        public Double price;
-        public String maker;
-        public String startDate;
-        public String endDate;
-        public String validFrom;
-        public String validTo;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String materialCode;
+        String materialName;
+        String materialCategory;
+        String unit;
+        Double price;
+        String maker;
+        String startDate;
+        String endDate;
+        String validFrom;
+        String validTo;
     }
 
     static final class FixtureKensaSortEntry {
-        public String kensaCode;
-        public String kensaName;
-        public String sampleType;
-        public String kensaSort;
-        public String classification;
-        public String insuranceCategory;
-        public String category;
-        public String departmentCode;
-        public String startDate;
-        public String endDate;
-        public String validFrom;
-        public String validTo;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String kensaCode;
+        String kensaName;
+        String kensaSort;
+        String classification;
+        String validFrom;
+        String validTo;
     }
 
     static final class FixtureEtensuEntry {
-        public String medicalFeeCode;
-        public String tensuCode;
-        public String name;
-        public String note;
-        public String category;
-        public String etensuCategory;
-        public String kubun;
-        public Double points;
-        public Double tanka;
-        public String unit;
-        public String noticeDate;
-        public String effectiveDate;
-        public String startDate;
-        public String endDate;
-        public String validFrom;
-        public String validTo;
-        public String tensuVersion;
-        public String snapshotVersion;
-        public String version;
-        public Boolean cacheHit;
-        public Boolean missingMaster;
-        public Boolean fallbackUsed;
+        String medicalFeeCode;
+        String tensuCode;
+        String name;
+        String category;
+        String etensuCategory;
+        String kubun;
+        Double points;
+        Double tanka;
+        String unit;
+        String noticeDate;
+        String effectiveDate;
+        String startDate;
+        String endDate;
+        String validFrom;
+        String validTo;
+        String tensuVersion;
+        String snapshotVersion;
+        String version;
     }
 }

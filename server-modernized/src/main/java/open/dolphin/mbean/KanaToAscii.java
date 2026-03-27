@@ -320,21 +320,16 @@ public class KanaToAscii {
 
     public String CHGKanatoASCII(String strKana, String strASCII) {
 
-        String strCHG = "";
-        boolean bTrue = false;
+        List<String> segments = new ArrayList<>();
         int nLen = 0;
-        ConvData dic;
-
 
         for (nLen = 0; nLen < strKana.length(); nLen++) {
-            String strSub = "";
-            bTrue = false;
+            boolean bTrue = false;
             if (nLen + 1 < strKana.length()) {
-                strSub = strKana.substring((nLen), nLen + 2);
+                String strSub = strKana.substring(nLen, nLen + 2);
                 for (ConvData data : m_DataAry) {
-                    dic = data;
-                    if (dic.m_sKana.equals(strSub)) {
-                        strCHG += dic.m_sAsc;
+                    if (data.m_sKana.equals(strSub)) {
+                        segments.add(data.m_sAsc);
                         bTrue = true;
                         break;
                     }
@@ -345,11 +340,10 @@ public class KanaToAscii {
                 }
 
             }
-            strSub = strKana.substring((nLen), nLen + 1);
+            String strSub = strKana.substring(nLen, nLen + 1);
             for (ConvData data : m_DataAry) {
-                dic = data;
-                if (dic.m_sKana.equals(strSub)) {
-                    strCHG += dic.m_sAsc;
+                if (data.m_sKana.equals(strSub)) {
+                    segments.add(data.m_sAsc);
                     bTrue = true;
                     break;
                 }
@@ -358,10 +352,11 @@ public class KanaToAscii {
                 //return -1;
                 //return null;
                 // カナ/英数字以外の文字は?に変換する
-                strCHG += "?";
+                segments.add("?");
             }
 
         }
+        String strCHG = String.join("", segments);
         byte[] ChgByte = strCHG.getBytes(StandardCharsets.US_ASCII);
         for (nLen = 0; nLen < ChgByte.length; nLen++) {
             if (ChgByte[nLen] == '$') {
@@ -381,21 +376,16 @@ public class KanaToAscii {
         }
         String sAsc = new String(ChgByte, StandardCharsets.US_ASCII); //    
 
-        sAsc.replace("$", "");
-        sAsc.replace("OO", "OH");
-        sAsc.replace("OU", "OH");
-        sAsc.replace("AA", "A");
-        sAsc.replace("II", "I");
-        sAsc.replace("UU", "U");
-        sAsc.replace("EE", "E");
+        sAsc = sAsc.replace("$", "");
+        sAsc = sAsc.replace("OO", "OH");
+        sAsc = sAsc.replace("OU", "OH");
+        sAsc = sAsc.replace("AA", "A");
+        sAsc = sAsc.replace("II", "I");
+        sAsc = sAsc.replace("UU", "U");
+        sAsc = sAsc.replace("EE", "E");
 
         //strASCII = sAsc;
 
         return sAsc;
-    }
-
-    public static void main(String[] args) {
-        KanaToAscii ka = new KanaToAscii();
-        String result = ka.CHGKanatoASCII("フナバシ ケンジ", "");
     }
 }

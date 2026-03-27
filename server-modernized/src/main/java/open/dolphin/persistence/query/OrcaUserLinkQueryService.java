@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * ORCAユーザー連携テーブル向けの native SQL を集約する query service。
@@ -35,14 +36,14 @@ public class OrcaUserLinkQueryService {
                     + "join opendolphin.d_users u on u.id=l.ehr_user_pk "
                     + "where l.facility_id=:facilityId";
 
-    private final EntityManager em;
+    private final Supplier<EntityManager> emProvider;
 
-    public OrcaUserLinkQueryService(EntityManager em) {
-        this.em = em;
+    public OrcaUserLinkQueryService(Supplier<EntityManager> emProvider) {
+        this.emProvider = emProvider;
     }
 
     public boolean isLinkTablePresent() {
-        List<?> rows = em.createNativeQuery(TABLE_EXISTS_SQL)
+        List<?> rows = emProvider.get().createNativeQuery(TABLE_EXISTS_SQL)
                 .setMaxResults(1)
                 .getResultList();
         return !rows.isEmpty();
@@ -56,7 +57,7 @@ public class OrcaUserLinkQueryService {
         if (facilityId == null || facilityId.isBlank() || userPks == null || userPks.isEmpty()) {
             return Map.of();
         }
-        List<?> rows = em.createNativeQuery(SELECT_BY_USER_PKS_SQL)
+        List<?> rows = emProvider.get().createNativeQuery(SELECT_BY_USER_PKS_SQL)
                 .setParameter("facilityId", facilityId)
                 .setParameter("ids", userPks)
                 .getResultList();
@@ -77,7 +78,7 @@ public class OrcaUserLinkQueryService {
     }
 
     public OrcaLinkRow findLinkByUserPk(String facilityId, long userPk) {
-        List<?> rows = em.createNativeQuery(SELECT_ONE_BY_USER_PK_SQL)
+        List<?> rows = emProvider.get().createNativeQuery(SELECT_ONE_BY_USER_PK_SQL)
                 .setParameter("facilityId", facilityId)
                 .setParameter("ehrUserPk", userPk)
                 .setMaxResults(1)
@@ -98,7 +99,7 @@ public class OrcaUserLinkQueryService {
     }
 
     public Long findOwnerByOrcaUserId(String facilityId, String orcaUserId) {
-        List<?> rows = em.createNativeQuery(SELECT_OWNER_BY_ORCA_USER_SQL)
+        List<?> rows = emProvider.get().createNativeQuery(SELECT_OWNER_BY_ORCA_USER_SQL)
                 .setParameter("facilityId", facilityId)
                 .setParameter("orcaUserId", orcaUserId)
                 .setMaxResults(1)
@@ -114,7 +115,7 @@ public class OrcaUserLinkQueryService {
     }
 
     public void upsertLink(String facilityId, long ehrUserPk, String orcaUserId, Instant now, String updatedBy) {
-        em.createNativeQuery(UPSERT_SQL)
+        emProvider.get().createNativeQuery(UPSERT_SQL)
                 .setParameter("facilityId", facilityId)
                 .setParameter("ehrUserPk", ehrUserPk)
                 .setParameter("orcaUserId", orcaUserId)
@@ -125,21 +126,21 @@ public class OrcaUserLinkQueryService {
     }
 
     public void deleteByEhrUserPk(String facilityId, long ehrUserPk) {
-        em.createNativeQuery(DELETE_BY_EHR_USER_PK_SQL)
+        emProvider.get().createNativeQuery(DELETE_BY_EHR_USER_PK_SQL)
                 .setParameter("facilityId", facilityId)
                 .setParameter("ehrUserPk", ehrUserPk)
                 .executeUpdate();
     }
 
     public int deleteByOrcaUserId(String facilityId, String orcaUserId) {
-        return em.createNativeQuery(DELETE_BY_ORCA_USER_SQL)
+        return emProvider.get().createNativeQuery(DELETE_BY_ORCA_USER_SQL)
                 .setParameter("facilityId", facilityId)
                 .setParameter("orcaUserId", orcaUserId)
                 .executeUpdate();
     }
 
     public Map<String, OrcaFacilityLinkRow> findLinksByFacilityId(String facilityId) {
-        List<?> rows = em.createNativeQuery(SELECT_BY_FACILITY_SQL)
+        List<?> rows = emProvider.get().createNativeQuery(SELECT_BY_FACILITY_SQL)
                 .setParameter("facilityId", facilityId)
                 .getResultList();
 

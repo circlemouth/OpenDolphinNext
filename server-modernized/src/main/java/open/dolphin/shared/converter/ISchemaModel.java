@@ -1,5 +1,6 @@
 package open.dolphin.shared.converter;
 
+import java.util.Arrays;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.SchemaModel;
 import open.dolphin.infomodel.UserModel;
@@ -105,27 +106,27 @@ public abstract class ISchemaModel<T extends IExtRefModel> implements java.io.Se
     }
 
     public UserModel getUserModel() {
-        return userModel;
+        return copyUserModel(userModel);
     }
 
     public void setUserModel(UserModel userModel) {
-        this.userModel = userModel;
+        this.userModel = copyUserModel(userModel);
     }
 
     public KarteBean getKarteBean() {
-        return karteBean;
+        return copyKarteBean(karteBean);
     }
 
     public void setKarteBean(KarteBean karteBean) {
-        this.karteBean = karteBean;
+        this.karteBean = copyKarteBean(karteBean);
     }
 
     public T getExtRefModel() {
-        return extRef;
+        return copyExtRefModel(extRef);
     }
 
     public void setExtRefModel(T extRef) {
-        this.extRef = extRef;
+        this.extRef = copyExtRefModel(extRef);
     }
 
     public String getUri() {
@@ -145,11 +146,11 @@ public abstract class ISchemaModel<T extends IExtRefModel> implements java.io.Se
     }
 
     public byte[] getImageBytes() {
-        return imageBytes;
+        return imageBytes == null ? null : Arrays.copyOf(imageBytes, imageBytes.length);
     }
 
     public void setImageBytes(byte[] imageBytes) {
-        this.imageBytes = imageBytes;
+        this.imageBytes = imageBytes == null ? null : Arrays.copyOf(imageBytes, imageBytes.length);
     }
 
     public void fromModel(SchemaModel model) {
@@ -190,5 +191,33 @@ public abstract class ISchemaModel<T extends IExtRefModel> implements java.io.Se
         ret.setImageBytes(this.getImageBytes());
 
         return ret;
+    }
+
+    private UserModel copyUserModel(UserModel source) {
+        if (source == null) {
+            return null;
+        }
+        UserModel copy = new UserModel();
+        copy.setId(source.getId());
+        return copy;
+    }
+
+    private KarteBean copyKarteBean(KarteBean source) {
+        if (source == null) {
+            return null;
+        }
+        KarteBean copy = new KarteBean();
+        copy.setId(source.getId());
+        return copy;
+    }
+
+    @SuppressWarnings("unchecked")
+    private T copyExtRefModel(T source) {
+        if (source == null) {
+            return null;
+        }
+        T copy = createExtRefModel();
+        copy.fromModel(source.toModel());
+        return copy;
     }
 }

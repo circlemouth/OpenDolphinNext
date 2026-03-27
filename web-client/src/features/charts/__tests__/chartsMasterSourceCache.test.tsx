@@ -101,7 +101,7 @@ vi.mock('../../../libs/admin/useAdminBroadcast', () => ({
 }));
 
 vi.mock('../../administration/api', () => ({
-  fetchEffectiveAdminConfig: vi.fn(async () => ({
+  fetchAdminConfig: vi.fn(async () => ({
     chartsMasterSource: currentPolicy,
     chartsDisplayEnabled: true,
     chartsSendEnabled: true,
@@ -248,7 +248,7 @@ describe('Charts masterSource cache refresh', () => {
     });
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
-    queryClient.setQueryData(['admin-effective-config'], {
+    queryClient.setQueryData(['admin-config'], {
       chartsMasterSource: 'mock',
       chartsDisplayEnabled: true,
       chartsSendEnabled: true,
@@ -278,7 +278,7 @@ describe('Charts masterSource cache refresh', () => {
     await waitFor(() => expect(fetchCounters.claim).toBeGreaterThan(0));
 
     currentPolicy = 'server';
-    queryClient.setQueryData(['admin-effective-config'], {
+    queryClient.setQueryData(['admin-config'], {
       chartsMasterSource: 'server',
       chartsDisplayEnabled: true,
       chartsSendEnabled: true,

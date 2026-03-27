@@ -111,9 +111,21 @@ final class AdminOrcaUserSupport {
         return null;
     }
 
-    static Boolean optionalBoolean(Map<String, Object> payload, String... keys) {
+    static boolean hasAnyKey(Map<String, Object> payload, String... keys) {
         if (payload == null || keys == null) {
-            return null;
+            return false;
+        }
+        for (String key : keys) {
+            if (key != null && payload.containsKey(key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean optionalBoolean(Map<String, Object> payload, String... keys) {
+        if (payload == null || keys == null) {
+            return false;
         }
         for (String key : keys) {
             if (key == null || !payload.containsKey(key)) {
@@ -139,7 +151,7 @@ final class AdminOrcaUserSupport {
                 }
             }
         }
-        return null;
+        return false;
     }
 
     static String normalizeToken(String value) {

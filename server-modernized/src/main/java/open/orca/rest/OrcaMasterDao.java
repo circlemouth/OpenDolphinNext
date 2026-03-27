@@ -116,10 +116,10 @@ public class OrcaMasterDao {
             return null;
         }
         try (Connection connection = openConnection()) {
-            OrcaMasterDaoTableMeta.DrugTableMeta meta = OrcaMasterDaoTableMeta.DrugTableMeta.SUPPORTED_CONTRACT;
+            OrcaMasterDaoTableMeta.MaterialTableMeta meta = OrcaMasterDaoTableMeta.MaterialTableMeta.SUPPORTED_CONTRACT;
             return drugQueryService.searchMaterial(connection, criteria, meta.tableName, meta.codeColumn, meta.nameColumn,
-                    meta.kanaColumn, meta.categoryColumn, meta.unitColumn, meta.priceColumn, meta.startDateColumn,
-                    meta.endDateColumn, meta.versionColumn);
+                    meta.kanaColumn, meta.materialCategoryColumn, meta.unitColumn, meta.priceColumn, meta.makerColumn,
+                    meta.startDateColumn, meta.endDateColumn, meta.versionColumn);
         } catch (SQLException e) {
             LOGGER.log(Level.WARNING, "Failed to load ORCA-08 material master", e);
             return null;

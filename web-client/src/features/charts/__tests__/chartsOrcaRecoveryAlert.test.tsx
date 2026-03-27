@@ -49,7 +49,7 @@ vi.mock('../../../libs/admin/useAdminBroadcast', () => ({
 }));
 
 vi.mock('../../administration/api', () => ({
-  fetchEffectiveAdminConfig: vi.fn(async () => ({
+  fetchAdminConfig: vi.fn(async () => ({
     chartsMasterSource: 'server',
     chartsDisplayEnabled: true,
     chartsSendEnabled: true,

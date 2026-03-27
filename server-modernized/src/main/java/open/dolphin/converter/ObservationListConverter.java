@@ -33,6 +33,9 @@ public class ObservationListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (ObservationList)model;
+        ObservationList source = (ObservationList) model;
+        ObservationList copy = new ObservationList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

@@ -53,7 +53,7 @@ public class ReceptionRealtimeSseSupport {
 
     private ScheduledExecutorService keepAliveScheduler;
     private ScheduledFuture<?> keepAliveTask;
-    private boolean ownsKeepAliveScheduler;
+    private volatile boolean ownsKeepAliveScheduler;
 
     @PostConstruct
     void initialize() {

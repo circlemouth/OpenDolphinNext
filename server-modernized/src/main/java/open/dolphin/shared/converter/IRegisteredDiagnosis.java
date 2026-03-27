@@ -1,5 +1,6 @@
 package open.dolphin.shared.converter;
 
+import java.util.Date;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.RegisteredDiagnosisModel;
 import open.dolphin.infomodel.UserModel;
@@ -138,19 +139,19 @@ public class IRegisteredDiagnosis implements java.io.Serializable {
     }
 
     public UserModel getUserModel() {
-        return userModel;
+        return copyUserReference(userModel);
     }
 
     public void setUserModel(UserModel userModel) {
-        this.userModel = userModel;
+        this.userModel = copyUserReference(userModel);
     }
 
     public KarteBean getKarteBean() {
-        return karteBean;
+        return copyKarteReference(karteBean);
     }
 
     public void setKarteBean(KarteBean karteBean) {
-        this.karteBean = karteBean;
+        this.karteBean = copyKarteReference(karteBean);
     }
 
     public String getDiagnosis() {
@@ -344,5 +345,32 @@ public class IRegisteredDiagnosis implements java.io.Serializable {
         ret.setRelatedHealthInsurance(this.getRelatedHealthInsurance());
         
         return ret;
+    }
+
+    private static UserModel copyUserReference(UserModel source) {
+        if (source == null) {
+            return null;
+        }
+        UserModel copy = new UserModel();
+        copy.setId(source.getId());
+        copy.setUserId(source.getUserId());
+        copy.setCommonName(source.getCommonName());
+        copy.setSirName(source.getSirName());
+        copy.setGivenName(source.getGivenName());
+        copy.setLicenseModel(source.getLicenseModel());
+        copy.setFacilityModel(source.getFacilityModel());
+        copy.setMemberType(source.getMemberType());
+        copy.setMemo(source.getMemo());
+        copy.setRegisteredDate(source.getRegisteredDate() == null ? null : new Date(source.getRegisteredDate().getTime()));
+        return copy;
+    }
+
+    private static KarteBean copyKarteReference(KarteBean source) {
+        if (source == null) {
+            return null;
+        }
+        KarteBean copy = new KarteBean();
+        copy.setId(source.getId());
+        return copy;
     }
 }

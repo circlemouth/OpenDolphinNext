@@ -123,11 +123,11 @@ public abstract class IPVTHealthInsurance<T extends IPVTPublicInsuranceItem> imp
     }
 
     public List<String> getContinuedDisease() {
-        return continuedDisease;
+        return continuedDisease == null ? null : new ArrayList<>(continuedDisease);
     }
 
     public void setContinuedDisease(List<String> continuedDisease) {
-        this.continuedDisease = continuedDisease;
+        this.continuedDisease = continuedDisease == null ? null : new ArrayList<>(continuedDisease);
     }
 
     public String getPayInRatio() {
@@ -147,11 +147,11 @@ public abstract class IPVTHealthInsurance<T extends IPVTPublicInsuranceItem> imp
     }
 
     public List<T> getPublicItems() {
-        return publicItems;
+        return publicItems == null ? null : new ArrayList<>(publicItems);
     }
 
     public void setPublicItems(List<T> publicItems) {
-        this.publicItems = publicItems;
+        this.publicItems = publicItems == null ? null : new ArrayList<>(publicItems);
     }
 
     public void fromModel(PVTHealthInsuranceModel model) {
@@ -168,7 +168,7 @@ public abstract class IPVTHealthInsurance<T extends IPVTPublicInsuranceItem> imp
         this.setPayInRatio(model.getPayInRatio());
         this.setPayOutRatio(model.getPayOutRatio());
 
-        if (model.getContinuedDisease() != null && this.getContinuedDisease().size() > 0) {
+        if (model.getContinuedDisease() != null && model.getContinuedDisease().length > 0) {
             String[] arr = model.getContinuedDisease();
             this.setContinuedDisease(Arrays.asList(arr));
         }

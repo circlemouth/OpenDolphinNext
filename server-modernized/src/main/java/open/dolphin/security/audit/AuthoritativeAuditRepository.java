@@ -10,6 +10,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -309,6 +311,21 @@ public class AuthoritativeAuditRepository {
             String ipAddress,
             String userAgent,
             Map<String, Object> payload) {
+
+        public AuditWriteCommand {
+            payload = immutablePayload(payload);
+        }
+
+        public Map<String, Object> payload() {
+            return immutablePayload(payload);
+        }
+
+        private static Map<String, Object> immutablePayload(Map<String, Object> source) {
+            if (source == null) {
+                return null;
+            }
+            return Collections.unmodifiableMap(new LinkedHashMap<>(source));
+        }
     }
 
     public record AuditWriteResult(

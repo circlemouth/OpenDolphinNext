@@ -24,6 +24,10 @@ public final class HealthInsuranceModelConverter implements IInfoModelConverter 
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (HealthInsuranceModel)model;
+        HealthInsuranceModel source = (HealthInsuranceModel) model;
+        HealthInsuranceModel copy = new HealthInsuranceModel();
+        copy.setId(source.getId());
+        copy.setBeanJson(source.getBeanJson());
+        this.model = copy;
     }
 }

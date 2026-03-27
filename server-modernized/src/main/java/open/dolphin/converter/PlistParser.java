@@ -6,7 +6,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringReader;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -64,7 +66,7 @@ public final class PlistParser {
 
     private static final String BASE64 = "base64";
 
-    private static Boolean DEBUG = false;
+    private static final boolean DEBUG = false;
 
     private List<Object> stack;
 
@@ -334,8 +336,9 @@ public final class PlistParser {
             Method mth = target.getClass().getMethod(setter, cls);
             mth.invoke(target, value);
 
-        } catch (Exception e) {
+        } catch (ReflectiveOperationException | SecurityException e) {
             //System.err.println("Exception setValue: " + e.getMessage());
+            debug(e.getMessage());
         }
     }
     
@@ -346,16 +349,25 @@ public final class PlistParser {
         String setter = toSetter(name);
 
         try {
+            long parsed = Long.parseLong(value);
             Method mth = target.getClass().getMethod(setter, long.class);
-            mth.invoke(target, Long.parseLong(value));
+            mth.invoke(target, parsed);
             return;
-        } catch (Exception e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            debug(e.getMessage());
+        } catch (NumberFormatException e) {
+            debug(e.getMessage());
+            return;
         }
 
         try {
+            int parsed = Integer.parseInt(value);
             Method mth = target.getClass().getMethod(setter, int.class);
-            mth.invoke(target, Integer.parseInt(value));
-        } catch (Exception e) {
+            mth.invoke(target, parsed);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            debug(e.getMessage());
+        } catch (NumberFormatException e) {
+            debug(e.getMessage());
         }
     }
 
@@ -366,16 +378,25 @@ public final class PlistParser {
         String setter = toSetter(name);
 
         try {
+            float parsed = Float.parseFloat(value);
             Method mth = target.getClass().getMethod(setter, float.class);
-            mth.invoke(target, Float.parseFloat(value));
+            mth.invoke(target, parsed);
             return;
-        } catch (Exception e) {
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            debug(e.getMessage());
+        } catch (NumberFormatException e) {
+            debug(e.getMessage());
+            return;
         }
 
         try {
+            double parsed = Double.parseDouble(value);
             Method mth = target.getClass().getMethod(setter, double.class);
-            mth.invoke(target, Double.parseDouble(value));
-        } catch (Exception e) {
+            mth.invoke(target, parsed);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            debug(e.getMessage());
+        } catch (NumberFormatException e) {
+            debug(e.getMessage());
         }
     }
 
@@ -424,7 +445,8 @@ public final class PlistParser {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             ret = sdf.parse(dateStr);
-        } catch (Exception e) {
+        } catch (ParseException e) {
+            debug(e.getMessage());
         }
 
         return ret;
@@ -466,7 +488,7 @@ public final class PlistParser {
         return res;
     }
 
-    private void debug(String str) {
+    private static void debug(String str) {
         if (DEBUG) {
             System.err.println(str);
         }

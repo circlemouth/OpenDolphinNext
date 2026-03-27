@@ -30,6 +30,11 @@ public final class DepartmentModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (DepartmentModel)model;
+        DepartmentModel source = (DepartmentModel) model;
+        DepartmentModel copy = new DepartmentModel();
+        copy.setDepartment(source.getDepartment());
+        copy.setDepartmentDesc(source.getDepartmentDesc());
+        copy.setDepartmentCodeSys(source.getDepartmentCodeSys());
+        this.model = copy;
     }
 }

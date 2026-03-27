@@ -154,5 +154,26 @@ public class OrcaPatientSyncPlanner {
             int intervalMinutes,
             int initialLookbackDays
     ) {
+        public PlannedSync {
+            request = copyRequest(request);
+        }
+
+        @Override
+        public PatientSyncRequest request() {
+            return copyRequest(request);
+        }
+    }
+
+    private static PatientSyncRequest copyRequest(PatientSyncRequest source) {
+        if (source == null) {
+            return null;
+        }
+        PatientSyncRequest copy = new PatientSyncRequest();
+        copy.setStartDate(source.getStartDate());
+        copy.setEndDate(source.getEndDate());
+        copy.setClassCode(source.getClassCode());
+        copy.setIncludeTestPatient(source.isIncludeTestPatient());
+        copy.setIncludeInsurance(source.isIncludeInsurance());
+        return copy;
     }
 }

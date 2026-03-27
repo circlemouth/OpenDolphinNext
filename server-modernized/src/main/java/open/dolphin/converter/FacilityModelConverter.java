@@ -78,6 +78,21 @@ public final class FacilityModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (FacilityModel)model;
+        FacilityModel source = (FacilityModel) model;
+        FacilityModel copy = new FacilityModel();
+        copy.setId(source.getId());
+        copy.setFacilityId(source.getFacilityId());
+        copy.setFacilityName(source.getFacilityName());
+        copy.setZipCode(source.getZipCode());
+        copy.setAddress(source.getAddress());
+        copy.setTelephone(source.getTelephone());
+        copy.setFacsimile(source.getFacsimile());
+        copy.setUrl(source.getUrl());
+        copy.setRegisteredDate(source.getRegisteredDate() == null ? null : new Date(source.getRegisteredDate().getTime()));
+        copy.setMemberType(source.getMemberType());
+        copy.setS3URL(source.getS3URL());
+        copy.setS3AccessKey(source.getS3AccessKey());
+        copy.setS3SecretKey(source.getS3SecretKey());
+        this.model = copy;
     }
 }

@@ -31,7 +31,7 @@ import open.dolphin.session.PatientServiceBean;
  * so the local patient table stays consistent with ORCA.</p>
  */
 @Path("/orca/patientmodv2/outpatient")
-public class PatientModV2OutpatientResource extends AbstractResource {
+public final class PatientModV2OutpatientResource extends AbstractResource {
 
     private static final String DATA_SOURCE_SERVER = "server";
     private static final String AUDIT_ACTION = "ORCA_PATIENT_MUTATION";
@@ -108,11 +108,11 @@ public class PatientModV2OutpatientResource extends AbstractResource {
 
         try {
             MutationOutcome outcome = executeOperation(request, operation, facilityId, patch, runId, response, details);
-            success = outcome.success;
-            status = outcome.status;
-            apiResult = outcome.apiResult;
-            apiResultMessage = outcome.apiResultMessage;
-            syncedPatient = outcome.patient;
+            success = outcome.success();
+            status = outcome.status();
+            apiResult = outcome.apiResult();
+            apiResultMessage = outcome.apiResultMessage();
+            syncedPatient = outcome.patient();
         } catch (RuntimeException ex) {
             details.put("errorMessage", ex.getMessage());
             dispatchAuditEvent(request, details, AUDIT_ACTION, AuditEventEnvelope.Outcome.FAILURE);
@@ -144,30 +144,32 @@ public class PatientModV2OutpatientResource extends AbstractResource {
             String runId,
             Map<String, Object> response,
             Map<String, Object> details) {
-        MutationOutcome outcome = new MutationOutcome();
         switch (operation.toLowerCase(Locale.ROOT)) {
-            case "create" -> handleCreate(request, facilityId, patch, runId, response, details, outcome);
-            case "update" -> handleUpdate(facilityId, patch, runId, details, outcome);
+            case "create" -> {
+                return handleCreate(request, facilityId, patch, runId, response, details);
+            }
+            case "update" -> {
+                return handleUpdate(facilityId, patch, runId, details);
+            }
             case "delete" -> {
-                outcome.apiResult = "79";
-                outcome.apiResultMessage = "患者削除は電子カルテ側から実行できません（ORCA側で操作してください）";
-                outcome.status = Response.Status.FORBIDDEN;
+                return new MutationOutcome(
+                        false,
+                        Response.Status.FORBIDDEN,
+                        "79",
+                        "患者削除は電子カルテ側から実行できません（ORCA側で操作してください）",
+                        null);
             }
-            default -> {
-                throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
-                        "Unsupported operation: " + operation);
-            }
+            default -> throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
+                    "Unsupported operation: " + operation);
         }
-        return outcome;
     }
 
-    private void handleCreate(HttpServletRequest request,
+    private MutationOutcome handleCreate(HttpServletRequest request,
             String facilityId,
             PatientModV2OutpatientSupport.PatientPatch patch,
             String runId,
             Map<String, Object> response,
-            Map<String, Object> details,
-            MutationOutcome outcome) {
+            Map<String, Object> details) {
         if (patientServiceBean == null) {
             throw new IllegalStateException("PatientServiceBean is not available");
         }
@@ -185,28 +187,20 @@ public class PatientModV2OutpatientResource extends AbstractResource {
             response.put("idempotentReason", "existing_patient");
             details.put("idempotent", Boolean.TRUE);
             details.put("idempotentReason", "existing_patient");
-            outcome.patient = existing;
-            outcome.apiResultMessage = "既存患者のためスキップしました";
-            outcome.success = true;
-            return;
+            return new MutationOutcome(true, Response.Status.OK, "00", "既存患者のためスキップしました", existing);
         }
 
-        outcome.patient = orcaCoordinator().importFromOrcaAndFetchLocal(facilityId, patch.patientId, runId, details);
-        outcome.apiResultMessage = "ORCAから取り込みました";
-        outcome.success = true;
+        PatientModel imported = orcaCoordinator().importFromOrcaAndFetchLocal(facilityId, patch.patientId, runId, details);
+        return new MutationOutcome(true, Response.Status.OK, "00", "ORCAから取り込みました", imported);
     }
 
-    private void handleUpdate(String facilityId,
+    private MutationOutcome handleUpdate(String facilityId,
             PatientModV2OutpatientSupport.PatientPatch patch,
             String runId,
-            Map<String, Object> details,
-            MutationOutcome outcome) {
+            Map<String, Object> details) {
         PatientModV2OutpatientSupport.OrcaMutationResult result =
                 orcaCoordinator().updateOrcaAndSyncLocal(facilityId, patch, runId, details);
-        outcome.patient = result.patient;
-        outcome.apiResult = result.apiResult;
-        outcome.apiResultMessage = result.apiResultMessage;
-        outcome.success = true;
+        return new MutationOutcome(true, Response.Status.OK, result.apiResult, result.apiResultMessage, result.patient);
     }
 
     private PatientModV2OutpatientOrcaCoordinator orcaCoordinator() {
@@ -348,11 +342,11 @@ public class PatientModV2OutpatientResource extends AbstractResource {
         builder.header("x-fallback-used", String.valueOf(fallbackUsed));
     }
 
-    private static final class MutationOutcome {
-        private boolean success;
-        private Response.Status status = Response.Status.OK;
-        private String apiResult = "00";
-        private String apiResultMessage = "OK";
-        private PatientModel patient;
+    private record MutationOutcome(
+            boolean success,
+            Response.Status status,
+            String apiResult,
+            String apiResultMessage,
+            PatientModel patient) {
     }
 }

@@ -123,9 +123,6 @@ const run = async () => {
   await page.route('**/api/admin/config**', (route) => {
     respondJson(route, adminConfigPayload);
   });
-  await page.route('**/api/admin/delivery**', (route) => {
-    respondJson(route, adminConfigPayload);
-  });
   await page.route('**/orca/master/generic-class**', (route) => {
     respondJson(route, { items: genericItems, totalCount: genericItems.length, runId });
   });

@@ -92,7 +92,7 @@ public class AdminMasterUpdateResource extends AbstractResource {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String actor = requireAdminActor(request, runId);
         adminStepUpGuard.require(request, "admin:mutation");
-        boolean force = payload != null && Boolean.TRUE.equals(readBoolean(payload.get("force")));
+        boolean force = payload != null && readBoolean(payload.get("force"));
         try {
             Map<String, Object> body = masterUpdateService.runDataset(datasetCode, "MANUAL", actor, runId, force);
             recordAudit(request, "MASTER_UPDATE_RUN", actor, runId,
@@ -337,7 +337,7 @@ public class AdminMasterUpdateResource extends AbstractResource {
         return value.replace('"', '_').replace("\r", "").replace("\n", "");
     }
 
-    private Boolean readBoolean(Object value) {
+    private boolean readBoolean(Object value) {
         if (value instanceof Boolean bool) {
             return bool;
         }
@@ -350,7 +350,7 @@ public class AdminMasterUpdateResource extends AbstractResource {
                 return false;
             }
         }
-        return null;
+        return false;
     }
 
     private static final class UploadedFile {

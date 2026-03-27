@@ -50,7 +50,7 @@ public class GUIDGenerator {
         tmpBuffer.append(hashcode);
         
         long timeNow = System.currentTimeMillis();
-        int timeLow = (int) timeNow & 0xFFFFFFFF;
+        int timeLow = (int) timeNow;
         int node = seeder.nextInt();
         
         StringBuilder guid = new StringBuilder(32);

@@ -17,7 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 /**
  * TOTP シークレットを AES-GCM で保護するユーティリティ。
  */
-public class TotpSecretProtector {
+public final class TotpSecretProtector {
 
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final int GCM_TAG_LENGTH = 128;

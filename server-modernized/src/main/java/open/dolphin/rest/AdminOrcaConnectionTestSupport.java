@@ -127,7 +127,7 @@ final class AdminOrcaConnectionTestSupport {
         OrcaTransportRequest transportRequest = OrcaTransportRequest.post(payload).withQuery("class=04");
         OrcaTransportResult result =
                 restOrcaTransport.invoke(facilityId, OrcaEndpoint.SYSTEM_MANAGEMENT_LIST, transportRequest);
-        String responseXml = result != null ? result.getBody() : null;
+        String responseXml = result.getBody();
         String apiResult = extractFirst(API_RESULT_PATTERN, responseXml);
         String apiMessage = extractFirst(API_MESSAGE_PATTERN, responseXml);
         return new TestInvocationResult(result, apiResult, apiMessage);

@@ -175,9 +175,7 @@ public class OperationsReadinessEvaluator {
                 return true;
             }
             detail.setStatus(STATUS_DOWN);
-            detail.setReasonCode(latestState != null && OrcaPushConnectionStateStore.STATUS_DEGRADED.equals(latestState.connectionStatus())
-                    ? REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE
-                    : REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE);
+            detail.setReasonCode(REASON_ORCA_PUSH_RUNTIME_UNAVAILABLE);
             checks.put(CHECK_ORCA_PUSH, detail);
             return false;
         } catch (RuntimeException ex) {
@@ -299,5 +297,24 @@ public class OperationsReadinessEvaluator {
             Response.Status httpStatus,
             OperationsReadinessResponse body
     ) {
+        public ReadinessSnapshot {
+            body = copyBody(body);
+        }
+
+        @Override
+        public OperationsReadinessResponse body() {
+            return copyBody(this.body);
+        }
+
+        private static OperationsReadinessResponse copyBody(OperationsReadinessResponse source) {
+            if (source == null) {
+                return null;
+            }
+            OperationsReadinessResponse copy = new OperationsReadinessResponse();
+            copy.setStatus(source.getStatus());
+            Map<String, OperationsReadinessCheck> checks = source.getChecks();
+            copy.setChecks(checks != null ? new LinkedHashMap<>(checks) : null);
+            return copy;
+        }
     }
 }

@@ -50,7 +50,6 @@ public class LocalDiagnosisResource extends AbstractResource {
             @QueryParam("from") String from,
             @QueryParam("to") String to,
             @QueryParam("activeOnly") @DefaultValue("false") boolean activeOnly) {
-        String remoteUser = requireRemoteUser(request);
         String facilityId = requireActorFacility(request);
         PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
         if (patient == null) {

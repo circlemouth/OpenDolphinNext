@@ -28,8 +28,6 @@ export type AdminConfigResponse = Partial<AdminConfigPayload> & {
   deliveryMode?: string;
 };
 
-export type EffectiveAdminConfigResponse = AdminConfigResponse;
-
 export type OperationsCheck = {
   status?: string;
   [key: string]: unknown;
@@ -213,10 +211,6 @@ export async function saveAdminConfig(payload: AdminConfigPayload): Promise<Admi
   });
   const json = await response.json().catch(() => ({}));
   return normalizeConfig(json, response.headers, response.status);
-}
-
-export async function fetchEffectiveAdminConfig(): Promise<EffectiveAdminConfigResponse> {
-  return fetchAdminConfig();
 }
 
 export async function fetchOperationsHealth(): Promise<OperationsHealthResponse> {

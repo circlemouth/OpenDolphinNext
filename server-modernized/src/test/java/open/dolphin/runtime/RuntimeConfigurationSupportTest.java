@@ -18,14 +18,6 @@ class RuntimeConfigurationSupportTest {
     }
 
     @Test
-    void parseBooleanFlagSupportsCommonVariants() {
-        assertTrue(RuntimeConfigurationSupport.parseBooleanFlag("true"));
-        assertTrue(RuntimeConfigurationSupport.parseBooleanFlag(" On "));
-        assertFalse(RuntimeConfigurationSupport.parseBooleanFlag("0"));
-        assertNull(RuntimeConfigurationSupport.parseBooleanFlag("maybe"));
-    }
-
-    @Test
     void firstNonBlankReturnsTrimmedValue() {
         assertEquals("value", RuntimeConfigurationSupport.firstNonBlank(null, "  ", " value "));
         assertNull(RuntimeConfigurationSupport.firstNonBlank(null, "", "  "));

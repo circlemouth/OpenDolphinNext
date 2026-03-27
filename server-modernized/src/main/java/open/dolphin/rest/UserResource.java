@@ -178,7 +178,7 @@ public class UserResource extends AbstractResource {
     public void deleteUser(@Context HttpServletRequest servletReq, @PathParam("userId") String userId) {
         
         HttpServletRequest req = (HttpServletRequest)servletReq;
-        String remoteUser = requireAdmin(req, userServiceBean);
+        requireAdmin(req, userServiceBean);
         String actorFacility = requireActorFacility(req);
         UserModel target = loadUserQuietly(userId);
         if (target == null) {

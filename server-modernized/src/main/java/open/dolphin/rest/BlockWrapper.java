@@ -50,7 +50,7 @@ public final class BlockWrapper extends HttpServletRequestWrapper {
     @Override
     public String getHeader(String name) {
         if (name == null) {
-            return super.getHeader(name);
+            return null;
         }
         String override = headerOverrides.get(name.trim().toLowerCase(Locale.ROOT));
         if (override != null) {
@@ -61,6 +61,9 @@ public final class BlockWrapper extends HttpServletRequestWrapper {
 
     @Override
     public Enumeration<String> getHeaders(String name) {
+        if (name == null) {
+            return Collections.emptyEnumeration();
+        }
         String override = getHeader(name);
         if (override != null) {
             return Collections.enumeration(Collections.singletonList(override));

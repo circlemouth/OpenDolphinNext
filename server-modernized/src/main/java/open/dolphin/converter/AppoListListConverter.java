@@ -33,6 +33,9 @@ public class AppoListListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (AppoListList)model;
+        AppoListList source = (AppoListList) model;
+        AppoListList copy = new AppoListList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

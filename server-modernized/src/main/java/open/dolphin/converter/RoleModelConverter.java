@@ -29,6 +29,11 @@ public final class RoleModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (RoleModel)model;
+        RoleModel source = (RoleModel) model;
+        RoleModel copy = new RoleModel();
+        copy.setId(source.getId());
+        copy.setUserId(source.getUserId());
+        copy.setRole(source.getRole());
+        this.model = copy;
     }
 }

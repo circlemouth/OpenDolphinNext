@@ -24,7 +24,6 @@ import open.orca.rest.OrcaMasterFixtureSupport.FixtureAddressEntry;
 import open.orca.rest.OrcaMasterFixtureSupport.FixtureEtensuEntry;
 import open.orca.rest.OrcaMasterFixtureSupport.FixtureGenericPriceEntry;
 import open.orca.rest.OrcaMasterFixtureSupport.FixtureHokenjaEntry;
-import open.orca.rest.OrcaMasterFixtureSupport.FixtureListResponse;
 import open.orca.rest.OrcaMasterFixtureSupport.LoadedFixture;
 import open.dolphin.rest.dto.orca.OrcaDrugMasterEntry;
 import open.dolphin.rest.dto.orca.OrcaMasterListResponse;
@@ -595,10 +594,6 @@ public class OrcaMasterResource extends AbstractResource {
 
     private OrcaAddressEntry toAddressEntry(FixtureAddressEntry entry, LoadedFixture<?> fixture) {
         return responseMapper.toAddressEntry(entry, toServiceFixture(fixture));
-    }
-
-    private OrcaTensuEntry toEtensuEntry(FixtureEtensuEntry entry, LoadedFixture<?> fixture) {
-        return responseMapper.toEtensuEntry(entry, toServiceFixture(fixture));
     }
 
     private OrcaTensuEntry toEtensuEntry(EtensuDao.EtensuRecord record, LoadedFixture<?> fixture) {

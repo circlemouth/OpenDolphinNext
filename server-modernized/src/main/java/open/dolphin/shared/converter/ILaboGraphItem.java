@@ -44,11 +44,11 @@ public class ILaboGraphItem<T extends ILaboValue> {
     }
 
     public List<T> getResults() {
-        return results;
+        return results == null ? null : new ArrayList<>(results);
     }
 
     public void setResults(List<T> results) {
-        this.results = results;
+        this.results = results == null ? null : new ArrayList<>(results);
     }
 
     public void addValue(T value) {

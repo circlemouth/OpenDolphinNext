@@ -38,6 +38,9 @@ public class VitalListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (VitalList)model;
+        VitalList source = (VitalList) model;
+        VitalList copy = new VitalList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

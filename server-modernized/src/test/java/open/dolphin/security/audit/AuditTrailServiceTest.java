@@ -55,7 +55,18 @@ class AuditTrailServiceTest {
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {
-        Field field = target.getClass().getDeclaredField(fieldName);
+        Field field = null;
+        Class<?> type = target.getClass();
+        while (type != null && field == null) {
+            try {
+                field = type.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException ex) {
+                type = type.getSuperclass();
+            }
+        }
+        if (field == null) {
+            throw new NoSuchFieldException(fieldName);
+        }
         field.setAccessible(true);
         field.set(target, value);
     }

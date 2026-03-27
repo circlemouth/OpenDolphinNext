@@ -6,12 +6,12 @@ import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { AdministrationPage } from '../AdministrationPage';
 
 const {
-  mockFetchEffectiveAdminConfig,
+  mockFetchAdminConfig,
   mockFetchOrcaQueue,
   mockFetchOrcaConnectionConfig,
   mockUseAuthService,
 } = vi.hoisted(() => ({
-  mockFetchEffectiveAdminConfig: vi.fn(),
+  mockFetchAdminConfig: vi.fn(),
   mockFetchOrcaQueue: vi.fn(),
   mockFetchOrcaConnectionConfig: vi.fn(),
   mockUseAuthService: vi.fn(),
@@ -137,7 +137,7 @@ vi.mock('../delivery/OrcaQueueCard', () => ({
 
 vi.mock('../api', () => ({
   discardOrcaQueue: vi.fn().mockResolvedValue({ ok: true }),
-  fetchEffectiveAdminConfig: mockFetchEffectiveAdminConfig,
+  fetchAdminConfig: mockFetchAdminConfig,
   fetchOperationsHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', raw: {} }),
   fetchOperationsReadiness: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', checks: {}, raw: {} }),
   fetchOrcaQueue: mockFetchOrcaQueue,
@@ -201,7 +201,7 @@ beforeEach(() => {
     setDataSourceTransition: vi.fn(),
     setFallbackUsed: vi.fn(),
   });
-  mockFetchEffectiveAdminConfig.mockResolvedValue({
+  mockFetchAdminConfig.mockResolvedValue({
     runId: 'RUN-CONFIG',
     source: 'live',
     status: 200,

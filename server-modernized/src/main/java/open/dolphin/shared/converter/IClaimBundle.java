@@ -103,11 +103,11 @@ public abstract class IClaimBundle<T extends IClaimItem> implements java.io.Seri
     }
 
     public List<T> getClaimItems() {
-        return claimItems;
+        return claimItems == null ? null : new ArrayList<>(claimItems);
     }
 
     public void setClaimItems(List<T> claimItems) {
-        this.claimItems = claimItems;
+        this.claimItems = claimItems == null ? null : new ArrayList<>(claimItems);
     }
 
     public String getMemo() {

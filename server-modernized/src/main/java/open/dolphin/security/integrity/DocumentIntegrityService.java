@@ -301,10 +301,6 @@ public class DocumentIntegrityService {
         }
     }
 
-    private String sha256Hex(String value) {
-        return sha256Hex(value == null ? null : value.getBytes(StandardCharsets.UTF_8));
-    }
-
     private String hmacSha256Hex(byte[] key, String value) {
         if (key == null) {
             throw new IllegalStateException("HMAC key is not configured");

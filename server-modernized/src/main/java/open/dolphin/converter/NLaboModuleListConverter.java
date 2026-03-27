@@ -34,6 +34,9 @@ public class NLaboModuleListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (NLaboModuleList)model;
+        NLaboModuleList source = (NLaboModuleList) model;
+        NLaboModuleList copy = new NLaboModuleList();
+        copy.setList(source.getList() == null ? null : new ArrayList<>(source.getList()));
+        this.model = copy;
     }
 }

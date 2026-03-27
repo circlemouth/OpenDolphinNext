@@ -40,6 +40,14 @@ public final class AllergyModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (AllergyModel)model;
+        AllergyModel source = (AllergyModel) model;
+        AllergyModel copy = new AllergyModel();
+        copy.setFactor(source.getFactor());
+        copy.setIdentifiedDate(source.getIdentifiedDate());
+        copy.setMemo(source.getMemo());
+        copy.setSeverity(source.getSeverity());
+        copy.setSeverityTableId(source.getSeverityTableId());
+        copy.setObservationId(source.getObservationId());
+        this.model = copy;
     }
 }

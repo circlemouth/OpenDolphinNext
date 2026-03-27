@@ -12,16 +12,15 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.util.Map;
-import open.dolphin.security.auth.AdminStepUpGuard;
 
 /**
  * EHR-ORCA user link endpoint split from AdminOrcaUserResource.
  */
 @Path("/admin")
-public class AdminOrcaUserLinkResource extends AdminOrcaUserResource {
+public final class AdminOrcaUserLinkResource extends AbstractResource {
 
     @jakarta.inject.Inject
-    private AdminStepUpGuard adminStepUpGuard;
+    private AdminOrcaUserResource delegate;
 
     @PUT
     @Path("/users/{ehrUserId}/orca-link")
@@ -31,7 +30,7 @@ public class AdminOrcaUserLinkResource extends AdminOrcaUserResource {
     public Response linkEhrUserToOrcaEndpoint(@Context HttpServletRequest request,
                                               @PathParam("ehrUserId") String ehrUserId,
                                               Map<String, Object> payload) {
-        return super.linkEhrUserToOrca(request, ehrUserId, payload);
+        return delegate.linkEhrUserToOrca(request, ehrUserId, payload);
     }
 
     @DELETE
@@ -40,6 +39,6 @@ public class AdminOrcaUserLinkResource extends AdminOrcaUserResource {
     @Transactional
     public Response unlinkEhrUserFromOrcaEndpoint(@Context HttpServletRequest request,
                                                   @PathParam("ehrUserId") String ehrUserId) {
-        return super.unlinkEhrUserFromOrca(request, ehrUserId);
+        return delegate.unlinkEhrUserFromOrca(request, ehrUserId);
     }
 }

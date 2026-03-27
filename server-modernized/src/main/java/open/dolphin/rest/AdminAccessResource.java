@@ -398,7 +398,7 @@ public class AdminAccessResource extends AbstractResource {
     }
 
     private OrcaUserLinkQueryService orcaUserLinks() {
-        return new OrcaUserLinkQueryService(em);
+        return new OrcaUserLinkQueryService(() -> em);
     }
 
     private Long asLong(Object value) {
