@@ -42,10 +42,12 @@
 - `docs/server-modernization/planning/codex_automation_orchestration/README.md`
 - `docs/server-modernization/planning/codex_automation_orchestration/codex_automation_orchestration_plan.md`
 - `docs/server-modernization/planning/codex_automation_orchestration/codex_automation_master_prompt.txt`
+- `docs/development/supporting/phase3_wave2_prompt_pack/README.md`
 - 用途: `common` 廃止・公開面整理・品質ゲート強制までの cleanup track を `A01`〜`A10` のときは 1 体ずつ、現行 phase3 では `WS0` 起点で `WS1`〜`WS8` を必要最小限で進めるための現行導線。
 - 注意: 進捗判定は上記 orchestration plan を正本とし、旧 `codex_automation_workplan_revised.md` 系は履歴確認用途に限定する。
 - 最新実績: RUN_ID `20260320T205337Z` で cleanup track `A10`「packaging / CI / 品質ゲート強制」を完了。現行は `prompts/phase3/` 配下の WS0〜WS8 を継続実行する。
 - `prompts/phase3/` は `docs/server-modernization/planning/codex_automation_orchestration/prompts/phase3/` に配置済み。`WS0_parallel_orchestrator_prompt.md` を起点に現行タスクを進める。
+- static-analysis Wave 2 の支援資料は `docs/development/supporting/phase3_wave2_prompt_pack/` に配置済み。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 
 ## 参照優先順位（Server-Modernization領域）
 1. `docs/DEVELOPMENT_STATUS.md`
@@ -254,6 +256,7 @@
   - `bash ./scripts/reporting/verify.sh`
 - static analysis（reporting + server-modernized）:
   - `bash ./scripts/server-modernized/verify-static-analysis.sh`
+  - baseline burn-down 完了前のため、恒常 green 前提の PR required check ではなく manual/nightly 運用とする
 - CI workflow:
   - `.github/workflows/web-client-test-shards.yml`
   - `.github/workflows/e2e.yml`
