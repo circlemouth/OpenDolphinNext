@@ -489,13 +489,6 @@ final class OrcaChartSupportSupport {
         }
     }
 
-    private Element firstElement(Document document, String tagName) {
-        if (document == null) {
-            return null;
-        }
-        return firstElement(document.getDocumentElement(), tagName);
-    }
-
     private Element firstElement(Element parent, String tagName) {
         if (parent == null) {
             return null;

@@ -12,6 +12,7 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.orca.sync.OrcaPatientImportService;
 import open.dolphin.orca.sync.OrcaPatientSyncPlanner;
@@ -32,39 +33,20 @@ import open.dolphin.session.framework.SessionOperation;
 @SessionOperation
 public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
 
-    private OrcaPatientImportService importService;
-    private OrcaPatientSyncRunner syncRunner;
-    private OrcaSyncCursorStore cursorStore;
-    private OrcaSyncRunStore runStore;
-
-    public OrcaPatientSyncResource() {
-    }
+    private final OrcaPatientImportService importService;
+    private final OrcaPatientSyncRunner syncRunner;
+    private final OrcaSyncCursorStore cursorStore;
+    private final OrcaSyncRunStore runStore;
 
     @Inject
     public OrcaPatientSyncResource(OrcaPatientImportService importService,
             OrcaPatientSyncRunner syncRunner,
             OrcaSyncCursorStore cursorStore,
             OrcaSyncRunStore runStore) {
-        this.importService = importService;
-        this.syncRunner = syncRunner;
-        this.cursorStore = cursorStore;
-        this.runStore = runStore;
-    }
-
-    void setImportService(OrcaPatientImportService importService) {
-        this.importService = importService;
-    }
-
-    void setSyncRunner(OrcaPatientSyncRunner syncRunner) {
-        this.syncRunner = syncRunner;
-    }
-
-    void setCursorStore(OrcaSyncCursorStore cursorStore) {
-        this.cursorStore = cursorStore;
-    }
-
-    void setRunStore(OrcaSyncRunStore runStore) {
-        this.runStore = runStore;
+        this.importService = Objects.requireNonNull(importService, "importService");
+        this.syncRunner = Objects.requireNonNull(syncRunner, "syncRunner");
+        this.cursorStore = Objects.requireNonNull(cursorStore, "cursorStore");
+        this.runStore = Objects.requireNonNull(runStore, "runStore");
     }
 
     @POST

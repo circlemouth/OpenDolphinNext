@@ -109,20 +109,20 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
             }
         }
         if (!response.isCacheHit()) {
-            Boolean cacheHit = extractDetailBoolean(details, "cacheHit");
-            if (cacheHit != null && cacheHit) {
+            boolean cacheHit = extractDetailBoolean(details, "cacheHit");
+            if (cacheHit) {
                 response.setCacheHit(true);
             }
         }
         if (!response.isMissingMaster()) {
-            Boolean missingMaster = extractDetailBoolean(details, "missingMaster");
-            if (missingMaster != null && missingMaster) {
+            boolean missingMaster = extractDetailBoolean(details, "missingMaster");
+            if (missingMaster) {
                 response.setMissingMaster(true);
             }
         }
         if (!response.isFallbackUsed()) {
-            Boolean fallbackUsed = extractDetailBoolean(details, "fallbackUsed");
-            if (fallbackUsed != null && fallbackUsed) {
+            boolean fallbackUsed = extractDetailBoolean(details, "fallbackUsed");
+            if (fallbackUsed) {
                 response.setFallbackUsed(true);
             }
         }
@@ -203,9 +203,9 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
         return null;
     }
 
-    private Boolean extractDetailBoolean(Map<String, Object> details, String key) {
+    private boolean extractDetailBoolean(Map<String, Object> details, String key) {
         if (details == null || key == null) {
-            return null;
+            return false;
         }
         Object value = details.get(key);
         if (value instanceof Boolean bool) {
@@ -216,9 +216,9 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
                 return Boolean.TRUE;
             }
             if ("false".equalsIgnoreCase(text)) {
-                return Boolean.FALSE;
+                return false;
             }
         }
-        return null;
+        return false;
     }
 }

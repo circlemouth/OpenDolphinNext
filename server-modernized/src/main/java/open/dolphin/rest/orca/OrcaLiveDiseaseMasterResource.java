@@ -11,6 +11,7 @@ import jakarta.ws.rs.core.MediaType;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -63,7 +64,7 @@ public class OrcaLiveDiseaseMasterResource extends AbstractOrcaRestResource {
                     entries.add(entry);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (SQLException ignored) {
             return List.of();
         }
         return entries;

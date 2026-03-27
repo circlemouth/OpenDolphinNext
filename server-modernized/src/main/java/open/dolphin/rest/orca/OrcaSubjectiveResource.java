@@ -14,6 +14,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.DocumentModel;
@@ -132,12 +133,12 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
     }
 
     private UserModel requireUser(HttpServletRequest request, String facilityId, String patientId, String runId) {
-        UserModel user = userServiceBean.getUser(request.getRemoteUser());
-        if (user == null) {
+        String remoteUser = request.getRemoteUser();
+        return Optional.ofNullable(userServiceBean.getUser(remoteUser)).orElseGet(() -> {
             Map<String, Object> audit = buildSubjectiveAudit(facilityId, patientId, runId);
             failSubjectiveNotFound(request, audit, "user_not_found", Response.Status.UNAUTHORIZED, "User not found");
-        }
-        return user;
+            return null;
+        });
     }
 
     private KarteBean requireKarte(HttpServletRequest request, String facilityId, String patientId, String runId,

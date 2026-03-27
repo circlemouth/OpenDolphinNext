@@ -49,15 +49,18 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
      * Resolve runId: prefer X-Run-Id header, otherwise generate new UTC-based id.
      */
     protected String resolveRunId(HttpServletRequest request) {
-        return resolveRunIdValue(request);
+        return resolveRunIdValue((Object) request);
     }
 
-    public static String resolveRunIdValue(HttpServletRequest request) {
-        if (request != null) {
+    public static String resolveRunIdValue(Object requestOrHeader) {
+        if (requestOrHeader instanceof HttpServletRequest request) {
             String header = request.getHeader("X-Run-Id");
             if (header != null && !header.isBlank()) {
                 return header.trim();
             }
+        }
+        if (requestOrHeader instanceof String headerValue) {
+            return resolveRunIdValue(headerValue);
         }
         return resolveRunIdValue((String) null);
     }
