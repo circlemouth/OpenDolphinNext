@@ -31,6 +31,8 @@
   - 毎回メインエージェントへ渡す共通 prompt。
 - `prompts/A01_*.txt` 〜 `prompts/A10_*.txt`
   - 未完了先頭タスクごとにサブエージェントへ渡す task prompt。
+- `prompts/phase3/*.md`
+  - Phase3 継続作業向けの orchestrator / workstream prompt pack（WS0〜WS8）。
 - `logs/README.md`
   - 実行ログの命名規則と最低記録項目。
 
