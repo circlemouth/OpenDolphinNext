@@ -1,12 +1,13 @@
 # Codex Automation Orchestration 作業計画書（現行）
 
-- 更新日: 2026-03-21
-- RUN_ID: 20260320T205337Z
+- 更新日: 2026-03-27
+- RUN_ID: 20260327T063611Z
 
 この計画書は、`common` 廃止・旧 ORCA 死蔵コード撤去・品質ゲート強制までを、**メインエージェントがサブエージェントを順次召喚して処理する** ための現行作業計画書です。
 
 > 旧 `codex_automation_workplan_revised.md` 系は Legacy/Archive です。
-> この計画書だけを、本 automation track の進捗判定正本として扱います。
+> この計画書は cleanup track (`A01`〜`A10`) の進捗判定正本であり、`A10` 完了後は `prompts/phase3/*.md`（`WS0`〜`WS8`）を現行継続タスクとして扱います。
+> 現行実行は `prompts/phase3/WS0_parallel_orchestrator_prompt.md` の導線を起点に開始します。
 
 ## 0. 現在ステータス
 - [x] A01 直接依存の明示化と dependency hygiene の土台作成
@@ -19,6 +20,8 @@
 - [x] A08 audit 契約吸収と common 廃止
 - [x] A09 runtime config 正本化と文書同期
 - [x] A10 packaging / CI / 品質ゲート強制
+- [ ] WS0（Phase3 継続）: `prompts/phase3/WS0_parallel_orchestrator_prompt.md` を起点に現行作業を開始
+- [ ] WS1〜WS8（Phase3 継続）: `prompts/phase3/` 配下の workstream で現行再整理を継続
 
 ## 1. 事前条件
 - [ ] 対象が zip 展開物ではなく repo 全体であることを確認する
@@ -32,8 +35,9 @@
 - [ ] 毎回 `main` 最新を取り込んだ新規ブランチで開始する
 - [ ] 1 実行 = 1 ブランチ = 1 PR = 1 タスク
 - [ ] メインエージェントは未完了先頭 task を 1 件だけ選ぶ
-- [ ] メインエージェントは対応 prompt を添えてサブエージェントを 1 体だけ召喚する
-- [ ] 並列サブエージェント実行は禁止
+- [ ] メインエージェントは対応 prompt を添えてサブエージェントを召喚する
+- [ ] cleanup track 時は 1 体ずつ。Phase3 のみ、WS0 起点の合意の下で非衝突 WS 群を併行化可
+- [ ] 並列サブエージェント実行は原則禁止（Phase3 のみ例外）
 - [ ] メインエージェントが最後に検証、plan 更新、log 作成を行う
 - [ ] 差分はその task の責務に限定し、unrelated formatting はしない
 - [ ] 検証に失敗したら失敗ログを残して停止し、別件へスコープを広げない
@@ -62,6 +66,8 @@
 8. A08 audit 契約吸収と common 廃止
 9. A09 runtime config 正本化と文書同期
 10. A10 packaging / CI / 品質ゲート強制
+11. (A01-A10 完了後) `prompts/phase3/WS0_parallel_orchestrator_prompt.md`
+12. (Phase3) `prompts/phase3/` 配下の WS1〜WS8 を並列検討・実装し、依存に応じて収束して反映
 
 ## 5. task 詳細
 

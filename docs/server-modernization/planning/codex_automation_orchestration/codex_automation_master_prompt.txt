@@ -1,4 +1,5 @@
-あなたはこの repo のメインエージェントです。今回の作業は、あなた自身が全部実装するのではなく、未完了先頭タスクに対応するサブエージェントを **1 体だけ順次召喚** して進めてください。
+あなたはこの repo のメインエージェントです。今回の作業は、あなた自身が全部実装するのではなく、未完了タスクに対してサブエージェントを使って進めてください。
+現行の `A01`〜`A10` cleanup track では順次 1 体だけを使いますが、`A10` 完了後は `prompts/phase3`（WS0-WS8）導線へ移行し、WS0 の指示に従って必要最小の並列起票を許可します。
 
 ## 最初に必ず読むファイル
 - `docs/DEVELOPMENT_STATUS.md`
@@ -10,13 +11,18 @@
 ## 進捗判定ルール
 - 進捗判定は必ず `codex_automation_orchestration_plan.md` を正本とする
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md` など旧 automation 文書は Legacy/Archive として扱い、今回の task selection には使わない
-- 未完了タスクは plan の A01 から A10 までを上から順に処理する
+- `A01`〜`A10` が未完了なら plan の A01 から上から順に処理する
+- `A10` が完了している場合は `prompts/phase3/WS0_parallel_orchestrator_prompt.md` を読み、`WS1`〜`WS8` の phase3 workstream へ移行する
 - 1 実行で扱うタスクは 1 件だけに限定する
 
 ## 実行手順
 1. 上記ファイルを読み、未完了先頭タスクを 1 件だけ特定する
-2. 対応する `prompts/Axx_*.txt` を読む
-3. サブエージェントを 1 体だけ召喚し、その task prompt を `【ワーカー指示】` として渡す
+2. 対応する prompt を読む
+   - `A01`〜`A10` 中の未完了がある場合は `prompts/Axx_*.txt`
+   - `A10` 完了時は `prompts/phase3/WS0_parallel_orchestrator_prompt.md` を経由して `WS1`〜`WS8` に遷移する
+3. サブエージェントを召喚し、その task prompt を `【ワーカー指示】` として渡す
+   - cleanup track: 1 体のみ
+   - phase3 継続: WS0 起点の合意の下、非衝突の WS 群を必要最小限で並列起票可
 4. サブエージェントの結果を待ち、変更内容とテスト結果をレビューする
 5. 必要なら同じサブエージェントへ追加修正を指示する
 6. メインエージェント自身で最終確認コマンドを実行する
@@ -25,7 +31,8 @@
 9. 完了したら次タスクへは進まず終了する
 
 ## サブエージェント運用ルール
-- 並列召喚は許可するが、担当作業範囲と依存関係を考慮して可能な場合のみおこなうこと
+- 並列召喚は原則許可しない。担当作業範囲と依存関係を考慮し、必要時のみ 2 体以上を同時に使う。
+- 例外: phase3 継続導線では WS0 起点の合意の下で、非衝突 WS 群へ限定し並列召喚を使う。
 - サブエージェントには担当 task の責務だけを渡す
 - `pom.xml`、`OpenDolphinRestApplication.java`、`README.md`、`WebXmlEndpointExposureTest.java` など競合しやすいファイルを複数サブエージェントに触らせない
 - サブエージェントが blocker を返したら、メインエージェントが blocker の妥当性を確認し、plan と log に残す

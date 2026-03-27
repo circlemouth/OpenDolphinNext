@@ -1,7 +1,7 @@
 # Server-Modernization ドキュメントハブ（現行）
 
-- 更新日: 2026-03-26
-- RUN_ID: 20260326T030254Z
+- 更新日: 2026-03-27
+- RUN_ID: 20260327T063611Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
@@ -42,9 +42,10 @@
 - `docs/server-modernization/planning/codex_automation_orchestration/README.md`
 - `docs/server-modernization/planning/codex_automation_orchestration/codex_automation_orchestration_plan.md`
 - `docs/server-modernization/planning/codex_automation_orchestration/codex_automation_master_prompt.txt`
-- 用途: `common` 廃止・公開面整理・品質ゲート強制までの cleanup track を、メインエージェントが未完了先頭 task に対応するサブエージェントを 1 体ずつ召喚して進めるための現行導線。
+- 用途: `common` 廃止・公開面整理・品質ゲート強制までの cleanup track を `A01`〜`A10` のときは 1 体ずつ、現行 phase3 では `WS0` 起点で `WS1`〜`WS8` を必要最小限で進めるための現行導線。
 - 注意: 進捗判定は上記 orchestration plan を正本とし、旧 `codex_automation_workplan_revised.md` 系は履歴確認用途に限定する。
-- 最新実績: RUN_ID `20260320T205337Z` で `A10`「packaging / CI / 品質ゲート強制」を完了。cleanup track の `A01`-`A10` は完了。
+- 最新実績: RUN_ID `20260320T205337Z` で cleanup track `A10`「packaging / CI / 品質ゲート強制」を完了。現行は `prompts/phase3/` 配下の WS0〜WS8 を継続実行する。
+- `prompts/phase3/` は `docs/server-modernization/planning/codex_automation_orchestration/prompts/phase3/` に配置済み。`WS0_parallel_orchestrator_prompt.md` を起点に現行タスクを進める。
 
 ## 参照優先順位（Server-Modernization領域）
 1. `docs/DEVELOPMENT_STATUS.md`

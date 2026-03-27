@@ -1,7 +1,7 @@
 # Codex Automation Orchestration（現行）
 
-- 更新日: 2026-03-20
-- RUN_ID: 20260320T113001Z
+- 更新日: 2026-03-27
+- RUN_ID: 20260327T063611Z
 
 > 本ディレクトリは、`common` 廃止・公開面整理・品質ゲート強制までを、**メインエージェントがサブエージェントを順次召喚して処理する** ための現行 automation 導線です。
 > 旧 `codex_automation_workplan_revised.md` 系は Legacy/Archive です。本件の進捗判定には使いません。
@@ -22,7 +22,8 @@
 - サブエージェントは担当タスクの実装・テスト・必要最小限の文書更新案を実施し、**`【ワーカー報告】` 形式**で返す。
 - メインエージェントは結果をレビューし、必要なら同一サブエージェントへ追加修正を指示する。
 - メインエージェント自身が最終検証、計画書更新、実行ログ作成を行ってから終了する。
-- `pom.xml`、`OpenDolphinRestApplication.java`、`README.md`、`WebXmlEndpointExposureTest.java` で衝突しやすいため、**並列サブエージェント実行は禁止** とする。
+- `pom.xml`、`OpenDolphinRestApplication.java`、`README.md`、`WebXmlEndpointExposureTest.java` で衝突しやすいため、原則は 1 体運用とする。
+- ただし cleanup track 完了後の phase3 では、WS0 起点で非衝突が確定した WS1〜WS8 を最小限併行実行可。
 
 ## 収録物
 - `codex_automation_orchestration_plan.md`
@@ -33,8 +34,14 @@
   - 未完了先頭タスクごとにサブエージェントへ渡す task prompt。
 - `prompts/phase3/*.md`
   - Phase3 継続作業向けの orchestrator / workstream prompt pack（WS0〜WS8）。
+- `prompts/phase3/WS0_parallel_orchestrator_prompt.md`
+  - cleanup track 完了後の現行継続タスクの起点となるオーケストレーター prompt。
 - `logs/README.md`
   - 実行ログの命名規則と最低記録項目。
+
+## 現行継続タスク
+- cleanup track の `A01`〜`A10` は完了。現行で実行する内容は `prompts/phase3/WS0_parallel_orchestrator_prompt.md` を起点に、`WS1`〜`WS8` を必要に応じて並行実施します。
+- 実行順の正本は `codex_automation_orchestration_plan.md` を参照し、`prompts/phase3` 側の進捗は plan の更新と logs/ の記録で管理します。
 
 ## 運用ルール
 - 1 実行 = 1 ブランチ = 1 PR = 1 タスク。
