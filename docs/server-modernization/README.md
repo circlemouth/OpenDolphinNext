@@ -243,6 +243,23 @@
   - failing class を同じ `-Dtest=` 指定でローカル再現する。
   - 修正後は同クラス群で再実行し、WBSと `docs/DEVELOPMENT_STATUS.md` を更新する。
 
+### WS9 post-merge verification / CI guard
+- web guard:
+  - `cd web-client && npm run verify:web-guard`
+- repo-wide Phase3+ surface guards:
+  - `bash ./scripts/ci/verify-phase3-surface-guards.sh all`
+- server-modernized release-critical:
+  - `bash ./scripts/server-modernized/verify-release-critical.sh`
+- reporting release-critical:
+  - `bash ./scripts/reporting/verify.sh`
+- static analysis（reporting + server-modernized）:
+  - `bash ./scripts/server-modernized/verify-static-analysis.sh`
+- CI workflow:
+  - `.github/workflows/web-client-test-shards.yml`
+  - `.github/workflows/e2e.yml`
+  - `.github/workflows/server-modernized-characterization.yml`
+  - `.github/workflows/server-modernized-static-analysis-gate.yml`
+
 ### リポジトリ運用対象外の生成物（P12-01）
 - `**/target/`、`**/__MACOSX/`、AppleDouble (`**/._*`) は生成物として Git 管理対象外にする。
 - 受領 zip の実体はルートの `/common.zip` / `/server-modernized.zip` のみを一時参照対象とし、展開ゴミはレビュー差分へ混ぜない。

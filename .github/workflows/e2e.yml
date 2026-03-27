@@ -27,6 +27,9 @@ jobs:
         run: npm ci
         working-directory: web-client
 
+      - name: Run WS9 web guards
+        run: bash ./scripts/ci/verify-phase3-surface-guards.sh web
+
       - name: Guard ORCA API contract (/api01rv2 forbidden in web-client)
         run: npm run check:orca-api01rv2
 

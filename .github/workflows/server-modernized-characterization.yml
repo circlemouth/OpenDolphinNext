@@ -52,6 +52,14 @@ jobs:
           java-version: "25"
           cache: maven
 
+      - name: Run WS9 surface guards
+        run: bash ./scripts/ci/verify-phase3-surface-guards.sh server
+
+      - name: Run WS9 release-critical server tests
+        env:
+          MAVEN_OPTS: "-Djdk.attach.allowAttachSelf=true -XX:+EnableDynamicAgentLoading"
+        run: bash ./scripts/server-modernized/verify-release-critical.sh
+
       - name: Run PR characterization tests on JDK25 (primary)
         id: pr_jdk25
         continue-on-error: true
@@ -102,6 +110,14 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
+
+      - name: Run WS9 surface guards
+        run: bash ./scripts/ci/verify-phase3-surface-guards.sh server
+
+      - name: Run WS9 release-critical server tests
+        env:
+          MAVEN_OPTS: "-Djdk.attach.allowAttachSelf=true -XX:+EnableDynamicAgentLoading"
+        run: bash ./scripts/server-modernized/verify-release-critical.sh
 
       - name: Run nightly characterization tests on JDK25 (primary)
         id: nightly_jdk25

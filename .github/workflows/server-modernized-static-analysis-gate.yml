@@ -33,14 +33,14 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Run WS9 surface guards
+        run: bash ./scripts/ci/verify-phase3-surface-guards.sh all
+
+      - name: Run reporting release-critical tests
+        run: bash ./scripts/reporting/verify.sh
+
       - name: Run packaging and quality gates
-        run: >-
-          mvn -B -ntp
-          -Pstatic-analysis,dependency-hygiene
-          -Dstatic.analysis.enforce=true
-          -DskipTests
-          -pl server-modernized
-          -am verify
+        run: bash ./scripts/server-modernized/verify-static-analysis.sh
 
       - name: Upload static analysis reports
         if: always()
@@ -49,4 +49,5 @@ jobs:
           name: static-analysis-reports
           path: |
             server-modernized/target/static-analysis/**/*.xml
+            reporting/target/static-analysis/**/*.xml
             server-modernized/target/opendolphin-server.war

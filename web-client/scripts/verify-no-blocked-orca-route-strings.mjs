@@ -9,10 +9,15 @@ const scriptDir = path.dirname(scriptPath);
 const projectRootDir = path.resolve(scriptDir, '..');
 const srcDir = path.join(projectRootDir, 'src');
 
-const BLOCKED_ROUTES = [
-  '/api/orca/medical/outpatient',
-  '/api/orca/deptinfo',
-  '/api/orca/local-medical/outpatient',
+const BLOCKED_SURFACES = [
+  { kind: 'blocked-route', value: '/api/orca/medical/outpatient' },
+  { kind: 'blocked-route', value: '/api/orca/deptinfo' },
+  { kind: 'blocked-route', value: '/api/orca/local-medical/outpatient' },
+  { kind: 'mock-surface', value: '/api/orca/appointments/list/mock' },
+  { kind: 'mock-surface', value: '/api/orca/visits/list/mock' },
+  { kind: 'mock-surface', value: '/api/orca/visits/mutation/mock' },
+  { kind: 'mock-surface', value: '/api/orca/patients/local-search/mock' },
+  { kind: 'mock-surface', value: '/api/orca/patient/mutation/mock' },
 ];
 
 const TEXT_FILE_EXTENSIONS = new Set([
@@ -43,12 +48,13 @@ const walk = (currentDir) => {
     const content = readFileSync(fullPath, 'utf8');
     const lines = content.split(/\r?\n/);
     lines.forEach((line, index) => {
-      BLOCKED_ROUTES.forEach((route) => {
-        if (!line.includes(route)) return;
+      BLOCKED_SURFACES.forEach((surface) => {
+        if (!line.includes(surface.value)) return;
         findings.push({
           filePath: fullPath,
           line: index + 1,
-          route,
+          kind: surface.kind,
+          value: surface.value,
         });
       });
     });
@@ -58,11 +64,11 @@ const walk = (currentDir) => {
 walk(srcDir);
 
 if (findings.length > 0) {
-  console.error('[verify:no-blocked-orca-route-strings] blocked ORCA route string の再混入を検出しました。');
+  console.error('[verify:no-blocked-orca-route-strings] blocked ORCA route string / mock surface の再混入を検出しました。');
   findings.forEach((finding) => {
-    console.error(` - ${path.relative(projectRootDir, finding.filePath)}:${finding.line} ${finding.route}`);
+    console.error(` - ${path.relative(projectRootDir, finding.filePath)}:${finding.line} [${finding.kind}] ${finding.value}`);
   });
   process.exit(2);
 }
 
-console.log('[verify:no-blocked-orca-route-strings] blocked ORCA route string の再混入は検出されませんでした。');
+console.log('[verify:no-blocked-orca-route-strings] blocked ORCA route string / mock surface の再混入は検出されませんでした。');

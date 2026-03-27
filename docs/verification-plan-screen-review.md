@@ -146,8 +146,6 @@
 - 事前リスク洗い出し
 - 認証モーダル回避（LogFilter が未認証時に 401 + WWW-Authenticate を返す場合）:
 `LOGFILTER_HEADER_AUTH_ENABLED=false`
-`VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK=0`
-`VITE_ENABLE_LEGACY_HEADER_AUTH=0`（任意、Basic のみ運用）
 `VITE_ENABLE_FACILITY_HEADER=1`（Basic + Facility を維持）
 - Vite proxy Authorization 上書き抑止:
 既存の Authorization ヘッダがある場合は ORCA_BASIC_* を付与しない（vite.config.ts 対応済み）。
@@ -159,7 +157,7 @@
 戻す場合は `VITE_ORCA_API_PATH_PREFIX=/api` など明示指定で上書き。
 - Charts 401 対策（Basic が MD5 になり 401 となる場合）:
 `VITE_ENABLE_FACILITY_HEADER=1`
-`VITE_ENABLE_LEGACY_HEADER_AUTH=1` + `LOGFILTER_HEADER_AUTH_ENABLED=true`（Legacy ヘッダ認証を許可する場合のみ）
+legacy header auth は使わず、session login を正本にする
 `devPasswordPlain` を sessionStorage に保持するため再起動後は再ログイン
 - X-Orca-Api-Result-Message ヘッダ抑止（暫定・既定はON）:
 `ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER=false`
@@ -185,7 +183,7 @@
   3) ORCA 経路の前提:
      - server-modernized 側で ORCA 送信設定が必要（例: `ORCA_API_HOST/PORT/SCHEME/USER/PASSWORD`）。
      - WebORCA の場合は `ORCA_MODE=weborca`（必要なら `ORCA_API_PATH_PREFIX=/api` を明示）。
-  4) LogFilter 認証モーダル回避: `LOGFILTER_HEADER_AUTH_ENABLED=false`（必要なら `VITE_ENABLE_LEGACY_HEADER_AUTH=0`）。
+  4) LogFilter 認証モーダル回避: `LOGFILTER_HEADER_AUTH_ENABLED=false`。
   5) 例外/回避フラグはオフ確認:
      - `VITE_USE_MOCK_ORCA_QUEUE=0`, `VITE_VERIFY_ADMIN_DELIVERY=0`
      - `VITE_DISABLE_CHART_EVENT_STREAM=0`, `VITE_DISABLE_ORCA_POLLING=0`
@@ -220,7 +218,6 @@ MSW 追加対応:
 起動例:
 ```bash
 LOGFILTER_HEADER_AUTH_ENABLED=false \
-VITE_ALLOW_LEGACY_HEADER_AUTH_FALLBACK=0 \
 WEB_CLIENT_MODE=npm \
 ./setup-modernized-env.sh
 ```
@@ -533,7 +530,7 @@ WEB_CLIENT_MODE=npm \
 - WebORCA 判定: Trial の場合は `ORCA_MODE=weborca`（または `ORCA_API_WEBORCA=1`）を明示。
 - `/api` 付与: `ORCA_API_PATH_PREFIX` を `off` にしていないこと（WebORCA の `/api` 付与が必要）。
 - Web クライアント認証: ログイン後に `Authorization` が付与されるか確認。
-- 代替認証を使う場合: `VITE_ENABLE_LEGACY_HEADER_AUTH=1` + `LOGFILTER_HEADER_AUTH_ENABLED=1`。
+- 代替の legacy header auth は使わず、session login を正本とする。
 - 施設ヘッダ: `X-Facility-Id` を付与する必要がある環境は `VITE_ENABLE_FACILITY_HEADER=1`。
 - ORCA データ前提: Dr/患者 seed が存在（例: Dr=10000/10001, Patient=00005）。
 - POST 開放: Trial で `acceptmodv2` が HTTP405 の場合はブロッカー（別環境が必要）。
@@ -567,7 +564,7 @@ seed/権限の準備手順（最小）:
 失敗時の分岐（簡易）:
 | 症状 | 主な原因 | 対処 |
 | --- | --- | --- |
-| 401 Unauthorized | Web クライアント認証未付与 / header 認証無効 | ログイン再実施、`Authorization` 送出確認。header 認証なら `VITE_ENABLE_LEGACY_HEADER_AUTH=1` + `LOGFILTER_HEADER_AUTH_ENABLED=1` |
+| 401 Unauthorized | Web クライアント認証未付与 / session 無効 | ログイン再実施、`Authorization` 送出確認、session を再確立 |
 | 403 Forbidden | 施設ID/権限不一致 | `X-Facility-Id` とユーザー権限を再確認 |
 | 404 Not Found | `/api` 付与漏れ、proxy 先誤り | `ORCA_MODE=weborca`、`ORCA_API_PATH_PREFIX`、`VITE_DEV_PROXY_TARGET` を再確認 |
 | 405 Method Not Allowed | ORCA 側で POST 未開放（Trial 制約） | POST 開放済みの環境へ切替（dev ORCA など） |
@@ -1510,7 +1507,7 @@ Dev ORCA 到達不可時のエスカレーション（必要確認先/依頼項�
   - `ORCA_MODE=weborca`（WebORCA 利用時）
   - `ORCA_API_PATH_PREFIX`（必要なら `/api` を明示）
   - `LOGFILTER_HEADER_AUTH_ENABLED=false`（認証モーダル回避が必要な場合）
-  - `VITE_ENABLE_FACILITY_HEADER=1` / `VITE_ENABLE_LEGACY_HEADER_AUTH=1`（必要時）
+  - `VITE_ENABLE_FACILITY_HEADER=1`（必要時）
 
 ##### 8.1.4 再検証の最小データ条件（患者/受付/会計/予約）
 

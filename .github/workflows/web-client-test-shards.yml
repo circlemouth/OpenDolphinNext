@@ -28,6 +28,9 @@ jobs:
         run: npm ci
         working-directory: web-client
 
+      - name: Run WS9 web guards
+        run: bash ./scripts/ci/verify-phase3-surface-guards.sh web
+
       - name: Lint web-client
         run: npm run lint
         working-directory: web-client
@@ -67,9 +70,8 @@ jobs:
         run: npm ci
         working-directory: web-client
 
-      - name: Verify no public secrets
-        run: npm run verify:no-public-secrets
-        working-directory: web-client
+      - name: Run WS9 web guards
+        run: bash ./scripts/ci/verify-phase3-surface-guards.sh web
 
       - name: Run shard ${{ matrix.shard }}
         run: npm run test:ci -- --shard=${{ matrix.shard }}
