@@ -36,4 +36,6 @@
 - [supporting/phase2a_handoff_docs_bundle/phase2a_a5_security_audit_integrity_report_initial.md](supporting/phase2a_handoff_docs_bundle/phase2a_a5_security_audit_integrity_report_initial.md)
 - [supporting/phase3_wave2_prompt_pack/README.md](supporting/phase3_wave2_prompt_pack/README.md)
   - `server-modernized` の static-analysis Wave 2 支援資料。`docs/server-modernization/static-analysis-baseline-inventory.md` と連動する。
+- [supporting/phase3_wave3_prompt_pack/README.md](supporting/phase3_wave3_prompt_pack/README.md)
+  - `server-modernized` の static-analysis Wave 3 支援資料。`docs/server-modernization/static-analysis-baseline-inventory.md` と連動する。
 - 補助資料は履歴・設計補足・handoff seed の参照用であり、現行開発計画正本ではない。

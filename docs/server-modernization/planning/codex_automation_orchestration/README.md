@@ -36,6 +36,8 @@
   - Phase3 継続作業向けの orchestrator / workstream prompt pack（WS0〜WS8）。
 - `docs/development/supporting/phase3_wave2_prompt_pack/README.md`
   - static-analysis Wave 2 の現行支援資料。
+- `docs/development/supporting/phase3_wave3_prompt_pack/README.md`
+  - static-analysis Wave 3 の現行支援資料。
 - `prompts/phase3/WS0_parallel_orchestrator_prompt.md`
   - cleanup track 完了後の現行継続タスクの起点となるオーケストレーター prompt。
 - `logs/README.md`

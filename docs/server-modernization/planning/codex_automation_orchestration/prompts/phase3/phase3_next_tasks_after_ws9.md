@@ -51,6 +51,10 @@ current repo を正本とし、後方互換性は考慮しない。
 - `docs/development/supporting/phase3_wave2_prompt_pack/README.md`
 - 目的: T10-B の次に進める static-analysis Wave 2 の現行支援資料。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md`。
 
+## Wave 3 支援資料
+- `docs/development/supporting/phase3_wave3_prompt_pack/README.md`
+- 目的: Wave 2 の次に進める static-analysis Wave 3 の現行支援資料。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md`。
+
 ## T10-C: stale QA/admin contract cleanup
 - [ ] `web-client/scripts/qa-order-master-ui.mjs`
 - [ ] `web-client/scripts/qa-soap-persistence.mjs`
