@@ -1,6 +1,7 @@
 package open.dolphin.converter;
 
 import java.util.Date;
+import java.util.Arrays;
 import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.KarteBean;
@@ -116,12 +117,13 @@ public final class AttachmentModelConverter implements IInfoModelConverter {
     }
 
     public byte[] getContentBytes() {
-        return model.getContentBytes();
+        byte[] contentBytes = model.getContentBytes();
+        return contentBytes == null ? null : Arrays.copyOf(contentBytes, contentBytes.length);
     }
     
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (AttachmentModel)m;
+        this.model = ModelCopySupport.copy((AttachmentModel) m, AttachmentModel::new);
         model.setKarteBean(toKarteReference(model.getKarteBean()));
         model.setUserModel(toUserReference(model.getUserModel()));
     }

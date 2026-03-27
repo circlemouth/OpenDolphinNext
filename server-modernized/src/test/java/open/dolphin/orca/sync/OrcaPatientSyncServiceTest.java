@@ -19,7 +19,9 @@ class OrcaPatientSyncServiceTest {
     void importPatientsDelegatesToImportService() {
         OrcaPatientImportService importService = mock(OrcaPatientImportService.class);
         OrcaPatientSyncRunner syncRunner = mock(OrcaPatientSyncRunner.class);
-        OrcaPatientSyncService service = new OrcaPatientSyncService(importService, syncRunner);
+        OrcaPatientSyncService service = new OrcaPatientSyncService();
+        service.setImportService(importService);
+        service.setSyncRunner(syncRunner);
 
         PatientImportRequest request = new PatientImportRequest();
         request.getPatientIds().add("000001");
@@ -37,7 +39,9 @@ class OrcaPatientSyncServiceTest {
     void syncPatientsDelegatesToRunnerWithApiTrigger() {
         OrcaPatientImportService importService = mock(OrcaPatientImportService.class);
         OrcaPatientSyncRunner syncRunner = mock(OrcaPatientSyncRunner.class);
-        OrcaPatientSyncService service = new OrcaPatientSyncService(importService, syncRunner);
+        OrcaPatientSyncService service = new OrcaPatientSyncService();
+        service.setImportService(importService);
+        service.setSyncRunner(syncRunner);
 
         PatientSyncRequest request = new PatientSyncRequest();
         PatientImportResponse expected = new PatientImportResponse();

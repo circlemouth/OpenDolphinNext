@@ -29,6 +29,6 @@ public class DrugInteractionModelConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (DrugInteractionModel)model;
+        this.model = ModelCopySupport.copy((DrugInteractionModel) model, DrugInteractionModel::new);
     }
 }

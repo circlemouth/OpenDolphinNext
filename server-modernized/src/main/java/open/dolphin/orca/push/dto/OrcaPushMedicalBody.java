@@ -14,6 +14,25 @@ public class OrcaPushMedicalBody implements OrcaPushBody {
     private String Perform_Date;
     private List<OrcaPushMedicalInformation> Medical_Information = new ArrayList<>();
 
+    public OrcaPushMedicalBody() {
+    }
+
+    public OrcaPushMedicalBody(OrcaPushMedicalBody source) {
+        if (source == null) {
+            return;
+        }
+        this.Patient_Mode = source.Patient_Mode;
+        this.Patient_ID = source.Patient_ID;
+        this.Information_Date = source.Information_Date;
+        this.Information_Time = source.Information_Time;
+        this.Perform_Date = source.Perform_Date;
+        this.Medical_Information = copyMedicalInformationList(source.Medical_Information);
+    }
+
+    public static OrcaPushMedicalBody copyOf(OrcaPushMedicalBody source) {
+        return source == null ? null : new OrcaPushMedicalBody(source);
+    }
+
     public String getPatient_Mode() {
         return Patient_Mode;
     }
@@ -55,10 +74,21 @@ public class OrcaPushMedicalBody implements OrcaPushBody {
     }
 
     public List<OrcaPushMedicalInformation> getMedical_Information() {
-        return Medical_Information;
+        return copyMedicalInformationList(Medical_Information);
     }
 
     public void setMedical_Information(List<OrcaPushMedicalInformation> medical_Information) {
-        Medical_Information = medical_Information != null ? medical_Information : new ArrayList<>();
+        Medical_Information = copyMedicalInformationList(medical_Information);
+    }
+
+    private static List<OrcaPushMedicalInformation> copyMedicalInformationList(List<OrcaPushMedicalInformation> source) {
+        List<OrcaPushMedicalInformation> copy = new ArrayList<>();
+        if (source == null) {
+            return copy;
+        }
+        for (OrcaPushMedicalInformation item : source) {
+            copy.add(OrcaPushMedicalInformation.copyOf(item));
+        }
+        return copy;
     }
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import open.dolphin.converter.AllergyModelConverter;
 import open.dolphin.converter.IInfoModelConverter;
+import open.dolphin.converter.ModelCopySupport;
 import open.dolphin.converter.PatientMemoModelConverter;
 import open.dolphin.infomodel.AllergyModel;
 import open.dolphin.infomodel.DocumentModel;
@@ -93,6 +94,6 @@ public abstract class IVisitPackage<TPatientVisitModel, TPatientModel, TDocument
 
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (VisitPackage) m;
+        this.model = ModelCopySupport.copy((VisitPackage) m, VisitPackage::new);
     }
 }

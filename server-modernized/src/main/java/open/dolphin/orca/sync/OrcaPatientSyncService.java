@@ -20,12 +20,6 @@ public class OrcaPatientSyncService {
         // CDI
     }
 
-    public OrcaPatientSyncService(OrcaPatientImportService importService,
-            OrcaPatientSyncRunner syncRunner) {
-        this.importService = importService;
-        this.syncRunner = syncRunner;
-    }
-
     @Inject
     void setImportService(OrcaPatientImportService importService) {
         this.importService = importService;

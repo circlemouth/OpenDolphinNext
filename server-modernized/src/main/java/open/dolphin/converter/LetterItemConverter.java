@@ -24,6 +24,6 @@ public final class LetterItemConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (LetterItem)model;
+        this.model = ModelCopySupport.copy((LetterItem) model, LetterItem::new);
     }
 }

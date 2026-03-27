@@ -12,6 +12,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.metrics.OrcaPushMetricsRegistrar;
@@ -33,11 +34,11 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
     private final OrcaPushMetricsRegistrar metricsRegistrar;
     private final ScheduledExecutorService scheduler;
     private final AtomicBoolean closed = new AtomicBoolean();
+    private final AtomicInteger reconnectAttempt = new AtomicInteger();
     private final StringBuilder messageBuffer = new StringBuilder();
 
     private volatile WebSocket webSocket;
     private volatile ScheduledFuture<?> pingTask;
-    private volatile int reconnectAttempt;
 
     public OrcaPushClient(
             String facilityId,
@@ -92,7 +93,7 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
     @Override
     public void onOpen(WebSocket webSocket) {
         this.webSocket = webSocket;
-        reconnectAttempt = 0;
+        reconnectAttempt.set(0);
         connectionStateStore.markConnected(facilityId, "push", connection.pushUrl());
         metricsRegistrar.markConnected(facilityId);
         sendSubscribe();
@@ -180,8 +181,8 @@ public class OrcaPushClient implements WebSocket.Listener, AutoCloseable {
     private void scheduleReconnect() {
         long initial = settings.reconnectInitialDelayMs() != null ? settings.reconnectInitialDelayMs() : 1000L;
         long max = settings.reconnectMaxDelayMs() != null ? settings.reconnectMaxDelayMs() : 30000L;
-        long delay = Math.min(max, initial * (1L << Math.min(reconnectAttempt, 10)));
-        reconnectAttempt++;
+        int attempt = reconnectAttempt.getAndIncrement();
+        long delay = Math.min(max, initial * (1L << Math.min(attempt, 10)));
         metricsRegistrar.recordReconnect(facilityId, settings.shadowMode() ? "shadow" : "live");
         scheduler.schedule(() -> {
             if (!closed.get()) {

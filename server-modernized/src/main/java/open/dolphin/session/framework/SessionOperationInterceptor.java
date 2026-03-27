@@ -72,9 +72,9 @@ public class SessionOperationInterceptor {
     }
 
     private String currentHttpTraceId() {
-        Object fromJboss = MDC.get("traceId");
-        if (fromJboss instanceof String traceId && !traceId.isBlank()) {
-            return traceId;
+        String fromJboss = MDC.get("traceId");
+        if (fromJboss != null && !fromJboss.isBlank()) {
+            return fromJboss;
         }
         String fromSlf4j = org.slf4j.MDC.get("traceId");
         if (fromSlf4j != null && !fromSlf4j.isBlank()) {
@@ -98,9 +98,9 @@ public class SessionOperationInterceptor {
     }
 
     private String currentActorId() {
-        Object fromJboss = MDC.get(SessionTraceAttributes.ACTOR_ID_MDC_KEY);
-        if (fromJboss instanceof String actor && !actor.isBlank()) {
-            return actor;
+        String fromJboss = MDC.get(SessionTraceAttributes.ACTOR_ID_MDC_KEY);
+        if (fromJboss != null && !fromJboss.isBlank()) {
+            return fromJboss;
         }
         String fromSlf4j = org.slf4j.MDC.get(SessionTraceAttributes.ACTOR_ID_MDC_KEY);
         if (fromSlf4j != null && !fromSlf4j.isBlank()) {

@@ -165,7 +165,7 @@ public class KarteDocumentWriteService {
                 }
 
                 id = delete.getLinkId();
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 break;
             }
         }

@@ -54,10 +54,6 @@ public class OrcaPushRecoveryService {
             return;
         }
         Instant windowEnd = Instant.now();
-        int lookbackMinutes = configurationResolver.orcaPush().recoveryInitialLookbackMinutes() != null
-                ? configurationResolver.orcaPush().recoveryInitialLookbackMinutes()
-                : 30;
-        Instant windowStart = windowEnd.minusSeconds(lookbackMinutes * 60L);
         String recoveryRunId = "PUSHREC-" + facilityId + "-" + windowEnd.toEpochMilli();
         try {
             for (String event : enabledEvents()) {

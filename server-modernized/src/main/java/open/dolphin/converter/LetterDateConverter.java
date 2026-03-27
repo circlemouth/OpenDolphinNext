@@ -25,6 +25,6 @@ public final class LetterDateConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (LetterDate)model;
+        this.model = ModelCopySupport.copy((LetterDate) model, LetterDate::new);
     }
 }

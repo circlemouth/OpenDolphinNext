@@ -33,6 +33,6 @@ public class DragInteractionListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (DrugInteractionList)model;
+        this.model = ModelCopySupport.copy((DrugInteractionList) model, DrugInteractionList::new);
     }
 }

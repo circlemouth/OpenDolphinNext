@@ -125,10 +125,6 @@ final class OrcaTransportRegistry {
         }
 
         OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = orcaConnectionConfigStore.resolve(facilityId);
-        if (resolved == null) {
-            return null;
-        }
-
         OrcaTransportSettings settings = OrcaTransportSettings.fromAdminConfig(
                 resolved.baseUrl(),
                 resolved.useWeborca(),
@@ -145,9 +141,6 @@ final class OrcaTransportRegistry {
 
     private ResolvedTransportConfig loadFallbackSettings() {
         OrcaTransportSettings settings = OrcaTransportSettings.load(configurationResolver);
-        if (settings == null) {
-            return null;
-        }
         return ResolvedTransportConfig.forFallback(settings);
     }
 
@@ -171,7 +164,7 @@ final class OrcaTransportRegistry {
 
     private Duration resolveConnectTimeout() {
         ServerRuntimeConfiguration.OrcaTransportHttpSettings settings = configurationResolver.orcaTransportHttp();
-        Duration configured = settings != null ? settings.connectTimeout() : null;
+        Duration configured = settings.connectTimeout();
         if (configured == null || configured.isZero() || configured.isNegative()) {
             return DEFAULT_CONNECT_TIMEOUT;
         }

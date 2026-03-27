@@ -114,7 +114,7 @@ public final class ObservationModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (ObservationModel)m;
+        this.model = ModelCopySupport.copy((ObservationModel) m, ObservationModel::new);
         model.setKarteBean(toKarteReference(model.getKarteBean()));
         model.setUserModel(toUserReference(model.getUserModel()));
     }

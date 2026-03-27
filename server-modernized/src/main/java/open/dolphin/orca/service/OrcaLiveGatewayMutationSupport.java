@@ -72,7 +72,6 @@ final class OrcaLiveGatewayMutationSupport {
 
     String normalizeToken(String value, String label) {
         String raw = requireText(value, label).trim();
-        String normalized = raw.toLowerCase(Locale.ROOT);
         for (String prefix : new String[] {
                 "class=", "?class=",
                 "request_number=", "?request_number=",
@@ -80,9 +79,9 @@ final class OrcaLiveGatewayMutationSupport {
                 "claim_send_info=", "?claim_send_info=",
                 "claimsendinfo=", "?claimsendinfo="
         }) {
-            if (normalized.startsWith(prefix)) {
+            String lower = raw.toLowerCase(Locale.ROOT);
+            if (lower.startsWith(prefix)) {
                 raw = raw.substring(prefix.length());
-                normalized = raw.toLowerCase(Locale.ROOT);
                 break;
             }
         }

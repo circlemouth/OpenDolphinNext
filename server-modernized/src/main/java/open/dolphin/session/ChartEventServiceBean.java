@@ -390,8 +390,5 @@ public class ChartEventServiceBean {
         LOGGER.warn(msg);
     }
     
-    private void warn(String msg, Throwable throwable) {
-        LOGGER.warn(msg, throwable);
-    }
 //minagawa$    
 }

@@ -44,10 +44,10 @@ public class OrcaPushEnvelope {
     }
 
     public OrcaPushEventData getData() {
-        return data;
+        return OrcaPushEventData.copyOf(data);
     }
 
     public void setData(OrcaPushEventData data) {
-        this.data = data;
+        this.data = OrcaPushEventData.copyOf(data);
     }
 }

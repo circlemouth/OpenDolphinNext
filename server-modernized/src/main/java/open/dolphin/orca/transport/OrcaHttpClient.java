@@ -14,6 +14,7 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -396,11 +397,6 @@ public class OrcaHttpClient {
     }
 
     private static String formatDetailLog(String requestId, String method, String path, int status,
-            OrcaApiResult apiResult) {
-        return formatDetailLog(requestId, method, path, status, apiResult, OrcaLogMode.DETAIL);
-    }
-
-    private static String formatDetailLog(String requestId, String method, String path, int status,
             OrcaApiResult apiResult, OrcaLogMode logMode) {
         SanitizedText apiMessage = sanitizeLogText(apiResult != null ? apiResult.message : null);
         String warningsRaw = (apiResult != null && apiResult.warnings != null && !apiResult.warnings.isEmpty())
@@ -569,7 +565,7 @@ public class OrcaHttpClient {
         private OrcaApiResult(String apiResult, String message, List<String> warnings) {
             this.apiResult = apiResult;
             this.message = message;
-            this.warnings = warnings != null ? warnings : List.of();
+            this.warnings = copyWarnings(warnings);
         }
 
         static OrcaApiResult of(String apiResult, String message, List<String> warnings) {
@@ -585,7 +581,7 @@ public class OrcaHttpClient {
         }
 
         public List<String> warnings() {
-            return warnings;
+            return copyWarnings(warnings);
         }
     }
 
@@ -606,7 +602,7 @@ public class OrcaHttpClient {
             this.status = status;
             this.body = body;
             this.contentType = contentType;
-            this.headers = headers != null ? headers : Map.of();
+            this.headers = copyHeaders(headers);
             this.elapsedMs = elapsedMs;
             this.apiResult = apiResult;
         }
@@ -632,7 +628,7 @@ public class OrcaHttpClient {
         }
 
         public Map<String, List<String>> headers() {
-            return headers;
+            return headers.isEmpty() ? Map.of() : copyHeaders(headers);
         }
 
         public long elapsedMs() {
@@ -642,5 +638,24 @@ public class OrcaHttpClient {
         public OrcaApiResult apiResult() {
             return apiResult;
         }
+    }
+
+    private static List<String> copyWarnings(List<String> source) {
+        return source == null || source.isEmpty() ? List.of() : List.copyOf(source);
+    }
+
+    private static Map<String, List<String>> copyHeaders(Map<String, List<String>> source) {
+        if (source == null || source.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, List<String>> copy = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : source.entrySet()) {
+            if (entry.getKey() == null) {
+                continue;
+            }
+            List<String> value = entry.getValue();
+            copy.put(entry.getKey(), value == null ? List.of() : List.copyOf(value));
+        }
+        return Map.copyOf(copy);
     }
 }

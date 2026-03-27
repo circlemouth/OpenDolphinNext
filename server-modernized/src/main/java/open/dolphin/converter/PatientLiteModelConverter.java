@@ -41,6 +41,6 @@ public final class PatientLiteModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PatientLiteModel)model;
+        this.model = ModelCopySupport.copy((PatientLiteModel) model, PatientLiteModel::new);
     }
 }

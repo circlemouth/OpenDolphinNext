@@ -32,6 +32,6 @@ public final class ModuleInfoBeanConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (ModuleInfoBean)model;
+        this.model = ModelCopySupport.copy((ModuleInfoBean) model, ModuleInfoBean::new);
     }
 }

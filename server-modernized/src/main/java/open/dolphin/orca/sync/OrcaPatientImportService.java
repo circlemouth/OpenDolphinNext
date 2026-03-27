@@ -32,11 +32,6 @@ public class OrcaPatientImportService {
         // CDI
     }
 
-    public OrcaPatientImportService(OrcaLiveGateway liveGateway, PatientServiceBean patientServiceBean) {
-        this.liveGateway = liveGateway;
-        this.patientServiceBean = patientServiceBean;
-    }
-
     @Inject
     void setLiveGateway(OrcaLiveGateway liveGateway) {
         this.liveGateway = liveGateway;

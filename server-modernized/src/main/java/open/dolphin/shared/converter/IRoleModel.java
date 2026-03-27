@@ -30,6 +30,6 @@ public class IRoleModel implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (RoleModel)model;
+        this.model = ModelCopySupport.copy((RoleModel) model, RoleModel::new);
     }
 }

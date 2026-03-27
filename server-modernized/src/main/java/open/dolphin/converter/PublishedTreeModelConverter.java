@@ -1,6 +1,7 @@
 package open.dolphin.converter;
 
 import java.util.Date;
+import java.util.Arrays;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.PublishedTreeModel;
 
@@ -57,7 +58,8 @@ public final class PublishedTreeModelConverter implements IInfoModelConverter {
     }
 
     public byte[] getTreeBytes() {
-        return model.getTreeBytes();
+        byte[] treeBytes = model.getTreeBytes();
+        return treeBytes == null ? null : Arrays.copyOf(treeBytes, treeBytes.length);
     }
 
     public String getTreeXml() {
@@ -70,6 +72,6 @@ public final class PublishedTreeModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PublishedTreeModel)model;
+        this.model = ModelCopySupport.copy((PublishedTreeModel) model, PublishedTreeModel::new);
     }
 }

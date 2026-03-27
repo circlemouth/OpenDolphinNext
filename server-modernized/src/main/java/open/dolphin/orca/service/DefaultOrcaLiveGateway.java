@@ -6,6 +6,7 @@ import jakarta.enterprise.inject.spi.CDI;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
+import java.util.function.Function;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.transport.OrcaEndpoint;
@@ -49,9 +50,9 @@ import open.dolphin.orca.service.OrcaLiveGatewaySupport.InsuranceSelection;
 @ApplicationScoped
 public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
 
-    public static final String BLOCKER_TAG = "TrialLocalOnly";
-    public static final int MAX_APPOINTMENT_RANGE_DAYS = 31;
-    public static final int MAX_VISIT_RANGE_DAYS = 31;
+    static final String BLOCKER_TAG = "TrialLocalOnly";
+    static final int MAX_APPOINTMENT_RANGE_DAYS = 31;
+    static final int MAX_VISIT_RANGE_DAYS = 31;
 
     private OrcaTransport transport;
 
@@ -68,7 +69,7 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
      */
     public DefaultOrcaLiveGateway(OrcaTransport transport, OrcaXmlMapper mapper) {
         this.transport = transport;
-        this.mapper = mapper;
+        this.mapper = new OrcaXmlMapper();
     }
 
     @PostConstruct
@@ -97,9 +98,13 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
             String payload = buildAppointmentListPayload(cursor, request);
             OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.APPOINTMENT_LIST, OrcaTransportRequest.post(payload));
             String xml = result != null ? result.getBody() : null;
-            OrcaAppointmentListResponse daily = mapper.toAppointmentList(xml);
+            OrcaAppointmentListResponse daily = mapResponse(xml, mapper::toAppointmentList);
             if (aggregate == null) {
-                aggregate = daily;
+                aggregate = daily != null ? daily : new OrcaAppointmentListResponse();
+                if (daily == null) {
+                    aggregate.setApiResult("00");
+                    aggregate.setApiResultMessage("No data");
+                }
             } else if (daily != null) {
                 aggregate.getSlots().addAll(daily.getSlots());
             }
@@ -125,10 +130,11 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildPatientAppointmentListPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.PATIENT_APPOINTMENT_LIST, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        PatientAppointmentListResponse response = mapper.toPatientAppointments(xml);
-        if (response != null) {
-            response.setRecordsReturned(response.getReservations().size());
+        PatientAppointmentListResponse response = mapResponse(xml, mapper::toPatientAppointments);
+        if (response == null) {
+            response = new PatientAppointmentListResponse();
         }
+        response.setRecordsReturned(response.getReservations().size());
         enrich(response, result);
         return response;
     }
@@ -140,7 +146,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildBillingSimulationPayload(request, insurance);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.BILLING_SIMULATION, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        BillingSimulationResponse response = mapper.toBillingSimulation(xml);
+        BillingSimulationResponse response = mapResponse(xml, mapper::toBillingSimulation);
+        if (response == null) {
+            response = new BillingSimulationResponse();
+        }
         enrich(response, result);
         return response;
     }
@@ -152,10 +161,11 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildVisitListPayload(request, range);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.VISIT_LIST, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        VisitPatientListResponse response = mapper.toVisitList(xml);
-        if (response != null) {
-            response.setRecordsReturned(response.getVisits().size());
+        VisitPatientListResponse response = mapResponse(xml, mapper::toVisitList);
+        if (response == null) {
+            response = new VisitPatientListResponse();
         }
+        response.setRecordsReturned(response.getVisits().size());
         if (range.from().equals(range.to())) {
             response.setVisitDate(range.from().toString());
         } else {
@@ -171,7 +181,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildPatientIdListPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.PATIENT_ID_LIST, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        PatientIdListResponse response = mapper.toPatientIdList(xml);
+        PatientIdListResponse response = mapResponse(xml, mapper::toPatientIdList);
+        if (response == null) {
+            response = new PatientIdListResponse();
+        }
         enrich(response, result);
         return response;
     }
@@ -182,7 +195,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildPatientBatchPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.PATIENT_BATCH, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        PatientBatchResponse response = mapper.toPatientBatch(xml);
+        PatientBatchResponse response = mapResponse(xml, mapper::toPatientBatch);
+        if (response == null) {
+            response = new PatientBatchResponse();
+        }
         if (!request.isIncludeInsurance()) {
             for (PatientDetail detail : response.getPatients()) {
                 detail.getInsurances().clear();
@@ -200,7 +216,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.PATIENT_NAME_SEARCH, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
         String searchTerm = request.getName() != null ? request.getName() : request.getKana();
-        PatientSearchResponse response = mapper.toPatientSearch(xml, searchTerm);
+        PatientSearchResponse response = mapResponse(xml, v -> mapper.toPatientSearch(v, searchTerm));
+        if (response == null) {
+            response = new PatientSearchResponse();
+        }
         enrich(response, result);
         return response;
     }
@@ -211,7 +230,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildInsuranceCombinationPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.INSURANCE_COMBINATION, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        InsuranceCombinationResponse response = mapper.toInsuranceCombination(xml);
+        InsuranceCombinationResponse response = mapResponse(xml, mapper::toInsuranceCombination);
+        if (response == null) {
+            response = new InsuranceCombinationResponse();
+        }
         enrich(response, result);
         return response;
     }
@@ -222,7 +244,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildFormerNameHistoryPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.FORMER_NAME_HISTORY, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        FormerNameHistoryResponse response = mapper.toFormerNames(xml);
+        FormerNameHistoryResponse response = mapResponse(xml, mapper::toFormerNames);
+        if (response == null) {
+            response = new FormerNameHistoryResponse();
+        }
         enrich(response, result);
         return response;
     }
@@ -233,7 +258,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildAppointmentMutationPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.APPOINTMENT_MUTATION, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        AppointmentMutationResponse response = mapper.toAppointmentMutation(xml);
+        AppointmentMutationResponse response = mapResponse(xml, mapper::toAppointmentMutation);
+        if (response == null) {
+            response = new AppointmentMutationResponse();
+        }
         enrich(response, result);
         return response;
     }
@@ -244,7 +272,10 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildVisitMutationPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.ACCEPTANCE_MUTATION, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        VisitMutationResponse response = mapper.toVisitMutation(xml);
+        VisitMutationResponse response = mapResponse(xml, mapper::toVisitMutation);
+        if (response == null) {
+            response = new VisitMutationResponse();
+        }
         enrich(response, result);
         return response;
     }
@@ -282,6 +313,7 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
     private String buildVisitMutationPayload(VisitMutationRequest request) { return support.buildVisitMutationPayload(request); }
     private void appendTag(StringBuilder builder, String tag, String value) { support.appendTag(builder, tag, value); }
     private void appendXml2Tag(StringBuilder builder, String tag, String value) { support.appendXml2Tag(builder, tag, value); }
+    private <T> T mapResponse(String xml, Function<String, T> converter) { return xml != null ? converter.apply(xml) : null; }
 
     private static String requireFacilityId(String facilityId) {
         if (facilityId == null || facilityId.isBlank()) {

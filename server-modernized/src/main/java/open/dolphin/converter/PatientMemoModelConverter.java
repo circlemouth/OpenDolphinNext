@@ -84,7 +84,7 @@ public final class PatientMemoModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (PatientMemoModel)m;
+        this.model = ModelCopySupport.copy((PatientMemoModel) m, PatientMemoModel::new);
         model.setKarteBean(toKarteReference(model.getKarteBean()));
         model.setUserModel(toUserReference(model.getUserModel()));
     }

@@ -59,7 +59,8 @@ public final class PVTHealthInsuranceModelConverter implements IInfoModelConvert
     }
 
     public String[] getContinuedDisease() {
-        return model.getContinuedDisease();
+        String[] continuedDisease = model.getContinuedDisease();
+        return continuedDisease == null ? null : Arrays.copyOf(continuedDisease, continuedDisease.length);
     }
 
     public String getPayInRatio() {
@@ -86,7 +87,7 @@ public final class PVTHealthInsuranceModelConverter implements IInfoModelConvert
 
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (PVTHealthInsuranceModel)m;
+        this.model = ModelCopySupport.copy((PVTHealthInsuranceModel) m, PVTHealthInsuranceModel::new);
         PVTPublicInsuranceItemModel[] testArray = model.getPVTPublicInsuranceItem();
         if (testArray!=null && testArray.length>0) {
             List<PVTPublicInsuranceItemModel> list = new ArrayList<PVTPublicInsuranceItemModel>();

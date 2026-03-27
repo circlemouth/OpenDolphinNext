@@ -78,10 +78,13 @@ public class LetterServiceBean {
 
     
     public long saveOrUpdateLetter(LetterModule model) {
+        if (model == null) {
+            return 0L;
+        }
 
         KarteBean resolvedKarte = null;
-        boolean updating = model != null && model.getLinkId() != 0L;
-        String previousPatientContext = setPatientContext(model != null ? model.getPatientId() : null);
+        boolean updating = model.getLinkId() != 0L;
+        String previousPatientContext = setPatientContext(model.getPatientId());
         String action = updating ? "LETTER_UPDATE" : "LETTER_CREATE";
 
         try {

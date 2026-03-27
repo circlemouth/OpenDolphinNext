@@ -226,6 +226,6 @@ public final class DocInfoModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (DocInfoModel)model;
+        this.model = ModelCopySupport.copy((DocInfoModel) model, DocInfoModel::new);
     }
 }

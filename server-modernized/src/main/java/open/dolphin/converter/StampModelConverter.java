@@ -32,6 +32,6 @@ public final class StampModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (StampModel)model;
+        this.model = ModelCopySupport.copy((StampModel) model, StampModel::new);
     }
 }

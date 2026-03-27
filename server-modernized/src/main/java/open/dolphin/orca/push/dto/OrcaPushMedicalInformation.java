@@ -10,6 +10,23 @@ public class OrcaPushMedicalInformation {
     private String Physician_Code;
     private String Invoice_Number;
 
+    public OrcaPushMedicalInformation() {
+    }
+
+    public OrcaPushMedicalInformation(OrcaPushMedicalInformation source) {
+        if (source == null) {
+            return;
+        }
+        this.Insurance_Combination_Number = source.Insurance_Combination_Number;
+        this.Department_Code = source.Department_Code;
+        this.Physician_Code = source.Physician_Code;
+        this.Invoice_Number = source.Invoice_Number;
+    }
+
+    public static OrcaPushMedicalInformation copyOf(OrcaPushMedicalInformation source) {
+        return source == null ? null : new OrcaPushMedicalInformation(source);
+    }
+
     public String getInsurance_Combination_Number() {
         return Insurance_Combination_Number;
     }

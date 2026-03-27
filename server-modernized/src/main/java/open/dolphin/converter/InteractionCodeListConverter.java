@@ -22,6 +22,6 @@ public class InteractionCodeListConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (InteractionCodeList)model;
+        this.model = ModelCopySupport.copy((InteractionCodeList) model, InteractionCodeList::new);
     }
 }

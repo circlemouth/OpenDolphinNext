@@ -31,16 +31,6 @@ public class OrcaPatientSyncRunner {
         // CDI
     }
 
-    public OrcaPatientSyncRunner(OrcaLiveGateway liveGateway,
-            OrcaPatientImportService importService,
-            OrcaSyncCursorStore cursorStore,
-            OrcaSyncRunStore runStore) {
-        this.liveGateway = liveGateway;
-        this.importService = importService;
-        this.cursorStore = cursorStore;
-        this.runStore = runStore;
-    }
-
     @Inject
     void setLiveGateway(OrcaLiveGateway liveGateway) {
         this.liveGateway = liveGateway;

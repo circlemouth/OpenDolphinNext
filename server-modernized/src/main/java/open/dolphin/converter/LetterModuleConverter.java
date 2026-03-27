@@ -231,7 +231,7 @@ public final class LetterModuleConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (LetterModule)m;
+        this.model = ModelCopySupport.copy((LetterModule) m, LetterModule::new);
         model.setKarteBean(toKarteReference(model.getKarteBean()));
         model.setUserModel(toUserReference(model.getUserModel()));
     }

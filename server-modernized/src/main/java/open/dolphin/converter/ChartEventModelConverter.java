@@ -67,6 +67,6 @@ public class ChartEventModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (ChartEventModel)model;
+        this.model = ModelCopySupport.copy((ChartEventModel) model, ChartEventModel::new);
     }   
 }

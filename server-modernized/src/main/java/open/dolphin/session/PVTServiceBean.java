@@ -245,7 +245,7 @@ public class PVTServiceBean {
 
     public int removePvtForFacility(String fid, long id) { if (fid == null || fid.isBlank()) return 0; try { PatientVisitModel exist = findPvtForFacility(fid, id); if (exist == null) return 0; em.remove(exist); return 1; } catch (Exception e) { return 0; } }
 
-    public int removePvt(long id) { PatientVisitModel exist = (PatientVisitModel) em.find(PatientVisitModel.class, new Long(id)); em.remove(exist); return 1; }
+    public int removePvt(long id) { PatientVisitModel exist = (PatientVisitModel) em.find(PatientVisitModel.class, Long.valueOf(id)); em.remove(exist); return 1; }
 
     public int updatePvtStateForFacility(String fid, long pk, int state) { PatientVisitModel exist = findPvtForFacility(fid, pk); return exist == null ? 0 : updatePvtStateInternal(exist, state); }
 
@@ -255,7 +255,7 @@ public class PVTServiceBean {
 
     public int updateMemoForFacility(String fid, long pk, String memo) { PatientVisitModel exist = findPvtForFacility(fid, pk); if (exist == null) return 0; exist.setMemo(memo); return 1; }
 
-    public int updateMemo(long pk, String memo) { PatientVisitModel exist = (PatientVisitModel) em.find(PatientVisitModel.class, new Long(pk)); exist.setMemo(memo); return 1; }
+    public int updateMemo(long pk, String memo) { PatientVisitModel exist = (PatientVisitModel) em.find(PatientVisitModel.class, Long.valueOf(pk)); exist.setMemo(memo); return 1; }
 
     private PatientVisitModel findPvtForFacility(String fid, long id) { if (fid == null || fid.isBlank()) return null; List<PatientVisitModel> list = em.createQuery(QUERY_PVT_BY_PK_FID).setParameter(ID, id).setParameter(FID, fid).setMaxResults(1).getResultList(); return list.isEmpty() ? null : list.get(0); }
 }

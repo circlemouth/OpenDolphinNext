@@ -90,6 +90,6 @@ public final class OrcaInputSetConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (OrcaInputSet)model;
+        this.model = ModelCopySupport.copy((OrcaInputSet) model, OrcaInputSet::new);
     }
 }

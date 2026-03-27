@@ -95,9 +95,9 @@ public class SessionTraceManager {
         if (preferredTraceId != null && !preferredTraceId.isBlank()) {
             return preferredTraceId;
         }
-        Object fromJboss = MDC.get(MDC_TRACE_ID_KEY);
-        if (fromJboss instanceof String existing && !existing.isBlank()) {
-            return existing;
+        String fromJboss = MDC.get(MDC_TRACE_ID_KEY);
+        if (fromJboss != null && !fromJboss.isBlank()) {
+            return fromJboss;
         }
         String fromSlf4j = org.slf4j.MDC.get(MDC_TRACE_ID_KEY);
         if (fromSlf4j != null && !fromSlf4j.isBlank()) {

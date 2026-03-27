@@ -77,6 +77,6 @@ public final class NLaboModuleConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (NLaboModule)model;
+        this.model = ModelCopySupport.copy((NLaboModule) model, NLaboModule::new);
     }
 }

@@ -48,6 +48,6 @@ public final class PVTPublicInsuranceItemModelConverter implements IInfoModelCon
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PVTPublicInsuranceItemModel)model;
+        this.model = ModelCopySupport.copy((PVTPublicInsuranceItemModel) model, PVTPublicInsuranceItemModel::new);
     }
 }

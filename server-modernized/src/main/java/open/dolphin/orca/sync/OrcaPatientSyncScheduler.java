@@ -83,16 +83,20 @@ public class OrcaPatientSyncScheduler {
             try {
                 var response = syncRunner.run(plan.facilityId(), plan.request(), "scheduler", plan.runId());
                 long elapsedMs = Duration.between(started, Instant.now()).toMillis();
+                String apiResult = response.getApiResult();
+                int createdCount = response.getCreatedCount();
+                int updatedCount = response.getUpdatedCount();
+                int fetchedCount = response.getFetchedCount();
                 LOGGER.log(Level.INFO,
                         "ORCA patient sync finished. facilityId={0} startDate={1} endDate={2} apiResult={3} created={4} updated={5} fetched={6} elapsedMs={7}",
                         new Object[]{
                                 plan.facilityId(),
                                 plan.request().getStartDate(),
                                 plan.request().getEndDate(),
-                                response != null ? response.getApiResult() : null,
-                                response != null ? response.getCreatedCount() : 0,
-                                response != null ? response.getUpdatedCount() : 0,
-                                response != null ? response.getFetchedCount() : 0,
+                                apiResult,
+                                createdCount,
+                                updatedCount,
+                                fetchedCount,
                                 elapsedMs
                         });
             } catch (Exception ex) {

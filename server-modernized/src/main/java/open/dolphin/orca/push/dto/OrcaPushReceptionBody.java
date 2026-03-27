@@ -14,6 +14,27 @@ public class OrcaPushReceptionBody implements OrcaPushBody {
     private String Physician_Code;
     private String Insurance_Combination_Number;
 
+    public OrcaPushReceptionBody() {
+    }
+
+    public OrcaPushReceptionBody(OrcaPushReceptionBody source) {
+        if (source == null) {
+            return;
+        }
+        this.Patient_Mode = source.Patient_Mode;
+        this.Patient_ID = source.Patient_ID;
+        this.Accept_Date = source.Accept_Date;
+        this.Accept_Time = source.Accept_Time;
+        this.Accept_Id = source.Accept_Id;
+        this.Department_Code = source.Department_Code;
+        this.Physician_Code = source.Physician_Code;
+        this.Insurance_Combination_Number = source.Insurance_Combination_Number;
+    }
+
+    public static OrcaPushReceptionBody copyOf(OrcaPushReceptionBody source) {
+        return source == null ? null : new OrcaPushReceptionBody(source);
+    }
+
     public String getPatient_Mode() {
         return Patient_Mode;
     }

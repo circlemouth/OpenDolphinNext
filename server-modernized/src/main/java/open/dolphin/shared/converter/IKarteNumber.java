@@ -1,6 +1,7 @@
 package open.dolphin.shared.converter;
 
 import open.dolphin.converter.IInfoModelConverter;
+import open.dolphin.converter.ModelCopySupport;
 import open.dolphin.infomodel.KarteNumber;
 import open.dolphin.infomodel.IInfoModel;
 
@@ -26,6 +27,6 @@ public class IKarteNumber implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (KarteNumber)m;
+        this.model = ModelCopySupport.copy((KarteNumber) m, KarteNumber::new);
     }
 }

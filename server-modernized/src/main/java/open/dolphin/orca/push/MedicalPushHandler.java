@@ -47,7 +47,7 @@ public class MedicalPushHandler implements OrcaPushEventHandler {
         }
         String eventUuid = normalize(eventData != null ? eventData.getUuid() : null);
         String eventName = normalize(eventData != null ? eventData.getEvent() : null);
-        Instant eventTime = parseInstant(eventData.getTime());
+        Instant eventTime = parseInstant(eventData != null ? eventData.getTime() : null);
         if (eventInboxStore.isApplied(facilityId, STREAM_KIND, eventUuid)) {
             metricsRegistrar.recordDuplicate(facilityId, eventName, mode());
             return;

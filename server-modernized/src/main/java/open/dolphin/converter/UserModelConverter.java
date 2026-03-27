@@ -112,6 +112,6 @@ public final class UserModelConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (UserModel)model;
+        this.model = ModelCopySupport.copy((UserModel) model, UserModel::new);
     }
 }

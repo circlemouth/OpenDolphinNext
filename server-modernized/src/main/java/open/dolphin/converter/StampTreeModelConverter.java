@@ -1,6 +1,7 @@
 package open.dolphin.converter;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Date;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.StampTreeModel;
@@ -66,7 +67,8 @@ public final class StampTreeModelConverter implements IInfoModelConverter {
     }
 
     public byte[] getTreeBytes() {
-        return model.getTreeBytes();
+        byte[] treeBytes = model.getTreeBytes();
+        return treeBytes == null ? null : Arrays.copyOf(treeBytes, treeBytes.length);
     }
 
 // XML 送信不可    
@@ -82,7 +84,7 @@ public final class StampTreeModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (StampTreeModel)model;
+        this.model = ModelCopySupport.copy((StampTreeModel) model, StampTreeModel::new);
         ensureTreeBytes();
     }
 

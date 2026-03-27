@@ -40,6 +40,6 @@ public class StampTreeHolderConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (StampTreeHolder)model;
+        this.model = ModelCopySupport.copy((StampTreeHolder) model, StampTreeHolder::new);
     }
 }

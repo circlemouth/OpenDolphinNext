@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -89,7 +90,8 @@ public class NLabServiceBean {
 
     
     public PatientModel create(String fid, NLaboModule module) {
-        String fidPidBeforeNormalization = fid != null && module != null ? fid + ":" + module.getPatientId() : null;
+        Objects.requireNonNull(module, "module");
+        String fidPidBeforeNormalization = fid != null ? fid + ":" + module.getPatientId() : null;
         String previousPatientContext = setPatientContext(extractPatientId(fidPidBeforeNormalization));
         final String action = "LAB_TEST_CREATE";
         try {
@@ -101,10 +103,10 @@ public class NLabServiceBean {
             NLaboModule exist = findExistingModule(fidPid, module.getSampleDate(), module.getLaboCenterCode(), module.getModuleKey());
             if (exist != null) em.remove(exist);
             em.persist(module);
-            recordLabAudit(action, fidPidBeforeNormalization != null ? fidPidBeforeNormalization : module.getPatientId(), module != null ? module.getLaboCenterCode() : null, module != null && module.getItems() != null ? module.getItems().size() : 0, null, buildModuleDetails(module));
+            recordLabAudit(action, fidPidBeforeNormalization != null ? fidPidBeforeNormalization : module.getPatientId(), module.getLaboCenterCode(), module.getItems() != null ? module.getItems().size() : 0, null, buildModuleDetails(module));
             return patient;
         } catch (RuntimeException ex) {
-            recordLabAudit(action, fidPidBeforeNormalization, module != null ? module.getLaboCenterCode() : null, module != null && module.getItems() != null ? module.getItems().size() : 0, ex, buildModuleDetails(module));
+            recordLabAudit(action, fidPidBeforeNormalization, module.getLaboCenterCode(), module.getItems() != null ? module.getItems().size() : 0, ex, buildModuleDetails(module));
             throw ex;
         } finally {
             restorePatientContext(previousPatientContext);
@@ -266,8 +268,8 @@ public class NLabServiceBean {
                     null, moduleIdDetails(id));
             return 1;
         } catch (RuntimeException ex) {
-            recordLabAudit(action, fidPid, target != null ? target.getLaboCenterCode() : null,
-                    target != null && target.getItems() != null ? target.getItems().size() : 0,
+            recordLabAudit(action, fidPid, target.getLaboCenterCode(),
+                    target.getItems() != null ? target.getItems().size() : 0,
                     ex, moduleIdDetails(id));
             throw ex;
         } finally {

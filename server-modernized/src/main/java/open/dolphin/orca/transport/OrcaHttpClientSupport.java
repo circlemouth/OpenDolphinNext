@@ -2,6 +2,7 @@ package open.dolphin.orca.transport;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -44,7 +45,7 @@ final class OrcaHttpClientSupport {
             String apiMessage = messageNode.map(JsonNode::asText).orElse(null);
             List<String> warnings = extractWarningsFromJson(root);
             return OrcaHttpClient.OrcaApiResult.of(apiResult, apiMessage, warnings);
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             return null;
         }
     }

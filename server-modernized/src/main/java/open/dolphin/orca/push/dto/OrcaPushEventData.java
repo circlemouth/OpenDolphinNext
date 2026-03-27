@@ -14,6 +14,25 @@ public class OrcaPushEventData {
     @JsonProperty("body")
     private OrcaPushBody body;
 
+    public OrcaPushEventData() {
+    }
+
+    public OrcaPushEventData(OrcaPushEventData source) {
+        if (source == null) {
+            return;
+        }
+        this.id = source.id;
+        this.uuid = source.uuid;
+        this.event = source.event;
+        this.user = source.user;
+        this.time = source.time;
+        this.body = copyBody(source.body);
+    }
+
+    public static OrcaPushEventData copyOf(OrcaPushEventData source) {
+        return source == null ? null : new OrcaPushEventData(source);
+    }
+
     public String getId() {
         return id;
     }
@@ -59,6 +78,16 @@ public class OrcaPushEventData {
     }
 
     public void setBody(OrcaPushBody body) {
-        this.body = body;
+        this.body = copyBody(body);
+    }
+
+    private static OrcaPushBody copyBody(OrcaPushBody source) {
+        if (source instanceof OrcaPushMedicalBody medicalBody) {
+            return OrcaPushMedicalBody.copyOf(medicalBody);
+        }
+        if (source instanceof OrcaPushReceptionBody receptionBody) {
+            return OrcaPushReceptionBody.copyOf(receptionBody);
+        }
+        return source;
     }
 }

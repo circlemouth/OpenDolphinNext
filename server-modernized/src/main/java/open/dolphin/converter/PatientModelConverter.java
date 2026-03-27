@@ -3,6 +3,7 @@ package open.dolphin.converter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import open.dolphin.infomodel.HealthInsuranceModel;
 import open.dolphin.infomodel.IInfoModel;
@@ -68,7 +69,8 @@ public final class PatientModelConverter implements IInfoModelConverter {
     }
 
     public byte[] getJpegPhoto() {
-        return model.getJpegPhoto();
+        byte[] jpegPhoto = model.getJpegPhoto();
+        return jpegPhoto == null ? null : Arrays.copyOf(jpegPhoto, jpegPhoto.length);
     }
 
     public String getMemo() {
@@ -130,6 +132,6 @@ public final class PatientModelConverter implements IInfoModelConverter {
     
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PatientModel)model;
+        this.model = ModelCopySupport.copy((PatientModel) model, PatientModel::new);
     }
 }

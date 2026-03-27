@@ -1,6 +1,8 @@
 package open.dolphin.orca.transport;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,7 +25,7 @@ public final class OrcaTransportResult {
         this.status = status;
         this.body = body;
         this.contentType = contentType;
-        this.headers = headers != null ? headers : Collections.emptyMap();
+        this.headers = copyHeaders(headers);
     }
 
     public static OrcaTransportResult fallback(String body, String contentType) {
@@ -51,6 +53,22 @@ public final class OrcaTransportResult {
     }
 
     public Map<String, List<String>> getHeaders() {
-        return headers;
+        return copyHeaders(headers);
+    }
+
+    private static Map<String, List<String>> copyHeaders(Map<String, List<String>> source) {
+        if (source == null || source.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, List<String>> copy = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : source.entrySet()) {
+            String key = entry.getKey();
+            if (key == null) {
+                continue;
+            }
+            List<String> value = entry.getValue();
+            copy.put(key, value == null ? List.of() : Collections.unmodifiableList(new ArrayList<>(value)));
+        }
+        return Collections.unmodifiableMap(copy);
     }
 }

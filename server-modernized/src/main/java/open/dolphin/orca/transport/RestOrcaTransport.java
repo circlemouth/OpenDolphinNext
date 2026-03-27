@@ -291,7 +291,7 @@ public class RestOrcaTransport implements OrcaTransport {
 
     private long resolveCacheTtlMs() {
         ServerRuntimeConfiguration.OrcaTransportHttpSettings settings = resolver().orcaTransportHttp();
-        Long configured = settings != null ? settings.cacheTtlMs() : null;
+        Long configured = settings.cacheTtlMs();
         return configured != null ? Math.max(0L, configured) : DEFAULT_CACHE_TTL_MS;
     }
 

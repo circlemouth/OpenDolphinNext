@@ -3,6 +3,7 @@ package open.dolphin.shared.converter;
 import java.util.ArrayList;
 import java.util.List;
 import open.dolphin.converter.IInfoModelConverter;
+import open.dolphin.converter.ModelCopySupport;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.PatientList;
 import open.dolphin.infomodel.PatientModel;
@@ -29,6 +30,6 @@ public abstract class IPatientList<T> implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (PatientList) model;
+        this.model = ModelCopySupport.copy((PatientList) model, PatientList::new);
     }
 }

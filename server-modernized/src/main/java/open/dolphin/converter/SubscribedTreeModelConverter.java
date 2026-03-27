@@ -33,6 +33,6 @@ public final class SubscribedTreeModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel model) {
-        this.model = (SubscribedTreeModel)model;
+        this.model = ModelCopySupport.copy((SubscribedTreeModel) model, SubscribedTreeModel::new);
     }
 }

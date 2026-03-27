@@ -40,7 +40,7 @@ public final class SessionTraceContext {
 
     public Map<String, String> getAttributes() {
         if (attributes.isEmpty()) {
-            return attributes;
+            return Collections.emptyMap();
         }
         return Collections.unmodifiableMap(new HashMap<>(attributes));
     }

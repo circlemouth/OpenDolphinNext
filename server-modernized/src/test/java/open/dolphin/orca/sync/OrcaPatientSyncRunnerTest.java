@@ -34,7 +34,11 @@ class OrcaPatientSyncRunnerTest {
             setField(runStore, "dataSource", dataSource);
 
             FakeImportService importService = new FakeImportService(false);
-            OrcaPatientSyncRunner runner = new OrcaPatientSyncRunner(new FakeLiveGateway(), importService, cursorStore, runStore);
+            OrcaPatientSyncRunner runner = new OrcaPatientSyncRunner();
+            runner.setLiveGateway(new FakeLiveGateway());
+            runner.setImportService(importService);
+            runner.setCursorStore(cursorStore);
+            runner.setRunStore(runStore);
 
             PatientSyncRequest request = new PatientSyncRequest();
             request.setStartDate(LocalDate.of(2026, 3, 20));
@@ -63,11 +67,11 @@ class OrcaPatientSyncRunnerTest {
             setField(runStore, "dataSource", dataSource);
             cursorStore.save("F001", OrcaPatientSyncPlanner.STREAM_KIND, "date", "2026-03-19", "RUN-BEFORE");
 
-            OrcaPatientSyncRunner runner = new OrcaPatientSyncRunner(
-                    new FakeLiveGateway(),
-                    new FakeImportService(true),
-                    cursorStore,
-                    runStore);
+            OrcaPatientSyncRunner runner = new OrcaPatientSyncRunner();
+            runner.setLiveGateway(new FakeLiveGateway());
+            runner.setImportService(new FakeImportService(true));
+            runner.setCursorStore(cursorStore);
+            runner.setRunStore(runStore);
 
             PatientSyncRequest request = new PatientSyncRequest();
             request.setStartDate(LocalDate.of(2026, 3, 20));

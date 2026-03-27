@@ -101,7 +101,7 @@ public final class AppointmentModelConverter implements IInfoModelConverter {
 
     @Override
     public void setModel(IInfoModel m) {
-        this.model = (AppointmentModel)m;
+        this.model = ModelCopySupport.copy((AppointmentModel) m, AppointmentModel::new);
         model.setKarteBean(toKarteReference(model.getKarteBean()));
         model.setUserModel(toUserReference(model.getUserModel()));
     }
