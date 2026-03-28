@@ -1,7 +1,7 @@
 # Server-Modernization ドキュメントハブ（現行）
 
-- 更新日: 2026-03-27
-- RUN_ID: 20260327T063611Z
+- 更新日: 2026-03-28
+- RUN_ID: 20260328T033006Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
@@ -45,6 +45,7 @@
 - `docs/development/supporting/phase3_wave2_prompt_pack/README.md`
 - `docs/development/supporting/phase3_wave3_prompt_pack/README.md`
 - `docs/development/supporting/phase3_wave4_prompt_pack/README.md`
+- `docs/development/supporting/phase3_post_decision_prompt_pack/README.md`
 - 用途: `common` 廃止・公開面整理・品質ゲート強制までの cleanup track を `A01`〜`A10` のときは 1 体ずつ、現行 phase3 では `WS0` 起点で `WS1`〜`WS8` を必要最小限で進めるための現行導線。
 - 注意: 進捗判定は上記 orchestration plan を正本とし、旧 `codex_automation_workplan_revised.md` 系は履歴確認用途に限定する。
 - 最新実績: RUN_ID `20260320T205337Z` で cleanup track `A10`「packaging / CI / 品質ゲート強制」を完了。現行は `prompts/phase3/` 配下の WS0〜WS8 を継続実行する。
@@ -52,6 +53,7 @@
 - static-analysis Wave 2 の支援資料は `docs/development/supporting/phase3_wave2_prompt_pack/` に配置済み。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - static-analysis Wave 3 の支援資料は `docs/development/supporting/phase3_wave3_prompt_pack/` に配置済み。inventory 正本は同じく `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - static-analysis Wave 4 の支援資料は `docs/development/supporting/phase3_wave4_prompt_pack/` に配置済み。inventory 正本は同じく `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
+- post-decision の支援資料は `docs/development/supporting/phase3_post_decision_prompt_pack/` に配置済み。static-analysis contract / workflow restore / minimal release gate の repo-local truth を扱う。
 
 ## 参照優先順位（Server-Modernization領域）
 1. `docs/DEVELOPMENT_STATUS.md`
@@ -205,10 +207,8 @@
 - 作成手順:
   - `cp ops/modernized-server/config/server-modernized.production.env.sample ops/modernized-server/config/server-modernized.production.env`
   - 必要に応じて `MODERNIZED_CUSTOM_PROPERTIES_FILE` で `custom.properties` の参照先を切り替える。
-- ORCA Trial の公開情報は sample に既定値として反映済み:
-  - `ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/`
-  - `ORCA_API_USER=trial`
-  - `ORCA_API_PASSWORD=weborcatrial`
+- production / validation sample は placeholder のみを保持し、実値は毎回ローカル env / secret mount で注入する。
+- WebORCA Trial を使う検証だけは `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` の公開接続情報を参照し、production sample へ直書きしない。
 
 ### テスト実行方針（server-modernized / Mockito inline）
 - 既定実行は **JDK25（Homebrew OpenJDK）** を使用する。
@@ -258,9 +258,15 @@
   - `bash ./scripts/server-modernized/verify-release-critical.sh`
 - reporting release-critical:
   - `bash ./scripts/reporting/verify.sh`
-- static analysis（reporting + server-modernized）:
-  - `bash ./scripts/server-modernized/verify-static-analysis.sh`
-  - baseline burn-down 完了前のため、恒常 green 前提の PR required check ではなく manual/nightly 運用とする
+- static analysis authoritative entrypoint:
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+  - `bash ./scripts/server-modernized/verify-static-analysis.sh` は同一契約へ委譲する thin wrapper として保持するが、repo-local truth の正本ではない
+  - SpotBugs / FindSecBugs は fail-on-error を維持し、Checkstyle / PMD は skip のまま維持する
+- minimal release gate（mandatory）:
+  1. `cd web-client && npm run ci`
+  2. `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+  3. `cd web-client && node scripts/runtime-ready-smoke.mjs`
+- branch protection / required checks は repo-external であり、ここでは unknown とする
 - CI workflow:
   - `.github/workflows/web-client-test-shards.yml`
   - `.github/workflows/e2e.yml`

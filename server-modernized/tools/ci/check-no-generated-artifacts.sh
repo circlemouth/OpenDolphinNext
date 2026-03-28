@@ -23,6 +23,14 @@ cd "$ROOT_DIR"
 artifact_pattern='(^|/)target(/|$)|\.war$|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$'
 review_target_exclude_pattern='^artifacts/'
 
+filter_review_target() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -v "$review_target_exclude_pattern" | rg "$artifact_pattern"
+  else
+    grep -E -v "$review_target_exclude_pattern" | grep -E "$artifact_pattern"
+  fi
+}
+
 if git rev-parse --git-dir >/dev/null 2>&1; then
   offenders=$(
     {
@@ -30,8 +38,7 @@ if git rev-parse --git-dir >/dev/null 2>&1; then
       git ls-files --others --exclude-standard -z
     } |
       tr '\0' '\n' |
-      rg -v "$review_target_exclude_pattern" |
-      rg "$artifact_pattern" |
+      filter_review_target |
       sort -u || true
   )
 else
@@ -44,8 +51,7 @@ else
       -name 'Thumbs.db' \
     \) -print \
       | sed 's#^\./##' \
-      | rg -v "$review_target_exclude_pattern" \
-      | rg "$artifact_pattern" \
+      | filter_review_target \
       | sort -u || true
   )
 fi

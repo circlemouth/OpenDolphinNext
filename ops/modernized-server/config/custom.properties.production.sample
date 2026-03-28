@@ -1,3 +1,3 @@
-# Production profile sample (public WebORCA Trial defaults)
-orca.id=trial
-orca.password=weborcatrial
+# Production profile sample
+orca.id=replace_me_orca_user
+orca.password=replace_me_orca_password

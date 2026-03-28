@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.List;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
@@ -25,6 +26,7 @@ class RestOrcaTransportTest {
     @Test
     void currentSettingsUsesExplicitFacilityAndReusesHttpClientWithinCacheTtl() throws Exception {
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.listConfiguredFacilityIds()).thenReturn(List.of(FACILITY_ID));
         when(store.resolve(FACILITY_ID)).thenReturn(resolvedConnection(
                 "https://default.example.orca",
                 "default-user",
@@ -51,6 +53,7 @@ class RestOrcaTransportTest {
     @Test
     void facilityScopedLookupUsesFacilitySpecificAdminConfig() throws Exception {
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.listConfiguredFacilityIds()).thenReturn(List.of(FACILITY_ID));
         when(store.resolve(FACILITY_ID)).thenReturn(resolvedConnection(
                 "https://facility.example.orca",
                 "facility-user",
@@ -73,6 +76,7 @@ class RestOrcaTransportTest {
     @Test
     void reloadSettingsReusesHttpClientWhenResolvedConfigUnchanged() throws Exception {
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.listConfiguredFacilityIds()).thenReturn(List.of(FACILITY_ID));
         when(store.resolve(FACILITY_ID)).thenReturn(resolvedConnection(
                 "https://same.example.orca",
                 "same-user",
@@ -95,6 +99,7 @@ class RestOrcaTransportTest {
     @Test
     void reloadSettingsReplacesHttpClientWhenResolvedConfigChanges() throws Exception {
         OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.listConfiguredFacilityIds()).thenReturn(List.of(FACILITY_ID));
         when(store.resolve(FACILITY_ID))
                 .thenReturn(resolvedConnection("https://first.example.orca", "user-a", "pass-a"))
                 .thenReturn(resolvedConnection("https://second.example.orca", "user-b", "pass-b"));

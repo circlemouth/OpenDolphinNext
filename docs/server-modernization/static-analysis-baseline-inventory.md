@@ -3,12 +3,14 @@
 - Date: 2026-03-28
 - RUN_ID: 20260327T225253Z
 - Scope: `server-modernized` SpotBugs / FindSecBugs Wave 4 integrated snapshot
-- Canonical command: `bash ./scripts/server-modernized/verify-static-analysis.sh`
+- Authoritative command: `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+- Thin wrapper: `bash ./scripts/server-modernized/verify-static-analysis.sh`
 
 ## Intent
 
 - Keep parent POM intent unchanged: SpotBugs / FindSecBugs remain fail-on-error.
 - Keep Checkstyle / PMD unchanged.
+- Keep the authoritative entrypoint explicit and repo-local.
 - Record the Wave 4 integrated baseline without threshold relaxation, blanket suppression, or filter weakening.
 
 ## Before Counts
@@ -80,6 +82,8 @@
 ## Commands Used
 
 ```bash
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
+
 mvn -f pom.server-modernized.xml -pl server-modernized -am -DskipTests compile
 
 bash ./scripts/server-modernized/verify-static-analysis.sh
@@ -87,6 +91,8 @@ bash ./scripts/server-modernized/verify-static-analysis.sh
 
 ## Notes / Unknown
 
+- `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` is the repo-local authoritative static-analysis entrypoint.
+- `bash ./scripts/server-modernized/verify-static-analysis.sh` remains as a convenience wrapper that delegates to the same contract.
 - `compile` passed.
 - `bash ./scripts/server-modernized/verify-static-analysis.sh` passed.
 - The current snapshot leaves no remaining SpotBugs / FindSecBugs findings.

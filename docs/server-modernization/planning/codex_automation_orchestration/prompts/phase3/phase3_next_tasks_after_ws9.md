@@ -59,6 +59,10 @@ current repo を正本とし、後方互換性は考慮しない。
 - `docs/development/supporting/phase3_wave4_prompt_pack/README.md`
 - 目的: Wave 3 の次に進める static-analysis Wave 4 の現行支援資料。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md`。
 
+## Post-Decision 支援資料
+- `docs/development/supporting/phase3_post_decision_prompt_pack/README.md`
+- 目的: repo-only で確定した static-analysis / release gate の判断を repo-local truth として反映する現行支援資料。
+
 ## T10-C: stale QA/admin contract cleanup
 - [ ] `web-client/scripts/qa-order-master-ui.mjs`
 - [ ] `web-client/scripts/qa-soap-persistence.mjs`

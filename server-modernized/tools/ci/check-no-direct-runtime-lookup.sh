@@ -20,6 +20,14 @@ if [[ -z "$ROOT_DIR" ]]; then
 fi
 cd "$ROOT_DIR"
 
+list_runtime_lookup_offenders() {
+  if command -v rg >/dev/null 2>&1; then
+    rg -l -e 'System\.getenv\(' -e 'System\.getProperty\(' -e 'ConfigProvider\.getConfig\(' server-modernized/src/main/java || true
+  else
+    grep -R -l -E 'System\.getenv\(|System\.getProperty\(|ConfigProvider\.getConfig\(' server-modernized/src/main/java || true
+  fi
+}
+
 allowed_files=(
   "server-modernized/src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java"
 )
@@ -37,7 +45,7 @@ while IFS= read -r file; do
     printf '  %s\n' "$file" >&2
     offender_found=1
   fi
-done < <(rg -l -e 'System\.getenv\(' -e 'System\.getProperty\(' -e 'ConfigProvider\.getConfig\(' server-modernized/src/main/java || true)
+done < <(list_runtime_lookup_offenders)
 
 if [[ "$offender_found" -ne 0 ]]; then
   printf 'direct runtime lookup outside allowlist:\n' >&2

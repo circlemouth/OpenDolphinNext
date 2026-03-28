@@ -1,4 +1,4 @@
-# 開発状況（単一参照, 更新日: 2026-03-27）
+# 開発状況（単一参照, 更新日: 2026-03-28）
 
 ## 現行ステータス
 - `docs/development/phase2_current_coding_tasks_checklist_v1.md` は、2026-03-24 以降の `server-modernized` 現行開発計画正本である。
@@ -12,6 +12,10 @@
 - `docs/development/supporting/phase3_wave2_prompt_pack/` は、static-analysis Wave 2 の現行支援資料置き場である。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - `docs/development/supporting/phase3_wave3_prompt_pack/` は、static-analysis Wave 3 の現行支援資料置き場である。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - `docs/development/supporting/phase3_wave4_prompt_pack/` は、static-analysis Wave 4 の現行支援資料置き場である。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
+- `docs/development/supporting/phase3_post_decision_prompt_pack/` は、Phase3+ post-decision 実装の現行支援資料置き場である。repo-only で確定した static-analysis / release gate 判断を repo-local truth として反映する。
+- Phase3+ post-decision の repo-local truth は、`mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` を static-analysis authoritative entrypoint とし、`cd web-client && npm run ci` / `cd web-client && node scripts/runtime-ready-smoke.mjs` を含む minimal release gate を mandatory として明記する。
+- `scripts/server-modernized/verify-static-analysis.sh` は convenience wrapper として残すが、正本ではない。
+- branch protection / required checks は repo-external のため unknown とする。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` は、server modernization automation の作業記録として保持する **Legacy/Archive** 扱いの開発ドキュメントである。
 - `docs/development/supporting/phase2a_handoff_docs_bundle/` は、現行計画を補助する追加資料置き場である。正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md` のまま変更しない。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。
@@ -56,6 +60,8 @@
   - 変更: wave3 README を追加し、WS0 / WSA〜WSD / inventory の参照順を明示した。`static-analysis-baseline-inventory.md` の曖昧参照を repo-root 相対の実パスに置き換えた。
 - 2026-03-27: static-analysis Wave 4 の支援資料を `docs/development/supporting/phase3_wave4_prompt_pack/` へ移設し、inventory 正本 `docs/server-modernization/static-analysis-baseline-inventory.md` と agent 向け導線を同期した（RUN_ID=20260327T224925Z）。
   - 変更: wave4 README を追加し、WS0 / WSA〜WSG / inventory の参照順を明示した。`static-analysis-baseline-inventory.md` の曖昧参照を repo-root 相対の実パスに置き換えた。
+- 2026-03-28: Phase3+ post-decision の支援資料を `docs/development/supporting/phase3_post_decision_prompt_pack/` へ移設し、static-analysis contract / workflow restore / minimal release gate の repo-local truth を同期した（RUN_ID=20260328T032318Z）。
+  - 変更: post-decision README を追加し、WS0 / WSA〜WSD / shared context の参照順を明示した。repo-visible docs との導線を `docs/development/README.md`、`docs/server-modernization/README.md`、`docs/server-modernization/planning/codex_automation_orchestration/README.md`、`docs/server-modernization/planning/codex_automation_orchestration/prompts/phase3/phase3_next_tasks_after_ws9.md` に接続した。
 - 2026-03-26: task 7 の formal local summary route を実装し、Charts medical summary replacement を placeholder から正式 GET 契約へ切り替えた。public route は `GET /api/local-summary/encounters/{encounterKey}/medical-summary`、canonical target は `encounterKey` のみ、`sourcePath` は固定文字列、top-level envelope は `recordsReturned` / `outcome` / `sourcePath` / `payload.outpatientList` を維持する。old blocked route `/api/orca/medical/outpatient`、`/api/orca/local-medical/outpatient`、`/api/orca/deptinfo` は未登録のまま維持し、client は `encounterKey` 不在時に `sourcePath=key_unavailable` の fail-closed placeholder を返す。`pause` / `finish` を summary refresh trigger に使わず、task 8 の start-only transition 契約も維持した。
 - 2026-03-26: Charts の encounter transition start-only 接続を current public contract に合わせて実装した。`POST /api/encounters/{encounterKey}/transitions` に `operation=chart_open` を送る専用 helper を `web-client` に追加し、`ChartsActionBar` は server success 後のみ success UI を出す await 制御へ変更した。`pause` / `finish` は従来どおり local/UI flow のみを維持し、transition request は送らない。`encounterKey` / `patientId` / `karteId` 欠落時は fail-closed とし、summary placeholder / removed-route guard は維持した。
 - 2026-03-26: Reception → Charts の canonical key feed について、`scheduleKey` / `encounterKey` の server 供給と web-client の pass-through を test と docs で固定した。`docs/development/public_route_key_feed_contract_20260326.md` を追加し、`ScheduleResourceTest` / `CanonicalEncounterKeysTest` / `useAppNavigation.test.tsx` / `encounterContext.test.ts` を canonical payload 仕様へ強化した。

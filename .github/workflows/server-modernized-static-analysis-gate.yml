@@ -1,6 +1,7 @@
 name: server-modernized-static-analysis-gate
 
 on:
+  pull_request:
   schedule:
     - cron: "0 18 * * *"
   workflow_dispatch:
@@ -14,35 +15,46 @@ concurrency:
 
 jobs:
   static-analysis-gate:
-    # Baseline burn-down is still in progress, so keep this off the default PR green path.
+    # Static-analysis only. Runtime smoke and release-critical gates live in other workflows.
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect server static-analysis relevant changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        run: |
+          base_sha="${{ github.event.pull_request.base.sha }}"
+          if git diff --name-only "${base_sha}" HEAD | grep -Eq '^(server-modernized/|common/|pom\.server-modernized\.xml|\.github/workflows/server-modernized-static-analysis-gate\.yml|scripts/ci/verify-phase3-surface-guards\.sh|server-modernized/tools/ci/check-(doc-links|config-contract)\.sh)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup Java
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
 
-      - name: Run WS9 surface guards
-        run: bash ./scripts/ci/verify-phase3-surface-guards.sh all
+      - name: Run canonical static-analysis verify
+        if: github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true'
+        run: mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
 
-      - name: Run reporting release-critical tests
-        run: bash ./scripts/reporting/verify.sh
-
-      - name: Run packaging and quality gates
-        run: bash ./scripts/server-modernized/verify-static-analysis.sh
+      - name: Skip when no relevant server static-analysis changes are present
+        if: github.event_name == 'pull_request' && steps.changes.outputs.relevant != 'true'
+        run: echo "No server/static-analysis relevant changes detected; passing required check."
 
       - name: Upload static analysis reports
-        if: always()
+        if: always() && (github.event_name != 'pull_request' || steps.changes.outputs.relevant == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: static-analysis-reports
           path: |
             server-modernized/target/static-analysis/**/*.xml
-            reporting/target/static-analysis/**/*.xml
-            server-modernized/target/opendolphin-server.war

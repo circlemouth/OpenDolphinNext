@@ -65,7 +65,7 @@ class RepoGuardScriptsIT {
         Path repoRoot = findRepoRoot();
         CommandResult packageResult = runCommand(
                 repoRoot,
-                List.of("mvn", "-q", "-pl", "server-modernized", "-am", "-DskipTests", "package"));
+                List.of("mvn", "-q", "-f", "pom.server-modernized.xml", "-pl", "server-modernized", "-am", "-DskipTests", "package"));
 
         assertThat(packageResult.exitCode()).isZero();
 
@@ -164,6 +164,9 @@ class RepoGuardScriptsIT {
         runCommand(repoRoot, List.of("git", "init"));
         runCommand(repoRoot, List.of("git", "config", "user.name", "Codex"));
         runCommand(repoRoot, List.of("git", "config", "user.email", "codex@example.invalid"));
+        Path emptyExcludes = Files.createTempFile("repo-guard-global-excludes", ".txt");
+        Files.writeString(emptyExcludes, "");
+        runCommand(repoRoot, List.of("git", "config", "core.excludesFile", emptyExcludes.toString()));
     }
 
     private static Path findRepoRoot() {

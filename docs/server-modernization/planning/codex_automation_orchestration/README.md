@@ -40,6 +40,8 @@
   - static-analysis Wave 3 の現行支援資料。
 - `docs/development/supporting/phase3_wave4_prompt_pack/README.md`
   - static-analysis Wave 4 の現行支援資料。
+- `docs/development/supporting/phase3_post_decision_prompt_pack/README.md`
+  - Phase3+ post-decision 実装の現行支援資料。
 - `prompts/phase3/WS0_parallel_orchestrator_prompt.md`
   - cleanup track 完了後の現行継続タスクの起点となるオーケストレーター prompt。
 - `logs/README.md`

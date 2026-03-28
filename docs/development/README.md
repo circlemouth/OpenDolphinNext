@@ -1,7 +1,7 @@
 # 開発計画インデックス
 
-- 更新日: 2026-03-24
-- RUN_ID: 20260324T111046Z
+- 更新日: 2026-03-28
+- RUN_ID: 20260328T033006Z
 
 このディレクトリは、現行の開発計画と Legacy/Archive 化した旧計画の索引である。実装着手前に本ファイルを読み、現行計画への導線をここから辿る。
 
@@ -40,4 +40,14 @@
   - `server-modernized` の static-analysis Wave 3 支援資料。`docs/server-modernization/static-analysis-baseline-inventory.md` と連動する。
 - [supporting/phase3_wave4_prompt_pack/README.md](supporting/phase3_wave4_prompt_pack/README.md)
   - `server-modernized` の static-analysis Wave 4 支援資料。`docs/server-modernization/static-analysis-baseline-inventory.md` と連動する。
+- [supporting/phase3_post_decision_prompt_pack/README.md](supporting/phase3_post_decision_prompt_pack/README.md)
+  - Phase3+ post-decision 実装の支援資料。repo-only で確定した static-analysis / release gate 判断を repo-local truth に反映する。
+- Phase3+ post-decision の repo-local truth:
+  - authoritative static-analysis entrypoint: `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+  - minimal release gate（mandatory）:
+    1. `cd web-client && npm run ci`
+    2. `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+    3. `cd web-client && node scripts/runtime-ready-smoke.mjs`
+  - `scripts/server-modernized/verify-static-analysis.sh` は convenience wrapper であり、正本は Maven command。
+  - branch protection / required checks は repo-external のため unknown。
 - 補助資料は履歴・設計補足・handoff seed の参照用であり、現行開発計画正本ではない。

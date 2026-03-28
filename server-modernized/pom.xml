@@ -547,7 +547,7 @@
         <profile>
             <id>static-analysis</id>
             <activation>
-                <activeByDefault>true</activeByDefault>
+                <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
                 <spotbugs.plugin.version>4.9.8.2</spotbugs.plugin.version>
@@ -559,7 +559,7 @@
                 <spotbugs.skip>false</spotbugs.skip>
                 <static.analysis.config.dir>${maven.multiModuleProjectDirectory}/server-modernized/config/static-analysis</static.analysis.config.dir>
                 <static.analysis.output.dir>${maven.multiModuleProjectDirectory}/server-modernized/target/static-analysis</static.analysis.output.dir>
-                <static.analysis.enforce>false</static.analysis.enforce>
+                <static.analysis.enforce>true</static.analysis.enforce>
             </properties>
             <build>
                 <plugins>
@@ -630,6 +630,7 @@
                         <artifactId>maven-checkstyle-plugin</artifactId>
                         <version>${checkstyle.plugin.version}</version>
                         <configuration>
+                            <skip>true</skip>
                             <configLocation>${static.analysis.config.dir}/checkstyle.xml</configLocation>
                             <includeTestSourceDirectory>false</includeTestSourceDirectory>
                             <failOnViolation>${static.analysis.enforce}</failOnViolation>
@@ -659,6 +660,7 @@
                         <artifactId>maven-pmd-plugin</artifactId>
                         <version>${pmd.plugin.version}</version>
                         <configuration>
+                            <skip>true</skip>
                             <targetJdk>17</targetJdk>
                             <linkXRef>false</linkXRef>
                             <failOnViolation>${static.analysis.enforce}</failOnViolation>

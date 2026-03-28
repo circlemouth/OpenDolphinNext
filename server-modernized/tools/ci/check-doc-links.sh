@@ -44,6 +44,12 @@ for file in "${FILES[@]}"; do
     continue
   fi
 
+  if command -v rg >/dev/null 2>&1; then
+    matches_cmd=(rg -n -o -P '\[[^][]+\]\((?!https?://|mailto:|#)[^)]+\)' "$file")
+  else
+    matches_cmd=(perl -ne 'while(/\[[^][]+\]\((?!https?:\/\/|mailto:|#)[^)]+\)/g){print "$.:$&\n"}' "$file")
+  fi
+
   while IFS= read -r match; do
     target=${match#*](}
     target=${target%)}
@@ -64,7 +70,7 @@ for file in "${FILES[@]}"; do
       printf 'broken link: %s -> %s\n' "$file" "$match" >&2
       status=1
     fi
-  done < <(rg -n -o -P '\[[^][]+\]\((?!https?://|mailto:|#)[^)]+\)' "$file" || true)
+  done < <("${matches_cmd[@]}" || true)
 done
 
 exit "$status"

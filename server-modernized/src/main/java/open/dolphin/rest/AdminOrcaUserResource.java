@@ -40,7 +40,7 @@ import open.dolphin.session.UserServiceBean;
  * Administration APIs for ORCA user management and EHR-ORCA user linking.
  */
 @Path("/admin")
-public final class AdminOrcaUserResource extends AbstractResource {
+public class AdminOrcaUserResource extends AbstractResource {
 
     @PersistenceContext
     private EntityManager em;

@@ -62,7 +62,14 @@ export const FacilityLoginResolver = () => {
   const [isResolving, setIsResolving] = useState(true);
 
   const fromState = useMemo(() => resolveFromState(location.state), [location.state]);
-  const forwardState = useMemo(() => (fromState ? { from: fromState } : undefined), [fromState]);
+  const forwardableFromState = useMemo(() => {
+    if (!fromState) return undefined;
+    return resolveFacilityIdFromFromState(fromState) ? fromState : undefined;
+  }, [fromState]);
+  const forwardState = useMemo(
+    () => (forwardableFromState ? { from: forwardableFromState } : undefined),
+    [forwardableFromState],
+  );
   const legacyFrom = useMemo(() => isLegacyFrom(fromState), [fromState]);
   const switchContext = useMemo(() => resolveSwitchContext(location.state), [location.state]);
   const forwardSearch = location.search ?? '';

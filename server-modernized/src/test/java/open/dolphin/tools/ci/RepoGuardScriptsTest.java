@@ -131,6 +131,9 @@ class RepoGuardScriptsTest {
         runCommand(repoRoot, "git", "init");
         runCommand(repoRoot, "git", "config", "user.name", "Codex");
         runCommand(repoRoot, "git", "config", "user.email", "codex@example.invalid");
+        Path emptyExcludes = Files.createTempFile("repo-guard-global-excludes", ".txt");
+        Files.writeString(emptyExcludes, "");
+        runCommand(repoRoot, "git", "config", "core.excludesFile", emptyExcludes.toString());
     }
 
     private static CommandResult runScript(String relativeScriptPath, Path repoRoot) throws Exception {
