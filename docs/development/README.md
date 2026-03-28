@@ -40,4 +40,6 @@
   - `server-modernized` の static-analysis Wave 3 支援資料。`docs/server-modernization/static-analysis-baseline-inventory.md` と連動する。
 - [supporting/phase3_wave4_prompt_pack/README.md](supporting/phase3_wave4_prompt_pack/README.md)
   - `server-modernized` の static-analysis Wave 4 支援資料。`docs/server-modernization/static-analysis-baseline-inventory.md` と連動する。
+- [supporting/phase3_post_decision_prompt_pack/README.md](supporting/phase3_post_decision_prompt_pack/README.md)
+  - Phase3+ post-decision 実装の支援資料。repo-only で確定した static-analysis / release gate 判断を repo-local truth に反映する。
 - 補助資料は履歴・設計補足・handoff seed の参照用であり、現行開発計画正本ではない。

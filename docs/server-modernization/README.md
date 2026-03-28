@@ -45,6 +45,7 @@
 - `docs/development/supporting/phase3_wave2_prompt_pack/README.md`
 - `docs/development/supporting/phase3_wave3_prompt_pack/README.md`
 - `docs/development/supporting/phase3_wave4_prompt_pack/README.md`
+- `docs/development/supporting/phase3_post_decision_prompt_pack/README.md`
 - 用途: `common` 廃止・公開面整理・品質ゲート強制までの cleanup track を `A01`〜`A10` のときは 1 体ずつ、現行 phase3 では `WS0` 起点で `WS1`〜`WS8` を必要最小限で進めるための現行導線。
 - 注意: 進捗判定は上記 orchestration plan を正本とし、旧 `codex_automation_workplan_revised.md` 系は履歴確認用途に限定する。
 - 最新実績: RUN_ID `20260320T205337Z` で cleanup track `A10`「packaging / CI / 品質ゲート強制」を完了。現行は `prompts/phase3/` 配下の WS0〜WS8 を継続実行する。
@@ -52,6 +53,7 @@
 - static-analysis Wave 2 の支援資料は `docs/development/supporting/phase3_wave2_prompt_pack/` に配置済み。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - static-analysis Wave 3 の支援資料は `docs/development/supporting/phase3_wave3_prompt_pack/` に配置済み。inventory 正本は同じく `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - static-analysis Wave 4 の支援資料は `docs/development/supporting/phase3_wave4_prompt_pack/` に配置済み。inventory 正本は同じく `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
+- post-decision の支援資料は `docs/development/supporting/phase3_post_decision_prompt_pack/` に配置済み。static-analysis contract / workflow restore / minimal release gate の repo-local truth を扱う。
 
 ## 参照優先順位（Server-Modernization領域）
 1. `docs/DEVELOPMENT_STATUS.md`
