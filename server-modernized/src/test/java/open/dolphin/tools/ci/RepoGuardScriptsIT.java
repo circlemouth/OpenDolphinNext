@@ -65,7 +65,7 @@ class RepoGuardScriptsIT {
         Path repoRoot = findRepoRoot();
         CommandResult packageResult = runCommand(
                 repoRoot,
-                List.of("mvn", "-q", "-pl", "server-modernized", "-am", "-DskipTests", "package"));
+                List.of("mvn", "-q", "-f", "pom.server-modernized.xml", "-pl", "server-modernized", "-am", "-DskipTests", "package"));
 
         assertThat(packageResult.exitCode()).isZero();
 
