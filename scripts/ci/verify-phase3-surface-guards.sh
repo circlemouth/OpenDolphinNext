@@ -15,16 +15,25 @@ run_web() {
 run_server() {
   echo "[ws9-guards] running server AsyncContext zero-hit guard"
   local hits
-  hits="$(
-    rg -n \
-      -e 'AsyncContext' \
-      -e 'addAsyncContext' \
-      -e 'removeAsyncContext' \
-      -e 'getAsyncContextList' \
-      -e 'setAsyncContext' \
-      "${ROOT_DIR}/server-modernized/src/main" \
-      "${ROOT_DIR}/server-modernized/src/test" || true
-  )"
+  if command -v rg >/dev/null 2>&1; then
+    hits="$(
+      rg -n \
+        -e 'AsyncContext' \
+        -e 'addAsyncContext' \
+        -e 'removeAsyncContext' \
+        -e 'getAsyncContextList' \
+        -e 'setAsyncContext' \
+        "${ROOT_DIR}/server-modernized/src/main" \
+        "${ROOT_DIR}/server-modernized/src/test" || true
+    )"
+  else
+    hits="$(
+      grep -R -n -E \
+        'AsyncContext|addAsyncContext|removeAsyncContext|getAsyncContextList|setAsyncContext' \
+        "${ROOT_DIR}/server-modernized/src/main" \
+        "${ROOT_DIR}/server-modernized/src/test" || true
+    )"
+  fi
 
   if [[ -n "${hits}" ]]; then
     echo "[ws9-guards] AsyncContext fallback drift detected:" >&2

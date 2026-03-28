@@ -204,8 +204,9 @@ describe('AppRouter login redirect', () => {
     render(<RouterProvider router={router} />);
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/login');
+      expect(router.state.location.pathname).toBe('/f/123/login');
     });
+    expect(router.state.location.state).toBeNull();
     expect(screen.getByTestId('login-screen')).toBeInTheDocument();
   });
 

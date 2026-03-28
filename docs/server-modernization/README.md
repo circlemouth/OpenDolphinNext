@@ -207,10 +207,8 @@
 - 作成手順:
   - `cp ops/modernized-server/config/server-modernized.production.env.sample ops/modernized-server/config/server-modernized.production.env`
   - 必要に応じて `MODERNIZED_CUSTOM_PROPERTIES_FILE` で `custom.properties` の参照先を切り替える。
-- ORCA Trial の公開情報は sample に既定値として反映済み:
-  - `ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/`
-  - `ORCA_API_USER=trial`
-  - `ORCA_API_PASSWORD=weborcatrial`
+- production / validation sample は placeholder のみを保持し、実値は毎回ローカル env / secret mount で注入する。
+- WebORCA Trial を使う検証だけは `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` の公開接続情報を参照し、production sample へ直書きしない。
 
 ### テスト実行方針（server-modernized / Mockito inline）
 - 既定実行は **JDK25（Homebrew OpenJDK）** を使用する。

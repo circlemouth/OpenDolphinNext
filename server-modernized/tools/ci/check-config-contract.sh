@@ -23,11 +23,19 @@ cd "$ROOT_DIR"
 resolver="server-modernized/src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java"
 sample="server-modernized/config/server-modernized.env.sample"
 
-resolver_keys=$(rg -oP 'public static final String KEY_[A-Z0-9_]+\s*=\s*"\K[^"]+' "$resolver" \
-  | sed -E 's/[.-]/_/g' \
-  | tr '[:lower:]' '[:upper:]' \
-  | sort -u)
-sample_keys=$(rg -oP '^[A-Z0-9_]+(?==)' "$sample" | sort -u)
+if command -v rg >/dev/null 2>&1; then
+  resolver_keys=$(rg -oP 'public static final String KEY_[A-Z0-9_]+\s*=\s*"\K[^"]+' "$resolver" \
+    | sed -E 's/[.-]/_/g' \
+    | tr '[:lower:]' '[:upper:]' \
+    | sort -u)
+  sample_keys=$(rg -oP '^[A-Z0-9_]+(?==)' "$sample" | sort -u)
+else
+  resolver_keys=$(perl -ne 'print "$1\n" while /public static final String KEY_[A-Z0-9_]+\s*=\s*"([^"]+)"/g' "$resolver" \
+    | sed -E 's/[.-]/_/g' \
+    | tr '[:lower:]' '[:upper:]' \
+    | sort -u)
+  sample_keys=$(perl -ne 'print "$1\n" if /^([A-Z0-9_]+)=/' "$sample" | sort -u)
+fi
 
 missing=0
 for key in $resolver_keys; do
