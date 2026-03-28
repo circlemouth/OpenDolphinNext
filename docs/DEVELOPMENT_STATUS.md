@@ -1,4 +1,4 @@
-# 開発状況（単一参照, 更新日: 2026-03-27）
+# 開発状況（単一参照, 更新日: 2026-03-28）
 
 ## 現行ステータス
 - `docs/development/phase2_current_coding_tasks_checklist_v1.md` は、2026-03-24 以降の `server-modernized` 現行開発計画正本である。
@@ -13,6 +13,9 @@
 - `docs/development/supporting/phase3_wave3_prompt_pack/` は、static-analysis Wave 3 の現行支援資料置き場である。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - `docs/development/supporting/phase3_wave4_prompt_pack/` は、static-analysis Wave 4 の現行支援資料置き場である。inventory 正本は `docs/server-modernization/static-analysis-baseline-inventory.md` とする。
 - `docs/development/supporting/phase3_post_decision_prompt_pack/` は、Phase3+ post-decision 実装の現行支援資料置き場である。repo-only で確定した static-analysis / release gate 判断を repo-local truth として反映する。
+- Phase3+ post-decision の repo-local truth は、`mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` を static-analysis authoritative entrypoint とし、`cd web-client && npm run ci` / `cd web-client && node scripts/runtime-ready-smoke.mjs` を含む minimal release gate を mandatory として明記する。
+- `scripts/server-modernized/verify-static-analysis.sh` は convenience wrapper として残すが、正本ではない。
+- branch protection / required checks は repo-external のため unknown とする。
 - `docs/server-modernization/planning/codex_automation_workplan_revised.md` と `docs/server-modernization/planning/server_modernization_wbs_detailed.md` は、server modernization automation の作業記録として保持する **Legacy/Archive** 扱いの開発ドキュメントである。
 - `docs/development/supporting/phase2a_handoff_docs_bundle/` は、現行計画を補助する追加資料置き場である。正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md` のまま変更しない。
 - ORCA 接続情報の正本は `docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md`（Phase2 版は Legacy）。

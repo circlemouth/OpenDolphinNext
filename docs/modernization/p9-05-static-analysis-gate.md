@@ -51,3 +51,17 @@ SpotBugs / Checkstyle / PMD を PR 時の必須チェックに組み込み、静
 - `server-modernized/pom.xml` / `pom.server-modernized.xml` の SpotBugs plugin を `4.9.8.2` へ更新し、`spotbugs.skip` の既定値を解除した。
 - 根本原因は、Maven が Java 25 で動作したときに SpotBugs 4.8.5.0 が JDK 標準クラスの class file major version 69 を読めなかったことだった。
 - 修正後は Maven Java 25 で `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis -Dspotbugs.skip=false -Dcheckstyle.skip=true -Dpmd.skip=true -DskipTests verify` を実行し、SpotBugs 実行まで含めて BUILD SUCCESS を確認した。
+
+## 2026-03-28 repo-local truth
+- authoritative static-analysis entrypoint:
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+- wrapper:
+  - `scripts/server-modernized/verify-static-analysis.sh` は convenience wrapper として残すが、正本ではない。
+- minimal release gate（mandatory）:
+  1. `cd web-client && npm run ci`
+  2. `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+  3. `cd web-client && node scripts/runtime-ready-smoke.mjs`
+- policy:
+  - SpotBugs / FindSecBugs fail-on-error を維持する。
+  - Checkstyle / PMD は skip のまま維持する。
+  - branch protection / required checks は repo-external のため unknown とする。

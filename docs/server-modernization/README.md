@@ -1,7 +1,7 @@
 # Server-Modernization ドキュメントハブ（現行）
 
-- 更新日: 2026-03-27
-- RUN_ID: 20260327T063611Z
+- 更新日: 2026-03-28
+- RUN_ID: 20260328T033006Z
 
 > 本ファイルが **現行の入口**。Phase2 文書は Legacy/Archive として参照専用です。
 > 全体の優先順位は `docs/DEVELOPMENT_STATUS.md` を最上位とします。
@@ -260,9 +260,15 @@
   - `bash ./scripts/server-modernized/verify-release-critical.sh`
 - reporting release-critical:
   - `bash ./scripts/reporting/verify.sh`
-- static analysis（reporting + server-modernized）:
-  - `bash ./scripts/server-modernized/verify-static-analysis.sh`
-  - baseline burn-down 完了前のため、恒常 green 前提の PR required check ではなく manual/nightly 運用とする
+- static analysis authoritative entrypoint:
+  - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+  - `bash ./scripts/server-modernized/verify-static-analysis.sh` は同一契約へ委譲する thin wrapper として保持するが、repo-local truth の正本ではない
+  - SpotBugs / FindSecBugs は fail-on-error を維持し、Checkstyle / PMD は skip のまま維持する
+- minimal release gate（mandatory）:
+  1. `cd web-client && npm run ci`
+  2. `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
+  3. `cd web-client && node scripts/runtime-ready-smoke.mjs`
+- branch protection / required checks は repo-external であり、ここでは unknown とする
 - CI workflow:
   - `.github/workflows/web-client-test-shards.yml`
   - `.github/workflows/e2e.yml`

@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 class AdminOrcaUserLinkResourceTest {
 
     private AdminOrcaUserLinkResource resource;
+    private AdminOrcaUserResource delegate;
     private HttpServletRequest request;
     private UserServiceBean userServiceBean;
     private OrcaTransport orcaTransport;
@@ -36,16 +37,18 @@ class AdminOrcaUserLinkResourceTest {
     @BeforeEach
     void setUp() throws Exception {
         resource = new AdminOrcaUserLinkResource();
+        delegate = new AdminOrcaUserResource();
         request = mock(HttpServletRequest.class);
         userServiceBean = mock(UserServiceBean.class);
         orcaTransport = mock(OrcaTransport.class);
         em = mock(EntityManager.class);
 
-        setField(resource, AdminOrcaUserResource.class, "userServiceBean", userServiceBean);
-        setField(resource, AdminOrcaUserResource.class, "orcaTransport", orcaTransport);
-        setField(resource, AdminOrcaUserResource.class, "adminStepUpGuard", mock(AdminStepUpGuard.class));
-        setField(resource, AdminOrcaUserResource.class, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
-        setField(resource, AdminOrcaUserResource.class, "em", em);
+        setField(resource, AdminOrcaUserLinkResource.class, "delegate", delegate);
+        setField(delegate, AdminOrcaUserResource.class, "userServiceBean", userServiceBean);
+        setField(delegate, AdminOrcaUserResource.class, "orcaTransport", orcaTransport);
+        setField(delegate, AdminOrcaUserResource.class, "adminStepUpGuard", mock(AdminStepUpGuard.class));
+        setField(delegate, AdminOrcaUserResource.class, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
+        setField(delegate, AdminOrcaUserResource.class, "em", em);
 
         when(request.getRemoteUser()).thenReturn("F001:admin");
         when(userServiceBean.isAdmin("F001:admin")).thenReturn(true);

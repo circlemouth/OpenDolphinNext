@@ -33,12 +33,22 @@ import open.dolphin.session.framework.SessionOperation;
 @SessionOperation
 public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
 
-    private final OrcaPatientImportService importService;
-    private final OrcaPatientSyncRunner syncRunner;
-    private final OrcaSyncCursorStore cursorStore;
-    private final OrcaSyncRunStore runStore;
+    @Inject
+    private OrcaPatientImportService importService;
 
     @Inject
+    private OrcaPatientSyncRunner syncRunner;
+
+    @Inject
+    private OrcaSyncCursorStore cursorStore;
+
+    @Inject
+    private OrcaSyncRunStore runStore;
+
+    public OrcaPatientSyncResource() {
+        // Default constructor for RESTEasy resource instantiation.
+    }
+
     public OrcaPatientSyncResource(OrcaPatientImportService importService,
             OrcaPatientSyncRunner syncRunner,
             OrcaSyncCursorStore cursorStore,

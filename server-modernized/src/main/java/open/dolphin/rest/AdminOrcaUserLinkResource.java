@@ -17,7 +17,7 @@ import java.util.Map;
  * EHR-ORCA user link endpoint split from AdminOrcaUserResource.
  */
 @Path("/admin")
-public final class AdminOrcaUserLinkResource extends AbstractResource {
+public class AdminOrcaUserLinkResource extends AbstractResource {
 
     @jakarta.inject.Inject
     private AdminOrcaUserResource delegate;

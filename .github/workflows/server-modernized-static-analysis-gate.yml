@@ -1,6 +1,12 @@
 name: server-modernized-static-analysis-gate
 
 on:
+  pull_request:
+    paths:
+      - "server-modernized/**"
+      - "common/**"
+      - "pom.server-modernized.xml"
+      - ".github/workflows/server-modernized-static-analysis-gate.yml"
   schedule:
     - cron: "0 18 * * *"
   workflow_dispatch:
@@ -14,7 +20,7 @@ concurrency:
 
 jobs:
   static-analysis-gate:
-    # Baseline burn-down is still in progress, so keep this off the default PR green path.
+    # Static-analysis only. Runtime smoke and release-critical gates live in other workflows.
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -28,14 +34,8 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Run WS9 surface guards
-        run: bash ./scripts/ci/verify-phase3-surface-guards.sh all
-
-      - name: Run reporting release-critical tests
-        run: bash ./scripts/reporting/verify.sh
-
-      - name: Run packaging and quality gates
-        run: bash ./scripts/server-modernized/verify-static-analysis.sh
+      - name: Run canonical static-analysis verify
+        run: mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
 
       - name: Upload static analysis reports
         if: always()
@@ -44,5 +44,3 @@ jobs:
           name: static-analysis-reports
           path: |
             server-modernized/target/static-analysis/**/*.xml
-            reporting/target/static-analysis/**/*.xml
-            server-modernized/target/opendolphin-server.war
