@@ -164,6 +164,9 @@ class RepoGuardScriptsIT {
         runCommand(repoRoot, List.of("git", "init"));
         runCommand(repoRoot, List.of("git", "config", "user.name", "Codex"));
         runCommand(repoRoot, List.of("git", "config", "user.email", "codex@example.invalid"));
+        Path emptyExcludes = Files.createTempFile("repo-guard-global-excludes", ".txt");
+        Files.writeString(emptyExcludes, "");
+        runCommand(repoRoot, List.of("git", "config", "core.excludesFile", emptyExcludes.toString()));
     }
 
     private static Path findRepoRoot() {
