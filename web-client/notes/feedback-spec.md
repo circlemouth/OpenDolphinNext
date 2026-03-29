@@ -5,12 +5,12 @@
 ## Levels
 - `success`: 完了を示す通知
 - `info`: 状態変化や補助情報を示す通知
-- `warn`: 注意喚起。ユーザーが次に取るべき行動を伴う
-- `error`: 失敗通知。ユーザーが次に取るべき行動を伴う
+- `warn`: 注意喚起。必要なら次アクションを伴う
+- `error`: 失敗通知。必要なら次アクションを伴う
 
 ## CTA Rule
-- `warn` は CTA 必須です。
-- `error` は CTA 必須です。
+- safe で決定的な次アクションがある場合に CTA を付けます。
+- `warn` / `error` の全 surface に一律必須とはしません。
 - `success` と `info` は CTA 任意です。
 
 ## Message Source
@@ -21,14 +21,15 @@
 ## Canonical Copy Principles
 - logout: logout 自体は継続し、cleanup を優先する
 - CSRF: token 欠落や送信不可は安全側で失敗させる
-- state-loss: 文脈喪失時は single re-entry route に戻す
+- state-loss: 文脈喪失時は surface ごとの safe fallback に戻す
 - auth-failure: `/login` 起点で再認証させる
 - fetch-failure: 安全で短い失敗文言を使う
 - save-failure: 安全で短い失敗文言を使い、再試行または再入力へ導く
+- safe-support-id: raw detail の代わりに `RUN_ID` / `traceId` のような安全な識別子を出すことがある
 
 ## Accessibility Minimum
 - 色だけに依存して状態を伝えないことを最小契約とします。
-- `warn` / `error` は CTA と併せて状態を判別できる必要があります。
+- `warn` / `error` は CTA の有無に依らず状態を判別できる必要があります。
 
 ## Terminology
 - `success` / `info` / `warn` / `error` の 4 段で統一します。
