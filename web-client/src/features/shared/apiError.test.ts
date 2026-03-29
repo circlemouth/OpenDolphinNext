@@ -41,4 +41,26 @@ describe('buildApiFailureBanner', () => {
     expect(banner.nextAction).toBe('通信回復後に再取得');
     expect(banner.retryLabel).toBe('再取得');
   });
+
+  it('does not append raw backend messages to the visible banner copy', () => {
+    const banner = buildApiFailureBanner(
+      '患者情報',
+      { httpStatus: 500, apiResult: 'E90', apiResultMessage: 'java.lang.IllegalStateException: backend exploded' },
+      '取得',
+    );
+
+    expect(banner.message).toContain('患者情報の取得に失敗しました。');
+    expect(banner.message).toContain('HTTP 500');
+    expect(banner.message).not.toContain('java.lang.IllegalStateException');
+    expect(banner.message).not.toContain('backend exploded');
+  });
+
+  it('does not append raw internal error messages for network failures', () => {
+    const banner = buildApiFailureBanner('患者情報', { error: new Error('socket hang up at backend-node-3') }, '取得');
+
+    expect(banner.message).toContain('患者情報の取得に失敗しました。');
+    expect(banner.message).toContain('不明なエラー');
+    expect(banner.message).not.toContain('socket hang up');
+    expect(banner.message).not.toContain('backend-node-3');
+  });
 });

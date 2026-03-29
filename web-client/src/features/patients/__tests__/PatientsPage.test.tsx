@@ -728,8 +728,33 @@ describe('PatientsPage search summary', () => {
     const networkScope = within(networkDetails);
     expect(networkScope.getByText('server fetchedAt: 2026-01-29T00:00:00Z')).toBeInTheDocument();
     expect(networkScope.getByText('Api_Result: 00')).toBeInTheDocument();
-    expect(networkScope.getByText('Api_Result_Message: OK')).toBeInTheDocument();
     expect(networkScope.getByText('不足タグ: Patient_ID')).toBeInTheDocument();
+    expect(networkScope.queryByText(/Api_Result_Message:/)).not.toBeInTheDocument();
+    expect(networkScope.queryByText('OK')).not.toBeInTheDocument();
+  });
+
+  it('API failure 時も raw Api_Result_Message を通信詳細へ表示しない', () => {
+    mockQueryData = {
+      patients: [],
+      memos: [],
+      runId: 'RUN-PATIENTS',
+      recordsReturned: 0,
+      status: 500,
+      apiResult: 'E90',
+      apiResultMessage: 'java.lang.IllegalStateException: backend exploded',
+      missingTags: [],
+    };
+
+    renderPatientsPage();
+
+    const errorBanner = screen
+      .getAllByRole('alert')
+      .find((element) => element.textContent?.includes('患者情報の取得に失敗しました。'));
+    expect(errorBanner).toBeDefined();
+    expect(errorBanner).toHaveTextContent('患者情報の取得に失敗しました。');
+    expect(errorBanner).toHaveTextContent('サーバー側で障害が発生しています。');
+    expect(screen.queryByText(/java\.lang\.IllegalStateException/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Api_Result_Message:/)).not.toBeInTheDocument();
   });
 });
 

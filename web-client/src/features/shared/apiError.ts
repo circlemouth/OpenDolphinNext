@@ -53,24 +53,6 @@ export const classifyApiError = (context: ApiErrorContext): ApiErrorKind => {
   return 'unknown';
 };
 
-const buildDetail = (kind: ApiErrorKind, context: ApiErrorContext): string | undefined => {
-  const errorMessage = toErrorMessage(context.error);
-  const apiResultMessage = context.apiResultMessage;
-  const apiResult = context.apiResult;
-  if (kind === 'network') return errorMessage;
-  if (kind === 'http') {
-    if (apiResultMessage) return apiResultMessage;
-    if (apiResult) return `apiResult=${apiResult}`;
-    return errorMessage;
-  }
-  if (kind === 'business') {
-    if (apiResultMessage) return apiResultMessage;
-    if (apiResult) return `apiResult=${apiResult}`;
-    return errorMessage;
-  }
-  return errorMessage;
-};
-
 const isAuthErrorStatus = (status?: number) => status === 401 || status === 403;
 
 const isServerErrorStatus = (status?: number) => typeof status === 'number' && status >= 500;
@@ -122,7 +104,6 @@ export const buildApiFailureBanner = (
   operation: string = '取得',
 ): ApiFailureBanner => {
   const kind = classifyApiError(context);
-  const detail = buildDetail(kind, context);
   const status = context.httpStatus;
   const tone: BannerTone = kind === 'http' ? resolveHttpTone(status) : kind === 'business' ? 'warning' : 'error';
   const label =
@@ -136,13 +117,12 @@ export const buildApiFailureBanner = (
           ? '業務エラー'
           : '不明なエラー';
   const base = resolveMessageBase(subject, operation, kind, status);
-  const message = `${base}${label ? `（${label}${detail ? ` / ${detail}` : ''}）` : detail ? `（${detail}）` : ''}`;
+  const message = `${base}${label ? `（${label}）` : ''}`;
   const action = resolveActionLabel(kind, status);
   return {
     tone,
     message,
     kind,
-    detail,
     nextAction: action.nextAction,
     retryLabel: action.retryLabel,
     cooldownMs: isServerErrorStatus(status) ? 5000 : undefined,

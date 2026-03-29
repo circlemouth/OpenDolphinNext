@@ -562,7 +562,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         enqueue({
           tone: 'error',
           message: 'ORCAからの取り込みに失敗しました',
-          detail: result.error ?? `患者番号=${patientId}`,
+          detail: `患者番号=${patientId}`,
         });
         setSelectionNotice({
           tone: 'warning',
@@ -570,11 +570,11 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         });
       }
     },
-    onError: (error: unknown, patientId) => {
+    onError: (_error: unknown, patientId) => {
       enqueue({
         tone: 'error',
         message: 'ORCAからの取り込みに失敗しました',
-        detail: error instanceof Error ? error.message : `patientId=${patientId}`,
+        detail: `患者番号=${patientId}`,
       });
     },
   });
@@ -708,7 +708,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const resolvedFetchedAt = patientsQuery.data?.fetchedAt ?? lastMeta.fetchedAt;
   const resolvedRecordsReturned = patientsQuery.data?.recordsReturned ?? lastMeta.recordsReturned;
   const resolvedApiResult = patientsQuery.data?.apiResult ?? lastMeta.apiResult;
-  const resolvedApiResultMessage = patientsQuery.data?.apiResultMessage ?? lastMeta.apiResultMessage;
   const resolvedMissingTags = patientsQuery.data?.missingTags ?? lastMeta.missingTags ?? [];
   const masterOk = !resolvedMissingMaster && !resolvedFallbackUsed && (resolvedTransition ?? 'server') === 'server';
   const importPatientIdDraft = orcaImportPatientId.trim();
@@ -816,9 +815,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         enqueue({ tone: 'warning', message: '該当する住所が見つかりませんでした' });
         return;
       }
-      enqueue({ tone: 'error', message: result.message ?? '住所補完に失敗しました。' });
-    } catch (error) {
-      enqueue({ tone: 'error', message: error instanceof Error ? error.message : '住所補完に失敗しました。' });
+      enqueue({ tone: 'error', message: '住所補完に失敗しました。郵便番号を確認して再試行してください。' });
+    } catch (_error) {
+      enqueue({ tone: 'error', message: '住所補完に失敗しました。時間をおいて再試行してください。' });
     } finally {
       setOrcaAddressPending(false);
     }
@@ -1088,8 +1087,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     mutationFn: (payload: PatientMutationPayload) => savePatient(payload),
     onSuccess: (result: PatientMutationResult, variables) => {
       setLastAuditEvent(result.auditEvent);
-      setLastSaveResult(result);
-      setToast({ tone: result.ok ? 'success' : 'error', message: result.message ?? '保存しました' });
+      setLastSaveResult(
+        result.ok ? result : { ...result, message: '保存に失敗しました。内容を確認して再試行してください。' },
+      );
+      setToast({
+        tone: result.ok ? 'success' : 'error',
+        message: result.ok ? result.message ?? '保存しました' : '保存に失敗しました。内容を確認して再試行してください。',
+      });
       appliedMeta.current = applyAuthServicePatch(
         {
           runId: result.runId,
@@ -1118,8 +1122,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       }
       patientsQuery.refetch();
     },
-    onError: (error: unknown) => {
-      setToast({ tone: 'error', message: '保存に失敗しました', detail: error instanceof Error ? error.message : String(error) });
+    onError: (_error: unknown) => {
+      setToast({ tone: 'error', message: '保存に失敗しました。時間をおいて再試行してください。' });
       // onError は network/throw のみなので、直前の attempt を残して UI から再試行できるようにする
       setLastSaveResult({
         ok: false,
@@ -1706,7 +1710,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           <span>server fetchedAt: {resolvedFetchedAt ?? '—'}</span>
           <span>endpoint: {patientsQuery.data?.sourcePath ?? 'orca/patients/local-search'}</span>
           <span>Api_Result: {resolvedApiResult ?? '—'}</span>
-          <span>Api_Result_Message: {resolvedApiResultMessage ?? '—'}</span>
           <span>不足タグ: {resolvedMissingTags.length ? resolvedMissingTags.join(', ') : 'なし'}</span>
         </div>
       </details>

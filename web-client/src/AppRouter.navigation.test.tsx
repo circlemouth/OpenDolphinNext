@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { AppRouter } from './AppRouter';
 import { httpFetch } from './libs/http/httpClient';
 
+let mockPatientsPageShouldThrow = false;
+
 vi.mock('./styles/app-shell.css', () => ({}));
 vi.mock('./libs/http/httpClient', () => ({
   httpFetch: vi.fn(),
@@ -64,7 +66,12 @@ vi.mock('./features/reception/pages/ReceptionPage', () => ({
   ReceptionPage: () => <div data-testid="reception-page">reception page</div>,
 }));
 vi.mock('./features/patients/PatientsPage', () => ({
-  PatientsPage: () => <div data-testid="patients-page">patients page</div>,
+  PatientsPage: () => {
+    if (mockPatientsPageShouldThrow) {
+      throw new Error('java.lang.IllegalStateException: render exploded');
+    }
+    return <div data-testid="patients-page">patients page</div>;
+  },
 }));
 vi.mock('./features/administration/AdministrationPage', async () => {
   const { useLocation, useNavigate } = await import('react-router-dom');
@@ -187,6 +194,7 @@ const prepareSession = (role: string) => {
 
 describe('AppRouter navigation guard', () => {
   beforeEach(() => {
+    mockPatientsPageShouldThrow = false;
     vi.mocked(httpFetch).mockImplementation(async (input, init) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.endsWith('/session/me')) {
@@ -237,6 +245,25 @@ describe('AppRouter navigation guard', () => {
     await user.click(screen.getByRole('tab', { name: '受付' }));
     expect(window.location.pathname).toBe('/f/0001/reception');
     await screen.findByTestId('reception-page');
+  });
+
+  it('route render error 時も raw error.message を画面に表示しない', async () => {
+    prepareSession('doctor');
+    mockPatientsPageShouldThrow = true;
+    const user = userEvent.setup();
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+    await user.click(screen.getByRole('tab', { name: '患者管理' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('画面エラーが発生しました');
+    expect(screen.getByText(/RUN_ID:/)).toBeInTheDocument();
+    expect(screen.queryByText(/java\.lang\.IllegalStateException/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/詳細:/)).not.toBeInTheDocument();
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('system_admin は管理画面ボタンが表示され遷移できる', async () => {

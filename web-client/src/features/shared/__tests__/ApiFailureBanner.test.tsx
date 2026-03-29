@@ -37,4 +37,19 @@ describe('ApiFailureBanner', () => {
       screen.getByText('問い合わせ用IDがまだ発行されていないため、コピーできません。再試行後に確認してください。'),
     ).toBeInTheDocument();
   });
+
+  it('raw backend message ではなく canonical copy を表示する', () => {
+    renderWithToast(
+      <ApiFailureBanner
+        subject="患者情報"
+        operation="取得"
+        httpStatus={500}
+        apiResult="E90"
+        apiResultMessage="org.springframework.jdbc.BadSqlGrammarException"
+      />,
+    );
+
+    expect(screen.getByText(/患者情報の取得に失敗しました。サーバー側で障害が発生しています。/)).toBeInTheDocument();
+    expect(screen.queryByText(/BadSqlGrammarException/)).not.toBeInTheDocument();
+  });
 });

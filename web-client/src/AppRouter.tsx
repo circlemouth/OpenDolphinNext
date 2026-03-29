@@ -1247,14 +1247,13 @@ type AppOutletErrorBoundaryProps = {
 
 type AppOutletErrorBoundaryState = {
   hasError: boolean;
-  errorMessage?: string;
 };
 
 class AppOutletErrorBoundary extends Component<AppOutletErrorBoundaryProps, AppOutletErrorBoundaryState> {
   state: AppOutletErrorBoundaryState = { hasError: false };
 
-  static getDerivedStateFromError(error: Error): AppOutletErrorBoundaryState {
-    return { hasError: true, errorMessage: error.message || 'unknown_error' };
+  static getDerivedStateFromError(_error: Error): AppOutletErrorBoundaryState {
+    return { hasError: true };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -1275,7 +1274,7 @@ class AppOutletErrorBoundary extends Component<AppOutletErrorBoundaryProps, AppO
 
   componentDidUpdate(prevProps: AppOutletErrorBoundaryProps) {
     if (prevProps.screenKey !== this.props.screenKey && this.state.hasError) {
-      this.setState({ hasError: false, errorMessage: undefined });
+      this.setState({ hasError: false });
     }
   }
 
@@ -1287,7 +1286,6 @@ class AppOutletErrorBoundary extends Component<AppOutletErrorBoundaryProps, AppO
       <section className="status-message is-error app-shell__crash-fallback" role="alert">
         <h2 style={{ marginTop: 0 }}>画面エラーが発生しました</h2>
         <p>業務継続のため、画面を再読み込みするか受付へ戻ってください。</p>
-        {this.state.errorMessage ? <p>詳細: {this.state.errorMessage}</p> : null}
         <p>
           RUN_ID: {this.props.runId ?? '未取得'} / traceId: {this.props.traceId ?? '未取得'}
         </p>
