@@ -430,6 +430,7 @@ describe('ReceptionPage accept UX', () => {
     await user.click(form.getByRole('button', { name: '検索' }));
     const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
     const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    expect(within(resultPanel).queryByText(/Api_Result_Message:/)).toBeNull();
     expect(within(acceptPanel).queryByRole('button', { name: '受付する' })).toBeNull();
     expect(within(acceptPanel).getByText(/左の患者検索結果カードを選択すると/)).toBeInTheDocument();
 

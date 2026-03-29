@@ -4958,7 +4958,6 @@ export function ReceptionPage({
               <div className="reception-master__results" role="status" aria-live={infoLive}>
                 <div className="reception-master__results-meta">
                   <span>Api_Result: {masterSearchMeta?.apiResult ?? '—'}</span>
-                  <span>Api_Result_Message: {masterSearchMeta?.apiResultMessage ?? '—'}</span>
                   <span>records: {masterSearchMeta?.recordsReturned ?? masterSearchResults.length}</span>
                   <span>fetchedAt: {masterSearchMeta?.fetchedAt ?? '—'}</span>
                 </div>
