@@ -13,6 +13,8 @@
 - current contract を更新する時は、`web-client/notes/` 側の正本も同じ変更で更新します。
 
 ## 収録ファイル
+- `phase0_product_contract_and_copy_20260330.md`
+  - quick win 実装前に auth 例外 matrix、redirect reason taxonomy、lost-context matrix、feedback copy、a11y minimum、unknown を固定した Phase 0 成果物。
 - `codex_prompt_web_product_improvement_orchestrator_20260329.txt`
   - evidence pack と quick win 実装を統括する Codex 用プロンプト。
 - `chatgpt_prompt_phase0_product_contract_20260329.txt`
