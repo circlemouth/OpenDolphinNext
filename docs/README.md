@@ -53,3 +53,10 @@
 - code changes と related docs updates は同じ変更で揃える。
 - repo に証拠がなければ unknown と扱う。
 - `docs/web-client/product-improvement/` は開発オーケストレーション資料置き場であり、current contract の正本ではありません。
+
+## Add / Delete Rule
+- 新しい docs を追加してよいのは、current contract、manager handoff、live runbook、enduring architecture summary、code-adjacent README のいずれかに直接該当する場合だけです。
+- dated note、phase plan、prompt pack、worker report、verification evidence dump は原則 `docs/` に残しません。
+- 既存 docs と役割が重なる場合は新規追加より統合を優先し、正本を 1 本に絞ります。
+- reference-only 文書を残す場合は、canonical source を冒頭に明記し、managerdocs / contracts / web-client notes と競合させません。
+- repo 内参照が消えており、現行運用の判断・実行に不要な docs は削除を優先します。

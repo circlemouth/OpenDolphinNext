@@ -1,5 +1,8 @@
 # Document埋め込み運用ポリシー（暫定/恒久/廃止条件）
 
+Status: reference-only
+Canonical source: `docs/managerdocs/03_web_current_contract_summary.md`, `web-client/notes/ui-current-contract.md`
+
 RUN_ID: 20260121T063526Z
 
 ## 目的

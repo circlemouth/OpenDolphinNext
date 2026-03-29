@@ -1,5 +1,7 @@
 # Webクライアント UIガイドライン v0.1
 
+- Status: reference-only
+- Canonical source: `docs/managerdocs/04_ui_improvement_program.md`, `web-client/notes/ui-current-contract.md`
 - 更新日: 2026-02-26
 - RUN_ID: `20260226T102426Z`
 - ステータス: Draft（運用開始）
@@ -173,4 +175,3 @@
 - 直接値（色、余白、角丸、影）を書かず、トークン参照を優先したか
 - フォーカス可視化と状態差分を色以外でも判別できるか
 - 主要操作と補助情報の視覚優先順位が分離されているか
-

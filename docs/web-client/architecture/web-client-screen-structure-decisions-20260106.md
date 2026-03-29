@@ -1,5 +1,8 @@
 # Webクライアント画面構成 決定事項（RUN_ID=20260106T120500Z）
 
+Status: reference-only
+Canonical source: `docs/managerdocs/03_web_current_contract_summary.md`, `web-client/notes/ui-current-contract.md`
+
 ## 目的
 Web クライアントの本番ナビ/ルーティング/ガードの確定内容を整理し、実装・UX・運用ドキュメントの基準点を明確化する。
 
