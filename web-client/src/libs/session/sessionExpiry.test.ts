@@ -64,6 +64,7 @@ describe('sessionExpiry', () => {
     expect(customEvent.type).toBe(SESSION_EXPIRED_EVENT);
     expect(sessionStorage.getItem(SESSION_EXPIRED_STORAGE_KEY)).toContain('unauthorized');
     expect(localStorage.getItem(SESSION_EXPIRED_DEBOUNCE_STORAGE_KEY)).not.toBeNull();
+    expect(customEvent.detail.message).toContain('ログイン状態を確認できませんでした');
   });
 
   it('debounces within window and across tabs via shared timestamp', async () => {

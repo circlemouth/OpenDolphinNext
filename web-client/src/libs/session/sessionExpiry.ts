@@ -28,12 +28,12 @@ const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 't
 
 const buildMessage = (reason: SessionExpiryReason) => {
   if (reason === 'forbidden') {
-    return '権限不足のためアクセスできません。権限を確認して再ログインしてください。';
+    return 'この画面へのアクセス権限を確認できませんでした。権限を確認して再ログインしてください。';
   }
   if (reason === 'timeout') {
     return 'セッションの有効期限が切れました。再ログインしてください。';
   }
-  return 'セッションが切れました。再ログインしてください。';
+  return 'ログイン状態を確認できませんでした。再ログインしてください。';
 };
 
 const generateEnvelopeId = () => {

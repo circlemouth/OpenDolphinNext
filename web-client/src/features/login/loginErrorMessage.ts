@@ -26,11 +26,11 @@ export const AUTH_COPY = {
   credentialsFailure: 'ログインに失敗しました。施設ID・ユーザーID・パスワードを確認してください。',
   authenticationFailed: '認証を完了できませんでした。はじめからやり直してください。',
   securityFailure: '安全な確認ができなかったため、この操作を続けられません。ログイン画面からやり直してください。',
-  factor2Required: '施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。',
+  factor2Required: '本人確認のため二要素認証が必要です。認証アプリの6桁コードを入力してください。',
   factor2Invalid: '認証コードが一致しません。6桁コードを確認して再試行してください。',
-  factor2SessionMissing: '二要素認証の確認状態が見つかりませんでした。もう一度ログインしてください。',
-  factor2SessionExpired: '二要素認証の確認時間が過ぎました。もう一度ログインしてください。',
-  factor2Cancelled: '二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。',
+  factor2SessionMissing: '二要素認証の続きが見つかりません。施設IDとパスワードからやり直してください。',
+  factor2SessionExpired: '二要素認証の有効期限が切れました。もう一度ログインしてください。',
+  factor2Cancelled: '二要素認証を中止しました。もう一度ログインすると認証コード入力からやり直せます。',
   tooManyRequests: 'ログイン試行回数が上限に達しました。しばらく待ってから再試行してください。',
 } as const;
 

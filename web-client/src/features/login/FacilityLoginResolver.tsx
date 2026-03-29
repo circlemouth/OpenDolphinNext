@@ -3,6 +3,7 @@ import { useLocation, useNavigate, type Location } from 'react-router-dom';
 
 import { buildFacilityPath, normalizeFacilityId, parseFacilityPath } from '../../routes/facilityRoutes';
 import { FacilityLoginEntry } from './FacilityLoginEntry';
+import { resolveLoginNotice } from './loginRedirect';
 import { isLegacyFrom, resolveFromState, resolveSwitchContext } from './loginRouteState';
 import { loadRecentFacilities } from './recentFacilityStore';
 
@@ -62,13 +63,20 @@ export const FacilityLoginResolver = () => {
   const [isResolving, setIsResolving] = useState(true);
 
   const fromState = useMemo(() => resolveFromState(location.state), [location.state]);
+  const loginNotice = useMemo(() => resolveLoginNotice(location.state), [location.state]);
   const forwardableFromState = useMemo(() => {
     if (!fromState) return undefined;
     return resolveFacilityIdFromFromState(fromState) ? fromState : undefined;
   }, [fromState]);
   const forwardState = useMemo(
-    () => (forwardableFromState ? { from: forwardableFromState } : undefined),
-    [forwardableFromState],
+    () =>
+      forwardableFromState || loginNotice
+        ? {
+            ...(forwardableFromState ? { from: forwardableFromState } : {}),
+            ...(loginNotice ? { loginNotice } : {}),
+          }
+        : undefined,
+    [forwardableFromState, loginNotice],
   );
   const legacyFrom = useMemo(() => isLegacyFrom(fromState), [fromState]);
   const switchContext = useMemo(() => resolveSwitchContext(location.state), [location.state]);

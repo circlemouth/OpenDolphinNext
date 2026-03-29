@@ -49,6 +49,7 @@ import { SecurityMisconfigBanner } from './components/SecurityMisconfigBanner';
 import {
   SESSION_EXPIRED_EVENT,
   clearSessionExpiredNotice,
+  type SessionExpiryReason,
   type SessionExpiryNotice,
 } from './libs/session/sessionExpiry';
 import { clearAllAuthShared, clearScopedStorage } from './libs/session/storageCleanup';
@@ -64,6 +65,14 @@ import {
 import { FacilityLoginResolver } from './features/login/FacilityLoginResolver';
 import { addRecentFacility } from './features/login/recentFacilityStore';
 import { resolveSwitchContext, type LoginSwitchContext } from './features/login/loginRouteState';
+import {
+  persistLoginNotice,
+  resolveLoginDestinationSummary,
+  resolveLoginNotice,
+  resolveLoginNoticeFromSearch,
+  resolveLoginNoticeMessage,
+  resolveLoginRedirect,
+} from './features/login/loginRedirect';
 import { isSystemAdminRole } from './libs/auth/roles';
 import { testOrcaConnection, type OrcaConnectionTestResponse } from './features/administration/orcaConnectionApi';
 import { FocusTrapDialog } from './components/modals/FocusTrapDialog';
@@ -506,10 +515,11 @@ export function AppRouterWithNavigation() {
   }, []);
 
   const handleLogout = useCallback(
-    (reason: 'manual' | 'session-expired' = 'manual') => {
-      if (reason === 'manual') {
+    (reason: 'logout' | SessionExpiryReason = 'logout') => {
+      if (reason === 'logout') {
         clearSessionExpiredNotice();
       }
+      persistLoginNotice({ reason });
       const current = session;
       requestServerLogoutBestEffort(current ?? undefined);
       if (current) {
@@ -519,7 +529,17 @@ export function AppRouterWithNavigation() {
       clearStoredCredentials();
       clearSession();
       setSession(null);
-      navigate('/login', { replace: true });
+      navigate(
+        current && reason === 'logout'
+          ? `${buildFacilityPath(current.facilityId, '/login')}?reason=logout`
+          : current
+            ? buildFacilityPath(current.facilityId, '/login')
+            : '/login',
+        {
+          replace: true,
+          state: { loginNotice: { reason } },
+        },
+      );
     },
     [navigate, requestServerLogoutBestEffort, session],
   );
@@ -664,7 +684,7 @@ export function AppRouterWithNavigation() {
           },
         });
       }
-      handleLogout('session-expired');
+      handleLogout(detail?.reason ?? 'timeout');
     };
     if (typeof window !== 'undefined') {
       window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired as EventListener);
@@ -683,7 +703,7 @@ export function AppRouterWithNavigation() {
           <FacilityGate
             session={session}
             sessionBootstrapped={sessionBootstrapped}
-            onLogout={() => handleLogout('manual')}
+            onLogout={() => handleLogout('logout')}
           />
         }
       >
@@ -890,12 +910,27 @@ function FacilityLoginScreen({
   const location = useLocation();
   const normalizedId = normalizeFacilityId(decodeFacilityParam(facilityId) ?? facilityId);
   const switchContext = useMemo(() => resolveSwitchContext(location.state), [location.state]);
+  const initialNotice = useMemo(() => {
+    const notice = resolveLoginNotice(location.state) ?? resolveLoginNoticeFromSearch(location.search);
+    const message = resolveLoginNoticeMessage(notice);
+    if (!message) return undefined;
+    return {
+      message,
+      tone: notice?.reason === 'logout' ? ('info' as const) : ('error' as const),
+    };
+  }, [location.state]);
+  const destinationSummary = useMemo(
+    () => resolveLoginDestinationSummary(location.state, normalizedId ?? undefined),
+    [location.state, normalizedId],
+  );
 
   return (
     <LoginScreen
       onLoginSuccess={(result) => onLoginSuccess(result, switchContext)}
       initialFacilityId={normalizedId ?? ''}
       lockFacilityId={Boolean(normalizedId)}
+      initialNotice={initialNotice}
+      destinationSummary={destinationSummary}
     />
   );
 }
@@ -1207,27 +1242,6 @@ function LegacyRootRedirect({ session }: { session: Session | null }) {
 
   return <Navigate to={buildFacilityPath(session.facilityId, '/reception')} replace />;
 }
-
-type LoginRedirectIntent = { to: string; state?: unknown };
-
-const isLoginPath = (path: string) => path === '/login' || parseFacilityPath(path)?.suffix === '/login';
-
-const resolveLoginRedirect = (location: Location): LoginRedirectIntent | null => {
-  const state = location.state as { from?: string | Location } | null;
-  const from = state?.from;
-  if (!from) return null;
-  if (typeof from === 'string') {
-    const pathname = from.split('?')[0]?.split('#')[0] ?? '';
-    if (!pathname || isLoginPath(pathname)) return null;
-    if (!parseFacilityPath(pathname)) return null;
-    return { to: from };
-  }
-  const path = from.pathname ?? '';
-  if (!path) return null;
-  if (isLoginPath(path)) return null;
-  if (!parseFacilityPath(path)) return null;
-  return { to: `${path}${from.search ?? ''}${from.hash ?? ''}`, state: from.state };
-};
 
 const isLoginRoute = (pathname: string) => {
   if (pathname === '/login') return true;

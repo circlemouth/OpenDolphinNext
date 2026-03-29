@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LoginScreen, normalizeSessionResult } from '../LoginScreen';
+import { AUTH_COPY } from '../features/login/loginErrorMessage';
 import { httpFetch } from '../libs/http/httpClient';
 
 vi.mock('../libs/http/httpClient', () => ({
@@ -79,8 +80,10 @@ describe('LoginScreen', () => {
     expect(screen.queryByLabelText('パスワード')).not.toBeInTheDocument();
     expect(screen.getByText('ステップ 2/2')).toBeInTheDocument();
     expect(screen.getByText('二要素認証')).toBeInTheDocument();
-    expect(screen.getByText('施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。')).toBeInTheDocument();
+    expect(screen.getByText('ログイン情報の確認が終わったため、続けて認証アプリの6桁コードで本人確認を行います。')).toBeInTheDocument();
+    expect(screen.getByText(AUTH_COPY.factor2Required)).toBeInTheDocument();
     expect(screen.getByText('パスワードは保持していません。認証コードのみ入力してください。')).toBeInTheDocument();
+    expect(screen.getByLabelText('認証コード')).toHaveFocus();
   });
 
   it('正しいコードでログイン完了し、clientUuid を維持する', async () => {
@@ -180,7 +183,7 @@ describe('LoginScreen', () => {
     await user.type(await screen.findByLabelText('認証コード'), '111111');
     await user.click(screen.getByRole('button', { name: '認証コードを確認' }));
 
-    expect(await screen.findByText('認証コードが一致しません。6桁コードを確認して再試行してください。')).toBeInTheDocument();
+    expect(await screen.findByText(AUTH_COPY.factor2Invalid)).toBeInTheDocument();
     expect(screen.getByLabelText('認証コード')).toBeInTheDocument();
   });
 
@@ -228,7 +231,7 @@ describe('LoginScreen', () => {
 
     expect(await screen.findByLabelText('施設ID')).toBeInTheDocument();
     expect(screen.queryByLabelText('認証コード')).not.toBeInTheDocument();
-    expect(screen.getByText('二要素認証の確認時間が過ぎました。もう一度ログインしてください。')).toBeInTheDocument();
+    expect(screen.getByText(AUTH_COPY.factor2SessionExpired)).toBeInTheDocument();
     expect(window.location.search).toBe('');
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
@@ -262,7 +265,28 @@ describe('LoginScreen', () => {
 
     expect(await screen.findByLabelText('パスワード')).toBeInTheDocument();
     expect(screen.getByText('ステップ 1/2')).toBeInTheDocument();
-    expect(screen.getByText('二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。')).toBeInTheDocument();
+    expect(screen.getByText(AUTH_COPY.factor2Cancelled)).toBeInTheDocument();
+  });
+
+  it('initialNotice と destinationSummary を login 画面に表示する', () => {
+    render(
+      <LoginScreen
+        initialFacilityId="0001"
+        lockFacilityId
+        initialNotice={{
+          message: 'サインアウトしました。続けて別の施設やユーザーでログインできます。',
+          tone: 'info',
+        }}
+        destinationSummary={{
+          title: 'ログイン後の移動先',
+          body: 'ログイン後は /f/0001/reception を既定の着地点として開きます。',
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText('サインアウトしました。続けて別の施設やユーザーでログインできます。').length).toBeGreaterThan(0);
+    expect(screen.getByText('ログイン後の移動先')).toBeInTheDocument();
+    expect(screen.getByText('ログイン後は /f/0001/reception を既定の着地点として開きます。')).toBeInTheDocument();
   });
 
   it('normalizeSessionResult は server の userPk を保持する', () => {

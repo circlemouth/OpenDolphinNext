@@ -65,13 +65,27 @@ vi.mock('../features/charts/authService', async () => {
 });
 
 vi.mock('../LoginScreen', () => {
-  const MockLogin = ({ onLoginSuccess }: { onLoginSuccess?: (result: any) => void }) => {
+  const MockLogin = ({
+    onLoginSuccess,
+    initialNotice,
+    destinationSummary,
+  }: {
+    onLoginSuccess?: (result: any) => void;
+    initialNotice?: { message?: string };
+    destinationSummary?: { body?: string };
+  }) => {
     useEffect(() => {
       if ((globalThis as any).__mockAutoLogin !== false && onLoginSuccess) {
         onLoginSuccess(globalThis.__mockLoginResult);
       }
     }, [onLoginSuccess]);
-    return <div data-testid="login-screen">login</div>;
+    return (
+      <div data-testid="login-screen">
+        <div>login</div>
+        {initialNotice?.message ? <div>{initialNotice.message}</div> : null}
+        {destinationSummary?.body ? <div>{destinationSummary.body}</div> : null}
+      </div>
+    );
   };
   return { LoginScreen: MockLogin };
 });
@@ -248,6 +262,34 @@ describe('AppRouter login redirect', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/f/123/reception');
     });
+  });
+
+  it('logout notice がある場合は login surface に理由を表示する', async () => {
+    globalThis.__mockAutoLogin = false;
+    const router = buildRouter([{ pathname: '/f/123/login', state: { loginNotice: { reason: 'logout' } } }]);
+
+    render(<RouterProvider router={router} />);
+
+    expect(await screen.findByText('サインアウトしました。続けて別の施設やユーザーでログインできます。')).toBeInTheDocument();
+  });
+
+  it('scrub される deep link return では landing explanation を表示する', async () => {
+    globalThis.__mockAutoLogin = false;
+    const router = buildRouter([
+      {
+        pathname: '/f/123/login',
+        state: {
+          from: {
+            pathname: '/f/123/charts',
+            search: '?patientId=P-001&kw=山田',
+          },
+        },
+      },
+    ]);
+
+    render(<RouterProvider router={router} />);
+
+    expect(await screen.findByText(/deep link query は引き継がずに画面本体へ移動します/)).toBeInTheDocument();
   });
 
   it('ログイン済みで /login に戻った場合は server bootstrap 後に reception へ戻す', async () => {

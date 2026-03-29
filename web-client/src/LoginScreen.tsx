@@ -11,6 +11,7 @@ import {
   resolveLoginFailure,
   type LoginFailureResolution,
 } from './features/login/loginErrorMessage';
+import { consumeLoginNotice, resolveLoginNoticeMessage } from './features/login/loginRedirect';
 
 const resolveApiBaseUrl = () => {
   const raw = (import.meta.env.VITE_API_BASE_URL ?? '/api').trim().replace(/\/$/, '');
@@ -224,6 +225,14 @@ export const LoginScreen = ({
       setStatus('error');
       return;
     }
+    const loginNotice = consumeLoginNotice();
+    const loginNoticeMessage = resolveLoginNoticeMessage(loginNotice);
+    if (loginNoticeMessage) {
+      setFeedback(loginNoticeMessage);
+      setFeedbackTone(loginNotice?.reason === 'logout' ? 'info' : 'error');
+      setStatus(loginNotice?.reason === 'logout' ? 'idle' : 'error');
+      return;
+    }
     if (initialNotice?.message) {
       setFeedback(initialNotice.message);
       setFeedbackTone(initialNotice.tone);
@@ -283,7 +292,7 @@ export const LoginScreen = ({
     if (message) {
       setFeedback(message);
       setFeedbackTone(tone);
-      setStatus(tone === 'success' ? 'success' : 'error');
+      setStatus(tone === 'success' ? 'success' : tone === 'info' ? 'idle' : 'error');
     } else {
       setStatus('idle');
     }
@@ -515,6 +524,14 @@ export const LoginScreen = ({
     if (feedbackTone === 'info') return 'status-message';
     return 'status-message is-error';
   }, [feedbackTone]);
+  const feedbackRole = feedbackTone === 'error' ? 'alert' : 'status';
+  const feedbackLive = feedbackTone === 'error' ? 'assertive' : 'polite';
+  const initialNoticeClassName = useMemo(() => {
+    if (!initialNotice) return null;
+    if (initialNotice.tone === 'success') return 'status-message is-success';
+    if (initialNotice.tone === 'info') return 'status-message';
+    return 'status-message is-error';
+  }, [initialNotice]);
 
   return (
     <main className="login-shell">
@@ -542,6 +559,16 @@ export const LoginScreen = ({
         </header>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
+          {initialNotice && initialNoticeClassName ? (
+            <div
+              className={initialNoticeClassName}
+              role={initialNotice.tone === 'error' ? 'alert' : 'status'}
+              aria-live={initialNotice.tone === 'error' ? 'assertive' : 'polite'}
+              aria-atomic="true"
+            >
+              {initialNotice.message}
+            </div>
+          ) : null}
           {step === 'credentials' ? (
             <>
               <label className="field">
@@ -643,7 +670,7 @@ export const LoginScreen = ({
           ) : null}
 
           {feedback ? (
-            <div className={statusClassName} role="status">
+            <div className={statusClassName} role={feedbackRole} aria-live={feedbackLive} aria-atomic="true">
               {feedback}
               {isSuccess && profile ? (
                 <p className="status-message__detail">

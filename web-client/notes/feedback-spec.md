@@ -28,7 +28,7 @@
 - safe-support-id: raw detail の代わりに `RUN_ID` / `traceId` のような安全な識別子を出すことがある
 
 ## Auth Copy Matrix Minimum
-- factor2 required: 追加確認が必要であることを説明して同一 surface の次段へ進める
+- factor2 required: 本人確認のため追加確認が必要であることを説明して同一 surface の次段へ進める
 - factor2 invalid: retry を促し、credentials failure と混同させない
 - factor2 session missing: pending state が残っていないため login からやり直す
 - factor2 session expired: 期限切れのため login からやり直す
