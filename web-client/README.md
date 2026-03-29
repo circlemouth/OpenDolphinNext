@@ -18,7 +18,7 @@
 
 ## Current Summary
 - 認証は `/login` から始まる 1 段階目ログインを基本とし、必要時のみ factor2(TOTP) を要求します。
-- `returnTo` は sanitize 済み internal path のみを扱い、invalid または empty の場合は default post-login landing に落とします。実 path は docs 上 `unknown` です。
+- `returnTo` は sanitize 済み internal path のみを扱い、invalid または empty の場合は `/f/:facilityId/reception` に落とします。
 - 患者文脈は privacy-first を前提とし、URL、`localStorage`、`sessionStorage` に残しません。
 - admin の source of truth は `/api/admin/config` です。`/api/admin/delivery` を current contract に戻しません。
 - security 規範の詳細は [notes/security-spec.md](./notes/security-spec.md) を正本とし、この README へ重複移植しません。
