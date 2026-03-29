@@ -22,6 +22,14 @@ export type LoginFailureResolution = {
   message: string;
 };
 
+export const AUTH_COPY = {
+  factor2Required: '施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。',
+  factor2Invalid: '認証コードが一致しません。6桁コードを確認して再試行してください。',
+  factor2SessionMissing: '二要素認証の確認状態が見つかりませんでした。もう一度ログインしてください。',
+  factor2SessionExpired: '二要素認証の確認時間が過ぎました。もう一度ログインしてください。',
+  factor2Cancelled: '二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。',
+} as const;
+
 const normalizeText = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -70,13 +78,16 @@ const resolveTooManyRequestsMessage = (retryAfter: string | undefined): string =
 const resolveAuthFailureMessage = (reason: string | undefined, status: number): string => {
   const normalizedReason = reason?.toLowerCase();
   if (normalizedReason === 'factor2_required') {
-    return '二要素認証コードを入力してください。';
+    return AUTH_COPY.factor2Required;
   }
   if (normalizedReason === 'factor2_invalid') {
-    return '認証コードが正しくありません。';
+    return AUTH_COPY.factor2Invalid;
   }
-  if (normalizedReason === 'factor2_session_missing' || normalizedReason === 'factor2_session_expired') {
-    return '二要素認証セッションが無効です。最初からログインし直してください。';
+  if (normalizedReason === 'factor2_session_missing') {
+    return AUTH_COPY.factor2SessionMissing;
+  }
+  if (normalizedReason === 'factor2_session_expired') {
+    return AUTH_COPY.factor2SessionExpired;
   }
   if (normalizedReason === 'authentication_failed' || normalizedReason === 'unauthorized') {
     return 'ログインに失敗しました。施設ID・ユーザーID・パスワードを確認してください。';
@@ -104,16 +115,16 @@ export const resolveLoginFailure = (params: {
   const reason = resolveReason(parsed)?.toLowerCase();
 
   if (status === 401 && reason === 'factor2_required') {
-    return { kind: 'factor2_required', message: '二要素認証コードを入力してください。' };
+    return { kind: 'factor2_required', message: AUTH_COPY.factor2Required };
   }
   if (status === 401 && reason === 'factor2_invalid') {
-    return { kind: 'factor2_invalid', message: '認証コードが正しくありません。' };
+    return { kind: 'factor2_invalid', message: AUTH_COPY.factor2Invalid };
   }
   if (status === 401 && reason === 'factor2_session_missing') {
-    return { kind: 'factor2_session_missing', message: '二要素認証セッションが無効です。最初からログインし直してください。' };
+    return { kind: 'factor2_session_missing', message: AUTH_COPY.factor2SessionMissing };
   }
   if (status === 401 && reason === 'factor2_session_expired') {
-    return { kind: 'factor2_session_expired', message: '二要素認証セッションが無効です。最初からログインし直してください。' };
+    return { kind: 'factor2_session_expired', message: AUTH_COPY.factor2SessionExpired };
   }
 
   if (status === 429) {

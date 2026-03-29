@@ -7,6 +7,7 @@ import { generateRunId, updateObservabilityMeta } from './libs/observability/obs
 import { consumeSessionExpiredNotice } from './libs/session/sessionExpiry';
 import { logAuditEvent } from './libs/audit/auditLogger';
 import {
+  AUTH_COPY,
   resolveLoginFailure,
   type LoginFailureResolution,
 } from './features/login/loginErrorMessage';
@@ -70,6 +71,12 @@ type PendingSecondFactorState = {
   userId: string;
   clientUuid: string;
   runId: string;
+};
+
+type LoginStepMeta = {
+  badge: string;
+  title: string;
+  body: string;
 };
 
 export interface SessionAuthResponse {
@@ -182,6 +189,20 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
   const canSubmitCredentials = Boolean(normalizedResolvedFacilityId && normalizedUserId && values.password && !isLoading);
   const normalizedFactor2Code = secondFactorCode.replace(/\D/g, '');
   const canSubmitFactor2 = Boolean(normalizedFactor2Code.length === 6 && !isLoading);
+  const stepMeta: LoginStepMeta = useMemo(() => {
+    if (step === 'factor2') {
+      return {
+        badge: 'ステップ 2/2',
+        title: '二要素認証',
+        body: '施設IDとユーザーIDの確認が終わったため、6桁の認証コードで追加確認を行います。',
+      };
+    }
+    return {
+      badge: 'ステップ 1/2',
+      title: '認証情報の入力',
+      body: '施設ID・ユーザーID・パスワードを確認してサインインします。',
+    };
+  }, [step]);
 
   useEffect(() => {
     const notice = consumeSessionExpiredNotice();
@@ -296,7 +317,7 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
         });
         setSecondFactorCode('');
         setStep('factor2');
-        setFeedback(outcome.message);
+        setFeedback(null);
         setFeedbackTone('info');
         setStatus('idle');
         logAuditEvent({
@@ -484,6 +505,11 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
               <img src={SYSTEM_ICON_URL} alt="OpenDolphin システムアイコン" />
             </div>
           </div>
+          <div className="status-message" role="status" aria-live="polite">
+            <p style={{ margin: 0, fontWeight: 700 }}>{stepMeta.badge}</p>
+            <p style={{ margin: '0.25rem 0 0', fontWeight: 700 }}>{stepMeta.title}</p>
+            <p className="status-message__detail">{stepMeta.body}</p>
+          </div>
         </header>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -537,9 +563,12 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
           ) : (
             <>
               <div className="status-message" role="status">
-                二要素認証が必要です。6桁の認証コードを入力してください。
+                {AUTH_COPY.factor2Required}
                 <p className="status-message__detail">
                   対象: {pendingSecondFactor?.facilityId}:{pendingSecondFactor?.userId}
+                </p>
+                <p className="status-message__detail">
+                  パスワードは保持していません。認証コードのみ入力してください。
                 </p>
               </div>
 
@@ -566,10 +595,10 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
                 </button>
                 <button
                   type="button"
-                  onClick={() => resetToCredentialsStep('最初からログインし直してください。')}
+                  onClick={() => resetToCredentialsStep(AUTH_COPY.factor2Cancelled, 'info')}
                   disabled={isLoading}
                 >
-                  最初からやり直す
+                  認証コード入力をやめる
                 </button>
               </div>
             </>

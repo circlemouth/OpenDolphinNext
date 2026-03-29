@@ -27,6 +27,12 @@
 - save-failure: 安全で短い失敗文言を使い、再試行または再入力へ導く
 - safe-support-id: raw detail の代わりに `RUN_ID` / `traceId` のような安全な識別子を出すことがある
 
+### Auth exception copy
+- factor2 required は「追加確認が必要」であることを示し、秘密情報や内部 reason を出さない
+- factor2 retry は「コード確認と再試行」を示す
+- factor2 expired / session missing / cancel は同一文言に潰さず、再ログインが必要な理由を分ける
+- logout / session expiry / unauthorized / forbidden は同じ「ログインしてください」だけに潰さず、 user-visible reason を分ける
+
 ## Accessibility Minimum
 - 色だけに依存して状態を伝えないことを最小契約とします。
 - `warn` / `error` は CTA の有無に依らず状態を判別できる必要があります。

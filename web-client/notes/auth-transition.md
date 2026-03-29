@@ -28,6 +28,27 @@
 - pending session の期限切れ、試行上限到達、または cancel 時は credentials step に戻ります。
 - reload 後は pending factor2 state を復元しません。
 
+### Auth exception copy matrix
+- credentials mismatch:
+  - `ログインに失敗しました。施設ID・ユーザーID・パスワードを確認してください。`
+- factor2 required:
+  - `施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。`
+- factor2 retry:
+  - `認証コードが一致しません。6桁コードを確認して再試行してください。`
+- factor2 expired:
+  - `二要素認証の確認時間が過ぎました。もう一度ログインしてください。`
+- factor2 session missing:
+  - `二要素認証の確認状態が見つかりませんでした。もう一度ログインしてください。`
+- factor2 cancel:
+  - `二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。`
+- rate limit:
+  - `ログイン試行回数が上限に達しました。...後に再試行してください。`
+
+### Same-surface explanation
+- factor2 は credentials step と同一 surface で段階表示します。
+- factor2 step では「施設IDとユーザーIDの確認が完了した後の追加確認」であることだけを説明し、内部実装詳細は出しません。
+- factor2 step へ進んだ後も password は client state / DOM に残しません。
+
 ## Logout
 - logout は cleanup を優先し、`/login` へ `replace` 遷移します。
 - security の正本にある logout 順序は次です。

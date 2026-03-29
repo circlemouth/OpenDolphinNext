@@ -80,4 +80,29 @@ describe('resolveLoginFailureMessage', () => {
 
     expect(message).toContain('しばらく待って');
   });
+
+  it('maps factor2_invalid to retry guidance', () => {
+    const message = resolveLoginFailureMessage({
+      status: 401,
+      bodyText: JSON.stringify({
+        error: 'factor2_invalid',
+        reason: 'factor2_invalid',
+      }),
+    });
+
+    expect(message).toContain('再試行');
+  });
+
+  it('maps factor2_session_expired to relogin guidance', () => {
+    const message = resolveLoginFailureMessage({
+      status: 401,
+      bodyText: JSON.stringify({
+        error: 'factor2_session_expired',
+        reason: 'factor2_session_expired',
+      }),
+    });
+
+    expect(message).toContain('確認時間');
+    expect(message).toContain('もう一度ログイン');
+  });
 });

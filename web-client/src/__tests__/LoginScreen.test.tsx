@@ -77,7 +77,10 @@ describe('LoginScreen', () => {
 
     expect(await screen.findByLabelText('認証コード')).toBeInTheDocument();
     expect(screen.queryByLabelText('パスワード')).not.toBeInTheDocument();
-    expect(screen.getByText('二要素認証コードを入力してください。')).toBeInTheDocument();
+    expect(screen.getByText('ステップ 2/2')).toBeInTheDocument();
+    expect(screen.getByText('二要素認証')).toBeInTheDocument();
+    expect(screen.getByText('施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。')).toBeInTheDocument();
+    expect(screen.getByText('パスワードは保持していません。認証コードのみ入力してください。')).toBeInTheDocument();
   });
 
   it('正しいコードでログイン完了し、clientUuid を維持する', async () => {
@@ -177,7 +180,7 @@ describe('LoginScreen', () => {
     await user.type(await screen.findByLabelText('認証コード'), '111111');
     await user.click(screen.getByRole('button', { name: '認証コードを確認' }));
 
-    expect(await screen.findByText('認証コードが正しくありません。')).toBeInTheDocument();
+    expect(await screen.findByText('認証コードが一致しません。6桁コードを確認して再試行してください。')).toBeInTheDocument();
     expect(screen.getByLabelText('認証コード')).toBeInTheDocument();
   });
 
@@ -225,9 +228,41 @@ describe('LoginScreen', () => {
 
     expect(await screen.findByLabelText('施設ID')).toBeInTheDocument();
     expect(screen.queryByLabelText('認証コード')).not.toBeInTheDocument();
+    expect(screen.getByText('二要素認証の確認時間が過ぎました。もう一度ログインしてください。')).toBeInTheDocument();
     expect(window.location.search).toBe('');
     expect(localStorage.length).toBe(0);
     expect(sessionStorage.length).toBe(0);
+  });
+
+  it('factor2 をキャンセルすると credentials step に戻り、info copy を表示する', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      jsonResponse(
+        {
+          error: 'factor2_required',
+          code: 'factor2_required',
+          errorCode: 'factor2_required',
+          message: '二要素認証コードを入力してください。',
+          status: 401,
+          errorCategory: 'factor2_required',
+          factor2Required: true,
+          factor2Type: 'totp',
+        },
+        401,
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await user.type(screen.getByLabelText('施設ID'), 'F001');
+    await user.type(screen.getByLabelText('ユーザーID'), 'doctor01');
+    await user.type(screen.getByLabelText('パスワード'), 'Secret123!');
+    await user.click(screen.getByRole('button', { name: 'ログイン' }));
+    await user.click(await screen.findByRole('button', { name: '認証コード入力をやめる' }));
+
+    expect(await screen.findByLabelText('パスワード')).toBeInTheDocument();
+    expect(screen.getByText('ステップ 1/2')).toBeInTheDocument();
+    expect(screen.getByText('二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。')).toBeInTheDocument();
   });
 
   it('normalizeSessionResult は server の userPk を保持する', () => {
