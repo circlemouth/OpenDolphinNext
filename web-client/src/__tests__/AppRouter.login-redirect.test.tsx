@@ -270,7 +270,7 @@ describe('AppRouter login redirect', () => {
 
     render(<RouterProvider router={router} />);
 
-    expect(await screen.findByText('サインアウトしました。続けて別の施設やユーザーでログインできます。')).toBeInTheDocument();
+    expect(await screen.findByText('サインアウトしました。安全のため、この端末の作業状態を消去してログイン画面へ戻りました。')).toBeInTheDocument();
   });
 
   it('scrub される deep link return では landing explanation を表示する', async () => {

@@ -64,7 +64,7 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     await waitFor(() => {
       expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
     });
-    expect(screen.queryByText('患者情報が取得できません。患者導線から再度開いてください。')).not.toBeInTheDocument();
+    expect(screen.queryByText('患者情報が見つからないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。')).not.toBeInTheDocument();
     expect(document.querySelector('[data-test-id="mobile-image-capture-input"]')).toBeEnabled();
     expect(document.querySelector('[data-test-id="mobile-image-file-input"]')).toBeEnabled();
   });
@@ -76,7 +76,7 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('患者情報が取得できません。患者導線から再度開いてください。')).toBeInTheDocument();
+    expect(screen.getByText('患者情報が見つからないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。')).toBeInTheDocument();
     expect(document.querySelector('[data-test-id="mobile-images-missing-patient"]')).toBeInTheDocument();
     expect(document.querySelector('[data-test-id="mobile-image-send"]')).toBeDisabled();
     expect(document.querySelector('[data-test-id="mobile-image-capture-input"]')).toBeDisabled();

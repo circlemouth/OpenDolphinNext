@@ -13,11 +13,13 @@
   - `/f/:facilityId/*` で session 不在なら facility-scoped path を `/login` の `state.from` に詰め直す: `web-client/src/AppRouter.tsx:745-753`
   - `resolveLoginRedirect()` は facility-scoped path だけを許可し、`/login` 自身や root-level arbitrary path は fallback へ落とす: `web-client/src/AppRouter.tsx:1213-1230`
   - session expiry は `SESSION_EXPIRED_EVENT` 経由で logout cleanup を実行する: `web-client/src/AppRouter.tsx:651-677`, `web-client/src/libs/session/sessionExpiry.ts:149-179`
+  - login redirect の説明 copy は query scrub を案内するが、実際の scrub は login helper ではなく sensitive route 到達後に行う: `web-client/src/features/login/loginRedirect.ts:124-151`, `web-client/src/AppRouter.tsx:588-640`
 - evidence:
   - `web-client/src/__tests__/AppRouter.login-redirect.test.tsx:167-319`
   - `web-client/src/libs/session/sessionExpiry.test.ts:51-154`
 - next action:
   - Slice 2 で redirect reason taxonomy を helper に寄せ、`/login` surface で理由表示を追加する
+  - docs は「最終的に scrub される」説明に留め、redirect 前 scrub を断定しない
 
 ## 2. Patients の入力 source 優先度
 

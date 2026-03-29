@@ -22,7 +22,6 @@ import {
   useLocation,
   useNavigate,
   useParams,
-  type Location,
 } from 'react-router-dom';
 
 import { LoginScreen, type LoginResult } from './LoginScreen';
@@ -66,6 +65,7 @@ import { FacilityLoginResolver } from './features/login/FacilityLoginResolver';
 import { addRecentFacility } from './features/login/recentFacilityStore';
 import { resolveSwitchContext, type LoginSwitchContext } from './features/login/loginRouteState';
 import {
+  type LoginRedirectIntent,
   persistLoginNotice,
   resolveLoginDestinationSummary,
   resolveLoginNotice,

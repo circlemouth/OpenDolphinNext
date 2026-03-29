@@ -81,10 +81,10 @@ const resolveMessageBase = (subject: string, operation: string, kind: ApiErrorKi
     return `${subject}が見つかりませんでした。条件を変えて再取得してください。`;
   }
   if (kind === 'http' && status === 401) {
-    return `${subject}の${operation}に失敗しました。セッションが切れました。再ログインしてください。`;
+    return `${subject}の${operation}に失敗しました。ログインが必要です。再ログインしてください。`;
   }
   if (kind === 'http' && status === 403) {
-    return `${subject}の${operation}に失敗しました。権限不足または施設境界違反の可能性があるためアクセスできません。権限と施設を確認して再ログインしてください。`;
+    return `${subject}の${operation}に失敗しました。この操作は許可されていません。利用可能な画面からやり直してください。`;
   }
   if (kind === 'http' && typeof status === 'number' && status >= 500) {
     return `${subject}の${operation}に失敗しました。サーバー側で障害が発生しています。`;

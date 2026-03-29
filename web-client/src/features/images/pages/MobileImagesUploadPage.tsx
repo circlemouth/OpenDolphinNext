@@ -129,7 +129,7 @@ export function MobileImagesUploadPage() {
     setListItems([]);
     if (!patientId) {
       setStage('error');
-      setStatusText('患者情報が取得できません。患者導線から再度開いてください。');
+      setStatusText('患者情報が見つからないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。');
       return;
     }
     setStage('ready');
@@ -409,7 +409,7 @@ export function MobileImagesUploadPage() {
               role="alert"
               style={{ margin: 0, fontSize: '0.9rem', color: '#b42318' }}
             >
-              患者情報が取得できないため送信できません。患者導線から開き直してください。
+              患者情報が見つからないため送信できません。戻り導線から患者を選び直してください。
             </p>
           ) : null}
         </div>

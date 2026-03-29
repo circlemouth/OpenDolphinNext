@@ -14,7 +14,7 @@
 ## Transition Rule
 - auth-sensitive transition は `replace` を正とします。
 - `returnTo` は sanitize 済み internal path のみを扱います。
-- `returnTo` は保存・遷移前に query と hash を scrub する前提で扱います。
+- `returnTo` は保存・遷移前に query と hash を scrub した internal path だけを扱います。
 - `returnTo` の transport は query だけに限定せず、`location.state` と揮発文脈を併用します。
 - invalid または empty の `returnTo` は default post-login landing に落とします。
 - default post-login landing は `/f/:facilityId/reception` です。
@@ -29,7 +29,8 @@
 
 ### Landing explanation
 - `location.state.from` が facility-scoped internal path なら、login 後はその画面へ戻します。
-- `location.state.from` の query/hash に機微な deep link 条件が含まれる場合、user-visible には「前回の画面へ戻るが詳細条件は引き継がない」と説明します。
+- `location.state.from` の query/hash に機微な deep link 条件が含まれる場合、login surface では「前回の画面へ戻るが詳細条件は引き継がない」と説明します。
+- 実際の scrub は login helper ではなく、到達先の sensitive route 側で行う current behavior を前提とします。
 - `location.state.from` が無効、login 自身、または facility-scoped でない場合は `/f/:facilityId/reception` を fallback にします。
 
 ## Factor2

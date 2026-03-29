@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -129,12 +130,20 @@ vi.mock('@tanstack/react-query', () => ({
   }),
 }));
 
-vi.mock('react-router-dom', () => ({
-  MemoryRouter: ({ children }: { children: any }) => children,
-  useLocation: () => ({ pathname: '/f/FAC-TEST/patients', search: mockLocationSearch, state: mockLocationState }),
-  useNavigate: () => vi.fn(),
-  useSearchParams: () => [mockSearchParams, mockSetSearchParams],
-}));
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return {
+    ...actual,
+    Link: ({ children, to, ...props }: { children: ReactNode; to: string | { pathname?: string }; [key: string]: unknown }) => {
+      const href = typeof to === 'string' ? to : (to.pathname ?? '');
+      return <a href={href} {...props}>{children}</a>;
+    },
+    MemoryRouter: ({ children }: { children: any }) => children,
+    useLocation: () => ({ pathname: '/f/FAC-TEST/patients', search: mockLocationSearch, state: mockLocationState }),
+    useNavigate: () => vi.fn(),
+    useSearchParams: () => [mockSearchParams, mockSetSearchParams],
+  };
+});
 
 vi.mock('../../../libs/admin/useAdminBroadcast', () => ({
   useAdminBroadcast: () => ({ broadcast: null }),
@@ -170,7 +179,16 @@ vi.mock('../../../routes/useAppNavigation', () => ({
   useAppNavigation: () => {
     const from = mockSearchParams.get('from') ?? null;
     const returnTo = mockSearchParams.get('returnTo') ?? null;
-    const safeReturnTo = returnTo && !returnTo.startsWith('http') && returnTo.startsWith('/f/') ? returnTo : null;
+    const safeReturnTo = (() => {
+      if (!returnTo || returnTo.startsWith('http') || !returnTo.startsWith('/f/')) return null;
+      const [pathname, rawSearch = ''] = returnTo.split('?');
+      if (!rawSearch) return pathname;
+      const params = new URLSearchParams(rawSearch);
+      ['patientId', 'appointmentId', 'receptionId', 'scheduleKey', 'encounterKey', 'visitDate', 'invoiceNumber', 'kw', 'keyword']
+        .forEach((key) => params.delete(key));
+      const scrubbedSearch = params.toString();
+      return scrubbedSearch ? `${pathname}?${scrubbedSearch}` : pathname;
+    })();
     return {
       currentUrl: '/f/FAC-TEST/patients',
       currentScreen: 'patients',
@@ -683,14 +701,15 @@ describe('PatientsPage return flow', () => {
     mockAuthFlags.fallbackUsed = false;
   });
 
-  it('returnTo 指定があっても戻り導線は表示しない', () => {
+  it('returnTo 指定がある場合は surface-aware な戻り導線を表示する', () => {
     mockPatients();
     setRouterSearch('?from=charts&returnTo=/f/FAC-TEST/charts?patientId=000001');
 
     renderPatientsPage();
 
-    expect(screen.queryByRole('region', { name: '戻り導線' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /戻る/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '戻り導線' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'カルテへ戻る' })).toHaveAttribute('href', '/f/FAC-TEST/charts');
+    expect(screen.getByText('戻ったあとに必要な患者・受診を選び直してください。')).toBeInTheDocument();
     expect(mockGuardedNavigate).not.toHaveBeenCalled();
   });
 });

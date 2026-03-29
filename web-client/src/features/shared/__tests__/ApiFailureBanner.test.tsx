@@ -52,4 +52,17 @@ describe('ApiFailureBanner', () => {
     expect(screen.getByText(/患者情報の取得に失敗しました。サーバー側で障害が発生しています。/)).toBeInTheDocument();
     expect(screen.queryByText(/BadSqlGrammarException/)).not.toBeInTheDocument();
   });
+
+  it('403 は forbidden の canonical copy を表示する', () => {
+    renderWithToast(
+      <ApiFailureBanner
+        subject="患者情報"
+        operation="取得"
+        httpStatus={403}
+      />,
+    );
+
+    expect(screen.getByText(/この操作は許可されていません。利用可能な画面からやり直してください。/)).toBeInTheDocument();
+    expect(screen.queryByText(/施設境界違反/)).not.toBeInTheDocument();
+  });
 });
