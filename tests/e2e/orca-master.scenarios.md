@@ -1,6 +1,6 @@
 # ORCA-05/06/08 Playwright E2E シナリオ（MSW/Live 並列表記）
 - RUN_ID: `20251124T181500Z`（親 `20251124T000000Z`）
-- 参照: AGENTS → docs/web-client/README.md → docs/server-modernization/phase2/INDEX.md → docs/managerdocs/PHASE2_MANAGER_ASSIGNMENT_OVERVIEW.md → src/webclient_modernized_bridge/04_マスターデータ補完ブリッジ実装計画.md → docs/server-modernization/phase2/operations/assets/openapi/orca-master-orca05-06-08.yaml
+- 参照: AGENTS → web-client/README.md → docs/README.md → docs/managerdocs/README.md → docs/contracts/orca-master-api.md
 - プロファイル: MSW（既定: dataSource=snapshot, runId=20251124T090000Z 前提）/ Live（`VITE_DEV_PROXY_TARGET` 指定時、リクエストヘッダに `X-Run-Id=20251124T181500Z` を送る想定）。
 - 監査メタ共通期待: `meta.runId`=RUN_ID、`dataSource`=snapshot|server、`cacheHit`=true/false をレスポンスから取得し、UI/PerfLog に転記。422 時は `validationError=true`、404 時は `missingMaster=true`。
 
@@ -25,7 +25,7 @@
 | MSW-E-04 | `/orca/tensu/etensu` tensuVersion フォーマット不正 | fault=`invalidVersion` で 422 | tensuVersion に `2024-04` を指定し検索 | エラーアラート「tensuVersion は YYYYMM（6 桁）で指定してください」 | HTTP 422 | validationError=true | Live: 未実施。 |
 
 ## フォールト（レジリエンス計画インライン要約）
-- fault id は `docs/server-modernization/phase2/operations/orca-master-resilience-plan.md` §1/§2 に準拠。MSW では `window.__mswSetFault('<id>')` で切替。
+- fault id はこのシナリオ表の ID を正本とする。MSW では `window.__mswSetFault('<id>')` で切替。
 - `db-down`: MSW abort(0)→ UI バナー「ORCA マスター取得に失敗→スナップショット表示」、`fallbackUsed=true`。
 - `slow-query`: MSW delay(4000)→ 2 回バックオフ後 snapshot へ。バナー「タイムアウト→キャッシュ/スナップショット」。
 - `server-500` / `server-503`: 2 回リトライ後 snapshot。`fallbackUsed=true`。

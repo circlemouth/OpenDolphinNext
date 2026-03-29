@@ -84,17 +84,18 @@ class RepoGuardScriptsTest {
     }
 
     private static void createDocLinkFixture(Path repoRoot, boolean includeTarget) throws IOException {
-        Files.createDirectories(repoRoot.resolve("docs/development"));
+        Files.createDirectories(repoRoot.resolve("docs/managerdocs"));
+        Files.createDirectories(repoRoot.resolve("docs/architecture"));
         Files.createDirectories(repoRoot.resolve("docs/contracts"));
         Files.createDirectories(repoRoot.resolve("docs/runbooks"));
-        Files.createDirectories(repoRoot.resolve("docs/server-modernization"));
+        Files.createDirectories(repoRoot.resolve("docs/operations"));
         Files.createDirectories(repoRoot.resolve("server-modernized"));
 
         Files.writeString(repoRoot.resolve("README.md"), "[Docs](docs/README.md)\n");
-        Files.writeString(repoRoot.resolve("docs/README.md"), "[Checklist](development/server-modernized-remediation-master-checklist.md)\n");
-        Files.writeString(repoRoot.resolve("docs/development/server-modernized-remediation-master-checklist.md"), "# checklist\n");
-        Files.writeString(repoRoot.resolve("docs/development/pull-request-checklist-template.md"), "# pr\n");
-        Files.writeString(repoRoot.resolve("docs/development/execution-log.md"), "# log\n");
+        Files.writeString(repoRoot.resolve("docs/README.md"), "[Manager](managerdocs/README.md)\n");
+        Files.writeString(repoRoot.resolve("docs/managerdocs/README.md"), "# manager\n");
+        Files.writeString(repoRoot.resolve("docs/architecture/server-modernization-overview.md"), "# server\n");
+        Files.writeString(repoRoot.resolve("docs/architecture/web-client-overview.md"), "# web\n");
         Files.writeString(repoRoot.resolve("docs/contracts/document-integrity.md"), "# contract\n");
         Files.writeString(repoRoot.resolve("docs/contracts/health-endpoints.md"), "# contract\n");
         Files.writeString(repoRoot.resolve("docs/contracts/orca-connection.md"), "# contract\n");
@@ -102,8 +103,10 @@ class RepoGuardScriptsTest {
         Files.writeString(repoRoot.resolve("docs/contracts/patient-images.md"), "# contract\n");
         Files.writeString(repoRoot.resolve("docs/contracts/runtime-config.md"), "# contract\n");
         Files.writeString(repoRoot.resolve("docs/runbooks/release-validation.md"), "# runbook\n");
+        Files.writeString(repoRoot.resolve("docs/runbooks/pull-request-checklist.md"), "# pr\n");
+        Files.writeString(repoRoot.resolve("docs/operations/ORCA_CERTIFICATION_ONLY.md"), "# orca\n");
         String target = includeTarget ? "../README.md" : "../missing.md";
-        Files.writeString(repoRoot.resolve("docs/server-modernization/README.md"), "[Root](" + target + ")\n");
+        Files.writeString(repoRoot.resolve("docs/managerdocs/README.md"), "[Root](" + target + ")\n");
         Files.writeString(repoRoot.resolve("server-modernized/README.md"), "[Docs](../docs/README.md)\n");
     }
 

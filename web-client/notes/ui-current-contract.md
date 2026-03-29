@@ -88,4 +88,4 @@
 - [feedback-spec.md](./feedback-spec.md)
 - [release-gate.md](./release-gate.md)
 - [security-spec.md](./security-spec.md)
-- [phase3_handoff_current_state.md](../../docs/development/supporting/phase3_post_decision_prompt_pack/phase3_handoff_current_state.md)
+- [docs/managerdocs/03_web_current_contract_summary.md](../../docs/managerdocs/03_web_current_contract_summary.md)

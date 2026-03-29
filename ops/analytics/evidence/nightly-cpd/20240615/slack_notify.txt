@@ -1,1 +1,0 @@
-[BLOCKED] 現在の Codex サンドボックスからは Slack #dev-quality へアクセスできず、Permalink を取得できません。Ops 本番環境で Jenkins ジョブ `Server-Modernized-Static-Analysis-Nightly` を失敗させ、通知メッセージ URL を追記してください。

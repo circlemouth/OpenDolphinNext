@@ -33,6 +33,6 @@ MODE_LABEL=manual \
 - 追加メモ: (未実施/ブロッカーなどを記載)
 
 ## 5. 次アクション
-- [ ] `docs/server-modernization/phase2/notes/storage-mode-checklist.md` の該当セクションへ結果反映
-- [ ] `docs/web-client/planning/phase2/DOC_STATUS.md` を RUN_ID 単位で更新
+- [ ] `docs/runbooks/release-validation.md` の storage 関連確認に沿って結果を反映
+- [ ] 必要なら current ticket / PR comment へ RUN_ID 単位で追記
 - [ ] `artifacts/parity-manual/attachments/{{RUN_ID}}/` へのリンクを報告チャネルへ共有

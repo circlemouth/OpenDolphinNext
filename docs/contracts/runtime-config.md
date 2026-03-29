@@ -215,7 +215,7 @@
 
 ## 受け入れ条件
 - [x] `rg 'System\\.get(env|Property)|ConfigProvider\\.getConfig\\(' server-modernized/src/main/java -n` の結果が `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` のみに限定される。
-- [x] `rg 'dolphin\\.facilityId' server-modernized -n -g '!docs/server-modernization/planning/**'` の結果が 0 件になる。
+- [x] `rg 'dolphin\\.facilityId' server-modernized -n` の結果が 0 件になる。
 - [x] `bash server-modernized/tools/ci/check-no-direct-runtime-lookup.sh --root "$(git rev-parse --show-toplevel)"` が、`ServerConfigurationResolver.java` のみを allowlist とした状態で成功する。
 - [x] `config/server-modernized.env.sample` に resolver の全キーが掲載される。
 - [x] 起動時 validation が attachment storage / patient images / document integrity / ORCA API / PVT を含めて失敗することをテストで確認する。

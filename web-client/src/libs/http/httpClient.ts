@@ -83,7 +83,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/appointments/*',
     purpose: '予約一覧・患者／請求試算・来院状況を取得して ORCA バナーの `runId`/`dataSource` を連携する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'fetchedAt'],
-    sourceDocs: ['docs/server-modernization/api-architecture-consolidation-plan.md'],
+    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md'],
   },
   {
     id: 'diseaseMutation',
@@ -92,7 +92,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local-summary/diagnoses',
     purpose: 'Charts の local diagnosis 編集で facilityId/patientId/karteId スコープの登録・更新・削除を行い、ORCA live 契約と分離する。',
     auditMetadata: ['runId', 'operation', 'patientId', 'karteId'],
-    sourceDocs: ['docs/web-client/ux/charts-claim-ui-policy.md'],
+    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/managerdocs/04_ui_improvement_program.md'],
   },
   {
     id: 'orderBundleMutation',
@@ -101,7 +101,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/order/bundles',
     purpose: 'Charts の処方（RP）/オーダー束編集でバンドルを登録・更新・削除し、監査イベントへ反映する。',
     auditMetadata: ['runId', 'operation', 'patientId', 'entity'],
-    sourceDocs: ['docs/web-client/ux/charts-claim-ui-policy.md'],
+    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/managerdocs/04_ui_improvement_program.md'],
   },
   {
     id: 'patientOutpatient',
@@ -110,12 +110,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/patient/mutation',
     purpose: 'Patients/Administration で患者基本・保険情報を更新し、新規追加・削除・保険変更の `action=ORCA_PATIENT_MUTATION` を生成する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'operation'],
-    sourceDocs: [
-      'docs/web-client/architecture/web-client-api-mapping.md',
-      'docs/server-modernization/phase2/operations/logs/20251204T064209Z-api-gap.md',
-      'docs/server-modernization/phase2/operations/logs/20251205T090000Z-integration-implementation.md',
-      'docs/server-modernization/phase2/operations/logs/20251205T150000Z-integration-implementation.md',
-    ],
+    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md'],
   },
   {
     id: 'patientOutpatientInfo',
@@ -124,7 +119,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/patients/local-search/*',
     purpose: 'Reception/Patients 用にローカル患者検索を実行し、`missingMaster`/`cacheHit` を含めた `audit` を生成する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'fetchedAt', 'recordsReturned'],
-    sourceDocs: ['docs/server-modernization/api-architecture-consolidation-plan.md'],
+    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md'],
   },
 ];
 
@@ -136,7 +131,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/patients/{patientId}/images',
     purpose: '患者画像の一覧を取得し、Charts / Mobile Images UI へ共通供給する。',
     auditMetadata: ['runId', 'traceId', 'recordsReturned', 'fetchedAt'],
-    sourceDocs: ['docs/server-modernization/README.md', 'docs/web-client/CURRENT.md'],
+    sourceDocs: ['docs/contracts/patient-images.md', 'docs/architecture/web-client-overview.md'],
   },
   {
     id: 'patientImagesUpload',
@@ -145,7 +140,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/patients/{patientId}/images',
     purpose: '患者画像を multipart/form-data でアップロードする。',
     auditMetadata: ['runId', 'traceId', 'patientId', 'imageId', 'documentId', 'fetchedAt'],
-    sourceDocs: ['docs/server-modernization/README.md', 'docs/web-client/CURRENT.md'],
+    sourceDocs: ['docs/contracts/patient-images.md', 'docs/architecture/web-client-overview.md'],
   },
   {
     id: 'karteImageDetail',
@@ -154,7 +149,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/karte/image/{id}',
     purpose: 'カルテ画像の詳細（SchemaModel）を取得する。',
     auditMetadata: ['runId', 'traceId', 'imageId', 'fetchedAt'],
-    sourceDocs: ['src/server_modernized_gap_20251221/02_karte_gap/KRT_03_karte_image_PathParam修正.md'],
+    sourceDocs: ['docs/contracts/patient-images.md'],
   },
   {
     id: 'karteAttachmentDetail',
@@ -163,7 +158,7 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/karte/attachment/{id}',
     purpose: 'カルテ添付ファイルを取得する。',
     auditMetadata: ['runId', 'traceId', 'attachmentId', 'fetchedAt'],
-    sourceDocs: ['src/server_modernized_gap_20251221/02_karte_gap/KRT_01_Document更新API.md'],
+    sourceDocs: ['docs/contracts/document-integrity.md'],
   },
   {
     id: 'karteDocumentUpdate',
@@ -172,12 +167,12 @@ export const KARTE_IMAGE_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/karte/document',
     purpose: 'カルテ文書（Document）への添付送信と本文更新を行う。',
     auditMetadata: ['runId', 'traceId', 'documentId', 'attachmentsSent', 'fetchedAt'],
-    sourceDocs: ['src/server_modernized_gap_20251221/02_karte_gap/KRT_01_Document更新API.md'],
+    sourceDocs: ['docs/contracts/document-integrity.md', 'docs/web-client/architecture/document-embedded-attachment-policy.md'],
   },
 ];
 
 // `resolveMasterSource` が `dataSourceTransition=server` を返す経路ではこの `outpatient` グループを使い、`cacheHit`/`missingMaster` を `telemetryClient` に継承します。
-// RUN_ID=20251205T150000Z の統合実装ではこのパス一覧を経由し、`docs/server-modernization/phase2/operations/logs/20251205T150000Z-integration-implementation.md` へ telemetry funnel を記録しています。
+// 契約の正本は `docs/architecture/*.md` と `docs/contracts/*.md` に集約しています。
 
 export type HttpFetchInit = RequestInit & {
   /**

@@ -49,5 +49,6 @@ repo 外 manual task として、handoff で current fact として扱えるも�
 - repo 外 manual task の運用完了状況
 
 ## References
-- [phase3_handoff_current_state.md](../../docs/development/supporting/phase3_post_decision_prompt_pack/phase3_handoff_current_state.md)
+- [docs/managerdocs/01_current_state_and_decision_rules.md](../../docs/managerdocs/01_current_state_and_decision_rules.md)
+- [docs/managerdocs/02_release_readiness_and_repo_external_signoff.md](../../docs/managerdocs/02_release_readiness_and_repo_external_signoff.md)
 - [README.md](../README.md)

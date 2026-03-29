@@ -13,7 +13,7 @@
 - 同一ガント期間に派生 RUN を作成する場合は、親 RUN_ID（本ファイル）を備考とログ先頭に明記する。
 
 ## 参照順（必読）
-1. `docs/DEVELOPMENT_STATUS.md`
+1. `docs/README.md`
 2. `web-client/src/AppRouter.tsx`
 3. `web-client/src/LoginScreen.tsx`
 4. 本ガント（本ファイル）

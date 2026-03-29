@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 
 /**
  * ORCA master DAO.
- * Supported schema contract is documented in docs/development/orca-master-supported-schema-contract.md.
+ * Supported schema contract is documented in docs/contracts/orca-master-api.md.
  */
 @ApplicationScoped
 public class OrcaMasterDao {

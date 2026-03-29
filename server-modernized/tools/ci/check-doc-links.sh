@@ -23,9 +23,9 @@ cd "$ROOT_DIR"
 FILES=(
   "README.md"
   "docs/README.md"
-  "docs/development/server-modernized-remediation-master-checklist.md"
-  "docs/development/pull-request-checklist-template.md"
-  "docs/development/execution-log.md"
+  "docs/managerdocs/README.md"
+  "docs/architecture/server-modernization-overview.md"
+  "docs/architecture/web-client-overview.md"
   "docs/contracts/document-integrity.md"
   "docs/contracts/health-endpoints.md"
   "docs/contracts/orca-connection.md"
@@ -33,7 +33,8 @@ FILES=(
   "docs/contracts/patient-images.md"
   "docs/contracts/runtime-config.md"
   "docs/runbooks/release-validation.md"
-  "docs/server-modernization/README.md"
+  "docs/runbooks/pull-request-checklist.md"
+  "docs/operations/ORCA_CERTIFICATION_ONLY.md"
 )
 
 status=0

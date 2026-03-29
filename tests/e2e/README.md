@@ -18,8 +18,8 @@ RUN_ID=20251124T181500Z VITE_DEV_PROXY_TARGET=http://100.102.17.40:8000 \
 ```
 
 ## 期待成果物・保存先
-- HAR / コンソール / 監査メタ抽出: `artifacts/api-stability/<RUN_ID>/e2e/orca-master/` に `har/`, `console/`, `audit/` を作成して保存（手動 or 後続実装）。
-- フォールト注入時は `docs/server-modernization/phase2/operations/orca-master-resilience-plan.md` の scenarioId をファイル名に含める（例: `db-down-20251124T181500Z-har.har`）。
+- HAR / コンソール / 監査メタ抽出: `artifacts/api-stability/<RUN_ID>/e2e/orca-master/` に `har/`, `console/`, `audit/` を作成して保存する。
+- fault 名はテスト側の scenario id をそのままファイル名に含める（例: `db-down-20251124T181500Z-har.har`）。
 
 ## メモ
 - 422 バリデーション/Live シナリオは `test.skip` または `test.fixme` でスケルトン状態。UI セレクタが確定したら解除して実装する。

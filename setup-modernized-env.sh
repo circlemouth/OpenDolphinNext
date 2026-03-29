@@ -38,8 +38,8 @@ normalize_base_path() {
   printf '%s' "$raw"
 }
 
-ORCA_INFO_FILE="docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md"
-ORCA_CREDENTIAL_FILE="docs/web-client/operations/mac-dev-login.local.md"
+ORCA_INFO_FILE="docs/operations/ORCA_CERTIFICATION_ONLY.md"
+ORCA_CREDENTIAL_FILE="docs/operations/ORCA_CERTIFICATION_ONLY.md"
 CUSTOM_PROP_TEMPLATE="ops/shared/docker/custom.properties"
 CUSTOM_PROP_OUTPUT="custom.properties.dev"
 COMPOSE_OVERRIDE_FILE="docker-compose.override.dev.yml"

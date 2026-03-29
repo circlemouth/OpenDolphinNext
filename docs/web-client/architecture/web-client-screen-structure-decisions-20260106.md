@@ -4,7 +4,7 @@
 Web クライアントの本番ナビ/ルーティング/ガードの確定内容を整理し、実装・UX・運用ドキュメントの基準点を明確化する。
 
 ## 参照
-- `docs/DEVELOPMENT_STATUS.md`
+- `docs/managerdocs/03_web_current_contract_summary.md`
 - `src/webclient_screen_structure_plan/design/30_本番ナビ/ルーティング最終設計.md`
 
 ## 1. 本番ナビ（順序・名称・遷移）

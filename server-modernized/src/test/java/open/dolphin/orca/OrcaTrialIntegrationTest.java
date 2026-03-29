@@ -31,11 +31,11 @@ class OrcaTrialIntegrationTest {
         String facilityId = facilityId();
 
         List<RequestSpec> specs = List.of(
-                new RequestSpec(OrcaEndpoint.SYSTEM_DAILY, readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/xml/44_system01dailyv2_request.xml")),
-                new RequestSpec(OrcaEndpoint.SYSTEM_INFO, readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/xml/28_systeminfv2_request.xml")),
+                new RequestSpec(OrcaEndpoint.SYSTEM_DAILY, readXml("server-modernized/src/test/resources/orca-api-requests/xml/44_system01dailyv2_request.xml")),
+                new RequestSpec(OrcaEndpoint.SYSTEM_INFO, readXml("server-modernized/src/test/resources/orca-api-requests/xml/28_systeminfv2_request.xml")),
                 new RequestSpec(OrcaEndpoint.TEMP_MEDICAL_GET, tmedicalGetPayload()),
                 new RequestSpec(OrcaEndpoint.INCOME_INFO, incomeInfoPayload()),
-                new RequestSpec(OrcaEndpoint.MEDICAL_SET, readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/xml/33_medicalsetv2_request.xml")),
+                new RequestSpec(OrcaEndpoint.MEDICAL_SET, readXml("server-modernized/src/test/resources/orca-api-requests/xml/33_medicalsetv2_request.xml")),
                 new RequestSpec(OrcaEndpoint.INSURANCE_LIST, insuranceListPayload()),
                 new RequestSpec(OrcaEndpoint.MASTER_LAST_UPDATE, "<data></data>"),
                 new RequestSpec(OrcaEndpoint.CONTRAINDICATION_CHECK, contraindicationPayload()),
@@ -58,7 +58,7 @@ class OrcaTrialIntegrationTest {
         assertTrue(getResult.getBody().contains("Api_Result"));
 
         OrcaTransportResult modResult = invokeOrSkip(transport, facilityId, OrcaEndpoint.PATIENT_MOD,
-                OrcaTransportRequest.post(readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/14_patientmodv2_request.xml")));
+                OrcaTransportRequest.post(readXml("server-modernized/src/test/resources/orca-api-requests/14_patientmodv2_request.xml")));
         assertNotNull(modResult);
         assertTrue(modResult.getBody().contains("Api_Result"));
     }
@@ -68,7 +68,7 @@ class OrcaTrialIntegrationTest {
         RestOrcaTransport transport = buildTransport();
         String facilityId = facilityId();
         OrcaTransportResult result = invokeOrSkip(transport, facilityId, OrcaEndpoint.PRESCRIPTION_REPORT,
-                OrcaTransportRequest.post(readXml("docs/server-modernization/phase2/operations/assets/orca-api-requests/xml/44_system01dailyv2_request.xml")));
+                OrcaTransportRequest.post(readXml("server-modernized/src/test/resources/orca-api-requests/xml/44_system01dailyv2_request.xml")));
         assertNotNull(result);
         assertTrue(result.getBody().contains("Api_Result") || result.getBody().contains("Data_Id"));
         String dataId = extractDataId(result.getBody());

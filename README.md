@@ -7,26 +7,25 @@
 
 ## 📚 ドキュメント・開発ハブ
 
-本プロジェクトのドキュメントは役割別に集約されています。開発作業は必ず以下のハブドキュメントを起点に進めてください。
+現行の正本導線は少数に絞っています。古い phase 文書、dated note、archive は主要導線に含めません。
 
-### 開発状況（単一参照）
-👉 **[docs/DEVELOPMENT_STATUS.md](docs/DEVELOPMENT_STATUS.md)**
-*   Phase2 ドキュメントの位置付け（Legacy/Archive）
-*   現行作業の参照順とルール
-*   `docs/` 正本索引: [docs/README.md](docs/README.md)
+### 全体索引
+👉 **[docs/README.md](docs/README.md)**
+* manager 向け正本
+* current contracts
+* architecture summary
+* live runbooks
 
-### Web クライアント開発
-👉 **[docs/web-client/CURRENT.md](docs/web-client/CURRENT.md)**
-*   UX/UI 設計、画面仕様
-*   現行の設計/運用ハブ（Phase2 文書は Legacy/Archive）
-*   Web クライアント運用ルール
+### manager handoff / release boundary
+👉 **[docs/managerdocs/README.md](docs/managerdocs/README.md)**
+* repo-local の current state
+* release-ready と repo-external sign-off の境界
+* manager 向け operating playbook
 
-### サーバーモダナイズ & ORCA 連携
-👉 **[docs/server-modernization/README.md](docs/server-modernization/README.md)**
-*   Jakarta EE 10 移行、API 設計
-*   ORCA (WebORCA) 連携仕様・接続ルール
-*   サーバー運用・デプロイ手順（Phase2 は Legacy/Archive）
-*   root 側の契約索引: [docs/README.md](docs/README.md) から runtime config / health / ORCA connection / document integrity / patient images を参照
+### 実装に近い正本
+* Web: [web-client/README.md](web-client/README.md), [web-client/notes/](web-client/notes/)
+* Server: [docs/architecture/server-modernization-overview.md](docs/architecture/server-modernization-overview.md)
+* Release gate: [docs/runbooks/release-validation.md](docs/runbooks/release-validation.md)
 
 ---
 
@@ -45,7 +44,7 @@
 > これらのディレクトリに含まれるコードは、機能比較や仕様確認のためにのみ残されています。
 > **修正・変更・保守作業は行いません。**
 >
-> `artifacts/`、`output/`、`docs/archive/`、`docs/server-modernization/phase2/`、`docs/managerdocs/`、`src/LEGACY:*` などの検証証跡・旧計画文書は、現行の主要開発対象ではありません。
+> `artifacts/`、`output/`、`src/LEGACY:*` などの生成物・参照専用資産は、現行の主要開発対象ではありません。
 > 現在の実装作業は `server-modernized/` と `web-client/` を中心に進めます。
 
 
@@ -55,9 +54,8 @@
 *   フォーク元のリポジトリを公開、維持してくださっている株式会社メドレー様に感謝申し上げます。
 *   https://www.opendolphin.com/
 
-*   常に進化しながら開発に伴走してくれたCodex、ワークツリーによる開発と工程管理を理解させてくれたKamuiOS、マルチエージェント開発の活用とtmux等について(楽しく)学ばせていただいたmulti-agent-shogunの開発者の方々に謝辞申し上げます。
+*   常に進化しながら開発に伴走してくれたCodex、マルチエージェント開発の活用とtmux等について学ばせていただいたmulti-agent-shogunの開発者の方々に謝辞申し上げます。
     - [multi-agent-shogun](https://github.com/yohey-w/multi-agent-shogun.git)
-    - [kamuios](https://github.com/dai-motoki/kamuios.git)
     - [OpenAI Codex](https://github.com/openai/codex)
   - 
 *   PR [#68](https://github.com/circlemouth/OpenDolphinNext/pull/68)  により、サーバーデータ保存形式の見直しに関する具体的な修正、ご意見を頂けた H.Inomata 様(https://x.com/h_inomata?s=21)に感謝いたします。

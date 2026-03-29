@@ -20,7 +20,7 @@
     "verify:web-guard": "npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift",
     "verify:no-target-blank-unsafe": "node scripts/verify-no-target-blank-unsafe.mjs",
     "lint": "eslint .",
-    "openapi:orca-master": "openapi-typescript ../docs/server-modernization/phase2/operations/assets/openapi/orca-master-orca05-06-08.yaml --output src/generated/orca-master.ts --enum --export-type",
+    "openapi:orca-master": "node -e \"console.error('openapi:orca-master is retired; use docs/contracts/orca-master-api.md for the current contract summary.'); process.exit(1)\"",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:ci": "vitest run --silent --reporter=dot",

@@ -1,4 +1,0 @@
-{
-  "status": "blocked",
-  "reason": "Codex サンドボックスでは PagerDuty API へ接続できないため、インシデント作成と ID 取得は Ops 本番環境に依頼すること。Jenkins ビルド番号と Slack Permalink が揃い次第で構わない。"
-}

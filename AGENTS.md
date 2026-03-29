@@ -120,12 +120,11 @@
 
 ## 5. 開発・ドキュメントルール
 - **正本ドキュメント**:
-  - 実装着手と進捗判定の正本は `docs/development/phase2_current_coding_tasks_checklist_v1.md`。
-  - 現行状況と索引は `docs/DEVELOPMENT_STATUS.md` を参照する。
-  - `Phase2` と名のつくドキュメントは原則 **過去の遺物 (Legacy/Archive)** だが、`docs/development/phase2_current_coding_tasks_checklist_v1.md` のみ現行計画として扱う。
-- **現行ハブ**: `docs/web-client/CURRENT.md` / `docs/server-modernization/README.md` を入口とする。
-- **当面の server-modernized 作業計画**: `docs/server-modernization/planning/server_modernization_wbs_detailed.md` を参照する。
-  - WBS 記載タスクを順番に進める場合の作業根拠とし、`docs/development/phase2_current_coding_tasks_checklist_v1.md`・`docs/DEVELOPMENT_STATUS.md`・`AGENTS.md`・最新指示と矛盾する場合はそちらを優先する。
+  - 正本索引は `docs/README.md`。
+  - manager handoff / release 判定は `docs/managerdocs/README.md`。
+  - web current contract は `web-client/README.md` と `web-client/notes/`。
+  - server / release gate は `docs/architecture/server-modernization-overview.md` と `docs/runbooks/release-validation.md`。
+- **現行ハブ**: `docs/README.md` / `docs/managerdocs/README.md` / `web-client/README.md` を入口とする。
 - **文字コード**: 日本語を含むファイルは **UTF-8 (BOMなし)** で保存。
 - **RUN_ID**: 作業開始時に `YYYYMMDDThhmmssZ` を採番し、ログや報告で使用する。
 - **セキュリティ変更時のドキュメント更新は必須**:
@@ -138,7 +137,7 @@
 - **再ビルド所要時間**: `docker compose build server-modernized-dev` は依存DLで時間がかかる。
   - 推奨待機時間: **7〜10分**（初回は **15分** を見込む）。
   - タイムアウト設定時は **最低 10分** 以上を指定すること。
-- **ORCA連携**: 実環境 (ORCA) への接続は機微情報を含むため、`docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md` の手順を厳守し、ログを残すこと（Phase2 版は Legacy 参照のみ）。
+- **ORCA連携**: 実環境 (ORCA) への接続は機微情報を含むため、`docs/operations/ORCA_CERTIFICATION_ONLY.md` の手順を厳守し、ログを残すこと。
   - **標準接続先**: WebORCA Trial（XML/UTF-8 + Basic）。公開 Trial の既定値（URL/ユーザー/パス）は上記ドキュメント §2 の入力欄に記載。
 - **本番相当設定の検証**:
   - 認証、Cookie、CORS、ORCA 接続、添付保存、エラーハンドリングは、可能な限り本番相当設定で確認すること。
@@ -146,8 +145,8 @@
 
 ## 7. ワーキングフロー (作業手順)
 1. **理解**:
-   - 指示内容と `docs/development/phase2_current_coding_tasks_checklist_v1.md`、`docs/DEVELOPMENT_STATUS.md` を確認する。
-   - `server-modernized` の当面作業では `docs/server-modernization/planning/server_modernization_wbs_detailed.md` も確認する。
+   - 指示内容と `docs/README.md`、`docs/managerdocs/README.md`、`web-client/README.md` を確認する。
+   - server 側の current contract / release gate は `docs/architecture/server-modernization-overview.md` と `docs/runbooks/release-validation.md` を確認する。
    - 対象変更の **資産・信頼境界・攻撃面** を把握する。
 2. **脅威モデリング**:
    - 少なくとも以下を確認すること。

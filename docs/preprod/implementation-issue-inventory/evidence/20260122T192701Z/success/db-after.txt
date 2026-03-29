@@ -1,8 +1,0 @@
-     metric      | value 
------------------+-------
- patient_count   |     1
- karte_count     |     1
- diagnosis_count |     1
- document_count  |     2
-(4 rows)
-

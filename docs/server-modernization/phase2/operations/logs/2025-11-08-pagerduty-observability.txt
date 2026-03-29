@@ -1,7 +1,0 @@
-# Archive Stub: PagerDuty/Observability Log (2025-11-08)
-
-本ログは 2025-11-15 に Archive 移動済みです。内容は `docs/archive/2025Q4/server-modernization/phase2/operations/logs/2025-11-08-pagerduty-observability.txt` で確認できます。
-
-- 参照先: [docs/archive/2025Q4/server-modernization/phase2/operations/logs/2025-11-08-pagerduty-observability.txt](../../../../archive/2025Q4/server-modernization/phase2/operations/logs/2025-11-08-pagerduty-observability.txt)
-- 移動理由: PagerDuty/Observability チューニングの W20 証跡は本番運用での参照頻度が低いため、2025Q4 Archive へ集約しました。
-- 復活条件: PagerDuty dispatch フローを再評価するレビューや再現テストが発生し、過去ログを現行作業ディレクトリに戻す必要が生じた場合のみ復元します。

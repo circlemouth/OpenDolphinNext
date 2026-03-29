@@ -15,7 +15,7 @@
 - 上記ユーザーに `d_roles` の `system-administrator` 権限を付与。
 - `d_patient`/`d_karte` に最低限の患者 + Karte を登録（各 facility に patientId `00001`）。
 
-> **注意**: 医療機関や患者の実データは含まれていません。必要に応じて `docs/web-client/operations/LOCAL_BACKEND_DOCKER.md` で紹介している JSONL インポート手順や `ops/tests/api-smoke-test` の CLI を併用してください。
+> **注意**: 医療機関や患者の実データは含まれていません。必要に応じて `ops/tests/api-smoke-test` の CLI と `docs/runbooks/release-validation.md` の確認手順を併用してください。
 
 ## E2E 再現 seed（受付/診療/会計/帳票）
 `e2e_repro_seed.sql` は E2E の再現性を高めるためのシナリオ seed を追加します。`local_synthetic_seed.sql` を先に適用したうえで実行してください。

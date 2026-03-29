@@ -20,8 +20,8 @@ $ErrorActionPreference = "Stop"
 
 # --- 設定 ---
 $ScriptDir = $PSScriptRoot
-$OrcaInfoFile = "docs/server-modernization/operations/ORCA_CERTIFICATION_ONLY.md"
-$OrcaCredentialFile = "docs/web-client/operations/mac-dev-login.local.md"
+$OrcaInfoFile = "docs/operations/ORCA_CERTIFICATION_ONLY.md"
+$OrcaCredentialFile = "docs/operations/ORCA_CERTIFICATION_ONLY.md"
 $CustomPropTemplate = "ops/shared/docker/custom.properties"
 $CustomPropOutput = Join-Path $ScriptDir "custom.properties.dev"
 $ComposeOverrideFile = Join-Path $ScriptDir "docker-compose.override.dev.yml"
