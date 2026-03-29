@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -160,9 +160,20 @@ type LoginScreenProps = {
   onLoginSuccess?: (result: LoginResult) => void;
   initialFacilityId?: string;
   lockFacilityId?: boolean;
+  initialNotice?: { message: string; tone: FeedbackTone };
+  destinationSummary?: {
+    title: string;
+    body: string;
+  };
 };
 
-export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId = false }: LoginScreenProps) => {
+export const LoginScreen = ({
+  onLoginSuccess,
+  initialFacilityId,
+  lockFacilityId = false,
+  initialNotice,
+  destinationSummary,
+}: LoginScreenProps) => {
   const [values, setValues] = useState<CredentialsFormValues>(() => ({
     facilityId: initialFacilityId ?? '',
     userId: '',
@@ -178,6 +189,7 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackTone, setFeedbackTone] = useState<FeedbackTone>('error');
   const [profile, setProfile] = useState<LoginResult | null>(null);
+  const secondFactorInputRef = useRef<HTMLInputElement | null>(null);
 
   const isLoading = status === 'loading';
   const isSuccess = status === 'success';
@@ -194,7 +206,7 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
       return {
         badge: 'ステップ 2/2',
         title: '二要素認証',
-        body: '施設IDとユーザーIDの確認が終わったため、6桁の認証コードで追加確認を行います。',
+        body: 'ログイン情報の確認が終わったため、続けて認証アプリの6桁コードで本人確認を行います。',
       };
     }
     return {
@@ -210,8 +222,14 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
       setFeedback(notice.message);
       setFeedbackTone('error');
       setStatus('error');
+      return;
     }
-  }, []);
+    if (initialNotice?.message) {
+      setFeedback(initialNotice.message);
+      setFeedbackTone(initialNotice.tone);
+      setStatus(initialNotice.tone === 'error' ? 'error' : 'idle');
+    }
+  }, [initialNotice]);
 
   useEffect(() => {
     if (!initialFacilityId) return;
@@ -219,6 +237,11 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
       prev.facilityId === initialFacilityId ? prev : { ...prev, facilityId: initialFacilityId },
     );
   }, [initialFacilityId]);
+
+  useEffect(() => {
+    if (step !== 'factor2') return;
+    secondFactorInputRef.current?.focus();
+  }, [step]);
 
   const handleChange = (key: CredentialsFieldKey) => (event: ChangeEvent<HTMLInputElement>) => {
     setValues((prev) => ({ ...prev, [key]: event.target.value }));
@@ -379,7 +402,7 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
   const handleSecondFactorSubmit = async () => {
     const pending = pendingSecondFactor;
     if (!pending) {
-      resetToCredentialsStep('二要素認証セッションが無効です。最初からログインし直してください。');
+      resetToCredentialsStep(AUTH_COPY.factor2SessionMissing);
       return;
     }
 
@@ -510,6 +533,12 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
             <p style={{ margin: '0.25rem 0 0', fontWeight: 700 }}>{stepMeta.title}</p>
             <p className="status-message__detail">{stepMeta.body}</p>
           </div>
+          {destinationSummary ? (
+            <div className="status-message" role="status" aria-live="polite">
+              <p style={{ margin: 0, fontWeight: 700 }}>{destinationSummary.title}</p>
+              <p className="status-message__detail">{destinationSummary.body}</p>
+            </div>
+          ) : null}
         </header>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
@@ -562,7 +591,7 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
             </>
           ) : (
             <>
-              <div className="status-message" role="status">
+              <div className="status-message" role="status" aria-live="polite">
                 {AUTH_COPY.factor2Required}
                 <p className="status-message__detail">
                   対象: {pendingSecondFactor?.facilityId}:{pendingSecondFactor?.userId}
@@ -575,6 +604,7 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
               <label className="field">
                 <span>認証コード</span>
                 <input
+                  ref={secondFactorInputRef}
                   id="login-factor2-code"
                   name="loginFactor2Code"
                   type="text"
@@ -598,7 +628,7 @@ export const LoginScreen = ({ onLoginSuccess, initialFacilityId, lockFacilityId 
                   onClick={() => resetToCredentialsStep(AUTH_COPY.factor2Cancelled, 'info')}
                   disabled={isLoading}
                 >
-                  認証コード入力をやめる
+                  二要素認証を中止
                 </button>
               </div>
             </>

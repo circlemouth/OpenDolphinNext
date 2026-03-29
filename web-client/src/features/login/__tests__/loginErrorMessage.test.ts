@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveLoginFailureMessage } from '../loginErrorMessage';
+import { AUTH_COPY, resolveLoginFailure, resolveLoginFailureMessage } from '../loginErrorMessage';
 
 describe('resolveLoginFailureMessage', () => {
   it('maps unauthorized JSON to user-friendly credential guidance', () => {
@@ -13,7 +13,7 @@ describe('resolveLoginFailureMessage', () => {
       }),
     });
 
-    expect(message).toContain('施設ID・ユーザーID・パスワード');
+    expect(message).toBe(AUTH_COPY.credentialsFailure);
   });
 
   it('maps principal_unresolved to facility guidance', () => {
@@ -78,7 +78,7 @@ describe('resolveLoginFailureMessage', () => {
       retryAfter: 'not-a-number',
     });
 
-    expect(message).toContain('しばらく待って');
+    expect(message).toBe(AUTH_COPY.tooManyRequests);
   });
 
   it('maps factor2_invalid to retry guidance', () => {
@@ -90,7 +90,7 @@ describe('resolveLoginFailureMessage', () => {
       }),
     });
 
-    expect(message).toContain('再試行');
+    expect(message).toBe(AUTH_COPY.factor2Invalid);
   });
 
   it('maps factor2_session_expired to relogin guidance', () => {
@@ -102,7 +102,36 @@ describe('resolveLoginFailureMessage', () => {
       }),
     });
 
-    expect(message).toContain('確認時間');
-    expect(message).toContain('もう一度ログイン');
+    expect(message).toBe(AUTH_COPY.factor2SessionExpired);
+  });
+
+  it('distinguishes factor2 session missing and expired', () => {
+    const missing = resolveLoginFailure({
+      status: 401,
+      bodyText: JSON.stringify({
+        error: 'factor2_session_missing',
+      }),
+    });
+    const expired = resolveLoginFailure({
+      status: 401,
+      bodyText: JSON.stringify({
+        error: 'factor2_session_expired',
+      }),
+    });
+
+    expect(missing.message).toBe(AUTH_COPY.factor2SessionMissing);
+    expect(expired.message).toBe(AUTH_COPY.factor2SessionExpired);
+  });
+
+  it('maps header auth mismatch to security guidance', () => {
+    const message = resolveLoginFailureMessage({
+      status: 401,
+      bodyText: JSON.stringify({
+        error: 'header_auth_disabled',
+        reason: 'header_auth_disabled',
+      }),
+    });
+
+    expect(message).toBe(AUTH_COPY.securityFailure);
   });
 });

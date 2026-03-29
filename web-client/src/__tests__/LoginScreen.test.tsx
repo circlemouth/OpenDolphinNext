@@ -258,7 +258,7 @@ describe('LoginScreen', () => {
     await user.type(screen.getByLabelText('ユーザーID'), 'doctor01');
     await user.type(screen.getByLabelText('パスワード'), 'Secret123!');
     await user.click(screen.getByRole('button', { name: 'ログイン' }));
-    await user.click(await screen.findByRole('button', { name: '認証コード入力をやめる' }));
+    await user.click(await screen.findByRole('button', { name: '二要素認証を中止' }));
 
     expect(await screen.findByLabelText('パスワード')).toBeInTheDocument();
     expect(screen.getByText('ステップ 1/2')).toBeInTheDocument();

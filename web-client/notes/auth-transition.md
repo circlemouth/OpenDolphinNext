@@ -21,6 +21,17 @@
 - login 完了時の主な着地元は `location.state.from` です。
 - unauthenticated access と session expiry は `/login` へ `replace` 遷移します。
 
+### Redirect reason taxonomy
+- `logout`: 利用者が明示的にサインアウトした
+- `timeout`: セッション有効期限が切れた
+- `unauthorized`: ログイン状態を確認できなかった
+- `forbidden`: 権限確認に失敗した
+
+### Landing explanation
+- `location.state.from` が facility-scoped internal path なら、login 後はその画面へ戻します。
+- `location.state.from` の query/hash に機微な deep link 条件が含まれる場合、user-visible には「前回の画面へ戻るが詳細条件は引き継がない」と説明します。
+- `location.state.from` が無効、login 自身、または facility-scoped でない場合は `/f/:facilityId/reception` を fallback にします。
+
 ## Factor2
 - factor2 は TOTP 前提です。
 - factor2 は必要時のみ要求されます。

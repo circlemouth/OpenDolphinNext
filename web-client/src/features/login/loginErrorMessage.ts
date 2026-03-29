@@ -23,15 +23,15 @@ export type LoginFailureResolution = {
 };
 
 export const AUTH_COPY = {
-  credentialsFailure: 'ログイン情報を確認して、もう一度入力してください。',
+  credentialsFailure: 'ログインに失敗しました。施設ID・ユーザーID・パスワードを確認してください。',
   authenticationFailed: '認証を完了できませんでした。はじめからやり直してください。',
   securityFailure: '安全な確認ができなかったため、この操作を続けられません。ログイン画面からやり直してください。',
-  factor2Required: '追加の確認が必要です。認証アプリの6桁コードを入力してください。',
-  factor2Invalid: '確認コードが一致しません。最新の6桁コードを入力してください。',
-  factor2SessionMissing: '認証の続きが見つからなかったため、はじめからやり直してください。',
-  factor2SessionExpired: '確認コードの入力期限が切れたため、もう一度ログインしてください。',
-  factor2Cancelled: '追加の確認を中止しました。必要な場合はログインからやり直してください。',
-  tooManyRequests: '試行回数が上限に達しました。少し時間をおいてから、もう一度お試しください。',
+  factor2Required: '施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。',
+  factor2Invalid: '認証コードが一致しません。6桁コードを確認して再試行してください。',
+  factor2SessionMissing: '二要素認証の確認状態が見つかりませんでした。もう一度ログインしてください。',
+  factor2SessionExpired: '二要素認証の確認時間が過ぎました。もう一度ログインしてください。',
+  factor2Cancelled: '二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。',
+  tooManyRequests: 'ログイン試行回数が上限に達しました。しばらく待ってから再試行してください。',
 } as const;
 
 const normalizeText = (value: unknown): string | undefined => {
