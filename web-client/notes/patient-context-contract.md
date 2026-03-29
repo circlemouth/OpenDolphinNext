@@ -33,6 +33,7 @@
 ## URL Boundary
 - query には患者関連キーと自由入力キーを残しません。
 - `returnTo` の sanitize と同様に、URL は機微情報を残さない方向へ寄せます。
+- scrub により deep link query を落とした時は、戻り先の画面本体へ移動することを user-visible に説明します。
 
 ## Unknown
 - route 別 handoff state の詳細 schema

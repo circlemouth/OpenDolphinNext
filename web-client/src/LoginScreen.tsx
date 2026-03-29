@@ -526,12 +526,6 @@ export const LoginScreen = ({
   }, [feedbackTone]);
   const feedbackRole = feedbackTone === 'error' ? 'alert' : 'status';
   const feedbackLive = feedbackTone === 'error' ? 'assertive' : 'polite';
-  const initialNoticeClassName = useMemo(() => {
-    if (!initialNotice) return null;
-    if (initialNotice.tone === 'success') return 'status-message is-success';
-    if (initialNotice.tone === 'info') return 'status-message';
-    return 'status-message is-error';
-  }, [initialNotice]);
 
   return (
     <main className="login-shell">
@@ -559,16 +553,6 @@ export const LoginScreen = ({
         </header>
 
         <form className="login-form" onSubmit={handleSubmit} noValidate>
-          {initialNotice && initialNoticeClassName ? (
-            <div
-              className={initialNoticeClassName}
-              role={initialNotice.tone === 'error' ? 'alert' : 'status'}
-              aria-live={initialNotice.tone === 'error' ? 'assertive' : 'polite'}
-              aria-atomic="true"
-            >
-              {initialNotice.message}
-            </div>
-          ) : null}
           {step === 'credentials' ? (
             <>
               <label className="field">

@@ -46,6 +46,14 @@ describe('loginRedirect helpers', () => {
   it('returns default landing summary when from state is missing', () => {
     const summary = resolveLoginDestinationSummary({}, '0001');
 
+    expect(summary?.body).toContain('移動先が指定されていなかったため');
+    expect(summary?.body).toContain('/f/0001/reception');
+  });
+
+  it('returns invalid landing summary when from state is not facility scoped', () => {
+    const summary = resolveLoginDestinationSummary({ from: '/charts' }, '0001');
+
+    expect(summary?.body).toContain('元の移動先は安全に開けなかったため');
     expect(summary?.body).toContain('/f/0001/reception');
   });
 
@@ -54,6 +62,12 @@ describe('loginRedirect helpers', () => {
 
     expect(notice).toEqual({ reason: 'logout' });
     expect(resolveLoginNoticeMessage(notice)).toContain('サインアウトしました');
+  });
+
+  it('resolves timeout / unauthorized / forbidden messages distinctly', () => {
+    expect(resolveLoginNoticeMessage({ reason: 'timeout' })).toContain('有効期限が切れました');
+    expect(resolveLoginNoticeMessage({ reason: 'unauthorized' })).toContain('ログインが必要です');
+    expect(resolveLoginNoticeMessage({ reason: 'forbidden' })).toContain('この操作は許可されていません');
   });
 
   it('persists and consumes login notice from sessionStorage', () => {

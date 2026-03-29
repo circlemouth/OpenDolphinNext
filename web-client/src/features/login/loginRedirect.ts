@@ -81,15 +81,29 @@ export const resolveLoginNoticeFromSearch = (search: string): LoginRedirectNotic
 export const resolveLoginNoticeMessage = (notice?: LoginRedirectNotice): string | undefined => {
   if (!notice) return undefined;
   if (notice.reason === 'logout') {
-    return 'サインアウトしました。続けて別の施設やユーザーでログインできます。';
+    return 'サインアウトしました。安全のため、この端末の作業状態を消去してログイン画面へ戻りました。';
   }
   if (notice.reason === 'forbidden') {
-    return 'この画面へのアクセス権限を確認できませんでした。権限を確認して再ログインしてください。';
+    return 'この操作は許可されていません。現在の権限では続けられないため、利用可能な画面からやり直してください。';
   }
   if (notice.reason === 'timeout') {
-    return 'セッションの有効期限が切れたため、再ログインしてください。';
+    return 'セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。';
   }
-  return 'ログイン状態を確認できなかったため、再ログインしてください。';
+  return 'ログインが必要です。この画面を開くには再ログインしてください。';
+};
+
+const buildDefaultLandingBody = (fallbackFacilityId?: string, reason?: 'missing' | 'invalid') => {
+  const fallback =
+    normalizeFacilityId(fallbackFacilityId ?? '')
+      ? `${buildFacilityPath(normalizeFacilityId(fallbackFacilityId ?? ''), '/reception')} を既定の着地点として開きます。`
+      : '受付を既定の着地点として開きます。';
+  if (reason === 'invalid') {
+    return `元の移動先は安全に開けなかったため、${fallback}`;
+  }
+  if (reason === 'missing') {
+    return `移動先が指定されていなかったため、${fallback}`;
+  }
+  return `ログイン後は ${fallback}`;
 };
 
 export const persistLoginNotice = (notice: LoginRedirectNotice) => {
@@ -119,10 +133,11 @@ export const resolveLoginDestinationSummary = (
   fallbackFacilityId?: string,
 ): LoginDestinationSummary | undefined => {
   const from = resolveFromState(state);
+  const fromTarget = resolveFromTarget(from);
   const fromPath = resolveFromPath(from);
   if (fromPath && !isLoginPath(fromPath) && parseFacilityPath(fromPath)) {
-    const scrubbed = scrubPathWithQuery(resolveFromTarget(from));
-    if (scrubbed !== resolveFromTarget(from)) {
+    const scrubbed = scrubPathWithQuery(fromTarget);
+    if (scrubbed !== fromTarget) {
       return {
         title: 'ログイン後の移動先',
         body: 'ログイン後は前回の画面へ戻ります。安全のため、詳細条件や deep link query は引き継がずに画面本体へ移動します。',
@@ -134,16 +149,15 @@ export const resolveLoginDestinationSummary = (
     };
   }
 
-  const normalizedFacilityId = normalizeFacilityId(fallbackFacilityId ?? '');
-  if (normalizedFacilityId) {
+  if (from !== undefined) {
     return {
       title: 'ログイン後の移動先',
-      body: `ログイン後は ${buildFacilityPath(normalizedFacilityId, '/reception')} を既定の着地点として開きます。`,
+      body: buildDefaultLandingBody(fallbackFacilityId, 'invalid'),
     };
   }
   return {
     title: 'ログイン後の移動先',
-    body: 'ログイン後は受付を既定の着地点として開きます。',
+    body: buildDefaultLandingBody(fallbackFacilityId, 'missing'),
   };
 };
 
