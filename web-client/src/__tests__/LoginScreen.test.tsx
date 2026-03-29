@@ -51,6 +51,22 @@ describe('LoginScreen', () => {
     expect(heading).toHaveAttribute('id', 'login-heading');
   });
 
+  it('initialNotice と destinationSummary を login surface 上に表示する', () => {
+    render(
+      <LoginScreen
+        initialNotice={{ message: 'セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。', tone: 'error' }}
+        destinationSummary={{
+          title: 'ログイン後の移動先',
+          body: '元の移動先は安全に開けなかったため、/f/0001/reception を既定の着地点として開きます。',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。')).toBeInTheDocument();
+    expect(screen.getByText('ログイン後の移動先')).toBeInTheDocument();
+    expect(screen.getByText('元の移動先は安全に開けなかったため、/f/0001/reception を既定の着地点として開きます。')).toBeInTheDocument();
+  });
+
   it('factor2_required を受けると 2FA 入力画面へ遷移し、password を DOM から消す', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       jsonResponse(

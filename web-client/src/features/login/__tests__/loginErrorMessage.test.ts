@@ -81,6 +81,19 @@ describe('resolveLoginFailureMessage', () => {
     expect(message).toBe(AUTH_COPY.tooManyRequests);
   });
 
+  it('maps factor2_required to purpose-first guidance', () => {
+    const message = resolveLoginFailureMessage({
+      status: 401,
+      bodyText: JSON.stringify({
+        error: 'factor2_required',
+        reason: 'factor2_required',
+      }),
+    });
+
+    expect(message).toBe(AUTH_COPY.factor2Required);
+    expect(message).toContain('本人確認');
+  });
+
   it('maps factor2_invalid to retry guidance', () => {
     const message = resolveLoginFailureMessage({
       status: 401,
