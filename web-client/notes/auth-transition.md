@@ -25,29 +25,32 @@
 - factor2 は TOTP 前提です。
 - factor2 は必要時のみ要求されます。
 - factor2 は `LoginScreen` 内の同一 surface 切替で扱います。
+- factor2 copy は `required / invalid / session missing / session expired / cancel` を見分けます。
+- factor2 surface では、追加確認が必要な理由を user-visible に説明します。
 - pending session の期限切れ、試行上限到達、または cancel 時は credentials step に戻ります。
 - reload 後は pending factor2 state を復元しません。
 
 ### Auth exception copy matrix
-- credentials mismatch:
-  - `ログインに失敗しました。施設ID・ユーザーID・パスワードを確認してください。`
+- credentials denied:
+  - `ログイン情報を確認して、もう一度入力してください。`
 - factor2 required:
-  - `施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。`
-- factor2 retry:
-  - `認証コードが一致しません。6桁コードを確認して再試行してください。`
-- factor2 expired:
-  - `二要素認証の確認時間が過ぎました。もう一度ログインしてください。`
+  - `追加の確認が必要です。認証アプリの6桁コードを入力してください。`
+- factor2 invalid:
+  - `確認コードが一致しません。最新の6桁コードを入力してください。`
 - factor2 session missing:
-  - `二要素認証の確認状態が見つかりませんでした。もう一度ログインしてください。`
+  - `認証の続きが見つからなかったため、はじめからやり直してください。`
+- factor2 session expired:
+  - `確認コードの入力期限が切れたため、もう一度ログインしてください。`
 - factor2 cancel:
-  - `二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。`
-- rate limit:
-  - `ログイン試行回数が上限に達しました。...後に再試行してください。`
+  - `追加の確認を中止しました。必要な場合はログインからやり直してください。`
+- retry-after / throttled:
+  - `試行回数が上限に達しました。少し時間をおいてから、もう一度お試しください。`
 
-### Same-surface explanation
-- factor2 は credentials step と同一 surface で段階表示します。
-- factor2 step では「施設IDとユーザーIDの確認が完了した後の追加確認」であることだけを説明し、内部実装詳細は出しません。
-- factor2 step へ進んだ後も password は client state / DOM に残しません。
+### Factor2 surface guidance
+- same-surface step-up は維持します。
+- factor2 を要求する理由は、内部実装詳細ではなく「追加確認が必要」という目的レベルで説明します。
+- factor2 step では password を保持せず、認証コードだけを再入力対象として扱います。
+- cancel / expired / retry は同一文言に潰さず、再入力と再ログインの違いが分かる copy を使います。
 
 ## Logout
 - logout は cleanup を優先し、`/login` へ `replace` 遷移します。

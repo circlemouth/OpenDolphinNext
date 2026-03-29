@@ -23,11 +23,15 @@ export type LoginFailureResolution = {
 };
 
 export const AUTH_COPY = {
-  factor2Required: '施設IDとユーザーIDの確認が完了しました。続けて二要素認証コードを入力してください。',
-  factor2Invalid: '認証コードが一致しません。6桁コードを確認して再試行してください。',
-  factor2SessionMissing: '二要素認証の確認状態が見つかりませんでした。もう一度ログインしてください。',
-  factor2SessionExpired: '二要素認証の確認時間が過ぎました。もう一度ログインしてください。',
-  factor2Cancelled: '二要素認証をキャンセルしました。必要な場合はもう一度ログインしてください。',
+  credentialsFailure: 'ログイン情報を確認して、もう一度入力してください。',
+  authenticationFailed: '認証を完了できませんでした。はじめからやり直してください。',
+  securityFailure: '安全な確認ができなかったため、この操作を続けられません。ログイン画面からやり直してください。',
+  factor2Required: '追加の確認が必要です。認証アプリの6桁コードを入力してください。',
+  factor2Invalid: '確認コードが一致しません。最新の6桁コードを入力してください。',
+  factor2SessionMissing: '認証の続きが見つからなかったため、はじめからやり直してください。',
+  factor2SessionExpired: '確認コードの入力期限が切れたため、もう一度ログインしてください。',
+  factor2Cancelled: '追加の確認を中止しました。必要な場合はログインからやり直してください。',
+  tooManyRequests: '試行回数が上限に達しました。少し時間をおいてから、もう一度お試しください。',
 } as const;
 
 const normalizeText = (value: unknown): string | undefined => {
@@ -70,9 +74,9 @@ const resolveRetryAfterSeconds = (retryAfter: string | undefined): number | unde
 const resolveTooManyRequestsMessage = (retryAfter: string | undefined): string => {
   const seconds = resolveRetryAfterSeconds(retryAfter);
   if (seconds) {
-    return `ログイン試行回数が上限に達しました。${seconds}秒後に再試行してください。`;
+    return `${AUTH_COPY.tooManyRequests} ${seconds}秒後に再試行してください。`;
   }
-  return 'ログイン試行回数が上限に達しました。しばらく待ってから再試行してください。';
+  return AUTH_COPY.tooManyRequests;
 };
 
 const resolveAuthFailureMessage = (reason: string | undefined, status: number): string => {
@@ -90,18 +94,18 @@ const resolveAuthFailureMessage = (reason: string | undefined, status: number): 
     return AUTH_COPY.factor2SessionExpired;
   }
   if (normalizedReason === 'authentication_failed' || normalizedReason === 'unauthorized') {
-    return 'ログインに失敗しました。施設ID・ユーザーID・パスワードを確認してください。';
+    return AUTH_COPY.credentialsFailure;
   }
   if (normalizedReason === 'principal_unresolved') {
     return 'ログインに失敗しました。施設IDの入力が正しいか確認してください。';
   }
   if (normalizedReason === 'header_auth_disabled' || normalizedReason === 'header_authentication_disabled') {
-    return 'ログインに失敗しました。認証方式の設定が一致していません。管理者へ連絡してください。';
+    return AUTH_COPY.securityFailure;
   }
   if (status === 403) {
     return 'ログインに失敗しました。このアカウントにはアクセス権限がありません。';
   }
-  return 'ログインに失敗しました。入力内容を確認して再試行してください。';
+  return AUTH_COPY.authenticationFailed;
 };
 
 export const resolveLoginFailure = (params: {

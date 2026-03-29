@@ -27,6 +27,19 @@
 - save-failure: 安全で短い失敗文言を使い、再試行または再入力へ導く
 - safe-support-id: raw detail の代わりに `RUN_ID` / `traceId` のような安全な識別子を出すことがある
 
+## Auth Copy Matrix Minimum
+- factor2 required: 追加確認が必要であることを説明して同一 surface の次段へ進める
+- factor2 invalid: retry を促し、credentials failure と混同させない
+- factor2 session missing: pending state が残っていないため login からやり直す
+- factor2 session expired: 期限切れのため login からやり直す
+- factor2 cancel: user が中止したことを示し、再開時は login からやり直す
+
+## Auth Copy Minimum
+- login/factor2 は `ステップ 1/2` と `ステップ 2/2` を user-visible に区別します。
+- factor2 では「なぜ追加確認が出たか」を目的レベルで説明し、内部実装詳細は出しません。
+- cancel / expired / retry は同一失敗文言に潰さず、再入力・再ログイン・待機の違いが分かる copy を使います。
+- factor2 step では password を保持しない前提を明示します。
+
 ### Auth exception copy
 - factor2 required は「追加確認が必要」であることを示し、秘密情報や内部 reason を出さない
 - factor2 retry は「コード確認と再試行」を示す
