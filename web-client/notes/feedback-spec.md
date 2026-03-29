@@ -46,6 +46,11 @@
 - factor2 expired / session missing / cancel は同一文言に潰さず、再ログインが必要な理由を分ける
 - logout / session expiry / unauthorized / forbidden は同じ「ログインしてください」だけに潰さず、 user-visible reason を分ける
 
+## Lost-context Recovery Minimum
+- lost-context の primary CTA は generic な「戻る」ではなく、`受付へ戻る` / `患者管理へ戻る` / `カルテへ戻る` のように surface 名を含めます。
+- safe な `returnTo` がある場合だけ direct return を出し、fallback shortcut は補助導線として出します。
+- canonical copy は「戻ったあと何を選び直すか」を 1 文で説明し、 raw backend/internal detail は使いません。
+
 ## Accessibility Minimum
 - 色だけに依存して状態を伝えないことを最小契約とします。
 - `warn` / `error` は CTA の有無に依らず状態を判別できる必要があります。

@@ -29,6 +29,8 @@
 - Charts は `/f/:facilityId/charts` へ戻し、Reception から再選択を案内します。
 - Patients は `from=reception` なら `/f/:facilityId/reception`、それ以外は `/f/:facilityId/charts` を使います。
 - Mobile Images は `from=reception` / `from=patients` を優先し、既定は `/f/:facilityId/charts` です。
+- generic な「戻る」は使わず、surface-aware CTA で戻り先を明示します。
+- safe な `returnTo` がある時だけ direct return を出し、無い時は surface ごとの fallback を primary CTA にします。
 
 ## URL Boundary
 - query には患者関連キーと自由入力キーを残しません。
