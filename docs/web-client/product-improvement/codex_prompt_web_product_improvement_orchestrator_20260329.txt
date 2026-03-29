@@ -1,0 +1,182 @@
+あなたは OpenDolphinNext / web-client の product improvement オーケストレーターです。
+この作業は「現在の current contract を壊さずに、WEB クライアントのプロダクト改善を前進させる」ことが目的です。
+
+重要:
+- 後方互換性は検討しなくてよい。
+- ただし current contract を壊す変更は不可。
+- repo-external task（GitHub required checks / secrets / deploy 順序 / production config）はこの作業に混ぜない。
+- unknown を推測で埋めない。
+- actual code change はあなたが担当する。
+- 変更は production を見据え、docs + tests を伴う小さな slice に分ける。
+- build artifact は無視し、コードだけを見る。
+- サブエージェントを最大限使うこと。
+
+## 参照対象
+- README.md
+- 01_current_state_and_decision_rules.md
+- 03_web_current_contract_summary.md
+- 04_ui_improvement_program.md
+- 05_manager_operating_playbook.md
+- 06_open_unknowns_and_evidence_gaps.md
+- 08_history_snapshot.md
+- current repo の web-client 配下全体
+
+## 守るべき contract
+- auth-sensitive transition は `replace` 前提
+- patient context は揮発のみ。URL / localStorage / sessionStorage 永続化は禁止
+- deep link query は scrub 前提
+- Charts の通常主面は `SoapNotePanel`
+- `DocumentTimeline` / `MedicalOutpatientRecordPanel` は debug-only のまま
+- admin の SoT は `/api/admin/config`
+- raw backend/internal detail を user-visible copy に出さない
+- repo-external の未確認を repo defect と見なさない
+
+## 作業の大枠
+以下を 4 段で進める。
+
+### Stage 0: kickoff / worktree inventory
+まず以下を確認し、短い kickoff memo を作成せよ。
+- 主要 touchpoint の所在
+- 既存 test の所在
+- quick win と evidence-first の切り分け
+
+### Stage 1: evidence pack（read-first, no code change until classification）
+以下を repo truth で確認し、各論点を `MATCH / DOCS_UNDER_SPEC / DOCS_OVER_ASSERT / TRUE_REGRESSION / UNKNOWN` に分類せよ。
+
+1. auth guard / redirect matrix
+2. Patients の入力 source 優先度
+3. Mobile Images の入力 source 優先度
+4. route 別 minimal encounter context schema
+5. admin current UI detail
+6. auto-sync / auto-action current behavior
+7. a11y / focus / keyboard / narrow layout current behavior
+
+成果物:
+- `docs/working-notes/web-product-evidence-pack.md` または同等の repo 内メモ
+- 各論点の classification、根拠ファイル、次アクション
+
+Stage 1 で UNKNOWN のまま残るものは、その理由を明示して先へ送ること。
+
+### Stage 2: quick win slice 実装
+以下の順で slice を分けて進めよ。1 slice ごとに commit / tests / summary を出すこと。
+
+#### Slice 1: BL-01 + BL-02
+狙い:
+- auth 例外 copy matrix を docs で固定
+- login → factor2 の段階表示と目的説明を改善
+- cancel / expired / retry の違いを見せ分ける
+
+最重要 touchpoint 候補:
+- `web-client/notes/auth-transition.md`
+- `web-client/notes/feedback-spec.md`
+- `web-client/src/LoginScreen.tsx`
+- `web-client/src/features/login/loginErrorMessage.ts`
+- `web-client/src/__tests__/LoginScreen.test.tsx`
+- `web-client/src/features/login/__tests__/loginErrorMessage.test.ts`
+
+追加指示:
+- same-surface factor2 は維持
+- password は現行どおり credentials 成功後に DOM / state へ残さない
+- 二要素認証の「なぜ出たか」を説明するが、内部実装詳細は見せない
+
+#### Slice 2: BL-03 + BL-14
+狙い:
+- `/login` に戻された理由を user-visible にする
+- logout / session expiry / unauthorized / forbidden を区別する
+- scrub 後の landing 変更を説明する
+- `replace` のまま confusion を減らす
+
+最重要 touchpoint 候補:
+- `web-client/src/AppRouter.tsx`
+- `web-client/src/libs/session/sessionExpiry.ts`
+- `web-client/src/routes/useAppNavigation.ts`
+- `web-client/src/__tests__/AppRouter.login-redirect.test.tsx`
+- `web-client/src/AppRouter.navigation.test.tsx`
+- `web-client/notes/auth-transition.md`
+- `web-client/notes/patient-context-contract.md`
+
+追加指示:
+- `replace` を安易に `push` に変えない
+- location.state.from / sanitized returnTo / fallback の関係を壊さない
+- 可能なら redirect reason taxonomy を型または helper に寄せて drift を減らす
+
+#### Slice 3: BL-05 + BL-09
+狙い:
+- surface-aware lost-context CTA を実装する
+- feedback / recovery copy を横断で揃える
+- shared return guidance を no-op から実体化する
+
+最重要 touchpoint 候補:
+- `web-client/src/features/shared/ReturnToBar.tsx`
+- `web-client/src/features/shared/__tests__/ReturnToBar.test.tsx`
+- `web-client/src/features/images/pages/MobileImagesUploadPage.tsx`
+- `web-client/src/features/patients/PatientsPage.tsx`
+- `web-client/src/features/shared/ApiFailureBanner.tsx`
+- `web-client/src/features/shared/apiError.ts`
+- `web-client/notes/feedback-spec.md`
+- `web-client/notes/patient-context-contract.md`
+
+追加指示:
+- generic な「戻る」ではなく surface 別 CTA にする
+- Patients / Mobile Images の unknown がある箇所は Stage 1 の evidence を超えて断定しない
+- raw message ではなく canonical copy を優先
+
+#### Slice 4: BL-10（必要なら）
+狙い:
+- a11y minimum を docs と実装で揃える
+- focus / live region / keyboard / narrow layout の最低限を固定する
+
+最重要 touchpoint 候補:
+- `web-client/notes/feedback-spec.md`
+- `web-client/notes/ui-current-contract.md`
+- `web-client/src/LoginScreen.tsx`
+- `web-client/src/routes/NavigationGuardProvider.tsx`
+- shared UI components と test
+
+### Stage 3: deferred design backlog
+quick win 後に以下を扱え。
+- BL-06 patient/encounter bar
+- BL-07 Charts 主従面設計
+- BL-08 auto-sync / auto-action 可視化
+- BL-11 Patients / Mobile Images inventory follow-up
+- BL-12 admin IA 単線化
+- BL-13 task-oriented transition matrix
+
+## サブエージェント構成
+最低でも以下の 5 エージェントを使え。
+
+1. **Contract Agent**
+   - manager docs と repo notes を読み、変えてよい contract / 変えてはいけない contract を一覧化する
+
+2. **Auth & Redirect Agent**
+   - `LoginScreen.tsx`, `loginErrorMessage.ts`, `AppRouter.tsx`, `sessionExpiry.ts` を担当
+   - BL-01 / BL-02 / BL-03 / BL-14 の差分案と test 案を出す
+
+3. **Context & Recovery Agent**
+   - `useAppNavigation.ts`, `ReturnToBar.tsx`, `PatientsPage.tsx`, `MobileImagesUploadPage.tsx` を担当
+   - BL-05 / BL-09 / BL-11 の evidence と差分案を出す
+
+4. **Charts & Admin Guardrail Agent**
+   - `SoapNotePanel` 主面、debug-only、admin config SoT を確認し、今回触れてよい範囲を制約として返す
+
+5. **Test & Validation Agent**
+   - 変更対象に対する vitest / smoke / regression の最小実行セットを提案し、変更ごとの test update を強制する
+
+## 実行ルール
+- 1 slice ごとに「目的 / 変更ファイル / contract 整合 / tests / 未解決事項」を出す
+- 変更前に affected tests を列挙する
+- unknown を見つけたら無理に実装せず、evidence pack へ戻す
+- scope creep を避ける
+- 既存の close 済み legacy cleanup を reopen しない
+- `/api/admin/delivery` を復活させない
+- patient context persistence を入れない
+- debug-only surface を通常主面へ昇格させない
+
+## 最終出力フォーマット
+最終的に以下をまとめて出せ。
+1. evidence pack
+2. 実装した slice 一覧
+3. 各 slice の commit summary
+4. 実行した tests
+5. 残課題（UNKNOWN / defer / repo-external 分離）
+6. 次に切るべき issue 一覧

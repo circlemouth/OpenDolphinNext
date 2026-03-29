@@ -52,11 +52,12 @@ quick win はありますが、repo-external sign-off より先にやる必須�
 
 ### UI 改善を進めたいとき
 4. [04_ui_improvement_program.md](./04_ui_improvement_program.md)
+5. [09_web_product_improvement_execution_plan_20260329.md](./09_web_product_improvement_execution_plan_20260329.md)
 
 ### 実際に判断・依頼を回したいとき
-5. [05_manager_operating_playbook.md](./05_manager_operating_playbook.md)
-6. [06_open_unknowns_and_evidence_gaps.md](./06_open_unknowns_and_evidence_gaps.md)
-7. [07_communication_templates.md](./07_communication_templates.md)
+6. [05_manager_operating_playbook.md](./05_manager_operating_playbook.md)
+7. [06_open_unknowns_and_evidence_gaps.md](./06_open_unknowns_and_evidence_gaps.md)
+8. [07_communication_templates.md](./07_communication_templates.md)
 
 ---
 
@@ -68,6 +69,7 @@ quick win はありますが、repo-external sign-off より先にやる必須�
 | `02_release_readiness_and_repo_external_signoff.md` | release-ready に必要な repo-external manual task | sign-off を回す時 |
 | `03_web_current_contract_summary.md` | web-client の current contract 要約 | auth / patient context / feedback / route を確認したい時 |
 | `04_ui_improvement_program.md` | UI 改善の統合計画、工程表、バックログ | UI 改善を計画する時 |
+| `09_web_product_improvement_execution_plan_20260329.md` | product improvement トラックの進行表、phase/slice の実行順序 | manager が開発レーンを進行管理する時 |
 | `05_manager_operating_playbook.md` | manager 向け運用手順、ChatGPT / Codex / 人手の使い分け | 新しい報告をさばく時 |
 | `06_open_unknowns_and_evidence_gaps.md` | unknown と証拠不足の一覧 | 推測で進めそうになった時 |
 | `07_communication_templates.md` | そのまま送れる依頼文、催促文、sign-off 文 | GitHub 管理者 / インフラ / Release owner に依頼する時 |
