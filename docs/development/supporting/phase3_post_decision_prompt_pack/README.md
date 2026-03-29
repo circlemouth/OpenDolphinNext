@@ -1,7 +1,7 @@
 # Phase3+ Post-Decision Prompt Pack
 
-- 更新日: 2026-03-28
-- RUN_ID: 20260328T032318Z
+- 更新日: 2026-03-29
+- RUN_ID: 20260329T060038Z
 
 このディレクトリは、Phase3+ の post-decision 実装を進めるための現行支援資料である。
 repo-only で確定した static-analysis / release gate の判断を、repo-local truth として反映するための入口をまとめている。
@@ -14,6 +14,8 @@ repo-only で確定した static-analysis / release gate の判断を、repo-loc
 5. [WSC_static_analysis_workflow_restore_prompt.md](WSC_static_analysis_workflow_restore_prompt.md)
 6. [WSD_minimal_release_gate_docs_prompt.md](WSD_minimal_release_gate_docs_prompt.md)
 7. [phase3_post_decision_shared_context.md](phase3_post_decision_shared_context.md)
+8. [phase3_handoff_current_state.md](phase3_handoff_current_state.md)
+   - Phase3+ の current state / handoff memo。repo-local truth と残課題の再読用。
 
 ## 使い方
 - 統合担当は `WS0_post_decision_orchestrator_prompt.md` から読む。
