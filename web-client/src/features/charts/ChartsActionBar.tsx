@@ -8,6 +8,7 @@ import { httpFetch } from '../../libs/http/httpClient';
 import { getObservabilityMeta, resolveAriaLive } from '../../libs/observability/observability';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import { ToneBanner, type BannerTone } from '../reception/components/ToneBanner';
+import { resolveUserSafeOperationFailure } from './userSafeErrorCopy';
 import { StatusPill } from '../shared/StatusPill';
 import { recordChartsAuditEvent, type ChartsOperationPhase } from './audit';
 import type { ChartsTabLockStatus } from './useChartsTabLock';
@@ -105,6 +106,24 @@ const ACTION_LABEL: Record<ChartAction, string> = {
   draft: 'ドラフト保存',
   cancel: 'キャンセル',
   print: '印刷',
+};
+
+const CHARTS_SUPPORT_GUIDE = '必要に応じて障害情報コピーで RUN_ID を共有してください。';
+
+const buildActionSuccessDetail = (action: ChartAction) => {
+  if (action === 'send') {
+    return 'ORCA 送信結果を確認し、必要なら一覧を再取得してください。';
+  }
+  if (action === 'finish') {
+    return '会計待ちへの反映を確認してください。';
+  }
+  if (action === 'start' || action === 'pause') {
+    return '画面上の状態更新を確認してください。';
+  }
+  if (action === 'print') {
+    return 'プレビュー内容を確認してから出力してください。';
+  }
+  return CHARTS_SUPPORT_GUIDE;
 };
 
 const ORCA_ACTION_TIMEOUT_MS = Number(import.meta.env.VITE_ORCA_SEND_TIMEOUT_MS ?? '60000');
@@ -478,20 +497,12 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (!outputResult) return;
     clearOutpatientOutputResult(storageScope);
     outpatientResultRef.current = true;
-    const detailParts = [
-      outputResult.detail,
-      outputResult.runId ? `runId=${outputResult.runId}` : undefined,
-      outputResult.traceId ? `traceId=${outputResult.traceId}` : undefined,
-      outputResult.endpoint ? `endpoint=${outputResult.endpoint}` : undefined,
-      typeof outputResult.httpStatus === 'number' ? `HTTP ${outputResult.httpStatus}` : undefined,
-    ].filter((part): part is string => typeof part === 'string' && part.length > 0);
-    const detail = detailParts.join(' / ');
     if (outputResult.outcome === 'success') {
       setBanner(null);
       setToast({
         tone: 'success',
         message: '外来印刷を完了',
-        detail,
+        detail: buildActionSuccessDetail('print'),
       });
       return;
     }
@@ -505,7 +516,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     setToast({
       tone: isBlocked ? 'warning' : 'error',
       message: isBlocked ? '外来印刷を停止' : '外来印刷に失敗',
-      detail,
+      detail: isBlocked ? '印刷内容を見直してから再度開いてください。' : CHARTS_SUPPORT_GUIDE,
     });
   }, []);
 
@@ -569,8 +580,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (requireServerRouteForSend && !isServerRoute) {
       reasons.push({
         key: 'not_server_route',
-        summary: 'ルート不一致: server以外で送信不可',
-        detail: `dataSourceTransition=${dataSourceTransition} のため ORCA 送信を停止します。`,
+        summary: '参照状態: 最新データ確認前のため送信不可',
+        detail: '最新データを確認できる状態へ戻ってから送信してください。',
         next: ['server route に切替（MSW OFF / 実 API）', 'Reception で再取得'],
       });
     }
@@ -578,7 +589,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (missingMaster && isServerRoute) {
       reasons.push({
         key: 'missing_master',
-        summary: 'マスタ欠損: missingMaster=true で送信不可',
+        summary: 'ORCA 参照不足: 送信不可',
         detail: 'マスタ欠損を検知したため、送信は実施できません。',
         next: [...MISSING_MASTER_RECOVERY_NEXT_STEPS],
       });
@@ -587,7 +598,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (fallbackUsed && isServerRoute) {
       reasons.push({
         key: 'fallback_used',
-        summary: 'フォールバック: fallbackUsed=true で送信不可',
+        summary: '暫定データ: 送信不可',
         detail: 'フォールバック経路のため、送信は実施できません。',
         next: [...MISSING_MASTER_RECOVERY_NEXT_STEPS],
       });
@@ -772,7 +783,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (missingMaster) {
       reasons.push({
         key: 'missing_master',
-        summary: 'マスタ欠損: missingMaster=true で印刷不可',
+        summary: 'ORCA 参照不足: 印刷不可',
         detail: 'マスタ欠損を検知したため出力を停止します。',
         next: [...MISSING_MASTER_RECOVERY_NEXT_STEPS],
       });
@@ -781,7 +792,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     if (fallbackUsed) {
       reasons.push({
         key: 'fallback_used',
-        summary: 'フォールバック: fallbackUsed=true で印刷不可',
+        summary: '暫定データ: 印刷不可',
         detail: 'フォールバック経路のため出力を停止します。',
         next: [...MISSING_MASTER_RECOVERY_NEXT_STEPS],
       });
@@ -1280,8 +1291,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       setBanner({
         tone: 'warning',
         message: missingMaster
-          ? 'missingMaster=true を検知しました。送信前に master を再取得してください。'
-          : 'fallbackUsed=true を検知しました。送信前に master 解消（server route）を確認してください。',
+          ? 'ORCA 参照が不足しているため、送信前に再取得が必要です。'
+          : '暫定データ表示中のため、送信前に最新データの再取得が必要です。',
         nextAction: MISSING_MASTER_RECOVERY_NEXT_STEPS.join(' / '),
       });
     }
@@ -1549,7 +1560,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             setToast({
               tone: 'success',
               message: 'ORCA送信を完了',
-              detail: detailParts.join(' / '),
+              detail: buildActionSuccessDetail('send'),
             });
           } else {
             if (resolvedPatientId && canRetryOrcaQueue) {
@@ -1568,13 +1579,13 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             }
             setBanner({
               tone: outcome === 'error' ? 'error' : 'warning',
-              message: `ORCA送信に警告/失敗: ${detailParts.join(' / ')}`,
+              message: outcome === 'error' ? 'ORCA送信に失敗しました。' : 'ORCA送信に警告があります。',
               nextAction: 'ORCA 応答を確認し再送してください。',
             });
             setToast({
               tone: outcome === 'error' ? 'error' : 'warning',
               message: outcome === 'error' ? 'ORCA送信に失敗' : 'ORCA送信に警告',
-              detail: detailParts.join(' / '),
+              detail: outcome === 'error' ? CHARTS_SUPPORT_GUIDE : 'ORCA 応答を確認し、必要なら再送してください。',
             });
           }
 
@@ -1661,18 +1672,12 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           return;
         } else {
           const after = getObservabilityMeta();
-          const nextRunId = after.runId ?? runId;
           const nextTraceId = after.traceId ?? resolvedTraceId;
-          const finishDetailParts = [
-            `runId=${nextRunId}`,
-            `traceId=${nextTraceId ?? 'unknown'}`,
-            'postFinish=medicalmodv23',
-          ];
           setBanner(null);
           setToast({
             tone: 'success',
             message: `${ACTION_LABEL[action]}を完了`,
-            detail: finishDetailParts.join(' / '),
+            detail: buildActionSuccessDetail(action),
           });
 
           const durationMs = Math.round(performance.now() - startedAt);
@@ -1910,9 +1915,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         setToast({
           tone: 'success',
           message: `${ACTION_LABEL[action]}を完了`,
-          detail:
-            startMeta?.detail ??
-            `runId=${nextRunId} / traceId=${nextTraceId ?? 'unknown'} / requestId=${startMeta?.requestId ?? 'unknown'} / transition=${dataSourceTransition}`,
+          detail: buildActionSuccessDetail(action),
         });
         logTelemetry(action, 'success', durationMs, startMeta?.detail, undefined, { runId: nextRunId, traceId: nextTraceId });
         logAudit(action, 'success', undefined, durationMs, {
@@ -1952,14 +1955,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       }
 
       const durationMs = Math.round(performance.now() - startedAt);
-      const after = getObservabilityMeta();
-      const nextRunId = after.runId ?? runId;
-      const nextTraceId = after.traceId ?? resolvedTraceId;
       setBanner(null);
       setToast({
         tone: 'success',
         message: `${ACTION_LABEL[action]}を完了`,
-        detail: `runId=${nextRunId} / traceId=${nextTraceId ?? 'unknown'} / requestId=${queueEntry?.requestId ?? 'unknown'} / transition=${dataSourceTransition}`,
+        detail: buildActionSuccessDetail(action),
       });
       logTelemetry(action, 'success', durationMs);
       logAudit(action, 'success', undefined, durationMs, { phase: 'do' });
@@ -2058,6 +2058,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           retryDetail,
         ].filter((part): part is string => typeof part === 'string');
         const composedDetail = `${detail}（${extraTags.join(' / ')}）${nextSteps ? ` / ${nextSteps}` : ''}`;
+        const safeSupportDetail = [
+          `runId=${errorRunId}`,
+          `traceId=${errorTraceId ?? 'unknown'}`,
+        ].join(' / ');
+        const userSafeFailure = resolveUserSafeOperationFailure(detail);
         if (action === 'send' && resolvedPatientId) {
           saveOrcaClaimSendCache(
             {
@@ -2075,11 +2080,15 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           );
         }
         setRetryAction(action);
-        setBanner({ tone: 'error', message: `${ACTION_LABEL[action]}に失敗: ${composedDetail}`, nextAction: nextSteps });
+        setBanner({
+          tone: 'error',
+          message: `${ACTION_LABEL[action]}に失敗しました。${userSafeFailure}`,
+          nextAction: nextSteps,
+        });
         setToast({
           tone: 'error',
           message: action === 'send' ? 'ORCA送信に失敗' : `${ACTION_LABEL[action]}に失敗`,
-          detail: composedDetail,
+          detail: safeSupportDetail,
         });
         logTelemetry(action, 'error', durationMs, composedDetail, composedDetail, { runId: errorRunId, traceId: errorTraceId });
         logAudit(action, 'error', composedDetail, durationMs, {
@@ -2335,18 +2344,15 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       setToast({
         tone: 'success',
         message: '帳票プレビューを開きました',
-        detail: `Data_Id=${result.responseMeta.dataId} / runId=${result.responseMeta.runId ?? runId} / traceId=${
-          result.responseMeta.traceId ?? 'unknown'
-        }`,
+        detail: buildActionSuccessDetail('print'),
       });
-    } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error);
+    } catch {
       const nextAction =
         resolvedReportType === 'prescription'
           ? '代替: 診療記録（外来サマリ）をローカル印刷で出力してください。'
           : 'ORCA 応答を確認し、再試行してください。';
-      setBanner({ tone: 'error', message: `帳票出力に失敗: ${detail}`, nextAction });
-      setToast({ tone: 'error', message: '帳票出力に失敗', detail });
+      setBanner({ tone: 'error', message: '帳票出力に失敗しました。', nextAction });
+      setToast({ tone: 'error', message: '帳票出力に失敗', detail: CHARTS_SUPPORT_GUIDE });
     } finally {
       setIsRunning(false);
       setRunningAction(null);

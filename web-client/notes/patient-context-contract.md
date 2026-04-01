@@ -10,13 +10,30 @@
 
 ## Authoritative Source
 - authoritative source は `location.state` です。
-- 実際の解決順は `location.state -> URL scrub 後に残る情報 -> returnTo 由来 -> volatile` です。
+- route ごとの入力 source 優先度は current route 実装に従い、この文書の route 別 schema に限定して明文化します。
 - helper cache や module-scope の揮発メモリは implementation detail として扱います。
 - 揮発メモリは補助であり、永続化や復元の根拠にしません。
 
 ## Minimal Encounter Context
 - docs に置いてよい最小項目は `patientId`, `appointmentId`, `receptionId`, `scheduleKey`, `encounterKey`, `visitDate` です。
-- Charts handoff では `scheduleKey` または `encounterKey` が必要です。
+- route ごとの minimal schema は次です。
+  - Charts:
+    - handoff には `scheduleKey` または `encounterKey` が必要です。
+    - `patientId`, `appointmentId`, `receptionId`, `visitDate` は補助的に carry します。
+  - Patients:
+    - 読み取り対象は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
+    - 入力 source 優先度は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context です。
+    - Patients 画面は route query の `patientId` を権威入力として読みません。
+  - Mobile Images:
+    - 現行の minimal schema は `patientId` のみです。
+    - 入力 source 優先度は query `patientId` -> `location.state.patientId` -> deep link volatile context です。
+    - query `patientId` は入口専用で、sensitive route 到達後に scrub されます。
+
+## App-Wide Navigation / Handoff Minimum
+- app-wide に docs 化してよい handoff key は `from` と sanitize 済み `returnTo` です。
+- `returnTo` の safe route allowlist は `reception`, `charts`, `charts/order-sets`, `charts/print/document`, `charts/print/outpatient`, `patients`, `m/images`, `administration`, `debug` を含みます。
+- current repo の navigation helper が認識する screen 名は `reception`, `charts`, `orderSets`, `print`, `patients`, `admin`, `debug`, `mobileImages` です。
+- patient context schema を app-wide に拡張せず、print / administration / debug では route 別 minimal schema が docs 未確定のままです。
 
 ## Non-Persistence
 - Charts の workspace patient tabs は同一 SPA セッション内の揮発状態だけで扱います。
@@ -39,8 +56,8 @@
 - scrub により deep link query を落とした時は、戻り先の画面本体へ移動することを user-visible に説明します。
 
 ## Unknown
-- route 別 handoff state の詳細 schema
-- Patients / Mobile Images の全入力 source の優先度細則
+- print / administration / debug を含む app-wide handoff state の全量 schema
+- route 別 handoff state の detail UI まで含む inventory
 
 ## References
 - [security-spec.md](./security-spec.md)

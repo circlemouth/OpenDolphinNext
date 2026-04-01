@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
 import { clearDeepLinkContext, saveDeepLinkContext } from '../../../../routes/deepLinkContextStorage';
 import { MobileImagesUploadPage } from '../MobileImagesUploadPage';
-import { fetchPatientImageList } from '../../mobileApi';
+import { fetchPatientImageList, uploadPatientImageViaXhr } from '../../mobileApi';
 
 vi.mock('../../../../libs/observability/observability', () => ({
   resolveAriaLive: () => 'polite',
@@ -105,5 +106,65 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
       expect(screen.getByText('患者画像機能はサーバーで無効化されています。')).toBeInTheDocument();
     });
     expect(document.querySelector('[data-test-id="mobile-image-send"]')).toBeDisabled();
+  });
+
+  it('visible button から file picker を開ける', async () => {
+    saveDeepLinkContext({ patientId: '123' });
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/m/images']}>
+        <MobileImagesUploadPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
+    });
+
+    const captureInput = document.querySelector('[data-test-id="mobile-image-capture-input"]') as HTMLInputElement;
+    const fileInput = document.querySelector('[data-test-id="mobile-image-file-input"]') as HTMLInputElement;
+    const captureClickSpy = vi.spyOn(captureInput, 'click');
+    const fileClickSpy = vi.spyOn(fileInput, 'click');
+    const user = userEvent.setup();
+
+    expect(screen.getByRole('button', { name: '撮影して送る' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '写真を選んで送る' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: '撮影して送る' }));
+    await user.click(screen.getByRole('button', { name: '写真を選んで送る' }));
+
+    expect(captureClickSpy).toHaveBeenCalledTimes(1);
+    expect(fileClickSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('upload failure は canonical copy のみ表示し raw error detail を出さない', async () => {
+    vi.mocked(uploadPatientImageViaXhr).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      error: 'java.sql.SQLException',
+      errorCode: 'internal_error',
+    } as any);
+    saveDeepLinkContext({ patientId: '123' });
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/m/images']}>
+        <MobileImagesUploadPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
+    });
+
+    const fileInput = document.querySelector('[data-test-id="mobile-image-file-input"]') as HTMLInputElement;
+    const file = new File(['image'], 'upload.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '送信' }));
+
+    expect(await screen.findByText('送信に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
+    expect(screen.queryByText(/java\.sql\.SQLException/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^debug:/)).not.toBeInTheDocument();
   });
 });

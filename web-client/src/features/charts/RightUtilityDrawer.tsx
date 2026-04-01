@@ -34,6 +34,7 @@ import {
   resolveLatestBundle,
   sortBundlesByLatestRule,
 } from './orderDetailDisplayViewModel';
+import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 import {
   RIGHT_UTILITY_TOOLS,
   resolveRightUtilityToolLabel,
@@ -535,7 +536,7 @@ export function RightUtilityDrawer({
                 ) : isPrescriptionPanel ? (
                   <>
                     {resolvedPanelLoading ? <p className="order-dock__empty">処方情報を取得しています...</p> : null}
-                    {resolvedPanelError ? <p className="order-dock__empty">処方情報の取得に失敗しました: {resolvedPanelError}</p> : null}
+                    {resolvedPanelError ? <p className="order-dock__empty">{resolveUserSafeFetchFailure('処方情報', resolvedPanelError)}</p> : null}
                     <PrescriptionOrderEditorPanel
                       patientId={patientId}
                       meta={meta}

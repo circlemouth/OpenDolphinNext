@@ -39,7 +39,8 @@
 - factor2 は `LoginScreen` 内の同一 surface 切替で扱います。
 - factor2 copy は `required / invalid / session missing / session expired / cancel` を見分けます。
 - factor2 surface では、追加確認が必要な理由を user-visible に説明します。
-- pending session の期限切れ、試行上限到達、または cancel 時は credentials step に戻ります。
+- pending session の期限切れまたは cancel 時は credentials step に戻ります。
+- factor2 の `invalid` は factor2 surface に残り、`retry-after / throttled` は current step を維持したまま待機文言を表示します。
 - reload 後は pending factor2 state を復元しません。
 
 ### Auth exception copy matrix
@@ -76,10 +77,21 @@
 - `returnTo` は保存・遷移前に sanitize が必要です。
 - internal path 以外を current contract に含めません。
 - guard は認証遷移の補助境界として扱い、認可完了の根拠にはしません。
-- guard の具体実装と遷移ブロック条件の詳細は `unknown` です。
+
+### Guard Matrix Minimum
+- 未認証で非 login route に入った場合は `/login` へ `replace` し、`state.from` に現在地を保持します。
+- facility-scoped route で session 不在の場合は、facility-scoped path を `state.from` に積んだうえで `/login` へ `replace` します。
+- 認証済みで login route にいる場合は、facility-scoped かつ safe な `state.from` を優先し、無効または欠落時は `/f/:facilityId/reception` へ `replace` します。
+- logout は cleanup 後に `/f/:facilityId/login?reason=logout` へ `replace` し、login surface で info copy を表示します。
+- `timeout / unauthorized / forbidden` は login notice を伴って `/f/:facilityId/login` へ `replace` し、login surface で理由を分けて表示します。
+- `AdministrationGate` の権限不足は `/login` へ戻さず、facility-scoped denial surface と `Reception` CTA を表示します。
+- sensitive route の query scrub は login helper ではなく `/reception`, `/charts`, `/patients`, `/m/images` 到達後に `replace` で行います。
+- `NavigationGuardProvider` は dirty source があり `screenKey` が変わる時だけ block し、`/charts` の外部パラメータ更新は同一 `chartsScreenId` なら通します。
+- `useAppNavigation()` が組み立てる `patients / charts / charts/print / charts/order-sets / m/images / administration / debug` 遷移は `guardedNavigate()` を通します。
+- dirty 状態で logout または switch account を要求した時は、auth redirect 前に session exit dialog で破棄確認を取ります。
 
 ## Unknown
-- auth guard の screen 単位の挙動
+- `NavigationGuardProvider` の `screenKey` 粒度を超える task-specific coverage
 
 ## References
 - [auth-check.md](./auth-check.md)

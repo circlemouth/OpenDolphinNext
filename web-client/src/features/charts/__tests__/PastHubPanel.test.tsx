@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { PastHubPanel } from '../PastHubPanel';
@@ -84,5 +84,46 @@ describe('PastHubPanel', () => {
     dayDetails.forEach((detail) => {
       expect(detail.open).toBe(false);
     });
+  });
+
+  it('オーダー取得失敗時は canonical copy を表示し raw detail を出さない', async () => {
+    mockedFetchOrderBundles.mockResolvedValueOnce({
+      ok: false,
+      bundles: [],
+      message: 'backend order route missing /api/orca/order/bundles stacktrace',
+    } as any);
+
+    renderWithQueryClient(
+      <PastHubPanel
+        patientId="P-001"
+        entries={[
+          {
+            id: 'row-001',
+            patientId: 'P-001',
+            appointmentId: 'A-001',
+            receptionId: 'R-001',
+            visitDate: '2026-03-04',
+            department: '内科',
+            physician: '田中医師',
+            status: '診療中',
+            source: 'visits',
+          },
+        ]}
+        soapHistory={[]}
+        selectedContext={{
+          patientId: 'P-001',
+          appointmentId: 'A-001',
+          receptionId: 'R-001',
+          visitDate: '2026-03-04',
+        }}
+        switchLocked={false}
+        todayIso="2026-03-05"
+        onSelectEncounter={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText('オーダー情報の取得に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
+    expect(screen.queryByText(/backend order route missing/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/stacktrace/i)).not.toBeInTheDocument();
   });
 });

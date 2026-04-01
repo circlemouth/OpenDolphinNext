@@ -87,6 +87,7 @@ import { isNetworkError } from '../../shared/apiError';
 import { getAppointmentDataBanner } from '../../outpatient/appointmentDataBanner';
 import { resolveOutpatientFlags } from '../../outpatient/flags';
 import { buildScopedStorageKey, type StorageScope } from '../../../libs/session/storageScope';
+import { resolveUserSafeFetchFailure } from '../userSafeErrorCopy';
 import type { DraftDirtySource } from '../draftSources';
 import {
   listChartOrderSets,
@@ -2434,7 +2435,10 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     })();
   }, [patientTabsToPrefetch, prefetchPatientTabData]);
   const rpEntries = rpHistoryQuery.data?.ok ? rpHistoryQuery.data.entries : [];
-  const rpError = rpHistoryQuery.data && !rpHistoryQuery.data.ok ? rpHistoryQuery.data.error : undefined;
+  const rpError =
+    rpHistoryQuery.data && !rpHistoryQuery.data.ok
+      ? resolveUserSafeFetchFailure('処方履歴', rpHistoryQuery.data.error)
+      : undefined;
   const baseOrderBundles = orderBundleSummaryQuery.data?.ok ? orderBundleSummaryQuery.data.bundles : EMPTY_ORDER_BUNDLES;
   const prescriptionBundles = useMemo(() => {
     if (prescriptionBundleSummaryQuery.data?.ok) return prescriptionBundleSummaryQuery.data.bundles;
@@ -2448,11 +2452,11 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   }, [baseOrderBundles, prescriptionBundles]);
   const prescriptionBundlesError =
     prescriptionBundleSummaryQuery.data && !prescriptionBundleSummaryQuery.data.ok
-      ? prescriptionBundleSummaryQuery.data.message ?? '処方情報の取得に失敗しました。'
+      ? resolveUserSafeFetchFailure('処方情報', prescriptionBundleSummaryQuery.data.message)
       : undefined;
   const orderBundlesError =
     orderBundleSummaryQuery.data && !orderBundleSummaryQuery.data.ok
-      ? orderBundleSummaryQuery.data.message ?? 'オーダー情報の取得に失敗しました。'
+      ? resolveUserSafeFetchFailure('オーダー情報', orderBundleSummaryQuery.data.message)
       : undefined;
   const orcaRecoveryAlert = useMemo(() => {
     if (!patientId) return null;
@@ -2491,7 +2495,10 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       const tone: 'error' | 'warning' = isAuth || isRouteMismatch ? 'error' : 'warning';
       return {
         tone,
-        message: candidate.message,
+        message: resolveUserSafeFetchFailure(
+          candidate === candidates[1] ? '処方情報' : candidate === candidates[2] ? '病名情報' : 'オーダー情報',
+          candidate.message,
+        ),
       };
     }
     return null;

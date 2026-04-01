@@ -31,17 +31,18 @@ export const isRecoverableOrcaNotFound = (params: {
 
 export const buildPatientImportFailureMessage = (contextLabel: string, result: OrcaPatientImportResult): string => {
   const cause = resolveImportFailureCause(result);
-  const runIdSuffix = result.runId ? ` (runId=${result.runId})` : '';
 
   if (result.errorKind === 'auth') {
-    const causeText = cause ? `reason=${cause}` : 'reason=authentication_failed';
-    return `${contextLabel} の再取得前に患者取込が認証エラーで失敗しました（${causeText}）。ORCA認証情報を確認してください。${runIdSuffix}`;
+    return `${contextLabel}の再取得前に患者取込を完了できませんでした。認証状態を確認してからやり直してください。`;
   }
 
   if (result.errorKind === 'route_not_found' || result.routeMismatch) {
-    return `${contextLabel} の再取得前に患者取込APIの経路不一致を検知しました。Vite の /orca リライト設定と VITE_ORCA_API_PATH_PREFIX を確認してください。${runIdSuffix}`;
+    return `${contextLabel}の再取得前に患者取込を完了できませんでした。利用可能な画面からやり直してください。`;
   }
 
-  const fallback = normalizeToken(result.error) ?? `HTTP ${result.status}`;
-  return `${contextLabel} の再取得前に患者取込が失敗しました: ${fallback}${runIdSuffix}`;
+  if (cause === 'patient_not_found' || cause === 'karte_not_found' || result.status === 404) {
+    return `${contextLabel}の再取得前に患者取込を完了できませんでした。対象患者が見つからないため、患者選択からやり直してください。`;
+  }
+
+  return `${contextLabel}の再取得前に患者取込を完了できませんでした。時間をおいて再試行してください。`;
 };

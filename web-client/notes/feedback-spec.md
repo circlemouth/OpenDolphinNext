@@ -17,6 +17,8 @@
 - raw API message は、docs に明示されるか user-safe 保証がある場合だけ表示対象にします。
 - それ以外は canonical copy に寄せます。
 - client に内部詳細や安全性未確認の文字列を露出しません。
+- `PatientsPage` の edit/audit summary、`ChartsActionBar` の action/result feedback、`ReceptionPage` の accept/cancel/claim-send result は canonical copy を current contract とします。
+- current runtime の active surface 全体が app-wide に統一済みとは断定せず、residual inventory は working note で追跡します。
 
 ## Canonical Copy Principles
 - logout: logout 自体は継続し、cleanup を優先する
@@ -54,17 +56,34 @@
 ## Accessibility Minimum
 - 色だけに依存して状態を伝えないことを最小契約とします。
 - `warn` / `error` は CTA の有無に依らず状態を判別できる必要があります。
+- touched surface の minimum は次です。
+  - `LoginScreen`:
+    - step banner と destination summary は `role=status` / `aria-live=polite`
+    - error feedback は `role=alert` / `aria-live=assertive`
+    - factor2 へ遷移したら認証コード入力へ focus を移します。
+  - `ReturnToBar`:
+    - recovery CTA は named `region` 内の keyboard reachable link で提供します。
+  - `PatientsPage`:
+    - status bar は live region で更新状態を伝え、warning note は tone に応じて assertive を使います。
+    - `ApiFailureBanner` は患者一覧/検索文脈の直近に置きます。
+  - `MobileImagesUploadPage`:
+    - page status は stage に応じて `status` / `alert` を切り替えます。
+    - missing-patient は `role=alert` で示します。
+    - file picker の入口は visible button とし、narrow layout でも単一カラムの意味順を崩しません。
+  - `ApiFailureBanner`:
+    - retry/share は action group でまとめ、ID 未取得時の disabled 理由は `aria-describedby` で補足します。
 
 ## Terminology
 - `success` / `info` / `warn` / `error` の 4 段で統一します。
 - current docs 上、「参照カルテ」と「参照パネル」は偽統合せず、「参照系 surface」を umbrella term として扱います。
 
 ## Unknown
-- `aria-live` の運用細則
-- focus 移動規則
+- app-wide `aria-live` の運用細則
+- touched surface 以外の focus 移動規則
 - keyboard 操作の詳細
 - timeout の詳細
 - feedback surface ごとの見た目実装
+- residual raw-detail inventory の app-wide 完了時点
 
 ## References
 - [security-spec.md](./security-spec.md)

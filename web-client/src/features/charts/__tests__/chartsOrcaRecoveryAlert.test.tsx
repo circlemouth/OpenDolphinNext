@@ -235,7 +235,8 @@ describe('ChartsPage ORCA recovery alert', () => {
     );
 
     await waitFor(() => expect(shared.fetchOrderBundlesWithPatientImportRecovery).toHaveBeenCalledTimes(1));
-    expect(await screen.findByTestId('tone-banner-error')).toHaveTextContent('認証エラー');
+    expect(await screen.findByTestId('tone-banner-error')).toHaveTextContent('オーダー情報を取得できませんでした。再ログインしてからやり直してください。');
+    expect(screen.queryByText(/reason=authentication_failed/)).not.toBeInTheDocument();
     await waitFor(() => expect(shared.fetchOrderBundlesWithPatientImportRecovery).toHaveBeenCalledTimes(1));
   });
 });

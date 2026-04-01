@@ -30,7 +30,7 @@ describe('orcaPatientImportRecovery', () => {
     ).toBe(false);
   });
 
-  it('builds explicit auth failure message', () => {
+  it('builds explicit auth failure message without raw reason tokens', () => {
     const message = buildPatientImportFailureMessage('病名情報', {
       ok: false,
       runId: 'RUN-TEST',
@@ -40,12 +40,12 @@ describe('orcaPatientImportRecovery', () => {
       error: 'unauthorized',
     });
 
-    expect(message).toContain('認証エラー');
-    expect(message).toContain('authentication_failed');
-    expect(message).toContain('RUN-TEST');
+    expect(message).toBe('病名情報の再取得前に患者取込を完了できませんでした。認証状態を確認してからやり直してください。');
+    expect(message).not.toContain('authentication_failed');
+    expect(message).not.toContain('RUN-TEST');
   });
 
-  it('builds route mismatch message', () => {
+  it('builds route mismatch message without internal config hints', () => {
     const message = buildPatientImportFailureMessage('オーダー情報', {
       ok: false,
       runId: 'RUN-TEST',
@@ -55,7 +55,7 @@ describe('orcaPatientImportRecovery', () => {
       error: 'not found',
     });
 
-    expect(message).toContain('経路不一致');
-    expect(message).toContain('VITE_ORCA_API_PATH_PREFIX');
+    expect(message).toBe('オーダー情報の再取得前に患者取込を完了できませんでした。利用可能な画面からやり直してください。');
+    expect(message).not.toContain('VITE_ORCA_API_PATH_PREFIX');
   });
 });

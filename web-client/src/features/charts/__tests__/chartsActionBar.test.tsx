@@ -254,7 +254,7 @@ describe('ChartsActionBar', () => {
     expect(screen.getByText(/checked_in -> chart_opened/)).toBeInTheDocument();
   });
 
-  it('診察開始の afterStart が失敗した場合は success toast を出さない', async () => {
+  it('診察開始の afterStart が失敗した場合は success toast を出さず raw detail も表示しない', async () => {
     const user = userEvent.setup();
     const onAfterStart = vi.fn().mockRejectedValue(new Error('encounterKey がないため診察開始を実行できません。'));
 
@@ -274,8 +274,8 @@ describe('ChartsActionBar', () => {
 
     await waitFor(() => expect(onAfterStart).toHaveBeenCalledTimes(1));
     expect(screen.queryByText('診察開始を完了')).not.toBeInTheDocument();
-    expect(screen.getByText('診察開始に失敗')).toBeInTheDocument();
-    expect(screen.getAllByText(/encounterKey がないため診察開始を実行できません。/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/診察開始に失敗しました。状態を確認してからやり直してください。/)).toBeInTheDocument();
+    expect(screen.queryByText(/encounterKey がないため診察開始を実行できません。/)).not.toBeInTheDocument();
   });
 
   it('診察中断では start hook を呼ばない', async () => {

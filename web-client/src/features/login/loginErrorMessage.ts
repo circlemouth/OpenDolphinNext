@@ -79,6 +79,11 @@ const resolveTooManyRequestsMessage = (retryAfter: string | undefined): string =
   return AUTH_COPY.tooManyRequests;
 };
 
+const isNetworkLikeMessage = (message: string | undefined): boolean => {
+  if (!message) return false;
+  return /failed to fetch|network|timeout|timed out|connection|load failed|abort/i.test(message);
+};
+
 const resolveAuthFailureMessage = (reason: string | undefined, status: number): string => {
   const normalizedReason = reason?.toLowerCase();
   if (normalizedReason === 'factor2_required') {
@@ -148,15 +153,14 @@ export const resolveLoginFailure = (params: {
   }
 
   const message = normalizeText(parsed?.message);
-  if (message) {
-    return { kind: 'generic', message: `ログインに失敗しました。${message}` };
-  }
-
   const resolvedStatusText = normalizeText(statusText);
-  if (resolvedStatusText) {
-    return { kind: 'generic', message: `ログインに失敗しました（HTTP ${status}: ${resolvedStatusText}）。` };
+  if (isNetworkLikeMessage(message) || isNetworkLikeMessage(resolvedStatusText)) {
+    return {
+      kind: 'generic',
+      message: 'ログインに失敗しました。通信状態を確認して再試行してください。',
+    };
   }
-  return { kind: 'generic', message: `ログインに失敗しました（HTTP ${status}）。` };
+  return { kind: 'generic', message: AUTH_COPY.authenticationFailed };
 };
 
 export const resolveLoginFailureMessage = (params: {
@@ -165,3 +169,11 @@ export const resolveLoginFailureMessage = (params: {
   statusText?: string;
   retryAfter?: string;
 }): string => resolveLoginFailure(params).message;
+
+export const resolveUnexpectedLoginErrorMessage = (error: unknown): string => {
+  const message = normalizeText(error instanceof Error ? error.message : typeof error === 'string' ? error : undefined);
+  if (isNetworkLikeMessage(message)) {
+    return 'ログインに失敗しました。通信状態を確認して再試行してください。';
+  }
+  return AUTH_COPY.authenticationFailed;
+};

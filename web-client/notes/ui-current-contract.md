@@ -27,7 +27,12 @@
 
 ### Verification
 - manual: `/login` 起点の 1 段階目ログインと factor2 要求有無の確認
-- unknown: auth guard の screen 単位の挙動
+- guard minimum:
+  - 未認証の非 login route は `/login` へ `replace`
+  - 認証済み login route は safe な `from` 優先、無効時は reception fallback
+  - `timeout / unauthorized / forbidden / logout` は login surface で理由を分ける
+  - factor2 `cancel / session expired / session missing` は route 遷移せず credentials step に戻る
+  - factor2 `429` は current step を維持して待機文言に寄せる
 
 ## Route Inventory
 - `/login`
@@ -40,6 +45,7 @@
 - `/f/:facilityId/charts/print/document`
 - `/f/:facilityId/m/images`
 - `/f/:facilityId/administration`
+- `/f/:facilityId/debug/*` (`DEBUG_PAGES_ENABLED` 時のみ)
 
 ## Guard Inventory
 - `FacilityGate`
@@ -47,9 +53,19 @@
 - `AdministrationGate`
 - `NavigationGuardProvider`
 
+### Guard Behavior Minimum
+- `FacilityGate` は未認証の非 login route を `/login` へ `replace` し、`state.from` を保持します。
+- `FacilityShell` は facility-scoped route で session 不在なら facility-scoped path を `state.from` に積み直して `/login` へ戻します。
+- `AdministrationGate` は権限不足を facility-scoped denial surface で処理し、`Reception` CTA を表示します。
+- `NavigationGuardProvider` は dirty source がある時、`screenKey` が変わる遷移だけを block します。
+- `NavigationGuardProvider` は `/charts` 同一路線で `chartsScreenId` が同一なら、外部パラメータ更新を同一画面として許可します。
+- dirty 状態で logout / switch account が要求された場合、silent redirect せず app-shell の session exit dialog を挟みます。
+
 ## Charts Surface
 ### Current Fact
 - normal runtime の中心 surface は `SoapNotePanel` です。
+- `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
+- `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
 - `OrcaSummary` は Charts 内部の補助 panel です。
 - `DocumentTimeline` と `MedicalOutpatientRecordPanel` は `showDebugUi` 有効時のみ表示される debug-only surface です。
 
@@ -70,17 +86,37 @@
 - manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / Administration への遷移確認
 - unknown: pane geometry、最小 state schema
 
+## Patients Surface
+### Current Fact
+- 初期 patient context は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context の順で解決します。
+- Patients が読む minimal context は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
+- `returnTo` は safe な候補だけを direct return に使い、fallback は `from=reception` なら reception、それ以外は charts です。
+
+### Verification
+- code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
+- manual: reception / charts 由来の再入場と patient 未選択開始
+
+## Mobile Images Surface
+### Current Fact
+- `patientId` は query `patientId` -> `location.state.patientId` -> deep link volatile context の順で解決します。
+- current screen は `ReturnToBar`、患者特定、アップロード、完了/参照の単一カラム構成です。
+- fallback は `from=reception` なら reception、`from=patients` なら patients、既定は charts です。
+
+### Verification
+- code-confirm: deep link scrub 後の patient 復元、missing-patient error、feature-disabled message
+- manual: file picker、upload、retry、return CTA
+
 ## Admin Surface
 ### Current Fact
 - admin current contract の source of truth は `/api/admin/config` です。
 - `/api/admin/delivery` を第 2 正本として復活させません。
-
-### Unknown
-- admin screen の current UI detail
+- top-level tab は `delivery`, `orca-users`, `master-updates` の 3 本です。
+- `delivery` 配下は `dashboard`, `connection`, `config`, `queue`, `operations`, `debug` の section sub-navigation を持ちます。
 
 ## Explicit Unknown
 - pane geometry
-- route 別 minimal encounter context schema
+- print / debug / administration を含む app-wide handoff state detail
+- `NavigationGuardProvider` の `screenKey` 粒度を超える task-level coverage
 
 ## References
 - [README.md](../README.md)
