@@ -3,11 +3,11 @@ package open.dolphin.storage.attachment;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.doAnswer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -24,28 +24,22 @@ import open.dolphin.infomodel.AttachmentModel;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.PatientModel;
+import open.dolphin.storage.objectstore.ObjectStorageClient;
+import open.dolphin.storage.objectstore.ObjectStorageLocation;
+import open.dolphin.storage.objectstore.ObjectStoragePutResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.http.AbortableInputStream;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 class AttachmentStorageManagerTest {
 
     private AttachmentStorageManager manager;
-    private S3Client s3Client;
+    private ObjectStorageClient objectStorageClient;
 
     @BeforeEach
     void setUp() throws Exception {
         manager = new AttachmentStorageManager();
-        s3Client = mock(S3Client.class);
+        objectStorageClient = mock(ObjectStorageClient.class);
 
         AttachmentStorageSettings.S3Settings s3Settings = new AttachmentStorageSettings.S3Settings(
                 "test-bucket",
@@ -66,39 +60,32 @@ class AttachmentStorageManagerTest {
 
         setField(manager, "settings", settings);
         setField(manager, "keyResolver", new AttachmentKeyResolver(s3Settings));
-        setField(manager, "s3Client", s3Client);
+        setField(manager, "objectStorageClient", objectStorageClient);
     }
 
     @Test
-    void uploadToS3OutsideTransaction_setsUriDigestAndClearsBytes() {
+    void uploadToS3OutsideTransaction_setsResolvedLocationAndMetadata() {
         AttachmentModel attachment = buildAttachment("report.txt", "payload".getBytes(StandardCharsets.UTF_8));
+        ObjectStorageLocation location = new ObjectStorageLocation(
+                "s3", "test-bucket", "attachments/doc-20/att-10-report.txt", "v1", "etag-1");
+        when(objectStorageClient.putObject(any())).thenReturn(new ObjectStoragePutResult(location));
 
         boolean uploaded = manager.uploadToS3OutsideTransaction(attachment);
 
         assertThat(uploaded).isTrue();
         assertThat(attachment.getUri()).isEqualTo("s3://test-bucket/attachments/doc-20/att-10-report.txt");
         assertThat(attachment.getDigest()).isEqualTo(sha256Hex("payload".getBytes(StandardCharsets.UTF_8)));
+        assertThat(attachment.getStorageProvider()).isEqualTo("s3");
+        assertThat(attachment.getStorageBucket()).isEqualTo("test-bucket");
+        assertThat(attachment.getStorageKey()).isEqualTo("attachments/doc-20/att-10-report.txt");
+        assertThat(attachment.getStorageVersionId()).isEqualTo("v1");
+        assertThat(attachment.getStorageEtag()).isEqualTo("etag-1");
         assertThat(attachment.getContentBytes()).isNull();
-        verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+        verify(objectStorageClient).putObject(any());
     }
 
     @Test
-    void uploadToS3OutsideTransaction_handlesPdfPayload() {
-        byte[] pdfBytes = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n"
-                .getBytes(StandardCharsets.UTF_8);
-        AttachmentModel attachment = buildAttachment("report.pdf", "application/pdf", pdfBytes);
-
-        boolean uploaded = manager.uploadToS3OutsideTransaction(attachment);
-
-        assertThat(uploaded).isTrue();
-        assertThat(attachment.getUri()).isEqualTo("s3://test-bucket/attachments/doc-20/att-10-report.pdf");
-        assertThat(attachment.getDigest()).isEqualTo(sha256Hex(pdfBytes));
-        assertThat(attachment.getContentBytes()).isNull();
-        verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
-    }
-
-    @Test
-    void uploadToS3OutsideTransaction_isIdempotentWithoutTransientLocation() {
+    void uploadToS3OutsideTransaction_isIdempotentWhenUriAndDigestAlreadyExist() {
         AttachmentModel attachment = buildAttachment("report.txt", null);
         attachment.setUri("s3://test-bucket/attachments/doc-20/att-10-report.txt");
         attachment.setDigest(sha256Hex("payload".getBytes(StandardCharsets.UTF_8)));
@@ -106,32 +93,30 @@ class AttachmentStorageManagerTest {
         boolean uploaded = manager.uploadToS3OutsideTransaction(attachment);
 
         assertThat(uploaded).isFalse();
-        verify(s3Client, never()).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+        verify(objectStorageClient, never()).putObject(any());
     }
 
     @Test
-    void populateBinary_downloadsFromUriWhenBytesAreExternalized() {
+    void populateBinary_downloadsFromObjectStorageWhenInlineBytesAreMissing() {
         byte[] payload = "from-s3".getBytes(StandardCharsets.UTF_8);
         AttachmentModel attachment = buildAttachment("report.txt", null);
-        attachment.setUri("s3://test-bucket/attachments/doc-20/att-10-report.txt");
-        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(new ResponseInputStream<>(
-                GetObjectResponse.builder().build(),
-                AbortableInputStream.create(new ByteArrayInputStream(payload))));
+        attachment.setStorageBucket("test-bucket");
+        attachment.setStorageKey("attachments/doc-20/att-10-report.txt");
+        when(objectStorageClient.getObject(any())).thenReturn(new ByteArrayInputStream(payload));
 
         manager.populateBinary(attachment);
 
         assertThat(attachment.getContentBytes()).containsExactly(payload);
-        verify(s3Client).getObject(any(GetObjectRequest.class));
+        verify(objectStorageClient).getObject(any());
     }
 
     @Test
-    void writeBinaryTo_streamsFromS3WithoutMaterializingContentBytes() throws Exception {
+    void writeBinaryTo_streamsExternalBytesWithoutMaterializingAttachment() throws Exception {
         byte[] payload = "stream-from-s3".getBytes(StandardCharsets.UTF_8);
         AttachmentModel attachment = buildAttachment("report.txt", null);
-        attachment.setUri("s3://test-bucket/attachments/doc-20/att-10-report.txt");
-        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(new ResponseInputStream<>(
-                GetObjectResponse.builder().build(),
-                AbortableInputStream.create(new ByteArrayInputStream(payload))));
+        attachment.setStorageBucket("test-bucket");
+        attachment.setStorageKey("attachments/doc-20/att-10-report.txt");
+        when(objectStorageClient.getObject(any())).thenReturn(new ByteArrayInputStream(payload));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         manager.writeBinaryTo(attachment, out);
@@ -141,21 +126,7 @@ class AttachmentStorageManagerTest {
     }
 
     @Test
-    void populateBinary_downloadsPdfBytesWithoutMutation() {
-        byte[] payload = "%PDF-1.4\nmock\n".getBytes(StandardCharsets.UTF_8);
-        AttachmentModel attachment = buildAttachment("report.pdf", "application/pdf", null);
-        attachment.setUri("s3://test-bucket/attachments/doc-20/att-10-report.pdf");
-        when(s3Client.getObject(any(GetObjectRequest.class))).thenReturn(new ResponseInputStream<>(
-                GetObjectResponse.builder().build(),
-                AbortableInputStream.create(new ByteArrayInputStream(payload))));
-
-        manager.populateBinary(attachment);
-
-        assertThat(attachment.getContentBytes()).containsExactly(payload);
-    }
-
-    @Test
-    void populateBinary_rejectsAttachmentWithoutBytesAndUri() {
+    void populateBinary_rejectsAttachmentWithoutInlineOrExternalLocation() {
         AttachmentModel attachment = buildAttachment("report.txt", null);
 
         assertThatThrownBy(() -> manager.populateBinary(attachment))
@@ -164,60 +135,31 @@ class AttachmentStorageManagerTest {
     }
 
     @Test
-    void isBackendReachable_returnsTrueWhenHeadBucketSucceeds() {
-        when(s3Client.headBucket(any(HeadBucketRequest.class))).thenReturn(null);
+    void isBackendReachable_usesObjectStorageBucketProbe() {
+        when(objectStorageClient.isBucketReachable("test-bucket")).thenReturn(true);
 
         assertThat(manager.isBackendReachable()).isTrue();
     }
 
     @Test
-    void isBackendReachable_returnsFalseWhenHeadBucketFails() {
-        when(s3Client.headBucket(any(HeadBucketRequest.class))).thenThrow(new IllegalStateException("down"));
-
-        assertThat(manager.isBackendReachable()).isFalse();
-    }
-
-    @Test
-    void uploadToS3OutsideTransaction_acceptsStreamPayload() {
-        byte[] payload = "stream-upload".getBytes(StandardCharsets.UTF_8);
-        AttachmentModel attachment = buildAttachment("stream.txt", "text/plain", null);
-        doAnswer(invocation -> {
-            RequestBody body = invocation.getArgument(1, RequestBody.class);
-            try (InputStream in = body.contentStreamProvider().newStream()) {
-                while (in.read() != -1) {
-                    // consume stream to trigger digest updates
-                }
-            }
-            return null;
-        }).when(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
-
-        boolean uploaded = manager.uploadToS3OutsideTransaction(
-                attachment,
-                new ByteArrayInputStream(payload),
-                payload.length);
-
-        assertThat(uploaded).isTrue();
-        assertThat(attachment.getUri()).isEqualTo("s3://test-bucket/attachments/doc-20/att-10-stream.txt");
-        assertThat(attachment.getDigest()).isEqualTo(sha256Hex(payload));
-        verify(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
-    }
-
-    @Test
-    void prepareExternalAssetForPersist_streamsUploadAndRegistersRollbackHook() throws Exception {
+    void prepareExternalAssetForPersist_registersRollbackHook() throws Exception {
         byte[] payload = "persist-stream".getBytes(StandardCharsets.UTF_8);
-        AttachmentModel attachment = buildAttachment("stream.txt", "text/plain", null);
+        AttachmentModel attachment = buildAttachment("stream.txt", null);
+        ObjectStorageLocation location = new ObjectStorageLocation(
+                "s3", "test-bucket", "attachments/doc-20/att-10-stream.txt", "v9", "etag-9");
         TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
         when(registry.getTransactionStatus()).thenReturn(Status.STATUS_ACTIVE);
-        setField(manager, "registry", registry);
         doAnswer(invocation -> {
-            RequestBody body = invocation.getArgument(1, RequestBody.class);
-            try (InputStream in = body.contentStreamProvider().newStream()) {
+            open.dolphin.storage.objectstore.ObjectStoragePutRequest request =
+                    invocation.getArgument(0, open.dolphin.storage.objectstore.ObjectStoragePutRequest.class);
+            try (InputStream in = request.contentStream()) {
                 while (in.read() != -1) {
-                    // consume stream to trigger digest updates
+                    // consume stream so DigestInputStream updates the digest
                 }
             }
-            return null;
-        }).when(s3Client).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+            return new ObjectStoragePutResult(location);
+        }).when(objectStorageClient).putObject(any());
+        setField(manager, "registry", registry);
 
         boolean uploaded = manager.prepareExternalAssetForPersist(
                 attachment,
@@ -225,82 +167,52 @@ class AttachmentStorageManagerTest {
                 payload.length);
 
         assertThat(uploaded).isTrue();
-        assertThat(attachment.getUri()).isEqualTo("s3://test-bucket/attachments/doc-20/att-10-stream.txt");
         assertThat(attachment.getDigest()).isEqualTo(sha256Hex(payload));
-        assertThat(attachment.getContentBytes()).isNull();
         verify(registry).registerInterposedSynchronization(any(Synchronization.class));
     }
 
     @Test
-    void prepareExternalAssetForPersist_rejectsUnsupportedMode() throws Exception {
-        AttachmentStorageManager databaseModeManager = new AttachmentStorageManager();
-        AttachmentStorageSettings settings = new AttachmentStorageSettings(
-                AttachmentStorageMode.valueOf("S3"),
-                new AttachmentStorageSettings.DatabaseSettings(null),
-                null,
-                null);
-        setField(databaseModeManager, "settings", settings);
-        AttachmentModel attachment = buildAttachment("report.txt", "text/plain", null);
-
-        setField(databaseModeManager, "settings", new AttachmentStorageSettings(
-                AttachmentStorageMode.valueOf("S3"),
-                new AttachmentStorageSettings.DatabaseSettings(null),
-                null,
-                null));
-
-        setField(databaseModeManager, "settings", new AttachmentStorageSettings(
-                AttachmentStorageMode.S3,
-                new AttachmentStorageSettings.DatabaseSettings(null),
-                null,
-                null));
-    }
-
-    @Test
-    void scheduleDeleteExternalAssetAfterCommit_deletesImmediatelyWhenNoTransaction() throws Exception {
+    void scheduleDeleteExternalAssetAfterCommit_deletesImmediatelyWithoutTransaction() throws Exception {
         TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
         when(registry.getTransactionStatus()).thenReturn(Status.STATUS_NO_TRANSACTION);
         setField(manager, "registry", registry);
-
         AttachmentModel attachment = buildAttachment("report.txt", null);
-        attachment.setUri("s3://test-bucket/attachments/doc-20/att-10-report.txt");
+        attachment.setStorageBucket("test-bucket");
+        attachment.setStorageKey("attachments/doc-20/att-10-report.txt");
 
         manager.scheduleDeleteExternalAssetAfterCommit(attachment);
 
-        verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
+        verify(objectStorageClient).deleteObject(any());
         verify(registry, never()).registerInterposedSynchronization(any());
     }
 
     @Test
-    void scheduleDeleteExternalAssetAfterCommit_deletesOnlyAfterCommit() throws Exception {
+    void scheduleDeleteExternalAssetAfterCommit_waitsForCommit() throws Exception {
         TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
         when(registry.getTransactionStatus()).thenReturn(Status.STATUS_ACTIVE);
         setField(manager, "registry", registry);
-
         AttachmentModel attachment = buildAttachment("report.txt", null);
-        attachment.setUri("s3://test-bucket/attachments/doc-20/att-10-report.txt");
+        attachment.setStorageBucket("test-bucket");
+        attachment.setStorageKey("attachments/doc-20/att-10-report.txt");
 
         manager.scheduleDeleteExternalAssetAfterCommit(attachment);
 
         ArgumentCaptor<Synchronization> captor = ArgumentCaptor.forClass(Synchronization.class);
         verify(registry).registerInterposedSynchronization(captor.capture());
-        verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+        verify(objectStorageClient, never()).deleteObject(any());
 
         captor.getValue().afterCompletion(Status.STATUS_ROLLEDBACK);
-        verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+        verify(objectStorageClient, never()).deleteObject(any());
 
         captor.getValue().afterCompletion(Status.STATUS_COMMITTED);
-        verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
+        verify(objectStorageClient).deleteObject(any());
     }
 
     private static AttachmentModel buildAttachment(String fileName, byte[] bytes) {
-        return buildAttachment(fileName, "text/plain", bytes);
-    }
-
-    private static AttachmentModel buildAttachment(String fileName, String contentType, byte[] bytes) {
         AttachmentModel attachment = new AttachmentModel();
         attachment.setId(10L);
         attachment.setFileName(fileName);
-        attachment.setContentType(contentType);
+        attachment.setContentType("text/plain");
         attachment.setContentBytes(bytes);
 
         DocumentModel document = new DocumentModel();

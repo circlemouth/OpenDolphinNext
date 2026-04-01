@@ -1,47 +1,56 @@
 package open.dolphin.storage.image;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.annotation.Resource;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
+import jakarta.inject.Inject;
+import jakarta.transaction.Status;
+import jakarta.transaction.Synchronization;
+import jakarta.transaction.Transactional;
+import jakarta.transaction.TransactionSynchronizationRegistry;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.util.Collection;
-import java.util.HexFormat;
 import java.util.Objects;
 import java.util.Optional;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import open.dolphin.infomodel.ExtRefModel;
 import open.dolphin.infomodel.SchemaModel;
 import open.dolphin.storage.attachment.AttachmentStorageConfigLoader;
 import open.dolphin.storage.attachment.AttachmentStorageException;
 import open.dolphin.storage.attachment.AttachmentStorageSettings;
+import open.dolphin.storage.objectstore.ObjectStorageClient;
+import open.dolphin.storage.objectstore.ObjectStorageDeleteRequest;
+import open.dolphin.storage.objectstore.ObjectStorageDigestSupport;
+import open.dolphin.storage.objectstore.ObjectStorageGetRequest;
+import open.dolphin.storage.objectstore.ObjectStorageLocation;
+import open.dolphin.storage.objectstore.ObjectStoragePutRequest;
+import open.dolphin.storage.objectstore.ObjectStoragePutResult;
+import open.dolphin.storage.objectstore.S3CompatibleObjectStorageClient;
+import software.amazon.awssdk.utils.IoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
-import software.amazon.awssdk.utils.IoUtils;
 
 @ApplicationScoped
 public class ImageStorageManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ImageStorageManager.class);
+    private static final String STORAGE_PROVIDER_S3 = "s3";
 
     @Inject
     AttachmentStorageConfigLoader configLoader;
 
+    @Inject
+    Instance<ImageStorageManager> selfReference;
+
+    @Resource
+    private TransactionSynchronizationRegistry registry;
+
     private AttachmentStorageSettings settings;
-    private S3Client s3Client;
+    private ObjectStorageClient objectStorageClient;
 
     @PostConstruct
     void init() {
@@ -51,13 +60,20 @@ public class ImageStorageManager {
         }
         AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
                 .orElseThrow(() -> new AttachmentStorageException("S3 settings are missing"));
-        s3Client = createClient(s3Settings);
+        objectStorageClient = new S3CompatibleObjectStorageClient(new S3CompatibleObjectStorageClient.Config(
+                s3Settings.getRegion(),
+                s3Settings.getEndpoint().orElse(null),
+                s3Settings.isForcePathStyle(),
+                s3Settings.getServerSideEncryption().orElse(null),
+                s3Settings.getKmsKeyId().orElse(null),
+                s3Settings.getAccessKey(),
+                s3Settings.getSecretKey()));
     }
 
     @PreDestroy
     void shutdown() {
-        if (s3Client != null) {
-            s3Client.close();
+        if (objectStorageClient != null) {
+            objectStorageClient.close();
         }
     }
 
@@ -66,74 +82,131 @@ public class ImageStorageManager {
             return;
         }
         requireS3Mode();
+        ImageStorageManager invoker = selfReference != null && !selfReference.isUnsatisfied()
+                ? selfReference.get()
+                : this;
         for (SchemaModel schema : schemas) {
-            uploadToS3(schema);
+            if (invoker.uploadToObjectStoreOutsideTransaction(schema)) {
+                registerRollbackHook(schema);
+            }
         }
+    }
+
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    public boolean uploadToObjectStoreOutsideTransaction(SchemaModel schema) {
+        return uploadToObjectStore(schema);
     }
 
     public void populateBinary(SchemaModel schema) {
         if (schema == null || schema.getImageBytes() != null) {
             return;
         }
-        if (!hasText(schema.getUri())) {
+        if (!hasText(schema.getUri()) && !hasText(schema.getStorageBucket())) {
             throw new AttachmentStorageException("Image " + schema.getId() + " has no external uri");
         }
-        S3ObjectLocation location = resolveLocation(schema.getUri())
+        ObjectStorageLocation location = resolveLocation(schema)
                 .orElseThrow(() -> new AttachmentStorageException("Invalid image uri: " + schema.getUri()));
-        GetObjectRequest request = GetObjectRequest.builder()
-                .bucket(location.bucket())
-                .key(location.key())
-                .build();
-        try (software.amazon.awssdk.core.ResponseInputStream<GetObjectResponse> response = s3Client.getObject(request)) {
-            schema.setImageBytes(IoUtils.toByteArray((InputStream) response));
+        try (InputStream response = objectStorageClient.getObject(new ObjectStorageGetRequest(location))) {
+            schema.setImageBytes(IoUtils.toByteArray(response));
         } catch (IOException ex) {
             throw new AttachmentStorageException("Failed to download image " + location.key(), ex);
         }
     }
 
     public void deleteExternalAsset(SchemaModel schema) {
-        if (schema == null || !hasText(schema.getUri())) {
+        if (schema == null || (!hasText(schema.getUri()) && !hasText(schema.getStorageBucket()))) {
             return;
         }
         requireS3Mode();
-        resolveLocation(schema.getUri()).ifPresent(location -> {
+        resolveLocation(schema).ifPresent(location -> {
             try {
-                s3Client.deleteObject(DeleteObjectRequest.builder()
-                        .bucket(location.bucket())
-                        .key(location.key())
-                        .build());
+                objectStorageClient.deleteObject(new ObjectStorageDeleteRequest(location));
             } catch (Exception ex) {
-                LOGGER.warn("Failed to delete image {}: {}", schema.getUri(), ex.getMessage());
+                LOGGER.warn("Failed to delete image {}: {}", location.toUri(), ex.getMessage());
             }
         });
     }
 
-    private void uploadToS3(SchemaModel schema) {
-        if (schema == null || schema.getImageBytes() == null || schema.getImageBytes().length == 0) {
+    public void scheduleDeleteExternalAssetAfterCommit(SchemaModel schema) {
+        if (schema == null || (!hasText(schema.getUri()) && !hasText(schema.getStorageBucket()))) {
             return;
         }
-        if (hasText(schema.getUri()) && hasText(schema.getDigest())) {
+        requireS3Mode();
+        ImageStorageManager invoker = selfReference != null && !selfReference.isUnsatisfied()
+                ? selfReference.get()
+                : this;
+        if (registry == null) {
+            invoker.deleteExternalAssetOutsideTransaction(schema);
             return;
+        }
+        int txStatus = registry.getTransactionStatus();
+        if (txStatus == Status.STATUS_ACTIVE
+                || txStatus == Status.STATUS_MARKED_ROLLBACK
+                || txStatus == Status.STATUS_PREPARING
+                || txStatus == Status.STATUS_PREPARED
+                || txStatus == Status.STATUS_COMMITTING
+                || txStatus == Status.STATUS_ROLLING_BACK) {
+            registry.registerInterposedSynchronization(new Synchronization() {
+                @Override
+                public void beforeCompletion() {
+                    // no-op
+                }
+
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == Status.STATUS_COMMITTED) {
+                        invoker.deleteExternalAssetOutsideTransaction(schema);
+                    }
+                }
+            });
+            return;
+        }
+        invoker.deleteExternalAssetOutsideTransaction(schema);
+    }
+
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    public void deleteExternalAssetOutsideTransaction(SchemaModel schema) {
+        deleteExternalAsset(schema);
+    }
+
+    private boolean uploadToObjectStore(SchemaModel schema) {
+        if (schema == null || schema.getImageBytes() == null || schema.getImageBytes().length == 0) {
+            return false;
+        }
+        if (isAlreadyExternalized(schema)) {
+            return false;
         }
         AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
                 .orElseThrow(() -> new AttachmentStorageException("S3 settings missing"));
         byte[] bytes = schema.getImageBytes();
-        schema.setDigest(hasText(schema.getDigest()) ? schema.getDigest() : sha256Hex(bytes));
+        ensureDigest(schema, bytes);
         String key = resolveKey(schema);
-        PutObjectRequest.Builder builder = PutObjectRequest.builder()
-                .bucket(s3Settings.getBucket())
-                .key(key)
-                .contentLength((long) bytes.length);
-        String contentType = resolveContentType(schema);
-        if (contentType != null) {
-            builder.contentType(contentType);
+        ObjectStorageLocation target = ObjectStorageLocation.s3(s3Settings.getBucket(), key);
+        MessageDigest digest = ObjectStorageDigestSupport.newSha256Digest();
+        try (InputStream digestInput = new java.security.DigestInputStream(
+                new java.io.BufferedInputStream(new ByteArrayInputStream(bytes)),
+                digest)) {
+            ObjectStoragePutResult result = objectStorageClient.putObject(new ObjectStoragePutRequest(
+                    target,
+                    digestInput,
+                    bytes.length,
+                    resolveContentType(schema)));
+            schema.setUri(result.location().toUri());
+            ensureDigest(schema, digest);
+            applyStoredObjectMetadata(schema, result.location());
+            schema.setImageBytes(null);
+            return true;
+        } catch (Exception ex) {
+            throw new AttachmentStorageException("Failed to upload image to object storage: " + key, ex);
         }
-        s3Settings.getServerSideEncryption()
-                .map(String::toUpperCase)
-                .ifPresent(mode -> applyServerSideEncryption(builder, mode, s3Settings));
-        s3Client.putObject(builder.build(), RequestBody.fromBytes(bytes));
-        schema.setUri("s3://" + s3Settings.getBucket() + "/" + key);
-        schema.setImageBytes(null);
+    }
+
+    private void applyStoredObjectMetadata(SchemaModel schema, ObjectStorageLocation location) {
+        schema.setStorageProvider(location.provider());
+        schema.setStorageBucket(location.bucket());
+        schema.setStorageKey(location.key());
+        schema.setStorageVersionId(location.versionId());
+        schema.setStorageEtag(location.eTag());
     }
 
     private String resolveKey(SchemaModel schema) {
@@ -161,11 +234,66 @@ public class ImageStorageManager {
         };
     }
 
-    private boolean isS3Enabled() {
-        return settings != null && settings.getMode().isS3();
+    private void registerRollbackHook(SchemaModel schema) {
+        if (registry == null) {
+            LOGGER.warn("TransactionSynchronizationRegistry is not available. Rollback for object upload {} cannot be guaranteed.",
+                    schema.getUri());
+            return;
+        }
+        try {
+            registry.registerInterposedSynchronization(new Synchronization() {
+                @Override
+                public void beforeCompletion() {
+                    // No action needed
+                }
+
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != Status.STATUS_COMMITTED) {
+                        LOGGER.info("Transaction rolled back. Deleting object: {}", schema.getUri());
+                        deleteExternalAsset(schema);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.warn("Failed to register synchronization for schema {}: {}", schema.getId(), e.getMessage());
+        }
     }
 
-    private Optional<S3ObjectLocation> resolveLocation(String uri) {
+    private boolean isAlreadyExternalized(SchemaModel schema) {
+        if (!hasText(schema.getUri())) {
+            return false;
+        }
+        return hasText(schema.getDigest()) || schema.getImageBytes() == null;
+    }
+
+    private void ensureDigest(SchemaModel schema, byte[] bytes) {
+        if (schema == null || hasText(schema.getDigest()) || bytes == null) {
+            return;
+        }
+        schema.setDigest(ObjectStorageDigestSupport.sha256Hex(bytes));
+    }
+
+    private void ensureDigest(SchemaModel schema, MessageDigest digest) {
+        if (schema == null || hasText(schema.getDigest()) || digest == null) {
+            return;
+        }
+        schema.setDigest(ObjectStorageDigestSupport.sha256Hex(digest));
+    }
+
+    private Optional<ObjectStorageLocation> resolveLocation(SchemaModel schema) {
+        if (schema == null) {
+            return Optional.empty();
+        }
+        if (hasText(schema.getStorageBucket()) && hasText(schema.getStorageKey())) {
+            return Optional.of(new ObjectStorageLocation(
+                    hasText(schema.getStorageProvider()) ? schema.getStorageProvider() : STORAGE_PROVIDER_S3,
+                    schema.getStorageBucket(),
+                    schema.getStorageKey(),
+                    schema.getStorageVersionId(),
+                    schema.getStorageEtag()));
+        }
+        String uri = schema.getUri();
         if (!hasText(uri) || !uri.startsWith("s3://")) {
             return Optional.empty();
         }
@@ -174,42 +302,9 @@ public class ImageStorageManager {
         if (slash <= 0 || slash == withoutScheme.length() - 1) {
             return Optional.empty();
         }
-        return Optional.of(new S3ObjectLocation(
+        return Optional.of(ObjectStorageLocation.s3(
                 withoutScheme.substring(0, slash),
                 withoutScheme.substring(slash + 1)));
-    }
-
-    private S3Client createClient(AttachmentStorageSettings.S3Settings s3Settings) {
-        S3ClientBuilder builder = S3Client.builder()
-                .region(Region.of(s3Settings.getRegion()))
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(s3Settings.isForcePathStyle())
-                        .build());
-        s3Settings.getEndpoint().ifPresent(builder::endpointOverride);
-        if (hasText(s3Settings.getAccessKey()) && hasText(s3Settings.getSecretKey())) {
-            builder.credentialsProvider(StaticCredentialsProvider.create(
-                    AwsBasicCredentials.create(s3Settings.getAccessKey(), s3Settings.getSecretKey())));
-        }
-        return builder.build();
-    }
-
-    private void applyServerSideEncryption(PutObjectRequest.Builder builder,
-                                           String mode,
-                                           AttachmentStorageSettings.S3Settings s3Settings) {
-        if ("AES256".equalsIgnoreCase(mode)) {
-            builder.serverSideEncryption(ServerSideEncryption.AES256);
-        } else if ("AWS:KMS".equalsIgnoreCase(mode) || "KMS".equalsIgnoreCase(mode)) {
-            builder.serverSideEncryption(ServerSideEncryption.AWS_KMS);
-            s3Settings.getKmsKeyId().ifPresent(builder::ssekmsKeyId);
-        }
-    }
-
-    private String sha256Hex(byte[] bytes) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to calculate SHA-256", ex);
-        }
     }
 
     private boolean hasText(String value) {
@@ -217,12 +312,9 @@ public class ImageStorageManager {
     }
 
     private void requireS3Mode() {
-        if (!isS3Enabled()) {
+        if (settings == null || !settings.getMode().isS3()) {
             throw new AttachmentStorageException("Unsupported image storage mode: "
                     + (settings != null ? settings.getMode() : "null"));
         }
-    }
-
-    private record S3ObjectLocation(String bucket, String key) {
     }
 }

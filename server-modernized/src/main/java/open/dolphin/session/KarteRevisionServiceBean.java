@@ -29,6 +29,7 @@ import open.dolphin.infomodel.DocumentModelCloner;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.ModuleModel;
 import open.dolphin.infomodel.SchemaModel;
+import open.dolphin.infomodel.UserModel;
 import open.dolphin.security.integrity.CanonicalJson;
 import open.dolphin.rest.dto.KarteRevisionDiffResponse;
 import open.dolphin.rest.dto.KarteRevisionEntryResponse;
@@ -179,9 +180,12 @@ public class KarteRevisionServiceBean {
      *
      * Parent revision is typically the current latest revision (baseRevisionId) for linear history.
      */
-    public long createRevisionFromSource(long sourceRevisionId, long parentRevisionId, String operation) {
+    public long createRevisionFromSource(long sourceRevisionId, long parentRevisionId, String operation, UserModel actor) {
         if (sourceRevisionId <= 0 || parentRevisionId <= 0) {
             throw new IllegalArgumentException("sourceRevisionId and parentRevisionId are required");
+        }
+        if (actor == null || actor.getId() <= 0) {
+            throw new IllegalArgumentException("actor is required");
         }
         DocumentModel source = getRevisionSnapshot(sourceRevisionId);
         if (source == null) {
@@ -198,17 +202,17 @@ public class KarteRevisionServiceBean {
 
         Date started = source.getStarted() != null ? source.getStarted() : new Date();
         Date now = new Date();
-        applyRevisionSnapshotMetadata(cloned, source, parentRevisionId, operation, started, now);
-        rebindRevisionChildren(cloned, parentRevisionId, operation, started, now);
+        applyRevisionSnapshotMetadata(cloned, source, actor, parentRevisionId, operation, started, now);
+        rebindRevisionChildren(cloned, actor, parentRevisionId, operation, started, now);
         syncRevisionDocInfo(cloned);
         return karteServiceBean.addDocument(cloned);
     }
 
-    private void applyRevisionSnapshotMetadata(DocumentModel cloned, DocumentModel source, long parentRevisionId,
+    private void applyRevisionSnapshotMetadata(DocumentModel cloned, DocumentModel source, UserModel actor, long parentRevisionId,
             String operation, Date started, Date now) {
         cloned.setId(0L);
         cloned.setKarteBean(source.getKarteBean());
-        cloned.setUserModel(source.getUserModel());
+        cloned.setUserModel(actor);
         cloned.setStarted(started);
         cloned.setFirstConfirmed(started);
         cloned.setConfirmed(now);
@@ -230,14 +234,14 @@ public class KarteRevisionServiceBean {
         info.setDocId(UUID.randomUUID().toString().replace("-", ""));
     }
 
-    private void rebindRevisionChildren(DocumentModel cloned, long parentRevisionId, String operation, Date started,
+    private void rebindRevisionChildren(DocumentModel cloned, UserModel actor, long parentRevisionId, String operation, Date started,
             Date now) {
-        rebindModules(cloned.getModules(), cloned, parentRevisionId, operation, started, now);
-        rebindSchema(cloned.getSchema(), cloned, parentRevisionId, operation, started, now);
-        rebindAttachments(cloned.getAttachment(), cloned, parentRevisionId, operation, started, now);
+        rebindModules(cloned.getModules(), cloned, actor, parentRevisionId, operation, started, now);
+        rebindSchema(cloned.getSchema(), cloned, actor, parentRevisionId, operation, started, now);
+        rebindAttachments(cloned.getAttachment(), cloned, actor, parentRevisionId, operation, started, now);
     }
 
-    private void rebindModules(List<ModuleModel> modules, DocumentModel cloned, long parentRevisionId,
+    private void rebindModules(List<ModuleModel> modules, DocumentModel cloned, UserModel actor, long parentRevisionId,
             String operation, Date started, Date now) {
         if (modules == null) {
             return;
@@ -248,7 +252,7 @@ public class KarteRevisionServiceBean {
             }
             module.setDocumentModel(cloned);
             module.setKarteBean(cloned.getKarteBean());
-            module.setUserModel(cloned.getUserModel());
+            module.setUserModel(actor);
             module.setStarted(started);
             module.setFirstConfirmed(started);
             module.setConfirmed(now);
@@ -260,7 +264,7 @@ public class KarteRevisionServiceBean {
         }
     }
 
-    private void rebindSchema(List<SchemaModel> schema, DocumentModel cloned, long parentRevisionId,
+    private void rebindSchema(List<SchemaModel> schema, DocumentModel cloned, UserModel actor, long parentRevisionId,
             String operation, Date started, Date now) {
         if (schema == null) {
             return;
@@ -271,7 +275,7 @@ public class KarteRevisionServiceBean {
             }
             image.setDocumentModel(cloned);
             image.setKarteBean(cloned.getKarteBean());
-            image.setUserModel(cloned.getUserModel());
+            image.setUserModel(actor);
             image.setStarted(started);
             image.setFirstConfirmed(started);
             image.setConfirmed(now);
@@ -283,7 +287,7 @@ public class KarteRevisionServiceBean {
         }
     }
 
-    private void rebindAttachments(List<AttachmentModel> attachments, DocumentModel cloned, long parentRevisionId,
+    private void rebindAttachments(List<AttachmentModel> attachments, DocumentModel cloned, UserModel actor, long parentRevisionId,
             String operation, Date started, Date now) {
         if (attachments == null) {
             return;
@@ -294,7 +298,7 @@ public class KarteRevisionServiceBean {
             }
             attachment.setDocumentModel(cloned);
             attachment.setKarteBean(cloned.getKarteBean());
-            attachment.setUserModel(cloned.getUserModel());
+            attachment.setUserModel(actor);
             attachment.setStarted(started);
             attachment.setFirstConfirmed(started);
             attachment.setConfirmed(now);

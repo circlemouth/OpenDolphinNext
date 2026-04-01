@@ -20,8 +20,23 @@ public class OrcaMasterDaoGateway implements OrcaMasterGateway {
     }
 
     @Override
+    public OrcaMasterDao.LookupResult<OrcaMasterDao.GenericPriceRecord> findGenericPrice(OrcaMasterDao.GenericPriceCriteria criteria) {
+        return masterDao.findGenericPrice(criteria);
+    }
+
+    @Override
     public OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> searchDrug(OrcaMasterDao.DrugCriteria criteria) {
         return masterDao.searchDrug(criteria);
+    }
+
+    @Override
+    public OrcaMasterDao.ListSearchResult<OrcaMasterDao.HokenjaRecord> searchHokenja(OrcaMasterDao.HokenjaCriteria criteria) {
+        return masterDao.searchHokenja(criteria);
+    }
+
+    @Override
+    public OrcaMasterDao.LookupResult<OrcaMasterDao.AddressRecord> findAddress(OrcaMasterDao.AddressCriteria criteria) {
+        return masterDao.findAddress(criteria);
     }
 
     @Override

@@ -48,7 +48,22 @@ public class OrcaMasterResource extends AbstractResource {
         }
 
         @Override
+        public OrcaMasterDao.LookupResult<OrcaMasterDao.GenericPriceRecord> findGenericPrice(OrcaMasterDao.GenericPriceCriteria criteria) {
+            return null;
+        }
+
+        @Override
         public OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> searchDrug(OrcaMasterDao.DrugCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.ListSearchResult<OrcaMasterDao.HokenjaRecord> searchHokenja(OrcaMasterDao.HokenjaCriteria criteria) {
+            return null;
+        }
+
+        @Override
+        public OrcaMasterDao.LookupResult<OrcaMasterDao.AddressRecord> findAddress(OrcaMasterDao.AddressCriteria criteria) {
             return null;
         }
 
@@ -194,12 +209,12 @@ public class OrcaMasterResource extends AbstractResource {
                     false, null, 0, buildSrycdDetails(srycd, effective, params));
             return errorResponseSupport().validationError(request, "SRYCD_VALIDATION_ERROR", "srycd must be 9 digits");
         }
-        LoadedFixture<OrcaDrugMasterEntry> unavailableFixture = unavailableFixture();
-        Response failure = errorResponseSupport().serviceUnavailable(request, "MASTER_GENERIC_PRICE_UNAVAILABLE",
-                "最低薬価マスタを取得できませんでした");
-        recordMasterAudit(request, apiRoute, masterType, 503, unavailableFixture, false, true, 0,
+        OrcaMasterDao.GenericPriceCriteria criteria = new OrcaMasterDao.GenericPriceCriteria();
+        criteria.setSrycd(srycd);
+        criteria.setEffective(effective);
+        OrcaMasterDao.LookupResult<OrcaMasterDao.GenericPriceRecord> dbResult = masterService.findGenericPrice(criteria);
+        return catalogEndpointService().buildGenericPriceResponse(ifNoneMatch, request, params, dbResult,
                 buildSrycdDetails(srycd, effective, params));
-        return failure;
     }
 
     @GET
@@ -268,12 +283,16 @@ public class OrcaMasterResource extends AbstractResource {
             return errorResponseSupport().validationError(request, "PREF_VALIDATION_ERROR",
                     "pref must be a 2-digit prefecture code");
         }
-        LoadedFixture<OrcaInsurerEntry> unavailableFixture = unavailableFixture();
-        Response failure = errorResponseSupport().serviceUnavailable(request, "MASTER_HOKENJA_UNAVAILABLE",
-                "保険者マスタを取得できませんでした");
-        recordMasterAudit(request, apiRoute, masterType, 503, unavailableFixture, false, true, 0,
+        OrcaMasterDao.HokenjaCriteria criteria = new OrcaMasterDao.HokenjaCriteria();
+        criteria.setPref(pref);
+        criteria.setKeyword(keyword);
+        criteria.setEffective(effective);
+        criteria.setPage(parsePositiveInt(params, "page", 1));
+        criteria.setSize(parsePageSize(params, "size", 100));
+        criteria.setIncludeTotalCount(OrcaMasterRequestSupport.shouldIncludeTotalCount(params));
+        OrcaMasterDao.ListSearchResult<OrcaMasterDao.HokenjaRecord> dbResult = masterService.searchHokenja(criteria);
+        return catalogEndpointService().buildHokenjaResponse(ifNoneMatch, request, params, dbResult,
                 buildQueryDetails(pref, keyword, effective, params));
-        return failure;
     }
 
     @GET
@@ -299,12 +318,12 @@ public class OrcaMasterResource extends AbstractResource {
                     false, null, 0, buildQueryDetails(null, null, effective, params, zip));
             return errorResponseSupport().validationError(request, "ZIP_VALIDATION_ERROR", "zip must be 7 digits");
         }
-        LoadedFixture<OrcaAddressEntry> unavailableFixture = unavailableFixture();
-        Response failure = errorResponseSupport().serviceUnavailable(request, "MASTER_ADDRESS_UNAVAILABLE",
-                "住所マスタを取得できませんでした");
-        recordMasterAudit(request, apiRoute, masterType, 503, unavailableFixture, false, true, 0,
+        OrcaMasterDao.AddressCriteria criteria = new OrcaMasterDao.AddressCriteria();
+        criteria.setZip(zip);
+        criteria.setEffective(effective);
+        OrcaMasterDao.LookupResult<OrcaMasterDao.AddressRecord> dbResult = masterService.findAddress(criteria);
+        return catalogEndpointService().buildAddressResponse(ifNoneMatch, request, params, dbResult,
                 buildQueryDetails(null, null, effective, params, zip));
-        return failure;
     }
 
     @GET

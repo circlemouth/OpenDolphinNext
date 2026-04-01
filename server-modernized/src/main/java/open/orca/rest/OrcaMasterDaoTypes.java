@@ -159,6 +159,105 @@ final class OrcaMasterDaoTypes {
         }
     }
 
+    static class GenericPriceCriteriaBase {
+        private String srycd;
+        private String effective;
+
+        public String getSrycd() {
+            return srycd;
+        }
+
+        public void setSrycd(String srycd) {
+            this.srycd = srycd;
+        }
+
+        public String getEffective() {
+            return effective;
+        }
+
+        public void setEffective(String effective) {
+            this.effective = effective;
+        }
+    }
+
+    static class HokenjaCriteriaBase {
+        private String pref;
+        private String keyword;
+        private String effective;
+        private int page = 1;
+        private int size = 100;
+        private boolean includeTotalCount;
+
+        public String getPref() {
+            return pref;
+        }
+
+        public void setPref(String pref) {
+            this.pref = pref;
+        }
+
+        public String getKeyword() {
+            return keyword;
+        }
+
+        public void setKeyword(String keyword) {
+            this.keyword = keyword;
+        }
+
+        public String getEffective() {
+            return effective;
+        }
+
+        public void setEffective(String effective) {
+            this.effective = effective;
+        }
+
+        public int getPage() {
+            return page;
+        }
+
+        public void setPage(int page) {
+            this.page = page;
+        }
+
+        public int getSize() {
+            return size;
+        }
+
+        public void setSize(int size) {
+            this.size = size;
+        }
+
+        public boolean isIncludeTotalCount() {
+            return includeTotalCount;
+        }
+
+        public void setIncludeTotalCount(boolean includeTotalCount) {
+            this.includeTotalCount = includeTotalCount;
+        }
+    }
+
+    static class AddressCriteriaBase {
+        private String zip;
+        private String effective;
+
+        public String getZip() {
+            return zip;
+        }
+
+        public void setZip(String zip) {
+            this.zip = zip;
+        }
+
+        public String getEffective() {
+            return effective;
+        }
+
+        public void setEffective(String effective) {
+            this.effective = effective;
+        }
+    }
+
     static class KeywordEffectiveCriteriaBase {
         private String keyword;
         private String effective;
@@ -269,6 +368,155 @@ final class OrcaMasterDaoTypes {
 
         public String getEndDate() {
             return endDate;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+    }
+
+    static class GenericPriceRecordBase {
+        String srycd;
+        String drugName;
+        String unit;
+        Double price;
+        String startDate;
+        String endDate;
+        String version;
+
+        public String getSrycd() {
+            return srycd;
+        }
+
+        public String getDrugName() {
+            return drugName;
+        }
+
+        public String getUnit() {
+            return unit;
+        }
+
+        public Double getPrice() {
+            return price;
+        }
+
+        public String getStartDate() {
+            return startDate;
+        }
+
+        public String getEndDate() {
+            return endDate;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+    }
+
+    static class HokenjaRecordBase {
+        String payerCode;
+        String payerName;
+        String payerType;
+        Double payerRatio;
+        String prefCode;
+        String cityCode;
+        String zip;
+        String addressLine;
+        String phone;
+        String validFrom;
+        String validTo;
+        String version;
+
+        public String getPayerCode() {
+            return payerCode;
+        }
+
+        public String getPayerName() {
+            return payerName;
+        }
+
+        public String getPayerType() {
+            return payerType;
+        }
+
+        public Double getPayerRatio() {
+            return payerRatio;
+        }
+
+        public String getPrefCode() {
+            return prefCode;
+        }
+
+        public String getCityCode() {
+            return cityCode;
+        }
+
+        public String getZip() {
+            return zip;
+        }
+
+        public String getAddressLine() {
+            return addressLine;
+        }
+
+        public String getPhone() {
+            return phone;
+        }
+
+        public String getValidFrom() {
+            return validFrom;
+        }
+
+        public String getValidTo() {
+            return validTo;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+    }
+
+    static class AddressRecordBase {
+        String zip;
+        String prefCode;
+        String cityCode;
+        String city;
+        String town;
+        String kana;
+        String roman;
+        String fullAddress;
+        String version;
+
+        public String getZip() {
+            return zip;
+        }
+
+        public String getPrefCode() {
+            return prefCode;
+        }
+
+        public String getCityCode() {
+            return cityCode;
+        }
+
+        public String getCity() {
+            return city;
+        }
+
+        public String getTown() {
+            return town;
+        }
+
+        public String getKana() {
+            return kana;
+        }
+
+        public String getRoman() {
+            return roman;
+        }
+
+        public String getFullAddress() {
+            return fullAddress;
         }
 
         public String getVersion() {

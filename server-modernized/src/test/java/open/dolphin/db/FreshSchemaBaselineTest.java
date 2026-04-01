@@ -84,7 +84,7 @@ class FreshSchemaBaselineTest {
             flyway.migrate();
 
             try (Connection connection = dataSource.getConnection()) {
-                assertEquals("0309", appliedVersion(connection));
+                assertEquals("0310", appliedVersion(connection));
                 assertTrue(tableExists(connection, "opendolphin", "d_module"));
                 assertTrue(tableExists(connection, "opendolphin", "d_health_insurance"));
                 assertTrue(tableExists(connection, "opendolphin", "d_attachment"));
@@ -122,6 +122,16 @@ class FreshSchemaBaselineTest {
                 assertFalse(columnExists(connection, "opendolphin", "d_attachment", "bytes"));
                 assertFalse(columnExists(connection, "opendolphin", "d_image", "jpegbyte"));
                 assertTrue(columnExists(connection, "opendolphin", "d_orca_user_link", "facility_id"));
+                assertTrue(columnExists(connection, "opendolphin", "d_attachment", "storage_provider"));
+                assertTrue(columnExists(connection, "opendolphin", "d_attachment", "storage_bucket"));
+                assertTrue(columnExists(connection, "opendolphin", "d_attachment", "storage_key"));
+                assertTrue(columnExists(connection, "opendolphin", "d_attachment", "storage_version_id"));
+                assertTrue(columnExists(connection, "opendolphin", "d_attachment", "storage_etag"));
+                assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_provider"));
+                assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_bucket"));
+                assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_key"));
+                assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_version_id"));
+                assertTrue(columnExists(connection, "opendolphin", "d_image", "storage_etag"));
 
                 assertTrue(indexExists(connection, "opendolphin", "d_document_karte_status_started_id_idx"));
                 assertTrue(indexExists(connection, "opendolphin", "d_attachment_doc_linkrelation_status_id_idx"));
@@ -200,22 +210,22 @@ class FreshSchemaBaselineTest {
                         "F", nextUserId, kartePk, "RP", "P", 0, "medOrder", "{\"bundle\":\"modern\"}", documentPk);
                 execute(connection,
                         "insert into opendolphin.d_image "
-                                + "(id, confirmed, started, recorded, status, creator_id, karte_id, contenttype, medicalrole, title, href, uri, digest, doc_id) "
-                                + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                + "(id, confirmed, started, recorded, status, creator_id, karte_id, contenttype, medicalrole, title, href, uri, digest, storage_provider, storage_bucket, storage_key, storage_version_id, storage_etag, doc_id) "
+                                + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         schemaPk, Timestamp.from(Instant.parse("2026-03-10T00:00:00Z")),
                         Timestamp.from(Instant.parse("2026-03-10T00:00:00Z")),
                         Timestamp.from(Instant.parse("2026-03-10T00:00:00Z")),
                         "F", nextUserId, kartePk, "image/png", "role", "Schema", "schema.png",
-                        "s3://bucket/schema.png", "sha256-schema", documentPk);
+                        "s3://bucket/schema.png", "sha256-schema", "s3", "bucket", "schema.png", "v1", "etag-schema", documentPk);
                 execute(connection,
                         "insert into opendolphin.d_attachment "
-                                + "(id, confirmed, started, recorded, status, creator_id, karte_id, filename, contenttype, contentsize, lastmodified, digest, uri, doc_id) "
-                                + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                                + "(id, confirmed, started, recorded, status, creator_id, karte_id, filename, contenttype, contentsize, lastmodified, digest, uri, storage_provider, storage_bucket, storage_key, storage_version_id, storage_etag, doc_id) "
+                                + "values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         attachmentPk, Timestamp.from(Instant.parse("2026-03-10T00:00:00Z")),
                         Timestamp.from(Instant.parse("2026-03-10T00:00:00Z")),
                         Timestamp.from(Instant.parse("2026-03-10T00:00:00Z")),
                         "F", nextUserId, kartePk, "attachment.pdf", "application/pdf", 0L, 0L, "sha256-attachment",
-                        "s3://bucket/attachment.pdf", documentPk);
+                        "s3://bucket/attachment.pdf", "s3", "bucket", "attachment.pdf", "v2", "etag-attachment", documentPk);
                 execute(connection,
                         "insert into opendolphin.chart_event_history (event_id, facility_id, issuer_uuid, event_type, payload_json) values (?, ?, ?, ?, ?)",
                         nextEventId, "F001", "issuer-1", 1, "{\"status\":\"ok\"}");
@@ -239,10 +249,20 @@ class FreshSchemaBaselineTest {
                     AttachmentModel attachment = session.find(AttachmentModel.class, attachmentPk);
                     assertNotNull(attachment);
                     assertEquals("sha256-attachment", attachment.getDigest());
+                    assertEquals("s3", attachment.getStorageProvider());
+                    assertEquals("bucket", attachment.getStorageBucket());
+                    assertEquals("attachment.pdf", attachment.getStorageKey());
+                    assertEquals("v2", attachment.getStorageVersionId());
+                    assertEquals("etag-attachment", attachment.getStorageEtag());
 
                     SchemaModel schema = session.find(SchemaModel.class, schemaPk);
                     assertNotNull(schema);
                     assertEquals("sha256-schema", schema.getDigest());
+                    assertEquals("s3", schema.getStorageProvider());
+                    assertEquals("bucket", schema.getStorageBucket());
+                    assertEquals("schema.png", schema.getStorageKey());
+                    assertEquals("v1", schema.getStorageVersionId());
+                    assertEquals("etag-schema", schema.getStorageEtag());
                 }
             }
         }

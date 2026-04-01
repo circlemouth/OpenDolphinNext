@@ -152,6 +152,7 @@ public class KarteDocumentWriteService {
                     SchemaModel model = (SchemaModel) obj;
                     model.setStatus(IInfoModel.STATUS_DELETE);
                     model.setEnded(ended);
+                    imageStorageManager.scheduleDeleteExternalAssetAfterCommit(model);
                 }
 
                 Collection<?> deleteAttachments = em.createQuery(QUERY_ATTACHMENT_BY_DOC_ID)
@@ -385,7 +386,7 @@ public class KarteDocumentWriteService {
 
     private void removeMissingSchemas(List<SchemaModel> existing, List<SchemaModel> incoming) {
         removeMissingChildren(existing, incoming, schema -> {
-            imageStorageManager.deleteExternalAsset(schema);
+            imageStorageManager.scheduleDeleteExternalAssetAfterCommit(schema);
             em.remove(em.contains(schema) ? schema : em.merge(schema));
         });
     }

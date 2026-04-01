@@ -24,6 +24,21 @@ public class SchemaModel extends KarteEntryBean
 
     @Column(nullable = false)
     private String digest;
+
+    @Column(name = "storage_provider")
+    private String storageProvider;
+
+    @Column(name = "storage_bucket")
+    private String storageBucket;
+
+    @Column(name = "storage_key")
+    private String storageKey;
+
+    @Column(name = "storage_version_id")
+    private String storageVersionId;
+
+    @Column(name = "storage_etag")
+    private String storageEtag;
     
     // Document
     @ManyToOne
@@ -82,6 +97,46 @@ public class SchemaModel extends KarteEntryBean
 
     public void setDigest(String digest) {
         this.digest = digest;
+    }
+
+    public String getStorageProvider() {
+        return storageProvider;
+    }
+
+    public void setStorageProvider(String storageProvider) {
+        this.storageProvider = storageProvider;
+    }
+
+    public String getStorageBucket() {
+        return storageBucket;
+    }
+
+    public void setStorageBucket(String storageBucket) {
+        this.storageBucket = storageBucket;
+    }
+
+    public String getStorageKey() {
+        return storageKey;
+    }
+
+    public void setStorageKey(String storageKey) {
+        this.storageKey = storageKey;
+    }
+
+    public String getStorageVersionId() {
+        return storageVersionId;
+    }
+
+    public void setStorageVersionId(String storageVersionId) {
+        this.storageVersionId = storageVersionId;
+    }
+
+    public String getStorageEtag() {
+        return storageEtag;
+    }
+
+    public void setStorageEtag(String storageEtag) {
+        this.storageEtag = storageEtag;
     }
 
     public byte[] getImageBytes() {
@@ -162,6 +217,11 @@ public class SchemaModel extends KarteEntryBean
 
         ret.setUri(this.getUri());
         ret.setDigest(this.getDigest());
+        ret.setStorageProvider(this.getStorageProvider());
+        ret.setStorageBucket(this.getStorageBucket());
+        ret.setStorageKey(this.getStorageKey());
+        ret.setStorageVersionId(this.getStorageVersionId());
+        ret.setStorageEtag(this.getStorageEtag());
 
         if (this.getImageBytes()!=null) {
             byte[] dest = new byte[this.getImageBytes().length];
@@ -195,6 +255,11 @@ public class SchemaModel extends KarteEntryBean
         sb.append("href=").append(this.getExtRefModel().getHref()).append("\n");
         sb.append("uri=").append(this.getUri()).append("\n");
         sb.append("digest=").append(this.getDigest()).append("\n");
+        sb.append("storageProvider=").append(this.getStorageProvider()).append("\n");
+        sb.append("storageBucket=").append(this.getStorageBucket()).append("\n");
+        sb.append("storageKey=").append(this.getStorageKey()).append("\n");
+        sb.append("storageVersionId=").append(this.getStorageVersionId()).append("\n");
+        sb.append("storageEtag=").append(this.getStorageEtag()).append("\n");
         return sb.toString();
     }
 }

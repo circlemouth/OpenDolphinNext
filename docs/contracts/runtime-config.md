@@ -141,8 +141,11 @@
 - `smtp.auth=true` のとき `smtp.username` / `smtp.password` は必須。旧 `cloud.zero.mail.*` / `opendolphin.smtp.*` fallback は廃止。
 
 ### 6. Attachment Storage
-- `attachment.storage.mode` は `database|s3` のいずれかで必須。
-- `database` 時は `attachment.storage.database.lob-table` 必須。
+- `attachment.storage.mode` は `s3` 固定で必須。
+- `attachment.storage.mode=database` やその他の mode は起動失敗にする。
+- local filesystem fallback は追加しない。
+- database LOB fallback は復活させない。
+- `s3` は AWS 専用ではなく、S3 互換 object storage を意味する。
 - `s3` 時は以下を必須。
   - `attachment.storage.s3.bucket`
   - `attachment.storage.s3.region`
@@ -155,6 +158,8 @@
   - `attachment.storage.s3.server-side-encryption`
   - `attachment.storage.s3.kms-key-id`
   - `attachment.storage.s3.multipart-threshold-mb`
+- `attachment.storage.s3.endpoint` と `attachment.storage.s3.force-path-style` で MinIO を含む S3 互換 endpoint へ接続できること。
+- 保存メタ情報は server 側で生成し、object storage provider / bucket / key / version / ETag を DB へ保持する。
 
 ### 7. Patient Images
 - `patient-images.enabled` = `true|false`
@@ -188,13 +193,13 @@
 - [x] 列挙値不正・URI 不正・Base64 不正・Path 不正も起動失敗にする。
 - [x] PVT 無効時のみ PVT 詳細設定の欠落を許可する。
 - [x] PVT worker health 閾値は未設定時に利用側既定値（`staleSuccessSeconds=180`, `maxProcessingMillis=30000`）を使用できる。
-- [x] S3 無効時のみ S3 詳細設定の欠落を許可する。
+- [x] `attachment.storage.mode=s3` のみ許可し、それ以外は起動失敗にする。
 - [x] runtime 必須値として `opendolphin.environment` / `opendolphin.timezone` / `jboss.server.data.dir` を検証する。
 - [x] ORCA runtime 必須値として `opendolphin.facility-id` / `opendolphin.cloud.zero` と、PVT 有効時の listener 詳細を検証する。
 - [x] datasource 必須値として `*.host` / `*.port` / `*.name` / `*.user` / `*.password` / `*.sslmode` / `*.sslrootcert` を検証する。
 - [x] scheduler は `chart-event.history.purge.enabled=false` / `orca.patient-sync.enabled=false` を既定とし、明示 enable なしで動かさない。
-- [x] `attachment.storage.mode=database` のとき `attachment.storage.database.lob-table` を必須とする。
 - [x] `attachment.storage.mode=s3` のとき bucket / region / access-key / secret-key を必須とする。
+- [x] `attachment.storage.s3.endpoint` / `attachment.storage.s3.force-path-style` を resolver で解決し、S3 互換 object storage 接続に使えることを検証する。
 - [x] `patient-images.enabled=true` のとき max-bytes / max-width / max-height を必須とする。
 - [x] `document.integrity.mode != off` のとき keyring-path を必須とする。
 - [x] `orca.mode` / `orca.base-url` / `orca.api.*` / ORCA secret protector を検証する。

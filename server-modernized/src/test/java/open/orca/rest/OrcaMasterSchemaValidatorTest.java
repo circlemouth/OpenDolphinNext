@@ -27,23 +27,35 @@ class OrcaMasterSchemaValidatorTest {
     @Test
     void validateOrThrow_rejectsMissingColumn() {
         Map<String, List<String>> schema = schema();
-        schema.get("TBL_TENSU_MASTER").remove("upymd");
+        schema.get("TBL_HKNJAINF_MASTER").remove("upymd");
         OrcaMasterSchemaValidator validator = new OrcaMasterSchemaValidator(fakeConnection(schema));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
 
-        assertTrue(ex.getMessage().contains("missing column TBL_TENSU_MASTER.upymd"));
+        assertTrue(ex.getMessage().contains("missing column TBL_HKNJAINF_MASTER.upymd"));
     }
 
     @Test
     void validateOrThrow_rejectsMissingTable() {
         Map<String, List<String>> schema = schema();
-        schema.remove("TBL_KENSASORT");
+        schema.remove("TBL_ADRS");
         OrcaMasterSchemaValidator validator = new OrcaMasterSchemaValidator(fakeConnection(schema));
 
         IllegalStateException ex = assertThrows(IllegalStateException.class, validator::validateOrThrow);
 
-        assertTrue(ex.getMessage().contains("missing table TBL_KENSASORT"));
+        assertTrue(ex.getMessage().contains("missing table TBL_ADRS"));
+    }
+
+    @Test
+    void validateOrThrow_acceptsAlternativeGenericPriceColumns() {
+        Map<String, List<String>> schema = schema();
+        schema.get("TBL_GENERIC_PRICE").remove("srycd");
+        schema.get("TBL_GENERIC_PRICE").add("yakkakjncd");
+        schema.get("TBL_GENERIC_PRICE").add("yukostymd");
+        schema.get("TBL_GENERIC_PRICE").add("yukoedymd");
+        OrcaMasterSchemaValidator validator = new OrcaMasterSchemaValidator(fakeConnection(schema));
+
+        assertDoesNotThrow(validator::validateOrThrow);
     }
 
     @Test
@@ -168,9 +180,15 @@ class OrcaMasterSchemaValidatorTest {
         schema.put("TBL_GENERIC_CLASS", new ArrayList<>(List.of(
                 "class_code", "class_name", "kana_name", "category_code",
                 "parent_class_code", "start_date", "end_date", "upymd")));
+        schema.put("TBL_GENERIC_PRICE", new ArrayList<>(List.of(
+                "srycd", "price", "start_date", "end_date", "upymd")));
         schema.put("TBL_TENSU_MASTER", new ArrayList<>(List.of(
                 "srycd", "name", "kananame", "srysyukbn",
                 "taniname", "ten", "yakkakjncd", "yukostymd", "yukoedymd", "upymd")));
+        schema.put("TBL_HKNJAINF_MASTER", new ArrayList<>(List.of(
+                "hknjanum", "hknjaname", "post", "adrs", "banti", "tel", "upymd")));
+        schema.put("TBL_ADRS", new ArrayList<>(List.of(
+                "post", "prefname", "cityname", "townname", "prefkana", "citykana", "townkana", "editadrs_name")));
         schema.put("TBL_YOUHOU", new ArrayList<>(List.of(
                 "youhoucode", "youhouname", "kana", "start_date", "end_date", "upymd")));
         schema.put("TBL_MATERIAL_H_M", new ArrayList<>(List.of(

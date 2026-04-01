@@ -1,18 +1,5 @@
 package open.dolphin.storage.attachment;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.security.DigestInputStream;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Collection;
-import java.util.HexFormat;
-import java.util.Objects;
-import java.util.Optional;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
@@ -23,22 +10,28 @@ import jakarta.transaction.Status;
 import jakarta.transaction.Synchronization;
 import jakarta.transaction.Transactional;
 import jakarta.transaction.TransactionSynchronizationRegistry;
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.util.Collection;
+import java.util.Objects;
+import java.util.Optional;
 import open.dolphin.infomodel.AttachmentModel;
+import open.dolphin.storage.objectstore.ObjectStorageClient;
+import open.dolphin.storage.objectstore.ObjectStorageDeleteRequest;
+import open.dolphin.storage.objectstore.ObjectStorageDigestSupport;
+import open.dolphin.storage.objectstore.ObjectStorageGetRequest;
+import open.dolphin.storage.objectstore.ObjectStorageLocation;
+import open.dolphin.storage.objectstore.ObjectStoragePutRequest;
+import open.dolphin.storage.objectstore.ObjectStoragePutResult;
+import open.dolphin.storage.objectstore.S3CompatibleObjectStorageClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
-import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
-import software.amazon.awssdk.core.sync.RequestBody;
 
 /**
  * 添付ファイルの保存先を制御するマネージャー。
@@ -48,6 +41,7 @@ public class AttachmentStorageManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AttachmentStorageManager.class);
     private static final int STREAM_BUFFER_SIZE = 8192;
+    private static final String STORAGE_PROVIDER_S3 = "s3";
 
     @Inject
     AttachmentStorageConfigLoader configLoader;
@@ -60,7 +54,7 @@ public class AttachmentStorageManager {
 
     private AttachmentStorageSettings settings;
     private AttachmentKeyResolver keyResolver;
-    private S3Client s3Client;
+    private ObjectStorageClient objectStorageClient;
 
     @PostConstruct
     void init() {
@@ -69,18 +63,25 @@ public class AttachmentStorageManager {
             AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
                     .orElseThrow(() -> new AttachmentStorageException("S3 settings are missing"));
             keyResolver = new AttachmentKeyResolver(s3Settings);
-            s3Client = createClient(s3Settings);
+            objectStorageClient = new S3CompatibleObjectStorageClient(new S3CompatibleObjectStorageClient.Config(
+                    s3Settings.getRegion(),
+                    s3Settings.getEndpoint().orElse(null),
+                    s3Settings.isForcePathStyle(),
+                    s3Settings.getServerSideEncryption().orElse(null),
+                    s3Settings.getKmsKeyId().orElse(null),
+                    s3Settings.getAccessKey(),
+                    s3Settings.getSecretKey()));
             LOGGER.info("Attachment storage initialized in S3 mode (bucket={}, region={}, config={})",
                     s3Settings.getBucket(), s3Settings.getRegion(), settings.getSourcePath().orElse(null));
-        } else {
-            throw new AttachmentStorageException("Unsupported attachment storage mode: " + settings.getMode());
+            return;
         }
+        throw new AttachmentStorageException("Unsupported attachment storage mode: " + settings.getMode());
     }
 
     @PreDestroy
     void shutdown() {
-        if (s3Client != null) {
-            s3Client.close();
+        if (objectStorageClient != null) {
+            objectStorageClient.close();
         }
     }
 
@@ -93,18 +94,9 @@ public class AttachmentStorageManager {
             return false;
         }
         requireS3Mode();
-        try {
-            AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
-                    .orElseThrow(() -> new AttachmentStorageException("S3 settings are missing"));
-            if (s3Client == null) {
-                return false;
-            }
-            s3Client.headBucket(HeadBucketRequest.builder().bucket(s3Settings.getBucket()).build());
-            return true;
-        } catch (Exception ex) {
-            LOGGER.warn("Attachment storage backend probe failed: {}", ex.getClass().getSimpleName());
-            return false;
-        }
+        AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
+                .orElseThrow(() -> new AttachmentStorageException("S3 settings are missing"));
+        return objectStorageClient != null && objectStorageClient.isBucketReachable(s3Settings.getBucket());
     }
 
     public void persistExternalAssets(Collection<AttachmentModel> attachments) {
@@ -158,8 +150,7 @@ public class AttachmentStorageManager {
         }
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             writeBinaryTo(attachment, out);
-            byte[] data = out.toByteArray();
-            attachment.setContentBytes(data);
+            attachment.setContentBytes(out.toByteArray());
         } catch (AttachmentStorageException ex) {
             throw ex;
         } catch (IOException ex) {
@@ -179,7 +170,7 @@ public class AttachmentStorageManager {
             output.write(attachment.getContentBytes());
             return;
         }
-        if (!hasText(attachment.getUri())) {
+        if (!hasText(attachment.getUri()) && !hasText(attachment.getStorageBucket())) {
             throw new AttachmentStorageException("Attachment " + attachment.getId()
                     + " has neither inline bytes nor external uri");
         }
@@ -187,22 +178,18 @@ public class AttachmentStorageManager {
             throw new AttachmentStorageException("Attachment " + attachment.getId()
                     + " requires external storage, but S3 mode is disabled");
         }
-        S3ObjectLocation location = resolveLocation(attachment).orElse(null);
+        ObjectStorageLocation location = resolveLocation(attachment).orElse(null);
         if (location == null) {
             throw new AttachmentStorageException("Attachment " + attachment.getId()
-                    + " cannot resolve S3 object location from uri=" + attachment.getUri());
+                    + " cannot resolve object location from uri=" + attachment.getUri());
         }
 
-        GetObjectRequest request = GetObjectRequest.builder()
-                .bucket(location.bucket)
-                .key(location.key)
-                .build();
-        try (software.amazon.awssdk.core.ResponseInputStream<GetObjectResponse> response = s3Client.getObject(request)) {
-            copy(response, output);
+        try (InputStream stream = objectStorageClient.getObject(new ObjectStorageGetRequest(location))) {
+            copy(stream, output);
         } catch (AttachmentStorageException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new AttachmentStorageException("Failed to stream attachment " + location.key, ex);
+            throw new AttachmentStorageException("Failed to stream attachment " + location.key(), ex);
         }
     }
 
@@ -224,19 +211,16 @@ public class AttachmentStorageManager {
         requireS3Mode();
         resolveLocation(attachment).ifPresent(location -> {
             try {
-                s3Client.deleteObject(DeleteObjectRequest.builder()
-                        .bucket(location.bucket)
-                        .key(location.key)
-                        .build());
+                objectStorageClient.deleteObject(new ObjectStorageDeleteRequest(location));
             } catch (Exception ex) {
-                LOGGER.warn("Failed to delete S3 object {} for attachment {}: {}",
-                        location, attachment.getId(), ex.getMessage());
+                LOGGER.warn("Failed to delete object {} for attachment {}: {}",
+                        location.toUri(), attachment.getId(), ex.getMessage());
             }
         });
     }
 
     public void scheduleDeleteExternalAssetAfterCommit(AttachmentModel attachment) {
-        if (attachment == null || !hasText(attachment.getUri())) {
+        if (attachment == null || (!hasText(attachment.getUri()) && !hasText(attachment.getStorageBucket()))) {
             return;
         }
         requireS3Mode();
@@ -272,16 +256,16 @@ public class AttachmentStorageManager {
         invoker.deleteExternalAssetOutsideTransaction(attachment);
     }
 
+    @Transactional(Transactional.TxType.NOT_SUPPORTED)
+    public void deleteExternalAssetOutsideTransaction(AttachmentModel attachment) {
+        deleteExternalAsset(attachment);
+    }
+
     private void requireS3Mode() {
         if (settings == null || !settings.getMode().isS3()) {
             throw new AttachmentStorageException("Unsupported attachment storage mode: "
                     + (settings != null ? settings.getMode() : "null"));
         }
-    }
-
-    @Transactional(Transactional.TxType.NOT_SUPPORTED)
-    public void deleteExternalAssetOutsideTransaction(AttachmentModel attachment) {
-        deleteExternalAsset(attachment);
     }
 
     private boolean uploadToS3(AttachmentModel attachment) {
@@ -329,37 +313,38 @@ public class AttachmentStorageManager {
         AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
                 .orElseThrow(() -> new AttachmentStorageException("S3 settings missing"));
         String key = keyResolver.resolve(attachment);
-        PutObjectRequest.Builder builder = PutObjectRequest.builder()
-                .bucket(s3Settings.getBucket())
-                .key(key)
-                .contentLength(contentLength);
-        if (attachment.getContentType() != null && !attachment.getContentType().isBlank()) {
-            builder.contentType(attachment.getContentType());
-        }
-        s3Settings.getServerSideEncryption()
-                .map(String::toUpperCase)
-                .ifPresent(mode -> applyServerSideEncryption(builder, mode, s3Settings));
-
-        try (DigestInputStream digestInput = new DigestInputStream(new BufferedInputStream(stream), newSha256Digest())) {
-            s3Client.putObject(builder.build(), RequestBody.fromInputStream(digestInput, contentLength));
-            String s3Uri = String.format("s3://%s/%s", s3Settings.getBucket(), key);
-            attachment.setUri(s3Uri);
-            ensureDigest(attachment, digestInput.getMessageDigest());
+        ObjectStorageLocation target = ObjectStorageLocation.s3(s3Settings.getBucket(), key);
+        MessageDigest digest = ObjectStorageDigestSupport.newSha256Digest();
+        try (DigestInputStream digestInput = new DigestInputStream(new BufferedInputStream(stream), digest)) {
+            ObjectStoragePutResult result = objectStorageClient.putObject(new ObjectStoragePutRequest(
+                    target,
+                    digestInput,
+                    contentLength,
+                    attachment.getContentType()));
+            attachment.setUri(result.location().toUri());
+            ensureDigest(attachment, digest);
+            applyStoredObjectMetadata(attachment, result.location());
             if (clearInlineBytesOnSuccess) {
                 attachment.setContentBytes(null);
             }
             return true;
-
         } catch (Exception ex) {
-            throw new AttachmentStorageException("Failed to upload attachment to S3: " + key, ex);
+            throw new AttachmentStorageException("Failed to upload attachment to object storage: " + key, ex);
         }
+    }
+
+    private void applyStoredObjectMetadata(AttachmentModel attachment, ObjectStorageLocation location) {
+        attachment.setStorageProvider(location.provider());
+        attachment.setStorageBucket(location.bucket());
+        attachment.setStorageKey(location.key());
+        attachment.setStorageVersionId(location.versionId());
+        attachment.setStorageEtag(location.eTag());
     }
 
     private boolean isAlreadyExternalized(AttachmentModel attachment, byte[] bytes) {
         if (!hasText(attachment.getUri())) {
             return false;
         }
-        // 永続済み判定は transient location ではなく uri + digest を基準にする。
         if (!hasText(attachment.getDigest())) {
             return bytes == null;
         }
@@ -370,19 +355,20 @@ public class AttachmentStorageManager {
         if (attachment == null || hasText(attachment.getDigest()) || bytes == null) {
             return;
         }
-        attachment.setDigest(sha256Hex(bytes));
+        attachment.setDigest(ObjectStorageDigestSupport.sha256Hex(bytes));
     }
 
     private void ensureDigest(AttachmentModel attachment, MessageDigest digest) {
         if (attachment == null || hasText(attachment.getDigest()) || digest == null) {
             return;
         }
-        attachment.setDigest(HexFormat.of().formatHex(digest.digest()));
+        attachment.setDigest(ObjectStorageDigestSupport.sha256Hex(digest));
     }
 
     private void registerRollbackHook(AttachmentModel attachment) {
         if (registry == null) {
-            LOGGER.warn("TransactionSynchronizationRegistry is not available. Rollback for S3 upload {} cannot be guaranteed.", attachment.getUri());
+            LOGGER.warn("TransactionSynchronizationRegistry is not available. Rollback for object upload {} cannot be guaranteed.",
+                    attachment.getUri());
             return;
         }
 
@@ -396,7 +382,7 @@ public class AttachmentStorageManager {
                 @Override
                 public void afterCompletion(int status) {
                     if (status != Status.STATUS_COMMITTED) {
-                        LOGGER.info("Transaction rolled back. Deleting S3 object: {}", attachment.getUri());
+                        LOGGER.info("Transaction rolled back. Deleting object: {}", attachment.getUri());
                         deleteExternalAsset(attachment);
                     }
                 }
@@ -406,74 +392,41 @@ public class AttachmentStorageManager {
         }
     }
 
-    private void applyServerSideEncryption(PutObjectRequest.Builder builder,
-                                           String mode,
-                                           AttachmentStorageSettings.S3Settings s3Settings) {
-        if ("AES256".equalsIgnoreCase(mode)) {
-            builder.serverSideEncryption(ServerSideEncryption.AES256);
-        } else if ("aws:kms".equalsIgnoreCase(mode) || "KMS".equalsIgnoreCase(mode)) {
-            builder.serverSideEncryption(ServerSideEncryption.AWS_KMS);
-            s3Settings.getKmsKeyId().ifPresent(builder::ssekmsKeyId);
+    private Optional<ObjectStorageLocation> resolveLocation(AttachmentModel attachment) {
+        if (attachment == null) {
+            return Optional.empty();
         }
-    }
-
-    private Optional<S3ObjectLocation> resolveLocation(AttachmentModel attachment) {
-        AttachmentStorageSettings.S3Settings s3Settings = settings.getS3()
-                .orElse(null);
+        if (hasText(attachment.getStorageBucket()) && hasText(attachment.getStorageKey())) {
+            return Optional.of(new ObjectStorageLocation(
+                    hasText(attachment.getStorageProvider()) ? attachment.getStorageProvider() : STORAGE_PROVIDER_S3,
+                    attachment.getStorageBucket(),
+                    attachment.getStorageKey(),
+                    attachment.getStorageVersionId(),
+                    attachment.getStorageEtag()));
+        }
+        AttachmentStorageSettings.S3Settings s3Settings = settings.getS3().orElse(null);
         if (s3Settings == null) {
             return Optional.empty();
         }
         String uri = attachment.getUri();
-        if (uri == null || uri.isBlank()) {
-            return Optional.of(new S3ObjectLocation(s3Settings.getBucket(), keyResolver.resolve(attachment)));
+        if (!hasText(uri)) {
+            return Optional.of(ObjectStorageLocation.s3(s3Settings.getBucket(), keyResolver.resolve(attachment)));
         }
         if (uri.startsWith("s3://")) {
-            String withoutScheme = uri.substring(5);
+            String withoutScheme = uri.substring("s3://".length());
             int slashIndex = withoutScheme.indexOf('/');
-            if (slashIndex <= 0) {
+            if (slashIndex <= 0 || slashIndex + 1 >= withoutScheme.length()) {
                 return Optional.empty();
             }
             String bucket = withoutScheme.substring(0, slashIndex);
             String key = withoutScheme.substring(slashIndex + 1);
-            return Optional.of(new S3ObjectLocation(bucket, key));
+            return Optional.of(ObjectStorageLocation.s3(bucket, key));
         }
-        return Optional.of(new S3ObjectLocation(s3Settings.getBucket(), uri));
-    }
-
-    private S3Client createClient(AttachmentStorageSettings.S3Settings s3Settings) {
-        S3Configuration serviceConfiguration = S3Configuration.builder()
-                .pathStyleAccessEnabled(s3Settings.isForcePathStyle())
-                .build();
-
-        S3ClientBuilder builder = S3Client.builder()
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(s3Settings.getAccessKey(), s3Settings.getSecretKey())))
-                .region(Region.of(s3Settings.getRegion()))
-                .serviceConfiguration(serviceConfiguration);
-
-        s3Settings.getEndpoint().ifPresent(builder::endpointOverride);
-        return builder.build();
+        return Optional.of(ObjectStorageLocation.s3(s3Settings.getBucket(), uri));
     }
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
-    }
-
-    private String sha256Hex(byte[] bytes) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(bytes));
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 not available", ex);
-        }
-    }
-
-    private MessageDigest newSha256Digest() {
-        try {
-            return MessageDigest.getInstance("SHA-256");
-        } catch (NoSuchAlgorithmException ex) {
-            throw new IllegalStateException("SHA-256 digest is unavailable", ex);
-        }
     }
 
     private static void copy(InputStream input, OutputStream output) throws IOException {
@@ -484,21 +437,6 @@ public class AttachmentStorageManager {
                 continue;
             }
             output.write(buffer, 0, read);
-        }
-    }
-
-    private static final class S3ObjectLocation {
-        private final String bucket;
-        private final String key;
-
-        private S3ObjectLocation(String bucket, String key) {
-            this.bucket = bucket;
-            this.key = key;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("s3://%s/%s", bucket, key);
         }
     }
 }

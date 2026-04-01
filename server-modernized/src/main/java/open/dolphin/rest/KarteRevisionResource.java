@@ -26,6 +26,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.IInfoModel;
+import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.dto.KarteRevisionDocumentResponse;
 import open.dolphin.rest.dto.KarteRevisionDiffResponse;
 import open.dolphin.rest.dto.KarteRevisionHistoryResponse;
@@ -186,7 +187,9 @@ public class KarteRevisionResource extends AbstractResource {
         KarteRevisionHistoryResponse history = karteRevisionServiceBean.getRevisionHistory(karteId, visitDate);
         GroupMatch match = findGroup(history, sourceRevisionId, baseRevisionId);
         validateRevisionGroup(operation, source, sourceRevisionId, baseRevisionId, visitDate, karteId, match);
-        long createdRevisionId = karteRevisionServiceBean.createRevisionFromSource(sourceRevisionId, baseRevisionId, operation);
+        UserModel actualActor = resolveActorUser();
+        long createdRevisionId = karteRevisionServiceBean.createRevisionFromSource(
+                sourceRevisionId, baseRevisionId, operation, actualActor);
         KarteRevisionWriteResponse response = buildRevisionWriteResponse(operation, karteId, visitDate, match,
                 sourceRevisionId, baseRevisionId, createdRevisionId);
         recordRevisionWriteSuccess(operation, source, response, sourceRevisionId, baseRevisionId, karteId, visitDate, match);
@@ -540,6 +543,29 @@ public class KarteRevisionResource extends AbstractResource {
     private String resolveActorId() {
         return Optional.ofNullable(httpServletRequest != null ? httpServletRequest.getRemoteUser() : null)
                 .orElse("system");
+    }
+
+    private UserModel resolveActorUser() {
+        String actorId = resolveActorId();
+        if ("system".equals(actorId)) {
+            throw restError(httpServletRequest, jakarta.ws.rs.core.Response.Status.UNAUTHORIZED,
+                    "unauthorized", "Authenticated principal is required", null, null);
+        }
+        try {
+            UserModel actor = userServiceBean != null ? userServiceBean.getUser(actorId) : null;
+            if (actor == null || actor.getId() <= 0) {
+                throw restError(httpServletRequest, jakarta.ws.rs.core.Response.Status.UNAUTHORIZED,
+                        "unauthorized", "Authenticated actor is invalid",
+                        Map.of("remoteUser", actorId), null);
+            }
+            return actor;
+        } catch (WebApplicationException ex) {
+            throw ex;
+        } catch (RuntimeException ex) {
+            throw restError(httpServletRequest, jakarta.ws.rs.core.Response.Status.UNAUTHORIZED,
+                    "unauthorized", "Authenticated actor is invalid",
+                    Map.of("remoteUser", actorId), ex);
+        }
     }
 
     private String resolveActorDisplayName(String actorId) {

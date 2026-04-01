@@ -46,9 +46,16 @@ public class OrcaMasterSchemaValidator {
                     continue;
                 }
                 Set<String> columns = loadColumns(metaData, actualTable);
-                for (String column : table.columns) {
+                for (String column : table.requiredColumns) {
                     if (!columns.contains(normalize(column))) {
                         errors.add("missing column " + table.name + "." + column);
+                    }
+                }
+                for (List<String> alternatives : table.requiredAlternatives) {
+                    boolean matched = alternatives.stream().anyMatch(column -> columns.contains(normalize(column)));
+                    if (!matched) {
+                        errors.add("missing required alternative column " + table.name + "."
+                                + String.join("|", alternatives));
                     }
                 }
             }
@@ -94,21 +101,31 @@ public class OrcaMasterSchemaValidator {
         return List.of(
                 new SchemaTable("TBL_GENERIC_CLASS", List.of(
                         "class_code", "class_name", "kana_name", "category_code",
-                        "parent_class_code", "start_date", "end_date", "upymd")),
+                        "parent_class_code", "start_date", "end_date", "upymd"), List.of()),
+                new SchemaTable("TBL_GENERIC_PRICE", List.of(
+                        "price", "upymd"), List.of(
+                        List.of("srycd", "yakkakjncd"),
+                        List.of("start_date", "yukostymd"),
+                        List.of("end_date", "yukoedymd"))),
                 new SchemaTable("TBL_TENSU_MASTER", List.of(
                         "srycd", "name", "kananame", "srysyukbn",
-                        "taniname", "ten", "yakkakjncd", "yukostymd", "yukoedymd", "upymd")),
+                        "taniname", "ten", "yakkakjncd", "yukostymd", "yukoedymd", "upymd"), List.of()),
+                new SchemaTable("TBL_HKNJAINF_MASTER", List.of(
+                        "hknjanum", "hknjaname", "post", "adrs", "banti", "tel", "upymd"), List.of()),
+                new SchemaTable("TBL_ADRS", List.of(
+                        "post", "prefname", "cityname", "townname", "prefkana", "citykana", "townkana", "editadrs_name"),
+                        List.of()),
                 new SchemaTable("TBL_YOUHOU", List.of(
-                        "youhoucode", "youhouname", "kana", "start_date", "end_date", "upymd")),
+                        "youhoucode", "youhouname", "kana", "start_date", "end_date", "upymd"), List.of()),
                 new SchemaTable("TBL_MATERIAL_H_M", List.of(
                         "material_code", "material_name", "kana_name", "category",
-                        "material_category", "unit", "price", "maker", "start_date", "end_date", "upymd")),
+                        "material_category", "unit", "price", "maker", "start_date", "end_date", "upymd"), List.of()),
                 new SchemaTable("TBL_KENSASORT", List.of(
                         "kensa_code", "kensa_name", "kana_name", "kensa_sort",
-                        "classification", "start_date", "end_date", "upymd"))
+                        "classification", "start_date", "end_date", "upymd"), List.of())
         );
     }
 
-    private record SchemaTable(String name, List<String> columns) {
+    private record SchemaTable(String name, List<String> requiredColumns, List<List<String>> requiredAlternatives) {
     }
 }
