@@ -75,6 +75,27 @@ class OrcaMasterResponseMapper {
         );
     }
 
+    OrcaDrugMasterEntry toGenericPriceEntry(OrcaMasterDao.GenericPriceRecord entry,
+            OrcaMasterService.LoadedFixture<?> fixture) {
+        return buildDrugEntry(
+                entry.srycd,
+                entry.drugName,
+                "generic-price",
+                entry.unit,
+                entry.price,
+                null,
+                null,
+                null,
+                firstNonBlank(entry.startDate, OrcaMasterService.DEFAULT_VALID_FROM),
+                firstNonBlank(entry.endDate, OrcaMasterService.DEFAULT_VALID_TO),
+                null,
+                fixture,
+                false,
+                false,
+                false
+        );
+    }
+
     OrcaDrugMasterEntry toDrugEntry(OrcaMasterDao.DrugRecord entry, OrcaMasterService.LoadedFixture<?> fixture) {
         return buildDrugEntry(
                 entry.srycd,
@@ -113,6 +134,24 @@ class OrcaMasterResponseMapper {
         return response;
     }
 
+    OrcaInsurerEntry toInsurerEntry(OrcaMasterDao.HokenjaRecord entry,
+            OrcaMasterService.LoadedFixture<?> fixture) {
+        OrcaInsurerEntry response = new OrcaInsurerEntry();
+        response.setPayerCode(entry.payerCode);
+        response.setPayerName(entry.payerName);
+        response.setPayerType(resolvePayerType(entry.payerType, entry.payerCode));
+        response.setPayerRatio(resolvePayerRatio(entry.payerRatio, response.getPayerType()));
+        response.setPrefCode(firstNonBlank(entry.prefCode, derivePrefCode(entry.payerCode)));
+        response.setCityCode(firstNonBlank(entry.cityCode, deriveCityCode(response.getPrefCode())));
+        response.setZip(entry.zip);
+        response.setAddressLine(entry.addressLine);
+        response.setPhone(entry.phone);
+        response.setValidFrom(firstNonBlank(entry.validFrom, OrcaMasterService.DEFAULT_VALID_FROM));
+        response.setValidTo(firstNonBlank(entry.validTo, OrcaMasterService.DEFAULT_VALID_TO));
+        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
+        return response;
+    }
+
     OrcaAddressEntry toAddressEntry(OrcaMasterFixtureSupport.FixtureAddressEntry entry,
             OrcaMasterService.LoadedFixture<?> fixture) {
         OrcaAddressEntry response = new OrcaAddressEntry();
@@ -125,6 +164,21 @@ class OrcaMasterResponseMapper {
         response.setKana(entry.kana);
         response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false,
                 fixture.origin == OrcaMasterService.DataOrigin.FALLBACK, null));
+        return response;
+    }
+
+    OrcaAddressEntry toAddressEntry(OrcaMasterDao.AddressRecord entry,
+            OrcaMasterService.LoadedFixture<?> fixture) {
+        OrcaAddressEntry response = new OrcaAddressEntry();
+        response.setZip(entry.zip);
+        response.setPrefCode(entry.prefCode);
+        response.setCityCode(entry.cityCode);
+        response.setCity(entry.city);
+        response.setTown(entry.town);
+        response.setKana(entry.kana);
+        response.setRoman(entry.roman);
+        response.setFullAddress(firstNonBlank(entry.fullAddress, joinAddress(entry.city, entry.town)));
+        response.setMeta(buildMeta(fixture.origin, fixture.snapshotVersion, fixture.version, false, false, false, null));
         return response;
     }
 
@@ -425,5 +479,17 @@ class OrcaMasterResponseMapper {
             }
         }
         return null;
+    }
+
+    private String joinAddress(String city, String town) {
+        String left = firstNonBlank(city);
+        String right = firstNonBlank(town);
+        if (left == null) {
+            return right;
+        }
+        if (right == null) {
+            return left;
+        }
+        return left + right;
     }
 }

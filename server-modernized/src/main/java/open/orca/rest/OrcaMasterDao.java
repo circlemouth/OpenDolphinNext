@@ -22,6 +22,10 @@ public class OrcaMasterDao {
     private final OrcaMasterGenericClassQueryService genericClassQueryService =
             new OrcaMasterGenericClassQueryService(querySupport, pagingSupport);
     private final OrcaMasterDrugQueryService drugQueryService = new OrcaMasterDrugQueryService(querySupport, pagingSupport);
+    private final OrcaMasterGenericPriceQueryService genericPriceQueryService = new OrcaMasterGenericPriceQueryService();
+    private final OrcaMasterHokenjaQueryService hokenjaQueryService =
+            new OrcaMasterHokenjaQueryService(querySupport, pagingSupport);
+    private final OrcaMasterAddressQueryService addressQueryService = new OrcaMasterAddressQueryService();
     private final OrcaMasterYouhouQueryService youhouQueryService =
             new OrcaMasterYouhouQueryService(querySupport, pagingSupport);
     private final OrcaMasterKensaSortQueryService kensaSortQueryService =
@@ -67,6 +71,19 @@ public class OrcaMasterDao {
         }
     }
 
+    public LookupResult<GenericPriceRecord> findGenericPrice(GenericPriceCriteria criteria) {
+        if (criteria == null) {
+            return null;
+        }
+        try (Connection connection = openConnection()) {
+            return genericPriceQueryService.findGenericPrice(connection, criteria,
+                    OrcaMasterDaoTableMeta.GenericPriceTableMeta.SUPPORTED_CONTRACT);
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Failed to load ORCA-05 generic price master", e);
+            return null;
+        }
+    }
+
     public ListSearchResult<CommentRecord> searchComment(CommentCriteria criteria) {
         if (criteria == null) {
             return null;
@@ -93,6 +110,32 @@ public class OrcaMasterDao {
                     meta.versionColumn, true);
         } catch (SQLException e) {
             LOGGER.log(Level.WARNING, "Failed to load ORCA-08 bodypart master", e);
+            return null;
+        }
+    }
+
+    public ListSearchResult<HokenjaRecord> searchHokenja(HokenjaCriteria criteria) {
+        if (criteria == null) {
+            return null;
+        }
+        try (Connection connection = openConnection()) {
+            OrcaMasterDaoTableMeta.HokenjaTableMeta meta = OrcaMasterDaoTableMeta.HokenjaTableMeta.SUPPORTED_CONTRACT;
+            return hokenjaQueryService.searchHokenja(connection, criteria, meta);
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Failed to load ORCA-06 hokenja master", e);
+            return null;
+        }
+    }
+
+    public LookupResult<AddressRecord> findAddress(AddressCriteria criteria) {
+        if (criteria == null) {
+            return null;
+        }
+        try (Connection connection = openConnection()) {
+            return addressQueryService.findAddress(connection, criteria,
+                    OrcaMasterDaoTableMeta.AddressTableMeta.SUPPORTED_CONTRACT);
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Failed to load ORCA-06 address master", e);
             return null;
         }
     }
@@ -160,7 +203,16 @@ public class OrcaMasterDao {
     public static final class DrugCriteria extends OrcaMasterDaoTypes.DrugCriteriaBase {
     }
 
+    public static final class GenericPriceCriteria extends OrcaMasterDaoTypes.GenericPriceCriteriaBase {
+    }
+
     public static final class CommentCriteria extends OrcaMasterDaoTypes.CommentCriteriaBase {
+    }
+
+    public static final class HokenjaCriteria extends OrcaMasterDaoTypes.HokenjaCriteriaBase {
+    }
+
+    public static final class AddressCriteria extends OrcaMasterDaoTypes.AddressCriteriaBase {
     }
 
     public static final class YouhouCriteria extends OrcaMasterDaoTypes.KeywordEffectiveCriteriaBase {
@@ -186,7 +238,28 @@ public class OrcaMasterDao {
         }
     }
 
+    public static final class GenericPriceRecord extends OrcaMasterDaoTypes.GenericPriceRecordBase implements VersionedRecord {
+        @Override
+        public String version() {
+            return version;
+        }
+    }
+
     public static final class CommentRecord extends OrcaMasterDaoTypes.CommentRecordBase implements VersionedRecord {
+        @Override
+        public String version() {
+            return version;
+        }
+    }
+
+    public static final class HokenjaRecord extends OrcaMasterDaoTypes.HokenjaRecordBase implements VersionedRecord {
+        @Override
+        public String version() {
+            return version;
+        }
+    }
+
+    public static final class AddressRecord extends OrcaMasterDaoTypes.AddressRecordBase implements VersionedRecord {
         @Override
         public String version() {
             return version;

@@ -13,6 +13,8 @@
 - `docs/contracts/` は runtime / health / ORCA / attachment の public contract を置く
 - `docs/runbooks/` は release / validation の live 手順を置く
 - `docs/operations/ORCA_CERTIFICATION_ONLY.md` は WebORCA Trial の接続確認手順を置く
+- server 本体の永続化は外部 PostgreSQL 前提で進める
+- 添付と画像の外部保存は `ATTACHMENT_STORAGE_MODE=s3` の S3 互換 object storage 前提で進める
 
 ## モジュール境界
 - `domain`: 業務ルールと値オブジェクト

@@ -60,8 +60,20 @@ class OrcaMasterService {
         return masterGateway.searchGenericClass(criteria);
     }
 
+    OrcaMasterDao.LookupResult<OrcaMasterDao.GenericPriceRecord> findGenericPrice(OrcaMasterDao.GenericPriceCriteria criteria) {
+        return masterGateway.findGenericPrice(criteria);
+    }
+
     OrcaMasterDao.ListSearchResult<OrcaMasterDao.DrugRecord> searchDrug(OrcaMasterDao.DrugCriteria criteria) {
         return masterGateway.searchDrug(criteria);
+    }
+
+    OrcaMasterDao.ListSearchResult<OrcaMasterDao.HokenjaRecord> searchHokenja(OrcaMasterDao.HokenjaCriteria criteria) {
+        return masterGateway.searchHokenja(criteria);
+    }
+
+    OrcaMasterDao.LookupResult<OrcaMasterDao.AddressRecord> findAddress(OrcaMasterDao.AddressCriteria criteria) {
+        return masterGateway.findAddress(criteria);
     }
 
     OrcaMasterDao.ListSearchResult<OrcaMasterDao.CommentRecord> searchComment(OrcaMasterDao.CommentCriteria criteria) {

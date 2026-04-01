@@ -22,6 +22,16 @@ public class AttachmentModel extends KarteEntryBean implements Serializable,java
     
     private String title;
     private String uri;
+    @Column(name = "storage_provider")
+    private String storageProvider;
+    @Column(name = "storage_bucket")
+    private String storageBucket;
+    @Column(name = "storage_key")
+    private String storageKey;
+    @Column(name = "storage_version_id")
+    private String storageVersionId;
+    @Column(name = "storage_etag")
+    private String storageEtag;
     private String extension;
     private String memo; 
     
@@ -69,6 +79,46 @@ public class AttachmentModel extends KarteEntryBean implements Serializable,java
 
     public void setMemo(String memo) {
         this.memo = memo;
+    }
+
+    public String getStorageProvider() {
+        return storageProvider;
+    }
+
+    public void setStorageProvider(String storageProvider) {
+        this.storageProvider = storageProvider;
+    }
+
+    public String getStorageBucket() {
+        return storageBucket;
+    }
+
+    public void setStorageBucket(String storageBucket) {
+        this.storageBucket = storageBucket;
+    }
+
+    public String getStorageKey() {
+        return storageKey;
+    }
+
+    public void setStorageKey(String storageKey) {
+        this.storageKey = storageKey;
+    }
+
+    public String getStorageVersionId() {
+        return storageVersionId;
+    }
+
+    public void setStorageVersionId(String storageVersionId) {
+        this.storageVersionId = storageVersionId;
+    }
+
+    public String getStorageEtag() {
+        return storageEtag;
+    }
+
+    public void setStorageEtag(String storageEtag) {
+        this.storageEtag = storageEtag;
     }
 
     public byte[] getContentBytes() {
@@ -161,6 +211,11 @@ public class AttachmentModel extends KarteEntryBean implements Serializable,java
         ret.setDigest(this.getDigest());
         ret.setTitle(this.getTitle());
         ret.setUri(this.getUri());
+        ret.setStorageProvider(this.getStorageProvider());
+        ret.setStorageBucket(this.getStorageBucket());
+        ret.setStorageKey(this.getStorageKey());
+        ret.setStorageVersionId(this.getStorageVersionId());
+        ret.setStorageEtag(this.getStorageEtag());
         ret.setExtension(this.getExtension());
         ret.setMemo(this.getMemo()); 
         ret.setAttachmentNumber(this.getAttachmentNumber());

@@ -7,7 +7,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import open.dolphin.rest.dto.orca.OrcaAddressEntry;
 import open.dolphin.rest.dto.orca.OrcaDrugMasterEntry;
+import open.dolphin.rest.dto.orca.OrcaInsurerEntry;
 import open.dolphin.rest.dto.orca.OrcaMasterListResponse;
 import open.dolphin.rest.dto.orca.OrcaTensuEntry;
 import open.dolphin.security.audit.SessionAuditDispatcher;
@@ -44,6 +46,106 @@ class OrcaMasterCatalogEndpointService {
         return buildPagedDrugEntryResponse(ifNoneMatch, request, params, "/api/orca/master/drug", "orca08-drug",
                 "MASTER_DRUG_UNAVAILABLE", "薬剤マスタを取得できませんでした", fromListResult(dbResult), auditDetails,
                 responseMapper::toDrugEntry);
+    }
+
+    Response buildGenericPriceResponse(String ifNoneMatch, HttpServletRequest request,
+            MultivaluedMap<String, String> params, OrcaMasterDao.LookupResult<OrcaMasterDao.GenericPriceRecord> dbResult,
+            Map<String, Object> auditDetails) {
+        if (dbResult == null) {
+            OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.GenericPriceRecord> unavailableFixture = fixtureSupport.unavailableFixture();
+            Response failure = auditSupport.serviceUnavailable(request, "MASTER_GENERIC_PRICE_UNAVAILABLE",
+                    "最低薬価マスタを取得できませんでした");
+            auditSupport.recordMasterAudit(request, "/api/orca/master/generic-price", "orca05-generic-price",
+                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+            return failure;
+        }
+        OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.GenericPriceRecord> fixture =
+                fixtureSupport.buildDbFixture(dbResult.isFound() && dbResult.getRecord() != null
+                        ? List.of(dbResult.getRecord()) : List.of(), dbResult.getVersion(), false);
+        if (!dbResult.isFound() || dbResult.getRecord() == null) {
+            auditSupport.recordMasterAudit(request, "/api/orca/master/generic-price", "orca05-generic-price",
+                    404, fixtureSupport.toServiceFixture(fixture), false, true, 0, auditDetails);
+            return auditSupport.notFound("MASTER_GENERIC_PRICE_NOT_FOUND", "最低薬価マスタが見つかりませんでした", request);
+        }
+        String etagValue = cacheSupport.buildEtag("/api/orca/master/generic-price", "orca05-generic-price",
+                fixtureSupport.toServiceFixture(fixture), params);
+        long ttlSeconds = cacheSupport.cacheTtlSeconds("orca05-generic-price");
+        if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
+            auditSupport.recordMasterAudit(request, "/api/orca/master/generic-price", "orca05-generic-price",
+                    304, fixtureSupport.toServiceFixture(fixture), true, false, 1, auditDetails);
+            return cacheSupport.buildNotModifiedResponse(etagValue, ttlSeconds, null);
+        }
+        OrcaDrugMasterEntry response = responseMapper.toGenericPriceEntry(
+                dbResult.getRecord(), fixtureSupport.toServiceFixture(fixture));
+        auditSupport.recordMasterAudit(request, "/api/orca/master/generic-price", "orca05-generic-price",
+                200, fixtureSupport.toServiceFixture(fixture), false, false, 1, auditDetails);
+        return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
+    }
+
+    Response buildHokenjaResponse(String ifNoneMatch, HttpServletRequest request,
+            MultivaluedMap<String, String> params, OrcaMasterDao.ListSearchResult<OrcaMasterDao.HokenjaRecord> dbResult,
+            Map<String, Object> auditDetails) {
+        if (dbResult == null) {
+            OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.HokenjaRecord> unavailableFixture = fixtureSupport.unavailableFixture();
+            Response failure = auditSupport.serviceUnavailable(request, "MASTER_HOKENJA_UNAVAILABLE",
+                    "保険者マスタを取得できませんでした");
+            auditSupport.recordMasterAudit(request, "/api/orca/master/hokenja", "orca06-hokenja",
+                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+            return failure;
+        }
+        OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.HokenjaRecord> fixture =
+                fixtureSupport.buildDbFixture(dbResult.getRecords(), dbResult.getVersion(), false);
+        String etagValue = cacheSupport.buildEtag("/api/orca/master/hokenja", "orca06-hokenja",
+                fixtureSupport.toServiceFixture(fixture), params);
+        long ttlSeconds = cacheSupport.cacheTtlSeconds("orca06-hokenja");
+        if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
+            auditSupport.recordMasterAudit(request, "/api/orca/master/hokenja", "orca06-hokenja",
+                    304, fixtureSupport.toServiceFixture(fixture), true, dbResult.getRecords().isEmpty(),
+                    dbResult.getTotalCount(), auditDetails);
+            return cacheSupport.buildNotModifiedResponse(etagValue, ttlSeconds, null);
+        }
+        List<OrcaInsurerEntry> items = new ArrayList<>(dbResult.getRecords().size());
+        for (OrcaMasterDao.HokenjaRecord entry : dbResult.getRecords()) {
+            items.add(responseMapper.toInsurerEntry(entry, fixtureSupport.toServiceFixture(fixture)));
+        }
+        OrcaMasterListResponse<OrcaInsurerEntry> response = responseAssembler.toListResponse(items, dbResult.getTotalCount());
+        auditSupport.recordMasterAudit(request, "/api/orca/master/hokenja", "orca06-hokenja",
+                200, fixtureSupport.toServiceFixture(fixture), false, items.isEmpty(), dbResult.getTotalCount(), auditDetails);
+        return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
+    }
+
+    Response buildAddressResponse(String ifNoneMatch, HttpServletRequest request,
+            MultivaluedMap<String, String> params, OrcaMasterDao.LookupResult<OrcaMasterDao.AddressRecord> dbResult,
+            Map<String, Object> auditDetails) {
+        if (dbResult == null) {
+            OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.AddressRecord> unavailableFixture = fixtureSupport.unavailableFixture();
+            Response failure = auditSupport.serviceUnavailable(request, "MASTER_ADDRESS_UNAVAILABLE",
+                    "住所マスタを取得できませんでした");
+            auditSupport.recordMasterAudit(request, "/api/orca/master/address", "orca06-address",
+                    503, fixtureSupport.toServiceFixture(unavailableFixture), false, true, 0, auditDetails);
+            return failure;
+        }
+        OrcaMasterFixtureSupport.LoadedFixture<OrcaMasterDao.AddressRecord> fixture =
+                fixtureSupport.buildDbFixture(dbResult.isFound() && dbResult.getRecord() != null
+                        ? List.of(dbResult.getRecord()) : List.of(), dbResult.getVersion(), false);
+        if (!dbResult.isFound() || dbResult.getRecord() == null) {
+            auditSupport.recordMasterAudit(request, "/api/orca/master/address", "orca06-address",
+                    404, fixtureSupport.toServiceFixture(fixture), false, true, 0, auditDetails);
+            return auditSupport.notFound("MASTER_ADDRESS_NOT_FOUND", "住所マスタが見つかりませんでした", request);
+        }
+        String etagValue = cacheSupport.buildEtag("/api/orca/master/address", "orca06-address",
+                fixtureSupport.toServiceFixture(fixture), params);
+        long ttlSeconds = cacheSupport.cacheTtlSeconds("orca06-address");
+        if (cacheSupport.etagMatches(ifNoneMatch, etagValue)) {
+            auditSupport.recordMasterAudit(request, "/api/orca/master/address", "orca06-address",
+                    304, fixtureSupport.toServiceFixture(fixture), true, false, 1, auditDetails);
+            return cacheSupport.buildNotModifiedResponse(etagValue, ttlSeconds, null);
+        }
+        OrcaAddressEntry response = responseMapper.toAddressEntry(
+                dbResult.getRecord(), fixtureSupport.toServiceFixture(fixture));
+        auditSupport.recordMasterAudit(request, "/api/orca/master/address", "orca06-address",
+                200, fixtureSupport.toServiceFixture(fixture), false, false, 1, auditDetails);
+        return cacheSupport.buildCachedOkResponse(response, etagValue, ttlSeconds, null);
     }
 
     Response buildCommentResponse(String ifNoneMatch, HttpServletRequest request, MultivaluedMap<String, String> params,

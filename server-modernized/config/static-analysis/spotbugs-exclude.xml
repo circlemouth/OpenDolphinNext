@@ -28,4 +28,11 @@
   <Match>
     <Annotation name="jakarta.annotation.Generated"/>
   </Match>
+
+  <!-- Generic price lookup は schema validator 済みの hard-coded allowlist から列名を選ぶため、
+       SpotBugs の non-constant SQL heuristics を個別除外する -->
+  <Match>
+    <Class name="open.orca.rest.OrcaMasterGenericPriceQueryService"/>
+    <Bug pattern="SQL_PREPARED_STATEMENT_GENERATED_FROM_NONCONSTANT_STRING"/>
+  </Match>
 </FindBugsFilter>

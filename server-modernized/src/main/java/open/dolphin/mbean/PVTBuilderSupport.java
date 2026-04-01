@@ -2,6 +2,8 @@ package open.dolphin.mbean;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -419,28 +421,9 @@ final class PVTBuilderSupport {
 
     static boolean isAfterToday(String mmlDate) {
         try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-            Date test = sdf.parse(mmlDate);
-            GregorianCalendar gc1 = new GregorianCalendar();
-            gc1.setTime(test);
-            gc1.clear(java.util.Calendar.HOUR_OF_DAY);
-            gc1.clear(java.util.Calendar.MINUTE);
-            gc1.clear(java.util.Calendar.SECOND);
-            gc1.clear(java.util.Calendar.MILLISECOND);
-            GregorianCalendar gc2 = new GregorianCalendar();
-            gc2.setTime(new Date());
-            gc2.clear(java.util.Calendar.HOUR_OF_DAY);
-            gc2.clear(java.util.Calendar.MINUTE);
-            gc2.clear(java.util.Calendar.SECOND);
-            gc2.clear(java.util.Calendar.MILLISECOND);
-            if (gc1.get(java.util.Calendar.YEAR) > gc2.get(java.util.Calendar.YEAR)) {
-                return true;
-            }
-            if (gc1.get(java.util.Calendar.MONTH) > gc2.get(java.util.Calendar.MONTH)) {
-                return true;
-            }
-            return gc1.get(java.util.Calendar.DAY_OF_MONTH) > gc2.get(java.util.Calendar.DAY_OF_MONTH);
-        } catch (ParseException ex) {
+            LocalDate claimDate = LocalDateTime.parse(mmlDate).toLocalDate();
+            return claimDate.isAfter(LocalDate.now());
+        } catch (RuntimeException ex) {
             return false;
         }
     }

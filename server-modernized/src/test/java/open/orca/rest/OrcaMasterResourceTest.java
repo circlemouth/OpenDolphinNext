@@ -14,7 +14,9 @@ import java.lang.reflect.Proxy;
 import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
+import open.dolphin.rest.dto.orca.OrcaAddressEntry;
 import open.dolphin.rest.dto.orca.OrcaDrugMasterEntry;
+import open.dolphin.rest.dto.orca.OrcaInsurerEntry;
 import open.dolphin.rest.dto.orca.OrcaMasterErrorResponse;
 import open.dolphin.rest.dto.orca.OrcaMasterListResponse;
 import open.dolphin.rest.dto.orca.OrcaMasterMeta;
@@ -479,18 +481,35 @@ class OrcaMasterResourceTest {
     }
 
     @Test
-    void getGenericPrice_returnsEntryWithMetaFromFixture() {
-        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+    void getGenericPrice_returnsEntryWithMeta() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<GenericPriceRecord> findGenericPrice(GenericPriceCriteria criteria) {
+                GenericPriceRecord record = new GenericPriceRecord();
+                record.srycd = criteria.getSrycd();
+                record.drugName = "プロパネコール注";
+                record.unit = "mL";
+                record.price = 120d;
+                record.startDate = "20240401";
+                record.endDate = "99999999";
+                record.version = "20260401";
+                return new LookupResult<>(record, "20260401", true);
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
         MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
         params.add("srycd", "110001110");
         UriInfo uriInfo = createUriInfo(params);
 
         Response response = resource.getGenericPrice(null, uriInfo, authenticatedRequest());
 
-        assertEquals(503, response.getStatus());
-        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertEquals(200, response.getStatus());
+        OrcaDrugMasterEntry payload = (OrcaDrugMasterEntry) response.getEntity();
         assertNotNull(payload);
-        assertEquals("MASTER_GENERIC_PRICE_UNAVAILABLE", payload.getCode());
+        assertEquals("110001110", payload.getCode());
+        assertEquals("generic-price", payload.getCategory());
+        assertEquals(120d, payload.getMinPrice());
+        assertNotNull(payload.getMeta());
     }
 
     @Test
@@ -509,8 +528,92 @@ class OrcaMasterResourceTest {
     }
 
     @Test
-    void getHokenja_returnsListWithMetaFromFixture() {
-        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+    void getGenericPrice_notFound_returns404() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<GenericPriceRecord> findGenericPrice(GenericPriceCriteria criteria) {
+                return new LookupResult<>(null, null, false);
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("srycd", "110001110");
+
+        Response response = resource.getGenericPrice(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(404, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_GENERIC_PRICE_NOT_FOUND", payload.getCode());
+    }
+
+    @Test
+    void getGenericPrice_ifNoneMatch_returnsNotModified() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<GenericPriceRecord> findGenericPrice(GenericPriceCriteria criteria) {
+                GenericPriceRecord record = new GenericPriceRecord();
+                record.srycd = criteria.getSrycd();
+                record.drugName = "プロパネコール注";
+                record.price = 120d;
+                record.version = "20260401";
+                return new LookupResult<>(record, "20260401", true);
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("srycd", "110001110");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response initial = resource.getGenericPrice(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+        Response cached = resource.getGenericPrice("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+        assertEquals("public, max-age=300, stale-while-revalidate=86400", cached.getHeaderString("Cache-Control"));
+    }
+
+    @Test
+    void getGenericPrice_backendUnavailable_returns503() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<GenericPriceRecord> findGenericPrice(GenericPriceCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("srycd", "110001110");
+
+        Response response = resource.getGenericPrice(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(503, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_GENERIC_PRICE_UNAVAILABLE", payload.getCode());
+    }
+
+    @Test
+    void getHokenja_returnsListWithMeta() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<HokenjaRecord> searchHokenja(HokenjaCriteria criteria) {
+                HokenjaRecord record = new HokenjaRecord();
+                record.payerCode = "06123456";
+                record.payerName = "医療共済組合東京";
+                record.prefCode = "13";
+                record.cityCode = "13000";
+                record.zip = "1600001";
+                record.addressLine = "東京都新宿区西新宿1-1-1";
+                record.phone = "03-0000-0000";
+                record.validFrom = "20240401";
+                record.validTo = "99991231";
+                record.version = "20260401";
+                return new ListSearchResult<>(List.of(record), criteria.isIncludeTotalCount() ? 1 : null, "20260401");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
         MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
         params.add("keyword", "医療共済");
         params.add("pref", "13");
@@ -518,10 +621,14 @@ class OrcaMasterResourceTest {
 
         Response response = resource.getHokenja(null, uriInfo, authenticatedRequest());
 
-        assertEquals(503, response.getStatus());
-        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertEquals(200, response.getStatus());
+        @SuppressWarnings("unchecked")
+        OrcaMasterListResponse<OrcaInsurerEntry> payload = (OrcaMasterListResponse<OrcaInsurerEntry>) response.getEntity();
         assertNotNull(payload);
-        assertEquals("MASTER_HOKENJA_UNAVAILABLE", payload.getCode());
+        assertNotNull(payload.getItems());
+        assertEquals(1, payload.getItems().size());
+        assertEquals("06123456", payload.getItems().get(0).getPayerCode());
+        assertNotNull(payload.getItems().get(0).getMeta());
     }
 
     @Test
@@ -540,53 +647,66 @@ class OrcaMasterResourceTest {
     }
 
     @Test
-    void getAddress_returnsEntryWithMetaFromFixture() {
-        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+    void getHokenja_emptySearch_returns200WithEmptyList() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<HokenjaRecord> searchHokenja(HokenjaCriteria criteria) {
+                return new ListSearchResult<>(List.of(), 0, "20260401");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
         MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
-        params.add("zip", "1000001");
+        params.add("keyword", "存在しない");
+        params.add("includeTotalCount", "true");
+
+        Response response = resource.getHokenja(null, createUriInfo(params), authenticatedRequest());
+
+        assertEquals(200, response.getStatus());
+        @SuppressWarnings("unchecked")
+        OrcaMasterListResponse<OrcaInsurerEntry> payload = (OrcaMasterListResponse<OrcaInsurerEntry>) response.getEntity();
+        assertNotNull(payload);
+        assertNotNull(payload.getItems());
+        assertTrue(payload.getItems().isEmpty());
+        assertEquals(0, payload.getTotalCount());
+    }
+
+    @Test
+    void getHokenja_ifNoneMatch_returnsNotModified() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<HokenjaRecord> searchHokenja(HokenjaCriteria criteria) {
+                HokenjaRecord record = new HokenjaRecord();
+                record.payerCode = "06123456";
+                record.payerName = "医療共済組合東京";
+                record.version = "20260401";
+                return new ListSearchResult<>(List.of(record), 1, "20260401");
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("keyword", "医療");
         UriInfo uriInfo = createUriInfo(params);
 
-        Response response = resource.getAddress(null, uriInfo, authenticatedRequest());
+        Response initial = resource.getHokenja(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+        Response cached = resource.getHokenja("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
 
-        assertEquals(503, response.getStatus());
-        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
-        assertNotNull(payload);
-        assertEquals("MASTER_ADDRESS_UNAVAILABLE", payload.getCode());
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
     }
 
     @Test
-    void getAddress_unknownZip_returnsNotFound() {
-        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+    void getHokenja_backendUnavailable_returns503() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public ListSearchResult<HokenjaRecord> searchHokenja(HokenjaCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
         MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
-        params.add("zip", "9999999");
-        UriInfo uriInfo = createUriInfo(params);
+        params.add("keyword", "医療");
 
-        Response response = resource.getAddress(null, uriInfo, authenticatedRequest());
-
-        assertEquals(503, response.getStatus());
-        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
-        assertNotNull(payload);
-        assertEquals("MASTER_ADDRESS_UNAVAILABLE", payload.getCode());
-    }
-
-    @Test
-    void getGenericPrice_noFixtureFallbackRemains() {
-        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
-        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
-        params.add("srycd", "110001110");
-        Response response = resource.getGenericPrice(null, createUriInfo(params), authenticatedRequest());
-
-        assertEquals(503, response.getStatus());
-        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
-        assertNotNull(payload);
-        assertEquals("MASTER_GENERIC_PRICE_UNAVAILABLE", payload.getCode());
-    }
-
-    @Test
-    void getHokenja_noFixtureFallbackRemains() {
-        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
-        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
-        params.add("keyword", "医療共済");
         Response response = resource.getHokenja(null, createUriInfo(params), authenticatedRequest());
 
         assertEquals(503, response.getStatus());
@@ -596,10 +716,97 @@ class OrcaMasterResourceTest {
     }
 
     @Test
-    void getAddress_noFixtureFallbackRemains() {
-        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), new OrcaMasterDao());
+    void getAddress_returnsEntryWithMeta() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<AddressRecord> findAddress(AddressCriteria criteria) {
+                AddressRecord record = new AddressRecord();
+                record.zip = criteria.getZip();
+                record.prefCode = "13";
+                record.cityCode = "13101";
+                record.city = "千代田区";
+                record.town = "千代田";
+                record.kana = "ﾁﾖﾀﾞｸ ﾁﾖﾀﾞ";
+                record.roman = "Chiyoda-ku Chiyoda";
+                record.fullAddress = "東京都千代田区千代田";
+                record.version = "20260401";
+                return new LookupResult<>(record, "20260401", true);
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
         MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
         params.add("zip", "1000001");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response response = resource.getAddress(null, uriInfo, authenticatedRequest());
+
+        assertEquals(200, response.getStatus());
+        OrcaAddressEntry payload = (OrcaAddressEntry) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("1000001", payload.getZip());
+        assertEquals("東京都千代田区千代田", payload.getFullAddress());
+        assertNotNull(payload.getMeta());
+    }
+
+    @Test
+    void getAddress_unknownZip_returnsNotFound() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<AddressRecord> findAddress(AddressCriteria criteria) {
+                return new LookupResult<>(null, null, false);
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("zip", "9999999");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response response = resource.getAddress(null, uriInfo, authenticatedRequest());
+
+        assertEquals(404, response.getStatus());
+        OrcaMasterErrorResponse payload = (OrcaMasterErrorResponse) response.getEntity();
+        assertNotNull(payload);
+        assertEquals("MASTER_ADDRESS_NOT_FOUND", payload.getCode());
+    }
+
+    @Test
+    void getAddress_ifNoneMatch_returnsNotModified() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<AddressRecord> findAddress(AddressCriteria criteria) {
+                AddressRecord record = new AddressRecord();
+                record.zip = criteria.getZip();
+                record.city = "千代田区";
+                record.fullAddress = "東京都千代田区千代田";
+                record.version = "20260401";
+                return new LookupResult<>(record, "20260401", true);
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("zip", "1000001");
+        UriInfo uriInfo = createUriInfo(params);
+
+        Response initial = resource.getAddress(null, uriInfo, authenticatedRequest());
+        EntityTag etag = initial.getEntityTag();
+        Response cached = resource.getAddress("\"" + etag.getValue() + "\"", uriInfo, authenticatedRequest());
+
+        assertEquals(304, cached.getStatus());
+        assertEquals(etag.getValue(), cached.getEntityTag().getValue());
+    }
+
+    @Test
+    void getAddress_backendUnavailable_returns503() {
+        OrcaMasterDao masterDao = new OrcaMasterDao() {
+            @Override
+            public LookupResult<AddressRecord> findAddress(AddressCriteria criteria) {
+                return null;
+            }
+        };
+        OrcaMasterResource resource = new OrcaMasterResource(new EtensuDao(), masterDao);
+        MultivaluedMap<String, String> params = new MultivaluedHashMap<>();
+        params.add("zip", "1000001");
+
         Response response = resource.getAddress(null, createUriInfo(params), authenticatedRequest());
 
         assertEquals(503, response.getStatus());
