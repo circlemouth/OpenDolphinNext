@@ -55,8 +55,10 @@
 
 ### Required State
 - 患者文脈は `location.state` と揮発メモリのみで扱います。
+- workspace patient tab は同一 SPA セッション内だけで保持し、reload/new tab 復元は行いません。
 - deep link query は処理後に scrub します。
 - reload 跨ぎの文脈復元は行いません。
+- active patient の workspace tab switch/close は、未保存入力がある場合に save/discard/cancel guard を通します。
 
 ### Terminology
 - 「参照カルテ」と「参照パネル」は current docs 上で完全同義とは断定しません。

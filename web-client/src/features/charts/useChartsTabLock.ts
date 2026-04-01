@@ -73,6 +73,7 @@ export function useChartsTabLock(options: {
 
   const storageKeyRef = useRef<string | null>(storageKey);
   storageKeyRef.current = storageKey;
+  const previousStorageKeyRef = useRef<string | null>(storageKey);
   const legacyKeyRef = useRef<string | null>(legacyStorageKey);
   legacyKeyRef.current = legacyStorageKey;
 
@@ -226,6 +227,12 @@ export function useChartsTabLock(options: {
   );
 
   useEffect(() => {
+    const previousStorageKey = previousStorageKeyRef.current;
+    if (previousStorageKey && previousStorageKey !== storageKey) {
+      releaseChartsTabLock({ storageKey: previousStorageKey, ownerTabSessionId: tabSessionId });
+    }
+    previousStorageKeyRef.current = storageKey;
+
     if (!enabled) {
       if (storageKey) {
         releaseChartsTabLock({ storageKey, ownerTabSessionId: tabSessionId });
@@ -235,6 +242,14 @@ export function useChartsTabLock(options: {
     }
     apply(storageKey ?? null);
   }, [apply, enabled, storageKey, tabSessionId]);
+
+  useEffect(() => {
+    return () => {
+      const activeKey = storageKeyRef.current;
+      if (!activeKey) return;
+      releaseChartsTabLock({ storageKey: activeKey, ownerTabSessionId: tabSessionId });
+    };
+  }, [tabSessionId]);
 
   useEffect(() => {
     if (!enabled) return;

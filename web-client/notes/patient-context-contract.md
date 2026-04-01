@@ -19,6 +19,7 @@
 - Charts handoff では `scheduleKey` または `encounterKey` が必要です。
 
 ## Non-Persistence
+- Charts の workspace patient tabs は同一 SPA セッション内の揮発状態だけで扱います。
 - reload をまたいだ復元はしません。
 - new tab をまたいだ復元はしません。
 - bookmark をまたいだ復元はしません。

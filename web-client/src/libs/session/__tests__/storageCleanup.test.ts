@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { loadChartsEncounterContext, storeChartsEncounterContext } from '../../../features/charts/encounterContext';
 import {
+  buildPatientTabKey,
   readChartsPatientTabsStorage,
   writeChartsPatientTabsStorage,
 } from '../../../features/charts/patientTabsStorage';
@@ -104,18 +105,21 @@ describe('storageCleanup', () => {
 
   it('removes scoped and legacy keys for the given user/facility', () => {
     const { session, local } = setup();
+    const tabKey = buildPatientTabKey('P-001', '2026-03-04', { encounterKey: 'F001:E100' });
+    if (!tabKey) throw new Error('tabKey must exist');
     storeChartsEncounterContext({ patientId: 'P-001', visitDate: '2026-03-04' }, scope);
     writeChartsPatientTabsStorage(
       {
         version: 1,
         updatedAt: '2026-03-04T00:00:00.000Z',
         savedAt: '2026-03-04T00:00:00.000Z',
-        activeKey: 'P-001::2026-03-04',
+        activeKey: tabKey,
         tabs: [
           {
-            key: 'P-001::2026-03-04',
+            key: tabKey,
             patientId: 'P-001',
             visitDate: '2026-03-04',
+            encounterKey: 'F001:E100',
             openedAt: '2026-03-04T00:00:00.000Z',
           },
         ],

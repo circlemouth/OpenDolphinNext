@@ -2,14 +2,20 @@ import React, { forwardRef, useImperativeHandle } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { AuthServiceProvider } from '../authService';
 import { fetchChartsMedicalSummary } from '../api';
 import { clearChartsEncounterContext, storeChartsEncounterContext } from '../encounterContext';
+import { fetchDiseasesWithPatientImportRecovery } from '../diseaseApi';
+import { fetchKarteIdByPatientId } from '../letterApi';
+import { fetchOrderBundlesWithPatientImportRecovery } from '../orderBundleApi';
 import { ChartsPage } from '../pages/ChartsPage';
+import { fetchPrescriptionOrderBundlesWithPatientImportRecovery } from '../prescriptionOrderApi';
+import { buildPatientTabKey, clearChartsPatientTabsStorage, writeChartsPatientTabsStorage } from '../patientTabsStorage';
 import { NavigationGuardProvider } from '../../../routes/NavigationGuardProvider';
+import { WORKSPACE_CHARTS_TAB_REQUEST_EVENT } from '../../workspaceTabs/workspaceTabEvents';
 
 const session = {
   facilityId: 'facility',
@@ -23,6 +29,38 @@ const fetchCounters = {
   summary: 0,
   claim: 0,
   appointment: 0,
+  karteId: 0,
+  orderBundles: 0,
+  prescriptionBundles: 0,
+  diagnosisSummary: 0,
+};
+
+const soapMockState = {
+  dirty: true,
+  dirtySources: ['soap'] as string[],
+  serverSynced: false,
+  isSaving: false,
+  saveResult: {
+    ok: true,
+    message: 'SOAP保存完了（モック）',
+    serverSynced: true,
+    localSaved: true,
+    error: undefined as string | undefined,
+  },
+};
+
+const resetSoapMockState = () => {
+  soapMockState.dirty = true;
+  soapMockState.dirtySources = ['soap'];
+  soapMockState.serverSynced = false;
+  soapMockState.isSaving = false;
+  soapMockState.saveResult = {
+    ok: true,
+    message: 'SOAP保存完了（モック）',
+    serverSynced: true,
+    localSaved: true,
+    error: undefined,
+  };
 };
 
 vi.mock('@emotion/react', () => ({
@@ -154,6 +192,49 @@ vi.mock('../../patients/api', () => ({
   fetchPatients: vi.fn(async () => ({ patients: [] })),
 }));
 
+vi.mock('../letterApi', () => ({
+  fetchKarteIdByPatientId: vi.fn(async () => {
+    fetchCounters.karteId += 1;
+    return { ok: true, karteId: 101, error: undefined };
+  }),
+}));
+
+vi.mock('../orderBundleApi', () => ({
+  fetchOrderBundlesWithPatientImportRecovery: vi.fn(async () => {
+    fetchCounters.orderBundles += 1;
+    return { ok: true, bundles: [] };
+  }),
+  mutateOrderBundles: vi.fn(),
+}));
+
+vi.mock('../prescriptionOrderApi', () => ({
+  fetchPrescriptionOrderBundlesWithPatientImportRecovery: vi.fn(async () => {
+    fetchCounters.prescriptionBundles += 1;
+    return { ok: true, bundles: [] };
+  }),
+  mutatePrescriptionOrderBundles: vi.fn(),
+}));
+
+vi.mock('../diseaseApi', () => ({
+  fetchDiseases: vi.fn(async () => ({ diseases: [] })),
+  fetchDiseasesWithPatientImportRecovery: vi.fn(async () => {
+    fetchCounters.diagnosisSummary += 1;
+    return {
+      ok: true,
+      diseases: [],
+      message: undefined,
+      errorKind: undefined,
+      routeMismatch: false,
+      patientImportAttempted: false,
+    };
+  }),
+  mutateDiseases: vi.fn(),
+}));
+
+vi.mock('../karteExtrasApi', () => ({
+  fetchRpHistory: vi.fn(async () => ({ ok: true, entries: [] })),
+}));
+
 vi.mock('../../outpatient/orcaQueueApi', () => ({
   fetchOrcaQueue: vi.fn(async () => ({
     runId: 'RUN-QUEUE',
@@ -251,10 +332,11 @@ vi.mock('../ChartsActionBar', () => ({
   }),
 }));
 vi.mock('../ChartsPatientSummaryBar', () => ({
-  ChartsPatientSummaryBar: ({ onFinishEncounter, inlineActionBar }: any) =>
+  ChartsPatientSummaryBar: ({ onFinishEncounter, inlineActionBar, patientId }: any) =>
     React.createElement(
       'div',
       null,
+      React.createElement('div', { 'data-testid': 'active-patient-id' }, patientId ?? 'none'),
       React.createElement(
         'button',
         {
@@ -287,41 +369,44 @@ vi.mock('../SoapNotePanel', () => ({
   SoapNotePanel: ({ onDraftDirtyChange, onSyncStateChange, saveRequest, onSaveRequestResult }: any) => {
     React.useEffect(() => {
       onDraftDirtyChange?.({
-        dirty: true,
+        dirty: soapMockState.dirty,
         patientId: 'P-001',
         appointmentId: 'A-001',
         receptionId: 'R-001',
         visitDate: '2026-02-16',
-        dirtySources: ['soap'],
+        dirtySources: soapMockState.dirtySources,
       });
       onSyncStateChange?.({
         localSaved: false,
-        serverSynced: false,
-        isSaving: false,
+        serverSynced: soapMockState.serverSynced,
+        isSaving: soapMockState.isSaving,
       });
     }, [onDraftDirtyChange, onSyncStateChange]);
     React.useEffect(() => {
       if (!saveRequest?.token) return;
       onSaveRequestResult?.({
         token: saveRequest.token,
-        ok: true,
-        message: 'SOAP保存完了（モック）',
-        serverSynced: true,
-        localSaved: true,
+        ok: soapMockState.saveResult.ok,
+        message: soapMockState.saveResult.message,
+        serverSynced: soapMockState.saveResult.serverSynced,
+        localSaved: soapMockState.saveResult.localSaved,
+        error: soapMockState.saveResult.error,
       });
-      onDraftDirtyChange?.({
-        dirty: false,
-        patientId: 'P-001',
-        appointmentId: 'A-001',
-        receptionId: 'R-001',
-        visitDate: '2026-02-16',
-        dirtySources: [],
-      });
-      onSyncStateChange?.({
-        localSaved: true,
-        serverSynced: true,
-        isSaving: false,
-      });
+      if (soapMockState.saveResult.ok && soapMockState.saveResult.serverSynced) {
+        onDraftDirtyChange?.({
+          dirty: false,
+          patientId: 'P-001',
+          appointmentId: 'A-001',
+          receptionId: 'R-001',
+          visitDate: '2026-02-16',
+          dirtySources: [],
+        });
+        onSyncStateChange?.({
+          localSaved: true,
+          serverSynced: true,
+          isSaving: false,
+        });
+      }
     }, [onDraftDirtyChange, onSaveRequestResult, onSyncStateChange, saveRequest]);
     return React.createElement('div', { 'data-test-id': 'soap-note-mock' });
   },
@@ -338,29 +423,94 @@ const seedChartsContext = () => {
   });
 };
 
-const seedPatientTabStorage = () => {
-  const patientTabKey = 'P-001::2026-02-16';
-  const storageKey = 'opendolphin:web-client:charts:patient-tabs:v1:facility:doctor';
+const buildEncounterTab = (params: {
+  patientId: string;
+  appointmentId: string;
+  receptionId: string;
+  encounterKey: string;
+  scheduleKey: string;
+  name: string;
+  department: string;
+  openedAt?: string;
+  lastActivatedAt?: string;
+}) => {
   const now = new Date().toISOString();
-  sessionStorage.setItem(
-    storageKey,
-    JSON.stringify({
+  const key = buildPatientTabKey(params.patientId, '2026-02-16', {
+    scheduleKey: params.scheduleKey,
+    encounterKey: params.encounterKey,
+  });
+  if (!key) throw new Error('encounter tab key must exist');
+  return {
+    key,
+    patientId: params.patientId,
+    visitDate: '2026-02-16',
+    appointmentId: params.appointmentId,
+    receptionId: params.receptionId,
+    encounterKey: params.encounterKey,
+    scheduleKey: params.scheduleKey,
+    name: params.name,
+    department: params.department,
+    openedAt: params.openedAt ?? now,
+    lastActivatedAt: params.lastActivatedAt ?? now,
+  };
+};
+
+const seedPatientTabStorage = (
+  tabs = [
+    buildEncounterTab({
+      patientId: 'P-001',
+      appointmentId: 'A-001',
+      receptionId: 'R-001',
+      encounterKey: 'F001:E100',
+      scheduleKey: 'F001:S100',
+      name: '患者A',
+      department: '内科',
+      openedAt: '2026-02-16T09:00:00.000Z',
+      lastActivatedAt: '2026-02-16T09:30:00.000Z',
+    }),
+  ],
+) => {
+  const now = '2026-02-16T10:00:00.000Z';
+  writeChartsPatientTabsStorage(
+    {
       version: 1,
       updatedAt: now,
       savedAt: now,
-      activeKey: patientTabKey,
-      tabs: [
-        {
-          key: patientTabKey,
-          patientId: 'P-001',
-          visitDate: '2026-02-16',
-          appointmentId: 'A-001',
-          receptionId: 'R-001',
-          openedAt: now,
-        },
-      ],
-    }),
+      activeKey: tabs[0]?.key,
+      tabs,
+    },
+    { facilityId: session.facilityId, userId: session.userId },
   );
+};
+
+const renderChartsPage = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <AuthServiceProvider initialFlags={{ runId: 'RUN-AUTH', cacheHit: true, missingMaster: false, dataSourceTransition: 'server' }}>
+        <MemoryRouter initialEntries={['/f/facility/charts']}>
+          <NavigationGuardProvider>
+            <ChartsPage />
+          </NavigationGuardProvider>
+        </MemoryRouter>
+      </AuthServiceProvider>
+    </QueryClientProvider>,
+  );
+};
+
+const requestWorkspaceTab = (action: 'select' | 'close', key: string) => {
+  act(() => {
+    window.dispatchEvent(
+      new CustomEvent(WORKSPACE_CHARTS_TAB_REQUEST_EVENT, {
+        detail: { action, key },
+      }),
+    );
+  });
 };
 
 describe('ChartsPage patient tab dirty indicator', () => {
@@ -368,7 +518,15 @@ describe('ChartsPage patient tab dirty indicator', () => {
     fetchCounters.summary = 0;
     fetchCounters.claim = 0;
     fetchCounters.appointment = 0;
+    fetchCounters.karteId = 0;
+    fetchCounters.orderBundles = 0;
+    fetchCounters.prescriptionBundles = 0;
+    fetchCounters.diagnosisSummary = 0;
+    resetSoapMockState();
     clearChartsEncounterContext();
+    clearChartsPatientTabsStorage();
+    sessionStorage.clear();
+    localStorage.clear();
     vi.clearAllMocks();
   });
 
@@ -376,23 +534,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     seedPatientTabStorage();
     seedChartsContext();
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AuthServiceProvider initialFlags={{ runId: 'RUN-AUTH', cacheHit: true, missingMaster: false, dataSourceTransition: 'server' }}>
-          <MemoryRouter initialEntries={['/f/facility/charts']}>
-            <NavigationGuardProvider>
-              <ChartsPage />
-            </NavigationGuardProvider>
-          </MemoryRouter>
-        </AuthServiceProvider>
-      </QueryClientProvider>,
-    );
+    renderChartsPage();
 
     await screen.findByRole('button', { name: '診察終了（上部モック）' });
     expect(document.querySelector('[data-test-id="charts-patient-tabs"]')).toBeNull();
@@ -403,23 +545,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     seedPatientTabStorage();
     seedChartsContext();
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AuthServiceProvider initialFlags={{ runId: 'RUN-AUTH', cacheHit: true, missingMaster: false, dataSourceTransition: 'server' }}>
-          <MemoryRouter initialEntries={['/f/facility/charts']}>
-            <NavigationGuardProvider>
-              <ChartsPage />
-            </NavigationGuardProvider>
-          </MemoryRouter>
-        </AuthServiceProvider>
-      </QueryClientProvider>,
-    );
+    renderChartsPage();
 
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: '診察終了（上部モック）' }));
@@ -440,23 +566,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     seedPatientTabStorage();
     seedChartsContext();
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AuthServiceProvider initialFlags={{ runId: 'RUN-AUTH', cacheHit: true, missingMaster: false, dataSourceTransition: 'server' }}>
-          <MemoryRouter initialEntries={['/f/facility/charts']}>
-            <NavigationGuardProvider>
-              <ChartsPage />
-            </NavigationGuardProvider>
-          </MemoryRouter>
-        </AuthServiceProvider>
-      </QueryClientProvider>,
-    );
+    renderChartsPage();
 
     const user = userEvent.setup();
     await user.keyboard('{Shift>}{Enter}{/Shift}');
@@ -471,23 +581,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     seedPatientTabStorage();
     seedChartsContext();
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AuthServiceProvider initialFlags={{ runId: 'RUN-AUTH', cacheHit: true, missingMaster: false, dataSourceTransition: 'server' }}>
-          <MemoryRouter initialEntries={['/f/facility/charts']}>
-            <NavigationGuardProvider>
-              <ChartsPage />
-            </NavigationGuardProvider>
-          </MemoryRouter>
-        </AuthServiceProvider>
-      </QueryClientProvider>,
-    );
+    renderChartsPage();
 
     const user = userEvent.setup();
     await screen.findByRole('button', { name: '診察開始（モック）' });
@@ -507,23 +601,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     seedPatientTabStorage();
     seedChartsContext();
 
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-      },
-    });
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AuthServiceProvider initialFlags={{ runId: 'RUN-AUTH', cacheHit: true, missingMaster: false, dataSourceTransition: 'server' }}>
-          <MemoryRouter initialEntries={['/f/facility/charts']}>
-            <NavigationGuardProvider>
-              <ChartsPage />
-            </NavigationGuardProvider>
-          </MemoryRouter>
-        </AuthServiceProvider>
-      </QueryClientProvider>,
-    );
+    renderChartsPage();
 
     const user = userEvent.setup();
     await screen.findByRole('button', { name: '診察中断（モック）' });
@@ -535,6 +613,207 @@ describe('ChartsPage patient tab dirty indicator', () => {
 
     await user.click(screen.getByRole('button', { name: '診察終了（モック）' }));
     await waitFor(() => expect(fetchCounters.summary).toBe(initialSummaryCalls));
+  });
+
+  it('workspace tab の active switch は保存成功後だけ切り替える', async () => {
+    const tabs = [
+      buildEncounterTab({
+        patientId: 'P-001',
+        appointmentId: 'A-001',
+        receptionId: 'R-001',
+        encounterKey: 'F001:E100',
+        scheduleKey: 'F001:S100',
+        name: '患者A',
+        department: '内科',
+        openedAt: '2026-02-16T09:00:00.000Z',
+        lastActivatedAt: '2026-02-16T09:30:00.000Z',
+      }),
+      buildEncounterTab({
+        patientId: 'P-002',
+        appointmentId: 'A-002',
+        receptionId: 'R-002',
+        encounterKey: 'F001:E200',
+        scheduleKey: 'F001:S200',
+        name: '患者B',
+        department: '外科',
+        openedAt: '2026-02-16T09:10:00.000Z',
+        lastActivatedAt: '2026-02-16T09:20:00.000Z',
+      }),
+    ];
+    seedPatientTabStorage(tabs);
+    seedChartsContext();
+
+    renderChartsPage();
+
+    expect(await screen.findByTestId('active-patient-id')).toHaveTextContent('P-001');
+
+    requestWorkspaceTab('select', tabs[1].key);
+
+    expect(await screen.findByRole('button', { name: '保存して切替' })).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '保存して切替' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-patient-id')).toHaveTextContent('P-002');
+    });
+    expect(screen.queryByRole('button', { name: '保存して切替' })).toBeNull();
+  });
+
+  it('workspace tab の保存失敗時は active switch を継続せず guard を残す', async () => {
+    soapMockState.saveResult = {
+      ok: false,
+      message: 'SOAP保存失敗（モック）',
+      serverSynced: false,
+      localSaved: false,
+      error: 'save_failed',
+    };
+    const tabs = [
+      buildEncounterTab({
+        patientId: 'P-001',
+        appointmentId: 'A-001',
+        receptionId: 'R-001',
+        encounterKey: 'F001:E100',
+        scheduleKey: 'F001:S100',
+        name: '患者A',
+        department: '内科',
+      }),
+      buildEncounterTab({
+        patientId: 'P-002',
+        appointmentId: 'A-002',
+        receptionId: 'R-002',
+        encounterKey: 'F001:E200',
+        scheduleKey: 'F001:S200',
+        name: '患者B',
+        department: '外科',
+      }),
+    ];
+    seedPatientTabStorage(tabs);
+    seedChartsContext();
+
+    renderChartsPage();
+
+    expect(await screen.findByTestId('active-patient-id')).toHaveTextContent('P-001');
+    requestWorkspaceTab('select', tabs[1].key);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '保存して切替' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-patient-id')).toHaveTextContent('P-001');
+    });
+    expect(screen.getByText('SOAP保存失敗（モック）')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '保存して切替' })).toBeInTheDocument();
+  });
+
+  it('workspace tab の active close でも保存/破棄/キャンセルの3択を出し、破棄時だけ次タブへ進む', async () => {
+    const tabs = [
+      buildEncounterTab({
+        patientId: 'P-001',
+        appointmentId: 'A-001',
+        receptionId: 'R-001',
+        encounterKey: 'F001:E100',
+        scheduleKey: 'F001:S100',
+        name: '患者A',
+        department: '内科',
+      }),
+      buildEncounterTab({
+        patientId: 'P-002',
+        appointmentId: 'A-002',
+        receptionId: 'R-002',
+        encounterKey: 'F001:E200',
+        scheduleKey: 'F001:S200',
+        name: '患者B',
+        department: '外科',
+      }),
+    ];
+    seedPatientTabStorage(tabs);
+    seedChartsContext();
+
+    renderChartsPage();
+
+    expect(await screen.findByTestId('active-patient-id')).toHaveTextContent('P-001');
+    requestWorkspaceTab('close', tabs[0].key);
+
+    expect(await screen.findByRole('button', { name: '保存して閉じる' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '破棄して閉じる' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'キャンセル' })).toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '破棄して閉じる' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('active-patient-id')).toHaveTextContent('P-002');
+    });
+  });
+
+  it('bounded prefetch は active を除く直近2タブまでに制限する', async () => {
+    soapMockState.dirty = false;
+    soapMockState.dirtySources = [];
+    soapMockState.serverSynced = true;
+    const tabs = [
+      buildEncounterTab({
+        patientId: 'P-001',
+        appointmentId: 'A-001',
+        receptionId: 'R-001',
+        encounterKey: 'F001:E100',
+        scheduleKey: 'F001:S100',
+        name: '患者A',
+        department: '内科',
+        lastActivatedAt: '2026-02-16T09:50:00.000Z',
+      }),
+      buildEncounterTab({
+        patientId: 'P-002',
+        appointmentId: 'A-002',
+        receptionId: 'R-002',
+        encounterKey: 'F001:E200',
+        scheduleKey: 'F001:S200',
+        name: '患者B',
+        department: '外科',
+        lastActivatedAt: '2026-02-16T09:40:00.000Z',
+      }),
+      buildEncounterTab({
+        patientId: 'P-003',
+        appointmentId: 'A-003',
+        receptionId: 'R-003',
+        encounterKey: 'F001:E300',
+        scheduleKey: 'F001:S300',
+        name: '患者C',
+        department: '小児科',
+        lastActivatedAt: '2026-02-16T09:30:00.000Z',
+      }),
+      buildEncounterTab({
+        patientId: 'P-004',
+        appointmentId: 'A-004',
+        receptionId: 'R-004',
+        encounterKey: 'F001:E400',
+        scheduleKey: 'F001:S400',
+        name: '患者D',
+        department: '皮膚科',
+        lastActivatedAt: '2026-02-16T09:20:00.000Z',
+      }),
+    ];
+    seedPatientTabStorage(tabs);
+    seedChartsContext();
+
+    renderChartsPage();
+
+    await waitFor(() => {
+      expect(fetchCounters.karteId).toBe(3);
+    });
+    expect(fetchCounters.orderBundles).toBe(3);
+    expect(fetchCounters.prescriptionBundles).toBe(3);
+    expect(fetchCounters.diagnosisSummary).toBe(3);
+
+    const summaryEncounterKeys = vi
+      .mocked(fetchChartsMedicalSummary)
+      .mock.calls.map(([, options]) => options?.encounterKey);
+    expect(summaryEncounterKeys).toEqual(expect.arrayContaining(['F001:E100', 'F001:E200', 'F001:E300']));
+    expect(summaryEncounterKeys).not.toContain('F001:E400');
+    expect(vi.mocked(fetchKarteIdByPatientId)).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(fetchOrderBundlesWithPatientImportRecovery)).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(fetchPrescriptionOrderBundlesWithPatientImportRecovery)).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(fetchDiseasesWithPatientImportRecovery)).toHaveBeenCalledTimes(3);
   });
 
 });

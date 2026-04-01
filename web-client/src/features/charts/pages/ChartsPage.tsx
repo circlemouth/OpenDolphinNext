@@ -65,6 +65,7 @@ import {
   loadChartsEncounterContext,
   normalizeEncounterContext,
   normalizeEncounterId,
+  normalizeEncounterKey,
   normalizeVisitDate,
   normalizeRunId,
   parseChartsEncounterContext,
@@ -96,8 +97,10 @@ import {
 import {
   applyEncounterTabState,
   buildPatientTabKey,
+  hasChartsPatientTabHandoffKey,
   readChartsPatientTabsStorage,
   writeChartsPatientTabsStorage,
+  type ChartsPatientTab,
   type ChartsPatientTabsStorage,
 } from '../patientTabsStorage';
 import {
@@ -155,6 +158,12 @@ const formatBirthDateParts = (value?: string): { iso: string; era: string; displ
   return { iso, era, display: `${iso}（${era}）` };
 };
 
+const normalizeDisplayText = (value?: string | null): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
 const pickLatestOutpatientMeta = (pages: AppointmentPayload[]): AppointmentPayload | undefined => {
   if (pages.length === 0) return undefined;
   const toTimestamp = (value?: string): number => {
@@ -204,6 +213,17 @@ type UtilityPanelLayoutStorage = {
   version: 1;
   updatedAt: string;
   layout: UtilityPanelLayout;
+};
+
+const PATIENT_TAB_PREFETCH_LIMIT = 2;
+const PATIENT_TAB_PREFETCH_MEDICAL_SUMMARY_STALE_MS = 120_000;
+const PATIENT_TAB_PREFETCH_KARTE_ID_STALE_MS = 60_000;
+const PATIENT_TAB_PREFETCH_DATA_STALE_MS = 30_000;
+
+const resolvePatientTabActivityAt = (tab: ChartsPatientTab): number => {
+  const raw = tab.lastActivatedAt ?? tab.openedAt;
+  const parsed = raw ? Date.parse(raw) : Number.NEGATIVE_INFINITY;
+  return Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed;
 };
 
 const resolveUtilityPanelFallbackStorageKey = () =>
@@ -367,7 +387,7 @@ type EncounterExitGuardState = {
 
 type SoapSaveRequestState = {
   token: string;
-  reason: 'pause' | 'finish';
+  reason: 'pause' | 'finish' | 'tab-transition';
 };
 
 type SoapSaveRequestResult = {
@@ -377,6 +397,19 @@ type SoapSaveRequestResult = {
   serverSynced: boolean;
   localSaved: boolean;
   error?: string | null;
+};
+
+type TabGuardChoice = 'save' | 'discard' | 'cancel';
+type TabGuardState = {
+  action: 'switch' | 'close';
+  targetKey?: string;
+  targetLabel?: string;
+  patientName: string;
+  patientId?: string;
+  visitDate?: string;
+  dirtySources: DraftDirtySource[];
+  saveError?: string | null;
+  canSave: boolean;
 };
 
 const resolveUtilityVisualKind = (action: DockedUtilityAction | null): UtilityVisualKind => {
@@ -590,7 +623,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
   useEffect(() => {
     const patientId = normalizeEncounterId(encounterContext.patientId);
-    if (!patientId) return;
+    if (!patientId || !hasHandoffEncounterKey(encounterContext)) return;
     const visitDate = normalizeVisitDate(encounterContext.visitDate) ?? today;
     setPatientTabsState((prev) =>
       applyEncounterTabState(prev, {
@@ -676,13 +709,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   });
   const [auditEvents, setAuditEvents] = useState<AuditEventRecord[]>([]);
   const [lockState, setLockState] = useState<{ locked: boolean; reason?: string }>({ locked: false });
-  const [tabGuard, setTabGuard] = useState<
-    | null
-    | {
-        action: 'switch' | 'close';
-        targetKey?: string;
-      }
-  >(null);
+  const [tabGuard, setTabGuard] = useState<TabGuardState | null>(null);
   const suppressUrlContextSyncRef = useRef(false);
   const [reloadGuardOpen, setReloadGuardOpen] = useState(false);
   const isSystemAdmin = isSystemAdminRole(session.role);
@@ -820,7 +847,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     (next: OutpatientEncounterContext, options?: { name?: string; department?: string }) => {
       const normalizedNext = normalizeEncounterContext(next);
       const patientId = normalizedNext.patientId;
-      if (!patientId) return;
+      if (!patientId || !hasHandoffEncounterKey(normalizedNext)) return;
       const visitDate = normalizedNext.visitDate ?? today;
       const name = options?.name?.trim() || undefined;
       const department = options?.department?.trim() || undefined;
@@ -909,6 +936,40 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     [activePatientTabKey, chartsBasePath, navigate, patientTabs],
   );
 
+  const activePatientTab = useMemo(
+    () => patientTabs.find((tab) => tab.key === activePatientTabKey) ?? null,
+    [activePatientTabKey, patientTabs],
+  );
+  const hasPendingTabGuard = draftState.dirty || !soapSyncState.serverSynced || soapSyncState.isSaving;
+  const canSaveBeforeTabTransition = (draftState.dirtySources ?? []).every((source) => source === 'soap');
+  const requestTabGuard = useCallback(
+    (action: 'switch' | 'close', targetKey?: string) => {
+      const targetTab = targetKey ? patientTabs.find((tab) => tab.key === targetKey) : undefined;
+      setTabGuard({
+        action,
+        targetKey,
+        targetLabel: normalizeDisplayText(targetTab?.name) ?? (targetTab?.patientId ? `患者 ID:${targetTab.patientId}` : undefined),
+        patientName:
+          normalizeDisplayText(activePatientTab?.name) ??
+          (encounterContext.patientId ? `患者 ID:${encounterContext.patientId}` : '患者未選択'),
+        patientId: encounterContext.patientId,
+        visitDate: normalizeVisitDate(encounterContext.visitDate) ?? today,
+        dirtySources: draftState.dirtySources ?? [],
+        saveError: null,
+        canSave: canSaveBeforeTabTransition,
+      });
+    },
+    [
+      activePatientTab?.name,
+      canSaveBeforeTabTransition,
+      draftState.dirtySources,
+      encounterContext.patientId,
+      encounterContext.visitDate,
+      patientTabs,
+      today,
+    ],
+  );
+
   const requestSelectPatientTab = useCallback(
     (key: string) => {
       if (key === activePatientTabKey) return;
@@ -926,13 +987,13 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         });
         return;
       }
-      if (draftState.dirty) {
-        setTabGuard({ action: 'switch', targetKey: key });
+      if (hasPendingTabGuard) {
+        requestTabGuard('switch', key);
         return;
       }
       forceSelectPatientTab(key);
     },
-    [activePatientTabKey, draftState.dirty, forceSelectPatientTab, lockState.locked, lockState.reason],
+    [activePatientTabKey, forceSelectPatientTab, hasPendingTabGuard, lockState.locked, lockState.reason, requestTabGuard],
   );
 
   const requestClosePatientTab = useCallback(
@@ -957,13 +1018,13 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         });
         return;
       }
-      if (isActive && draftState.dirty) {
-        setTabGuard({ action: 'close', targetKey: key });
+      if (isActive && hasPendingTabGuard) {
+        requestTabGuard('close', key);
         return;
       }
       forceClosePatientTab(key);
     },
-    [activePatientTabKey, draftState.dirty, forceClosePatientTab, lockState.locked, lockState.reason],
+    [activePatientTabKey, forceClosePatientTab, hasPendingTabGuard, lockState.locked, lockState.reason, requestTabGuard],
   );
 
   useEffect(() => {
@@ -992,21 +1053,18 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     setTabGuard(null);
   }, []);
 
-  const handleTabGuardConfirm = useCallback(() => {
-    if (!tabGuard) return;
-    const { action, targetKey } = tabGuard;
-    setTabGuard(null);
-    setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }));
-    if (action === 'switch') {
+  const continueTabGuardTransition = useCallback(
+    (guard: TabGuardState) => {
+      const { action, targetKey } = guard;
       if (!targetKey) return;
-      forceSelectPatientTab(targetKey);
-      return;
-    }
-    if (action === 'close') {
-      if (!targetKey) return;
+      if (action === 'switch') {
+        forceSelectPatientTab(targetKey);
+        return;
+      }
       forceClosePatientTab(targetKey);
-    }
-  }, [forceClosePatientTab, forceSelectPatientTab, tabGuard]);
+    },
+    [forceClosePatientTab, forceSelectPatientTab],
+  );
 
   const requestReload = useCallback(() => {
     if (draftState.dirty) {
@@ -2237,6 +2295,144 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     staleTime: 30_000,
     retry: false,
   });
+  const patientTabsToPrefetch = useMemo(
+    () =>
+      patientTabs
+        .filter((tab) => tab.key !== activePatientTabKey && hasChartsPatientTabHandoffKey(tab))
+        .sort((left, right) => resolvePatientTabActivityAt(right) - resolvePatientTabActivityAt(left))
+        .slice(0, PATIENT_TAB_PREFETCH_LIMIT),
+    [activePatientTabKey, patientTabs],
+  );
+  const prefetchRunIdRef = useRef(0);
+  const prefetchPatientTabData = useCallback(
+    async (tab: ChartsPatientTab, runId: number) => {
+      const patientId = normalizeEncounterId(tab.patientId);
+      const visitDate = normalizeVisitDate(tab.visitDate) ?? today;
+      if (!patientId) return;
+      const shouldContinue = () => prefetchRunIdRef.current === runId;
+
+      const encounterKey = normalizeEncounterKey(tab.encounterKey);
+      if (encounterKey && shouldContinue()) {
+        await queryClient
+          .prefetchQuery({
+            queryKey: ['charts-medical-summary', encounterKey, chartsMasterSourcePolicy],
+            queryFn: (context) =>
+              fetchChartsMedicalSummary(context, {
+                encounterKey,
+                preferredSourceOverride,
+              }),
+            staleTime: PATIENT_TAB_PREFETCH_MEDICAL_SUMMARY_STALE_MS,
+          })
+          .catch(() => undefined);
+      }
+
+      if (!shouldContinue()) return;
+      const karteResult = await queryClient
+        .fetchQuery({
+          queryKey: ['charts-karte-id', patientId],
+          queryFn: async () => {
+            const result = await fetchKarteIdByPatientId({ patientId });
+            return { ok: result.ok, karteId: result.karteId ?? null, error: result.error };
+          },
+          staleTime: PATIENT_TAB_PREFETCH_KARTE_ID_STALE_MS,
+        })
+        .catch(() => null);
+
+      if (!shouldContinue()) return;
+      const orderResult = await queryClient
+        .fetchQuery({
+          queryKey: ['charts-order-bundles', patientId, visitDate],
+          queryFn: async () => {
+            try {
+              return await fetchOrderBundlesWithPatientImportRecovery({ patientId, from: visitDate });
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              return { ok: false as const, bundles: [] as OrderBundle[], message };
+            }
+          },
+          staleTime: PATIENT_TAB_PREFETCH_DATA_STALE_MS,
+          retry: false,
+        })
+        .catch(() => null);
+
+      if (!shouldContinue()) return;
+      await queryClient
+        .prefetchQuery({
+          queryKey: ['charts-diagnosis-summary', patientId, visitDate],
+          queryFn: async () => {
+            try {
+              return await fetchDiseasesWithPatientImportRecovery({
+                patientId,
+                from: visitDate,
+                to: visitDate,
+              });
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              return {
+                ok: false,
+                diseases: [],
+                message,
+                errorKind: 'http',
+                routeMismatch: false,
+                patientImportAttempted: false,
+              } satisfies DiseaseImportResponse;
+            }
+          },
+          staleTime: PATIENT_TAB_PREFETCH_DATA_STALE_MS,
+          retry: false,
+        })
+        .catch(() => undefined);
+
+      if (!shouldContinue()) return;
+      if (orderResult?.ok === true) {
+        await queryClient
+          .prefetchQuery({
+            queryKey: ['charts-prescription-bundles', patientId, visitDate],
+            queryFn: async () => {
+              try {
+                return await fetchPrescriptionOrderBundlesWithPatientImportRecovery({ patientId, from: visitDate });
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                return { ok: false as const, bundles: [] as OrderBundle[], message };
+              }
+            },
+            staleTime: PATIENT_TAB_PREFETCH_DATA_STALE_MS,
+            retry: false,
+          })
+          .catch(() => undefined);
+      }
+
+      if (!shouldContinue()) return;
+      const prefetchKarteId = karteResult?.ok ? karteResult.karteId : null;
+      if (prefetchKarteId) {
+        await queryClient
+          .prefetchQuery({
+            queryKey: ['charts-rp-history', prefetchKarteId, visitDate],
+            queryFn: () =>
+              fetchRpHistory({
+                karteId: prefetchKarteId,
+                fromDate: '2000-01-01',
+                toDate: visitDate,
+                lastOnly: true,
+              }),
+            staleTime: PATIENT_TAB_PREFETCH_KARTE_ID_STALE_MS,
+          })
+          .catch(() => undefined);
+      }
+    },
+    [chartsMasterSourcePolicy, preferredSourceOverride, queryClient, today],
+  );
+  useEffect(() => {
+    if (patientTabsToPrefetch.length === 0) return;
+    const runId = prefetchRunIdRef.current + 1;
+    prefetchRunIdRef.current = runId;
+    void (async () => {
+      for (const tab of patientTabsToPrefetch) {
+        if (prefetchRunIdRef.current !== runId) return;
+        await prefetchPatientTabData(tab, runId);
+      }
+    })();
+  }, [patientTabsToPrefetch, prefetchPatientTabData]);
   const rpEntries = rpHistoryQuery.data?.ok ? rpHistoryQuery.data.entries : [];
   const rpError = rpHistoryQuery.data && !rpHistoryQuery.data.ok ? rpHistoryQuery.data.error : undefined;
   const baseOrderBundles = orderBundleSummaryQuery.data?.ok ? orderBundleSummaryQuery.data.bundles : EMPTY_ORDER_BUNDLES;
@@ -2986,7 +3182,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   }, []);
 
   const requestSoapSaveForEncounterAction = useCallback(
-    (reason: 'pause' | 'finish') =>
+    (reason: 'pause' | 'finish' | 'tab-transition') =>
       new Promise<SoapSaveRequestResult>((resolve) => {
         if (soapSyncState.isSaving) {
           resolve({
@@ -3014,6 +3210,51 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     soapSaveResolverRef.current?.(result);
     soapSaveResolverRef.current = null;
   }, []);
+
+  const handleTabGuardChoice = useCallback(
+    async (choice: TabGuardChoice) => {
+      if (!tabGuard) return;
+      if (choice === 'cancel') {
+        setTabGuard(null);
+        return;
+      }
+      if (choice === 'discard') {
+        setTabGuard(null);
+        setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }));
+        continueTabGuardTransition(tabGuard);
+        return;
+      }
+      if (!tabGuard.canSave) {
+        setTabGuard((prev) =>
+          prev
+            ? {
+                ...prev,
+                saveError: 'この未保存内容は患者タブ切替前に自動保存できません。保存完了後に再実行してください。',
+              }
+            : prev,
+        );
+        return;
+      }
+
+      setTabGuard((prev) => (prev ? { ...prev, saveError: null } : prev));
+      const saveResult = await requestSoapSaveForEncounterAction('tab-transition');
+      if (!saveResult.ok || !saveResult.serverSynced) {
+        const label = tabGuard.action === 'switch' ? '患者切替' : '患者タブ終了';
+        const message = `${label}を中止しました。SOAP保存に失敗: ${saveResult.message}`;
+        setContextAlert({
+          tone: 'warning',
+          message,
+        });
+        setTabGuard((prev) => (prev ? { ...prev, saveError: saveResult.message } : prev));
+        return;
+      }
+
+      setTabGuard(null);
+      setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }));
+      continueTabGuardTransition(tabGuard);
+    },
+    [continueTabGuardTransition, requestSoapSaveForEncounterAction, tabGuard],
+  );
 
   const handleBeforeChartsAction = useCallback(
     async (action: 'start' | 'pause' | 'finish' | 'send' | 'draft' | 'cancel' | 'print') => {
@@ -4068,20 +4309,60 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       <FocusTrapDialog
         open={Boolean(tabGuard)}
         title="未保存の入力があります"
-        description="患者切替・タブ操作の前に、未保存ドラフトを破棄するかキャンセルしてください。"
+        description="患者切替・タブ操作の前に、保存して続行するか、破棄して続行するか、キャンセルするかを選択してください。"
         onClose={handleTabGuardCancel}
         testId="charts-tab-guard-dialog"
       >
         <section className="charts-tab-guard" aria-label="未保存ドラフト確認">
           <p className="charts-tab-guard__message">
-            未保存の入力があります（ドラフト未保存）。破棄して続行しますか？
+            未保存の入力があります。続行方法を選択してください。
           </p>
+          <dl className="charts-actions__send-confirm-list">
+            <div>
+              <dt>現在の患者</dt>
+              <dd>{tabGuard?.patientName ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>患者ID</dt>
+              <dd>{tabGuard?.patientId ?? '—'}</dd>
+            </div>
+            <div>
+              <dt>診療日</dt>
+              <dd>{tabGuard?.visitDate ?? '—'}</dd>
+            </div>
+            {tabGuard?.targetLabel ? (
+              <div>
+                <dt>{tabGuard.action === 'switch' ? '切替先' : '対象タブ'}</dt>
+                <dd>{tabGuard.targetLabel}</dd>
+              </div>
+            ) : null}
+            <div>
+              <dt>未保存要因</dt>
+              <dd>
+                {tabGuard && tabGuard.dirtySources.length > 0
+                  ? tabGuard.dirtySources.join(' / ')
+                  : !soapSyncState.serverSynced
+                    ? 'SOAPサーバ未反映'
+                    : soapSyncState.isSaving
+                      ? 'SOAP保存中'
+                      : 'SOAP未保存'}
+              </dd>
+            </div>
+          </dl>
+          {tabGuard?.saveError ? <p className="charts-tab-guard__message">{tabGuard.saveError}</p> : null}
           <div className="charts-tab-guard__actions" role="group" aria-label="未保存ドラフト操作">
-            <button type="button" onClick={handleTabGuardCancel}>
+            <button type="button" onClick={() => void handleTabGuardChoice('cancel')}>
               キャンセル
             </button>
-            <button type="button" className="charts-tab-guard__danger" onClick={handleTabGuardConfirm}>
-              破棄して続行
+            <button
+              type="button"
+              onClick={() => void handleTabGuardChoice('save')}
+              disabled={!tabGuard?.canSave || soapSyncState.isSaving}
+            >
+              保存して{tabGuard?.action === 'switch' ? '切替' : '閉じる'}
+            </button>
+            <button type="button" className="charts-tab-guard__danger" onClick={() => void handleTabGuardChoice('discard')}>
+              破棄して{tabGuard?.action === 'switch' ? '切替' : '閉じる'}
             </button>
           </div>
         </section>
