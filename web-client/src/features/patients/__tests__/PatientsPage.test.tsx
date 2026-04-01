@@ -383,6 +383,32 @@ describe('PatientsPage audit filters', () => {
   });
 });
 
+describe('PatientsPage canonical feedback', () => {
+  beforeEach(() => {
+    mockPatients({ missingMaster: true });
+    mockAuthFlags.fallbackUsed = false;
+    mockAuthFlags.dataSourceTransition = 'server';
+  });
+
+  afterEach(() => {
+    mockPatients();
+    mockAuthFlags.fallbackUsed = false;
+    mockAuthFlags.dataSourceTransition = 'server';
+  });
+
+  it('監査サマリに内部フラグ名をそのまま出さない', async () => {
+    const user = userEvent.setup();
+    renderPatientsPage();
+
+    await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
+
+    expect(screen.getAllByText(/ORCA 参照が不足しているため反映を停止中です/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/missingMaster=true/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/fallbackUsed=true/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/dataSourceTransition=/)).not.toBeInTheDocument();
+  });
+});
+
 describe('PatientsPage legacy ORCA tabs', () => {
   beforeEach(() => {
     localStorage.clear();

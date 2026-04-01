@@ -15,6 +15,8 @@
 ## 収録ファイル
 - `phase0_product_contract_and_copy_20260330.md`
   - quick win 実装前に auth 例外 matrix、redirect reason taxonomy、lost-context matrix、feedback copy、a11y minimum、unknown を固定した Phase 0 成果物。
+- `web_product_next_wave_instruction_20260330.md`
+  - quick win 後の次波で、BL-11 / BL-04 / BL-10 / BL-08 の実行順と完了条件を固定した指示書。
 - `codex_prompt_web_product_improvement_orchestrator_20260329.txt`
   - evidence pack と quick win 実装を統括する Codex 用プロンプト。
 - `chatgpt_prompt_phase0_product_contract_20260329.txt`

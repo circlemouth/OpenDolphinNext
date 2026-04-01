@@ -28,6 +28,7 @@ import { fetchOrcaReportPdf } from '../orcaReportApi';
 import { MISSING_MASTER_RECOVERY_NEXT_STEPS } from '../../shared/missingMasterRecovery';
 import { readStoredSession } from '../../../libs/session/storedSession';
 import type { StorageScope } from '../../../libs/session/storageScope';
+import { resolveUserSafeFetchFailure } from '../userSafeErrorCopy';
 
 type OutputMode = DocumentOutputMode;
 type OutputStatus = 'idle' | 'printing' | 'completed' | 'failed';
@@ -915,7 +916,7 @@ function ChartsReportPrintContent({ state, restoredAt, restoredFromSession, onCl
         <div className="charts-print__screen-only">
           <ToneBanner
             tone="error"
-            message={`PDFの取得に失敗しました: ${pdfError ?? '原因不明'}`}
+            message={resolveUserSafeFetchFailure('PDF', pdfError)}
             nextAction="再試行するか、ORCAの帳票設定を確認してください。"
             runId={state.meta.runId}
           />

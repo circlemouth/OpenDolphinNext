@@ -241,6 +241,24 @@ describe('DocumentCreatePanel', () => {
     expect(within(list).getByText('会社提出')).toBeInTheDocument();
   }, 15000);
 
+  it('文書履歴取得失敗時は raw detail ではなく canonical copy を表示する', async () => {
+    vi.mocked(fetchLetterList).mockResolvedValue({
+      ok: false,
+      status: 500,
+      error: 'HTTP 500 (/odletter/list/201)',
+      letters: [],
+    });
+
+    render(
+      <MemoryRouter>
+        <DocumentCreatePanel {...baseProps} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('文書履歴の取得に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
+    expect(screen.queryByText(/HTTP 500/)).not.toBeInTheDocument();
+  }, 15000);
+
   it('患者フィルタで選択患者のみがデフォルト表示される', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchLetterList).mockResolvedValue({

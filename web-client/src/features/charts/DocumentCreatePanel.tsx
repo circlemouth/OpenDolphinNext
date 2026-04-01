@@ -41,6 +41,7 @@ import {
   type LetterModulePayload,
   type LetterTextPayload,
 } from './letterApi';
+import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 
 export type DocumentCreatePanelMeta = {
   runId?: string;
@@ -848,7 +849,7 @@ export function DocumentCreatePanel({
     const listResult = await fetchLetterList({ karteId });
     if (isStaleRequest()) return;
     if (!listResult.ok) {
-      setHistoryError(listResult.error ?? `文書履歴の取得に失敗しました (HTTP ${listResult.status})`);
+      setHistoryError(resolveUserSafeFetchFailure('文書履歴', listResult.error));
       setIsHistoryLoading(false);
       setHistoryLoaded(true);
       return;

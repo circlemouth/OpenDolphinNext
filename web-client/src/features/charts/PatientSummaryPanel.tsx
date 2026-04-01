@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { resolveAriaLive } from '../../libs/observability/observability';
 
 import { fetchPatientFreeDocument, savePatientFreeDocument } from './patientFreeDocumentApi';
+import { resolveUserSafeFetchFailure, resolveUserSafeOperationFailure } from './userSafeErrorCopy';
 
 type PatientSummaryPanelProps = {
   patientId?: string;
@@ -98,11 +99,17 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
         void queryClient.invalidateQueries({ queryKey: ['charts-free-document', patientId] });
         return;
       }
-      setStatusNotice({ tone: 'error', message: `患者サマリの保存に失敗しました: ${result.error ?? 'unknown error'}` });
+      setStatusNotice({
+        tone: 'error',
+        message: `患者サマリの保存に失敗しました。${resolveUserSafeOperationFailure(result.error)}`,
+      });
     },
     onError: (error) => {
-      const message = error instanceof Error ? error.message : String(error);
-      setStatusNotice({ tone: 'error', message: `患者サマリの保存に失敗しました: ${message}` });
+      const detail = error instanceof Error ? error.message : String(error);
+      setStatusNotice({
+        tone: 'error',
+        message: `患者サマリの保存に失敗しました。${resolveUserSafeOperationFailure(detail)}`,
+      });
     },
   });
 
@@ -113,7 +120,10 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
   const isSaving = saveMutation.isPending;
   const canSave = !readOnly && !isSaving && dirty;
   const ariaLive = resolveAriaLive('info');
-  const saveError = saveMutation.data && !saveMutation.data.ok ? saveMutation.data.error ?? '保存に失敗しました。' : null;
+  const saveError =
+    saveMutation.data && !saveMutation.data.ok
+      ? `患者サマリの保存に失敗しました。${resolveUserSafeOperationFailure(saveMutation.data.error)}`
+      : null;
   const loadError =
     freeDocQuery.data && !freeDocQuery.data.ok ? freeDocQuery.data.error ?? `取得に失敗しました。(HTTP ${freeDocQuery.data.status})` : null;
 
@@ -144,7 +154,7 @@ export function PatientSummaryPanel({ patientId, readOnly = false, readOnlyReaso
         ) : null}
         {loadError ? (
           <p className="charts-free-doc__error" role="status" aria-live={ariaLive}>
-            取得に失敗しました: {loadError}
+            {resolveUserSafeFetchFailure('患者サマリ', loadError)}
           </p>
         ) : null}
         <textarea

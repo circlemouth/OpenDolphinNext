@@ -77,6 +77,7 @@ const SIDEBAR_WIDTH_DEFAULT = 380;
 const SIDEBAR_WIDTH_MIN = 320;
 const SIDEBAR_WIDTH_MAX = 520;
 const SIDEBAR_WIDTH_KEY_STEP = 16;
+const PATIENTS_SUPPORT_GUIDE = '必要に応じて障害情報コピーで RUN_ID を共有してください。';
 
 const DEFAULT_FILTER = {
   keyword: '',
@@ -121,6 +122,78 @@ const isSameFilter = (left: typeof DEFAULT_FILTER, right: typeof DEFAULT_FILTER)
   left.department === right.department &&
   left.physician === right.physician &&
   left.paymentMode === right.paymentMode;
+
+const buildPatientEditBlockReason = (
+  kind: 'missing_master' | 'fallback_used' | 'not_server_route',
+  transition?: DataSourceTransition,
+) => {
+  if (kind === 'missing_master') {
+    return `ORCA 参照が不足しているため編集を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`;
+  }
+  if (kind === 'fallback_used') {
+    return `暫定データ表示中のため編集を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`;
+  }
+  if (transition && transition !== 'server') {
+    return '最新データを確認できる画面へ戻ってから編集してください。';
+  }
+  return '現在の状態では編集できません。';
+};
+
+const buildPatientsOrcaStatus = (options: {
+  missingMaster?: boolean;
+  fallbackUsed?: boolean;
+  dataSourceTransition?: DataSourceTransition;
+  lastSaveSucceeded?: boolean;
+  lastSaveFailed?: boolean;
+}) => {
+  if (options.missingMaster) {
+    return {
+      state: '反映停止',
+      detail: `ORCA 参照が不足しているため反映を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
+    };
+  }
+  if (options.fallbackUsed) {
+    return {
+      state: '反映停止',
+      detail: `暫定データ表示中のため反映を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
+    };
+  }
+  if ((options.dataSourceTransition ?? 'server') !== 'server') {
+    return {
+      state: '反映停止',
+      detail: '最新データを確認できる画面へ戻ってから反映状況を確認してください。',
+    };
+  }
+  if (options.lastSaveFailed) {
+    return {
+      state: '反映失敗',
+      detail: '保存に失敗したため ORCA 反映は完了していません。時間をおいて再試行してください。',
+    };
+  }
+  if (options.lastSaveSucceeded) {
+    return {
+      state: '反映完了',
+      detail: '保存後の反映を受け付けました。必要なら監査ログで結果を確認してください。',
+    };
+  }
+  return {
+    state: '反映可能',
+    detail: '保存後に ORCA へ反映できます。',
+  };
+};
+
+const buildPatientsToneMessage = (payload: ChartTonePayload) => {
+  if (payload.missingMaster) {
+    return `ORCA 参照が不足しています。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してから再開してください。`;
+  }
+  if (payload.cacheHit) {
+    return '前回取得した参照情報を表示しています。必要なら再取得してください。';
+  }
+  if (payload.dataSourceTransition !== 'server') {
+    return '最新データ確認前の参照状態です。必要なら再取得してください。';
+  }
+  return '最新データを確認しながら患者情報を編集できます。';
+};
 
 const pickString = (value: unknown): string | undefined => (typeof value === 'string' && value.length > 0 ? value : undefined);
 
@@ -784,16 +857,16 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     const reasons: string[] = [];
     const keys: string[] = [];
     if (resolvedMissingMaster) {
-      reasons.push('missingMaster=true: ORCAマスタ未取得のため編集不可');
+      reasons.push(buildPatientEditBlockReason('missing_master'));
       keys.push('missing_master');
     }
     if (resolvedFallbackUsed) {
-      reasons.push('fallbackUsed=true: フォールバックデータのため編集不可');
+      reasons.push(buildPatientEditBlockReason('fallback_used'));
       keys.push('fallback_used');
     }
     if ((resolvedTransition ?? 'server') !== 'server') {
       const transition = resolvedTransition ?? 'unknown';
-      reasons.push(`dataSourceTransition=${transition}: 非serverルートのため編集不可`);
+      reasons.push(buildPatientEditBlockReason('not_server_route', transition));
       keys.push(`data_source_transition:${transition}`);
     }
     return { blockReasons: reasons, blockReasonKeys: keys };
@@ -816,7 +889,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         return;
       }
       enqueue({ tone: 'error', message: '住所補完に失敗しました。郵便番号を確認して再試行してください。' });
-    } catch (_error) {
+    } catch {
       enqueue({ tone: 'error', message: '住所補完に失敗しました。時間をおいて再試行してください。' });
     } finally {
       setOrcaAddressPending(false);
@@ -843,7 +916,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     cacheHit: resolvedCacheHit,
     dataSourceTransition: resolvedTransition,
   };
-  const { tone, message: toneMessage } = getChartToneDetails(tonePayload);
+  const { tone } = getChartToneDetails(tonePayload);
+  const toneMessage = buildPatientsToneMessage(tonePayload);
   const operationalStatus = !patientsErrorContext && masterOk ? 'OK' : '要注意';
 
   const unlinkedCounts = useMemo(() => {
@@ -1138,36 +1212,22 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   );
 
   const currentOrcaStatus = useMemo(() => {
-    if (missingMasterFlag) {
-      return { state: '反映停止', detail: `missingMaster=true のため ORCA 反映を停止中。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。` };
-    }
-    if (fallbackUsedFlag) {
-      return { state: '反映停止', detail: `fallbackUsed=true のため ORCA 反映を停止中。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。` };
-    }
-    if ((resolvedTransition ?? 'server') !== 'server') {
-      return { state: '反映停止', detail: `dataSourceTransition=${resolvedTransition ?? 'unknown'} のため ORCA 反映を停止中` };
-    }
-    return { state: '反映可能', detail: 'server ルートで ORCA 反映可能' };
+    return buildPatientsOrcaStatus({
+      missingMaster: missingMasterFlag,
+      fallbackUsed: fallbackUsedFlag,
+      dataSourceTransition: resolvedTransition,
+    });
   }, [fallbackUsedFlag, missingMasterFlag, resolvedTransition]);
 
   const lastSaveOrcaStatus = useMemo(() => {
-    if (!lastSaveResult) return { state: '未送信', detail: '保存操作がまだありません' };
-    if (lastSaveResult.missingMaster) {
-      return { state: '反映停止', detail: `missingMaster=true のため ORCA 反映を停止。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。` };
-    }
-    if (lastSaveResult.fallbackUsed) {
-      return { state: '反映停止', detail: `fallbackUsed=true のため ORCA 反映を停止。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。` };
-    }
-    if ((lastSaveResult.dataSourceTransition ?? 'server') !== 'server') {
-      return { state: '反映停止', detail: `dataSourceTransition=${lastSaveResult.dataSourceTransition ?? 'unknown'} のため ORCA 反映を停止` };
-    }
-    if (!lastSaveResult.ok) {
-      return { state: '反映失敗', detail: lastSaveResult.message ?? '保存に失敗しました' };
-    }
-    return {
-      state: '反映完了',
-      detail: `status=${lastSaveResult.status ?? 'unknown'} / endpoint=${lastSaveResult.sourcePath ?? 'unknown'}`,
-    };
+    if (!lastSaveResult) return { state: '未送信', detail: '保存操作はまだありません。' };
+    return buildPatientsOrcaStatus({
+      missingMaster: lastSaveResult.missingMaster,
+      fallbackUsed: lastSaveResult.fallbackUsed,
+      dataSourceTransition: lastSaveResult.dataSourceTransition,
+      lastSaveSucceeded: lastSaveResult.ok,
+      lastSaveFailed: !lastSaveResult.ok,
+    });
   }, [lastSaveResult]);
 
   const resolveAuditPatientId = (record: AuditEventRecord) => {
@@ -2650,11 +2710,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <div className="patients-page__audit-card">
                 <span>保存結果</span>
                 <strong>{lastSaveResult ? (lastSaveResult.ok ? '成功' : '失敗') : '未送信'}</strong>
-                <small>
-                  runId={lastSaveResult?.runId ?? resolvedRunId ?? '—'} ／ status={lastSaveResult?.status ?? '—'} ／ endpoint=
-                  {lastSaveResult?.sourcePath ?? '—'}
-                </small>
-                {lastSaveResult?.message ? <small>message: {lastSaveResult.message}</small> : null}
+                <small>{PATIENTS_SUPPORT_GUIDE}</small>
+                {lastSaveResult?.message ? <small>{lastSaveResult.ok ? '保存処理は完了しました。' : '保存に失敗しました。時間をおいて再試行してください。'}</small> : null}
               </div>
               <div className="patients-page__audit-card">
                 <span>ORCA反映</span>

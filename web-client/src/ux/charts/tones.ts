@@ -86,11 +86,11 @@ export function getChartToneDetails(payload: ChartTonePayload): ChartToneDetails
 
   let message: string;
   if (payload.missingMaster) {
-    message = `tone=server ｜ missingMaster=true ｜ ${MISSING_MASTER_RECOVERY_NEXT_ACTION}`;
+    message = `ORCA 参照が不足しています。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`;
   } else if (payload.cacheHit) {
-    message = 'tone=info ｜ cacheHit=true ｜ マスタキャッシュ命中、ORCA再送可能';
+    message = '前回取得した参照情報を表示しています。必要なら再取得してください。';
   } else {
-    message = `${transitionMeta.label} ｜ tone=server carry over`;
+    message = '最新データを確認しながら操作してください。';
   }
 
   return { tone, message, transitionMeta };

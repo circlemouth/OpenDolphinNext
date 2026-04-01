@@ -9,16 +9,19 @@ unknown を無理に埋めないために使ってください。
 
 | 論点 | なぜ unknown か | 影響 | 次に何を確認するか | 確認先候補 | 分類 |
 | --- | --- | --- | --- | --- | --- |
-| auth guard の screen-level 挙動 | docs は inventory だけで behavior を書いていない | back/redirect acceptance を固定できない | route×guard×trigger×landing | current repo guard 実装 / manual route walk | code-confirmation |
-| route 別 minimal encounter context schema | docs は minimal keys までで止まっている | patient/encounter bar を fixed にできない | Charts / Patients / Mobile Images ごとの必要項目 | route / handoff 実装 | code-confirmation |
-| Patients の入力 source 優先度 | patient-context docs が unknown と明記 | re-entry UX を推測で設計してしまう | source 一覧と優先度 | current repo 実装 / docs follow-up | code-confirmation |
-| Mobile Images の入力 source 優先度 | docs が unknown と明記 | fallback copy の acceptance が曖昧 | source 一覧と優先度 | current repo 実装 / docs follow-up | code-confirmation |
-| admin の current UI detail | ui docs が intentionally thin | IA 改善を画面詳細まで落とせない | section hierarchy / naming / sub-navigation | current repo 実装 / manual inventory | code-confirmation |
-| auto-sync / auto-action の現況 | docs に記述がない | visibility/override 設計が空中戦になる | 発火条件、visible state、user control | current repo 実装 / walkthrough | code-confirmation |
-| comparison / latest-follow の現況 | docs に契約がない | Charts 主従面設計の粒度が定まらない | 比較系 UI が主面か補助面か | current repo 実装 / current design notes | code-confirmation |
-| `aria-live` / focus / keyboard rules | feedback-spec で unknown | a11y を後追い修正することになる | alert/badge/step-change の focus/live policy | docs follow-up / current repo 実装 | docs + code-confirmation |
+| auth guard の task-specific coverage 差分 | task-oriented matrix の主要行は code-confirm できたが、`screenKey` 粒度外の direct navigate / browser history 差分は未整理 | unsaved-change / task resume acceptance の端を固定できない | screenKey 直外の遷移経路 | current repo guard 実装 / manual route walk | code-confirmation |
+| route 別 minimal encounter context の app-wide schema | Charts / Patients / Mobile Images の minimal schema は docs 昇格済みだが、print / admin / debug を含む全体 schema は未定義 | patient/encounter bar を app-wide fixed にできない | 非主面ルートで必要な handoff keys | route / handoff 実装 | code-confirmation |
+| auto-sync / auto-action の cross-surface policy | surface 別 inventory は取れたが、visibility / override を横断で固定する証拠がない | policy を推測で新設してしまう | 共通 visibility / override contract の有無 | current repo 実装 / walkthrough | code-confirmation |
+| app-wide `aria-live` / focus / keyboard rules | touched surface の minimum は docs 化したが、app-wide 細則は未固定 | a11y を横断設計で誤って固定する | 非対象 surface の focus/live policy | docs follow-up / current repo 実装 | docs + code-confirmation |
 | pane geometry / narrow layout order | ui docs が unknown と明記 | chart の読みやすさと mobile/narrow 設計が未固定 | narrow 時の stacking 優先順 | current repo 実装 / screenshot audit | code-confirmation |
 | logout partial success の現 user-visible 表現 | security 原則はあるが copy 未固定 | auth-failure との誤認が残る | unsupported / failure 時の current copy | current repo 実装 / docs follow-up | docs + code-confirmation |
+
+### 1-1. この周回で unknown から外したもの
+
+- comparison / latest-follow の current behavior:
+  normal runtime 主面は `SoapNotePanel`、補助 surface は `PastHubPanel` と `ChartsActionBar` の再読込系、`DocumentTimeline` と `MedicalOutpatientRecordPanel` は debug-only まで code-confirm 済み。
+- active runtime の raw-detail inventory:
+  `PatientsPage`、`ChartsActionBar`、`ReceptionPage` の action/result feedback は current repo で canonical copy に同期済み。残る `ChartsPage` order-set notice、`ReceptionPage` search/master notice、administration operator surface は backlog であり、unknown ではなく residual regression inventory として扱う。
 
 ---
 
@@ -64,12 +67,12 @@ unknown を無理に埋めないために使ってください。
 ### まず閉じるべきもの
 1. GitHub required checks
 2. production secrets / config
-3. auth guard / redirect matrix
-4. Patients / Mobile Images / Administration の inventory
-5. a11y / keyboard / narrow layout の最小契約
+3. auth guard の task-specific coverage 差分
+4. auto-sync / auto-action の cross-surface policy
+5. a11y / keyboard / narrow layout の app-wide 追加証拠
 
 ### 後でもよいもの
-- comparison / latest-follow の詳細
+- comparison / latest-follow の将来 IA
 - pane geometry の細部
 - logout partial success の見た目差
 - `clientUuid` の説明詳細
@@ -92,10 +95,11 @@ unknown を見つけた時は、すぐ実装タスクにしないでください
 
 この handoff 作成時点では、次は intentionally unknown のままで構いません。
 
-- Patients / Mobile Images の detail UI
-- Administration の detail UI
-- a11y の細則
+- comparison / latest-follow の将来 IA
+- auto-sync / auto-action の cross-surface policy
+- a11y の app-wide 細則
 - pane geometry の細部
+- task-specific guard coverage 差分
 - `runtime-ready-smoke.mjs` の screen-level coverage 詳細
 - `setup-modernized-env.sh` 背景起動問題の原因
 

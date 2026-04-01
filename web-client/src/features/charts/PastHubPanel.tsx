@@ -7,6 +7,7 @@ import { normalizeVisitDate } from './encounterContext';
 import type { LetterModulePayload } from './letterApi';
 import { fetchOrderBundles, type OrderBundle } from './orderBundleApi';
 import { SOAP_SECTION_LABELS, formatSoapAuthoredAt, getLatestSoapEntries, type SoapEntry, type SoapSectionKey } from './soapNote';
+import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 
 export type PastHubOrderEntity =
   | 'medOrder'
@@ -415,7 +416,7 @@ export function PastHubPanel({
 
                         {bundlesQuery.data && !bundlesQuery.data.ok ? (
                           <p className="charts-past-hub__hint" role="status">
-                            オーダー取得に失敗しました: {bundlesQuery.data.message ?? 'unknown error'}
+                            {resolveUserSafeFetchFailure('オーダー情報', bundlesQuery.data.message)}
                           </p>
                         ) : bundlesForDay.length === 0 ? (
                           <p className="charts-past-hub__hint" role="status">

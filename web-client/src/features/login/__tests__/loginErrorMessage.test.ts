@@ -147,4 +147,27 @@ describe('resolveLoginFailureMessage', () => {
 
     expect(message).toBe(AUTH_COPY.securityFailure);
   });
+
+  it('does not expose backend message from generic 4xx payload', () => {
+    const message = resolveLoginFailureMessage({
+      status: 400,
+      bodyText: JSON.stringify({
+        message: 'oracle jdbc authentication failed at backend-node-3',
+      }),
+    });
+
+    expect(message).toBe(AUTH_COPY.authenticationFailed);
+    expect(message).not.toContain('backend-node-3');
+    expect(message).not.toContain('oracle');
+  });
+
+  it('does not expose raw statusText for generic HTTP failure', () => {
+    const message = resolveLoginFailureMessage({
+      status: 418,
+      statusText: 'Upstream Panic',
+    });
+
+    expect(message).toBe(AUTH_COPY.authenticationFailed);
+    expect(message).not.toContain('Upstream Panic');
+  });
 });

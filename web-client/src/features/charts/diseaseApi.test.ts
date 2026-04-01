@@ -122,7 +122,8 @@ describe('diseaseApi', () => {
     expect(result.errorKind).toBe('route_not_found');
     expect(result.routeMismatch).toBe(true);
     expect(result.patientImportAttempted).toBe(true);
-    expect(result.message).toContain('経路不一致');
+    expect(result.message).toContain('利用可能な画面からやり直してください');
+    expect(result.message).not.toContain('経路不一致');
   });
 
   it('resolves diagnosis code by exact ORCA disease name match', async () => {

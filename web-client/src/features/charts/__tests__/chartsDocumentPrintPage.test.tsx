@@ -5,11 +5,20 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 
 import { ChartsDocumentPrintPage } from '../pages/ChartsDocumentPrintPage';
 import type { DocumentPrintPreviewState } from '../print/documentPrintPreviewStorage';
+import type { ReportPrintPreviewState } from '../print/printPreviewStorage';
 import { hasStoredAuth } from '../../../libs/http/httpClient';
+import { fetchOrcaReportPdf } from '../orcaReportApi';
 
 vi.mock('../../../libs/http/httpClient', () => ({
   hasStoredAuth: vi.fn(),
 }));
+vi.mock('../orcaReportApi', async () => {
+  const actual = await vi.importActual<typeof import('../orcaReportApi')>('../orcaReportApi');
+  return {
+    ...actual,
+    fetchOrcaReportPdf: vi.fn(),
+  };
+});
 
 vi.mock('../audit', () => ({
   recordChartsAuditEvent: vi.fn(),
@@ -70,6 +79,18 @@ const baseState: DocumentPrintPreviewState = {
   facilityId: 'FAC-001',
 };
 
+const baseReportState: ReportPrintPreviewState = {
+  reportType: 'invoicereceipt',
+  reportLabel: '請求書兼領収書',
+  dataId: 'DATA-001',
+  patientId: 'P-001',
+  appointmentId: 'APPT-001',
+  requestedAt: new Date('2025-12-29T08:00:00Z').toISOString(),
+  meta: baseState.meta,
+  actor: '0001:doctor',
+  facilityId: 'FAC-001',
+};
+
 type DocumentPrintOverrides = Partial<Omit<DocumentPrintPreviewState, 'document' | 'meta'>> & {
   document?: Partial<DocumentPrintPreviewState['document']>;
   meta?: Partial<DocumentPrintPreviewState['meta']>;
@@ -81,6 +102,23 @@ const buildRouter = (stateOverrides: DocumentPrintOverrides = {}) => {
     ...stateOverrides,
     document: { ...baseState.document, ...(stateOverrides.document ?? {}) },
     meta: { ...baseState.meta, ...(stateOverrides.meta ?? {}) },
+  };
+  return createMemoryRouter(
+    [
+      {
+        path: '/charts/print/document',
+        element: <ChartsDocumentPrintPage />,
+      },
+    ],
+    { initialEntries: [{ pathname: '/charts/print/document', state }] },
+  );
+};
+
+const buildReportRouter = (stateOverrides: Partial<ReportPrintPreviewState> = {}) => {
+  const state = {
+    ...baseReportState,
+    ...stateOverrides,
+    meta: { ...baseReportState.meta, ...(stateOverrides.meta ?? {}) },
   };
   return createMemoryRouter(
     [
@@ -107,6 +145,11 @@ beforeEach(() => {
     writable: true,
   });
   setAuth(true);
+  vi.mocked(fetchOrcaReportPdf).mockResolvedValue({
+    ok: true,
+    status: 200,
+    pdfBlob: new Blob(['%PDF-1.7'], { type: 'application/pdf' }),
+  });
 });
 
 afterEach(() => {
@@ -121,7 +164,7 @@ afterEach(() => {
 
 describe('ChartsDocumentPrintPage', () => {
   it('出力前確認モーダルの表示/キャンセル/確定ができる', async () => {
-    const router = buildRouter();
+    const router = buildRouter({ initialOutputMode: 'pdf' });
     render(<RouterProvider router={router} />);
     const user = userEvent.setup();
 
@@ -151,7 +194,7 @@ describe('ChartsDocumentPrintPage', () => {
 
   it('権限不足で出力ブロック表示が出る', () => {
     setAuth(false);
-    const router = buildRouter();
+    const router = buildRouter({ initialOutputMode: 'pdf' });
     render(<RouterProvider router={router} />);
 
     expect(screen.getByRole('button', { name: '印刷' })).toBeDisabled();
@@ -179,5 +222,19 @@ describe('ChartsDocumentPrintPage', () => {
     render(<RouterProvider router={router} />);
 
     expect(screen.getByRole('dialog', { name: '出力の最終確認' })).toBeInTheDocument();
+  });
+
+  it('PDF取得失敗時は raw detail ではなく canonical copy を表示する', async () => {
+    vi.mocked(fetchOrcaReportPdf).mockResolvedValue({
+      ok: false,
+      status: 500,
+      error: 'HTTP 500 /blobapi/DATA-001 traceId=trace-raw',
+    });
+
+    const router = buildReportRouter();
+    render(<RouterProvider router={router} />);
+
+    expect(await screen.findByText(/PDFの取得に失敗しました。時間をおいて再試行してください。/)).toBeInTheDocument();
+    expect(screen.queryByText(/traceId=trace-raw/)).not.toBeInTheDocument();
   });
 });

@@ -9,6 +9,7 @@ import { logAuditEvent } from './libs/audit/auditLogger';
 import {
   AUTH_COPY,
   resolveLoginFailure,
+  resolveUnexpectedLoginErrorMessage,
   type LoginFailureResolution,
 } from './features/login/loginErrorMessage';
 import { consumeLoginNotice, resolveLoginNoticeMessage } from './features/login/loginRedirect';
@@ -388,7 +389,7 @@ export const LoginScreen = ({
       });
       onLoginSuccess?.(outcome.result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'ログインに失敗しました。';
+      const message = resolveUnexpectedLoginErrorMessage(error);
       setFeedback(message);
       setFeedbackTone('error');
       setStatus('error');
@@ -490,7 +491,7 @@ export const LoginScreen = ({
       });
       onLoginSuccess?.(outcome.result);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '二要素認証に失敗しました。';
+      const message = resolveUnexpectedLoginErrorMessage(error);
       setFeedback(message);
       setFeedbackTone('error');
       setStatus('error');

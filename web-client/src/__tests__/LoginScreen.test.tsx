@@ -284,6 +284,21 @@ describe('LoginScreen', () => {
     expect(screen.getByText(AUTH_COPY.factor2Cancelled)).toBeInTheDocument();
   });
 
+  it('unexpected fetch error でも raw internal detail を出さず canonical copy に寄せる', async () => {
+    vi.mocked(httpFetch).mockRejectedValueOnce(new Error('backend-node-3 connection refused'));
+
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await user.type(screen.getByLabelText('施設ID'), 'F001');
+    await user.type(screen.getByLabelText('ユーザーID'), 'doctor01');
+    await user.type(screen.getByLabelText('パスワード'), 'Secret123!');
+    await user.click(screen.getByRole('button', { name: 'ログイン' }));
+
+    expect(await screen.findByText('ログインに失敗しました。通信状態を確認して再試行してください。')).toBeInTheDocument();
+    expect(screen.queryByText(/backend-node-3/)).not.toBeInTheDocument();
+  });
+
   it('initialNotice と destinationSummary を login 画面に表示する', () => {
     render(
       <LoginScreen

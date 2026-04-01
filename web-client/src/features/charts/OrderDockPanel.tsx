@@ -33,6 +33,7 @@ import {
   type OrderDetailDisplayViewModel,
 } from './orderDetailDisplayViewModel';
 import { normalizeInline, resolvePrescriptionTiming, stripLeadingCode } from './orderDetailFormatters';
+import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 
 type TreatmentOrderEntity = 'treatmentOrder' | 'generalOrder' | 'surgeryOrder' | 'otherOrder';
 type TestOrderEntity = 'testOrder' | 'physiologyOrder' | 'bacteriaOrder' | 'radiologyOrder';
@@ -1701,7 +1702,7 @@ export function OrderDockPanel(props: {
 
       {notice ? <div className={`order-dock__notice order-dock__notice--${notice.tone}`}>{notice.message}</div> : null}
       {orderBundlesLoading ? <p className="order-dock__empty">オーダー情報を取得しています...</p> : null}
-      {orderBundlesError ? <p className="order-dock__empty">オーダー情報の取得に失敗しました: {orderBundlesError}</p> : null}
+      {orderBundlesError ? <p className="order-dock__empty">{resolveUserSafeFetchFailure('オーダー情報', orderBundlesError)}</p> : null}
       {!orderBundlesLoading && !orderBundlesError && (hasVisibleOrders || activeEntity) ? (
         <div className="order-dock__groups">{sortedVisibleGroupBundles.map(renderGroup)}</div>
       ) : null}
@@ -1712,7 +1713,7 @@ export function OrderDockPanel(props: {
           {rpHistoryLoading ? (
             <p className="order-dock__empty">処方履歴を取得しています...</p>
           ) : rpHistoryError ? (
-            <p className="order-dock__empty">処方履歴の取得に失敗しました: {rpHistoryError}</p>
+            <p className="order-dock__empty">{resolveUserSafeFetchFailure('処方履歴', rpHistoryError)}</p>
           ) : prescriptionDrugs.length === 0 ? (
             <p className="order-dock__empty">直近の処方履歴はありません。</p>
           ) : (

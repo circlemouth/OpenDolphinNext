@@ -35,8 +35,9 @@ const buildErrorMessage = (status: number, error?: string, errorCode?: string) =
   if (errorCode === 'feature_disabled' || status === 404) return FEATURE_DISABLED_MESSAGE;
   if (status === 413) return '画像サイズが大きすぎます（容量超過: 413）。小さい画像で再試行してください。';
   if (status === 415) return '対応していない画像形式です（415）。jpg/png などで再試行してください。';
+  if (status === 401 || status === 403) return 'ログイン状態を確認できませんでした。再ログインしてからやり直してください。';
   if (status === 0 || error === 'network_error') return '通信に失敗しました。電波状況を確認して再試行してください。';
-  return `送信に失敗しました（${error ?? `HTTP ${status}`}）。`;
+  return '送信に失敗しました。時間をおいて再試行してください。';
 };
 
 const normalizePatientId = (value?: string | null) => {
@@ -83,6 +84,8 @@ export function MobileImagesUploadPage() {
   });
   const [listItems, setListItems] = useState<PatientImageListItem[]>([]);
   const lastAttemptRef = useRef<{ patientId: string; file: File } | null>(null);
+  const captureInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!resolvedPatientId) return;
@@ -152,6 +155,20 @@ export function MobileImagesUploadPage() {
     },
     [],
   );
+
+  const openCapturePicker = useCallback(() => {
+    const input = captureInputRef.current;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }, []);
+
+  const openFilePicker = useCallback(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }, []);
 
   const handleSend = useCallback(async () => {
     if (!patientId || !selectedFile) return;
@@ -279,7 +296,8 @@ export function MobileImagesUploadPage() {
         <h2 style={{ margin: 0, fontSize: '1.1rem' }}>2) 撮影 / アップロード</h2>
 
         <div style={{ display: 'grid', gap: '0.6rem' }}>
-          <label
+          <button
+            type="button"
             style={{
               display: 'grid',
               placeItems: 'center',
@@ -291,24 +309,24 @@ export function MobileImagesUploadPage() {
               fontSize: '1.05rem',
               border: '1px solid rgba(0,0,0,0.08)',
             }}
+            disabled={!canPickFile}
+            onClick={openCapturePicker}
           >
             撮影して送る
-            <input
-              data-test-id="mobile-image-capture-input"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              disabled={!canPickFile}
-              style={{ position: 'absolute', left: -9999, width: 1, height: 1 }}
-              onChange={(event) => handleFilePicked(event.target.files?.[0] ?? null)}
-              onClick={(event) => {
-                const input = event.currentTarget;
-                input.value = '';
-              }}
-            />
-          </label>
+          </button>
+          <input
+            ref={captureInputRef}
+            data-test-id="mobile-image-capture-input"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            disabled={!canPickFile}
+            style={{ display: 'none' }}
+            onChange={(event) => handleFilePicked(event.target.files?.[0] ?? null)}
+          />
 
-          <label
+          <button
+            type="button"
             style={{
               display: 'grid',
               placeItems: 'center',
@@ -320,21 +338,20 @@ export function MobileImagesUploadPage() {
               fontSize: '1.05rem',
               border: '1px solid rgba(0,0,0,0.08)',
             }}
+            disabled={!canPickFile}
+            onClick={openFilePicker}
           >
             写真を選んで送る
-            <input
-              data-test-id="mobile-image-file-input"
-              type="file"
-              accept="image/*"
-              disabled={!canPickFile}
-              style={{ position: 'absolute', left: -9999, width: 1, height: 1 }}
-              onChange={(event) => handleFilePicked(event.target.files?.[0] ?? null)}
-              onClick={(event) => {
-                const input = event.currentTarget;
-                input.value = '';
-              }}
-            />
-          </label>
+          </button>
+          <input
+            ref={fileInputRef}
+            data-test-id="mobile-image-file-input"
+            type="file"
+            accept="image/*"
+            disabled={!canPickFile}
+            style={{ display: 'none' }}
+            onChange={(event) => handleFilePicked(event.target.files?.[0] ?? null)}
+          />
         </div>
 
         {selectedFile ? (
@@ -414,11 +431,6 @@ export function MobileImagesUploadPage() {
           ) : null}
         </div>
 
-        {lastError ? (
-          <div style={{ fontSize: '0.85rem', opacity: 0.75 }}>
-            debug: status={lastError.status} error={lastError.error ?? '―'}
-          </div>
-        ) : null}
       </section>
 
       <section

@@ -36,7 +36,9 @@
 - `POST /session/login/factor2`
 - 6 桁コードを送る
 - factor2 は `LoginScreen` 内の同一 surface 切替
-- pending session の期限切れ、試行上限到達、cancel 時は credentials step に戻る
+- pending session の期限切れ、session missing、cancel 時は credentials step に戻る
+- `invalid` は factor2 surface に残る
+- `429` は current step に留まり待機文言を出す
 - reload 後に pending factor2 state は復元しない
 
 ### 2-4. 着地
@@ -44,6 +46,8 @@
 - invalid / empty の `returnTo` は `/f/:facilityId/reception`
 - login 完了時の主な着地元は `location.state.from`
 - unauthenticated access と session expiry は `/login` に `replace`
+- deep-link scrub は login 前ではなく sensitive route 到達後に行う
+- admin 権限不足は `/login` へ飛ばさず facility-scoped denial surface に留める
 
 ### 2-5. logout
 - logout は cleanup 優先
@@ -55,7 +59,7 @@
   4. `/login` へ `replace`
 
 ### 2-6. unknown
-- auth guard の screen 単位の挙動
+- unsaved-changes dialog を含む task-oriented guard matrix
 - `clientUuid` の lifecycle 詳細
 - 2FA の backup code / trusted device / recovery flow の有無
 
@@ -72,8 +76,11 @@
 
 ### 3-2. source of truth
 - authoritative source は `location.state`
-- 実解決順:
-  `location.state -> URL scrub 後に残る情報 -> returnTo 由来 -> volatile`
+- route 別の解決順は current route 実装に従う
+- Patients:
+  `location.state` top-level -> `location.state.encounter` -> volatile encounter
+- Mobile Images:
+  `query patientId` -> `location.state.patientId` -> deep link volatile context
 
 ### 3-3. minimal encounter context
 docs に置いてよい最小項目:
@@ -85,6 +92,8 @@ docs に置いてよい最小項目:
 - `visitDate`
 
 Charts handoff では `scheduleKey` または `encounterKey` が必要
+- Patients は `patientId` 中心で `appointmentId / receptionId / visitDate` を読む
+- Mobile Images は `patientId` のみで成立する
 
 ### 3-4. fallback
 - Charts: `/f/:facilityId/charts` に戻し、Reception から再選択を案内
@@ -92,9 +101,7 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 - Mobile Images: `from=reception` / `from=patients` を優先し、既定は `/f/:facilityId/charts`
 
 ### 3-5. unknown
-- route 別 handoff state の詳細 schema
-- Patients / Mobile Images の全入力 source の優先度細則
-- route 別 minimal encounter context schema
+- print / administration を含む app-wide handoff state の詳細 schema
 
 ---
 
@@ -113,8 +120,9 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 
 ### 4-3. raw detail の扱い
 - raw API message は docs に明示されるか user-safe 保証がある場合だけ
-- それ以外は canonical copy
-- client に内部詳細や安全性未確認の文字列を露出しない
+- それ以外は canonical copy を default にする
+- `ApiFailureBanner`、route render error、Patients / Charts / Reception の current action-result surface は canonical copy を優先する
+- active runtime 全面で app-wide 完了とは断定せず、残差は working note で管理する
 - raw detail の代わりに `RUN_ID` / `traceId` のような安全な識別子を出すことがある
 
 ### 4-4. canonical principles
@@ -127,6 +135,8 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 
 ### 4-5. a11y minimum
 - 色だけに依存して状態を伝えない
+- touched surface では live region / focus / keyboard reachable CTA を個別に固定する
+- app-wide ルールはまだ fixed にしない
 
 ### 4-6. unknown
 - `aria-live` の運用細則
@@ -159,6 +169,8 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 
 ## 5-3. Charts surface
 - normal runtime の中心 surface は `SoapNotePanel`
+- `PastHubPanel` は historical reference の補助 surface
+- `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助で、独立 route はない
 - `OrcaSummary` は補助 panel
 - `DocumentTimeline` と `MedicalOutpatientRecordPanel` は debug-only surface
 - deep link query は scrub
@@ -171,9 +183,8 @@ normal runtime の中心は `SoapNotePanel` 側です。
 ## 5-4. Admin surface
 - source of truth は `/api/admin/config`
 - `/api/admin/delivery` を第 2 正本に戻さない
-
-### unknown
-- admin screen の current UI detail
+- top-level tab は `delivery / orca-users / master-updates`
+- `delivery` 配下は `dashboard / connection / config / queue / operations / debug`
 
 ---
 

@@ -21,4 +21,11 @@ describe('OrderSummaryPane', () => {
     expect(pane.querySelector('.soap-note__right-dock-button')).toBeNull();
     expect(screen.queryByText('該当オーダーなし')).toBeNull();
   });
+
+  it('取得失敗時は raw detail ではなく canonical copy を表示する', () => {
+    render(<OrderSummaryPane orderBundles={[]} prescriptionBundles={[]} orderBundlesError="HTTP 500 (/api/orca/order/bundles)" />);
+
+    expect(screen.getByText('オーダー情報の取得に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
+    expect(screen.queryByText(/HTTP 500/)).not.toBeInTheDocument();
+  });
 });

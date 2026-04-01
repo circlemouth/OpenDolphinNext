@@ -11,6 +11,7 @@ import { fetchOrcaAddress } from '../patients/orcaAddressApi';
 import { PatientFormErrorAlert } from '../patients/PatientFormErrorAlert';
 import { diffPatientKeys, PATIENT_FIELD_LABEL, pickPatientSection, type PatientEditableSection } from '../patients/patientDiff';
 import { validatePatientMutation, type PatientOperation, type PatientValidationError } from '../patients/patientValidation';
+import { resolveUserSafeFetchFailure, resolveUserSafeOperationFailure } from './userSafeErrorCopy';
 
 type EditMeta = {
   runId?: string;
@@ -207,7 +208,10 @@ export function PatientInfoEditDialog({
     },
     onSuccess: (result) => {
       onSaved?.(result);
-      setNotice({ tone: result.ok ? 'success' : 'error', message: result.message ?? (result.ok ? '保存しました' : '保存に失敗しました') });
+      const failureMessage = result.message
+        ? `患者情報の保存に失敗しました。${resolveUserSafeOperationFailure(result.message)}`
+        : '患者情報の保存に失敗しました。状態を確認してからやり直してください。';
+      setNotice({ tone: result.ok ? 'success' : 'error', message: result.ok ? (result.message ?? '保存しました') : failureMessage });
       if (result.ok) {
         recordOutpatientFunnel('charts_patient_edit', {
           runId: result.runId ?? meta.runId,
@@ -230,14 +234,15 @@ export function PatientInfoEditDialog({
           fallbackUsed: result.fallbackUsed ?? false,
           action: 'save',
           outcome: 'error',
-          note: result.message ?? 'save failed',
-          reason: result.message ?? 'save failed',
+          note: result.ok ? 'save success' : failureMessage,
+          reason: result.ok ? undefined : failureMessage,
         });
       }
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      setNotice({ tone: 'error', message: '保存に失敗しました', detail: message });
+      const detail = error instanceof Error ? error.message : String(error);
+      const failureMessage = `患者情報の保存に失敗しました。${resolveUserSafeOperationFailure(detail)}`;
+      setNotice({ tone: 'error', message: failureMessage });
       logAuditEvent({
         runId: meta.runId,
         source: 'charts-patient-edit',
@@ -255,7 +260,7 @@ export function PatientInfoEditDialog({
             patientId: meta.patientId,
             receptionId: meta.receptionId,
             appointmentId: meta.appointmentId,
-            error: message,
+            error: detail,
             changedKeys: lastAttemptRef.current?.changedKeys?.map(String),
           },
         },
@@ -282,11 +287,15 @@ export function PatientInfoEditDialog({
         setNotice({ tone: 'error', message: '該当する住所が見つかりませんでした' });
         return;
       }
-      setNotice({ tone: 'error', message: result.message ?? '住所補完に失敗しました。' });
-    } catch (error) {
       setNotice({
         tone: 'error',
-        message: error instanceof Error ? error.message : '住所補完に失敗しました。',
+        message: resolveUserSafeFetchFailure('住所候補', result.message ?? '住所補完に失敗しました。'),
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : '住所補完に失敗しました。';
+      setNotice({
+        tone: 'error',
+        message: resolveUserSafeFetchFailure('住所候補', detail),
       });
     } finally {
       setOrcaAddressPending(false);

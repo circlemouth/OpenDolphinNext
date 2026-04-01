@@ -70,7 +70,7 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
     vi.mocked(fetchOrderBundles).mockResolvedValue({ ok: true, bundles: [] } as any);
   });
 
-  it('公式経路で Api_Result/Invoice_Number/Data_Id を取得しトーストに表示する', async () => {
+  it('公式経路でも通常 runtime には内部 ID ではなく canonical copy を表示する', async () => {
     const user = userEvent.setup();
     vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
       ok: true,
@@ -101,8 +101,9 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     expect(screen.getByText(/ORCA送信を完了/)).toBeInTheDocument();
-    expect(screen.getByText(/Invoice_Number=INV-999/)).toBeInTheDocument();
-    expect(screen.getByText(/Data_Id=DATA-999/)).toBeInTheDocument();
+    expect(screen.getByText('ORCA 送信結果を確認し、必要なら一覧を再取得してください。')).toBeInTheDocument();
+    expect(screen.queryByText(/Invoice_Number=INV-999/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Data_Id=DATA-999/)).not.toBeInTheDocument();
   });
 
   it('Physician_Code が不足している場合は送信前に停止する', async () => {

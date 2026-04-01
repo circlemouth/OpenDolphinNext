@@ -10,6 +10,7 @@ import {
   type OrderDetailDisplayCategoryViewModel,
   type OrderDetailDisplayViewModel,
 } from './orderDetailDisplayViewModel';
+import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 
 type OrderSummaryPaneProps = {
   orderBundles?: OrderBundle[];
@@ -88,7 +89,7 @@ export function OrderSummaryPane({
       </header>
 
       {orderBundlesLoading ? <p className="soap-note__paper-empty">オーダー情報を取得しています...</p> : null}
-      {orderBundlesError ? <p className="soap-note__paper-empty">オーダー情報の取得に失敗しました: {orderBundlesError}</p> : null}
+      {orderBundlesError ? <p className="soap-note__paper-empty">{resolveUserSafeFetchFailure('オーダー情報', orderBundlesError)}</p> : null}
       {!contentDisabled && !hasAnyOrderBundle ? (
         <p className="soap-note__paper-empty">当日のオーダーはありません。</p>
       ) : null}

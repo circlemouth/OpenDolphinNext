@@ -218,6 +218,19 @@ const RECEPTION_REALTIME_STATUS_TONE: Record<
 
 const ACCEPT_SUCCESS_RESULTS = new Set(['00', '0000', 'K3']);
 const ACCEPT_WARNING_RESULTS = new Set(['16', '21']);
+const RECEPTION_SUPPORT_GUIDE = '必要に応じて障害情報コピーで RUN_ID を共有してください。';
+
+const buildReceptionAcceptResultDetail = () => '結果を確認し、必要なら一覧を再取得してください。';
+
+const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error') => {
+  if (outcome === 'success') {
+    return '一覧更新後に会計済みへの反映を確認してください。';
+  }
+  if (outcome === 'warning') {
+    return '会計送信結果に警告があります。内容を確認し、必要なら再試行してください。';
+  }
+  return RECEPTION_SUPPORT_GUIDE;
+};
 const DEFAULT_PHYSICIAN_CODES = ['10001', '10003', '10005', '10006', '10010'] as const;
 
 const normalizeApiResult = (value?: string) => (value ?? '').trim().toUpperCase();
@@ -363,7 +376,7 @@ const resolveRec001MvpDecision = (options: {
     return {
       label: 'マスタ欠損',
       tone: 'warning',
-      detail: 'missingMaster=true',
+      detail: `ORCA マスタ未取得のため再送できません。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
       nextAction: '復旧ガイド確認',
       canRetry: false,
     };
@@ -2751,7 +2764,7 @@ export function ReceptionPage({
         setAcceptResult({
           tone: toneResult,
           message,
-          detail: payload.apiResultMessage ?? payload.apiResult ?? 'status unknown',
+          detail: buildReceptionAcceptResultDetail(),
           runId: payload.runId ?? mergedMeta.runId,
           apiResult: payload.apiResult,
         });
@@ -2786,10 +2799,10 @@ export function ReceptionPage({
         setAcceptResult({
           tone: 'error',
           message: '受付処理に失敗しました',
-          detail,
+          detail: RECEPTION_SUPPORT_GUIDE,
           runId: mergedMeta.runId,
         });
-        enqueue({ tone: 'error', message: '受付処理に失敗しました', detail });
+        enqueue({ tone: 'error', message: '受付処理に失敗しました', detail: RECEPTION_SUPPORT_GUIDE });
         // eslint-disable-next-line no-console
         console.error('[acceptmodv2]', detail);
       }
@@ -2882,14 +2895,14 @@ export function ReceptionPage({
         setAcceptResult({
           tone: toneResult,
           message,
-          detail: payload.apiResultMessage ?? payload.apiResult ?? 'status unknown',
+          detail: buildReceptionAcceptResultDetail(),
           runId: payload.runId ?? mergedMeta.runId,
           apiResult: payload.apiResult,
         });
         enqueue({
           tone: toneResult === 'info' ? 'info' : toneResult,
           message,
-          detail: payload.apiResultMessage ?? payload.apiResult ?? undefined,
+          detail: buildReceptionAcceptResultDetail(),
         });
         logUiState({
           action: 'cancel',
@@ -2909,10 +2922,10 @@ export function ReceptionPage({
         setAcceptResult({
           tone: 'error',
           message: '受付取消に失敗しました',
-          detail,
+          detail: RECEPTION_SUPPORT_GUIDE,
           runId: mergedMeta.runId,
         });
-        enqueue({ tone: 'error', message: '受付取消に失敗しました', detail });
+        enqueue({ tone: 'error', message: '受付取消に失敗しました', detail: RECEPTION_SUPPORT_GUIDE });
         // eslint-disable-next-line no-console
         console.error('[acceptmodv2]', detail);
       }
@@ -3752,11 +3765,10 @@ export function ReceptionPage({
           `duration=${durationMs}ms`,
         ].filter((part): part is string => Boolean(part));
         const detail = detailParts.join(' / ');
-
         enqueue({
           tone: outcome === 'success' ? 'success' : outcome === 'warning' ? 'warning' : 'error',
           message: outcome === 'success' ? '会計送信を完了' : outcome === 'warning' ? '会計送信に警告' : '会計送信に失敗',
-          detail,
+          detail: buildReceptionClaimSendDetail(outcome),
         });
 
         logUiState({

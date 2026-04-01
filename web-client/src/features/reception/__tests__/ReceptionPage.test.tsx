@@ -41,6 +41,7 @@ let mockClaimSendCache: Record<string, { invoiceNumber?: string; dataId?: string
 let mockSearchParams = new URLSearchParams();
 let mockLocationState: Record<string, unknown> | undefined;
 const mockInvalidateQueries = vi.fn(async () => undefined);
+const mockEnqueue = vi.fn();
 
 const mockAuthFlags = {
   runId: 'RUN-AUTH',
@@ -132,7 +133,7 @@ vi.mock('../../../libs/admin/useAdminBroadcast', () => ({
 }));
 
 vi.mock('../../../libs/ui/appToast', () => ({
-  useAppToast: () => ({ enqueue: vi.fn(), dismiss: vi.fn() }),
+  useAppToast: () => ({ enqueue: mockEnqueue, dismiss: vi.fn() }),
 }));
 
 vi.mock('../../../AppRouter', () => ({
@@ -372,6 +373,7 @@ beforeEach(() => {
   mockSearchParams = new URLSearchParams();
   mockLocationState = undefined;
   mockInvalidateQueries.mockClear();
+  mockEnqueue.mockReset();
   localStorage.clear();
 });
 
@@ -1269,6 +1271,13 @@ describe('ReceptionPage status/date/card action UX', () => {
     await user.click(within(row).getByRole('button', { name: '会計送信' }));
 
     await waitFor(() => expect(vi.mocked(postOrcaMedicalModV2Xml)).toHaveBeenCalled());
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tone: 'success',
+        message: '会計送信を完了',
+        detail: '一覧更新後に会計済みへの反映を確認してください。',
+      }),
+    );
 
     await user.click(screen.getByRole('tab', { name: /会計済/ }));
     const completedList = screen.getByRole('region', { name: '受付一覧' });

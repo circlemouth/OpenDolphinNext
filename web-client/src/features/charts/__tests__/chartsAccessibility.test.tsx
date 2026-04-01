@@ -42,8 +42,10 @@ describe('Charts accessibility', () => {
       <MemoryRouter>
         <ChartsActionBar
           {...baseActionBarProps}
+          dataSourceTransition="server"
           missingMaster
           fallbackUsed={false}
+          patientId="000123"
         />
       </MemoryRouter>,
     );
@@ -51,7 +53,7 @@ describe('Charts accessibility', () => {
     const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
     expect(sendButton).toHaveAttribute('aria-disabled', 'true');
     const notes = screen.getAllByRole('note');
-    expect(notes.some((note) => note.textContent?.includes('missingMaster=true'))).toBe(true);
+    expect(notes.some((note) => note.textContent?.includes('ORCA 参照不足: 送信不可'))).toBe(true);
 
     const results = await axe(container);
     expect(results.violations).toHaveLength(0);

@@ -1,114 +1,248 @@
 # Web Product Evidence Pack
 
-- RUN_ID: `20260329T232932Z`
+- RUN_ID: `20260330T064252Z`
 - basis: current repo code / tests / docs only
 - classification vocabulary: `MATCH / DOCS_UNDER_SPEC / DOCS_OVER_ASSERT / TRUE_REGRESSION / UNKNOWN`
 
-## 1. auth guard / redirect matrix
+## 1. BL-04 guard matrix
 
-- classification: `DOCS_UNDER_SPEC`
+- overall classification:
+  - `DOCS_UNDER_SPEC`
+  - factor2 retry limit row は旧 docs が `DOCS_OVER_ASSERT`
+- repo truth matrix:
+
+| route / surface | guard | trigger | landing / behavior | classification | evidence |
+| --- | --- | --- | --- | --- | --- |
+| non-login route (`/reception`, `/charts`, `/patients`, `/m/images`, `/administration`) | `FacilityGate` | unauthenticated access | `/login` へ `replace`、`state.from` に現在地を保持 | `MATCH` | `web-client/src/AppRouter.tsx`, `web-client/src/__tests__/AppRouter.login-redirect.test.tsx` |
+| facility-scoped route | `FacilityShell` | session 不在 | facility-scoped path を `state.from` に積んで `/login` へ `replace` | `MATCH` | `web-client/src/AppRouter.tsx`, `web-client/src/__tests__/AppRouter.login-redirect.test.tsx` |
+| `/login` or `/f/:facilityId/login` | `FacilityGate` + `resolveLoginRedirect()` | authenticated access | safe な facility-scoped `from` を優先し、無効時は `/f/:facilityId/reception` へ `replace` | `MATCH` | `web-client/src/AppRouter.tsx`, `web-client/src/features/login/loginRedirect.ts`, `web-client/src/features/login/__tests__/loginRedirect.test.ts` |
+| login surface | login notice helper | logout | `/f/:facilityId/login?reason=logout` に戻り、info copy を表示 | `MATCH` | `web-client/src/AppRouter.tsx`, `web-client/src/features/login/loginRedirect.ts`, `web-client/src/__tests__/AppRouter.login-redirect.test.tsx` |
+| login surface | session expiry notice | `timeout / unauthorized / forbidden` | `/f/:facilityId/login` に戻り、理由を分けた notice copy を表示 | `MATCH` | `web-client/src/AppRouter.tsx`, `web-client/src/libs/session/sessionExpiry.ts`, `web-client/src/libs/session/sessionExpiry.test.ts`, `web-client/src/features/login/__tests__/loginRedirect.test.ts` |
+| `LoginScreen` | same-surface factor2 flow | `cancel` | credentials step に戻る | `MATCH` | `web-client/src/LoginScreen.tsx`, `web-client/src/__tests__/LoginScreen.test.tsx` |
+| `LoginScreen` | same-surface factor2 flow | `session missing / session expired` | credentials step に戻る | `MATCH` | `web-client/src/LoginScreen.tsx`, `web-client/src/__tests__/LoginScreen.test.tsx` |
+| `LoginScreen` | same-surface factor2 flow | `invalid` | factor2 surface に残る | `MATCH` | `web-client/src/LoginScreen.tsx`, `web-client/src/__tests__/LoginScreen.test.tsx` |
+| `LoginScreen` | same-surface factor2 flow | `429 / retry-after` | current step を維持し待機文言を表示 | `DOCS_OVER_ASSERT` | `web-client/src/features/login/loginErrorMessage.ts`, `web-client/src/features/login/__tests__/loginErrorMessage.test.ts` |
+| sensitive routes (`/reception`, `/charts`, `/patients`, `/m/images`) | scrub effect | deep-link query arrival | route 到達後に `replace` で scrub し、state / volatile context へ移す | `MATCH` | `web-client/src/AppRouter.tsx`, `web-client/src/__tests__/AppRouter.login-redirect.test.tsx`, `web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx` |
+| `/administration` | `AdministrationGate` | non-system_admin | login へ飛ばさず denial surface + `Reception` CTA | `MATCH` | `web-client/src/AppRouter.tsx` |
+
+- docs promotion:
+  - `web-client/notes/auth-transition.md`
+  - `web-client/notes/ui-current-contract.md`
+  - `docs/managerdocs/03_web_current_contract_summary.md`
+- remaining unknown:
+  - `screenKey` 粒度を超える task-specific guard coverage
+  - browser history / direct navigate 差分
+
+## 2. BL-11 docs promotion
+
+### 2-1. Patients input source priority
+- classification: `MATCH`
 - repo truth:
-  - `FacilityGate` は未認証かつ非 login route を `/login` へ `replace` し、`state.from` を保持する: `web-client/src/AppRouter.tsx:709-724`
-  - login route で認証済みなら `resolveLoginRedirect()` の結果、または `/f/:facilityId/reception` へ `replace` する: `web-client/src/AppRouter.tsx:721-724`, `web-client/src/AppRouter.tsx:1211-1230`
-  - `/f/:facilityId/*` で session 不在なら facility-scoped path を `/login` の `state.from` に詰め直す: `web-client/src/AppRouter.tsx:745-753`
-  - `resolveLoginRedirect()` は facility-scoped path だけを許可し、`/login` 自身や root-level arbitrary path は fallback へ落とす: `web-client/src/AppRouter.tsx:1213-1230`
-  - session expiry は `SESSION_EXPIRED_EVENT` 経由で logout cleanup を実行する: `web-client/src/AppRouter.tsx:651-677`, `web-client/src/libs/session/sessionExpiry.ts:149-179`
-  - login redirect の説明 copy は query scrub を案内するが、実際の scrub は login helper ではなく sensitive route 到達後に行う: `web-client/src/features/login/loginRedirect.ts:124-151`, `web-client/src/AppRouter.tsx:588-640`
+  - `patientId / appointmentId / receptionId / visitDate` は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context の順で解決
+  - route query の `patientId` は権威 source として読まない
+  - `returnTo` は patient context ではなく戻り導線としてのみ使う
 - evidence:
-  - `web-client/src/__tests__/AppRouter.login-redirect.test.tsx:167-319`
-  - `web-client/src/libs/session/sessionExpiry.test.ts:51-154`
-- next action:
-  - Slice 2 で redirect reason taxonomy を helper に寄せ、`/login` surface で理由表示を追加する
-  - docs は「最終的に scrub される」説明に留め、redirect 前 scrub を断定しない
+  - `web-client/src/features/patients/PatientsPage.tsx`
+  - `web-client/src/features/patients/__tests__/PatientsPage.test.tsx`
 
-## 2. Patients の入力 source 優先度
-
-- classification: `DOCS_UNDER_SPEC`
+### 2-2. Mobile Images input source priority
+- classification: `MATCH`
 - repo truth:
-  - `patientId` / `appointmentId` / `receptionId` / `visitDate` は `location.state` top-level -> `location.state.encounter` -> volatile stored encounter の順で解決する: `web-client/src/features/patients/PatientsPage.tsx:268-306`
-  - Patients 画面は route query から `patientId` を直接読まない
-  - `returnTo` は選択元 patient context ではなく戻り導線のためにのみ使う: `web-client/src/features/patients/PatientsPage.tsx:309-349`
+  - `patientId` は query `patientId` -> `location.state.patientId` -> deep link volatile context の順
+  - `openMobileImages()` は query / state / deep link volatile context を併用する
+  - scrub 後でも deep link volatile context から復元できる test がある
 - evidence:
-  - `web-client/src/features/patients/__tests__/PatientsPage.test.tsx:394-430`
-  - `web-client/src/routes/useAppNavigation.ts:325-378`
-- next action:
-  - Slice 3 では source priority を前提にし過ぎず、Patients 用 CTA は `from` / fallback を中心に構成する
+  - `web-client/src/features/images/pages/MobileImagesUploadPage.tsx`
+  - `web-client/src/routes/useAppNavigation.ts`
+  - `web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx`
 
-## 3. Mobile Images の入力 source 優先度
-
-- classification: `DOCS_UNDER_SPEC`
+### 2-3. route 別 minimal encounter context schema
+- classification: `MATCH`
 - repo truth:
-  - `patientId` は query `patientId` -> `location.state.patientId` -> deepLinkContext の順で解決する: `web-client/src/features/images/pages/MobileImagesUploadPage.tsx:54-66`
-  - `useAppNavigation.openMobileImages()` は `patientId` を URL query と `location.state` に積み、さらに deep link volatile context に保存する: `web-client/src/routes/useAppNavigation.ts:483-512`
-  - scrub 後でも deepLinkContext から復元できる test がある: `web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx:55-108`
+  - shared navigation state は `carryover`, `encounter`, top-level `patientId`, `appointmentId`, `receptionId`, `scheduleKey`, `encounterKey`, `visitDate`, `returnTo`, `from`
+  - Charts handoff は `scheduleKey` または `encounterKey` 必須
+  - Patients は `patientId`, `appointmentId`, `receptionId`, `visitDate` を読む
+  - Mobile Images は `patientId` のみで成立する
 - evidence:
-  - `web-client/src/features/images/pages/MobileImagesUploadPage.tsx:54-71`
-  - `web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx:55-108`
-- next action:
-  - Slice 3 では Mobile Images 用 copy を「患者導線から再入場」に寄せ、route-specific priority を docs に追記する
+  - `web-client/src/routes/useAppNavigation.ts`
+  - `web-client/src/features/patients/PatientsPage.tsx`
+  - `web-client/src/features/images/pages/MobileImagesUploadPage.tsx`
 
-## 4. route 別 minimal encounter context schema
-
-- classification: `DOCS_UNDER_SPEC`
+### 2-4. admin current UI detail inventory
+- classification: `MATCH`
 - repo truth:
-  - navigation 共通 state schema は `carryover`, `encounter`, top-level `patientId`, `appointmentId`, `receptionId`, `scheduleKey`, `encounterKey`, `visitDate`, `returnTo`, `from` を持つ: `web-client/src/routes/useAppNavigation.ts:45-59`
-  - Patients が実際に読むのは `patientId`, `appointmentId`, `receptionId`, `visitDate` まで: `web-client/src/features/patients/PatientsPage.tsx:268-306`
-  - Mobile Images が読むのは `patientId` だけ: `web-client/src/features/images/pages/MobileImagesUploadPage.tsx:16-18`, `web-client/src/features/images/pages/MobileImagesUploadPage.tsx:54-66`
-  - Charts handoff は `scheduleKey` または `encounterKey` 必須: `web-client/src/routes/useAppNavigation.ts:388-423`
+  - top-level tab は `delivery`, `orca-users`, `master-updates`
+  - `delivery` 配下は `dashboard`, `connection`, `config`, `queue`, `operations`, `debug`
+  - admin SoT は `/api/admin/config`
 - evidence:
-  - `web-client/src/routes/useAppNavigation.ts:45-59`
-  - `web-client/src/routes/useAppNavigation.ts:169-179`
-  - `web-client/src/features/patients/PatientsPage.tsx:268-306`
-  - `web-client/src/features/images/pages/MobileImagesUploadPage.tsx:54-66`
-- next action:
-  - Stage 2 では Patients / Mobile Images の docs を route-specific minimal schema で薄く補足する
+  - `web-client/src/features/administration/AdministrationPage.tsx`
+  - `web-client/src/features/administration/delivery/types.ts`
+  - `web-client/src/features/administration/api.ts`
+  - `web-client/src/features/administration/__tests__/AdministrationPage.searchParams.test.tsx`
 
-## 5. admin current UI detail
+- docs promotion:
+  - `web-client/notes/patient-context-contract.md`
+  - `web-client/notes/ui-current-contract.md`
+  - `docs/managerdocs/03_web_current_contract_summary.md`
+- remaining unknown:
+  - print / administration を含む app-wide handoff state の全量 schema
+  - admin IA の再設計要否
 
-- classification: `DOCS_UNDER_SPEC`
+## 3. BL-10 touched-surface a11y minimum
+
+- overall classification:
+  - `TRUE_REGRESSION` fixed: `MobileImagesUploadPage` の file picker keyboard reachability
+  - その他 touched surface は `MATCH`
 - repo truth:
-  - admin page は query を正規化し、`delivery` / `orca-users` / `master-updates` の 3 タブを持つ: `web-client/src/features/administration/AdministrationPage.tsx:69-85`, `web-client/src/features/administration/AdministrationPage.tsx:161-185`
-  - `delivery` タブ配下は `section` で `dashboard` などの sub-navigation を持つ: `web-client/src/features/administration/AdministrationPage.tsx:156-185`
-  - API SoT は `/api/admin/config`: `web-client/src/features/administration/api.ts:77`, `web-client/src/features/administration/api.ts:191-272`
+  - `LoginScreen` は step/status を live region で伝え、factor2 遷移時に認証コード入力へ focus を移す
+  - `ReturnToBar` は named region + keyboard reachable link
+  - `PatientsPage` は status bar / selection notice / API failure banner の live region を持つ
+  - `ApiFailureBanner` は retry/share action group と disabled 理由の `aria-describedby` を持つ
+  - `MobileImagesUploadPage` は status/alert、missing-patient alert、単一カラム layout を持ち、visible button 経由で picker を開くよう補正した
 - evidence:
-  - `web-client/src/features/administration/__tests__/AdministrationPage.searchParams.test.tsx:240-260`
-- next action:
-  - 今回の slice では admin IA を変更しない。docs は evidence pack への記録までに留める
+  - `web-client/src/LoginScreen.tsx`
+  - `web-client/src/features/shared/ReturnToBar.tsx`
+  - `web-client/src/features/shared/ApiFailureBanner.tsx`
+  - `web-client/src/features/patients/PatientsPage.tsx`
+  - `web-client/src/features/images/pages/MobileImagesUploadPage.tsx`
+  - `web-client/src/__tests__/LoginScreen.test.tsx`
+  - `web-client/src/features/shared/__tests__/ReturnToBar.test.tsx`
+  - `web-client/src/features/shared/__tests__/ApiFailureBanner.test.tsx`
+  - `web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx`
+- docs promotion:
+  - `web-client/notes/feedback-spec.md`
+- remaining unknown:
+  - app-wide live region / focus / keyboard rule
+  - touched surface 以外の narrow layout policy
 
-## 6. auto-sync / auto-action current behavior
+## 4. BL-08 auto-sync / auto-action inventory
 
-- classification: `UNKNOWN`
+- classification:
+  - surface 単位 inventory は `DOCS_UNDER_SPEC`
+  - 横断 visibility policy は `UNKNOWN`
 - repo truth:
-  - Patients には `autoRefreshNotice` による stale warning と `自動更新: 90秒` 表示がある: `web-client/src/features/shared/autoRefreshNotice.ts:5-68`, `web-client/src/features/patients/PatientsPage.tsx:723-731`, `web-client/src/features/patients/PatientsPage.tsx:1943-1953`
-  - ただし Charts / Mobile Images / Administration を横断した `auto-sync / auto-action` contract は repo 上で 1 本化されていない
-- reason:
-  - repo truth は Patients の自動更新表示までで止まり、改善対象として想定される「横断挙動」までは current contract を確定できない
+  - Patients:
+    - 90 秒 `refetchInterval`
+    - stale warning と user-visible `自動更新: 90秒`
+    - ORCA import success 後の自動再取得と自動選択
+  - Charts:
+    - admin config / claim / medical summary は 120 秒 refetch
+    - ORCA queue / push events は 30 秒 refetch
+    - admin broadcast で config refetch
+    - document print は `initialOutputMode` に応じた one-shot auto output がある
+  - Mobile Images:
+    - patient 解決時の一覧自動取得
+    - upload success 後の一覧再取得
+    - retry は user-triggered only
+- evidence:
+  - `web-client/src/features/patients/PatientsPage.tsx`
+  - `web-client/src/features/shared/autoRefreshNotice.ts`
+  - `web-client/src/features/charts/pages/ChartsPage.tsx`
+  - `web-client/src/features/charts/DocumentTimeline.tsx`
+  - `web-client/src/features/charts/pages/ChartsDocumentPrintPage.tsx`
+  - `web-client/src/features/images/pages/MobileImagesUploadPage.tsx`
 - next action:
-  - deferred backlog (BL-08) に残し、Charts まで含む code-confirmation を別 slice に切る
+  - visibility policy の新設は今回やらない
+  - cross-surface で user override を統一するかは次回 issue へ分離する
 
-## 7. a11y / focus / keyboard / narrow layout current behavior
+## 5. quick win / defer 判定
 
-- classification: `UNKNOWN`
-- repo truth (partial):
-  - グローバル focus ring は `global.css` にある: `web-client/src/styles/global.css:48-90`
-  - `FocusTrapDialog` は Esc close / tab trap / focus restore を持つ: `web-client/src/components/modals/FocusTrapDialog.tsx:45-169`
-  - `NavigationGuardProvider` は `alertdialog` と focus-trapped dialog を使う: `web-client/src/routes/NavigationGuardProvider.tsx:268-311`
-  - `LoginScreen`, `PatientsPage`, `MobileImagesUploadPage`, `ToneBanner` などに `role` / `aria-live` はある
-- reason:
-  - narrow layout の stacking order と app-wide keyboard rule は repo truth が点在しており、最低契約としてまだ固定できない
-- next action:
-  - Slice 4 は optional とし、今回触る surface の最低限 (`role`, `aria-live`, focus order, keyboard reachable CTA`) だけ実装で揃える
+- code changed in scope:
+  - `MobileImagesUploadPage` の file picker を visible button 化して keyboard reachability を回復
+  - 同 surface の upload failure copy を canonical に寄せ、raw error detail を通常 runtime から外した
+- docs/evidence-first:
+  - Patients / Mobile Images / Admin inventory
+  - auth guard matrix
+  - touched-surface a11y minimum
+  - auto behavior inventory
+- defer:
+  - app-wide a11y rule
+  - auto-sync / auto-action visibility policy
+  - admin IA 再設計
 
-## quick win 判定
+## 6. BL-04 follow-up / BL-13 prework
 
-- code-ready:
-  - auth exception copy matrix
-  - factor2 step copy / stage affordance
-  - `/login` redirect reason copy
-  - scrub explanation microcopy
-  - `ReturnToBar` 実装
-  - canonical feedback copy への寄せ
-- evidence-first / defer:
-  - auto-sync / auto-action の横断仕様
-  - app-wide narrow layout rule
-  - admin IA の再設計
+- classification:
+  - overall `DOCS_UNDER_SPEC`
+- repo truth:
+  - `NavigationGuardProvider` は `screenKey` 差分がある dirty 遷移だけを block する
+  - `/charts` 同一路線で `chartsScreenId` が同一なら外部パラメータ更新は同一画面として許可する
+  - `useAppNavigation()` が組み立てる `patients / charts / charts/print / charts/order-sets / m/images / administration / debug` 遷移は `guardedNavigate()` を通す
+  - dirty 状態の logout / switch account は auth redirect 前に app-shell の session exit dialog を挟む
+  - admin denial / debug denial は `/login` へ戻さず facility-scoped denial surface + `Reception` CTA に留める
+- evidence:
+  - `web-client/src/routes/NavigationGuardProvider.tsx`
+  - `web-client/src/routes/__tests__/NavigationGuardProvider.test.tsx`
+  - `web-client/src/routes/useAppNavigation.ts`
+  - `web-client/src/routes/appNavigation.ts`
+  - `web-client/src/routes/__tests__/useAppNavigation.test.tsx`
+  - `web-client/src/AppRouter.tsx`
+  - `web-client/src/AppRouter.navigation.test.tsx`
+- docs sync:
+  - `web-client/notes/auth-transition.md`
+  - `web-client/notes/ui-current-contract.md`
+  - `web-client/notes/patient-context-contract.md`
+- remaining unknown:
+  - `screenKey` 粒度を超える task-specific coverage
+  - app-wide handoff state の全量 schema
+
+## 7. comparison / latest-follow inventory
+
+- classification:
+  - overall `DOCS_UNDER_SPEC`
+  - dedicated normal-runtime comparison surface 不在は `MATCH`
+- repo truth:
+  - `SoapNotePanel` は normal runtime 主面で、latest SOAP / latest bundle を既定値や drawer open の補助に使う
+  - `PastHubPanel` は supplemental/historical reference hub であり、主面 comparison 専用 surface ではない
+  - `ChartsActionBar` の `最新を再読込` は supplemental recovery action であり comparison ではない
+  - `PatientsTab` の `DocumentTimeline へ` は補助導線だが comparison policy の source of truth ではない
+  - `DocumentTimeline` / `MedicalOutpatientRecordPanel` は debug-only のまま
+- evidence:
+  - `web-client/src/features/charts/SoapNotePanel.tsx`
+  - `web-client/src/features/charts/PastHubPanel.tsx`
+  - `web-client/src/features/charts/ChartsActionBar.tsx`
+  - `web-client/src/features/charts/PatientsTab.tsx`
+  - `web-client/src/features/charts/pages/ChartsPage.tsx`
+  - `web-client/src/features/charts/orderDetailDisplayViewModel.ts`
+  - `docs/working-notes/web-product-comparison-latest-follow-inventory.md`
+- remaining unknown:
+  - comparison/latest-follow の将来 IA
+  - auto behavior と結び付く visibility / override policy
+
+## 8. feedback / security follow-up
+
+- classification:
+  - app-wide 完了の docs 読みは `DOCS_OVER_ASSERT`
+  - Patients / Charts / Reception の current runtime action/result feedback は `TRUE_REGRESSION` fixed
+- repo truth:
+  - route render error boundary と `ApiFailureBanner` は canonical copy / support-id を優先する
+  - `LoginScreen` は unexpected fetch / generic HTTP failure を canonical copy に寄せた
+  - Charts fetch failure surface は `resolveUserSafeFetchFailure()`、action failure は `resolveUserSafeOperationFailure()` で通常 runtime の raw detail を抑制した
+  - `PatientsPage` は edit block / ORCA status / audit summary の internal flag / endpoint 表示を canonical copy へ寄せた
+  - shared tone helper は `PatientsTab` / `OrcaSummary` 等の通常 runtime copy を canonical に寄せた
+  - `ReceptionPage` は accept/cancel/claim-send の action/result feedback を canonical copy に寄せた
+  - `ChartsPage` order-set notice、`ReceptionPage` search/master notice、admin operator surface には residual raw-detail exposure が残る
+- evidence:
+  - `web-client/src/AppRouter.tsx`
+  - `web-client/src/LoginScreen.tsx`
+  - `web-client/src/features/login/loginErrorMessage.ts`
+  - `web-client/src/features/charts/userSafeErrorCopy.ts`
+  - `web-client/src/features/charts/PastHubPanel.tsx`
+  - `web-client/src/features/charts/OrderSummaryPane.tsx`
+  - `web-client/src/features/charts/OrderDockPanel.tsx`
+  - `web-client/src/features/charts/RightUtilityDrawer.tsx`
+  - `web-client/src/features/charts/PatientSummaryPanel.tsx`
+  - `web-client/src/features/charts/DocumentCreatePanel.tsx`
+  - `web-client/src/features/charts/pages/ChartsDocumentPrintPage.tsx`
+  - `web-client/src/features/charts/ChartsActionBar.tsx`
+  - `web-client/src/features/patients/PatientsPage.tsx`
+  - `web-client/src/features/reception/pages/ReceptionPage.tsx`
+  - `web-client/src/ux/charts/tones.ts`
+  - `web-client/src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx`
+  - `web-client/src/features/charts/__tests__/chartsAccessibility.test.tsx`
+  - `web-client/src/features/patients/__tests__/PatientsPage.test.tsx`
+  - `web-client/src/features/reception/__tests__/ReceptionPage.test.tsx`
+  - `docs/working-notes/web-product-feedback-security-inventory.md`
+- docs sync:
+  - `docs/managerdocs/03_web_current_contract_summary.md`
+  - `web-client/notes/feedback-spec.md`
