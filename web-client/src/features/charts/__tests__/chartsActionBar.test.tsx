@@ -251,7 +251,8 @@ describe('ChartsActionBar', () => {
 
     await waitFor(() => expect(onAfterStart).toHaveBeenCalledTimes(1));
     expect(screen.getByText('診察開始を完了')).toBeInTheDocument();
-    expect(screen.getByText(/checked_in -> chart_opened/)).toBeInTheDocument();
+    expect(screen.getByText('画面上の状態更新を確認してください。')).toBeInTheDocument();
+    expect(screen.queryByText(/checked_in -> chart_opened/)).not.toBeInTheDocument();
   });
 
   it('診察開始の afterStart が失敗した場合は success toast を出さず raw detail も表示しない', async () => {

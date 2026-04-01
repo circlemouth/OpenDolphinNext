@@ -115,7 +115,7 @@ describe('orderBundleApi', () => {
     expect(result.ok).toBe(false);
     expect(result.errorKind).toBe('auth');
     expect(result.patientImportAttempted).toBe(true);
-    expect(result.message).toContain('認証エラー');
-    expect(result.message).toContain('authentication_failed');
+    expect(result.message).toContain('認証状態を確認してからやり直してください');
+    expect(result.message).not.toContain('authentication_failed');
   });
 });
