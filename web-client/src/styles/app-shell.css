@@ -332,6 +332,42 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.workspace-tabs__tab--patient {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding-block: 0.45rem;
+  max-width: 280px;
+  white-space: normal;
+}
+
+.workspace-tabs__tab-labels {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.14rem;
+}
+
+.workspace-tabs__tab-primary,
+.workspace-tabs__tab-secondary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-tabs__tab-primary {
+  font-weight: 800;
+}
+
+.workspace-tabs__tab-secondary {
+  color: var(--ui-text-muted);
+  font-size: 0.74rem;
+}
+
 .workspace-tabs__tab:hover,
 .workspace-tabs__tab:focus-visible {
   border-color: var(--ui-primary);

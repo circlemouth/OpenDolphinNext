@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -68,7 +68,11 @@ const setAuthSession = () => {
 
 const setPatientTabsStorage = () => {
   const now = new Date().toISOString();
-  const tabKey = buildPatientTabKey('00000001', '2026-03-01');
+  const tabKey = buildPatientTabKey('00000001', '2026-03-01', {
+    scheduleKey: '0001:AP-20260301-001',
+    encounterKey: '0001:AC-20260301-001',
+  });
+  if (!tabKey) throw new Error('tabKey must exist');
   const state: ChartsPatientTabsStorage = {
     version: 1,
     updatedAt: now,
@@ -84,6 +88,9 @@ const setPatientTabsStorage = () => {
         appointmentId: '1001',
         receptionId: '2001',
         openedAt: now,
+        lastActivatedAt: now,
+        name: '山田 太郎',
+        department: '内科',
       },
     ],
   };
@@ -122,12 +129,14 @@ describe('WorkspaceTabBar navigation', () => {
 
     expect(window.location.pathname).toBe('/f/0001/reception');
 
-    const patientTab = await screen.findByRole('tab', { name: '患者' });
+    const patientTab = await screen.findByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i });
     expect(patientTab).toBeInTheDocument();
+    expect(within(patientTab).getByText('山田 太郎')).toBeInTheDocument();
+    expect(within(patientTab).getByText(/ID:00000001 \/ 内科/)).toBeInTheDocument();
     const tabs = screen.getAllByRole('tab');
     expect(tabs.some((tab) => tab.textContent?.includes('受付'))).toBe(true);
     expect(tabs.some((tab) => tab.textContent?.includes('患者管理'))).toBe(true);
-    expect(tabs.filter((tab) => tab.textContent?.includes('患者')).length).toBeGreaterThanOrEqual(1);
+    expect(tabs.some((tab) => tab.textContent?.includes('山田 太郎'))).toBe(true);
 
     await user.click(patientTab);
 
@@ -153,14 +162,14 @@ describe('WorkspaceTabBar navigation', () => {
       </QueryClientProvider>,
     );
 
-    const closeButton = await screen.findByRole('button', { name: '患者を閉じる' });
+    const closeButton = await screen.findByRole('button', { name: /山田 太郎 ID:00000001 \/ 内科/i });
     await user.click(closeButton);
 
     await waitFor(() => {
       expect(window.location.pathname).toBe('/f/0001/reception');
     });
     await waitFor(() => {
-      expect(screen.queryByRole('tab', { name: '患者' })).toBeNull();
+      expect(screen.queryByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i })).toBeNull();
     });
   });
 
@@ -177,7 +186,7 @@ describe('WorkspaceTabBar navigation', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByRole('tab', { name: '患者' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i })).toBeInTheDocument();
 
     firstRender.unmount();
     clearChartsPatientTabsStorage();
@@ -190,7 +199,7 @@ describe('WorkspaceTabBar navigation', () => {
     );
 
     await waitFor(() => {
-      expect(screen.queryByRole('tab', { name: '患者' })).toBeNull();
+      expect(screen.queryByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i })).toBeNull();
     });
   });
 });

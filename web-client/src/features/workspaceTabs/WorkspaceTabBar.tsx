@@ -43,11 +43,28 @@ const createInitialTabsState = (): ChartsPatientTabsStorage => ({
   tabs: [],
 });
 
-const formatTabLabel = (tab: ChartsPatientTab) => {
-  const patientName = normalizeText(tab.name) ?? '患者';
+const resolvePatientToken = (tab: ChartsPatientTab) => {
+  const raw = normalizeText(tab.encounterKey) ?? normalizeText(tab.scheduleKey);
+  if (!raw) return undefined;
+  const parts = raw.split(':').map((part) => part.trim()).filter(Boolean);
+  return parts.at(-1) ?? raw;
+};
+
+const resolvePatientTabDisplay = (tab: ChartsPatientTab) => {
+  const primary = normalizeText(tab.name) ?? `患者 ID:${tab.patientId}`;
+  const secondaryParts = [`ID:${tab.patientId}`];
   const department = normalizeText(tab.department);
-  if (!department) return patientName;
-  return `${patientName}（${department}）`;
+  if (department) secondaryParts.push(department);
+  const token = resolvePatientToken(tab);
+  if (token) secondaryParts.push(token);
+  if (normalizeText(tab.visitDate)) secondaryParts.push(tab.visitDate);
+  const secondary = secondaryParts.join(' / ');
+  return {
+    primary,
+    secondary,
+    accessibleLabel: `${primary} ${secondary}`.trim(),
+    title: [primary, secondary].filter(Boolean).join('\n'),
+  };
 };
 
 export function WorkspaceTabBar({
@@ -327,17 +344,18 @@ export function WorkspaceTabBar({
             ) : null}
             <div className="workspace-tabs__dynamic" ref={dynamicListRef} role="tablist" aria-label="患者ワークスペースタブ">
               {dynamicTabs.map((tab) => {
-                const label = formatTabLabel(tab);
+                const display = resolvePatientTabDisplay(tab);
                 const isActive = activeDynamicKey === tab.key;
                 return (
                   <div key={tab.key} className="workspace-tabs__item">
                     <button
                       type="button"
                       role="tab"
-                      className={`workspace-tabs__tab workspace-tabs__tab--shortcut workspace-tabs__tab--chart${isActive ? ' is-active' : ''}`}
+                      className={`workspace-tabs__tab workspace-tabs__tab--shortcut workspace-tabs__tab--chart workspace-tabs__tab--patient${isActive ? ' is-active' : ''}`}
                       aria-selected={isActive}
+                      aria-label={display.accessibleLabel}
                       tabIndex={isActive ? 0 : -1}
-                      title={label}
+                      title={display.title}
                       onClick={() => selectDynamicTab(tab)}
                     >
                       <svg
@@ -357,12 +375,15 @@ export function WorkspaceTabBar({
                         <path d="M8 10h8" />
                         <path d="M8 14h6" />
                       </svg>
-                      {label}
+                      <span className="workspace-tabs__tab-labels">
+                        <span className="workspace-tabs__tab-primary">{display.primary}</span>
+                        <span className="workspace-tabs__tab-secondary">{display.secondary}</span>
+                      </span>
                     </button>
                     <button
                       type="button"
                       className="workspace-tabs__close"
-                      aria-label={`${label}を閉じる`}
+                      aria-label={`${display.accessibleLabel}を閉じる`}
                       onMouseDown={suppressCloseMouseDown}
                       onClick={(event) => handleCloseButtonClick(event, tab.key)}
                     >
@@ -399,24 +420,29 @@ export function WorkspaceTabBar({
               {overflowOpen ? (
                 <div className="workspace-tabs__overflow-panel" aria-label="患者タブ一覧">
                   {dynamicTabs.map((tab) => {
-                    const label = formatTabLabel(tab);
+                    const display = resolvePatientTabDisplay(tab);
                     const isActive = activeDynamicKey === tab.key;
                     return (
                       <div key={`overflow-${tab.key}`} className="workspace-tabs__overflow-entry">
                         <button
                           type="button"
                           role="tab"
-                          className={`workspace-tabs__tab workspace-tabs__tab--shortcut workspace-tabs__tab--chart${isActive ? ' is-active' : ''}`}
+                          className={`workspace-tabs__tab workspace-tabs__tab--shortcut workspace-tabs__tab--chart workspace-tabs__tab--patient${isActive ? ' is-active' : ''}`}
                           aria-selected={isActive}
+                          aria-label={display.accessibleLabel}
                           tabIndex={isActive ? 0 : -1}
+                          title={display.title}
                           onClick={() => selectDynamicTab(tab)}
                         >
-                          {label}
+                          <span className="workspace-tabs__tab-labels">
+                            <span className="workspace-tabs__tab-primary">{display.primary}</span>
+                            <span className="workspace-tabs__tab-secondary">{display.secondary}</span>
+                          </span>
                         </button>
                         <button
                           type="button"
                           className="workspace-tabs__close"
-                          aria-label={`${label}を閉じる`}
+                          aria-label={`${display.accessibleLabel}を閉じる`}
                           onMouseDown={suppressCloseMouseDown}
                           onClick={(event) => handleCloseButtonClick(event, tab.key)}
                         >
