@@ -14,11 +14,14 @@
 ### Current Fact
 - 認証開始地点は `/login` です。
 - 施設付き login route は `/f/:facilityId/login` です。
+- `/login` から facility 付き login route への auto-resolve は `replace` です。
 - 1 段階目ログイン後、必要時のみ factor2(TOTP) に進みます。
 - factor2 は 6 桁コード入力を前提とします。
 - factor2 は `LoginScreen` 同一 surface で切り替えます。
 - 認証成功時は session rotate を前提とします。
 - logout は cleanup 優先で `/login` へ replace 遷移します。
+- facility が分かる logout は `/f/:facilityId/login?reason=logout` へ `replace` し、timeout / unauthorized / forbidden は `/f/:facilityId/login` へ寄せます。
+- login notice は `sessionExpiryNotice` -> `loginNotice` -> `initialNotice` の優先順位で表示します。
 
 ### Required State
 - 認証後遷移では sanitize 済み internal `returnTo` だけを扱います。
@@ -36,6 +39,7 @@
 
 ## Route Inventory
 - `/login`
+- `/outpatient-mock` (`LegacyOutpatientMockNotFound`, disabled legacy route)
 - `/f/:facilityId/login`
 - `/f/:facilityId/reception`
 - `/f/:facilityId/patients`
@@ -45,7 +49,10 @@
 - `/f/:facilityId/charts/print/document`
 - `/f/:facilityId/m/images`
 - `/f/:facilityId/administration`
-- `/f/:facilityId/debug/*` (`DEBUG_PAGES_ENABLED` 時のみ)
+- `/f/:facilityId/debug` (`DEBUG_PAGES_ENABLED` 時のみ)
+- `/f/:facilityId/debug/outpatient-mock` (`DEBUG_PAGES_ENABLED` 時のみ)
+- `/f/:facilityId/debug/mobile-patient-picker` (`DEBUG_PAGES_ENABLED` 時のみ)
+- `/f/:facilityId/debug/orca-api` (`DEBUG_PAGES_ENABLED` 時のみ)
 
 ## Guard Inventory
 - `FacilityGate`
@@ -91,6 +98,8 @@
 - 初期 patient context は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context の順で解決します。
 - Patients が読む minimal context は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
 - `returnTo` は safe な候補だけを direct return に使い、fallback は `from=reception` なら reception、それ以外は charts です。
+- `patients:returnTo` の sessionStorage seam は current reader を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
+- 通常 UI の監査表示は summary を正とし、raw endpoint dump は default から外します。
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
@@ -101,6 +110,7 @@
 - `patientId` は query `patientId` -> `location.state.patientId` -> deep link volatile context の順で解決します。
 - current screen は `ReturnToBar`、患者特定、アップロード、完了/参照の単一カラム構成です。
 - fallback は `from=reception` なら reception、`from=patients` なら patients、既定は charts です。
+- retry 後は送信ボタンへ、送信成功後は最初の参照リンクへ focus を戻します。
 
 ### Verification
 - code-confirm: deep link scrub 後の patient 復元、missing-patient error、feature-disabled message
@@ -110,8 +120,12 @@
 ### Current Fact
 - admin current contract の source of truth は `/api/admin/config` です。
 - `/api/admin/delivery` を第 2 正本として復活させません。
-- top-level tab は `delivery`, `orca-users`, `master-updates` の 3 本です。
+- top-level navigation は `delivery`, `orca-users`, `master-updates` の 3 本で、tab pattern ではなく plain navigation / `aria-current` を使います。
 - `delivery` 配下は `dashboard`, `connection`, `config`, `queue`, `operations`, `debug` の section sub-navigation を持ちます。
+- sub-navigation は `設定 / 状態確認 / 調査` に regroup します。
+- authz の canonical layer は `AdministrationGate` の route-level guard です。
+- `connection` は接続テストの実行面、`operations` は状態参照面です。
+- `AdminDeliveryStatusCard` は配信メタデータ card として `deliveryId / version / etag / deliveredAt / verified` を表示します。
 
 ## Explicit Unknown
 - pane geometry

@@ -7,6 +7,7 @@
 - `info`: 状態変化や補助情報を示す通知
 - `warn`: 注意喚起。必要なら次アクションを伴う
 - `error`: 失敗通知。必要なら次アクションを伴う
+- shared helper では `warn` を canonical とし、既存 component が受ける `warning` は adapter で吸収します。
 
 ## CTA Rule
 - safe で決定的な次アクションがある場合に CTA を付けます。
@@ -18,6 +19,8 @@
 - それ以外は canonical copy に寄せます。
 - client に内部詳細や安全性未確認の文字列を露出しません。
 - `PatientsPage` の edit/audit summary、`ChartsActionBar` の action/result feedback、`ReceptionPage` の accept/cancel/claim-send result は canonical copy を current contract とします。
+- `PatientsPage` と `AdministrationPage` の通常 surface では `endpoint`, `Api_Result_Message`, `Error.message` のような raw detail を default 表示しません。
+- safe support ID として `RUN_ID` / `traceId` を出すことがあります。
 - current runtime の active surface 全体が app-wide に統一済みとは断定せず、residual inventory は working note で追跡します。
 
 ## Canonical Copy Principles
@@ -52,6 +55,7 @@
 - lost-context の primary CTA は generic な「戻る」ではなく、`受付へ戻る` / `患者管理へ戻る` / `カルテへ戻る` のように surface 名を含めます。
 - safe な `returnTo` がある場合だけ direct return を出し、fallback shortcut は補助導線として出します。
 - canonical copy は「戻ったあと何を選び直すか」を 1 文で説明し、 raw backend/internal detail は使いません。
+- `ReturnToBar` の direct return は safe return candidate のみを使います。
 
 ## Accessibility Minimum
 - 色だけに依存して状態を伝えないことを最小契約とします。
@@ -63,6 +67,7 @@
     - factor2 へ遷移したら認証コード入力へ focus を移します。
   - `ReturnToBar`:
     - recovery CTA は named `region` 内の keyboard reachable link で提供します。
+    - narrow layout でも recovery hint を切り捨てず、primary CTA と `aria-describedby` で関連づけます。
   - `PatientsPage`:
     - status bar は live region で更新状態を伝え、warning note は tone に応じて assertive を使います。
     - `ApiFailureBanner` は患者一覧/検索文脈の直近に置きます。
@@ -70,8 +75,17 @@
     - page status は stage に応じて `status` / `alert` を切り替えます。
     - missing-patient は `role=alert` で示します。
     - file picker の入口は visible button とし、narrow layout でも単一カラムの意味順を崩しません。
+    - retry 後は送信ボタンへ、送信成功後は最初の参照リンクへ focus を戻します。
+    - 複数の参照リンクは file 名付きの一意な accessible name を持ちます。
   - `ApiFailureBanner`:
     - retry/share は action group でまとめ、ID 未取得時の disabled 理由は `aria-describedby` で補足します。
+  - `ConfirmDialog` / `FocusTrapDialog`:
+    - focusable が 0 件でも dialog panel に fallback focus を持たせます。
+    - pending 中は close button / Esc / backdrop / cancel を一貫して停止し、閉じられそうに見える affordance を残しません。
+  - `AdministrationPage`:
+    - save / test / refetch の async feedback は live region (`AdminAlert`) に集約します。
+  - `LoginScreen`:
+    - field validation は `aria-invalid` / `aria-describedby` で input と結びます。
 
 ## Terminology
 - `success` / `info` / `warn` / `error` の 4 段で統一します。

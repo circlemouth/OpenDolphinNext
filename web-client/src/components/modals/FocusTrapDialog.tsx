@@ -92,7 +92,11 @@ export function FocusTrapDialog({
     if (!panel) return;
     if (initialFocus === 'none') return;
     const focusables = getFocusableElements(panel);
-    if (focusables.length > 0) focusables[0].focus();
+    if (focusables.length > 0) {
+      focusables[0].focus();
+      return;
+    }
+    panel.focus();
   }, [initialFocus, open]);
 
   useEffect(() => {
@@ -109,7 +113,11 @@ export function FocusTrapDialog({
       const panel = panelRef.current;
       if (!panel) return;
       const focusables = getFocusableElements(panel);
-      if (focusables.length === 0) return;
+      if (focusables.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
       const active = document.activeElement as HTMLElement | null;
       const currentIndex = active ? focusables.indexOf(active) : -1;
       const goingBack = event.shiftKey;
@@ -144,6 +152,7 @@ export function FocusTrapDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="focus-trap-dialog__header">

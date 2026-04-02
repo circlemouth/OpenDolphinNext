@@ -1,16 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 
 import { FacilityLoginResolver } from '../FacilityLoginResolver';
 
-const buildRouter = (initialEntry?: { pathname: string; state?: unknown }) =>
+const buildRouter = (
+  initialEntries?: Array<string | { pathname: string; state?: unknown }>,
+  initialIndex?: number,
+) =>
   createMemoryRouter(
     [
       { path: '/login', element: <FacilityLoginResolver /> },
       { path: '/f/:facilityId/login', element: <div>facility login</div> },
+      { path: '/before', element: <div>before</div> },
     ],
-    { initialEntries: [initialEntry ?? { pathname: '/login' }] },
+    { initialEntries: initialEntries ?? [{ pathname: '/login' }], initialIndex },
   );
 
 beforeEach(() => {
@@ -35,7 +39,7 @@ describe('FacilityLoginResolver', () => {
 
   it('from state に施設ID付きパスがある場合は最優先で自動補完する', async () => {
     localStorage.setItem('opendolphin:web-client:recentFacilities', JSON.stringify(['0001', '0002']));
-    const router = buildRouter({ pathname: '/login', state: { from: '/f/ABC-01/reception' } });
+    const router = buildRouter([{ pathname: '/login', state: { from: '/f/ABC-01/reception' } }]);
 
     render(<RouterProvider router={router} />);
 
@@ -47,7 +51,7 @@ describe('FacilityLoginResolver', () => {
   it('from state を forwardState として維持する', async () => {
     const fromState = { pathname: '/f/XYZ-02/charts', search: '?mode=print' };
     localStorage.setItem('opendolphin:web-client:recentFacilities', JSON.stringify(['0001', '0002']));
-    const router = buildRouter({ pathname: '/login', state: { from: fromState } });
+    const router = buildRouter([{ pathname: '/login', state: { from: fromState } }]);
 
     render(<RouterProvider router={router} />);
 
@@ -83,7 +87,7 @@ describe('FacilityLoginResolver', () => {
   it('switchContext がある場合は自動補完せず施設選択を表示する', async () => {
     localStorage.setItem('opendolphin:web-client:recentFacilities', JSON.stringify(['0001']));
     const switchContext = { mode: 'switch', reason: 'manual', actor: { facilityId: '0001', userId: 'user-1' } };
-    const router = buildRouter({ pathname: '/login', state: { switchContext } });
+    const router = buildRouter([{ pathname: '/login', state: { switchContext } }]);
 
     render(<RouterProvider router={router} />);
 
@@ -91,5 +95,24 @@ describe('FacilityLoginResolver', () => {
       expect(screen.getByText('OpenDolphin Web 施設選択')).toBeInTheDocument();
     });
     expect(router.state.location.pathname).toBe('/login');
+  });
+
+  it('auto-resolve は replace 遷移で login history を増やさない', async () => {
+    localStorage.setItem('opendolphin:web-client:recentFacilities', JSON.stringify(['0001']));
+    const router = buildRouter(['/before', { pathname: '/login' }], 1);
+
+    render(<RouterProvider router={router} />);
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/f/0001/login');
+    });
+
+    await act(async () => {
+      await router.navigate(-1);
+    });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/before');
+    });
   });
 });

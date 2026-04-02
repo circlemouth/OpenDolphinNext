@@ -24,15 +24,19 @@
     - 読み取り対象は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
     - 入力 source 優先度は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context です。
     - Patients 画面は route query の `patientId` を権威入力として読みません。
+    - current repo では `patients:returnTo` の reader を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
   - Mobile Images:
     - 現行の minimal schema は `patientId` のみです。
     - 入力 source 優先度は query `patientId` -> `location.state.patientId` -> deep link volatile context です。
     - query `patientId` は入口専用で、sensitive route 到達後に scrub されます。
+  - Reception:
+    - `visitDate` は handoff 時に正規化して carry することがありますが、単独では権威入力にしません。
 
 ## App-Wide Navigation / Handoff Minimum
 - app-wide に docs 化してよい handoff key は `from` と sanitize 済み `returnTo` です。
 - `returnTo` の safe route allowlist は `reception`, `charts`, `charts/order-sets`, `charts/print/document`, `charts/print/outpatient`, `patients`, `m/images`, `administration`, `debug` を含みます。
 - current repo の navigation helper が認識する screen 名は `reception`, `charts`, `orderSets`, `print`, `patients`, `admin`, `debug`, `mobileImages` です。
+- safe でない `returnTo` は direct return に使わず、surface-aware fallback に落とします。
 - patient context schema を app-wide に拡張せず、print / administration / debug では route 別 minimal schema が docs 未確定のままです。
 
 ## Non-Persistence

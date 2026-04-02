@@ -13,7 +13,11 @@ vi.mock('../../../../libs/observability/observability', () => ({
 }));
 
 vi.mock('../../../../libs/security/safeUrl', () => ({
-  safeSameOriginHttpUrl: () => undefined,
+  safeSameOriginHttpUrl: (value?: string) => value ?? undefined,
+}));
+
+vi.mock('../../../../libs/observability/runIdCopy', () => ({
+  copyTextToClipboard: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../../../../AppRouter', () => ({
@@ -28,6 +32,7 @@ vi.mock('../../../../routes/useAppNavigation', () => ({
   useAppNavigation: () => ({
     fromCandidate: 'charts',
     returnToCandidate: '/f/0001/charts',
+    safeReturnToCandidate: '/f/0001/charts',
   }),
 }));
 
@@ -166,5 +171,91 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     expect(await screen.findByText('送信に失敗しました。時間をおいて再試行してください。')).toBeInTheDocument();
     expect(screen.queryByText(/java\.sql\.SQLException/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^debug:/)).not.toBeInTheDocument();
+  });
+
+  it('再試行で送信ボタンへ focus を戻す', async () => {
+    vi.mocked(uploadPatientImageViaXhr).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      error: 'network_error',
+      errorCode: 'internal_error',
+    } as any);
+    saveDeepLinkContext({ patientId: '123' });
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/m/images']}>
+        <MobileImagesUploadPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
+    });
+
+    const fileInput = document.querySelector('[data-test-id="mobile-image-file-input"]') as HTMLInputElement;
+    const file = new File(['image'], 'upload.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '送信' }));
+    await user.click(await screen.findByRole('button', { name: '再試行' }));
+
+    expect(screen.getByRole('button', { name: '送信' })).toHaveFocus();
+  });
+
+  it('送信成功後は最初の参照リンクへ focus し、リンク名を一意にする', async () => {
+    vi.mocked(fetchPatientImageList)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        endpoint: '/patients/123/images',
+        list: [],
+      } as any)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        endpoint: '/patients/123/images',
+        list: [
+          {
+            imageId: 'img-1',
+            fileName: 'upload-1.jpg',
+            size: 1200,
+            downloadUrl: 'https://example.test/images/1',
+          },
+          {
+            imageId: 'img-2',
+            fileName: 'upload-2.jpg',
+            size: 1300,
+            downloadUrl: 'https://example.test/images/2',
+          },
+        ],
+      } as any);
+    vi.mocked(uploadPatientImageViaXhr).mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+    } as any);
+    saveDeepLinkContext({ patientId: '123' });
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/m/images']}>
+        <MobileImagesUploadPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
+    });
+
+    const fileInput = document.querySelector('[data-test-id="mobile-image-file-input"]') as HTMLInputElement;
+    const file = new File(['image'], 'upload.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '送信' }));
+
+    const firstLink = await screen.findByRole('link', { name: '参照リンクを開く: upload-1.jpg' });
+    const secondLink = screen.getByRole('link', { name: '参照リンクを開く: upload-2.jpg' });
+    expect(firstLink).toHaveFocus();
+    expect(secondLink).toBeInTheDocument();
   });
 });

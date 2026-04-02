@@ -46,12 +46,14 @@
 - invalid / empty の `returnTo` は `/f/:facilityId/reception`
 - login 完了時の主な着地元は `location.state.from`
 - unauthenticated access と session expiry は `/login` に `replace`
+- `/login` から facility 付き login への auto-resolve も `replace`
+- notice 優先順位は `sessionExpiryNotice` -> `loginNotice` -> `initialNotice`
 - deep-link scrub は login 前ではなく sensitive route 到達後に行う
 - admin 権限不足は `/login` へ飛ばさず facility-scoped denial surface に留める
 
 ### 2-5. logout
 - logout は cleanup 優先
-- `/login` へ `replace`
+- facility が分かる時は `/f/:facilityId/login?reason=logout`、不明時は `/login` へ `replace`
 - 順序:
   1. サーバ logout API を best-effort 実行
   2. client storage cleanup
@@ -81,6 +83,7 @@
   `location.state` top-level -> `location.state.encounter` -> volatile encounter
 - Mobile Images:
   `query patientId` -> `location.state.patientId` -> deep link volatile context
+- Patients の戻り導線は `useAppNavigation().safeReturnToCandidate` を正とし、`patients:returnTo` reader は current repo に持たない
 
 ### 3-3. minimal encounter context
 docs に置いてよい最小項目:
@@ -112,6 +115,7 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 - `info`
 - `warn`
 - `error`
+- shared helper では `warn` を canonical とし、既存 `warning` surface は adapter で吸収する
 
 ### 4-2. CTA ルール
 - safe で決定的な次アクションがある時だけ CTA を付ける
@@ -122,6 +126,7 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 - raw API message は docs に明示されるか user-safe 保証がある場合だけ
 - それ以外は canonical copy を default にする
 - `ApiFailureBanner`、route render error、Patients / Charts / Reception の current action-result surface は canonical copy を優先する
+- Patients / Administration の通常 surface は `endpoint`, `Api_Result_Message`, `Error.message` を default 表示しない
 - active runtime 全面で app-wide 完了とは断定せず、残差は working note で管理する
 - raw detail の代わりに `RUN_ID` / `traceId` のような安全な識別子を出すことがある
 
@@ -151,6 +156,7 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 
 ## 5-1. route inventory
 - `/login`
+- `/outpatient-mock` (legacy disabled)
 - `/f/:facilityId/login`
 - `/f/:facilityId/reception`
 - `/f/:facilityId/patients`
@@ -160,6 +166,10 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 - `/f/:facilityId/charts/print/document`
 - `/f/:facilityId/m/images`
 - `/f/:facilityId/administration`
+- `/f/:facilityId/debug`
+- `/f/:facilityId/debug/outpatient-mock`
+- `/f/:facilityId/debug/mobile-patient-picker`
+- `/f/:facilityId/debug/orca-api`
 
 ## 5-2. guard inventory
 - `FacilityGate`
@@ -183,8 +193,11 @@ normal runtime の中心は `SoapNotePanel` 側です。
 ## 5-4. Admin surface
 - source of truth は `/api/admin/config`
 - `/api/admin/delivery` を第 2 正本に戻さない
-- top-level tab は `delivery / orca-users / master-updates`
+- top-level navigation は `delivery / orca-users / master-updates`
 - `delivery` 配下は `dashboard / connection / config / queue / operations / debug`
+- sub-navigation は `設定 / 状態確認 / 調査`
+- authz の canonical layer は route-level guard
+- `connection` は接続テスト実行面、`operations` は状態参照面
 
 ---
 

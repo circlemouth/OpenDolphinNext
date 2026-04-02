@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getAuditEventLog, logAuditEvent } from '../../libs/audit/auditLogger';
@@ -8,7 +8,6 @@ import { resolveAriaLive, resolveRunId } from '../../libs/observability/observab
 import { copyTextToClipboard } from '../../libs/observability/runIdCopy';
 import { useAppToast } from '../../libs/ui/appToast';
 import { useSession } from '../../AppRouter';
-import { buildFacilityPath } from '../../routes/facilityRoutes';
 import { ToneBanner } from '../reception/components/ToneBanner';
 import { AuditSummaryInline } from '../shared/AuditSummaryInline';
 import { RunIdBadge } from '../shared/RunIdBadge';
@@ -33,6 +32,7 @@ import {
   type OrcaQueueEntry,
 } from './api';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { AdminAlert } from './components/AdminAlert';
 import { AdminDeliveryConfigCard } from './delivery/AdminDeliveryConfigCard';
 import { AdminDeliveryStatusCard } from './delivery/AdminDeliveryStatusCard';
 import { DeliveryDashboard } from './delivery/DeliveryDashboard';
@@ -59,6 +59,7 @@ import {
   type OrcaInternalWrapperBase,
   type OrcaInternalWrapperEndpoint,
 } from './orcaInternalWrapperApi';
+import type { FeedbackTone } from '../shared/feedbackTone';
 import './administration.css';
 
 type AdministrationPageProps = {
@@ -67,7 +68,7 @@ type AdministrationPageProps = {
 };
 
 type AdministrationTab = 'delivery' | 'orca-users' | 'master-updates';
-type Feedback = { tone: 'success' | 'warning' | 'error' | 'info'; message: string };
+type Feedback = { tone: FeedbackTone; message: string };
 
 type OrcaInternalWrapperResult = OrcaInternalWrapperBase & {
   generatedAt?: string;
@@ -219,6 +220,12 @@ const normalizeEnvironmentLabel = (raw?: string) => {
   if (value.includes('prod')) return 'prod';
   if (value.includes('preview')) return 'preview';
   return raw;
+};
+
+const formatRoleLabel = (value?: string) => {
+  if (!value) return '不明';
+  if (value === 'system_admin') return 'システム管理者';
+  return value;
 };
 
 const getStringValue = (value: unknown) => (typeof value === 'string' ? value : undefined);
@@ -417,7 +424,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   } | null>(null);
 
   const queryClient = useQueryClient();
-  const guardMessageId = 'admin-guard-message';
   const guardDetailsId = 'admin-guard-details';
   const actorId = `${session.facilityId}:${session.userId}`;
   const showAdminDebugToggles = import.meta.env.VITE_ENABLE_ADMIN_DEBUG === '1' && isSystemAdmin;
@@ -576,7 +582,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
   const reportGuardedAction = useCallback(
     (action: GuardAction, detail?: string) => {
-      setFeedback({ tone: 'warning', message: '権限がないため操作をブロックしました。管理者へ依頼してください。' });
+      setFeedback({ tone: 'warn', message: '権限がないため操作をブロックしました。システム管理者へ依頼してください。' });
       logGuardEvent(action, detail);
     },
     [logGuardEvent],
@@ -618,9 +624,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     const data = orcaConnectionQuery.data;
     if (!data) return;
     if (!data.ok) {
-      if (data.error) {
-        setOrcaConnectionFeedback({ tone: 'warning', message: `WebORCA 接続設定の取得に失敗しました: ${data.error}` });
-      }
+      setOrcaConnectionFeedback({ tone: 'warn', message: 'WebORCA 接続設定の取得に失敗しました。再取得してください。' });
       return;
     }
     const next = buildConnectionSnapshot({
@@ -670,16 +674,16 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     mutationFn: saveOrcaConnectionConfig,
     onSuccess: (data) => {
       if (!data.ok) {
-        setOrcaConnectionFeedback({ tone: 'error', message: data.error ?? 'WebORCA 接続設定の保存に失敗しました。' });
+        setOrcaConnectionFeedback({ tone: 'error', message: 'WebORCA 接続設定の保存に失敗しました。設定内容を確認してください。' });
         return;
       }
       setOrcaConnectionFeedback({ tone: 'success', message: 'WebORCA 接続設定を保存しました。' });
       queryClient.invalidateQueries({ queryKey: ['admin-orca-connection'] });
     },
-    onError: (error) => {
+    onError: () => {
       setOrcaConnectionFeedback({
         tone: 'error',
-        message: `WebORCA 接続設定の保存に失敗しました: ${toErrorMessage(error)}`,
+        message: 'WebORCA 接続設定の保存に失敗しました。設定内容を確認してください。',
       });
     },
   });
@@ -696,9 +700,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       } else {
         setOrcaConnectionFeedback({
           tone: 'error',
-          message: data.error
-            ? `接続テストに失敗しました: ${data.error}`
-            : '接続テストに失敗しました。接続先・認証・証明書を確認してください。',
+          message: '接続テストに失敗しました。接続先・認証・証明書を確認してください。',
         });
       }
     },
@@ -711,7 +713,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       });
       setOrcaConnectionFeedback({
         tone: 'error',
-        message: `接続テストに失敗しました: ${toErrorMessage(error)}`,
+        message: '接続テストに失敗しました。接続先・認証・証明書を確認してください。',
       });
     },
   });
@@ -802,7 +804,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     }
     if (!orcaConnectionAccessVerified) {
       setOrcaConnectionFeedback({
-        tone: 'warning',
+        tone: 'warn',
         message:
           'WebORCA 接続設定は、管理者アカウントで認証済みのセッションでのみ表示・編集できます。再ログイン後に再取得してください。',
       });
@@ -900,7 +902,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const requestTemplate = useMemo(
     () =>
       [
-        '【system_admin 権限依頼テンプレート】',
+        '【システム管理者 権限依頼テンプレート】',
         `施設ID: ${session.facilityId}`,
         `環境: ${environmentLabel}`,
         '作業内容: Administration の設定変更/配信',
@@ -1069,7 +1071,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     if (!isForbidden) return;
     if (forbiddenLogRef.current.runId === resolvedRunId && forbiddenLogRef.current.noted) return;
     forbiddenLogRef.current = { runId: resolvedRunId, noted: true };
-    setFeedback({ tone: 'warning', message: '管理APIが権限不足 (403) のため読み取り専用で表示しています。' });
+    setFeedback({ tone: 'warn', message: '管理API が権限不足のため読み取り専用で表示しています。' });
     logAuditEvent({
       runId: resolvedRunId,
       source: 'admin/guard',
@@ -1090,30 +1092,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const deliveryStatus = buildChartsDeliveryStatus(rawConfig, rawConfig);
   const deliverySummary = summarizeDeliveryStatus(deliveryStatus);
   const lastDeliveredAt = configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt;
-  const deliveryFlagRows = [
-    {
-      key: 'chartsDisplayEnabled',
-      label: 'Charts表示',
-      configValue: rawConfig?.chartsDisplayEnabled,
-      deliveryValue: rawConfig?.chartsDisplayEnabled,
-      state: deliveryStatus.chartsDisplayEnabled,
-    },
-    {
-      key: 'chartsSendEnabled',
-      label: 'Charts送信',
-      configValue: rawConfig?.chartsSendEnabled,
-      deliveryValue: rawConfig?.chartsSendEnabled,
-      state: deliveryStatus.chartsSendEnabled,
-    },
-    {
-      key: 'chartsMasterSource',
-      label: 'Charts master',
-      configValue: rawConfig?.chartsMasterSource,
-      deliveryValue: rawConfig?.chartsMasterSource,
-      state: deliveryStatus.chartsMasterSource,
-    },
-  ];
-
   const orcaConnectionStatusTone = resolveStatusTone(orcaConnectionTestResult, orcaConnectionTestMutation.isPending);
   const orcaConnectionStatusLabel = resolveStatusLabel(orcaConnectionTestResult, orcaConnectionTestMutation.isPending);
   const traceId = queueQuery.data?.traceId ?? orcaConnectionTestResult?.traceId;
@@ -1159,6 +1137,36 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     return fragments.length > 0 ? fragments.join(' / ') : '異常なし';
   })();
 
+  const sectionLead =
+    activeTab === 'delivery'
+      ? '配信設定・接続テスト・監視導線を分離し、誤操作を防止します。'
+      : activeTab === 'master-updates'
+        ? 'ORCA と外部マスタの更新導線を管理し、更新状態を安全に確認します。'
+        : 'ORCA職員マスタ連携と、連携済みユーザーへの電子カルテ権限付与を管理します。';
+
+  const sectionMetricsHeading =
+    activeTab === 'delivery' ? '運用KPI' : activeTab === 'master-updates' ? '更新サマリ' : '権限サマリ';
+
+  const sectionMetrics =
+    activeTab === 'delivery'
+      ? [
+          `配信状態: ${deliverySummary.summary}`,
+          `最終配信: ${formatTimestampWithAgo(lastDeliveredAt)}`,
+          `WebORCA: ${webOrcaConnectionLabel}`,
+          `queue警告: pending ${queueSummary.pending} / failed ${queueSummary.failed} / 遅延 ${queueSummary.delayed}`,
+          `運用状態: ${abnormalSummary}`,
+          `環境: ${environmentLabel}`,
+          '単一路線: config only',
+        ]
+      : activeTab === 'master-updates'
+        ? [`環境: ${environmentLabel}`, `RUN_ID: ${resolvedRunId ?? '―'}`, '配信設定の正本: /api/admin/config']
+        : [
+            `権限: ${formatRoleLabel(role)}`,
+            `施設ID: ${session.facilityId}`,
+            `環境: ${environmentLabel}`,
+            '認可の正本: route-level',
+          ];
+
   return (
     <>
       <a className="skip-link" href="#administration-main">
@@ -1172,34 +1180,20 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
         tabIndex={-1}
       >
         <div className="administration-page__header">
-          <h1>Administration</h1>
-          {activeTab === 'delivery' ? (
-            <p className="administration-page__lead" role="status" aria-live={infoLive}>
-              設定配信の運用導線と監視導線を分離し、誤操作を防止します。
-            </p>
-          ) : activeTab === 'master-updates' ? (
-            <p className="administration-page__lead" role="status" aria-live={infoLive}>
-              ORCA/外部マスタの参照データ更新を管理します（自動・手動・アップロード・ロールバック）。
-            </p>
-          ) : (
-            <p className="administration-page__lead" role="status" aria-live={infoLive}>
-              ORCA職員マスタ連携と、連携済みユーザーへの電子カルテ権限付与を管理します。
-            </p>
-          )}
+          <h1>管理画面</h1>
+          <p className="administration-page__lead" role="status" aria-live={infoLive}>
+            {sectionLead}
+          </p>
 
           <div className="admin-header-blocks">
             <section className="admin-header-block">
-              <h2>運用KPI</h2>
+              <h2>{sectionMetricsHeading}</h2>
               <div className="administration-page__meta" aria-live={infoLive}>
-                <span className="administration-page__pill">配信状態: {deliverySummary.summary}</span>
-                <span className="administration-page__pill">最終配信: {formatTimestampWithAgo(lastDeliveredAt)}</span>
-                <span className="administration-page__pill">WebORCA: {webOrcaConnectionLabel}</span>
-                <span className="administration-page__pill">
-                  queue警告: pending {queueSummary.pending} / failed {queueSummary.failed} / 遅延 {queueSummary.delayed}
-                </span>
-                <span className="administration-page__pill">運用状態: {abnormalSummary}</span>
-                <span className="administration-page__pill">環境: {environmentLabel}</span>
-                <span className="administration-page__pill">単一路線: config only</span>
+                {sectionMetrics.map((metric) => (
+                  <span key={metric} className="administration-page__pill">
+                    {metric}
+                  </span>
+                ))}
               </div>
             </section>
 
@@ -1219,7 +1213,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                     コピー
                   </button>
                 </span>
-                <span className="administration-page__pill">role: {role ?? 'unknown'}</span>
+                <span className="administration-page__pill">権限: {formatRoleLabel(role)}</span>
                 <span className="administration-page__pill">
                   traceId: {traceId ?? '―'}
                   {traceId ? (
@@ -1232,11 +1226,10 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
             </section>
           </div>
 
-          <div className="administration-tabs" role="tablist" aria-label="Administration tabs">
+          <nav className="administration-tabs" aria-label="管理画面セクション">
             <button
               type="button"
-              role="tab"
-              aria-selected={activeTab === 'delivery'}
+              aria-current={activeTab === 'delivery' ? 'page' : undefined}
               className={`administration-tab${activeTab === 'delivery' ? ' is-active' : ''}`}
               onClick={() => {
                 const params = new URLSearchParams(searchParams);
@@ -1245,12 +1238,11 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
               }}
             >
-              設定配信
+              配信・運用
             </button>
             <button
               type="button"
-              role="tab"
-              aria-selected={activeTab === 'orca-users'}
+              aria-current={activeTab === 'orca-users' ? 'page' : undefined}
               className={`administration-tab${activeTab === 'orca-users' ? ' is-active' : ''}`}
               onClick={() => {
                 const params = new URLSearchParams(searchParams);
@@ -1263,8 +1255,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
             </button>
             <button
               type="button"
-              role="tab"
-              aria-selected={activeTab === 'master-updates'}
+              aria-current={activeTab === 'master-updates' ? 'page' : undefined}
               className={`administration-tab${activeTab === 'master-updates' ? ' is-active' : ''}`}
               onClick={() => {
                 const params = new URLSearchParams(searchParams);
@@ -1275,7 +1266,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
             >
               マスタ更新
             </button>
-          </div>
+          </nav>
 
           {activeTab === 'delivery' ? (
             <DeliverySubNav
@@ -1289,41 +1280,23 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
             />
           ) : null}
 
-          {isForbidden && activeTab === 'delivery' ? (
-            <ToneBanner
-              tone="error"
-              message="管理APIが 403 Forbidden を返しました。権限付与後に再ログインするか、システム管理者へ依頼してください。"
-              destination="Administration"
-              runId={resolvedRunId}
-              nextAction="権限確認 / 再ログイン"
+          {feedback ? <AdminAlert tone={feedback.tone} message={feedback.message} className="administration-page__feedback" /> : null}
+          {orcaConnectionFeedback && activeTab === 'delivery' && activeDeliverySection === 'connection' ? (
+            <AdminAlert
+              tone={orcaConnectionFeedback.tone}
+              message={orcaConnectionFeedback.message}
+              className="administration-page__feedback"
             />
           ) : null}
 
-          {!isSystemAdmin ? (
-            <div className="admin-guard" role="alert" aria-live={resolveAriaLive('warning')} id={guardMessageId}>
-              <div className="admin-guard__header">
-                <span className="admin-guard__title">操作ガード中</span>
-                <span className="admin-guard__badge">system_adminのみ</span>
-              </div>
-              <p className="admin-guard__message">
-                現在のロール（{role ?? 'unknown'}）では Administration の破壊操作はできません。入力欄は readOnly でコピー可能です。
-              </p>
-              <div className="admin-request-template">
-                <textarea value={requestTemplate} readOnly rows={6} id={guardDetailsId} />
-                <button type="button" className="admin-button admin-button--secondary" onClick={handleCopyRequestTemplate}>
-                  依頼テンプレをコピー
-                </button>
-              </div>
-              <ul className="admin-guard__next">
-                <li>system_admin で再ログインしてください。</li>
-                <li>権限保持者へ作業依頼を行ってください。</li>
-                <li>
-                  <Link to={buildFacilityPath(session.facilityId, '/reception')} className="admin-guard__link">
-                    Reception へ戻って受付状況を確認
-                  </Link>
-                </li>
-              </ul>
-            </div>
+          {isForbidden && activeTab === 'delivery' ? (
+            <ToneBanner
+              tone="error"
+              message="管理APIへのアクセスが拒否されました。権限を確認し、必要ならシステム管理者へ依頼してください。"
+              destination="管理画面"
+              runId={resolvedRunId}
+              nextAction="権限確認 / サポート依頼"
+            />
           ) : null}
         </div>
 
@@ -1374,7 +1347,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 accessVerified={orcaConnectionAccessVerified}
                 authBlocked={orcaConnectionAuthBlocked}
                 dirty={orcaConnectionDirty}
-                feedback={orcaConnectionFeedback}
                 statusTone={orcaConnectionStatusTone}
                 statusLabel={orcaConnectionStatusLabel}
                 testSummary={orcaConnectionTestResult}
@@ -1400,7 +1372,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                   showAdminDebugToggles={showAdminDebugToggles}
                   dirty={configDirty}
                   updatedAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
-                  feedback={feedback}
                   note={configQuery.data?.note}
                   guardDetailsId={guardDetailsId}
                   saving={configMutation.isPending}
@@ -1417,8 +1388,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                   deliveredAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
                   environmentLabel={environmentLabel}
                   deliveryMode={deliveryMode}
-                  verified={configQuery.data?.verifyAdminDelivery}
-                  rows={deliveryFlagRows}
+                  verified={configQuery.data?.verified}
                   onCopy={handleCopyValue}
                 />
               </div>
@@ -1438,8 +1408,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
             {activeDeliverySection === 'operations' ? (
               <OperationsHealthCard
-                isSystemAdmin={isSystemAdmin}
-                guardDetailsId={guardDetailsId}
                 healthResult={operationsHealthQuery.data ?? null}
                 readinessResult={operationsReadinessQuery.data ?? null}
                 pvtWorkerResult={pvtWorkerHealthQuery.data ?? null}
@@ -1450,11 +1418,9 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 orcaConnectionStatusLabel={orcaConnectionStatusLabel}
                 orcaConnectionResult={orcaConnectionTestResult}
                 onRefresh={handleOperationsRefresh}
-                onRunConnectionTest={handleOrcaConnectionTest}
                 refreshPending={
                   operationsHealthQuery.isFetching || operationsReadinessQuery.isFetching || pvtWorkerHealthQuery.isFetching
                 }
-                connectionTestPending={orcaConnectionTestMutation.isPending}
               />
             ) : null}
 

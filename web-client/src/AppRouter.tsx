@@ -70,7 +70,7 @@ import {
   resolveLoginDestinationSummary,
   resolveLoginNotice,
   resolveLoginNoticeFromSearch,
-  resolveLoginNoticeMessage,
+  resolveLoginSurfaceNotice,
   resolveLoginRedirect,
 } from './features/login/loginRedirect';
 import { isSystemAdminRole } from './libs/auth/roles';
@@ -841,11 +841,10 @@ function AdministrationGate({ session }: { session: Session }) {
   return (
     <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
       <div className="status-message is-error" role="status">
-        <p>Administration は system_admin 専用のためアクセスできません。</p>
-        <p>
-          現在のログイン: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId} / role={session.role}
-        </p>
-        <p>system_admin で再ログインしてください。</p>
+        <p>管理画面はシステム管理者のみ利用できます。</p>
+        <p>必要権限: システム管理者</p>
+        <p>サポート共有用 RUN_ID: {session.runId || '未取得'}</p>
+        <p>権限付与が必要な場合はシステム管理者へ依頼してください。</p>
       </div>
       <div className="login-form__actions" style={{ marginTop: '1rem' }}>
         <button type="button" onClick={() => navigate(buildFacilityPath(session.facilityId, '/reception'), { replace: true })}>
@@ -911,14 +910,10 @@ function FacilityLoginScreen({
   const normalizedId = normalizeFacilityId(decodeFacilityParam(facilityId) ?? facilityId);
   const switchContext = useMemo(() => resolveSwitchContext(location.state), [location.state]);
   const initialNotice = useMemo(() => {
-    const notice = resolveLoginNotice(location.state) ?? resolveLoginNoticeFromSearch(location.search);
-    const message = resolveLoginNoticeMessage(notice);
-    if (!message) return undefined;
-    return {
-      message,
-      tone: notice?.reason === 'logout' ? ('info' as const) : ('error' as const),
-    };
-  }, [location.state]);
+    return resolveLoginSurfaceNotice({
+      loginNotice: resolveLoginNotice(location.state) ?? resolveLoginNoticeFromSearch(location.search),
+    });
+  }, [location.search, location.state]);
   const destinationSummary = useMemo(
     () => resolveLoginDestinationSummary(location.state, normalizedId ?? undefined),
     [location.state, normalizedId],

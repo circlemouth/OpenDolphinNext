@@ -4,7 +4,7 @@ import { useLocation, useNavigate, type Location } from 'react-router-dom';
 import { buildFacilityPath, normalizeFacilityId, parseFacilityPath } from '../../routes/facilityRoutes';
 import { FacilityLoginEntry } from './FacilityLoginEntry';
 import { resolveLoginNotice } from './loginRedirect';
-import { isLegacyFrom, resolveFromState, resolveSwitchContext } from './loginRouteState';
+import { resolveFromState, resolveSwitchContext } from './loginRouteState';
 import { loadRecentFacilities } from './recentFacilityStore';
 
 type FacilityJson = {
@@ -78,7 +78,6 @@ export const FacilityLoginResolver = () => {
         : undefined,
     [forwardableFromState, loginNotice],
   );
-  const legacyFrom = useMemo(() => isLegacyFrom(fromState), [fromState]);
   const switchContext = useMemo(() => resolveSwitchContext(location.state), [location.state]);
   const forwardSearch = location.search ?? '';
 
@@ -96,12 +95,10 @@ export const FacilityLoginResolver = () => {
       const facilityId = await resolveFacilityId(fromState);
       if (!active) return;
       if (facilityId) {
-        // ルーティングの差分を最小化するため、/login 直アクセスは replace、
-        // 旧URL/リダイレクト由来（fromState or legacyFrom）は push で履歴を残す。
         const basePath = buildFacilityPath(facilityId, '/login');
         const nextPath = forwardSearch ? `${basePath}${forwardSearch}` : basePath;
         navigate(nextPath, {
-          replace: !(fromState || legacyFrom),
+          replace: true,
           state: forwardState,
         });
         return;
@@ -115,7 +112,7 @@ export const FacilityLoginResolver = () => {
     return () => {
       active = false;
     };
-  }, [forwardState, fromState, legacyFrom, location.key, navigate, switchContext]);
+  }, [forwardState, fromState, location.key, navigate, switchContext]);
 
   if (isResolving) {
     return (

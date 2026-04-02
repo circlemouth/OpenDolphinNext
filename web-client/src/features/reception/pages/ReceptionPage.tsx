@@ -4341,12 +4341,12 @@ export function ReceptionPage({
         <a className="skip-link" href="#reception-results">
           検索結果へスキップ
         </a>
-        <ReturnToBar
-          scope={{ facilityId: session.facilityId, userId: session.userId }}
-          returnTo={appNav.returnToCandidate}
-          from={appNav.fromCandidate}
-          fallbackUrl={fallbackUrl}
-        />
+      <ReturnToBar
+        scope={{ facilityId: session.facilityId, userId: session.userId }}
+        returnTo={appNav.safeReturnToCandidate}
+        from={appNav.fromCandidate}
+        fallbackUrl={fallbackUrl}
+      />
         <section className="reception-page__header">
           <div className="reception-page__title">
             <div className="reception-page__title-main">

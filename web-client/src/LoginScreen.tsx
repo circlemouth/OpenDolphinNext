@@ -12,7 +12,8 @@ import {
   resolveUnexpectedLoginErrorMessage,
   type LoginFailureResolution,
 } from './features/login/loginErrorMessage';
-import { consumeLoginNotice, resolveLoginNoticeMessage } from './features/login/loginRedirect';
+import { consumeLoginNotice, resolveLoginSurfaceNotice } from './features/login/loginRedirect';
+import type { FeedbackTone } from './features/shared/feedbackTone';
 
 const resolveApiBaseUrl = () => {
   const raw = (import.meta.env.VITE_API_BASE_URL ?? '/api').trim().replace(/\/$/, '');
@@ -56,6 +57,18 @@ const inferRole = (_userId: string, roles?: Array<string | { role?: string }>) =
   return 'unknown';
 };
 
+const resolveFieldErrorId = (fieldId: string) => `${fieldId}-error`;
+
+const resolveFieldDescribedBy = (fieldId: string, error?: string | null) =>
+  error ? resolveFieldErrorId(fieldId) : undefined;
+
+const resolveLoginSubmitErrorMessage = (error: unknown): string => {
+  if (error instanceof LoginFailureError) {
+    return error.message;
+  }
+  return resolveUnexpectedLoginErrorMessage(error);
+};
+
 type CredentialsFormValues = {
   facilityId: string;
   userId: string;
@@ -66,7 +79,7 @@ type CredentialsFormValues = {
 type CredentialsFieldKey = keyof CredentialsFormValues;
 type LoginStatus = 'idle' | 'loading' | 'success' | 'error';
 type LoginStep = 'credentials' | 'factor2';
-type FeedbackTone = 'success' | 'error' | 'info';
+type LoginFeedbackTone = Extract<FeedbackTone, 'success' | 'error' | 'info'>;
 
 type PendingSecondFactorState = {
   facilityId: string;
@@ -80,6 +93,13 @@ type LoginStepMeta = {
   title: string;
   body: string;
 };
+
+class LoginFailureError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LoginFailureError';
+  }
+}
 
 export interface SessionAuthResponse {
   facilityId?: string;
@@ -162,7 +182,7 @@ type LoginScreenProps = {
   onLoginSuccess?: (result: LoginResult) => void;
   initialFacilityId?: string;
   lockFacilityId?: boolean;
-  initialNotice?: { message: string; tone: FeedbackTone };
+  initialNotice?: { message: string; tone: LoginFeedbackTone };
   destinationSummary?: {
     title: string;
     body: string;
@@ -189,7 +209,7 @@ export const LoginScreen = ({
   const [pendingSecondFactor, setPendingSecondFactor] = useState<PendingSecondFactorState | null>(null);
   const [status, setStatus] = useState<LoginStatus>('idle');
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [feedbackTone, setFeedbackTone] = useState<FeedbackTone>('error');
+  const [feedbackTone, setFeedbackTone] = useState<LoginFeedbackTone>('error');
   const [profile, setProfile] = useState<LoginResult | null>(null);
   const secondFactorInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -219,25 +239,15 @@ export const LoginScreen = ({
   }, [step]);
 
   useEffect(() => {
-    const notice = consumeSessionExpiredNotice();
+    const notice = resolveLoginSurfaceNotice({
+      sessionExpiryNotice: consumeSessionExpiredNotice(),
+      loginNotice: consumeLoginNotice(),
+      initialNotice,
+    });
     if (notice?.message) {
       setFeedback(notice.message);
-      setFeedbackTone('error');
-      setStatus('error');
-      return;
-    }
-    const loginNotice = consumeLoginNotice();
-    const loginNoticeMessage = resolveLoginNoticeMessage(loginNotice);
-    if (loginNoticeMessage) {
-      setFeedback(loginNoticeMessage);
-      setFeedbackTone(loginNotice?.reason === 'logout' ? 'info' : 'error');
-      setStatus(loginNotice?.reason === 'logout' ? 'idle' : 'error');
-      return;
-    }
-    if (initialNotice?.message) {
-      setFeedback(initialNotice.message);
-      setFeedbackTone(initialNotice.tone);
-      setStatus(initialNotice.tone === 'error' ? 'error' : 'idle');
+      setFeedbackTone(notice.tone);
+      setStatus(notice.tone === 'error' ? 'error' : 'idle');
     }
   }, [initialNotice]);
 
@@ -284,7 +294,7 @@ export const LoginScreen = ({
     return next;
   };
 
-  const resetToCredentialsStep = (message?: string, tone: FeedbackTone = 'error') => {
+  const resetToCredentialsStep = (message?: string, tone: LoginFeedbackTone = 'error') => {
     setStep('credentials');
     setPendingSecondFactor(null);
     setSecondFactorCode('');
@@ -389,7 +399,7 @@ export const LoginScreen = ({
       });
       onLoginSuccess?.(outcome.result);
     } catch (error) {
-      const message = resolveUnexpectedLoginErrorMessage(error);
+      const message = resolveLoginSubmitErrorMessage(error);
       setFeedback(message);
       setFeedbackTone('error');
       setStatus('error');
@@ -556,7 +566,7 @@ export const LoginScreen = ({
         <form className="login-form" onSubmit={handleSubmit} noValidate>
           {step === 'credentials' ? (
             <>
-              <label className="field">
+              <label className="field" htmlFor="login-facility-id">
                 <span>施設ID</span>
                 <input
                   id="login-facility-id"
@@ -567,11 +577,17 @@ export const LoginScreen = ({
                   onChange={handleFacilityChange}
                   placeholder="例: 0001"
                   disabled={isLoading}
+                  aria-invalid={errors.facilityId ? 'true' : undefined}
+                  aria-describedby={resolveFieldDescribedBy('login-facility-id', errors.facilityId)}
                 />
-                {errors.facilityId ? <span className="field-error">{errors.facilityId}</span> : null}
+                {errors.facilityId ? (
+                  <span id={resolveFieldErrorId('login-facility-id')} className="field-error">
+                    {errors.facilityId}
+                  </span>
+                ) : null}
               </label>
 
-              <label className="field">
+              <label className="field" htmlFor="login-user-id">
                 <span>ユーザーID</span>
                 <input
                   id="login-user-id"
@@ -582,11 +598,17 @@ export const LoginScreen = ({
                   onChange={handleChange('userId')}
                   placeholder="例: doctor01"
                   disabled={isLoading}
+                  aria-invalid={errors.userId ? 'true' : undefined}
+                  aria-describedby={resolveFieldDescribedBy('login-user-id', errors.userId)}
                 />
-                {errors.userId ? <span className="field-error">{errors.userId}</span> : null}
+                {errors.userId ? (
+                  <span id={resolveFieldErrorId('login-user-id')} className="field-error">
+                    {errors.userId}
+                  </span>
+                ) : null}
               </label>
 
-              <label className="field">
+              <label className="field" htmlFor="login-password">
                 <span>パスワード</span>
                 <input
                   id="login-password"
@@ -597,8 +619,14 @@ export const LoginScreen = ({
                   onChange={handleChange('password')}
                   placeholder="パスワード"
                   disabled={isLoading}
+                  aria-invalid={errors.password ? 'true' : undefined}
+                  aria-describedby={resolveFieldDescribedBy('login-password', errors.password)}
                 />
-                {errors.password ? <span className="field-error">{errors.password}</span> : null}
+                {errors.password ? (
+                  <span id={resolveFieldErrorId('login-password')} className="field-error">
+                    {errors.password}
+                  </span>
+                ) : null}
               </label>
             </>
           ) : (
@@ -613,7 +641,7 @@ export const LoginScreen = ({
                 </p>
               </div>
 
-              <label className="field">
+              <label className="field" htmlFor="login-factor2-code">
                 <span>認証コード</span>
                 <input
                   ref={secondFactorInputRef}
@@ -627,8 +655,14 @@ export const LoginScreen = ({
                   onChange={handleSecondFactorCodeChange}
                   placeholder="6桁コード"
                   disabled={isLoading}
+                  aria-invalid={secondFactorError ? 'true' : undefined}
+                  aria-describedby={resolveFieldDescribedBy('login-factor2-code', secondFactorError)}
                 />
-                {secondFactorError ? <span className="field-error">{secondFactorError}</span> : null}
+                {secondFactorError ? (
+                  <span id={resolveFieldErrorId('login-factor2-code')} className="field-error">
+                    {secondFactorError}
+                  </span>
+                ) : null}
               </label>
 
               <div className="login-form__actions">
@@ -757,7 +791,7 @@ const performLogin = async (payload: CredentialsFormValues, runId: string): Prom
     if (failure.kind === 'factor2_required') {
       return { kind: 'factor2_required', message: failure.message, clientUuid, runId };
     }
-    throw new Error(failure.message);
+    throw new LoginFailureError(failure.message);
   }
 
   const data = (await response.json()) as SessionAuthResponse;

@@ -2,18 +2,21 @@ import { Global } from '@emotion/react';
 
 import type { LiveRegionAria } from '../../../libs/observability/types';
 import { resolveAriaLive, resolveRunId, resolveTraceId } from '../../../libs/observability/observability';
+import { normalizeFeedbackTone, toLegacyWarningTone } from '../../shared/feedbackTone';
 import { toneBannerStyles } from '../styles';
 
 export type BannerTone = 'error' | 'warning' | 'info';
+type ToneBannerTone = BannerTone | 'warn';
 
-const tonePrefix: Record<BannerTone, string> = {
+const tonePrefix: Record<ToneBannerTone, string> = {
   error: 'エラー',
   warning: '注意',
+  warn: '注意',
   info: '情報',
 };
 
 export interface ToneBannerProps {
-  tone: BannerTone;
+  tone: ToneBannerTone;
   message: string;
   patientId?: string;
   receptionId?: string;
@@ -37,11 +40,13 @@ export function ToneBanner({
   ariaLive,
   showMeta,
 }: ToneBannerProps) {
-  const live = resolveAriaLive(tone, ariaLive);
-  const role = tone === 'info' ? 'status' : 'alert';
+  const normalizedTone = normalizeFeedbackTone(tone);
+  const legacyTone = toLegacyWarningTone(tone);
+  const live = resolveAriaLive(legacyTone, ariaLive);
+  const role = normalizedTone === 'info' ? 'status' : 'alert';
   const resolvedRunId = resolveRunId(runId);
   const resolvedTraceId = resolveTraceId(traceId);
-  const shouldShowMeta = showMeta ?? tone === 'error';
+  const shouldShowMeta = showMeta ?? normalizedTone === 'error';
   const metaFragments = shouldShowMeta
     ? [`RUN_ID: ${resolvedRunId ?? '未取得'}`, `traceId: ${resolvedTraceId ?? '未取得'}`]
     : [];
@@ -58,7 +63,7 @@ export function ToneBanner({
     <>
       <Global styles={toneBannerStyles} />
       <div
-        className={`tone-banner tone-banner--${tone}`}
+        className={`tone-banner tone-banner--${legacyTone}`}
         role={role}
         aria-live={live}
         aria-atomic="true"

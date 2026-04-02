@@ -6,6 +6,7 @@ import {
   resolveLoginDestinationSummary,
   resolveLoginNotice,
   resolveLoginNoticeMessage,
+  resolveLoginSurfaceNotice,
   resolveLoginRedirect,
 } from '../loginRedirect';
 
@@ -75,5 +76,34 @@ describe('loginRedirect helpers', () => {
 
     expect(consumeLoginNotice()).toEqual({ reason: 'logout' });
     expect(consumeLoginNotice()).toBeUndefined();
+  });
+
+  it('login surface notice は session expiry を loginNotice より優先する', () => {
+    const notice = resolveLoginSurfaceNotice({
+      sessionExpiryNotice: {
+        reason: 'timeout',
+        occurredAt: '2026-04-02T00:00:00Z',
+        message: 'セッションの有効期限が切れました。再ログインしてください。',
+      },
+      loginNotice: { reason: 'logout' },
+      initialNotice: { message: 'fallback', tone: 'info' },
+    });
+
+    expect(notice).toEqual({
+      message: 'セッションの有効期限が切れました。再ログインしてください。',
+      tone: 'error',
+    });
+  });
+
+  it('login surface notice は loginNotice を initialNotice より優先する', () => {
+    const notice = resolveLoginSurfaceNotice({
+      loginNotice: { reason: 'logout' },
+      initialNotice: { message: 'fallback', tone: 'error' },
+    });
+
+    expect(notice).toEqual({
+      message: 'サインアウトしました。安全のため、この端末の作業状態を消去してログイン画面へ戻りました。',
+      tone: 'info',
+    });
   });
 });

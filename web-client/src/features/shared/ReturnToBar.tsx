@@ -1,4 +1,7 @@
+import { useId } from 'react';
 import { Link } from 'react-router-dom';
+
+import { isSafeReturnTo } from '../../routes/appNavigation';
 
 import './returnToBar.css';
 
@@ -14,7 +17,7 @@ const resolveSurfaceLabel = (surface?: string | null, fallbackUrl?: string) => {
   if (surface === 'reception' || fallbackUrl?.includes('/reception')) return '受付';
   if (surface === 'patients' || fallbackUrl?.includes('/patients')) return '患者管理';
   if (surface === 'charts' || fallbackUrl?.includes('/charts')) return 'カルテ';
-  if (surface === 'administration' || fallbackUrl?.includes('/administration')) return 'Administration';
+  if (surface === 'administration' || fallbackUrl?.includes('/administration')) return '管理画面';
   return '前の画面';
 };
 
@@ -46,22 +49,24 @@ const resolveHint = (surface?: string | null, hasReturnTo?: boolean) => {
     : '既定の戻り先から入り直してください。';
 };
 
-export function ReturnToBar({ returnTo, from, fallbackUrl, showShortcuts = false }: ReturnToBarProps) {
-  const primaryUrl = returnTo ?? fallbackUrl;
-  const hasReturnTo = Boolean(returnTo);
+export function ReturnToBar({ scope, returnTo, from, fallbackUrl, showShortcuts = false }: ReturnToBarProps) {
+  const hintId = useId();
+  const safeReturnTo = isSafeReturnTo(returnTo, scope.facilityId) ? returnTo : undefined;
+  const primaryUrl = safeReturnTo ?? fallbackUrl;
+  const hasReturnTo = Boolean(safeReturnTo);
   const surfaceLabel = resolveSurfaceLabel(from, fallbackUrl);
   const primaryLabel = resolvePrimaryActionLabel(surfaceLabel, hasReturnTo);
   const hint = resolveHint(from, hasReturnTo);
   const fallbackLabel = `${resolveSurfaceLabel(undefined, fallbackUrl)}へ移動`;
-  const showFallbackShortcut = showShortcuts && returnTo && returnTo !== fallbackUrl;
+  const showFallbackShortcut = showShortcuts && safeReturnTo && safeReturnTo !== fallbackUrl;
 
   return (
     <section className="return-to-bar" role="region" aria-label="戻り導線">
       <div className="return-to-bar__main">
-        <Link className="return-to-bar__back" to={primaryUrl}>
+        <Link className="return-to-bar__back" to={primaryUrl} aria-describedby={hintId}>
           {primaryLabel}
         </Link>
-        <div className="return-to-bar__hint">
+        <div id={hintId} className="return-to-bar__hint">
           {hint}
         </div>
       </div>

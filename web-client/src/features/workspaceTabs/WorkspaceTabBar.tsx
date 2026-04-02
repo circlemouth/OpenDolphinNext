@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { buildFacilityPath } from '../../routes/facilityRoutes';
@@ -65,6 +73,13 @@ const resolvePatientTabDisplay = (tab: ChartsPatientTab) => {
     accessibleLabel: `${primary} ${secondary}`.trim(),
     title: [primary, secondary].filter(Boolean).join('\n'),
   };
+};
+
+const resolveTabListTabs = (target: EventTarget | null) => {
+  if (!(target instanceof HTMLElement)) return [];
+  const tabList = target.closest('[role="tablist"]');
+  if (!(tabList instanceof HTMLElement)) return [];
+  return Array.from(tabList.querySelectorAll<HTMLElement>('[role="tab"]'));
 };
 
 export function WorkspaceTabBar({
@@ -271,6 +286,30 @@ export function WorkspaceTabBar({
     });
   }, []);
 
+  const handleTabKeyDown = useCallback((event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const tabs = resolveTabListTabs(event.currentTarget);
+    if (tabs.length === 0) return;
+    const currentIndex = tabs.indexOf(event.currentTarget);
+    if (currentIndex < 0) return;
+
+    let nextIndex: number | null = null;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = tabs.length - 1;
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    nextTab.focus();
+    nextTab.click();
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        nextTab.focus();
+      });
+    }
+  }, []);
+
   return (
     <div className="app-shell__tabbar">
       <div className="workspace-tabs">
@@ -282,6 +321,7 @@ export function WorkspaceTabBar({
             aria-selected={activeFixedKey === 'reception'}
             tabIndex={activeFixedKey === 'reception' ? 0 : -1}
             onClick={() => appNav.openReception()}
+            onKeyDown={handleTabKeyDown}
           >
             <svg
               className="workspace-tabs__tab-icon"
@@ -309,6 +349,7 @@ export function WorkspaceTabBar({
             aria-selected={activeFixedKey === 'patients'}
             tabIndex={activeFixedKey === 'patients' ? 0 : -1}
             onClick={() => appNav.openPatients()}
+            onKeyDown={handleTabKeyDown}
           >
             <svg
               className="workspace-tabs__tab-icon"
@@ -357,6 +398,7 @@ export function WorkspaceTabBar({
                       tabIndex={isActive ? 0 : -1}
                       title={display.title}
                       onClick={() => selectDynamicTab(tab)}
+                      onKeyDown={handleTabKeyDown}
                     >
                       <svg
                         className="workspace-tabs__tab-icon"
@@ -433,6 +475,7 @@ export function WorkspaceTabBar({
                           tabIndex={isActive ? 0 : -1}
                           title={display.title}
                           onClick={() => selectDynamicTab(tab)}
+                          onKeyDown={handleTabKeyDown}
                         >
                           <span className="workspace-tabs__tab-labels">
                             <span className="workspace-tabs__tab-primary">{display.primary}</span>

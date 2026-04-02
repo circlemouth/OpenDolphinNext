@@ -1,10 +1,7 @@
 import type { AdminConfigPayload } from '../api';
-
 import { AdminCard } from '../components/AdminCard';
 import { AdminField } from '../components/AdminField';
 import { DirtyStateBar } from '../components/DirtyStateBar';
-
-type Feedback = { tone: 'success' | 'warning' | 'error' | 'info'; message: string } | null;
 
 type AdminDeliveryConfigCardProps = {
   form: AdminConfigPayload;
@@ -12,7 +9,6 @@ type AdminDeliveryConfigCardProps = {
   showAdminDebugToggles: boolean;
   dirty: boolean;
   updatedAt?: string;
-  feedback: Feedback;
   note?: string;
   guardDetailsId?: string;
   saving: boolean;
@@ -29,7 +25,6 @@ export function AdminDeliveryConfigCard({
   showAdminDebugToggles,
   dirty,
   updatedAt,
-  feedback,
   note,
   guardDetailsId,
   saving,
@@ -145,7 +140,6 @@ export function AdminDeliveryConfigCard({
           再取得
         </button>
       </div>
-      {feedback ? <p className="status-message">{feedback.message}</p> : null}
       {note ? <p className="admin-note">{note}</p> : null}
     </AdminCard>
   );

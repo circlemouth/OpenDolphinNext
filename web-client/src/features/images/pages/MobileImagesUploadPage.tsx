@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
+import { copyTextToClipboard } from '../../../libs/observability/runIdCopy';
 import { safeSameOriginHttpUrl } from '../../../libs/security/safeUrl';
 import { useOptionalSession } from '../../../AppRouter';
 import { loadDeepLinkContext } from '../../../routes/deepLinkContextStorage';
@@ -11,6 +12,7 @@ import { useAppNavigation } from '../../../routes/useAppNavigation';
 import { MobilePatientPicker } from '../components/MobilePatientPicker';
 import { fetchPatientImageList, uploadPatientImageViaXhr, type PatientImageListItem, type UploadProgressEvent } from '../mobileApi';
 import { ReturnToBar } from '../../shared/ReturnToBar';
+import type { FeedbackTone } from '../../shared/feedbackTone';
 
 type UploadStage = 'idle' | 'ready' | 'uploading' | 'success' | 'error';
 type MobileImagesLocationState = {
@@ -33,8 +35,8 @@ const formatBytes = (value?: number) => {
 
 const buildErrorMessage = (status: number, error?: string, errorCode?: string) => {
   if (errorCode === 'feature_disabled' || status === 404) return FEATURE_DISABLED_MESSAGE;
-  if (status === 413) return '画像サイズが大きすぎます（容量超過: 413）。小さい画像で再試行してください。';
-  if (status === 415) return '対応していない画像形式です（415）。jpg/png などで再試行してください。';
+  if (status === 413) return '画像サイズが大きすぎます。小さい画像で再試行してください。';
+  if (status === 415) return '対応していない画像形式です。jpg/png などで再試行してください。';
   if (status === 401 || status === 403) return 'ログイン状態を確認できませんでした。再ログインしてからやり直してください。';
   if (status === 0 || error === 'network_error') return '通信に失敗しました。電波状況を確認して再試行してください。';
   return '送信に失敗しました。時間をおいて再試行してください。';
@@ -84,13 +86,28 @@ export function MobileImagesUploadPage() {
   });
   const [listItems, setListItems] = useState<PatientImageListItem[]>([]);
   const lastAttemptRef = useRef<{ patientId: string; file: File } | null>(null);
+  const pendingFocusTargetRef = useRef<'send' | 'download' | null>(null);
   const captureInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const sendButtonRef = useRef<HTMLButtonElement | null>(null);
+  const firstDownloadLinkRef = useRef<HTMLAnchorElement | null>(null);
 
   useEffect(() => {
     if (!resolvedPatientId) return;
     setPatientId(resolvedPatientId);
   }, [resolvedPatientId]);
+
+  useEffect(() => {
+    if (pendingFocusTargetRef.current === 'send' && stage === 'ready') {
+      sendButtonRef.current?.focus();
+      pendingFocusTargetRef.current = null;
+      return;
+    }
+    if (pendingFocusTargetRef.current === 'download' && stage === 'success' && listItems.length > 0) {
+      firstDownloadLinkRef.current?.focus();
+      pendingFocusTargetRef.current = null;
+    }
+  }, [listItems.length, stage]);
 
   useEffect(() => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -198,6 +215,7 @@ export function MobileImagesUploadPage() {
     setFeatureDisabled(false);
     setStage('success');
     setStatusText('送信しました。');
+    pendingFocusTargetRef.current = 'download';
     await refreshList(patientId);
   }, [patientId, refreshList, selectedFile]);
 
@@ -215,25 +233,49 @@ export function MobileImagesUploadPage() {
     setStage('ready');
     setStatusText('再送信の準備ができました。');
     setLastError(null);
+    pendingFocusTargetRef.current = 'send';
   }, [patientId]);
 
-  const statusTone = stage === 'error' ? 'error' : stage === 'success' ? 'success' : 'info';
+  const statusTone: FeedbackTone = stage === 'error' ? 'error' : stage === 'success' ? 'success' : 'info';
   const statusBg = statusTone === 'error' ? '#fee4e2' : statusTone === 'success' ? '#dcfce7' : '#eef2ff';
   const statusFg = statusTone === 'error' ? '#b42318' : statusTone === 'success' ? '#166534' : '#1e3a8a';
+  const [copyFeedback, setCopyFeedback] = useState<string>('');
+
+  const handleCopyRunId = useCallback(async () => {
+    if (!resolvedRunId) return;
+    try {
+      await copyTextToClipboard(resolvedRunId);
+      setCopyFeedback('RUN_ID をコピーしました。');
+    } catch {
+      setCopyFeedback('RUN_ID のコピーに失敗しました。');
+    }
+  }, [resolvedRunId]);
 
   const header = useMemo(() => {
     return (
       <header style={{ display: 'grid', gap: '0.35rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.75rem' }}>
           <h1 style={{ margin: 0, fontSize: '1.25rem' }}>画像アップロード（モバイル）</h1>
-          <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>RUN_ID: {resolvedRunId ?? '―'}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', opacity: 0.8 }}>
+            <span>RUN_ID: {resolvedRunId ?? '―'}</span>
+            {resolvedRunId ? (
+              <button type="button" onClick={handleCopyRunId} style={{ fontSize: '0.8rem' }}>
+                コピー
+              </button>
+            ) : null}
+          </span>
         </div>
         <p style={{ margin: 0, fontSize: '0.95rem', opacity: 0.9 }}>
           患者を特定して、撮影または写真を選択し、送信します。
         </p>
+        {copyFeedback ? (
+          <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.85 }} role="status" aria-live={infoLive}>
+            {copyFeedback}
+          </p>
+        ) : null}
       </header>
     );
-  }, [resolvedRunId]);
+  }, [copyFeedback, handleCopyRunId, infoLive, resolvedRunId]);
 
   return (
     <main
@@ -248,7 +290,7 @@ export function MobileImagesUploadPage() {
     >
       <ReturnToBar
         scope={{ facilityId: session?.facilityId, userId: session?.userId }}
-        returnTo={appNav.returnToCandidate}
+        returnTo={appNav.safeReturnToCandidate}
         from={appNav.fromCandidate}
         fallbackUrl={fallbackUrl}
       />
@@ -381,6 +423,7 @@ export function MobileImagesUploadPage() {
           <button
             type="button"
             data-test-id="mobile-image-send"
+            ref={sendButtonRef}
             onClick={handleSend}
             disabled={!canSend}
             style={{
@@ -417,7 +460,7 @@ export function MobileImagesUploadPage() {
                 fontWeight: 800,
               }}
             >
-              再試行（Retry）
+              再試行
             </button>
           ) : null}
           {!patientId ? (
@@ -484,9 +527,11 @@ export function MobileImagesUploadPage() {
                   {safeDownloadUrl ? (
                     <a
                       data-test-id="mobile-images-download-link"
+                      ref={item === listItems[0] ? firstDownloadLinkRef : undefined}
                       href={safeDownloadUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      aria-label={`参照リンクを開く: ${item.fileName ?? item.imageId}`}
                       style={{ fontSize: '0.95rem' }}
                     >
                       参照リンクを開く

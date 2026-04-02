@@ -244,9 +244,15 @@ describe('AdministrationPage search params sync', () => {
     await waitFor(() => {
       expect(router.state.location.search).toBe('?section=dashboard');
     });
-    expect(screen.getByRole('tab', { name: '設定配信' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: '配信・運用' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByTestId('delivery-active-section')).toHaveTextContent('dashboard');
     expect(document.title).toBe('管理画面 | 施設ID=FAC-TEST');
+  });
+
+  it('connection セクションでは async feedback を live region に表示する', async () => {
+    renderPage(['/admin?section=connection']);
+
+    expect(await screen.findByText('WebORCA 接続設定の取得に失敗しました。再取得してください。')).toBeInTheDocument();
   });
 
   it('query だけの遷移と戻る/進むで UI が追従する', async () => {
@@ -263,7 +269,7 @@ describe('AdministrationPage search params sync', () => {
       expect(router.state.location.search).toBe('?tab=master-updates');
     });
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: 'マスタ更新' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByRole('button', { name: 'マスタ更新' })).toHaveAttribute('aria-current', 'page');
     });
 
     act(() => {
@@ -273,7 +279,7 @@ describe('AdministrationPage search params sync', () => {
       expect(router.state.location.search).toBe('?section=queue');
     });
     await waitFor(() => {
-      expect(screen.getByRole('tab', { name: '設定配信' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByRole('button', { name: '配信・運用' })).toHaveAttribute('aria-current', 'page');
     });
     expect(screen.getByTestId('delivery-active-section')).toHaveTextContent('queue');
 
@@ -283,7 +289,7 @@ describe('AdministrationPage search params sync', () => {
     await waitFor(() => {
       expect(router.state.location.search).toBe('?tab=master-updates');
     });
-    expect(screen.getByRole('tab', { name: 'マスタ更新' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'マスタ更新' })).toHaveAttribute('aria-current', 'page');
 
     act(() => {
       void router.navigate(-1);
@@ -297,12 +303,12 @@ describe('AdministrationPage search params sync', () => {
   it('タブ/セクション操作で searchParams を更新し、履歴で戻せる', async () => {
     const router = renderPage(['/admin?section=dashboard']);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'ORCAユーザー連携・権限' }));
+    fireEvent.click(screen.getByRole('button', { name: 'ORCAユーザー連携・権限' }));
     await waitFor(() => {
       expect(router.state.location.search).toBe('?tab=orca-users');
     });
 
-    fireEvent.click(screen.getByRole('tab', { name: '設定配信' }));
+    fireEvent.click(screen.getByRole('button', { name: '配信・運用' }));
     await waitFor(() => {
       expect(router.state.location.search).toBe('?section=dashboard');
     });

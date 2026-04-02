@@ -6,6 +6,12 @@ import { AppRouter } from './AppRouter';
 import { httpFetch } from './libs/http/httpClient';
 
 let mockPatientsPageShouldThrow = false;
+const { mockNavigationGuardState } = vi.hoisted(() => ({
+  mockNavigationGuardState: {
+    isDirty: false,
+    dirtySources: [] as Array<{ sourceKey: string; reason?: string }>,
+  },
+}));
 
 vi.mock('./styles/app-shell.css', () => ({}));
 vi.mock('./libs/http/httpClient', () => ({
@@ -57,8 +63,8 @@ vi.mock('./routes/NavigationGuardProvider', () => ({
   NavigationGuardProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   resolveScreenKey: () => 'screen',
   useNavigationGuard: () => ({
-    isDirty: false,
-    dirtySources: [],
+    isDirty: mockNavigationGuardState.isDirty,
+    dirtySources: mockNavigationGuardState.dirtySources,
     guardedNavigate: vi.fn(),
   }),
 }));
@@ -97,18 +103,22 @@ vi.mock('./features/administration/AdministrationPage', async () => {
 
     return (
       <section>
-        <div role="tablist" aria-label="Administration tabs">
-          <button type="button" role="tab" onClick={() => setSection('access', 'orca-users')}>
+        <nav aria-label="管理画面セクション">
+          <button type="button" aria-current={tab === 'orca-users' ? 'page' : undefined} onClick={() => setSection('access', 'orca-users')}>
             ORCAユーザー連携・権限
           </button>
-          <button type="button" role="tab" onClick={() => setSection('master-updates', 'master-updates')}>
+          <button
+            type="button"
+            aria-current={tab === 'master-updates' ? 'page' : undefined}
+            onClick={() => setSection('master-updates', 'master-updates')}
+          >
             マスタ更新
           </button>
-          <button type="button" role="tab" onClick={() => setSection('dashboard')}>
-            設定配信
+          <button type="button" aria-current={!tab ? 'page' : undefined} onClick={() => setSection('dashboard')}>
+            配信・運用
           </button>
-        </div>
-        {section === 'dashboard' ? <nav aria-label="設定配信サブナビ">subnav</nav> : null}
+        </nav>
+        {section === 'dashboard' ? <nav aria-label="配信・運用サブナビ">subnav</nav> : null}
         {tab === 'orca-users' ? <h1>ORCAユーザー連携（職員マスタ）</h1> : null}
         {section === 'master-updates' ? <h1>マスタ更新ダッシュボード</h1> : null}
       </section>
@@ -125,11 +135,13 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
     role,
     orcaStatus,
     onRequestLogout,
+    onRequestSwitchAccount,
   }: {
     facilityId?: string;
     role?: string;
     orcaStatus?: { label: string };
     onRequestLogout?: () => void;
+    onRequestSwitchAccount?: () => void;
   }) => {
     const navigate = useNavigate();
     const basePath = `/f/${facilityId ?? '0001'}`;
@@ -149,6 +161,9 @@ vi.mock('./features/workspaceTabs/WorkspaceTabBar', async () => {
             管理画面を開く
           </button>
         ) : null}
+        <button type="button" onClick={() => onRequestSwitchAccount?.()}>
+          switch-account
+        </button>
         <button type="button" onClick={() => onRequestLogout?.()}>
           logout
         </button>
@@ -195,6 +210,8 @@ const prepareSession = (role: string) => {
 describe('AppRouter navigation guard', () => {
   beforeEach(() => {
     mockPatientsPageShouldThrow = false;
+    mockNavigationGuardState.isDirty = false;
+    mockNavigationGuardState.dirtySources = [];
     vi.mocked(httpFetch).mockImplementation(async (input, init) => {
       const url = typeof input === 'string' ? input : input.toString();
       if (url.endsWith('/session/me')) {
@@ -286,19 +303,19 @@ describe('AppRouter navigation guard', () => {
 
     render(<AppRouter />);
 
-    expect(await screen.findByRole('navigation', { name: '設定配信サブナビ' })).toBeInTheDocument();
+    expect(await screen.findByRole('navigation', { name: '配信・運用サブナビ' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: 'ORCAユーザー連携・権限' }));
+    await user.click(screen.getByRole('button', { name: 'ORCAユーザー連携・権限' }));
     expect(window.location.search).toContain('tab=orca-users');
     expect(await screen.findByRole('heading', { name: 'ORCAユーザー連携（職員マスタ）' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: 'マスタ更新' }));
+    await user.click(screen.getByRole('button', { name: 'マスタ更新' }));
     expect(window.location.search).toContain('tab=master-updates');
     expect(await screen.findByRole('heading', { name: 'マスタ更新ダッシュボード' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('tab', { name: '設定配信' }));
+    await user.click(screen.getByRole('button', { name: '配信・運用' }));
     expect(window.location.search).toContain('section=dashboard');
-    expect(await screen.findByRole('navigation', { name: '設定配信サブナビ' })).toBeInTheDocument();
+    expect(await screen.findByRole('navigation', { name: '配信・運用サブナビ' })).toBeInTheDocument();
   });
 
   it('system_admin 以外の直アクセスは Administration を遮断する', async () => {
@@ -307,7 +324,55 @@ describe('AppRouter navigation guard', () => {
 
     render(<AppRouter />);
 
-    expect(await screen.findByText('Administration は system_admin 専用のためアクセスできません。')).toBeInTheDocument();
+    expect(await screen.findByText('管理画面はシステム管理者のみ利用できます。')).toBeInTheDocument();
     expect(window.location.pathname).toBe('/f/0001/administration');
+  });
+
+  it('dirty 状態の logout は route-level dialog を出し、cancel では留まる', async () => {
+    prepareSession('doctor');
+    mockNavigationGuardState.isDirty = true;
+    mockNavigationGuardState.dirtySources = [{ sourceKey: 'charts.soap', reason: 'SOAPドラフトが未保存' }];
+    const user = userEvent.setup();
+
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+    await user.click(screen.getByRole('button', { name: 'logout' }));
+
+    expect(await screen.findByRole('alertdialog', { name: '未保存の変更があります' })).toBeInTheDocument();
+    expect(screen.getByText('SOAPドラフトが未保存')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'キャンセル' }));
+
+    expect(screen.queryByRole('alertdialog', { name: '未保存の変更があります' })).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe('/f/0001/reception');
+  });
+
+  it('dirty 状態の logout / switch account は discard 選択で login 側へ遷移する', async () => {
+    prepareSession('doctor');
+    mockNavigationGuardState.isDirty = true;
+    mockNavigationGuardState.dirtySources = [{ sourceKey: 'charts.soap', reason: 'SOAPドラフトが未保存' }];
+    const user = userEvent.setup();
+
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+
+    await user.click(screen.getByRole('button', { name: 'logout' }));
+    await user.click(await screen.findByRole('button', { name: '破棄してログアウト' }));
+    expect(window.location.pathname).toBe('/f/0001/login');
+
+    prepareSession('doctor');
+    mockNavigationGuardState.isDirty = true;
+    mockNavigationGuardState.dirtySources = [{ sourceKey: 'charts.soap', reason: 'SOAPドラフトが未保存' }];
+    window.history.pushState({}, '', '/f/0001/reception');
+
+    cleanup();
+    render(<AppRouter />);
+
+    await screen.findByTestId('reception-page');
+    await user.click(screen.getByRole('button', { name: 'switch-account' }));
+    await user.click(await screen.findByRole('button', { name: '破棄して切替' }));
+    expect(window.location.pathname).toBe('/f/0001/login');
   });
 });

@@ -36,6 +36,9 @@ export function ConfirmDialog({
       title={title}
       description={description}
       onClose={pending ? () => undefined : onCancel}
+      closeOnBackdrop={!pending}
+      closeOnEscape={!pending}
+      showCloseButton={!pending}
       testId="admin-confirm-dialog"
     >
       <div className="admin-dialog">

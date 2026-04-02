@@ -13,6 +13,7 @@
 
 ## Transition Rule
 - auth-sensitive transition は `replace` を正とします。
+- `/login` から `/f/:facilityId/login` への auto-resolve も `replace` で行い、余計な login history を増やしません。
 - `returnTo` は sanitize 済み internal path のみを扱います。
 - `returnTo` は保存・遷移前に query と hash を scrub した internal path だけを扱います。
 - `returnTo` の transport は query だけに限定せず、`location.state` と揮発文脈を併用します。
@@ -26,6 +27,10 @@
 - `timeout`: セッション有効期限が切れた
 - `unauthorized`: ログイン状態を確認できなかった
 - `forbidden`: 権限確認に失敗した
+
+### Notice precedence
+- login surface の notice 優先順位は `sessionExpiryNotice` -> `loginNotice` -> `initialNotice` です。
+- logout は `info`、`timeout / unauthorized / forbidden` は `error` として扱います。
 
 ### Landing explanation
 - `location.state.from` が facility-scoped internal path なら、login 後はその画面へ戻します。
@@ -66,7 +71,7 @@
 - cancel / expired / retry は同一文言に潰さず、再入力と再ログインの違いが分かる copy を使います。
 
 ## Logout
-- logout は cleanup を優先し、`/login` へ `replace` 遷移します。
+- logout は cleanup を優先し、facility が分かる時は `/f/:facilityId/login?reason=logout`、不明時は `/login` へ `replace` 遷移します。
 - security の正本にある logout 順序は次です。
   1. サーバ logout API を best-effort 実行
   2. クライアント側 storage cleanup
@@ -83,8 +88,8 @@
 - facility-scoped route で session 不在の場合は、facility-scoped path を `state.from` に積んだうえで `/login` へ `replace` します。
 - 認証済みで login route にいる場合は、facility-scoped かつ safe な `state.from` を優先し、無効または欠落時は `/f/:facilityId/reception` へ `replace` します。
 - logout は cleanup 後に `/f/:facilityId/login?reason=logout` へ `replace` し、login surface で info copy を表示します。
-- `timeout / unauthorized / forbidden` は login notice を伴って `/f/:facilityId/login` へ `replace` し、login surface で理由を分けて表示します。
-- `AdministrationGate` の権限不足は `/login` へ戻さず、facility-scoped denial surface と `Reception` CTA を表示します。
+- `timeout / unauthorized / forbidden` は facility が分かる時は `/f/:facilityId/login`、不明時は `/login` へ `replace` し、login surface で理由を分けて表示します。
+- `AdministrationGate` の権限不足は `/login` へ戻さず、facility-scoped denial surface と `受付` CTA を表示します。
 - sensitive route の query scrub は login helper ではなく `/reception`, `/charts`, `/patients`, `/m/images` 到達後に `replace` で行います。
 - `NavigationGuardProvider` は dirty source があり `screenKey` が変わる時だけ block し、`/charts` の外部パラメータ更新は同一 `chartsScreenId` なら通します。
 - `useAppNavigation()` が組み立てる `patients / charts / charts/print / charts/order-sets / m/images / administration / debug` 遷移は `guardedNavigate()` を通します。

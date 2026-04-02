@@ -35,7 +35,6 @@ import { loadChartsEncounterContext, normalizeVisitDate } from '../charts/encoun
 import { useSession } from '../../AppRouter';
 import { buildFacilityPath } from '../../routes/facilityRoutes';
 import { applyExternalParams, isSafeReturnTo, pickExternalParams } from '../../routes/appNavigation';
-import { scrubPathWithQuery } from '../../routes/scrubSensitiveUrl';
 import { useNavigationGuard } from '../../routes/NavigationGuardProvider';
 import { useAppNavigation } from '../../routes/useAppNavigation';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
@@ -67,9 +66,6 @@ import './patients.css';
 
 const FILTER_STORAGE_KEY = 'patients-filter-state';
 const RECEPTION_FILTER_STORAGE_KEY = 'reception-filter-state';
-const RETURN_TO_STORAGE_BASE = 'opendolphin:web-client:patients:returnTo';
-const RETURN_TO_VERSION = 'v2';
-const RETURN_TO_LEGACY_KEY = `${RETURN_TO_STORAGE_BASE}:v1`;
 const SIDEBAR_WIDTH_STORAGE_BASE = 'opendolphin:web-client:patients:sidebarWidth';
 const SIDEBAR_WIDTH_STORAGE_VERSION = 'v1';
 const SIDEBAR_WIDTH_LEGACY_KEY = `${SIDEBAR_WIDTH_STORAGE_BASE}:v1`;
@@ -379,43 +375,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     normalizeVisitDate(storedEncounter?.visitDate);
   const fromCandidate = appNav.fromCandidate ?? undefined;
   const fromCharts = fromCandidate === 'charts';
-  const storedReturnTo = useMemo(() => {
-    if (typeof sessionStorage === 'undefined') return undefined;
-    try {
-      const scopedKey = buildScopedStorageKey(RETURN_TO_STORAGE_BASE, RETURN_TO_VERSION, storageScope) ?? RETURN_TO_LEGACY_KEY;
-      const rawScoped = sessionStorage.getItem(scopedKey);
-      const rawLegacy = scopedKey === RETURN_TO_LEGACY_KEY ? null : sessionStorage.getItem(RETURN_TO_LEGACY_KEY);
-      const raw = rawScoped ?? rawLegacy;
-      if (!raw) return undefined;
-      const scrubbed = scrubPathWithQuery(raw).trim();
-      if (!scrubbed) {
-        sessionStorage.removeItem(scopedKey);
-        if (scopedKey !== RETURN_TO_LEGACY_KEY) {
-          sessionStorage.removeItem(RETURN_TO_LEGACY_KEY);
-        }
-        return undefined;
-      }
-      // Migrate legacy key to scoped key and sanitize old values.
-      if (rawScoped !== scrubbed) {
-        sessionStorage.setItem(scopedKey, scrubbed);
-      }
-      if (scopedKey !== RETURN_TO_LEGACY_KEY) {
-        sessionStorage.removeItem(RETURN_TO_LEGACY_KEY);
-      }
-      return scrubbed;
-    } catch {
-      return undefined;
-    }
-  }, [storageScope]);
-  const safeStoredReturnTo = useMemo(
-    () => (isSafeReturnTo(storedReturnTo, session.facilityId) ? storedReturnTo : undefined),
-    [session.facilityId, storedReturnTo],
-  );
-  const effectiveReturnTo = useMemo(() => {
-    if (appNav.safeReturnToCandidate) return appNav.safeReturnToCandidate;
-    if (fromCandidate === 'charts') return safeStoredReturnTo;
-    return undefined;
-  }, [appNav.safeReturnToCandidate, fromCandidate, safeStoredReturnTo]);
+  const effectiveReturnTo = appNav.safeReturnToCandidate;
   const fallbackUrl = useMemo(() => {
     if (fromCandidate === 'reception') return buildFacilityPath(session.facilityId, '/reception');
     return buildFacilityPath(session.facilityId, '/charts');
@@ -1767,8 +1727,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           />
         </div>
         <div className="patients-page__network-meta">
+          <span>RUN_ID: {resolvedRunId ?? '―'}</span>
           <span>server fetchedAt: {resolvedFetchedAt ?? '—'}</span>
-          <span>endpoint: {patientsQuery.data?.sourcePath ?? 'orca/patients/local-search'}</span>
           <span>Api_Result: {resolvedApiResult ?? '—'}</span>
           <span>不足タグ: {resolvedMissingTags.length ? resolvedMissingTags.join(', ') : 'なし'}</span>
         </div>
@@ -2620,7 +2580,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   name="patientsAuditKeyword"
                   value={auditKeyword}
                   onChange={(event) => setAuditKeyword(event.target.value)}
-                  placeholder="patientId / runId / action / endpoint"
+                  placeholder="patientId / runId / action / outcome"
                 />
               </label>
               <label>
@@ -2739,12 +2699,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             )}
             {lastAuditEvent && (
               <div className="patients-page__audit-raw">
-                <strong>最新 auditEvent</strong>
-                <p>
-                  {Object.entries(lastAuditEvent)
-                    .map(([key, value]) => `${key}: ${String(value)}`)
-                    .join(' ｜ ')}
-                </p>
+                <strong>最新の監査要約</strong>
+                <p>既定表示では action / outcome / 時刻 / RUN_ID を要約し、内部 endpoint は表示しません。</p>
               </div>
             )}
             <div className="patients-page__audit-list" role="list" aria-label="保存履歴">
@@ -2769,7 +2725,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                         <span>requestId: {desc.requestId}</span>
                         <span>{record.timestamp}</span>
                         {desc.status ? <span>status: {String(desc.status)}</span> : null}
-                        {desc.sourcePath ? <span>endpoint: {desc.sourcePath}</span> : null}
                         {desc.changedKeys ? <span>changedKeys: {desc.changedKeys}</span> : null}
                         {desc.operation ? <span>operation: {desc.operation}</span> : null}
                         {desc.section ? <span>section: {desc.section}</span> : null}

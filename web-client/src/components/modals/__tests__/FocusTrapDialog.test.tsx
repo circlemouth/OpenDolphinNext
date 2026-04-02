@@ -51,4 +51,26 @@ describe('FocusTrapDialog', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('focusable が無い場合は panel 自体へ fallback focus する', () => {
+    render(
+      <FocusTrapDialog open title="確認" onClose={vi.fn()} showCloseButton={false}>
+        <p>説明だけ</p>
+      </FocusTrapDialog>,
+    );
+
+    expect(screen.getByRole('dialog', { name: '確認' })).toHaveFocus();
+  });
+
+  it('focusable が無い場合でも Tab で panel focus を維持する', () => {
+    render(
+      <FocusTrapDialog open title="確認" onClose={vi.fn()} showCloseButton={false}>
+        <p>説明だけ</p>
+      </FocusTrapDialog>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: '確認' });
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(dialog).toHaveFocus();
+  });
 });

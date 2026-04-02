@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,6 +25,13 @@ const jsonResponse = (body: unknown, status = 200) =>
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+
+const fillCredentialsAndSubmit = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.type(screen.getByLabelText('施設ID'), 'F001');
+  await user.type(screen.getByLabelText('ユーザーID'), 'doctor01');
+  await user.type(screen.getByLabelText('パスワード'), 'Secret123!');
+  await user.click(screen.getByRole('button', { name: 'ログイン' }));
+};
 
 describe('LoginScreen', () => {
   beforeEach(() => {
@@ -65,6 +72,62 @@ describe('LoginScreen', () => {
     expect(screen.getByText('セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。')).toBeInTheDocument();
     expect(screen.getByText('ログイン後の移動先')).toBeInTheDocument();
     expect(screen.getByText('元の移動先は安全に開けなかったため、/f/0001/reception を既定の着地点として開きます。')).toBeInTheDocument();
+  });
+
+  it('入力不足時は field error を aria-invalid と aria-describedby で結びつける', async () => {
+    render(<LoginScreen />);
+
+    fireEvent.submit(screen.getByRole('button', { name: 'ログイン' }).closest('form') as HTMLFormElement);
+
+    expect(document.getElementById('login-facility-id')).toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById('login-user-id')).toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById('login-password')).toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById('login-facility-id')).toHaveAttribute('aria-describedby', 'login-facility-id-error');
+    expect(document.getElementById('login-user-id')).toHaveAttribute('aria-describedby', 'login-user-id-error');
+    expect(document.getElementById('login-password')).toHaveAttribute('aria-describedby', 'login-password-error');
+    expect(screen.getByText('施設IDを入力してください。')).toHaveAttribute('id', 'login-facility-id-error');
+    expect(screen.getByText('ユーザーIDを入力してください。')).toHaveAttribute('id', 'login-user-id-error');
+    expect(screen.getByText('パスワードを入力してください。')).toHaveAttribute('id', 'login-password-error');
+  });
+
+  it.each([
+    [
+      '401 credentials denied',
+      jsonResponse({ error: 'authentication_failed', message: 'nope' }, 401),
+      AUTH_COPY.credentialsFailure,
+    ],
+    [
+      '403 forbidden',
+      jsonResponse({ error: 'forbidden', message: 'forbidden' }, 403),
+      'ログインに失敗しました。このアカウントにはアクセス権限がありません。',
+    ],
+    [
+      '404 missing endpoint',
+      jsonResponse({ error: 'not_found', message: 'missing' }, 404),
+      'ログイン先が見つかりません。接続先設定を確認してください。',
+    ],
+    [
+      '429 throttled',
+      new Response(JSON.stringify({ error: 'too_many_requests' }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': '30' },
+      }),
+      'ログイン試行回数が上限に達しました。しばらく待ってから再試行してください。 30秒後に再試行してください。',
+    ],
+    [
+      '500 server error',
+      jsonResponse({ error: 'internal_server_error', message: 'boom' }, 500),
+      'ログインに失敗しました。サーバー側でエラーが発生しています。時間をおいて再試行してください。',
+    ],
+  ])('credentials step は %s の canonical copy を表示する', async (_label, response, expectedMessage) => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(response);
+
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await fillCredentialsAndSubmit(user);
+
+    expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
   });
 
   it('factor2_required を受けると 2FA 入力画面へ遷移し、password を DOM から消す', async () => {
@@ -200,6 +263,42 @@ describe('LoginScreen', () => {
     await user.click(screen.getByRole('button', { name: '認証コードを確認' }));
 
     expect(await screen.findByText(AUTH_COPY.factor2Invalid)).toBeInTheDocument();
+    expect(screen.getByLabelText('認証コード')).toBeInTheDocument();
+  });
+
+  it('factor2 submit で 429 を受けた場合も step 2 に残り待機文言を表示する', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            error: 'factor2_required',
+            code: 'factor2_required',
+            errorCode: 'factor2_required',
+            message: '二要素認証コードを入力してください。',
+            status: 401,
+            errorCategory: 'factor2_required',
+            factor2Required: true,
+            factor2Type: 'totp',
+          },
+          401,
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'too_many_requests' }), {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': '45' },
+        }),
+      );
+
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await fillCredentialsAndSubmit(user);
+    await user.type(await screen.findByLabelText('認証コード'), '123456');
+    await user.click(screen.getByRole('button', { name: '認証コードを確認' }));
+
+    expect(await screen.findByText('ログイン試行回数が上限に達しました。しばらく待ってから再試行してください。 45秒後に再試行してください。')).toBeInTheDocument();
+    expect(screen.getByText('ステップ 2/2')).toBeInTheDocument();
     expect(screen.getByLabelText('認証コード')).toBeInTheDocument();
   });
 

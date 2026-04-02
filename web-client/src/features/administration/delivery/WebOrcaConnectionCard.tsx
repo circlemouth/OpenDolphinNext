@@ -3,8 +3,6 @@ import { AdminField } from '../components/AdminField';
 import { AdminStatusPill } from '../components/AdminStatusPill';
 import { DirtyStateBar } from '../components/DirtyStateBar';
 
-type Feedback = { tone: 'success' | 'warning' | 'error' | 'info'; message: string } | null;
-
 type OrcaConnectionFormValue = {
   useWeborca: boolean;
   serverUrl: string;
@@ -54,7 +52,6 @@ type WebOrcaConnectionCardProps = {
   accessVerified: boolean;
   authBlocked: boolean;
   dirty: boolean;
-  feedback: Feedback;
   statusTone: 'ok' | 'warn' | 'error' | 'pending' | 'idle';
   statusLabel: string;
   testSummary: OrcaConnectionTestSummary | null;
@@ -85,7 +82,6 @@ export function WebOrcaConnectionCard({
   accessVerified,
   authBlocked,
   dirty,
-  feedback,
   statusTone,
   statusLabel,
   testSummary,
@@ -303,20 +299,13 @@ export function WebOrcaConnectionCard({
             </button>
           </div>
 
-          {feedback ? <p className="status-message">{feedback.message}</p> : null}
-
           {testSummary ? (
             <div className="admin-result admin-result--stack">
+              <div>結果: {testSummary.ok ? '接続確認済み' : '要確認'}</div>
               <div>HTTP: {testSummary.orcaHttpStatus ?? '―'}</div>
               <div>Api_Result: {testSummary.apiResult ?? '―'}</div>
-              <div>Api_Result_Message: {testSummary.apiResultMessage ?? '―'}</div>
               <div>testedAt: {formatTimestamp(testSummary.testedAt)}</div>
-              {!testSummary.ok ? (
-                <>
-                  <div>errorCategory: {testSummary.errorCategory ?? 'unknown'}</div>
-                  <div className="admin-error">error: {testSummary.error ?? '―'}</div>
-                </>
-              ) : null}
+              {!testSummary.ok ? <div>失敗理由の詳細は通常表示に出さず、RUN_ID と traceId で確認します。</div> : null}
             </div>
           ) : null}
         </>

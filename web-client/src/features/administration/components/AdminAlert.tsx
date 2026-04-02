@@ -1,6 +1,7 @@
 import { resolveAriaLive } from '../../../libs/observability/observability';
+import { toLegacyWarningTone, type FeedbackTone } from '../../shared/feedbackTone';
 
-type AdminAlertTone = 'ok' | 'warn' | 'error' | 'info';
+type AdminAlertTone = 'ok' | FeedbackTone;
 
 type AdminAlertProps = {
   tone: AdminAlertTone;
@@ -11,7 +12,7 @@ type AdminAlertProps = {
 
 export function AdminAlert({ tone, message, detail, className }: AdminAlertProps) {
   const role = tone === 'error' || tone === 'warn' ? 'alert' : 'status';
-  const live = resolveAriaLive(tone === 'warn' ? 'warning' : tone === 'ok' ? 'success' : tone);
+  const live = resolveAriaLive(tone === 'ok' ? 'success' : toLegacyWarningTone(tone), undefined);
 
   return (
     <div

@@ -2,7 +2,7 @@ import type { Location } from 'react-router-dom';
 
 import { buildFacilityPath, normalizeFacilityId, parseFacilityPath } from '../../routes/facilityRoutes';
 import { scrubPathWithQuery } from '../../routes/scrubSensitiveUrl';
-import type { SessionExpiryReason } from '../../libs/session/sessionExpiry';
+import type { SessionExpiryNotice, SessionExpiryReason } from '../../libs/session/sessionExpiry';
 
 export type LoginRedirectReason = 'logout' | SessionExpiryReason;
 
@@ -18,6 +18,13 @@ export type LoginRedirectState = {
 export type LoginRedirectIntent = {
   to: string;
   state?: unknown;
+};
+
+export type LoginSurfaceNoticeTone = 'success' | 'info' | 'error';
+
+export type LoginSurfaceNotice = {
+  message: string;
+  tone: LoginSurfaceNoticeTone;
 };
 
 export type LoginDestinationSummary = {
@@ -90,6 +97,33 @@ export const resolveLoginNoticeMessage = (notice?: LoginRedirectNotice): string 
     return 'セッションの有効期限が切れました。作業を続けるには、もう一度ログインしてください。';
   }
   return 'ログインが必要です。この画面を開くには再ログインしてください。';
+};
+
+export const resolveLoginSurfaceNotice = (params: {
+  sessionExpiryNotice?: SessionExpiryNotice | null;
+  loginNotice?: LoginRedirectNotice;
+  initialNotice?: LoginSurfaceNotice;
+}): LoginSurfaceNotice | undefined => {
+  if (params.sessionExpiryNotice?.message) {
+    return {
+      message: params.sessionExpiryNotice.message,
+      tone: 'error',
+    };
+  }
+
+  const loginNoticeMessage = resolveLoginNoticeMessage(params.loginNotice);
+  if (loginNoticeMessage) {
+    return {
+      message: loginNoticeMessage,
+      tone: params.loginNotice?.reason === 'logout' ? 'info' : 'error',
+    };
+  }
+
+  if (params.initialNotice?.message) {
+    return params.initialNotice;
+  }
+
+  return undefined;
 };
 
 const buildDefaultLandingBody = (fallbackFacilityId?: string, reason?: 'missing' | 'invalid') => {

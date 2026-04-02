@@ -79,7 +79,7 @@ export function DeliveryDashboard({
             <span>{environmentLabel}</span>
           </div>
           <div className="admin-kpi-grid__item">
-            <span className="admin-kpi-grid__label">deliveryMode</span>
+            <span className="admin-kpi-grid__label">配信モード</span>
             <span>{deliveryMode ?? '―'}</span>
           </div>
         </div>
@@ -97,9 +97,6 @@ export function DeliveryDashboard({
           </button>
           <button type="button" className="admin-button admin-button--secondary" onClick={() => onNavigate('operations')}>
             運用監視へ
-          </button>
-          <button type="button" className="admin-button admin-button--secondary" onClick={() => onNavigate('debug')}>
-            診断/デバッグへ
           </button>
         </div>
       </AdminCard>

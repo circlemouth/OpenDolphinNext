@@ -202,4 +202,40 @@ describe('WorkspaceTabBar navigation', () => {
       expect(screen.queryByRole('tab', { name: /山田 太郎 ID:00000001 \/ 内科/i })).toBeNull();
     });
   });
+
+  it('固定 tab は Arrow / Home / End で移動できる', async () => {
+    const user = userEvent.setup();
+    const queryClient = new QueryClient();
+
+    setAuthSession();
+    setPatientTabsStorage();
+    window.history.pushState({}, '', '/f/0001/reception');
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AppRouter />
+      </QueryClientProvider>,
+    );
+
+    const receptionTab = await screen.findByRole('tab', { name: '受付' });
+    receptionTab.focus();
+
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/f/0001/patients');
+    });
+    expect(screen.getByRole('tab', { name: '患者管理' })).toHaveFocus();
+
+    await user.keyboard('{Home}');
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/f/0001/reception');
+    });
+    expect(screen.getByRole('tab', { name: '受付' })).toHaveFocus();
+
+    await user.keyboard('{End}');
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/f/0001/patients');
+    });
+    expect(screen.getByRole('tab', { name: '患者管理' })).toHaveFocus();
+  });
 });

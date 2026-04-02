@@ -10,8 +10,6 @@ import { AdminCard } from '../components/AdminCard';
 import { AdminStatusPill } from '../components/AdminStatusPill';
 
 type OperationsHealthCardProps = {
-  isSystemAdmin: boolean;
-  guardDetailsId?: string;
   healthResult: OperationsHealthResponse | null;
   readinessResult: OperationsReadinessResponse | null;
   pvtWorkerResult: PvtWorkerHealthResponse | null;
@@ -22,9 +20,7 @@ type OperationsHealthCardProps = {
   orcaConnectionStatusLabel: string;
   orcaConnectionResult: OrcaConnectionTestResponse | null;
   onRefresh: () => void;
-  onRunConnectionTest: () => void;
   refreshPending: boolean;
-  connectionTestPending: boolean;
 };
 
 const resolveStatusTone = (status?: string) => {
@@ -47,8 +43,6 @@ const getCheckDetails = (check?: OperationsCheck) => {
 };
 
 export function OperationsHealthCard({
-  isSystemAdmin,
-  guardDetailsId,
   healthResult,
   readinessResult,
   pvtWorkerResult,
@@ -59,11 +53,8 @@ export function OperationsHealthCard({
   orcaConnectionStatusLabel,
   orcaConnectionResult,
   onRefresh,
-  onRunConnectionTest,
   refreshPending,
-  connectionTestPending,
 }: OperationsHealthCardProps) {
-  const readOnly = !isSystemAdmin;
   const checks = readinessResult?.checks ?? {};
   const pending = healthPending || readinessPending || pvtWorkerPending;
   const readinessTone = readinessPending
@@ -75,7 +66,7 @@ export function OperationsHealthCard({
   return (
     <AdminCard
       title="運用監視"
-      description="health/readiness と ORCA 接続テスト結果を統合して表示します。"
+      description="health/readiness と直近の接続状態を参照します。接続テストの実行は接続設定から行います。"
       status={
         <AdminStatusPill
           status={readinessTone}
@@ -95,15 +86,6 @@ export function OperationsHealthCard({
             disabled={refreshPending}
           >
             health/readiness 再取得
-          </button>
-          <button
-            type="button"
-            className="admin-button admin-button--secondary"
-            onClick={onRunConnectionTest}
-            disabled={connectionTestPending || readOnly}
-            aria-describedby={readOnly ? guardDetailsId : undefined}
-          >
-            ORCA 接続テスト
           </button>
         </div>
       }
@@ -168,9 +150,9 @@ export function OperationsHealthCard({
           {orcaConnectionResult?.apiResult ?? '―'}
         </div>
         {pvtWorkerResult?.reasonCodes.length ? <div>PVT reasonCodes: {pvtWorkerResult.reasonCodes.join(' / ')}</div> : null}
-        {healthResult?.error ? <div className="admin-error">health error: {healthResult.error}</div> : null}
-        {readinessResult?.error ? <div className="admin-error">readiness error: {readinessResult.error}</div> : null}
-        {pvtWorkerResult?.error ? <div className="admin-error">pvt worker error: {pvtWorkerResult.error}</div> : null}
+        {healthResult?.error || readinessResult?.error || pvtWorkerResult?.error ? (
+          <div className="admin-note">内部エラー詳細は通常表示に出さず、RUN_ID と traceId で追跡します。</div>
+        ) : null}
       </div>
 
       {pending ? <p className="admin-note">監視情報を更新中です。</p> : null}

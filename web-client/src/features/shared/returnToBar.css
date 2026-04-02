@@ -42,9 +42,7 @@
   color: #334155;
   font-weight: 700;
   font-size: 0.92rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
 }
 
 .return-to-bar__links {
@@ -73,3 +71,18 @@
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
 }
 
+@media (max-width: 720px) {
+  .return-to-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .return-to-bar__main {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .return-to-bar__links {
+    justify-content: flex-start;
+  }
+}

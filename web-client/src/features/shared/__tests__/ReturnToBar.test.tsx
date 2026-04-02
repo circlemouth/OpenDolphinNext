@@ -33,6 +33,22 @@ describe('ReturnToBar', () => {
     expect(screen.getByText('戻ったあとに必要な患者・受診を選び直してください。')).toBeInTheDocument();
   });
 
+  it('unsafe returnTo は direct return に使わず fallback に落とす', () => {
+    render(
+      <MemoryRouter>
+        <ReturnToBar
+          scope={{ facilityId: '0001', userId: 'doctor01' }}
+          from="patients"
+          returnTo="/f/9999/patients"
+          fallbackUrl="/f/0001/charts"
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: '患者管理から再開する' })).toHaveAttribute('href', '/f/0001/charts');
+    expect(screen.queryByRole('link', { name: '患者管理へ戻る' })).not.toBeInTheDocument();
+  });
+
   it('showShortcuts=true かつ fallback が異なる場合は既定導線も併記する', () => {
     render(
       <MemoryRouter>
