@@ -168,6 +168,7 @@ const toRpFromRecommendation = (
     quantity: item.quantity?.trim() || '',
     unit: item.unit?.trim() || '',
     genericChangeAllowed: true,
+    isGeneralNamePrescription: false,
     drugComment: '',
     claimComments: [],
     patientRequest: true,
@@ -180,6 +181,7 @@ const toRpFromRecommendation = (
       quantity: '',
       unit: '',
       genericChangeAllowed: true,
+      isGeneralNamePrescription: false,
       drugComment: '',
       claimComments: [],
       patientRequest: true,
@@ -195,8 +197,6 @@ const toRpFromRecommendation = (
     name: template.bundleName,
     usage: template.admin,
     daysOrTimes: template.bundleNumber || '1',
-    location: template.prescriptionLocation ?? 'out',
-    category: template.prescriptionTiming ?? 'regular',
     drugs: mainDrugs,
   };
 };
@@ -243,17 +243,16 @@ const toRpFromInputSetDetail = (
       quantity: item.quantity?.trim() ?? '',
       unit: item.unit?.trim() ?? '',
       genericChangeAllowed: true,
+      isGeneralNamePrescription: false,
       drugComment: item.memo?.trim() ?? '',
       claimComments: [],
       patientRequest: true,
     }));
   return {
-    ...buildEmptyPrescriptionRp(detail.started ?? started),
+    ...buildEmptyPrescriptionRp(detail.started ?? started, detail.classCode),
     name: detail.bundleName ?? '',
     usage: detail.admin ?? '',
     daysOrTimes: detail.bundleNumber ?? '1',
-    location: 'out',
-    category: 'regular',
     drugs:
       drugs.length > 0
         ? drugs
@@ -265,6 +264,7 @@ const toRpFromInputSetDetail = (
               quantity: '',
               unit: '',
               genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
               drugComment: '',
               claimComments: [],
               patientRequest: true,
@@ -546,6 +546,7 @@ export function PrescriptionOrderEditorPanel({
           quantity: '',
           unit: '',
           genericChangeAllowed: true,
+          isGeneralNamePrescription: false,
           drugComment: '',
           claimComments: [],
           patientRequest: true,
@@ -569,6 +570,7 @@ export function PrescriptionOrderEditorPanel({
               quantity: '',
               unit: '',
               genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
               drugComment: '',
               claimComments: [],
               patientRequest: true,
@@ -846,14 +848,14 @@ export function PrescriptionOrderEditorPanel({
   };
 
   const mutation = useMutation({
-    mutationFn: async (action: SaveAction) => {
+    mutationFn: async (payload: { action: SaveAction; order: PrescriptionOrder }) => {
       if (isPreviewMode) throw new Error('preview mode');
       if (!patientId) throw new Error('patientId is required');
       const result = await savePrescriptionOrder({
         patientId,
-        order,
+        order: payload.order,
       });
-      return { result, action };
+      return { result, action: payload.action };
     },
     onSuccess: ({ result, action }) => {
       const ok = Boolean(result.ok);
@@ -870,10 +872,10 @@ export function PrescriptionOrderEditorPanel({
         if (action === 'expand') onClose?.();
       }
     },
-    onError: (error, action) => {
+    onError: (error, payload) => {
       const message = error instanceof Error ? error.message : '処方オーダーの保存に失敗しました。';
       setNotice({ tone: 'error', message });
-      onSubmitResult?.({ action, ok: false });
+      onSubmitResult?.({ action: payload?.action ?? 'save', ok: false });
     },
   });
 
@@ -898,14 +900,14 @@ export function PrescriptionOrderEditorPanel({
     void (async () => {
       const codes = extractInteractionCodes();
       if (codes.length < 2) {
-        mutation.mutate(action);
+        mutation.mutate({ action, order });
         return;
       }
       try {
         const result = await checkOrcaOrderInteractions({ codes });
         if (!result.ok) {
           setNotice({ tone: 'warning', message: result.message ?? '相互作用チェックに失敗したため、そのまま保存します。' });
-          mutation.mutate(action);
+          mutation.mutate({ action, order });
           return;
         }
         if (result.totalCount > 0) {
@@ -920,7 +922,7 @@ export function PrescriptionOrderEditorPanel({
           message: error instanceof Error ? error.message : '相互作用チェックに失敗したため、そのまま保存します。',
         });
       }
-      mutation.mutate(action);
+      mutation.mutate({ action, order });
     })();
   };
 
@@ -991,7 +993,7 @@ export function PrescriptionOrderEditorPanel({
                 const action = pendingSaveAction;
                 setInteractionConfirmOpen(false);
                 setPendingSaveAction(null);
-                mutation.mutate(action);
+                mutation.mutate({ action, order });
               }}
             >
               今回だけ無視して保存

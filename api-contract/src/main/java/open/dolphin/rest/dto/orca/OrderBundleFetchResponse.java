@@ -72,6 +72,8 @@ public class OrderBundleFetchResponse {
         private String classCodeSystem;
         private String className;
         private String admin;
+        private String adminCode;
+        private String adminCodeSystem;
         private String adminMemo;
         private String memo;
         private String started;
@@ -150,6 +152,22 @@ public class OrderBundleFetchResponse {
 
         public void setAdmin(String admin) {
             this.admin = admin;
+        }
+
+        public String getAdminCode() {
+            return adminCode;
+        }
+
+        public void setAdminCode(String adminCode) {
+            this.adminCode = adminCode;
+        }
+
+        public String getAdminCodeSystem() {
+            return adminCodeSystem;
+        }
+
+        public void setAdminCodeSystem(String adminCodeSystem) {
+            this.adminCodeSystem = adminCodeSystem;
         }
 
         public String getAdminMemo() {

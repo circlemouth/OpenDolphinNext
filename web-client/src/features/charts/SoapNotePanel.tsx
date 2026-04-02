@@ -28,6 +28,7 @@ import { RightUtilityDock } from './RightUtilityDock';
 import { resolveLatestBundle } from './orderDetailDisplayViewModel';
 import {
   ORDER_GROUP_REGISTRY,
+  resolveCanonicalOrderEntity,
   resolveOrderEntity,
   resolveOrderEntityLabel,
   resolveOrderGroupKeyByEntity,
@@ -164,17 +165,15 @@ const resolveGroupSpec = (groupKey: OrderGroupKey) => ORDER_GROUP_REGISTRY.find(
 
 const normalizeBundleEntity = (bundle: OrderBundle, fallback: OrderEntity): OrderEntity => {
   const raw = bundle.entity?.trim() ?? '';
-  const resolved = resolveOrderEntity(raw);
+  const resolved = resolveCanonicalOrderEntity(raw) ?? resolveOrderEntity(raw);
   if (resolved) return resolved;
   return fallback;
 };
 
 const isBundleMatchedToEntity = (bundle: OrderBundle, targetEntity: OrderEntity, fallback: OrderEntity) => {
   const entity = normalizeBundleEntity(bundle, fallback);
-  if (targetEntity === 'testOrder') {
-    return entity === 'testOrder' || entity === 'laboTest';
-  }
-  return entity === targetEntity;
+  const normalizedTargetEntity = resolveCanonicalOrderEntity(targetEntity) ?? targetEntity;
+  return entity === normalizedTargetEntity;
 };
 
 const RIGHT_DRAWER_WIDTH_STORAGE_KEY = 'opendolphin:web-client:soap-right-drawer:width';

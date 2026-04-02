@@ -14,6 +14,7 @@ import {
   ORDER_GROUP_REGISTRY,
   isOrderEntity,
   resolveBundleNumberLabel,
+  resolveCanonicalOrderEntity,
   resolveOrderEntityEditorMeta,
   resolveOrderEntityLabel,
   resolveOrderGroupKeyByEntity,
@@ -284,6 +285,8 @@ const resolveOrderHubSourceLabel = (source?: OrderHubKpiSource | null) => {
   }
 };
 
+const resolveComparableOrderEntity = (entity: OrderEntity) => resolveCanonicalOrderEntity(entity) ?? entity;
+
 const EMPTY_ORDER_BUNDLE_EDITING_CONTEXT: OrderBundleEditingContext = {
   hasRpRequiredIssue: false,
   rpRequiredMissing: [],
@@ -438,7 +441,8 @@ export function OrderDockPanel(props: {
     for (const bundle of (orderBundles ?? []).filter(Boolean)) {
       const started = bundle.started?.slice(0, 10);
       if (orderVisitDate && started && started !== orderVisitDate) continue;
-      const entity = bundle.entity?.trim() || 'unknown';
+      const rawEntity = bundle.entity?.trim();
+      const entity = resolveCanonicalOrderEntity(rawEntity ?? '') ?? rawEntity ?? 'unknown';
       const list = map.get(entity) ?? [];
       list.push(bundle);
       map.set(entity, list);
@@ -513,7 +517,7 @@ export function OrderDockPanel(props: {
     const matches = groupBundles.flatMap((group) => {
       if (quickSearchGroup !== 'all' && group.key !== quickSearchGroup) return [];
       return group.bundles.flatMap((bundle, index) => {
-        const rawEntity = (bundle.entity?.trim() || group.entities[0]) as string;
+        const rawEntity = resolveCanonicalOrderEntity(bundle.entity?.trim() ?? '') ?? group.entities[0];
         if (!isOrderEntity(rawEntity)) return [];
         const entity = rawEntity;
         const summary = summarizeBundleForCard(bundle, entity);
@@ -587,17 +591,18 @@ export function OrderDockPanel(props: {
       request: OrderBundleEditPanelRequest | null,
       options?: { source?: OrderHubKpiSource; reason?: string; force?: boolean; triggerEl?: HTMLElement | null },
     ) => {
+      const resolvedEntity = resolveCanonicalOrderEntity(entity) ?? entity;
       const source = options?.source ?? 'right-panel';
       const reason = options?.reason ?? 'open_editor';
       const hasUnsaved = Boolean(editLifecycleRef.current && !editLifecycleRef.current.completed);
-      const isContextSwitch = Boolean(activeEntity && (activeEntity !== entity || request));
+      const isContextSwitch = Boolean(activeEntity && (activeEntity !== resolvedEntity || request));
       if (!options?.force && enableContextGuard && isContextSwitch && hasUnsaved && activeEntity) {
         const eventId = buildOrderHubEventId();
         focusRestoreRef.current = options?.triggerEl ?? resolveActiveElement();
         setContextGuard({
           eventId,
           currentEntity: activeEntity,
-          target: { kind: 'switch', entity, request, source, reason },
+          target: { kind: 'switch', entity: resolvedEntity, request, source, reason },
         });
         emitOrderHubKpi({
           category: 'OUI-04',
@@ -605,28 +610,28 @@ export function OrderDockPanel(props: {
           result: 'blocked',
           eventId,
           reason,
-          details: { currentEntity: activeEntity, nextEntity: entity },
+          details: { currentEntity: activeEntity, nextEntity: resolvedEntity },
         });
         return false;
       }
-      if (activeEntity && (activeEntity !== entity || request)) {
+      if (activeEntity && (activeEntity !== resolvedEntity || request)) {
         finalizeEditLifecycle(hasUnsaved ? 'discarded' : 'left', source);
       }
-      const groupKey = resolveOrderGroupKeyByEntity(entity);
+      const groupKey = resolveOrderGroupKeyByEntity(resolvedEntity);
       if (groupKey === 'treatment') {
-        setTreatmentEntity(entity as TreatmentOrderEntity);
+        setTreatmentEntity(resolvedEntity as TreatmentOrderEntity);
       }
       if (groupKey === 'test') {
-        setTestEntity(entity as TestOrderEntity);
+        setTestEntity(resolvedEntity as TestOrderEntity);
       }
       if (groupKey === 'charge') {
-        setChargeEntity(entity as ChargeOrderEntity);
+        setChargeEntity(resolvedEntity as ChargeOrderEntity);
       }
       if (quickAddGroupKey && groupKey !== quickAddGroupKey) {
         setQuickAddGroupKey(null);
       }
       setActiveEditorContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
-      setActiveEntity(entity);
+      setActiveEntity(resolvedEntity);
       setActiveRequest(request);
       setActiveEditorSource(source);
 
@@ -637,15 +642,15 @@ export function OrderDockPanel(props: {
         result: 'started',
         eventId: operationEventId,
         reason,
-        details: { entity, requestKind: request?.kind ?? 'history_copy' },
+        details: { entity: resolvedEntity, requestKind: request?.kind ?? 'history_copy' },
       });
 
       const activeLifecycle = editLifecycleRef.current;
-      if (!activeLifecycle || activeLifecycle.entity !== entity || activeLifecycle.completed) {
+      if (!activeLifecycle || activeLifecycle.entity !== resolvedEntity || activeLifecycle.completed) {
         const lifecycleEventId = buildOrderHubEventId();
         editLifecycleRef.current = {
           eventId: lifecycleEventId,
-          entity,
+          entity: resolvedEntity,
           source,
           completed: false,
         };
@@ -655,7 +660,7 @@ export function OrderDockPanel(props: {
           result: 'started',
           eventId: lifecycleEventId,
           reason,
-          details: { entity, requestKind: request?.kind ?? 'history_copy' },
+          details: { entity: resolvedEntity, requestKind: request?.kind ?? 'history_copy' },
         });
       }
       return true;
@@ -950,7 +955,7 @@ export function OrderDockPanel(props: {
 
   const handleApplyRecommendation = useCallback(
     (candidate: OrderRecommendationCandidate, entity: string) => {
-      const resolved = entity.trim();
+      const resolved = resolveCanonicalOrderEntity(entity.trim()) ?? entity.trim();
       if (!isOrderEntity(resolved)) return;
       setQuickAddGroupKey(null);
       openEditor(resolved, { requestId: buildRequestId(), kind: 'recommendation', candidate }, { source: primaryOperationSource, reason: 'recommendation' });
@@ -1102,18 +1107,32 @@ export function OrderDockPanel(props: {
     const visibleBundles = (() => {
       if (group.bundles.length === 0) return [];
       if (isQuickAddMode && isQuickAddTarget) return group.bundles;
+      const selectedTreatmentEntity = resolveComparableOrderEntity(treatmentEntity);
+      const selectedTestEntity = resolveComparableOrderEntity(testEntity);
+      const selectedChargeEntity = resolveComparableOrderEntity(chargeEntity);
       if (group.key === 'treatment' && !treatmentShowAll) {
-        return group.bundles.filter((bundle) => (bundle.entity?.trim() || defaultEntity) === treatmentEntity);
+        return group.bundles.filter((bundle) => {
+          const normalizedEntity = resolveComparableOrderEntity(
+            resolveCanonicalOrderEntity(bundle.entity?.trim() ?? '') ?? defaultEntity,
+          );
+          return normalizedEntity === selectedTreatmentEntity;
+        });
       }
       if (group.key === 'test' && !testShowAll) {
         return group.bundles.filter((bundle) => {
-          const rawEntity = bundle.entity?.trim() || defaultEntity;
-          const normalizedEntity = rawEntity === 'laboTest' ? 'testOrder' : rawEntity;
-          return normalizedEntity === testEntity;
+          const normalizedEntity = resolveComparableOrderEntity(
+            resolveCanonicalOrderEntity(bundle.entity?.trim() ?? '') ?? defaultEntity,
+          );
+          return normalizedEntity === selectedTestEntity;
         });
       }
       if (group.key === 'charge' && !chargeShowAll) {
-        return group.bundles.filter((bundle) => (bundle.entity?.trim() || defaultEntity) === chargeEntity);
+        return group.bundles.filter((bundle) => {
+          const normalizedEntity = resolveComparableOrderEntity(
+            resolveCanonicalOrderEntity(bundle.entity?.trim() ?? '') ?? defaultEntity,
+          );
+          return normalizedEntity === selectedChargeEntity;
+        });
       }
       return group.bundles;
     })();

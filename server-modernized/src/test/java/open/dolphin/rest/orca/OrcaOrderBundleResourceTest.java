@@ -165,6 +165,8 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         var first = response.getBundles().get(0);
         assertEquals("モジュール担当医", first.getEnteredByName());
         assertEquals("薬剤師", first.getEnteredByRole());
+        assertEquals("4101", first.getAdminCode());
+        assertEquals("Claim007", first.getAdminCodeSystem());
 
         var second = response.getBundles().get(1);
         assertEquals("document-user-1002", second.getEnteredByName());
@@ -172,7 +174,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void getBundlesReturnsBodyPartFieldAndKeepsLegacyItems() {
+    void getBundlesReturnsBodyPartFieldAndStripsLegacyBodyPartItems() {
         OrderBundleFetchResponse response = resource.getBundles(
                 servletRequest,
                 "00001",
@@ -184,8 +186,8 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertNotNull(first.getBodyPart());
         assertEquals("0021001", first.getBodyPart().getCode());
         assertEquals("胸部", first.getBodyPart().getName());
-        assertEquals(2, first.getItems().size());
-        assertEquals("0021001", first.getItems().get(0).getCode());
+        assertEquals(1, first.getItems().size());
+        assertEquals("100001", first.getItems().get(0).getCode());
     }
 
     @Test
@@ -240,6 +242,9 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         op.setOperation("create");
         op.setEntity("medOrder");
         op.setBundleName("降圧薬セット");
+        op.setAdmin("静注");
+        op.setAdminCode("4101");
+        op.setAdminCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
@@ -266,6 +271,9 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertTrue(saved.getModules().get(0).getBeanJson().contains("\"schemaVersion\":1"));
         assertTrue(saved.getModules().get(0).getBeanJson().contains("\"moduleType\":\"medOrder\""));
         BundleDolphin bundle = (BundleDolphin) saved.getModules().get(0).getModel();
+        assertEquals("静注", bundle.getAdmin());
+        assertEquals("4101", bundle.getAdminCode());
+        assertEquals("Claim007", bundle.getAdminCodeSystem());
         ClaimItem[] claimItems = bundle.getClaimItem();
         assertNotNull(claimItems);
         assertEquals(2, claimItems.length);
@@ -355,6 +363,50 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void getInputSetsCanonicalizesTestEntityFromLegacyAlias() throws Exception {
+        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+            @Override
+            protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
+                OrcaOrderInputSetListResponse.Item test = new OrcaOrderInputSetListResponse.Item();
+                test.setSetCode("T60001");
+                test.setName("検査セット");
+                test.setEntity(IInfoModel.ENTITY_LABO_TEST);
+                test.setKind("T");
+                test.setClassCode("600");
+                test.setClassCodeSystem("Claim007");
+                test.setItemCount(3);
+                test.setValidFrom("20240401");
+                test.setValidTo("99991231");
+
+                OrcaOrderInputSetListResponse.Item med = new OrcaOrderInputSetListResponse.Item();
+                med.setSetCode("P01001");
+                med.setName("降圧セット");
+                med.setEntity(IInfoModel.ENTITY_MED_ORDER);
+                med.setKind("P");
+                med.setClassCode("212");
+                med.setClassCodeSystem("Claim007");
+                med.setItemCount(3);
+                med.setValidFrom("20240401");
+                med.setValidTo("99991231");
+                return List.of(test, med);
+            }
+        };
+        injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
+        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
+        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
+
+        OrcaOrderInputSetListResponse response =
+                inputSetResource.getInputSets(servletRequest, "セット", "laboTest", "2026-03-09", 1, 20);
+
+        assertNotNull(response);
+        assertEquals(1, response.getTotalCount());
+        assertEquals(1, response.getItems().size());
+        assertEquals("T60001", response.getItems().get(0).getSetCode());
+        assertEquals("testOrder", response.getItems().get(0).getEntity());
+    }
+
+    @Test
     void getInputSetDetailReturnsBundle() throws Exception {
         OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
             @Override
@@ -390,6 +442,80 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertNotNull(response.getBundle());
         assertEquals("降圧セット", response.getBundle().getBundleName());
         assertEquals(1, response.getBundle().getItems().size());
+    }
+
+    @Test
+    void getInputSetDetailAcceptsLegacyAliasAndReturnsCanonicalEntity() throws Exception {
+        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+            @Override
+            protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
+                OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
+                bundle.setEntity(IInfoModel.ENTITY_LABO_TEST);
+                bundle.setBundleName("検査セット");
+                bundle.setBundleNumber("14");
+                bundle.setClassCode("600");
+                bundle.setClassCodeSystem("Claim007");
+                bundle.setClassName("検査");
+                bundle.setStarted("2026-03-09");
+                OrcaOrderInputSetDetailResponse.Item item = new OrcaOrderInputSetDetailResponse.Item();
+                item.setCode("620000001");
+                item.setName("アムロジピン");
+                item.setQuantity("1");
+                item.setUnit("錠");
+                item.setMemo("");
+                bundle.setItems(List.of(item));
+                return bundle;
+            }
+        };
+        injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
+        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
+        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
+
+        OrcaOrderInputSetDetailResponse response =
+                inputSetResource.getInputSetDetail(servletRequest, "P01001", "20260309", "laboTest", null);
+
+        assertTrue(response.isOk());
+        assertEquals("P01001", response.getSetCode());
+        assertNotNull(response.getBundle());
+        assertEquals("testOrder", response.getBundle().getEntity());
+    }
+
+    @Test
+    void getInputSetDetailAcceptsGeneralAliasAndReturnsCanonicalEntity() throws Exception {
+        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+            @Override
+            protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
+                OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
+                bundle.setEntity(IInfoModel.ENTITY_TREATMENT);
+                bundle.setBundleName("処置セット");
+                bundle.setBundleNumber("14");
+                bundle.setClassCode("400");
+                bundle.setClassCodeSystem("Claim007");
+                bundle.setClassName("処置");
+                bundle.setStarted("2026-03-09");
+                OrcaOrderInputSetDetailResponse.Item item = new OrcaOrderInputSetDetailResponse.Item();
+                item.setCode("400000001");
+                item.setName("処置項目");
+                item.setQuantity("1");
+                item.setUnit("回");
+                item.setMemo("");
+                bundle.setItems(List.of(item));
+                return bundle;
+            }
+        };
+        injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
+        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
+        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
+
+        OrcaOrderInputSetDetailResponse response =
+                inputSetResource.getInputSetDetail(servletRequest, "S02001", "20260309", "generalOrder", null);
+
+        assertTrue(response.isOk());
+        assertEquals("S02001", response.getSetCode());
+        assertNotNull(response.getBundle());
+        assertEquals("treatmentOrder", response.getBundle().getEntity());
     }
 
     @Test
@@ -604,6 +730,8 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             bundle.setOrderName("降圧薬セット");
             bundle.setBundleNumber("14");
             bundle.setAdmin("1日1回 朝食後");
+            bundle.setAdminCode("4101");
+            bundle.setAdminCodeSystem("Claim007");
             bundle.setClassCode("212");
             ClaimItem item = new ClaimItem();
             item.setCode("100001");

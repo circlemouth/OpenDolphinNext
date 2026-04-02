@@ -12,6 +12,15 @@ export type RpRequiredIssue = {
   missing: RpRequiredField[];
 };
 
+export type OrderBundleCodeIssue = {
+  entity?: string;
+  bundleName?: string;
+  documentId?: number;
+  moduleId?: number;
+  mixedRows: boolean;
+  missingCodeItemIndexes: number[];
+};
+
 const RP_REQUIRED_ENTITIES = new Set<RpRequiredEntity>(['medOrder', 'injectionOrder']);
 
 export const RP_REQUIRED_ERROR_LABEL = 'RP必須項目不足';
@@ -51,6 +60,9 @@ const inferEntityFromClassCode = (classCode?: string | null): RpRequiredEntity |
 
 const hasMedicationInfo = (items?: Array<Pick<OrderBundleItem, 'code'>> | null) =>
   Boolean(items?.some((item) => Boolean(item.code?.trim())));
+
+const hasItemValue = (item?: Pick<OrderBundleItem, 'name' | 'quantity' | 'unit' | 'memo'> | null) =>
+  Boolean(item?.name?.trim() || item?.quantity?.trim() || item?.unit?.trim() || item?.memo?.trim());
 
 const resolveMedicalClass = (entity: RpRequiredEntity, classCode?: string | null) => {
   const explicit = classCode?.trim();
@@ -116,3 +128,44 @@ export const buildRpRequiredBlockedMessage = (issues: RpRequiredIssue[], preview
   `ORCA送信を停止: ${buildRpRequiredUnifiedMessage(issues, previewLimit)}`;
 
 export const buildRpRequiredEditorMessage = (issue: RpRequiredIssue) => buildRpRequiredUnifiedMessage([issue], 1);
+
+export const resolveOrderBundleCodeIssue = (bundle: OrderBundle): OrderBundleCodeIssue | null => {
+  const missingCodeItemIndexes: number[] = [];
+  let hasCodedItem = false;
+  (bundle.items ?? []).forEach((item, index) => {
+    if (!hasItemValue(item)) return;
+    if (item.code?.trim()) {
+      hasCodedItem = true;
+      return;
+    }
+    missingCodeItemIndexes.push(index);
+  });
+  if (missingCodeItemIndexes.length === 0) return null;
+  return {
+    entity: bundle.entity,
+    bundleName: bundle.bundleName,
+    documentId: bundle.documentId,
+    moduleId: bundle.moduleId,
+    mixedRows: hasCodedItem,
+    missingCodeItemIndexes,
+  };
+};
+
+export const collectOrderBundleCodeIssues = (bundles: OrderBundle[]): OrderBundleCodeIssue[] =>
+  bundles
+    .map(resolveOrderBundleCodeIssue)
+    .filter((issue): issue is OrderBundleCodeIssue => Boolean(issue));
+
+export const formatOrderBundleCodeIssueLine = (issue: OrderBundleCodeIssue) => {
+  const entityLabel = issue.entity ? resolveOrderEntityLabel(issue.entity as Parameters<typeof resolveOrderEntityLabel>[0]) : 'order';
+  const bundleLabel = issue.bundleName?.trim() || '名称未設定';
+  const rowLabel = issue.missingCodeItemIndexes.map((index) => `行${index + 1}`).join(' / ');
+  return `${entityLabel}/${bundleLabel}: ${issue.mixedRows ? 'コードあり/なし混在' : 'コード未入力'}（${rowLabel}）`;
+};
+
+export const buildOrderBundleCodeBlockedMessage = (issues: OrderBundleCodeIssue[], previewLimit = 4) => {
+  if (issues.length === 0) return 'ORCA送信を停止: コード未入力行があります。';
+  const preview = issues.slice(0, previewLimit).map(formatOrderBundleCodeIssueLine).join(' / ');
+  const remaining = issues.length - previewLimit;
+  return `ORCA送信を停止: コード未入力行があります（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`;
+};

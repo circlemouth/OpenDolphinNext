@@ -3,6 +3,7 @@ package open.dolphin.rest.orca;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import open.dolphin.infomodel.BundleDolphin;
@@ -67,6 +68,11 @@ final class OrcaOrderBundleFetchSupport {
             int page,
             int size) {
         List<OrcaOrderInputSetListResponse.Item> filtered = rows.stream()
+                .filter(Objects::nonNull)
+                .map(row -> {
+                    row.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(row.getEntity()));
+                    return row;
+                })
                 .filter(row -> entity == null || entity.equals(row.getEntity()))
                 .sorted(Comparator.comparing(OrcaOrderInputSetListResponse.Item::getSetCode))
                 .collect(Collectors.toList());
@@ -108,13 +114,7 @@ final class OrcaOrderBundleFetchSupport {
     }
 
     private static boolean matchesEntity(String requestedEntity, String moduleEntity) {
-        if (requestedEntity == null || requestedEntity.isBlank()) {
-            return true;
-        }
-        if (moduleEntity == null) {
-            return false;
-        }
-        return moduleEntity.equals(requestedEntity);
+        return OrcaOrderBundleRequestSupport.entitiesMatch(requestedEntity, moduleEntity);
     }
 
     private static OrderBundleFetchResponse.OrderBundleEntry toEntry(
@@ -126,13 +126,15 @@ final class OrcaOrderBundleFetchSupport {
         OrderBundleFetchResponse.OrderBundleEntry entry = new OrderBundleFetchResponse.OrderBundleEntry();
         entry.setDocumentId(document.getId());
         entry.setModuleId(module.getId());
-        entry.setEntity(moduleEntity);
+        entry.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(moduleEntity));
         entry.setBundleName(OrcaOrderBundleDisplaySupport.resolveBundleName(bundle, info));
         entry.setBundleNumber(bundle.getBundleNumber());
         entry.setClassCode(bundle.getClassCode());
         entry.setClassCodeSystem(bundle.getClassCodeSystem());
         entry.setClassName(bundle.getClassName());
         entry.setAdmin(bundle.getAdmin());
+        entry.setAdminCode(bundle.getAdminCode());
+        entry.setAdminCodeSystem(bundle.getAdminCodeSystem());
         entry.setAdminMemo(bundle.getAdminMemo());
         entry.setMemo(bundle.getMemo());
         entry.setStarted(OrcaOrderBundleRequestSupport.formatDate(module.getStarted()));
@@ -142,7 +144,7 @@ final class OrcaOrderBundleFetchSupport {
         List<OrderBundleFetchResponse.OrderBundleItem> items =
                 OrcaOrderBundleRecommendationSupport.toItems(bundle.getClaimItem());
         entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(items));
-        entry.setItems(items);
+        entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(items));
         return entry;
     }
 }

@@ -38,6 +38,24 @@ final class OrcaOrderBundleRecommendationSupport {
         return list;
     }
 
+    static List<OrderBundleFetchResponse.OrderBundleItem> removeBodyPartItems(
+            List<OrderBundleFetchResponse.OrderBundleItem> items) {
+        if (items == null || items.isEmpty()) {
+            return List.of();
+        }
+        List<OrderBundleFetchResponse.OrderBundleItem> filtered = new ArrayList<>();
+        for (OrderBundleFetchResponse.OrderBundleItem item : items) {
+            if (item == null) {
+                continue;
+            }
+            if (isBodyPartCode(item.getCode())) {
+                continue;
+            }
+            filtered.add(item);
+        }
+        return filtered;
+    }
+
     static OrderBundleFetchResponse.OrderBundleItem extractBodyPart(
             List<OrderBundleFetchResponse.OrderBundleItem> items) {
         if (items == null || items.isEmpty()) {
@@ -102,7 +120,7 @@ final class OrcaOrderBundleRecommendationSupport {
             template.setPrescriptionLocation(prescriptionMeta.location());
             template.setPrescriptionTiming(prescriptionMeta.timing());
         }
-        template.setItems(normalItems);
+        template.setItems(removeBodyPartItems(normalItems));
         template.setMaterialItems(materialItems);
         template.setCommentItems(commentItems);
         template.setBodyPart(bodyPart);
@@ -113,7 +131,7 @@ final class OrcaOrderBundleRecommendationSupport {
             String entity,
             OrderBundleRecommendationResponse.OrderRecommendationTemplate template) {
         StringBuilder builder = new StringBuilder();
-        appendNormalized(builder, entity);
+        appendNormalized(builder, OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity));
         appendNormalized(builder, template.getBundleName());
         appendNormalized(builder, template.getAdmin());
         appendNormalized(builder, template.getBundleNumber());

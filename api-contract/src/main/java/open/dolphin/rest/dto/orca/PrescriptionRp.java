@@ -7,11 +7,17 @@ import java.util.List;
 public class PrescriptionRp {
 
     private String rpNumber;
+    private String bundleName;
     private String medicalClass;
     private String medicalClassNumber;
     private String usageCode;
     private String usageName;
     private String memo;
+    private String started;
+    private String remark;
+    private Integer refillCount;
+    private String refillPattern;
+    private String doctorComment;
     private Boolean patientRequested;
     private List<PrescriptionDrug> drugs;
     private List<PrescriptionClaimComment> claimComments;
@@ -22,6 +28,14 @@ public class PrescriptionRp {
 
     public void setRpNumber(String rpNumber) {
         this.rpNumber = rpNumber;
+    }
+
+    public String getBundleName() {
+        return bundleName;
+    }
+
+    public void setBundleName(String bundleName) {
+        this.bundleName = bundleName;
     }
 
     public String getMedicalClass() {
@@ -62,6 +76,46 @@ public class PrescriptionRp {
 
     public void setMemo(String memo) {
         this.memo = memo;
+    }
+
+    public String getStarted() {
+        return started;
+    }
+
+    public void setStarted(String started) {
+        this.started = started;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public Integer getRefillCount() {
+        return refillCount;
+    }
+
+    public void setRefillCount(Integer refillCount) {
+        this.refillCount = refillCount;
+    }
+
+    public String getRefillPattern() {
+        return refillPattern;
+    }
+
+    public void setRefillPattern(String refillPattern) {
+        this.refillPattern = refillPattern;
+    }
+
+    public String getDoctorComment() {
+        return doctorComment;
+    }
+
+    public void setDoctorComment(String doctorComment) {
+        this.doctorComment = doctorComment;
     }
 
     public Boolean getPatientRequested() {

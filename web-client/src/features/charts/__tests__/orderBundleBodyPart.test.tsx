@@ -141,14 +141,32 @@ describe('OrderBundleEditPanel body part search', () => {
     );
     await waitFor(() => expect(screen.getByText('胸部')).toBeInTheDocument());
 
+    container.querySelectorAll<HTMLElement>('[data-rowid]').forEach((node) => {
+      node.removeAttribute('data-rowid');
+    });
     expect(container).toMatchSnapshot();
   });
 
-  it('generalOrder で部位選択した内容が保存アイテムに含まれる', async () => {
+  it('generalOrder では bodyPart を専用フィールドに分離し、主項目は items に残る', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type }) => {
+      if (type === 'etensu') {
+        return {
+          ok: true,
+          items: [
+            {
+              type: 'etensu',
+              code: '140000610',
+              name: 'テスト項目',
+              unit: '回',
+              category: '4',
+            },
+          ],
+          totalCount: 1,
+        };
+      }
       if (type === 'bodypart') {
         return {
           ok: true,
@@ -179,6 +197,18 @@ describe('OrderBundleEditPanel body part search', () => {
     );
 
     await user.type(screen.getByPlaceholderText('処置項目名'), 'テスト項目');
+    await waitFor(() =>
+      expect(
+        searchMock.mock.calls.some(
+          ([params]) => params?.type === 'etensu' && params?.keyword === 'テスト項目',
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('datalist[id$="-item-predictive-list"] option[value="テスト項目"]')).not.toBeNull(),
+    );
+    await user.tab();
+    await waitFor(() => expect(screen.getByTestId('order-bundle-item-summary-0')).toHaveTextContent('コード: 140000610'));
 
     const keywordInput = screen.getByLabelText('部位検索', {
       selector: 'input[id$="-bodypart-keyword"]',
@@ -186,7 +216,11 @@ describe('OrderBundleEditPanel body part search', () => {
     await user.type(keywordInput, '膝');
 
     await waitFor(() =>
-      expect(searchMock).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'bodypart', keyword: '膝' })),
+      expect(
+        searchMock.mock.calls.some(
+          ([params]) => params?.type === 'bodypart' && params?.keyword === '膝',
+        ),
+      ).toBe(true),
     );
     await waitFor(() => expect(screen.getByText('膝関節')).toBeInTheDocument());
 
@@ -198,9 +232,8 @@ describe('OrderBundleEditPanel body part search', () => {
 
     const call = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
     const items = call?.operations?.[0]?.items ?? [];
-    expect(items).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: '002003', name: '膝関節' })]),
-    );
+    expect(items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '140000610', name: 'テスト項目' })]));
+    expect(items).not.toEqual(expect.arrayContaining([expect.objectContaining({ code: '002003', name: '膝関節' })]));
   });
 
   it('部位検索の失敗時は aria-live=assertive のエラーバナーが表示される', async () => {
@@ -284,11 +317,18 @@ describe('OrderBundleEditPanel body part search', () => {
     expect(screen.getByLabelText('部位')).toHaveValue('胸部');
   });
 
-  it('保存payloadは互換itemsに加えて bodyPart 専用フィールドも送る', async () => {
+  it('保存payloadは bodyPart 専用フィールドを送る', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type }) => {
+      if (type === 'etensu') {
+        return {
+          ok: true,
+          items: [{ type: 'etensu', code: '140000700', name: '温熱療法', unit: '回', category: '4' }],
+          totalCount: 1,
+        };
+      }
       if (type === 'bodypart') {
         return {
           ok: true,
@@ -311,9 +351,26 @@ describe('OrderBundleEditPanel body part search', () => {
     );
 
     await user.type(screen.getByPlaceholderText('処置項目名'), '温熱療法');
+    await waitFor(() =>
+      expect(
+        searchMock.mock.calls.some(
+          ([params]) => params?.type === 'etensu' && params?.keyword === '温熱療法',
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('datalist[id$="-item-predictive-list"] option[value="温熱療法"]')).not.toBeNull(),
+    );
+    await user.tab();
+    await waitFor(() => expect(screen.getByTestId('order-bundle-item-summary-0')).toHaveTextContent('コード: 140000700'));
+
     await user.type(screen.getByLabelText('部位検索', { selector: 'input[id$="-bodypart-keyword"]' }), '腰');
     await waitFor(() =>
-      expect(searchMock).toHaveBeenLastCalledWith(expect.objectContaining({ type: 'bodypart', keyword: '腰' })),
+      expect(
+        searchMock.mock.calls.some(
+          ([params]) => params?.type === 'bodypart' && params?.keyword === '腰',
+        ),
+      ).toBe(true),
     );
     const bodyPartButton = await screen.findByRole('button', { name: /腰部/ });
     await user.click(bodyPartButton);

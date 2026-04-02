@@ -30,7 +30,7 @@ final class OrcaOrderInputSetMetadataSupport {
                 return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_SURGERY_ORDER, "手術");
             }
             if (number >= 600 && number <= 699) {
-                return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_LABO_TEST, "検査");
+                return new OrcaOrderInputSetSupport.ClassMetadata("testOrder", "検査");
             }
             if (number >= 700 && number <= 799) {
                 return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_RADIOLOGY_ORDER, "放射線");

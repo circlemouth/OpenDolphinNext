@@ -4,6 +4,7 @@ import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
 import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../shared/orcaPatientImportRecovery';
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
+import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
 
 export type OrderBundleItem = {
   code?: string;
@@ -31,6 +32,8 @@ export type OrderBundle = {
   classCodeSystem?: string;
   className?: string;
   admin?: string;
+  adminCode?: string;
+  adminCodeSystem?: string;
   adminMemo?: string;
   memo?: string;
   started?: string;
@@ -76,6 +79,8 @@ export type OrderBundleOperation = {
   classCodeSystem?: string;
   className?: string;
   admin?: string;
+  adminCode?: string;
+  adminCodeSystem?: string;
   adminMemo?: string;
   memo?: string;
   startDate?: string;
@@ -83,6 +88,23 @@ export type OrderBundleOperation = {
   items?: OrderBundleItem[];
   bodyPart?: OrderBundleBodyPart;
 };
+
+const normalizeOrderEntityValue = (value?: string | null): string | undefined => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return resolveCanonicalOrderEntity(trimmed) ?? trimmed;
+};
+
+const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
+  ...bundle,
+  entity: normalizeOrderEntityValue(bundle.entity),
+});
+
+const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => ({
+  ...operation,
+  entity: normalizeOrderEntityValue(operation.entity),
+});
 
 export type OrderBundleMutationResult = {
   ok: boolean;
@@ -98,7 +120,8 @@ export async function fetchOrderBundles(params: FetchOrderBundlesParams): Promis
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
   const query = new URLSearchParams();
-  if (params.entity) query.set('entity', params.entity);
+  const normalizedEntity = normalizeOrderEntityValue(params.entity);
+  if (normalizedEntity) query.set('entity', normalizedEntity);
   if (params.from) query.set('from', params.from);
   const response = await httpFetch(`/api/orca/order/bundles?patientId=${encodeURIComponent(params.patientId)}${query.toString() ? `&${query.toString()}` : ''}`);
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'オーダー情報の取得に失敗しました。' });
@@ -120,7 +143,7 @@ export async function fetchOrderBundles(params: FetchOrderBundlesParams): Promis
     runId: typeof json.runId === 'string' ? (json.runId as string) : parsed.runId ?? runId,
     patientId: typeof json.patientId === 'string' ? (json.patientId as string) : params.patientId,
     recordsReturned: typeof json.recordsReturned === 'number' ? (json.recordsReturned as number) : undefined,
-    bundles: Array.isArray(json.bundles) ? (json.bundles as OrderBundle[]) : [],
+    bundles: Array.isArray(json.bundles) ? (json.bundles as OrderBundle[]).map(normalizeOrderBundle) : [],
     message: parsed.message,
     status: parsed.status,
     errorCode: parsed.ok ? undefined : parsed.errorCode,
@@ -185,7 +208,10 @@ export async function mutateOrderBundles(params: {
   const response = await httpFetch('/api/orca/order/bundles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ patientId: params.patientId, operations: params.operations }),
+    body: JSON.stringify({
+      patientId: params.patientId,
+      operations: params.operations.map(normalizeOrderBundleOperation),
+    }),
   });
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const message =

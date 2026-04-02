@@ -8,6 +8,7 @@ public class PrescriptionClaimComment {
     private String code;
     private String text;
     private String category;
+    private String note;
 
     public String getCode() {
         return code;
@@ -31,5 +32,13 @@ public class PrescriptionClaimComment {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public String getNote() {
+        return note;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
     }
 }

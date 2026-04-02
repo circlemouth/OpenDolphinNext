@@ -82,6 +82,45 @@ class OrcaPrescriptionOrderImportSupportTest {
     }
 
     @Test
+    void applyDoImportReplacesMatchingRpByStableRpNumber() {
+        PrescriptionDrug baseDrug = new PrescriptionDrug();
+        baseDrug.setCode("BASE");
+        PrescriptionRp baseRp = new PrescriptionRp();
+        baseRp.setRpNumber("rp-stable-001");
+        baseRp.setUsageCode("100");
+        baseRp.setDrugs(List.of(baseDrug));
+        PrescriptionOrder base = new PrescriptionOrder();
+        base.setRps(List.of(baseRp));
+
+        PrescriptionDrug incomingDrug = new PrescriptionDrug();
+        incomingDrug.setCode("INCOMING");
+        PrescriptionRp incomingRp = new PrescriptionRp();
+        incomingRp.setRpNumber("rp-stable-001");
+        incomingRp.setUsageCode("200");
+        incomingRp.setDrugs(List.of(incomingDrug));
+        PrescriptionOrder incoming = new PrescriptionOrder();
+        incoming.setPatientId("source-patient");
+        incoming.setRps(List.of(incomingRp));
+
+        PrescriptionOrder merged = OrcaPrescriptionOrderImportSupport.applyDoImport(
+                base,
+                incoming,
+                "target-patient",
+                null,
+                LocalDate.parse("2025-03-21"),
+                "doctor",
+                "run-1",
+                Instant.parse("2025-03-21T00:00:00Z"),
+                new ArrayList<>(),
+                MAPPER);
+
+        assertEquals(1, merged.getRps().size());
+        assertEquals("rp-stable-001", merged.getRps().get(0).getRpNumber());
+        assertEquals("200", merged.getRps().get(0).getUsageCode());
+        assertEquals("INCOMING", merged.getRps().get(0).getDrugs().get(0).getCode());
+    }
+
+    @Test
     void hasMissingUsageCodeRequiresDrugRows() {
         PrescriptionRp validRp = new PrescriptionRp();
         validRp.setUsageCode("100");

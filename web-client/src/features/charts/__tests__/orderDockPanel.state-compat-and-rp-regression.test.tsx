@@ -60,6 +60,17 @@ const injectionBundle = {
   items: [{ code: '620009999', name: '620009999 生食', quantity: '1', unit: '本', memo: '' }],
 } as any;
 
+const treatmentBundle = {
+  entity: 'treatmentOrder',
+  documentId: 'DOC-TM-1',
+  moduleId: 'MOD-TM-1',
+  bundleName: '創傷処置',
+  classCode: '400',
+  bundleNumber: '1',
+  started: '2026-02-24',
+  items: [{ code: '400000001', name: '400000001 創傷処置', quantity: '1', unit: '回', memo: '' }],
+} as any;
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -140,7 +151,7 @@ describe('OrderDockPanel state compatibility', () => {
     }
   });
 
-  it('legacy laboTest エンティティを検査タブ互換で表示できる', async () => {
+  it('laboTest エイリアスを検査タブへ正規化して表示できる', async () => {
     const user = userEvent.setup();
     renderWithClient(
       <OrderDockPanel
@@ -167,6 +178,28 @@ describe('OrderDockPanel state compatibility', () => {
 
     expect(within(testGroup).getByText('旧検査セット')).toBeInTheDocument();
     expect(within(testGroup).getByRole('button', { name: '旧検査セットを編集' })).toBeInTheDocument();
+  });
+
+  it('一般タブを選んでも処置束が canonical match で消えない', async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <OrderDockPanel
+        patientId="P-100"
+        meta={baseMeta}
+        visitDate="2026-02-24"
+        orderBundles={[treatmentBundle]}
+      />,
+    );
+
+    const treatmentGroup = document.querySelector('section.order-dock__group[data-group="treatment"]') as HTMLElement;
+    const toggle = within(treatmentGroup).getByRole('button', { name: /処置を(開く|閉じる)/ });
+    if (toggle.getAttribute('aria-expanded') !== 'true') {
+      await user.click(toggle);
+    }
+    await waitFor(() => expect(toggle.getAttribute('aria-expanded')).toBe('true'));
+
+    await user.click(within(treatmentGroup).getByRole('tab', { name: '一般' }));
+    expect(within(treatmentGroup).getByRole('button', { name: '創傷処置を編集' })).toBeInTheDocument();
   });
 });
 

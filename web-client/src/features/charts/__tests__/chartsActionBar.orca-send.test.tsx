@@ -127,18 +127,131 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
-  it('コメントコード系は9桁以外でも送信コードとして許容する', async () => {
+  it('コメントコードのみの束は送信前に停止する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
-        entity === 'generalOrder'
+        entity === 'treatmentOrder'
           ? [
               {
-                entity: 'generalOrder',
+                entity: 'treatmentOrder',
                 bundleName: 'コメント送信',
                 bundleNumber: '1',
                 items: [{ code: '0082', name: 'コメント' }],
+              },
+            ]
+          : [],
+    }));
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="000001"
+          visitDate="2026-01-20"
+          selectedEntry={{ department: '01 内科', physician: '10001 主治医', patientId: '000001' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/非送信データを検出/)).toBeInTheDocument());
+    expect(screen.getByText(/本体となるコード行を1件以上追加してください/)).toBeInTheDocument();
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('9桁以外かつコメントコード系でないコードは送信前に停止する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'treatmentOrder'
+          ? [
+              {
+                entity: 'treatmentOrder',
+                bundleName: '不正コード',
+                bundleNumber: '1',
+                items: [{ code: '12345', name: '未正規化コード' }],
+              },
+            ]
+          : [],
+    }));
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="000001"
+          visitDate="2026-01-20"
+          selectedEntry={{ department: '01 内科', physician: '10001 主治医', patientId: '000001' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/9桁コード/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('コードあり/なし混在の束は送信前に停止する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'treatmentOrder'
+          ? [
+              {
+                entity: 'treatmentOrder',
+                bundleName: '混在束',
+                bundleNumber: '1',
+                items: [
+                  { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回' },
+                  { name: '未コード行', quantity: '1', unit: '回' },
+                ],
+              },
+            ]
+          : [],
+    }));
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="000001"
+          visitDate="2026-01-20"
+          selectedEntry={{ department: '01 内科', physician: '10001 主治医', patientId: '000001' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/非送信データ/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('放射線の bodyPart と本体は unit を保ったまま送信ペイロードに残る', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'radiologyOrder'
+          ? [
+              {
+                entity: 'radiologyOrder',
+                bundleName: '胸部CT',
+                bundleNumber: '1',
+                classCode: '700',
+                bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
+                items: [
+                  { code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '' },
+                  { code: '700000001', name: '造影剤', quantity: '1', unit: '本', memo: '' },
+                ],
               },
             ]
           : [],
@@ -166,21 +279,32 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    await waitFor(() => expect(buildMedicalModV2RequestXml).toHaveBeenCalled());
+    const lastCall = vi.mocked(buildMedicalModV2RequestXml).mock.calls.at(-1)?.[0] as any;
+    const radiologyInfo = Array.isArray(lastCall?.medicalInformation) ? lastCall.medicalInformation[0] : null;
+    const radiologyCodes = Array.isArray(radiologyInfo?.medications) ? radiologyInfo.medications.map((item: any) => item.code) : [];
+
+    expect(radiologyCodes).toEqual(expect.arrayContaining(['002001', '170017510', '700000001']));
+    expect(radiologyInfo.medications).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: '002001', unit: '部位' })]),
+    );
+    expect(postOrcaMedicalModV2Xml).toHaveBeenCalledTimes(1);
   });
 
-  it('9桁以外かつコメントコード系でないコードは送信前に停止する', async () => {
+  it('放射線の bodyPart だけの束は送信前に停止する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
-        entity === 'generalOrder'
+        entity === 'radiologyOrder'
           ? [
               {
-                entity: 'generalOrder',
-                bundleName: '不正コード',
+                entity: 'radiologyOrder',
+                bundleName: '胸部CT',
                 bundleNumber: '1',
-                items: [{ code: '12345', name: '未正規化コード' }],
+                classCode: '700',
+                bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
+                items: [],
               },
             ]
           : [],
@@ -200,7 +324,7 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/9桁コード/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/非送信データ/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
@@ -275,6 +399,48 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
 
     await waitFor(() => expect(screen.getByText(/RP必須項目不足/)).toBeInTheDocument());
     expect(screen.getByText(/Medication_info/)).toBeInTheDocument();
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('注射RPでコードなし行がある場合は送信前に停止する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: '注射RP',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '静注',
+                adminCode: '4101',
+                items: [
+                  { code: '830000001', name: '注射手技', quantity: '1', unit: '回' },
+                  { name: 'ビタミン注射', quantity: '1', unit: '回' },
+                ],
+              },
+            ]
+          : [],
+    }));
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="000001"
+          visitDate="2026-01-20"
+          selectedEntry={{ department: '01 内科', physician: '10001 主治医', patientId: '000001' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/非送信データ/)).toBeInTheDocument());
+    expect(screen.getByText(/コードあり行とコードなし行が混在しています/)).toBeInTheDocument();
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
@@ -383,15 +549,15 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
     expect(screen.queryByText(/RP必須項目不足/)).not.toBeInTheDocument();
   });
 
-  it('generalOrder のフォールバック Medical_Class は 400 を使用する', async () => {
+  it('treatmentOrder canonical を 400 送信する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
-        entity === 'generalOrder'
+        entity === 'treatmentOrder'
           ? [
               {
-                entity: 'generalOrder',
+                entity: 'treatmentOrder',
                 bundleName: '一般オーダー',
                 bundleNumber: '1',
                 items: [{ code: '110000010', name: '手技' }],
@@ -428,5 +594,45 @@ describe('ChartsActionBar ORCA送信 (medicalmodv2)', () => {
         medicalInformation: expect.arrayContaining([expect.objectContaining({ medicalClass: '400' })]),
       }),
     );
+  });
+
+  it('mixed coded/uncoded row を含む treatmentOrder は送信前に停止する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'treatmentOrder'
+          ? [
+              {
+                entity: 'treatmentOrder',
+                bundleName: '混在オーダー',
+                bundleNumber: '1',
+                classCode: '400',
+                items: [
+                  { code: '110000010', name: '手技' },
+                  { name: '自由入力だけの行', quantity: '1' },
+                ],
+              },
+            ]
+          : [],
+    }));
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="000001"
+          visitDate="2026-01-20"
+          selectedEntry={{ department: '01 内科', physician: '10001 主治医', patientId: '000001' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/非送信データを検出/)).toBeInTheDocument());
+    expect(screen.getByText(/コードあり行とコードなし行が混在/)).toBeInTheDocument();
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 });

@@ -144,14 +144,15 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
                 from,
                 Date.from(Instant.now().minusSeconds(60L * 60L * 24L * 30L)));
         List<DocumentModel> documents = OrcaOrderBundleQuerySupport.resolveDocuments(karteServiceBean, karte, since);
+        String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityQuery(entity);
         List<OrderBundleFetchResponse.OrderBundleEntry> bundles =
-                OrcaOrderBundleFetchSupport.collectBundles(documents, entity, this::decodeBundle);
+                OrcaOrderBundleFetchSupport.collectBundles(documents, normalizedEntity, this::decodeBundle);
         OrderBundleFetchResponse response = OrcaOrderBundleFetchSupport.buildResponse(runId, patientId, bundles);
 
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);
         audit.put("patientId", patientId);
-        audit.put("entity", entity);
+        audit.put("entity", normalizedEntity);
         audit.put("runId", runId);
         audit.put("recordsReturned", bundles.size());
         recordAudit(request, "ORCA_ORDER_BUNDLE_FETCH", audit, AuditEventEnvelope.Outcome.SUCCESS);
@@ -258,7 +259,8 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "inputset_not_found", "Input set not found");
         }
-        if (normalizedEntity != null && !normalizedEntity.equals(bundle.getEntity())) {
+        bundle.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(bundle.getEntity()));
+        if (normalizedEntity != null && !OrcaOrderBundleRequestSupport.entitiesMatch(normalizedEntity, bundle.getEntity())) {
             Map<String, Object> audit = new HashMap<>();
             audit.put("facilityId", facilityId);
             audit.put("runId", runId);

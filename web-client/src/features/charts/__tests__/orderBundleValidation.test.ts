@@ -7,6 +7,8 @@ type BundleFormState = Parameters<typeof validateBundleForm>[0]['form'];
 const baseForm: BundleFormState = {
   bundleName: '',
   admin: '',
+  adminCode: '',
+  adminCodeSystem: undefined,
   bundleNumber: '1',
   adminMemo: '',
   memo: '',
@@ -22,7 +24,8 @@ const baseForm: BundleFormState = {
 describe('validateBundleForm', () => {
   it('medOrder: 薬剤/項目・用法を必須として判定する', () => {
     const issues = validateBundleForm({ form: baseForm, entity: 'medOrder', bundleLabel: 'RP名' });
-    expect(issues.map((issue) => issue.key)).toEqual(['missing_items', 'missing_usage']);
+    expect(issues).toHaveLength(2);
+    expect(issues.map((issue) => issue.key)).toEqual(expect.arrayContaining(['missing_items', 'missing_usage']));
   });
 
   it('medOrder: 必須条件を満たす場合はエラーなし', () => {
@@ -31,7 +34,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '降圧薬RP',
         admin: '1日1回',
-        items: [{ name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+        items: [{ code: '620000001', name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
       },
       entity: 'medOrder',
       bundleLabel: 'RP名',
@@ -45,7 +48,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '降圧薬RP',
         admin: '',
-        items: [{ name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+        items: [{ code: '620000001', name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
       },
       entity: 'medOrder',
       bundleLabel: 'RP名',
@@ -59,7 +62,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '',
         admin: '1日1回',
-        items: [{ name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+        items: [{ code: '620000001', name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
       },
       entity: 'medOrder',
       bundleLabel: 'RP名',
@@ -73,7 +76,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         admin: '1日1回',
         bundleNumber: '15',
-        items: [{ name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
+        items: [{ code: '620000001', name: 'アムロジピン', quantity: '1', unit: '錠', memo: '' }],
         prescriptionTiming: 'regular',
       },
       entity: 'medOrder',
@@ -89,7 +92,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         admin: '必要時',
         bundleNumber: '15',
-        items: [{ name: 'ロキソニン', quantity: '1', unit: '錠', memo: '' }],
+        items: [{ code: '620000002', name: 'ロキソニン', quantity: '1', unit: '錠', memo: '' }],
         prescriptionTiming: 'tonyo',
       },
       entity: 'medOrder',
@@ -101,14 +104,62 @@ describe('validateBundleForm', () => {
 
   it('generalOrder: 項目が必須で、用法は必須にしない', () => {
     const issues = validateBundleForm({
-      form: { ...baseForm, bundleName: '処置オーダー', admin: '' },
+      form: {
+        ...baseForm,
+        bundleName: '処置オーダー',
+        admin: '',
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
+      },
       entity: 'generalOrder',
       bundleLabel: 'オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['missing_items']);
+    expect(issues).toHaveLength(0);
   });
 
-  it.each(['treatmentOrder', 'testOrder', 'laboTest'])('BaseEditor系 %s は項目必須', (entity) => {
+  it('generalOrder: コードあり/なし混在は明示的にブロックする', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '処置オーダー',
+        items: [
+          { code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' },
+          { code: '', name: '未コード行', quantity: '1', unit: '回', memo: '' },
+        ],
+      },
+      entity: 'generalOrder',
+      bundleLabel: 'オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['mixed_coded_uncoded']);
+  });
+
+  it('generalOrder: コードなし行のみは明示的にブロックする', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '処置オーダー',
+        items: [{ code: '', name: '未コード行', quantity: '1', unit: '回', memo: '' }],
+      },
+      entity: 'generalOrder',
+      bundleLabel: 'オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['uncoded_row']);
+  });
+
+  it('generalOrder: コメントだけの束は保存前に止める', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '処置オーダー',
+        items: [],
+        commentItems: [{ code: '0081', name: 'コメント', quantity: '', unit: '', memo: '注意' }],
+      },
+      entity: 'generalOrder',
+      bundleLabel: 'オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['comment_only']);
+  });
+
+  it.each(['treatmentOrder', 'testOrder'])('BaseEditor系 %s は項目必須', (entity) => {
     const issues = validateBundleForm({
       form: { ...baseForm, bundleName: 'BaseEditor', admin: '' },
       entity,
@@ -117,12 +168,27 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['missing_items']);
   });
 
+  it('laboTest alias も testOrder と同じ必須判定になる', () => {
+    const aliasIssues = validateBundleForm({
+      form: { ...baseForm, bundleName: 'BaseEditor', admin: '' },
+      entity: 'laboTest',
+      bundleLabel: 'オーダー名',
+    });
+    const canonicalIssues = validateBundleForm({
+      form: { ...baseForm, bundleName: 'BaseEditor', admin: '' },
+      entity: 'testOrder',
+      bundleLabel: 'オーダー名',
+    });
+
+    expect(aliasIssues).toEqual(canonicalIssues);
+  });
+
   it('generalOrder: オーダー名が未入力でも項目があればエラーにしない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '',
-        items: [{ name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
       },
       entity: 'generalOrder',
       bundleLabel: 'オーダー名',
@@ -130,12 +196,12 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual([]);
   });
 
-  it('injectionOrder: 手技料なしフラグがあっても必須条件を満たせばエラーなし', () => {
+  it('injectionOrder: メモの自由記述は保存可能', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         memo: '手技料なし',
-        items: [{ name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '310000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
       },
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
@@ -143,12 +209,24 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('injectionOrder: コードなし行は送信前にブロックする', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        items: [{ code: '', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['uncoded_row']);
+  });
+
   it('radiologyOrder: 部位が未入力の場合にエラー', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '胸部撮影',
-        items: [{ name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
         bodyPart: null,
       },
       entity: 'radiologyOrder',
@@ -162,7 +240,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '胸部撮影',
-        items: [{ name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
         bodyPart: { code: '002000', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
@@ -171,12 +249,26 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('radiologyOrder: 部位コードが欠ける場合はエラー', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '胸部撮影',
+        items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
+        bodyPart: { code: '', name: '胸部', quantity: '', unit: '', memo: '' },
+      },
+      entity: 'radiologyOrder',
+      bundleLabel: '放射線オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_body_part_code']);
+  });
+
   it('commentItems: コメントコードか内容が欠ける場合はエラー', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
-        items: [{ name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [{ code: '0081', name: '', quantity: '', unit: '', memo: '' }],
       },
       entity: 'generalOrder',
@@ -190,7 +282,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
-        items: [{ name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [{ code: '123', name: '注意事項', quantity: '', unit: '', memo: '' }],
       },
       entity: 'generalOrder',
@@ -204,7 +296,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
-        items: [{ name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [],
       },
       entity: 'generalOrder',
@@ -218,7 +310,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
-        items: [{ name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         materialItems: [{ name: '', quantity: '1', unit: '枚', memo: '' }],
       },
       entity: 'generalOrder',
@@ -232,7 +324,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
-        items: [{ name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         materialItems: [],
       },
       entity: 'generalOrder',

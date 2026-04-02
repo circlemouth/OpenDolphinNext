@@ -39,6 +39,7 @@ import {
   type RpRequiredField,
 } from './orderRpRequirements';
 import {
+  resolveCanonicalOrderEntity,
   resolveOrderEntityDefaultClassMeta,
   resolveOrderEntityEtensuCategory,
   resolveOrderEntityUiProfile,
@@ -103,7 +104,12 @@ type BundleFormState = {
   moduleId?: number;
   bundleName: string;
   admin: string;
+  adminCode: string;
+  adminCodeSystem?: string;
   bundleNumber: string;
+  classCode?: string;
+  classCodeSystem?: string;
+  className?: string;
   adminMemo: string;
   memo: string;
   startDate: string;
@@ -149,8 +155,12 @@ type ContraindicationNotice = { tone: 'info' | 'warning' | 'error'; message: str
 type OrderBundleItemWithRowId = OrderBundleItem & { rowId?: string };
 type RecentUsageStorageScope = { facilityId?: string; userId?: string };
 
-const createRowId = () =>
-  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+let rowIdSequence = 0;
+
+const createRowId = () => {
+  rowIdSequence += 1;
+  return `${Date.now().toString(36)}-${rowIdSequence.toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
 
 const ensureRowId = (item: OrderBundleItem): OrderBundleItemWithRowId => ({
   ...item,
@@ -205,7 +215,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-const NO_PROCEDURE_CHARGE_TEXT = '手技料なし';
 const MATERIAL_CODE_PREFIX = '7';
 const BODY_PART_CODE_PREFIX = '002';
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
@@ -329,22 +338,29 @@ const splitBundleItems = (items?: OrderBundleItem[], explicitBodyPart?: OrderBun
   const normal: OrderBundleItem[] = [];
   const material: OrderBundleItem[] = [];
   const comment: OrderBundleItem[] = [];
-  let bodyPart: OrderBundleBodyPart | null = explicitBodyPart?.name?.trim()
+  const explicit = explicitBodyPart?.name?.trim()
     ? {
-        code: explicitBodyPart.code,
-        name: explicitBodyPart.name,
-        quantity: explicitBodyPart.quantity,
-        unit: explicitBodyPart.unit,
-        memo: explicitBodyPart.memo,
+        code: explicitBodyPart.code?.trim() || undefined,
+        name: explicitBodyPart.name.trim(),
+        quantity: explicitBodyPart.quantity?.trim() || undefined,
+        unit: explicitBodyPart.unit?.trim() || undefined,
+        memo: explicitBodyPart.memo?.trim() || undefined,
       }
     : null;
+  let bodyPart: OrderBundleBodyPart | null = explicit;
+  let bodyPartResolvedFromItems = Boolean(explicit);
   (items ?? []).forEach((item) => {
     const code = item.code?.trim();
     if (code && code.startsWith(BODY_PART_CODE_PREFIX)) {
-      if (!bodyPart) {
-        bodyPart = { ...item };
-      } else {
-        normal.push({ ...item });
+      if (!bodyPartResolvedFromItems) {
+        bodyPart = {
+          code: item.code?.trim() || undefined,
+          name: item.name.trim(),
+          quantity: item.quantity?.trim() || undefined,
+          unit: item.unit?.trim() || undefined,
+          memo: item.memo?.trim() || undefined,
+        };
+        bodyPartResolvedFromItems = true;
       }
       return;
     }
@@ -362,23 +378,7 @@ const splitBundleItems = (items?: OrderBundleItem[], explicitBodyPart?: OrderBun
 };
 
 const collectBundleItems = (form: BundleFormState) => {
-  const bodyPartItem =
-    form.bodyPart && form.bodyPart.name.trim()
-      ? {
-          code: form.bodyPart.code,
-          name: form.bodyPart.name,
-          quantity: form.bodyPart.quantity,
-          unit: form.bodyPart.unit,
-          memo: form.bodyPart.memo,
-        }
-      : null;
-  const merged = [
-    ...(bodyPartItem ? [bodyPartItem] : []),
-    ...form.items,
-    ...form.materialItems,
-    ...form.commentItems,
-  ];
-  return merged;
+  return [...form.items, ...form.materialItems, ...form.commentItems];
 };
 
 const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | undefined => {
@@ -392,8 +392,6 @@ const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | 
   };
 };
 
-const countMainItems = (form: BundleFormState) => countItems(form.items);
-
 const DEFAULT_VALIDATION_RULE: BundleValidationRule = {
   itemLabel: '項目',
   requiresItems: true,
@@ -404,7 +402,12 @@ const DEFAULT_VALIDATION_RULE: BundleValidationRule = {
 const buildEmptyForm = (today: string): BundleFormState => ({
   bundleName: '',
   admin: '',
+  adminCode: '',
+  adminCodeSystem: undefined,
   bundleNumber: '1',
+  classCode: undefined,
+  classCodeSystem: undefined,
+  className: undefined,
   adminMemo: '',
   memo: '',
   startDate: today,
@@ -425,7 +428,12 @@ export const toFormState = (bundle: OrderBundle, today: string): BundleFormState
     moduleId: bundle.moduleId,
     bundleName: bundle.bundleName ?? '',
     admin: bundle.admin ?? '',
+    adminCode: bundle.adminCode ?? '',
+    adminCodeSystem: bundle.adminCodeSystem ?? undefined,
     bundleNumber: bundle.bundleNumber ?? '1',
+    classCode: bundle.classCode ?? undefined,
+    classCodeSystem: bundle.classCodeSystem ?? undefined,
+    className: bundle.className ?? undefined,
     adminMemo: bundle.adminMemo ?? '',
     memo: bundle.memo ?? '',
     startDate: bundle.started ?? today,
@@ -451,7 +459,12 @@ const toFormStateFromHistoryCopy = (bundle: OrderBundle, today: string): BundleF
 const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => ({
   bundleName: template.bundleName,
   admin: template.admin,
+  adminCode: '',
+  adminCodeSystem: undefined,
   bundleNumber: template.bundleNumber || '1',
+  classCode: undefined,
+  classCodeSystem: undefined,
+  className: undefined,
   adminMemo: template.adminMemo,
   memo: template.memo,
   startDate: today,
@@ -486,23 +499,25 @@ const toOrderBundleFromInputSetDetail = (
   bundle: NonNullable<Awaited<ReturnType<typeof fetchOrcaOrderInputSetDetail>>['bundle']>,
   entity: string,
 ): OrderBundle => ({
-  entity: bundle.entity ?? entity,
+  entity: resolveCanonicalOrderEntity(bundle.entity) ?? resolveCanonicalOrderEntity(entity) ?? entity,
   bundleName: bundle.bundleName ?? '',
   bundleNumber: bundle.bundleNumber ?? '1',
   classCode: bundle.classCode,
   classCodeSystem: bundle.classCodeSystem,
   className: bundle.className,
   admin: bundle.admin ?? '',
+  adminCode: '',
+  adminCodeSystem: undefined,
   adminMemo: bundle.adminMemo ?? '',
   memo: bundle.memo ?? '',
   started: bundle.started,
   bodyPart: bundle.bodyPart?.name
     ? {
-        code: bundle.bodyPart.code,
-        name: bundle.bodyPart.name,
-        quantity: bundle.bodyPart.quantity,
-        unit: bundle.bodyPart.unit,
-        memo: bundle.bodyPart.memo,
+        code: bundle.bodyPart.code?.trim() || undefined,
+        name: bundle.bodyPart.name.trim(),
+        quantity: bundle.bodyPart.quantity?.trim() || undefined,
+        unit: bundle.bodyPart.unit?.trim() || undefined,
+        memo: bundle.bodyPart.memo?.trim() || undefined,
       }
     : undefined,
   items: bundle.items.map((item) => ({
@@ -696,15 +711,56 @@ export const validateBundleForm = ({
         item.memo?.trim(),
     );
   const rule = resolveOrderEntityValidationRule(entity) ?? DEFAULT_VALIDATION_RULE;
-  const itemCount = countMainItems(form);
-  if (rule.requiresItems && itemCount === 0) {
-    issues.push({ key: 'missing_items', message: `${rule.itemLabel}を1件以上入力してください。` });
-  }
+  const valuedItems = form.items.filter(hasAnyValue);
+  const codedItems = valuedItems.filter((item) => Boolean(item.code?.trim()));
+  const uncodedItems = valuedItems.filter((item) => !item.code?.trim());
+  const hasBodyPartValue = Boolean(
+    form.bodyPart?.name?.trim() ||
+      form.bodyPart?.code?.trim() ||
+      form.bodyPart?.quantity?.trim() ||
+      form.bodyPart?.unit?.trim() ||
+      form.bodyPart?.memo?.trim(),
+  );
   if (rule.requiresUsage && !form.admin.trim()) {
     issues.push({ key: 'missing_usage', message: '用法を入力してください。' });
   }
   if (rule.requiresBodyPart && !form.bodyPart?.name?.trim()) {
     issues.push({ key: 'missing_body_part', message: '部位を入力してください。' });
+  }
+  if (form.bodyPart?.name?.trim() && !form.bodyPart.code?.trim()) {
+    issues.push({
+      key: 'missing_body_part_code',
+      message: '部位コードを選択してください。',
+    });
+  }
+  if (rule.requiresItems && valuedItems.length === 0) {
+    const hasAuxiliaryValue = form.commentItems.some(hasAnyValue) || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
+    issues.push({
+      key: hasAuxiliaryValue ? 'comment_only' : 'missing_items',
+      message: hasAuxiliaryValue
+        ? '部位やコメントだけでは保存できません。コード付きの本体項目を入力してください。'
+        : `${rule.itemLabel}を1件以上入力してください。`,
+    });
+  }
+  if (valuedItems.length > 0) {
+    if (uncodedItems.length > 0 && codedItems.length > 0) {
+      issues.push({
+        key: 'mixed_coded_uncoded',
+        message: 'コードあり行とコードなし行が混在しています。コードなし行を削除するか、必ずマスタ選択してください。',
+      });
+    } else if (uncodedItems.length > 0) {
+      issues.push({
+        key: 'uncoded_row',
+        message: 'コードなし行が含まれています。名前だけの行は ORCA へ送れないため、マスタ選択してください。',
+      });
+    } else if (rule.requiresItems && codedItems.length === 0) {
+      issues.push({
+        key: 'comment_only',
+        message: hasBodyPartValue
+          ? '部位だけでは保存できません。コード付きの本体項目を入力してください。'
+          : 'コメントだけでは保存できません。コード付きの本体項目を入力してください。',
+      });
+    }
   }
   const isDaysBasedPrescription =
     entity === 'medOrder' && (form.prescriptionTiming === 'regular' || form.prescriptionTiming === 'gaiyo');
@@ -861,7 +917,7 @@ export function OrderBundleEditPanel({
   const isInjectionOrder = entity === 'injectionOrder';
   const isCompactOrderLayout = isMedOrder || isInjectionOrder;
   const isRadiologyOrder = entity === 'radiologyOrder';
-  const isRehabOrder = entity === 'generalOrder';
+  const isRehabOrder = entity === 'generalOrder' || entity === 'treatmentOrder';
   const isGaiyoPrescription = isMedOrder && form.prescriptionTiming === 'gaiyo';
   const rpRequiredIssueForForm = useMemo(
     () =>
@@ -1388,7 +1444,7 @@ export function OrderBundleEditPanel({
     if (currentAdmin) {
       const currentItem: OrderMasterSearchItem = {
         type: 'youhou',
-        code: form.adminMemo?.trim() || undefined,
+        code: form.adminCode?.trim() || undefined,
         name: currentAdmin,
       };
       const currentOptionKey = buildUsageOptionKey(currentItem);
@@ -1397,9 +1453,9 @@ export function OrderBundleEditPanel({
       }
     }
     return Array.from(optionMap.values());
-  }, [form.admin, form.adminMemo, usageItems]);
+  }, [form.admin, form.adminCode, usageItems]);
   const selectedUsageOptionKey = useMemo(() => {
-    const currentAdminCode = form.adminMemo?.trim() ?? '';
+    const currentAdminCode = form.adminCode?.trim() ?? '';
     if (currentAdminCode) {
       const matchedByCode = usageSelectOptions.find((item) => item.code?.trim() === currentAdminCode);
       if (matchedByCode) return buildUsageOptionKey(matchedByCode);
@@ -1411,9 +1467,9 @@ export function OrderBundleEditPanel({
       usageSelectOptions.find((item) => normalizePredictiveLabel(item.name) === normalizedAdmin) ??
       null;
     return matchedByLabel ? buildUsageOptionKey(matchedByLabel) : '';
-  }, [form.admin, form.adminMemo, usageSelectOptions]);
+  }, [form.admin, form.adminCode, usageSelectOptions]);
   const usageMasterMetaFromOptions = useMemo(() => {
-    const currentAdminCode = form.adminMemo?.trim() ?? '';
+    const currentAdminCode = form.adminCode?.trim() ?? '';
     if (currentAdminCode) {
       const matchedByCode = usageSelectOptions.find((item) => item.code?.trim() === currentAdminCode);
       if (matchedByCode) return buildUsageMasterMeta(matchedByCode);
@@ -1425,7 +1481,7 @@ export function OrderBundleEditPanel({
       usageSelectOptions.find((item) => normalizePredictiveLabel(item.name) === normalizedAdmin) ??
       null;
     return matchedByLabel ? buildUsageMasterMeta(matchedByLabel) : null;
-  }, [form.admin, form.adminMemo, usageSelectOptions]);
+  }, [form.admin, form.adminCode, usageSelectOptions]);
   const selectedUsageMeta = usageMasterMetaFromOptions ?? selectedUsageMasterMeta;
   const selectedUsageDaysLimit = selectedUsageMeta?.daysLimit;
   const selectedUsageDosePerDay = selectedUsageMeta?.dosePerDay;
@@ -1433,14 +1489,14 @@ export function OrderBundleEditPanel({
 
   useEffect(() => {
     if (!selectedUsageMasterMeta) return;
-    const currentCode = form.adminMemo?.trim() ?? '';
+    const currentCode = form.adminCode?.trim() ?? '';
     const normalizedCurrentAdmin = normalizePredictiveLabel(form.admin);
     const matchesByCode = Boolean(selectedUsageMasterMeta.code && currentCode && selectedUsageMasterMeta.code === currentCode);
     const matchesByLabel = normalizePredictiveLabel(selectedUsageMasterMeta.label) === normalizedCurrentAdmin;
     if (!matchesByCode && !matchesByLabel) {
       setSelectedUsageMasterMeta(null);
     }
-  }, [form.admin, form.adminMemo, selectedUsageMasterMeta]);
+  }, [form.admin, form.adminCode, selectedUsageMasterMeta]);
 
   const commentMasterOptions = useMemo(() => {
     const map = new Map<string, OrderMasterSearchItem>();
@@ -1538,7 +1594,7 @@ export function OrderBundleEditPanel({
           return {
             ...prev,
             admin: formatUsageLabel(matched),
-            adminMemo: matched.code?.trim() ?? '',
+            adminCode: matched.code?.trim() ?? '',
           };
         });
         setSelectedUsageMasterMeta(buildUsageMasterMeta(matched));
@@ -1696,7 +1752,7 @@ export function OrderBundleEditPanel({
     setForm((prev) => ({
       ...prev,
       admin: label,
-      adminMemo: item.code?.trim() ?? '',
+      adminCode: item.code?.trim() ?? '',
     }));
     setSelectedUsageMasterMeta(buildUsageMasterMeta(item));
   };
@@ -1728,7 +1784,7 @@ export function OrderBundleEditPanel({
     setForm((prev) => ({
       ...prev,
       admin: nextValue,
-      adminMemo: '',
+      adminCode: '',
     }));
     setSelectedUsageMasterMeta(null);
     void normalizeUsageInput(nextValue);
@@ -1779,6 +1835,7 @@ export function OrderBundleEditPanel({
   };
 
   const applyBodyPart = (item: OrderMasterSearchItem) => {
+    clearValidationByKeys(['missing_body_part', 'missing_body_part_code']);
     setForm((prev) => ({
       ...prev,
       bodyPart: {
@@ -1822,6 +1879,15 @@ export function OrderBundleEditPanel({
 
   const resolveBundleClassMeta = (bundleForm: BundleFormState) => {
     if (!isMedOrder) {
+      const explicitClassCode = bundleForm.classCode?.trim();
+      const explicitClassName = bundleForm.className?.trim();
+      if (explicitClassCode || explicitClassName) {
+        return {
+          classCode: explicitClassCode || undefined,
+          classCodeSystem: bundleForm.classCodeSystem?.trim() || PRESCRIPTION_CLASS_CODE_SYSTEM,
+          className: explicitClassName || undefined,
+        };
+      }
       const mapped = resolveOrderEntityDefaultClassMeta(entity);
       if (!mapped) return {};
       return {
@@ -1992,7 +2058,6 @@ export function OrderBundleEditPanel({
     today,
   ]);
 
-  const isNoProcedureCharge = isInjectionOrder && form.memo === NO_PROCEDURE_CHARGE_TEXT;
   const isDaysBasedPrescription =
     isMedOrder && (form.prescriptionTiming === 'regular' || form.prescriptionTiming === 'gaiyo');
   const bundleNumberLabel = isMedOrder
@@ -2055,6 +2120,8 @@ export function OrderBundleEditPanel({
             bundleNumber: payload.form.bundleNumber,
             ...classMeta,
             admin: payload.form.admin,
+            adminCode: payload.form.adminCode,
+            adminCodeSystem: payload.form.adminCodeSystem,
             adminMemo: payload.form.adminMemo,
             memo: payload.form.memo,
             startDate: payload.form.startDate,
@@ -2107,7 +2174,6 @@ export function OrderBundleEditPanel({
             materialItemCount: countItems(payload.form.materialItems),
             commentItemCount: countItems(payload.form.commentItems),
             bodyPart: payload.form.bodyPart?.name ?? null,
-            noProcedureCharge: payload.form.memo === NO_PROCEDURE_CHARGE_TEXT,
             ...(result.ok ? {} : { error: failureMessage }),
           },
         },
@@ -2133,6 +2199,8 @@ export function OrderBundleEditPanel({
             classCodeSystem: classMeta.classCodeSystem,
             className: classMeta.className,
             admin: payload.form.admin,
+            adminCode: payload.form.adminCode,
+            adminCodeSystem: payload.form.adminCodeSystem,
             adminMemo: payload.form.adminMemo,
             memo: payload.form.memo,
             started: payload.form.startDate,
@@ -2160,6 +2228,8 @@ export function OrderBundleEditPanel({
                     classCodeSystem: classMeta.classCodeSystem,
                     className: classMeta.className,
                     admin: payload.form.admin,
+                    adminCode: payload.form.adminCode,
+                    adminCodeSystem: payload.form.adminCodeSystem,
                     adminMemo: payload.form.adminMemo,
                     memo: payload.form.memo,
                     started: payload.form.startDate,
@@ -2219,7 +2289,6 @@ export function OrderBundleEditPanel({
             materialItemCount: countItems(payload.form.materialItems),
             commentItemCount: countItems(payload.form.commentItems),
             bodyPart: payload.form.bodyPart?.name ?? null,
-            noProcedureCharge: payload.form.memo === NO_PROCEDURE_CHARGE_TEXT,
             error: message,
           },
         },
@@ -2438,8 +2507,23 @@ export function OrderBundleEditPanel({
             return `${entityId}-admin`;
           case 'missing_body_part':
             return `${entityId}-bodypart`;
+          case 'missing_body_part_code':
+            return `${entityId}-bodypart`;
           case 'missing_items':
             return `${entityId}-item-name-0`;
+          case 'comment_only':
+            return `${entityId}-item-name-0`;
+          case 'mixed_coded_uncoded':
+          case 'uncoded_row':
+          case 'missing_item_code': {
+            const idx = bundleForm.items.findIndex((item) => {
+              if (!item.name?.trim() && !item.quantity?.trim() && !item.unit?.trim() && !item.memo?.trim()) {
+                return false;
+              }
+              return !item.code?.trim();
+            });
+            return idx >= 0 ? `${entityId}-item-code-${idx}` : `${entityId}-item-name-0`;
+          }
           case USAGE_DAYS_LIMIT_ERROR_KEY:
             return `${entityId}-bundle-number`;
           case 'invalid_comment_item': {
@@ -2504,7 +2588,6 @@ export function OrderBundleEditPanel({
             materialItemCount: countItems(form.materialItems),
             commentItemCount: countItems(form.commentItems),
             bodyPart: form.bodyPart?.name ?? null,
-            noProcedureCharge: form.memo === NO_PROCEDURE_CHARGE_TEXT,
             blockedReasons: guardReasonKeys.length > 0 ? guardReasonKeys : ['edit_guard'],
             operationPhase: 'lock',
           },
@@ -2567,7 +2650,6 @@ export function OrderBundleEditPanel({
             materialItemCount: countItems(normalizedForm.materialItems),
             commentItemCount: countItems(normalizedForm.commentItems),
             bodyPart: normalizedForm.bodyPart?.name ?? null,
-            noProcedureCharge: normalizedForm.memo === NO_PROCEDURE_CHARGE_TEXT,
             blockedReasons: validationIssues.map((issue) => issue.key),
             validationMessages: validationIssues.map((issue) => issue.message),
             operationPhase: 'lock',
@@ -2650,8 +2732,8 @@ export function OrderBundleEditPanel({
   }, [validationIssues]);
   const usageError = validationByKey.get('missing_usage');
   const bundleNumberError = validationByKey.get(USAGE_DAYS_LIMIT_ERROR_KEY);
-  const itemsError = validationByKey.get('missing_items');
-  const bodyPartError = validationByKey.get('missing_body_part');
+  const itemsError = validationByKey.get('missing_items') ?? validationByKey.get('comment_only');
+  const bodyPartError = validationByKey.get('missing_body_part') ?? validationByKey.get('missing_body_part_code');
   const commentError =
     validationByKey.get('invalid_comment_item') ?? validationByKey.get('invalid_comment_code');
 
@@ -3156,7 +3238,7 @@ export function OrderBundleEditPanel({
                     setForm((prev) => ({
                       ...prev,
                       admin: '',
-                      adminMemo: '',
+                      adminCode: '',
                     }));
                     setSelectedUsageMasterMeta(null);
                     return;
@@ -3166,7 +3248,7 @@ export function OrderBundleEditPanel({
                     setForm((prev) => ({
                       ...prev,
                       admin: '',
-                      adminMemo: '',
+                      adminCode: '',
                     }));
                     setSelectedUsageMasterMeta(null);
                   }
@@ -3193,7 +3275,7 @@ export function OrderBundleEditPanel({
                 aria-invalid={usageError ? 'true' : undefined}
                 onChange={(event) => {
                   clearValidationByKeys(['missing_usage', USAGE_DAYS_LIMIT_ERROR_KEY]);
-                  setForm((prev) => ({ ...prev, admin: event.target.value, adminMemo: '' }));
+                  setForm((prev) => ({ ...prev, admin: event.target.value, adminCode: '' }));
                   setSelectedUsageMasterMeta(null);
                 }}
                 placeholder={orderUiProfile.instructionPlaceholder}
@@ -3293,43 +3375,21 @@ export function OrderBundleEditPanel({
                     disabled={isBlocked}
                   />
                 </div>
-                {orderUiProfile.supportsInjectionNoProcedure ? (
-                  <div className="charts-side-panel__field charts-side-panel__meta-section--memo">
-                    <label className="charts-side-panel__toggle">
-                      <input
-                        id={`${entityId}-no-procedure-charge`}
-                        name={`${entityId}-no-procedure-charge`}
-                        type="checkbox"
-                        checked={isNoProcedureCharge}
-                        onChange={(event) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            memo: event.target.checked ? NO_PROCEDURE_CHARGE_TEXT : '',
-                          }))
-                        }
-                        disabled={isBlocked}
-                      />
-                      手技料なし
-                    </label>
-                    <p className="charts-side-panel__message">注射オーダーのメモに「手技料なし」を反映します。</p>
-                  </div>
-                ) : (
-                  <div className="charts-side-panel__field charts-side-panel__meta-section--memo">
-                    <label htmlFor={`${entityId}-memo`}>{orderUiProfile.memoLabel}</label>
-                    <textarea
-                      id={`${entityId}-memo`}
-                      value={form.memo}
-                      onChange={(event) => setForm((prev) => ({ ...prev, memo: event.target.value }))}
-                      placeholder={orderUiProfile.memoPlaceholder}
-                      disabled={isBlocked}
-                    />
-                    {isRehabOrder && (
-                      <p className="charts-side-panel__message">
-                        メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className="charts-side-panel__field charts-side-panel__meta-section--memo">
+                  <label htmlFor={`${entityId}-memo`}>{orderUiProfile.memoLabel}</label>
+                  <textarea
+                    id={`${entityId}-memo`}
+                    value={form.memo}
+                    onChange={(event) => setForm((prev) => ({ ...prev, memo: event.target.value }))}
+                    placeholder={orderUiProfile.memoPlaceholder}
+                    disabled={isBlocked}
+                  />
+                  {isRehabOrder && (
+                    <p className="charts-side-panel__message">
+                      メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </details>
@@ -3345,43 +3405,21 @@ export function OrderBundleEditPanel({
                 disabled={isBlocked}
               />
             </div>
-            {orderUiProfile.supportsInjectionNoProcedure ? (
-              <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--memo">
-                <label className="charts-side-panel__toggle">
-                  <input
-                    id={`${entityId}-no-procedure-charge`}
-                    name={`${entityId}-no-procedure-charge`}
-                    type="checkbox"
-                    checked={isNoProcedureCharge}
-                    onChange={(event) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        memo: event.target.checked ? NO_PROCEDURE_CHARGE_TEXT : '',
-                      }))
-                    }
-                    disabled={isBlocked}
-                  />
-                  手技料なし
-                </label>
-                <p className="charts-side-panel__message">注射オーダーのメモに「手技料なし」を反映します。</p>
-              </div>
-            ) : (
-              <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--memo">
-                <label htmlFor={`${entityId}-memo`}>{orderUiProfile.memoLabel}</label>
-                <textarea
-                  id={`${entityId}-memo`}
-                  value={form.memo}
-                  onChange={(event) => setForm((prev) => ({ ...prev, memo: event.target.value }))}
-                  placeholder={orderUiProfile.memoPlaceholder}
-                  disabled={isBlocked}
-                />
-                {isRehabOrder && (
-                  <p className="charts-side-panel__message">
-                    メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
-                  </p>
-                )}
-              </div>
-            )}
+            <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--memo">
+              <label htmlFor={`${entityId}-memo`}>{orderUiProfile.memoLabel}</label>
+              <textarea
+                id={`${entityId}-memo`}
+                value={form.memo}
+                onChange={(event) => setForm((prev) => ({ ...prev, memo: event.target.value }))}
+                placeholder={orderUiProfile.memoPlaceholder}
+                disabled={isBlocked}
+              />
+              {isRehabOrder && (
+                <p className="charts-side-panel__message">
+                  メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
+                </p>
+              )}
+            </div>
           </>
         )}
 
@@ -3408,7 +3446,7 @@ export function OrderBundleEditPanel({
                   data-orca-warning={orcaWarningTargets.bodyPart ? 'true' : undefined}
                   aria-invalid={bodyPartError ? 'true' : undefined}
                   onChange={(event) => {
-                    clearValidationByKeys(['missing_body_part']);
+                    clearValidationByKeys(['missing_body_part', 'missing_body_part_code']);
                     const nextName = event.target.value;
                     setForm((prev) => ({
                       ...prev,
@@ -3661,7 +3699,6 @@ export function OrderBundleEditPanel({
                   }`}
                   data-invalid={itemsError && index === 0 ? 'true' : undefined}
                   data-testid="order-bundle-item-row"
-                  data-rowid={rowId ?? ''}
                   onClick={() => setSelectedItemRowId(rowId ?? null)}
                   onDragOver={(event) => {
                     if (isBlocked) return;

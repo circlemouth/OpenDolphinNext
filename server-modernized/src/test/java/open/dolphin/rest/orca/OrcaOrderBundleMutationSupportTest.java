@@ -23,6 +23,9 @@ class OrcaOrderBundleMutationSupportTest {
         OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
         operation.setEntity(IInfoModel.ENTITY_MED_ORDER);
         operation.setBundleName("降圧薬セット");
+        operation.setAdmin("静注");
+        operation.setAdminCode("4101");
+        operation.setAdminCodeSystem("Claim007");
         OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
         bodyPart.setCode("002999");
         bodyPart.setName("右下肢");
@@ -38,6 +41,9 @@ class OrcaOrderBundleMutationSupportTest {
         DocumentModel document = OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
 
         BundleDolphin bundle = (BundleDolphin) document.getModules().get(0).getModel();
+        assertEquals("静注", bundle.getAdmin());
+        assertEquals("4101", bundle.getAdminCode());
+        assertEquals("Claim007", bundle.getAdminCodeSystem());
         ClaimItem[] claimItems = bundle.getClaimItem();
         assertNotNull(claimItems);
         assertEquals(2, claimItems.length);

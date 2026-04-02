@@ -365,7 +365,6 @@ exports[`OrderBundleEditPanel body part search > 放射線の部位検索はキ�
                   <div>
                     <div
                       class="charts-side-panel__item-row charts-side-panel__item-row--inactive charts-side-panel__item-row--selected"
-                      data-rowid="mknj9o4t-henbgn"
                       data-testid="order-bundle-item-row"
                     >
                       <button

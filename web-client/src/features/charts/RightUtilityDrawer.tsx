@@ -22,6 +22,7 @@ import { PrescriptionOrderEditorPanel } from './PrescriptionOrderEditorPanel';
 import type { OrderBundle } from './orderBundleApi';
 import {
   ORDER_GROUP_REGISTRY,
+  resolveCanonicalOrderEntity,
   resolveOrderEntity,
   resolveOrderEntityEditorMeta,
   resolveOrderEntityLabel,
@@ -82,16 +83,15 @@ const resolveGroupByTool = (tool: RightUtilityTool) => {
 
 const normalizeBundleEntity = (bundle: OrderBundle, fallback: OrderEntity): OrderEntity => {
   const raw = bundle.entity?.trim() ?? '';
-  const resolved = resolveOrderEntity(raw);
+  const resolved = resolveCanonicalOrderEntity(raw) ?? resolveOrderEntity(raw);
   if (resolved) return resolved;
   return fallback;
 };
 
 const belongsToSelectionEntity = (bundleEntity: OrderEntity, selectedEntity: OrderEntity) => {
-  if (selectedEntity === 'testOrder') {
-    return bundleEntity === 'testOrder' || bundleEntity === 'laboTest';
-  }
-  return bundleEntity === selectedEntity;
+  const normalizedBundleEntity = resolveCanonicalOrderEntity(bundleEntity) ?? bundleEntity;
+  const normalizedSelectedEntity = resolveCanonicalOrderEntity(selectedEntity) ?? selectedEntity;
+  return normalizedBundleEntity === normalizedSelectedEntity;
 };
 
 const isOrderTool = (tool: RightUtilityTool): tool is OrderGroupKey => tool !== 'document' && tool !== 'orca';

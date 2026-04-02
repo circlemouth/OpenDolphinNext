@@ -33,9 +33,20 @@ import { useOrcaReportPrint } from './print/useOrcaReportPrint';
 import { MISSING_MASTER_RECOVERY_NEXT_STEPS } from '../shared/missingMasterRecovery';
 import { fetchOrderBundles, type OrderBundle } from './orderBundleApi';
 import { ORCA_SEND_ORDER_ENTITIES, isOrderEntity, type OrderEntity } from './orderCategoryRegistry';
-import { buildRpRequiredBlockedMessage, collectRpRequiredIssues, RP_REQUIRED_NEXT_ACTION } from './orderRpRequirements';
+import {
+  buildOrderBundleCodeBlockedMessage,
+  buildRpRequiredBlockedMessage,
+  collectOrderBundleCodeIssues,
+  collectRpRequiredIssues,
+  RP_REQUIRED_NEXT_ACTION,
+} from './orderRpRequirements';
 import { buildOrderHubEventId, recordOrderHubKpi } from './orderHubKpi';
-import { toMedicalModV2InformationWithSource } from './orderRpNormalization';
+import {
+  collectMedicalModV2BundleIssues,
+  toMedicalModV2InformationWithSource,
+  type RpNormalizedRowSource,
+  type MedicalModV2BundleIssue,
+} from './orderRpNormalization';
 import { retryOrcaQueue } from '../outpatient/orcaQueueApi';
 
 type ChartAction = 'start' | 'pause' | 'finish' | 'send' | 'draft' | 'cancel' | 'print';
@@ -144,6 +155,14 @@ const isSendableMedicalModV2Code = (code: string) => {
   return NORMALIZED_CODE_PATTERN.test(normalized) || isCommentMedicationCode(normalized);
 };
 
+const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSource['kind']) => {
+  const normalized = code.trim();
+  if (!normalized) return false;
+  if (sourceKind === 'usage') return /^\d+$/.test(normalized);
+  if (sourceKind === 'body_part') return /^002\d{0,}$/.test(normalized);
+  return isSendableMedicalModV2Code(normalized);
+};
+
 const resolveFetchedBundleEntity = (rawEntity: string | undefined, fallback: OrderEntity): OrderEntity => {
   const normalized = rawEntity?.trim();
   if (normalized && isOrderEntity(normalized)) return normalized;
@@ -183,6 +202,12 @@ type MedicalModV2RequiredIssue = ReturnType<typeof collectRpRequiredIssues>[numb
 
 const collectMedicalModV2RequiredIssues = (bundles: OrderBundle[]): MedicalModV2RequiredIssue[] =>
   collectRpRequiredIssues(bundles);
+
+const formatMedicalModV2BundleIssue = (issue: MedicalModV2BundleIssue) => {
+  const entity = issue.entity?.trim() || 'order';
+  const bundleName = issue.bundleName?.trim() || '名称未設定';
+  return `${entity}/${bundleName}: ${issue.detail}`;
+};
 
 const summarizeGuardReasons = (reasons: GuardReason[]) => {
   if (reasons.length === 0) return null;
@@ -1434,6 +1459,60 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             setRunningAction(null);
             return;
           }
+          const bundleIssues = collectMedicalModV2BundleIssues(orderBundleResult.bundles);
+          if (bundleIssues.length > 0) {
+            const preview = bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
+            const remaining = bundleIssues.length - 4;
+            setBanner({
+              tone: 'warning',
+              message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
+              nextAction: 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
+            });
+            setIsRunning(false);
+            setRunningAction(null);
+            return;
+          }
+          const codeIssues = collectOrderBundleCodeIssues(orderBundleResult.bundles);
+          if (codeIssues.length > 0) {
+            const eventId = buildOrderHubEventId();
+            recordOrderHubKpi(
+              {
+                runId,
+                cacheHit,
+                missingMaster,
+                fallbackUsed,
+                dataSourceTransition,
+                patientId: resolvedPatientId,
+                appointmentId: resolvedAppointmentId,
+              },
+              {
+                category: 'OUI-04',
+                source: 'system',
+                result: 'blocked',
+                eventId,
+                reason: 'code_missing',
+                details: {
+                  issueCount: codeIssues.length,
+                  issues: codeIssues.slice(0, 8).map((issue) => ({
+                    entity: issue.entity ?? null,
+                    bundleName: issue.bundleName ?? null,
+                    documentId: issue.documentId ?? null,
+                    moduleId: issue.moduleId ?? null,
+                    mixedRows: issue.mixedRows,
+                    missingCodeItemIndexes: issue.missingCodeItemIndexes,
+                  })),
+                },
+              },
+            );
+            setBanner({
+              tone: 'warning',
+              message: buildOrderBundleCodeBlockedMessage(codeIssues),
+              nextAction: 'コード未入力の行を補正してから再送してください。',
+            });
+            setIsRunning(false);
+            setRunningAction(null);
+            return;
+          }
           const medicalInformationWithSource = orderBundleResult.bundles
             .map(toMedicalModV2InformationWithSource)
             .filter(
@@ -1472,9 +1551,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               const code = item.code?.trim() ?? '';
               if (!code) return;
               const rowSource = medicalInformationSources[groupIndex]?.rows[rowIndex];
-              const usageRow = rowSource?.source.kind === 'usage';
-              if (usageRow && /^\d+$/.test(code)) return;
-              if (isSendableMedicalModV2Code(code)) return;
+              if (isAllowedMedicalModV2Code(code, rowSource?.source.kind)) return;
               if (invalidCodes.length >= 12) return;
               invalidCodes.push({ code, name: item.name?.trim() || undefined, group: groupIndex + 1, row: rowIndex + 1 });
               // groupIndex + 1: ORCA warning position is 1-based.
@@ -1487,7 +1564,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               .join(' / ');
             setBanner({
               tone: 'warning',
-              message: `ORCA送信を停止: 9桁コード/コメント/用法数字コード以外の入力コードがあります: ${preview}`,
+              message: `ORCA送信を停止: 9桁コード/コメント/部位コード/用法数字コード以外の入力コードがあります: ${preview}`,
               nextAction: 'オーダー入力に戻り、候補選択またはコード補正候補を適用してください。',
             });
             setIsRunning(false);

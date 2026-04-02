@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ORCA_SEND_ORDER_ENTITIES,
+  resolveCanonicalOrderEntity,
   resolveOrderDockCategoryLabel,
   resolveOrderEntity,
   resolveOrderEntityDefaultClassMeta,
@@ -19,6 +20,11 @@ describe('orderCategoryRegistry', () => {
     expect(resolveOrderGroupKeyByEntity('medOrder')).toBe('prescription');
     expect(resolveOrderGroupKeyByEntity('laboTest')).toBe('test');
     expect(resolveOrderEntity('prescriptionOrder')).toBe('medOrder');
+    expect(resolveOrderEntity('laboTest')).toBe('testOrder');
+    expect(resolveOrderEntity(' laboTest ')).toBe('testOrder');
+    expect(resolveCanonicalOrderEntity('laboTest')).toBe('testOrder');
+    expect(resolveCanonicalOrderEntity('generalOrder')).toBe('treatmentOrder');
+    expect(resolveCanonicalOrderEntity(' generalOrder ')).toBe('treatmentOrder');
     expect(resolveOrderGroupKeyByEntity('prescriptionOrder')).toBe('prescription');
     expect(resolveOrderDockCategoryLabel('charge')).toBe('算定');
   });
@@ -30,11 +36,13 @@ describe('orderCategoryRegistry', () => {
 
     expect(medUi.defaultMasterSearchType).toBe('drug');
     expect(medRule.requiresUsage).toBe(true);
+    expect(resolveOrderEntityUiProfile('injectionOrder').supportsInjectionNoProcedure).toBe(false);
     expect(injClass?.classCode).toBe('310');
     expect(resolveOrderEntityEtensuCategory('radiologyOrder')).toBe('7');
     expect(ORCA_SEND_ORDER_ENTITIES).toContain('medOrder');
     expect(ORCA_SEND_ORDER_ENTITIES).toContain('injectionOrder');
-    expect(ORCA_SEND_ORDER_ENTITIES).toContain('laboTest');
+    expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('laboTest');
+    expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('generalOrder');
   });
 
   it('カテゴリ差分を維持した検索ポリシーを返す', () => {
@@ -52,8 +60,6 @@ describe('orderCategoryRegistry', () => {
     expect(testPolicy.etensuCategory).toBe('6');
     expect(chargePolicy.etensuCategory).toBe('1');
 
-    expect(laboPolicy.etensuCategory).toBe('6');
-    expect(laboPolicy.classMeta?.classCode).toBe('600');
-    expect(laboPolicy.masterSearchPresets.map((preset) => preset.type)).toEqual(['etensu', 'kensa-sort']);
+    expect(laboPolicy).toEqual(testPolicy);
   });
 });

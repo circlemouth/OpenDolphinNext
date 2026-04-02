@@ -11,14 +11,12 @@ import open.dolphin.infomodel.ModelUtils;
 final class OrcaOrderBundleRequestSupport {
 
     private static final Set<String> ORDER_BUNDLE_ENTITIES = Set.of(
-            IInfoModel.ENTITY_GENERAL_ORDER,
             IInfoModel.ENTITY_MED_ORDER,
             IInfoModel.ENTITY_OTHER_ORDER,
-            IInfoModel.ENTITY_TREATMENT,
+            "treatmentOrder",
             IInfoModel.ENTITY_SURGERY_ORDER,
             IInfoModel.ENTITY_RADIOLOGY_ORDER,
-            IInfoModel.ENTITY_LABO_TEST,
-            "laboTest",
+            "testOrder",
             IInfoModel.ENTITY_PHYSIOLOGY_ORDER,
             IInfoModel.ENTITY_BACTERIA_ORDER,
             IInfoModel.ENTITY_INJECTION_ORDER,
@@ -29,14 +27,30 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static String normalizeEntityQuery(String entity) {
-        if (entity == null || entity.isBlank()) {
-            return null;
+        return canonicalizeEntity(entity);
+    }
+
+    static String normalizeEntityResponse(String entity) {
+        return canonicalizeEntity(entity);
+    }
+
+    static String normalizeEntityStorage(String entity) {
+        return canonicalizeEntity(entity);
+    }
+
+    static boolean entitiesMatch(String requestedEntity, String moduleEntity) {
+        if (requestedEntity == null || requestedEntity.isBlank()) {
+            return true;
         }
-        String normalized = entity.trim();
-        if ("laboTest".equals(normalized)) {
-            return IInfoModel.ENTITY_LABO_TEST;
+        if (moduleEntity == null || moduleEntity.isBlank()) {
+            return false;
         }
-        return normalized;
+        String requested = canonicalizeEntity(requestedEntity);
+        String actual = canonicalizeEntity(moduleEntity);
+        if (requested == null || actual == null) {
+            return false;
+        }
+        return requested.equals(actual);
     }
 
     static String normalizeOrcaDateOrToday(String input) {
@@ -112,13 +126,28 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static boolean isValidEntity(String entity) {
-        if (entity == null) {
-            return false;
-        }
-        String normalized = entity.trim();
-        if (normalized.isEmpty()) {
+        String normalized = canonicalizeEntity(entity);
+        if (normalized == null) {
             return false;
         }
         return ORDER_BUNDLE_ENTITIES.contains(normalized);
+    }
+
+    private static String canonicalizeEntity(String entity) {
+        if (entity == null || entity.isBlank()) {
+            return null;
+        }
+        String normalized = entity.trim();
+        if ("laboTest".equals(normalized) || IInfoModel.ENTITY_LABO_TEST.equals(normalized)) {
+            return "testOrder";
+        }
+        if (IInfoModel.ENTITY_GENERAL_ORDER.equals(normalized) || "generalOrder".equals(normalized)
+                || IInfoModel.ENTITY_TREATMENT.equals(normalized)) {
+            return "treatmentOrder";
+        }
+        if ("instructionChargeOrder".equals(normalized)) {
+            return IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER;
+        }
+        return normalized;
     }
 }

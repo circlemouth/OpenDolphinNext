@@ -1,6 +1,7 @@
 package open.dolphin.rest.dto.orca;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PrescriptionDrug {
@@ -13,6 +14,10 @@ public class PrescriptionDrug {
     private String validFrom;
     private String validTo;
     private Boolean patientRequested;
+    private Boolean genericChangeAllowed;
+    private Boolean generalNamePrescription;
+    private String drugComment;
+    private List<PrescriptionClaimComment> claimComments;
     private PrescriptionDoInputMeta doInputMeta;
 
     public String getCode() {
@@ -77,6 +82,38 @@ public class PrescriptionDrug {
 
     public void setPatientRequested(Boolean patientRequested) {
         this.patientRequested = patientRequested;
+    }
+
+    public Boolean getGenericChangeAllowed() {
+        return genericChangeAllowed;
+    }
+
+    public void setGenericChangeAllowed(Boolean genericChangeAllowed) {
+        this.genericChangeAllowed = genericChangeAllowed;
+    }
+
+    public Boolean getGeneralNamePrescription() {
+        return generalNamePrescription;
+    }
+
+    public void setGeneralNamePrescription(Boolean generalNamePrescription) {
+        this.generalNamePrescription = generalNamePrescription;
+    }
+
+    public String getDrugComment() {
+        return drugComment;
+    }
+
+    public void setDrugComment(String drugComment) {
+        this.drugComment = drugComment;
+    }
+
+    public List<PrescriptionClaimComment> getClaimComments() {
+        return claimComments;
+    }
+
+    public void setClaimComments(List<PrescriptionClaimComment> claimComments) {
+        this.claimComments = claimComments;
     }
 
     public PrescriptionDoInputMeta getDoInputMeta() {

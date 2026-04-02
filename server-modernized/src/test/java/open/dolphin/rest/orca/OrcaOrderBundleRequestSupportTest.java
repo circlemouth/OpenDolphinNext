@@ -14,8 +14,17 @@ class OrcaOrderBundleRequestSupportTest {
 
     @Test
     void normalizeEntityQueryMapsLegacyAlias() {
-        assertEquals(IInfoModel.ENTITY_LABO_TEST, OrcaOrderBundleRequestSupport.normalizeEntityQuery("laboTest"));
+        assertEquals("testOrder", OrcaOrderBundleRequestSupport.normalizeEntityQuery("laboTest"));
+        assertEquals("treatmentOrder", OrcaOrderBundleRequestSupport.normalizeEntityQuery(IInfoModel.ENTITY_GENERAL_ORDER));
         assertNull(OrcaOrderBundleRequestSupport.normalizeEntityQuery(" "));
+    }
+
+    @Test
+    void entitiesMatchUsesCanonicalAlias() {
+        assertTrue(OrcaOrderBundleRequestSupport.entitiesMatch("testOrder", IInfoModel.ENTITY_LABO_TEST));
+        assertTrue(OrcaOrderBundleRequestSupport.entitiesMatch("treatmentOrder", IInfoModel.ENTITY_GENERAL_ORDER));
+        assertTrue(OrcaOrderBundleRequestSupport.entitiesMatch("treatmentOrder", IInfoModel.ENTITY_TREATMENT));
+        assertFalse(OrcaOrderBundleRequestSupport.entitiesMatch("testOrder", IInfoModel.ENTITY_TREATMENT));
     }
 
     @Test
@@ -43,6 +52,7 @@ class OrcaOrderBundleRequestSupportTest {
     @Test
     void entityAndOperationValidatorsRejectUnsupportedValues() {
         assertTrue(OrcaOrderBundleRequestSupport.isValidEntity(IInfoModel.ENTITY_MED_ORDER));
+        assertTrue(OrcaOrderBundleRequestSupport.isValidEntity("laboTest"));
         assertFalse(OrcaOrderBundleRequestSupport.isValidEntity("unknown"));
         assertTrue(OrcaOrderBundleRequestSupport.isSupportedOperation("create"));
         assertFalse(OrcaOrderBundleRequestSupport.isSupportedOperation("patch"));

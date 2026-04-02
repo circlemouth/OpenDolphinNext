@@ -14,7 +14,7 @@ export type OrcaMedicalWarningUi = {
   medicalClass?: string;
   medicationCode?: string;
   medicationName?: string;
-  sourceKind?: 'bundle_item' | 'usage';
+  sourceKind?: 'bundle_item' | 'usage' | 'body_part';
   sourceItemIndex?: number;
 };
 

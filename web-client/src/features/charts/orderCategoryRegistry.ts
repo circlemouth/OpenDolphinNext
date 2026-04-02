@@ -20,7 +20,24 @@ export type OrderEntity =
 
 const ORDER_ENTITY_ALIASES: Record<string, OrderEntity> = {
   prescriptionOrder: 'medOrder',
+  laboTest: 'testOrder',
   instructionChargeOrder: 'instractionChargeOrder',
+};
+
+const CANONICAL_ORDER_ENTITY_ALIASES: Record<OrderEntity, OrderEntity> = {
+  medOrder: 'medOrder',
+  injectionOrder: 'injectionOrder',
+  treatmentOrder: 'treatmentOrder',
+  generalOrder: 'treatmentOrder',
+  surgeryOrder: 'surgeryOrder',
+  otherOrder: 'otherOrder',
+  testOrder: 'testOrder',
+  laboTest: 'testOrder',
+  physiologyOrder: 'physiologyOrder',
+  bacteriaOrder: 'bacteriaOrder',
+  radiologyOrder: 'radiologyOrder',
+  baseChargeOrder: 'baseChargeOrder',
+  instractionChargeOrder: 'instractionChargeOrder',
 };
 
 export type OrderEntityValidationRule = {
@@ -153,7 +170,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
       supportsUsageSearch: true,
       supportsBodyPartSearch: false,
       supportsCommentCodes: true,
-      supportsInjectionNoProcedure: true,
+      supportsInjectionNoProcedure: false,
       masterSearchPresets: [
         { type: 'drug', label: '注射薬剤' },
         { type: 'etensu', label: '注射手技' },
@@ -168,7 +185,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     etensuCategory: '4',
     classMeta: { classCode: '400', className: '処置' },
     validation: BASE_EDITOR_VALIDATION,
-    ui: BASE_EDITOR_UI,
+    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: true },
     editor: { title: '処置', bundleLabel: '処置名', itemQuantityLabel: '数量' },
   },
   generalOrder: {
@@ -195,7 +212,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     etensuCategory: '8',
     classMeta: { classCode: '800', className: 'その他' },
     validation: BASE_EDITOR_VALIDATION,
-    ui: BASE_EDITOR_UI,
+    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: true },
     editor: { title: 'その他', bundleLabel: '項目', itemQuantityLabel: '数量' },
   },
   testOrder: {
@@ -406,17 +423,15 @@ export const ORDER_GROUP_REGISTRY: Array<{
   {
     key: 'test',
     label: '検査',
-    entities: ['testOrder', 'laboTest', 'physiologyOrder', 'bacteriaOrder', 'radiologyOrder'],
+    entities: ['testOrder', 'physiologyOrder', 'bacteriaOrder', 'radiologyOrder'],
     defaultEntity: 'testOrder',
   },
   { key: 'charge', label: '算定', entities: ['baseChargeOrder', 'instractionChargeOrder'], defaultEntity: 'baseChargeOrder' },
 ];
 
 export const ORCA_SEND_ORDER_ENTITIES: readonly OrderEntity[] = [
-  'generalOrder',
   'treatmentOrder',
   'testOrder',
-  'laboTest',
   'physiologyOrder',
   'bacteriaOrder',
   'instractionChargeOrder',
@@ -429,12 +444,25 @@ export const ORCA_SEND_ORDER_ENTITIES: readonly OrderEntity[] = [
 ] as const;
 
 export const resolveOrderEntity = (value: string): OrderEntity | null => {
-  if (value in ORDER_ENTITY_REGISTRY) return value as OrderEntity;
-  const alias = ORDER_ENTITY_ALIASES[value];
-  return alias ?? null;
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const alias = ORDER_ENTITY_ALIASES[normalized];
+  if (alias) return alias;
+  if (normalized in ORDER_ENTITY_REGISTRY) return normalized as OrderEntity;
+  return null;
 };
 
-export const isOrderEntity = (value: string): value is OrderEntity => value in ORDER_ENTITY_REGISTRY;
+export const resolveCanonicalOrderEntity = (value?: string | null): OrderEntity | null => {
+  if (!value) return null;
+  const resolved = resolveOrderEntity(value);
+  if (!resolved) return null;
+  return CANONICAL_ORDER_ENTITY_ALIASES[resolved] ?? resolved;
+};
+
+export const isOrderEntity = (value: string): value is OrderEntity => {
+  const normalized = value.trim();
+  return normalized in ORDER_ENTITY_REGISTRY;
+};
 
 export const resolveOrderEntityLabel = (entity: string): string => {
   const resolved = resolveOrderEntity(entity);

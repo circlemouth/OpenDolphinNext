@@ -82,6 +82,8 @@ final class OrcaOrderBundleMutationSupport {
         bundle.setOrderName(operation.getBundleName());
         bundle.setBundleNumber(OrcaOrderBundleRequestSupport.hasText(operation.getBundleNumber()) ? operation.getBundleNumber() : "1");
         bundle.setAdmin(operation.getAdmin());
+        bundle.setAdminCode(operation.getAdminCode());
+        bundle.setAdminCodeSystem(operation.getAdminCodeSystem());
         bundle.setAdminMemo(operation.getAdminMemo());
         bundle.setMemo(operation.getMemo());
         if (OrcaOrderBundleRequestSupport.hasText(operation.getClassName())) {
@@ -156,9 +158,9 @@ final class OrcaOrderBundleMutationSupport {
 
     private static String resolveEntity(OrderBundleMutationRequest.BundleOperation operation) {
         if (operation.getEntity() != null && !operation.getEntity().isBlank()) {
-            return operation.getEntity().trim();
+            return OrcaOrderBundleRequestSupport.normalizeEntityStorage(operation.getEntity());
         }
-        return IInfoModel.ENTITY_GENERAL_ORDER;
+        return IInfoModel.ENTITY_TREATMENT;
     }
 
     private static String resolveTitle(OrderBundleMutationRequest.BundleOperation operation) {

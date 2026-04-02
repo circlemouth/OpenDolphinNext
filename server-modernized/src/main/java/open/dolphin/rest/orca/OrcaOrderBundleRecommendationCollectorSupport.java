@@ -187,21 +187,22 @@ final class OrcaOrderBundleRecommendationCollectorSupport {
                 || !OrcaOrderBundleRequestSupport.isValidEntity(moduleEntity)) {
             return 0;
         }
-        if (entity != null && !entity.equals(moduleEntity)) {
+        if (!OrcaOrderBundleRequestSupport.entitiesMatch(entity, moduleEntity)) {
             return 0;
         }
         BundleDolphin bundle = bundleDecoder.decode(module);
         if (bundle == null) {
             return 0;
         }
+        String canonicalEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(moduleEntity);
         OrderBundleRecommendationResponse.OrderRecommendationTemplate template =
                 OrcaOrderBundleRecommendationSupport.toRecommendationTemplate(
                         bundleNameResolver.resolve(bundle, module.getModuleInfoBean()),
                         bundle,
-                        moduleEntity);
-        String key = OrcaOrderBundleRecommendationSupport.buildRecommendationKey(moduleEntity, template);
+                        canonicalEntity);
+        String key = OrcaOrderBundleRecommendationSupport.buildRecommendationKey(canonicalEntity, template);
         Date usedAt = module.getStarted() != null ? module.getStarted() : document != null ? document.getStarted() : null;
-        OrcaOrderBundleAggregationSupport.upsert(aggregates, key, moduleEntity, template, usedAt);
+        OrcaOrderBundleAggregationSupport.upsert(aggregates, key, canonicalEntity, template, usedAt);
         return 1;
     }
 

@@ -36,6 +36,82 @@ class OrcaChartSupportSupportTest {
     }
 
     @Test
+    void buildMedicalModV2RequestXmlSerializesMedicationUnitAndGenericFlag() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("12345");
+        payload.setPerformDate("2026-03-22T08:00:00");
+        payload.setDepartmentCode("01");
+
+        ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
+        information.setMedicalClass("21");
+        information.setMedicalClassName("処方");
+        information.setMedicalClassNumber("2");
+        ChartSupportMedicalModV2Request.Medication medication = new ChartSupportMedicalModV2Request.Medication();
+        medication.setCode("620000001");
+        medication.setName("アムロジピン");
+        medication.setNumber("1");
+        medication.setUnit("錠");
+        medication.setGenericFlg("yes");
+        information.setMedications(List.of(medication));
+        payload.setMedicalInformation(List.of(information));
+
+        String xml = support.buildMedicalModV2RequestXml(payload);
+
+        assertTrue(xml.contains("<Medical_Class type=\"string\">21</Medical_Class>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">処方</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Number type=\"string\">2</Medical_Class_Number>"));
+        assertTrue(xml.contains("<Medication_Number type=\"string\">1</Medication_Number>"));
+        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">錠</Medication_Unit_Code>"));
+        assertTrue(xml.contains("<Medication_Unit_Code_Name type=\"string\">錠</Medication_Unit_Code_Name>"));
+        assertTrue(xml.contains("<Medication_Generic_Flg type=\"string\">yes</Medication_Generic_Flg>"));
+    }
+
+    @Test
+    void buildMedicalModV2RequestXmlSerializesBodyPartAndMixedUnits() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("12345");
+        payload.setPerformDate("2026-03-22T08:00:00");
+        payload.setDepartmentCode("01");
+
+        ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
+        information.setMedicalClass("70");
+        information.setMedicalClassName("放射線");
+        information.setMedicalClassNumber("1");
+
+        ChartSupportMedicalModV2Request.Medication bodyPart = new ChartSupportMedicalModV2Request.Medication();
+        bodyPart.setCode("002001");
+        bodyPart.setName("胸部");
+        bodyPart.setNumber("1");
+        bodyPart.setUnit("部位");
+
+        ChartSupportMedicalModV2Request.Medication main = new ChartSupportMedicalModV2Request.Medication();
+        main.setCode("170017510");
+        main.setName("ＣＴ撮影");
+        main.setNumber("1");
+        main.setUnit("回");
+
+        ChartSupportMedicalModV2Request.Medication material = new ChartSupportMedicalModV2Request.Medication();
+        material.setCode("700000001");
+        material.setName("造影剤");
+        material.setNumber("1");
+        material.setUnit("本");
+
+        information.setMedications(List.of(bodyPart, main, material));
+        payload.setMedicalInformation(List.of(information));
+
+        String xml = support.buildMedicalModV2RequestXml(payload);
+
+        assertTrue(xml.contains("<Medical_Class type=\"string\">70</Medical_Class>"));
+        assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">002001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">部位</Medication_Unit_Code>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">170017510</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">回</Medication_Unit_Code>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">700000001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">本</Medication_Unit_Code>"));
+    }
+
+    @Test
     void parseMedicalModResponseMarksApiErrorAsFailure() {
         String xml = """
                 <data>
