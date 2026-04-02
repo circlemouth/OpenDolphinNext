@@ -22,6 +22,7 @@ import {
 import { useSession } from '../../AppRouter';
 import { useAppNavigation } from '../../routes/useAppNavigation';
 import { fetchPatients, type PatientRecord } from '../patients/api';
+import { OrcaHokenjaReferenceDialog } from './OrcaHokenjaReferenceDialog';
 import { PatientInfoEditDialog } from './PatientInfoEditDialog';
 
 const resolveEntryPatientId = (
@@ -205,10 +206,8 @@ export function PatientsTab({
     trigger?: string;
     note?: string;
   }>({ open: false });
-  const [patientEditDialog, setPatientEditDialog] = useState<{ open: boolean; section: 'basic' | 'insurance' }>({
-    open: false,
-    section: 'basic',
-  });
+  const [patientEditDialogOpen, setPatientEditDialogOpen] = useState(false);
+  const [hokenjaDialogOpen, setHokenjaDialogOpen] = useState(false);
   const lastAuditPatientId = useRef<string | undefined>(undefined);
   const lastAutoSelectSignature = useRef<string | null>(null);
   const lastEditGuardSignature = useRef<string | null>(null);
@@ -466,7 +465,6 @@ export function PatientsTab({
   const canEditPatientInfoNow =
     Boolean(selectedPatientId) && canEditPatientInfoByRole && canEditByStatus && !editBlockedByMaster && !switchLocked && !draftDirty;
   const canDeepLinkPatientsBasic = Boolean(selectedPatientId);
-  const canDeepLinkPatientsInsurance = canDeepLinkPatientsBasic;
 
   const patientEditBlockedReason = useMemo(() => {
     if (!selectedPatientId) return 'patientId が未確定のため編集できません。';
@@ -925,12 +923,12 @@ export function PatientsTab({
     });
   };
 
-  const navigateToPatients = (intent: 'basic' | 'insurance') => {
+  const navigateToPatientsBasic = () => {
     const kwCandidate = receptionCarryover?.kw ?? selectedPatientId ?? selectedContext?.patientId;
     const carryover: ReceptionCarryoverParams = { ...(receptionCarryover ?? {}) };
     if (kwCandidate) carryover.kw = kwCandidate;
     appNav.openPatients({
-      intent,
+      intent: 'basic',
       runId: flags.runId,
       patientId: selectedPatientId ?? selectedContext?.patientId,
       encounter: selectedContext ?? undefined,
@@ -945,13 +943,13 @@ export function PatientsTab({
       fallbackUsed: flags.fallbackUsed ?? false,
       action: 'deeplink',
       outcome: 'started',
-      note: `intent=${intent}`,
+      note: 'intent=basic',
     });
 
     logUiState({
       action: 'patient_fetch',
       screen: 'charts',
-      controlId: `patients-deeplink-${intent}`,
+      controlId: 'patients-deeplink-basic',
       runId: flags.runId,
       cacheHit: flags.cacheHit,
       missingMaster: flags.missingMaster,
@@ -959,7 +957,7 @@ export function PatientsTab({
       fallbackUsed: flags.fallbackUsed,
       details: {
         patientId: selectedPatientId,
-        intent,
+        intent: 'basic',
       },
     });
   };
@@ -1612,7 +1610,7 @@ export function PatientsTab({
                   <div className="patients-tab__card-actions" role="group" aria-label="基本情報操作">
                     <button
                       type="button"
-                      onClick={() => setPatientEditDialog({ open: true, section: 'basic' })}
+                      onClick={() => setPatientEditDialogOpen(true)}
                       disabled={!canEditPatientInfoNow}
                       title={
                         canEditPatientInfoNow
@@ -1625,7 +1623,7 @@ export function PatientsTab({
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigateToPatients('basic')}
+                      onClick={navigateToPatientsBasic}
                       disabled={!canDeepLinkPatientsBasic}
                       className="patients-tab__ghost"
                       title={canDeepLinkPatientsBasic ? 'Patients 画面で編集（代替導線）' : '編集不可'}
@@ -1757,25 +1755,12 @@ export function PatientsTab({
                   <div className="patients-tab__card-actions" role="group" aria-label="保険操作">
                     <button
                       type="button"
-                      onClick={() => setPatientEditDialog({ open: true, section: 'insurance' })}
-                      disabled={!canEditPatientInfoNow}
-                      title={
-                        canEditPatientInfoNow
-                          ? 'Charts から安全に更新（差分確認/監査/再試行）'
-                          : patientEditBlockedReason ?? '編集不可'
-                      }
+                      onClick={() => setHokenjaDialogOpen(true)}
+                      disabled={!selectedPatientId}
+                      title="ORCA 保険者マスタを参照（患者情報は更新しません）"
                       className="patients-tab__primary"
                     >
-                      保険を編集（Charts）
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigateToPatients('insurance')}
-                      disabled={!canDeepLinkPatientsInsurance}
-                      className="patients-tab__ghost"
-                      title={canDeepLinkPatientsInsurance ? 'Patients 画面で編集（代替導線）' : '編集不可'}
-                    >
-                      Patients で開く
+                      保険者を参照
                     </button>
                     <button type="button" className="patients-tab__ghost" onClick={() => scrollTo('diff')}>
                       差分へ
@@ -1796,16 +1781,14 @@ export function PatientsTab({
                     <strong>{selected.appointmentTime ?? '—'}</strong>
                   </div>
                 </div>
-                {editBlockedByMaster ? (
-                  <small className="patients-tab__detail-guard">
-                    missingMaster/fallbackUsed/非serverルートの場合は保険編集を停止します（{editBlockedReason}）。
-                  </small>
-                ) : null}
+                <small className="patients-tab__detail-guard">
+                  保険/公費の更新はこの画面では行いません。必要な場合は ORCA 側で更新してください。
+                </small>
               </div>
 
               <PatientInfoEditDialog
-                open={patientEditDialog.open}
-                section={patientEditDialog.section}
+                open={patientEditDialogOpen}
+                section="basic"
                 baseline={patientBaseline}
                 fallback={fallbackPatientRecord}
                 editAllowed={canEditPatientInfoNow}
@@ -1823,7 +1806,7 @@ export function PatientsTab({
                   actorRole: session.role,
                 }}
                 onClose={() => {
-                  setPatientEditDialog((prev) => ({ ...prev, open: false }));
+                  setPatientEditDialogOpen(false);
                   onRequestRestoreFocus?.();
                 }}
                 onSaved={(result) => {
@@ -2173,7 +2156,7 @@ export function PatientsTab({
                 className="patients-tab__primary"
                 onClick={() => {
                   closeAudit();
-                  navigateToPatients('basic');
+                  navigateToPatientsBasic();
                 }}
                 disabled={!selectedPatientId}
               >
@@ -2192,6 +2175,17 @@ export function PatientsTab({
           </div>
         </FocusTrapDialog>
       ) : null}
+      <OrcaHokenjaReferenceDialog
+        open={hokenjaDialogOpen}
+        onClose={() => {
+          setHokenjaDialogOpen(false);
+          onRequestRestoreFocus?.();
+        }}
+        patientId={selectedPatientId}
+        patientName={patientBaseline?.name ?? selected?.name}
+        insuranceLabel={patientBaseline?.insurance ?? selected?.insurance}
+        visitDate={selected?.visitDate}
+      />
     </section>
   );
 }
