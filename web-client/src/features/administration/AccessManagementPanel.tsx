@@ -27,7 +27,7 @@ type AccessManagementPanelProps = {
 type Feedback = { tone: 'success' | 'warning' | 'error' | 'info'; message: string };
 
 const ROLE_OPTIONS: Array<{ id: string; label: string; hint: string }> = [
-  { id: 'admin', label: '管理者 (admin)', hint: 'Administration へのアクセスを許可' },
+  { id: 'admin', label: '管理者 (admin)', hint: '管理画面へのアクセスを許可' },
   { id: 'system-administrator', label: '管理者 (system-administrator)', hint: 'Legacy seed 互換' },
   { id: 'doctor', label: '医師 (doctor)', hint: '医師向け機能を想定' },
   { id: 'nurse', label: '看護師 (nurse)', hint: '看護師向け機能を想定' },

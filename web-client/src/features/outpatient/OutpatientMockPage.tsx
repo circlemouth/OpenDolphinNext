@@ -12,10 +12,10 @@ export function OutpatientMockPage() {
           <p>legacy endpoint 前提のデバッグ画面は終了し、通常導線の typed JSON API に統一しました。</p>
         </header>
         <div className="status-message" role="status">
-          <p>検証は Reception / Charts / Administration の現行導線で実施してください。</p>
+          <p>検証は 受付 / Charts / 管理画面 の現行導線で実施してください。</p>
           {session ? (
             <a className="facility-entry__secondary" href={buildFacilityPath(session.facilityId, '/reception')}>
-              Reception を開く
+              受付を開く
             </a>
           ) : null}
         </div>

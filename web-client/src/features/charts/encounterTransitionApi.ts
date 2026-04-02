@@ -72,7 +72,7 @@ export async function openChartEncounter(params: {
   patientId?: string;
   karteId?: number | null;
 }): Promise<EncounterTransitionSuccess> {
-  const encounterKey = requireString(normalizeString(params.encounterKey), 'missing_encounter_key', 'encounterKey がないため診察開始を実行できません。Reception から開き直してください。');
+  const encounterKey = requireString(normalizeString(params.encounterKey), 'missing_encounter_key', 'encounterKey がないため診察開始を実行できません。受付から開き直してください。');
   const patientId = requireString(normalizeString(params.patientId), 'missing_patient_id', 'patientId がないため診察開始を実行できません。患者選択を確認してください。');
   const karteId = requireNumber(normalizeNumber(params.karteId), 'missing_karte_id', 'karteId がないため診察開始を実行できません。患者情報を再取得してください。');
 

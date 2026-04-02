@@ -905,7 +905,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
         '【システム管理者 権限依頼テンプレート】',
         `施設ID: ${session.facilityId}`,
         `環境: ${environmentLabel}`,
-        '作業内容: Administration の設定変更/配信',
+        '作業内容: 管理画面の設定変更/配信',
         '影響範囲: WebORCA接続設定・配信設定・ORCA queue 操作',
       ].join('\n'),
     [environmentLabel, session.facilityId],

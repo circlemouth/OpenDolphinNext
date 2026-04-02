@@ -4,11 +4,11 @@
 
 ## Scope
 - Auth
-- Reception
+- 受付
 - Charts
 - Patients
 - Mobile Images
-- Administration
+- 管理画面
 
 ## Auth Surface
 ### Current Fact
@@ -63,7 +63,7 @@
 ### Guard Behavior Minimum
 - `FacilityGate` は未認証の非 login route を `/login` へ `replace` し、`state.from` を保持します。
 - `FacilityShell` は facility-scoped route で session 不在なら facility-scoped path を `state.from` に積み直して `/login` へ戻します。
-- `AdministrationGate` は権限不足を facility-scoped denial surface で処理し、`Reception` CTA を表示します。
+- `AdministrationGate` は権限不足を facility-scoped denial surface で処理し、`受付` CTA を表示します。
 - `NavigationGuardProvider` は dirty source がある時、`screenKey` が変わる遷移だけを block します。
 - `NavigationGuardProvider` は `/charts` 同一路線で `chartsScreenId` が同一なら、外部パラメータ更新を同一画面として許可します。
 - dirty 状態で logout / switch account が要求された場合、silent redirect せず app-shell の session exit dialog を挟みます。
@@ -90,7 +90,7 @@
 ### Verification
 - runtime smoke: `runtime-ready-smoke.mjs` が release 前 mandatory
 - runtime smoke は主要 route / guard の確認根拠であり、debug-only surface の常時表示までは断定しません。
-- manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / Administration への遷移確認
+- manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / 管理画面 への遷移確認
 - unknown: pane geometry、最小 state schema
 
 ## Patients Surface

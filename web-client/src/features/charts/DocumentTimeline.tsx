@@ -248,7 +248,7 @@ export function DocumentTimeline({
     const bannerTone = isConflict ? 'warning' : 'info';
     const message = [
       outcome ? `${action}(${outcome})` : action,
-      actor ? `actor=${actor}` : undefined,
+      actor ? '実行者は監査ログに記録しました。' : undefined,
       note ? `note=${note}` : undefined,
       lockExpiresAt ? `lockExpiresAt=${lockExpiresAt}` : undefined,
     ]
@@ -479,7 +479,7 @@ export function DocumentTimeline({
       if (hasMasterIssue) {
         const fallbackAction = claimEnabled ? (onRetryClaim ?? onOpenReception) : onOpenReception;
         const fallbackLabel =
-          claimEnabled && onRetryClaim ? '請求バンドルを再取得' : 'Receptionへ戻る';
+          claimEnabled && onRetryClaim ? '請求バンドルを再取得' : '受付へ戻る';
         return {
           label: fallbackLabel,
           tone: 'warning' as const,
@@ -489,7 +489,7 @@ export function DocumentTimeline({
             claimEnabled && onRetryClaim
               ? effectiveClaimLoading
                 ? '再取得中'
-                : '解消しない場合は Reception で状態確認'
+                : '解消しない場合は受付で状態確認'
               : '受付状況を確認',
         };
       }
@@ -981,7 +981,7 @@ export function DocumentTimeline({
           error={orcaQueueError}
           destination="ORCA キュー"
           runId={resolvedRunId}
-          nextAction="再取得 / 設定確認（Administration のキュー監視）"
+          nextAction="再取得 / 設定確認（管理画面のキュー監視）"
         />
       )}
       {(orcaPushEventsError || orcaPushEvents?.error) && (

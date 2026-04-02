@@ -507,7 +507,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       return;
     }
     const isBlocked = outputResult.outcome === 'blocked';
-    const nextAction = '印刷/エクスポートを再度開く / Reception で再取得';
+    const nextAction = '印刷/エクスポートを再度開く / 受付で再取得';
     setBanner({
       tone: isBlocked ? 'warning' : 'error',
       message: isBlocked ? '外来印刷が停止されました' : '外来印刷に失敗しました',
@@ -528,7 +528,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         key: 'config_disabled',
         summary: '管理配信: 送信停止で送信不可',
         detail: sendDisabledReason ?? '管理配信により ORCA 送信が無効化されています。',
-        next: ['Administration で再配信', '設定を再取得して反映を確認'],
+        next: ['管理画面で再配信', '設定を再取得して反映を確認'],
       });
     }
 
@@ -573,7 +573,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         key: 'patient_not_selected',
         summary: '患者未選択: 対象未確定で送信不可',
         detail: '患者が未選択のため送信先が確定できません。',
-        next: ['Patients で患者を選択', 'Reception へ戻って対象患者を確定'],
+        next: ['患者管理で患者を選択', '受付へ戻って対象患者を確定'],
       });
     }
 
@@ -582,7 +582,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         key: 'not_server_route',
         summary: '参照状態: 最新データ確認前のため送信不可',
         detail: '最新データを確認できる状態へ戻ってから送信してください。',
-        next: ['server route に切替（MSW OFF / 実 API）', 'Reception で再取得'],
+        next: ['server route に切替（MSW OFF / 実 API）', '受付で再取得'],
       });
     }
 
@@ -627,7 +627,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         key: 'network_degraded',
         summary: '通信不安定: 再取得が必要で送信不可',
         detail: networkDegradedReason,
-        next: ['再取得してから再送', 'Reception へ戻って状態確認'],
+        next: ['再取得してから再送', '受付へ戻って状態確認'],
       });
     }
 
@@ -714,7 +714,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         key: 'patient_not_selected',
         summary: '患者未選択: 対象未確定で診察終了不可',
         detail: 'patientId が未確定のため診察終了を実行できません。',
-        next: ['Patients で患者を選択', 'Reception へ戻って対象患者を確定'],
+        next: ['患者管理で患者を選択', '受付へ戻って対象患者を確定'],
       });
     }
 
@@ -776,7 +776,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
         key: 'patient_not_selected',
         summary: '患者未選択: 対象未確定で印刷不可',
         detail: '患者が未選択のため印刷プレビューを開けません。',
-        next: ['Patients で患者を選択', 'Reception へ戻って対象患者を確定'],
+        next: ['患者管理で患者を選択', '受付へ戻って対象患者を確定'],
       });
     }
 
@@ -1189,7 +1189,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       setBanner({
         tone: 'warning',
         message: `ORCA送信を停止: ${blockedReason}`,
-        nextAction: '送信前チェック（理由）を確認し、必要なら Reception で再取得してください。',
+        nextAction: '送信前チェック（理由）を確認し、必要なら受付で再取得してください。',
       });
       setRetryAction(null);
       setToast(null);
@@ -1365,7 +1365,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             setBanner({
               tone: 'warning',
               message: `ORCA送信を停止: ${blockedReason}`,
-              nextAction: 'Reception で患者/診療科/日付を確認してください。',
+              nextAction: '受付で患者/診療科/日付を確認してください。',
             });
             setIsRunning(false);
             setRunningAction(null);
@@ -2017,11 +2017,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             return '次にやること: 再ログイン / 設定確認（facilityId/userId/password）';
           }
           if (isNetworkError(error) || isNetworkError(detail)) {
-            return '次にやること: 通信回復を待つ / Reception で再取得 / リトライ';
+            return '次にやること: 通信回復を待つ / 受付で再取得 / リトライ';
           }
           return claimEnabled
-            ? '次にやること: Reception へ戻る / 請求を再取得 / 設定確認'
-            : '次にやること: Reception へ戻る / 受付データを再取得 / 設定確認';
+            ? '次にやること: 受付へ戻る / 請求を再取得 / 設定確認'
+            : '次にやること: 受付へ戻る / 受付データを再取得 / 設定確認';
         })();
         let retryDetail: string | undefined;
         let retryMeta: { retryRequested?: boolean; retryApplied?: boolean; retryReason?: string; queueRunId?: string; queueTraceId?: string } =
@@ -2181,7 +2181,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
     const { actor, facilityId } = resolveAuditActor();
 
-    const detail = `印刷プレビューを開きました (actor=${actor})`;
+    const detail = `印刷プレビューを開きました。実行者は監査ログに記録しました。`;
     setBanner(null);
     setToast({ tone: 'success', message: '印刷/エクスポートを開きました', detail });
 

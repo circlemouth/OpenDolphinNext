@@ -37,9 +37,9 @@ const summarizeDeliveryStatus = (status?: AdminDeliveryStatus) => {
 };
 
 const resolveDestination = (surface: AdminBroadcastBannerProps['surface']) => {
-  if (surface === 'reception') return 'Reception';
-  if (surface === 'charts') return 'Charts';
-  return 'Patients';
+  if (surface === 'reception') return '受付';
+  if (surface === 'charts') return 'カルテ';
+  return '患者管理';
 };
 
 export function AdminBroadcastBanner({ broadcast, surface, runId }: AdminBroadcastBannerProps) {

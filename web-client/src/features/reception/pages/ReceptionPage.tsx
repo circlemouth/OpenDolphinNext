@@ -4103,7 +4103,7 @@ export function ReceptionPage({
           <ToneBanner
             tone="warning"
             message={`手入力患者ID(${manualPatientId}) と選択中患者ID(${selectedPatientId}) が一致していません。`}
-            destination="Reception"
+            destination="受付"
             nextAction={
               isManualMismatchConfirmed
                 ? '手入力続行を確認済みです'
@@ -4315,7 +4315,7 @@ export function ReceptionPage({
           <ToneBanner
             tone={acceptResult.tone === 'success' ? 'info' : acceptResult.tone}
             message={acceptResult.message}
-            destination="Reception"
+            destination="受付"
             nextAction={acceptResult.tone === 'success' ? '受付リスト更新' : '内容確認'}
             runId={acceptResult.runId ?? resolvedRunId}
             ariaLive={acceptResult.tone === 'error' ? 'assertive' : 'polite'}
@@ -4736,7 +4736,7 @@ export function ReceptionPage({
               </button>
             </div>
             <div className="reception-toolbar__summary" role="status" aria-live={infoLive}>
-              <span className="reception-search__saved-share">Reception ↔ Patients で共有</span>
+              <span className="reception-search__saved-share">受付 ↔ 患者管理で共有</span>
               <span className="reception-search__saved-updated">
                 {selectedSavedView ? `選択中の更新: ${savedViewUpdatedAtLabel ?? '—'}` : '選択中のビューはありません'}
               </span>
@@ -4753,7 +4753,7 @@ export function ReceptionPage({
               {appointmentErrorContext && (
                 <ApiFailureBanner
                   subject="外来リスト"
-                  destination="Reception"
+                  destination="受付"
                   runId={appointmentQuery.data?.runId ?? flags.runId}
                   nextAction="再取得"
                   retryLabel="再取得"
@@ -4766,7 +4766,7 @@ export function ReceptionPage({
                 <ToneBanner
                   tone="warning"
                   message={unlinkedWarning.message}
-                  destination="Reception"
+                  destination="受付"
                   nextAction="一覧を確認"
                   runId={mergedMeta.runId}
                   ariaLive="assertive"
@@ -4778,7 +4778,7 @@ export function ReceptionPage({
                   tone={intentBanner.tone}
                   message={intentBanner.message}
                   patientId={intentKeyword || undefined}
-                  destination="Reception"
+                  destination="受付"
                   nextAction={intentBanner.nextAction}
                   runId={flags.runId}
                   ariaLive={intentBanner.tone === 'info' ? 'polite' : 'assertive'}
@@ -4788,7 +4788,7 @@ export function ReceptionPage({
                 <ToneBanner
                   tone={appointmentAutoRefreshNotice.tone}
                   message={appointmentAutoRefreshNotice.message}
-                  destination="Reception"
+                  destination="受付"
                   nextAction={appointmentAutoRefreshNotice.nextAction}
                   runId={resolvedRunId}
                 />
@@ -4797,7 +4797,7 @@ export function ReceptionPage({
                 <ToneBanner
                   tone="warning"
                   message={`先頭${appointmentQuery.data?.size ?? 50}件のみ表示中です。`}
-                  destination="Reception"
+                  destination="受付"
                   nextAction="検索条件を絞って再取得"
                   runId={appointmentQuery.data?.runId ?? resolvedRunId}
                 />
@@ -4961,7 +4961,7 @@ export function ReceptionPage({
                 <ToneBanner
                   tone={masterSearchNotice.tone}
                   message={masterSearchNotice.message}
-                  destination="Reception"
+                  destination="受付"
                   nextAction="検索結果を確認"
                   runId={masterSearchMeta?.runId ?? resolvedRunId}
                 />
@@ -5864,7 +5864,7 @@ export function ReceptionPage({
                       <ToneBanner
                         tone="error"
                         message={patientSearchError}
-                        destination="Reception"
+                        destination="受付"
                         nextAction="条件を見直す"
                         runId={patientSearchMeta?.runId ?? resolvedRunId}
                         ariaLive="assertive"
@@ -6182,7 +6182,7 @@ export function ReceptionPage({
               message={`過去カルテの取得に失敗しました: ${
                 medicalRecordsModalQuery.error instanceof Error ? medicalRecordsModalQuery.error.message : 'unknown'
               }`}
-              destination="Reception"
+              destination="受付"
               nextAction="条件を見直す"
               runId={medicalRecordsModalQuery.data?.runId ?? resolvedRunId}
               ariaLive="assertive"

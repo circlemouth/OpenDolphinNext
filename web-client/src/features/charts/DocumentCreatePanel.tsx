@@ -1598,7 +1598,7 @@ export function DocumentCreatePanel({
 
     const outputLabel =
       initialOutputMode === 'print' ? '印刷' : initialOutputMode === 'pdf' ? 'PDF出力' : 'プレビュー';
-    const detail = `文書${outputLabel}プレビューを開きました (actor=${actor})`;
+    const detail = `文書${outputLabel}プレビューを開きました。実行者は監査ログに記録しました。`;
     setNotice({ tone: 'success', message: `文書${outputLabel}プレビューを開きました。` });
     updateOutputAudit(resolvedDoc.id, {
       status: 'started',
@@ -2357,7 +2357,7 @@ export function DocumentCreatePanel({
                             再出力（印刷）
                           </button>
                           <button type="button" onClick={() => appNav.openReception()}>
-                            再取得（Reception）
+                            再取得（受付）
                           </button>
                           <a href={PRINT_HELP_URL} target="_blank" rel="noopener noreferrer">
                             印刷ヘルプ

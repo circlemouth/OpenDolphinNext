@@ -931,7 +931,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
       suppressUrlContextSyncRef.current = true;
       setEncounterContext({});
-      setContextAlert({ tone: 'info', message: '患者が未選択です。Reception から患者を選択してください。' });
+      setContextAlert({ tone: 'info', message: '患者が未選択です。受付から患者を選択してください。' });
       navigate({ pathname: chartsBasePath, search: '' }, { replace: true });
     },
     [activePatientTabKey, chartsBasePath, navigate, patientTabs],
@@ -1703,14 +1703,14 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     if (isFirstApply && nextSend === false) {
       setDeliveryImpactBanner({
         tone: 'warning',
-        message: 'Charts の ORCA送信 は管理配信で disabled の状態です。',
+        message: 'Charts の ORCA送信 は管理配信で無効の状態です。',
       });
       return;
     }
     if (isFirstApply && nextDisplay === false) {
       setDeliveryImpactBanner({
         tone: 'warning',
-        message: 'Charts の表示は管理配信で disabled の状態です。',
+        message: 'Charts の表示は管理配信で無効の状態です。',
       });
       return;
     }
@@ -4229,7 +4229,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
               閉じる
             </button>
             <button type="button" onClick={handleOpenReception}>
-              Receptionへ
+              受付へ
             </button>
           </div>
           <PatientsTab
@@ -4571,7 +4571,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           tone={contextAlert.tone}
           message={contextAlert.message}
           destination="Charts"
-          nextAction="必要なら Reception で再選択"
+          nextAction="必要なら受付で再選択"
           runId={flags.runId}
         />
       ) : null}
@@ -4609,9 +4609,9 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       {!chartsDisplayEnabled ? (
         <ToneBanner
           tone="warning"
-          message="Charts の表示が管理配信で disabled です。Administration で再度 enabled にして配信してください。"
+          message="Charts の表示が管理配信で無効です。管理画面で再度有効化して配信してください。"
           destination="Charts"
-          nextAction="Administration で再配信"
+          nextAction="管理画面で再配信"
           runId={adminConfigQuery.data?.runId ?? broadcast?.runId ?? flags.runId}
         />
       ) : null}

@@ -456,7 +456,7 @@ function ChartsOutpatientPrintContent() {
           <ToneBanner
             tone="warning"
             message={outputGuardMessage}
-            nextAction={outputGuardNextAction ?? 'Reception で master 解決/再取得を行い、最新データで再度出力してください。'}
+            nextAction={outputGuardNextAction ?? '受付で master 解決/再取得を行い、最新データで再度出力してください。'}
             runId={state.meta.runId}
           />
           <div className="charts-print__recovery" role="group" aria-label="出力復旧導線">
@@ -465,7 +465,7 @@ function ChartsOutpatientPrintContent() {
               className="charts-print__button"
               onClick={() => appNav.openReception()}
             >
-              Receptionへ戻る
+              受付へ戻る
             </button>
             <button type="button" className="charts-print__button charts-print__button--ghost" onClick={handleClose}>
               Chartsへ戻る
@@ -487,7 +487,7 @@ function ChartsOutpatientPrintContent() {
           <ToneBanner
             tone="error"
             message={`出力に失敗しました: ${outputError ?? '原因不明'}`}
-            nextAction="再試行するか、Reception/Charts に戻って状態を確認してください。"
+            nextAction="再試行するか、受付/Charts に戻って状態を確認してください。"
             runId={state.meta.runId}
           />
           <div className="charts-print__recovery" role="group" aria-label="出力の再試行">
@@ -504,7 +504,7 @@ function ChartsOutpatientPrintContent() {
               className="charts-print__button"
               onClick={() => appNav.openReception()}
             >
-              Receptionへ戻る
+              受付へ戻る
             </button>
             <button type="button" className="charts-print__button charts-print__button--ghost" onClick={handleClose}>
               Chartsへ戻る

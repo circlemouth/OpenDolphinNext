@@ -1527,7 +1527,7 @@ export function PatientsTab({
                 <span className="patients-tab__row-id">患者データなし</span>
                 <strong>外来 API 応答を待機</strong>
               </div>
-              <p className="patients-tab__row-detail">Reception からの取得結果がまだ届いていません。</p>
+              <p className="patients-tab__row-detail">受付からの取得結果がまだ届いていません。</p>
               <span className="patients-tab__row-status">tone={tone}</span>
             </article>
           )}
@@ -1915,16 +1915,16 @@ export function PatientsTab({
                 </div>
                 <div className="patients-tab__detail-actions" role="group" aria-label="関連導線">
                   <button type="button" onClick={() => navigateToReception('appointment_change')} className="patients-tab__ghost">
-                    予約変更へ（Reception）
+                    予約変更へ（受付）
                   </button>
                   <button type="button" onClick={() => navigateToReception('appointment_cancel')} className="patients-tab__ghost">
-                    予約キャンセルへ（Reception）
+                    予約キャンセルへ（受付）
                   </button>
                   <button type="button" onClick={() => scrollTo('timeline')} className="patients-tab__ghost">
                     DocumentTimeline へ
                   </button>
                 </div>
-                <small className="patients-tab__detail-guard">Charts は導線のみ。予約操作は Reception 側で実行します。</small>
+                <small className="patients-tab__detail-guard">Charts は導線のみ。予約操作は受付側で実行します。</small>
               </div>
 
               <div className="patients-tab__card" ref={diffRef}>

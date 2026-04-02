@@ -29,7 +29,7 @@
     - 現行の minimal schema は `patientId` のみです。
     - 入力 source 優先度は query `patientId` -> `location.state.patientId` -> deep link volatile context です。
     - query `patientId` は入口専用で、sensitive route 到達後に scrub されます。
-  - Reception:
+  - 受付:
     - `visitDate` は handoff 時に正規化して carry することがありますが、単独では権威入力にしません。
 
 ## App-Wide Navigation / Handoff Minimum
@@ -48,7 +48,7 @@
 
 ## Re-Entry Fallback
 - 文脈喪失時の fallback は single route ではなく surface ごとに異なります。
-- Charts は `/f/:facilityId/charts` へ戻し、Reception から再選択を案内します。
+- Charts は `/f/:facilityId/charts` へ戻し、受付から再選択を案内します。
 - Patients は `from=reception` なら `/f/:facilityId/reception`、それ以外は `/f/:facilityId/charts` を使います。
 - Mobile Images は `from=reception` / `from=patients` を優先し、既定は `/f/:facilityId/charts` です。
 - generic な「戻る」は使わず、surface-aware CTA で戻り先を明示します。

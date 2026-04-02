@@ -617,7 +617,7 @@ export function OrcaSummary({
             {isRefreshing ? '再取得中…' : '再取得'}
           </button>
           <button type="button" onClick={handleOpenReception}>
-            Receptionを開く
+            受付を開く
           </button>
           <span>runId: {resolvedRunId ?? '—'}</span>
           <span>traceId: {recoveryTraceId}</span>
