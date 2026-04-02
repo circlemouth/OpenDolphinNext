@@ -26,7 +26,7 @@ export function DebugHubPage() {
       },
       {
         label: 'Charts',
-        description: 'Auth-service flags / Telemetry panel は VITE_ENABLE_DEBUG_UI=1 かつ system_admin。QA/検証専用。',
+        description: 'Auth-service flags / Telemetry panel は VITE_ENABLE_DEBUG_UI=1 かつシステム管理者のみ。QA/検証専用。',
         href: buildFacilityPath(session.facilityId, '/charts'),
       },
     ],
@@ -42,7 +42,7 @@ export function DebugHubPage() {
         </header>
         <section className="status-message" aria-live={resolveAriaLive('info')}>
           <h2>前提条件（ENV/role）</h2>
-          <p>VITE_ENABLE_DEBUG_PAGES=1 かつ system_admin ロールのみアクセス可能です。</p>
+          <p>VITE_ENABLE_DEBUG_PAGES=1 かつシステム管理者ロールのみアクセス可能です。</p>
           <p>Charts 内のデバッグ UI は VITE_ENABLE_DEBUG_UI=1 が必要です。</p>
         </section>
         <section className="status-message" aria-live={resolveAriaLive('info')}>

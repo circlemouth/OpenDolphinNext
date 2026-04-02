@@ -70,7 +70,7 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     await waitFor(() => {
       expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
     });
-    expect(screen.queryByText('患者情報が見つからないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。')).not.toBeInTheDocument();
+    expect(screen.queryByText('患者文脈が引き継がれていないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。')).not.toBeInTheDocument();
     expect(document.querySelector('[data-test-id="mobile-image-capture-input"]')).toBeEnabled();
     expect(document.querySelector('[data-test-id="mobile-image-file-input"]')).toBeEnabled();
   });
@@ -82,7 +82,7 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('患者情報が見つからないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。')).toBeInTheDocument();
+    expect(screen.getByText('患者文脈が引き継がれていないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。')).toBeInTheDocument();
     expect(document.querySelector('[data-test-id="mobile-images-missing-patient"]')).toBeInTheDocument();
     expect(document.querySelector('[data-test-id="mobile-image-send"]')).toBeDisabled();
     expect(document.querySelector('[data-test-id="mobile-image-capture-input"]')).toBeDisabled();
@@ -201,6 +201,45 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     await user.click(await screen.findByRole('button', { name: '再試行' }));
 
     expect(screen.getByRole('button', { name: '送信' })).toHaveFocus();
+  });
+
+  it('患者が切り替わった後は画像再選択を促す', async () => {
+    vi.mocked(uploadPatientImageViaXhr).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      error: 'network_error',
+      errorCode: 'internal_error',
+    } as any);
+    saveDeepLinkContext({ patientId: '123' });
+
+    render(
+      <MemoryRouter initialEntries={['/f/0001/m/images']}>
+        <MobileImagesUploadPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
+    });
+
+    const fileInput = document.querySelector('[data-test-id="mobile-image-file-input"]') as HTMLInputElement;
+    const file = new File(['image'], 'upload.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '送信' }));
+
+    const patientInput = screen.getByRole('textbox', { name: '患者ID' }) as HTMLInputElement;
+    await user.clear(patientInput);
+    await user.type(patientInput, '456');
+    await user.click(screen.getByRole('button', { name: '患者を確定' }));
+
+    expect(
+      screen.getByText(
+        '選択中の患者文脈が引き継がれていないため、この画面だけでは再試行できません。戻り導線から患者を選び直して、画像を再選択してください。',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '再試行' })).toBeEnabled();
   });
 
   it('送信成功後は最初の参照リンクへ focus し、リンク名を一意にする', async () => {

@@ -8,7 +8,6 @@ const SESSION_BASE_KEYS = [
   // PHI関連(sessionStorage): ログアウト時に必ず除去する
   'opendolphin:web-client:charts:encounter-context',
   'opendolphin:web-client:charts:patient-tabs',
-  'opendolphin:web-client:patients:returnTo',
   'opendolphin:web-client:soap-history',
   'opendolphin:web-client:charts:printPreview:document',
   'opendolphin:web-client:charts:printPreview:outpatient',

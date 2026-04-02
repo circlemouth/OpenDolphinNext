@@ -320,7 +320,7 @@ export function AccessManagementPanel({ runId, role, mode = 'full' }: AccessMana
         <div className="admin-guard" role="alert" aria-live={resolveAriaLive('warning')}>
           <div className="admin-guard__header">
             <span className="admin-guard__title">操作ガード中</span>
-            <span className="admin-guard__badge">system_adminのみ</span>
+            <span className="admin-guard__badge">システム管理者のみ</span>
           </div>
           <p className="admin-guard__message">
             現在のロール（{role ?? session.role ?? 'unknown'}）では {panelLabel} を操作できません。

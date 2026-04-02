@@ -16,6 +16,7 @@
   align-items: center;
   gap: 0.6rem;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .return-to-bar__back {
@@ -29,6 +30,7 @@
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .return-to-bar__back:hover,
@@ -43,6 +45,8 @@
   font-weight: 700;
   font-size: 0.92rem;
   line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .return-to-bar__links {
@@ -80,9 +84,19 @@
   .return-to-bar__main {
     align-items: flex-start;
     flex-direction: column;
+    gap: 0.45rem;
   }
 
   .return-to-bar__links {
     justify-content: flex-start;
+  }
+
+  .return-to-bar__back {
+    white-space: normal;
+    width: 100%;
+  }
+
+  .return-to-bar__hint {
+    width: 100%;
   }
 }

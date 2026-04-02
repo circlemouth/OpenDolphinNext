@@ -935,6 +935,31 @@
   color: #64748b;
 }
 
+.patients-page__audit-support {
+  margin: 0;
+}
+
+.patients-page__audit-support summary {
+  cursor: pointer;
+  list-style: none;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.patients-page__audit-support summary::-webkit-details-marker {
+  display: none;
+}
+
+.patients-page__audit-support-body {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
 .patients-page__audit-message {
   margin: 0;
 }

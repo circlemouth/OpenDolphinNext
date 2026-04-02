@@ -524,7 +524,14 @@
 
 .admin-queue__actions {
   display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.35rem;
+}
+
+.admin-queue__reason {
+  margin: 0;
+  max-width: 20rem;
 }
 
 .admin-note {

@@ -20,6 +20,7 @@
 - client に内部詳細や安全性未確認の文字列を露出しません。
 - `PatientsPage` の edit/audit summary、`ChartsActionBar` の action/result feedback、`ReceptionPage` の accept/cancel/claim-send result は canonical copy を current contract とします。
 - `PatientsPage` と `AdministrationPage` の通常 surface では `endpoint`, `Api_Result_Message`, `Error.message` のような raw detail を default 表示しません。
+- `PatientsPage` の保存履歴で `traceId` / `requestId` / internal status を出す場合は、default 表示ではなく support disclosure に隔離します。
 - safe support ID として `RUN_ID` / `traceId` を出すことがあります。
 - current runtime の active surface 全体が app-wide に統一済みとは断定せず、residual inventory は working note で追跡します。
 

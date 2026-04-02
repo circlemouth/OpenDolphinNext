@@ -53,7 +53,6 @@ describe('storageCleanup', () => {
     session.setItem('opendolphin:web-client:charts:encounter-context:v2:fac-1:user-1', 'x');
     session.setItem('opendolphin:web-client:charts:patient-tabs:v1:fac-1:user-1', 'x');
     session.setItem('opendolphin:web-client:soap-history:v2:fac-1:user-1', 'x');
-    session.setItem('opendolphin:web-client:patients:returnTo:v2:fac-1:user-1', 'x');
     session.setItem('opendolphin:web-client:reception-daily-state:v1:fac-1:user-1', 'x');
     session.setItem('opendolphin:web-client:deeplink-context', '{"savedAt":"2026-03-04T00:00:00.000Z","values":{"patientId":"123"}}');
     session.setItem('charts:orca-claim-send:fac-1:user-1', 'x');

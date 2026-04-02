@@ -98,7 +98,7 @@
 - 初期 patient context は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context の順で解決します。
 - Patients が読む minimal context は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
 - `returnTo` は safe な候補だけを direct return に使い、fallback は `from=reception` なら reception、それ以外は charts です。
-- `patients:returnTo` の sessionStorage seam は current reader を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
+- `patients:returnTo` の sessionStorage seam は current repo に reader / writer を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
 - 通常 UI の監査表示は summary を正とし、raw endpoint dump は default から外します。
 
 ### Verification
@@ -125,6 +125,7 @@
 - sub-navigation は `設定 / 状態確認 / 調査` に regroup します。
 - authz の canonical layer は `AdministrationGate` の route-level guard です。
 - `connection` は接続テストの実行面、`operations` は状態参照面です。
+- `config` の診断用トグルは既定で閉じ、通常運用導線より一段下げて扱います。
 - `AdminDeliveryStatusCard` は配信メタデータ card として `deliveryId / version / etag / deliveredAt / verified` を表示します。
 
 ## Explicit Unknown

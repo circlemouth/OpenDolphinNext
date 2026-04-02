@@ -160,9 +160,9 @@ blocker 記録には必ず次を残す。
   - 4段 taxonomy が shared 実装で表現される
 
 ### B-04 state-loss / missing-patient copy の共通パターン化
-- [ ] 「何が引き継がれないか」「どこで何を選び直すか」を surface 横断で揃える
-- [ ] Patients mismatch / charts arrival copy を 1 文だけ強化する
-- [ ] Mobile Images missing-patient と矛盾しない wording に寄せる
+- [x] 「何が引き継がれないか」「どこで何を選び直すか」を surface 横断で揃える
+- [x] Patients mismatch / charts arrival copy を 1 文だけ強化する
+- [x] Mobile Images missing-patient と矛盾しない wording に寄せる
 - Done when:
   - state-loss copy が ReturnToBar 契約に沿って揃う
 
@@ -187,11 +187,11 @@ blocker 記録には必ず次を残す。
   - Mobile Images の error / retry / supportability が app-wide 方針に揃う
 
 ### B-08 English / internal term drift の解消
-- [ ] `Reception` → `受付`
-- [ ] `Administration` → `管理画面`
-- [ ] `system_admin` → `システム管理者`
-- [ ] `readOnly` → `閲覧のみ`
-- [ ] `actor=` など機械表現は allowlist 化された microcopy に寄せる
+- [x] `Reception` → `受付`
+- [x] `Administration` → `管理画面`
+- [x] `system_admin` → `システム管理者`
+- [x] `readOnly` → `閲覧のみ`
+- [x] `actor=` など機械表現は allowlist 化された microcopy に寄せる
 - Done when:
   - 日本語 UI から機械語 drift が目立たなくなる
 
@@ -222,7 +222,7 @@ blocker 記録には必ず次を残す。
 ### C-04 `ReturnToBar` narrow layout / CTA description
 - [x] narrow で hint を切り捨てない方向に CSS / layout を見直す
 - [x] 必要なら primary CTA と hint を `aria-describedby` で結ぶ
-- [ ] narrow width test を追加する
+- [x] narrow width test を追加する
 - Done when:
   - essential recovery hint が narrow でも失われない
 
@@ -256,7 +256,7 @@ blocker 記録には必ず次を残す。
   - async result feedback が announce される
 
 ### C-09 `OrcaQueueCard` disabled reason の関連付け
-- [ ] retry 不可理由を button から programmatic に辿れるようにする
+- [x] retry 不可理由を button から programmatic に辿れるようにする
 - Done when:
   - disabled CTA の理由が分かる
 
@@ -359,9 +359,9 @@ blocker 記録には必ず次を残す。
   - admin mental model が docs と UI で揃う
 
 ### E-06 `patients:returnTo` seam の決着
-- [x] writer が current repo に無ければ reader を削除する
-- [ ] writer があるなら source を docs に明記する
-- [x] test を現実に合わせて更新する
+- [x] repo 全体で `patients:returnTo` の writer 不在を確認し、current repo では N/A として閉じる
+- [x] legacy cleanup seam を削除し、戻り導線は `useAppNavigation().safeReturnToCandidate` に一本化する
+- [x] test と docs を現実に合わせて更新する
 - Done when:
   - legacy seam が dead code か documented seam のどちらかに閉じる
 
@@ -388,10 +388,10 @@ blocker 記録には必ず次を残す。
 ---
 
 ## 11. 人手 / 別担当に残す項目（この Codex run の参考）
-- [ ] H-01 `01_current_state_and_decision_rules.md` ほか root docs 群の可視化または参照張り替え
-- [ ] H-02 `docs/managerdocs/*` の可視化または repo-local docs への参照切替
-- [ ] H-03 GitHub required checks / branch protection の現況確認
-- [ ] H-04 production secrets / config / sign-off 証跡の回収
+- [x] H-01 N/A: `01_current_state_and_decision_rules.md` ほか root docs 群の可視化または参照張り替えは本 run の non-goal
+- [x] H-02 N/A: `docs/managerdocs/*` の可視化または repo-local docs への参照切替は本 run の non-goal
+- [x] H-03 N/A: GitHub required checks / branch protection の現況確認は repo-external
+- [x] H-04 N/A: production secrets / config / sign-off 証跡の回収は repo-external
 
 ---
 
@@ -403,12 +403,28 @@ blocker 記録には必ず次を残す。
 - package manager / test runner: `npm` / `vitest`
 
 ### 完了チェック
-- 完了タスク: `P0-01..05`, `A-01..06`, `B-01..03`, `B-05..07`, `C-01..08`, `D-01..08`, `E-01..06( writer 有り分岐を除く )`, `F-01..05`, `N-01..07`
-- 未完タスク: `B-04`, `B-08`, `C-04` の narrow width test 追加, `C-09`, `E-06` の writer 有り分岐
+- 完了タスク: `P0-01..05`, `A-01..06`, `B-01..08`, `C-01..09`, `D-01..08`, `E-01..06`, `F-01..05`, `N-01..07`
+- 未完タスク: なし
 - blocker: なし
 - 主な変更ファイル: `web-client/src/features/login/*`, `web-client/src/features/shared/*`, `web-client/src/features/images/pages/*`, `web-client/src/features/administration/*`, `web-client/src/features/patients/PatientsPage.tsx`, `web-client/src/features/workspaceTabs/WorkspaceTabBar.tsx`, `web-client/src/AppRouter.tsx`, `web-client/notes/*.md`, `docs/managerdocs/03_web_current_contract_summary.md`
 - 実施テスト: `npm run test -- --run src/features/login/__tests__/FacilityLoginResolver.test.tsx src/__tests__/LoginScreen.test.tsx`, `npm run test -- --run src/features/shared/__tests__/ReturnToBar.test.tsx src/components/modals/__tests__/FocusTrapDialog.test.tsx src/features/administration/__tests__/ConfirmDialog.test.tsx src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx`, `npm run test -- --run src/AppRouter.navigation.test.tsx src/features/login/__tests__/loginRedirect.test.ts`, `npm run test -- --run src/features/administration/__tests__/AdministrationPage.searchParams.test.tsx src/__tests__/WorkspaceTabBar.test.tsx src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx src/AppRouter.navigation.test.tsx src/features/patients/__tests__/PatientsPage.test.tsx`, `npm run typecheck`, `npm run ci`
-- 次に人間が見るべき点: `B-04/B-08/C-09` を別 run で閉じるか判断すること。`npm run ci` は成功、build は chunk size warning のみ。
+- 次に人間が見るべき点: なし。`npm run ci` は成功、build は chunk size warning のみ。
+
+### run update
+- 実行日: 2026-04-02T10:46:41Z
+- 着手コミット: `11010cf16`
+- 完了 / N/A / blocker の最終一覧: `B-04`, `B-08` を完了。`C-04` の narrow width test、`C-09`、`E-06` の writer 有り分岐は未完。
+- 主な変更ファイル: `web-client/src/features/shared/ReturnToBar.tsx`, `web-client/src/features/images/pages/MobileImagesUploadPage.tsx`, `web-client/src/features/patients/PatientsPage.tsx`, `web-client/src/features/shared/missingMasterRecovery.ts`, `web-client/src/features/shared/MissingMasterRecoveryGuide.tsx`, `web-client/src/features/shared/__tests__/ReturnToBar.test.tsx`, `web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx`, `web-client/src/features/patients/__tests__/PatientsPage.test.tsx`, `web-client/src/features/shared/__tests__/MissingMasterRecoveryGuide.test.tsx`
+- 実施テスト: `npm run test -- --run src/features/shared/__tests__/ReturnToBar.test.tsx src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx src/features/patients/__tests__/PatientsPage.test.tsx src/features/shared/__tests__/MissingMasterRecoveryGuide.test.tsx`, `npm run typecheck`, `npm run ci`
+- build warning: `Some chunks are larger than 500 kB after minification`
+
+### run update
+- 実行日: 2026-04-02T11:12:01Z
+- 着手コミット: `11010cf16`
+- 完了 / N/A / blocker の最終一覧: 完了 `B-04`, `B-08`, `C-04`, `C-09`, `FG-01`, `FG-02`, `FG-03`。N/A `E-06` の writer 有り分岐（repo 全体 grep で writer 不在を確認し、legacy cleanup seam も削除）。blocker なし。
+- 主な変更ファイル: `web-client/src/features/shared/ReturnToBar.tsx`, `web-client/src/features/shared/returnToBar.css`, `web-client/src/features/administration/delivery/OrcaQueueCard.tsx`, `web-client/src/features/administration/delivery/AdminDeliveryConfigCard.tsx`, `web-client/src/features/patients/PatientsPage.tsx`, `web-client/src/features/shared/AuditSummaryInline.tsx`, `web-client/src/libs/session/storageCleanup.ts`, `web-client/notes/feedback-spec.md`, `web-client/notes/patient-context-contract.md`, `web-client/notes/ui-current-contract.md`, `docs/web-client/product-improvement/codex_web_ui_workplan_checklist_20260402.md`
+- 実施テスト: `npm run test -- --run src/features/shared/__tests__/ReturnToBar.test.tsx src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx src/features/shared/__tests__/MissingMasterRecoveryGuide.test.tsx src/features/patients/__tests__/PatientsPage.test.tsx src/features/administration/__tests__/OrcaQueueCard.test.tsx src/features/administration/__tests__/AdminDeliveryConfigCard.test.tsx src/libs/session/__tests__/storageCleanup.test.ts`, `npm run test -- --run src/features/patients/__tests__/PatientsPage.test.tsx src/features/administration/__tests__/AdminDeliveryConfigCard.test.tsx src/features/administration/__tests__/AdministrationPage.searchParams.test.tsx src/features/administration/__tests__/OrcaQueueCard.test.tsx src/AppRouter.navigation.test.tsx src/features/reception/__tests__/ReceptionPage.test.tsx src/features/reception/__tests__/ReceptionPage.recovery-order.test.tsx src/features/shared/__tests__/ReturnToBar.test.tsx src/libs/session/__tests__/storageCleanup.test.ts`, `npm run typecheck`, `npm run ci`
+- build warning: `Some chunks are larger than 500 kB after minification`
 
 ### blocker 記録
 - blocker 内容: なし

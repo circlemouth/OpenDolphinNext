@@ -144,16 +144,26 @@ export function MobileImagesUploadPage() {
 
   useEffect(() => {
     setSelectedFile(null);
-    setLastError(null);
     setFeatureDisabled(false);
     setListItems([]);
     if (!patientId) {
       setStage('error');
-      setStatusText('患者情報が見つからないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。');
+      setStatusText('患者文脈が引き継がれていないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。');
+      setLastError(null);
+      return;
+    }
+    if (lastAttemptRef.current && lastAttemptRef.current.patientId !== patientId) {
+      setStage('error');
+      setLastError({ status: 0, error: 'patient_switched' });
+      setStatusText('選択中の患者文脈が引き継がれていないため、この画面だけでは再試行できません。戻り導線から患者を選び直して、画像を再選択してください。');
+      refreshList(patientId).catch(() => {
+        // ignore
+      });
       return;
     }
     setStage('ready');
     setStatusText('患者情報を確認しました。画像を選択して送信してください。');
+    setLastError(null);
     refreshList(patientId).catch(() => {
       // ignore
     });
@@ -216,6 +226,7 @@ export function MobileImagesUploadPage() {
     setStage('success');
     setStatusText('送信しました。');
     pendingFocusTargetRef.current = 'download';
+    lastAttemptRef.current = null;
     await refreshList(patientId);
   }, [patientId, refreshList, selectedFile]);
 
@@ -224,7 +235,7 @@ export function MobileImagesUploadPage() {
     if (!last) return;
     // Retry keeps the current patient context; if user switched patient, they should reselect file intentionally.
     if (patientId && last.patientId !== patientId) {
-      setStatusText('患者が切り替わっているため、再試行するには画像を再選択してください。');
+      setStatusText('選択中の患者文脈が引き継がれていないため、この画面だけでは再試行できません。戻り導線から患者を選び直して、画像を再選択してください。');
       setStage('ready');
       setLastError(null);
       return;
@@ -469,7 +480,7 @@ export function MobileImagesUploadPage() {
               role="alert"
               style={{ margin: 0, fontSize: '0.9rem', color: '#b42318' }}
             >
-              患者情報が見つからないため送信できません。戻り導線から患者を選び直してください。
+              患者文脈が引き継がれていないため送信できません。この画面だけでは再開できないので、戻り導線から患者を選び直してください。
             </p>
           ) : null}
         </div>

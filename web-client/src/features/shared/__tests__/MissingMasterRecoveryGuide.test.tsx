@@ -47,7 +47,7 @@ describe('MissingMasterRecoveryGuide', () => {
     );
 
     expect(screen.getByRole('button', { name: '再取得（再取得）' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Receptionへ戻る（Reception）' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '受付へ戻る（受付）' })).toBeEnabled();
     const shareButton = screen.getByRole('button', { name: '管理者共有（管理者共有）' });
     expect(shareButton).toBeEnabled();
 
@@ -86,7 +86,7 @@ describe('MissingMasterRecoveryGuide', () => {
     renderWithToast(<MissingMasterRecoveryGuide />, enqueue);
 
     expect(screen.getByRole('button', { name: '再取得（再取得）' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Receptionへ戻る（Reception）' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '受付へ戻る（受付）' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '管理者共有（管理者共有）' })).toBeDisabled();
   });
 });

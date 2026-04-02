@@ -990,7 +990,7 @@ function DebugOutpatientMockGate({ session }: { session: Session }) {
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
         <div className="status-message is-error" role="status">
           <p>権限がないためデバッグ画面へのアクセスを拒否しました。</p>
-          <p>必要ロール: system_admin / 現在: {session.role}</p>
+          <p>必要権限: システム管理者 / 現在: {session.role}</p>
           <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
           {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
           <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
@@ -1000,7 +1000,7 @@ function DebugOutpatientMockGate({ session }: { session: Session }) {
             type="button"
             onClick={() => navigate(buildFacilityPath(session.facilityId, '/reception'), { replace: true })}
           >
-            Reception へ戻る
+            受付へ戻る
           </button>
         </div>
       </div>
@@ -1061,7 +1061,7 @@ function DebugMobilePatientPickerGate({ session }: { session: Session }) {
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
         <div className="status-message is-error" role="status">
           <p>権限がないためデバッグ画面へのアクセスを拒否しました。</p>
-          <p>必要ロール: system_admin / 現在: {session.role}</p>
+          <p>必要権限: システム管理者 / 現在: {session.role}</p>
           <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
           {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
           <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
@@ -1071,7 +1071,7 @@ function DebugMobilePatientPickerGate({ session }: { session: Session }) {
             type="button"
             onClick={() => navigate(buildFacilityPath(session.facilityId, '/reception'), { replace: true })}
           >
-            Reception へ戻る
+            受付へ戻る
           </button>
         </div>
       </div>
@@ -1130,7 +1130,7 @@ function DebugHubGate({ session }: { session: Session }) {
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
         <div className="status-message is-error" role="status">
           <p>権限がないためデバッグ導線へのアクセスを拒否しました。</p>
-          <p>必要ロール: system_admin / 現在: {session.role}</p>
+          <p>必要権限: システム管理者 / 現在: {session.role}</p>
           <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
           {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
           <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
@@ -1140,7 +1140,7 @@ function DebugHubGate({ session }: { session: Session }) {
             type="button"
             onClick={() => navigate(buildFacilityPath(session.facilityId, '/reception'), { replace: true })}
           >
-            Reception へ戻る
+            受付へ戻る
           </button>
         </div>
       </div>
@@ -1199,7 +1199,7 @@ function DebugOrcaApiGate({ session }: { session: Session }) {
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
         <div className="status-message is-error" role="status">
           <p>権限がないため ORCA API コンソールへのアクセスを拒否しました。</p>
-          <p>必要ロール: system_admin / 現在: {session.role}</p>
+          <p>必要権限: システム管理者 / 現在: {session.role}</p>
           <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
           {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
           <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
@@ -1209,7 +1209,7 @@ function DebugOrcaApiGate({ session }: { session: Session }) {
             type="button"
             onClick={() => navigate(buildFacilityPath(session.facilityId, '/reception'), { replace: true })}
           >
-            Reception へ戻る
+            受付へ戻る
           </button>
         </div>
       </div>

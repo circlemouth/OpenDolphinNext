@@ -924,14 +924,14 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     if (hasPatient && !matched) {
       return {
         tone: 'warning' as const,
-        message: 'カルテから移動しましたが、対象患者が一覧に見つかりません。受付の検索条件を確認してください。',
-        nextAction: '検索条件を見直す',
+        message: 'カルテから移動しましたが、対象患者の文脈が引き継がれていません。この画面だけでは再開できないため、受付の検索条件を見直して患者を選び直してください。',
+        nextAction: '患者を選び直す',
       };
     }
     return {
       tone: 'warning' as const,
-      message: 'カルテから患者管理へ移動しました。受付フィルタを維持しているため、操作前に対象患者を確認してください。',
-      nextAction: '対象患者を確認',
+      message: 'カルテから患者管理へ移動しました。受付フィルタは引き継いでいますが、この画面だけでは再開できません。操作前に対象患者を選び直してください。',
+      nextAction: '対象患者を選び直す',
     };
   }, [fromCharts, patientIdParam, patients]);
 
@@ -1723,6 +1723,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             variant="inline"
             className="patients-page__badge"
             label="監査サマリ"
+            showActor={false}
             runId={resolvedRunId}
           />
         </div>
@@ -2719,17 +2720,23 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                         <StatusPill className="patients-page__audit-pill" label="ORCA" value={desc.orcaStatus} />
                       </div>
                       <div className="patients-page__audit-row-sub">
-                        <span>patientId: {desc.patientId}</span>
-                        <span>runId: {desc.runId}</span>
-                        <span>traceId: {desc.traceId}</span>
-                        <span>requestId: {desc.requestId}</span>
+                        <span>RUN_ID: {desc.runId}</span>
                         <span>{record.timestamp}</span>
-                        {desc.status ? <span>status: {String(desc.status)}</span> : null}
-                        {desc.changedKeys ? <span>changedKeys: {desc.changedKeys}</span> : null}
-                        {desc.operation ? <span>operation: {desc.operation}</span> : null}
-                        {desc.section ? <span>section: {desc.section}</span> : null}
-                        {renderAuditMessage(desc.message)}
                       </div>
+                      <details className="patients-page__audit-support">
+                        <summary>サポート向け詳細を表示</summary>
+                        <div className="patients-page__audit-support-body">
+                          <span>patientId: {desc.patientId}</span>
+                          {desc.traceId !== '—' ? <span>traceId: {desc.traceId}</span> : null}
+                          {desc.requestId !== '—' ? <span>requestId: {desc.requestId}</span> : null}
+                          {desc.status ? <span>status: {String(desc.status)}</span> : null}
+                          {desc.changedKeys ? <span>changedKeys: {desc.changedKeys}</span> : null}
+                          {desc.operation ? <span>operation: {desc.operation}</span> : null}
+                          {desc.section ? <span>section: {desc.section}</span> : null}
+                          {desc.sourcePath ? <span>sourcePath: {desc.sourcePath}</span> : null}
+                          {renderAuditMessage(desc.message)}
+                        </div>
+                      </details>
                     </div>
                   );
                 })

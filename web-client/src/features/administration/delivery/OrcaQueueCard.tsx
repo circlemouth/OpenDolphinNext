@@ -49,6 +49,13 @@ const toStatusTone = (status: string) => {
   return 'idle' as const;
 };
 
+const resolveRetryDisabledReason = (params: { pending: boolean; readOnly: boolean; entry: OrcaQueueEntry }) => {
+  if (params.readOnly) return '管理者権限が必要です。';
+  if (params.pending) return '処理中のため再送できません。';
+  if (!params.entry.retryable) return 'このエントリは再送不可として記録されています。';
+  return undefined;
+};
+
 export function OrcaQueueCard({
   entries,
   isSystemAdmin,
@@ -122,6 +129,9 @@ export function OrcaQueueCard({
           ) : (
             filteredEntries.map((entry) => {
               const delayed = isDelayed(entry, warningThresholdMs);
+              const retryDisabledReason = resolveRetryDisabledReason({ pending, readOnly, entry });
+              const retryReasonId = retryDisabledReason ? `orca-queue-retry-reason-${entry.patientId}` : undefined;
+              const retryDescribedBy = [retryReasonId, readOnly ? guardDetailsId : undefined].filter(Boolean).join(' ') || undefined;
               return (
                 <tr key={entry.patientId} className={delayed ? 'admin-queue__row--delayed' : undefined}>
                   <td>{entry.patientId}</td>
@@ -139,12 +149,17 @@ export function OrcaQueueCard({
                   <td>{entry.error ?? '―'}</td>
                   <td>
                     <div className="admin-queue__actions">
+                      {retryDisabledReason ? (
+                        <p id={retryReasonId} className="admin-queue__reason admin-quiet">
+                          {retryDisabledReason}
+                        </p>
+                      ) : null}
                       <button
                         type="button"
                         className="admin-button admin-button--secondary"
                         onClick={() => onRetry(entry.patientId)}
                         disabled={pending || readOnly || !entry.retryable}
-                        aria-describedby={readOnly ? guardDetailsId : undefined}
+                        aria-describedby={retryDescribedBy}
                       >
                         再送
                       </button>

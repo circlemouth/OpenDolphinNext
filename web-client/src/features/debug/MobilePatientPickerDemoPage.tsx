@@ -17,7 +17,7 @@ export function MobilePatientPickerDemoPage() {
         <div className="status-message" role="status" aria-live={resolveAriaLive('info')}>
           <p>選択中 patientId: {selectedPatientId ?? '(none)'}</p>
           <p style={{ fontSize: '0.85rem', opacity: 0.8 }}>
-            note: 本ページは `VITE_ENABLE_DEBUG_PAGES=1` かつ system_admin ロールでのみ表示されます。
+            note: 本ページは `VITE_ENABLE_DEBUG_PAGES=1` かつシステム管理者ロールでのみ表示されます。
           </p>
         </div>
 
@@ -30,4 +30,3 @@ export function MobilePatientPickerDemoPage() {
     </main>
   );
 }
-

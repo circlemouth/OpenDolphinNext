@@ -40,7 +40,7 @@ export function AdminDeliveryConfigCard({
     <AdminCard
       id="admin-delivery-config"
       title="配信設定"
-      description="運用トグルと開発トグルを分離し、保存前に差分確認してから配信します。"
+      description="運用設定を優先表示し、診断用トグルは必要なときだけ開いて確認します。"
     >
       <DirtyStateBar dirty={dirty} updatedAt={updatedAt} />
       <AdminField
@@ -108,8 +108,8 @@ export function AdminDeliveryConfigCard({
         </AdminField>
       </div>
 
-      <details className="admin-dev-flags" open>
-        <summary>開発トグル（診断/デバッグ用途）</summary>
+      <details className="admin-dev-flags">
+        <summary>診断用の開発トグル（既定では閉じています）</summary>
         {showAdminDebugToggles ? (
           <div className="admin-form__toggles">
             <div className="admin-toggle">
@@ -128,7 +128,7 @@ export function AdminDeliveryConfigCard({
             </div>
           </div>
         ) : (
-          <p className="admin-quiet">この環境では開発トグルを非表示にしています（診断/デバッグセクションから操作）。</p>
+          <p className="admin-quiet">この環境では診断用トグルを非表示にしています（必要時は診断/デバッグセクションを使用します）。</p>
         )}
       </details>
 

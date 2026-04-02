@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { isSafeReturnTo } from '../../routes/appNavigation';
@@ -31,26 +31,52 @@ const resolvePrimaryActionLabel = (surfaceLabel: string, hasReturnTo: boolean) =
 const resolveHint = (surface?: string | null, hasReturnTo?: boolean) => {
   if (surface === 'reception') {
     return hasReturnTo
-      ? '戻ったあとに対象患者を選び直せます。'
-      : '患者文脈が必要な場合は受付で対象患者を選び直してください。';
+      ? '患者文脈は引き継がれていません。戻ったあとに対象患者を選び直せます。'
+      : '患者文脈が引き継がれていない場合は、受付で対象患者を選び直してください。';
   }
   if (surface === 'patients') {
     return hasReturnTo
-      ? '戻ったあとに患者一覧から対象患者を選び直せます。'
-      : '患者一覧から対象患者を選び直してください。';
+      ? '患者文脈は引き継がれていません。戻ったあとに患者一覧から対象患者を選び直せます。'
+      : '患者文脈が引き継がれていない場合は、患者一覧から対象患者を選び直してください。';
   }
   if (surface === 'charts') {
     return hasReturnTo
-      ? '戻ったあとに必要な患者・受診を選び直してください。'
-      : 'カルテまたは受付から対象患者を選び直してください。';
+      ? '患者文脈は引き継がれていません。戻ったあとに患者と受診を選び直してください。'
+      : '患者文脈が引き継がれていない場合は、カルテまたは受付から対象患者を選び直してください。';
   }
   return hasReturnTo
-    ? '前の画面から安全に入り直してください。'
-    : '既定の戻り先から入り直してください。';
+    ? '患者文脈は引き継がれていません。前の画面から安全に入り直してください。'
+    : '患者文脈が引き継がれていない場合は、既定の戻り先から入り直してください。';
+};
+
+const useIsNarrowViewport = (query = '(max-width: 720px)') => {
+  const [isNarrow, setIsNarrow] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    return window.matchMedia(query).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+
+    const mediaQueryList = window.matchMedia(query);
+    const update = () => setIsNarrow(mediaQueryList.matches);
+    update();
+
+    if (typeof mediaQueryList.addEventListener === 'function') {
+      mediaQueryList.addEventListener('change', update);
+      return () => mediaQueryList.removeEventListener('change', update);
+    }
+
+    mediaQueryList.addListener(update);
+    return () => mediaQueryList.removeListener(update);
+  }, [query]);
+
+  return isNarrow;
 };
 
 export function ReturnToBar({ scope, returnTo, from, fallbackUrl, showShortcuts = false }: ReturnToBarProps) {
   const hintId = useId();
+  const isNarrowViewport = useIsNarrowViewport();
   const safeReturnTo = isSafeReturnTo(returnTo, scope.facilityId) ? returnTo : undefined;
   const primaryUrl = safeReturnTo ?? fallbackUrl;
   const hasReturnTo = Boolean(safeReturnTo);
@@ -61,12 +87,12 @@ export function ReturnToBar({ scope, returnTo, from, fallbackUrl, showShortcuts 
   const showFallbackShortcut = showShortcuts && safeReturnTo && safeReturnTo !== fallbackUrl;
 
   return (
-    <section className="return-to-bar" role="region" aria-label="戻り導線">
+    <section className="return-to-bar" role="region" aria-label="戻り導線" data-layout={isNarrowViewport ? 'narrow' : 'wide'}>
       <div className="return-to-bar__main">
         <Link className="return-to-bar__back" to={primaryUrl} aria-describedby={hintId}>
           {primaryLabel}
         </Link>
-        <div id={hintId} className="return-to-bar__hint">
+        <div id={hintId} className="return-to-bar__hint" data-layout={isNarrowViewport ? 'narrow' : 'wide'}>
           {hint}
         </div>
       </div>

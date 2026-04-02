@@ -137,16 +137,16 @@ export function MissingMasterRecoveryGuide({
   const shareDisabledState = !shareText;
 
   return (
-    <section className="missing-master-recovery" role="group" aria-label="missingMaster 復旧導線">
+    <section className="missing-master-recovery" role="group" aria-label="復旧導線">
       <Global styles={missingMasterRecoveryStyles} />
-      <h3 className="missing-master-recovery__title">復旧導線（再取得 → Reception → 管理者共有）</h3>
+      <h3 className="missing-master-recovery__title">復旧導線（再取得 → 受付 → 管理者共有）</h3>
       <p className="missing-master-recovery__note">
-        再取得で解消しない場合は Reception で状態を確認し、RUN_ID/traceId を管理者へ共有してください。
+        再取得で解消しない場合は受付で状態を確認し、RUN_ID/traceId を管理者へ共有してください。
       </p>
       <ol className="missing-master-recovery__list">
         {MISSING_MASTER_RECOVERY_STEPS.map((step) => {
           const actionLabel = step.label === MISSING_MASTER_RECOVERY_ACTIONS.reception
-            ? 'Receptionへ戻る'
+            ? '受付へ戻る'
             : step.label === MISSING_MASTER_RECOVERY_ACTIONS.share
               ? '管理者共有'
               : step.label;

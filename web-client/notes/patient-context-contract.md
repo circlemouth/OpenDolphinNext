@@ -24,7 +24,7 @@
     - 読み取り対象は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
     - 入力 source 優先度は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context です。
     - Patients 画面は route query の `patientId` を権威入力として読みません。
-    - current repo では `patients:returnTo` の reader を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
+    - current repo では `patients:returnTo` の reader / writer を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
   - Mobile Images:
     - 現行の minimal schema は `patientId` のみです。
     - 入力 source 優先度は query `patientId` -> `location.state.patientId` -> deep link volatile context です。

@@ -381,6 +381,34 @@ describe('PatientsPage audit filters', () => {
 
     expect(screen.getByText('開始日 (2025-12-10) が終了日 (2025-12-05) より後です。')).toBeInTheDocument();
   });
+
+  it('保存履歴の詳細IDはサポート向け disclosure に隔離する', async () => {
+    mockPatients();
+    addAuditEvent('2025-12-01T10:00:00.000Z', {
+      source: 'patient-save',
+      patientId: 'P-001',
+      traceId: 'TRACE-1',
+      payload: {
+        action: 'PATIENT_UPDATE',
+        outcome: 'SUCCESS',
+        details: { patientId: 'P-001', message: 'updated', requestId: 'REQ-1' },
+      },
+    });
+
+    renderPatientsPage();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
+
+    const traceId = screen.getByText('traceId: TRACE-1');
+    const requestId = screen.getByText('requestId: REQ-1');
+    expect(traceId).not.toBeVisible();
+    expect(requestId).not.toBeVisible();
+
+    await user.click(screen.getByText('サポート向け詳細を表示'));
+
+    expect(traceId).toBeVisible();
+    expect(requestId).toBeVisible();
+  });
 });
 
 describe('PatientsPage canonical feedback', () => {
@@ -406,6 +434,41 @@ describe('PatientsPage canonical feedback', () => {
     expect(screen.queryByText(/missingMaster=true/)).not.toBeInTheDocument();
     expect(screen.queryByText(/fallbackUsed=true/)).not.toBeInTheDocument();
     expect(screen.queryByText(/dataSourceTransition=/)).not.toBeInTheDocument();
+  });
+
+  it('監査ログの既定表示は action / outcome / 時刻 / RUN_ID に留め、詳細は disclosure に隔離する', async () => {
+    clearAuditEventLog();
+    mockPatients();
+    addAuditEvent('2025-12-01T10:00:00.000Z', {
+      source: 'patient-save',
+      patientId: 'P-001',
+      payload: {
+        action: 'PATIENT_UPDATE',
+        outcome: 'SUCCESS',
+        runId: 'RUN-AUDIT-1',
+        details: {
+          patientId: 'P-001',
+          requestId: 'REQ-1',
+          sourcePath: '/api/patients/update',
+          message: 'updated',
+        },
+      },
+      traceId: 'TRACE-1',
+    });
+
+    renderPatientsPage();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
+
+    const row = screen.getByRole('listitem');
+    const summary = row.querySelector('.patients-page__audit-row-sub');
+    expect(summary).not.toBeNull();
+    expect(summary).toHaveTextContent('RUN_ID: RUN-AUDIT-1');
+    expect(summary).toHaveTextContent('2025-12-01T10:00:00.000Z');
+    expect(summary).not.toHaveTextContent('traceId');
+    expect(summary).not.toHaveTextContent('requestId');
+    expect(summary).not.toHaveTextContent('/api/patients/update');
+    expect(within(row).getByText('サポート向け詳細を表示')).toBeInTheDocument();
   });
 });
 
@@ -521,7 +584,7 @@ describe('PatientsPage unlinked warnings', () => {
 
     await screen.findAllByText('反映停止注意');
     expect(screen.getAllByText('反映停止').length).toBeGreaterThan(0);
-    expect(screen.getByText('復旧導線（再取得 → Reception → 管理者共有）')).toBeTruthy();
+    expect(screen.getByText('復旧導線（再取得 → 受付 → 管理者共有）')).toBeTruthy();
     expect(screen.getByRole('button', { name: '管理者共有（管理者共有）' })).toBeTruthy();
   });
 });
@@ -735,8 +798,20 @@ describe('PatientsPage return flow', () => {
 
     expect(screen.getByRole('region', { name: '戻り導線' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'カルテへ戻る' })).toHaveAttribute('href', '/f/FAC-TEST/charts');
-    expect(screen.getByText('戻ったあとに必要な患者・受診を選び直してください。')).toBeInTheDocument();
+    expect(screen.getByText('患者文脈は引き継がれていません。戻ったあとに患者と受診を選び直してください。')).toBeInTheDocument();
     expect(mockGuardedNavigate).not.toHaveBeenCalled();
+  });
+
+  it('charts 由来の一覧ミスマッチでは患者の再選択を案内する', () => {
+    mockPatients({
+      patients: [{ patientId: 'P-001', name: '山田 花子', kana: 'ヤマダ ハナコ', birthDate: '1980-01-01' }],
+    });
+    setRouterSearch('?from=charts');
+    setRouterState({ patientId: 'P-999' });
+
+    renderPatientsPage();
+
+    expect(screen.getByText(/対象患者の文脈が引き継がれていません/)).toBeInTheDocument();
   });
 });
 

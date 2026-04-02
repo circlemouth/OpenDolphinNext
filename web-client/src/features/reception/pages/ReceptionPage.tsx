@@ -410,7 +410,7 @@ const resolveRec001MvpDecision = (options: {
       retryTitle: retryable
         ? 'ORCA再送を要求します'
         : !options.isSystemAdmin
-          ? 'system_admin のみ再送できます'
+          ? 'システム管理者のみ再送できます'
           : !options.retrySupported
             ? 'この環境では ORCA 再送は未実装です'
             : 'retryable=false のため再送できません',
@@ -428,7 +428,7 @@ const resolveRec001MvpDecision = (options: {
       retryTitle: retryable
         ? '滞留のため ORCA再送を要求します'
         : !options.isSystemAdmin
-          ? 'system_admin のみ再送できます'
+          ? 'システム管理者のみ再送できます'
           : !options.retrySupported
             ? 'この環境では ORCA 再送は未実装です'
             : undefined,
@@ -3542,7 +3542,7 @@ export function ReceptionPage({
       if (!isSystemAdmin) {
         enqueue({
           tone: 'warning',
-          message: 'ORCAキュー再送は system_admin のみ実行できます。',
+          message: 'ORCAキュー再送はシステム管理者のみ実行できます。',
         });
         return;
       }

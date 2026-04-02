@@ -105,7 +105,7 @@ export function AuditSummaryInline({
   tone,
   variant = 'inline',
   label,
-  showActor = true,
+  showActor = false,
   showTrace = false,
   showNote = false,
   showLock = true,
