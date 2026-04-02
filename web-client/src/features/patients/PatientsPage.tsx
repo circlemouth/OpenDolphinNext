@@ -789,7 +789,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   );
   const liveValidationCount = liveValidationErrors.length;
   const basicChangedKeys = useMemo(
-    () => diffPatientKeys({ baseline, draft: form, section: 'basic' }),
+    () => diffPatientKeys({ baseline, draft: form }),
     [baseline, form],
   );
   const basicChangedRows = useMemo(

@@ -1,11 +1,10 @@
 import type { PatientRecord } from './api';
 
-export type PatientEditableSection = 'basic' | 'insurance';
+const BASIC_KEYS = ['name', 'kana', 'birthDate', 'sex', 'phone', 'zip', 'address'] as const satisfies readonly (keyof PatientRecord)[];
 
-const BASIC_KEYS: (keyof PatientRecord)[] = ['name', 'kana', 'birthDate', 'sex', 'phone', 'zip', 'address'];
-const INSURANCE_KEYS: (keyof PatientRecord)[] = ['insurance'];
+type PatientDiffKey = (typeof BASIC_KEYS)[number] | 'patientId';
 
-export const PATIENT_FIELD_LABEL: Record<keyof PatientRecord, string> = {
+export const PATIENT_FIELD_LABEL = {
   patientId: '患者ID',
   name: '氏名',
   kana: 'カナ',
@@ -14,34 +13,28 @@ export const PATIENT_FIELD_LABEL: Record<keyof PatientRecord, string> = {
   phone: '電話',
   zip: '郵便番号',
   address: '住所',
-  insurance: '保険/自費',
-  memo: 'メモ',
-  lastVisit: '最終受診',
-};
+} satisfies Record<PatientDiffKey, string>;
 
 const normalize = (value: unknown) => (value === undefined || value === null ? '' : String(value)).trim();
 
 export function diffPatientKeys(params: {
   baseline: PatientRecord | null;
   draft: PatientRecord;
-  section: PatientEditableSection;
-}): (keyof PatientRecord)[] {
-  const { baseline, draft, section } = params;
-  const keys = section === 'insurance' ? INSURANCE_KEYS : BASIC_KEYS;
+}): (typeof BASIC_KEYS)[number][] {
+  const { baseline, draft } = params;
   if (!baseline) {
-    return keys.filter((key) => normalize((draft as any)[key]) !== '');
+    return BASIC_KEYS.filter((key) => normalize(draft[key]) !== '');
   }
-  return keys.filter((key) => normalize((baseline as any)[key]) !== normalize((draft as any)[key]));
+  return BASIC_KEYS.filter((key) => normalize(baseline[key]) !== normalize(draft[key]));
 }
 
 export function pickPatientSection(params: {
   baseline?: PatientRecord | null;
   fallback?: PatientRecord | null;
-  section: PatientEditableSection;
 }): PatientRecord {
-  const { baseline, fallback, section } = params;
+  const { baseline, fallback } = params;
   const source = baseline ?? fallback ?? {};
-  const next: PatientRecord = {
+  return {
     patientId: source.patientId,
     name: source.name,
     kana: source.kana,
@@ -50,14 +43,5 @@ export function pickPatientSection(params: {
     phone: source.phone,
     zip: source.zip,
     address: source.address,
-    insurance: source.insurance,
-    memo: source.memo,
-    lastVisit: source.lastVisit,
   };
-  if (section === 'insurance') {
-    // insurance 以外は閲覧用なので不要な値は残しておく（差分表示に使う）
-    return next;
-  }
-  return next;
 }
-

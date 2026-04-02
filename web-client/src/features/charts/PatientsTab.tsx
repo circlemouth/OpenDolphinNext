@@ -1788,7 +1788,6 @@ export function PatientsTab({
 
               <PatientInfoEditDialog
                 open={patientEditDialogOpen}
-                section="basic"
                 baseline={patientBaseline}
                 fallback={fallbackPatientRecord}
                 editAllowed={canEditPatientInfoNow}

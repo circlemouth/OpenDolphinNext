@@ -36,7 +36,6 @@ describe('PatientInfoEditDialog', () => {
     render(
       <PatientInfoEditDialog
         open
-        section="basic"
         baseline={{
           patientId: 'P-001',
           name: '山田 花子',
@@ -67,7 +66,6 @@ describe('PatientInfoEditDialog', () => {
     render(
       <PatientInfoEditDialog
         open
-        section="basic"
         baseline={{
           patientId: 'P-001',
           name: '山田 花子',

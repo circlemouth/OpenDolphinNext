@@ -9,7 +9,7 @@ import type { DataSourceTransition } from '../../libs/observability/types';
 import { savePatient, type PatientRecord, type PatientMutationResult } from '../patients/api';
 import { fetchOrcaAddress } from '../patients/orcaAddressApi';
 import { PatientFormErrorAlert } from '../patients/PatientFormErrorAlert';
-import { diffPatientKeys, PATIENT_FIELD_LABEL, pickPatientSection, type PatientEditableSection } from '../patients/patientDiff';
+import { diffPatientKeys, PATIENT_FIELD_LABEL, pickPatientSection } from '../patients/patientDiff';
 import { validatePatientMutation, type PatientOperation, type PatientValidationError } from '../patients/patientValidation';
 import { resolveUserSafeFetchFailure, resolveUserSafeOperationFailure } from './userSafeErrorCopy';
 
@@ -28,7 +28,6 @@ type EditMeta = {
 
 export type PatientInfoEditDialogProps = {
   open: boolean;
-  section: PatientEditableSection;
   baseline: PatientRecord | null;
   fallback: PatientRecord | null;
   editAllowed: boolean;
@@ -39,7 +38,9 @@ export type PatientInfoEditDialogProps = {
   onRefetchBaseline?: () => void;
 };
 
-const fieldOrder: Array<keyof PatientRecord> = ['patientId', 'name', 'kana', 'birthDate', 'sex', 'phone', 'zip', 'address', 'insurance'];
+type ReviewFieldKey = keyof typeof PATIENT_FIELD_LABEL;
+
+const fieldOrder: ReviewFieldKey[] = ['patientId', 'name', 'kana', 'birthDate', 'sex', 'phone', 'zip', 'address'];
 const DRAFT_COMPARE_KEYS: Array<keyof PatientRecord> = [
   'patientId',
   'name',
@@ -49,9 +50,6 @@ const DRAFT_COMPARE_KEYS: Array<keyof PatientRecord> = [
   'phone',
   'zip',
   'address',
-  'insurance',
-  'memo',
-  'lastVisit',
 ];
 const normalizeDraftValue = (value: unknown) => (value === undefined || value === null ? '' : String(value)).trim();
 const isSameDraft = (left: PatientRecord | null | undefined, right: PatientRecord | null | undefined) =>
@@ -67,7 +65,6 @@ const todayCompact = () => {
 
 export function PatientInfoEditDialog({
   open,
-  section,
   baseline,
   fallback,
   editAllowed,
@@ -98,21 +95,11 @@ export function PatientInfoEditDialog({
     return !meta.missingMaster && !meta.fallbackUsed && (meta.dataSourceTransition ?? 'server') === 'server';
   }, [meta.dataSourceTransition, meta.fallbackUsed, meta.missingMaster]);
 
-  const baseDraft = useMemo(() => pickPatientSection({ baseline, fallback, section }), [baseline, fallback, section]);
+  const baseDraft = useMemo(() => pickPatientSection({ baseline, fallback }), [baseline, fallback]);
 
-  const changedKeys = useMemo(() => diffPatientKeys({ baseline, draft, section }), [baseline, draft, section]);
-
-  const editAllowedResolved = useMemo(() => {
-    if (section === 'insurance') return false;
-    return editAllowed;
-  }, [editAllowed, section]);
-
-  const editBlockedReasonResolved = useMemo(() => {
-    if (section === 'insurance') {
-      return '保険/自費は ORCA 側で更新してください（電子カルテからの更新は未対応です）。';
-    }
-    return editBlockedReason;
-  }, [editBlockedReason, section]);
+  const changedKeys = useMemo(() => diffPatientKeys({ baseline, draft }), [baseline, draft]);
+  const editAllowedResolved = editAllowed;
+  const editBlockedReasonResolved = editBlockedReason;
 
   useEffect(() => {
     if (!open) {
@@ -144,21 +131,21 @@ export function PatientInfoEditDialog({
       fallbackUsed: meta.fallbackUsed ?? false,
       action: 'open',
       outcome: editAllowedResolved ? 'success' : 'blocked',
-      note: section,
+      note: 'basic',
       reason: editAllowedResolved ? undefined : editBlockedReasonResolved ?? 'edit not allowed',
     });
 
     logUiState({
       action: 'patient_edit_open',
       screen: 'charts',
-      controlId: section === 'insurance' ? 'patient-insurance-edit' : 'patient-basic-edit',
+      controlId: 'patient-basic-edit',
       runId: meta.runId,
       cacheHit: meta.cacheHit,
       missingMaster: meta.missingMaster,
       fallbackUsed: meta.fallbackUsed,
       dataSourceTransition: meta.dataSourceTransition,
       details: {
-        section,
+        section: 'basic',
         patientId: meta.patientId,
         receptionId: meta.receptionId,
         appointmentId: meta.appointmentId,
@@ -182,7 +169,6 @@ export function PatientInfoEditDialog({
     meta.runId,
     meta.visitDate,
     open,
-    section,
   ]);
 
   useEffect(() => {
@@ -197,7 +183,7 @@ export function PatientInfoEditDialog({
         runId: meta.runId,
         auditMeta: {
           source: 'charts',
-          section,
+          section: 'basic',
           changedKeys: params.changedKeys.map(String),
           receptionId: meta.receptionId,
           appointmentId: meta.appointmentId,
@@ -221,7 +207,7 @@ export function PatientInfoEditDialog({
           fallbackUsed: result.fallbackUsed ?? false,
           action: 'save',
           outcome: 'success',
-          note: `${section} changedKeys=${changedKeys.map(String).join(',') || 'none'}`,
+          note: `basic changedKeys=${changedKeys.map(String).join(',') || 'none'}`,
         });
         onRefetchBaseline?.();
         onClose();
@@ -256,7 +242,7 @@ export function PatientInfoEditDialog({
           subject: 'charts',
           details: {
             operation: lastAttemptRef.current?.operation,
-            section,
+            section: 'basic',
             patientId: meta.patientId,
             receptionId: meta.receptionId,
             appointmentId: meta.appointmentId,
@@ -273,7 +259,7 @@ export function PatientInfoEditDialog({
 
   const handleOrcaAddressLookup = async () => {
     const zip = normalizeZipDigits(draft.zip);
-    if (section !== 'basic' || !canEdit || step !== 'edit' || orcaAddressPending || zip.length !== 7) return;
+    if (!canEdit || step !== 'edit' || orcaAddressPending || zip.length !== 7) return;
     setOrcaAddressPending(true);
     try {
       const result = await fetchOrcaAddress({ zip, effective: todayCompact() });
@@ -340,7 +326,7 @@ export function PatientInfoEditDialog({
       fallbackUsed: meta.fallbackUsed ?? false,
       action: 'rollback',
       outcome: 'success',
-      note: section,
+      note: 'basic',
     });
     logAuditEvent({
       runId: meta.runId,
@@ -353,7 +339,7 @@ export function PatientInfoEditDialog({
         action: 'PATIENTMODV2_OUTPATIENT_ROLLBACK',
         outcome: 'success',
         subject: 'charts',
-        details: { section, patientId: meta.patientId, receptionId: meta.receptionId, appointmentId: meta.appointmentId },
+        details: { section: 'basic', patientId: meta.patientId, receptionId: meta.receptionId, appointmentId: meta.appointmentId },
       },
     });
   };
@@ -373,16 +359,13 @@ export function PatientInfoEditDialog({
       return;
     }
     const payload = draftRef.current;
-    const changed = diffPatientKeys({ baseline, draft: payload, section });
+    const changed = diffPatientKeys({ baseline, draft: payload });
     lastAttemptRef.current = { payload, operation, changedKeys: changed };
     mutation.mutate({ patient: payload, operation, changedKeys: changed });
   };
 
-  const title = section === 'insurance' ? '保険/自費（編集不可）' : '患者基本情報を更新';
-  const description =
-    section === 'insurance'
-      ? '保険/自費は ORCA 側で更新してください。電子カルテからの更新は未対応です。'
-      : '保存前に差分を確認し、/api/orca/patient/mutation で更新します。';
+  const title = '患者基本情報を更新';
+  const description = '保存前に差分を確認し、/api/orca/patient/mutation で更新します。';
 
   const fieldErrorMap = useMemo(() => {
     const map = new Map<keyof PatientRecord, string>();
@@ -393,11 +376,11 @@ export function PatientInfoEditDialog({
     return map;
   }, [errors]);
 
-  const renderRow = (key: keyof PatientRecord) => {
+  const renderRow = (key: ReviewFieldKey) => {
     const label = PATIENT_FIELD_LABEL[key] ?? String(key);
-    const baselineValue = baseline ? (baseline as any)[key] : undefined;
-    const draftValue = (draft as any)[key];
-    const isChanged = changedKeys.includes(key);
+    const baselineValue = baseline?.[key];
+    const draftValue = draft[key];
+    const isChanged = key !== 'patientId' && changedKeys.includes(key);
     return (
       <div key={String(key)} className={`patient-edit__diff-row${isChanged ? ' is-changed' : ''}`}>
         <div className="patient-edit__diff-label">{label}</div>
@@ -446,7 +429,7 @@ export function PatientInfoEditDialog({
 
           <div className="patient-edit__meta" role="note" aria-label="監査メタ">
             <span>operation={operation}</span>
-            <span>section={section}</span>
+            <span>section=basic</span>
             <span>changedKeys={changedKeys.length}</span>
           </div>
 
@@ -464,25 +447,6 @@ export function PatientInfoEditDialog({
                   <input id="patient-edit-patientId" value={draft.patientId ?? ''} readOnly aria-readonly="true" />
                 </label>
 
-                {section === 'insurance' ? (
-                  <label className="patient-edit__field">
-                    <span>保険/自費</span>
-                    <input
-                      id="patient-edit-insurance"
-                      value={draft.insurance ?? ''}
-                      onChange={(event) => setDraft((prev) => ({ ...prev, insurance: event.target.value }))}
-                      aria-invalid={fieldErrorMap.has('insurance')}
-                      aria-describedby={fieldErrorMap.has('insurance') ? 'patient-edit-error-insurance' : undefined}
-                      placeholder="例: 社保12 / 国保34 / 自費"
-                      required
-                    />
-                    {fieldErrorMap.has('insurance') ? (
-                      <small id="patient-edit-error-insurance" className="patient-edit__field-error" role="alert">
-                        {fieldErrorMap.get('insurance')}
-                      </small>
-                    ) : null}
-                  </label>
-                ) : (
                   <>
                     <label className="patient-edit__field">
                       <span>氏名（必須）</span>
@@ -607,7 +571,6 @@ export function PatientInfoEditDialog({
                       />
                     </label>
                   </>
-                )}
               </div>
 
               <div className="patient-edit__actions">
@@ -635,9 +598,7 @@ export function PatientInfoEditDialog({
                   <div role="columnheader">before</div>
                   <div role="columnheader">after</div>
                 </div>
-                {fieldOrder
-                  .filter((key) => (section === 'insurance' ? key === 'insurance' || key === 'patientId' : key !== 'insurance'))
-                  .map(renderRow)}
+                {fieldOrder.map(renderRow)}
               </div>
 
               <label className="patient-edit__confirm">
