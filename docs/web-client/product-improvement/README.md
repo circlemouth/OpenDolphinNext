@@ -19,6 +19,12 @@
   - quick win 後の次波で、BL-11 / BL-04 / BL-10 / BL-08 の実行順と完了条件を固定した指示書。
 - `codex_web_ui_workplan_checklist_20260402.md`
   - Web UI 改修の実行計画をチェックボックス形式で整理した、Codex 向けの current development document。
+- `orca-order-remediation-checklist.md`
+  - ORCA オーダー是正の current development checklist。
+- `orca-order-remediation-manager.prompt.md`
+  - ORCA オーダー是正の統括エージェント向けプロンプト。
+- `orca-order-remediation-subagents.md`
+  - ORCA オーダー是正のサブエージェント向けプロンプト集。
 - `codex_prompt_web_product_improvement_orchestrator_20260329.txt`
   - evidence pack と quick win 実装を統括する Codex 用プロンプト。
 - `chatgpt_prompt_phase0_product_contract_20260329.txt`
