@@ -31,21 +31,12 @@ import { getOrcaClaimSendEntry, saveOrcaClaimSendCache, type OrcaMedicalWarningU
 import { ReportPrintDialog } from './print/ReportPrintDialog';
 import { useOrcaReportPrint } from './print/useOrcaReportPrint';
 import { MISSING_MASTER_RECOVERY_NEXT_STEPS } from '../shared/missingMasterRecovery';
-import { fetchOrderBundles, type OrderBundle } from './orderBundleApi';
-import { ORCA_SEND_ORDER_ENTITIES, isOrderEntity, type OrderEntity } from './orderCategoryRegistry';
-import {
-  buildOrderBundleCodeBlockedMessage,
-  buildRpRequiredBlockedMessage,
-  collectOrderBundleCodeIssues,
-  collectRpRequiredIssues,
-  RP_REQUIRED_NEXT_ACTION,
-} from './orderRpRequirements';
+import { ORCA_SEND_ORDER_ENTITIES } from './orderCategoryRegistry';
 import { buildOrderHubEventId, recordOrderHubKpi } from './orderHubKpi';
 import {
-  collectMedicalModV2BundleIssues,
-  toMedicalModV2InformationWithSource,
-  type RpNormalizedRowSource,
-  type MedicalModV2BundleIssue,
+  buildMedicalModV2BlockNotice,
+  fetchMedicalModV2OrderBundles,
+  prepareMedicalModV2SendData,
 } from './orderRpNormalization';
 import { retryOrcaQueue } from '../outpatient/orcaQueueApi';
 
@@ -142,71 +133,6 @@ const resolveActionTimeoutMs = (action: ChartAction) => {
   if (action !== 'send' && action !== 'finish') return 0;
   if (!Number.isFinite(ORCA_ACTION_TIMEOUT_MS) || ORCA_ACTION_TIMEOUT_MS <= 0) return 0;
   return ORCA_ACTION_TIMEOUT_MS;
-};
-
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
-const NORMALIZED_CODE_PATTERN = /^\d{9}$/;
-
-const isCommentMedicationCode = (code: string) => COMMENT_CODE_PATTERN.test(code.trim());
-
-const isSendableMedicalModV2Code = (code: string) => {
-  const normalized = code.trim();
-  if (!normalized) return false;
-  return NORMALIZED_CODE_PATTERN.test(normalized) || isCommentMedicationCode(normalized);
-};
-
-const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSource['kind']) => {
-  const normalized = code.trim();
-  if (!normalized) return false;
-  if (sourceKind === 'usage') return /^\d+$/.test(normalized);
-  if (sourceKind === 'body_part') return /^002\d{0,}$/.test(normalized);
-  return isSendableMedicalModV2Code(normalized);
-};
-
-const resolveFetchedBundleEntity = (rawEntity: string | undefined, fallback: OrderEntity): OrderEntity => {
-  const normalized = rawEntity?.trim();
-  if (normalized && isOrderEntity(normalized)) return normalized;
-  return fallback;
-};
-
-const fetchMedicalModV2OrderBundles = async (patientId: string, from: string) => {
-  const results = await Promise.allSettled(
-    ORCA_SEND_ORDER_ENTITIES.map((entity) => fetchOrderBundles({ patientId, entity, from })),
-  );
-  const bundles: OrderBundle[] = [];
-  const errors: string[] = [];
-  results.forEach((result, index) => {
-    const entity = ORCA_SEND_ORDER_ENTITIES[index];
-    if (result.status === 'fulfilled') {
-      if (!result.value.ok) {
-        const status = typeof result.value.status === 'number' ? `HTTP ${result.value.status}` : 'request_failed';
-        const reason = result.value.message?.trim() || result.value.errorCode?.trim() || status;
-        errors.push(`${entity}: ${reason}`);
-        return;
-      }
-      bundles.push(
-        ...(result.value.bundles ?? []).map((bundle) => ({
-          ...bundle,
-          entity: resolveFetchedBundleEntity(bundle.entity, entity),
-        })),
-      );
-      return;
-    }
-    const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
-    errors.push(`${entity}: ${reason}`);
-  });
-  return { bundles, errors };
-};
-
-type MedicalModV2RequiredIssue = ReturnType<typeof collectRpRequiredIssues>[number];
-
-const collectMedicalModV2RequiredIssues = (bundles: OrderBundle[]): MedicalModV2RequiredIssue[] =>
-  collectRpRequiredIssues(bundles);
-
-const formatMedicalModV2BundleIssue = (issue: MedicalModV2BundleIssue) => {
-  const entity = issue.entity?.trim() || 'order';
-  const bundleName = issue.bundleName?.trim() || '名称未設定';
-  return `${entity}/${bundleName}: ${issue.detail}`;
 };
 
 const summarizeGuardReasons = (reasons: GuardReason[]) => {
@@ -1419,8 +1345,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             setRunningAction(null);
             return;
           }
-          const requiredIssues = collectMedicalModV2RequiredIssues(orderBundleResult.bundles);
-          if (requiredIssues.length > 0) {
+          const preparedSendData = prepareMedicalModV2SendData(orderBundleResult.bundles);
+          if (preparedSendData.requiredIssues.length > 0) {
             const eventId = buildOrderHubEventId();
             recordOrderHubKpi(
               {
@@ -1439,8 +1365,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 eventId,
                 reason: 'rp_required_missing',
                 details: {
-                  issueCount: requiredIssues.length,
-                  issues: requiredIssues.slice(0, 8).map((issue) => ({
+                  issueCount: preparedSendData.requiredIssues.length,
+                  issues: preparedSendData.requiredIssues.slice(0, 8).map((issue) => ({
                     entity: issue.entity,
                     bundleName: issue.bundleName ?? null,
                     documentId: issue.documentId ?? null,
@@ -1450,30 +1376,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 },
               },
             );
-            setBanner({
-              tone: 'warning',
-              message: buildRpRequiredBlockedMessage(requiredIssues),
-              nextAction: RP_REQUIRED_NEXT_ACTION,
-            });
-            setIsRunning(false);
-            setRunningAction(null);
-            return;
           }
-          const bundleIssues = collectMedicalModV2BundleIssues(orderBundleResult.bundles);
-          if (bundleIssues.length > 0) {
-            const preview = bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
-            const remaining = bundleIssues.length - 4;
-            setBanner({
-              tone: 'warning',
-              message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
-              nextAction: 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
-            });
-            setIsRunning(false);
-            setRunningAction(null);
-            return;
-          }
-          const codeIssues = collectOrderBundleCodeIssues(orderBundleResult.bundles);
-          if (codeIssues.length > 0) {
+          if (preparedSendData.codeIssues.length > 0) {
             const eventId = buildOrderHubEventId();
             recordOrderHubKpi(
               {
@@ -1492,8 +1396,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 eventId,
                 reason: 'code_missing',
                 details: {
-                  issueCount: codeIssues.length,
-                  issues: codeIssues.slice(0, 8).map((issue) => ({
+                  issueCount: preparedSendData.codeIssues.length,
+                  issues: preparedSendData.codeIssues.slice(0, 8).map((issue) => ({
                     entity: issue.entity ?? null,
                     bundleName: issue.bundleName ?? null,
                     documentId: issue.documentId ?? null,
@@ -1504,68 +1408,13 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 },
               },
             );
-            setBanner({
-              tone: 'warning',
-              message: buildOrderBundleCodeBlockedMessage(codeIssues),
-              nextAction: 'コード未入力の行を補正してから再送してください。',
-            });
-            setIsRunning(false);
-            setRunningAction(null);
-            return;
           }
-          const medicalInformationWithSource = orderBundleResult.bundles
-            .map(toMedicalModV2InformationWithSource)
-            .filter(
-              (entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry),
-            );
-          const medicalInformationSources = medicalInformationWithSource.map((entry) => entry.source);
-          const medicalInformation = medicalInformationWithSource.map((entry) => entry.info);
-
-          // ORCA medicalmodv2 limits: Medical_Information max 40 groups, Medication_info max 40 rows per group.
-          const groupLimit = 40;
-          const rowLimit = 40;
-          const totalGroups = medicalInformation.length;
-          const groupLimitExceeded = totalGroups > groupLimit;
-          const rowLimitExceeded = medicalInformation.some((info) => (info.medications?.length ?? 0) > rowLimit);
-          if (groupLimitExceeded || rowLimitExceeded) {
-            const reasons: string[] = [];
-            if (groupLimitExceeded) {
-              reasons.push(`Medical_Information=${totalGroups}/${groupLimit}`);
-            }
-            if (rowLimitExceeded) {
-              reasons.push(`Medication_info>${rowLimit}`);
-            }
+          const blockNotice = buildMedicalModV2BlockNotice(preparedSendData);
+          if (blockNotice) {
             setBanner({
               tone: 'warning',
-              message: `ORCA送信を停止: 中途データ上限を超過（${reasons.join(' / ')}）`,
-              nextAction: 'RP/オーダー束を分割して再送してください。',
-            });
-            setIsRunning(false);
-            setRunningAction(null);
-            return;
-          }
-
-          const invalidCodes: Array<{ code: string; name?: string; group: number; row: number }> = [];
-          medicalInformation.forEach((info, groupIndex) => {
-            info.medications.forEach((item, rowIndex) => {
-              const code = item.code?.trim() ?? '';
-              if (!code) return;
-              const rowSource = medicalInformationSources[groupIndex]?.rows[rowIndex];
-              if (isAllowedMedicalModV2Code(code, rowSource?.source.kind)) return;
-              if (invalidCodes.length >= 12) return;
-              invalidCodes.push({ code, name: item.name?.trim() || undefined, group: groupIndex + 1, row: rowIndex + 1 });
-              // groupIndex + 1: ORCA warning position is 1-based.
-            });
-          });
-          if (invalidCodes.length > 0) {
-            const preview = invalidCodes
-              .slice(0, 5)
-              .map((entry) => `G${entry.group}-L${entry.row}:${entry.code}${entry.name ? `(${entry.name})` : ''}`)
-              .join(' / ');
-            setBanner({
-              tone: 'warning',
-              message: `ORCA送信を停止: 9桁コード/コメント/部位コード/用法数字コード以外の入力コードがあります: ${preview}`,
-              nextAction: 'オーダー入力に戻り、候補選択またはコード補正候補を適用してください。',
+              message: blockNotice.message,
+              nextAction: blockNotice.nextAction,
             });
             setIsRunning(false);
             setRunningAction(null);
@@ -1577,7 +1426,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             performDate: calculationDate,
             departmentCode,
             physicianCode,
-            medicalInformation,
+            medicalInformation: preparedSendData.medicalInformation,
           });
           const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01', signal });
           const idempotentDuplicate = isIdempotentDuplicate(result.apiResult, result.apiResultMessage);
@@ -1603,8 +1452,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             const itemPosition = warning.medicalWarningItemPosition;
             const groupIndex = typeof groupPosition === 'number' ? groupPosition - 1 : undefined;
             const groupSource =
-              typeof groupIndex === 'number' && groupIndex >= 0 && groupIndex < medicalInformationSources.length
-                ? medicalInformationSources[groupIndex]
+              typeof groupIndex === 'number' && groupIndex >= 0 && groupIndex < preparedSendData.medicalInformationSources.length
+                ? preparedSendData.medicalInformationSources[groupIndex]
                 : undefined;
             const rowIndex = typeof itemPosition === 'number' ? itemPosition - 1 : undefined;
             const rowSource =
@@ -1693,7 +1542,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               orderBundles: {
                 entities: ORCA_SEND_ORDER_ENTITIES.length,
                 bundles: orderBundleResult.bundles.length,
-                medicalInformation: medicalInformation.length,
+                medicalInformation: preparedSendData.medicalInformation.length,
                 fetchErrors: orderBundleResult.errors.length > 0 ? orderBundleResult.errors : undefined,
               },
             },

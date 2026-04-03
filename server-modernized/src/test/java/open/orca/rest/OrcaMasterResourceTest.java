@@ -397,9 +397,9 @@ class OrcaMasterResourceTest {
             @Override
             public ListSearchResult<CommentRecord> searchBodypart(CommentCriteria criteria) {
                 CommentRecord record = new CommentRecord();
-                record.tensuCode = "820183500";
-                record.name = "撮影部位（ＭＲＩ撮影）：膝";
-                record.category = "820";
+                record.tensuCode = "002001";
+                record.name = "胸部";
+                record.category = "002";
                 record.unit = "部位";
                 record.startDate = "00000000";
                 record.endDate = "99999999";
@@ -423,8 +423,8 @@ class OrcaMasterResourceTest {
         assertNotNull(payload.getItems());
         assertFalse(payload.getItems().isEmpty());
         OrcaTensuEntry entry = payload.getItems().get(0);
-        assertEquals("820183500", entry.getTensuCode());
-        assertEquals("撮影部位（ＭＲＩ撮影）：膝", entry.getName());
+        assertEquals("002001", entry.getTensuCode());
+        assertEquals("胸部", entry.getName());
         assertNotNull(entry.getMeta());
         assertEquals("server", entry.getMeta().getDataSource());
     }
@@ -456,9 +456,9 @@ class OrcaMasterResourceTest {
             @Override
             public ListSearchResult<CommentRecord> searchBodypart(CommentCriteria criteria) {
                 CommentRecord record = new CommentRecord();
-                record.tensuCode = "820183500";
-                record.name = "撮影部位（ＭＲＩ撮影）：膝";
-                record.category = "820";
+                record.tensuCode = "002001";
+                record.name = "胸部";
+                record.category = "002";
                 record.unit = "部位";
                 record.startDate = "00000000";
                 record.endDate = "99999999";

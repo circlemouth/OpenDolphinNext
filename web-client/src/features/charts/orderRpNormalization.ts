@@ -1,6 +1,17 @@
 import type { MedicalModV2Information } from './orcaClaimApi';
-import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta } from './orderCategoryRegistry';
-import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
+import {
+  ORCA_SEND_ORDER_ENTITIES,
+  resolveCanonicalOrderEntity,
+  resolveOrderEntityDefaultClassMeta,
+} from './orderCategoryRegistry';
+import { fetchOrderBundles, type OrderBundle, type OrderBundleItem } from './orderBundleApi';
+import {
+  buildOrderBundleCodeBlockedMessage,
+  buildRpRequiredBlockedMessage,
+  collectOrderBundleCodeIssues,
+  collectRpRequiredIssues,
+  RP_REQUIRED_NEXT_ACTION,
+} from './orderRpRequirements';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
@@ -318,4 +329,142 @@ export const toMedicalModV2InformationWithSource = (
     rows: normalized.rows,
   };
   return { info, source };
+};
+
+export const toMedicalModV2Information = (bundle: OrderBundle): MedicalModV2Information | null =>
+  toMedicalModV2InformationWithSource(bundle)?.info ?? null;
+
+export const fetchMedicalModV2OrderBundles = async (patientId: string, from: string) => {
+  const results = await Promise.allSettled(
+    ORCA_SEND_ORDER_ENTITIES.map((entity) => fetchOrderBundles({ patientId, entity, from })),
+  );
+  const bundles: OrderBundle[] = [];
+  const errors: string[] = [];
+  results.forEach((result, index) => {
+    const entity = ORCA_SEND_ORDER_ENTITIES[index];
+    if (result.status === 'fulfilled') {
+      if (!result.value.ok) {
+        const status = typeof result.value.status === 'number' ? `HTTP ${result.value.status}` : 'request_failed';
+        const reason = result.value.message?.trim() || result.value.errorCode?.trim() || status;
+        errors.push(`${entity}: ${reason}`);
+        return;
+      }
+      bundles.push(
+        ...(result.value.bundles ?? []).map((bundle) => ({
+          ...bundle,
+          entity: resolveCanonicalOrderEntity(bundle.entity) ?? entity,
+        })),
+      );
+      return;
+    }
+    const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+    errors.push(`${entity}: ${reason}`);
+  });
+  return { bundles, errors };
+};
+
+const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSource['kind']) => {
+  const normalized = code.trim();
+  if (!normalized) return false;
+  if (sourceKind === 'usage') return /^\d+$/.test(normalized);
+  if (sourceKind === 'body_part') return /^002\d{0,}$/.test(normalized);
+  return /^\d{9}$/.test(normalized) || isCommentMedicationCode(normalized);
+};
+
+export const formatMedicalModV2BundleIssue = (issue: MedicalModV2BundleIssue) => {
+  const entity = issue.entity?.trim() || 'order';
+  const bundleName = issue.bundleName?.trim() || '名称未設定';
+  return `${entity}/${bundleName}: ${issue.detail}`;
+};
+
+export const prepareMedicalModV2SendData = (bundles: OrderBundle[]) => {
+  const requiredIssues = collectRpRequiredIssues(bundles);
+  const bundleIssues = collectMedicalModV2BundleIssues(bundles);
+  const codeIssues = collectOrderBundleCodeIssues(bundles);
+  const medicalInformationWithSource = bundles
+    .map(toMedicalModV2InformationWithSource)
+    .filter(
+      (entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry),
+    );
+  const medicalInformationSources = medicalInformationWithSource.map((entry) => entry.source);
+  const medicalInformation = medicalInformationWithSource.map((entry) => entry.info);
+
+  const groupLimit = 40;
+  const rowLimit = 40;
+  const totalGroups = medicalInformation.length;
+  const groupLimitExceeded = totalGroups > groupLimit;
+  const rowLimitExceeded = medicalInformation.some((info) => (info.medications?.length ?? 0) > rowLimit);
+  const limitReasons: string[] = [];
+  if (groupLimitExceeded) {
+    limitReasons.push(`Medical_Information=${totalGroups}/${groupLimit}`);
+  }
+  if (rowLimitExceeded) {
+    limitReasons.push(`Medication_info>${rowLimit}`);
+  }
+
+  const invalidCodes: Array<{ code: string; name?: string; group: number; row: number }> = [];
+  medicalInformation.forEach((info, groupIndex) => {
+    info.medications.forEach((item, rowIndex) => {
+      const code = item.code?.trim() ?? '';
+      if (!code) return;
+      const rowSource = medicalInformationSources[groupIndex]?.rows[rowIndex];
+      if (isAllowedMedicalModV2Code(code, rowSource?.source.kind)) return;
+      if (invalidCodes.length >= 12) return;
+      invalidCodes.push({ code, name: item.name?.trim() || undefined, group: groupIndex + 1, row: rowIndex + 1 });
+    });
+  });
+
+  return {
+    requiredIssues,
+    bundleIssues,
+    codeIssues,
+    medicalInformationWithSource,
+    medicalInformationSources,
+    medicalInformation,
+    totalGroups,
+    groupLimitExceeded,
+    rowLimitExceeded,
+    limitReasons,
+    invalidCodes,
+  };
+};
+
+export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepareMedicalModV2SendData>) => {
+  if (prepared.requiredIssues.length > 0) {
+    return {
+      message: buildRpRequiredBlockedMessage(prepared.requiredIssues),
+      nextAction: RP_REQUIRED_NEXT_ACTION,
+    };
+  }
+  if (prepared.bundleIssues.length > 0) {
+    const preview = prepared.bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
+    const remaining = prepared.bundleIssues.length - 4;
+    return {
+      message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
+      nextAction: 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
+    };
+  }
+  if (prepared.codeIssues.length > 0) {
+    return {
+      message: buildOrderBundleCodeBlockedMessage(prepared.codeIssues),
+      nextAction: 'コード未入力の行を補正してから再送してください。',
+    };
+  }
+  if (prepared.groupLimitExceeded || prepared.rowLimitExceeded) {
+    return {
+      message: `ORCA送信を停止: 中途データ上限を超過（${prepared.limitReasons.join(' / ')}）`,
+      nextAction: 'RP/オーダー束を分割して再送してください。',
+    };
+  }
+  if (prepared.invalidCodes.length > 0) {
+    const preview = prepared.invalidCodes
+      .slice(0, 5)
+      .map((entry) => `G${entry.group}-L${entry.row}:${entry.code}${entry.name ? `(${entry.name})` : ''}`)
+      .join(' / ');
+    return {
+      message: `ORCA送信を停止: 9桁コード/コメント/部位コード/用法数字コード以外の入力コードがあります: ${preview}`,
+      nextAction: 'オーダー入力に戻り、候補選択またはコード補正候補を適用してください。',
+    };
+  }
+  return null;
 };

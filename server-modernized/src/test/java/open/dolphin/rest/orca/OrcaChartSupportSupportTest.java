@@ -118,7 +118,7 @@ class OrcaChartSupportSupportTest {
         payload.setDepartmentCode("01");
 
         ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
-        information.setMedicalClass("70");
+        information.setMedicalClass("700");
         information.setMedicalClassName("Radiology");
         information.setMedicalClassNumber("1");
 
@@ -149,7 +149,7 @@ class OrcaChartSupportSupportTest {
 
         String xml = support.buildMedicalModV2RequestXml(payload);
 
-        assertTrue(xml.contains("<Medical_Class type=\"string\">70</Medical_Class>"));
+        assertTrue(xml.contains("<Medical_Class type=\"string\">700</Medical_Class>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">002001</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">part</Medication_Unit_Code>"));

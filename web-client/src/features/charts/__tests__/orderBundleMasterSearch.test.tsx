@@ -673,7 +673,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       />,
     );
 
-    const itemNameInput = screen.getByPlaceholderText('検査項目名');
+    const itemNameInput = screen.getByPlaceholderText('生理検査項目名');
     await user.type(itemNameInput, '心電図');
 
     await waitFor(() => {
@@ -713,7 +713,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       />,
     );
 
-    const itemNameInput = screen.getByPlaceholderText('検査項目名');
+    const itemNameInput = screen.getByPlaceholderText('細菌検査項目名');
     await user.type(itemNameInput, '培養');
 
     await waitFor(() => {
@@ -732,7 +732,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('その他オーダーの統合検索は etensuカテゴリ8 / drug / material を使用する', async () => {
+  it('その他オーダーの統合検索は etensuカテゴリ8 のみを使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
@@ -753,7 +753,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       />,
     );
 
-    const itemNameInput = screen.getByPlaceholderText('処置項目名');
+    const itemNameInput = screen.getByPlaceholderText('その他オーダー項目名');
     await user.type(itemNameInput, '創');
 
     await waitFor(() => {
@@ -771,8 +771,8 @@ describe('OrderBundleEditPanel master search UI', () => {
         ([params]) => params?.type === 'material' && typeof params?.keyword === 'string' && params.keyword.includes('創'),
       );
       expect(hasEtensu).toBe(true);
-      expect(hasDrug).toBe(true);
-      expect(hasMaterial).toBe(true);
+      expect(hasDrug).toBe(false);
+      expect(hasMaterial).toBe(false);
     });
   });
 
@@ -951,11 +951,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     await waitFor(() => expect(screen.getByText('選択式コメント候補（medicationgetv2）')).toBeInTheDocument());
     const selectionCommentButton = screen.getAllByText('食後')[0]?.closest('button');
     expect(selectionCommentButton).not.toBeNull();
-    await user.click(selectionCommentButton!);
-
-    const commentCodeInput = container.querySelector<HTMLInputElement>('input[id$="-comment-code-0"]');
-    const commentNameInput = container.querySelector<HTMLInputElement>('input[id$="-comment-name-0"]');
-    expect(commentCodeInput?.value).toBe('0082');
-    expect(commentNameInput?.value).toBe('食後');
+    expect(selectionCommentButton).toBeDisabled();
+    expect(selectionCommentButton).toHaveAttribute('title', expect.stringContaining('未対応'));
   });
 });

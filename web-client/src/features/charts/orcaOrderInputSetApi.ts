@@ -57,6 +57,8 @@ export type OrcaOrderInputSetDetailResult = {
       quantity?: string;
       unit?: string;
       memo?: string;
+      genericFlg?: 'yes' | 'no';
+      userComment?: string;
       rowRole?: 'main' | 'material' | 'comment';
     }>;
   };
@@ -185,18 +187,22 @@ export async function fetchOrcaOrderInputSetDetail(params: {
     };
   }
   const bundle = (json as { bundle?: Record<string, unknown> }).bundle ?? {};
-  const items = Array.isArray((bundle as { items?: unknown[] }).items)
-      ? ((bundle as { items?: Array<Record<string, unknown>> }).items ?? []).map((item) => ({
-          code: typeof item.code === 'string' ? item.code : undefined,
-          name: typeof item.name === 'string' ? item.name : undefined,
-          quantity: typeof item.quantity === 'string' ? item.quantity : undefined,
-          unit: typeof item.unit === 'string' ? item.unit : undefined,
-          memo: typeof item.memo === 'string' ? item.memo : undefined,
-          rowRole:
-            item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment'
-              ? item.rowRole
-              : undefined,
-        }))
+  type DetailItem = NonNullable<OrcaOrderInputSetDetailResult['bundle']>['items'][number];
+  const items: NonNullable<OrcaOrderInputSetDetailResult['bundle']>['items'] = Array.isArray((bundle as { items?: unknown[] }).items)
+    ? ((bundle as { items?: Array<Record<string, unknown>> }).items ?? []).map((item): DetailItem => {
+        const detailItem: DetailItem = {};
+        if (typeof item.code === 'string') detailItem.code = item.code;
+        if (typeof item.name === 'string') detailItem.name = item.name;
+        if (typeof item.quantity === 'string') detailItem.quantity = item.quantity;
+        if (typeof item.unit === 'string') detailItem.unit = item.unit;
+        if (typeof item.memo === 'string') detailItem.memo = item.memo;
+        if (item.genericFlg === 'yes' || item.genericFlg === 'no') detailItem.genericFlg = item.genericFlg;
+        if (typeof item.userComment === 'string') detailItem.userComment = item.userComment;
+        if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment') {
+          detailItem.rowRole = item.rowRole;
+        }
+        return detailItem;
+      })
     : [];
   const bodyPartSource = (bundle as { bodyPart?: Record<string, unknown> | null }).bodyPart;
   return {

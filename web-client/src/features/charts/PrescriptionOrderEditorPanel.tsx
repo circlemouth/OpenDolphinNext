@@ -237,7 +237,7 @@ const toRpFromInputSetDetail = (
   started: string,
 ): PrescriptionRp => {
   const claimComments: PrescriptionClaimComment[] = [];
-  const drugs = detail.items
+  const drugs: PrescriptionDrug[] = detail.items
     .filter((item) => Boolean(item.code?.trim() || item.name?.trim()))
     .flatMap((item) => {
       const code = item.code?.trim() || undefined;
@@ -255,7 +255,7 @@ const toRpFromInputSetDetail = (
         genericChangeAllowed: true,
         isGeneralNamePrescription: false,
         drugComment: item.memo?.trim() ?? '',
-        claimComments: [],
+        claimComments: [] as PrescriptionClaimComment[],
         patientRequest: true,
       }];
     });
@@ -270,7 +270,7 @@ const toRpFromInputSetDetail = (
         genericChangeAllowed: true,
         isGeneralNamePrescription: false,
         drugComment: '',
-        claimComments: [],
+        claimComments: [] as PrescriptionClaimComment[],
         patientRequest: true,
       });
     }
@@ -366,36 +366,38 @@ export function PrescriptionOrderEditorPanel({
     staleTime: 30_000,
   });
 
-  const sourceBundles = useMemo(() => {
-    if (bundlesOverride) {
-      return bundlesOverride.filter((bundle) => (bundle.entity?.trim() ?? '') === 'medOrder');
-    }
-    return sourceBundleQuery.data?.sourceBundles ?? [];
-  }, [bundlesOverride, sourceBundleQuery.data?.sourceBundles]);
+  const overrideOrder = useMemo(() => {
+    if (!bundlesOverride || !patientId) return null;
+    const medBundles = bundlesOverride.filter((bundle) => (bundle.entity?.trim() ?? '') === 'medOrder');
+    if (medBundles.length === 0) return null;
+    return toPrescriptionOrder(medBundles, patientId);
+  }, [bundlesOverride, patientId]);
+  const sourceOrder = overrideOrder ?? sourceBundleQuery.data?.order ?? null;
 
   const sourceSignature = useMemo(() => {
-    if (sourceBundles.length === 0) return 'empty';
-    return sourceBundles
-      .map((bundle) => `${bundle.documentId ?? 'none'}:${bundle.moduleId ?? 'none'}:${bundle.started ?? 'none'}`)
+    if (!sourceOrder) return sourceBundleQuery.isSuccess ? 'empty' : 'pending';
+    const order = sourceOrder;
+    if (order.rps.length === 0) return 'empty';
+    return order.rps
+      .map((rp) => `${rp.documentId ?? 'none'}:${rp.moduleId ?? 'none'}:${rp.started ?? 'none'}:${rp.rpId}`)
       .join('|');
-  }, [sourceBundles]);
+  }, [sourceBundleQuery.isSuccess, sourceOrder]);
 
   const lastSourceSignatureRef = useRef<string>('');
   useEffect(() => {
     if (!patientId) return;
     if (sourceSignature === lastSourceSignatureRef.current) return;
     lastSourceSignatureRef.current = sourceSignature;
-    if (sourceBundles.length === 0) {
+    if (!sourceOrder || sourceOrder.rps.length === 0) {
       setOrder(buildEmptyPrescriptionOrder(patientId, today));
       setSelectedRpIndex(0);
       setSelectedDrugIndex(0);
       return;
     }
-    const restored = toPrescriptionOrder(sourceBundles, patientId);
-    setOrder(restored);
+    setOrder(sourceOrder);
     setSelectedRpIndex(0);
     setSelectedDrugIndex(0);
-  }, [patientId, sourceBundles, sourceSignature, today]);
+  }, [patientId, sourceOrder, sourceSignature, today]);
 
   const lastRequestIdRef = useRef<string | null>(null);
   useEffect(() => {

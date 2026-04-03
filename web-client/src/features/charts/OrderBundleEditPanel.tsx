@@ -420,7 +420,6 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
   let bodyPartResolvedFromItems = Boolean(explicit);
   (items ?? []).forEach((item) => {
     const rowRole = resolveBundleItemRowRole(entity, item);
-    const code = item.code?.trim();
     if (rowRole === 'bodyPart') {
       if (!bodyPartResolvedFromItems) {
         bodyPart = {
@@ -624,9 +623,10 @@ const toOrderBundleFromInputSetDetail = (
       quantity: item.quantity,
       unit: item.unit,
       memo: item.memo,
-      genericFlg: item.genericFlg,
-      userComment: item.userComment,
-      rowRole: item.rowRole,
+      rowRole:
+        item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment'
+          ? item.rowRole
+          : undefined,
     })),
   };
 };
@@ -866,6 +866,11 @@ export const validateBundleForm = ({
       key: 'missing_body_part_code',
       message: '部位コードを選択してください。',
     });
+  } else if (form.bodyPart?.code?.trim() && !form.bodyPart.code.trim().startsWith(BODY_PART_CODE_PREFIX)) {
+    issues.push({
+      key: 'invalid_body_part_code',
+      message: 'bodyPart は 002 系コードのみ保存できます。',
+    });
   }
   if (rule.requiresItems && valuedItems.length === 0) {
     const hasAuxiliaryValue = form.commentItems.some(hasAnyValue) || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
@@ -1104,7 +1109,6 @@ export function OrderBundleEditPanel({
     supportsBodyPartSearch || Boolean(form.bodyPart?.name?.trim() || form.bodyPart?.code?.trim());
   const sendContractNote = resolveSendContractNote(entity);
   const itemMasterTargets = orderUiProfile.masterSearchPresets;
-  const supportsMaterialRows = itemMasterTargets.some((target) => target.type === 'material') || form.materialItems.length > 0;
   const supportsEtensuDetailSearch = itemMasterTargets.some((target) => target.type === 'etensu');
   const itemPredictiveTargetLabel = itemMasterTargets.map((target) => target.label).join(' / ');
   const parsedPointsMin = pointsMinInput.trim() ? Number(pointsMinInput) : undefined;
@@ -2026,14 +2030,6 @@ export function OrderBundleEditPanel({
       unit: item.unit ?? '',
       memo: item.note ?? '',
     });
-  };
-
-  const removeMaterialRowById = (rowId?: string | null) => {
-    if (!rowId) return;
-    setForm((prev) => ({
-      ...prev,
-      materialItems: prev.materialItems.filter((entry) => (entry as OrderBundleItemWithRowId).rowId !== rowId),
-    }));
   };
 
   const resolveBundleClassMeta = (bundleForm: BundleFormState) => {

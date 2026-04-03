@@ -471,6 +471,35 @@ export const toPrescriptionOrder = (sourceBundles: OrderBundle[], patientId: str
   };
 };
 
+const toPrescriptionRpFromOperation = (operation: OrderBundleOperation, started?: string): PrescriptionRp =>
+  toRpFromBundle({
+    documentId: operation.documentId,
+    moduleId: operation.moduleId,
+    entity: operation.entity ?? 'medOrder',
+    bundleName: operation.bundleName,
+    bundleNumber: operation.bundleNumber,
+    classCode: operation.classCode,
+    classCodeSystem: operation.classCodeSystem,
+    className: operation.className,
+    admin: operation.admin,
+    adminCode: operation.adminCode,
+    adminCodeSystem: operation.adminCodeSystem,
+    adminMemo: operation.adminMemo,
+    memo: operation.memo,
+    started,
+    items: (operation.items ?? []).map((item) => ({
+      code: item.code,
+      name: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      memo: item.memo,
+      genericFlg: item.genericFlg,
+      userComment: item.userComment,
+      rowRole: item.rowRole,
+    })),
+    bodyPart: operation.bodyPart,
+  });
+
 const normalizeRpMeta = (rp: PrescriptionRp, doctorComment: string): StoredRpMeta => {
   const lowerFields = hasAnyLowerField({
     lowerDrugCode: rp.lowerDrugCode,
@@ -662,30 +691,6 @@ const buildPrescriptionOrderQuery = (params: { patientId: string; from?: string 
   }
   return query.toString();
 };
-
-const toBundleFromOperation = (operation: OrderBundleOperation): OrderBundle => ({
-  documentId: operation.documentId,
-  moduleId: operation.moduleId,
-  entity: 'medOrder',
-  bundleName: operation.bundleName,
-  bundleNumber: operation.bundleNumber,
-  classCode: operation.classCode,
-  classCodeSystem: operation.classCodeSystem,
-  className: operation.className,
-  admin: operation.admin,
-  adminMemo: operation.adminMemo,
-  memo: operation.memo,
-  started: operation.startDate,
-  items: (operation.items ?? []).map((item) => ({
-    code: item.code,
-    name: item.name,
-    quantity: item.quantity,
-    unit: item.unit,
-    memo: item.memo,
-    genericFlg: item.genericFlg,
-    userComment: item.userComment,
-  })),
-});
 
 const toServerPrescriptionOrder = (order: PrescriptionOrder): ServerPrescriptionOrder => {
   const normalizedOrder = normalizePrescriptionOrder(order);
@@ -894,10 +899,9 @@ const fetchPrescriptionOrderBase = async (params: {
   const fetchResponse = parsePrescriptionOrderFetchResponse(parsed.json);
   const sourceBundles = fetchResponse.order ? toSourceBundlesFromServerOrder(fetchResponse.order) : [];
   const firstClassOrder = fetchResponse.order ? fromServerPrescriptionOrder(fetchResponse.order, params.patientId) : null;
-  const order =
-    fetchResponse.found
-      ? firstClassOrder ?? (sourceBundles.length > 0 ? toPrescriptionOrder(sourceBundles, params.patientId) : buildEmptyPrescriptionOrder(params.patientId, params.from))
-      : buildEmptyPrescriptionOrder(params.patientId, params.from);
+  const order = fetchResponse.found
+    ? firstClassOrder ?? buildEmptyPrescriptionOrder(params.patientId, params.from)
+    : buildEmptyPrescriptionOrder(params.patientId, params.from);
   if (fetchResponse.order?.encounterDate) {
     order.encounterDate = fetchResponse.order.encounterDate;
   }
@@ -1034,50 +1038,64 @@ export const mutatePrescriptionOrderBundles = async (params: {
     };
   }
 
-  const nextBundles = [...current.sourceBundles];
+  const nextOrder = normalizePrescriptionOrder(current.order);
+  const isPlaceholderOrder =
+    !nextOrder.doctorComment.trim() &&
+    nextOrder.deletedDocumentIds.length === 0 &&
+    nextOrder.rps.length === 1 &&
+    !nextOrder.rps[0]?.name.trim() &&
+    !nextOrder.rps[0]?.usage.trim() &&
+    !nextOrder.rps[0]?.usageCode?.trim() &&
+    nextOrder.rps[0]?.daysOrTimes.trim() === '1' &&
+    !nextOrder.rps[0]?.remark.trim() &&
+    !nextOrder.rps[0]?.doctorComment.trim() &&
+    !nextOrder.rps[0]?.started?.trim() &&
+    nextOrder.rps[0]?.drugs.every(
+      (drug) =>
+        !drug.code?.trim() && !drug.name.trim() && !drug.quantity.trim() && !drug.unit.trim() && !drug.drugComment.trim(),
+    );
+  const nextRps = isPlaceholderOrder ? [] : [...nextOrder.rps];
+  const matchesOperation = (rp: PrescriptionRp, operation: OrderBundleOperation) => {
+    if (typeof operation.documentId === 'number' && rp.documentId === operation.documentId) return true;
+    if (typeof operation.moduleId === 'number' && rp.moduleId === operation.moduleId) return true;
+    const bundleName = operation.bundleName?.trim();
+    if (!bundleName || rp.name.trim() !== bundleName) return false;
+    const operationClass = operation.classCode?.trim() ?? '';
+    const rpClass = resolvePrescriptionClassCode(rp.category, rp.location);
+    if (operationClass && operationClass !== rpClass) return false;
+    const operationNumber = operation.bundleNumber?.trim() ?? '';
+    if (operationNumber && operationNumber !== rp.daysOrTimes.trim()) return false;
+    return true;
+  };
+
   params.operations
     .filter((operation) => (operation.entity?.trim() ?? 'medOrder') === 'medOrder')
     .forEach((operation) => {
       if (operation.operation === 'delete') {
-        const documentId = typeof operation.documentId === 'number' ? operation.documentId : null;
-        const moduleId = typeof operation.moduleId === 'number' ? operation.moduleId : null;
-        for (let i = nextBundles.length - 1; i >= 0; i -= 1) {
-          const bundle = nextBundles[i];
-          const docMatched = documentId !== null && bundle.documentId === documentId;
-          const moduleMatched = moduleId !== null && bundle.moduleId === moduleId;
-          if (docMatched || moduleMatched) {
-            nextBundles.splice(i, 1);
-          }
+        const targetIndex = nextRps.findIndex((rp) => matchesOperation(rp, operation));
+        if (targetIndex >= 0) {
+          nextRps.splice(targetIndex, 1);
+        }
+        if (typeof operation.documentId === 'number' && !nextOrder.deletedDocumentIds.includes(operation.documentId)) {
+          nextOrder.deletedDocumentIds = [...nextOrder.deletedDocumentIds, operation.documentId];
         }
         return;
       }
 
-      const nextBundle = toBundleFromOperation({
-        ...operation,
-        entity: 'medOrder',
-      });
-      if (operation.operation === 'update') {
-        const targetIndex = nextBundles.findIndex((bundle) => {
-          if (typeof operation.documentId === 'number' && typeof bundle.documentId === 'number') {
-            return bundle.documentId === operation.documentId;
-          }
-          if (typeof operation.moduleId === 'number' && typeof bundle.moduleId === 'number') {
-            return bundle.moduleId === operation.moduleId;
-          }
-          return false;
-        });
-        if (targetIndex >= 0) {
-          nextBundles[targetIndex] = {
-            ...nextBundles[targetIndex],
-            ...nextBundle,
-          };
-          return;
-        }
+      const started = operation.startDate?.trim() || nextOrder.performDate || nextOrder.encounterDate;
+      const nextRp = toPrescriptionRpFromOperation(operation, started);
+      const targetIndex = nextRps.findIndex((rp) => matchesOperation(rp, operation));
+      if (targetIndex >= 0) {
+        nextRps[targetIndex] = {
+          ...nextRps[targetIndex],
+          ...nextRp,
+        };
+        return;
       }
-      nextBundles.push(nextBundle);
+      nextRps.push(nextRp);
     });
 
-  const nextOrder = toPrescriptionOrder(nextBundles, params.patientId);
+  nextOrder.rps = nextRps;
   const saveResult = await savePrescriptionOrder({
     patientId: params.patientId,
     order: nextOrder,

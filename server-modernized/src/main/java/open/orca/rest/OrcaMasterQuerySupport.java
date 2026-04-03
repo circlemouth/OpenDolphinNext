@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class OrcaMasterQuerySupport {
+    private static final String BODY_PART_CODE_PREFIX = "002";
     private static final String DRUG_CODE_PREFIX = "6";
     private static final String MATERIAL_CODE_PREFIX = "7";
     private static final String COMMENT_CODE_REGEX = "^(008[1-6]|8[1-6]|098|099|98|99)";
-    private static final String BODY_PART_NAME_TOKEN = "部位";
 
     Query buildGenericClassQuery(OrcaMasterDao.GenericClassCriteria criteria, String tableName,
             String codeColumn, String nameColumn, String kanaColumn, String startDateColumn, String endDateColumn) {
@@ -52,10 +52,8 @@ final class OrcaMasterQuerySupport {
             String nameColumn, String kanaColumn, String startDateColumn, String endDateColumn) {
         StringBuilder where = new StringBuilder(" FROM ").append(tableName).append(" WHERE 1=1");
         List<Object> params = new ArrayList<>();
-        where.append(" AND CAST(").append(codeColumn).append(" AS VARCHAR) ~ ?");
-        params.add(COMMENT_CODE_REGEX);
-        where.append(" AND UPPER(CAST(").append(nameColumn).append(" AS VARCHAR)) LIKE ?");
-        params.add("%" + BODY_PART_NAME_TOKEN + "%");
+        where.append(" AND CAST(").append(codeColumn).append(" AS VARCHAR) LIKE ?");
+        params.add(BODY_PART_CODE_PREFIX + "%");
         appendKeywordFilter(where, params, criteria.getKeyword(), codeColumn, nameColumn, kanaColumn, null);
         appendEffectiveFilter(where, params, criteria.getEffective(), startDateColumn, endDateColumn);
         return new Query(where.toString(), params);

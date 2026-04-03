@@ -1,6 +1,6 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { generateRunId, getObservabilityMeta, updateObservabilityMeta } from '../../libs/observability/observability';
-import type { OrderBundleItem } from './orderBundleApi';
+import type { OrderBundleBodyPart, OrderBundleItem } from './orderBundleApi';
 
 export type OrderRecommendationSource = 'patient' | 'facility';
 
@@ -21,7 +21,7 @@ export type OrderRecommendationTemplate = {
   items: OrderBundleItem[];
   materialItems: OrderBundleItem[];
   commentItems: OrderBundleItem[];
-  bodyPart?: OrderBundleItem | null;
+  bodyPart?: OrderBundleBodyPart | null;
 };
 
 export type OrderRecommendationCandidate = {

@@ -147,7 +147,8 @@ final class OrcaOrderBundleRequestSupport {
             case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
             case IInfoModel.ENTITY_RADIOLOGY_ORDER -> normalizedClassCode.startsWith("7");
             case IInfoModel.ENTITY_OTHER_ORDER -> normalizedClassCode.startsWith("8");
-            case IInfoModel.ENTITY_BASE_CHARGE_ORDER, IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> normalizedClassCode.startsWith("1");
+            case IInfoModel.ENTITY_BASE_CHARGE_ORDER -> isInRange(normalizedClassCode, 110, 125);
+            case IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> isInRange(normalizedClassCode, 130, 150);
             default -> true;
         };
     }
@@ -178,5 +179,14 @@ final class OrcaOrderBundleRequestSupport {
             return IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER;
         }
         return normalized;
+    }
+
+    private static boolean isInRange(String classCode, int minInclusive, int maxInclusive) {
+        try {
+            int value = Integer.parseInt(classCode);
+            return value >= minInclusive && value <= maxInclusive;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 }

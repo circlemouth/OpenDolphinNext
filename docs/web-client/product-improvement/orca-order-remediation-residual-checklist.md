@@ -38,12 +38,12 @@
 ## 1. P0 ブロッカー
 
 ### 1-1. ReceptionPage の旧 ORCA送信経路を廃止して共有経路へ統合
-- [ ] `ReceptionPage` 内の独自 `ORCA_SEND_ORDER_ENTITIES` を削除する
-- [ ] `ReceptionPage` 内の独自 `toMedicalModV2Medication` / `toMedicalModV2Information` を削除する
-- [ ] Charts 側と同じ entity list・canonicalization・validation・normalization を使う共有 helper を呼ぶようにする
-- [ ] `medOrder` が会計送信で必ず含まれることを確認する
-- [ ] `generalOrder` / `laboTest` の二重 fetch が消えることを確認する
-- [ ] `bodyPart` / comment code / local-only field の扱いが Charts 側と一致することを確認する
+- [x] `ReceptionPage` 内の独自 `ORCA_SEND_ORDER_ENTITIES` を削除する
+- [x] `ReceptionPage` 内の独自 `toMedicalModV2Medication` / `toMedicalModV2Information` を削除する
+- [x] Charts 側と同じ entity list・canonicalization・validation・normalization を使う共有 helper を呼ぶようにする
+- [x] `medOrder` が会計送信で必ず含まれることを確認する
+- [x] `generalOrder` / `laboTest` の二重 fetch が消えることを確認する
+- [x] `bodyPart` / comment code / local-only field の扱いが Charts 側と一致することを確認する
 - [ ] `ReceptionPage` の送信テストを、共有経路利用を前提に書き換える
 
 ### 1-2. 処方の送信 source of truth 一本化
@@ -54,11 +54,11 @@
 - [ ] `save → fetch → send` の統合テストを追加する
 
 ### 1-3. 処方の lossy hydrate を廃止
-- [ ] `fetchPrescriptionOrder().order` を editor の正とし、`sourceBundles -> toPrescriptionOrder()` での再構築をやめる
-- [ ] `ChartsPage` でも first-class `order` を主に使い、`sourceBundles` は互換表示専用に限定する
-- [ ] `mutatePrescriptionOrderBundles` を `sourceBundles` ベースではなく first-class order ベースに作り直す
-- [ ] no-op 再保存で `generalNamePrescription`, `refill*`, `doctorComment`, `lower*` などが落ちないことを確認する
-- [ ] first-class no-op re-save テストを追加する
+- [x] `fetchPrescriptionOrder().order` を editor の正とし、`sourceBundles -> toPrescriptionOrder()` での再構築をやめる
+- [x] `ChartsPage` でも first-class `order` を主に使い、`sourceBundles` は互換表示専用に限定する
+- [x] `mutatePrescriptionOrderBundles` を `sourceBundles` ベースではなく first-class order ベースに作り直す
+- [x] no-op 再保存で `generalNamePrescription`, `refill*`, `doctorComment`, `lower*` などが落ちないことを確認する
+- [x] first-class no-op re-save テストを追加する
 
 ### 1-4. 600系 send contract を実装または fail-closed に確定
 - [ ] `testOrder` の `admin` を sendable にするか local-only にするか実装を確定する
@@ -75,12 +75,12 @@
 - [ ] server で override ではない実経路テストを追加する
 
 ### 1-6. radiology の bodyPart endpoint 契約を 002 ベースで閉じる
-- [ ] `/api/orca/master/bodypart` の検索実装を 002 系 bodyPart 契約に合わせて修正する
-- [ ] `胸部` / `膝関節` など通常検索語で 002 候補を返すようにする
-- [ ] comment code 系や不適切 code を bodyPart endpoint から返さないようにする
-- [ ] front validation でも非 002 bodyPart code を reject する
+- [x] `/api/orca/master/bodypart` の検索実装を 002 系 bodyPart 契約に合わせて修正する
+- [x] `胸部` / `膝関節` など通常検索語で 002 候補を返すようにする
+- [x] comment code 系や不適切 code を bodyPart endpoint から返さないようにする
+- [x] front validation でも非 002 bodyPart code を reject する
 - [ ] bodyPart E2E（検索→選択→保存→再取得→送信→XML）を追加する
-- [ ] `OrcaChartSupportSupportTest` の radiology `Medical_Class` を `700` 固定で検証する
+- [x] `OrcaChartSupportSupportTest` の radiology `Medical_Class` を `700` 固定で検証する
 
 ## 2. 注射の残タスク
 
@@ -189,9 +189,9 @@
 ## 6. Charge の残タスク
 
 ### 6-1. baseCharge / instractionCharge class range を閉じる
-- [ ] `baseChargeOrder = 110-125`, `instractionChargeOrder = 130-150` を client/server/test で厳密化するか決める
-- [ ] `isCompatibleClassCode` を決めた規則へ修正する
-- [ ] `baseCharge + 130`, `instractionCharge + 110` の扱いを reject か許容かで固定する
+- [x] `baseChargeOrder = 110-125`, `instractionChargeOrder = 130-150` を client/server/test で厳密化するか決める
+- [x] `isCompatibleClassCode` を決めた規則へ修正する
+- [x] `baseCharge + 130`, `instractionCharge + 110` の扱いを reject か許容かで固定する
 - [ ] 既存の逆向きテストを更新する
 
 ### 6-2. instractionCharge 新規作成 path
@@ -216,11 +216,11 @@
 - [ ] ReceptionPage ORCA 送信共有化テスト
 - [ ] prescription `save -> fetch -> no-op save -> send -> XML` テスト
 - [ ] bacteria input set apply テスト
-- [ ] bodyPart endpoint 実テスト
-- [ ] radiology `700` XML テスト
+- [x] bodyPart endpoint 実テスト
+- [x] radiology `700` XML テスト
 - [ ] treatment material UI round-trip テスト
-- [ ] instractionCharge class range テスト
-- [ ] selection comment parameter 対応/非対応テスト
+- [x] instractionCharge class range テスト
+- [x] selection comment parameter 対応/非対応テスト
 
 ### 7-2. 機械的完了条件
 - [ ] `docs/web-client/product-improvement/orca-order-remediation-residual-checklist.md` に未チェックが 0 件

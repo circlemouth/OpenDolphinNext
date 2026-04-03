@@ -128,7 +128,8 @@ describe('order send smoke', () => {
           }),
         ]),
       );
-    expect(payload.medicalInformation[0]?.medications.map((item) => item.code)).toEqual([
+    const radiologyMedicalInformation = payload.medicalInformation ?? [];
+    expect(radiologyMedicalInformation[0]?.medications.map((item) => item.code)).toEqual([
       '002001',
       '170017510',
       '700000001',
@@ -398,7 +399,8 @@ describe('order send smoke', () => {
           }),
         ]),
       );
-    expect(payload.medicalInformation[0]?.medications.map((item) => item.code)).toEqual([
+    const treatmentMedicalInformation = payload.medicalInformation ?? [];
+    expect(treatmentMedicalInformation[0]?.medications.map((item) => item.code)).toEqual([
       '002003',
       '140000610',
       '700000021',
@@ -534,11 +536,12 @@ describe('order send smoke', () => {
         }),
       ]),
     );
-    expect(payload.medicalInformation[0]).not.toHaveProperty('subtype');
-    expect(payload.medicalInformation[0]).not.toHaveProperty('adminMemo');
-    expect(payload.medicalInformation[0]).not.toHaveProperty('memo');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('local admin memo');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('local memo');
+    const bacteriaMedicalInformation = payload.medicalInformation ?? [];
+    expect(bacteriaMedicalInformation[0]).not.toHaveProperty('subtype');
+    expect(bacteriaMedicalInformation[0]).not.toHaveProperty('adminMemo');
+    expect(bacteriaMedicalInformation[0]).not.toHaveProperty('memo');
+    expect(JSON.stringify(bacteriaMedicalInformation)).not.toContain('local admin memo');
+    expect(JSON.stringify(bacteriaMedicalInformation)).not.toContain('local memo');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
 

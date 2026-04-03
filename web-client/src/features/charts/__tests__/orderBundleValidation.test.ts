@@ -264,6 +264,20 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['missing_body_part_code']);
   });
 
+  it('radiologyOrder: 002 以外の部位コードはエラー', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '胸部撮影',
+        items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
+        bodyPart: { code: 'BP001', name: '胸部', quantity: '', unit: '', memo: '' },
+      },
+      entity: 'radiologyOrder',
+      bundleLabel: '放射線オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_body_part_code']);
+  });
+
   it('commentItems: コメントコードか内容が欠ける場合はエラー', () => {
     const issues = validateBundleForm({
       form: {

@@ -288,6 +288,143 @@ describe('prescriptionOrderApi first-class contract', () => {
     );
   });
 
+  it('save -> fetch -> no-op save で first-class order の generic / claim / usage 情報が落ちない', async () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '全体コメント',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-stable-001',
+          name: '頓服RP',
+          location: 'in',
+          category: 'tonyo',
+          usage: '頓服',
+          usageCode: '200',
+          daysOrTimes: '3',
+          remark: 'local only',
+          refillCount: 2,
+          refillPattern: 'alternate',
+          doctorComment: 'RPコメント',
+          started: '2026-03-09',
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: false,
+              isGeneralNamePrescription: true,
+              drugComment: '食後',
+              claimComments: [{ id: 'claim-1', code: '810000001', name: '患者希望', note: 'note' }],
+              patientRequest: false,
+            },
+          ],
+        },
+      ],
+    };
+
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ runId: 'RUN-SAVE-1' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            found: true,
+            runId: 'RUN-FETCH-1',
+            order: {
+              patientId: '000001',
+              encounterDate: '2026-03-09',
+              performDate: '2026-03-09',
+              doctorComments: [{ text: '全体コメント' }],
+              rps: [
+                {
+                  rpNumber: 'rp-stable-001',
+                  bundleName: '頓服RP',
+                  medicalClass: '221',
+                  medicalClassNumber: '3',
+                  usageCode: '200',
+                  usageName: '頓服',
+                  started: '2026-03-09',
+                  remark: 'local only',
+                  refillCount: 2,
+                  refillPattern: 'alternate',
+                  doctorComment: 'RPコメント',
+                  drugs: [
+                    {
+                      code: '620000001',
+                      name: 'アムロジピン',
+                      quantity: '1',
+                      unit: '錠',
+                      genericChangeAllowed: false,
+                      generalNamePrescription: true,
+                      drugComment: '食後',
+                      patientRequested: false,
+                      claimComments: [{ code: '810000001', text: '患者希望', note: 'note' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ runId: 'RUN-SAVE-2' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    await savePrescriptionOrder({ patientId: '000001', order });
+    const fetched = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09' });
+    await savePrescriptionOrder({ patientId: '000001', order: fetched.order });
+
+    const secondRequest = vi.mocked(httpFetch).mock.calls[2]?.[1];
+    const secondBody = JSON.parse(String((secondRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+
+    expect(secondBody.rps[0]).toEqual(
+      expect.objectContaining({
+        rpNumber: 'rp-stable-001',
+        medicalClass: '221',
+        medicalClassNumber: '3',
+        usageCode: '200',
+        usageName: '頓服',
+        remark: 'local only',
+        refillCount: 2,
+        refillPattern: 'alternate',
+        doctorComment: 'RPコメント',
+      }),
+    );
+    expect(secondBody.rps[0].drugs[0]).toEqual(
+      expect.objectContaining({
+        code: '620000001',
+        genericChangeAllowed: false,
+        generalNamePrescription: true,
+        drugComment: '食後',
+        patientRequested: false,
+      }),
+    );
+    expect(secondBody.rps[0].drugs[0].claimComments[0]).toEqual(
+      expect.objectContaining({
+        code: '810000001',
+        text: '患者希望',
+        note: 'note',
+      }),
+    );
+  });
+
   it('save は code なし請求コメントを送信前に fail-closed で拒否する', async () => {
     const order: PrescriptionOrder = {
       patientId: '000001',

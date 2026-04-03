@@ -96,9 +96,14 @@ import {
   type ReceptionRealtimeEvent,
 } from '../receptionRealtimeStream';
 import { useAppToast } from '../../../libs/ui/appToast';
-import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml, type MedicalModV2Information } from '../../charts/orcaClaimApi';
+import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from '../../charts/orcaClaimApi';
 import { saveOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
-import { fetchOrderBundles, type OrderBundle, type OrderBundleItem } from '../../charts/orderBundleApi';
+import { ORCA_SEND_ORDER_ENTITIES } from '../../charts/orderCategoryRegistry';
+import {
+  buildMedicalModV2BlockNotice,
+  fetchMedicalModV2OrderBundles,
+  prepareMedicalModV2SendData,
+} from '../../charts/orderRpNormalization';
 
 type SortKey = 'time' | 'acceptance' | 'reservation' | 'name' | 'department';
 type StatusListLayout = 'table' | 'cards';
@@ -274,80 +279,6 @@ const normalizeDepartmentCode = (value?: string) => {
 const isApiResultOk = (apiResult?: string) => Boolean(apiResult && /^0+$/.test(apiResult));
 const isIdempotentDuplicate = (apiResult?: string, apiResultMessage?: string) =>
   apiResult === '80' && Boolean(apiResultMessage && /既に同日の診療データが登録されています/.test(apiResultMessage));
-
-const ORCA_SEND_ORDER_ENTITIES = [
-  'generalOrder',
-  'treatmentOrder',
-  'testOrder',
-  'laboTest',
-  'physiologyOrder',
-  'bacteriaOrder',
-  'instractionChargeOrder',
-  'surgeryOrder',
-  'otherOrder',
-  'radiologyOrder',
-  'baseChargeOrder',
-  'injectionOrder',
-] as const;
-
-const BODY_PART_CODE_PREFIX = '002';
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
-
-const toMedicalModV2Medication = (item: OrderBundleItem) => {
-  const code = item.code?.trim();
-  if (!code) return null;
-  if (code.startsWith(BODY_PART_CODE_PREFIX)) return null;
-  if (COMMENT_CODE_PATTERN.test(code)) return null;
-  return {
-    code,
-    name: item.name?.trim() || undefined,
-    number: item.quantity?.trim() || undefined,
-    unit: item.unit?.trim() || undefined,
-  };
-};
-
-const resolveMedicalModV2ClassFallback = (bundle: OrderBundle) => {
-  // `OrderBundleEditPanel` only assigns `classCode` for medOrder today.
-  // For other entities, keep medicalmodv2 export working by applying a sane default.
-  // NOTE: This is a pragmatic fallback for verification; refine mapping once ORCA class rules are fixed.
-  const entity = bundle.entity?.trim();
-  if (!entity) return null;
-  if (entity === 'generalOrder') return '01';
-  return null;
-};
-
-const toMedicalModV2Information = (bundle: OrderBundle): MedicalModV2Information | null => {
-  const medications = bundle.items
-    .map(toMedicalModV2Medication)
-    .filter((item): item is NonNullable<ReturnType<typeof toMedicalModV2Medication>> => Boolean(item));
-  if (medications.length === 0) return null;
-  const medicalClass = bundle.classCode?.trim() || resolveMedicalModV2ClassFallback(bundle);
-  if (!medicalClass) return null;
-  return {
-    medicalClass,
-    medicalClassName: bundle.className?.trim() || undefined,
-    medicalClassNumber: bundle.bundleNumber?.trim() || undefined,
-    medications,
-  };
-};
-
-const fetchMedicalModV2OrderBundles = async (patientId: string, from: string) => {
-  const results = await Promise.allSettled(
-    ORCA_SEND_ORDER_ENTITIES.map((entity) => fetchOrderBundles({ patientId, entity, from })),
-  );
-  const bundles: OrderBundle[] = [];
-  const errors: string[] = [];
-  results.forEach((result, index) => {
-    const entity = ORCA_SEND_ORDER_ENTITIES[index];
-    if (result.status === 'fulfilled') {
-      bundles.push(...(result.value.bundles ?? []).map((bundle) => ({ ...bundle, entity: bundle.entity ?? entity })));
-      return;
-    }
-    const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
-    errors.push(`${entity}: ${reason}`);
-  });
-  return { bundles, errors };
-};
 
 const truncateText = (value: string, maxLength = 60) => {
   if (value.length <= maxLength) return value;
@@ -2610,7 +2541,7 @@ export function ReceptionPage({
     };
   }, [acceptPatientId, masterSelected, patientSearchSelected, selectedEntry, visibleAppointmentEntries]);
   const sendDirectAcceptMinimalForced = useCallback(() => {
-    // TEMP: 強制送信ボタン専用（撤去前提）
+    // 強制送信ボタン専用の直送経路。削除予定。
     const now = new Date();
     const acceptancePush = resolveAcceptancePush('1');
     const resolvedMedicalInformation = resolveMedicalInformation(acceptNote);
@@ -2633,7 +2564,7 @@ export function ReceptionPage({
             ]
           : undefined,
     };
-    // TEMP: XHRで送信可否/ステータスを可視化（撤去前提）
+    // XHR送信可否/ステータスの可視化用。
     setXhrDebugState({ lastAttemptAt: now.toISOString(), status: null, error: null });
     const xhr = new XMLHttpRequest();
     xhr.open('POST', '/api/orca/visits/mutation', true);
@@ -2729,7 +2660,7 @@ export function ReceptionPage({
       const started = performance.now();
       try {
         if (hasErrors) return;
-        // TEMP: 直接呼び出しフォールバック（mutateAsyncが未配線の場合に備える）
+        // mutateAsync 未配線時の直接呼び出しフォールバック。
         const payload = await (visitMutation.mutateAsync ? visitMutation.mutateAsync(params) : mutateVisit(params));
         const durationMs = Math.round(performance.now() - started);
         setAcceptDurationMs(durationMs);
@@ -3731,15 +3662,65 @@ export function ReceptionPage({
         }
 
         const orderBundleResult = await fetchMedicalModV2OrderBundles(patientId, calculationDate);
-        const medicalInformation = orderBundleResult.bundles
-          .map(toMedicalModV2Information)
-          .filter((info): info is MedicalModV2Information => Boolean(info));
+        if (orderBundleResult.errors.length > 0) {
+          const failedEntitiesPreview = orderBundleResult.errors.slice(0, 6).join(' / ');
+          const remaining = orderBundleResult.errors.length - 6;
+          enqueue({
+            tone: 'warning',
+            message: '会計送信を停止',
+            detail: `オーダー取得失敗（${failedEntitiesPreview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
+          });
+          logAuditEvent({
+            runId: baseRunId,
+            source: 'reception/claim-send',
+            patientId,
+            payload: {
+              action: 'RECEPTION_CLAIM_SEND',
+              result: 'blocked',
+              blockedReasons: ['fetch_failed'],
+              visitDate: calculationDate,
+              orderBundles: {
+                fetchErrors: orderBundleResult.errors,
+              },
+            },
+          });
+          return;
+        }
+        const preparedSendData = prepareMedicalModV2SendData(orderBundleResult.bundles);
+        const blockNotice = buildMedicalModV2BlockNotice(preparedSendData);
+        if (blockNotice) {
+          enqueue({
+            tone: 'warning',
+            message: '会計送信を停止',
+            detail: `${blockNotice.message} / ${blockNotice.nextAction}`,
+          });
+          logAuditEvent({
+            runId: baseRunId,
+            source: 'reception/claim-send',
+            patientId,
+            payload: {
+              action: 'RECEPTION_CLAIM_SEND',
+              result: 'blocked',
+              blockedReasons: ['invalid_order_bundle'],
+              visitDate: calculationDate,
+              orderBundles: {
+                bundles: orderBundleResult.bundles.length,
+                medicalInformation: preparedSendData.medicalInformation.length,
+                requiredIssues: preparedSendData.requiredIssues.length,
+                bundleIssues: preparedSendData.bundleIssues.length,
+                codeIssues: preparedSendData.codeIssues.length,
+                invalidCodes: preparedSendData.invalidCodes.length,
+              },
+            },
+          });
+          return;
+        }
         const requestXml = buildMedicalModV2RequestXml({
           patientId,
           performDate: calculationDate,
           departmentCode,
           physicianCode,
-          medicalInformation,
+          medicalInformation: preparedSendData.medicalInformation,
         });
         const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01' });
         const idempotentDuplicate = isIdempotentDuplicate(result.apiResult, result.apiResultMessage);
@@ -3793,7 +3774,7 @@ export function ReceptionPage({
             orderBundles: {
               entities: ORCA_SEND_ORDER_ENTITIES.length,
               bundles: orderBundleResult.bundles.length,
-              medicalInformation: medicalInformation.length,
+              medicalInformation: preparedSendData.medicalInformation.length,
               fetchErrors: orderBundleResult.errors.length > 0 ? orderBundleResult.errors : undefined,
             },
           },
@@ -3817,7 +3798,7 @@ export function ReceptionPage({
             orderBundles: {
               entities: ORCA_SEND_ORDER_ENTITIES.length,
               bundles: orderBundleResult.bundles.length,
-              medicalInformation: medicalInformation.length,
+              medicalInformation: preparedSendData.medicalInformation.length,
               fetchErrors: orderBundleResult.errors.length > 0 ? orderBundleResult.errors : undefined,
             },
           },
