@@ -21,6 +21,8 @@
   - Web UI 改修の実行計画をチェックボックス形式で整理した、Codex 向けの current development document。
 - `orca-order-remediation-checklist.md`
   - ORCA オーダー是正の current development checklist。
+- `orca-order-remediation-residual-checklist.md`
+  - ORCA オーダー是正の残タスクをまとめた、現時点の latest development document。
 - `orca-order-remediation-manager.prompt.md`
   - ORCA オーダー是正の統括エージェント向けプロンプト。
 - `orca-order-remediation-subagents.md`
