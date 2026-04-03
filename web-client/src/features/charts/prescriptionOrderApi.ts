@@ -10,7 +10,7 @@ import {
   type OrderBundleMutationResult,
   type OrderBundleOperation,
 } from './orderBundleApi';
-import { formatOrcaOrderItemMemo, parseOrcaOrderItemMemo, type OrcaOrderItemMeta } from './orcaOrderItemMeta';
+import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export type PrescriptionLocation = 'in' | 'out';
 export type PrescriptionCategory = 'regular' | 'tonyo' | 'gaiyo';
@@ -78,6 +78,13 @@ export type PrescriptionOrderFetchResult = Omit<OrderBundleFetchResult, 'bundles
 };
 
 export type PrescriptionOrderSaveResult = OrderBundleMutationResult;
+
+export type PrescriptionClaimCommentCodeIssue = {
+  rpIndex: number;
+  drugIndex: number;
+  commentIndex: number;
+  commentName: string;
+};
 
 export type PrescriptionDoImportSource =
   | { type: 'bundle'; bundle: OrderBundle }
@@ -305,8 +312,32 @@ const normalizeClaimComments = (comments: PrescriptionClaimComment[]) => {
   return next;
 };
 
+export const findFirstPrescriptionClaimCommentCodeIssue = (
+  order: PrescriptionOrder,
+): PrescriptionClaimCommentCodeIssue | null => {
+  for (let rpIndex = 0; rpIndex < order.rps.length; rpIndex += 1) {
+    const rp = order.rps[rpIndex];
+    for (let drugIndex = 0; drugIndex < rp.drugs.length; drugIndex += 1) {
+      const drug = rp.drugs[drugIndex];
+      const claimComments = normalizeClaimComments(drug.claimComments);
+      for (let commentIndex = 0; commentIndex < claimComments.length; commentIndex += 1) {
+        const comment = claimComments[commentIndex];
+        if (comment.name.trim() && !comment.code?.trim()) {
+          return {
+            rpIndex,
+            drugIndex,
+            commentIndex,
+            commentName: comment.name.trim(),
+          };
+        }
+      }
+    }
+  }
+  return null;
+};
+
 const toDrugFromItem = (item: OrderBundleItem): PrescriptionDrug => {
-  const parsed = parseOrcaOrderItemMemo(item.memo);
+  const parsed = resolveOrcaOrderItemFields(item);
   const drugMetaParsed = splitMetaText<StoredDrugMeta>(parsed.memoText, RX_DRUG_META_PREFIX);
   const drugMeta = drugMetaParsed.meta;
   const claimComments = normalizeClaimComments(
@@ -325,9 +356,9 @@ const toDrugFromItem = (item: OrderBundleItem): PrescriptionDrug => {
     name: item.name?.trim() || '',
     quantity: item.quantity?.trim() || '',
     unit: item.unit?.trim() || '',
-    genericChangeAllowed: parsed.meta.genericFlg !== 'no',
+    genericChangeAllowed: parsed.genericFlg !== 'no',
     isGeneralNamePrescription: false,
-    drugComment: parsed.meta.userComment?.trim() || '',
+    drugComment: parsed.userComment?.trim() || '',
     claimComments,
     patientRequest: drugMeta?.patientRequest ?? true,
     ...(drugMeta?.lowerFields ?? {}),
@@ -543,11 +574,6 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
     const name = drug.name.trim();
     if (!name && !code) return;
 
-    const orcaMeta: OrcaOrderItemMeta = {
-      genericFlg: drug.genericChangeAllowed ? 'yes' : 'no',
-      userComment: drug.drugComment.trim() || undefined,
-    };
-
     const drugMeta = normalizeDrugMeta(drug);
     const memoText = withJsonMetaLine('', RX_DRUG_META_PREFIX, drugMeta, Boolean(
       drugMeta.patientRequest !== undefined ||
@@ -560,7 +586,9 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
       name,
       quantity: drug.quantity.trim() || '',
       unit: drug.unit.trim() || '',
-      memo: formatOrcaOrderItemMemo(orcaMeta, memoText),
+      memo: memoText,
+      genericFlg: drug.genericChangeAllowed ? 'yes' : 'no',
+      userComment: drug.drugComment.trim() || undefined,
     });
 
     normalizeClaimComments(drug.claimComments).forEach((comment) => {
@@ -654,6 +682,8 @@ const toBundleFromOperation = (operation: OrderBundleOperation): OrderBundle => 
     quantity: item.quantity,
     unit: item.unit,
     memo: item.memo,
+    genericFlg: item.genericFlg,
+    userComment: item.userComment,
   })),
 });
 
@@ -755,24 +785,18 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
     const parsedMemo = splitMetaText<ServerRpMeta>(rp.memo, RX_SERVER_RP_META_PREFIX);
     const meta = parsedMemo.meta;
     const drugs = (rp.drugs ?? []).flatMap((drug, drugIndex) => {
-      const itemMemo = formatOrcaOrderItemMemo(
+      const itemMemo = withJsonMetaLine(
+        '',
+        RX_DRUG_META_PREFIX,
         {
-          genericFlg: drug.genericChangeAllowed === false ? 'no' : 'yes',
-          userComment: drug.drugComment?.trim() || undefined,
+          claimComments: (drug.claimComments ?? []).map((comment) => ({
+            code: comment.code?.trim() || undefined,
+            name: comment.text?.trim() || '',
+            note: comment.note?.trim() || undefined,
+          })),
+          patientRequest: drug.patientRequested ?? true,
         },
-        withJsonMetaLine(
-          '',
-          RX_DRUG_META_PREFIX,
-          {
-            claimComments: (drug.claimComments ?? []).map((comment) => ({
-              code: comment.code?.trim() || undefined,
-              name: comment.text?.trim() || '',
-              note: comment.note?.trim() || undefined,
-            })),
-            patientRequest: drug.patientRequested ?? true,
-          },
-          Boolean((drug.claimComments?.length ?? 0) > 0 || drug.patientRequested !== undefined),
-        ),
+        Boolean((drug.claimComments?.length ?? 0) > 0 || drug.patientRequested !== undefined),
       );
       const mainItem: OrderBundleItem = {
         code: drug.code?.trim() || undefined,
@@ -780,6 +804,8 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
         quantity: drug.quantity?.trim() || '',
         unit: drug.unit?.trim() || '',
         memo: itemMemo,
+        genericFlg: drug.genericChangeAllowed === false ? 'no' : 'yes',
+        userComment: drug.drugComment?.trim() || undefined,
       };
       const commentItems = (drug.claimComments ?? []).map<OrderBundleItem>((comment) => ({
         code: comment.code?.trim() || undefined,
@@ -956,6 +982,12 @@ export async function savePrescriptionOrder(params: {
     ...params.order,
     patientId: params.patientId,
   });
+  const claimCommentCodeIssue = findFirstPrescriptionClaimCommentCodeIssue(normalizedOrder);
+  if (claimCommentCodeIssue) {
+    throw new Error(
+      `RP${claimCommentCodeIssue.rpIndex + 1} 薬剤${claimCommentCodeIssue.drugIndex + 1}: 請求コメントコード未入力のコメントは保存できません。`,
+    );
+  }
   const payload = toServerPrescriptionOrder(normalizedOrder);
   const response = await httpFetch('/api/orca/prescription-orders', {
     method: 'POST',

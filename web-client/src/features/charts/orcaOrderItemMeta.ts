@@ -1,8 +1,14 @@
 export type OrcaOrderItemMeta = {
   // "yes"/"no" only. When omitted, ORCA uses its own default setting.
   genericFlg?: 'yes' | 'no';
-  // User comment for each medication row. Kept in memo meta to avoid colliding with free-text memo.
+  // User comment for each medication row.
   userComment?: string;
+};
+
+export type OrcaOrderItemMetaCarrier = {
+  memo?: string | null;
+  genericFlg?: 'yes' | 'no';
+  userComment?: string | null;
 };
 
 const META_PREFIX = '__orca_meta__:';
@@ -12,8 +18,11 @@ const normalizeGenericFlg = (value: unknown): OrcaOrderItemMeta['genericFlg'] =>
   return undefined;
 };
 
-const normalizeUserComment = (value: unknown): OrcaOrderItemMeta['userComment'] =>
-  typeof value === 'string' ? value : undefined;
+const normalizeUserComment = (value: unknown): OrcaOrderItemMeta['userComment'] => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
 
 const hasUserComment = (value: OrcaOrderItemMeta['userComment']) =>
   typeof value === 'string' && value.trim().length > 0;
@@ -65,4 +74,17 @@ export function updateOrcaOrderItemMeta(memo: string | undefined, patch: Partial
     delete next.userComment;
   }
   return formatOrcaOrderItemMemo(next, memoText);
+}
+
+export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | null): {
+  genericFlg?: 'yes' | 'no';
+  userComment?: string;
+  memoText: string;
+} {
+  const parsed = parseOrcaOrderItemMemo(item?.memo);
+  return {
+    genericFlg: normalizeGenericFlg(item?.genericFlg ?? parsed.meta.genericFlg),
+    userComment: normalizeUserComment(item?.userComment ?? parsed.meta.userComment),
+    memoText: parsed.memoText,
+  };
 }

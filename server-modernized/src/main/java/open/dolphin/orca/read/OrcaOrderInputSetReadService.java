@@ -17,6 +17,9 @@ import open.orca.rest.ORCAConnection;
 
 public class OrcaOrderInputSetReadService {
 
+    private static final String MATERIAL_CODE_PREFIX = "7";
+    private static final String COMMENT_CODE_REGEX = "^(008[1-6]|8[1-6]|098|099|98|99).*";
+
     private final ORCAConnection orcaConnection;
 
     public OrcaOrderInputSetReadService(ORCAConnection orcaConnection) {
@@ -71,6 +74,7 @@ public class OrcaOrderInputSetReadService {
                 return null;
             }
             OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
+            bundle.setSourceSetCode(setCode);
             bundle.setBundleName(bundleName);
             bundle.setBundleNumber("1");
             bundle.setClassCodeSystem(claimClassSystem);
@@ -112,6 +116,15 @@ public class OrcaOrderInputSetReadService {
             }
             if (bundle.getClassCode() == null) {
                 applyBundleClass(bundle, setCode.startsWith("P") ? "212" : "900", claimClassSystem, classMetadataResolver);
+            }
+            if (bundle.getBodyPart() != null) {
+                bundle.getBodyPart().setRowRole("bodyPart");
+            }
+            for (OrcaOrderInputSetDetailResponse.Item item : bundle.getItems()) {
+                if (item == null) {
+                    continue;
+                }
+                item.setRowRole(resolveRowRole(bundle.getEntity(), item.getCode()));
             }
             if (bundle.getItems().isEmpty() && bundle.getBodyPart() == null) {
                 return null;
@@ -244,6 +257,27 @@ public class OrcaOrderInputSetReadService {
         bundle.setClassCodeSystem(claimClassSystem);
         bundle.setEntity(resolved.entity());
         bundle.setClassName(resolved.className());
+    }
+
+    private static String resolveRowRole(String entity, String code) {
+        String normalizedCode = trimToNull(code);
+        if (normalizedCode == null) {
+            return "main";
+        }
+        if (shouldTreatAsMaterialItem(entity, normalizedCode)) {
+            return "material";
+        }
+        if (normalizedCode.matches(COMMENT_CODE_REGEX)) {
+            return "comment";
+        }
+        return "main";
+    }
+
+    private static boolean shouldTreatAsMaterialItem(String entity, String code) {
+        if (code == null || !code.startsWith(MATERIAL_CODE_PREFIX)) {
+            return false;
+        }
+        return !IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(entity);
     }
 
     @FunctionalInterface

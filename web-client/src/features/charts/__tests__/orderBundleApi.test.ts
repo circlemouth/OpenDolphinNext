@@ -27,7 +27,7 @@ describe('orderBundleApi bodyPart contract', () => {
     vi.clearAllMocks();
   });
 
-  it('fetch は bodyPart 専用フィールドを欠落させずに返す', async () => {
+  it('fetch restores bodyPart and adminCode as first-class fields', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -36,12 +36,19 @@ describe('orderBundleApi bodyPart contract', () => {
           bundles: [
             {
               entity: 'radiologyOrder',
-              bundleName: '胸部CT',
-              admin: '1回',
+              bundleName: 'CHEST_CT',
+              admin: 'once-daily',
               adminCode: '1234',
               adminCodeSystem: 'Claim007',
-              items: [{ code: '700001', name: '胸部CT' }],
-              bodyPart: { code: 'BP001', name: '胸部', quantity: '1', unit: '部位', memo: '専用' },
+              items: [{ code: '700001', name: 'CHEST_CT', rowRole: 'main' }],
+              bodyPart: {
+                code: 'BP001',
+                name: 'CHEST',
+                quantity: '1',
+                unit: 'part',
+                memo: 'BODY_PART',
+                rowRole: 'bodyPart',
+              },
             },
           ],
         }),
@@ -58,14 +65,16 @@ describe('orderBundleApi bodyPart contract', () => {
     expect((result.bundles[0] as any).bodyPart).toEqual(
       expect.objectContaining({
         code: 'BP001',
-        name: '胸部',
+        name: 'CHEST',
       }),
     );
     expect((result.bundles[0] as any).adminCode).toBe('1234');
     expect((result.bundles[0] as any).adminCodeSystem).toBe('Claim007');
+    expect((result.bundles[0] as any).items[0]?.rowRole).toBe('main');
+    expect((result.bundles[0] as any).bodyPart?.rowRole).toBe('bodyPart');
   });
 
-  it('fetch は laboTest 由来の bundle.entity を testOrder に正規化して返す', async () => {
+  it('fetch normalizes laboTest bundle.entity to testOrder', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -74,8 +83,8 @@ describe('orderBundleApi bodyPart contract', () => {
           bundles: [
             {
               entity: 'laboTest',
-              bundleName: '血液一般',
-              items: [{ code: '160000010', name: '血液一般' }],
+              bundleName: 'LAB_GENERAL',
+              items: [{ code: '160000010', name: 'LAB_GENERAL' }],
             },
           ],
         }),
@@ -92,7 +101,7 @@ describe('orderBundleApi bodyPart contract', () => {
     expect(result.bundles[0]?.entity).toBe('testOrder');
   });
 
-  it('mutation は bodyPart 専用フィールドを payload に含めて送信する', async () => {
+  it('mutation includes bodyPart and adminCode in the payload', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -112,12 +121,19 @@ describe('orderBundleApi bodyPart contract', () => {
         {
           operation: 'create',
           entity: 'radiologyOrder',
-          bundleName: '胸部CT',
-          admin: '1回',
+          bundleName: 'CHEST_CT',
+          admin: 'once-daily',
           adminCode: '1234',
           adminCodeSystem: 'Claim007',
-          items: [{ code: '700001', name: '胸部CT' }],
-          bodyPart: { code: 'BP001', name: '胸部', quantity: '1', unit: '部位', memo: '専用' },
+          items: [{ code: '700001', name: 'CHEST_CT', rowRole: 'main' }],
+          bodyPart: {
+            code: 'BP001',
+            name: 'CHEST',
+            quantity: '1',
+            unit: 'part',
+            memo: 'BODY_PART',
+            rowRole: 'bodyPart',
+          },
         } as any,
       ],
     });
@@ -129,15 +145,17 @@ describe('orderBundleApi bodyPart contract', () => {
       expect.objectContaining({
         adminCode: '1234',
         adminCodeSystem: 'Claim007',
+        items: [expect.objectContaining({ code: '700001', rowRole: 'main' })],
         bodyPart: expect.objectContaining({
           code: 'BP001',
-          name: '胸部',
+          name: 'CHEST',
+          rowRole: 'bodyPart',
         }),
       }),
     );
   });
 
-  it('mutation は laboTest 由来の entity を testOrder に正規化して送信する', async () => {
+  it('mutation normalizes laboTest entity to testOrder', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -157,8 +175,8 @@ describe('orderBundleApi bodyPart contract', () => {
         {
           operation: 'create',
           entity: 'laboTest',
-          bundleName: '血液一般',
-          items: [{ code: '160000010', name: '血液一般' }],
+          bundleName: 'LAB_GENERAL',
+          items: [{ code: '160000010', name: 'LAB_GENERAL' }],
         } as any,
       ],
     });
@@ -169,7 +187,7 @@ describe('orderBundleApi bodyPart contract', () => {
     expect(body.operations[0]?.entity).toBe('testOrder');
   });
 
-  it('mutation は adminCode と adminMemo を別 field として保持する', async () => {
+  it('mutation keeps adminCode and adminMemo as separate fields', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -189,12 +207,12 @@ describe('orderBundleApi bodyPart contract', () => {
         {
           operation: 'create',
           entity: 'treatmentOrder',
-          bundleName: '処置セット',
-          admin: '1日1回',
+          bundleName: 'TREATMENT_SET',
+          admin: 'once-per-day',
           adminCode: '31001',
           adminCodeSystem: 'Claim007',
-          adminMemo: '注射前確認',
-          items: [{ code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回' }],
+          adminMemo: 'ADMIN_MEMO',
+          items: [{ code: '140000610', name: 'TREATMENT_ITEM', quantity: '1', unit: 'times' }],
         } as any,
       ],
     });
@@ -204,15 +222,15 @@ describe('orderBundleApi bodyPart contract', () => {
 
     expect(body.operations[0]).toEqual(
       expect.objectContaining({
-        admin: '1日1回',
+        admin: 'once-per-day',
         adminCode: '31001',
         adminCodeSystem: 'Claim007',
-        adminMemo: '注射前確認',
+        adminMemo: 'ADMIN_MEMO',
       }),
     );
   });
 
-  it('mutation は mixed coded/uncoded rows を黙って落とさずそのまま送信する', async () => {
+  it('mutation keeps mixed coded and uncoded rows in the payload', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -232,11 +250,11 @@ describe('orderBundleApi bodyPart contract', () => {
         {
           operation: 'create',
           entity: 'treatmentOrder',
-          bundleName: '混在オーダー',
+          bundleName: 'MIXED_ORDER',
           bundleNumber: '1',
           items: [
-            { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回' },
-            { name: '未コード行', quantity: '1', unit: '回' },
+            { code: '140000610', name: 'TREATMENT_ITEM', quantity: '1', unit: 'times' },
+            { name: 'UNCODED_ROW', quantity: '1', unit: 'times' },
           ],
         } as any,
       ],
@@ -247,11 +265,14 @@ describe('orderBundleApi bodyPart contract', () => {
 
     expect(body.operations[0]?.items).toHaveLength(2);
     expect(body.operations[0]?.items).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: '140000610' }), expect.objectContaining({ name: '未コード行' })]),
+      expect.arrayContaining([
+        expect.objectContaining({ code: '140000610' }),
+        expect.objectContaining({ name: 'UNCODED_ROW' }),
+      ]),
     );
   });
 
-  it('患者取込リカバリ後の再取得でも bodyPart 専用フィールドを保持する', async () => {
+  it('patient import recovery still preserves bodyPart in fetched bundles', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(
@@ -273,9 +294,9 @@ describe('orderBundleApi bodyPart contract', () => {
             bundles: [
               {
                 entity: 'radiologyOrder',
-                bundleName: '腰椎MRI',
-                items: [{ code: '700100', name: '腰椎MRI' }],
-                bodyPart: { code: 'BP090', name: '腰部' },
+                bundleName: 'BRAIN_MRI',
+                items: [{ code: '700100', name: 'BRAIN_MRI' }],
+                bodyPart: { code: 'BP090', name: 'HEAD' },
               },
             ],
           }),
@@ -296,6 +317,180 @@ describe('orderBundleApi bodyPart contract', () => {
 
     expect(result.ok).toBe(true);
     expect(result.patientImportAttempted).toBe(true);
-    expect((result.bundles[0] as any).bodyPart).toEqual(expect.objectContaining({ name: '腰部' }));
+    expect((result.bundles[0] as any).bodyPart).toEqual(expect.objectContaining({ name: 'HEAD' }));
+  });
+
+  it('fetch restores otherOrder explicit class meta and local-only fields', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-OTHER-FETCH',
+          patientId: '000001',
+          bundles: [
+            {
+              entity: 'otherOrder',
+              bundleName: 'CERTIFICATE_FEE',
+              bundleNumber: '5',
+              classCode: '800',
+              classCodeSystem: 'Claim007',
+              className: 'Other',
+              admin: 'LOCAL_ADMIN_NOTE',
+              memo: 'LOCAL_MEMO',
+              items: [{ code: '180000210', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderBundles({ patientId: '000001', entity: 'otherOrder' });
+
+    expect(result.ok).toBe(true);
+    expect(result.bundles[0]).toEqual(
+      expect.objectContaining({
+        entity: 'otherOrder',
+        bundleName: 'CERTIFICATE_FEE',
+        classCode: '800',
+        classCodeSystem: 'Claim007',
+        className: 'Other',
+        admin: 'LOCAL_ADMIN_NOTE',
+        memo: 'LOCAL_MEMO',
+      }),
+    );
+  });
+
+  it('mutation keeps otherOrder explicit class meta and local-only fields', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-OTHER-MUT',
+          createdDocumentIds: [104],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'otherOrder',
+          bundleName: 'CERTIFICATE_FEE',
+          bundleNumber: '5',
+          classCode: '800',
+          classCodeSystem: 'Claim007',
+          className: 'Other',
+          admin: 'LOCAL_ADMIN_NOTE',
+          memo: 'LOCAL_MEMO',
+          items: [{ code: '180000210', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
+        } as any,
+      ],
+    });
+
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+
+    expect(body.operations[0]).toEqual(
+      expect.objectContaining({
+        entity: 'otherOrder',
+        bundleName: 'CERTIFICATE_FEE',
+        bundleNumber: '5',
+        classCode: '800',
+        classCodeSystem: 'Claim007',
+        className: 'Other',
+        admin: 'LOCAL_ADMIN_NOTE',
+        memo: 'LOCAL_MEMO',
+        items: expect.arrayContaining([expect.objectContaining({ code: '180000210', unit: 'times' })]),
+      }),
+    );
+  });
+
+  it('fetch preserves class 600 subtype contract', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-SUBTYPE-FETCH',
+          patientId: '000001',
+          bundles: [
+            {
+              entity: 'bacteriaOrder',
+              bundleName: 'bacteria bundle',
+              bundleNumber: '2',
+              subtype: 'culture',
+              classCode: '600',
+              classCodeSystem: 'Claim007',
+              className: 'test class',
+              items: [{ code: '160000010', name: 'culture item', quantity: '1', unit: 'count' }],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderBundles({ patientId: '000001', entity: 'bacteriaOrder' });
+
+    expect(result.ok).toBe(true);
+    expect(result.bundles[0]).toEqual(
+      expect.objectContaining({
+        entity: 'bacteriaOrder',
+        subtype: 'culture',
+        classCode: '600',
+      }),
+    );
+  });
+
+  it('mutation preserves class 600 subtype contract', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-SUBTYPE-MUT',
+          createdDocumentIds: [105],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'bacteriaOrder',
+          bundleName: 'bacteria bundle',
+          bundleNumber: '2',
+          subtype: 'sensitivity',
+          classCode: '600',
+          classCodeSystem: 'Claim007',
+          className: 'test class',
+          items: [{ code: '160000011', name: 'sensitivity item', quantity: '1', unit: 'count' }],
+        } as any,
+      ],
+    });
+
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+
+    expect(body.operations[0]).toEqual(
+      expect.objectContaining({
+        entity: 'bacteriaOrder',
+        subtype: 'sensitivity',
+        classCode: '600',
+      }),
+    );
   });
 });

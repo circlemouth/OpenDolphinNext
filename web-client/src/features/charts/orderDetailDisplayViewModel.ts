@@ -1,4 +1,4 @@
-import { parseOrcaOrderItemMemo } from './orcaOrderItemMeta';
+import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
 import {
   ORDER_GROUP_REGISTRY,
@@ -146,20 +146,20 @@ const buildPrescriptionItems = (
 
   const items = resolveDisplayItemsWithoutBodyPart(bundle)
     .map((item) => {
-      const parsed = parseOrcaOrderItemMemo(item.memo);
+      const parsed = resolveOrcaOrderItemFields(item);
       const quantity = formatQuantityWithUnit(item.quantity, item.unit);
       const ingredientAmount = extractIngredientAmount(item);
-      const userComment = normalizeInline(parsed.meta.userComment);
+      const userComment = normalizeInline(parsed.userComment);
       const receiptComment = toSafeMemoText(parsed.memoText);
 
-      if (!parsed.meta.genericFlg) missingGeneric = true;
+      if (!parsed.genericFlg) missingGeneric = true;
       if (!ingredientAmount) missingIngredient = true;
       if (!receiptComment) missingReceiptComment = true;
 
       const genericNote =
-        parsed.meta.genericFlg === 'no'
+        parsed.genericFlg === 'no'
           ? '【後発変更不可】'
-          : parsed.meta.genericFlg === 'yes'
+          : parsed.genericFlg === 'yes'
             ? '【後発変更可】'
             : '【後発可否不明】';
 

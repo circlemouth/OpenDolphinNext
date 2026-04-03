@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ORCA_SEND_ORDER_ENTITIES,
+  normalizeOrderTestSubtype,
   resolveCanonicalOrderEntity,
   resolveOrderDockCategoryLabel,
   resolveOrderEntity,
@@ -9,13 +10,14 @@ import {
   resolveOrderEntityEtensuCategory,
   resolveOrderEntityLabel,
   resolveOrderEntityMasterSearchPolicy,
+  resolveOrderEntityTestSubtypeConfig,
   resolveOrderEntityUiProfile,
   resolveOrderEntityValidationRule,
   resolveOrderGroupKeyByEntity,
 } from '../orderCategoryRegistry';
 
 describe('orderCategoryRegistry', () => {
-  it('カテゴリ/エンティティ解決を一元定義で返す', () => {
+  it('normalizes aliases and group keys consistently', () => {
     expect(resolveOrderEntityLabel('medOrder')).toBe('処方');
     expect(resolveOrderGroupKeyByEntity('medOrder')).toBe('prescription');
     expect(resolveOrderGroupKeyByEntity('laboTest')).toBe('test');
@@ -29,7 +31,7 @@ describe('orderCategoryRegistry', () => {
     expect(resolveOrderDockCategoryLabel('charge')).toBe('算定');
   });
 
-  it('検索・バリデーション・送信向けメタを返す', () => {
+  it('returns entity specific ui, validation, and send metadata', () => {
     const medUi = resolveOrderEntityUiProfile('medOrder');
     const medRule = resolveOrderEntityValidationRule('medOrder');
     const injClass = resolveOrderEntityDefaultClassMeta('injectionOrder');
@@ -45,7 +47,7 @@ describe('orderCategoryRegistry', () => {
     expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('generalOrder');
   });
 
-  it('カテゴリ差分を維持した検索ポリシーを返す', () => {
+  it('returns search policy aligned with each entity', () => {
     const injectionPolicy = resolveOrderEntityMasterSearchPolicy('injectionOrder');
     const treatmentPolicy = resolveOrderEntityMasterSearchPolicy('treatmentOrder');
     const testPolicy = resolveOrderEntityMasterSearchPolicy('testOrder');
@@ -55,11 +57,29 @@ describe('orderCategoryRegistry', () => {
     expect(injectionPolicy.masterSearchPresets.map((preset) => preset.type)).toEqual(['drug', 'etensu']);
     expect(injectionPolicy.defaultMasterSearchType).toBe('drug');
     expect(injectionPolicy.etensuCategory).toBe('3');
-
     expect(treatmentPolicy.etensuCategory).toBe('4');
     expect(testPolicy.etensuCategory).toBe('6');
     expect(chargePolicy.etensuCategory).toBe('1');
-
     expect(laboPolicy).toEqual(testPolicy);
+  });
+
+  it('exposes class 600 subtype config by entity', () => {
+    const specimen = resolveOrderEntityTestSubtypeConfig('testOrder');
+    const physiology = resolveOrderEntityTestSubtypeConfig('physiologyOrder');
+    const bacteria = resolveOrderEntityTestSubtypeConfig('bacteriaOrder');
+
+    expect(specimen?.readOnly).toBe(true);
+    expect(specimen?.defaultValue).toBe('specimen');
+    expect(physiology?.readOnly).toBe(true);
+    expect(physiology?.defaultValue).toBe('physiology');
+    expect(bacteria?.required).toBe(true);
+    expect(bacteria?.options.map((option) => option.value)).toEqual(['culture', 'sensitivity']);
+  });
+
+  it('normalizes class 600 subtype by entity contract', () => {
+    expect(normalizeOrderTestSubtype('testOrder', undefined)).toBe('specimen');
+    expect(normalizeOrderTestSubtype('physiologyOrder', 'PHYSIOLOGY')).toBe('physiology');
+    expect(normalizeOrderTestSubtype('bacteriaOrder', 'culture')).toBe('culture');
+    expect(normalizeOrderTestSubtype('bacteriaOrder', 'invalid')).toBeUndefined();
   });
 });

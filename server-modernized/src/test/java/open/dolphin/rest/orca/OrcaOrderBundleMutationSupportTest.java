@@ -2,6 +2,7 @@ package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Date;
 import java.util.List;
@@ -68,5 +69,31 @@ class OrcaOrderBundleMutationSupportTest {
 
         assertEquals(42L, document.getModules().get(0).getId());
         assertEquals("オーダー", document.getDocInfoModel().getTitle());
+    }
+    @Test
+    void buildDocumentStoresGenericFlagAndUserCommentOutsideVisibleMemo() {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setEntity(IInfoModel.ENTITY_MED_ORDER);
+        operation.setBundleName("処方セット");
+        OrderBundleMutationRequest.BundleItem drug = new OrderBundleMutationRequest.BundleItem();
+        drug.setCode("620000001");
+        drug.setName("アムロジピン");
+        drug.setQuantity("1");
+        drug.setUnit("錠");
+        drug.setMemo("レセプトコメント");
+        drug.setGenericFlg("no");
+        drug.setUserComment("食後");
+        operation.setItems(List.of(drug));
+
+        DocumentModel document = OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
+
+        BundleDolphin bundle = (BundleDolphin) document.getModules().get(0).getModel();
+        ClaimItem[] claimItems = bundle.getClaimItem();
+        assertNotNull(claimItems);
+        assertEquals(1, claimItems.length);
+        assertTrue(claimItems[0].getMemo().startsWith("__orca_meta__:"));
+        assertTrue(claimItems[0].getMemo().contains("\"genericFlg\":\"no\""));
+        assertTrue(claimItems[0].getMemo().contains("\"userComment\":\"食後\""));
+        assertTrue(claimItems[0].getMemo().endsWith("レセプトコメント"));
     }
 }

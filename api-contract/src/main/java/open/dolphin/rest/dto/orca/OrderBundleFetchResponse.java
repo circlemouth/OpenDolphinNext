@@ -68,6 +68,7 @@ public class OrderBundleFetchResponse {
         private String entity;
         private String bundleName;
         private String bundleNumber;
+        private String subtype;
         private String classCode;
         private String classCodeSystem;
         private String className;
@@ -120,6 +121,14 @@ public class OrderBundleFetchResponse {
 
         public void setBundleNumber(String bundleNumber) {
             this.bundleNumber = bundleNumber;
+        }
+
+        public String getSubtype() {
+            return subtype;
+        }
+
+        public void setSubtype(String subtype) {
+            this.subtype = subtype;
         }
 
         public String getClassCode() {
@@ -233,6 +242,9 @@ public class OrderBundleFetchResponse {
         private String quantity;
         private String unit;
         private String memo;
+        private String genericFlg;
+        private String userComment;
+        private String rowRole;
 
         public String getCode() {
             return code;
@@ -272,6 +284,30 @@ public class OrderBundleFetchResponse {
 
         public void setMemo(String memo) {
             this.memo = memo;
+        }
+
+        public String getGenericFlg() {
+            return genericFlg;
+        }
+
+        public void setGenericFlg(String genericFlg) {
+            this.genericFlg = genericFlg;
+        }
+
+        public String getUserComment() {
+            return userComment;
+        }
+
+        public void setUserComment(String userComment) {
+            this.userComment = userComment;
+        }
+
+        public String getRowRole() {
+            return rowRole;
+        }
+
+        public void setRowRole(String rowRole) {
+            this.rowRole = rowRole;
         }
     }
 }

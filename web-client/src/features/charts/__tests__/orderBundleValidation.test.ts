@@ -10,6 +10,7 @@ const baseForm: BundleFormState = {
   adminCode: '',
   adminCodeSystem: undefined,
   bundleNumber: '1',
+  subtype: '',
   adminMemo: '',
   memo: '',
   startDate: '2025-12-29',
@@ -331,5 +332,46 @@ describe('validateBundleForm', () => {
       bundleLabel: 'オーダー名',
     });
     expect(issues).toHaveLength(0);
+  });
+  it('bacteriaOrder: subtype が無い場合は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: 'Bacteria',
+        subtype: '',
+        items: [{ code: '160000010', name: 'Culture', quantity: '1', unit: 'count', memo: '' }],
+      },
+      entity: 'bacteriaOrder',
+      bundleLabel: '検査オーダー',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_test_subtype']);
+  });
+
+  it('bacteriaOrder: 許可されない subtype は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: 'Bacteria',
+        subtype: 'specimen' as BundleFormState['subtype'],
+        items: [{ code: '160000010', name: 'Culture', quantity: '1', unit: 'count', memo: '' }],
+      },
+      entity: 'bacteriaOrder',
+      bundleLabel: '検査オーダー',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_test_subtype', 'invalid_test_subtype']);
+  });
+
+  it('testOrder: hidden bodyPart が残っている場合は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: 'Test',
+        items: [{ code: '160000010', name: 'Lab', quantity: '1', unit: 'count', memo: '' }],
+        bodyPart: { code: '002001', name: 'Chest', quantity: '', unit: '', memo: '' },
+      },
+      entity: 'testOrder',
+      bundleLabel: '検査オーダー',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
   });
 });

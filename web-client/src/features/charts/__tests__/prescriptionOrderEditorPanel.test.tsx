@@ -121,15 +121,32 @@ describe('PrescriptionOrderEditorPanel', () => {
 
     renderPanel();
 
+    const claimCodeInput = screen.getByPlaceholderText('請求コメントコード');
     const claimInput = screen.getByPlaceholderText('請求用コメント（Shift+Enterで確定）');
+    await user.type(claimCodeInput, '810000001');
     await user.type(claimInput, '患者希望コメント');
     await user.keyboard('{Shift>}{Enter}{/Shift}');
 
-    const chip = screen.getByRole('button', { name: '患者希望コメント' });
+    const chip = screen.getByRole('button', { name: '810000001 患者希望コメント' });
     expect(chip).toBeInTheDocument();
 
     await user.click(chip);
-    expect(screen.queryByRole('button', { name: '患者希望コメント' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '810000001 患者希望コメント' })).toBeNull();
+  });
+
+  it('コード未入力の請求コメントは追加前に明示ブロックする', async () => {
+    const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderPanel();
+
+    const claimInput = screen.getByPlaceholderText('請求用コメント（Shift+Enterで確定）');
+    await user.type(claimInput, 'コードなしコメント');
+    await user.keyboard('{Shift>}{Enter}{/Shift}');
+
+    expect(screen.queryByRole('button', { name: /コードなしコメント/ })).toBeNull();
+    expect(screen.getByText('請求コメントはコード付きで追加してください。自由文は薬剤コメントへ入力してください。')).toBeInTheDocument();
   });
 
   it('日数一括変更は内服/頓服RPのみに反映し、外用RPには反映しない', async () => {

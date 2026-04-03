@@ -1,7 +1,7 @@
 import type { MedicalModV2Information } from './orcaClaimApi';
 import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta } from './orderCategoryRegistry';
 import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
-import { parseOrcaOrderItemMemo } from './orcaOrderItemMeta';
+import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 const BODY_PART_CODE_PATTERN = /^002/;
@@ -74,6 +74,9 @@ const cloneBundleItem = (item?: OrderBundleItem | null): OrderBundleItem | null 
     quantity: item.quantity?.trim() || undefined,
     unit: item.unit?.trim() || undefined,
     memo: item.memo?.trim() || undefined,
+    genericFlg: item.genericFlg,
+    userComment: item.userComment,
+    rowRole: item.rowRole,
   };
 };
 
@@ -90,6 +93,25 @@ const cloneBodyPartItem = (item?: OrderBundle['bodyPart'] | null): OrderBundleIt
 
 const isBodyPartCodeValue = (code?: string | null) => Boolean(code?.trim() && isBodyPartCode(code.trim()));
 
+const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
+  const normalizedCode = code?.trim();
+  if (!normalizedCode || !normalizedCode.startsWith('7')) return false;
+  const canonicalEntity = resolveCanonicalOrderEntity(entity);
+  return canonicalEntity !== 'radiologyOrder';
+};
+
+const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | null) => {
+  if (!item) return 'main' as const;
+  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
+    return item.rowRole;
+  }
+  const code = item.code?.trim();
+  if (isBodyPartCodeValue(code)) return 'bodyPart' as const;
+  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
+  if (code && isCommentMedicationCode(code)) return 'comment' as const;
+  return 'main' as const;
+};
+
 const collectNormalizedRows = (bundle: OrderBundle) => {
   const rows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   const explicitBodyPart = cloneBodyPartItem(bundle.bodyPart);
@@ -103,12 +125,27 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
   } else if (legacyBodyPart) {
     rows.push({ item: legacyBodyPart, source: { kind: 'body_part' } });
   }
+  const mainRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
+  const materialRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
+  const commentRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   (bundle.items ?? []).forEach((item, itemIndex) => {
-    if (!hasBundleItemValue(item)) return;
-    const code = item.code?.trim() ?? '';
+    const cloned = cloneBundleItem(item);
+    if (!cloned || !hasBundleItemValue(cloned)) return;
+    const code = cloned.code?.trim() ?? '';
     if (isBodyPartCodeValue(code) && (explicitBodyPart || legacyBodyPart)) return;
-    rows.push({ item: { ...item }, source: { kind: 'bundle_item', itemIndex } });
+    const row = { item: cloned, source: { kind: 'bundle_item', itemIndex } as const };
+    const rowRole = resolveBundleItemRowRole(bundle.entity, cloned);
+    if (rowRole === 'comment') {
+      commentRows.push(row);
+      return;
+    }
+    if (rowRole === 'material') {
+      materialRows.push(row);
+      return;
+    }
+    mainRows.push(row);
   });
+  rows.push(...mainRows, ...materialRows, ...commentRows);
   return rows;
 };
 
@@ -173,8 +210,8 @@ export const collectMedicalModV2BundleIssues = (bundles: OrderBundle[]): Medical
 const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication | null => {
   const code = item.code?.trim();
   if (!code) return null;
-  const { meta } = parseOrcaOrderItemMemo(item.memo);
-  const genericFlg = DRUG_CODE_PATTERN.test(code) ? meta.genericFlg : undefined;
+  const { genericFlg: resolvedGenericFlg } = resolveOrcaOrderItemFields(item);
+  const genericFlg = DRUG_CODE_PATTERN.test(code) ? resolvedGenericFlg : undefined;
   return {
     code,
     name: item.name?.trim() || undefined,
@@ -192,9 +229,12 @@ const resolveMedicalClass = (bundle: OrderBundle) => {
 };
 
 const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormalizedRow | null => {
-  const isPrescription = (bundle.entity?.trim() ?? '') === 'medOrder';
-  if (!isPrescription) return null;
-  const usageCodeCandidate = bundle.adminCode?.trim() || (bundle.admin?.trim() ? bundle.admin.trim().split(/\s+/)[0] : '');
+  const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  const isPrescription = canonicalEntity === 'medOrder';
+  const isInjection = canonicalEntity === 'injectionOrder';
+  if (!isPrescription && !isInjection) return null;
+  const usageCodeCandidate =
+    bundle.adminCode?.trim() || (isPrescription && bundle.admin?.trim() ? bundle.admin.trim().split(/\s+/)[0] : '');
   const usageCode = /^\d{4,}$/.test(usageCodeCandidate) ? usageCodeCandidate : '';
   if (!usageCode) return null;
   const hasUsageAlready = rows.some((row) => row.medication.code.trim() === usageCode);
@@ -229,12 +269,16 @@ export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundl
   if (!medicalClass) return null;
 
   const usageRow = buildUsageRow(bundle, bundleRows);
-  const isPrescription = (bundle.entity?.trim() ?? '') === 'medOrder';
+  const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  const isPrescription = canonicalEntity === 'medOrder';
+  const isInjection = canonicalEntity === 'injectionOrder';
   const bodyPartRows = bundleRows.filter((row) => row.source.kind === 'body_part');
   const nonBodyPartRows = bundleRows.filter((row) => row.source.kind !== 'body_part');
   const head = isPrescription ? nonBodyPartRows.filter((row) => !isCommentMedicationCode(row.medication.code)) : nonBodyPartRows;
   const tail = isPrescription ? nonBodyPartRows.filter((row) => isCommentMedicationCode(row.medication.code)) : [];
-  const rows = [...bodyPartRows, ...head, ...(usageRow ? [usageRow] : []), ...tail];
+  const rows = isInjection
+    ? [...(usageRow ? [usageRow] : []), ...bodyPartRows, ...head]
+    : [...bodyPartRows, ...head, ...(usageRow ? [usageRow] : []), ...tail];
 
   return {
     header: {

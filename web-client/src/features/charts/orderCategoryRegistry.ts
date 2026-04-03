@@ -2,6 +2,7 @@ import type { OrderMasterSearchType } from './orderMasterSearchApi';
 
 export type OrderGroupKey = 'prescription' | 'injection' | 'treatment' | 'test' | 'charge';
 export type BundleNumberLabel = '日数' | '回数';
+export type OrderTestSubtype = 'specimen' | 'physiology' | 'culture' | 'sensitivity';
 
 export type OrderEntity =
   | 'medOrder'
@@ -67,6 +68,14 @@ export type OrderEntityUiProfile = {
   supportsInjectionNoProcedure: boolean;
   masterSearchPresets: Array<{ type: OrderMasterSearchType; label: string }>;
   defaultMasterSearchType: OrderMasterSearchType;
+  testSubtype?: {
+    label: string;
+    helpText: string;
+    required: boolean;
+    readOnly: boolean;
+    defaultValue?: OrderTestSubtype;
+    options: Array<{ value: OrderTestSubtype; label: string }>;
+  };
 };
 
 export type OrderEntityMasterSearchPolicy = {
@@ -123,6 +132,35 @@ const BASE_EDITOR_UI: OrderEntityUiProfile = {
 const cloneMasterSearchPresets = (
   presets: OrderEntityUiProfile['masterSearchPresets'],
 ): Array<{ type: OrderMasterSearchType; label: string }> => presets.map((preset) => ({ ...preset }));
+
+const TEST_SPECIMEN_SUBTYPE = {
+  label: '600系 subtype',
+  helpText: '検体・一般検査は specimen として保存し、ORCA送信 grouping には使いません。',
+  required: false,
+  readOnly: true,
+  defaultValue: 'specimen' as OrderTestSubtype,
+  options: [{ value: 'specimen' as OrderTestSubtype, label: '検体/一般検査' }],
+};
+
+const TEST_PHYSIOLOGY_SUBTYPE = {
+  label: '600系 subtype',
+  helpText: '生理検査は physiology 固定で扱い、検体系とは editor 上で分離します。',
+  required: false,
+  readOnly: true,
+  defaultValue: 'physiology' as OrderTestSubtype,
+  options: [{ value: 'physiology' as OrderTestSubtype, label: '生理' }],
+};
+
+const TEST_BACTERIA_SUBTYPE = {
+  label: '細菌検査 subtype',
+  helpText: '細菌検査は culture または sensitivity を選択してください。ORCA送信 grouping は classCode 600 を維持します。',
+  required: true,
+  readOnly: false,
+  options: [
+    { value: 'culture' as OrderTestSubtype, label: '培養' },
+    { value: 'sensitivity' as OrderTestSubtype, label: '感受性' },
+  ],
+};
 
 const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
   medOrder: {
@@ -212,7 +250,18 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     etensuCategory: '8',
     classMeta: { classCode: '800', className: 'その他' },
     validation: BASE_EDITOR_VALIDATION,
-    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: true },
+    ui: {
+      ...BASE_EDITOR_UI,
+      bundleNamePlaceholder: '例: 診断書料',
+      instructionPlaceholder: '院内補足として保持します',
+      memoPlaceholder: '院内メモとして保持します',
+      masterSectionTitle: 'その他オーダーマスタ検索',
+      mainItemLabel: 'その他オーダー項目',
+      mainItemPlaceholder: 'その他オーダー項目名',
+      supportsBodyPartSearch: true,
+      masterSearchPresets: [{ type: 'etensu', label: 'その他オーダー' }],
+      defaultMasterSearchType: 'etensu',
+    },
     editor: { title: 'その他', bundleLabel: '項目', itemQuantityLabel: '数量' },
   },
   testOrder: {
@@ -239,6 +288,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
         { type: 'kensa-sort', label: '検査区分' },
       ],
       defaultMasterSearchType: 'etensu',
+      testSubtype: TEST_SPECIMEN_SUBTYPE,
     },
     editor: { title: '検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
@@ -266,6 +316,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
         { type: 'kensa-sort', label: '検査区分' },
       ],
       defaultMasterSearchType: 'etensu',
+      testSubtype: TEST_SPECIMEN_SUBTYPE,
     },
     editor: { title: '検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
@@ -276,14 +327,14 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     classMeta: { classCode: '600', className: '検査' },
     validation: BASE_EDITOR_VALIDATION,
     ui: {
-      bundleNamePlaceholder: '例: 生化学検査',
-      instructionLabel: '検査指示',
-      instructionPlaceholder: '例: 至急 / 空腹時',
-      memoLabel: '検査メモ',
-      memoPlaceholder: '採取条件・備考を入力',
-      masterSectionTitle: '検査マスタ検索',
-      mainItemLabel: '検査項目',
-      mainItemPlaceholder: '検査項目名',
+      bundleNamePlaceholder: '例: 心電図検査',
+      instructionLabel: '生理検査指示',
+      instructionPlaceholder: '例: 安静時 / 12誘導',
+      memoLabel: '生理検査メモ',
+      memoPlaceholder: '実施条件・備考を入力',
+      masterSectionTitle: '生理検査マスタ検索',
+      mainItemLabel: '生理検査項目',
+      mainItemPlaceholder: '生理検査項目名',
       supportsUsageSearch: false,
       supportsBodyPartSearch: false,
       supportsCommentCodes: true,
@@ -293,6 +344,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
         { type: 'kensa-sort', label: '検査区分' },
       ],
       defaultMasterSearchType: 'etensu',
+      testSubtype: TEST_PHYSIOLOGY_SUBTYPE,
     },
     editor: { title: '生理検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
@@ -303,14 +355,14 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     classMeta: { classCode: '600', className: '検査' },
     validation: BASE_EDITOR_VALIDATION,
     ui: {
-      bundleNamePlaceholder: '例: 生化学検査',
-      instructionLabel: '検査指示',
-      instructionPlaceholder: '例: 至急 / 空腹時',
-      memoLabel: '検査メモ',
+      bundleNamePlaceholder: '例: 細菌培養',
+      instructionLabel: '細菌検査指示',
+      instructionPlaceholder: '例: 喀痰 / 至急',
+      memoLabel: '細菌検査メモ',
       memoPlaceholder: '採取条件・備考を入力',
-      masterSectionTitle: '検査マスタ検索',
-      mainItemLabel: '検査項目',
-      mainItemPlaceholder: '検査項目名',
+      masterSectionTitle: '細菌検査マスタ検索',
+      mainItemLabel: '細菌検査項目',
+      mainItemPlaceholder: '細菌検査項目名',
       supportsUsageSearch: false,
       supportsBodyPartSearch: false,
       supportsCommentCodes: true,
@@ -320,6 +372,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
         { type: 'kensa-sort', label: '検査区分' },
       ],
       defaultMasterSearchType: 'etensu',
+      testSubtype: TEST_BACTERIA_SUBTYPE,
     },
     editor: { title: '細菌検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
@@ -488,6 +541,17 @@ export const resolveOrderEntityUiProfile = (entity: string): OrderEntityUiProfil
   return BASE_EDITOR_UI;
 };
 
+export const resolveOrderEntityTestSubtypeConfig = (entity: string): OrderEntityUiProfile['testSubtype'] => {
+  const resolved = resolveOrderEntity(entity);
+  if (!resolved) return undefined;
+  const config = ORDER_ENTITY_REGISTRY[resolved].ui.testSubtype;
+  if (!config) return undefined;
+  return {
+    ...config,
+    options: config.options.map((option) => ({ ...option })),
+  };
+};
+
 export const resolveOrderEntityMasterSearchPolicy = (entity: string): OrderEntityMasterSearchPolicy => {
   const resolved = resolveOrderEntity(entity);
   if (!resolved) {
@@ -528,6 +592,15 @@ export const resolveOrderEntityEditorMeta = (entity: string): OrderEntityEditorM
   const resolved = resolveOrderEntity(entity);
   if (!resolved) return null;
   return ORDER_ENTITY_REGISTRY[resolved].editor;
+};
+
+export const normalizeOrderTestSubtype = (entity: string, subtype?: string | null): OrderTestSubtype | undefined => {
+  const config = resolveOrderEntityTestSubtypeConfig(entity);
+  if (!config) return undefined;
+  const normalized = subtype?.trim().toLowerCase();
+  const matched = config.options.find((option) => option.value === normalized);
+  if (matched) return matched.value;
+  return config.defaultValue;
 };
 
 type PrescriptionTiming = 'regular' | 'tonyo' | 'gaiyo';

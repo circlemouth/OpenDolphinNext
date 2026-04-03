@@ -7,8 +7,14 @@ export type OrderRecommendationSource = 'patient' | 'facility';
 export type OrderRecommendationTemplate = {
   bundleName: string;
   admin: string;
+  adminMemo?: string;
+  adminCode?: string;
+  adminCodeSystem?: string;
   bundleNumber: string;
-  adminMemo: string;
+  subtype?: string;
+  classCode?: string;
+  classCodeSystem?: string;
+  className?: string;
   memo: string;
   prescriptionLocation?: 'in' | 'out';
   prescriptionTiming?: 'regular' | 'tonyo' | 'gaiyo';

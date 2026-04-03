@@ -2025,7 +2025,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           },
         });
       } else if (action === 'draft') {
-        // TODO: 本実装では localStorage / server に保存。現段階は送信前チェック用のガード連携を優先。
+        // 下書き保存は既存の保存経路に委ね、ここでは送信前ガード後の完了通知だけを扱う。
         onDraftSaved?.();
       } else {
         // cancel は現状デモ（監査・テレメトリの記録）として扱う。

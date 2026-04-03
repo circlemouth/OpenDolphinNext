@@ -73,7 +73,9 @@ final class OrcaOrderBundleFetchSupport {
                     row.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(row.getEntity()));
                     return row;
                 })
-                .filter(row -> entity == null || entity.equals(row.getEntity()))
+                .filter(row -> entity == null
+                        || OrcaOrderBundle600SubtypeSupport.matchesInputSetEntity(
+                                entity, row.getEntity(), row.getClassCode()))
                 .sorted(Comparator.comparing(OrcaOrderInputSetListResponse.Item::getSetCode))
                 .collect(Collectors.toList());
         int fromIndex = Math.min(filtered.size(), (page - 1) * size);
@@ -129,6 +131,10 @@ final class OrcaOrderBundleFetchSupport {
         entry.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(moduleEntity));
         entry.setBundleName(OrcaOrderBundleDisplaySupport.resolveBundleName(bundle, info));
         entry.setBundleNumber(bundle.getBundleNumber());
+        entry.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(
+                moduleEntity,
+                null,
+                info != null ? info.getStampMemo() : null));
         entry.setClassCode(bundle.getClassCode());
         entry.setClassCodeSystem(bundle.getClassCodeSystem());
         entry.setClassName(bundle.getClassName());
@@ -142,7 +148,7 @@ final class OrcaOrderBundleFetchSupport {
         entry.setEnteredByName(OrcaOrderBundleDisplaySupport.resolveEnteredByName(enteredBy));
         entry.setEnteredByRole(OrcaOrderBundleDisplaySupport.resolveEnteredByRole(enteredBy));
         List<OrderBundleFetchResponse.OrderBundleItem> items =
-                OrcaOrderBundleRecommendationSupport.toItems(bundle.getClaimItem());
+                OrcaOrderBundleRecommendationSupport.toItems(moduleEntity, bundle.getClaimItem());
         entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(items));
         entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(items));
         return entry;

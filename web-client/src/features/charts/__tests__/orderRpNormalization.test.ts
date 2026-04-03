@@ -88,4 +88,30 @@ describe('orderRpNormalization', () => {
       }),
     );
   });
+  it('normalize は injectionOrder の admin 行と rowRole 順を固定する', () => {
+    const normalized = normalizeOrderBundleToRp({
+      entity: 'injectionOrder',
+      bundleName: 'drip-set',
+      bundleNumber: '3',
+      classCode: '310',
+      admin: '静注',
+      adminCode: '4101',
+      items: [
+        { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'slow', rowRole: 'comment' },
+        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
+        { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
+        { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', rowRole: 'main' },
+      ],
+    } as any);
+
+    expect(normalized?.header.medicalClass).toBe('310');
+    expect(normalized?.header.medicalClassNumber).toBe('3');
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual([
+      '4101',
+      '830000001',
+      '620000012',
+      '700000031',
+      '0085001',
+    ]);
+  });
 });

@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import open.dolphin.rest.dto.orca.PrescriptionClaimComment;
 import open.dolphin.rest.dto.orca.PrescriptionDoInputMeta;
 import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
@@ -118,6 +119,70 @@ class OrcaPrescriptionOrderImportSupportTest {
         assertEquals("rp-stable-001", merged.getRps().get(0).getRpNumber());
         assertEquals("200", merged.getRps().get(0).getUsageCode());
         assertEquals("INCOMING", merged.getRps().get(0).getDrugs().get(0).getCode());
+    }
+
+    @Test
+    void applyDoImportReplacesMatchingRpByStableRpNumberAndKeepsIncomingComments() {
+        PrescriptionClaimComment baseRpComment = new PrescriptionClaimComment();
+        baseRpComment.setCode("8200001");
+        baseRpComment.setText("旧RPコメント");
+        PrescriptionDrug baseDrug = new PrescriptionDrug();
+        baseDrug.setCode("BASE");
+        baseDrug.setDrugComment("旧薬剤コメント");
+        baseDrug.setClaimComments(List.of(baseRpComment));
+        PrescriptionRp baseRp = new PrescriptionRp();
+        baseRp.setRpNumber("rp-stable-001");
+        baseRp.setUsageCode("100");
+        baseRp.setDoctorComment("旧医師コメント");
+        baseRp.setClaimComments(List.of(baseRpComment));
+        baseRp.setDrugs(List.of(baseDrug));
+        PrescriptionOrder base = new PrescriptionOrder();
+        base.setRps(List.of(baseRp));
+
+        PrescriptionClaimComment incomingRpComment = new PrescriptionClaimComment();
+        incomingRpComment.setCode("8200002");
+        incomingRpComment.setText("新RPコメント");
+        incomingRpComment.setNote("do-import");
+        PrescriptionClaimComment incomingDrugComment = new PrescriptionClaimComment();
+        incomingDrugComment.setCode("8200003");
+        incomingDrugComment.setText("新薬剤コメント");
+        PrescriptionDrug incomingDrug = new PrescriptionDrug();
+        incomingDrug.setCode("INCOMING");
+        incomingDrug.setDrugComment("服薬後眠気あり");
+        incomingDrug.setClaimComments(List.of(incomingDrugComment));
+        PrescriptionRp incomingRp = new PrescriptionRp();
+        incomingRp.setRpNumber("rp-stable-001");
+        incomingRp.setUsageCode("200");
+        incomingRp.setDoctorComment("DO取込時コメント");
+        incomingRp.setClaimComments(List.of(incomingRpComment));
+        incomingRp.setDrugs(List.of(incomingDrug));
+        PrescriptionOrder incoming = new PrescriptionOrder();
+        incoming.setPatientId("source-patient");
+        incoming.setRps(List.of(incomingRp));
+
+        PrescriptionOrder merged = OrcaPrescriptionOrderImportSupport.applyDoImport(
+                base,
+                incoming,
+                "target-patient",
+                null,
+                LocalDate.parse("2025-03-21"),
+                "doctor",
+                "run-1",
+                Instant.parse("2025-03-21T00:00:00Z"),
+                new ArrayList<>(),
+                MAPPER);
+
+        assertEquals(1, merged.getRps().size());
+        PrescriptionRp mergedRp = merged.getRps().get(0);
+        assertEquals("rp-stable-001", mergedRp.getRpNumber());
+        assertEquals("200", mergedRp.getUsageCode());
+        assertEquals("DO取込時コメント", mergedRp.getDoctorComment());
+        assertEquals(1, mergedRp.getClaimComments().size());
+        assertEquals("新RPコメント", mergedRp.getClaimComments().get(0).getText());
+        assertEquals("INCOMING", mergedRp.getDrugs().get(0).getCode());
+        assertEquals("服薬後眠気あり", mergedRp.getDrugs().get(0).getDrugComment());
+        assertEquals(1, mergedRp.getDrugs().get(0).getClaimComments().size());
+        assertEquals("新薬剤コメント", mergedRp.getDrugs().get(0).getClaimComments().get(0).getText());
     }
 
     @Test

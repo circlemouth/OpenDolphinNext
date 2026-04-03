@@ -25,7 +25,7 @@ import type { OrderRecommendationCandidate } from './orderRecommendationApi';
 import { OrderRecommendationModal } from './OrderRecommendationModal';
 import type { RpHistoryEntry } from './karteExtrasApi';
 import { getOrcaClaimSendEntry, type OrcaMedicalWarningUi } from './orcaClaimSendCache';
-import { parseOrcaOrderItemMemo } from './orcaOrderItemMeta';
+import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import { buildOrderHubEventId, recordOrderHubKpi, type OrderHubKpiSource } from './orderHubKpi';
 import { buildRpRequiredEditorMessage, resolveRpRequiredFieldLabel, resolveRpRequiredIssueFromBundle } from './orderRpRequirements';
 import {
@@ -79,9 +79,9 @@ const truncateChipText = (value: string, maxLength: number) => {
   return `${value.slice(0, Math.max(1, maxLength - 1))}…`;
 };
 
-const resolveMedItemUserComment = (memo?: string | null): string => {
-  const parsed = parseOrcaOrderItemMemo(memo);
-  return normalizeInline(parsed.meta.userComment ?? '');
+const resolveMedItemUserComment = (item: OrderBundleItem): string => {
+  const parsed = resolveOrcaOrderItemFields(item);
+  return normalizeInline(parsed.userComment ?? '');
 };
 
 type BundleCardChip = {
@@ -101,7 +101,7 @@ const summarizeBundleForCard = (bundle: OrderBundle, entity: OrderEntity): Bundl
   const chipsAll = items.reduce<BundleCardChip[]>((acc, item) => {
     const baseChip = formatBundleItemChip(item);
     if (!baseChip) return acc;
-    const userComment = resolveMedItemUserComment(item.memo);
+    const userComment = resolveMedItemUserComment(item);
     if (!userComment) {
       acc.push({ label: baseChip, title: baseChip });
       return acc;

@@ -112,11 +112,13 @@ const CLAIM_COMMENT_TEMPLATES: Array<{ code?: string; name: string }> = [
 ];
 
 const DRUG_COMMENT_TEMPLATES = ['食後服用を指導', '眠気に注意', '残薬確認済み'];
+const INPUT_SET_CLAIM_COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 
-const createClaimComment = (name: string, code?: string): PrescriptionClaimComment => ({
+const createClaimComment = (name: string, code?: string, note?: string): PrescriptionClaimComment => ({
   id: `claim-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
   code: code?.trim() || undefined,
   name: name.trim(),
+  note: note?.trim() || undefined,
 });
 
 const normalizeSearchText = (value: string) => value.replace(/\s+/g, ' ').trim();
@@ -234,24 +236,51 @@ const toRpFromInputSetDetail = (
   detail: NonNullable<OrcaOrderInputSetDetailResult['bundle']>,
   started: string,
 ): PrescriptionRp => {
+  const claimComments: PrescriptionClaimComment[] = [];
   const drugs = detail.items
     .filter((item) => Boolean(item.code?.trim() || item.name?.trim()))
-    .map((item) => ({
-      rowId: `drug-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-      code: item.code?.trim() || undefined,
-      name: item.name?.trim() ?? '',
-      quantity: item.quantity?.trim() ?? '',
-      unit: item.unit?.trim() ?? '',
-      genericChangeAllowed: true,
-      isGeneralNamePrescription: false,
-      drugComment: item.memo?.trim() ?? '',
-      claimComments: [],
-      patientRequest: true,
-    }));
+    .flatMap((item) => {
+      const code = item.code?.trim() || undefined;
+      const name = item.name?.trim() ?? '';
+      if (code && INPUT_SET_CLAIM_COMMENT_CODE_PATTERN.test(code) && name) {
+        claimComments.push(createClaimComment(name, code, item.memo));
+        return [];
+      }
+      return [{
+        rowId: `drug-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        code,
+        name,
+        quantity: item.quantity?.trim() ?? '',
+        unit: item.unit?.trim() ?? '',
+        genericChangeAllowed: true,
+        isGeneralNamePrescription: false,
+        drugComment: item.memo?.trim() ?? '',
+        claimComments: [],
+        patientRequest: true,
+      }];
+    });
+  if (claimComments.length > 0) {
+    if (drugs.length === 0) {
+      drugs.push({
+        rowId: `drug-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        code: undefined,
+        name: '',
+        quantity: '',
+        unit: '',
+        genericChangeAllowed: true,
+        isGeneralNamePrescription: false,
+        drugComment: '',
+        claimComments: [],
+        patientRequest: true,
+      });
+    }
+    drugs[0].claimComments = [...drugs[0].claimComments, ...claimComments];
+  }
   return {
     ...buildEmptyPrescriptionRp(detail.started ?? started, detail.classCode),
     name: detail.bundleName ?? '',
     usage: detail.admin ?? '',
+    usageCode: detail.adminMemo?.trim() || undefined,
     daysOrTimes: detail.bundleNumber ?? '1',
     drugs:
       drugs.length > 0
@@ -589,9 +618,14 @@ export function PrescriptionOrderEditorPanel({
   const applyClaimDraft = useCallback(() => {
     if (isPreviewMode) return;
     if (!selectedRp || !selectedDrug) return;
+    const code = claimDraft.code.trim();
     const name = claimDraft.name.trim();
     if (!name) return;
-    const comment = createClaimComment(name, claimDraft.code);
+    if (!code) {
+      setNotice({ tone: 'error', message: '請求コメントはコード付きで追加してください。自由文は薬剤コメントへ入力してください。' });
+      return;
+    }
+    const comment = createClaimComment(name, code);
     updateDrug(selectedRpIndex, selectedDrugIndex, (drug) => ({
       ...drug,
       claimComments: [...drug.claimComments, comment],
@@ -823,6 +857,14 @@ export function PrescriptionOrderEditorPanel({
           issues.push({
             key: `drug_rule_claim_${rpIndex}_${drugIndex}`,
             message: `RP${rpIndex + 1} 薬剤${drugIndex + 1}: 患者希望以外は請求用コメントが必須です。`,
+            rpIndex,
+            drugIndex,
+          });
+        }
+        if (drug.claimComments.some((comment) => !comment.code?.trim())) {
+          issues.push({
+            key: `drug_rule_claim_${rpIndex}_${drugIndex}`,
+            message: `RP${rpIndex + 1} 薬剤${drugIndex + 1}: 請求コメントはコード付きのみ保存できます。自由文は薬剤コメントへ入力してください。`,
             rpIndex,
             drugIndex,
           });
@@ -1207,6 +1249,7 @@ export function PrescriptionOrderEditorPanel({
               >
                 {inputSetLoading ? '検索中…' : '入力セット検索'}
               </button>
+              <p className="charts-side-panel__help">setCode は展開専用です。保存・ORCA送信 payload には保持しません。</p>
               {inputSetItems.length > 0 ? (
                 <div className="charts-side-panel__search-table">
                   <div className="charts-side-panel__search-header">

@@ -5,6 +5,7 @@ import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
+import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export type OrderBundleItem = {
   code?: string;
@@ -12,6 +13,9 @@ export type OrderBundleItem = {
   quantity?: string;
   unit?: string;
   memo?: string;
+  genericFlg?: 'yes' | 'no';
+  userComment?: string;
+  rowRole?: 'main' | 'material' | 'comment' | 'bodyPart';
 };
 
 export type OrderBundleBodyPart = {
@@ -20,6 +24,7 @@ export type OrderBundleBodyPart = {
   quantity?: string;
   unit?: string;
   memo?: string;
+  rowRole?: 'bodyPart';
 };
 
 export type OrderBundle = {
@@ -28,6 +33,8 @@ export type OrderBundle = {
   entity?: string;
   bundleName?: string;
   bundleNumber?: string;
+  sourceSetCode?: string;
+  subtype?: string;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
@@ -75,6 +82,7 @@ export type OrderBundleOperation = {
   entity?: string;
   bundleName?: string;
   bundleNumber?: string;
+  subtype?: string;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
@@ -99,11 +107,29 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
   ...bundle,
   entity: normalizeOrderEntityValue(bundle.entity),
+  items: (bundle.items ?? []).map((item) => {
+    const fields = resolveOrcaOrderItemFields(item);
+    return {
+      ...item,
+      memo: fields.memoText,
+      genericFlg: fields.genericFlg,
+      userComment: fields.userComment,
+    };
+  }),
 });
 
 const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => ({
   ...operation,
   entity: normalizeOrderEntityValue(operation.entity),
+  items: (operation.items ?? []).map((item) => {
+    const fields = resolveOrcaOrderItemFields(item);
+    return {
+      ...item,
+      memo: fields.memoText,
+      genericFlg: fields.genericFlg,
+      userComment: fields.userComment,
+    };
+  }),
 });
 
 export type OrderBundleMutationResult = {

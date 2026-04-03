@@ -23,12 +23,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import open.dolphin.rest.dto.orca.PrescriptionClaimComment;
+import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
 import open.dolphin.rest.dto.orca.PrescriptionOrderDoImportRequest;
 import open.dolphin.rest.dto.orca.PrescriptionOrderDoImportResponse;
 import open.dolphin.rest.dto.orca.PrescriptionOrderFetchResponse;
+import open.dolphin.rest.dto.orca.PrescriptionRp;
 import open.dolphin.rest.dto.orca.PrescriptionOrderSaveResponse;
 import open.dolphin.session.PatientServiceBean;
 import org.slf4j.Logger;
@@ -143,6 +146,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         normalized.setEncounterId(trimToNull(normalized.getEncounterId()));
         normalized.setEncounterDate(encounterDate != null ? encounterDate.toString() : null);
         normalized.setPerformDate(performDate != null ? performDate.toString() : null);
+        validateClaimCommentCodes(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
 
         String json = writeJsonOrThrow(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
         Instant now = Instant.now();
@@ -484,6 +488,47 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
             return null;
         }
         return OBJECT_MAPPER.convertValue(source, PrescriptionOrder.class);
+    }
+
+    private void validateClaimCommentCodes(
+            HttpServletRequest request,
+            PrescriptionOrder order,
+            String facilityId,
+            String patientId,
+            String runId,
+            String action) {
+        if (order == null) {
+            return;
+        }
+        List<PrescriptionRp> rps = safeList(order.getRps());
+        for (int rpIndex = 0; rpIndex < rps.size(); rpIndex++) {
+            PrescriptionRp rp = rps.get(rpIndex);
+            if (rp == null) {
+                continue;
+            }
+            List<PrescriptionDrug> drugs = safeList(rp.getDrugs());
+            for (int drugIndex = 0; drugIndex < drugs.size(); drugIndex++) {
+                PrescriptionDrug drug = drugs.get(drugIndex);
+                if (drug == null) {
+                    continue;
+                }
+                List<PrescriptionClaimComment> claimComments = safeList(drug.getClaimComments());
+                for (int commentIndex = 0; commentIndex < claimComments.size(); commentIndex++) {
+                    PrescriptionClaimComment claimComment = claimComments.get(commentIndex);
+                    if (claimComment == null) {
+                        continue;
+                    }
+                    String text = trimToNull(claimComment.getText());
+                    String code = trimToNull(claimComment.getCode());
+                    if (text != null && code == null) {
+                        String field = "rps[" + rpIndex + "].drugs[" + drugIndex + "].claimComments[" + commentIndex + "].code";
+                        String message = "claim comment code is required when text is present";
+                        recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+                        throw validationError(request, field, message);
+                    }
+                }
+            }
+        }
     }
 
     private boolean hasText(String value) {

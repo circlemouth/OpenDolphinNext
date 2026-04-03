@@ -104,6 +104,8 @@ final class OrcaOrderBundleMutationSupport {
         info.setStampName(operation.getBundleName() != null ? operation.getBundleName() : resolveTitle(operation));
         info.setStampRole(IInfoModel.ROLE_P);
         info.setEntity(resolveEntity(operation));
+        info.setStampMemo(OrcaOrderBundle600SubtypeSupport.updateStampMemo(
+                info.getStampMemo(), info.getEntity(), operation.getSubtype()));
         info.setStampNumber(0);
         module.setModuleInfoBean(info);
         module.setModel(bundle);
@@ -147,12 +149,17 @@ final class OrcaOrderBundleMutationSupport {
         if (item == null || item.getName() == null || item.getName().isBlank()) {
             return null;
         }
+        OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo = OrcaOrderBundleItemMemoSupport.parse(item.getMemo());
+        String genericFlg = OrcaOrderBundleItemMemoSupport.normalizeGenericFlg(
+                OrcaOrderBundleRequestSupport.hasText(item.getGenericFlg()) ? item.getGenericFlg() : parsedMemo.genericFlg());
+        String userComment = OrcaOrderBundleItemMemoSupport.normalizeUserComment(
+                OrcaOrderBundleRequestSupport.hasText(item.getUserComment()) ? item.getUserComment() : parsedMemo.userComment());
         ClaimItem claimItem = new ClaimItem();
         claimItem.setName(item.getName());
         claimItem.setCode(item.getCode());
         claimItem.setNumber(item.getQuantity());
         claimItem.setUnit(item.getUnit());
-        claimItem.setMemo(item.getMemo());
+        claimItem.setMemo(OrcaOrderBundleItemMemoSupport.format(genericFlg, userComment, parsedMemo.memoText()));
         return claimItem;
     }
 

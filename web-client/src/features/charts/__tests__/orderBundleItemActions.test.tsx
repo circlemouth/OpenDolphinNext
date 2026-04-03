@@ -7,7 +7,6 @@ import type { ReactElement } from 'react';
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
-import { parseOrcaOrderItemMemo } from '../orcaOrderItemMeta';
 
 vi.mock('../orderBundleApi', async () => ({
   fetchOrderBundles: vi.fn().mockResolvedValue({
@@ -64,6 +63,13 @@ const generalProps = {
   entity: 'generalOrder',
   title: '一般オーダー編集',
   bundleLabel: 'オーダー名',
+  itemQuantityLabel: '回数',
+};
+const chargeProps = {
+  ...baseProps,
+  entity: 'baseChargeOrder',
+  title: '基本料編集',
+  bundleLabel: '算定',
   itemQuantityLabel: '回数',
 };
 
@@ -129,6 +135,63 @@ describe('OrderBundleEditPanel item actions', () => {
     });
     await user.tab();
   };
+
+  it('injectionOrder は注射コメントを first-class userComment として保持し hidden meta を再送しない', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: 'REQ-INJECTION-1',
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName: '点滴セット',
+            bundleNumber: '2',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: 'Injection',
+            admin: '静注',
+            adminCode: '4101',
+            adminMemo: '20ml/h',
+            items: [
+              {
+                code: '620000001',
+                name: '注射薬A',
+                quantity: '1',
+                unit: 'A',
+                memo: '__orca_meta__:{"genericFlg":"no","userComment":"旧コメント"}\nレセ本文',
+                rowRole: 'main',
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(
+      await screen.findByText(/admin\/adminCode・回数・coded row と rowRole.*注射コメントは local-only/i),
+    ).toBeInTheDocument();
+
+    const commentInput = (await screen.findByLabelText('注射コメント 1')) as HTMLInputElement;
+    expect(commentInput.value).toBe('旧コメント');
+    await user.clear(commentInput);
+    await user.type(commentInput, '更新コメント');
+    await user.click(screen.getByRole('button', { name: '保存して続ける' }));
+
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+
+    const savedItem = mutateMock.mock.calls.at(-1)?.[0]?.operations?.[0]?.items?.[0];
+    expect(savedItem).toMatchObject({
+      code: '620000001',
+      genericFlg: 'no',
+      userComment: '更新コメント',
+      rowRole: 'main',
+    });
+    expect(savedItem?.memo).toBe('レセ本文');
+  });
 
   it('末尾行に入力すると空行が自動追加される', async () => {
     const user = userEvent.setup();
@@ -226,10 +289,33 @@ describe('OrderBundleEditPanel item actions', () => {
 
   it('generalOrder は仕様準拠の Medical_Class を保存 payload に付与する', async () => {
     const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockImplementation(async ({ type, keyword }) => {
+      if (type === 'etensu' && keyword.includes('創傷処置')) {
+        return {
+          ok: true,
+          items: [{ type: 'etensu', code: '140000610', name: '創傷処置', unit: '回', category: '4' }],
+          totalCount: 1,
+        };
+      }
+      return { ok: true, items: [], totalCount: 0 };
+    });
     renderWithClient(<OrderBundleEditPanel {...generalProps} />);
 
     const itemInput = screen.getByPlaceholderText('処置項目名') as HTMLInputElement;
     await user.type(itemInput, '創傷処置');
+    await waitFor(() =>
+      expect(
+        searchMock.mock.calls.some(
+          ([params]) => params?.type === 'etensu' && params?.keyword === '創傷処置',
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('datalist[id$="-item-predictive-list"] option[value="創傷処置"]')).not.toBeNull(),
+    );
+    await user.tab();
+    await waitFor(() => expect(screen.getByTestId('order-bundle-item-summary-0')).toHaveTextContent('コード: 140000610'));
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
     const mutateMock = vi.mocked(mutateOrderBundles);
@@ -240,6 +326,45 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(operation?.classCode).toBe('400');
     expect(operation?.classCodeSystem).toBe('Claim007');
     expect(operation?.className).toBe('処置');
+  });
+
+  it('baseChargeOrder の再編集保存は explicit class meta を潰さない', async () => {
+    const user = userEvent.setup();
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...chargeProps}
+        request={{
+          requestId: 'req-charge-edit',
+          kind: 'edit',
+          bundle: {
+            documentId: 10,
+            moduleId: 20,
+            entity: 'baseChargeOrder',
+            bundleName: '在宅指導',
+            bundleNumber: '1',
+            classCode: '130',
+            classCodeSystem: 'Claim007',
+            className: '指導・在宅',
+            admin: '',
+            adminMemo: '',
+            memo: '確認',
+            started: '2026-03-09',
+            items: [{ code: '1300001', name: '在宅患者訪問診療料', quantity: '1', unit: '回', memo: '' }],
+          },
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '保存して更新する' }));
+
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+
+    const payload = mutateMock.mock.calls[0]?.[0];
+    const operation = payload?.operations?.[0];
+    expect(operation?.classCode).toBe('130');
+    expect(operation?.classCodeSystem).toBe('Claim007');
+    expect(operation?.className).toBe('指導・在宅');
   });
 
   it('外用の混合トグルで混合コメント行が保存 payload に追加される', async () => {
@@ -324,12 +449,11 @@ describe('OrderBundleEditPanel item actions', () => {
 
     const payload = mutateMock.mock.calls[0]?.[0];
     const items = payload?.operations?.[0]?.items ?? [];
-    const { meta, memoText } = parseOrcaOrderItemMemo(items[0]?.memo);
-    expect(meta).toMatchObject({
+    expect(items[0]).toMatchObject({
       genericFlg: 'yes',
       userComment: '食後',
+      memo: '元メモ',
     });
-    expect(memoText).toBe('元メモ');
   });
 
   it('空白のみ薬剤コメントは memo meta から除去される', async () => {
@@ -348,12 +472,8 @@ describe('OrderBundleEditPanel item actions', () => {
 
     const payload = mutateMock.mock.calls[0]?.[0];
     const items = payload?.operations?.[0]?.items ?? [];
-    const itemMemo = items[0]?.memo ?? '';
-    const { meta, memoText } = parseOrcaOrderItemMemo(itemMemo);
-
-    expect(itemMemo.startsWith('__orca_meta__:')).toBe(false);
-    expect(meta.userComment).toBeUndefined();
-    expect(memoText).toBe('');
+    expect(items[0]?.memo ?? '').toBe('');
+    expect(items[0]?.userComment).toBeUndefined();
   });
 
   it('最近使った用法セレクトで用法欄を上書きできる', async () => {

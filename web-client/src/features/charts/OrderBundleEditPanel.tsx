@@ -25,7 +25,7 @@ import {
   fetchOrcaOrderInputSets,
   type OrcaOrderInputSetSummary,
 } from './orcaOrderInputSetApi';
-import { parseOrcaOrderItemMemo, type OrcaOrderItemMeta, updateOrcaOrderItemMeta } from './orcaOrderItemMeta';
+import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import {
   fetchOrderRecommendations,
   type OrderRecommendationCandidate,
@@ -42,8 +42,11 @@ import {
   resolveCanonicalOrderEntity,
   resolveOrderEntityDefaultClassMeta,
   resolveOrderEntityEtensuCategory,
+  resolveOrderEntityTestSubtypeConfig,
   resolveOrderEntityUiProfile,
   resolveOrderEntityValidationRule,
+  normalizeOrderTestSubtype,
+  type OrderTestSubtype,
 } from './orderCategoryRegistry';
 import type { DataSourceTransition } from './authService';
 import type { DocumentOpenRequest } from './DocumentCreatePanel';
@@ -104,13 +107,15 @@ type BundleFormState = {
   moduleId?: number;
   bundleName: string;
   admin: string;
+  adminMemo: string;
   adminCode: string;
   adminCodeSystem?: string;
   bundleNumber: string;
+  sourceSetCode?: string;
+  subtype: OrderTestSubtype | '';
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
-  adminMemo: string;
   memo: string;
   startDate: string;
   prescriptionLocation: PrescriptionLocation;
@@ -143,6 +148,14 @@ type UsageMasterMeta = {
   youhouCode?: string;
 };
 
+type SelectionCommentCandidate = {
+  code: string;
+  name: string;
+  category?: string;
+  itemNumber?: string;
+  itemNumberBranch?: string;
+};
+
 type BundleValidationRule = {
   itemLabel: string;
   requiresItems: boolean;
@@ -170,10 +183,41 @@ const ensureRowId = (item: OrderBundleItem): OrderBundleItemWithRowId => ({
 const stripRowMeta = (item: OrderBundleItem): OrderBundleItem => {
   const rest = { ...(item as OrderBundleItemWithRowId) };
   delete rest.rowId;
+  const resolvedItemFields = resolveOrcaOrderItemFields(rest);
+  rest.memo = resolvedItemFields.memoText;
+  if (resolvedItemFields.genericFlg) {
+    rest.genericFlg = resolvedItemFields.genericFlg;
+  } else {
+    delete rest.genericFlg;
+  }
+  if (resolvedItemFields.userComment) {
+    rest.userComment = resolvedItemFields.userComment;
+  } else {
+    delete rest.userComment;
+  }
   return rest;
 };
 
 const buildEmptyItem = (): OrderBundleItem => ensureRowId({ name: '', quantity: '', unit: '', memo: '' });
+
+const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem): OrderBundleItem => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity ?? '';
+  const resolvedItemFields = resolveOrcaOrderItemFields(item);
+  if (canonicalEntity !== 'injectionOrder') {
+    return {
+      ...item,
+      genericFlg: resolvedItemFields.genericFlg,
+      userComment: resolvedItemFields.userComment,
+    };
+  }
+  const fallbackComment = resolvedItemFields.userComment?.trim() || resolvedItemFields.memoText?.trim() || undefined;
+  return {
+    ...item,
+    memo: resolvedItemFields.memoText?.trim() ? resolvedItemFields.memoText : undefined,
+    genericFlg: resolvedItemFields.genericFlg,
+    userComment: fallbackComment,
+  };
+};
 
 const hasOrderBundleItemValue = (item: OrderBundleItem) =>
   Boolean(item.name?.trim() || item.code?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
@@ -285,8 +329,12 @@ const USAGE_ROUTE_CLASSIFICATION_TABLE: Record<string, { label: string; injectio
   TOP: { label: '外用', injectionPriority: 90 },
 };
 const UNKNOWN_USAGE_ROUTE_CLASSIFICATION = { label: '未分類', injectionPriority: 999 };
+const UNSUPPORTED_COMMENT_PARAMETER_MESSAGE =
+  '選択式コメントの itemNumber / branch は未対応のため追加できません。パラメータ不要のコメントのみ選択してください。';
 
 const isDrugMedicationCode = (code: string) => /^6\d{8}$/.test(code.trim());
+const hasUnsupportedCommentSelectionParameter = (item?: { itemNumber?: string; itemNumberBranch?: string }) =>
+  Boolean(item?.itemNumber?.trim() || item?.itemNumberBranch?.trim());
 
 const parseDocumentIds = (value?: string) => {
   if (!value) return { documentId: undefined, letterId: undefined };
@@ -334,7 +382,27 @@ const resolveDocumentOpenRequest = (bundle: OrderBundle, item: OrderBundleItem):
 const countItems = (items?: OrderBundleItem[]) =>
   items ? items.filter((item) => item.name.trim().length > 0).length : 0;
 
-const splitBundleItems = (items?: OrderBundleItem[], explicitBodyPart?: OrderBundleBodyPart) => {
+const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
+  const normalizedCode = code?.trim();
+  if (!normalizedCode || !normalizedCode.startsWith(MATERIAL_CODE_PREFIX)) return false;
+  const canonicalEntity = resolveCanonicalOrderEntity(entity);
+  // Radiology main rows also use 7xx codes, so prefix-only material detection would hide them.
+  return canonicalEntity !== 'radiologyOrder';
+};
+
+const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | OrderBundleBodyPart | null) => {
+  if (!item) return 'main' as const;
+  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
+    return item.rowRole;
+  }
+  const code = item.code?.trim();
+  if (code?.startsWith(BODY_PART_CODE_PREFIX)) return 'bodyPart' as const;
+  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
+  if (code && COMMENT_CODE_PATTERN.test(code)) return 'comment' as const;
+  return 'main' as const;
+};
+
+const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], explicitBodyPart?: OrderBundleBodyPart) => {
   const normal: OrderBundleItem[] = [];
   const material: OrderBundleItem[] = [];
   const comment: OrderBundleItem[] = [];
@@ -345,13 +413,15 @@ const splitBundleItems = (items?: OrderBundleItem[], explicitBodyPart?: OrderBun
         quantity: explicitBodyPart.quantity?.trim() || undefined,
         unit: explicitBodyPart.unit?.trim() || undefined,
         memo: explicitBodyPart.memo?.trim() || undefined,
+        rowRole: 'bodyPart' as const,
       }
     : null;
   let bodyPart: OrderBundleBodyPart | null = explicit;
   let bodyPartResolvedFromItems = Boolean(explicit);
   (items ?? []).forEach((item) => {
+    const rowRole = resolveBundleItemRowRole(entity, item);
     const code = item.code?.trim();
-    if (code && code.startsWith(BODY_PART_CODE_PREFIX)) {
+    if (rowRole === 'bodyPart') {
       if (!bodyPartResolvedFromItems) {
         bodyPart = {
           code: item.code?.trim() || undefined,
@@ -359,26 +429,31 @@ const splitBundleItems = (items?: OrderBundleItem[], explicitBodyPart?: OrderBun
           quantity: item.quantity?.trim() || undefined,
           unit: item.unit?.trim() || undefined,
           memo: item.memo?.trim() || undefined,
+          rowRole: 'bodyPart',
         };
         bodyPartResolvedFromItems = true;
       }
       return;
     }
-    if (code && code.startsWith(MATERIAL_CODE_PREFIX)) {
-      material.push({ ...item });
+    if (rowRole === 'material') {
+      material.push({ ...item, rowRole: 'material' });
       return;
     }
-    if (code && COMMENT_CODE_PATTERN.test(code)) {
-      comment.push({ ...item });
+    if (rowRole === 'comment') {
+      comment.push({ ...item, rowRole: 'comment' });
       return;
     }
-    normal.push({ ...item });
+    normal.push({ ...item, rowRole: 'main' });
   });
   return { normal, material, comment, bodyPart };
 };
 
 const collectBundleItems = (form: BundleFormState) => {
-  return [...form.items, ...form.materialItems, ...form.commentItems];
+  return [
+    ...form.items.map((item) => ({ ...item, rowRole: 'main' as const })),
+    ...form.materialItems.map((item) => ({ ...item, rowRole: 'material' as const })),
+    ...form.commentItems.map((item) => ({ ...item, rowRole: 'comment' as const })),
+  ];
 };
 
 const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | undefined => {
@@ -389,6 +464,7 @@ const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | 
     quantity: form.bodyPart.quantity?.trim() || undefined,
     unit: form.bodyPart.unit?.trim() || undefined,
     memo: form.bodyPart.memo?.trim() || undefined,
+    rowRole: 'bodyPart',
   };
 };
 
@@ -399,16 +475,29 @@ const DEFAULT_VALIDATION_RULE: BundleValidationRule = {
   requiresBodyPart: false,
 };
 
+const resolveFormSubtype = (entity: string, subtype?: string | null): OrderTestSubtype | '' => {
+  if (!entity.trim()) {
+    const normalized = subtype?.trim().toLowerCase();
+    if (normalized === 'specimen' || normalized === 'physiology' || normalized === 'culture' || normalized === 'sensitivity') {
+      return normalized;
+    }
+    return '';
+  }
+  return normalizeOrderTestSubtype(entity, subtype) ?? '';
+};
+
 const buildEmptyForm = (today: string): BundleFormState => ({
   bundleName: '',
   admin: '',
+  adminMemo: '',
   adminCode: '',
   adminCodeSystem: undefined,
   bundleNumber: '1',
+  sourceSetCode: undefined,
+  subtype: '',
   classCode: undefined,
   classCodeSystem: undefined,
   className: undefined,
-  adminMemo: '',
   memo: '',
   startDate: today,
   prescriptionLocation: DEFAULT_PRESCRIPTION_LOCATION,
@@ -420,28 +509,29 @@ const buildEmptyForm = (today: string): BundleFormState => ({
 });
 
 export const toFormState = (bundle: OrderBundle, today: string): BundleFormState => {
-  const { normal, material, comment, bodyPart } = splitBundleItems(bundle.items, bundle.bodyPart);
+  const { normal, material, comment, bodyPart } = splitBundleItems(bundle.entity, bundle.items, bundle.bodyPart);
   const prescription = parsePrescriptionClassCode(bundle.classCode);
-  const mergedItems = [...normal, ...material];
   return {
     documentId: bundle.documentId,
     moduleId: bundle.moduleId,
     bundleName: bundle.bundleName ?? '',
     admin: bundle.admin ?? '',
+    adminMemo: bundle.adminMemo ?? '',
     adminCode: bundle.adminCode ?? '',
     adminCodeSystem: bundle.adminCodeSystem ?? undefined,
     bundleNumber: bundle.bundleNumber ?? '1',
+    sourceSetCode: bundle.sourceSetCode,
+    subtype: resolveFormSubtype(bundle.entity ?? '', bundle.subtype),
     classCode: bundle.classCode ?? undefined,
     classCodeSystem: bundle.classCodeSystem ?? undefined,
     className: bundle.className ?? undefined,
-    adminMemo: bundle.adminMemo ?? '',
     memo: bundle.memo ?? '',
     startDate: bundle.started ?? today,
     prescriptionLocation: prescription.location,
     prescriptionTiming: prescription.timing,
-    items: ensureTrailingEmptyMainItem(mergedItems.length > 0 ? mergedItems : [buildEmptyItem()]),
-    materialItems: [],
-    commentItems: comment.map(ensureRowId),
+    items: ensureTrailingEmptyMainItem((normal.length > 0 ? normal : [buildEmptyItem()]).map((item) => normalizeItemForForm(bundle.entity, item))),
+    materialItems: material.map((item) => ensureRowId(normalizeItemForForm(bundle.entity, item))),
+    commentItems: comment.map((item) => ensureRowId(normalizeItemForForm(bundle.entity, item))),
     bodyPart,
   };
 };
@@ -456,26 +546,23 @@ const toFormStateFromHistoryCopy = (bundle: OrderBundle, today: string): BundleF
   };
 };
 
-const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => ({
+export const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => ({
   bundleName: template.bundleName,
   admin: template.admin,
-  adminCode: '',
-  adminCodeSystem: undefined,
+  adminMemo: template.adminMemo ?? '',
+  adminCode: template.adminCode ?? '',
+  adminCodeSystem: template.adminCodeSystem ?? undefined,
   bundleNumber: template.bundleNumber || '1',
-  classCode: undefined,
-  classCodeSystem: undefined,
-  className: undefined,
-  adminMemo: template.adminMemo,
+  subtype: resolveFormSubtype('', template.subtype),
+  classCode: template.classCode ?? undefined,
+  classCodeSystem: template.classCodeSystem ?? undefined,
+  className: template.className ?? undefined,
   memo: template.memo,
   startDate: today,
   prescriptionLocation: template.prescriptionLocation ?? DEFAULT_PRESCRIPTION_LOCATION,
   prescriptionTiming: template.prescriptionTiming ?? DEFAULT_PRESCRIPTION_TIMING,
-  items: ensureTrailingEmptyMainItem(
-    [...template.items, ...template.materialItems].length > 0
-      ? [...template.items, ...template.materialItems].map((item) => ensureRowId({ ...item }))
-      : [buildEmptyItem()],
-  ),
-  materialItems: [],
+  items: ensureTrailingEmptyMainItem(template.items.length > 0 ? template.items.map((item) => ensureRowId({ ...item })) : [buildEmptyItem()]),
+  materialItems: template.materialItems.map((item) => ensureRowId({ ...item })),
   commentItems: template.commentItems.map((item) => ({ ...item })),
   bodyPart: template.bodyPart ? { ...template.bodyPart } : null,
 });
@@ -498,36 +585,51 @@ const isBundleFormEmpty = (form: BundleFormState) => {
 const toOrderBundleFromInputSetDetail = (
   bundle: NonNullable<Awaited<ReturnType<typeof fetchOrcaOrderInputSetDetail>>['bundle']>,
   entity: string,
-): OrderBundle => ({
-  entity: resolveCanonicalOrderEntity(bundle.entity) ?? resolveCanonicalOrderEntity(entity) ?? entity,
-  bundleName: bundle.bundleName ?? '',
-  bundleNumber: bundle.bundleNumber ?? '1',
-  classCode: bundle.classCode,
-  classCodeSystem: bundle.classCodeSystem,
-  className: bundle.className,
-  admin: bundle.admin ?? '',
-  adminCode: '',
-  adminCodeSystem: undefined,
-  adminMemo: bundle.adminMemo ?? '',
-  memo: bundle.memo ?? '',
-  started: bundle.started,
-  bodyPart: bundle.bodyPart?.name
-    ? {
-        code: bundle.bodyPart.code?.trim() || undefined,
-        name: bundle.bodyPart.name.trim(),
-        quantity: bundle.bodyPart.quantity?.trim() || undefined,
-        unit: bundle.bodyPart.unit?.trim() || undefined,
-        memo: bundle.bodyPart.memo?.trim() || undefined,
-      }
-    : undefined,
-  items: bundle.items.map((item) => ({
-    code: item.code,
-    name: item.name ?? '',
-    quantity: item.quantity,
-    unit: item.unit,
-    memo: item.memo,
-  })),
-});
+): OrderBundle => {
+  const inputSetEntity = resolveCanonicalOrderEntity(bundle.entity) ?? resolveCanonicalOrderEntity(entity) ?? entity;
+  const requestedEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  const classCode = bundle.classCode?.trim() ?? '';
+  const resolvedEntity =
+    classCode.startsWith('6') && (requestedEntity === 'physiologyOrder' || requestedEntity === 'bacteriaOrder')
+      ? requestedEntity
+      : inputSetEntity;
+  return {
+    entity: resolvedEntity,
+    bundleName: bundle.bundleName ?? '',
+    bundleNumber: bundle.bundleNumber ?? '1',
+    sourceSetCode: bundle.sourceSetCode,
+    subtype: resolveFormSubtype(resolvedEntity, bundle.subtype),
+    classCode: bundle.classCode,
+    classCodeSystem: bundle.classCodeSystem,
+    className: bundle.className,
+    admin: bundle.admin ?? '',
+    adminMemo: bundle.adminMemo ?? '',
+    adminCode: bundle.adminCode ?? '',
+    adminCodeSystem: bundle.adminCodeSystem ?? undefined,
+    memo: bundle.memo ?? '',
+    started: bundle.started,
+    bodyPart: bundle.bodyPart?.name
+      ? {
+          code: bundle.bodyPart.code?.trim() || undefined,
+          name: bundle.bodyPart.name.trim(),
+          quantity: bundle.bodyPart.quantity?.trim() || undefined,
+          unit: bundle.bodyPart.unit?.trim() || undefined,
+          memo: bundle.bodyPart.memo?.trim() || undefined,
+          rowRole: 'bodyPart',
+        }
+      : undefined,
+    items: bundle.items.map((item) => ({
+      code: item.code,
+      name: item.name ?? '',
+      quantity: item.quantity,
+      unit: item.unit,
+      memo: item.memo,
+      genericFlg: item.genericFlg,
+      userComment: item.userComment,
+      rowRole: item.rowRole,
+    })),
+  };
+};
 
 const resolveRecommendationLabel = (candidate: OrderRecommendationCandidate) => {
   const bundle = candidate.template.bundleName.trim();
@@ -565,6 +667,23 @@ const buildUsageMasterMeta = (item: OrderMasterSearchItem): UsageMasterMeta => (
   dosePerDay: typeof item.dosePerDay === 'number' ? item.dosePerDay : undefined,
   youhouCode: item.youhouCode?.trim() || undefined,
 });
+
+const resolveSendContractNote = (entity: string) => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  if (canonicalEntity === 'injectionOrder') {
+    return '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみ、speed は adminMemo、行ごとの注射コメントは local-only です。';
+  }
+  if (canonicalEntity === 'otherOrder') {
+    return 'setCode は展開専用です。オーダー名・指示・自由メモは院内補足として保存し、ORCA送信では classCode とコード付き行だけを使用します。';
+  }
+  if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
+    return 'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
+  }
+  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
+    return '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。';
+  }
+  return '';
+};
 const formatUsageMasterSummary = (item: Pick<UsageMasterMeta, 'timingCode' | 'routeCode' | 'daysLimit' | 'dosePerDay'>) => {
   const route = resolveUsageRouteClassification(item.routeCode);
   const segments = [`タイミング: ${resolveUsageTimingLabel(item.timingCode)}`, `経路: ${route.label}`];
@@ -711,6 +830,9 @@ export const validateBundleForm = ({
         item.memo?.trim(),
     );
   const rule = resolveOrderEntityValidationRule(entity) ?? DEFAULT_VALIDATION_RULE;
+  const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
+  const resolvedSubtype = resolveFormSubtype(entity, form.subtype);
+  const supportsBodyPartField = resolveOrderEntityUiProfile(entity).supportsBodyPartSearch;
   const valuedItems = form.items.filter(hasAnyValue);
   const codedItems = valuedItems.filter((item) => Boolean(item.code?.trim()));
   const uncodedItems = valuedItems.filter((item) => !item.code?.trim());
@@ -724,8 +846,20 @@ export const validateBundleForm = ({
   if (rule.requiresUsage && !form.admin.trim()) {
     issues.push({ key: 'missing_usage', message: '用法を入力してください。' });
   }
+  if (testSubtypeConfig?.required && !resolvedSubtype) {
+    issues.push({ key: 'missing_test_subtype', message: `${testSubtypeConfig.label}を選択してください。` });
+  }
+  if (form.subtype && !resolvedSubtype) {
+    issues.push({ key: 'invalid_test_subtype', message: '600系 subtype が不正です。' });
+  }
   if (rule.requiresBodyPart && !form.bodyPart?.name?.trim()) {
     issues.push({ key: 'missing_body_part', message: '部位を入力してください。' });
+  }
+  if (hasBodyPartValue && !supportsBodyPartField) {
+    issues.push({
+      key: 'unsupported_body_part',
+      message: 'この種別では bodyPart を保持できません。部位をクリアしてください。',
+    });
   }
   if (form.bodyPart?.name?.trim() && !form.bodyPart.code?.trim()) {
     issues.push({
@@ -926,7 +1060,7 @@ export function OrderBundleEditPanel({
         bundleName: form.bundleName,
         classCode: isMedOrder
           ? resolvePrescriptionClassCode(form.prescriptionTiming, form.prescriptionLocation)
-          : resolveOrderEntityDefaultClassMeta(entity)?.classCode,
+          : form.classCode?.trim() || resolveOrderEntityDefaultClassMeta(entity)?.classCode,
         bundleNumber: form.bundleNumber,
         items: form.items,
       }),
@@ -964,7 +1098,13 @@ export function OrderBundleEditPanel({
   const supportsUsageSearch = orderUiProfile.supportsUsageSearch;
   const supportsBodyPartSearch = orderUiProfile.supportsBodyPartSearch;
   const supportsCommentCodes = orderUiProfile.supportsCommentCodes;
+  const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
+  const effectiveTestSubtype = resolveFormSubtype(entity, form.subtype);
+  const showBodyPartSection =
+    supportsBodyPartSearch || Boolean(form.bodyPart?.name?.trim() || form.bodyPart?.code?.trim());
+  const sendContractNote = resolveSendContractNote(entity);
   const itemMasterTargets = orderUiProfile.masterSearchPresets;
+  const supportsMaterialRows = itemMasterTargets.some((target) => target.type === 'material') || form.materialItems.length > 0;
   const supportsEtensuDetailSearch = itemMasterTargets.some((target) => target.type === 'etensu');
   const itemPredictiveTargetLabel = itemMasterTargets.map((target) => target.label).join(' / ');
   const parsedPointsMin = pointsMinInput.trim() ? Number(pointsMinInput) : undefined;
@@ -1366,10 +1506,7 @@ export function OrderBundleEditPanel({
     retry: 0,
   });
   const selectionCommentCandidates = useMemo(() => {
-    const map = new Map<
-      string,
-      { code: string; name: string; category?: string; itemNumber?: string; itemNumberBranch?: string }
-    >();
+    const map = new Map<string, SelectionCommentCandidate>();
     (itemPredictiveQuery.data?.selectionComments ?? []).forEach((item) => {
       const code = item.code?.trim();
       const name = item.name.trim();
@@ -1510,7 +1647,9 @@ export function OrderBundleEditPanel({
           map.set(`${code}|${name}`, item);
         });
     }
-    selectionCommentCandidates.forEach((item) => {
+    selectionCommentCandidates
+      .filter((item) => !hasUnsupportedCommentSelectionParameter(item))
+      .forEach((item) => {
         const code = item.code?.trim();
         const name = item.name.trim();
         if (!code || !name) return;
@@ -1520,7 +1659,7 @@ export function OrderBundleEditPanel({
           name,
           category: item.category,
         });
-    });
+      });
     const draftCode = commentDraft.code?.trim();
     const draftName = commentDraft.name?.trim();
     if (!draftName) return Array.from(map.values());
@@ -1559,6 +1698,10 @@ export function OrderBundleEditPanel({
         return Boolean(code && name);
       }),
     [commentMasterOptions],
+  );
+  const unsupportedSelectionCommentCandidates = useMemo(
+    () => selectionCommentCandidates.filter((item) => hasUnsupportedCommentSelectionParameter(item)),
+    [selectionCommentCandidates],
   );
 
   const resolvePredictiveItem = (value: string) => {
@@ -1631,14 +1774,20 @@ export function OrderBundleEditPanel({
     applyPredictiveItem(rowId, resolvePredictiveItem(value));
   };
 
-  const applyCommentDraftSelection = (selected: {
+  const applyCommentDraftSelection = useCallback((selected: {
     code?: string;
     name?: string;
     unit?: string;
     note?: string;
+    itemNumber?: string;
+    itemNumberBranch?: string;
   }) => {
     const selectedName = selected.name?.trim();
     if (!selectedName) return;
+    if (hasUnsupportedCommentSelectionParameter(selected)) {
+      setNotice({ tone: 'error', message: UNSUPPORTED_COMMENT_PARAMETER_MESSAGE });
+      return;
+    }
     setCommentDraft((prev) => ({
       ...prev,
       code: selected.code?.trim() ?? '',
@@ -1646,7 +1795,7 @@ export function OrderBundleEditPanel({
       unit: selected.unit ?? prev.unit ?? '',
       memo: selected.note ?? prev.memo ?? '',
     }));
-  };
+  }, []);
 
   useEffect(() => {
     if (!supportsCommentCodes) return;
@@ -1718,7 +1867,9 @@ export function OrderBundleEditPanel({
         setNotice({ tone: 'error', message: detail.message ?? '診療セット詳細の取得に失敗しました。' });
         return;
       }
-      if (detail.bundle.entity && detail.bundle.entity !== entity) {
+      const requestedEntity = resolveCanonicalOrderEntity(entity);
+      const detailEntity = resolveCanonicalOrderEntity(detail.bundle.entity);
+      if (requestedEntity && detailEntity && detailEntity !== requestedEntity) {
         setNotice({ tone: 'error', message: 'entity が一致しないため診療セットを反映できません。' });
         return;
       }
@@ -1875,6 +2026,14 @@ export function OrderBundleEditPanel({
       unit: item.unit ?? '',
       memo: item.note ?? '',
     });
+  };
+
+  const removeMaterialRowById = (rowId?: string | null) => {
+    if (!rowId) return;
+    setForm((prev) => ({
+      ...prev,
+      materialItems: prev.materialItems.filter((entry) => (entry as OrderBundleItemWithRowId).rowId !== rowId),
+    }));
   };
 
   const resolveBundleClassMeta = (bundleForm: BundleFormState) => {
@@ -2118,6 +2277,7 @@ export function OrderBundleEditPanel({
             entity,
             bundleName: payload.form.bundleName,
             bundleNumber: payload.form.bundleNumber,
+            subtype: resolveFormSubtype(entity, payload.form.subtype) || undefined,
             ...classMeta,
             admin: payload.form.admin,
             adminCode: payload.form.adminCode,
@@ -2195,6 +2355,7 @@ export function OrderBundleEditPanel({
             entity,
             bundleName: payload.form.bundleName,
             bundleNumber: payload.form.bundleNumber,
+            subtype: resolveFormSubtype(entity, payload.form.subtype) || undefined,
             classCode: classMeta.classCode,
             classCodeSystem: classMeta.classCodeSystem,
             className: classMeta.className,
@@ -2224,6 +2385,7 @@ export function OrderBundleEditPanel({
                     ...bundle,
                     bundleName: payload.form.bundleName,
                     bundleNumber: payload.form.bundleNumber,
+                    subtype: resolveFormSubtype(entity, payload.form.subtype) || undefined,
                     classCode: classMeta.classCode,
                     classCodeSystem: classMeta.classCodeSystem,
                     className: classMeta.className,
@@ -2604,7 +2766,7 @@ export function OrderBundleEditPanel({
       bundleName: normalizedForm.bundleName,
       classCode: isMedOrder
         ? resolvePrescriptionClassCode(normalizedForm.prescriptionTiming, normalizedForm.prescriptionLocation)
-        : resolveOrderEntityDefaultClassMeta(entity)?.classCode,
+        : normalizedForm.classCode?.trim() || resolveOrderEntityDefaultClassMeta(entity)?.classCode,
       bundleNumber: normalizedForm.bundleNumber,
       items: normalizedForm.items,
     });
@@ -2733,7 +2895,11 @@ export function OrderBundleEditPanel({
   const usageError = validationByKey.get('missing_usage');
   const bundleNumberError = validationByKey.get(USAGE_DAYS_LIMIT_ERROR_KEY);
   const itemsError = validationByKey.get('missing_items') ?? validationByKey.get('comment_only');
-  const bodyPartError = validationByKey.get('missing_body_part') ?? validationByKey.get('missing_body_part_code');
+  const subtypeError = validationByKey.get('missing_test_subtype') ?? validationByKey.get('invalid_test_subtype');
+  const bodyPartError =
+    validationByKey.get('unsupported_body_part') ??
+    validationByKey.get('missing_body_part') ??
+    validationByKey.get('missing_body_part_code');
   const commentError =
     validationByKey.get('invalid_comment_item') ?? validationByKey.get('invalid_comment_code');
 
@@ -3100,6 +3266,12 @@ export function OrderBundleEditPanel({
             >
               {orcaSetLoading ? '検索中…' : 'セット検索'}
             </button>
+            <p className="charts-side-panel__help">
+              {sendContractNote || 'setCode は展開専用です。保存・ORCA送信 payload には保持しません。'}
+            </p>
+            {form.sourceSetCode ? (
+              <p className="charts-side-panel__help">反映元 setCode: {form.sourceSetCode}（local-only）</p>
+            ) : null}
             {orcaSetItems.length > 0 ? (
               <div className="charts-side-panel__search-table">
                 <div className="charts-side-panel__search-header">
@@ -3390,6 +3562,19 @@ export function OrderBundleEditPanel({
                     </p>
                   )}
                 </div>
+                {!isMedOrder ? (
+                  <div className="charts-side-panel__field charts-side-panel__meta-section--memo">
+                    <label htmlFor={`${entityId}-admin-memo`}>院内補足</label>
+                    <textarea
+                      id={`${entityId}-admin-memo`}
+                      value={form.adminMemo}
+                      onChange={(event) => setForm((prev) => ({ ...prev, adminMemo: event.target.value }))}
+                      placeholder="院内運用向けの補足を入力"
+                      disabled={isBlocked}
+                    />
+                    <p className="charts-side-panel__help">院内ローカル情報として保存します。ORCA 送信対象にはしません。</p>
+                  </div>
+                ) : null}
               </div>
             </div>
           </details>
@@ -3420,13 +3605,63 @@ export function OrderBundleEditPanel({
                 </p>
               )}
             </div>
+            {!isMedOrder ? (
+              <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--memo">
+                <label htmlFor={`${entityId}-admin-memo`}>院内補足</label>
+                <textarea
+                  id={`${entityId}-admin-memo`}
+                  value={form.adminMemo}
+                  onChange={(event) => setForm((prev) => ({ ...prev, adminMemo: event.target.value }))}
+                  placeholder="院内運用向けの補足を入力"
+                  disabled={isBlocked}
+                />
+                <p className="charts-side-panel__help">院内ローカル情報として保存します。ORCA 送信対象にはしません。</p>
+              </div>
+            ) : null}
+            {testSubtypeConfig ? (
+              <div className="charts-side-panel__field charts-side-panel__meta-section">
+                <label htmlFor={`${entityId}-test-subtype`}>{testSubtypeConfig.label}</label>
+                {testSubtypeConfig.readOnly ? (
+                  <input
+                    id={`${entityId}-test-subtype`}
+                    value={testSubtypeConfig.options.find((option) => option.value === effectiveTestSubtype)?.label ?? ''}
+                    readOnly
+                    disabled
+                  />
+                ) : (
+                  <select
+                    id={`${entityId}-test-subtype`}
+                    value={effectiveTestSubtype}
+                    aria-invalid={subtypeError ? 'true' : undefined}
+                    onChange={(event) => {
+                      clearValidationByKeys(['missing_test_subtype', 'invalid_test_subtype']);
+                      setForm((prev) => ({ ...prev, subtype: event.target.value as OrderTestSubtype | '' }));
+                    }}
+                    disabled={isBlocked}
+                  >
+                    <option value="">選択してください</option>
+                    {testSubtypeConfig.options.map((option) => (
+                      <option key={`test-subtype-${option.value}`} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <p className="charts-side-panel__help">{testSubtypeConfig.helpText}</p>
+                {subtypeError ? (
+                  <p className="charts-side-panel__field-error" role="alert">
+                    {subtypeError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </>
         )}
 
-        {supportsBodyPartSearch && (
+        {showBodyPartSection && (
           <div className="charts-side-panel__subsection charts-side-panel__subsection--search charts-side-panel__meta-section charts-side-panel__meta-section--bodypart">
             <div className="charts-side-panel__subheader">
-              <strong>{isRadiologyOrder ? '部位' : '部位（リハビリ）'}</strong>
+              <strong>{supportsBodyPartSearch ? (isRadiologyOrder ? '部位' : '部位（リハビリ）') : 'bodyPart'}</strong>
               {isRadiologyOrder && (
                 <span
                   className={`charts-side-panel__status ${
@@ -3446,7 +3681,7 @@ export function OrderBundleEditPanel({
                   data-orca-warning={orcaWarningTargets.bodyPart ? 'true' : undefined}
                   aria-invalid={bodyPartError ? 'true' : undefined}
                   onChange={(event) => {
-                    clearValidationByKeys(['missing_body_part', 'missing_body_part_code']);
+                    clearValidationByKeys(['unsupported_body_part', 'missing_body_part', 'missing_body_part_code']);
                     const nextName = event.target.value;
                     setForm((prev) => ({
                       ...prev,
@@ -3459,7 +3694,7 @@ export function OrderBundleEditPanel({
                       },
                     }));
                   }}
-                  placeholder={isRadiologyOrder ? '例: 胸部' : '例: 膝関節'}
+                  placeholder={supportsBodyPartSearch ? (isRadiologyOrder ? '例: 胸部' : '例: 膝関節') : '保持しない場合はクリアしてください'}
                   disabled={isBlocked}
                 />
                 {bodyPartError ? (
@@ -3475,7 +3710,7 @@ export function OrderBundleEditPanel({
                   value={bodyPartKeyword}
                   onChange={(event) => setBodyPartKeyword(event.target.value)}
                   placeholder={isRadiologyOrder ? '例: 胸' : '例: 膝'}
-                  disabled={isBlocked}
+                  disabled={isBlocked || !supportsBodyPartSearch}
                 />
               </div>
             </div>
@@ -3484,7 +3719,7 @@ export function OrderBundleEditPanel({
                 type="button"
                 className="charts-side-panel__action charts-side-panel__action--search"
                 onClick={() => bodyPartSearchQuery.refetch()}
-                disabled={isBlocked || bodyPartSearchQuery.isFetching}
+                disabled={isBlocked || !supportsBodyPartSearch || bodyPartSearchQuery.isFetching}
               >
                 部位検索
               </button>
@@ -3499,15 +3734,17 @@ export function OrderBundleEditPanel({
             </div>
             {!isRadiologyOrder && (
               <p className="charts-side-panel__message">
-                リハビリ部位は任意入力です。部位マスタから選択するか、手入力で補足できます。
+                {supportsBodyPartSearch
+                  ? 'リハビリ部位は任意入力です。部位マスタから選択するか、手入力で補足できます。'
+                  : 'この種別では bodyPart を保存・送信しません。値が残っている場合はクリアしてください。'}
               </p>
             )}
-            {bodyPartSearchQuery.data && !bodyPartSearchQuery.data.ok && (
+            {supportsBodyPartSearch && bodyPartSearchQuery.data && !bodyPartSearchQuery.data.ok && (
               <div className="charts-side-panel__notice charts-side-panel__notice--error" role="alert" aria-live="assertive">
                 {bodyPartSearchQuery.data.message ?? '部位マスタの検索に失敗しました。'}
               </div>
             )}
-            {bodyPartSearchQuery.data?.ok && (
+            {supportsBodyPartSearch && bodyPartSearchQuery.data?.ok && (
               <>
                 <div className="charts-side-panel__search-count">
                   {bodyPartSearchQuery.isFetching ? '検索中...' : `${bodyPartSearchQuery.data.totalCount ?? 0}件`}
@@ -3636,39 +3873,41 @@ export function OrderBundleEditPanel({
             const hasRowValue = hasOrderBundleItemValue(item);
             const isInactiveRow = !hasRowValue;
             const supportsItemCommentRow = isMedOrder || isInjectionOrder;
-            const parsedItemMemo = supportsItemCommentRow ? parseOrcaOrderItemMemo(item.memo) : null;
-            const genericValue = isMedOrder ? parsedItemMemo?.meta.genericFlg ?? '' : '';
-            const userCommentValue = isMedOrder
-              ? parsedItemMemo?.meta.userComment ?? ''
-              : parsedItemMemo?.memoText ?? (item.memo ?? '');
+            const resolvedItemFields = supportsItemCommentRow ? resolveOrcaOrderItemFields(item) : null;
+            const genericValue = isMedOrder ? resolvedItemFields?.genericFlg ?? '' : '';
+            const userCommentValue = resolvedItemFields?.userComment ?? '';
             const genericDisabled = isBlocked || !isDrugMedicationCode(item.code?.trim() ?? '');
-            const updateItemMeta = (patch: Partial<OrcaOrderItemMeta>) => {
+            const updateGenericFlag = (nextValue: '' | 'yes' | 'no') => {
               setForm((prev) => {
                 const next = [...prev.items];
                 const current = next[index];
                 if (!current) return prev;
                 next[index] = {
                   ...current,
-                  memo: updateOrcaOrderItemMeta(current.memo ?? '', patch),
+                  genericFlg: nextValue === 'yes' || nextValue === 'no' ? nextValue : undefined,
                 };
                 return { ...prev, items: next };
               });
             };
-            const updateGenericFlag = (nextValue: '' | 'yes' | 'no') => {
-              updateItemMeta({
-                genericFlg: nextValue === 'yes' || nextValue === 'no' ? nextValue : undefined,
-              });
-            };
             const updateUserComment = (nextValue: string) => {
               if (isMedOrder) {
-                updateItemMeta({ userComment: nextValue });
+                setForm((prev) => {
+                  const next = [...prev.items];
+                  const current = next[index];
+                  if (!current) return prev;
+                  next[index] = {
+                    ...current,
+                    userComment: nextValue,
+                  };
+                  return { ...prev, items: next };
+                });
                 return;
               }
               setForm((prev) => {
                 const next = [...prev.items];
                 const current = next[index];
                 if (!current) return prev;
-                next[index] = { ...current, memo: nextValue };
+                next[index] = { ...current, userComment: nextValue };
                 return { ...prev, items: next };
               });
             };
@@ -3894,7 +4133,8 @@ export function OrderBundleEditPanel({
                         note: item.category,
                       })
                     }
-                    disabled={isBlocked}
+                    disabled={isBlocked || hasUnsupportedCommentSelectionParameter(item)}
+                    title={hasUnsupportedCommentSelectionParameter(item) ? UNSUPPORTED_COMMENT_PARAMETER_MESSAGE : undefined}
                   >
                     <span>{item.code}</span>
                     <span>{item.name}</span>
@@ -3904,6 +4144,9 @@ export function OrderBundleEditPanel({
                   </button>
                 ))}
               </div>
+              {unsupportedSelectionCommentCandidates.length > 0 ? (
+                <p className="charts-side-panel__help">{UNSUPPORTED_COMMENT_PARAMETER_MESSAGE}</p>
+              ) : null}
             </div>
           )}
           </div>

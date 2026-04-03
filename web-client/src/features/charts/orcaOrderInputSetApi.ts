@@ -30,17 +30,35 @@ export type OrcaOrderInputSetDetailResult = {
   setCode?: string;
   bundle?: {
     entity?: string | null;
+    sourceSetCode?: string;
     bundleName?: string;
     bundleNumber?: string;
+    subtype?: string;
     classCode?: string;
     classCodeSystem?: string;
     className?: string;
     admin?: string;
+    adminCode?: string;
+    adminCodeSystem?: string;
     adminMemo?: string;
     memo?: string;
     started?: string;
-    bodyPart?: { code?: string; name?: string; quantity?: string; unit?: string; memo?: string } | null;
-    items: Array<{ code?: string; name?: string; quantity?: string; unit?: string; memo?: string }>;
+    bodyPart?: {
+      code?: string;
+      name?: string;
+      quantity?: string;
+      unit?: string;
+      memo?: string;
+      rowRole?: 'bodyPart';
+    } | null;
+    items: Array<{
+      code?: string;
+      name?: string;
+      quantity?: string;
+      unit?: string;
+      memo?: string;
+      rowRole?: 'main' | 'material' | 'comment';
+    }>;
   };
   notFound?: boolean;
   message?: string;
@@ -168,13 +186,17 @@ export async function fetchOrcaOrderInputSetDetail(params: {
   }
   const bundle = (json as { bundle?: Record<string, unknown> }).bundle ?? {};
   const items = Array.isArray((bundle as { items?: unknown[] }).items)
-    ? ((bundle as { items?: Array<Record<string, unknown>> }).items ?? []).map((item) => ({
-        code: typeof item.code === 'string' ? item.code : undefined,
-        name: typeof item.name === 'string' ? item.name : undefined,
-        quantity: typeof item.quantity === 'string' ? item.quantity : undefined,
-        unit: typeof item.unit === 'string' ? item.unit : undefined,
-        memo: typeof item.memo === 'string' ? item.memo : undefined,
-      }))
+      ? ((bundle as { items?: Array<Record<string, unknown>> }).items ?? []).map((item) => ({
+          code: typeof item.code === 'string' ? item.code : undefined,
+          name: typeof item.name === 'string' ? item.name : undefined,
+          quantity: typeof item.quantity === 'string' ? item.quantity : undefined,
+          unit: typeof item.unit === 'string' ? item.unit : undefined,
+          memo: typeof item.memo === 'string' ? item.memo : undefined,
+          rowRole:
+            item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment'
+              ? item.rowRole
+              : undefined,
+        }))
     : [];
   const bodyPartSource = (bundle as { bodyPart?: Record<string, unknown> | null }).bodyPart;
   return {
@@ -183,12 +205,16 @@ export async function fetchOrcaOrderInputSetDetail(params: {
     setCode: typeof json.setCode === 'string' ? json.setCode : setCode,
     bundle: {
       entity: typeof bundle.entity === 'string' ? bundle.entity : bundle.entity === null ? null : undefined,
+      sourceSetCode: typeof bundle.sourceSetCode === 'string' ? bundle.sourceSetCode : setCode,
       bundleName: typeof bundle.bundleName === 'string' ? bundle.bundleName : undefined,
       bundleNumber: typeof bundle.bundleNumber === 'string' ? bundle.bundleNumber : undefined,
+      subtype: typeof bundle.subtype === 'string' ? bundle.subtype : undefined,
       classCode: typeof bundle.classCode === 'string' ? bundle.classCode : undefined,
       classCodeSystem: typeof bundle.classCodeSystem === 'string' ? bundle.classCodeSystem : undefined,
       className: typeof bundle.className === 'string' ? bundle.className : undefined,
       admin: typeof bundle.admin === 'string' ? bundle.admin : undefined,
+      adminCode: typeof bundle.adminCode === 'string' ? bundle.adminCode : undefined,
+      adminCodeSystem: typeof bundle.adminCodeSystem === 'string' ? bundle.adminCodeSystem : undefined,
       adminMemo: typeof bundle.adminMemo === 'string' ? bundle.adminMemo : undefined,
       memo: typeof bundle.memo === 'string' ? bundle.memo : undefined,
       started: typeof bundle.started === 'string' ? bundle.started : undefined,
@@ -200,6 +226,7 @@ export async function fetchOrcaOrderInputSetDetail(params: {
               quantity: typeof bodyPartSource.quantity === 'string' ? bodyPartSource.quantity : undefined,
               unit: typeof bodyPartSource.unit === 'string' ? bodyPartSource.unit : undefined,
               memo: typeof bodyPartSource.memo === 'string' ? bodyPartSource.memo : undefined,
+              rowRole: bodyPartSource.rowRole === 'bodyPart' ? 'bodyPart' : undefined,
             }
           : null,
       items,

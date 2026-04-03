@@ -67,3 +67,27 @@ describe('resolveMedOrderBundleName', () => {
     expect(name).toBe('内用（院外処方）');
   });
 });
+
+describe('toFormState non-prescription split rules', () => {
+  it('radiologyOrder は 7 で始まる本体コードを材料行へ誤分類しない', () => {
+    const bundle: OrderBundle = {
+      entity: 'radiologyOrder',
+      bundleName: '胸部CT',
+      bundleNumber: '3',
+      classCode: '700',
+      classCodeSystem: 'Claim007',
+      className: '放射線',
+      bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
+      items: [
+        { code: '700000001', name: '胸部CT本体', quantity: '1', unit: '回', memo: '' },
+        { code: '700000099', name: '造影剤', quantity: '1', unit: '本', memo: '' },
+      ],
+    };
+
+    const form = toFormState(bundle, '2026-03-09');
+
+    expect(form.items.map((item) => item.code)).toEqual(expect.arrayContaining(['700000001', '700000099']));
+    expect(form.materialItems).toHaveLength(0);
+    expect(form.bodyPart).toEqual(expect.objectContaining({ code: '002001', name: '胸部' }));
+  });
+});

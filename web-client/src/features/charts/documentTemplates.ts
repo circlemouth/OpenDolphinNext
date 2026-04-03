@@ -17,7 +17,7 @@ export type DocumentTemplate = {
   defaults: Record<string, string>;
 };
 
-// TODO(20251229T081044Z): server-modernized で文書テンプレ API 仕様確定後に差し替える。
+// 文書テンプレ API の正式仕様が固まるまでは、この暫定型を明示的な front 契約として使う。
 export type DocumentTemplateApiItem = {
   templateId: string;
   documentType: DocumentType;
@@ -33,7 +33,7 @@ export type DocumentTemplateApiResponse = {
   templates: DocumentTemplateApiItem[];
 };
 
-// TODO(20251229T081044Z): 文書出力 API の仕様確定後に request/response を実 API に合わせる。
+// 文書出力 API の正式仕様が固まるまでは、この front 契約を明示的に維持する。
 export type DocumentOutputRequest = {
   runId: string;
   patientId: string;

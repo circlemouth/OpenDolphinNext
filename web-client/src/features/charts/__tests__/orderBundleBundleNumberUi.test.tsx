@@ -58,6 +58,13 @@ const injectionProps = {
   bundleLabel: '注射オーダー名',
   itemQuantityLabel: '回数',
 };
+const chargeProps = {
+  ...baseProps,
+  entity: 'baseChargeOrder',
+  title: '基本料編集',
+  bundleLabel: '算定',
+  itemQuantityLabel: '数量',
+};
 
 afterEach(() => {
   cleanup();
@@ -213,5 +220,43 @@ describe('OrderBundleEditPanel bundle number UI', () => {
     const usageSelect = screen.getByLabelText('用法') as HTMLSelectElement;
     expect(usageSelect.selectedOptions[0]?.text).toBe('1回');
     expect(screen.getByText('頓用は回数として扱われます。')).toBeInTheDocument();
+  });
+
+  it('charge 編集保存では明示 class meta を entity default に潰さない', async () => {
+    const user = userEvent.setup();
+    vi.mocked(mutateOrderBundles).mockResolvedValueOnce({ ok: true, runId: 'RUN-ORDER' });
+    vi.mocked(fetchOrderBundles).mockResolvedValueOnce({
+      ok: true,
+      patientId: 'P-1',
+      bundles: [
+        {
+          documentId: 11,
+          moduleId: 21,
+          entity: 'baseChargeOrder',
+          bundleName: '再診料',
+          bundleNumber: '1',
+          classCode: '120',
+          classCodeSystem: 'Claim007',
+          className: '再診料',
+          admin: '',
+          adminMemo: '',
+          memo: '',
+          started: '2025-12-30',
+          items: [{ code: '120000110', name: '再診料', quantity: '1', unit: '回', memo: '' }],
+        },
+      ],
+    });
+
+    renderWithClient(<OrderBundleEditPanel {...chargeProps} />);
+
+    await user.click(await screen.findByRole('button', { name: '編集' }));
+    await user.click(screen.getByRole('button', { name: '保存して更新する' }));
+
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+    const operation = mutateMock.mock.calls[0]?.[0]?.operations?.[0];
+    expect(operation?.classCode).toBe('120');
+    expect(operation?.classCodeSystem).toBe('Claim007');
+    expect(operation?.className).toBe('再診料');
   });
 });

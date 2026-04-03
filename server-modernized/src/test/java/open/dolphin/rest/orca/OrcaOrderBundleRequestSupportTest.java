@@ -59,4 +59,12 @@ class OrcaOrderBundleRequestSupportTest {
         assertTrue(OrcaOrderBundleRequestSupport.hasText("value"));
         assertFalse(OrcaOrderBundleRequestSupport.hasText(" "));
     }
+
+    @Test
+    void supportsBodyPartFieldIsLimitedToBodyPartAwareEntities() {
+        assertTrue(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_TREATMENT));
+        assertTrue(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_RADIOLOGY_ORDER));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField("testOrder"));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_BACTERIA_ORDER));
+    }
 }

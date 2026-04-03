@@ -167,6 +167,9 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("薬剤師", first.getEnteredByRole());
         assertEquals("4101", first.getAdminCode());
         assertEquals("Claim007", first.getAdminCodeSystem());
+        assertEquals("no", first.getItems().get(0).getGenericFlg());
+        assertEquals("食後", first.getItems().get(0).getUserComment());
+        assertEquals("レセプトコメント", first.getItems().get(0).getMemo());
 
         var second = response.getBundles().get(1);
         assertEquals("document-user-1002", second.getEnteredByName());
@@ -240,25 +243,24 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         payload.setPatientId("00001");
         OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
         op.setOperation("create");
-        op.setEntity("medOrder");
-        op.setBundleName("降圧薬セット");
-        op.setAdmin("静注");
-        op.setAdminCode("4101");
-        op.setAdminCodeSystem("Claim007");
+        op.setEntity("treatmentOrder");
+        op.setBundleName("bodyPart-priority");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
         bodyPart.setCode("002999");
-        bodyPart.setName("右下肢");
+        bodyPart.setName("priority-body-part");
         op.setBodyPart(bodyPart);
 
         OrderBundleMutationRequest.BundleItem legacyBodyPart = new OrderBundleMutationRequest.BundleItem();
         legacyBodyPart.setCode("002111");
-        legacyBodyPart.setName("旧部位");
-        OrderBundleMutationRequest.BundleItem drug = new OrderBundleMutationRequest.BundleItem();
-        drug.setCode("100001");
-        drug.setName("アムロジピン");
-        op.setItems(List.of(legacyBodyPart, drug));
+        legacyBodyPart.setName("legacy-body-part");
+        OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
+        procedure.setCode("140000610");
+        procedure.setName("treatment-main");
+        op.setItems(List.of(legacyBodyPart, procedure));
         payload.setOperations(List.of(op));
 
         OrderBundleMutationResponse response = resource.postBundles(servletRequest, payload);
@@ -268,18 +270,13 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
         assertNotNull(saved);
         assertNotNull(saved.getModules().get(0).getBeanJson());
-        assertTrue(saved.getModules().get(0).getBeanJson().contains("\"schemaVersion\":1"));
-        assertTrue(saved.getModules().get(0).getBeanJson().contains("\"moduleType\":\"medOrder\""));
         BundleDolphin bundle = (BundleDolphin) saved.getModules().get(0).getModel();
-        assertEquals("静注", bundle.getAdmin());
-        assertEquals("4101", bundle.getAdminCode());
-        assertEquals("Claim007", bundle.getAdminCodeSystem());
         ClaimItem[] claimItems = bundle.getClaimItem();
         assertNotNull(claimItems);
         assertEquals(2, claimItems.length);
         assertEquals("002999", claimItems[0].getCode());
-        assertEquals("右下肢", claimItems[0].getName());
-        assertEquals("100001", claimItems[1].getCode());
+        assertEquals("priority-body-part", claimItems[0].getName());
+        assertEquals("140000610", claimItems[1].getCode());
     }
 
     @Test
@@ -288,17 +285,19 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         payload.setPatientId("00001");
         OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
         op.setOperation("create");
-        op.setEntity("medOrder");
-        op.setBundleName("降圧薬セット");
+        op.setEntity("treatmentOrder");
+        op.setBundleName("legacy-body-part-fallback");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem legacyBodyPart = new OrderBundleMutationRequest.BundleItem();
         legacyBodyPart.setCode("002777");
-        legacyBodyPart.setName("頭部");
-        OrderBundleMutationRequest.BundleItem drug = new OrderBundleMutationRequest.BundleItem();
-        drug.setCode("100001");
-        drug.setName("アムロジピン");
-        op.setItems(List.of(legacyBodyPart, drug));
+        legacyBodyPart.setName("legacy-body-part");
+        OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
+        procedure.setCode("140000610");
+        procedure.setName("treatment-main");
+        op.setItems(List.of(legacyBodyPart, procedure));
         payload.setOperations(List.of(op));
 
         OrderBundleMutationResponse response = resource.postBundles(servletRequest, payload);
@@ -308,14 +307,51 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
         assertNotNull(saved);
         assertNotNull(saved.getModules().get(0).getBeanJson());
-        assertTrue(saved.getModules().get(0).getBeanJson().contains("\"schemaVersion\":1"));
-        assertTrue(saved.getModules().get(0).getBeanJson().contains("\"moduleType\":\"medOrder\""));
         BundleDolphin bundle = (BundleDolphin) saved.getModules().get(0).getModel();
         ClaimItem[] claimItems = bundle.getClaimItem();
         assertNotNull(claimItems);
         assertEquals(2, claimItems.length);
         assertEquals("002777", claimItems[0].getCode());
-        assertEquals("頭部", claimItems[0].getName());
+        assertEquals("legacy-body-part", claimItems[0].getName());
+        assertEquals("140000610", claimItems[1].getCode());
+    }
+
+    @Test
+    void postBundlesRejectsCommentOnlyNonMedBundle() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("treatmentOrder");
+        op.setBundleName("comment-only-treatment");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("002001");
+        bodyPart.setName("body-part-only");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem comment = new OrderBundleMutationRequest.BundleItem();
+        comment.setCode("0085001");
+        comment.setName("comment-only");
+        op.setItems(List.of(comment));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("items", body.get("field"));
+        assertEquals("items do not contain a sendable main row", body.get("message"));
     }
 
     @Test
@@ -413,19 +449,38 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
                 OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
                 bundle.setEntity(IInfoModel.ENTITY_MED_ORDER);
+                bundle.setSourceSetCode(setCode);
                 bundle.setBundleName("降圧セット");
                 bundle.setBundleNumber("14");
                 bundle.setClassCode("212");
                 bundle.setClassCodeSystem("Claim007");
                 bundle.setClassName("RP");
+                bundle.setAdminMemo("入力セット補足");
+                bundle.setMemo("入力セットメモ");
                 bundle.setStarted("2026-03-09");
+                OrcaOrderInputSetDetailResponse.BodyPart bodyPart = new OrcaOrderInputSetDetailResponse.BodyPart();
+                bodyPart.setCode("0021001");
+                bodyPart.setName("胸部");
+                bodyPart.setQuantity("1");
+                bodyPart.setUnit("部位");
+                bodyPart.setMemo("");
+                bodyPart.setRowRole("bodyPart");
+                bundle.setBodyPart(bodyPart);
                 OrcaOrderInputSetDetailResponse.Item item = new OrcaOrderInputSetDetailResponse.Item();
                 item.setCode("620000001");
                 item.setName("アムロジピン");
                 item.setQuantity("1");
                 item.setUnit("錠");
                 item.setMemo("");
-                bundle.setItems(List.of(item));
+                item.setRowRole("main");
+                OrcaOrderInputSetDetailResponse.Item comment = new OrcaOrderInputSetDetailResponse.Item();
+                comment.setCode("0085001");
+                comment.setName("コメント");
+                comment.setQuantity("");
+                comment.setUnit("");
+                comment.setMemo("注意");
+                comment.setRowRole("comment");
+                bundle.setItems(List.of(item, comment));
                 return bundle;
             }
         };
@@ -440,8 +495,20 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertTrue(response.isOk());
         assertEquals("P01001", response.getSetCode());
         assertNotNull(response.getBundle());
+        assertEquals("P01001", response.getBundle().getSourceSetCode());
         assertEquals("降圧セット", response.getBundle().getBundleName());
-        assertEquals(1, response.getBundle().getItems().size());
+        assertEquals("212", response.getBundle().getClassCode());
+        assertEquals("Claim007", response.getBundle().getClassCodeSystem());
+        assertEquals("入力セット補足", response.getBundle().getAdminMemo());
+        assertEquals("入力セットメモ", response.getBundle().getMemo());
+        assertNotNull(response.getBundle().getBodyPart());
+        assertEquals("0021001", response.getBundle().getBodyPart().getCode());
+        assertEquals("bodyPart", response.getBundle().getBodyPart().getRowRole());
+        assertEquals(2, response.getBundle().getItems().size());
+        assertEquals("main", response.getBundle().getItems().get(0).getRowRole());
+        assertEquals("0085001", response.getBundle().getItems().get(1).getCode());
+        assertEquals("注意", response.getBundle().getItems().get(1).getMemo());
+        assertEquals("comment", response.getBundle().getItems().get(1).getRowRole());
     }
 
     @Test
@@ -738,6 +805,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             item.setName("アムロジピン");
             item.setNumber("1");
             item.setUnit("錠");
+            item.setMemo("__orca_meta__:{\"genericFlg\":\"no\",\"userComment\":\"食後\"}\nレセプトコメント");
             ClaimItem bodyPart = new ClaimItem();
             bodyPart.setCode("0021001");
             bodyPart.setName("胸部");

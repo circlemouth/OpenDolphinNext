@@ -199,7 +199,8 @@ final class OrcaOrderBundleRecommendationCollectorSupport {
                 OrcaOrderBundleRecommendationSupport.toRecommendationTemplate(
                         bundleNameResolver.resolve(bundle, module.getModuleInfoBean()),
                         bundle,
-                        canonicalEntity);
+                        canonicalEntity,
+                        module.getModuleInfoBean() != null ? module.getModuleInfoBean().getStampMemo() : null);
         String key = OrcaOrderBundleRecommendationSupport.buildRecommendationKey(canonicalEntity, template);
         Date usedAt = module.getStarted() != null ? module.getStarted() : document != null ? document.getStarted() : null;
         OrcaOrderBundleAggregationSupport.upsert(aggregates, key, canonicalEntity, template, usedAt);

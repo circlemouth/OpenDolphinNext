@@ -133,6 +133,35 @@ final class OrcaOrderBundleRequestSupport {
         return ORDER_BUNDLE_ENTITIES.contains(normalized);
     }
 
+    static boolean isCompatibleClassCode(String entity, String classCode) {
+        String normalizedEntity = canonicalizeEntity(entity);
+        String normalizedClassCode = trimToNull(classCode);
+        if (normalizedEntity == null || normalizedClassCode == null) {
+            return true;
+        }
+        return switch (normalizedEntity) {
+            case IInfoModel.ENTITY_MED_ORDER -> Set.of("211", "212", "221", "222", "231", "232").contains(normalizedClassCode);
+            case IInfoModel.ENTITY_INJECTION_ORDER -> normalizedClassCode.startsWith("3");
+            case "treatmentOrder" -> normalizedClassCode.startsWith("4");
+            case IInfoModel.ENTITY_SURGERY_ORDER -> normalizedClassCode.startsWith("5");
+            case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
+            case IInfoModel.ENTITY_RADIOLOGY_ORDER -> normalizedClassCode.startsWith("7");
+            case IInfoModel.ENTITY_OTHER_ORDER -> normalizedClassCode.startsWith("8");
+            case IInfoModel.ENTITY_BASE_CHARGE_ORDER, IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> normalizedClassCode.startsWith("1");
+            default -> true;
+        };
+    }
+
+    static boolean supportsBodyPartField(String entity) {
+        String normalizedEntity = canonicalizeEntity(entity);
+        if (normalizedEntity == null) {
+            return false;
+        }
+        return "treatmentOrder".equals(normalizedEntity)
+                || IInfoModel.ENTITY_OTHER_ORDER.equals(normalizedEntity)
+                || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+    }
+
     private static String canonicalizeEntity(String entity) {
         if (entity == null || entity.isBlank()) {
             return null;

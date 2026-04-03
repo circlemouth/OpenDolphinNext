@@ -56,12 +56,16 @@ public class OrcaOrderInputSetDetailResponse {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Bundle {
         private String entity;
+        private String sourceSetCode;
         private String bundleName;
         private String bundleNumber;
+        private String subtype;
         private String classCode;
         private String classCodeSystem;
         private String className;
         private String admin;
+        private String adminCode;
+        private String adminCodeSystem;
         private String adminMemo;
         private String memo;
         private String started;
@@ -74,6 +78,14 @@ public class OrcaOrderInputSetDetailResponse {
 
         public void setEntity(String entity) {
             this.entity = entity;
+        }
+
+        public String getSourceSetCode() {
+            return sourceSetCode;
+        }
+
+        public void setSourceSetCode(String sourceSetCode) {
+            this.sourceSetCode = sourceSetCode;
         }
 
         public String getBundleName() {
@@ -90,6 +102,14 @@ public class OrcaOrderInputSetDetailResponse {
 
         public void setBundleNumber(String bundleNumber) {
             this.bundleNumber = bundleNumber;
+        }
+
+        public String getSubtype() {
+            return subtype;
+        }
+
+        public void setSubtype(String subtype) {
+            this.subtype = subtype;
         }
 
         public String getClassCode() {
@@ -122,6 +142,22 @@ public class OrcaOrderInputSetDetailResponse {
 
         public void setAdmin(String admin) {
             this.admin = admin;
+        }
+
+        public String getAdminCode() {
+            return adminCode;
+        }
+
+        public void setAdminCode(String adminCode) {
+            this.adminCode = adminCode;
+        }
+
+        public String getAdminCodeSystem() {
+            return adminCodeSystem;
+        }
+
+        public void setAdminCodeSystem(String adminCodeSystem) {
+            this.adminCodeSystem = adminCodeSystem;
         }
 
         public String getAdminMemo() {
@@ -172,6 +208,7 @@ public class OrcaOrderInputSetDetailResponse {
         private String quantity;
         private String unit;
         private String memo;
+        private String rowRole;
 
         public String getCode() {
             return code;
@@ -211,6 +248,14 @@ public class OrcaOrderInputSetDetailResponse {
 
         public void setMemo(String memo) {
             this.memo = memo;
+        }
+
+        public String getRowRole() {
+            return rowRole;
+        }
+
+        public void setRowRole(String rowRole) {
+            this.rowRole = rowRole;
         }
     }
 

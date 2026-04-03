@@ -139,6 +139,11 @@ exports[`OrderBundleEditPanel body part search > 放射線の部位検索はキ�
               >
                 セット検索
               </button>
+              <p
+                class="charts-side-panel__help"
+              >
+                setCode は展開専用です。保存・ORCA送信 payload には保持しません。
+              </p>
             </div>
             <div
               class="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--usage"
@@ -198,6 +203,24 @@ exports[`OrderBundleEditPanel body part search > 放射線の部位検索はキ�
                 id="radiologyOrder-memo"
                 placeholder="撮影条件・依頼目的を入力"
               />
+            </div>
+            <div
+              class="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--memo"
+            >
+              <label
+                for="radiologyOrder-admin-memo"
+              >
+                院内補足
+              </label>
+              <textarea
+                id="radiologyOrder-admin-memo"
+                placeholder="院内運用向けの補足を入力"
+              />
+              <p
+                class="charts-side-panel__help"
+              >
+                院内ローカル情報として保存します。ORCA 送信対象にはしません。
+              </p>
             </div>
             <div
               class="charts-side-panel__subsection charts-side-panel__subsection--search charts-side-panel__meta-section charts-side-panel__meta-section--bodypart"
