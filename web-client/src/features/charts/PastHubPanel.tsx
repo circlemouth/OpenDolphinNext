@@ -27,7 +27,7 @@ const ORDER_ENTITY_LABEL: Record<PastHubOrderEntity, string> = {
   medOrder: '処方',
   injectionOrder: '注射',
   treatmentOrder: '処置',
-  generalOrder: '一般',
+  generalOrder: '一般(処置400別表示)',
   surgeryOrder: '手術',
   otherOrder: 'その他',
   testOrder: '検査',

@@ -125,6 +125,135 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesRejectsNon8CodeForOtherOrder() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
+        op.setBundleName("other-main");
+        op.setClassCode("800");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("700000001");
+        item.setName("invalid-material");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("items", body.get("field"));
+        assertEquals("otherOrder items must use code family 8", body.get("message"));
+    }
+
+    @Test
+    void postBundlesRejectsOtherOrderWithWrongClassCodeFamily() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
+        op.setBundleName("other-main");
+        op.setClassCode("700");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("180000210");
+        item.setName("other-main");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("classCode", body.get("field"));
+        assertEquals("classCode is incompatible with entity", body.get("message"));
+    }
+
+    @Test
+    void postBundlesRejectsBodyPartForOtherOrder() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
+        op.setBundleName("other-main");
+        op.setClassCode("800");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("002001");
+        bodyPart.setName("invalid-body-part");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("800000001");
+        item.setName("other-main");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart is incompatible with entity", body.get("message"));
+    }
+
+    @Test
+    void postBundlesAcceptsOtherOrder18FamilyCode() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
+        op.setBundleName("other-main");
+        op.setClassCode("800");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("180000210");
+        item.setName("other-main");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        OrderBundleMutationResponse response = resource.postBundles(servletRequest, payload);
+
+        assertNotNull(response);
+        assertEquals(1, response.getCreatedDocumentIds().size());
+    }
+
+    @Test
     void getBundlesReturnsStored600Subtype() throws Exception {
         karteServiceBean = new BasicKarteServiceBean(List.of(buildStored600Document(
                 16001L,
@@ -148,6 +277,47 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals("600", entry.getClassCode());
         assertEquals(1, entry.getItems().size());
         assertEquals("160000010", entry.getItems().get(0).getCode());
+    }
+
+    @Test
+    void postBundlesPersistsBacteriaSubtypeAndFetchReturnsIt() throws Exception {
+        karteServiceBean = new BasicKarteServiceBean(List.of());
+        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_BACTERIA_ORDER);
+        op.setSubtype("culture");
+        op.setBundleName("culture-main");
+        op.setClassCode("600");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("160000010");
+        item.setName("culture-main");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        OrderBundleMutationResponse mutationResponse = resource.postBundles(servletRequest, payload);
+
+        assertNotNull(mutationResponse);
+        OrderBundleFetchResponse fetched = resource.getBundles(
+                servletRequest,
+                "00001",
+                IInfoModel.ENTITY_BACTERIA_ORDER,
+                "2025-01-01");
+
+        assertNotNull(fetched);
+        assertEquals(1, fetched.getBundles().size());
+        OrderBundleFetchResponse.OrderBundleEntry entry = fetched.getBundles().get(0);
+        assertEquals(IInfoModel.ENTITY_BACTERIA_ORDER, entry.getEntity());
+        assertEquals("culture", entry.getSubtype());
+        assertEquals("600", entry.getClassCode());
+        assertEquals("culture-main", entry.getBundleName());
     }
 
     @Test
@@ -365,7 +535,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         private long nextDocumentId = 9000L;
 
         private BasicKarteServiceBean(List<DocumentModel> documents) {
-            this.documents = documents;
+            this.documents = new java.util.ArrayList<>(documents);
         }
 
         @Override
@@ -400,6 +570,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
                 nextDocumentId++;
                 document.setId(nextDocumentId);
             }
+            documents.add(document);
             return document.getId();
         }
 

@@ -59,7 +59,7 @@ const DEFAULT_STAMP_TARGET = 'medOrder';
 
 const STAMP_TARGET_OPTIONS = [
   { value: 'medOrder', label: '処方' },
-  { value: 'generalOrder', label: '処置/検査/指示' },
+  { value: 'generalOrder', label: '一般(処置400別表示)' },
   { value: 'injectionOrder', label: '注射' },
   { value: 'treatmentOrder', label: '処置' },
   { value: 'surgeryOrder', label: '手術' },

@@ -49,6 +49,8 @@ describe('prescriptionOrderApi first-class contract', () => {
       encounterDate: '2026-03-09',
       performDate: '2026-03-09',
       doctorComment: '全体コメント',
+      prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
+      remarks: [{ code: 'remark-1', text: '院内備考' }],
       deletedDocumentIds: [1, 1, 0, -1],
       rps: classMatrix.map((entry, index) => ({
         rpId: entry.rpId,
@@ -64,6 +66,10 @@ describe('prescriptionOrderApi first-class contract', () => {
         doctorComment: `RPコメント${index + 1}`,
         started: '2026-03-09',
         lowerDrugCode: index === 0 ? 'lower-drug' : undefined,
+        claimComments:
+          index === 0
+            ? [{ id: 'rp-claim-1', code: '820100001', name: 'RP患者希望', note: 'rp-note' }]
+            : [],
         drugs: [
           {
             rowId: `drug-${index + 1}`,
@@ -74,6 +80,7 @@ describe('prescriptionOrderApi first-class contract', () => {
             genericChangeAllowed: index % 2 === 0,
             isGeneralNamePrescription: index % 2 === 1,
             drugComment: '食後',
+            lowerUsageCode: index === 0 ? 'lower-usage' : undefined,
             claimComments: [
               { id: `claim-${index + 1}`, code: '810000001', name: '患者希望', note: 'note' },
             ],
@@ -87,11 +94,18 @@ describe('prescriptionOrderApi first-class contract', () => {
     expect(operations.filter((operation) => operation.operation !== 'delete').map((operation) => operation.classCode)).toEqual(
       classMatrix.map((entry) => entry.medicalClass),
     );
-    expect(operations[0]?.items?.[0]).toEqual(
-      expect.objectContaining({
-        genericFlg: 'yes',
-        userComment: '食後',
-      }),
+    expect(operations[0]?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: '820100001',
+          name: 'RP患者希望',
+          memo: '__rx_claim_target__:__rp__',
+        }),
+        expect.objectContaining({
+          genericFlg: 'yes',
+          userComment: '食後',
+        }),
+      ]),
     );
     expect(operations[0]?.items?.[0]?.memo?.startsWith('__orca_meta__:')).toBe(false);
     expect(operations.filter((operation) => operation.operation === 'delete')).toEqual([
@@ -124,6 +138,10 @@ describe('prescriptionOrderApi first-class contract', () => {
         refillPattern: 'standard',
         doctorComment: 'RPコメント1',
         started: '2026-03-09',
+        claimComments: expect.arrayContaining([
+          expect.objectContaining({ code: '820100001', text: 'RP患者希望', note: 'rp-note' }),
+        ]),
+        lowerFields: { lowerDrugCode: 'lower-drug' },
       }),
     );
     expect(body.rps[0].drugs[0]).toEqual(
@@ -134,6 +152,7 @@ describe('prescriptionOrderApi first-class contract', () => {
         generalNamePrescription: false,
         drugComment: '食後',
         patientRequested: true,
+        lowerFields: { lowerUsageCode: 'lower-usage' },
       }),
     );
     expect(body.rps[1].drugs[0]).toEqual(
@@ -150,6 +169,8 @@ describe('prescriptionOrderApi first-class contract', () => {
         note: 'note',
       }),
     );
+    expect(body.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
+    expect(body.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
     expect(body.doctorComments).toEqual([{ text: '全体コメント' }]);
     expect(body.deletedDocumentIds ?? undefined).toBeUndefined();
   });
@@ -165,6 +186,8 @@ describe('prescriptionOrderApi first-class contract', () => {
             encounterDate: '2026-03-09',
             performDate: '2026-03-09',
             doctorComments: [{ text: '全体コメント' }],
+            prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
+            remarks: [{ code: 'remark-1', text: '院内備考' }],
             rps: [
               {
                 rpNumber: 'rp-stable-001',
@@ -178,6 +201,8 @@ describe('prescriptionOrderApi first-class contract', () => {
                 refillCount: 2,
                 refillPattern: 'alternate',
                 doctorComment: 'RPコメント',
+                claimComments: [{ code: '820100001', text: 'RP患者希望', note: 'rp-note' }],
+                lowerFields: { lowerDrugCode: 'lower-drug' },
                 drugs: [
                   {
                     code: '620000001',
@@ -188,6 +213,7 @@ describe('prescriptionOrderApi first-class contract', () => {
                     generalNamePrescription: true,
                     drugComment: '食後',
                     patientRequested: false,
+                    lowerFields: { lowerUsageCode: 'lower-usage' },
                     claimComments: [{ code: '810000001', text: '患者希望', note: 'note' }],
                   },
                 ],
@@ -228,8 +254,15 @@ describe('prescriptionOrderApi first-class contract', () => {
     const result = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09' });
 
     expect(result.ok).toBe(true);
-    expect(result.order.doctorComment).toBe('全体コメント');
+    expect(result.order.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
+    expect(result.order.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
     expect(result.sourceBundles[0]?.items[0]).toEqual(
+      expect.objectContaining({
+        code: '820100001',
+        name: 'RP患者希望',
+      }),
+    );
+    expect(result.sourceBundles[0]?.items[1]).toEqual(
       expect.objectContaining({
         genericFlg: 'no',
         userComment: '食後',
@@ -249,6 +282,10 @@ describe('prescriptionOrderApi first-class contract', () => {
         refillCount: 2,
         refillPattern: 'alternate',
         doctorComment: 'RPコメント',
+        claimComments: expect.arrayContaining([
+          expect.objectContaining({ code: '820100001', name: 'RP患者希望', note: 'rp-note' }),
+        ]),
+        lowerDrugCode: 'lower-drug',
       }),
     );
     expect(result.order.rps[0].drugs[0]).toEqual(
@@ -259,6 +296,7 @@ describe('prescriptionOrderApi first-class contract', () => {
         isGeneralNamePrescription: true,
         drugComment: '食後',
         patientRequest: false,
+        lowerUsageCode: 'lower-usage',
       }),
     );
     expect(result.order.rps[1]).toEqual(
@@ -294,6 +332,8 @@ describe('prescriptionOrderApi first-class contract', () => {
       encounterDate: '2026-03-09',
       performDate: '2026-03-09',
       doctorComment: '全体コメント',
+      prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
+      remarks: [{ code: 'remark-1', text: '院内備考' }],
       deletedDocumentIds: [],
       rps: [
         {
@@ -309,6 +349,8 @@ describe('prescriptionOrderApi first-class contract', () => {
           refillPattern: 'alternate',
           doctorComment: 'RPコメント',
           started: '2026-03-09',
+          claimComments: [{ id: 'rp-claim-1', code: '820100001', name: 'RP患者希望', note: 'rp-note' }],
+          lowerDrugCode: 'lower-drug',
           drugs: [
             {
               rowId: 'drug-1',
@@ -319,6 +361,7 @@ describe('prescriptionOrderApi first-class contract', () => {
               genericChangeAllowed: false,
               isGeneralNamePrescription: true,
               drugComment: '食後',
+              lowerUsageCode: 'lower-usage',
               claimComments: [{ id: 'claim-1', code: '810000001', name: '患者希望', note: 'note' }],
               patientRequest: false,
             },
@@ -344,6 +387,8 @@ describe('prescriptionOrderApi first-class contract', () => {
               encounterDate: '2026-03-09',
               performDate: '2026-03-09',
               doctorComments: [{ text: '全体コメント' }],
+              prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
+              remarks: [{ code: 'remark-1', text: '院内備考' }],
               rps: [
                 {
                   rpNumber: 'rp-stable-001',
@@ -357,6 +402,8 @@ describe('prescriptionOrderApi first-class contract', () => {
                   refillCount: 2,
                   refillPattern: 'alternate',
                   doctorComment: 'RPコメント',
+                  claimComments: [{ code: '820100001', text: 'RP患者希望', note: 'rp-note' }],
+                  lowerFields: { lowerDrugCode: 'lower-drug' },
                   drugs: [
                     {
                       code: '620000001',
@@ -367,6 +414,7 @@ describe('prescriptionOrderApi first-class contract', () => {
                       generalNamePrescription: true,
                       drugComment: '食後',
                       patientRequested: false,
+                      lowerFields: { lowerUsageCode: 'lower-usage' },
                       claimComments: [{ code: '810000001', text: '患者希望', note: 'note' }],
                     },
                   ],
@@ -388,10 +436,36 @@ describe('prescriptionOrderApi first-class contract', () => {
       );
 
     await savePrescriptionOrder({ patientId: '000001', order });
-    const fetched = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09' });
-    await savePrescriptionOrder({ patientId: '000001', order: fetched.order });
+    const fetchedOrder: PrescriptionOrder = {
+      ...order,
+      doctorComment: '全体コメント',
+      rps: [
+        {
+          ...order.rps[0],
+          remark: 'local only',
+          refillCount: 2,
+          refillPattern: 'alternate',
+          doctorComment: 'RPコメント',
+          started: '2026-03-09',
+          claimComments: [{ id: 'rp-claim-1', code: '820100001', name: 'RP患者希望', note: 'rp-note' }],
+          lowerDrugCode: 'lower-drug',
+          drugs: [
+            {
+              ...order.rps[0].drugs[0],
+              genericChangeAllowed: false,
+              isGeneralNamePrescription: true,
+              drugComment: '食後',
+              lowerUsageCode: 'lower-usage',
+              claimComments: [{ id: 'claim-1', code: '810000001', name: '患者希望', note: 'note' }],
+              patientRequest: false,
+            },
+          ],
+        },
+      ],
+    };
+    await savePrescriptionOrder({ patientId: '000001', order: fetchedOrder });
 
-    const secondRequest = vi.mocked(httpFetch).mock.calls[2]?.[1];
+    const secondRequest = vi.mocked(httpFetch).mock.calls[1]?.[1];
     const secondBody = JSON.parse(String((secondRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
 
     expect(secondBody.rps[0]).toEqual(
@@ -405,6 +479,10 @@ describe('prescriptionOrderApi first-class contract', () => {
         refillCount: 2,
         refillPattern: 'alternate',
         doctorComment: 'RPコメント',
+        claimComments: expect.arrayContaining([
+          expect.objectContaining({ code: '820100001', text: 'RP患者希望', note: 'rp-note' }),
+        ]),
+        lowerFields: { lowerDrugCode: 'lower-drug' },
       }),
     );
     expect(secondBody.rps[0].drugs[0]).toEqual(
@@ -414,6 +492,7 @@ describe('prescriptionOrderApi first-class contract', () => {
         generalNamePrescription: true,
         drugComment: '食後',
         patientRequested: false,
+        lowerFields: { lowerUsageCode: 'lower-usage' },
       }),
     );
     expect(secondBody.rps[0].drugs[0].claimComments[0]).toEqual(
@@ -423,6 +502,8 @@ describe('prescriptionOrderApi first-class contract', () => {
         note: 'note',
       }),
     );
+    expect(secondBody.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
+    expect(secondBody.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
   });
 
   it('save は code なし請求コメントを送信前に fail-closed で拒否する', async () => {
@@ -464,6 +545,51 @@ describe('prescriptionOrderApi first-class contract', () => {
 
     await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
       'RP1 薬剤1: 請求コメントコード未入力のコメントは保存できません。',
+    );
+    expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
+  });
+
+
+  it('save は RP-level code なし請求コメントも送信前に fail-closed で拒否する', async () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '処方RP',
+          location: 'out',
+          category: 'regular',
+          usage: '1日1回',
+          daysOrTimes: '1',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          claimComments: [{ id: 'rp-claim-1', name: 'コードなしRPコメント' }],
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
+      'RP1 RPコメント: 請求コメントコード未入力のコメントは保存できません。',
     );
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });

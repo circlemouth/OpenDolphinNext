@@ -237,10 +237,18 @@ const buildBundleDetailLines = (group: OrderGroupKey, bundle: OrderBundle, bundl
   const bundleMemo = normalizeInline(bundle.memo);
   const admin = normalizeInline(bundle.admin);
   const adminMemo = normalizeInline(bundle.adminMemo);
+  const sourceSetCode = normalizeInline((bundle as OrderBundle & { sourceSetCode?: string }).sourceSetCode);
 
   if (group === 'injection') {
     const adminLine = [admin || null, adminMemo || null].filter(Boolean).join(' ');
     detailLines.push(adminLine || '投与情報なし');
+  }
+
+  if (group === 'charge') {
+    const adminLine = [admin || null, adminMemo ? `院内補足:${adminMemo}` : null].filter(Boolean).join(' / ');
+    if (adminLine) detailLines.push(adminLine);
+    if (sourceSetCode) detailLines.push(`反映元 setCode: ${sourceSetCode}`);
+    if (bundle.started?.trim()) detailLines.push(`開始: ${bundle.started.trim()}`);
   }
 
   if (group === 'charge' || group === 'injection') {

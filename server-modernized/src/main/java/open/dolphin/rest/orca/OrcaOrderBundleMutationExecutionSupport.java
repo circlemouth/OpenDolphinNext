@@ -101,6 +101,9 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 if (OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
                     hasBodyPart = true;
                 } else if (!isCommentCode(code)) {
+                    if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity) && !isOtherOrderCode(code)) {
+                        throw validationFailure.invalid("items", "otherOrder items must use code family 8");
+                    }
                     hasSendableMainRow = true;
                 }
             } else {
@@ -128,6 +131,10 @@ final class OrcaOrderBundleMutationExecutionSupport {
         return canonicalEntity != null
                 && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity)
                 && !IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity);
+    }
+
+    private static boolean isOtherOrderCode(String code) {
+        return code.startsWith("8") || code.startsWith("18");
     }
 
     private static boolean hasBodyPartItem(OrderBundleMutationRequest.BundleItem item) {

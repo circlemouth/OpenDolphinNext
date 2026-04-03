@@ -191,7 +191,7 @@ const toRpFromRecommendation = (
   }
   template.commentItems.forEach((comment) => {
     if (!comment.name.trim()) return;
-    mainDrugs[0].claimComments.push(createClaimComment(comment.name, comment.code));
+    rp.claimComments = [...(rp.claimComments ?? []), createClaimComment(comment.name, comment.code)];
   });
 
   return {
@@ -259,29 +259,14 @@ const toRpFromInputSetDetail = (
         patientRequest: true,
       }];
     });
-  if (claimComments.length > 0) {
-    if (drugs.length === 0) {
-      drugs.push({
-        rowId: `drug-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        code: undefined,
-        name: '',
-        quantity: '',
-        unit: '',
-        genericChangeAllowed: true,
-        isGeneralNamePrescription: false,
-        drugComment: '',
-        claimComments: [] as PrescriptionClaimComment[],
-        patientRequest: true,
-      });
-    }
-    drugs[0].claimComments = [...drugs[0].claimComments, ...claimComments];
-  }
   return {
     ...buildEmptyPrescriptionRp(detail.started ?? started, detail.classCode),
     name: detail.bundleName ?? '',
     usage: detail.admin ?? '',
     usageCode: detail.adminMemo?.trim() || undefined,
     daysOrTimes: detail.bundleNumber ?? '1',
+    remark: detail.memo?.trim() ?? '',
+    claimComments,
     drugs:
       drugs.length > 0
         ? drugs
@@ -842,6 +827,20 @@ export function PrescriptionOrderEditorPanel({
         issues.push({
           key: `rp_items_${rpIndex}`,
           message: `RP${rpIndex + 1} に薬剤を1件以上入力してください。`,
+          rpIndex,
+        });
+      }
+      if (!rp.usageCode?.trim()) {
+        issues.push({
+          key: `rp_usage_code_${rpIndex}`,
+          message: `RP${rpIndex + 1}: 用法マスタコードを選択してください。自由入力だけの用法は保存できません。`,
+          rpIndex,
+        });
+      }
+      if ((rp.claimComments ?? []).some((comment) => !comment.code?.trim())) {
+        issues.push({
+          key: `rp_rule_claim_${rpIndex}`,
+          message: `RP${rpIndex + 1}: RP請求コメントはコード付きのみ保存できます。自由文は備考へ入力してください。`,
           rpIndex,
         });
       }
@@ -1429,7 +1428,52 @@ export function PrescriptionOrderEditorPanel({
                       }}
                       placeholder="備考"
                     />
+                    <p className="charts-side-panel__help">備考と医師コメントは院内ローカル保持です。ORCA送信 payload には含めません。</p>
                   </div>
+                </div>
+                <div className="charts-side-panel__field charts-side-panel__meta-section">
+                  <label>RP請求コメント</label>
+                  <div className="charts-side-panel__chip-list" aria-label="RP請求コメント一覧">
+                    {(selectedRp.claimComments ?? []).length === 0 ? (
+                      <span className="charts-side-panel__empty-chip">未設定</span>
+                    ) : (
+                      (selectedRp.claimComments ?? []).map((comment, commentIndex) => (
+                        <button
+                          key={comment.id}
+                          type="button"
+                          className="charts-side-panel__chip-button charts-side-panel__chip-button--selected"
+                          onClick={() =>
+                            updateRp(selectedRpIndex, (rp) => ({
+                              ...rp,
+                              claimComments: (rp.claimComments ?? []).filter((_, idx) => idx !== commentIndex),
+                            }))
+                          }
+                        >
+                          {comment.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                  <div className="charts-side-panel__chip-list">
+                    {CLAIM_COMMENT_TEMPLATES.map((template) => (
+                      <button
+                        key={`rx-rp-claim-template-${template.name}`}
+                        type="button"
+                        className="charts-side-panel__chip-button"
+                        onClick={() =>
+                          updateRp(selectedRpIndex, (rp) => ({
+                            ...rp,
+                            claimComments: [...(rp.claimComments ?? []), createClaimComment(template.name, template.code)],
+                          }))
+                        }
+                      >
+                        {template.name}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="charts-side-panel__help">
+                    RP請求コメントは先頭薬剤へ寄せず、このRPの first-class field として保存・再取得・送信します。
+                  </p>
                 </div>
 
                 <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--start">
@@ -1557,6 +1601,19 @@ export function PrescriptionOrderEditorPanel({
                         <button
                           type="button"
                           className="charts-side-panel__switch-button"
+                          data-active={drug.isGeneralNamePrescription ? 'true' : 'false'}
+                          onClick={() =>
+                            updateDrug(selectedRpIndex, drugIndex, (current) => ({
+                              ...current,
+                              isGeneralNamePrescription: !current.isGeneralNamePrescription,
+                            }))
+                          }
+                        >
+                          {drug.isGeneralNamePrescription ? '一般名指定' : '銘柄指定'}
+                        </button>
+                        <button
+                          type="button"
+                          className="charts-side-panel__switch-button"
                           data-active={drug.patientRequest ? 'true' : 'false'}
                           onClick={() =>
                             updateDrug(selectedRpIndex, drugIndex, (current) => ({
@@ -1659,6 +1716,9 @@ export function PrescriptionOrderEditorPanel({
                             患者希望以外の場合は「後発変更 不可」+「請求用コメント」が必須です。
                           </p>
                         ) : null}
+                        <p className="charts-side-panel__help">
+                          一般名指定/後発可否/請求コメントは ORCA送信対象です。lower系・numberCode・prescriptionSettings・remarks は preserve-only で、この画面からは編集しません。
+                        </p>
                         {rowIssueGeneric || rowIssueClaim ? (
                           <p className="charts-side-panel__field-error" role="alert">
                             {[rowIssueGeneric, rowIssueClaim].filter(Boolean).join(' / ')}

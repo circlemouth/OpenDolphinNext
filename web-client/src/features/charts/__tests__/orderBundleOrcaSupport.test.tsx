@@ -121,12 +121,26 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ),
     ).toBeInTheDocument();
   });
+
+  it('physiologyOrder も 600 local-only 契約を明示する', () => {
+    renderPanel({
+      ...testProps,
+      entity: 'physiologyOrder',
+      title: '生理検査編集',
+    });
+
+    expect(
+      screen.getByText(
+        '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。',
+      ),
+    ).toBeInTheDocument();
+  });
   it('otherOrder は local-only field の送信契約を明示する', () => {
     renderPanel(otherProps);
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。オーダー名・指示・自由メモは院内補足として保存し、ORCA送信では classCode とコード付き行だけを使用します。',
+        'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。',
       ),
     ).toBeInTheDocument();
   });
@@ -147,7 +161,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみ、speed は adminMemo、行ごとの注射コメントは local-only です。',
+        '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは local-only です。',
       ),
     ).toBeInTheDocument();
   });
@@ -479,6 +493,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
       setCode: 'O80001',
       bundle: {
         entity: 'otherOrder',
+        sourceSetCode: 'O80001',
         bundleName: '文書料セット',
         bundleNumber: '5',
         classCode: '800',
@@ -495,6 +510,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(await screen.findByRole('button', { name: /O80001.*文書料セット.*反映/ }));
 
     expect(screen.getByLabelText('オーダー名')).toHaveValue('文書料セット');
+    expect(screen.getByText('反映元 setCode: O80001（local-only）')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 

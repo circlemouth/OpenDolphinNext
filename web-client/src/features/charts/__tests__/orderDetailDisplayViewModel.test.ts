@@ -252,6 +252,37 @@ describe('orderDetailDisplayViewModel requirements', () => {
     expect(model.bundleNumberValue).toBe('7');
   });
 
+  it('charge ViewModel は local-only review 導線として admin/adminMemo/sourceSetCode/started を detailLines に残す', async () => {
+    const module = await loadOrderDetailDisplayViewModelModule();
+    const buildRows = resolveRowsBuilder(module);
+    const rows = invokeRowsBuilder(buildRows, {
+      group: 'charge',
+      defaultEntity: 'baseChargeOrder',
+      bundles: [
+        {
+          entity: 'baseChargeOrder',
+          bundleName: '外来管理加算',
+          bundleNumber: '1',
+          started: '2026-02-28T10:00:00+09:00',
+          admin: '算定指示',
+          adminMemo: '算定前確認',
+          memo: '自由メモ',
+          sourceSetCode: 'C13001',
+          items: [{ name: '外来管理加算', quantity: '1', unit: '回' }],
+        } as any,
+      ],
+    });
+
+    const model = rows[0] as Record<string, unknown>;
+    const detailLines = Array.isArray(model.detailLines) ? model.detailLines.join(' / ') : '';
+
+    expect(detailLines).toContain('算定指示');
+    expect(detailLines).toContain('院内補足:算定前確認');
+    expect(detailLines).toContain('メモ:自由メモ');
+    expect(detailLines).toContain('反映元 setCode: C13001');
+    expect(detailLines).toContain('開始: 2026-02-28T10:00:00+09:00');
+  });
+
   it('処方は prescriptionBundles を優先し、orderBundles の処方はフォールバック扱いにする', async () => {
     const module = await loadOrderDetailDisplayViewModelModule();
     const buildCategories = resolveCategoryBuilder(module);

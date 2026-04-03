@@ -565,6 +565,7 @@ describe('order send smoke', () => {
                 admin: '静注',
                 adminCode: '4101',
                 adminMemo: '20ml/h',
+                memo: 'bundle-memo-a',
                 items: [
                   { code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-a', rowRole: 'main' },
                 ],
@@ -579,6 +580,7 @@ describe('order send smoke', () => {
                 admin: '筋注',
                 adminCode: '4102',
                 adminMemo: 'ward-note',
+                memo: 'bundle-memo-b',
                 items: [
                   { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' },
                   { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
@@ -595,6 +597,7 @@ describe('order send smoke', () => {
                 admin: '点滴',
                 adminCode: '4103',
                 adminMemo: 'slow-drip',
+                memo: 'bundle-memo-c',
                 items: [
                   { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
                   { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-c', rowRole: 'main' },
@@ -637,6 +640,7 @@ describe('order send smoke', () => {
           admin: '静注',
           adminCode: '4101',
           adminMemo: '20ml/h',
+          memo: 'bundle-memo-a',
           items: [{ code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-a', rowRole: 'main' }],
         },
         {
@@ -650,6 +654,7 @@ describe('order send smoke', () => {
           admin: '筋注',
           adminCode: '4102',
           adminMemo: 'ward-note',
+          memo: 'bundle-memo-b',
           items: [
             { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' },
             { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
@@ -667,6 +672,7 @@ describe('order send smoke', () => {
           admin: '点滴',
           adminCode: '4103',
           adminMemo: 'slow-drip',
+          memo: 'bundle-memo-c',
           items: [
             { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
             { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-c', rowRole: 'main' },
@@ -718,6 +724,9 @@ describe('order send smoke', () => {
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('20ml/h');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('ward-note');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('slow-drip');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-a');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-b');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-c');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-a');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-b');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-c');
@@ -735,12 +744,21 @@ describe('order send smoke', () => {
       ['4103', '620000012', '700000031'],
     ]);
     expect(JSON.stringify(body.medicalInformation)).not.toContain('20ml/h');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('ward-note');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('slow-drip');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-a');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-b');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-c');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-a');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-b');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-c');
   });
 
   it('save fetch no-op save send smoke uses prescription-orders as medOrder source of truth', async () => {
     const requestUrls: string[] = [];
     const order = buildEmptyPrescriptionOrder('000001', '2026-03-09T09:30:00');
+    order.prescriptionSettings = [{ code: 'setting-1', name: '院内設定', value: 'enabled' }];
+    order.remarks = [{ code: 'remark-1', text: '院内備考' }];
     order.rps = [
       {
         ...order.rps[0],
@@ -753,6 +771,8 @@ describe('order send smoke', () => {
         daysOrTimes: '7',
         remark: '食後',
         doctorComment: '継続処方',
+        lowerDrugCode: 'lower-drug',
+        claimComments: [{ id: 'rp-claim-1', code: '820100001', name: 'RP患者希望', note: 'rp-note' }],
         drugs: [
           {
             rowId: 'drug-1',
@@ -763,6 +783,7 @@ describe('order send smoke', () => {
             genericChangeAllowed: true,
             isGeneralNamePrescription: false,
             drugComment: '眠前注意',
+            lowerUsageCode: 'lower-usage',
             claimComments: [],
             patientRequest: false,
           },
@@ -778,8 +799,8 @@ describe('order send smoke', () => {
         encounterDate: '2026-03-09',
         performDate: '2026-03-09',
         doctorComments: [{ text: '継続処方' }],
-        prescriptionSettings: [],
-        remarks: [],
+        prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
+        remarks: [{ code: 'remark-1', text: '院内備考' }],
         rps: [
           {
             rpNumber: 'rp-1',
@@ -791,7 +812,8 @@ describe('order send smoke', () => {
             remark: '食後',
             doctorComment: '継続処方',
             started: '2026-03-09T09:30:00',
-            claimComments: [],
+            lowerFields: { lowerDrugCode: 'lower-drug' },
+            claimComments: [{ code: '820100001', text: 'RP患者希望', note: 'rp-note' }],
             drugs: [
               {
                 code: '620000001',
@@ -801,6 +823,7 @@ describe('order send smoke', () => {
                 genericChangeAllowed: true,
                 generalNamePrescription: false,
                 drugComment: '眠前注意',
+                lowerFields: { lowerUsageCode: 'lower-usage' },
                 claimComments: [],
                 patientRequested: false,
               },
@@ -866,6 +889,23 @@ describe('order send smoke', () => {
 
     const firstSave = await savePrescriptionOrder({ patientId: '000001', order });
     expect(firstSave.ok).toBe(true);
+    const firstSaveRequest = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const firstSaveBody = JSON.parse(String((firstSaveRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    expect(firstSaveBody.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
+    expect(firstSaveBody.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
+    expect(firstSaveBody.rps[0]).toEqual(
+      expect.objectContaining({
+        claimComments: expect.arrayContaining([
+          expect.objectContaining({ code: '820100001', text: 'RP患者希望', note: 'rp-note' }),
+        ]),
+        lowerFields: { lowerDrugCode: 'lower-drug' },
+      }),
+    );
+    expect(firstSaveBody.rps[0].drugs[0]).toEqual(
+      expect.objectContaining({
+        lowerFields: { lowerUsageCode: 'lower-usage' },
+      }),
+    );
 
     const fetched = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09' });
     expect(fetched.ok).toBe(true);
@@ -875,7 +915,13 @@ describe('order send smoke', () => {
       quantity: '3',
       unit: '錠',
       drugComment: '眠前注意',
+      lowerUsageCode: 'lower-usage',
     });
+    expect(fetched.order.rps[0]?.claimComments).toEqual([
+      expect.objectContaining({ code: '820100001', name: 'RP患者希望', note: 'rp-note' }),
+    ]);
+    expect(fetched.order.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
+    expect(fetched.order.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
 
     const secondSave = await savePrescriptionOrder({ patientId: '000001', order: fetched.order });
     expect(secondSave.ok).toBe(true);
@@ -894,7 +940,10 @@ describe('order send smoke', () => {
         expect.objectContaining({
           medicalClass: '211',
           medicalClassNumber: '7',
-          medications: [expect.objectContaining({ code: '620000001', unit: '錠', name: '薬剤A' })],
+          medications: expect.arrayContaining([
+            expect.objectContaining({ code: '620000001', unit: '錠', name: '薬剤A' }),
+            expect.objectContaining({ code: '820100001', name: 'RP患者希望' }),
+          ]),
         }),
       ]),
     );
@@ -918,6 +967,11 @@ describe('order send smoke', () => {
         }),
       ]),
     );
+    expect(JSON.stringify(payload.medicalInformation)).toContain('RP患者希望');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('院内設定');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('院内備考');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('lower-drug');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('lower-usage');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
     expect(sendResult.ok).toBe(true);

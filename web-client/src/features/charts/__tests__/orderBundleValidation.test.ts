@@ -222,6 +222,62 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['uncoded_row']);
   });
 
+  it('injectionOrder: adminCode が無い自由入力用法は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '',
+        items: [{ code: '620000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_admin_code']);
+  });
+
+  it('injectionOrder: classCode 310 以外は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '4101',
+        classCode: '320',
+        items: [{ code: '620000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
+      } as BundleFormState & { classCode: string },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_class_code']);
+  });
+
+  it('injectionOrder: 投与指示がある場合は adminCode も必須', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '',
+        items: [{ code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_admin_code']);
+  });
+
+  it('injectionOrder: コメントだけの束は保存前に止める', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        items: [],
+        commentItems: [{ code: '0081', name: 'コメント', quantity: '', unit: '', memo: '注意' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['comment_only']);
+  });
+
   it('radiologyOrder: 部位が未入力の場合にエラー', () => {
     const issues = validateBundleForm({
       form: {
@@ -276,6 +332,19 @@ describe('validateBundleForm', () => {
       bundleLabel: '放射線オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_body_part_code']);
+  });
+
+  it('otherOrder: bodyPart を保存前に reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
+      },
+      entity: 'otherOrder',
+      bundleLabel: 'その他オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
   });
 
   it('commentItems: コメントコードか内容が欠ける場合はエラー', () => {
@@ -387,5 +456,46 @@ describe('validateBundleForm', () => {
       bundleLabel: '検査オーダー',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
+  });
+
+  it('otherOrder: bodyPart は front 契約で reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '文書料',
+        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
+      },
+      entity: 'otherOrder',
+      bundleLabel: 'その他',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
+  });
+
+  it('otherOrder: 8系以外の main code は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '不正その他',
+        items: [{ code: '700000001', name: '造影剤', quantity: '1', unit: '本', memo: '' }],
+      },
+      entity: 'otherOrder',
+      bundleLabel: 'その他',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_other_order_code']);
+  });
+
+  it('otherOrder: 材料行は front 契約で reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: 'その他',
+        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        materialItems: [{ code: '180000211', name: '文書材料', quantity: '1', unit: '本', memo: '' }],
+      },
+      entity: 'otherOrder',
+      bundleLabel: 'その他',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['unsupported_material_item']);
   });
 });

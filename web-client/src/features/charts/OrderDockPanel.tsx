@@ -302,7 +302,7 @@ const quickAddCategories = [
 
 const treatmentSubtypeTabs = [
   { key: 'treatmentOrder' as const, label: '処置' },
-  { key: 'generalOrder' as const, label: '一般' },
+  { key: 'generalOrder' as const, label: '一般(処置400別表示)' },
   { key: 'surgeryOrder' as const, label: '手術' },
   { key: 'otherOrder' as const, label: 'その他' },
 ] as const;

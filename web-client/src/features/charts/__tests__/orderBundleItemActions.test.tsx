@@ -74,6 +74,7 @@ const chargeProps = {
 };
 
 const recentUsageStorageKey = 'charts-order-recent-usage:unknown-facility:unknown-user:medOrder';
+const injectionRecentUsageStorageKey = 'charts-order-recent-usage:unknown-facility:unknown-user:injectionOrder';
 
 afterEach(() => {
   cleanup();
@@ -171,8 +172,12 @@ describe('OrderBundleEditPanel item actions', () => {
     );
 
     expect(
-      await screen.findByText(/admin\/adminCode・回数・coded row と rowRole.*注射コメントは local-only/i),
+      await screen.findByText(/admin\/adminCode・回数・coded row と rowRole.*adminMemo\/speed.*注射コメントは local-only/i),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('注射メモ')).toHaveAttribute(
+      'placeholder',
+      '投与速度・ルートなど（院内メモ / ORCA送信しない）',
+    );
 
     const commentInput = (await screen.findByLabelText('注射コメント 1')) as HTMLInputElement;
     expect(commentInput.value).toBe('旧コメント');
@@ -191,6 +196,110 @@ describe('OrderBundleEditPanel item actions', () => {
       rowRole: 'main',
     });
     expect(savedItem?.memo).toBe('レセ本文');
+  });
+
+  it.each([
+    {
+      label: '薬剤のみ',
+      bundleName: 'drug-only',
+      items: [{ code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '', rowRole: 'main' as const }],
+      expected: [{ code: '620000010', rowRole: 'main' as const }],
+    },
+    {
+      label: '手技+薬剤',
+      bundleName: 'procedure-drug',
+      items: [
+        { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' as const },
+        { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: '回', memo: '', rowRole: 'main' as const },
+        { code: '620000011', name: '注射薬B', quantity: '1', unit: 'A', memo: '', rowRole: 'main' as const },
+      ],
+      expected: [
+        { code: '830000001', rowRole: 'main' as const },
+        { code: '620000011', rowRole: 'main' as const },
+        { code: '0085001', rowRole: 'comment' as const },
+      ],
+    },
+    {
+      label: 'material+drug',
+      bundleName: 'drip-set',
+      items: [
+        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' as const },
+        { code: '620000012', name: '注射薬C', quantity: '1', unit: 'A', memo: '', rowRole: 'main' as const },
+      ],
+      expected: [
+        { code: '620000012', rowRole: 'main' as const },
+        { code: '700000031', rowRole: 'material' as const },
+      ],
+    },
+  ])('injectionOrder editor は %s の rowRole を round-trip で保持する', async ({ bundleName, items, expected }) => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: `REQ-INJECTION-ROUNDTRIP-${bundleName}`,
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName,
+            bundleNumber: '1',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: 'Injection',
+            admin: '静注',
+            adminCode: '4101',
+            items,
+          },
+        }}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '保存して続ける' }));
+
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+    const operation = mutateMock.mock.calls.at(-1)?.[0]?.operations?.[0];
+    expect(operation?.items).toEqual(expect.arrayContaining(expected.map((item) => expect.objectContaining(item))));
+    expect(operation?.items?.map((item: Record<string, string>) => ({ code: item.code, rowRole: item.rowRole }))).toEqual(expected);
+  });
+
+  it('injectionOrder は preserved genericFlg を read-only 表示する', async () => {
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: 'REQ-INJECTION-GENERIC',
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName: '点滴セット',
+            bundleNumber: '2',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: 'Injection',
+            admin: '静注',
+            adminCode: '4101',
+            adminMemo: '20ml/h',
+            items: [
+              {
+                code: '620000001',
+                name: '注射薬A',
+                quantity: '1',
+                unit: 'A',
+                memo: '__orca_meta__:{"genericFlg":"no","userComment":"旧コメント"}\nレセ本文',
+                rowRole: 'main',
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(await screen.findByLabelText('後発情報 1')).toHaveValue('一般名なし');
+    expect(screen.getAllByText('注射の genericFlg は preserve-only です。この画面では表示のみ行います。').length).toBeGreaterThan(0);
   });
 
   it('末尾行に入力すると空行が自動追加される', async () => {
@@ -256,6 +365,58 @@ describe('OrderBundleEditPanel item actions', () => {
     const payload = mutateMock.mock.calls[0]?.[0];
     const items = payload?.operations?.[0]?.items ?? [];
     expect(items.map((item: { name: string }) => item.name)).toEqual(['アムロジピン', 'テルミサルタン']);
+  });
+
+  it('instractionChargeOrder は選択項目の category から classCode を導出する', async () => {
+    const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockImplementation(async ({ type, keyword }) => {
+      if (type === 'etensu' && keyword.includes('管理料')) {
+        return {
+          ok: true,
+          items: [{ type: 'etensu', code: '114010210', name: '特定疾患療養管理料', unit: '回', category: '140' }],
+          totalCount: 1,
+        };
+      }
+      return { ok: true, items: [], totalCount: 0 };
+    });
+
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...chargeProps}
+        entity="instractionChargeOrder"
+        title="指導料編集"
+        bundleLabel="算定"
+        itemQuantityLabel="回数"
+      />,
+    );
+
+    const itemNameInput = screen.getByPlaceholderText('算定項目名') as HTMLInputElement;
+    await user.type(itemNameInput, '管理料');
+    await waitFor(() =>
+      expect(
+        searchMock.mock.calls.some(
+          ([params]) => params?.type === 'etensu' && params?.keyword === '管理料' && params?.category === '1',
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(
+        document.querySelector('datalist[id$="-item-predictive-list"] option[value="特定疾患療養管理料"]'),
+      ).not.toBeNull(),
+    );
+    await user.clear(itemNameInput);
+    await user.type(itemNameInput, '特定疾患療養管理料');
+    await user.tab();
+    await waitFor(() => expect(screen.getByTestId('order-bundle-item-summary-0')).toHaveTextContent('コード: 114010210'));
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+
+    const payload = mutateMock.mock.calls.at(-1)?.[0];
+    expect(payload?.operations?.[0]?.entity).toBe('instractionChargeOrder');
+    expect(payload?.operations?.[0]?.classCode).toBe('140');
   });
 
   it('頓用/院内の選択とRP名補正が保存 payload に反映される', async () => {
@@ -527,6 +688,40 @@ describe('OrderBundleEditPanel item actions', () => {
     await user.selectOptions(usageSelect, usageSelect.options[1]?.value ?? '');
     expect(usageSelect.selectedOptions[0]?.text).toBe('静注候補');
     expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'youhou', keyword: '', allowEmpty: true }));
+  });
+
+  it('injectionOrder の最近使った用法 fallback は adminCode 空のまま保存前 block する', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem(injectionRecentUsageStorageKey, JSON.stringify(['院内メモ用の自由入力']));
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: 'REQ-INJECTION-RECENT-USAGE',
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName: '点滴セット',
+            bundleNumber: '1',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: 'Injection',
+            items: [{ code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '', rowRole: 'main' }],
+          },
+        }}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('最近使った用法'), '院内メモ用の自由入力');
+    expect((screen.getByLabelText('投与指示') as HTMLSelectElement).value).toContain('院内メモ用の自由入力');
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    expect(
+      await screen.findAllByText('注射の投与指示を保存するには adminCode を選択してください。自由入力だけでは送信できません。'),
+    ).toHaveLength(2);
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 
   it.each([

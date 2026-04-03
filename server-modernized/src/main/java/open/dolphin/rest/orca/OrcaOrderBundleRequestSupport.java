@@ -141,7 +141,7 @@ final class OrcaOrderBundleRequestSupport {
         }
         return switch (normalizedEntity) {
             case IInfoModel.ENTITY_MED_ORDER -> Set.of("211", "212", "221", "222", "231", "232").contains(normalizedClassCode);
-            case IInfoModel.ENTITY_INJECTION_ORDER -> normalizedClassCode.startsWith("3");
+            case IInfoModel.ENTITY_INJECTION_ORDER -> "310".equals(normalizedClassCode);
             case "treatmentOrder" -> normalizedClassCode.startsWith("4");
             case IInfoModel.ENTITY_SURGERY_ORDER -> normalizedClassCode.startsWith("5");
             case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
@@ -159,7 +159,6 @@ final class OrcaOrderBundleRequestSupport {
             return false;
         }
         return "treatmentOrder".equals(normalizedEntity)
-                || IInfoModel.ENTITY_OTHER_ORDER.equals(normalizedEntity)
                 || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
     }
 

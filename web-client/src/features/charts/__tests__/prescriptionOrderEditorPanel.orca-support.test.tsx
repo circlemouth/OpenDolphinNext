@@ -55,6 +55,7 @@ const renderPanel = (bundlesOverride = [
     bundleName: '既存RP',
     bundleNumber: '7',
     admin: '1日1回 朝食後',
+    adminMemo: '001000',
     classCode: '212',
     started: '2026-03-09',
     items: [{ code: 'A100', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
@@ -170,6 +171,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         classCode: '221',
         admin: '頓服',
         adminMemo: '200',
+        memo: '入力セット備考',
         started: '2026-03-09',
         items: [
           { code: '620000001', name: 'アムロジピン', quantity: '1', unit: '錠', memo: '食後' },
@@ -200,6 +202,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         usage: '頓服',
         usageCode: '200',
         daysOrTimes: '3',
+        remark: '入力セット備考',
       }),
     );
     expect(appendedRp?.drugs).toHaveLength(1);
@@ -209,13 +212,70 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         drugComment: '食後',
       }),
     );
-    expect(appendedRp?.drugs[0]?.claimComments[0]).toEqual(
+    expect(appendedRp?.claimComments?.[0]).toEqual(
       expect.objectContaining({
         code: '810000001',
         name: '患者希望',
         note: '入力セット由来',
       }),
     );
+    expect(appendedRp?.drugs[0]?.claimComments).toEqual([]);
+  });
+
+  it('一般名指定トグルを独立に保存 payload へ反映する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderPanel([
+      {
+        entity: 'medOrder',
+        bundleName: '既存RP',
+        bundleNumber: '7',
+        admin: '毎食後',
+        adminMemo: '001000',
+        classCode: '212',
+        started: '2026-03-09',
+        items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
+      },
+    ]);
+
+    await user.click(screen.getByRole('button', { name: '銘柄指定' }));
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(savePrescriptionOrder).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = vi.mocked(savePrescriptionOrder).mock.calls[0]?.[0];
+    expect(payload?.order?.rps[0]?.drugs[0]).toEqual(
+      expect.objectContaining({
+        genericChangeAllowed: true,
+        isGeneralNamePrescription: true,
+      }),
+    );
+  });
+
+  it('usageCode の無い自由用法は保存前に block する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderPanel([
+      {
+        entity: 'medOrder',
+        bundleName: '既存RP',
+        bundleNumber: '7',
+        admin: '自由用法だけ',
+        adminMemo: '',
+        classCode: '212',
+        started: '2026-03-09',
+        items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
+      },
+    ]);
+
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(await screen.findByText('RP1: 用法マスタコードを選択してください。自由入力だけの用法は保存できません。')).toBeInTheDocument();
+    expect(savePrescriptionOrder).not.toHaveBeenCalled();
   });
 
   it('相互作用ありでは確認 dialog を出し、続行時だけ保存する', async () => {
@@ -234,6 +294,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         bundleName: '既存RP',
         bundleNumber: '7',
         admin: '1日1回 朝食後',
+        adminMemo: '001000',
         classCode: '212',
         started: '2026-03-09',
         items: [
@@ -274,6 +335,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         bundleName: '既存RP',
         bundleNumber: '7',
         admin: '1日1回 朝食後',
+        adminMemo: '001000',
         classCode: '212',
         started: '2026-03-09',
         items: [

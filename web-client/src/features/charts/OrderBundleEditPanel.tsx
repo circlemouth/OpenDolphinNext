@@ -688,13 +688,13 @@ const buildUsageMasterMeta = (item: OrderMasterSearchItem): UsageMasterMeta => (
 const resolveSendContractNote = (entity: string) => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   if (canonicalEntity === 'injectionOrder') {
-    return '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみ、speed は adminMemo、行ごとの注射コメントは local-only です。';
+    return '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは local-only です。';
   }
   if (canonicalEntity === 'treatmentOrder') {
     return '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
   }
   if (canonicalEntity === 'otherOrder') {
-    return 'setCode は展開専用です。オーダー名・指示・自由メモは院内補足として保存し、ORCA送信では classCode とコード付き行だけを使用します。';
+    return 'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。';
   }
   if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
     return 'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
@@ -859,9 +859,11 @@ export const validateBundleForm = ({
   const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
   const resolvedSubtype = resolveFormSubtype(entity, form.subtype);
   const supportsBodyPartField = resolveOrderEntityUiProfile(entity).supportsBodyPartSearch;
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   const valuedItems = form.items.filter(hasAnyValue);
   const codedItems = valuedItems.filter((item) => Boolean(item.code?.trim()));
   const uncodedItems = valuedItems.filter((item) => !item.code?.trim());
+  const hasMaterialValues = form.materialItems.some(hasAnyValue);
   const hasBodyPartValue = Boolean(
     form.bodyPart?.name?.trim() ||
       form.bodyPart?.code?.trim() ||
@@ -871,6 +873,18 @@ export const validateBundleForm = ({
   );
   if (rule.requiresUsage && !form.admin.trim()) {
     issues.push({ key: 'missing_usage', message: '用法を入力してください。' });
+  }
+  if (entity === 'injectionOrder' && form.admin.trim() && !form.adminCode.trim()) {
+    issues.push({
+      key: 'missing_admin_code',
+      message: '注射の投与指示を保存するには adminCode を選択してください。自由入力だけでは送信できません。',
+    });
+  }
+  if (canonicalEntity === 'injectionOrder' && form.classCode?.trim() && form.classCode.trim() !== '310') {
+    issues.push({
+      key: 'invalid_injection_class_code',
+      message: '注射 bundle は classCode 310 のみ保存できます。',
+    });
   }
   if (testSubtypeConfig?.required && !resolvedSubtype) {
     issues.push({ key: 'missing_test_subtype', message: `${testSubtypeConfig.label}を選択してください。` });
@@ -924,6 +938,25 @@ export const validateBundleForm = ({
         message: hasBodyPartValue
           ? '部位だけでは保存できません。コード付きの本体項目を入力してください。'
           : 'コメントだけでは保存できません。コード付きの本体項目を入力してください。',
+      });
+    }
+  }
+  if (canonicalEntity === 'otherOrder') {
+    if (hasMaterialValues) {
+      issues.push({
+        key: 'unsupported_material_item',
+        message: 'otherOrder では材料行を保持できません。etensu category 8 の項目のみ入力してください。',
+      });
+    }
+    if (
+      codedItems.some((item) => {
+        const code = item.code?.trim() ?? '';
+        return code !== '' && !COMMENT_CODE_PATTERN.test(code) && !/^(8|18)/.test(code);
+      })
+    ) {
+      issues.push({
+        key: 'invalid_other_order_code',
+        message: 'otherOrder では etensu category 8 のコード以外を保存できません。',
       });
     }
   }
@@ -1786,6 +1819,8 @@ export function OrderBundleEditPanel({
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
     if (!rowId || !matched) return;
     const promoteToMaterial = matched.type === 'material' || shouldTreatAsMaterialItem(entity, matched.code?.trim() ?? '');
+    const derivedClassCode =
+      entity === 'instractionChargeOrder' || entity === 'baseChargeOrder' ? matched.category?.trim() || '' : '';
     setForm((prev) => {
       const updateRow = (row: OrderBundleItem) => ({
         ...row,
@@ -1816,6 +1851,12 @@ export function OrderBundleEditPanel({
       }
       return {
         ...prev,
+        classCode:
+          derivedClassCode &&
+          ((entity === 'instractionChargeOrder' && /^(13\d|14\d|150)$/.test(derivedClassCode)) ||
+            (entity === 'baseChargeOrder' && /^(11\d|12[0-5])$/.test(derivedClassCode)))
+            ? derivedClassCode
+            : prev.classCode,
         items: nextItems,
         materialItems: nextMaterialItems,
       };
@@ -2714,6 +2755,8 @@ export function OrderBundleEditPanel({
           case 'rp_required':
             return `${entityId}-rp-required-warning`;
           case 'missing_usage':
+          case 'missing_admin_code':
+          case 'invalid_injection_class_code':
             return `${entityId}-admin`;
           case 'missing_body_part':
             return `${entityId}-bodypart`;
@@ -2948,9 +2991,16 @@ export function OrderBundleEditPanel({
     });
     return map;
   }, [validationIssues]);
-  const usageError = validationByKey.get('missing_usage');
+  const usageError =
+    validationByKey.get('missing_usage') ??
+    validationByKey.get('missing_admin_code') ??
+    validationByKey.get('invalid_injection_class_code');
   const bundleNumberError = validationByKey.get(USAGE_DAYS_LIMIT_ERROR_KEY);
-  const itemsError = validationByKey.get('missing_items') ?? validationByKey.get('comment_only');
+  const itemsError =
+    validationByKey.get('missing_items') ??
+    validationByKey.get('comment_only') ??
+    validationByKey.get('unsupported_material_item') ??
+    validationByKey.get('invalid_other_order_code');
   const subtypeError = validationByKey.get('missing_test_subtype') ?? validationByKey.get('invalid_test_subtype');
   const bodyPartError =
     validationByKey.get('unsupported_body_part') ??
@@ -4138,6 +4188,28 @@ export function OrderBundleEditPanel({
                             {option.label}
                           </button>
                         ))}
+                      </div>
+                    ) : isInjectionOrder ? (
+                      <div
+                        className="charts-side-panel__field charts-side-panel__field--readonly"
+                        role="group"
+                        aria-label="後発情報"
+                        style={{ gridColumn: '1 / span 2' }}
+                      >
+                        <label>後発情報</label>
+                        <input
+                          value={
+                            resolvedItemFields?.genericFlg === 'yes'
+                              ? '一般名'
+                              : resolvedItemFields?.genericFlg === 'no'
+                                ? '一般名なし'
+                                : '既定'
+                          }
+                          readOnly
+                          disabled
+                          aria-label={`後発情報 ${index + 1}`}
+                        />
+                        <p className="charts-side-panel__help">注射の genericFlg は preserve-only です。この画面では表示のみ行います。</p>
                       </div>
                     ) : null}
                     <input

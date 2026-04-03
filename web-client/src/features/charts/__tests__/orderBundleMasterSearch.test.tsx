@@ -830,6 +830,24 @@ describe('OrderBundleEditPanel master search UI', () => {
     expect(screen.getByLabelText('検査指示')).toBeInTheDocument();
   });
 
+  it('otherOrder では bodyPart 検索を表示しない', async () => {
+    localStorage.setItem('devFacilityId', 'facility');
+    localStorage.setItem('devUserId', 'doctor');
+
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...baseProps}
+        entity="otherOrder"
+        title="その他"
+        bundleLabel="項目"
+        itemQuantityLabel="数量"
+      />,
+    );
+
+    expect(screen.queryByLabelText('部位検索')).toBeNull();
+    expect(screen.queryByLabelText('部位')).toBeNull();
+  });
+
   it('コメント候補の行選択でコメントコードを追加できる', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
