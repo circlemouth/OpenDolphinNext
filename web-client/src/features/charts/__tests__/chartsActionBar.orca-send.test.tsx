@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ChartsActionBar } from '../ChartsActionBar';
 import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles } from '../orderBundleApi';
+import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
 import type { ReceptionEntry } from '../../reception/api';
 
 vi.mock('../../../routes/useAppNavigation', () => ({
@@ -52,6 +53,14 @@ vi.mock('../orderBundleApi', () => ({
   fetchOrderBundles: vi.fn().mockResolvedValue({ ok: true, bundles: [] }),
 }));
 
+vi.mock('../prescriptionOrderApi', async () => {
+  const actual = await vi.importActual<typeof import('../prescriptionOrderApi')>('../prescriptionOrderApi');
+  return {
+    ...actual,
+    fetchPrescriptionOrder: vi.fn(),
+  };
+});
+
 vi.mock('../../../libs/audit/auditLogger', () => ({
   logAuditEvent: vi.fn(),
   logUiState: vi.fn(),
@@ -67,6 +76,34 @@ const baseProps = {
   missingMaster: false,
   dataSourceTransition: 'server' as const,
   fallbackUsed: false,
+};
+
+const buildSendablePrescriptionOrder = () => {
+  const order = buildEmptyPrescriptionOrder('000001', '2026-01-20');
+  order.rps = [
+    {
+      ...order.rps[0],
+      name: 'RP1',
+      usage: '毎食後',
+      usageCode: '001000',
+      daysOrTimes: '7',
+      drugs: [
+        {
+          rowId: 'drug-1',
+          code: '620000001',
+          name: '薬剤A',
+          quantity: '3',
+          unit: '錠',
+          genericChangeAllowed: true,
+          isGeneralNamePrescription: false,
+          drugComment: '',
+          claimComments: [],
+          patientRequest: false,
+        },
+      ],
+    },
+  ];
+  return order;
 };
 
 const defaultSelectedEntry: ReceptionEntry = {
@@ -94,6 +131,12 @@ describe('ChartsActionBar ORCA send', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(fetchOrderBundles).mockResolvedValue({ ok: true, bundles: [] } as any);
+    vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
+      ok: true,
+      patientId: '000001',
+      sourceBundles: [],
+      order: buildSendablePrescriptionOrder(),
+    } as any);
   });
 
   it('sends a valid medicalmodv2 payload', async () => {
@@ -117,6 +160,7 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    expect(fetchPrescriptionOrder).toHaveBeenCalledWith({ patientId: '000001', from: '2026-01-20' });
     expect(screen.getByText(/ORCA送信/)).toBeInTheDocument();
     expect(screen.queryByText(/Invoice_Number=INV-999/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Data_Id=DATA-999/)).not.toBeInTheDocument();

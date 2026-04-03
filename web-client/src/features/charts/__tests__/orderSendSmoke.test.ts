@@ -13,7 +13,8 @@ vi.mock('../../../libs/observability/observability', () => ({
 import { httpFetch } from '../../../libs/http/httpClient';
 import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles, mutateOrderBundles } from '../orderBundleApi';
-import { toMedicalModV2InformationWithSource } from '../orderRpNormalization';
+import { fetchMedicalModV2OrderBundles, prepareMedicalModV2SendData, toMedicalModV2InformationWithSource } from '../orderRpNormalization';
+import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder, savePrescriptionOrder } from '../prescriptionOrderApi';
 
 describe('order send smoke', () => {
   beforeEach(() => {
@@ -47,9 +48,11 @@ describe('order send smoke', () => {
                 classCode: '700',
                 classCodeSystem: 'Claim007',
                 className: 'Radiology',
+                admin: '検査前説明',
+                memo: 'local-radiology-memo',
                 bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
                 items: [
-                  { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: '' },
+                  { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: 'local-item-memo' },
                   { code: '700000001', name: 'CONTRAST', quantity: '1', unit: 'bottle', memo: '' },
                   { code: '0085001', name: 'CAUTION', quantity: '', unit: '', memo: 'note' },
                 ],
@@ -88,9 +91,11 @@ describe('order send smoke', () => {
           classCode: '700',
           classCodeSystem: 'Claim007',
           className: 'Radiology',
+          admin: '検査前説明',
+          memo: 'local-radiology-memo',
           bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
             items: [
-              { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: '' },
+              { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: 'local-item-memo' },
               { code: '700000001', name: 'CONTRAST', quantity: '1', unit: 'bottle', memo: '' },
               { code: '0085001', name: 'CAUTION', quantity: '', unit: '', memo: 'note' },
             ],
@@ -135,6 +140,9 @@ describe('order send smoke', () => {
       '700000001',
       '0085001',
     ]);
+    expect(JSON.stringify(radiologyMedicalInformation)).not.toContain('検査前説明');
+    expect(JSON.stringify(radiologyMedicalInformation)).not.toContain('local-radiology-memo');
+    expect(JSON.stringify(radiologyMedicalInformation)).not.toContain('local-item-memo');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
 
@@ -166,6 +174,9 @@ describe('order send smoke', () => {
       '700000001',
       '0085001',
     ]);
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('検査前説明');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-radiology-memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-item-memo');
   });
   it('save fetch normalize send smoke keeps otherOrder local fields out of medical payload', async () => {
     vi.mocked(httpFetch)
@@ -317,9 +328,11 @@ describe('order send smoke', () => {
                 classCode: '400',
                 classCodeSystem: 'Claim007',
                 className: 'Treatment',
+                admin: 'local-treatment-admin',
+                memo: 'local-treatment-memo',
                 bodyPart: { code: '002003', name: 'KNEE', quantity: '1', unit: 'PART', memo: '' },
                 items: [
-                  { code: '140000610', name: 'WOUND_CARE', quantity: '1', unit: 'times', memo: '' },
+                  { code: '140000610', name: 'WOUND_CARE', quantity: '1', unit: 'times', memo: 'local-treatment-item-memo' },
                   { code: '700000021', name: 'GAUZE', quantity: '2', unit: 'sheet', memo: '' },
                   { code: '0085002', name: 'COMMENT', quantity: '', unit: '', memo: 'after-cleaning' },
                 ],
@@ -358,9 +371,11 @@ describe('order send smoke', () => {
           classCode: '400',
           classCodeSystem: 'Claim007',
           className: 'Treatment',
+          admin: 'local-treatment-admin',
+          memo: 'local-treatment-memo',
           bodyPart: { code: '002003', name: 'KNEE', quantity: '1', unit: 'PART', memo: '' },
           items: [
-            { code: '140000610', name: 'WOUND_CARE', quantity: '1', unit: 'times', memo: '' },
+            { code: '140000610', name: 'WOUND_CARE', quantity: '1', unit: 'times', memo: 'local-treatment-item-memo' },
             { code: '700000021', name: 'GAUZE', quantity: '2', unit: 'sheet', memo: '' },
             { code: '0085002', name: 'COMMENT', quantity: '', unit: '', memo: 'after-cleaning' },
           ],
@@ -406,6 +421,9 @@ describe('order send smoke', () => {
       '700000021',
       '0085002',
     ]);
+    expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-admin');
+    expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-memo');
+    expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-item-memo');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
 
@@ -435,9 +453,12 @@ describe('order send smoke', () => {
       '700000021',
       '0085002',
     ]);
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-admin');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-item-memo');
   });
 
-  it('save fetch normalize send payload smoke keeps 600 subtype local-only', async () => {
+  it('save fetch normalize smoke blocks bacteriaOrder before send when subtype is present', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(
@@ -477,20 +498,7 @@ describe('order send smoke', () => {
           },
         ),
       )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            runId: 'RUN-SEND-600',
-            traceId: 'TRACE-SEND-600',
-            apiResult: '00',
-            apiResultMessage: 'OK',
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        ),
-      );
+      ;
 
     await mutateOrderBundles({
       patientId: '000001',
@@ -514,39 +522,17 @@ describe('order send smoke', () => {
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'bacteriaOrder' });
     expect(fetched.ok).toBe(true);
 
-    const normalized = fetched.bundles
-      .map((bundle) => toMedicalModV2InformationWithSource(bundle))
-      .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
 
-    const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
-      medicalInformation: normalized.map((entry) => entry.info),
-    });
-
-    expect(payload.medicalInformation).toEqual(
+    expect(prepared.bundleIssues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          medicalClass: '600',
-          medicalClassName: 'test class',
-          medicalClassNumber: '6',
-          medications: [expect.objectContaining({ code: '160000010', unit: 'count' })],
+          code: 'unsupported_bacteria_subtype',
+          entity: 'bacteriaOrder',
         }),
       ]),
     );
-    const bacteriaMedicalInformation = payload.medicalInformation ?? [];
-    expect(bacteriaMedicalInformation[0]).not.toHaveProperty('subtype');
-    expect(bacteriaMedicalInformation[0]).not.toHaveProperty('adminMemo');
-    expect(bacteriaMedicalInformation[0]).not.toHaveProperty('memo');
-    expect(JSON.stringify(bacteriaMedicalInformation)).not.toContain('local admin memo');
-    expect(JSON.stringify(bacteriaMedicalInformation)).not.toContain('local memo');
-
-    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
-
-    expect(sendResult.ok).toBe(true);
-    expect(httpFetch).toHaveBeenCalledTimes(3);
+    expect(httpFetch).toHaveBeenCalledTimes(2);
   });
 
   it('save fetch normalize send payload smoke keeps injection rowRole patterns and drops local-only fields', async () => {
@@ -750,5 +736,192 @@ describe('order send smoke', () => {
     ]);
     expect(JSON.stringify(body.medicalInformation)).not.toContain('20ml/h');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-a');
+  });
+
+  it('save fetch no-op save send smoke uses prescription-orders as medOrder source of truth', async () => {
+    const requestUrls: string[] = [];
+    const order = buildEmptyPrescriptionOrder('000001', '2026-03-09T09:30:00');
+    order.rps = [
+      {
+        ...order.rps[0],
+        rpId: 'rp-1',
+        name: '降圧薬RP',
+        location: 'in',
+        category: 'regular',
+        usage: '毎食後',
+        usageCode: '001000',
+        daysOrTimes: '7',
+        remark: '食後',
+        doctorComment: '継続処方',
+        drugs: [
+          {
+            rowId: 'drug-1',
+            code: '620000001',
+            name: '薬剤A',
+            quantity: '3',
+            unit: '錠',
+            genericChangeAllowed: true,
+            isGeneralNamePrescription: false,
+            drugComment: '眠前注意',
+            claimComments: [],
+            patientRequest: false,
+          },
+        ],
+      },
+    ];
+
+    const prescriptionOrderResponse = {
+      runId: 'RUN-RX-FETCH',
+      found: true,
+      order: {
+        patientId: '000001',
+        encounterDate: '2026-03-09',
+        performDate: '2026-03-09',
+        doctorComments: [{ text: '継続処方' }],
+        prescriptionSettings: [],
+        remarks: [],
+        rps: [
+          {
+            rpNumber: 'rp-1',
+            bundleName: '降圧薬RP',
+            medicalClass: '211',
+            medicalClassNumber: '7',
+            usageCode: '001000',
+            usageName: '毎食後',
+            remark: '食後',
+            doctorComment: '継続処方',
+            started: '2026-03-09T09:30:00',
+            claimComments: [],
+            drugs: [
+              {
+                code: '620000001',
+                name: '薬剤A',
+                quantity: '3',
+                unit: '錠',
+                genericChangeAllowed: true,
+                generalNamePrescription: false,
+                drugComment: '眠前注意',
+                claimComments: [],
+                patientRequested: false,
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    vi.mocked(httpFetch).mockImplementation(async (input, init) => {
+      const url = String(input);
+      requestUrls.push(url);
+      if (url === '/api/orca/prescription-orders' && init?.method === 'POST') {
+        return new Response(
+          JSON.stringify({
+            runId: 'RUN-RX-SAVE',
+            createdDocumentIds: [701],
+            updatedDocumentIds: [],
+            deletedDocumentIds: [],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      if (url.startsWith('/api/orca/prescription-orders?')) {
+        return new Response(JSON.stringify(prescriptionOrderResponse), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      if (url.startsWith('/api/orca/order/bundles?')) {
+        return new Response(
+          JSON.stringify({
+            runId: 'RUN-BUNDLES',
+            patientId: '000001',
+            recordsReturned: 0,
+            bundles: [],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      if (url === '/api/orca/chart-support/medical-mod-v2') {
+        return new Response(
+          JSON.stringify({
+            runId: 'RUN-SEND-RX',
+            traceId: 'TRACE-SEND-RX',
+            apiResult: '00',
+            apiResultMessage: 'OK',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const firstSave = await savePrescriptionOrder({ patientId: '000001', order });
+    expect(firstSave.ok).toBe(true);
+
+    const fetched = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09' });
+    expect(fetched.ok).toBe(true);
+    expect(fetched.order.rps[0]?.drugs[0]).toMatchObject({
+      code: '620000001',
+      name: '薬剤A',
+      quantity: '3',
+      unit: '錠',
+      drugComment: '眠前注意',
+    });
+
+    const secondSave = await savePrescriptionOrder({ patientId: '000001', order: fetched.order });
+    expect(secondSave.ok).toBe(true);
+
+    const fetchedBundles = await fetchMedicalModV2OrderBundles('000001', '2026-03-09');
+    expect(fetchedBundles.errors).toEqual([]);
+    expect(fetchedBundles.bundles.some((bundle) => bundle.entity === 'medOrder')).toBe(true);
+    expect(requestUrls.some((url) => url.includes('/api/orca/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
+
+    const prepared = prepareMedicalModV2SendData(fetchedBundles.bundles);
+    expect(prepared.requiredIssues).toEqual([]);
+    expect(prepared.bundleIssues).toEqual([]);
+    expect(prepared.codeIssues).toEqual([]);
+    expect(prepared.medicalInformation).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          medicalClass: '211',
+          medicalClassNumber: '7',
+          medications: [expect.objectContaining({ code: '620000001', unit: '錠', name: '薬剤A' })],
+        }),
+      ]),
+    );
+
+    const payload = buildMedicalModV2RequestXml({
+      patientId: '000001',
+      performDate: '2026-03-09T09:30:00',
+      departmentCode: '01',
+      physicianCode: '10001',
+      medicalInformation: prepared.medicalInformation,
+    });
+
+    expect(payload.medicalInformation).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          medicalClass: '211',
+          medicalClassNumber: '7',
+          medications: expect.arrayContaining([
+            expect.objectContaining({ code: '620000001', name: '薬剤A', unit: '錠' }),
+          ]),
+        }),
+      ]),
+    );
+
+    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
+    expect(sendResult.ok).toBe(true);
+    expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toHaveLength(2);
+    expect(requestUrls.filter((url) => url === '/api/orca/prescription-orders')).toHaveLength(2);
   });
 });

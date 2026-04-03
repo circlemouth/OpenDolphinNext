@@ -682,6 +682,25 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
   return operations;
 };
 
+export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): OrderBundle[] =>
+  buildPrescriptionMutationOperations(order)
+    .filter((operation) => operation.operation !== 'delete')
+    .map((operation) => ({
+      entity: 'medOrder',
+      documentId: operation.documentId,
+      moduleId: operation.moduleId,
+      bundleName: operation.bundleName,
+      bundleNumber: operation.bundleNumber,
+      classCode: operation.classCode,
+      classCodeSystem: operation.classCodeSystem,
+      className: operation.className,
+      admin: operation.admin,
+      adminMemo: operation.adminMemo,
+      memo: operation.memo,
+      started: operation.startDate,
+      items: (operation.items ?? []).map((item) => ({ ...item })),
+    }));
+
 const buildPrescriptionOrderQuery = (params: { patientId: string; from?: string }) => {
   const query = new URLSearchParams();
   query.set('patientId', params.patientId);

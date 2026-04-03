@@ -631,6 +631,23 @@ const toOrderBundleFromInputSetDetail = (
   };
 };
 
+const matchesOrcaInputSetEntity = (
+  requestedEntity?: string | null,
+  bundleEntity?: string | null,
+  classCode?: string | null,
+) => {
+  const normalizedRequested = resolveCanonicalOrderEntity(requestedEntity ?? '') ?? requestedEntity?.trim() ?? '';
+  const normalizedBundle = resolveCanonicalOrderEntity(bundleEntity ?? '') ?? bundleEntity?.trim() ?? '';
+  if (!normalizedRequested || !normalizedBundle) return true;
+  if (normalizedRequested === normalizedBundle) return true;
+  const normalizedClassCode = classCode?.trim() ?? '';
+  return (
+    normalizedClassCode.startsWith('6') &&
+    normalizedBundle === 'testOrder' &&
+    (normalizedRequested === 'physiologyOrder' || normalizedRequested === 'bacteriaOrder')
+  );
+};
+
 const resolveRecommendationLabel = (candidate: OrderRecommendationCandidate) => {
   const bundle = candidate.template.bundleName.trim();
   const firstItem = candidate.template.items.find((item) => item.name.trim())?.name.trim() ?? '';
@@ -673,14 +690,23 @@ const resolveSendContractNote = (entity: string) => {
   if (canonicalEntity === 'injectionOrder') {
     return '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみ、speed は adminMemo、行ごとの注射コメントは local-only です。';
   }
+  if (canonicalEntity === 'treatmentOrder') {
+    return '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
+  }
   if (canonicalEntity === 'otherOrder') {
     return 'setCode は展開専用です。オーダー名・指示・自由メモは院内補足として保存し、ORCA送信では classCode とコード付き行だけを使用します。';
   }
   if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
     return 'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
   }
+  if (canonicalEntity === 'bacteriaOrder') {
+    return '細菌検査 subtype・院内補足・自由メモは local-only です。subtype に対応する ORCA 送信 carrier は未実装のため、送信前に明示 block します。';
+  }
   if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
     return '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。';
+  }
+  if (canonicalEntity === 'radiologyOrder') {
+    return '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
   }
   return '';
 };
@@ -1103,6 +1129,11 @@ export function OrderBundleEditPanel({
   const supportsUsageSearch = orderUiProfile.supportsUsageSearch;
   const supportsBodyPartSearch = orderUiProfile.supportsBodyPartSearch;
   const supportsCommentCodes = orderUiProfile.supportsCommentCodes;
+  const supportsMaterialRows =
+    isInjectionOrder ||
+    isRehabOrder ||
+    isRadiologyOrder ||
+    form.materialItems.some((item) => hasOrderBundleItemValue(item));
   const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
   const effectiveTestSubtype = resolveFormSubtype(entity, form.subtype);
   const showBodyPartSection =
@@ -1350,11 +1381,11 @@ export function OrderBundleEditPanel({
   }, [entity, meta]);
 
   const selectedItemForPrediction = useMemo(() => {
-    const rows = form.items as OrderBundleItemWithRowId[];
+    const rows = [...(form.items as OrderBundleItemWithRowId[]), ...(form.materialItems as OrderBundleItemWithRowId[])];
     if (rows.length === 0) return null;
     if (!selectedItemRowId) return rows[0];
     return rows.find((row) => row.rowId === selectedItemRowId) ?? rows[0];
-  }, [form.items, selectedItemRowId]);
+  }, [form.items, form.materialItems, selectedItemRowId]);
   const selectedItemPredictionKeyword = selectedItemForPrediction?.name?.trim() ?? '';
   const debouncedItemPredictionKeyword = useDebouncedValue(selectedItemPredictionKeyword, 260);
   const itemPredictiveSearchTypes = useMemo<OrderMasterSearchType[]>(
@@ -1754,20 +1785,41 @@ export function OrderBundleEditPanel({
 
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
     if (!rowId || !matched) return;
-    setForm((prev) => ({
-      ...prev,
-      items: prev.items.map((row) => {
+    const promoteToMaterial = matched.type === 'material' || shouldTreatAsMaterialItem(entity, matched.code?.trim() ?? '');
+    setForm((prev) => {
+      const updateRow = (row: OrderBundleItem) => ({
+        ...row,
+        code: matched.code ?? row.code,
+        name: matched.name,
+        unit: row.unit?.trim() ? row.unit : matched.unit ?? '',
+        memo: row.memo?.trim() ? row.memo : matched.note ?? '',
+      });
+      let promotedMaterialRow: OrderBundleItemWithRowId | null = null;
+      const nextItems = ensureTrailingEmptyMainItem(
+        prev.items.map((row) => {
+          const currentRow = row as OrderBundleItemWithRowId;
+          if (currentRow.rowId !== rowId) return row;
+          if (!promoteToMaterial) {
+            return updateRow(row);
+          }
+          promotedMaterialRow = ensureRowId({ ...updateRow(row), rowRole: 'material' });
+          return buildEmptyItem();
+        }),
+      );
+      const nextMaterialItems = prev.materialItems.map((row) => {
         const currentRow = row as OrderBundleItemWithRowId;
         if (currentRow.rowId !== rowId) return row;
-        return {
-          ...row,
-          code: matched.code ?? row.code,
-          name: matched.name,
-          unit: row.unit?.trim() ? row.unit : matched.unit ?? '',
-          memo: row.memo?.trim() ? row.memo : matched.note ?? '',
-        };
-      }),
-    }));
+        return ensureRowId({ ...updateRow(row), rowRole: 'material' });
+      });
+      if (promotedMaterialRow) {
+        nextMaterialItems.push(promotedMaterialRow);
+      }
+      return {
+        ...prev,
+        items: nextItems,
+        materialItems: nextMaterialItems,
+      };
+    });
     const youhouCode = matched.youhouCode?.trim();
     if (supportsUsageSearch && !form.admin.trim() && youhouCode) {
       void autoFillUsageFromYouhouCode(youhouCode);
@@ -1873,7 +1925,7 @@ export function OrderBundleEditPanel({
       }
       const requestedEntity = resolveCanonicalOrderEntity(entity);
       const detailEntity = resolveCanonicalOrderEntity(detail.bundle.entity);
-      if (requestedEntity && detailEntity && detailEntity !== requestedEntity) {
+      if (!matchesOrcaInputSetEntity(requestedEntity, detailEntity, detail.bundle.classCode)) {
         setNotice({ tone: 'error', message: 'entity が一致しないため診療セットを反映できません。' });
         return;
       }
@@ -2856,6 +2908,14 @@ export function OrderBundleEditPanel({
     });
   };
 
+  const removeMaterialRowById = (rowId?: string | null) => {
+    if (!rowId) return;
+    setForm((prev) => ({
+      ...prev,
+      materialItems: prev.materialItems.filter((item) => (item as OrderBundleItemWithRowId).rowId !== rowId),
+    }));
+  };
+
   const removeSelectedItemRow = () => removeItemRowById(selectedItemRowId);
 
   useEffect(() => {
@@ -2868,7 +2928,7 @@ export function OrderBundleEditPanel({
   }, [form.items]);
 
   useEffect(() => {
-    const rows = form.items;
+    const rows = [...form.items, ...form.materialItems];
     if (rows.length === 0) {
       setSelectedItemRowId(null);
       return;
@@ -2879,7 +2939,7 @@ export function OrderBundleEditPanel({
     if (!exists) {
       setSelectedItemRowId((rows[0] as OrderBundleItemWithRowId).rowId ?? null);
     }
-  }, [form.items, selectedItemRowId]);
+  }, [form.items, form.materialItems, selectedItemRowId]);
 
   const validationByKey = useMemo(() => {
     const map = new Map<string, string>();
@@ -4101,6 +4161,118 @@ export function OrderBundleEditPanel({
               </div>
             );
           })}
+          {supportsMaterialRows ? (
+            <div className="charts-side-panel__subsection">
+              <div className="charts-side-panel__subheader">
+                <strong>材料行</strong>
+                <div className="charts-side-panel__subheader-actions">
+                  <button
+                    type="button"
+                    className="charts-side-panel__ghost charts-side-panel__ghost--add"
+                    onClick={() => {
+                      const nextItem = buildEmptyItem();
+                      setForm((prev) => ({ ...prev, materialItems: [...prev.materialItems, nextItem] }));
+                      setSelectedItemRowId((nextItem as OrderBundleItemWithRowId).rowId ?? null);
+                    }}
+                    disabled={isBlocked}
+                  >
+                    材料追加
+                  </button>
+                </div>
+              </div>
+              <p className="charts-side-panel__help">
+                材料行は `rowRole=material` として保存します。material 候補を main 行で選んだ場合もここへ移します。
+              </p>
+              {form.materialItems.length === 0 ? (
+                <p className="charts-side-panel__empty">材料行はまだありません。</p>
+              ) : null}
+              {form.materialItems.map((item, index) => {
+                const rowId = (item as OrderBundleItemWithRowId).rowId;
+                const hasRowValue = hasOrderBundleItemValue(item);
+                const rowSummary = [
+                  `コード: ${item.code?.trim() || '未設定'}`,
+                  formatItemQuantitySummary(item, itemQuantityLabel),
+                ].join(' / ');
+                return (
+                  <div key={rowId ?? `${entityId}-material-${index}`}>
+                    <div
+                      className={`charts-side-panel__item-row charts-side-panel__item-row--comment${
+                        selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''
+                      }`}
+                      onClick={() => setSelectedItemRowId(rowId ?? null)}
+                    >
+                      <input
+                        id={`${entityId}-material-name-${index}`}
+                        name={`${entityId}-material-name-${index}`}
+                        value={item.name}
+                        list={
+                          rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
+                            ? `${entityId}-item-predictive-list`
+                            : undefined
+                        }
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setForm((prev) => {
+                            const next = [...prev.materialItems];
+                            next[index] = { ...next[index], name: value };
+                            return { ...prev, materialItems: next };
+                          });
+                          applyPredictiveItemSelection(rowId, value);
+                        }}
+                        onBlur={(event) => applyPredictiveItemSelection(rowId, event.target.value)}
+                        onFocus={() => setSelectedItemRowId(rowId ?? null)}
+                        placeholder="材料名"
+                        disabled={isBlocked}
+                        style={{ gridColumn: '1 / span 2' }}
+                      />
+                      <input
+                        id={`${entityId}-material-quantity-${index}`}
+                        name={`${entityId}-material-quantity-${index}`}
+                        value={item.quantity ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setForm((prev) => {
+                            const next = [...prev.materialItems];
+                            next[index] = { ...next[index], quantity: value };
+                            return { ...prev, materialItems: next };
+                          });
+                        }}
+                        onFocus={() => setSelectedItemRowId(rowId ?? null)}
+                        placeholder={itemQuantityLabel}
+                        disabled={isBlocked}
+                      />
+                      <input
+                        id={`${entityId}-material-unit-${index}`}
+                        name={`${entityId}-material-unit-${index}`}
+                        value={item.unit ?? ''}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setForm((prev) => {
+                            const next = [...prev.materialItems];
+                            next[index] = { ...next[index], unit: value };
+                            return { ...prev, materialItems: next };
+                          });
+                        }}
+                        onFocus={() => setSelectedItemRowId(rowId ?? null)}
+                        placeholder="単位"
+                        disabled={isBlocked}
+                      />
+                      <button
+                        type="button"
+                        className="charts-side-panel__icon"
+                        aria-label={`材料行 ${index + 1} を削除`}
+                        onClick={() => removeMaterialRowById(rowId)}
+                        disabled={isBlocked}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    {hasRowValue ? <p className="charts-side-panel__help">{rowSummary}</p> : null}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
             </div>
 
             {supportsCommentCodes && selectionCommentCandidates.length > 0 && (

@@ -7,6 +7,7 @@ import { ReceptionPage } from '../pages/ReceptionPage';
 import { buildDepartmentOptions } from '../departmentOptions';
 import type { AppointmentPayload, ClaimOutpatientPayload, ReceptionEntry } from '../../outpatient/types';
 import { postOrcaMedicalModV2Xml } from '../../charts/orcaClaimApi';
+import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../../charts/prescriptionOrderApi';
 
 const createBaseClaimData = (): ClaimOutpatientPayload => ({
   runId: 'RUN-CLAIM',
@@ -30,6 +31,34 @@ const createBaseAppointmentData = (): AppointmentPayload => ({
   recordsReturned: 0,
   raw: {},
 });
+
+const createSendablePrescriptionOrder = (patientId: string, started: string) => {
+  const order = buildEmptyPrescriptionOrder(patientId, started);
+  order.rps = [
+    {
+      ...order.rps[0],
+      name: 'RP1',
+      usage: '毎食後',
+      usageCode: '001000',
+      daysOrTimes: '7',
+      drugs: [
+        {
+          rowId: 'drug-1',
+          code: '620000001',
+          name: '薬剤A',
+          quantity: '3',
+          unit: '錠',
+          genericChangeAllowed: true,
+          isGeneralNamePrescription: false,
+          drugComment: '',
+          claimComments: [],
+          patientRequest: false,
+        },
+      ],
+    },
+  ];
+  return order;
+};
 
 let mockClaimData = createBaseClaimData();
 let mockAppointmentData = createBaseAppointmentData();
@@ -184,6 +213,14 @@ vi.mock('../../charts/orcaClaimApi', () => ({
 vi.mock('../../charts/orderBundleApi', () => ({
   fetchOrderBundles: vi.fn(async () => ({ ok: true, bundles: [], recordsReturned: 0 })),
 }));
+
+vi.mock('../../charts/prescriptionOrderApi', async () => {
+  const actual = await vi.importActual<typeof import('../../charts/prescriptionOrderApi')>('../../charts/prescriptionOrderApi');
+  return {
+    ...actual,
+    fetchPrescriptionOrder: vi.fn(),
+  };
+});
 
 vi.mock('../exceptionLogic', () => ({
   buildExceptionAuditDetails: () => ({}),
@@ -374,6 +411,12 @@ beforeEach(() => {
   mockLocationState = undefined;
   mockInvalidateQueries.mockClear();
   mockEnqueue.mockReset();
+  vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
+    ok: true,
+    patientId: '555',
+    sourceBundles: [],
+    order: createSendablePrescriptionOrder('555', '2026-04-03'),
+  } as any);
   localStorage.clear();
 });
 
@@ -1271,6 +1314,11 @@ describe('ReceptionPage status/date/card action UX', () => {
     await user.click(within(row).getByRole('button', { name: '会計送信' }));
 
     await waitFor(() => expect(vi.mocked(postOrcaMedicalModV2Xml)).toHaveBeenCalled());
+    expect(fetchPrescriptionOrder).toHaveBeenCalledWith(
+      expect.objectContaining({
+        patientId: 'P-501',
+      }),
+    );
     expect(mockEnqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         tone: 'success',

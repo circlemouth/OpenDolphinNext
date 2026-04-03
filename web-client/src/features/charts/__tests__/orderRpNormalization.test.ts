@@ -1,12 +1,31 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveCanonicalOrderEntity } from '../orderCategoryRegistry';
 import {
   collectMedicalModV2BundleIssues,
+  fetchMedicalModV2OrderBundles,
   normalizeOrderBundleToRp,
 } from '../orderRpNormalization';
+import { fetchOrderBundles } from '../orderBundleApi';
+import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
+
+vi.mock('../orderBundleApi', () => ({
+  fetchOrderBundles: vi.fn(),
+}));
+
+vi.mock('../prescriptionOrderApi', async () => {
+  const actual = await vi.importActual<typeof import('../prescriptionOrderApi')>('../prescriptionOrderApi');
+  return {
+    ...actual,
+    fetchPrescriptionOrder: vi.fn(),
+  };
+});
 
 describe('orderRpNormalization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('canonical entity は generalOrder と laboTest を正規化する', () => {
     expect(resolveCanonicalOrderEntity('generalOrder')).toBe('treatmentOrder');
     expect(resolveCanonicalOrderEntity('laboTest')).toBe('testOrder');
@@ -49,6 +68,26 @@ describe('orderRpNormalization', () => {
         code: 'comment_only',
         bundleName: '胸部CT',
       }),
+    );
+  });
+
+  it('bacteriaOrder の subtype は carrier 未対応のため送信前 issue を返す', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'bacteriaOrder',
+        bundleName: '細菌培養',
+        subtype: 'culture',
+        items: [{ code: '160000010', name: '培養検査', quantity: '1', unit: '回', memo: '' }],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_bacteria_subtype',
+          bundleName: '細菌培養',
+        }),
+      ]),
     );
   });
 
@@ -113,5 +152,66 @@ describe('orderRpNormalization', () => {
       '700000031',
       '0085001',
     ]);
+  });
+
+  it('fetchMedicalModV2OrderBundles は medOrder を prescription-orders から組み立てる', async () => {
+    vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
+      ok: true,
+      patientId: '000001',
+      sourceBundles: [],
+      order: {
+        ...buildEmptyPrescriptionOrder('000001', '2026-03-09'),
+        rps: [
+          {
+            ...buildEmptyPrescriptionOrder('000001', '2026-03-09').rps[0],
+            name: 'RP1',
+            usage: '毎食後',
+            usageCode: '001000',
+            daysOrTimes: '7',
+            drugs: [
+              {
+                rowId: 'drug-1',
+                code: '620000001',
+                name: '薬剤A',
+                quantity: '3',
+                unit: '錠',
+                genericChangeAllowed: true,
+                isGeneralNamePrescription: false,
+                drugComment: '',
+                claimComments: [],
+                patientRequest: false,
+              },
+            ],
+          },
+        ],
+      },
+    } as any);
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'treatmentOrder'
+          ? [{ entity: 'treatmentOrder', bundleName: '処置', bundleNumber: '1', items: [{ code: '140000610', name: '処置', quantity: '1', unit: '回' }] }]
+          : [],
+    }));
+
+    const result = await fetchMedicalModV2OrderBundles('000001', '2026-03-09');
+
+    expect(fetchPrescriptionOrder).toHaveBeenCalledWith({ patientId: '000001', from: '2026-03-09' });
+    expect(fetchOrderBundles).not.toHaveBeenCalledWith(expect.objectContaining({ entity: 'medOrder' }));
+    expect(result.errors).toEqual([]);
+    expect(result.bundles).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity: 'medOrder',
+          bundleName: 'RP1',
+          admin: '毎食後',
+          adminMemo: '001000',
+        }),
+        expect.objectContaining({
+          entity: 'treatmentOrder',
+          bundleName: '処置',
+        }),
+      ]),
+    );
   });
 });

@@ -7,33 +7,33 @@
 ## 0. 決定ログ
 
 ### 0-1. bodyPart 契約
-- [ ] `bodyPart` を有効コード `002...` のみに制限するのか、専用 field として他コード体系も許容するのかを決め、1文で記録する
-- [ ] `/api/orca/master/bodypart`、front validation、server validation、fetch reconstruction、send validation、XML テストを同一契約に揃える
-- [ ] 既存の `BP001` など旧 front test 契約を廃止するか、変換規則を入れるかを決めて記録する
+- [x] `bodyPart` は ORCA 送信・保存・再取得とも `002...` 専用 field とし、他コード体系は受け入れない
+- [x] `/api/orca/master/bodypart`、front validation、server validation、fetch reconstruction、send validation、XML テストを同一契約に揃える
+- [x] 既存の `BP001` など旧 front test 契約は廃止し、非 `002...` は front/server とも reject に統一する
 
 ### 0-2. 600系送信契約
-- [ ] `testOrder / physiologyOrder / bacteriaOrder` の識別を ORCA 送信でどう持つか決める
-- [ ] `admin / adminMemo / memo / subtype / item.memo` を 600系で送るのか local-only にするのか決める
-- [ ] 複数検査項目を 1 bundle に積むことを許容するなら、bundle 共通属性と item 個別属性の境界を決める
-- [ ] `bacteriaOrder` の `subtype` だけで足りるのか、`検体種別 / 培養 / 感受性 / 備考` の first-class 化が必要か決める
+- [x] `testOrder / physiologyOrder / bacteriaOrder` は editor/save では entity を保持しつつ、ORCA送信 grouping は classCode `600` とコード付き行に統一する
+- [x] `admin / adminMemo / memo / subtype / item.memo` は 600系では local-only とし、ORCA送信 payload/XML には出さない
+- [x] 600系の複数検査項目は許容し、bundle 共通属性は local-only、ORCA送信は item 単位の coded row のみを使う
+- [x] `bacteriaOrder` は現時点では `subtype` のみを first-class に扱い、`検体種別 / 培養 / 感受性 / 備考` の追加 field は導入しない
 
 ### 0-3. 処方送信契約
-- [ ] 処方の送信 source of truth を `prescription-orders` に一本化する方針を明記する
-- [ ] `sourceBundles` を互換表示専用に落とすのか、完全廃止するのか決める
-- [ ] `free-text usage`, `generalNamePrescription`, `RP-level claimComments`, `lower*`, `numberCode`, `prescriptionSettings`, `remarks` を sendable にするのか local-only / reject にするのか決める
+- [x] 処方の送信 source of truth は `prescription-orders` とし、ORCA送信では first-class order から send bundle を組み立てる
+- [x] `sourceBundles` は互換表示専用に残し、editor/save/send の正は first-class `order` に固定する
+- [x] `free-text usage`, `generalNamePrescription`, `RP-level claimComments`, `lower*`, `numberCode`, `prescriptionSettings`, `remarks` は当面 sendable にせず、first-class order で保持しつつ local-only / reject を個別に詰める
 
 ### 0-4. 注射送信契約
-- [ ] `admin / adminCode / adminMemo / memo / route / timing / frequency / speed` のうち送るものと local-only にするものを決める
-- [ ] `material row` を注射 editor で first-class にする方針を決める
-- [ ] 注射 drug の `genericFlg` を UI 編集可能にするか、preserve-only として明示するか決める
+- [x] 注射は `admin/adminCode` を sendable、`adminMemo/memo/route/timing/frequency/speed` と行コメントは local-only に固定する
+- [x] 注射 `material row` は editor で first-class に扱い、保存時も `rowRole=material` を維持する
+- [x] 注射 drug の `genericFlg` は当面 preserve-only とし、UI で壊さないことを優先して後続で表示/編集方針を詰める
 
 ### 0-5. 処置・一般・その他・放射線・charge 契約
-- [ ] `generalOrder` を UI alias として残すのか、`treatmentOrder` に統合するのか決める
-- [ ] treatment の `bundleName / admin / memo` を local-only にするのか sendable にするのか決める
-- [ ] `otherOrder` に許す code family、material-only、bodyPart 可否を決める
-- [ ] radiology の `instruction / memo / item.memo` を local-only にするのか sendable にするのか決める
-- [ ] charge の class range を `110-125` と `130-150` で厳密に分けるか、別方針にするか決める
-- [ ] parameter 付き selection comment を実装するのか、正式に非対応とするのか決める
+- [x] `generalOrder` は canonical `treatmentOrder` の UI alias として残し、保存・送信・テストの正は `treatmentOrder` に寄せる
+- [x] treatment の `bundleName / admin / memo` は local-only とし、ORCA送信では classCode/bodyPart/coded row のみを使う
+- [x] `otherOrder` は etensu category `8` のみを対象とし、material-only と bodyPart は front 契約では受け付けない
+- [x] radiology の `instruction / memo / item.memo` は local-only とし、ORCA送信では bodyPart/classCode/coded row のみを使う
+- [x] charge の class range は `110-125` と `130-150` で厳密に分ける
+- [x] parameter 付き selection comment は正式に非対応とし、UI block とテストで固定する
 
 ## 1. P0 ブロッカー
 
@@ -44,14 +44,14 @@
 - [x] `medOrder` が会計送信で必ず含まれることを確認する
 - [x] `generalOrder` / `laboTest` の二重 fetch が消えることを確認する
 - [x] `bodyPart` / comment code / local-only field の扱いが Charts 側と一致することを確認する
-- [ ] `ReceptionPage` の送信テストを、共有経路利用を前提に書き換える
+- [x] `ReceptionPage` の送信テストを、共有経路利用を前提に書き換える
 
 ### 1-2. 処方の送信 source of truth 一本化
-- [ ] ORCA送信で処方を読む経路を `order/bundles` ベースから `prescription-orders` ベースへ切り替える
-- [ ] ActionBar 側で処方だけ first-class order を取得し、他オーダーと同一 payload へ組み立てる共通経路を作る
-- [ ] 保存直後の処方が、そのまま送信 payload に現れることを確認する
-- [ ] `ChartsPage` / `PrescriptionOrderEditorPanel` / 送信経路で処方の表示・保存・送信が同じ order を見ることを確認する
-- [ ] `save → fetch → send` の統合テストを追加する
+- [x] ORCA送信で処方を読む経路を `order/bundles` ベースから `prescription-orders` ベースへ切り替える
+- [x] ActionBar 側で処方だけ first-class order を取得し、他オーダーと同一 payload へ組み立てる共通経路を作る
+- [x] 保存直後の処方が、そのまま送信 payload に現れることを確認する
+- [x] `ChartsPage` / `PrescriptionOrderEditorPanel` / 送信経路で処方の表示・保存・送信が同じ order を見ることを確認する
+- [x] `save → fetch → send` の統合テストを追加する
 
 ### 1-3. 処方の lossy hydrate を廃止
 - [x] `fetchPrescriptionOrder().order` を editor の正とし、`sourceBundles -> toPrescriptionOrder()` での再構築をやめる
@@ -64,14 +64,14 @@
 - [ ] `testOrder` の `admin` を sendable にするか local-only にするか実装を確定する
 - [ ] sendable にしないなら、UI 文言・helper・テストを local-only 契約に揃える
 - [ ] `physiologyOrder` の `subtype / admin / memo / item.memo` について同様に確定する
-- [ ] `bacteriaOrder` の `subtype` が送信で消えない carrier を設けるか、送信前に明示 block する
-- [ ] `orderSendSmoke.test.ts` の 600 local-only 前提を最終仕様に合わせて更新する
+- [x] `bacteriaOrder` の `subtype` は carrier 未対応のため、送信前に明示 block する
+- [x] `orderSendSmoke.test.ts` の 600 local-only 前提を最終仕様に合わせて更新する
 
 ### 1-5. bacteriaOrder の ORCA入力セット適用を実運用で通す
-- [ ] bacteria タブで `entity=testOrder, classCode=600` の input set detail を受け入れるよう client 側 apply 条件を修正する
-- [ ] `toOrderBundleFromInputSetDetail` と `handleOrcaSetApply` の entity mismatch 条件を 600系 canonical 前提に直す
+- [x] bacteria タブで `entity=testOrder, classCode=600` の input set detail を受け入れるよう client 側 apply 条件を修正する
+- [x] `toOrderBundleFromInputSetDetail` と `handleOrcaSetApply` の entity mismatch 条件を 600系 canonical 前提に直す
 - [ ] server 実経路で 600 detail を bacteria に適用した時の subtype 取扱いを明文化する
-- [ ] web-client で bacteria input set apply テストを追加する
+- [x] web-client で bacteria input set apply テストを追加する
 - [ ] server で override ではない実経路テストを追加する
 
 ### 1-6. radiology の bodyPart endpoint 契約を 002 ベースで閉じる
@@ -85,10 +85,10 @@
 ## 2. 注射の残タスク
 
 ### 2-1. 注射 material row を editor で first-class 化
-- [ ] `form.materialItems` を注射 editor に表示する
-- [ ] material row の追加・編集・削除 UI を実装する
-- [ ] recommendation / fetch / input set 由来の material row が hidden にならないことを保証する
-- [ ] 7xxxx item を注射 editor で追加したとき、main ではなく material として入る導線を作る
+- [x] `form.materialItems` を注射 editor に表示する
+- [x] material row の追加・編集・削除 UI を実装する
+- [x] recommendation / fetch / input set 由来の material row が hidden にならないことを保証する
+- [x] 7xxxx item を注射 editor で追加したとき、main ではなく material として入る導線を作る
 - [ ] `薬剤のみ / 手技+薬剤 / material+drug` の editor round-trip テストを追加する
 
 ### 2-2. 注射 admin/adminCode validation を締める
@@ -157,15 +157,15 @@
 ## 5. 処置・一般・その他・放射線・bodyPart の残タスク
 
 ### 5-1. treatment material row の UI/round-trip を直す
-- [ ] treatment editor に `materialItems` の表示・編集・削除 UI を追加する
-- [ ] material master 選択が stable に `rowRole=material` へ入るようにする
-- [ ] hidden material regression テストを追加する
+- [x] treatment editor に `materialItems` の表示・編集・削除 UI を追加する
+- [x] material master 選択が stable に `rowRole=material` へ入るようにする
+- [x] hidden material regression テストを追加する
 - [ ] treatment send smoke と editor round-trip を揃える
 
 ### 5-2. treatment `bundleName/admin/memo` 契約
-- [ ] local-only にするなら UI 上で明示する
+- [x] local-only にするなら UI 上で明示する
 - [ ] 送るなら send carrier / XML を追加する
-- [ ] `bundleName / admin / memo` の treatment local-only 契約テストを追加する
+- [x] `bundleName / admin / memo` の treatment local-only 契約テストを追加する
 
 ### 5-3. generalOrder の UI alias 後始末
 - [ ] `generalOrder` タブを残すか統合するか決める
@@ -177,14 +177,14 @@
 - [ ] `otherOrder` に許す code family を server で明示的に検証する
 - [ ] material-only を許す/拒否する方針を決める
 - [ ] bodyPart を許す/拒否する方針を決める
-- [ ] `orderBundleMasterSearch.test.tsx` を現行 `etensu only` 契約へ更新する
+- [x] `orderBundleMasterSearch.test.tsx` を現行 `etensu only` 契約へ更新する
 - [ ] `sourceSetCode` を local-only とするなら durability テストを追加する
 
 ### 5-5. radiology の material/drug role 契約
-- [ ] manual 検索で追加した material/drug を main row に潰すのか、material row として保持するのか決める
-- [ ] その仕様に合わせて `applyPredictiveItem` と rowRole 設計を揃える
-- [ ] radiology の instruction/memo/item memo を local-only にするか sendable にするか決める
-- [ ] radiology local-only 契約テストを追加する
+- [x] manual 検索で追加した material は `material row` に保持し、drug/etensu は `main row` に保持する
+- [x] その仕様に合わせて `applyPredictiveItem` と rowRole 設計を揃える
+- [x] radiology の instruction/memo/item memo を local-only にするか sendable にするか決める
+- [x] radiology local-only 契約テストを追加する
 
 ## 6. Charge の残タスク
 
@@ -192,7 +192,7 @@
 - [x] `baseChargeOrder = 110-125`, `instractionChargeOrder = 130-150` を client/server/test で厳密化するか決める
 - [x] `isCompatibleClassCode` を決めた規則へ修正する
 - [x] `baseCharge + 130`, `instractionCharge + 110` の扱いを reject か許容かで固定する
-- [ ] 既存の逆向きテストを更新する
+- [x] 既存の逆向きテストを更新する
 
 ### 6-2. instractionCharge 新規作成 path
 - [ ] master item 選択から class を導出するか、手動 class 選択 UI を設けるか決める
@@ -201,8 +201,8 @@
 
 ### 6-3. parameter 付き selection comment
 - [ ] 実装する場合は `itemNumber / itemNumberBranch / parameter` を first-class に追加する
-- [ ] 非対応とする場合は UI block とテストを正式仕様にする
-- [ ] 旧期待のテストを修正する
+- [x] 非対応とする場合は UI block とテストを正式仕様にする
+- [x] 旧期待のテストを修正する
 - [ ] medicationgetv2 / selection comment の runtime テストを整備する
 
 ### 6-4. charge local-only と auditability
@@ -213,18 +213,18 @@
 ## 7. テストと最終確認
 
 ### 7-1. 追加必須テスト
-- [ ] ReceptionPage ORCA 送信共有化テスト
-- [ ] prescription `save -> fetch -> no-op save -> send -> XML` テスト
-- [ ] bacteria input set apply テスト
+- [x] ReceptionPage ORCA 送信共有化テスト
+- [x] prescription `save -> fetch -> no-op save -> send -> XML` テスト
+- [x] bacteria input set apply テスト
 - [x] bodyPart endpoint 実テスト
 - [x] radiology `700` XML テスト
-- [ ] treatment material UI round-trip テスト
+- [x] treatment material UI round-trip テスト
 - [x] instractionCharge class range テスト
 - [x] selection comment parameter 対応/非対応テスト
 
 ### 7-2. 機械的完了条件
 - [ ] `docs/web-client/product-improvement/orca-order-remediation-residual-checklist.md` に未チェックが 0 件
-- [ ] client / server の追加・更新テストが green
+- [x] client / server の追加・更新テストが green
 - [ ] TODO / FIXME / XXX / temporary comment が残っていない
-- [ ] save → fetch → normalize → send → XML の smoke を主要系で再実行した
+- [x] save → fetch → normalize → send → XML の smoke を主要系で再実行した
 - [ ] 最終報告に residual task count: 0 / open blocker count: 0 を書ける状態にした

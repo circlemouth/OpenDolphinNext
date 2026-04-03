@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
@@ -84,6 +84,14 @@ const testProps = {
   itemQuantityLabel: '回数',
 };
 
+const bacteriaProps = {
+  ...baseProps,
+  entity: 'bacteriaOrder',
+  title: '細菌検査編集',
+  bundleLabel: '検査名',
+  itemQuantityLabel: '回数',
+};
+
 const renderPanel = (props?: Partial<typeof baseProps>) => {
   const client = new QueryClient({
     defaultOptions: {
@@ -144,6 +152,31 @@ describe('OrderBundleEditPanel ORCA support', () => {
     ).toBeInTheDocument();
   });
 
+  it('treatmentOrder は bundleName/admin/memo の local-only 契約を明示する', () => {
+    renderPanel({
+      entity: 'treatmentOrder',
+      title: '処置編集',
+      bundleLabel: '処置オーダー名',
+      itemQuantityLabel: '回数',
+    });
+
+    expect(
+      screen.getByText(
+        '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('radiologyOrder は instruction/memo/item memo の local-only 契約を明示する', () => {
+    renderPanel(radiologyProps);
+
+    expect(
+      screen.getByText(
+        '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('点数検索（詳細）は値保持と invalid range を扱う', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
@@ -200,7 +233,11 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     renderPanel();
 
-    expect(screen.getByText('setCode は展開専用です。保存・ORCA送信 payload には保持しません。')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+      ),
+    ).toBeInTheDocument();
 
     await user.type(screen.getByPlaceholderText('診療セット名またはコード'), '処置');
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
@@ -210,7 +247,19 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.getByLabelText('オーダー名')).toHaveValue('創傷処置セット');
     expect(screen.getByLabelText('部位', { selector: 'input' })).toHaveValue('膝関節');
     expect(screen.getByLabelText('院内補足')).toHaveValue('運用前確認');
+    expect(screen.getByDisplayValue('処置材料A')).toBeInTheDocument();
     expect(screen.getByText('反映元 setCode: P02001（local-only）')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
+    const operation = payload?.operations?.[0];
+    expect(operation?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: '140000610', rowRole: 'main' }),
+        expect.objectContaining({ code: 'M001', rowRole: 'material', unit: '個' }),
+      ]),
+    );
   });
 
   it('非空フォームでは confirm 後に ORCA診療セットを反映する', async () => {
@@ -502,5 +551,204 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.className).toBe('検査');
     expect(operation?.adminMemo).toBe('至急');
     expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '160000010', unit: '回' })]));
+  });
+
+  it('bacteriaOrder は testOrder の 600 input set detail を受け入れて subtype を保持する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
+      ok: true,
+      status: 200,
+      totalCount: 1,
+      items: [{ setCode: 'B60001', name: '細菌培養セット', entity: 'bacteriaOrder', itemCount: 1 }],
+    });
+    vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
+      ok: true,
+      status: 200,
+      setCode: 'B60001',
+      bundle: {
+        entity: 'testOrder',
+        bundleName: '細菌培養セット',
+        bundleNumber: '1',
+        subtype: 'culture',
+        classCode: '600',
+        classCodeSystem: 'Claim007',
+        className: '検査',
+        adminMemo: '48h incubate',
+        items: [{ code: '160000010', name: '培養検査', quantity: '1', unit: '回', memo: '' }],
+      },
+    });
+
+    renderPanel(bacteriaProps);
+
+    await user.type(screen.getByPlaceholderText('診療セット名またはコード'), '細菌');
+    await user.click(screen.getByRole('button', { name: 'セット検索' }));
+    await user.click(await screen.findByRole('button', { name: /B60001.*細菌培養セット.*反映/ }));
+
+    expect(screen.getByLabelText('検査名')).toHaveValue('細菌培養セット');
+    expect(screen.getByLabelText('細菌検査 subtype')).toHaveValue('culture');
+    expect(screen.getByLabelText('院内補足')).toHaveValue('48h incubate');
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
+    const operation = payload?.operations?.[0];
+    expect(operation?.entity).toBe('bacteriaOrder');
+    expect(operation?.subtype).toBe('culture');
+    expect(operation?.classCode).toBe('600');
+    expect(operation?.classCodeSystem).toBe('Claim007');
+    expect(operation?.adminMemo).toBe('48h incubate');
+    expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '160000010', unit: '回' })]));
+  });
+
+  it('injectionOrder で 7xxxx 候補を main 行に選ぶと material 行へ昇格する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockImplementation(async (params) => {
+      if (typeof params?.keyword === 'string' && params.keyword.includes('注射薬A')) {
+        return {
+          ok: true,
+          items: [
+            {
+              type: params.type ?? 'drug',
+              code: '620000010',
+              name: '注射薬A',
+              unit: 'ampoule',
+              note: '',
+            },
+          ],
+          totalCount: 1,
+        } as any;
+      }
+      if (typeof params?.keyword === 'string' && params.keyword.includes('ドリップ')) {
+        return {
+          ok: true,
+          items: [
+            {
+              type: params.type ?? 'etensu',
+              code: '700000031',
+              name: 'ドリップセット',
+              unit: 'set',
+              note: '',
+            },
+          ],
+          totalCount: 1,
+        } as any;
+      }
+      return { ok: true, items: [], totalCount: 0 } as any;
+    });
+
+    renderPanel(injectionProps);
+
+    const [firstMainInput] = screen.getAllByPlaceholderText('注射薬剤または手技名');
+    await user.type(firstMainInput, '注射薬A');
+    await waitFor(() =>
+      expect(vi.mocked(fetchOrderMasterSearch)).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: '注射薬A' }),
+      ),
+    );
+    await user.tab();
+    await waitFor(() => expect(screen.getByDisplayValue('注射薬A')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: '追加' }));
+
+    const mainInputsAfterAppend = screen.getAllByPlaceholderText('注射薬剤または手技名');
+    const secondMainInput = mainInputsAfterAppend[mainInputsAfterAppend.length - 1];
+    await user.type(secondMainInput, 'ドリップセット');
+    await waitFor(() =>
+      expect(vi.mocked(fetchOrderMasterSearch)).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: 'ドリップセット' }),
+      ),
+    );
+    await user.tab();
+
+    await waitFor(() => expect(screen.getByDisplayValue('ドリップセット')).toBeInTheDocument());
+    expect(screen.getByText('材料行')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
+    const operation = payload?.operations?.[0];
+    expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '700000031', rowRole: 'material' })]));
+    expect(operation?.items).not.toEqual(expect.arrayContaining([expect.objectContaining({ code: '700000031', rowRole: 'main' })]));
+  });
+
+  it('treatmentOrder で main row と material row を UI から作成して rowRole を保持する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockImplementation(async (params) => {
+      if (typeof params?.keyword === 'string' && params.keyword.includes('創傷処置')) {
+        return {
+          ok: true,
+          items: [
+            {
+              type: 'etensu',
+              code: '140000610',
+              name: '創傷処置（１００ｃｍ２未満）',
+              unit: '回',
+              note: '',
+            },
+          ],
+          totalCount: 1,
+        } as any;
+      }
+      if (typeof params?.keyword === 'string' && params.keyword.includes('処置材料B')) {
+        return {
+          ok: true,
+          items: [
+            {
+              type: 'material',
+              code: 'M002',
+              name: '処置材料B',
+              unit: '個',
+              note: '',
+            },
+          ],
+          totalCount: 1,
+        } as any;
+      }
+      return { ok: true, items: [], totalCount: 0 } as any;
+    });
+
+    renderPanel({
+      entity: 'treatmentOrder',
+      title: '処置編集',
+      bundleLabel: '処置オーダー名',
+      itemQuantityLabel: '回数',
+    });
+
+    const [mainInput] = screen.getAllByPlaceholderText('処置項目名');
+    await user.type(mainInput, '創傷処置（１００ｃｍ２未満）');
+    await waitFor(() =>
+      expect(vi.mocked(fetchOrderMasterSearch)).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: '創傷処置（１００ｃｍ２未満）' }),
+      ),
+    );
+    await user.tab();
+    await waitFor(() => expect(screen.getByDisplayValue('創傷処置（１００ｃｍ２未満）')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: '追加' }));
+    const appendedInputs = screen.getAllByPlaceholderText('処置項目名');
+    const secondMainInput = appendedInputs[appendedInputs.length - 1];
+    await user.type(secondMainInput, '処置材料B');
+    await waitFor(() =>
+      expect(vi.mocked(fetchOrderMasterSearch)).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: '処置材料B' }),
+      ),
+    );
+    await user.tab();
+
+    await waitFor(() => expect(screen.getByDisplayValue('処置材料B')).toBeInTheDocument());
+    expect(screen.getByText('材料行')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
+    const operation = payload?.operations?.[0];
+    expect(operation?.entity).toBe('treatmentOrder');
+    expect(operation?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: '140000610', rowRole: 'main' }),
+        expect.objectContaining({ code: 'M002', rowRole: 'material', unit: '個' }),
+      ]),
+    );
   });
 });

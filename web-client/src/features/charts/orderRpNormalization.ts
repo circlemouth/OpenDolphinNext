@@ -13,6 +13,7 @@ import {
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 const BODY_PART_CODE_PATTERN = /^002/;
@@ -64,7 +65,8 @@ export type MedicalModV2BundleIssueCode =
   | 'uncoded_row'
   | 'mixed_coded_uncoded'
   | 'comment_only'
-  | 'missing_main_row';
+  | 'missing_main_row'
+  | 'unsupported_bacteria_subtype';
 
 export type MedicalModV2BundleIssue = {
   code: MedicalModV2BundleIssueCode;
@@ -171,6 +173,15 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
 
 export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): MedicalModV2BundleIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  if (canonicalEntity === 'bacteriaOrder' && bundle.subtype?.trim()) {
+    return [
+      buildBundleIssue(
+        bundle,
+        'unsupported_bacteria_subtype',
+        '細菌検査 subtype は ORCA 送信 carrier 未対応のため、送信前に停止します。',
+      ),
+    ];
+  }
   const rows = collectNormalizedRows(bundle);
   const valuedRows = rows.filter((row) => hasBundleItemValue(row.item));
   if (valuedRows.length === 0) {
@@ -336,7 +347,28 @@ export const toMedicalModV2Information = (bundle: OrderBundle): MedicalModV2Info
 
 export const fetchMedicalModV2OrderBundles = async (patientId: string, from: string) => {
   const results = await Promise.allSettled(
-    ORCA_SEND_ORDER_ENTITIES.map((entity) => fetchOrderBundles({ patientId, entity, from })),
+    ORCA_SEND_ORDER_ENTITIES.map(async (entity) => {
+      if (entity === 'medOrder') {
+        const prescriptionOrder = await fetchPrescriptionOrder({ patientId, from });
+        if (!prescriptionOrder.ok) {
+          return {
+            ok: false,
+            message: prescriptionOrder.message,
+            status: prescriptionOrder.status,
+            errorCode: prescriptionOrder.errorCode,
+            bundles: [] as OrderBundle[],
+          };
+        }
+        return {
+          ok: true,
+          message: prescriptionOrder.message,
+          status: prescriptionOrder.status,
+          errorCode: undefined,
+          bundles: buildPrescriptionOrderSendBundles(prescriptionOrder.order),
+        };
+      }
+      return fetchOrderBundles({ patientId, entity, from });
+    }),
   );
   const bundles: OrderBundle[] = [];
   const errors: string[] = [];
