@@ -126,6 +126,12 @@
   - server / release gate は `docs/architecture/server-modernization-overview.md` と `docs/runbooks/release-validation.md`。
 - **現行ハブ**: `docs/README.md` / `docs/managerdocs/README.md` / `web-client/README.md` を入口とする。
 - **文字コード**: 日本語を含むファイルは **UTF-8 (BOMなし)** で保存。
+- **Windows/macOS 混在時の文字化け再発防止**:
+  - Windows / macOS のどちらで編集しても、**エディタの自動判定に任せず UTF-8 (BOMなし) を明示**して開くこと。
+  - 日本語ドキュメントを更新したら、**保存後に UTF-8 指定で再読込して目視確認**し、文字化けしたまま上書きしないこと。
+  - `AGENTS.md`、`docs/`、`web-client/notes/` など日本語を含む正本ドキュメントは、**Shift_JIS / CP932 / UTF-8 with BOM で保存しない**こと。
+  - 文字化けを見つけた場合は、そのまま追記で直そうとせず、**git 上の正常版または内容復元後の UTF-8 BOMなし全文で置き換えてから**作業を続けること。
+  - 改行コード差分だけのつもりでも、日本語ファイルでは **コミット前に UTF-8 / BOMなし / 文字化けなし** を確認すること。
 - **RUN_ID**: 作業開始時に `YYYYMMDDThhmmssZ` を採番し、ログや報告で使用する。
 - **セキュリティ変更時のドキュメント更新は必須**:
   - 認証/認可/セッション/外部連携/ヘルスチェック/添付保存/監査ログに影響する変更では、該当ドキュメントを必ず更新すること。
