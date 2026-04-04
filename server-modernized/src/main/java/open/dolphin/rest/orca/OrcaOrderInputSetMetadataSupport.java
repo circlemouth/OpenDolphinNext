@@ -10,13 +10,12 @@ final class OrcaOrderInputSetMetadataSupport {
 
     static OrcaOrderInputSetSupport.ClassMetadata resolveClassMetadata(String receiptCode, Logger logger) {
         try {
+            OrcaOrderInputSetSupport.ClassMetadata chargeMetadata =
+                    OrcaChargeClassCanonicalSupport.resolveClassMetadata(receiptCode);
+            if (chargeMetadata != null) {
+                return chargeMetadata;
+            }
             int number = Integer.parseInt(receiptCode);
-            if (number >= 110 && number <= 125) {
-                return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_BASE_CHARGE_ORDER, "診断料");
-            }
-            if (number >= 130 && number <= 150) {
-                return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, "指導・在宅");
-            }
             if (number >= 200 && number <= 299) {
                 return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_MED_ORDER, "RP");
             }

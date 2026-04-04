@@ -355,6 +355,40 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesCanonicalizesChargeClassNameWithoutBundleNameFallback() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_BASE_CHARGE_ORDER);
+        op.setBundleName("charge-bundle-name");
+        op.setClassCode("110");
+        op.setClassCodeSystem("Claim007");
+        op.setClassName("bundleFallback");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("110000110");
+        item.setName("initial-consultation");
+        item.setQuantity("1");
+        item.setUnit("times");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        OrderBundleMutationResponse response = resource.postBundles(servletRequest, payload);
+
+        assertNotNull(response);
+        assertEquals(1, response.getCreatedDocumentIds().size());
+
+        DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
+        assertNotNull(saved);
+        BundleDolphin bundle = (BundleDolphin) saved.getModules().get(0).getModel();
+        assertEquals("基本診療料", bundle.getClassName());
+        assertEquals("110", bundle.getClassCode());
+    }
+
+    @Test
     void getInputSetsReturnsPagedResponse() throws Exception {
         OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
             @Override

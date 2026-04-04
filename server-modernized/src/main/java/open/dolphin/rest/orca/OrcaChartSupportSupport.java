@@ -71,8 +71,10 @@ final class OrcaChartSupportSupport {
             }
             builder.append("<Medical_Information_child type=\"record\">");
             appendTag(builder, "Medical_Class", entry.getMedicalClass());
-            if (!isBlank(entry.getMedicalClassName())) {
-                appendTag(builder, "Medical_Class_Name", entry.getMedicalClassName());
+            String medicalClassName = OrcaChargeClassCanonicalSupport.canonicalClassNameForMedicalClass(
+                    entry.getMedicalClass(), entry.getMedicalClassName());
+            if (!isBlank(medicalClassName)) {
+                appendTag(builder, "Medical_Class_Name", medicalClassName);
             }
             appendTag(builder, "Medical_Class_Number", fallback(entry.getMedicalClassNumber(), "1"));
             builder.append("<Medication_info type=\"array\">");
@@ -384,8 +386,8 @@ final class OrcaChartSupportSupport {
             boolean transportOk = target.getStatus() >= 200 && target.getStatus() < 300;
             boolean apiOk = apiResult != null && apiResult.matches("0+");
             target.setApiOk(apiOk);
-            target.setOk(transportOk);
-            if (!transportOk && !isBlank(apiResultMessage)) {
+            target.setOk(transportOk && apiOk);
+            if ((!transportOk || !apiOk) && !isBlank(apiResultMessage)) {
                 target.setError(apiResultMessage);
             }
             return;
@@ -394,8 +396,8 @@ final class OrcaChartSupportSupport {
             boolean transportOk = target.getStatus() >= 200 && target.getStatus() < 300;
             boolean apiOk = apiResult != null && apiResult.matches("0+");
             target.setApiOk(apiOk);
-            target.setOk(transportOk);
-            if (!transportOk && !isBlank(apiResultMessage)) {
+            target.setOk(transportOk && apiOk);
+            if ((!transportOk || !apiOk) && !isBlank(apiResultMessage)) {
                 target.setError(apiResultMessage);
             }
             return;
@@ -404,8 +406,8 @@ final class OrcaChartSupportSupport {
             boolean transportOk = target.getStatus() >= 200 && target.getStatus() < 300;
             boolean apiOk = apiResult != null && apiResult.matches("0+");
             target.setApiOk(apiOk);
-            target.setOk(transportOk);
-            if (!transportOk && !isBlank(apiResultMessage)) {
+            target.setOk(transportOk && apiOk);
+            if ((!transportOk || !apiOk) && !isBlank(apiResultMessage)) {
                 target.setError(apiResultMessage);
             }
             return;
@@ -414,8 +416,8 @@ final class OrcaChartSupportSupport {
             boolean transportOk = target.getStatus() >= 200 && target.getStatus() < 300;
             boolean apiOk = apiResult != null && apiResult.matches("0+");
             target.setApiOk(apiOk);
-            target.setOk(transportOk);
-            if (!transportOk && !isBlank(apiResultMessage)) {
+            target.setOk(transportOk && apiOk);
+            if ((!transportOk || !apiOk) && !isBlank(apiResultMessage)) {
                 target.setError(apiResultMessage);
             }
         }

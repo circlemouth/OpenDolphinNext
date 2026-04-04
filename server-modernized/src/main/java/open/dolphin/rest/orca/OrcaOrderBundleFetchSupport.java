@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import open.dolphin.infomodel.BundleDolphin;
+import open.dolphin.infomodel.ClaimConst;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.ModuleInfoBean;
 import open.dolphin.infomodel.ModuleModel;
@@ -135,9 +136,15 @@ final class OrcaOrderBundleFetchSupport {
                 moduleEntity,
                 null,
                 info != null ? info.getStampMemo() : null));
-        entry.setClassCode(bundle.getClassCode());
-        entry.setClassCodeSystem(bundle.getClassCodeSystem());
-        entry.setClassName(bundle.getClassName());
+        String canonicalClassCode = OrcaChargeClassCanonicalSupport.canonicalClassCode(
+                moduleEntity,
+                bundle.getClassCode());
+        entry.setClassCode(canonicalClassCode);
+        entry.setClassCodeSystem(canonicalClassCode != null ? ClaimConst.CLASS_CODE_ID : bundle.getClassCodeSystem());
+        entry.setClassName(OrcaChargeClassCanonicalSupport.canonicalClassName(
+                moduleEntity,
+                canonicalClassCode,
+                bundle.getClassName()));
         entry.setAdmin(bundle.getAdmin());
         entry.setAdminCode(bundle.getAdminCode());
         entry.setAdminCodeSystem(bundle.getAdminCodeSystem());

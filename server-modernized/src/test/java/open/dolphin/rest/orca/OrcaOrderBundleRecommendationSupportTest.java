@@ -76,6 +76,25 @@ class OrcaOrderBundleRecommendationSupportTest {
     }
 
     @Test
+    void toRecommendationTemplateCanonicalizesChargeClassNameFromClassCode() {
+        BundleDolphin bundle = new BundleDolphin();
+        bundle.setBundleNumber("1");
+        bundle.setClassCode("110");
+        bundle.setClassCodeSystem("Claim007");
+        bundle.setClassName("BundleFallback");
+        bundle.setClaimItem(new ClaimItem[]{claimItem("110000110", "INITIAL", "1", "times", null)});
+
+        OrderBundleRecommendationResponse.OrderRecommendationTemplate template =
+                OrcaOrderBundleRecommendationSupport.toRecommendationTemplate(
+                        "BASE",
+                        bundle,
+                        IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+                        null);
+
+        assertEquals("基本診療料", template.getClassName());
+    }
+
+    @Test
     void toRecommendationTemplateKeepsPrescriptionClassSemanticsForOtherClassCodes() {
         BundleDolphin tonyo = new BundleDolphin();
         tonyo.setBundleNumber("1");

@@ -134,9 +134,22 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             ChartSupportMedicationGetRequest payload) {
         requireRemoteUser(request);
         requireFacilityId(request);
+        String requestNumber = payload != null && !isBlank(payload.getRequestNumber())
+                ? payload.getRequestNumber().trim()
+                : "02";
         if (payload == null || isBlank(payload.getRequestCode())) {
             throw validationError(request, "payload", "requestCode is required");
         }
+        if (!"01".equals(requestNumber) && !"02".equals(requestNumber)) {
+            throw validationError(request, "payload.requestNumber", "requestNumber must be 01 or 02");
+        }
+        if ("02".equals(requestNumber) && !payload.getRequestCode().trim().matches("\\d{9}")) {
+            throw validationError(request, "payload.requestCode", "requestCode must be a 9-digit medical code for requestNumber 02");
+        }
+        if (!isBlank(payload.getBaseDate())) {
+            payload.setBaseDate(payload.getBaseDate().trim());
+        }
+        payload.setRequestNumber(requestNumber);
 
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
@@ -151,7 +164,9 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runId", runId);
         details.put("traceId", traceId);
+        details.put("requestNumber", requestNumber);
         details.put("requestCode", payload.getRequestCode());
+        details.put("baseDatePresent", !isBlank(payload.getBaseDate()));
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
         recordAudit(request, "ORCA_MEDICATION_GET", details,

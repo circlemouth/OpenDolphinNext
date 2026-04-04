@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import open.dolphin.infomodel.BundleDolphin;
 import open.dolphin.infomodel.ClaimItem;
+import open.dolphin.infomodel.ClaimConst;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.rest.dto.orca.OrderBundleFetchResponse;
 import open.dolphin.rest.dto.orca.OrderBundleRecommendationResponse;
@@ -160,9 +161,13 @@ final class OrcaOrderBundleRecommendationSupport {
         template.setAdminCode(normalize(bundle.getAdminCode()));
         template.setAdminCodeSystem(normalize(bundle.getAdminCodeSystem()));
         template.setBundleNumber(hasText(bundle.getBundleNumber()) ? bundle.getBundleNumber().trim() : "1");
-        template.setClassCode(normalize(bundle.getClassCode()));
-        template.setClassCodeSystem(normalize(bundle.getClassCodeSystem()));
-        template.setClassName(normalize(bundle.getClassName()));
+        String canonicalClassCode = OrcaChargeClassCanonicalSupport.canonicalClassCode(entity, bundle.getClassCode());
+        template.setClassCode(normalize(canonicalClassCode));
+        template.setClassCodeSystem(canonicalClassCode != null ? ClaimConst.CLASS_CODE_ID : normalize(bundle.getClassCodeSystem()));
+        template.setClassName(OrcaChargeClassCanonicalSupport.canonicalClassName(
+                entity,
+                canonicalClassCode,
+                bundle.getClassName()));
         template.setAdminMemo(normalize(bundle.getAdminMemo()));
         template.setMemo(normalize(bundle.getMemo()));
         template.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(entity, null, stampMemo));

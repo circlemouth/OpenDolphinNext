@@ -86,17 +86,18 @@ final class OrcaOrderBundleMutationSupport {
         bundle.setAdminCodeSystem(operation.getAdminCodeSystem());
         bundle.setAdminMemo(operation.getAdminMemo());
         bundle.setMemo(operation.getMemo());
-        if (OrcaOrderBundleRequestSupport.hasText(operation.getClassName())) {
-            bundle.setClassName(operation.getClassName());
-        } else if (OrcaOrderBundleRequestSupport.hasText(operation.getBundleName())) {
-            bundle.setClassName(operation.getBundleName());
+        String entity = resolveEntity(operation);
+        String classCode = OrcaChargeClassCanonicalSupport.canonicalClassCode(
+                entity,
+                operation.getClassCode());
+        if (OrcaOrderBundleRequestSupport.hasText(classCode)) {
+            bundle.setClassCode(classCode);
+            bundle.setClassCodeSystem(ClaimConst.CLASS_CODE_ID);
         }
-        if (OrcaOrderBundleRequestSupport.hasText(operation.getClassCode())) {
-            bundle.setClassCode(operation.getClassCode());
-            bundle.setClassCodeSystem(OrcaOrderBundleRequestSupport.hasText(operation.getClassCodeSystem())
-                    ? operation.getClassCodeSystem()
-                    : ClaimConst.CLASS_CODE_ID);
-        }
+        bundle.setClassName(OrcaChargeClassCanonicalSupport.canonicalClassName(
+                entity,
+                bundle.getClassCode(),
+                operation.getClassName()));
         bundle.setClaimItem(toClaimItems(operation));
 
         ModuleModel module = new ModuleModel();

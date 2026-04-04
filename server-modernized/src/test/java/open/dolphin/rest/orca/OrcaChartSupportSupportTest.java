@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
+import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import org.junit.jupiter.api.Test;
 
@@ -178,7 +179,7 @@ class OrcaChartSupportSupportTest {
 
         ChartSupportMedicalModV2Request.MedicalInformation baseCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         baseCharge.setMedicalClass("110");
-        baseCharge.setMedicalClassName("BaseCharge");
+        baseCharge.setMedicalClassName("BundleFallback");
         baseCharge.setMedicalClassNumber("1");
         ChartSupportMedicalModV2Request.Medication initialConsultation = new ChartSupportMedicalModV2Request.Medication();
         initialConsultation.setCode("110000110");
@@ -189,7 +190,7 @@ class OrcaChartSupportSupportTest {
 
         ChartSupportMedicalModV2Request.MedicalInformation instructionCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         instructionCharge.setMedicalClass("130");
-        instructionCharge.setMedicalClassName("Instruction");
+        instructionCharge.setMedicalClassName("BundleFallback");
         instructionCharge.setMedicalClassNumber("2");
         ChartSupportMedicalModV2Request.Medication homeInstruction = new ChartSupportMedicalModV2Request.Medication();
         homeInstruction.setCode("112007410");
@@ -203,14 +204,81 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Medical_Class type=\"string\">110</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">BaseCharge</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">基本診療料</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">110000110</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medical_Class type=\"string\">130</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Instruction</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">医学管理等</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">2</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">112007410</Medication_Code>"));
+        assertFalse(xml.contains("<Admin"));
+        assertFalse(xml.contains("<AdminMemo"));
+        assertFalse(xml.contains("<Memo"));
+        assertFalse(xml.contains("<Started"));
+        assertFalse(xml.contains("BaseCharge"));
+        assertFalse(xml.contains("Instruction"));
+    }
+
+    @Test
+    void buildMedicationGetRequestXmlSerializesRequestCodeAndBaseDate() {
+        ChartSupportMedicationGetRequest payload = new ChartSupportMedicationGetRequest();
+        payload.setRequestNumber("02");
+        payload.setRequestCode("114030710");
+        payload.setBaseDate("2026-03-22");
+
+        String xml = support.buildMedicationGetRequestXml(payload);
+
+        assertTrue(xml.contains("<Request_Number type=\"string\">02</Request_Number>"));
+        assertTrue(xml.contains("<Request_Code type=\"string\">114030710</Request_Code>"));
+        assertTrue(xml.contains("<Base_Date type=\"string\">2026-03-22</Base_Date>"));
+    }
+
+    @Test
+    void parseMedicationGetResponseReadsSelectionMetadata() {
+        String xml = """
+                <data>
+                  <medicationgetres type="record">
+                    <Information_Date type="string">2026-03-22</Information_Date>
+                    <Information_Time type="string">08:01:00</Information_Time>
+                    <Api_Result type="string">000</Api_Result>
+                    <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                    <Request_Code type="string">114030710</Request_Code>
+                    <Base_Date type="string">2026-03-22</Base_Date>
+                    <Medication_Information type="record">
+                      <Medication_Code type="string">114030710</Medication_Code>
+                      <Medication_Name type="string">在宅時医学総合管理料</Medication_Name>
+                      <Medication_Name_inKana type="string">ザイタクジイガクソウゴウカンリリョウ</Medication_Name_inKana>
+                      <StartDate type="string">2024-06-01</StartDate>
+                      <EndDate type="string">9999-12-31</EndDate>
+                    </Medication_Information>
+                    <Selection_Expression_Information type="array">
+                      <Selection_Expression_Information_child type="record">
+                        <Comment_Code type="string">850100106</Comment_Code>
+                        <Comment_Name type="string">往診又は訪問診療年月日（在医総管）</Comment_Name>
+                        <Item_Number type="string">0166</Item_Number>
+                        <Item_Number_Branch type="string">01</Item_Number_Branch>
+                        <Category type="string">C002</Category>
+                      </Selection_Expression_Information_child>
+                    </Selection_Expression_Information>
+                  </medicationgetres>
+                </data>
+                """;
+
+        var response = support.parseMedicationGetResponse(
+                OrcaTransportResult.fallback(xml, "application/xml"),
+                "run-2",
+                "trace-2");
+
+        assertTrue(response.isOk());
+        assertNotNull(response.getMedication());
+        assertEquals("114030710", response.getMedication().getMedicationCode());
+        assertEquals("114030710", response.getMedication().getRequestCode());
+        assertEquals(1, response.getSelections().size());
+        assertEquals("850100106", response.getSelections().get(0).getCommentCode());
+        assertEquals("0166", response.getSelections().get(0).getItemNumber());
+        assertEquals("01", response.getSelections().get(0).getItemNumberBranch());
+        assertEquals("C002", response.getSelections().get(0).getCategory());
     }
 
     @Test

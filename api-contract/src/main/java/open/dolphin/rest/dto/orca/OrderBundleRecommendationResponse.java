@@ -146,8 +146,11 @@ public class OrderBundleRecommendationResponse {
         private String subtype;
         private String classCode;
         private String classCodeSystem;
+        /** Canonical className resolved on the server. */
         private String className;
+        /** Local-only. Not sent to ORCA medicalmodv2. */
         private String adminMemo;
+        /** Local-only. Not sent to ORCA medicalmodv2. */
         private String memo;
         private String prescriptionLocation;
         private String prescriptionTiming;
