@@ -37,6 +37,7 @@ public class OrderBundleMutationRequest {
         private String bundleName;
         private String bundleNumber;
         private String subtype;
+        private BacteriaOrderMetadata bacteria;
         private String classCode;
         private String classCodeSystem;
         private String className;
@@ -49,6 +50,8 @@ public class OrderBundleMutationRequest {
         private String endDate;
         private BundleItem bodyPart;
         private List<BundleItem> items;
+        private List<BundleItem> materialItems;
+        private List<BundleItem> commentItems;
 
         public String getOperation() {
             return operation;
@@ -104,6 +107,14 @@ public class OrderBundleMutationRequest {
 
         public void setSubtype(String subtype) {
             this.subtype = subtype;
+        }
+
+        public BacteriaOrderMetadata getBacteria() {
+            return bacteria;
+        }
+
+        public void setBacteria(BacteriaOrderMetadata bacteria) {
+            this.bacteria = bacteria;
         }
 
         public String getClassCode() {
@@ -201,6 +212,22 @@ public class OrderBundleMutationRequest {
         public void setItems(List<BundleItem> items) {
             this.items = items;
         }
+
+        public List<BundleItem> getMaterialItems() {
+            return materialItems;
+        }
+
+        public void setMaterialItems(List<BundleItem> materialItems) {
+            this.materialItems = materialItems;
+        }
+
+        public List<BundleItem> getCommentItems() {
+            return commentItems;
+        }
+
+        public void setCommentItems(List<BundleItem> commentItems) {
+            this.commentItems = commentItems;
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -213,6 +240,9 @@ public class OrderBundleMutationRequest {
         private String genericFlg;
         private String userComment;
         private String rowRole;
+        private String category;
+        private String itemNumber;
+        private String itemNumberBranch;
 
         public String getName() {
             return name;
@@ -276,6 +306,30 @@ public class OrderBundleMutationRequest {
 
         public void setRowRole(String rowRole) {
             this.rowRole = rowRole;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
+        }
+
+        public String getItemNumber() {
+            return itemNumber;
+        }
+
+        public void setItemNumber(String itemNumber) {
+            this.itemNumber = itemNumber;
+        }
+
+        public String getItemNumberBranch() {
+            return itemNumberBranch;
+        }
+
+        public void setItemNumberBranch(String itemNumberBranch) {
+            this.itemNumberBranch = itemNumberBranch;
         }
     }
 }

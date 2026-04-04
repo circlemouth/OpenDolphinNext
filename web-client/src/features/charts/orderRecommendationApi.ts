@@ -1,5 +1,6 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { generateRunId, getObservabilityMeta, updateObservabilityMeta } from '../../libs/observability/observability';
+import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
 import type { OrderBundleBodyPart, OrderBundleItem } from './orderBundleApi';
 
 export type OrderRecommendationSource = 'patient' | 'facility';
@@ -12,6 +13,7 @@ export type OrderRecommendationTemplate = {
   adminCodeSystem?: string;
   bundleNumber: string;
   subtype?: string;
+  bacteria?: BacteriaOrderMetadata;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;

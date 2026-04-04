@@ -27,6 +27,11 @@ export type OrderMasterSearchItem = {
   daysLimit?: number;
   dosePerDay?: number;
   youhouCode?: string;
+  specimens?: Array<{
+    groupCode?: string;
+    seq?: number;
+    sampleCode?: string;
+  }>;
 };
 
 export type OrderMasterSearchResult = {
@@ -92,6 +97,11 @@ type OrcaTensuEntry = {
   startDate?: string;
   endDate?: string;
   tensuVersion?: string;
+  specimens?: Array<{
+    groupCode?: string;
+    seq?: number;
+    sampleCode?: string;
+  }>;
 };
 
 const MASTER_ENDPOINT_MAP: Record<OrderMasterSearchType, string> = {
@@ -137,6 +147,15 @@ const normalizeTensuEntry = (entry: OrcaTensuEntry, type: OrderMasterSearchType)
   const name = entry.name?.trim();
   if (!name) return null;
   const code = entry.tensuCode?.trim();
+  const specimens = Array.isArray(entry.specimens)
+    ? entry.specimens
+        .map((specimen) => ({
+          groupCode: typeof specimen.groupCode === 'string' ? specimen.groupCode : undefined,
+          seq: typeof specimen.seq === 'number' ? specimen.seq : undefined,
+          sampleCode: typeof specimen.sampleCode === 'string' ? specimen.sampleCode : undefined,
+        }))
+        .filter((specimen) => specimen.groupCode || specimen.sampleCode)
+    : [];
   return {
     type,
     code: code || undefined,
@@ -147,6 +166,7 @@ const normalizeTensuEntry = (entry: OrcaTensuEntry, type: OrderMasterSearchType)
     note: entry.noticeDate ?? entry.effectiveDate ?? entry.tensuVersion ?? undefined,
     validFrom: entry.startDate ?? entry.effectiveDate ?? undefined,
     validTo: entry.endDate ?? undefined,
+    specimens: specimens.length > 0 ? specimens : undefined,
   };
 };
 

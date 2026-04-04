@@ -69,6 +69,7 @@ public class OrderBundleFetchResponse {
         private String bundleName;
         private String bundleNumber;
         private String subtype;
+        private BacteriaOrderMetadata bacteria;
         private String classCode;
         private String classCodeSystem;
         private String className;
@@ -82,6 +83,8 @@ public class OrderBundleFetchResponse {
         private String enteredByRole;
         private OrderBundleItem bodyPart;
         private List<OrderBundleItem> items;
+        private List<OrderBundleItem> materialItems;
+        private List<OrderBundleItem> commentItems;
 
         public Long getDocumentId() {
             return documentId;
@@ -129,6 +132,14 @@ public class OrderBundleFetchResponse {
 
         public void setSubtype(String subtype) {
             this.subtype = subtype;
+        }
+
+        public BacteriaOrderMetadata getBacteria() {
+            return bacteria;
+        }
+
+        public void setBacteria(BacteriaOrderMetadata bacteria) {
+            this.bacteria = bacteria;
         }
 
         public String getClassCode() {
@@ -234,6 +245,22 @@ public class OrderBundleFetchResponse {
         public void setItems(List<OrderBundleItem> items) {
             this.items = items;
         }
+
+        public List<OrderBundleItem> getMaterialItems() {
+            return materialItems;
+        }
+
+        public void setMaterialItems(List<OrderBundleItem> materialItems) {
+            this.materialItems = materialItems;
+        }
+
+        public List<OrderBundleItem> getCommentItems() {
+            return commentItems;
+        }
+
+        public void setCommentItems(List<OrderBundleItem> commentItems) {
+            this.commentItems = commentItems;
+        }
     }
 
     public static class OrderBundleItem {
@@ -245,6 +272,9 @@ public class OrderBundleFetchResponse {
         private String genericFlg;
         private String userComment;
         private String rowRole;
+        private String category;
+        private String itemNumber;
+        private String itemNumberBranch;
 
         public String getCode() {
             return code;
@@ -308,6 +338,30 @@ public class OrderBundleFetchResponse {
 
         public void setRowRole(String rowRole) {
             this.rowRole = rowRole;
+        }
+
+        public String getCategory() {
+            return category;
+        }
+
+        public void setCategory(String category) {
+            this.category = category;
+        }
+
+        public String getItemNumber() {
+            return itemNumber;
+        }
+
+        public void setItemNumber(String itemNumber) {
+            this.itemNumber = itemNumber;
+        }
+
+        public String getItemNumberBranch() {
+            return itemNumberBranch;
+        }
+
+        public void setItemNumberBranch(String itemNumberBranch) {
+            this.itemNumberBranch = itemNumberBranch;
         }
     }
 }

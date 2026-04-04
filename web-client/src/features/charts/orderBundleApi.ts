@@ -5,6 +5,8 @@ import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
+import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
+import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export type OrderBundleItem = {
@@ -16,6 +18,10 @@ export type OrderBundleItem = {
   genericFlg?: 'yes' | 'no';
   userComment?: string;
   rowRole?: 'main' | 'material' | 'comment' | 'bodyPart';
+  commentValue?: string;
+  category?: string;
+  itemNumber?: string;
+  itemNumberBranch?: string;
 };
 
 export type OrderBundleBodyPart = {
@@ -35,6 +41,7 @@ export type OrderBundle = {
   bundleNumber?: string;
   sourceSetCode?: string;
   subtype?: string;
+  bacteria?: BacteriaOrderMetadata;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
@@ -51,6 +58,8 @@ export type OrderBundle = {
   authorRole?: string;
   authoredAt?: string;
   items: OrderBundleItem[];
+  materialItems?: OrderBundleItem[];
+  commentItems?: OrderBundleItem[];
   bodyPart?: OrderBundleBodyPart;
 };
 
@@ -83,6 +92,7 @@ export type OrderBundleOperation = {
   bundleName?: string;
   bundleNumber?: string;
   subtype?: string;
+  bacteria?: BacteriaOrderMetadata;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
@@ -94,6 +104,8 @@ export type OrderBundleOperation = {
   startDate?: string;
   endDate?: string;
   items?: OrderBundleItem[];
+  materialItems?: OrderBundleItem[];
+  commentItems?: OrderBundleItem[];
   bodyPart?: OrderBundleBodyPart;
 };
 
@@ -107,6 +119,7 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
   ...bundle,
   entity: normalizeOrderEntityValue(bundle.entity),
+  bacteria: normalizeBacteriaOrderMetadata(bundle.bacteria),
   items: (bundle.items ?? []).map((item) => {
     const fields = resolveOrcaOrderItemFields(item);
     return {
@@ -114,6 +127,33 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
       memo: fields.memoText,
       genericFlg: fields.genericFlg,
       userComment: fields.userComment,
+      category: item.category?.trim() || undefined,
+      itemNumber: fields.itemNumber,
+      itemNumberBranch: fields.itemNumberBranch,
+    };
+  }),
+  materialItems: (bundle.materialItems ?? []).map((item) => {
+    const fields = resolveOrcaOrderItemFields(item);
+    return {
+      ...item,
+      memo: fields.memoText,
+      genericFlg: fields.genericFlg,
+      userComment: fields.userComment,
+      category: item.category?.trim() || undefined,
+      itemNumber: fields.itemNumber,
+      itemNumberBranch: fields.itemNumberBranch,
+    };
+  }),
+  commentItems: (bundle.commentItems ?? []).map((item) => {
+    const fields = resolveOrcaOrderItemFields(item);
+    return {
+      ...item,
+      memo: fields.memoText,
+      genericFlg: fields.genericFlg,
+      userComment: fields.userComment,
+      category: item.category?.trim() || undefined,
+      itemNumber: fields.itemNumber,
+      itemNumberBranch: fields.itemNumberBranch,
     };
   }),
 });
@@ -121,6 +161,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
 const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => ({
   ...operation,
   entity: normalizeOrderEntityValue(operation.entity),
+  bacteria: normalizeBacteriaOrderMetadata(operation.bacteria),
   items: (operation.items ?? []).map((item) => {
     const fields = resolveOrcaOrderItemFields(item);
     return {
@@ -128,6 +169,33 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
       memo: fields.memoText,
       genericFlg: fields.genericFlg,
       userComment: fields.userComment,
+      category: item.category?.trim() || undefined,
+      itemNumber: fields.itemNumber,
+      itemNumberBranch: fields.itemNumberBranch,
+    };
+  }),
+  materialItems: (operation.materialItems ?? []).map((item) => {
+    const fields = resolveOrcaOrderItemFields(item);
+    return {
+      ...item,
+      memo: fields.memoText,
+      genericFlg: fields.genericFlg,
+      userComment: fields.userComment,
+      category: item.category?.trim() || undefined,
+      itemNumber: fields.itemNumber,
+      itemNumberBranch: fields.itemNumberBranch,
+    };
+  }),
+  commentItems: (operation.commentItems ?? []).map((item) => {
+    const fields = resolveOrcaOrderItemFields(item);
+    return {
+      ...item,
+      memo: fields.memoText,
+      genericFlg: fields.genericFlg,
+      userComment: fields.userComment,
+      category: item.category?.trim() || undefined,
+      itemNumber: fields.itemNumber,
+      itemNumberBranch: fields.itemNumberBranch,
     };
   }),
 });

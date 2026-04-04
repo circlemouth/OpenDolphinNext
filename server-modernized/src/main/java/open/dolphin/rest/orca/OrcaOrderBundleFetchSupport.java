@@ -70,7 +70,10 @@ final class OrcaOrderBundleFetchSupport {
         List<OrcaOrderInputSetListResponse.Item> filtered = rows.stream()
                 .filter(Objects::nonNull)
                 .map(row -> {
-                    row.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(row.getEntity()));
+                    row.setEntity(OrcaOrderBundle600SubtypeSupport.resolveInputSetEntity(
+                            entity,
+                            OrcaOrderBundleRequestSupport.normalizeEntityResponse(row.getEntity()),
+                            row.getClassCode()));
                     return row;
                 })
                 .filter(row -> entity == null
@@ -135,6 +138,11 @@ final class OrcaOrderBundleFetchSupport {
                 moduleEntity,
                 null,
                 info != null ? info.getStampMemo() : null));
+        entry.setBacteria(OrcaOrderBundle600SubtypeSupport.resolveBacteria(
+                moduleEntity,
+                null,
+                info != null ? info.getStampMemo() : null,
+                bundle.getClaimItem()));
         entry.setClassCode(bundle.getClassCode());
         entry.setClassCodeSystem(bundle.getClassCodeSystem());
         entry.setClassName(bundle.getClassName());
@@ -147,10 +155,14 @@ final class OrcaOrderBundleFetchSupport {
         UserModel enteredBy = OrcaOrderBundleDisplaySupport.resolveEnteredByUser(module, document);
         entry.setEnteredByName(OrcaOrderBundleDisplaySupport.resolveEnteredByName(enteredBy));
         entry.setEnteredByRole(OrcaOrderBundleDisplaySupport.resolveEnteredByRole(enteredBy));
-        List<OrderBundleFetchResponse.OrderBundleItem> items =
+        List<OrderBundleFetchResponse.OrderBundleItem> allItems =
                 OrcaOrderBundleRecommendationSupport.toItems(moduleEntity, bundle.getClaimItem());
-        entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(items));
-        entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(items));
+        entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(allItems));
+        entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(allItems));
+        entry.setMaterialItems(OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(
+                allItems, OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL));
+        entry.setCommentItems(OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(
+                allItems, OrcaOrderBundleRecommendationSupport.ROW_ROLE_COMMENT));
         return entry;
     }
 }

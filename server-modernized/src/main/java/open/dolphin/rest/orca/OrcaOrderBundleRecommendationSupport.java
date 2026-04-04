@@ -6,6 +6,7 @@ import java.util.Objects;
 import open.dolphin.infomodel.BundleDolphin;
 import open.dolphin.infomodel.ClaimItem;
 import open.dolphin.infomodel.IInfoModel;
+import open.dolphin.rest.dto.orca.BacteriaOrderMetadata;
 import open.dolphin.rest.dto.orca.OrderBundleFetchResponse;
 import open.dolphin.rest.dto.orca.OrderBundleRecommendationResponse;
 
@@ -40,6 +41,9 @@ final class OrcaOrderBundleRecommendationSupport {
             entry.setMemo(parsedMemo.memoText());
             entry.setGenericFlg(parsedMemo.genericFlg());
             entry.setUserComment(parsedMemo.userComment());
+            entry.setCategory(parsedMemo.category());
+            entry.setItemNumber(parsedMemo.itemNumber());
+            entry.setItemNumberBranch(parsedMemo.itemNumberBranch());
             entry.setRowRole(resolveRowRole(entity, entry));
             list.add(entry);
         }
@@ -78,6 +82,24 @@ final class OrcaOrderBundleRecommendationSupport {
             }
         }
         return null;
+    }
+
+    static List<OrderBundleFetchResponse.OrderBundleItem> filterItemsByRowRole(
+            List<OrderBundleFetchResponse.OrderBundleItem> items,
+            String rowRole) {
+        if (items == null || items.isEmpty()) {
+            return List.of();
+        }
+        List<OrderBundleFetchResponse.OrderBundleItem> filtered = new ArrayList<>();
+        for (OrderBundleFetchResponse.OrderBundleItem item : items) {
+            if (item == null) {
+                continue;
+            }
+            if (Objects.equals(rowRole, item.getRowRole())) {
+                filtered.add(item);
+            }
+        }
+        return filtered;
     }
 
     static boolean isBodyPartCode(String code) {
@@ -166,6 +188,7 @@ final class OrcaOrderBundleRecommendationSupport {
         template.setAdminMemo(normalize(bundle.getAdminMemo()));
         template.setMemo(normalize(bundle.getMemo()));
         template.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(entity, null, stampMemo));
+        template.setBacteria(OrcaOrderBundle600SubtypeSupport.resolveBacteria(entity, null, stampMemo, bundle.getClaimItem()));
         if (IInfoModel.ENTITY_MED_ORDER.equals(entity)) {
             template.setPrescriptionLocation(prescriptionMeta.location());
             template.setPrescriptionTiming(prescriptionMeta.timing());
@@ -189,6 +212,7 @@ final class OrcaOrderBundleRecommendationSupport {
         appendNormalized(builder, template.getMemo());
         appendNormalized(builder, template.getPrescriptionLocation());
         appendNormalized(builder, template.getPrescriptionTiming());
+        appendBacteria(builder, template.getBacteria());
         appendItems(builder, template.getItems());
         appendItems(builder, template.getMaterialItems());
         appendItems(builder, template.getCommentItems());
@@ -221,6 +245,33 @@ final class OrcaOrderBundleRecommendationSupport {
         appendNormalized(builder, item.getGenericFlg());
         appendNormalized(builder, item.getUserComment());
         builder.append("}");
+    }
+
+    private static void appendBacteria(StringBuilder builder, BacteriaOrderMetadata bacteria) {
+        builder.append("|{");
+        if (bacteria != null) {
+            appendCarrierComment(builder, bacteria.getSpecimen());
+            if (bacteria.getCarrierComments() != null) {
+                for (BacteriaOrderMetadata.CarrierComment comment : bacteria.getCarrierComments()) {
+                    appendCarrierComment(builder, comment);
+                }
+            }
+        }
+        builder.append("}");
+    }
+
+    private static void appendCarrierComment(StringBuilder builder, BacteriaOrderMetadata.CarrierComment comment) {
+        builder.append("[");
+        if (comment != null) {
+            appendNormalized(builder, comment.getRole());
+            appendNormalized(builder, comment.getCode());
+            appendNormalized(builder, comment.getName());
+            appendNormalized(builder, comment.getInputValue());
+            appendNormalized(builder, comment.getCategory());
+            appendNormalized(builder, comment.getItemNumber());
+            appendNormalized(builder, comment.getItemNumberBranch());
+        }
+        builder.append("]");
     }
 
     private static void appendNormalized(StringBuilder builder, String value) {

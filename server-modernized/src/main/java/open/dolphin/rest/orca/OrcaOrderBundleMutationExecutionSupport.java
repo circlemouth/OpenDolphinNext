@@ -10,11 +10,13 @@ import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.rest.dto.orca.BacteriaOrderMetadata;
 import open.dolphin.rest.dto.orca.OrderBundleMutationRequest;
 
 final class OrcaOrderBundleMutationExecutionSupport {
 
     private static final Pattern COMMENT_CODE_PATTERN = Pattern.compile("^(008[1-6]|8[1-6]|098|099|98|99)");
+    private static final Pattern BACTERIA_NUMERIC_COMMENT_VALUE_PATTERN = Pattern.compile("^[+-]?\\d+(?:\\.\\d+)?$");
 
     private OrcaOrderBundleMutationExecutionSupport() {
     }
@@ -86,7 +88,8 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 && !OrcaOrderBundle600SubtypeSupport.isValidSubtype(canonicalEntity, explicitSubtype)) {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
-        List<OrderBundleMutationRequest.BundleItem> items = op.getItems();
+        validateBacteriaMetadata(canonicalEntity, op.getBacteria(), validationFailure);
+        List<OrderBundleMutationRequest.BundleItem> items = collectItems(op);
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
         boolean hasSendableMainRow = false;
@@ -124,6 +127,68 @@ final class OrcaOrderBundleMutationExecutionSupport {
         }
         if (requiresSendableMainRow(canonicalEntity) && !hasSendableMainRow) {
             throw validationFailure.invalid("items", "items do not contain a sendable main row");
+        }
+    }
+
+    private static List<OrderBundleMutationRequest.BundleItem> collectItems(OrderBundleMutationRequest.BundleOperation op) {
+        List<OrderBundleMutationRequest.BundleItem> collected = new ArrayList<>();
+        appendItems(collected, op != null ? op.getItems() : null);
+        appendItems(collected, op != null ? op.getMaterialItems() : null);
+        appendItems(collected, op != null ? op.getCommentItems() : null);
+        return collected;
+    }
+
+    private static void appendItems(
+            List<OrderBundleMutationRequest.BundleItem> target,
+            List<OrderBundleMutationRequest.BundleItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        target.addAll(items);
+    }
+
+    private static void validateBacteriaMetadata(
+            String canonicalEntity,
+            BacteriaOrderMetadata bacteria,
+            ValidationFailure validationFailure) {
+        if (bacteria == null) {
+            return;
+        }
+        if (!IInfoModel.ENTITY_BACTERIA_ORDER.equals(canonicalEntity)) {
+            throw validationFailure.invalid("bacteria", "bacteria metadata is incompatible with entity");
+        }
+        validateCarrierComment("bacteria.specimen", bacteria.getSpecimen(), validationFailure);
+        if (bacteria.getCarrierComments() != null) {
+            for (int i = 0; i < bacteria.getCarrierComments().size(); i += 1) {
+                validateCarrierComment("bacteria.carrierComments[" + i + "]", bacteria.getCarrierComments().get(i), validationFailure);
+            }
+        }
+    }
+
+    private static void validateCarrierComment(
+            String field,
+            BacteriaOrderMetadata.CarrierComment comment,
+            ValidationFailure validationFailure) {
+        if (comment == null) {
+            return;
+        }
+        String code = OrcaOrderBundleRequestSupport.trimToNull(comment.getCode());
+        String name = OrcaOrderBundleRequestSupport.trimToNull(comment.getName());
+        String inputValue = OrcaOrderBundleRequestSupport.trimToNull(comment.getInputValue());
+        if (code == null && name == null && inputValue == null) {
+            return;
+        }
+        if (code == null || !isCommentCode(code)) {
+            throw validationFailure.invalid(field, "bacteria carrier comment code is invalid");
+        }
+        if (code.matches("^842\\d{6}$")) {
+            if (inputValue == null || !BACTERIA_NUMERIC_COMMENT_VALUE_PATTERN.matcher(inputValue).matches()) {
+                throw validationFailure.invalid(field, "842 comment requires numeric inputValue");
+            }
+            return;
+        }
+        if (code.matches("^830\\d{6}$") && inputValue == null) {
+            throw validationFailure.invalid(field, "830 comment requires inputValue");
         }
     }
 

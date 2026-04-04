@@ -65,8 +65,7 @@ export type MedicalModV2BundleIssueCode =
   | 'uncoded_row'
   | 'mixed_coded_uncoded'
   | 'comment_only'
-  | 'missing_main_row'
-  | 'unsupported_bacteria_subtype';
+  | 'missing_main_row';
 
 export type MedicalModV2BundleIssue = {
   code: MedicalModV2BundleIssueCode;
@@ -127,6 +126,8 @@ const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem
 
 const collectNormalizedRows = (bundle: OrderBundle) => {
   const rows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
+  const hasExplicitMaterial = Boolean(bundle.materialItems && bundle.materialItems.length > 0);
+  const hasExplicitComment = Boolean(bundle.commentItems && bundle.commentItems.length > 0);
   const explicitBodyPart = cloneBodyPartItem(bundle.bodyPart);
   const legacyBodyPart = explicitBodyPart
     ? null
@@ -149,14 +150,35 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
     const row = { item: cloned, source: { kind: 'bundle_item', itemIndex } as const };
     const rowRole = resolveBundleItemRowRole(bundle.entity, cloned);
     if (rowRole === 'comment') {
+      if (hasExplicitComment) return;
       commentRows.push(row);
       return;
     }
     if (rowRole === 'material') {
+      if (hasExplicitMaterial) return;
       materialRows.push(row);
       return;
     }
     mainRows.push(row);
+  });
+  (bundle.materialItems ?? []).forEach((item, itemIndex) => {
+    const cloned = cloneBundleItem(item);
+    if (!cloned || !hasBundleItemValue(cloned)) return;
+    materialRows.push({
+      item: { ...cloned, rowRole: 'material' },
+      source: { kind: 'bundle_item', itemIndex: (bundle.items?.length ?? 0) + itemIndex },
+    });
+  });
+  (bundle.commentItems ?? []).forEach((item, itemIndex) => {
+    const cloned = cloneBundleItem(item);
+    if (!cloned || !hasBundleItemValue(cloned)) return;
+    commentRows.push({
+      item: { ...cloned, rowRole: 'comment' },
+      source: {
+        kind: 'bundle_item',
+        itemIndex: (bundle.items?.length ?? 0) + (bundle.materialItems?.length ?? 0) + itemIndex,
+      },
+    });
   });
   rows.push(...mainRows, ...materialRows, ...commentRows);
   return rows;
@@ -173,15 +195,6 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
 
 export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): MedicalModV2BundleIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
-  if (canonicalEntity === 'bacteriaOrder' && bundle.subtype?.trim()) {
-    return [
-      buildBundleIssue(
-        bundle,
-        'unsupported_bacteria_subtype',
-        '細菌検査 subtype は ORCA 送信 carrier 未対応のため、送信前に停止します。',
-      ),
-    ];
-  }
   const rows = collectNormalizedRows(bundle);
   const valuedRows = rows.filter((row) => hasBundleItemValue(row.item));
   if (valuedRows.length === 0) {
