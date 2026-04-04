@@ -142,7 +142,7 @@ exports[`OrderBundleEditPanel body part search > 放射線の部位検索はキ�
               <p
                 class="charts-side-panel__help"
               >
-                setCode は展開専用です。保存・ORCA送信 payload には保持しません。
+                放射線送信では bodyPart・main/auxiliary/comment の coded row・classCode を使います。検査指示(admin)・instruction補足(adminMemo)・bundle memo・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。材料/造影薬の区別は rowRole=auxiliary + rowSubtype として保存します。
               </p>
             </div>
             <div
@@ -417,6 +417,37 @@ exports[`OrderBundleEditPanel body part search > 放射線の部位検索はキ�
                         value=""
                       />
                     </div>
+                  </div>
+                  <div
+                    class="charts-side-panel__subsection"
+                  >
+                    <div
+                      class="charts-side-panel__subheader"
+                    >
+                      <strong>
+                        補助行（材料/造影薬）
+                      </strong>
+                      <div
+                        class="charts-side-panel__subheader-actions"
+                      >
+                        <button
+                          class="charts-side-panel__ghost charts-side-panel__ghost--add"
+                          type="button"
+                        >
+                          補助行追加
+                        </button>
+                      </div>
+                    </div>
+                    <p
+                      class="charts-side-panel__help"
+                    >
+                      放射線の補助行は \`rowRole=auxiliary\` と \`rowSubtype=material|contrastDrug\` を保存します。material/drug 候補を main 行で選んだ場合もここへ移します。
+                    </p>
+                    <p
+                      class="charts-side-panel__empty"
+                    >
+                      補助行はまだありません。
+                    </p>
                   </div>
                 </div>
               </div>

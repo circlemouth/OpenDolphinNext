@@ -16,6 +16,8 @@ export type OrcaMedicalWarningUi = {
   medicationName?: string;
   sourceKind?: 'bundle_item' | 'usage' | 'body_part';
   sourceItemIndex?: number;
+  sourceRowRole?: 'main' | 'auxiliary' | 'comment' | 'bodyPart';
+  sourceRowSubtype?: 'material' | 'contrastDrug';
 };
 
 export type OrcaClaimSendCacheEntry = {

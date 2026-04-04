@@ -47,7 +47,7 @@ describe('order send smoke', () => {
                 bundleNumber: '3',
                 classCode: '700',
                 classCodeSystem: 'Claim007',
-                className: 'Radiology',
+                className: '放射線',
                 admin: '検査前説明',
                 memo: 'local-radiology-memo',
                 bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
@@ -90,7 +90,7 @@ describe('order send smoke', () => {
           bundleNumber: '3',
           classCode: '700',
           classCodeSystem: 'Claim007',
-          className: 'Radiology',
+          className: '放射線',
           admin: '検査前説明',
           memo: 'local-radiology-memo',
           bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
@@ -122,7 +122,7 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '放射線',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001', unit: 'PART' }),
@@ -157,7 +157,7 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '放射線',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001', unit: 'PART' }),
@@ -602,7 +602,7 @@ describe('order send smoke', () => {
                 adminMemo: 'slow-drip',
                 memo: 'bundle-memo-c',
                 items: [
-                  { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: 'material-note', rowRole: 'material' },
+                  { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: 'material-note', rowRole: 'auxiliary' },
                   { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: 'freeform-c', userComment: 'local-c', rowRole: 'main' },
                 ],
               },
@@ -677,7 +677,7 @@ describe('order send smoke', () => {
           adminMemo: 'slow-drip',
           memo: 'bundle-memo-c',
           items: [
-            { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: 'material-note', rowRole: 'material' },
+            { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: 'material-note', rowRole: 'auxiliary' },
             { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: 'freeform-c', userComment: 'local-c', rowRole: 'main' },
           ],
         },
@@ -688,7 +688,7 @@ describe('order send smoke', () => {
     const saveBody = JSON.parse(String(saveRequest?.body ?? '{}')) as Record<string, any>;
     expect(
       saveBody.operations.map((entry: Record<string, any>) => entry.items.map((item: Record<string, string>) => item.rowRole)),
-    ).toEqual([['main'], ['comment', 'main', 'main'], ['material', 'main']]);
+    ).toEqual([['main'], ['comment', 'main', 'main'], ['auxiliary', 'main']]);
     expect(JSON.stringify(saveBody.operations)).not.toContain('__orca_meta__:');
 
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'injectionOrder' });
@@ -696,7 +696,7 @@ describe('order send smoke', () => {
     expect(fetched.bundles.map((bundle) => bundle.items.map((item) => item.rowRole))).toEqual([
       ['main'],
       ['comment', 'main', 'main'],
-      ['material', 'main'],
+      ['auxiliary', 'main'],
     ]);
     expect(fetched.bundles[1]?.items[2]?.userComment).toBe('local-b');
     expect(fetched.bundles[1]?.items[2]?.memo).toBe('freeform-b');

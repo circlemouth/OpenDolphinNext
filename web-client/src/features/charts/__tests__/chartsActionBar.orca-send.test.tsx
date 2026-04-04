@@ -358,7 +358,7 @@ describe('ChartsActionBar ORCA send', () => {
                 classCode: '310',
                 admin: '点滴',
                 adminCode: '4103',
-                items: [{ code: '700000031', name: 'drip-set', quantity: '1', unit: 'set', rowRole: 'material' }],
+                items: [{ code: '700000031', name: 'drip-set', quantity: '1', unit: 'set', rowRole: 'auxiliary' }],
               },
             ]
           : [],
@@ -415,7 +415,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '3',
                 classCode: '700',
                 classCodeSystem: 'Claim007',
-                className: 'Radiology',
+                className: '放射線',
                 bodyPart: { code: '002001', name: 'chest', quantity: '1', unit: 'part', memo: '' },
                 items: [
                   { code: '170017510', name: 'ct', quantity: '1', unit: 'times', memo: '' },

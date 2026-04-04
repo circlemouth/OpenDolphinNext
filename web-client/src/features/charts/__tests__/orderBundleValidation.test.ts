@@ -369,7 +369,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '胸部撮影',
         items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
-        bodyPart: { code: 'BP001', name: '胸部', quantity: '', unit: '', memo: '' },
+        bodyPart: { code: '001001', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
       bundleLabel: '放射線オーダー名',
@@ -432,7 +432,7 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
-  it('materialItems: 材料名が空でもエラーにしない（材料は項目行へ統合）', () => {
+  it('materialItems: 数量や単位だけの行は保存前に block する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -443,7 +443,22 @@ describe('validateBundleForm', () => {
       entity: 'generalOrder',
       bundleLabel: 'オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual([]);
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_material_item']);
+  });
+
+  it('radiologyOrder: 補助行だけで main row が無い場合は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '胸部撮影',
+        items: [],
+        materialItems: [{ code: '700000001', name: '造影剤', quantity: '1', unit: '本', memo: '' }],
+        bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
+      },
+      entity: 'radiologyOrder',
+      bundleLabel: '放射線オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
   });
 
   it('materialItems: 行を削除するとエラーが解消される', () => {

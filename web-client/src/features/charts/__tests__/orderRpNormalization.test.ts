@@ -84,7 +84,7 @@ describe('orderRpNormalization', () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toEqual(
       expect.objectContaining({
-        code: 'comment_only',
+        code: 'missing_main_row',
         bundleName: '胸部CT',
       }),
     );
@@ -144,19 +144,36 @@ describe('orderRpNormalization', () => {
     expect(buildMedicalModV2BlockNotice(prepared)?.message).toContain('otherOrder');
   });
 
-  it('normalize は unit を保持する', () => {
+  it('normalize は radiology auxiliary rowSubtype と canonical className を send source に残す', () => {
     const normalized = normalizeOrderBundleToRp({
       entity: 'radiologyOrder',
       bundleName: '胸部CT',
       bundleNumber: '1',
-      items: [{ code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '' }],
+      classCode: '700',
+      className: '画像診断',
+      bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
+      items: [
+        { code: '170017510', name: '胸部CT', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+        {
+          code: '600000001',
+          name: '造影剤',
+          quantity: '1',
+          unit: '本',
+          memo: '',
+          rowRole: 'auxiliary',
+          rowSubtype: 'contrastDrug',
+        },
+        { code: '0085001', name: 'コメント', quantity: '', unit: '', memo: '', rowRole: 'comment' },
+      ],
     } as any);
 
-    expect(normalized?.rows[0]?.medication).toEqual(
-      expect.objectContaining({
-        unit: '回',
-      }),
+    expect(normalized?.header.medicalClassName).toBe('放射線');
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['002001', '170017510', '600000001', '0085001']);
+    expect(normalized?.rows[1]?.source).toEqual(expect.objectContaining({ kind: 'bundle_item', rowRole: 'main' }));
+    expect(normalized?.rows[2]?.source).toEqual(
+      expect.objectContaining({ kind: 'bundle_item', rowRole: 'auxiliary', rowSubtype: 'contrastDrug' }),
     );
+    expect(normalized?.rows[3]?.source).toEqual(expect.objectContaining({ kind: 'bundle_item', rowRole: 'comment' }));
   });
 
   it('normalize は explicit bodyPart と adminCode を first-class で保持する', () => {
@@ -190,7 +207,7 @@ describe('orderRpNormalization', () => {
       adminCode: '4101',
       items: [
         { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'slow', rowRole: 'comment' },
-        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
+        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'auxiliary' },
         { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
         { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', rowRole: 'main' },
       ],

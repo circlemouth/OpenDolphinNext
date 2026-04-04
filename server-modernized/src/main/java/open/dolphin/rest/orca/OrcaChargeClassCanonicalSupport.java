@@ -6,6 +6,7 @@ final class OrcaChargeClassCanonicalSupport {
 
     static final String BASE_CHARGE_CLASS_NAME = "基本診療料";
     static final String INSTRUCTION_CHARGE_CLASS_NAME = "医学管理等";
+    static final String RADIOLOGY_CLASS_NAME = "放射線";
 
     private OrcaChargeClassCanonicalSupport() {
     }
@@ -49,6 +50,9 @@ final class OrcaChargeClassCanonicalSupport {
     }
 
     static String canonicalClassNameForMedicalClass(String medicalClass) {
+        if (isInRange(medicalClass, 700, 799)) {
+            return RADIOLOGY_CLASS_NAME;
+        }
         if (isInRange(medicalClass, 110, 125)) {
             return BASE_CHARGE_CLASS_NAME;
         }

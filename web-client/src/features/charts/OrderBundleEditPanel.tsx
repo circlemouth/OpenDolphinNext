@@ -12,6 +12,8 @@ import {
   type OrderBundle,
   type OrderBundleBodyPart,
   type OrderBundleItem,
+  type OrderBundleRowRole,
+  type OrderBundleRowSubtype,
 } from './orderBundleApi';
 import { getOrcaClaimSendEntry, type OrcaMedicalWarningUi } from './orcaClaimSendCache';
 import {
@@ -386,8 +388,7 @@ const resolveDocumentOpenRequest = (bundle: OrderBundle, item: OrderBundleItem):
   };
 };
 
-const countItems = (items?: OrderBundleItem[]) =>
-  items ? items.filter((item) => item.name.trim().length > 0).length : 0;
+const countItems = (items?: OrderBundleItem[]) => (items ? items.filter((item) => hasOrderBundleItemValue(item)).length : 0);
 
 const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
   const normalizedCode = code?.trim();
@@ -397,16 +398,44 @@ const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null)
   return canonicalEntity !== 'radiologyOrder';
 };
 
-const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | OrderBundleBodyPart | null) => {
+const resolveRadiologyAuxiliarySubtype = (item?: Pick<OrderBundleItem, 'code' | 'rowSubtype'> | null): OrderBundleRowSubtype => {
+  if (item?.rowSubtype === 'material' || item?.rowSubtype === 'contrastDrug') {
+    return item.rowSubtype;
+  }
+  return isDrugMedicationCode(item?.code?.trim() ?? '') ? 'contrastDrug' : 'material';
+};
+
+const resolveBundleItemRowRole = (
+  entity?: string | null,
+  item?: Pick<OrderBundleItem, 'code' | 'rowRole'> | Pick<OrderBundleBodyPart, 'code' | 'rowRole'> | null,
+) => {
   if (!item) return 'main' as const;
-  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
+  if (item.rowRole === 'main' || item.rowRole === 'auxiliary' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
     return item.rowRole;
   }
+  if (item.rowRole === 'material') return 'auxiliary' as const;
   const code = item.code?.trim();
   if (code?.startsWith(BODY_PART_CODE_PREFIX)) return 'bodyPart' as const;
-  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
+  if ((resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && isDrugMedicationCode(code ?? '')) {
+    return 'auxiliary' as const;
+  }
+  if (shouldTreatAsMaterialItem(entity, code)) return 'auxiliary' as const;
   if (code && COMMENT_CODE_PATTERN.test(code)) return 'comment' as const;
   return 'main' as const;
+};
+
+const resolveBundleItemRowSubtype = (
+  entity?: string | null,
+  item?: Pick<OrderBundleItem, 'code' | 'rowSubtype' | 'rowRole'> | Pick<OrderBundleBodyPart, 'code' | 'rowRole'> | null,
+  rowRole?: OrderBundleRowRole,
+) => {
+  const resolvedRole = rowRole ?? resolveBundleItemRowRole(entity, item);
+  if (resolvedRole !== 'auxiliary') return undefined;
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  if (canonicalEntity === 'radiologyOrder') {
+    return resolveRadiologyAuxiliarySubtype(item);
+  }
+  return 'material' as const;
 };
 
 const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], explicitBodyPart?: OrderBundleBodyPart) => {
@@ -427,6 +456,7 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
   let bodyPartResolvedFromItems = Boolean(explicit);
   (items ?? []).forEach((item) => {
     const rowRole = resolveBundleItemRowRole(entity, item);
+    const rowSubtype = resolveBundleItemRowSubtype(entity, item, rowRole);
     if (rowRole === 'bodyPart') {
       if (!bodyPartResolvedFromItems) {
         bodyPart = {
@@ -441,8 +471,8 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
       }
       return;
     }
-    if (rowRole === 'material') {
-      material.push({ ...item, rowRole: 'material' });
+    if (rowRole === 'auxiliary') {
+      material.push({ ...item, rowRole: 'auxiliary', rowSubtype });
       return;
     }
     if (rowRole === 'comment') {
@@ -457,7 +487,11 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
 const collectBundleItems = (form: BundleFormState) => {
   return [
     ...form.items.map((item) => ({ ...item, rowRole: 'main' as const })),
-    ...form.materialItems.map((item) => ({ ...item, rowRole: 'material' as const })),
+    ...form.materialItems.map((item) => ({
+      ...item,
+      rowRole: 'auxiliary' as const,
+      rowSubtype: resolveRadiologyAuxiliarySubtype(item),
+    })),
     ...form.commentItems.map((item) => ({ ...item, rowRole: 'comment' as const })),
   ];
 };
@@ -643,9 +677,10 @@ const toOrderBundleFromInputSetDetail = (
       unit: item.unit,
       memo: item.memo,
       rowRole:
-        item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment'
+        item.rowRole === 'main' || item.rowRole === 'auxiliary' || item.rowRole === 'comment'
           ? item.rowRole
           : undefined,
+      rowSubtype: resolveBundleItemRowSubtype(resolvedEntity, item, item.rowRole),
     })),
   });
 };
@@ -725,7 +760,7 @@ const resolveSendContractNote = (entity: string) => {
     return '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。';
   }
   if (canonicalEntity === 'radiologyOrder') {
-    return '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
+    return '放射線送信では bodyPart・main/auxiliary/comment の coded row・classCode を使います。検査指示(admin)・instruction補足(adminMemo)・bundle memo・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。材料/造影薬の区別は rowRole=auxiliary + rowSubtype として保存します。';
   }
   return '';
 };
@@ -882,7 +917,16 @@ export const validateBundleForm = ({
   const valuedItems = form.items.filter(hasAnyValue);
   const codedItems = valuedItems.filter((item) => Boolean(item.code?.trim()));
   const uncodedItems = valuedItems.filter((item) => !item.code?.trim());
-  const hasMaterialValues = form.materialItems.some(hasAnyValue);
+  const valuedMaterialItems = form.materialItems.filter(hasAnyValue);
+  const codedMaterialItems = valuedMaterialItems.filter((item) => Boolean(item.code?.trim() && item.name?.trim()));
+  const uncodedMaterialItems = valuedMaterialItems.filter((item) => !item.code?.trim() || !item.name?.trim());
+  const codedSendableRows = codedItems.length + codedMaterialItems.length;
+  const uncodedSendableRows = uncodedItems.length + uncodedMaterialItems.length;
+  const hasAuxiliaryValue =
+    form.commentItems.some(hasAnyValue) ||
+    valuedMaterialItems.length > 0 ||
+    (Boolean(form.bodyPart?.name?.trim()) && Boolean(form.bodyPart?.code?.trim()));
+  const hasMaterialValues = valuedMaterialItems.length > 0;
   const hasBodyPartValue = Boolean(
     form.bodyPart?.name?.trim() ||
       form.bodyPart?.code?.trim() ||
@@ -938,40 +982,58 @@ export const validateBundleForm = ({
     });
   }
   if (rule.requiresItems && valuedItems.length === 0) {
-    const hasAuxiliaryValue =
-      hasMaterialValues || form.commentItems.some(hasAnyValue) || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
     issues.push({
-      key: hasAuxiliaryValue ? 'comment_only' : 'missing_items',
+      key: hasAuxiliaryValue ? (canonicalEntity === 'radiologyOrder' ? 'missing_main_row' : 'comment_only') : 'missing_items',
       message: hasAuxiliaryValue
-        ? '部位・材料・コメントだけでは保存できません。コード付きの本体項目を入力してください。'
+        ? canonicalEntity === 'radiologyOrder'
+          ? '放射線オーダーは部位・補助行・コメントだけでは保存できません。コード付きの検査本体を1件以上入力してください。'
+          : '部位・補助行・コメントだけでは保存できません。コード付きの本体項目を入力してください。'
         : `${rule.itemLabel}を1件以上入力してください。`,
     });
   }
-  if (valuedItems.length > 0) {
-    if (uncodedItems.length > 0 && codedItems.length > 0) {
+  if (valuedItems.length > 0 || valuedMaterialItems.length > 0) {
+    if (uncodedMaterialItems.length > 0) {
+      const quantityOnlyAuxiliary = uncodedMaterialItems.some(
+        (item) => !item.name?.trim() && Boolean(item.quantity?.trim() || item.unit?.trim() || item.memo?.trim()),
+      );
+      issues.push({
+        key: 'invalid_material_item',
+        message: quantityOnlyAuxiliary
+          ? '補助行は数量/単位/メモだけでは保存できません。材料または造影薬を必ずマスタ選択してください。'
+          : '補助行はコード付き候補から選択してください。名称だけの材料/造影薬は保存できません。',
+      });
+    } else if (uncodedSendableRows > 0 && codedSendableRows > 0) {
       issues.push({
         key: 'mixed_coded_uncoded',
         message: 'コードあり行とコードなし行が混在しています。コードなし行を削除するか、必ずマスタ選択してください。',
       });
-    } else if (uncodedItems.length > 0) {
+    } else if (uncodedSendableRows > 0) {
       issues.push({
         key: 'uncoded_row',
         message: 'コードなし行が含まれています。名前だけの行は ORCA へ送れないため、マスタ選択してください。',
       });
-    } else if (rule.requiresItems && codedItems.length === 0) {
+    } else if (rule.requiresItems && valuedItems.length > 0 && codedItems.length === 0) {
       issues.push({
-        key: 'comment_only',
-        message: hasBodyPartValue
-          ? '部位だけでは保存できません。コード付きの本体項目を入力してください。'
-          : 'コメントだけでは保存できません。コード付きの本体項目を入力してください。',
+        key: canonicalEntity === 'radiologyOrder' && valuedMaterialItems.length > 0 ? 'missing_main_row' : 'comment_only',
+        message:
+          canonicalEntity === 'radiologyOrder' && valuedMaterialItems.length > 0
+            ? '放射線オーダーは補助行だけでは保存できません。コード付きの検査本体を1件以上入力してください。'
+            : hasBodyPartValue
+              ? '部位だけでは保存できません。コード付きの本体項目を入力してください。'
+              : 'コメントだけでは保存できません。コード付きの本体項目を入力してください。',
       });
     }
   }
   if (
     canonicalEntity === 'injectionOrder' &&
-    valuedItems.length > 0 &&
     codedItems.length > 0 &&
-    !codedItems.some((item) => resolveBundleItemRowRole(entity, item) === 'main')
+    ![
+      ...codedItems,
+      ...codedMaterialItems.map((item) => ({
+        ...item,
+        rowRole: resolveBundleItemRowRole(entity, item),
+      })),
+    ].some((item) => resolveBundleItemRowRole(entity, item) === 'main')
   ) {
     issues.push({
       key: 'comment_only',
@@ -1855,11 +1917,21 @@ export function OrderBundleEditPanel({
 
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
     if (!rowId || !matched) return;
-    const promoteToMaterial = matched.type === 'material' || shouldTreatAsMaterialItem(entity, matched.code?.trim() ?? '');
     const derivedClassCode = deriveChargeClassCodeFromCategory(entity, matched.category);
     const derivedChargeMeta = derivedClassCode
       ? resolveCanonicalChargeClassMeta({ entity, classCode: derivedClassCode })
       : null;
+    const targetLane: 'main' | 'auxiliary' | 'comment' | 'bodyPart' =
+      matched.type === 'bodypart'
+        ? 'bodyPart'
+        : matched.type === 'comment'
+          ? 'comment'
+          : matched.type === 'material' ||
+              ((resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && matched.type === 'drug') ||
+              shouldTreatAsMaterialItem(entity, matched.code?.trim() ?? '')
+            ? 'auxiliary'
+            : 'main';
+    const materialSubtype: OrderBundleRowSubtype = matched.type === 'drug' ? 'contrastDrug' : 'material';
     setForm((prev) => {
       const updateRow = (row: OrderBundleItem) => ({
         ...row,
@@ -1868,35 +1940,77 @@ export function OrderBundleEditPanel({
         unit: row.unit?.trim() ? row.unit : matched.unit ?? '',
         memo: row.memo?.trim() ? row.memo : matched.note ?? '',
       });
-      let promotedMaterialRow: OrderBundleItemWithRowId | null = null;
-      const nextItems = ensureTrailingEmptyMainItem(
-        prev.items.map((row) => {
-          const currentRow = row as OrderBundleItemWithRowId;
-          if (currentRow.rowId !== rowId) return row;
-          if (!promoteToMaterial) {
-            return updateRow(row);
-          }
-          promotedMaterialRow = ensureRowId({ ...updateRow(row), rowRole: 'material' });
-          return buildEmptyItem();
-        }),
-      );
-      const nextMaterialItems = prev.materialItems.map((row) => {
-        const currentRow = row as OrderBundleItemWithRowId;
-        if (currentRow.rowId !== rowId) return row;
-        return ensureRowId({ ...updateRow(row), rowRole: 'material' });
-      });
-      if (promotedMaterialRow) {
-        nextMaterialItems.push(promotedMaterialRow);
+      const sourceMainIndex = prev.items.findIndex((row) => (row as OrderBundleItemWithRowId).rowId === rowId);
+      const sourceMaterialIndex = prev.materialItems.findIndex((row) => (row as OrderBundleItemWithRowId).rowId === rowId);
+      const sourceRow =
+        sourceMainIndex >= 0
+          ? prev.items[sourceMainIndex]
+          : sourceMaterialIndex >= 0
+            ? prev.materialItems[sourceMaterialIndex]
+            : buildEmptyItem();
+      const mappedRow = ensureRowId(updateRow(sourceRow));
+      const mainMappedRow = ensureRowId({ ...mappedRow, rowRole: 'main' as const, rowSubtype: undefined });
+
+      const nextItems = [...prev.items];
+      const nextMaterialItems = [...prev.materialItems];
+      const nextCommentItems = [...prev.commentItems];
+      let nextBodyPart = prev.bodyPart;
+
+      if (sourceMainIndex >= 0) {
+        nextItems[sourceMainIndex] = buildEmptyItem();
+      }
+      if (sourceMaterialIndex >= 0) {
+        nextMaterialItems.splice(sourceMaterialIndex, 1);
+      }
+
+      if (targetLane === 'main') {
+        if (sourceMainIndex >= 0) {
+          nextItems[sourceMainIndex] = mainMappedRow;
+        } else {
+          const insertIndex = Math.max(0, nextItems.length - 1);
+          nextItems.splice(insertIndex, 0, mainMappedRow);
+        }
+      } else if (targetLane === 'auxiliary') {
+        const nextMaterialRow = ensureRowId({
+          ...mappedRow,
+          rowRole: 'auxiliary',
+          rowSubtype: materialSubtype,
+        });
+        if (sourceMaterialIndex >= 0) {
+          nextMaterialItems.splice(sourceMaterialIndex, 0, nextMaterialRow);
+        } else {
+          nextMaterialItems.push(nextMaterialRow);
+        }
+      } else if (targetLane === 'comment') {
+        nextCommentItems.push({
+          ...mappedRow,
+          rowRole: 'comment',
+          rowSubtype: undefined,
+        });
+      } else if (targetLane === 'bodyPart') {
+        nextBodyPart = {
+          code: matched.code ?? sourceRow.code,
+          name: matched.name,
+          quantity: sourceRow.quantity?.trim() || undefined,
+          unit: sourceRow.unit?.trim() || undefined,
+          memo: sourceRow.memo?.trim() || undefined,
+          rowRole: 'bodyPart',
+        };
       }
       return {
         ...prev,
         classCode: derivedChargeMeta?.classCode ?? prev.classCode,
         classCodeSystem: derivedChargeMeta?.classCodeSystem ?? prev.classCodeSystem,
         className: derivedChargeMeta?.className ?? prev.className,
-        items: nextItems,
+        items: ensureTrailingEmptyMainItem(nextItems),
         materialItems: nextMaterialItems,
+        commentItems: nextCommentItems,
+        bodyPart: nextBodyPart,
       };
     });
+    if (targetLane === 'bodyPart' || targetLane === 'comment') {
+      setSelectedItemRowId(null);
+    }
     const youhouCode = matched.youhouCode?.trim();
     if (supportsUsageSearch && !form.admin.trim() && youhouCode) {
       void autoFillUsageFromYouhouCode(youhouCode);
@@ -2804,6 +2918,7 @@ export function OrderBundleEditPanel({
           case 'missing_body_part_code':
             return `${entityId}-bodypart`;
           case 'missing_items':
+          case 'missing_main_row':
             return `${entityId}-item-name-0`;
           case 'comment_only':
             return `${entityId}-item-name-0`;
@@ -3040,6 +3155,7 @@ export function OrderBundleEditPanel({
   const bundleNumberError = validationByKey.get(USAGE_DAYS_LIMIT_ERROR_KEY);
   const itemsError =
     validationByKey.get('missing_items') ??
+    validationByKey.get('missing_main_row') ??
     validationByKey.get('comment_only') ??
     validationByKey.get('unsupported_material_item') ??
     validationByKey.get('invalid_other_order_code');
@@ -4295,7 +4411,7 @@ export function OrderBundleEditPanel({
           {supportsMaterialRows ? (
             <div className="charts-side-panel__subsection">
               <div className="charts-side-panel__subheader">
-                <strong>材料行</strong>
+                <strong>{entity === 'radiologyOrder' ? '補助行（材料/造影薬）' : '材料行'}</strong>
                 <div className="charts-side-panel__subheader-actions">
                   <button
                     type="button"
@@ -4307,15 +4423,19 @@ export function OrderBundleEditPanel({
                     }}
                     disabled={isBlocked}
                   >
-                    材料追加
+                    {entity === 'radiologyOrder' ? '補助行追加' : '材料追加'}
                   </button>
                 </div>
               </div>
               <p className="charts-side-panel__help">
-                材料行は `rowRole=material` として保存します。material 候補を main 行で選んだ場合もここへ移します。
+                {entity === 'radiologyOrder'
+                  ? '放射線の補助行は `rowRole=auxiliary` と `rowSubtype=material|contrastDrug` を保存します。material/drug 候補を main 行で選んだ場合もここへ移します。'
+                  : '材料行は `rowRole=auxiliary` として保存します。material 候補を main 行で選んだ場合もここへ移します。'}
               </p>
               {form.materialItems.length === 0 ? (
-                <p className="charts-side-panel__empty">材料行はまだありません。</p>
+                <p className="charts-side-panel__empty">
+                  {entity === 'radiologyOrder' ? '補助行はまだありません。' : '材料行はまだありません。'}
+                </p>
               ) : null}
               {form.materialItems.map((item, index) => {
                 const rowId = (item as OrderBundleItemWithRowId).rowId;

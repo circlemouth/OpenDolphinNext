@@ -151,6 +151,8 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Medical_Class type=\"string\">700</Medical_Class>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">放射線</Medical_Class_Name>"));
+        assertFalse(xml.contains("<Medical_Class_Name type=\"string\">Radiology</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">002001</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">part</Medication_Unit_Code>"));

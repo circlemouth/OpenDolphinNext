@@ -1,14 +1,22 @@
+export type OrcaOrderItemRowRole = 'main' | 'auxiliary' | 'comment' | 'bodyPart';
+export type OrcaOrderItemRowSubtype = 'material' | 'contrastDrug';
+
 export type OrcaOrderItemMeta = {
   // "yes"/"no" only. When omitted, ORCA uses its own default setting.
   genericFlg?: 'yes' | 'no';
   // User comment for each medication row.
   userComment?: string;
+  // Explicit row metadata is persisted in memo meta so save -> fetch does not fall back to heuristics.
+  rowRole?: OrcaOrderItemRowRole;
+  rowSubtype?: OrcaOrderItemRowSubtype;
 };
 
 export type OrcaOrderItemMetaCarrier = {
   memo?: string | null;
   genericFlg?: 'yes' | 'no';
   userComment?: string | null;
+  rowRole?: OrcaOrderItemRowRole | null;
+  rowSubtype?: OrcaOrderItemRowSubtype | null;
 };
 
 const META_PREFIX = '__orca_meta__:';
@@ -24,10 +32,28 @@ const normalizeUserComment = (value: unknown): OrcaOrderItemMeta['userComment'] 
   return trimmed ? trimmed : undefined;
 };
 
+const normalizeRowRole = (value: unknown): OrcaOrderItemMeta['rowRole'] => {
+  if (value === 'main' || value === 'auxiliary' || value === 'comment' || value === 'bodyPart') {
+    return value;
+  }
+  if (value === 'material') {
+    return 'auxiliary';
+  }
+  return undefined;
+};
+
+const normalizeRowSubtype = (value: unknown): OrcaOrderItemMeta['rowSubtype'] => {
+  if (value === 'material' || value === 'contrastDrug') {
+    return value;
+  }
+  return undefined;
+};
+
 const hasUserComment = (value: OrcaOrderItemMeta['userComment']) =>
   typeof value === 'string' && value.trim().length > 0;
 
-const isEmptyMeta = (meta: OrcaOrderItemMeta) => !meta.genericFlg && !hasUserComment(meta.userComment);
+const isEmptyMeta = (meta: OrcaOrderItemMeta) =>
+  !meta.genericFlg && !hasUserComment(meta.userComment) && !meta.rowRole && !meta.rowSubtype;
 
 export function parseOrcaOrderItemMemo(memo?: string | null): { meta: OrcaOrderItemMeta; memoText: string } {
   const raw = typeof memo === 'string' ? memo : '';
@@ -44,6 +70,8 @@ export function parseOrcaOrderItemMemo(memo?: string | null): { meta: OrcaOrderI
       meta: {
         genericFlg: normalizeGenericFlg(parsed.genericFlg),
         userComment: normalizeUserComment(parsed.userComment),
+        rowRole: normalizeRowRole(parsed.rowRole),
+        rowSubtype: normalizeRowSubtype(parsed.rowSubtype),
       },
       memoText,
     };
@@ -59,6 +87,8 @@ export function formatOrcaOrderItemMemo(meta: OrcaOrderItemMeta, memoText: strin
   const json: OrcaOrderItemMeta = {};
   if (meta.genericFlg) json.genericFlg = meta.genericFlg;
   if (hasUserComment(meta.userComment)) json.userComment = meta.userComment;
+  if (meta.rowRole) json.rowRole = meta.rowRole;
+  if (meta.rowSubtype) json.rowSubtype = meta.rowSubtype;
   const metaLine = `${META_PREFIX}${JSON.stringify(json)}`;
   if (!body.trim()) return metaLine;
   return `${metaLine}\n${body}`;
@@ -73,18 +103,28 @@ export function updateOrcaOrderItemMeta(memo: string | undefined, patch: Partial
   if (!hasUserComment(next.userComment)) {
     delete next.userComment;
   }
+  if (!next.rowRole) {
+    delete next.rowRole;
+  }
+  if (!next.rowSubtype) {
+    delete next.rowSubtype;
+  }
   return formatOrcaOrderItemMemo(next, memoText);
 }
 
 export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | null): {
   genericFlg?: 'yes' | 'no';
   userComment?: string;
+  rowRole?: OrcaOrderItemRowRole;
+  rowSubtype?: OrcaOrderItemRowSubtype;
   memoText: string;
 } {
   const parsed = parseOrcaOrderItemMemo(item?.memo);
   return {
     genericFlg: normalizeGenericFlg(item?.genericFlg ?? parsed.meta.genericFlg),
     userComment: normalizeUserComment(item?.userComment ?? parsed.meta.userComment),
+    rowRole: normalizeRowRole(item?.rowRole ?? parsed.meta.rowRole),
+    rowSubtype: normalizeRowSubtype(item?.rowSubtype ?? parsed.meta.rowSubtype),
     memoText: parsed.memoText,
   };
 }
