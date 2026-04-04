@@ -345,11 +345,11 @@ export const toMedicalModV2InformationWithSource = (
 export const toMedicalModV2Information = (bundle: OrderBundle): MedicalModV2Information | null =>
   toMedicalModV2InformationWithSource(bundle)?.info ?? null;
 
-export const fetchMedicalModV2OrderBundles = async (patientId: string, from: string) => {
+export const fetchMedicalModV2OrderBundles = async (patientId: string, from: string, encounterId?: string) => {
   const results = await Promise.allSettled(
     ORCA_SEND_ORDER_ENTITIES.map(async (entity) => {
       if (entity === 'medOrder') {
-        const prescriptionOrder = await fetchPrescriptionOrder({ patientId, from });
+        const prescriptionOrder = await fetchPrescriptionOrder({ patientId, from, encounterId });
         if (!prescriptionOrder.ok) {
           return {
             ok: false,

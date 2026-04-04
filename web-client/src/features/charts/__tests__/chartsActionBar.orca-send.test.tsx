@@ -1,5 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -79,7 +81,10 @@ const baseProps = {
 };
 
 const buildSendablePrescriptionOrder = () => {
-  const order = buildEmptyPrescriptionOrder('000001', '2026-01-20');
+  const order = buildEmptyPrescriptionOrder('000001', '2026-01-20') as ReturnType<typeof buildEmptyPrescriptionOrder> & {
+    encounterId: string;
+  };
+  order.encounterId = 'F001:E100';
   order.rps = [
     {
       ...order.rps[0],
@@ -119,10 +124,13 @@ const renderActionBar = (selectedEntry?: Partial<ReceptionEntry>) =>
   render(
     <MemoryRouter>
       <ChartsActionBar
-        {...baseProps}
-        patientId="000001"
-        visitDate="2026-01-20"
-        selectedEntry={selectedEntry ? { ...defaultSelectedEntry, ...selectedEntry } : defaultSelectedEntry}
+        {...({
+          ...baseProps,
+          patientId: '000001',
+          encounterId: 'F001:E100',
+          visitDate: '2026-01-20',
+          selectedEntry: selectedEntry ? { ...defaultSelectedEntry, ...selectedEntry } : defaultSelectedEntry,
+        } as any)}
       />
     </MemoryRouter>,
   );
@@ -137,6 +145,10 @@ describe('ChartsActionBar ORCA send', () => {
       sourceBundles: [],
       order: buildSendablePrescriptionOrder(),
     } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('sends a valid medicalmodv2 payload', async () => {
@@ -160,7 +172,7 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
-    expect(fetchPrescriptionOrder).toHaveBeenCalledWith({ patientId: '000001', from: '2026-01-20' });
+    expect(fetchPrescriptionOrder).toHaveBeenCalledWith({ patientId: '000001', from: '2026-01-20', encounterId: 'F001:E100' });
     expect(screen.getByText(/ORCA送信/)).toBeInTheDocument();
     expect(screen.queryByText(/Invoice_Number=INV-999/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Data_Id=DATA-999/)).not.toBeInTheDocument();

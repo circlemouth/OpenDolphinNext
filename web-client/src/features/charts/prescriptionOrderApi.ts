@@ -25,6 +25,12 @@ export type PrescriptionLowerFields = {
   lowerClassCode?: string;
 };
 
+export type PrescriptionNumberFields = {
+  numberCode?: string;
+  numberCodeSystem?: string;
+  numberCodeName?: string;
+};
+
 export type PrescriptionClaimComment = PrescriptionLowerFields & {
   id: string;
   code?: string;
@@ -32,7 +38,7 @@ export type PrescriptionClaimComment = PrescriptionLowerFields & {
   note?: string;
 };
 
-export type PrescriptionDrug = PrescriptionLowerFields & {
+export type PrescriptionDrug = PrescriptionLowerFields & PrescriptionNumberFields & {
   rowId: string;
   code?: string;
   name: string;
@@ -77,6 +83,7 @@ export type PrescriptionRp = PrescriptionLowerFields & {
 
 export type PrescriptionOrder = {
   patientId: string;
+  encounterId?: string;
   encounterDate?: string;
   performDate?: string;
   doctorComment: string;
@@ -100,6 +107,13 @@ export type PrescriptionClaimCommentCodeIssue = {
   commentName: string;
 };
 
+type PrescriptionClaimCommentNumberIssue = {
+  rpIndex: number;
+  drugIndex: number;
+  commentIndex: number;
+  commentCode: string;
+};
+
 export type PrescriptionDoImportSource =
   | { type: 'bundle'; bundle: OrderBundle }
   | { type: 'rp'; rp: PrescriptionRp }
@@ -118,6 +132,7 @@ type StoredDrugMeta = {
   claimComments?: Array<{ code?: string; name?: string; note?: string; lowerFields?: PrescriptionLowerFields }>;
   isGeneralNamePrescription?: boolean;
   patientRequest?: boolean;
+  numberFields?: PrescriptionNumberFields;
   lowerFields?: PrescriptionLowerFields;
 };
 
@@ -140,6 +155,9 @@ type ServerPrescriptionDrug = {
   drugComment?: string;
   claimComments?: ServerPrescriptionClaimComment[];
   patientRequested?: boolean;
+  numberCode?: string;
+  numberCodeSystem?: string;
+  numberCodeName?: string;
   lowerFields?: PrescriptionLowerFields;
 };
 
@@ -180,6 +198,7 @@ type ServerPrescriptionRemark = {
 
 type ServerPrescriptionOrder = {
   patientId: string;
+  encounterId?: string;
   encounterDate?: string;
   performDate?: string;
   rps?: ServerPrescriptionRp[];
@@ -189,6 +208,7 @@ type ServerPrescriptionOrder = {
 };
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
+const COMMENT_NUMBER_REQUIRED_PATTERN = /^(8501|8511|8521|831)/;
 const RX_RP_META_PREFIX = '__rx_rp_meta__:';
 const RX_DRUG_META_PREFIX = '__rx_drug_meta__:';
 const RX_CLAIM_LINK_PREFIX = '__rx_claim_target__:';
@@ -252,6 +272,7 @@ function normalizePrescriptionOrder(order: PrescriptionOrder): PrescriptionOrder
   return {
     ...order,
     patientId: order.patientId.trim(),
+    encounterId: order.encounterId?.trim() || undefined,
     encounterDate: order.encounterDate?.trim() || undefined,
     performDate: order.performDate?.trim() || undefined,
     doctorComment: order.doctorComment.trim(),
@@ -295,6 +316,9 @@ const buildEmptyDrug = (): PrescriptionDrug => ({
   name: '',
   quantity: '',
   unit: '',
+  numberCode: undefined,
+  numberCodeSystem: undefined,
+  numberCodeName: undefined,
   genericChangeAllowed: true,
   isGeneralNamePrescription: false,
   drugComment: '',
@@ -305,6 +329,16 @@ const buildEmptyDrug = (): PrescriptionDrug => ({
 const hasAnyLowerField = (fields?: PrescriptionLowerFields) => {
   if (!fields) return false;
   return Object.values(fields).some((value) => Boolean(value && value.trim()));
+};
+
+const normalizeNumberFields = (fields?: PrescriptionNumberFields): PrescriptionNumberFields | undefined => {
+  if (!fields) return undefined;
+  const next = {
+    numberCode: fields.numberCode?.trim() || undefined,
+    numberCodeSystem: fields.numberCodeSystem?.trim() || undefined,
+    numberCodeName: fields.numberCodeName?.trim() || undefined,
+  } satisfies PrescriptionNumberFields;
+  return next.numberCode || next.numberCodeSystem || next.numberCodeName ? next : undefined;
 };
 
 const toServerLowerFields = (fields?: PrescriptionLowerFields) =>
@@ -375,6 +409,36 @@ export const findFirstPrescriptionClaimCommentCodeIssue = (
   return null;
 };
 
+const requiresStructuredClaimCommentNumber = (code?: string) => COMMENT_NUMBER_REQUIRED_PATTERN.test(code?.trim() ?? '');
+
+const findFirstUnsupportedPrescriptionClaimCommentNumberIssue = (
+  order: PrescriptionOrder,
+): PrescriptionClaimCommentNumberIssue | null => {
+  for (let rpIndex = 0; rpIndex < order.rps.length; rpIndex += 1) {
+    const rp = order.rps[rpIndex];
+    const rpClaimComments = normalizeClaimComments(rp.claimComments ?? []);
+    for (let commentIndex = 0; commentIndex < rpClaimComments.length; commentIndex += 1) {
+      const comment = rpClaimComments[commentIndex];
+      const code = comment.code?.trim() ?? '';
+      if (comment.note?.trim() && requiresStructuredClaimCommentNumber(code)) {
+        return { rpIndex, drugIndex: -1, commentIndex, commentCode: code };
+      }
+    }
+    for (let drugIndex = 0; drugIndex < rp.drugs.length; drugIndex += 1) {
+      const drug = rp.drugs[drugIndex];
+      const claimComments = normalizeClaimComments(drug.claimComments);
+      for (let commentIndex = 0; commentIndex < claimComments.length; commentIndex += 1) {
+        const comment = claimComments[commentIndex];
+        const code = comment.code?.trim() ?? '';
+        if (comment.note?.trim() && requiresStructuredClaimCommentNumber(code)) {
+          return { rpIndex, drugIndex, commentIndex, commentCode: code };
+        }
+      }
+    }
+  }
+  return null;
+};
+
 const toDrugFromItem = (item: OrderBundleItem): PrescriptionDrug => {
   const parsed = resolveOrcaOrderItemFields(item);
   const drugMetaParsed = splitMetaText<StoredDrugMeta>(parsed.memoText, RX_DRUG_META_PREFIX);
@@ -395,8 +459,9 @@ const toDrugFromItem = (item: OrderBundleItem): PrescriptionDrug => {
     name: item.name?.trim() || '',
     quantity: item.quantity?.trim() || '',
     unit: item.unit?.trim() || '',
-    genericChangeAllowed: parsed.genericFlg !== 'no',
-    isGeneralNamePrescription: drugMeta?.isGeneralNamePrescription ?? false,
+    ...(drugMeta?.numberFields ?? {}),
+    genericChangeAllowed: true,
+    isGeneralNamePrescription: drugMeta?.isGeneralNamePrescription ?? parsed.genericFlg === 'yes',
     drugComment: parsed.userComment?.trim() || '',
     claimComments,
     patientRequest: drugMeta?.patientRequest ?? true,
@@ -475,8 +540,13 @@ export const buildEmptyPrescriptionRp = (started?: string, classCode?: string): 
   };
 };
 
-export const buildEmptyPrescriptionOrder = (patientId: string, started?: string): PrescriptionOrder => ({
+export const buildEmptyPrescriptionOrder = (
+  patientId: string,
+  started?: string,
+  encounterId?: string,
+): PrescriptionOrder => ({
   patientId,
+  encounterId: encounterId?.trim() || undefined,
   encounterDate: started?.slice(0, 10),
   performDate: started?.slice(0, 10),
   doctorComment: '',
@@ -486,10 +556,14 @@ export const buildEmptyPrescriptionOrder = (patientId: string, started?: string)
   remarks: [],
 });
 
-export const toPrescriptionOrder = (sourceBundles: OrderBundle[], patientId: string): PrescriptionOrder => {
+export const toPrescriptionOrder = (
+  sourceBundles: OrderBundle[],
+  patientId: string,
+  encounterId?: string,
+): PrescriptionOrder => {
   const medBundles = sourceBundles.filter((bundle) => (bundle.entity?.trim() ?? '') === 'medOrder');
   if (medBundles.length === 0) {
-    return buildEmptyPrescriptionOrder(patientId);
+    return buildEmptyPrescriptionOrder(patientId, undefined, encounterId);
   }
   const rps = medBundles.map(toRpFromBundle);
   const startedDates = rps
@@ -498,6 +572,7 @@ export const toPrescriptionOrder = (sourceBundles: OrderBundle[], patientId: str
   const baseDate = startedDates[0];
   return {
     patientId,
+    encounterId: encounterId?.trim() || undefined,
     encounterDate: baseDate,
     performDate: baseDate,
     doctorComment: rps.find((rp) => rp.doctorComment.trim())?.doctorComment ?? '',
@@ -588,6 +663,7 @@ const normalizeDrugMeta = (drug: PrescriptionDrug): StoredDrugMeta => {
   return {
     isGeneralNamePrescription: drug.isGeneralNamePrescription,
     patientRequest: drug.patientRequest,
+    numberFields: normalizeNumberFields(drug),
     claimComments: normalizeClaimComments(drug.claimComments).map((comment) => ({
       code: comment.code,
       name: comment.name,
@@ -633,6 +709,9 @@ const toServerDrug = (drug: PrescriptionDrug): ServerPrescriptionDrug => ({
   drugComment: drug.drugComment.trim() || undefined,
   claimComments: normalizeClaimComments(drug.claimComments).map(toServerClaimComment),
   patientRequested: drug.patientRequest,
+  numberCode: drug.numberCode?.trim() || undefined,
+  numberCodeSystem: drug.numberCodeSystem?.trim() || undefined,
+  numberCodeName: drug.numberCodeName?.trim() || undefined,
   lowerFields: toServerLowerFields(drug),
 });
 
@@ -667,7 +746,7 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
       quantity: drug.quantity.trim() || '',
       unit: drug.unit.trim() || '',
       memo: memoText,
-      genericFlg: drug.genericChangeAllowed ? 'yes' : 'no',
+      genericFlg: drug.isGeneralNamePrescription ? 'yes' : 'no',
       userComment: drug.drugComment.trim() || undefined,
     });
 
@@ -744,27 +823,63 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
 };
 
 export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): OrderBundle[] =>
-  buildPrescriptionMutationOperations(order)
-    .filter((operation) => operation.operation !== 'delete')
-    .map((operation) => ({
+  normalizePrescriptionOrder(order).rps.map((rp) => {
+    const items: OrderBundleItem[] = [];
+    rp.drugs.forEach((drug, drugIndex) => {
+      const code = drug.code?.trim() || undefined;
+      const name = drug.name.trim();
+      if (!name && !code) return;
+      items.push({
+        code,
+        name,
+        quantity: drug.quantity.trim() || '',
+        unit: drug.unit.trim() || '',
+        genericFlg: drug.isGeneralNamePrescription ? 'yes' : 'no',
+      });
+      normalizeClaimComments(drug.claimComments).forEach((comment) => {
+        items.push({
+          code: comment.code?.trim() || undefined,
+          name: comment.name.trim(),
+          quantity: '',
+          unit: '',
+          memo: `${RX_CLAIM_LINK_PREFIX}${drugIndex}`,
+        });
+      });
+    });
+    normalizeClaimComments(rp.claimComments ?? []).forEach((comment) => {
+      items.push({
+        code: comment.code?.trim() || undefined,
+        name: comment.name.trim(),
+        quantity: '',
+        unit: '',
+        memo: `${RX_CLAIM_LINK_PREFIX}${RX_RP_CLAIM_LINK_TARGET}`,
+      });
+    });
+    return {
       entity: 'medOrder',
-      documentId: operation.documentId,
-      moduleId: operation.moduleId,
-      bundleName: operation.bundleName,
-      bundleNumber: operation.bundleNumber,
-      classCode: operation.classCode,
-      classCodeSystem: operation.classCodeSystem,
-      className: operation.className,
-      admin: operation.admin,
-      adminMemo: operation.adminMemo,
-      memo: operation.memo,
-      started: operation.startDate,
-      items: (operation.items ?? []).map((item) => ({ ...item })),
-    }));
+      documentId: rp.documentId,
+      moduleId: rp.moduleId,
+      bundleName: rp.name.trim() || '処方RP',
+      bundleNumber: rp.daysOrTimes.trim() || '1',
+      classCode: resolvePrescriptionClassCode(rp.category, rp.location),
+      classCodeSystem: 'Claim007',
+      className: undefined,
+      admin: rp.usage.trim(),
+      adminCode: rp.usageCode?.trim() || undefined,
+      adminMemo: rp.usageCode?.trim() || '',
+      memo: undefined,
+      started: rp.started,
+      items,
+    } satisfies OrderBundle;
+  });
 
-const buildPrescriptionOrderQuery = (params: { patientId: string; from?: string }) => {
+const buildPrescriptionOrderQuery = (params: { patientId: string; from?: string; encounterId?: string }) => {
   const query = new URLSearchParams();
   query.set('patientId', params.patientId);
+  const encounterId = params.encounterId?.trim();
+  if (encounterId) {
+    query.set('encounterId', encounterId);
+  }
   const encounterDate = params.from?.slice(0, 10);
   if (encounterDate) {
     query.set('encounterDate', encounterDate);
@@ -799,6 +914,7 @@ const toServerPrescriptionOrder = (order: PrescriptionOrder): ServerPrescription
 
   return {
     patientId: normalizedOrder.patientId,
+    encounterId: normalizedOrder.encounterId,
     encounterDate: normalizedOrder.encounterDate ?? startedDates[0],
     performDate: normalizedOrder.performDate ?? startedDates[0],
     rps,
@@ -822,6 +938,9 @@ const fromServerDrug = (drug: ServerPrescriptionDrug): PrescriptionDrug => ({
   name: drug.name?.trim() || '',
   quantity: drug.quantity?.trim() || '',
   unit: drug.unit?.trim() || '',
+  numberCode: drug.numberCode?.trim() || undefined,
+  numberCodeSystem: drug.numberCodeSystem?.trim() || undefined,
+  numberCodeName: drug.numberCodeName?.trim() || undefined,
   genericChangeAllowed: drug.genericChangeAllowed ?? true,
   isGeneralNamePrescription: drug.generalNamePrescription ?? false,
   drugComment: drug.drugComment?.trim() || '',
@@ -861,6 +980,7 @@ const fromServerPrescriptionOrder = (order: ServerPrescriptionOrder, patientId: 
     ?.text?.trim();
   return {
     patientId,
+    encounterId: order.encounterId?.trim() || undefined,
     encounterDate: order.encounterDate,
     performDate: order.performDate,
     doctorComment: latestDoctorComment ?? '',
@@ -890,11 +1010,27 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
             code: comment.code?.trim() || undefined,
             name: comment.text?.trim() || '',
             note: comment.note?.trim() || undefined,
+            lowerFields: hasAnyLowerField(comment.lowerFields) ? comment.lowerFields : undefined,
           })),
           isGeneralNamePrescription: drug.generalNamePrescription ?? false,
           patientRequest: drug.patientRequested ?? true,
+          numberFields: normalizeNumberFields({
+            numberCode: drug.numberCode,
+            numberCodeSystem: drug.numberCodeSystem,
+            numberCodeName: drug.numberCodeName,
+          }),
+          lowerFields: hasAnyLowerField(drug.lowerFields) ? drug.lowerFields : undefined,
         },
-        Boolean((drug.claimComments?.length ?? 0) > 0 || drug.patientRequested !== undefined),
+        Boolean(
+          (drug.claimComments?.length ?? 0) > 0 ||
+            drug.patientRequested !== undefined ||
+            normalizeNumberFields({
+              numberCode: drug.numberCode,
+              numberCodeSystem: drug.numberCodeSystem,
+              numberCodeName: drug.numberCodeName,
+            }) ||
+            hasAnyLowerField(drug.lowerFields),
+        ),
       );
       const mainItem: OrderBundleItem = {
         code: drug.code?.trim() || undefined,
@@ -902,7 +1038,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
         quantity: drug.quantity?.trim() || '',
         unit: drug.unit?.trim() || '',
         memo: itemMemo,
-        genericFlg: drug.genericChangeAllowed === false ? 'no' : 'yes',
+        genericFlg: drug.generalNamePrescription ? 'yes' : 'no',
         userComment: drug.drugComment?.trim() || undefined,
       };
       const commentItems = (drug.claimComments ?? []).map<OrderBundleItem>((comment) => ({
@@ -985,6 +1121,7 @@ const parsePrescriptionOrderFetchResponse = (
 const fetchPrescriptionOrderBase = async (params: {
   patientId: string;
   from?: string;
+  encounterId?: string;
 }): Promise<PrescriptionOrderFetchResult> => {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
@@ -998,7 +1135,7 @@ const fetchPrescriptionOrderBase = async (params: {
       runId,
       patientId: params.patientId,
       sourceBundles: [],
-      order: buildEmptyPrescriptionOrder(params.patientId, params.from),
+      order: buildEmptyPrescriptionOrder(params.patientId, params.from, params.encounterId),
       message: '処方オーダーAPIがJSON以外を返しました。ルーティング設定を確認してください。',
       status: parsed.status,
       errorKind: 'route_not_found',
@@ -1012,7 +1149,7 @@ const fetchPrescriptionOrderBase = async (params: {
       runId: parsed.runId ?? runId,
       patientId: params.patientId,
       sourceBundles: [],
-      order: buildEmptyPrescriptionOrder(params.patientId, params.from),
+      order: buildEmptyPrescriptionOrder(params.patientId, params.from, params.encounterId),
       message: parsed.message,
       status: parsed.status,
       errorCode: parsed.errorCode,
@@ -1025,8 +1162,9 @@ const fetchPrescriptionOrderBase = async (params: {
   const sourceBundles = fetchResponse.order ? toSourceBundlesFromServerOrder(fetchResponse.order) : [];
   const firstClassOrder = fetchResponse.order ? fromServerPrescriptionOrder(fetchResponse.order, params.patientId) : null;
   const order = fetchResponse.found
-    ? firstClassOrder ?? buildEmptyPrescriptionOrder(params.patientId, params.from)
-    : buildEmptyPrescriptionOrder(params.patientId, params.from);
+    ? firstClassOrder ?? buildEmptyPrescriptionOrder(params.patientId, params.from, params.encounterId)
+    : buildEmptyPrescriptionOrder(params.patientId, params.from, params.encounterId);
+  order.encounterId = fetchResponse.order?.encounterId?.trim() || order.encounterId || params.encounterId?.trim() || undefined;
   if (fetchResponse.order?.encounterDate) {
     order.encounterDate = fetchResponse.order.encounterDate;
   }
@@ -1057,6 +1195,7 @@ const fetchPrescriptionOrderBase = async (params: {
 export async function fetchPrescriptionOrder(params: {
   patientId: string;
   from?: string;
+  encounterId?: string;
 }): Promise<PrescriptionOrderFetchResult> {
   const primary = await fetchPrescriptionOrderBase(params);
   if (primary.ok) return primary;
@@ -1080,7 +1219,7 @@ export async function fetchPrescriptionOrder(params: {
       ...primary,
       ok: false,
       sourceBundles: [],
-      order: buildEmptyPrescriptionOrder(params.patientId, params.from),
+      order: buildEmptyPrescriptionOrder(params.patientId, params.from, params.encounterId),
       runId: importResult.runId ?? primary.runId,
       status: importResult.status || primary.status,
       message: buildPatientImportFailureMessage('処方オーダー情報', importResult),
@@ -1119,7 +1258,17 @@ export async function savePrescriptionOrder(params: {
       `RP${claimCommentCodeIssue.rpIndex + 1} ${commentTarget}: 請求コメントコード未入力のコメントは保存できません。`,
     );
   }
-  const usageCodeIssueIndex = normalizedOrder.rps.findIndex((rp) => rp.usage.trim() && !rp.usageCode?.trim());
+  const claimCommentNumberIssue = findFirstUnsupportedPrescriptionClaimCommentNumberIssue(normalizedOrder);
+  if (claimCommentNumberIssue) {
+    const commentTarget =
+      claimCommentNumberIssue.drugIndex >= 0 ? `薬剤${claimCommentNumberIssue.drugIndex + 1}` : 'RPコメント';
+    throw new Error(
+      `RP${claimCommentNumberIssue.rpIndex + 1} ${commentTarget}: ${claimCommentNumberIssue.commentCode} 系コメントの補足値送信は未対応のため保存できません。`,
+    );
+  }
+  const usageCodeIssueIndex = normalizedOrder.rps.findIndex(
+    (rp) => rp.drugs.some((drug) => drug.name.trim() || drug.code?.trim()) && !rp.usageCode?.trim(),
+  );
   if (usageCodeIssueIndex >= 0) {
     throw new Error(`RP${usageCodeIssueIndex + 1}: 用法コード未確定の自由入力は保存できません。候補選択で用法を確定してください。`);
   }
@@ -1143,6 +1292,7 @@ export async function savePrescriptionOrder(params: {
 export const fetchPrescriptionOrderBundlesWithPatientImportRecovery = async (params: {
   patientId: string;
   from?: string;
+  encounterId?: string;
 }): Promise<OrderBundleFetchResult> => {
   const result = await fetchPrescriptionOrder(params);
   return {
@@ -1153,9 +1303,10 @@ export const fetchPrescriptionOrderBundlesWithPatientImportRecovery = async (par
 
 export const mutatePrescriptionOrderBundles = async (params: {
   patientId: string;
+  encounterId?: string;
   operations: OrderBundleOperation[];
 }): Promise<OrderBundleMutationResult> => {
-  const current = await fetchPrescriptionOrder({ patientId: params.patientId });
+  const current = await fetchPrescriptionOrder({ patientId: params.patientId, encounterId: params.encounterId });
   if (!current.ok) {
     return {
       ok: false,
@@ -1170,6 +1321,9 @@ export const mutatePrescriptionOrderBundles = async (params: {
   }
 
   const nextOrder = normalizePrescriptionOrder(current.order);
+  if (!nextOrder.encounterId) {
+    nextOrder.encounterId = params.encounterId?.trim() || undefined;
+  }
   const isPlaceholderOrder =
     !nextOrder.doctorComment.trim() &&
     nextOrder.deletedDocumentIds.length === 0 &&
@@ -1254,6 +1408,7 @@ const cloneDrug = (drug: PrescriptionDrug): PrescriptionDrug => ({
   name: drug.name.trim(),
   quantity: drug.quantity.trim(),
   unit: drug.unit.trim(),
+  ...(normalizeNumberFields(drug) ?? {}),
   genericChangeAllowed: drug.genericChangeAllowed,
   isGeneralNamePrescription: drug.isGeneralNamePrescription,
   drugComment: drug.drugComment.trim(),

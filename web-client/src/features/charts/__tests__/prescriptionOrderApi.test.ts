@@ -46,6 +46,7 @@ describe('prescriptionOrderApi first-class contract', () => {
 
     const order: PrescriptionOrder = {
       patientId: '000001',
+      encounterId: 'F001:E100',
       encounterDate: '2026-03-09',
       performDate: '2026-03-09',
       doctorComment: '全体コメント',
@@ -77,6 +78,9 @@ describe('prescriptionOrderApi first-class contract', () => {
             name: 'アムロジピン',
             quantity: '1',
             unit: '錠',
+            numberCode: index === 0 ? '001' : undefined,
+            numberCodeSystem: index === 0 ? 'urn:orca:number' : undefined,
+            numberCodeName: index === 0 ? 'number-name' : undefined,
             genericChangeAllowed: index % 2 === 0,
             isGeneralNamePrescription: index % 2 === 1,
             drugComment: '食後',
@@ -87,7 +91,7 @@ describe('prescriptionOrderApi first-class contract', () => {
             patientRequest: index % 2 === 0,
           },
         ],
-      })),
+        })),
     };
 
     const operations = buildPrescriptionMutationOperations(order);
@@ -102,7 +106,7 @@ describe('prescriptionOrderApi first-class contract', () => {
           memo: '__rx_claim_target__:__rp__',
         }),
         expect.objectContaining({
-          genericFlg: 'yes',
+          genericFlg: 'no',
           userComment: '食後',
         }),
       ]),
@@ -121,6 +125,7 @@ describe('prescriptionOrderApi first-class contract', () => {
     const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
     const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
 
+    expect(body.encounterId).toBe('F001:E100');
     expect(body.rps.map((rp: Record<string, any>) => rp.rpNumber)).toEqual(classMatrix.map((entry) => entry.rpId));
     expect(body.rps.map((rp: Record<string, any>) => rp.medicalClass)).toEqual(
       classMatrix.map((entry) => entry.medicalClass),
@@ -148,6 +153,9 @@ describe('prescriptionOrderApi first-class contract', () => {
       expect.objectContaining({
         code: '620000001',
         unit: '錠',
+        numberCode: '001',
+        numberCodeSystem: 'urn:orca:number',
+        numberCodeName: 'number-name',
         genericChangeAllowed: true,
         generalNamePrescription: false,
         drugComment: '食後',
@@ -183,6 +191,7 @@ describe('prescriptionOrderApi first-class contract', () => {
           runId: 'RUN-FETCH',
           order: {
             patientId: '000001',
+            encounterId: 'F001:E200',
             encounterDate: '2026-03-09',
             performDate: '2026-03-09',
             doctorComments: [{ text: '全体コメント' }],
@@ -209,6 +218,9 @@ describe('prescriptionOrderApi first-class contract', () => {
                     name: 'アムロジピン',
                     quantity: '1',
                     unit: '錠',
+                    numberCode: '001',
+                    numberCodeSystem: 'urn:orca:number',
+                    numberCodeName: 'number-name',
                     genericChangeAllowed: false,
                     generalNamePrescription: true,
                     drugComment: '食後',
@@ -251,9 +263,11 @@ describe('prescriptionOrderApi first-class contract', () => {
       ),
     );
 
-    const result = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09' });
+    const result = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09', encounterId: 'F001:E200' } as any);
 
     expect(result.ok).toBe(true);
+    expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('encounterId=F001%3AE200');
+    expect(result.order).toMatchObject({ encounterId: 'F001:E200' });
     expect(result.order.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
     expect(result.order.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
     expect(result.sourceBundles[0]?.items[0]).toEqual(
@@ -264,7 +278,7 @@ describe('prescriptionOrderApi first-class contract', () => {
     );
     expect(result.sourceBundles[0]?.items[1]).toEqual(
       expect.objectContaining({
-        genericFlg: 'no',
+        genericFlg: 'yes',
         userComment: '食後',
       }),
     );
@@ -329,6 +343,7 @@ describe('prescriptionOrderApi first-class contract', () => {
   it('save -> fetch -> no-op save で first-class order の generic / claim / usage 情報が落ちない', async () => {
     const order: PrescriptionOrder = {
       patientId: '000001',
+      encounterId: 'F001:E300',
       encounterDate: '2026-03-09',
       performDate: '2026-03-09',
       doctorComment: '全体コメント',
@@ -358,6 +373,9 @@ describe('prescriptionOrderApi first-class contract', () => {
               name: 'アムロジピン',
               quantity: '1',
               unit: '錠',
+              numberCode: '001',
+              numberCodeSystem: 'urn:orca:number',
+              numberCodeName: 'number-name',
               genericChangeAllowed: false,
               isGeneralNamePrescription: true,
               drugComment: '食後',
@@ -383,9 +401,10 @@ describe('prescriptionOrderApi first-class contract', () => {
             found: true,
             runId: 'RUN-FETCH-1',
             order: {
-              patientId: '000001',
-              encounterDate: '2026-03-09',
-              performDate: '2026-03-09',
+                patientId: '000001',
+                encounterId: 'F001:E300',
+                encounterDate: '2026-03-09',
+                performDate: '2026-03-09',
               doctorComments: [{ text: '全体コメント' }],
               prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
               remarks: [{ code: 'remark-1', text: '院内備考' }],
@@ -410,6 +429,9 @@ describe('prescriptionOrderApi first-class contract', () => {
                       name: 'アムロジピン',
                       quantity: '1',
                       unit: '錠',
+                      numberCode: '001',
+                      numberCodeSystem: 'urn:orca:number',
+                      numberCodeName: 'number-name',
                       genericChangeAllowed: false,
                       generalNamePrescription: true,
                       drugComment: '食後',
@@ -468,6 +490,7 @@ describe('prescriptionOrderApi first-class contract', () => {
     const secondRequest = vi.mocked(httpFetch).mock.calls[1]?.[1];
     const secondBody = JSON.parse(String((secondRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
 
+    expect(secondBody.encounterId).toBe('F001:E300');
     expect(secondBody.rps[0]).toEqual(
       expect.objectContaining({
         rpNumber: 'rp-stable-001',
@@ -488,6 +511,9 @@ describe('prescriptionOrderApi first-class contract', () => {
     expect(secondBody.rps[0].drugs[0]).toEqual(
       expect.objectContaining({
         code: '620000001',
+        numberCode: '001',
+        numberCodeSystem: 'urn:orca:number',
+        numberCodeName: 'number-name',
         genericChangeAllowed: false,
         generalNamePrescription: true,
         drugComment: '食後',
@@ -590,6 +616,51 @@ describe('prescriptionOrderApi first-class contract', () => {
 
     await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
       'RP1 RPコメント: 請求コメントコード未入力のコメントは保存できません。',
+    );
+    expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
+  });
+
+  it('save は 85/831 系 claim comment の補足値を未実装 carrier として fail-closed にする', async () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '処方RP',
+          location: 'out',
+          category: 'regular',
+          usage: '1日1回',
+          usageCode: '001000',
+          daysOrTimes: '1',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          claimComments: [{ id: 'rp-claim-1', code: '850100001', name: '特記事項', note: '3' }],
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
+      'RP1 RPコメント: 850100001 系コメントの補足値送信は未対応のため保存できません。',
     );
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });

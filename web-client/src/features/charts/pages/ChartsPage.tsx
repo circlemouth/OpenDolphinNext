@@ -2243,11 +2243,15 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     retry: false,
   });
   const prescriptionBundleSummaryQuery = useQuery({
-    queryKey: ['charts-prescription-bundles', patientId, actionVisitDate],
+    queryKey: ['charts-prescription-bundles', patientId, actionVisitDate, encounterContext.encounterKey ?? 'none'],
     queryFn: async () => {
       if (!patientId) return { ok: false as const, bundles: [] as OrderBundle[], message: 'patientId is missing' };
       try {
-        return await fetchPrescriptionOrderBundlesWithPatientImportRecovery({ patientId, from: actionVisitDate });
+        return await fetchPrescriptionOrderBundlesWithPatientImportRecovery({
+          patientId,
+          from: actionVisitDate,
+          encounterId: encounterContext.encounterKey,
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         return { ok: false as const, bundles: [] as OrderBundle[], message };
@@ -2388,10 +2392,14 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       if (orderResult?.ok === true) {
         await queryClient
           .prefetchQuery({
-            queryKey: ['charts-prescription-bundles', patientId, visitDate],
+            queryKey: ['charts-prescription-bundles', patientId, visitDate, tab.encounterKey ?? 'none'],
             queryFn: async () => {
               try {
-                return await fetchPrescriptionOrderBundlesWithPatientImportRecovery({ patientId, from: visitDate });
+                return await fetchPrescriptionOrderBundlesWithPatientImportRecovery({
+                  patientId,
+                  from: visitDate,
+                  encounterId: tab.encounterKey,
+                });
               } catch (error) {
                 const message = error instanceof Error ? error.message : String(error);
                 return { ok: false as const, bundles: [] as OrderBundle[], message };
@@ -2815,6 +2823,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       fallbackUsed: resolvedFallbackUsed ?? false,
       dataSourceTransition: resolvedTransition ?? 'snapshot',
       patientId: encounterContext.patientId,
+      encounterId: encounterContext.encounterKey,
       appointmentId: encounterContext.appointmentId,
       receptionId: encounterContext.receptionId,
       visitDate: encounterContext.visitDate,
@@ -2826,6 +2835,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       approvalLocked,
       approvalReason,
       encounterContext.appointmentId,
+      encounterContext.encounterKey,
       encounterContext.patientId,
       encounterContext.receptionId,
       encounterContext.visitDate,
@@ -3484,6 +3494,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       if (prescriptionOrderOperations.length > 0) {
         const prescriptionResult = await mutatePrescriptionOrderBundles({
           patientId,
+          encounterId: encounterContext.encounterKey,
           operations: prescriptionOrderOperations,
         });
         if (!prescriptionResult.ok) {
@@ -4700,6 +4711,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           embedded
                           sendDisabledReason={sendDisabledReason}
                           patientId={patientId}
+                          encounterId={encounterContext.encounterKey}
                           visitDate={actionVisitDate}
                           queueEntry={actionBarQueueEntry}
                           hasUnsavedDraft={draftState.dirty}

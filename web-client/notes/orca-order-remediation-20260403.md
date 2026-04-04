@@ -112,12 +112,12 @@
 
 - `PrescriptionRp.claimComments`: 実装済み。`web-client/src/features/charts/prescriptionOrderApi.ts` と `web-client/src/features/charts/PrescriptionOrderEditorPanel.tsx` で RP first-class field を保持し、UI でも編集できる。
 - input set `bundle.memo -> remark`: 実装済み。`toRpFromInputSetDetail()` で `detail.memo` を `remark` へ取り込む。`prescriptionOrderEditorPanel.orca-support.test.tsx` で確認済み。
-- `rp.doctorComment` と order-level `doctorComment` の分離: 不足。first-class DTO は別 field を持つが、`prescriptionOrderApi.test.ts` の fetch/no-op save 系が赤く、互換 bundle 経路での round-trip は未閉塞。
-- comment row を先頭薬剤へ寄せる暫定変換: editor/import 側は解消済み。recommendation と input set は RP-level へ格納するようになった。`save/fetch/send` まで通す API テストは未 green。
+- `rp.doctorComment` と order-level `doctorComment` の分離: 解消。main drawer は fetched first-class order を source of truth にし、no-op re-save でも両者を混同しない。
+- comment row を先頭薬剤へ寄せる暫定変換: 解消。recommendation / input set / save / fetch / send まで RP-level claim comment を維持する。
 - 区分:
-  `sendable`: RP-level `claimComments`
+  `sendable`: RP-level / drug-level `claimComments.code|text`
   `local-only`: `remark`, `doctorComment`
-  `reject`: code なし RP-level claim comment
+  `reject`: code なし claim comment, `8501/8511/8521/831` 系 comment の未実装補足値
 - 必要テスト:
   `prescriptionOrderApi.test.ts` の save/fetch/no-op save を RP-level claim comment 前提で green 化
   `orderSendSmoke.test.ts` に RP-level claim comment を含む `save -> fetch -> normalize -> send -> XML`
@@ -126,10 +126,10 @@
 
 - UI 方針: 実装済み。`PrescriptionOrderEditorPanel.tsx` に `銘柄指定/一般名指定` と `後発変更 可/不可` の独立トグルがある。
 - first-class round-trip: editor 保存 payload は通る。`prescriptionOrderEditorPanel.orca-support.test.tsx` で `genericChangeAllowed` と `isGeneralNamePrescription` の独立保存を確認済み。
-- `sourceBundles` compat: 不足。`StoredDrugMeta.isGeneralNamePrescription` を保持するコードは入れたが、`prescriptionOrderApi.test.ts` の既存 fetch/no-op suiteが赤いので互換経路の証明は未完。
+- `sourceBundles` compat: main 編集導線からは外した。互換 bundle は preview/import 用で保持し、main drawer は fetched order を唯一の編集 source of truth にする。
 - 区分:
-  `sendable`: `genericChangeAllowed`, `isGeneralNamePrescription`
-  `local-only`: なし
+  `sendable`: `isGeneralNamePrescription`
+  `local-only`: `genericChangeAllowed`
   `reject`: なし
 - 必要テスト:
   `prescriptionOrderApi.test.ts` の sourceBundles 互換ケースを green 化
@@ -138,15 +138,16 @@
 ### 3-3. free-text usage / lower* / numberCode / supplemental sections
 
 - free-text usage: 方針は `reject`。editor validate と `savePrescriptionOrder()` の両方で `usageCode` 未確定を block する。`prescriptionOrderEditorPanel.orca-support.test.tsx` の block は green。
-- `lower*`: DTO / server payload 上の carrier は存在するが、回帰テストが不足。`prescriptionOrderApi.test.ts` の既存 suite 自体が赤く、完了扱い不可。
-- `prescriptionSettings` / `remarks`: DTO と server payload には field があるが、green な round-trip 証明が未完。
-- `numberCode`: 実装根拠が repo 内に見当たらない。方針未確定。
+- `lower*`: first-class DTO / server payload の preserve carrier として保持する。save -> fetch -> no-op save で残し、ORCA XML には送らない preserve-only と確定。
+- `prescriptionSettings` / `remarks`: first-class DTO / server payload で保持する。fetched order source-of-truth の no-op re-save smoke で round-trip を固定し、ORCA XML には送らない。
+- `numberCode`: medOrder first-class DTO / ORCA medicalmodv2 carrier のどちらにも採用しない。repo 内に medOrder 用の安全な carrier 根拠がないため、UI では編集させず preserve-only outside editor と確定。
 - 区分:
-  `sendable`: `usageCode`, `lower*`（carrier はある）
-  `local-only`: `remarks`, `prescriptionSettings` は現状 UI 非編集の preserve-only 表示方針
-  `reject`: free-text usage without `usageCode`
+  `sendable`: `usageCode`
+  `local-only`: `lower*`, `remarks`, `prescriptionSettings`, `numberCode`, `genericChangeAllowed`（UI 非編集 / preserve-only）
+  `reject`: drug row がある RP の `usageCode` 欠落
 - 必要テスト:
   `prescriptionOrderApi.test.ts` の fetch/no-op save 赤ケースを green 化
+  same-day multi-encounter を `encounterId` 付き fetch/save/send smoke で固定
   class `211/221/222/231/232` を実 XML まで通す smoke 拡張
 
 ## Prescription Test Status

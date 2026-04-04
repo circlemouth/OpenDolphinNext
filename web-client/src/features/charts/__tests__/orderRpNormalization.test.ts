@@ -194,9 +194,13 @@ describe('orderRpNormalization', () => {
           : [],
     }));
 
-    const result = await fetchMedicalModV2OrderBundles('000001', '2026-03-09');
+    const result = await fetchMedicalModV2OrderBundles('000001', '2026-03-09', 'F001:E777');
 
-    expect(fetchPrescriptionOrder).toHaveBeenCalledWith({ patientId: '000001', from: '2026-03-09' });
+    expect(fetchPrescriptionOrder).toHaveBeenCalledWith({
+      patientId: '000001',
+      from: '2026-03-09',
+      encounterId: 'F001:E777',
+    });
     expect(fetchOrderBundles).not.toHaveBeenCalledWith(expect.objectContaining({ entity: 'medOrder' }));
     expect(result.errors).toEqual([]);
     expect(result.bundles).toEqual(

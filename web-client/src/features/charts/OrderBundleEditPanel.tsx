@@ -58,6 +58,7 @@ export type OrderBundleEditPanelMeta = {
   fallbackUsed?: boolean;
   dataSourceTransition?: DataSourceTransition;
   patientId?: string;
+  encounterId?: string;
   appointmentId?: string;
   receptionId?: string;
   visitDate?: string;

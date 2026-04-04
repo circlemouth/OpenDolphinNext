@@ -541,7 +541,6 @@ export function RightUtilityDrawer({
                       patientId={patientId}
                       meta={meta}
                       variant="embedded"
-                      bundlesOverride={resolvedPanelBundles}
                       request={activeOrderRequest}
                       onRequestConsumed={onOrderRequestConsumed}
                       onEditingContextChange={onOrderEditingContextChange}

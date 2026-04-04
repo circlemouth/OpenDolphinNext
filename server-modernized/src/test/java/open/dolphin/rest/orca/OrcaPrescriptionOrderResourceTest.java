@@ -1,22 +1,28 @@
 package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.rest.dto.orca.PrescriptionClaimComment;
 import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
+import open.dolphin.rest.dto.orca.PrescriptionOrderFetchResponse;
 import open.dolphin.rest.dto.orca.PrescriptionOrderSaveResponse;
 import open.dolphin.rest.dto.orca.PrescriptionRp;
 import open.dolphin.security.audit.AuditEventPayload;
@@ -27,6 +33,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
 
     private OrcaPrescriptionOrderResource resource;
     private FakePrescriptionOrderRepository fakeRepository;
@@ -82,8 +90,9 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void saveOrderReturns400WhenClaimCommentCodeIsMissing() {
-        PrescriptionOrder payload = buildPayload(null, "コードなしコメント");
+    void saveOrderReturns400WhenDrugClaimCommentCodeIsMissing() {
+        PrescriptionOrder payload = buildPayload();
+        payload.getRps().get(0).getDrugs().get(0).setClaimComments(List.of(claimComment(null, "drug comment", "note")));
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.saveOrder(servletRequest, payload));
@@ -93,8 +102,44 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void saveOrderPersistsWhenClaimCommentCodeIsPresent() {
-        PrescriptionOrder payload = buildPayload("810000001", "患者希望");
+    void saveOrderReturns400WhenRpClaimCommentCodeIsMissing() {
+        PrescriptionOrder payload = buildPayload();
+        payload.getRps().get(0).setClaimComments(List.of(claimComment(null, "rp comment", "rp-note")));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertValidationError(ex, "rps[0].claimComments[0].code");
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void saveOrderReturns400WhenUsageCodeIsMissing() {
+        PrescriptionOrder payload = buildPayload();
+        payload.getRps().get(0).setUsageCode(null);
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertValidationError(ex, "rps[0].usageCode");
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void saveOrderReturns400WhenStructuredClaimCommentNumberIsNotSupported() {
+        PrescriptionOrder payload = buildPayload();
+        payload.getRps().get(0).setClaimComments(List.of(claimComment("850100001", "special comment", "3")));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertValidationError(ex, "rps[0].claimComments[0].note");
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void saveOrderPersistsEncounterScopedPayload() {
+        PrescriptionOrder payload = buildPayload();
 
         PrescriptionOrderSaveResponse response = resource.saveOrder(servletRequest, payload);
 
@@ -103,39 +148,85 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(1, fakeRepository.saveCalls);
         assertEquals(101L, response.getOrderId());
         assertEquals("00001", response.getPatientId());
+        assertEquals("F001:E100", response.getEncounterId());
+        assertEquals("F001:E100", fakeRepository.savedEncounterId);
+        assertEquals(LocalDate.parse("2026-04-03"), fakeRepository.savedEncounterDate);
+        assertNotNull(fakeRepository.savedPayloadJson);
+        assertTrue(fakeRepository.savedPayloadJson.contains("\"numberCode\":\"001\""));
+        assertTrue(fakeRepository.savedPayloadJson.contains("\"lowerUsageCode\":\"L-USAGE\""));
+        assertTrue(fakeRepository.savedPayloadJson.contains("\"lowerClaimCode\":\"L-CLAIM\""));
+        assertTrue(fakeRepository.savedPayloadJson.contains("\"lowerDrugCode\":\"L-DRUG\""));
     }
 
-    private static PrescriptionOrder buildPayload(String commentCode, String commentText) {
-        PrescriptionClaimComment claimComment = new PrescriptionClaimComment();
-        claimComment.setCode(commentCode);
-        claimComment.setText(commentText);
+    @Test
+    void getLatestOrderUsesEncounterIdToAvoidSameDayMixup() throws Exception {
+        PrescriptionOrder encounterA = buildPayload();
+        encounterA.setEncounterId("F001:E100");
+        PrescriptionOrder encounterB = buildPayload();
+        encounterB.setEncounterId("F001:E200");
+        encounterB.getRps().get(0).setRpNumber("rp-enc-200");
 
+        fakeRepository.addStoredOrder(encounterA);
+        fakeRepository.addStoredOrder(encounterB);
+
+        PrescriptionOrderFetchResponse response = resource.getLatestOrder(
+                servletRequest,
+                "00001",
+                "F001:E200",
+                "2026-04-03");
+
+        assertTrue(response.isFound());
+        assertEquals("F001:E200", response.getEncounterId());
+        assertEquals("F001:E200", response.getOrder().getEncounterId());
+        assertEquals("rp-enc-200", response.getOrder().getRps().get(0).getRpNumber());
+        assertEquals("F001:E200", fakeRepository.lastFindEncounterId);
+        assertEquals(LocalDate.parse("2026-04-03"), fakeRepository.lastFindEncounterDate);
+        assertFalse("F001:E100".equals(response.getOrder().getEncounterId()));
+    }
+
+    private static PrescriptionOrder buildPayload() {
         PrescriptionDrug drug = new PrescriptionDrug();
         drug.setCode("620000001");
-        drug.setName("アムロジピン");
+        drug.setName("Amlodipine");
         drug.setQuantity("1");
-        drug.setUnit("錠");
+        drug.setUnit("tab");
+        drug.setNumberCode("001");
+        drug.setNumberCodeSystem("urn:orca:number");
+        drug.setNumberCodeName("number-name");
         drug.setGenericChangeAllowed(Boolean.TRUE);
         drug.setGeneralNamePrescription(Boolean.FALSE);
-        drug.setDrugComment("食後");
+        drug.setDrugComment("after meal");
         drug.setPatientRequested(Boolean.TRUE);
-        drug.setClaimComments(List.of(claimComment));
+        drug.setLowerUsageCode("L-USAGE");
+        drug.setClaimComments(List.of(claimComment("810000001", "drug comment", "note")));
 
         PrescriptionRp rp = new PrescriptionRp();
         rp.setRpNumber("rp-1");
-        rp.setBundleName("処方RP");
+        rp.setBundleName("Prescription RP");
         rp.setMedicalClass("212");
         rp.setMedicalClassNumber("1");
-        rp.setUsageName("1日1回");
+        rp.setUsageCode("001000");
+        rp.setUsageName("after meal");
         rp.setStarted("2026-04-03");
+        rp.setLowerDrugCode("L-DRUG");
         rp.setDrugs(List.of(drug));
 
         PrescriptionOrder payload = new PrescriptionOrder();
         payload.setPatientId("00001");
+        payload.setEncounterId("F001:E100");
         payload.setEncounterDate("2026-04-03");
         payload.setPerformDate("2026-04-03");
         payload.setRps(List.of(rp));
         return payload;
+    }
+
+    private static PrescriptionClaimComment claimComment(String code, String text, String note) {
+        PrescriptionClaimComment claimComment = new PrescriptionClaimComment();
+        claimComment.setCode(code);
+        claimComment.setText(text);
+        claimComment.setNote(note);
+        claimComment.setLowerClaimCode("L-CLAIM");
+        return claimComment;
     }
 
     @SuppressWarnings("unchecked")
@@ -181,8 +272,8 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
             patient.setId(100L);
             patient.setFacilityId(fid);
             patient.setPatientId(pid);
-            patient.setFullName("テスト患者");
-            patient.setKanaName("テストカンジャ");
+            patient.setFullName("Test Patient");
+            patient.setKanaName("Test Kana");
             patient.setBirthday(LocalDate.parse("1990-01-01"));
             return patient;
         }
@@ -190,12 +281,45 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
 
     private static final class FakePrescriptionOrderRepository extends PrescriptionOrderRepository {
         private int saveCalls;
+        private String savedEncounterId;
+        private LocalDate savedEncounterDate;
+        private String savedPayloadJson;
+        private String lastFindEncounterId;
+        private LocalDate lastFindEncounterDate;
+        private final Map<String, StoredPrescriptionOrder> storedOrdersByEncounterId = new HashMap<>();
 
         @Override
         long save(String facilityId, String patientId, String encounterId, LocalDate encounterDate, LocalDate performDate,
-                String payloadJson, java.time.Instant createdAt, String createdBy) {
+                String payloadJson, Instant createdAt, String createdBy) {
             saveCalls += 1;
+            savedEncounterId = encounterId;
+            savedEncounterDate = encounterDate;
+            savedPayloadJson = payloadJson;
             return 101L;
+        }
+
+        @Override
+        Optional<StoredPrescriptionOrder> findLatest(String facilityId, String patientId, String encounterId,
+                LocalDate encounterDate) {
+            lastFindEncounterId = encounterId;
+            lastFindEncounterDate = encounterDate;
+            if (encounterId == null) {
+                return storedOrdersByEncounterId.values().stream().findFirst();
+            }
+            return Optional.ofNullable(storedOrdersByEncounterId.get(encounterId));
+        }
+
+        void addStoredOrder(PrescriptionOrder order) throws Exception {
+            String encounterId = order.getEncounterId();
+            storedOrdersByEncounterId.put(
+                    encounterId,
+                    new StoredPrescriptionOrder(
+                            storedOrdersByEncounterId.size() + 1L,
+                            OBJECT_MAPPER.writeValueAsString(order),
+                            encounterId,
+                            LocalDate.parse(order.getEncounterDate()),
+                            LocalDate.parse(order.getPerformDate()),
+                            Instant.parse("2026-04-03T00:00:00Z")));
         }
     }
 }
