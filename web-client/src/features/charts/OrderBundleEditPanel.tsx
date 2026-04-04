@@ -20,12 +20,19 @@ import {
   type OrderMasterSearchResult,
   type OrderMasterSearchType,
 } from './orderMasterSearchApi';
+import { fetchOrcaMedicationGet } from './orcaMedicationGetApi';
 import {
   fetchOrcaOrderInputSetDetail,
   fetchOrcaOrderInputSets,
   type OrcaOrderInputSetSummary,
 } from './orcaOrderInputSetApi';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+import {
+  canonicalizeChargeBundleMeta,
+  deriveChargeClassCodeFromCategory,
+  isChargeOrderEntity,
+  resolveCanonicalChargeClassMeta,
+} from './orderChargeClassSupport';
 import {
   fetchOrderRecommendations,
   type OrderRecommendationCandidate,
@@ -329,12 +336,8 @@ const USAGE_ROUTE_CLASSIFICATION_TABLE: Record<string, { label: string; injectio
   TOP: { label: '外用', injectionPriority: 90 },
 };
 const UNKNOWN_USAGE_ROUTE_CLASSIFICATION = { label: '未分類', injectionPriority: 999 };
-const UNSUPPORTED_COMMENT_PARAMETER_MESSAGE =
-  '選択式コメントの itemNumber / branch は未対応のため追加できません。パラメータ不要のコメントのみ選択してください。';
 
 const isDrugMedicationCode = (code: string) => /^6\d{8}$/.test(code.trim());
-const hasUnsupportedCommentSelectionParameter = (item?: { itemNumber?: string; itemNumberBranch?: string }) =>
-  Boolean(item?.itemNumber?.trim() || item?.itemNumberBranch?.trim());
 
 const parseDocumentIds = (value?: string) => {
   if (!value) return { documentId: undefined, letterId: undefined };
@@ -508,29 +511,36 @@ const buildEmptyForm = (today: string): BundleFormState => ({
 });
 
 export const toFormState = (bundle: OrderBundle, today: string): BundleFormState => {
-  const { normal, material, comment, bodyPart } = splitBundleItems(bundle.entity, bundle.items, bundle.bodyPart);
-  const prescription = parsePrescriptionClassCode(bundle.classCode);
+  const normalizedBundle = canonicalizeChargeBundleMeta(bundle);
+  const { normal, material, comment, bodyPart } = splitBundleItems(
+    normalizedBundle.entity,
+    normalizedBundle.items,
+    normalizedBundle.bodyPart,
+  );
+  const prescription = parsePrescriptionClassCode(normalizedBundle.classCode);
   return {
-    documentId: bundle.documentId,
-    moduleId: bundle.moduleId,
-    bundleName: bundle.bundleName ?? '',
-    admin: bundle.admin ?? '',
-    adminMemo: bundle.adminMemo ?? '',
-    adminCode: bundle.adminCode ?? '',
-    adminCodeSystem: bundle.adminCodeSystem ?? undefined,
-    bundleNumber: bundle.bundleNumber ?? '1',
-    sourceSetCode: bundle.sourceSetCode,
-    subtype: resolveFormSubtype(bundle.entity ?? '', bundle.subtype),
-    classCode: bundle.classCode ?? undefined,
-    classCodeSystem: bundle.classCodeSystem ?? undefined,
-    className: bundle.className ?? undefined,
-    memo: bundle.memo ?? '',
-    startDate: bundle.started ?? today,
+    documentId: normalizedBundle.documentId,
+    moduleId: normalizedBundle.moduleId,
+    bundleName: normalizedBundle.bundleName ?? '',
+    admin: normalizedBundle.admin ?? '',
+    adminMemo: normalizedBundle.adminMemo ?? '',
+    adminCode: normalizedBundle.adminCode ?? '',
+    adminCodeSystem: normalizedBundle.adminCodeSystem ?? undefined,
+    bundleNumber: normalizedBundle.bundleNumber ?? '1',
+    sourceSetCode: normalizedBundle.sourceSetCode,
+    subtype: resolveFormSubtype(normalizedBundle.entity ?? '', normalizedBundle.subtype),
+    classCode: normalizedBundle.classCode ?? undefined,
+    classCodeSystem: normalizedBundle.classCodeSystem ?? undefined,
+    className: normalizedBundle.className ?? undefined,
+    memo: normalizedBundle.memo ?? '',
+    startDate: normalizedBundle.started ?? today,
     prescriptionLocation: prescription.location,
     prescriptionTiming: prescription.timing,
-    items: ensureTrailingEmptyMainItem((normal.length > 0 ? normal : [buildEmptyItem()]).map((item) => normalizeItemForForm(bundle.entity, item))),
-    materialItems: material.map((item) => ensureRowId(normalizeItemForForm(bundle.entity, item))),
-    commentItems: comment.map((item) => ensureRowId(normalizeItemForForm(bundle.entity, item))),
+    items: ensureTrailingEmptyMainItem(
+      (normal.length > 0 ? normal : [buildEmptyItem()]).map((item) => normalizeItemForForm(normalizedBundle.entity, item)),
+    ),
+    materialItems: material.map((item) => ensureRowId(normalizeItemForForm(normalizedBundle.entity, item))),
+    commentItems: comment.map((item) => ensureRowId(normalizeItemForForm(normalizedBundle.entity, item))),
     bodyPart,
   };
 };
@@ -545,26 +555,31 @@ const toFormStateFromHistoryCopy = (bundle: OrderBundle, today: string): BundleF
   };
 };
 
-export const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => ({
-  bundleName: template.bundleName,
-  admin: template.admin,
-  adminMemo: template.adminMemo ?? '',
-  adminCode: template.adminCode ?? '',
-  adminCodeSystem: template.adminCodeSystem ?? undefined,
-  bundleNumber: template.bundleNumber || '1',
-  subtype: resolveFormSubtype('', template.subtype),
-  classCode: template.classCode ?? undefined,
-  classCodeSystem: template.classCodeSystem ?? undefined,
-  className: template.className ?? undefined,
-  memo: template.memo,
-  startDate: today,
-  prescriptionLocation: template.prescriptionLocation ?? DEFAULT_PRESCRIPTION_LOCATION,
-  prescriptionTiming: template.prescriptionTiming ?? DEFAULT_PRESCRIPTION_TIMING,
-  items: ensureTrailingEmptyMainItem(template.items.length > 0 ? template.items.map((item) => ensureRowId({ ...item })) : [buildEmptyItem()]),
-  materialItems: template.materialItems.map((item) => ensureRowId({ ...item })),
-  commentItems: template.commentItems.map((item) => ({ ...item })),
-  bodyPart: template.bodyPart ? { ...template.bodyPart } : null,
-});
+export const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => {
+  const chargeMeta = resolveCanonicalChargeClassMeta({ classCode: template.classCode });
+  return {
+    bundleName: template.bundleName,
+    admin: template.admin,
+    adminMemo: template.adminMemo ?? '',
+    adminCode: template.adminCode ?? '',
+    adminCodeSystem: template.adminCodeSystem ?? undefined,
+    bundleNumber: template.bundleNumber || '1',
+    subtype: resolveFormSubtype('', template.subtype),
+    classCode: chargeMeta?.classCode ?? template.classCode ?? undefined,
+    classCodeSystem: chargeMeta?.classCodeSystem ?? template.classCodeSystem ?? undefined,
+    className: chargeMeta?.className ?? template.className ?? undefined,
+    memo: template.memo,
+    startDate: today,
+    prescriptionLocation: template.prescriptionLocation ?? DEFAULT_PRESCRIPTION_LOCATION,
+    prescriptionTiming: template.prescriptionTiming ?? DEFAULT_PRESCRIPTION_TIMING,
+    items: ensureTrailingEmptyMainItem(
+      template.items.length > 0 ? template.items.map((item) => ensureRowId({ ...item })) : [buildEmptyItem()],
+    ),
+    materialItems: template.materialItems.map((item) => ensureRowId({ ...item })),
+    commentItems: template.commentItems.map((item) => ({ ...item })),
+    bodyPart: template.bodyPart ? { ...template.bodyPart } : null,
+  };
+};
 
 const isBundleFormEmpty = (form: BundleFormState) => {
   const bundleNumber = form.bundleNumber.trim();
@@ -592,7 +607,7 @@ const toOrderBundleFromInputSetDetail = (
     classCode.startsWith('6') && (requestedEntity === 'physiologyOrder' || requestedEntity === 'bacteriaOrder')
       ? requestedEntity
       : inputSetEntity;
-  return {
+  return canonicalizeChargeBundleMeta({
     entity: resolvedEntity,
     bundleName: bundle.bundleName ?? '',
     bundleNumber: bundle.bundleNumber ?? '1',
@@ -628,7 +643,7 @@ const toOrderBundleFromInputSetDetail = (
           ? item.rowRole
           : undefined,
     })),
-  };
+  });
 };
 
 const matchesOrcaInputSetEntity = (
@@ -697,7 +712,7 @@ const resolveSendContractNote = (entity: string) => {
     return 'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。';
   }
   if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
-    return 'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
+    return 'setCode は展開専用です。charge 系は classCode/className・数量/単位・coded row のみを ORCA へ送ります。算定指示・院内補足・自由メモ・開始日は local-only とし、medicationgetv2 の Item_Number / Branch は候補 metadata として表示します。';
   }
   if (canonicalEntity === 'bacteriaOrder') {
     return '細菌検査 subtype・院内補足・自由メモは local-only です。subtype に対応する ORCA 送信 carrier は未実装のため、送信前に明示 block します。';
@@ -1113,6 +1128,7 @@ export function OrderBundleEditPanel({
   }, []);
   const isMedOrder = entity === 'medOrder';
   const isInjectionOrder = entity === 'injectionOrder';
+  const isChargeOrder = isChargeOrderEntity(entity);
   const isCompactOrderLayout = isMedOrder || isInjectionOrder;
   const isRadiologyOrder = entity === 'radiologyOrder';
   const isRehabOrder = entity === 'generalOrder' || entity === 'treatmentOrder';
@@ -1442,13 +1458,6 @@ export function OrderBundleEditPanel({
         itemPredictiveSearchTypes.map(async (type) => {
           const items: OrderMasterSearchItem[] = [];
           const correctionCandidates: OrderMasterSearchItem[] = [];
-          const selectionComments: Array<{
-            code: string;
-            name: string;
-            category?: string;
-            itemNumber?: string;
-            itemNumberBranch?: string;
-          }> = [];
           let correctionMeta: OrderMasterSearchResult['correctionMeta'];
           let totalCount: number | undefined;
           let page = 1;
@@ -1470,7 +1479,6 @@ export function OrderBundleEditPanel({
               correctionCandidates.push(...(result.correctionCandidates ?? []));
               correctionMeta = result.correctionMeta ?? correctionMeta;
             }
-            selectionComments.push(...(result.selectionComments ?? []));
             totalCount = typeof result.totalCount === 'number' ? result.totalCount : totalCount;
             const pageItemCount = result.items?.length ?? 0;
             const hasNextPage =
@@ -1486,7 +1494,6 @@ export function OrderBundleEditPanel({
             totalCount: typeof totalCount === 'number' ? totalCount : items.length,
             correctionCandidates,
             correctionMeta,
-            selectionComments,
           };
           return { type, result: mergedResult };
         }),
@@ -1496,7 +1503,6 @@ export function OrderBundleEditPanel({
       const items = successful.flatMap((entry) => entry.result.items ?? []);
       const correctionCandidates = successful.flatMap((entry) => entry.result.correctionCandidates ?? []);
       const correctionMeta = successful.map((entry) => entry.result.correctionMeta).find((meta) => Boolean(meta));
-      const selectionComments = successful.flatMap((entry) => entry.result.selectionComments ?? []);
       const failedMessages = responses
         .filter((entry) => !entry.result.ok)
         .map((entry) => entry.result.message)
@@ -1506,7 +1512,6 @@ export function OrderBundleEditPanel({
         items,
         correctionCandidates,
         correctionMeta,
-        selectionComments,
         failedTypes,
         message: failedMessages[0],
       };
@@ -1558,29 +1563,25 @@ export function OrderBundleEditPanel({
     [itemPredictiveItems],
   );
   const selectedItemCode = selectedItemForPrediction?.code?.trim() ?? '';
+  const selectedItemRowRole = resolveBundleItemRowRole(entity, selectedItemForPrediction);
   const selectionCommentQuery = useQuery({
     queryKey: ['charts-order-selection-comments', selectedItemCode, form.startDate],
-    queryFn: async (): Promise<{
-      selections: Array<{
-        commentCode?: string;
-        commentName?: string;
-        category?: string;
-        itemNumber?: string;
-        itemNumberBranch?: string;
-      }>;
-    }> => ({ selections: [] }),
-    enabled: false,
+    queryFn: () =>
+      fetchOrcaMedicationGet({
+        requestCode: selectedItemCode,
+        baseDate: form.startDate?.trim() || undefined,
+        requestNumber: '02',
+      }),
+    enabled:
+      supportsCommentCodes &&
+      /^\d{9}$/.test(selectedItemCode) &&
+      selectedItemRowRole === 'main' &&
+      !isBlocked,
     staleTime: 30 * 1000,
     retry: 0,
   });
   const selectionCommentCandidates = useMemo(() => {
     const map = new Map<string, SelectionCommentCandidate>();
-    (itemPredictiveQuery.data?.selectionComments ?? []).forEach((item) => {
-      const code = item.code?.trim();
-      const name = item.name.trim();
-      if (!code || !name) return;
-      map.set(`${code}|${name}`, item);
-    });
     (selectionCommentQuery.data?.selections ?? []).forEach((selection) => {
       const code = selection.commentCode?.trim();
       const name = selection.commentName?.trim();
@@ -1594,7 +1595,7 @@ export function OrderBundleEditPanel({
       });
     });
     return Array.from(map.values());
-  }, [itemPredictiveQuery.data?.selectionComments, selectionCommentQuery.data?.selections]);
+  }, [selectionCommentQuery.data?.selections]);
 
   const usageEffectiveDate = form.startDate?.trim() || undefined;
   const usageSearchQuery = useQuery({
@@ -1715,19 +1716,17 @@ export function OrderBundleEditPanel({
           map.set(`${code}|${name}`, item);
         });
     }
-    selectionCommentCandidates
-      .filter((item) => !hasUnsupportedCommentSelectionParameter(item))
-      .forEach((item) => {
-        const code = item.code?.trim();
-        const name = item.name.trim();
-        if (!code || !name) return;
-        map.set(`${code}|${name}`, {
-          type: 'comment',
-          code,
-          name,
-          category: item.category,
-        });
+    selectionCommentCandidates.forEach((item) => {
+      const code = item.code?.trim();
+      const name = item.name.trim();
+      if (!code || !name) return;
+      map.set(`${code}|${name}`, {
+        type: 'comment',
+        code,
+        name,
+        category: item.category,
       });
+    });
     const draftCode = commentDraft.code?.trim();
     const draftName = commentDraft.name?.trim();
     if (!draftName) return Array.from(map.values());
@@ -1767,11 +1766,6 @@ export function OrderBundleEditPanel({
       }),
     [commentMasterOptions],
   );
-  const unsupportedSelectionCommentCandidates = useMemo(
-    () => selectionCommentCandidates.filter((item) => hasUnsupportedCommentSelectionParameter(item)),
-    [selectionCommentCandidates],
-  );
-
   const resolvePredictiveItem = (value: string) => {
     const normalized = normalizePredictiveLabel(value);
     if (!normalized) return null;
@@ -1819,8 +1813,10 @@ export function OrderBundleEditPanel({
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
     if (!rowId || !matched) return;
     const promoteToMaterial = matched.type === 'material' || shouldTreatAsMaterialItem(entity, matched.code?.trim() ?? '');
-    const derivedClassCode =
-      entity === 'instractionChargeOrder' || entity === 'baseChargeOrder' ? matched.category?.trim() || '' : '';
+    const derivedClassCode = deriveChargeClassCodeFromCategory(entity, matched.category);
+    const derivedChargeMeta = derivedClassCode
+      ? resolveCanonicalChargeClassMeta({ entity, classCode: derivedClassCode })
+      : null;
     setForm((prev) => {
       const updateRow = (row: OrderBundleItem) => ({
         ...row,
@@ -1851,12 +1847,9 @@ export function OrderBundleEditPanel({
       }
       return {
         ...prev,
-        classCode:
-          derivedClassCode &&
-          ((entity === 'instractionChargeOrder' && /^(13\d|14\d|150)$/.test(derivedClassCode)) ||
-            (entity === 'baseChargeOrder' && /^(11\d|12[0-5])$/.test(derivedClassCode)))
-            ? derivedClassCode
-            : prev.classCode,
+        classCode: derivedChargeMeta?.classCode ?? prev.classCode,
+        classCodeSystem: derivedChargeMeta?.classCodeSystem ?? prev.classCodeSystem,
+        className: derivedChargeMeta?.className ?? prev.className,
         items: nextItems,
         materialItems: nextMaterialItems,
       };
@@ -1881,10 +1874,6 @@ export function OrderBundleEditPanel({
   }) => {
     const selectedName = selected.name?.trim();
     if (!selectedName) return;
-    if (hasUnsupportedCommentSelectionParameter(selected)) {
-      setNotice({ tone: 'error', message: UNSUPPORTED_COMMENT_PARAMETER_MESSAGE });
-      return;
-    }
     setCommentDraft((prev) => ({
       ...prev,
       code: selected.code?.trim() ?? '',
@@ -2127,6 +2116,14 @@ export function OrderBundleEditPanel({
 
   const resolveBundleClassMeta = (bundleForm: BundleFormState) => {
     if (!isMedOrder) {
+      const chargeMeta = resolveCanonicalChargeClassMeta({ entity, classCode: bundleForm.classCode });
+      if (chargeMeta) {
+        return {
+          classCode: chargeMeta.classCode,
+          classCodeSystem: chargeMeta.classCodeSystem,
+          className: chargeMeta.className,
+        };
+      }
       const explicitClassCode = bundleForm.classCode?.trim();
       const explicitClassName = bundleForm.className?.trim();
       if (explicitClassCode || explicitClassName) {
@@ -3560,6 +3557,11 @@ export function OrderBundleEditPanel({
                 disabled={isBlocked}
               />
             )}
+            {isChargeOrder && (
+              <p className="charts-side-panel__help">
+                算定指示は local-only です。charge 系の ORCA 送信では classCode/className・数量/単位・coded row のみを使用します。
+              </p>
+            )}
             {supportsUsageSearch && (
               <>
                 <label htmlFor={`${entityId}-admin-recent`}>最近使った用法</label>
@@ -3652,6 +3654,9 @@ export function OrderBundleEditPanel({
                     onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
                     disabled={isBlocked}
                   />
+                  {isChargeOrder ? (
+                    <p className="charts-side-panel__help">開始日は候補取得と院内履歴のための local-only 日付です。medicalmodv2 の行情報には含めません。</p>
+                  ) : null}
                 </div>
                 <div className="charts-side-panel__field charts-side-panel__meta-section--memo">
                   <label htmlFor={`${entityId}-memo`}>{orderUiProfile.memoLabel}</label>
@@ -3662,6 +3667,9 @@ export function OrderBundleEditPanel({
                     placeholder={orderUiProfile.memoPlaceholder}
                     disabled={isBlocked}
                   />
+                  {isChargeOrder ? (
+                    <p className="charts-side-panel__help">自由メモは local-only です。ORCA に意味を持たせる内容は coded comment を追加してください。</p>
+                  ) : null}
                   {isRehabOrder && (
                     <p className="charts-side-panel__message">
                       メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
@@ -3695,6 +3703,9 @@ export function OrderBundleEditPanel({
                 onChange={(event) => setForm((prev) => ({ ...prev, startDate: event.target.value }))}
                 disabled={isBlocked}
               />
+              {isChargeOrder ? (
+                <p className="charts-side-panel__help">開始日は候補取得と院内履歴のための local-only 日付です。medicalmodv2 の行情報には含めません。</p>
+              ) : null}
             </div>
             <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--memo">
               <label htmlFor={`${entityId}-memo`}>{orderUiProfile.memoLabel}</label>
@@ -3705,6 +3716,9 @@ export function OrderBundleEditPanel({
                 placeholder={orderUiProfile.memoPlaceholder}
                 disabled={isBlocked}
               />
+              {isChargeOrder ? (
+                <p className="charts-side-panel__help">自由メモは local-only です。ORCA に意味を持たせる内容は coded comment を追加してください。</p>
+              ) : null}
               {isRehabOrder && (
                 <p className="charts-side-panel__message">
                   メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
@@ -4373,8 +4387,7 @@ export function OrderBundleEditPanel({
                         note: item.category,
                       })
                     }
-                    disabled={isBlocked || hasUnsupportedCommentSelectionParameter(item)}
-                    title={hasUnsupportedCommentSelectionParameter(item) ? UNSUPPORTED_COMMENT_PARAMETER_MESSAGE : undefined}
+                    disabled={isBlocked}
                   >
                     <span>{item.code}</span>
                     <span>{item.name}</span>
@@ -4384,9 +4397,7 @@ export function OrderBundleEditPanel({
                   </button>
                 ))}
               </div>
-              {unsupportedSelectionCommentCandidates.length > 0 ? (
-                <p className="charts-side-panel__help">{UNSUPPORTED_COMMENT_PARAMETER_MESSAGE}</p>
-              ) : null}
+              <p className="charts-side-panel__help">項番/枝番は ORCA selection metadata として表示します。追加時の入力ブロックには使いません。</p>
             </div>
           )}
           </div>

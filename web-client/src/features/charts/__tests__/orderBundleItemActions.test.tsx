@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,6 +7,7 @@ import type { ReactElement } from 'react';
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
+import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 
 vi.mock('../orderBundleApi', async () => ({
   fetchOrderBundles: vi.fn().mockResolvedValue({
@@ -25,6 +26,14 @@ vi.mock('../stampApi', async () => ({
 
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
+}));
+
+vi.mock('../orcaMedicationGetApi', async () => ({
+  fetchOrcaMedicationGet: vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    selections: [],
+  }),
 }));
 
 const renderWithClient = (ui: ReactElement) => {
@@ -417,6 +426,9 @@ describe('OrderBundleEditPanel item actions', () => {
     const payload = mutateMock.mock.calls.at(-1)?.[0];
     expect(payload?.operations?.[0]?.entity).toBe('instractionChargeOrder');
     expect(payload?.operations?.[0]?.classCode).toBe('140');
+    expect(payload?.operations?.[0]?.className).toBe(
+      resolveCanonicalChargeClassMeta({ entity: 'instractionChargeOrder', classCode: '140' })?.className,
+    );
   });
 
   it('頓用/院内の選択とRP名補正が保存 payload に反映される', async () => {
@@ -503,14 +515,14 @@ describe('OrderBundleEditPanel item actions', () => {
             entity: 'baseChargeOrder',
             bundleName: '在宅指導',
             bundleNumber: '1',
-            classCode: '130',
+            classCode: '120',
             classCodeSystem: 'Claim007',
-            className: '指導・在宅',
+            className: '旧名称',
             admin: '',
             adminMemo: '',
             memo: '確認',
             started: '2026-03-09',
-            items: [{ code: '1300001', name: '在宅患者訪問診療料', quantity: '1', unit: '回', memo: '' }],
+            items: [{ code: '1200001', name: '在宅患者訪問診療料', quantity: '1', unit: '回', memo: '' }],
           },
         }}
       />,
@@ -523,9 +535,9 @@ describe('OrderBundleEditPanel item actions', () => {
 
     const payload = mutateMock.mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
-    expect(operation?.classCode).toBe('130');
+    expect(operation?.classCode).toBe('120');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('指導・在宅');
+    expect(operation?.className).toBe(resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className);
   });
 
   it('外用の混合トグルで混合コメント行が保存 payload に追加される', async () => {

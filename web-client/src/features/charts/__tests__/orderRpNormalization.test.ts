@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveCanonicalOrderEntity } from '../orderCategoryRegistry';
+import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 import {
   collectMedicalModV2BundleIssues,
   fetchMedicalModV2OrderBundles,
@@ -26,6 +27,22 @@ describe('orderRpNormalization', () => {
     vi.clearAllMocks();
   });
 
+  it('charge bundles use canonical class metadata for RP normalization', () => {
+    const normalized = normalizeOrderBundleToRp({
+      entity: 'baseChargeOrder',
+      bundleName: 'BASE_CHARGE_SET',
+      bundleNumber: '1',
+      classCode: '120',
+      classCodeSystem: 'Claim007',
+      className: 'bundle fallback should not survive',
+      items: [{ code: '120000110', name: 'BASE_CHARGE_SET', quantity: '1', unit: 'times' }],
+    } as any);
+
+    expect(normalized?.header.medicalClass).toBe('120');
+    expect(normalized?.header.medicalClassName).toBe(
+      resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className,
+    );
+  });
   it('canonical entity は generalOrder と laboTest を正規化する', () => {
     expect(resolveCanonicalOrderEntity('generalOrder')).toBe('treatmentOrder');
     expect(resolveCanonicalOrderEntity('laboTest')).toBe('testOrder');

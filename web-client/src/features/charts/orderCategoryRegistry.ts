@@ -1,3 +1,4 @@
+import { resolveCanonicalChargeClassMeta } from './orderChargeClassSupport';
 import type { OrderMasterSearchType } from './orderMasterSearchApi';
 
 export type OrderGroupKey = 'prescription' | 'injection' | 'treatment' | 'test' | 'charge';
@@ -413,7 +414,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '基本料',
     group: 'charge',
     etensuCategory: '1',
-    classMeta: { classCode: '110', className: '基本診療料' },
+    classMeta: resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder' })!,
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 初診料算定',
@@ -437,7 +438,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '指導料',
     group: 'charge',
     etensuCategory: '1',
-    classMeta: { classCode: '130', className: '医学管理等' },
+    classMeta: resolveCanonicalChargeClassMeta({ entity: 'instractionChargeOrder' })!,
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 初診料算定',

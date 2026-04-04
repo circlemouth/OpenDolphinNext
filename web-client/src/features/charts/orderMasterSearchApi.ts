@@ -46,13 +46,6 @@ export type OrderMasterSearchResult = {
     apiResultMessage?: string;
     validTo?: string;
   };
-  selectionComments?: Array<{
-    code: string;
-    name: string;
-    category?: string;
-    itemNumber?: string;
-    itemNumberBranch?: string;
-  }>;
 };
 
 type OrcaMasterListResponse<T> = {
@@ -393,6 +386,5 @@ export async function fetchOrderMasterSearch(params: {
     raw: json,
     correctionCandidates: undefined,
     correctionMeta: undefined,
-    selectionComments: undefined,
   };
 }

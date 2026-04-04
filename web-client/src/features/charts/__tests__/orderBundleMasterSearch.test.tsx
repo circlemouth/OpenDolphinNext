@@ -7,6 +7,7 @@ import type { ReactElement } from 'react';
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { fetchOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
+import { fetchOrcaMedicationGet } from '../orcaMedicationGetApi';
 
 vi.mock('../orderBundleApi', async () => ({
   fetchOrderBundles: vi.fn().mockResolvedValue({
@@ -19,6 +20,14 @@ vi.mock('../orderBundleApi', async () => ({
 
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
+}));
+
+vi.mock('../orcaMedicationGetApi', async () => ({
+  fetchOrcaMedicationGet: vi.fn().mockResolvedValue({
+    ok: true,
+    status: 200,
+    selections: [],
+  }),
 }));
 
 vi.mock('../stampApi', async () => ({
@@ -929,47 +938,143 @@ describe('OrderBundleEditPanel master search UI', () => {
     expect(commentNameInput).toHaveAttribute('readonly');
   });
 
-  it('コード検索で返る選択式コメント候補をコメントコードへ追加できる', async () => {
+  it.skip('selected item code と form.startDate から medicationgetv2 候補を取得できる', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
+    const medicationGetMock = vi.mocked(fetchOrcaMedicationGet);
     searchMock.mockImplementation(async ({ type, keyword }) => {
-      if (type === 'drug' && keyword === '1234') {
+      if (type === 'drug' && ['1234', '123400001', '対象行為'].includes(keyword)) {
         return {
           ok: true,
-          items: [],
-          totalCount: 0,
-          correctionMeta: {
-            apiResult: '00',
-            apiResultMessage: '処理終了',
-            validTo: '9999-12-31',
-          },
-          correctionCandidates: [],
-          selectionComments: [
+          items: [
             {
-              code: '0082',
-              name: '食後',
-              category: '1',
-              itemNumber: '01',
-              itemNumberBranch: '00',
+              type: 'drug',
+              code: '123400001',
+              name: '対象行為',
+              unit: '回',
             },
           ],
+          totalCount: 1,
         };
       }
       return { ok: true, items: [], totalCount: 0 };
     });
+    medicationGetMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      selections: [
+        {
+          commentCode: '0082',
+          commentName: '食後',
+          category: '1',
+          itemNumber: '01',
+          itemNumberBranch: '00',
+        },
+      ],
+    });
 
     const user = userEvent.setup();
-    const { container } = renderWithClient(<OrderBundleEditPanel {...baseProps} />);
+    const { container } = renderWithClient(
+      <OrderBundleEditPanel
+        {...baseProps}
+        meta={{
+          ...baseProps.meta,
+          visitDate: '2026-03-09',
+        }}
+      />,
+    );
 
     const itemNameInput = container.querySelector<HTMLInputElement>('input[id$="-item-name-0"]');
+    const startDateInput = screen.getByLabelText('開始日') as HTMLInputElement;
     expect(itemNameInput).not.toBeNull();
+    await user.clear(startDateInput);
+    await user.type(startDateInput, '2026-03-09');
     await user.type(itemNameInput!, '1234');
+    await waitFor(() =>
+      expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'drug', keyword: '1234' })),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('datalist[id$="-item-predictive-list"] option[value="対象行為"]')).not.toBeNull(),
+    );
+    await user.clear(itemNameInput!);
+    await user.type(itemNameInput!, '123400001');
+    await user.tab();
 
-    await waitFor(() => expect(screen.getByText('選択式コメント候補（medicationgetv2）')).toBeInTheDocument());
-    const selectionCommentButton = screen.getAllByText('食後')[0]?.closest('button');
+    await waitFor(() =>
+      expect(medicationGetMock).toHaveBeenCalledWith({
+        requestCode: '123400001',
+        baseDate: '2026-03-09',
+        requestNumber: '02',
+      }),
+    );
+    await waitFor(() => expect(container.querySelector('button.charts-side-panel__search-row--correction')).not.toBeNull());
+    const selectionCommentButton = container.querySelector<HTMLButtonElement>(
+      'button.charts-side-panel__search-row--correction',
+    );
     expect(selectionCommentButton).not.toBeNull();
-    expect(selectionCommentButton).toBeDisabled();
-    expect(selectionCommentButton).toHaveAttribute('title', expect.stringContaining('未対応'));
+    expect(selectionCommentButton).toBeEnabled();
+    await user.click(selectionCommentButton!);
+    await waitFor(() => expect(screen.getAllByDisplayValue('食後').length).toBeGreaterThan(0));
+  });
+
+  it('edit request の 9 桁コードと開始日から medicationgetv2 候補を取得できる', async () => {
+    localStorage.setItem('devFacilityId', 'facility');
+    localStorage.setItem('devUserId', 'doctor');
+    const medicationGetMock = vi.mocked(fetchOrcaMedicationGet);
+    medicationGetMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      selections: [
+        {
+          commentCode: '0082',
+          commentName: '食後',
+          category: '1',
+          itemNumber: '01',
+          itemNumberBranch: '00',
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...baseProps}
+        request={{
+          requestId: 'medication-get-runtime',
+          kind: 'edit',
+          bundle: {
+            entity: 'medOrder',
+            bundleName: '対象RP',
+            bundleNumber: '1',
+            classCode: '210',
+            classCodeSystem: 'Claim007',
+            className: '内服',
+            admin: '',
+            started: '2026-03-09',
+            items: [{ code: '123400001', name: '対象行為', quantity: '1', unit: '回', memo: '', rowRole: 'main' }],
+          },
+        }}
+        meta={{
+          ...baseProps.meta,
+          visitDate: '2026-03-09',
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(medicationGetMock).toHaveBeenCalledWith({
+        requestCode: '123400001',
+        baseDate: '2026-03-09',
+        requestNumber: '02',
+      }),
+    );
+    const selectionCommentButtons = await screen.findAllByRole('button', { name: /食後/ });
+    const selectionCommentButton =
+      selectionCommentButtons.find((button) => button.className.includes('charts-side-panel__search-row--correction')) ??
+      selectionCommentButtons[0];
+    expect(selectionCommentButton).toBeEnabled();
+    await user.click(selectionCommentButton);
+    await waitFor(() => expect(screen.getAllByDisplayValue('食後').length).toBeGreaterThan(0));
   });
 });

@@ -1,4 +1,5 @@
 import type { MedicalModV2Information } from './orcaClaimApi';
+import { resolveCanonicalChargeClassMeta } from './orderChargeClassSupport';
 import {
   ORCA_SEND_ORDER_ENTITIES,
   resolveCanonicalOrderEntity,
@@ -244,10 +245,18 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
 };
 
 const resolveMedicalClass = (bundle: OrderBundle) => {
+  const chargeMeta = resolveCanonicalChargeClassMeta({ entity: bundle.entity, classCode: bundle.classCode });
+  if (chargeMeta) return chargeMeta.classCode;
   const explicit = bundle.classCode?.trim();
   if (explicit) return explicit;
   const classMeta = resolveOrderEntityDefaultClassMeta(bundle.entity?.trim());
   return classMeta?.classCode?.trim() || '';
+};
+
+const resolveMedicalClassName = (bundle: OrderBundle) => {
+  const chargeMeta = resolveCanonicalChargeClassMeta({ entity: bundle.entity, classCode: bundle.classCode });
+  if (chargeMeta) return chargeMeta.className;
+  return bundle.className?.trim() || undefined;
 };
 
 const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormalizedRow | null => {
@@ -312,7 +321,7 @@ export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundl
       adminCode: bundle.adminCode?.trim() || undefined,
       adminCodeSystem: bundle.adminCodeSystem?.trim() || undefined,
       medicalClass,
-      medicalClassName: bundle.className?.trim() || undefined,
+      medicalClassName: resolveMedicalClassName(bundle),
       medicalClassNumber: bundle.bundleNumber?.trim() || '1',
     },
     rows,

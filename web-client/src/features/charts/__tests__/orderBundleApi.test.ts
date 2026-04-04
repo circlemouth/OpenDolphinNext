@@ -21,6 +21,7 @@ import {
   fetchOrderBundlesWithPatientImportRecovery,
   mutateOrderBundles,
 } from '../orderBundleApi';
+import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 
 describe('orderBundleApi bodyPart contract', () => {
   beforeEach(() => {
@@ -409,6 +410,88 @@ describe('orderBundleApi bodyPart contract', () => {
         admin: 'LOCAL_ADMIN_NOTE',
         memo: 'LOCAL_MEMO',
         items: expect.arrayContaining([expect.objectContaining({ code: '180000210', unit: 'times' })]),
+      }),
+    );
+  });
+
+  it('fetch canonicalizes charge className from classCode and entity', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-CHARGE-FETCH',
+          patientId: '000001',
+          bundles: [
+            {
+              entity: 'baseChargeOrder',
+              bundleName: 'BASE_CHARGE_SET',
+              bundleNumber: '1',
+              classCode: '120',
+              classCodeSystem: 'Claim007',
+              className: 'bundle fallback should not survive',
+              adminMemo: 'LOCAL_NOTE',
+              items: [{ code: '120000110', name: 'BASE_CHARGE_SET', quantity: '1', unit: 'times' }],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderBundles({ patientId: '000001', entity: 'baseChargeOrder' });
+
+    expect(result.ok).toBe(true);
+    expect(result.bundles[0]).toEqual(
+      expect.objectContaining({
+        entity: 'baseChargeOrder',
+        classCode: '120',
+        classCodeSystem: 'Claim007',
+        className: resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className,
+      }),
+    );
+  });
+
+  it('mutation canonicalizes charge className before send', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-CHARGE-MUT',
+          createdDocumentIds: [106],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'instractionChargeOrder',
+          bundleName: 'INSTRACTION_CHARGE_SET',
+          bundleNumber: '2',
+          classCode: '140',
+          classCodeSystem: 'Claim007',
+          className: 'bundle fallback should not survive',
+          items: [{ code: '140000610', name: 'INSTRACTION_CHARGE_SET', quantity: '1', unit: 'times' }],
+        } as any,
+      ],
+    });
+
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+
+    expect(body.operations[0]).toEqual(
+      expect.objectContaining({
+        entity: 'instractionChargeOrder',
+        classCode: '140',
+        classCodeSystem: 'Claim007',
+        className: resolveCanonicalChargeClassMeta({ entity: 'instractionChargeOrder', classCode: '140' })?.className,
       }),
     );
   });

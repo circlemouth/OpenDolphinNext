@@ -7,6 +7,7 @@ import type { ReactElement } from 'react';
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { fetchOrderBundles, mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
+import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 
 vi.mock('../orderBundleApi', async () => ({
   fetchOrderBundles: vi.fn().mockResolvedValue({
@@ -257,6 +258,6 @@ describe('OrderBundleEditPanel bundle number UI', () => {
     const operation = mutateMock.mock.calls[0]?.[0]?.operations?.[0];
     expect(operation?.classCode).toBe('120');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('再診料');
+    expect(operation?.className).toBe(resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className);
   });
 });

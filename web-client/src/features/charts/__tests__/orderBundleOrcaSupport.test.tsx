@@ -7,6 +7,7 @@ import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
 import { mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
+import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
@@ -150,7 +151,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。',
+        'setCode は展開専用です。charge 系は classCode/className・数量/単位・coded row のみを ORCA へ送ります。算定指示・院内補足・自由メモ・開始日は local-only とし、medicationgetv2 の Item_Number / Branch は候補 metadata として表示します。',
       ),
     ).toBeInTheDocument();
   });
@@ -391,16 +392,16 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       setCode: 'B13001',
-      bundle: {
-        entity: 'baseChargeOrder',
-        bundleName: '在宅指導セット',
-        bundleNumber: '1',
-        classCode: '130',
-        classCodeSystem: 'Claim007',
-        className: '指導・在宅',
-        adminMemo: '算定前確認',
-        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '' }],
-      },
+        bundle: {
+          entity: 'baseChargeOrder',
+          bundleName: '在宅指導セット',
+          bundleNumber: '1',
+          classCode: '120',
+          classCodeSystem: 'Claim007',
+          className: '旧名称',
+          adminMemo: '算定前確認',
+          items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '' }],
+        },
     });
 
     renderPanel(chargeProps);
@@ -417,9 +418,9 @@ describe('OrderBundleEditPanel ORCA support', () => {
     const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
     expect(operation?.entity).toBe('baseChargeOrder');
-    expect(operation?.classCode).toBe('130');
+    expect(operation?.classCode).toBe('120');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('指導・在宅');
+    expect(operation?.className).toBe(resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className);
     expect(operation?.adminMemo).toBe('算定前確認');
   });
 

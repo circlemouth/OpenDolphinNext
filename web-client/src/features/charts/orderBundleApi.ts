@@ -4,6 +4,7 @@ import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
 import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../shared/orcaPatientImportRecovery';
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
+import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
 import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
@@ -105,7 +106,7 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
 };
 
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
-  ...bundle,
+  ...canonicalizeChargeBundleMeta(bundle),
   entity: normalizeOrderEntityValue(bundle.entity),
   items: (bundle.items ?? []).map((item) => {
     const fields = resolveOrcaOrderItemFields(item);
@@ -119,7 +120,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
 });
 
 const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => ({
-  ...operation,
+  ...canonicalizeChargeBundleMeta(operation),
   entity: normalizeOrderEntityValue(operation.entity),
   items: (operation.items ?? []).map((item) => {
     const fields = resolveOrcaOrderItemFields(item);
