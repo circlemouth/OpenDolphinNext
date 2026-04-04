@@ -394,8 +394,7 @@ const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null)
   const normalizedCode = code?.trim();
   if (!normalizedCode || !normalizedCode.startsWith(MATERIAL_CODE_PREFIX)) return false;
   const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  // Radiology main rows also use 7xx codes, so prefix-only material detection would hide them.
-  return canonicalEntity !== 'radiologyOrder';
+  return canonicalEntity === 'treatmentOrder' || canonicalEntity === 'injectionOrder';
 };
 
 const resolveRadiologyAuxiliarySubtype = (item?: Pick<OrderBundleItem, 'code' | 'rowSubtype'> | null): OrderBundleRowSubtype => {
@@ -920,6 +919,7 @@ export const validateBundleForm = ({
   const valuedMaterialItems = form.materialItems.filter(hasAnyValue);
   const codedMaterialItems = valuedMaterialItems.filter((item) => Boolean(item.code?.trim() && item.name?.trim()));
   const uncodedMaterialItems = valuedMaterialItems.filter((item) => !item.code?.trim() || !item.name?.trim());
+  const invalidCodedMaterialItems = codedMaterialItems.filter((item) => !/^\d{9}$/.test(item.code?.trim() ?? ''));
   const codedSendableRows = codedItems.length + codedMaterialItems.length;
   const uncodedSendableRows = uncodedItems.length + uncodedMaterialItems.length;
   const hasAuxiliaryValue =
@@ -992,7 +992,12 @@ export const validateBundleForm = ({
     });
   }
   if (valuedItems.length > 0 || valuedMaterialItems.length > 0) {
-    if (uncodedMaterialItems.length > 0) {
+    if (invalidCodedMaterialItems.length > 0) {
+      issues.push({
+        key: 'invalid_material_code',
+        message: '補助行は ORCA 送信可能な9桁コードのみ保存できます。候補を選び直してください。',
+      });
+    } else if (uncodedMaterialItems.length > 0) {
       const quantityOnlyAuxiliary = uncodedMaterialItems.some(
         (item) => !item.name?.trim() && Boolean(item.quantity?.trim() || item.unit?.trim() || item.memo?.trim()),
       );
@@ -1388,12 +1393,36 @@ export function OrderBundleEditPanel({
     | { kind: 'usage' }
     | { kind: 'bodyPart' }
     | { kind: 'items'; index: number }
+    | { kind: 'materialItems'; index: number }
     | { kind: 'commentItems'; index: number };
 
   const resolveWarningFocusTarget = useCallback(
     (warning: OrcaMedicalWarningUi): { elementId: string; target: WarningFocusTarget } | null => {
       if (warning.sourceKind === 'usage') {
         return { elementId: `${entityId}-admin`, target: { kind: 'usage' } };
+      }
+      if (typeof warning.sourceSectionIndex === 'number' && warning.sourceRowRole) {
+        if (warning.sourceRowRole === 'bodyPart') {
+          return { elementId: `${entityId}-bodypart`, target: { kind: 'bodyPart' } };
+        }
+        if (warning.sourceRowRole === 'main') {
+          return {
+            elementId: `${entityId}-item-name-${warning.sourceSectionIndex}`,
+            target: { kind: 'items', index: warning.sourceSectionIndex },
+          };
+        }
+        if (warning.sourceRowRole === 'auxiliary') {
+          return {
+            elementId: `${entityId}-material-name-${warning.sourceSectionIndex}`,
+            target: { kind: 'materialItems', index: warning.sourceSectionIndex },
+          };
+        }
+        if (warning.sourceRowRole === 'comment') {
+          return {
+            elementId: `${entityId}-comment-name-${warning.sourceSectionIndex}`,
+            target: { kind: 'commentItems', index: warning.sourceSectionIndex },
+          };
+        }
       }
       if (typeof warning.sourceItemIndex !== 'number') return null;
       const bodyPartCount = form.bodyPart && form.bodyPart.name.trim() ? 1 : 0;
@@ -1407,7 +1436,13 @@ export function OrderBundleEditPanel({
         const index = sourceIndex - itemsStart;
         return { elementId: `${entityId}-item-name-${index}`, target: { kind: 'items', index } };
       }
-      const commentStart = itemsEnd;
+      const materialStart = itemsEnd;
+      const materialEnd = materialStart + form.materialItems.length;
+      if (sourceIndex >= materialStart && sourceIndex < materialEnd) {
+        const index = sourceIndex - materialStart;
+        return { elementId: `${entityId}-material-name-${index}`, target: { kind: 'materialItems', index } };
+      }
+      const commentStart = materialEnd;
       const commentEnd = commentStart + form.commentItems.length;
       if (sourceIndex >= commentStart && sourceIndex < commentEnd) {
         const index = sourceIndex - commentStart;
@@ -1415,7 +1450,7 @@ export function OrderBundleEditPanel({
       }
       return null;
     },
-    [entityId, form.bodyPart, form.commentItems.length, form.items.length],
+    [entityId, form.bodyPart, form.commentItems.length, form.items.length, form.materialItems.length],
   );
 
   const [warningFocusRequest, setWarningFocusRequest] = useState<OrcaMedicalWarningUi | null>(null);
@@ -2822,6 +2857,7 @@ export function OrderBundleEditPanel({
 
   const orcaWarningTargets = useMemo(() => {
     const items = new Set<number>();
+    const materialItems = new Set<number>();
     const commentItems = new Set<number>();
     let usage = false;
     let bodyPart = false;
@@ -2831,13 +2867,15 @@ export function OrderBundleEditPanel({
       if (resolved.target.kind === 'usage') usage = true;
       if (resolved.target.kind === 'bodyPart') bodyPart = true;
       if (resolved.target.kind === 'items') items.add(resolved.target.index);
+      if (resolved.target.kind === 'materialItems') materialItems.add(resolved.target.index);
       if (resolved.target.kind === 'commentItems') commentItems.add(resolved.target.index);
     });
     if (warningFocusTarget?.kind === 'usage') usage = true;
     if (warningFocusTarget?.kind === 'bodyPart') bodyPart = true;
     if (warningFocusTarget?.kind === 'items') items.add(warningFocusTarget.index);
+    if (warningFocusTarget?.kind === 'materialItems') materialItems.add(warningFocusTarget.index);
     if (warningFocusTarget?.kind === 'commentItems') commentItems.add(warningFocusTarget.index);
-    return { usage, bodyPart, items, commentItems };
+    return { usage, bodyPart, items, materialItems, commentItems };
   }, [orcaWarningsForActiveBundle, resolveWarningFocusTarget, warningFocusTarget]);
 
   const requestWarningFocus = useCallback(
@@ -2922,6 +2960,17 @@ export function OrderBundleEditPanel({
             return `${entityId}-item-name-0`;
           case 'comment_only':
             return `${entityId}-item-name-0`;
+          case 'invalid_material_item':
+          case 'invalid_material_code': {
+            const idx = bundleForm.materialItems.findIndex((item) => {
+              if (!item.name?.trim() && !item.quantity?.trim() && !item.unit?.trim() && !item.memo?.trim()) {
+                return false;
+              }
+              const code = item.code?.trim() ?? '';
+              return !code || !/^\d{9}$/.test(code);
+            });
+            return idx >= 0 ? `${entityId}-material-name-${idx}` : `${entityId}-material-name-0`;
+          }
           case 'mixed_coded_uncoded':
           case 'uncoded_row':
           case 'missing_item_code': {
@@ -3157,6 +3206,8 @@ export function OrderBundleEditPanel({
     validationByKey.get('missing_items') ??
     validationByKey.get('missing_main_row') ??
     validationByKey.get('comment_only') ??
+    validationByKey.get('invalid_material_item') ??
+    validationByKey.get('invalid_material_code') ??
     validationByKey.get('unsupported_material_item') ??
     validationByKey.get('invalid_other_order_code');
   const subtypeError = validationByKey.get('missing_test_subtype') ?? validationByKey.get('invalid_test_subtype');
@@ -4448,6 +4499,8 @@ export function OrderBundleEditPanel({
                   <div key={rowId ?? `${entityId}-material-${index}`}>
                     <div
                       className={`charts-side-panel__item-row charts-side-panel__item-row--comment${
+                        orcaWarningTargets.materialItems.has(index) ? ' charts-side-panel__item-row--orca-warning' : ''
+                      }${
                         selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''
                       }`}
                       onClick={() => setSelectedItemRowId(rowId ?? null)}

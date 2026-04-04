@@ -1475,6 +1475,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               medicationName: rowSource?.medication.name,
               sourceKind: rowSource?.source.kind,
               sourceItemIndex: rowSource?.source.kind === 'bundle_item' ? rowSource.source.itemIndex : undefined,
+              sourceSectionIndex: rowSource?.source.kind === 'bundle_item' ? rowSource.source.sectionIndex : undefined,
               sourceRowRole: rowSource?.source.kind === 'bundle_item' ? rowSource.source.rowRole : undefined,
               sourceRowSubtype: rowSource?.source.kind === 'bundle_item' ? rowSource.source.rowSubtype : undefined,
             };

@@ -13,12 +13,10 @@ import open.dolphin.rest.dto.orca.OrderBundleRecommendationResponse;
 final class OrcaOrderBundleRecommendationSupport {
 
     private static final String MATERIAL_CODE_PREFIX = "7";
-    private static final String BODY_PART_CODE_PREFIX = "002";
-    private static final String COMMENT_CODE_REGEX = "^(008[1-6]|8[1-6]|098|099|98|99).*";
-    static final String ROW_ROLE_MAIN = "main";
-    static final String ROW_ROLE_MATERIAL = "auxiliary";
-    static final String ROW_ROLE_COMMENT = "comment";
-    static final String ROW_ROLE_BODY_PART = "bodyPart";
+    static final String ROW_ROLE_MAIN = OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN;
+    static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRequestSupport.ROW_ROLE_MATERIAL;
+    static final String ROW_ROLE_COMMENT = OrcaOrderBundleRequestSupport.ROW_ROLE_COMMENT;
+    static final String ROW_ROLE_BODY_PART = OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART;
     static final String ROW_SUBTYPE_MATERIAL = "material";
     static final String ROW_SUBTYPE_CONTRAST_DRUG = "contrastDrug";
 
@@ -86,28 +84,17 @@ final class OrcaOrderBundleRecommendationSupport {
     }
 
     static boolean isBodyPartCode(String code) {
-        return normalize(code).startsWith(BODY_PART_CODE_PREFIX);
+        return OrcaOrderBundleRequestSupport.isBodyPartCode(code);
     }
 
     static boolean isCommentCode(String code) {
-        return normalize(code).matches(COMMENT_CODE_REGEX);
+        return OrcaOrderBundleRequestSupport.isCommentCode(code);
     }
 
     static String normalizeRowRole(Object value) {
-        if (!(value instanceof String stringValue)) {
-            return null;
-        }
-        String normalized = normalize(stringValue);
-        if (ROW_ROLE_MAIN.equals(normalized)
-                || ROW_ROLE_MATERIAL.equals(normalized)
-                || ROW_ROLE_COMMENT.equals(normalized)
-                || ROW_ROLE_BODY_PART.equals(normalized)) {
-            return normalized;
-        }
-        if ("material".equals(normalized)) {
-            return ROW_ROLE_MATERIAL;
-        }
-        return null;
+        return value instanceof String stringValue
+                ? OrcaOrderBundleRequestSupport.normalizeRowRole(stringValue)
+                : null;
     }
 
     static String normalizeRowSubtype(Object value) {
@@ -128,7 +115,9 @@ final class OrcaOrderBundleRecommendationSupport {
         if (item == null) {
             return ROW_ROLE_MAIN;
         }
-        return resolveRowRole(entity, item.getCode(), item.getRowRole(), item.getRowSubtype());
+        String resolved = resolveRowRole(entity, item.getCode(), item.getRowRole(), item.getRowSubtype());
+        item.setRowRole(resolved);
+        return resolved;
     }
 
     static String resolveRowRole(String entity, String code, String explicitRowRole, String explicitRowSubtype) {
@@ -192,8 +181,8 @@ final class OrcaOrderBundleRecommendationSupport {
             return false;
         }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
-        // Radiology main rows also use 7xx codes, so prefix-only material detection would drop valid main rows.
-        return !IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+        return "treatmentOrder".equals(normalizedEntity)
+                || IInfoModel.ENTITY_INJECTION_ORDER.equals(normalizedEntity);
     }
 
     static OrderBundleRecommendationResponse.OrderRecommendationTemplate toRecommendationTemplate(

@@ -241,7 +241,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
         bodyPart: { code: '002001', name: '膝関節', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
         items: [
           { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
-          { code: 'M001', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'auxiliary' },
+          { code: '700000011', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'auxiliary' },
         ],
       },
     });
@@ -273,7 +273,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: 'M001', rowRole: 'auxiliary', unit: '個' }),
+        expect.objectContaining({ code: '700000011', rowRole: 'auxiliary', unit: '個' }),
       ]),
     );
   });
@@ -744,7 +744,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
           items: [
             {
               type: 'material',
-              code: 'M002',
+              code: '700000012',
               name: '処置材料B',
               unit: '個',
               note: '',
@@ -795,7 +795,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: 'M002', rowRole: 'auxiliary', unit: '個' }),
+        expect.objectContaining({ code: '700000012', rowRole: 'auxiliary', unit: '個' }),
       ]),
     );
   });

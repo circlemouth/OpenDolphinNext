@@ -10,6 +10,10 @@ import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.ModelUtils;
 
 final class OrcaOrderBundleRequestSupport {
+    static final String ROW_ROLE_MAIN = OrcaOrderBundleRowRoleSupport.ROW_ROLE_MAIN;
+    static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRowRoleSupport.ROW_ROLE_AUXILIARY;
+    static final String ROW_ROLE_COMMENT = OrcaOrderBundleRowRoleSupport.ROW_ROLE_COMMENT;
+    static final String ROW_ROLE_BODY_PART = OrcaOrderBundleRowRoleSupport.ROW_ROLE_BODY_PART;
 
     private static final Pattern OTHER_ORDER_CODE_PATTERN = Pattern.compile("^(?:8\\d{8}|18\\d{7})$");
     private static final Pattern SENDABLE_USAGE_CODE_PATTERN = Pattern.compile("^\\d{4,}$");
@@ -155,7 +159,7 @@ final class OrcaOrderBundleRequestSupport {
         return switch (normalizedEntity) {
             case IInfoModel.ENTITY_MED_ORDER -> Set.of("211", "212", "221", "222", "231", "232").contains(normalizedClassCode);
             case IInfoModel.ENTITY_INJECTION_ORDER -> "310".equals(normalizedClassCode);
-            case "treatmentOrder" -> normalizedClassCode.startsWith("4");
+            case "treatmentOrder" -> "400".equals(normalizedClassCode);
             case IInfoModel.ENTITY_SURGERY_ORDER -> normalizedClassCode.startsWith("5");
             case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
             case IInfoModel.ENTITY_RADIOLOGY_ORDER -> normalizedClassCode.startsWith("7");
@@ -191,6 +195,34 @@ final class OrcaOrderBundleRequestSupport {
         }
         return "treatmentOrder".equals(normalizedEntity)
                 || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+    }
+
+    static String normalizeRowRole(String rowRole) {
+        return OrcaOrderBundleRowRoleSupport.normalizeRowRole(rowRole);
+    }
+
+    static boolean isBodyPartCode(String code) {
+        return OrcaOrderBundleRowRoleSupport.isBodyPartCode(code);
+    }
+
+    static boolean isCommentCode(String code) {
+        return OrcaOrderBundleRowRoleSupport.isCommentCode(code);
+    }
+
+    static boolean isNineDigitCode(String code) {
+        return OrcaOrderBundleRowRoleSupport.isNineDigitCode(code);
+    }
+
+    static boolean isSendableCodeForRowRole(String rowRole, String code) {
+        return OrcaOrderBundleRowRoleSupport.isSendableCodeForRowRole(null, rowRole, code);
+    }
+
+    static boolean isValidCodeForRowRole(String entity, String rowRole, String code) {
+        return OrcaOrderBundleRowRoleSupport.isCodeCompatibleWithRole(entity, rowRole, code);
+    }
+
+    static String resolveRowRole(String entity, String rowRole, String code) {
+        return OrcaOrderBundleRowRoleSupport.resolveRowRole(entity, rowRole, code);
     }
 
     static boolean requiresSendableMainRow(String canonicalEntity) {

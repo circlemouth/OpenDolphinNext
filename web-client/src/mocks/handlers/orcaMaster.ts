@@ -122,7 +122,7 @@ const GENERIC_CLASS_ITEMS: DrugMasterItem[] = [
 
 const MATERIAL_ITEMS: DrugMasterItem[] = [
   {
-    code: 'M001',
+    code: '700000031',
     name: '処置材料A',
     unit: '個',
     category: '処置',

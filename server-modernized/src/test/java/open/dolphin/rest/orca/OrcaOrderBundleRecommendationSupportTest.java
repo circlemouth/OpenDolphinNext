@@ -42,9 +42,16 @@ class OrcaOrderBundleRecommendationSupportTest {
         bundle.setAdmin("oral");
         bundle.setAdminCode("4101");
         bundle.setAdminCodeSystem("Claim007");
+        ClaimItem material = claimItem("700000123", "SYRINGE", "1", "bottle", null);
+        material.setMemo(OrcaOrderBundleItemMemoSupport.format(
+                null,
+                null,
+                OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL,
+                null,
+                null));
         bundle.setClaimItem(new ClaimItem[]{
                 claimItem("0021001", "CHEST", "1", null, null),
-                claimItem("700123", "SYRINGE", "1", "bottle", null),
+                material,
                 claimItem("0085001", "COMMENT", "1", null, "after-meal"),
                 claimItem("100001", "AMLODIPINE", "2", "tablet", "morning")
         });
@@ -92,6 +99,43 @@ class OrcaOrderBundleRecommendationSupportTest {
                         null);
 
         assertEquals("基本診療料", template.getClassName());
+    }
+
+    @Test
+    void toRecommendationTemplateSeparatesTreatmentBodyPartMaterialAndCommentItems() {
+        BundleDolphin bundle = new BundleDolphin();
+        bundle.setBundleNumber("3");
+        bundle.setClassCode("400");
+        bundle.setClassCodeSystem("Claim007");
+        bundle.setClassName("Treatment");
+        bundle.setClaimItem(new ClaimItem[]{
+                claimItem("002001", "KNEE", "1", "part", null),
+                claimItem("140000610", "WOUND_CARE", "1", "times", null),
+                claimItem("700000021", "GAUZE", "2", "sheet", null),
+                claimItem("0085002", "COMMENT", "1", null, "after-cleaning")
+        });
+
+        OrderBundleRecommendationResponse.OrderRecommendationTemplate template =
+                OrcaOrderBundleRecommendationSupport.toRecommendationTemplate(
+                        "WOUND_CARE",
+                        bundle,
+                        IInfoModel.ENTITY_TREATMENT,
+                        null);
+
+        assertNotNull(template.getBodyPart());
+        assertEquals("002001", template.getBodyPart().getCode());
+        assertEquals(1, template.getMaterialItems().size());
+        assertEquals("700000021", template.getMaterialItems().get(0).getCode());
+        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL, template.getMaterialItems().get(0).getRowRole());
+        assertEquals(1, template.getCommentItems().size());
+        assertEquals("0085002", template.getCommentItems().get(0).getCode());
+        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_COMMENT, template.getCommentItems().get(0).getRowRole());
+        assertEquals(1, template.getItems().size());
+        assertEquals("140000610", template.getItems().get(0).getCode());
+        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN, template.getItems().get(0).getRowRole());
+        assertEquals("400", template.getClassCode());
+        assertEquals("Claim007", template.getClassCodeSystem());
+        assertEquals("Treatment", template.getClassName());
     }
 
     @Test

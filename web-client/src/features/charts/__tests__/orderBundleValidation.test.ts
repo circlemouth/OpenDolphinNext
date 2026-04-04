@@ -570,4 +570,18 @@ describe('validateBundleForm', () => {
     });
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_material_item']);
   });
+
+  it('materialItems: non-sendable code は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '処置オーダー',
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        materialItems: [{ code: 'M001', name: '処置材料A', quantity: '1', unit: '個', memo: '' }],
+      },
+      entity: 'generalOrder',
+      bundleLabel: 'オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_material_code']);
+  });
 });

@@ -16,6 +16,7 @@ export type OrcaMedicalWarningUi = {
   medicationName?: string;
   sourceKind?: 'bundle_item' | 'usage' | 'body_part';
   sourceItemIndex?: number;
+  sourceSectionIndex?: number;
   sourceRowRole?: 'main' | 'auxiliary' | 'comment' | 'bodyPart';
   sourceRowSubtype?: 'material' | 'contrastDrug';
 };
@@ -79,10 +80,14 @@ export function saveOrcaClaimSendCache(value: OrcaClaimSendCacheInput, scope: St
   volatileClaimSendCache.set(buildVolatileKey(resolvedScope, value.patientId), volatilePayload);
   const payload: OrcaClaimSendCacheEntry = {
     patientId: value.patientId,
+    appointmentId: value.appointmentId,
+    performDate: value.performDate,
     runId: value.runId,
     traceId: value.traceId,
     apiResult: value.apiResult,
     sendStatus: value.sendStatus,
+    errorMessage: value.errorMessage,
+    medicalWarnings: value.medicalWarnings,
     savedAt,
   };
   const store = loadOrcaClaimSendCache(resolvedScope) ?? {};
@@ -109,10 +114,14 @@ const normalizeEntry = (entry: Partial<OrcaClaimSendCacheEntry> | null | undefin
   const resolvedSavedAt = savedAt ?? new Date().toISOString();
   return {
     patientId,
+    appointmentId: typeof entry.appointmentId === 'string' ? entry.appointmentId : undefined,
+    performDate: typeof entry.performDate === 'string' ? entry.performDate : undefined,
     runId: typeof entry.runId === 'string' ? entry.runId : undefined,
     traceId: typeof entry.traceId === 'string' ? entry.traceId : undefined,
     apiResult: typeof entry.apiResult === 'string' ? entry.apiResult : undefined,
     sendStatus: entry.sendStatus === 'success' || entry.sendStatus === 'error' ? entry.sendStatus : undefined,
+    errorMessage: typeof entry.errorMessage === 'string' ? entry.errorMessage : undefined,
+    medicalWarnings: Array.isArray(entry.medicalWarnings) ? entry.medicalWarnings : undefined,
     savedAt: resolvedSavedAt,
   };
 };

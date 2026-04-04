@@ -44,8 +44,8 @@ export type RpNormalizedMedication = {
 };
 
 export type RpNormalizedRowSource =
-  | { kind: 'body_part' }
-  | { kind: 'bundle_item'; itemIndex: number; rowRole: OrderBundleRowRole; rowSubtype?: OrderBundleRowSubtype }
+  | { kind: 'body_part'; sectionIndex: 0 }
+  | { kind: 'bundle_item'; itemIndex: number; rowRole: OrderBundleRowRole; rowSubtype?: OrderBundleRowSubtype; sectionIndex: number }
   | { kind: 'usage' };
 
 export type RpNormalizedRow = {
@@ -127,7 +127,7 @@ const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null)
   const normalizedCode = code?.trim();
   if (!normalizedCode || !normalizedCode.startsWith('7')) return false;
   const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  return canonicalEntity !== 'radiologyOrder';
+  return canonicalEntity === 'treatmentOrder' || canonicalEntity === 'injectionOrder';
 };
 
 const resolveBundleItemRowSubtype = (
@@ -172,9 +172,9 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
         .map(cloneBundleItem)
         .find((item): item is OrderBundleItem => Boolean(item && isBodyPartCodeValue(item.code)));
   if (explicitBodyPart) {
-    rows.push({ item: explicitBodyPart, source: { kind: 'body_part' } });
+    rows.push({ item: explicitBodyPart, source: { kind: 'body_part', sectionIndex: 0 } });
   } else if (legacyBodyPart) {
-    rows.push({ item: legacyBodyPart, source: { kind: 'body_part' } });
+    rows.push({ item: legacyBodyPart, source: { kind: 'body_part', sectionIndex: 0 } });
   }
   const mainRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   const auxiliaryRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
@@ -186,7 +186,17 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
     if (isBodyPartCodeValue(code) && (explicitBodyPart || legacyBodyPart)) return;
     const rowRole = resolveBundleItemRowRole(bundle.entity, cloned);
     const rowSubtype = resolveBundleItemRowSubtype(bundle.entity, cloned, rowRole);
-    const row = { item: cloned, source: { kind: 'bundle_item', itemIndex, rowRole, rowSubtype } as const };
+    const row = {
+      item: cloned,
+      source: {
+        kind: 'bundle_item',
+        itemIndex,
+        rowRole,
+        rowSubtype,
+        sectionIndex:
+          rowRole === 'comment' ? commentRows.length : rowRole === 'auxiliary' ? auxiliaryRows.length : mainRows.length,
+      } as const,
+    };
     if (rowRole === 'comment') {
       commentRows.push(row);
       return;
