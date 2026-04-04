@@ -1,4 +1,4 @@
-export type OrcaOrderItemRowRole = 'main' | 'auxiliary' | 'comment' | 'bodyPart';
+export type OrcaOrderItemRowRole = 'main' | 'auxiliary' | 'material' | 'comment' | 'bodyPart';
 export type OrcaOrderItemRowSubtype = 'material' | 'contrastDrug';
 
 export type OrcaOrderItemMeta = {
@@ -45,11 +45,8 @@ const normalizeUserComment = (value: unknown): OrcaOrderItemMeta['userComment'] 
 };
 
 const normalizeRowRole = (value: unknown): OrcaOrderItemMeta['rowRole'] => {
-  if (value === 'main' || value === 'auxiliary' || value === 'comment' || value === 'bodyPart') {
+  if (value === 'main' || value === 'auxiliary' || value === 'material' || value === 'comment' || value === 'bodyPart') {
     return value;
-  }
-  if (value === 'material') {
-    return 'auxiliary';
   }
   return undefined;
 };

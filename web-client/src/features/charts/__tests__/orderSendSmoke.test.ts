@@ -732,10 +732,10 @@ describe('order send smoke', () => {
                 className: 'Injection',
                 admin: '静注',
                 adminCode: '4101',
-                adminMemo: '20ml/h',
+                adminMemo: '',
                 memo: 'bundle-memo-a',
                 items: [
-                  { code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-a', rowRole: 'main' },
+                  { code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', genericFlg: 'yes', userComment: 'local-a', rowRole: 'main' },
                 ],
               },
               {
@@ -747,12 +747,12 @@ describe('order send smoke', () => {
                 className: 'Injection',
                 admin: '筋注',
                 adminCode: '4102',
-                adminMemo: 'ward-note',
+                adminMemo: '',
                 memo: 'bundle-memo-b',
                 items: [
                   { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' },
                   { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
-                  { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-b', rowRole: 'main' },
+                  { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: '', genericFlg: 'no', userComment: 'local-b', rowRole: 'main' },
                 ],
               },
               {
@@ -764,7 +764,7 @@ describe('order send smoke', () => {
                 className: 'Injection',
                 admin: '点滴',
                 adminCode: '4103',
-                adminMemo: 'slow-drip',
+                adminMemo: '',
                 memo: 'bundle-memo-c',
                 items: [
                   { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
@@ -807,9 +807,9 @@ describe('order send smoke', () => {
           className: 'Injection',
           admin: '静注',
           adminCode: '4101',
-          adminMemo: '20ml/h',
+          adminMemo: '',
           memo: 'bundle-memo-a',
-          items: [{ code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-a', rowRole: 'main' }],
+          items: [{ code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', genericFlg: 'yes', userComment: 'local-a', rowRole: 'main' }],
         },
         {
           operation: 'create',
@@ -821,12 +821,12 @@ describe('order send smoke', () => {
           className: 'Injection',
           admin: '筋注',
           adminCode: '4102',
-          adminMemo: 'ward-note',
+          adminMemo: '',
           memo: 'bundle-memo-b',
           items: [
             { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' },
             { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
-            { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-b', rowRole: 'main' },
+            { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: '', genericFlg: 'no', userComment: 'local-b', rowRole: 'main' },
           ],
         },
         {
@@ -839,7 +839,7 @@ describe('order send smoke', () => {
           className: 'Injection',
           admin: '点滴',
           adminCode: '4103',
-          adminMemo: 'slow-drip',
+          adminMemo: '',
           memo: 'bundle-memo-c',
           items: [
             { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
@@ -853,7 +853,9 @@ describe('order send smoke', () => {
     const saveBody = JSON.parse(String(saveRequest?.body ?? '{}')) as Record<string, any>;
     expect(
       saveBody.operations.map((entry: Record<string, any>) => entry.items.map((item: Record<string, string>) => item.rowRole)),
-    ).toEqual([['main'], ['comment', 'main', 'main'], ['auxiliary', 'main']]);
+    ).toEqual([['main'], ['comment', 'main', 'main'], ['material', 'main']]);
+    expect(saveBody.operations[0]?.items[0]?.genericFlg).toBe('yes');
+    expect(saveBody.operations[1]?.items[2]?.genericFlg).toBe('no');
     expect(JSON.stringify(saveBody.operations)).not.toContain('__orca_meta__:');
 
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'injectionOrder' });
@@ -861,9 +863,11 @@ describe('order send smoke', () => {
     expect(fetched.bundles.map((bundle) => bundle.items.map((item) => item.rowRole))).toEqual([
       ['main'],
       ['comment', 'main', 'main'],
-      ['auxiliary', 'main'],
+      ['material', 'main'],
     ]);
     expect(fetched.bundles[1]?.items[2]?.userComment).toBe('local-b');
+    expect(fetched.bundles[0]?.items[0]?.genericFlg).toBe('yes');
+    expect(fetched.bundles[1]?.items[2]?.genericFlg).toBe('no');
     expect(fetched.bundles[1]?.items[2]?.memo).toBe('');
 
     const normalized = fetched.bundles
@@ -875,6 +879,8 @@ describe('order send smoke', () => {
       ['4102', '830000001', '620000011', '0085001'],
       ['4103', '620000012', '700000031'],
     ]);
+    expect(normalized[0]?.info.medications[1]?.genericFlg).toBe('yes');
+    expect(normalized[1]?.info.medications[2]?.genericFlg).toBe('no');
 
     const payload = buildMedicalModV2RequestXml({
       patientId: '000001',
@@ -889,9 +895,8 @@ describe('order send smoke', () => {
       ['4102', '830000001', '620000011', '0085001'],
       ['4103', '620000012', '700000031'],
     ]);
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('20ml/h');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('ward-note');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('slow-drip');
+    expect(payload.medicalInformation?.[0]?.medications[1]?.genericFlg).toBe('yes');
+    expect(payload.medicalInformation?.[1]?.medications[2]?.genericFlg).toBe('no');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-a');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-b');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-c');
@@ -911,9 +916,8 @@ describe('order send smoke', () => {
       ['4102', '830000001', '620000011', '0085001'],
       ['4103', '620000012', '700000031'],
     ]);
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('20ml/h');
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('ward-note');
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('slow-drip');
+    expect(body.medicalInformation[0]?.medications[1]?.genericFlg).toBe('yes');
+    expect(body.medicalInformation[1]?.medications[2]?.genericFlg).toBe('no');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-a');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-b');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-c');

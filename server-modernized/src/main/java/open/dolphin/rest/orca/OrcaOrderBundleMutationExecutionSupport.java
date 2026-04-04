@@ -145,7 +145,8 @@ final class OrcaOrderBundleMutationExecutionSupport {
                         && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
                     throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
                 }
-                if (OrcaOrderBundleRequestSupport.ROW_ROLE_MATERIAL.equals(rowRole)) {
+                if (OrcaOrderBundleRequestSupport.ROW_ROLE_MATERIAL.equals(rowRole)
+                        && !IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)) {
                     throw validationFailure.invalid("items", "auxiliary rows require sendable 9-digit code");
                 }
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)) {
@@ -178,7 +179,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
         }
         String adminCode = OrcaOrderBundleRequestSupport.trimToNull(op.getAdminCode());
         if (adminCode == null) {
-            throw validationFailure.invalid("adminCode", "adminCode is required for injectionOrder");
+            throw validationFailure.invalid("adminCode", "adminCode is required when admin is provided");
         }
         if (!OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode(adminCode)) {
             throw validationFailure.invalid("adminCode", "adminCode must be a sendable numeric code for injectionOrder");
@@ -211,8 +212,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
 
     private static boolean requiresSendableMainRow(String canonicalEntity) {
         return canonicalEntity != null
-                && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity)
-                && !IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity);
+                && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity);
     }
 
     private static boolean hasValuedItem(OrderBundleMutationRequest.BundleItem item) {

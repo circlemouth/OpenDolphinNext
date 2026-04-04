@@ -265,21 +265,6 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_class_code']);
   });
 
-  it('injectionOrder: 非数値 adminCode は保存前に block する', () => {
-    const issues = validateBundleForm({
-      form: {
-        ...baseForm,
-        admin: '静注候補',
-        adminCode: 'Y100',
-        classCode: '310',
-        items: [{ code: '620000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
-      } as BundleFormState & { classCode: string },
-      entity: 'injectionOrder',
-      bundleLabel: '注射オーダー名',
-    });
-    expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_admin_code']);
-  });
-
   it('injectionOrder: 投与指示がある場合は adminCode も必須', () => {
     const issues = validateBundleForm({
       form: {
@@ -304,7 +289,22 @@ describe('validateBundleForm', () => {
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['comment_only']);
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
+  });
+
+  it('injectionOrder: coded main + uncoded material は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '4101',
+        items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', memo: '' }],
+        materialItems: [{ code: '', name: '未コード材料', quantity: '1', unit: '式', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['mixed_coded_uncoded']);
   });
 
   it('injectionOrder: 材料だけの束は保存前に止める', () => {
@@ -318,7 +318,7 @@ describe('validateBundleForm', () => {
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['comment_only']);
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
   });
 
   it('radiologyOrder: 部位が未入力の場合にエラー', () => {
@@ -432,7 +432,7 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
-  it('materialItems: 数量や単位だけの行は保存前に block する', () => {
+  it('materialItems: コードなし材料行は混在エラーとして保存前に止める', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -443,22 +443,7 @@ describe('validateBundleForm', () => {
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['invalid_material_item']);
-  });
-
-  it('radiologyOrder: 補助行だけで main row が無い場合は保存前に block する', () => {
-    const issues = validateBundleForm({
-      form: {
-        ...baseForm,
-        bundleName: '胸部撮影',
-        items: [],
-        materialItems: [{ code: '700000001', name: '造影剤', quantity: '1', unit: '本', memo: '' }],
-        bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
-      },
-      entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
-    });
-    expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
+    expect(issues.map((issue) => issue.key)).toEqual(['mixed_coded_uncoded']);
   });
 
   it('materialItems: 行を削除するとエラーが解消される', () => {

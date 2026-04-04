@@ -63,7 +63,7 @@ export type OrcaOrderInputSetDetailResult = {
       memo?: string;
       genericFlg?: 'yes' | 'no';
       userComment?: string;
-      rowRole?: 'main' | 'auxiliary' | 'comment';
+      rowRole?: 'main' | 'auxiliary' | 'material' | 'comment';
       rowSubtype?: 'material' | 'contrastDrug';
       category?: string;
       masterCategory?: string;
@@ -78,7 +78,7 @@ export type OrcaOrderInputSetDetailResult = {
       memo?: string;
       genericFlg?: 'yes' | 'no';
       userComment?: string;
-      rowRole?: 'main' | 'auxiliary' | 'comment';
+      rowRole?: 'main' | 'auxiliary' | 'material' | 'comment';
       rowSubtype?: 'material' | 'contrastDrug';
       category?: string;
       masterCategory?: string;
@@ -93,7 +93,7 @@ export type OrcaOrderInputSetDetailResult = {
       memo?: string;
       genericFlg?: 'yes' | 'no';
       userComment?: string;
-      rowRole?: 'main' | 'auxiliary' | 'comment';
+      rowRole?: 'main' | 'auxiliary' | 'material' | 'comment';
       rowSubtype?: 'material' | 'contrastDrug';
       category?: string;
       masterCategory?: string;

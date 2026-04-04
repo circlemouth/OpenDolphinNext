@@ -14,6 +14,28 @@ import org.junit.jupiter.api.Test;
 class OrcaOrderBundleMutationExecutionSupportTest {
 
     @Test
+    void executeRejectsInjectionWithMissingAdminCode() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(buildInjectionUpdateOperation(
+                                "静注",
+                                null,
+                                List.of(buildItem("620000010", "drug-a", "main")))),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operation, field, input, required) -> new Date(0L),
+                        documentId -> null,
+                        new NoOpPersistence(),
+                        (documentId, operation, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+        assertTrue(ex.getMessage().contains("adminCode"));
+        assertTrue(ex.getMessage().contains("required"));
+    }
+
+    @Test
     void executeAllowsInjectionWithoutAdminWhenSendableMainRowExists() {
         OrcaOrderBundleMutationExecutionSupport.MutationResult result = OrcaOrderBundleMutationExecutionSupport.execute(
                 buildPayload(buildInjectionUpdateOperation(null, null, List.of(buildItem("620000010", "drug-a", null)))),
@@ -71,6 +93,100 @@ class OrcaOrderBundleMutationExecutionSupportTest {
 
         assertTrue(ex.getMessage().contains("items"));
         assertTrue(ex.getMessage().contains("sendable main row"));
+    }
+
+    @Test
+    void executeRejectsInjectionCommentOnlyBundle() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(buildInjectionUpdateOperation(
+                                "点滴",
+                                "4103",
+                                List.of(buildItem("0085001", "comment-only", "comment")))),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operation, field, input, required) -> new Date(0L),
+                        documentId -> null,
+                        new NoOpPersistence(),
+                        (documentId, operation, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+        assertTrue(ex.getMessage().contains("items"));
+        assertTrue(ex.getMessage().contains("sendable main row"));
+    }
+
+    @Test
+    void executeRejectsInjectionMixedCodedAndUncodedMaterialBundle() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(buildInjectionUpdateOperation(
+                                "点滴",
+                                "4103",
+                                List.of(
+                                        buildItem("620000010", "drug-a", "main"),
+                                        buildItem(null, "uncoded-material", "material")))),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operation, field, input, required) -> new Date(0L),
+                        documentId -> null,
+                        new NoOpPersistence(),
+                        (documentId, operation, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+        assertTrue(ex.getMessage().contains("items"));
+        assertTrue(ex.getMessage().contains("mixed coded and uncoded"));
+    }
+
+    @Test
+    void executeRejectsInjectionBodyPartOnlyBundle() {
+        OrderBundleMutationRequest.BundleOperation operation = buildInjectionUpdateOperation("点滴", "4103", List.of());
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("002001");
+        bodyPart.setName("胸部");
+        operation.setBodyPart(bodyPart);
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(operation),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operationName, field, input, required) -> new Date(0L),
+                        documentId -> null,
+                        new NoOpPersistence(),
+                        (documentId, operationName, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+        assertTrue(ex.getMessage().contains("bodyPart"));
+        assertTrue(ex.getMessage().contains("incompatible"));
+    }
+
+    @Test
+    void executeRejectsInjectionWithNon310ClassCode() {
+        OrderBundleMutationRequest.BundleOperation operation =
+                buildInjectionUpdateOperation("点滴", "4103", List.of(buildItem("620000010", "drug-a", "main")));
+        operation.setClassCode("400");
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(operation),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operationName, field, input, required) -> new Date(0L),
+                        documentId -> null,
+                        new NoOpPersistence(),
+                        (documentId, operationName, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+        assertTrue(ex.getMessage().contains("classCode"));
+        assertTrue(ex.getMessage().contains("incompatible"));
     }
 
     private static OrderBundleMutationRequest buildPayload(OrderBundleMutationRequest.BundleOperation operation) {

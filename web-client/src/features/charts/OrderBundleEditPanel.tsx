@@ -32,6 +32,15 @@ import {
   type OrderRecommendationTemplate,
 } from './orderRecommendationApi';
 import {
+  collectInjectionBundleContractIssues,
+  collectOrderBundleContractStats,
+  hasOrderBundleRowValue,
+  isOrderBundleCommentCode,
+  ORDER_BUNDLE_BODY_PART_CODE_PREFIX,
+  resolveOrderBundleItemRowRole,
+  shouldTreatAsMaterialItem,
+} from './orderBundleContract';
+import {
   buildRpRequiredEditorMessage,
   resolveRpRequiredIssue,
   resolveRpRequiredFieldLabel,
@@ -219,8 +228,7 @@ const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem)
   };
 };
 
-const hasOrderBundleItemValue = (item: OrderBundleItem) =>
-  Boolean(item.name?.trim() || item.code?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
+const hasOrderBundleItemValue = (item: OrderBundleItem) => hasOrderBundleRowValue(item);
 
 const ensureTrailingEmptyMainItem = (items: OrderBundleItem[]): OrderBundleItemWithRowId[] => {
   if (items.length === 0) return [buildEmptyItem()];
@@ -259,9 +267,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-const MATERIAL_CODE_PREFIX = '7';
-const BODY_PART_CODE_PREFIX = '002';
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 const MIXING_COMMENT_MARKER = '__mixing_comment__';
 const DOCUMENT_ITEM_KEYWORDS = ['文書', '診断書', '紹介状', '返信', '報告', '証明書', '意見書', '指示書'];
 const DEFAULT_PRESCRIPTION_LOCATION: PrescriptionLocation = 'out';
@@ -382,24 +387,11 @@ const resolveDocumentOpenRequest = (bundle: OrderBundle, item: OrderBundleItem):
 const countItems = (items?: OrderBundleItem[]) =>
   items ? items.filter((item) => item.name.trim().length > 0).length : 0;
 
-const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
-  const normalizedCode = code?.trim();
-  if (!normalizedCode || !normalizedCode.startsWith(MATERIAL_CODE_PREFIX)) return false;
-  const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  // Radiology main rows also use 7xx codes, so prefix-only material detection would hide them.
-  return canonicalEntity !== 'radiologyOrder';
-};
-
-const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | OrderBundleBodyPart | null) => {
-  if (!item) return 'main' as const;
-  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
-    return item.rowRole;
-  }
-  const code = item.code?.trim();
-  if (code?.startsWith(BODY_PART_CODE_PREFIX)) return 'bodyPart' as const;
-  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
-  if (code && COMMENT_CODE_PATTERN.test(code)) return 'comment' as const;
-  return 'main' as const;
+const canEditInjectionGenericFlag = (entity?: string | null, item?: OrderBundleItem | null) => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  if (canonicalEntity !== 'injectionOrder') return false;
+  if (resolveOrderBundleItemRowRole(entity, item) !== 'main') return false;
+  return isDrugMedicationCode(item?.code?.trim() ?? '');
 };
 
 const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], explicitBodyPart?: OrderBundleBodyPart) => {
@@ -419,7 +411,7 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
   let bodyPart: OrderBundleBodyPart | null = explicit;
   let bodyPartResolvedFromItems = Boolean(explicit);
   (items ?? []).forEach((item) => {
-    const rowRole = resolveBundleItemRowRole(entity, item);
+    const rowRole = resolveOrderBundleItemRowRole(entity, item);
     if (rowRole === 'bodyPart') {
       if (!bodyPartResolvedFromItems) {
         bodyPart = {
@@ -453,6 +445,37 @@ const collectBundleItems = (form: BundleFormState) => {
     ...form.materialItems.map((item) => ({ ...item, rowRole: 'material' as const })),
     ...form.commentItems.map((item) => ({ ...item, rowRole: 'comment' as const })),
   ];
+};
+
+const buildMissingMainRowMessage = ({
+  canonicalEntity,
+  hasBodyPartValue,
+  hasMaterialValue,
+  hasCommentValue,
+  hasAdminValue,
+}: {
+  canonicalEntity: string;
+  hasBodyPartValue: boolean;
+  hasMaterialValue: boolean;
+  hasCommentValue: boolean;
+  hasAdminValue: boolean;
+}) => {
+  if (canonicalEntity === 'injectionOrder') {
+    return '投与指示・材料・コメント・部位だけでは保存できません。薬剤または手技のコード付き本体項目を1件以上入力してください。';
+  }
+  if (hasMaterialValue) {
+    return '材料だけでは保存できません。コード付きの本体項目を入力してください。';
+  }
+  if (hasBodyPartValue) {
+    return '部位だけでは保存できません。コード付きの本体項目を入力してください。';
+  }
+  if (hasCommentValue) {
+    return 'コメントだけでは保存できません。コード付きの本体項目を入力してください。';
+  }
+  if (hasAdminValue) {
+    return '指示だけでは保存できません。コード付きの本体項目を入力してください。';
+  }
+  return 'コード付きの本体項目を入力してください。';
 };
 
 const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | undefined => {
@@ -688,7 +711,7 @@ const buildUsageMasterMeta = (item: OrderMasterSearchItem): UsageMasterMeta => (
 const resolveSendContractNote = (entity: string) => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   if (canonicalEntity === 'injectionOrder') {
-    return '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは local-only です。';
+    return '注射送信では admin/adminCode・回数・coded row・generic flag・rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは carrier 未対応のため入力がある間は送信を停止します。';
   }
   if (canonicalEntity === 'treatmentOrder') {
     return '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
@@ -863,23 +886,35 @@ export const validateBundleForm = ({
   usageDaysLimit?: number;
 }): BundleValidationIssue[] => {
   const issues: BundleValidationIssue[] = [];
-  const hasAnyValue = (item: OrderBundleItem) =>
-    Boolean(
-      item.name?.trim() ||
-        item.code?.trim() ||
-        item.quantity?.trim() ||
-        item.unit?.trim() ||
-        item.memo?.trim(),
-    );
+  const hasAnyValue = (item: OrderBundleItem) => hasOrderBundleRowValue(item);
   const rule = resolveOrderEntityValidationRule(entity) ?? DEFAULT_VALIDATION_RULE;
   const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
   const resolvedSubtype = resolveFormSubtype(entity, form.subtype);
   const supportsBodyPartField = resolveOrderEntityUiProfile(entity).supportsBodyPartSearch;
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
-  const valuedItems = form.items.filter(hasAnyValue);
-  const codedItems = valuedItems.filter((item) => Boolean(item.code?.trim()));
-  const uncodedItems = valuedItems.filter((item) => !item.code?.trim());
+  const combinedItems = collectBundleItems(form);
+  const contractStats = collectOrderBundleContractStats({
+    entity,
+    items: combinedItems,
+    bodyPart: form.bodyPart,
+    admin: canonicalEntity === 'injectionOrder' ? form.admin : undefined,
+  });
+  const injectionContractIssues =
+    canonicalEntity === 'injectionOrder'
+      ? collectInjectionBundleContractIssues(
+          {
+            entity,
+            classCode: form.classCode,
+            admin: form.admin,
+            adminCode: form.adminCode,
+            items: combinedItems,
+            bodyPart: form.bodyPart,
+          },
+          { mode: 'save' },
+        )
+      : [];
   const hasMaterialValues = form.materialItems.some(hasAnyValue);
+  const hasCommentValues = form.commentItems.some(hasAnyValue);
   const hasBodyPartValue = Boolean(
     form.bodyPart?.name?.trim() ||
       form.bodyPart?.code?.trim() ||
@@ -887,21 +922,17 @@ export const validateBundleForm = ({
       form.bodyPart?.unit?.trim() ||
       form.bodyPart?.memo?.trim(),
   );
+  const requiresSendableMainRow = rule.requiresItems && canonicalEntity !== 'medOrder';
+  const hasAuxiliaryOnlyBundleContent =
+    requiresSendableMainRow &&
+    contractStats.sendableMainRows.length === 0 &&
+    (contractStats.valuedRows.length > 0 || contractStats.hasBodyPartValue || contractStats.hasAdmin);
   if (rule.requiresUsage && !form.admin.trim()) {
     issues.push({ key: 'missing_usage', message: '用法を入力してください。' });
   }
-  if (entity === 'injectionOrder' && form.admin.trim() && !form.adminCode.trim()) {
-    issues.push({
-      key: 'missing_admin_code',
-      message: '注射の投与指示を保存するには adminCode を選択してください。自由入力だけでは送信できません。',
-    });
-  }
-  if (canonicalEntity === 'injectionOrder' && form.classCode?.trim() && form.classCode.trim() !== '310') {
-    issues.push({
-      key: 'invalid_injection_class_code',
-      message: '注射 bundle は classCode 310 のみ保存できます。',
-    });
-  }
+  injectionContractIssues.forEach((issue) => {
+    issues.push({ key: issue.code, message: issue.detail });
+  });
   if (testSubtypeConfig?.required && !resolvedSubtype) {
     issues.push({ key: 'missing_test_subtype', message: `${testSubtypeConfig.label}を選択してください。` });
   }
@@ -922,38 +953,50 @@ export const validateBundleForm = ({
       key: 'missing_body_part_code',
       message: '部位コードを選択してください。',
     });
-  } else if (form.bodyPart?.code?.trim() && !form.bodyPart.code.trim().startsWith(BODY_PART_CODE_PREFIX)) {
+  } else if (
+    form.bodyPart?.code?.trim() &&
+    !form.bodyPart.code.trim().startsWith(ORDER_BUNDLE_BODY_PART_CODE_PREFIX)
+  ) {
     issues.push({
       key: 'invalid_body_part_code',
       message: 'bodyPart は 002 系コードのみ保存できます。',
     });
   }
-  if (rule.requiresItems && valuedItems.length === 0) {
-    const hasAuxiliaryValue = form.commentItems.some(hasAnyValue) || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
+  if (rule.requiresItems && contractStats.valuedRows.length === 0 && !(canonicalEntity === 'injectionOrder' && injectionContractIssues.length > 0)) {
     issues.push({
-      key: hasAuxiliaryValue ? 'comment_only' : 'missing_items',
-      message: hasAuxiliaryValue
-        ? '部位やコメントだけでは保存できません。コード付きの本体項目を入力してください。'
+      key: hasAuxiliaryOnlyBundleContent ? (canonicalEntity === 'injectionOrder' ? 'missing_main_row' : 'comment_only') : 'missing_items',
+      message: hasAuxiliaryOnlyBundleContent
+        ? buildMissingMainRowMessage({
+            canonicalEntity,
+            hasBodyPartValue,
+            hasMaterialValue: hasMaterialValues,
+            hasCommentValue: hasCommentValues,
+            hasAdminValue: contractStats.hasAdmin,
+          })
         : `${rule.itemLabel}を1件以上入力してください。`,
     });
   }
-  if (valuedItems.length > 0) {
-    if (uncodedItems.length > 0 && codedItems.length > 0) {
+  if (contractStats.valuedRows.length > 0 && canonicalEntity !== 'injectionOrder') {
+    if (contractStats.uncodedRows.length > 0 && contractStats.codedRows.length > 0) {
       issues.push({
         key: 'mixed_coded_uncoded',
         message: 'コードあり行とコードなし行が混在しています。コードなし行を削除するか、必ずマスタ選択してください。',
       });
-    } else if (uncodedItems.length > 0) {
+    } else if (contractStats.uncodedRows.length > 0) {
       issues.push({
         key: 'uncoded_row',
         message: 'コードなし行が含まれています。名前だけの行は ORCA へ送れないため、マスタ選択してください。',
       });
-    } else if (rule.requiresItems && codedItems.length === 0) {
+    } else if (hasAuxiliaryOnlyBundleContent) {
       issues.push({
         key: 'comment_only',
-        message: hasBodyPartValue
-          ? '部位だけでは保存できません。コード付きの本体項目を入力してください。'
-          : 'コメントだけでは保存できません。コード付きの本体項目を入力してください。',
+        message: buildMissingMainRowMessage({
+          canonicalEntity,
+          hasBodyPartValue,
+          hasMaterialValue: hasMaterialValues,
+          hasCommentValue: hasCommentValues,
+          hasAdminValue: contractStats.hasAdmin,
+        }),
       });
     }
   }
@@ -965,9 +1008,9 @@ export const validateBundleForm = ({
       });
     }
     if (
-      codedItems.some((item) => {
+      contractStats.codedRows.some(({ item }) => {
         const code = item.code?.trim() ?? '';
-        return code !== '' && !COMMENT_CODE_PATTERN.test(code) && !/^(8|18)/.test(code);
+        return code !== '' && !isOrderBundleCommentCode(code) && !/^(8|18)/.test(code);
       })
     ) {
       issues.push({
@@ -993,7 +1036,7 @@ export const validateBundleForm = ({
       const hasName = Boolean(item.name?.trim());
       const hasValue = hasAnyValue(item);
       if (hasValue && (!hasCode || !hasName)) acc.incomplete = true;
-      if (hasCode && !COMMENT_CODE_PATTERN.test(item.code!.trim())) acc.invalidCode = true;
+      if (hasCode && !isOrderBundleCommentCode(item.code!.trim())) acc.invalidCode = true;
       return acc;
     },
     { incomplete: false, invalidCode: false },
@@ -2781,6 +2824,7 @@ export function OrderBundleEditPanel({
           case 'missing_body_part_code':
             return `${entityId}-bodypart`;
           case 'missing_items':
+          case 'missing_main_row':
             return `${entityId}-item-name-0`;
           case 'comment_only':
             return `${entityId}-item-name-0`;
@@ -2808,7 +2852,7 @@ export function OrderBundleEditPanel({
           case 'invalid_comment_code': {
             const idx = bundleForm.commentItems.findIndex((item) => {
               const code = item.code?.trim();
-              return Boolean(code && !COMMENT_CODE_PATTERN.test(code));
+              return Boolean(code && !isOrderBundleCommentCode(code));
             });
             return idx >= 0 ? `${entityId}-comment-name-${idx}` : `${entityId}-comment-draft-name`;
           }
@@ -3016,6 +3060,7 @@ export function OrderBundleEditPanel({
   const bundleNumberError = validationByKey.get(USAGE_DAYS_LIMIT_ERROR_KEY);
   const itemsError =
     validationByKey.get('missing_items') ??
+    validationByKey.get('missing_main_row') ??
     validationByKey.get('comment_only') ??
     validationByKey.get('unsupported_material_item') ??
     validationByKey.get('invalid_other_order_code');
@@ -3042,7 +3087,7 @@ export function OrderBundleEditPanel({
       const hasCode = Boolean(item.code?.trim());
       const hasName = Boolean(item.name?.trim());
       const hasValue = hasAnyValue(item);
-      const invalidCode = hasCode && !COMMENT_CODE_PATTERN.test(item.code!.trim());
+      const invalidCode = hasCode && !isOrderBundleCommentCode(item.code!.trim());
       if (invalidCode || (hasValue && (!hasCode || !hasName))) indices.add(index);
     });
     return indices;
@@ -4003,7 +4048,8 @@ export function OrderBundleEditPanel({
             const isInactiveRow = !hasRowValue;
             const supportsItemCommentRow = isMedOrder || isInjectionOrder;
             const resolvedItemFields = supportsItemCommentRow ? resolveOrcaOrderItemFields(item) : null;
-            const genericValue = isMedOrder ? resolvedItemFields?.genericFlg ?? '' : '';
+            const canEditGenericFlag = isMedOrder || canEditInjectionGenericFlag(entity, item);
+            const genericValue = canEditGenericFlag ? resolvedItemFields?.genericFlg ?? '' : '';
             const userCommentValue = resolvedItemFields?.userComment ?? '';
             const genericDisabled = isBlocked || !isDrugMedicationCode(item.code?.trim() ?? '');
             const updateGenericFlag = (nextValue: '' | 'yes' | 'no') => {
@@ -4019,24 +4065,14 @@ export function OrderBundleEditPanel({
               });
             };
             const updateUserComment = (nextValue: string) => {
-              if (isMedOrder) {
-                setForm((prev) => {
-                  const next = [...prev.items];
-                  const current = next[index];
-                  if (!current) return prev;
-                  next[index] = {
-                    ...current,
-                    userComment: nextValue,
-                  };
-                  return { ...prev, items: next };
-                });
-                return;
-              }
               setForm((prev) => {
                 const next = [...prev.items];
                 const current = next[index];
                 if (!current) return prev;
-                next[index] = { ...current, userComment: nextValue };
+                next[index] = {
+                  ...current,
+                  userComment: nextValue,
+                };
                 return { ...prev, items: next };
               });
             };
@@ -4186,11 +4222,11 @@ export function OrderBundleEditPanel({
                     }${selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''}`}
                     onClick={() => setSelectedItemRowId(rowId ?? null)}
                   >
-                    {isMedOrder ? (
+                    {canEditGenericFlag ? (
                       <div
                         className="charts-side-panel__switch-group charts-side-panel__switch-group--compact"
                         role="group"
-                        aria-label="一般名"
+                        aria-label={isInjectionOrder ? '後発情報' : '一般名'}
                         title={genericDisabled ? '薬剤コード確定後に選択できます。' : undefined}
                         style={{ gridColumn: '1 / span 2' }}
                       >
@@ -4212,28 +4248,9 @@ export function OrderBundleEditPanel({
                           </button>
                         ))}
                       </div>
-                    ) : isInjectionOrder ? (
-                      <div
-                        className="charts-side-panel__field charts-side-panel__field--readonly"
-                        role="group"
-                        aria-label="後発情報"
-                        style={{ gridColumn: '1 / span 2' }}
-                      >
-                        <label>後発情報</label>
-                        <input
-                          value={
-                            resolvedItemFields?.genericFlg === 'yes'
-                              ? '一般名'
-                              : resolvedItemFields?.genericFlg === 'no'
-                                ? '一般名なし'
-                                : '既定'
-                          }
-                          readOnly
-                          disabled
-                          aria-label={`後発情報 ${index + 1}`}
-                        />
-                        <p className="charts-side-panel__help">注射の genericFlg は preserve-only です。この画面では表示のみ行います。</p>
-                      </div>
+                    ) : null}
+                    {isInjectionOrder && canEditGenericFlag ? (
+                      <p className="charts-side-panel__help">注射の genericFlg は薬剤 main row に限り編集できます。</p>
                     ) : null}
                     <input
                       id={`${entityId}-item-user-comment-${index}`}

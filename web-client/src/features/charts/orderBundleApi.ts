@@ -10,15 +10,20 @@ import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
-export type OrderBundleRowRole = 'main' | 'auxiliary' | 'comment' | 'bodyPart';
+export type OrderBundleRowRole = 'main' | 'auxiliary' | 'material' | 'comment' | 'bodyPart';
 export type OrderBundleRowSubtype = 'material' | 'contrastDrug';
 
 export const normalizeOrderBundleRowRole = (value?: string | null): OrderBundleRowRole | undefined => {
   const normalized = value?.trim();
-  if (normalized === 'main' || normalized === 'auxiliary' || normalized === 'comment' || normalized === 'bodyPart') {
+  if (
+    normalized === 'main' ||
+    normalized === 'auxiliary' ||
+    normalized === 'material' ||
+    normalized === 'comment' ||
+    normalized === 'bodyPart'
+  ) {
     return normalized;
   }
-  if (normalized === 'material') return 'auxiliary';
   return undefined;
 };
 

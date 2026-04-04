@@ -17,7 +17,7 @@ export type OrcaMedicalWarningUi = {
   sourceKind?: 'bundle_item' | 'usage' | 'body_part';
   sourceItemIndex?: number;
   sourceSectionIndex?: number;
-  sourceRowRole?: 'main' | 'auxiliary' | 'comment' | 'bodyPart';
+  sourceRowRole?: 'main' | 'auxiliary' | 'material' | 'comment' | 'bodyPart';
   sourceRowSubtype?: 'material' | 'contrastDrug';
 };
 
