@@ -275,7 +275,37 @@ describe('validateBundleForm', () => {
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['comment_only']);
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
+  });
+
+  it('injectionOrder: coded main + uncoded material は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '4101',
+        items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', memo: '' }],
+        materialItems: [{ code: '', name: '未コード材料', quantity: '1', unit: 'set', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['mixed_coded_uncoded']);
+  });
+
+  it('injectionOrder: material だけの束は保存前に止める', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '4101',
+        items: [],
+        materialItems: [{ code: '700000031', name: '材料A', quantity: '1', unit: 'set', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
   });
 
   it('radiologyOrder: 部位が未入力の場合にエラー', () => {
@@ -389,7 +419,7 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
-  it('materialItems: 材料名が空でもエラーにしない（材料は項目行へ統合）', () => {
+  it('materialItems: コードなし材料行は混在エラーとして保存前に止める', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -400,7 +430,7 @@ describe('validateBundleForm', () => {
       entity: 'generalOrder',
       bundleLabel: 'オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual([]);
+    expect(issues.map((issue) => issue.key)).toEqual(['mixed_coded_uncoded']);
   });
 
   it('materialItems: 行を削除するとエラーが解消される', () => {
@@ -472,7 +502,7 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
   });
 
-  it('otherOrder: 8系以外の main code は保存前に block する', () => {
+  it('otherOrder: 8系以外の 7xxxx 行は不正コードとして保存前に block する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,

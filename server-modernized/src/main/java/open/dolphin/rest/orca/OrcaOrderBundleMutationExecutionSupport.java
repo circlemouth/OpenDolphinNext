@@ -15,6 +15,9 @@ import open.dolphin.rest.dto.orca.OrderBundleMutationRequest;
 final class OrcaOrderBundleMutationExecutionSupport {
 
     private static final Pattern COMMENT_CODE_PATTERN = Pattern.compile("^(008[1-6]|8[1-6]|098|099|98|99)");
+    private static final String ROW_ROLE_MATERIAL = "material";
+    private static final String ROW_ROLE_COMMENT = "comment";
+    private static final String ROW_ROLE_BODY_PART = "bodyPart";
 
     private OrcaOrderBundleMutationExecutionSupport() {
     }
@@ -86,29 +89,45 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 && !OrcaOrderBundle600SubtypeSupport.isValidSubtype(canonicalEntity, explicitSubtype)) {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
+        if (IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)
+                && OrcaOrderBundleRequestSupport.hasText(op.getAdmin())
+                && !OrcaOrderBundleRequestSupport.hasText(op.getAdminCode())) {
+            throw validationFailure.invalid("adminCode", "adminCode is required when admin is provided");
+        }
         List<OrderBundleMutationRequest.BundleItem> items = op.getItems();
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
         boolean hasSendableMainRow = false;
+        boolean hasBodyPartValue = hasValuedItem(op.getBodyPart());
         boolean hasBodyPart = hasBodyPartItem(op.getBodyPart());
         for (OrderBundleMutationRequest.BundleItem item : items != null ? items : List.<OrderBundleMutationRequest.BundleItem>of()) {
             if (!hasValuedItem(item)) {
                 continue;
             }
             String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
-            if (code != null) {
-                hasCodedRow = true;
-                if (OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
-                    hasBodyPart = true;
-                } else if (!isCommentCode(code)) {
-                    if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity) && !isOtherOrderCode(code)) {
-                        throw validationFailure.invalid("items", "otherOrder items must use code family 8");
-                    }
-                    hasSendableMainRow = true;
-                }
-            } else {
-                hasUncodedRow = true;
+            String rowRole = resolveRowRole(canonicalEntity, item, code);
+            if (ROW_ROLE_BODY_PART.equals(rowRole)) {
+                hasBodyPartValue = true;
+                hasBodyPart = code != null;
+                continue;
             }
+            if (code == null) {
+                hasUncodedRow = true;
+                continue;
+            }
+            if (ROW_ROLE_MATERIAL.equals(rowRole)) {
+                hasCodedRow = true;
+                continue;
+            }
+            if (ROW_ROLE_COMMENT.equals(rowRole)) {
+                hasCodedRow = true;
+                continue;
+            }
+            hasCodedRow = true;
+            if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity) && !isOtherOrderCode(code)) {
+                throw validationFailure.invalid("items", "otherOrder items must use code family 8");
+            }
+            hasSendableMainRow = true;
         }
         if (hasCodedRow && hasUncodedRow) {
             throw validationFailure.invalid("items", "items contain mixed coded and uncoded rows");
@@ -116,7 +135,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (hasUncodedRow) {
             throw validationFailure.invalid("items", "items contain uncoded rows");
         }
-        if (hasBodyPart && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
+        if (hasBodyPartValue && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
             throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
         }
         if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(canonicalEntity) && !hasBodyPart) {
@@ -127,10 +146,38 @@ final class OrcaOrderBundleMutationExecutionSupport {
         }
     }
 
+    private static String resolveRowRole(
+            String canonicalEntity,
+            OrderBundleMutationRequest.BundleItem item,
+            String normalizedCode) {
+        String explicitRowRole = OrcaOrderBundleRequestSupport.trimToNull(item.getRowRole());
+        if (OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN.equals(explicitRowRole)
+                || ROW_ROLE_MATERIAL.equals(explicitRowRole)
+                || ROW_ROLE_COMMENT.equals(explicitRowRole)
+                || ROW_ROLE_BODY_PART.equals(explicitRowRole)) {
+            return explicitRowRole;
+        }
+        if (normalizedCode != null && OrcaOrderBundleRecommendationSupport.isBodyPartCode(normalizedCode)) {
+            return ROW_ROLE_BODY_PART;
+        }
+        if (isMaterialCode(canonicalEntity, normalizedCode)) {
+            return ROW_ROLE_MATERIAL;
+        }
+        if (normalizedCode != null && isCommentCode(normalizedCode)) {
+            return ROW_ROLE_COMMENT;
+        }
+        return OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN;
+    }
+
+    private static boolean isMaterialCode(String canonicalEntity, String normalizedCode) {
+        return normalizedCode != null
+                && normalizedCode.startsWith("7")
+                && !IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(canonicalEntity);
+    }
+
     private static boolean requiresSendableMainRow(String canonicalEntity) {
         return canonicalEntity != null
-                && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity)
-                && !IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity);
+                && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity);
     }
 
     private static boolean isOtherOrderCode(String code) {

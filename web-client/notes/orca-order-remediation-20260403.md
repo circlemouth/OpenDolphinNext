@@ -29,17 +29,21 @@
 - `startDate`
 - free-form `memo`
 - free-form `item.memo`
-- 注射の `adminMemo`
 - 処方の `prescriptionSettings` / `remarks`
 - 構造化 first-class field に昇格していない院内補助情報
 
+### send-block
+
+- 注射の `adminMemo/speed`
+- ORCA MedicalModV2 carrier 未対応のため、入力が残っている間は ORCA 送信を停止する項目
+
 ## Injection Recheck (`20260403T142706Z`)
 
-- 注射は `admin/adminCode` を sendable、`memo/adminMemo/speed/route/timing/frequency` と行コメントを local-only に固定した。
-- `recent usage` 由来の自由入力は `adminCode=''` のまま保持されるが、保存前 validation で fail-closed に止める。
-- `classCode=310` 以外の `injectionOrder` は client/server とも reject に固定した。
-- `genericFlg` は preserve-only で、editor の read-only 表示と comment 編集時の hidden meta 保持をテストで固定した。
-- editor round-trip は `薬剤のみ / 手技+薬剤 / material+drug` の 3 経路で `rowRole` 保持を確認済み。
+- 注射 bundle の invalid contract を `editor / save API / send guard / server mutation` で統一した。`classCode != 310`、`admin` あり `adminCode` なし、main/material を問わない uncoded row、mixed coded/uncoded は fail-closed に reject する。
+- 注射は sendable main row（薬剤または手技の coded row）を 1 件以上必須にした。`comment-only / material-only / bodyPart-only / usage-only` は `missing_main_row` として保存前・送信前・server validation で止める。
+- material 行は validation 対象に含め、predictive search、save -> fetch -> normalize -> send payload の全経路で `rowRole=material` を保持する。
+- `genericFlg` は preserve-only をやめ、注射の薬剤 main row に限って editor で変更可能にした。procedure / material / comment には表示せず、save -> fetch -> no-op save -> normalize -> XML まで維持する。
+- `adminMemo/speed` は repo 既存 carrier と ORCA 公式 MedicalModV2 に安全な送信先が無いため、院内保存は許可しつつ ORCA 送信前に明示 block する契約で確定した。silent drop はしない。
 
 ## 600系 Recheck (`20260403T142706Z`)
 

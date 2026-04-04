@@ -137,7 +137,24 @@ describe('OrderBundleEditPanel item actions', () => {
     await user.tab();
   };
 
-  it('injectionOrder は注射コメントを first-class userComment として保持し hidden meta を再送しない', async () => {
+  const fillMaterialRow = async (
+    user: ReturnType<typeof userEvent.setup>,
+    rowIndex: number,
+    materialName: string,
+  ) => {
+    const nameInputs = screen.getAllByPlaceholderText('材料名') as HTMLInputElement[];
+    await user.clear(nameInputs[rowIndex]);
+    await user.type(nameInputs[rowIndex], materialName);
+    await waitFor(() => {
+      const options = Array.from(
+        document.querySelectorAll('datalist[id$="-item-predictive-list"] option'),
+      ) as HTMLOptionElement[];
+      expect(options.some((option) => (option.getAttribute('value') ?? '').includes(materialName))).toBe(true);
+    });
+    await user.tab();
+  };
+
+  it('injectionOrder main drug row can edit generic flag and preserve hidden meta', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     renderWithClient(
@@ -148,12 +165,12 @@ describe('OrderBundleEditPanel item actions', () => {
           kind: 'edit',
           bundle: {
             entity: 'injectionOrder',
-            bundleName: '点滴セット',
+            bundleName: '注射セット',
             bundleNumber: '2',
             classCode: '310',
             classCodeSystem: 'Claim007',
             className: 'Injection',
-            admin: '静注',
+            admin: '点滴',
             adminCode: '4101',
             adminMemo: '20ml/h',
             items: [
@@ -162,7 +179,7 @@ describe('OrderBundleEditPanel item actions', () => {
                 name: '注射薬A',
                 quantity: '1',
                 unit: 'A',
-                memo: '__orca_meta__:{"genericFlg":"no","userComment":"旧コメント"}\nレセ本文',
+                memo: '__orca_meta__:{"genericFlg":"no","userComment":"既存コメント"}\nレセプト本文',
                 rowRole: 'main',
               },
             ],
@@ -172,18 +189,23 @@ describe('OrderBundleEditPanel item actions', () => {
     );
 
     expect(
-      await screen.findByText(/admin\/adminCode・回数・coded row と rowRole.*adminMemo\/speed.*注射コメントは local-only/i),
+      await screen.findByText(
+        (text) =>
+          text.includes('admin/adminCode') &&
+          text.includes('coded row') &&
+          text.includes('rowRole') &&
+          text.includes('adminMemo/speed') &&
+          text.includes('carrier 未対応'),
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('注射メモ')).toHaveAttribute(
-      'placeholder',
-      '投与速度・ルートなど（院内メモ / ORCA送信しない）',
-    );
+    const genericGroup = await screen.findByRole('group', { name: '後発情報' });
+    await user.click(within(genericGroup).getByRole('button', { name: '一般名' }));
 
     const commentInput = (await screen.findByLabelText('注射コメント 1')) as HTMLInputElement;
-    expect(commentInput.value).toBe('旧コメント');
+    expect(commentInput.value).toBe('既存コメント');
     await user.clear(commentInput);
     await user.type(commentInput, '更新コメント');
-    await user.click(screen.getByRole('button', { name: '保存して続ける' }));
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
     const mutateMock = vi.mocked(mutateOrderBundles);
     await waitFor(() => expect(mutateMock).toHaveBeenCalled());
@@ -191,117 +213,97 @@ describe('OrderBundleEditPanel item actions', () => {
     const savedItem = mutateMock.mock.calls.at(-1)?.[0]?.operations?.[0]?.items?.[0];
     expect(savedItem).toMatchObject({
       code: '620000001',
-      genericFlg: 'no',
+      genericFlg: 'yes',
       userComment: '更新コメント',
       rowRole: 'main',
     });
-    expect(savedItem?.memo).toBe('レセ本文');
+    expect(savedItem?.memo).toBe('レセプト本文');
   });
 
-  it.each([
-    {
-      label: '薬剤のみ',
-      bundleName: 'drug-only',
-      items: [{ code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '', rowRole: 'main' as const }],
-      expected: [{ code: '620000010', rowRole: 'main' as const }],
-    },
-    {
-      label: '手技+薬剤',
-      bundleName: 'procedure-drug',
-      items: [
-        { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' as const },
-        { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: '回', memo: '', rowRole: 'main' as const },
-        { code: '620000011', name: '注射薬B', quantity: '1', unit: 'A', memo: '', rowRole: 'main' as const },
-      ],
-      expected: [
-        { code: '830000001', rowRole: 'main' as const },
-        { code: '620000011', rowRole: 'main' as const },
-        { code: '0085001', rowRole: 'comment' as const },
-      ],
-    },
-    {
-      label: 'material+drug',
-      bundleName: 'drip-set',
-      items: [
-        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' as const },
-        { code: '620000012', name: '注射薬C', quantity: '1', unit: 'A', memo: '', rowRole: 'main' as const },
-      ],
-      expected: [
-        { code: '620000012', rowRole: 'main' as const },
-        { code: '700000031', rowRole: 'material' as const },
-      ],
-    },
-  ])('injectionOrder editor は %s の rowRole を round-trip で保持する', async ({ bundleName, items, expected }) => {
-    const user = userEvent.setup();
+  it('injectionOrder hides generic flag for procedure, material, and comment rows', async () => {
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
-
     renderWithClient(
       <OrderBundleEditPanel
         {...injectionProps}
         request={{
-          requestId: `REQ-INJECTION-ROUNDTRIP-${bundleName}`,
+          requestId: 'REQ-INJECTION-GENERIC-ROWS',
           kind: 'edit',
           bundle: {
             entity: 'injectionOrder',
-            bundleName,
+            bundleName: '注射セット',
             bundleNumber: '1',
             classCode: '310',
             classCodeSystem: 'Claim007',
             className: 'Injection',
-            admin: '静注',
+            admin: '点滴',
             adminCode: '4101',
-            items,
-          },
-        }}
-      />,
-    );
-
-    await user.click(screen.getByRole('button', { name: '保存して続ける' }));
-
-    const mutateMock = vi.mocked(mutateOrderBundles);
-    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
-    const operation = mutateMock.mock.calls.at(-1)?.[0]?.operations?.[0];
-    expect(operation?.items).toEqual(expect.arrayContaining(expected.map((item) => expect.objectContaining(item))));
-    expect(operation?.items?.map((item: Record<string, string>) => ({ code: item.code, rowRole: item.rowRole }))).toEqual(expected);
-  });
-
-  it('injectionOrder は preserved genericFlg を read-only 表示する', async () => {
-    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
-    renderWithClient(
-      <OrderBundleEditPanel
-        {...injectionProps}
-        request={{
-          requestId: 'REQ-INJECTION-GENERIC',
-          kind: 'edit',
-          bundle: {
-            entity: 'injectionOrder',
-            bundleName: '点滴セット',
-            bundleNumber: '2',
-            classCode: '310',
-            classCodeSystem: 'Claim007',
-            className: 'Injection',
-            admin: '静注',
-            adminCode: '4101',
-            adminMemo: '20ml/h',
             items: [
-              {
-                code: '620000001',
-                name: '注射薬A',
-                quantity: '1',
-                unit: 'A',
-                memo: '__orca_meta__:{"genericFlg":"no","userComment":"旧コメント"}\nレセ本文',
-                rowRole: 'main',
-              },
+              { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+              { code: '620000001', name: '注射薬B', quantity: '1', unit: 'A', memo: '', rowRole: 'main' },
+              { code: '700000031', name: '材料A', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
+              { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'note', rowRole: 'comment' },
             ],
           },
         }}
       />,
     );
 
-    expect(await screen.findByLabelText('後発情報 1')).toHaveValue('一般名なし');
-    expect(screen.getAllByText('注射の genericFlg は preserve-only です。この画面では表示のみ行います。').length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('group', { name: '後発情報' })).toHaveLength(1);
   });
+  it('injectionOrder keeps rowRole=material when predictive search is used on a material row', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockImplementation(async ({ keyword }) => {
+      if (keyword.trim().includes('材料候補')) {
+        return {
+          ok: true,
+          items: [{ type: 'drug', code: '700000031', name: '材料候補', unit: 'set' }],
+          totalCount: 1,
+        };
+      }
+      return { ok: true, items: [], totalCount: 0 };
+    });
 
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: 'REQ-INJECTION-MATERIAL-PREDICTIVE',
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName: '注射セット',
+            bundleNumber: '1',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: 'Injection',
+            admin: '点滴',
+            adminCode: '4101',
+            items: [
+              { code: '620000001', name: '注射薬C', quantity: '1', unit: 'A', memo: '', rowRole: 'main' },
+              { code: '700000031', name: '', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
+            ],
+          },
+        }}
+      />,
+    );
+
+    await fillMaterialRow(user, 0, '材料候補');
+    await waitFor(() => {
+      const options = Array.from(document.querySelectorAll('datalist[id$="-item-predictive-list"] option')) as HTMLOptionElement[];
+      expect(options.some((option) => (option.getAttribute('value') ?? '').includes('材料候補'))).toBe(true);
+    });
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+
+    const operation = mutateMock.mock.calls.at(-1)?.[0]?.operations?.[0];
+    expect(operation?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: '700000031', name: '材料候補', rowRole: 'material' }),
+      ]),
+    );
+  });
   it('末尾行に入力すると空行が自動追加される', async () => {
     const user = userEvent.setup();
     renderWithClient(<OrderBundleEditPanel {...baseProps} />);

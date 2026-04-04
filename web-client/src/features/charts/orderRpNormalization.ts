@@ -12,19 +12,20 @@ import {
   collectRpRequiredIssues,
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
+import {
+  collectOrderBundleContractStats,
+  collectInjectionBundleContractIssues,
+  hasBundleRowValue,
+  isBodyPartBundleCode,
+  isCommentBundleCode,
+  resolveBundleItemRowRole,
+} from './orderBundleContract';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
 
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
-const BODY_PART_CODE_PATTERN = /^002/;
 const DRUG_CODE_PATTERN = /^6\d{8}$/;
 
-const isCommentMedicationCode = (code: string) => COMMENT_CODE_PATTERN.test(code.trim());
-const isBodyPartCode = (code: string) => BODY_PART_CODE_PATTERN.test(code.trim());
-
-const hasBundleItemValue = (item: OrderBundleItem) =>
-  Boolean(item.code?.trim() || item.name?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
-
+const isCommentMedicationCode = (code: string) => isCommentBundleCode(code);
 export type RpNormalizedMedication = {
   code: string;
   name?: string;
@@ -62,10 +63,13 @@ export type RpNormalizedBundle = {
 };
 
 export type MedicalModV2BundleIssueCode =
+  | 'missing_admin_code'
+  | 'invalid_injection_class_code'
   | 'uncoded_row'
   | 'mixed_coded_uncoded'
   | 'comment_only'
   | 'missing_main_row'
+  | 'unsupported_admin_memo'
   | 'unsupported_bacteria_subtype';
 
 export type MedicalModV2BundleIssue = {
@@ -104,26 +108,7 @@ const cloneBodyPartItem = (item?: OrderBundle['bodyPart'] | null): OrderBundleIt
   };
 };
 
-const isBodyPartCodeValue = (code?: string | null) => Boolean(code?.trim() && isBodyPartCode(code.trim()));
-
-const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
-  const normalizedCode = code?.trim();
-  if (!normalizedCode || !normalizedCode.startsWith('7')) return false;
-  const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  return canonicalEntity !== 'radiologyOrder';
-};
-
-const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | null) => {
-  if (!item) return 'main' as const;
-  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
-    return item.rowRole;
-  }
-  const code = item.code?.trim();
-  if (isBodyPartCodeValue(code)) return 'bodyPart' as const;
-  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
-  if (code && isCommentMedicationCode(code)) return 'comment' as const;
-  return 'main' as const;
-};
+const isBodyPartCodeValue = (code?: string | null) => isBodyPartBundleCode(code);
 
 const collectNormalizedRows = (bundle: OrderBundle) => {
   const rows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
@@ -143,7 +128,7 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
   const commentRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   (bundle.items ?? []).forEach((item, itemIndex) => {
     const cloned = cloneBundleItem(item);
-    if (!cloned || !hasBundleItemValue(cloned)) return;
+    if (!cloned || !hasBundleRowValue(cloned)) return;
     const code = cloned.code?.trim() ?? '';
     if (isBodyPartCodeValue(code) && (explicitBodyPart || legacyBodyPart)) return;
     const row = { item: cloned, source: { kind: 'bundle_item', itemIndex } as const };
@@ -182,15 +167,21 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
       ),
     ];
   }
-  const rows = collectNormalizedRows(bundle);
-  const valuedRows = rows.filter((row) => hasBundleItemValue(row.item));
-  if (valuedRows.length === 0) {
+  if (canonicalEntity === 'injectionOrder') {
+    return collectInjectionBundleContractIssues(bundle, { mode: 'send', blockAdminMemo: true }).map((issue) =>
+      buildBundleIssue(bundle, issue.code, issue.detail),
+    );
+  }
+  const contractStats = collectOrderBundleContractStats({
+    entity: bundle.entity,
+    items: bundle.items,
+    bodyPart: bundle.bodyPart,
+  });
+  if (contractStats.valuedRows.length === 0) {
     return [buildBundleIssue(bundle, 'missing_main_row', '送信対象の行がありません。')];
   }
 
-  const codedRows = valuedRows.filter((row) => Boolean(row.item.code?.trim()));
-  const uncodedRows = valuedRows.filter((row) => !row.item.code?.trim());
-  if (uncodedRows.length > 0 && codedRows.length > 0) {
+  if (contractStats.uncodedRows.length > 0 && contractStats.codedRows.length > 0) {
     return [
       buildBundleIssue(
         bundle,
@@ -199,7 +190,7 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
       ),
     ];
   }
-  if (uncodedRows.length > 0) {
+  if (contractStats.uncodedRows.length > 0) {
     return [
       buildBundleIssue(
         bundle,
@@ -209,12 +200,8 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
     ];
   }
 
-  const sendableMainRows = codedRows.filter((row) => {
-    const code = row.item.code?.trim() ?? '';
-    return !isCommentMedicationCode(code) && !isBodyPartCode(code);
-  });
-  const requireMainRow = canonicalEntity !== 'medOrder' && canonicalEntity !== 'injectionOrder';
-  if (requireMainRow && sendableMainRows.length === 0) {
+  const requireMainRow = canonicalEntity !== 'medOrder';
+  if (requireMainRow && contractStats.sendableMainRows.length === 0) {
     return [
       buildBundleIssue(
         bundle,
@@ -473,7 +460,7 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
     const remaining = prepared.bundleIssues.length - 4;
     return {
       message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
-      nextAction: 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
+      nextAction: 'コードなし行、adminCode 未設定、adminMemo/speed、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',
     };
   }
   if (prepared.codeIssues.length > 0) {

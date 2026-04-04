@@ -230,6 +230,123 @@ describe('ChartsActionBar ORCA send', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
+  it('blocks fetched injection bundles when admin exists without adminCode', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'missing-admin-code',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '点滴',
+                adminCode: '',
+                items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', rowRole: 'main' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/adminCode/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks fetched injection bundles when only comment rows are present', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'comment-only',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '点滴',
+                adminCode: '4101',
+                items: [{ code: '0085001', name: 'COMMENT', quantity: '', unit: '', rowRole: 'comment' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/本体行/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks fetched injection bundles when only material rows are present', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'material-only',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '点滴',
+                adminCode: '4101',
+                items: [{ code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', rowRole: 'material' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/本体行/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks fetched injection bundles when adminMemo or speed is present', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'admin-memo',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '点滴',
+                adminCode: '4101',
+                adminMemo: '20ml/h',
+                items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', rowRole: 'main' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/adminMemo\/speed/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
   it('accepts bodyPart and material rows on valid payloads', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({

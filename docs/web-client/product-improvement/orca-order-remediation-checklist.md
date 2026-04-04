@@ -79,7 +79,7 @@ ORCAオーダー系の保存、再読込、送信正規化、medicalmodv2 XML �
 ### 1-5. bodyPart / 注射 / 処方の重点是正
 
 - [x] `bodyPart` の manual / master-selected 両経路で round-trip と send を成立させた。
-- [x] 注射の `admin / adminCode / adminMemo / rowRole` の送信契約を明示した。
+- [x] 注射の `admin / adminCode / adminMemo / rowRole` の保存契約と送信契約を分離して明示した。
 - [x] 処方の `genericFlg` と `rpNumber` の契約を固定した。
 
 ---
@@ -103,7 +103,7 @@ ORCAオーダー系の保存、再読込、送信正規化、medicalmodv2 XML �
 
 - [x] editor 必須条件と送信前必須条件を一致させた。
 - [x] code なし comment row、mixed coded / uncoded row、送信不能 bodyPart を UI 側で明示 block するようにした。
-- [x] 注射コメントの send / local-only 契約を画面文言で明示した。
+- [x] 注射コメントと `adminMemo/speed` の carrier 未対応を画面文言と送信前 block で明示した。
 
 ### 3-2. input set / recommendation
 
@@ -140,13 +140,17 @@ ORCAオーダー系の保存、再読込、送信正規化、medicalmodv2 XML �
 ### 4-2. 注射 (`injectionOrder`)
 
 - [x] `admin` と `adminCode` を分離して保持するようにした。
-- [x] route / timing / frequency / dosePerDay / speed の扱いを local-only / send 対象で固定した。
-  - 注射送信では `admin/adminCode`、回数、coded row、`rowRole` を使う。
-  - `route / timing / frequency / dosePerDay` は参照表示、`speed` は `adminMemo`、行コメントは local-only。
+- [x] route / timing / frequency / dosePerDay / speed の扱いを fail-closed に固定した。
+  - 注射送信では `admin/adminCode`、回数、coded row、`rowRole`、薬剤 main row の `genericFlg` を使う。
+  - `route / timing / frequency / dosePerDay` は参照表示、`adminMemo/speed` と行コメントは carrier 未対応のため入力がある間は送信を block する。
+- [x] 注射 invalid contract を `editor / save API / send guard / server mutation` で揃えた。
+  - `classCode=310` のみ、`admin` ありなら `adminCode` 必須、uncoded row / mixed coded+uncoded は main/material を問わず reject。
+  - `comment-only / material-only / bodyPart-only / usage-only` は sendable main row 不足として reject。
 - [x] `supportsInjectionNoProcedure=true` の sentinel memo 実装を残さないようにした。
 - [x] 薬剤のみ、手技 + 薬剤、点滴セットの 3 パターンを role 保持で区別できるようにした。
 - [x] 注射 free comment の hidden meta 逆流を止めた。
 - [x] generic flag / comment / unit / adminCode の round-trip と XML テストを追加した。
+  - 注射の `genericFlg` は薬剤 main row のみ editor で編集でき、save -> fetch -> normalize -> XML まで維持する。
 
 ### 4-3. 基本診療料 / 指導料
 
@@ -179,7 +183,7 @@ ORCAオーダー系の保存、再読込、送信正規化、medicalmodv2 XML �
 ### 5-1. 追加・更新した主なテスト
 
 - [x] 処方: 1 RP 2 薬剤 + コメント + generic flag 契約
-- [x] 注射: 手技 + 薬剤 + admin/adminCode + 回数 + rowRole 契約
+- [x] 注射: 手技 + 薬剤 + admin/adminCode + 回数 + rowRole + genericFlg 契約
 - [x] 基本 / 指導料: class meta 再編集保存
 - [x] 一般 / 処置 / その他: mixed row block
 - [x] 放射線: bodyPart + 本体 + 材料 / 造影

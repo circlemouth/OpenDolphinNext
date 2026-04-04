@@ -154,6 +154,99 @@ describe('orderRpNormalization', () => {
     ]);
   });
 
+  it('injectionOrder: material row は main-row requirement を満たさない', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'injectionOrder',
+        bundleName: 'material-only',
+        classCode: '310',
+        admin: '点滴',
+        adminCode: '4103',
+        items: [{ code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', rowRole: 'material' }],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'missing_main_row',
+          bundleName: 'material-only',
+        }),
+      ]),
+    );
+  });
+
+  it('injectionOrder: rowRole-aware 判定で bodyPart/comment/material を sendable main row に数えない', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'injectionOrder',
+        bundleName: 'aux-only',
+        classCode: '310',
+        admin: '点滴',
+        adminCode: '4103',
+        bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', rowRole: 'bodyPart' },
+        items: [
+          { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', rowRole: 'material' },
+          { code: '0085001', name: 'COMMENT', quantity: '', unit: '', rowRole: 'comment' },
+        ],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'missing_main_row',
+          bundleName: 'aux-only',
+        }),
+      ]),
+    );
+  });
+
+  it('injectionOrder: admin があって adminCode が無い bundle は送信前に止める', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'injectionOrder',
+        bundleName: 'missing-admin-code',
+        classCode: '310',
+        admin: '静注',
+        adminCode: '',
+        items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', rowRole: 'main' }],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'missing_admin_code',
+          bundleName: 'missing-admin-code',
+        }),
+      ]),
+    );
+  });
+
+  it('injectionOrder: adminMemo/speed を持つ bundle は送信前に止める', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'injectionOrder',
+        bundleName: 'admin-memo',
+        classCode: '310',
+        admin: '点滴',
+        adminCode: '4103',
+        adminMemo: '20ml/h',
+        items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', rowRole: 'main' }],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_admin_memo',
+          bundleName: 'admin-memo',
+        }),
+      ]),
+    );
+  });
+
   it('fetchMedicalModV2OrderBundles は medOrder を prescription-orders から組み立てる', async () => {
     vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
       ok: true,
