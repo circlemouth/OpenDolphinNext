@@ -255,6 +255,11 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">620000010</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">ampoule</Medication_Unit_Code>"));
+        assertFalse(xml.contains("adminMemo"));
+        assertFalse(xml.contains("userComment"));
+        assertFalse(xml.contains("routeCode"));
+        assertFalse(xml.contains("timingCode"));
+        assertFalse(xml.contains("dosePerDay"));
     }
 
     @Test

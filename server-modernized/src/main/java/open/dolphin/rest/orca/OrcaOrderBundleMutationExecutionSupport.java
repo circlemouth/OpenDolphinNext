@@ -86,6 +86,9 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 && !OrcaOrderBundle600SubtypeSupport.isValidSubtype(canonicalEntity, explicitSubtype)) {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
+        if (IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)) {
+            validateInjectionContract(op, validationFailure);
+        }
         List<OrderBundleMutationRequest.BundleItem> items = op.getItems();
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
@@ -104,7 +107,9 @@ final class OrcaOrderBundleMutationExecutionSupport {
                     if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity) && !isOtherOrderCode(code)) {
                         throw validationFailure.invalid("items", "otherOrder items must use code family 8");
                     }
-                    hasSendableMainRow = true;
+                    if (isSendableMainRow(canonicalEntity, item, code)) {
+                        hasSendableMainRow = true;
+                    }
                 }
             } else {
                 hasUncodedRow = true;
@@ -122,15 +127,38 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(canonicalEntity) && !hasBodyPart) {
             throw validationFailure.invalid("bodyPart", "bodyPart is required for radiologyOrder");
         }
-        if (requiresSendableMainRow(canonicalEntity) && !hasSendableMainRow) {
+        if (OrcaOrderBundleRequestSupport.requiresSendableMainRow(canonicalEntity) && !hasSendableMainRow) {
             throw validationFailure.invalid("items", "items do not contain a sendable main row");
         }
     }
 
-    private static boolean requiresSendableMainRow(String canonicalEntity) {
-        return canonicalEntity != null
-                && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity)
-                && !IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity);
+    private static void validateInjectionContract(
+            OrderBundleMutationRequest.BundleOperation op,
+            ValidationFailure validationFailure) {
+        if (!OrcaOrderBundleRequestSupport.hasText(op.getAdmin())) {
+            return;
+        }
+        String adminCode = OrcaOrderBundleRequestSupport.trimToNull(op.getAdminCode());
+        if (adminCode == null) {
+            throw validationFailure.invalid("adminCode", "adminCode is required for injectionOrder");
+        }
+        if (!OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode(adminCode)) {
+            throw validationFailure.invalid("adminCode", "adminCode must be a sendable numeric code for injectionOrder");
+        }
+    }
+
+    private static boolean isSendableMainRow(
+            String canonicalEntity,
+            OrderBundleMutationRequest.BundleItem item,
+            String code) {
+        if (!IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)) {
+            return true;
+        }
+        String rowRole = OrcaOrderBundleRequestSupport.trimToNull(item != null ? item.getRowRole() : null);
+        if ("comment".equals(rowRole) || "bodyPart".equals(rowRole) || "material".equals(rowRole)) {
+            return false;
+        }
+        return !code.startsWith("7");
     }
 
     private static boolean isOtherOrderCode(String code) {

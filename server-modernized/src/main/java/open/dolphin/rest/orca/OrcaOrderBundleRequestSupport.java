@@ -5,10 +5,13 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Set;
+import java.util.regex.Pattern;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.ModelUtils;
 
 final class OrcaOrderBundleRequestSupport {
+
+    private static final Pattern SENDABLE_USAGE_CODE_PATTERN = Pattern.compile("^\\d{4,}$");
 
     private static final Set<String> ORDER_BUNDLE_ENTITIES = Set.of(
             IInfoModel.ENTITY_MED_ORDER,
@@ -121,6 +124,15 @@ final class OrcaOrderBundleRequestSupport {
         return value != null && !value.isBlank();
     }
 
+    static boolean isSendableUsageCode(String code) {
+        String normalized = trimToNull(code);
+        return normalized != null && SENDABLE_USAGE_CODE_PATTERN.matcher(normalized).matches();
+    }
+
+    static boolean isSendableInjectionAdminCode(String code) {
+        return isSendableUsageCode(code);
+    }
+
     static boolean isSupportedOperation(String operation) {
         return "create".equals(operation) || "update".equals(operation) || "delete".equals(operation);
     }
@@ -160,6 +172,10 @@ final class OrcaOrderBundleRequestSupport {
         }
         return "treatmentOrder".equals(normalizedEntity)
                 || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+    }
+
+    static boolean requiresSendableMainRow(String canonicalEntity) {
+        return canonicalEntity != null && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity);
     }
 
     private static String canonicalizeEntity(String entity) {

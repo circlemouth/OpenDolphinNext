@@ -172,7 +172,7 @@ describe('OrderBundleEditPanel item actions', () => {
     );
 
     expect(
-      await screen.findByText(/admin\/adminCode・回数・coded row と rowRole.*adminMemo\/speed.*注射コメントは local-only/i),
+      await screen.findByText(/数字 adminCode の投与指示・回数・coded row と rowRole.*adminMemo\/speed.*注射コメントは local-only/i),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('注射メモ')).toHaveAttribute(
       'placeholder',
@@ -662,7 +662,7 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(JSON.parse(stored ?? '[]')[0]).toBe('1回');
   });
 
-  it('injectionOrder でも用法候補を利用でき、経路コード順で表示される', async () => {
+  it('injectionOrder は数字 adminCode の投与指示候補だけを表示し、非送信 code を除外する', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type }) => {
@@ -672,8 +672,10 @@ describe('OrderBundleEditPanel item actions', () => {
           items: [
             { type: 'youhou', code: 'Y900', name: '外用候補', routeCode: 'TOP', timingCode: '03' },
             { type: 'youhou', code: 'Y100', name: '静注候補', routeCode: 'IV', timingCode: '03' },
+            { type: 'youhou', code: '4102', name: '筋注候補', routeCode: 'IM', timingCode: '03' },
+            { type: 'youhou', code: '4101', name: '静注候補(数字)', routeCode: 'IV', timingCode: '03' },
           ],
-          totalCount: 2,
+          totalCount: 4,
         };
       }
       return { ok: true, items: [], totalCount: 0 };
@@ -682,12 +684,52 @@ describe('OrderBundleEditPanel item actions', () => {
     renderWithClient(<OrderBundleEditPanel {...injectionProps} />);
 
     const usageSelect = screen.getByLabelText('投与指示') as HTMLSelectElement;
-    await waitFor(() => expect(usageSelect.options.length).toBeGreaterThan(2));
-    expect(usageSelect.options[1]?.text).toBe('静注候補');
-    expect(usageSelect.options[2]?.text).toBe('外用候補');
+    await waitFor(() => expect(usageSelect.options.length).toBe(3));
+    expect(Array.from(usageSelect.options).map((option) => option.text)).toEqual(['候補を選択', '静注候補(数字)', '筋注候補']);
     await user.selectOptions(usageSelect, usageSelect.options[1]?.value ?? '');
-    expect(usageSelect.selectedOptions[0]?.text).toBe('静注候補');
+    expect(usageSelect.selectedOptions[0]?.text).toBe('静注候補(数字)');
     expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'youhou', keyword: '', allowEmpty: true }));
+  });
+
+  it('injectionOrder の既存非送信 adminCode は選択済みに見せず、保存前に明示 block する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({
+      ok: true,
+      items: [{ type: 'youhou', code: '4101', name: '静注候補', routeCode: 'IV', timingCode: '03' }],
+      totalCount: 1,
+    });
+
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...injectionProps}
+        request={{
+          requestId: 'REQ-INJECTION-INVALID-ADMIN-CODE',
+          kind: 'edit',
+          bundle: {
+            entity: 'injectionOrder',
+            bundleName: '点滴セット',
+            bundleNumber: '1',
+            classCode: '310',
+            classCodeSystem: 'Claim007',
+            className: 'Injection',
+            admin: '静注候補',
+            adminCode: 'Y100',
+            items: [{ code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '', rowRole: 'main' }],
+          },
+        }}
+      />,
+    );
+
+    const usageSelect = screen.getByLabelText('投与指示') as HTMLSelectElement;
+    await waitFor(() => expect(usageSelect.options.length).toBe(2));
+    expect(usageSelect.value).toBe('');
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    expect(
+      await screen.findAllByText('注射の adminCode は数値コード候補のみ送信できます。非数値コードは選び直してください。'),
+    ).toHaveLength(2);
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 
   it('injectionOrder の最近使った用法 fallback は adminCode 空のまま保存前 block する', async () => {
@@ -715,7 +757,7 @@ describe('OrderBundleEditPanel item actions', () => {
     );
 
     await user.selectOptions(screen.getByLabelText('最近使った用法'), '院内メモ用の自由入力');
-    expect((screen.getByLabelText('投与指示') as HTMLSelectElement).value).toContain('院内メモ用の自由入力');
+    expect((screen.getByLabelText('投与指示') as HTMLSelectElement).value).toBe('');
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
     expect(

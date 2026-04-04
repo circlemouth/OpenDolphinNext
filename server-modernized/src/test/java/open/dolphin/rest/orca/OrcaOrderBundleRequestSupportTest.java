@@ -86,6 +86,22 @@ class OrcaOrderBundleRequestSupportTest {
     }
 
     @Test
+    void injectionAdminCodeHelpersFailClosedOnNonNumericCodes() {
+        assertTrue(OrcaOrderBundleRequestSupport.isSendableUsageCode("4101"));
+        assertTrue(OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode("001000"));
+        assertFalse(OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode("Y100"));
+        assertFalse(OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode("410"));
+        assertFalse(OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode(" "));
+    }
+
+    @Test
+    void requiresSendableMainRowIncludesInjectionButNotMedOrder() {
+        assertFalse(OrcaOrderBundleRequestSupport.requiresSendableMainRow(IInfoModel.ENTITY_MED_ORDER));
+        assertTrue(OrcaOrderBundleRequestSupport.requiresSendableMainRow(IInfoModel.ENTITY_INJECTION_ORDER));
+        assertTrue(OrcaOrderBundleRequestSupport.requiresSendableMainRow(IInfoModel.ENTITY_TREATMENT));
+    }
+
+    @Test
     void isCompatibleClassCodePinsOtherOrderToEightFamily() {
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "800"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "700"));
