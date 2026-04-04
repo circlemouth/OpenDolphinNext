@@ -67,13 +67,19 @@ describe('orderCategoryRegistry', () => {
     const specimen = resolveOrderEntityTestSubtypeConfig('testOrder');
     const physiology = resolveOrderEntityTestSubtypeConfig('physiologyOrder');
     const bacteria = resolveOrderEntityTestSubtypeConfig('bacteriaOrder');
+    const testUi = resolveOrderEntityUiProfile('testOrder');
 
     expect(specimen?.readOnly).toBe(true);
     expect(specimen?.defaultValue).toBe('specimen');
+    expect(specimen?.helpText).toContain('bundle 共通');
     expect(physiology?.readOnly).toBe(true);
     expect(physiology?.defaultValue).toBe('physiology');
+    expect(physiology?.helpText).toContain('ORCA送信には使いません');
     expect(bacteria?.required).toBe(true);
+    expect(bacteria?.helpText).toContain('carrier がない');
     expect(bacteria?.options.map((option) => option.value)).toEqual(['culture', 'sensitivity']);
+    expect(testUi.instructionLabel).toBe('検査指示（院内）');
+    expect(testUi.memoLabel).toBe('検査メモ（院内）');
   });
 
   it('normalizes class 600 subtype by entity contract', () => {

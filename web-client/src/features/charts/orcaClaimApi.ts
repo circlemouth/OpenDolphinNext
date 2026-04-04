@@ -31,7 +31,6 @@ export type MedicalModV2Medication = {
   code: string;
   name?: string;
   number?: string;
-  unit?: string;
   genericFlg?: 'yes' | 'no';
 };
 
@@ -53,13 +52,27 @@ export type MedicalModV2RequestPayload = {
   medicalInformation?: MedicalModV2Information[];
 };
 
-export const buildMedicalModV2RequestXml = (params: MedicalModV2RequestPayload): MedicalModV2RequestPayload => params;
+export const buildMedicalModV2RequestXml = (params: MedicalModV2RequestPayload): MedicalModV2RequestPayload => ({
+  ...params,
+  medicalInformation: params.medicalInformation?.map((info) => ({
+    medicalClass: info.medicalClass,
+    medicalClassName: info.medicalClassName,
+    medicalClassNumber: info.medicalClassNumber,
+    medications: info.medications.map((medication) => ({
+      code: medication.code,
+      name: medication.name,
+      number: medication.number,
+      genericFlg: medication.genericFlg,
+    })),
+  })),
+});
 
 export async function postOrcaMedicalModV2Xml(
   payload: MedicalModV2RequestPayload,
   options: { classCode?: string; signal?: AbortSignal } = {},
 ): Promise<OrcaClaimSendResult> {
   const runId = getObservabilityMeta().runId;
+  const requestPayload = buildMedicalModV2RequestXml(payload);
   const response = await httpFetch(ORCA_MEDICALMODV2_PATH, {
     method: 'POST',
     headers: {
@@ -67,7 +80,7 @@ export async function postOrcaMedicalModV2Xml(
       Accept: 'application/json',
     },
     body: JSON.stringify({
-      ...payload,
+      ...requestPayload,
       classCode: options.classCode,
     }),
     signal: options.signal,

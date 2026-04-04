@@ -7,18 +7,186 @@ vi.mock('../../../libs/http/httpClient', () => ({
 vi.mock('../../../libs/observability/observability', () => ({
   generateRunId: vi.fn(() => 'RUN-GEN'),
   getObservabilityMeta: vi.fn(() => ({ runId: 'RUN-META', traceId: 'TRACE-META' })),
+  ensureObservabilityMeta: vi.fn(() => ({ runId: 'RUN-META', traceId: 'TRACE-META' })),
   updateObservabilityMeta: vi.fn(),
 }));
 
 import { httpFetch } from '../../../libs/http/httpClient';
 import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles, mutateOrderBundles } from '../orderBundleApi';
+import { fetchOrcaOrderInputSetDetail } from '../orcaOrderInputSetApi';
 import { fetchMedicalModV2OrderBundles, prepareMedicalModV2SendData, toMedicalModV2InformationWithSource } from '../orderRpNormalization';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder, savePrescriptionOrder } from '../prescriptionOrderApi';
 
 describe('order send smoke', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('input set detail save reload send smoke keeps testOrder admin local-only and multiple item comment rows', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            setCode: 'T60001',
+            bundle: {
+              entity: 'laboTest',
+              sourceSetCode: 'T60001',
+              bundleName: '採血セット',
+              bundleNumber: '2',
+              classCode: '600',
+              classCodeSystem: 'Claim007',
+              className: '検査',
+              admin: '至急',
+              adminMemo: '空腹時',
+              memo: 'bundle memo',
+              items: [
+                { code: '160000010', name: '血算', quantity: '1', unit: '回', memo: 'item memo A', rowRole: 'main' },
+                { code: '0085001', name: '採血注意', quantity: '', unit: '', memo: 'comment memo', rowRole: 'comment' },
+                { code: '160000011', name: '生化学', quantity: '1', unit: '回', memo: 'item memo B', rowRole: 'main' },
+              ],
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-SAVE-TEST600',
+            createdDocumentIds: [606],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-FETCH-TEST600',
+            patientId: '000001',
+            bundles: [
+              {
+                entity: 'testOrder',
+                bundleName: '採血セット',
+                bundleNumber: '2',
+                classCode: '600',
+                classCodeSystem: 'Claim007',
+                className: '検査',
+                admin: '至急',
+                adminMemo: '空腹時',
+                memo: 'bundle memo',
+                items: [
+                  { code: '160000010', name: '血算', quantity: '1', unit: '回', memo: 'item memo A', rowRole: 'main' },
+                  { code: '0085001', name: '採血注意', quantity: '', unit: '', memo: 'comment memo', rowRole: 'comment' },
+                  { code: '160000011', name: '生化学', quantity: '1', unit: '回', memo: 'item memo B', rowRole: 'main' },
+                ],
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-SEND-TEST600',
+            traceId: 'TRACE-SEND-TEST600',
+            apiResult: '00',
+            apiResultMessage: 'OK',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+    const inputSet = await fetchOrcaOrderInputSetDetail({
+      setCode: 'T60001',
+      effective: '20260309',
+      entity: 'testOrder',
+    });
+    expect(inputSet.ok).toBe(true);
+    expect(inputSet.bundle?.entity).toBe('laboTest');
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'testOrder',
+          bundleName: inputSet.bundle?.bundleName,
+          bundleNumber: inputSet.bundle?.bundleNumber,
+          classCode: inputSet.bundle?.classCode,
+          classCodeSystem: inputSet.bundle?.classCodeSystem,
+          className: inputSet.bundle?.className,
+          admin: inputSet.bundle?.admin,
+          adminMemo: inputSet.bundle?.adminMemo,
+          memo: inputSet.bundle?.memo,
+          items: inputSet.bundle?.items as any,
+        },
+      ],
+    });
+
+    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'testOrder' });
+    expect(fetched.ok).toBe(true);
+    expect(fetched.bundles[0]?.admin).toBe('至急');
+    expect(fetched.bundles[0]?.adminMemo).toBe('空腹時');
+    expect(fetched.bundles[0]?.memo).toBe('bundle memo');
+
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    expect(prepared.bundleIssues).toEqual([]);
+    expect(prepared.medicalInformation[0]?.medications.map((item) => item.code)).toEqual([
+      '160000010',
+      '160000011',
+      '0085001',
+    ]);
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('至急');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('空腹時');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('bundle memo');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('item memo');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('"unit"');
+
+    const payload = buildMedicalModV2RequestXml({
+      patientId: '000001',
+      performDate: '2026-03-09T09:30:00',
+      departmentCode: '01',
+      physicianCode: '10001',
+      medicalInformation: prepared.medicalInformation,
+    });
+
+    expect(payload.medicalInformation?.[0]?.medications.map((item) => item.code)).toEqual([
+      '160000010',
+      '160000011',
+      '0085001',
+    ]);
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('"unit"');
+
+    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
+
+    expect(sendResult.ok).toBe(true);
+    expect(httpFetch).toHaveBeenCalledTimes(4);
+    const request = vi.mocked(httpFetch).mock.calls[3]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
+    expect(body.medicalInformation[0]?.medications.map((item: Record<string, string>) => item.code)).toEqual([
+      '160000010',
+      '160000011',
+      '0085001',
+    ]);
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('至急');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('空腹時');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('item memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('"unit"');
   });
 
   it('save fetch normalize send payload smoke keeps radiology row roles and class meta', async () => {
@@ -125,9 +293,9 @@ describe('order send smoke', () => {
             medicalClassName: 'Radiology',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
-              expect.objectContaining({ code: '002001', unit: 'PART' }),
-              expect.objectContaining({ code: '170017510', unit: 'times' }),
-              expect.objectContaining({ code: '700000001', unit: 'bottle' }),
+              expect.objectContaining({ code: '002001' }),
+              expect.objectContaining({ code: '170017510' }),
+              expect.objectContaining({ code: '700000001' }),
               expect.objectContaining({ code: '0085001', name: 'CAUTION' }),
             ]),
           }),
@@ -160,9 +328,9 @@ describe('order send smoke', () => {
             medicalClassName: 'Radiology',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
-              expect.objectContaining({ code: '002001', unit: 'PART' }),
-              expect.objectContaining({ code: '170017510', unit: 'times' }),
-              expect.objectContaining({ code: '700000001', unit: 'bottle' }),
+              expect.objectContaining({ code: '002001' }),
+              expect.objectContaining({ code: '170017510' }),
+              expect.objectContaining({ code: '700000001' }),
               expect.objectContaining({ code: '0085001', name: 'CAUTION' }),
             ]),
           }),
@@ -271,7 +439,7 @@ describe('order send smoke', () => {
           medicalClass: '800',
           medicalClassName: 'Other',
           medicalClassNumber: '4',
-          medications: [expect.objectContaining({ code: '180000210', unit: 'times' })],
+          medications: [expect.objectContaining({ code: '180000210' })],
         }),
       ]),
     );
@@ -293,7 +461,7 @@ describe('order send smoke', () => {
           medicalClass: '800',
           medicalClassName: 'Other',
           medicalClassNumber: '4',
-          medications: [expect.objectContaining({ code: '180000210', unit: 'times' })],
+          medications: [expect.objectContaining({ code: '180000210' })],
         }),
       ]),
     );
@@ -406,9 +574,9 @@ describe('order send smoke', () => {
             medicalClassName: 'Treatment',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
-              expect.objectContaining({ code: '002003', unit: 'PART' }),
-              expect.objectContaining({ code: '140000610', unit: 'times' }),
-              expect.objectContaining({ code: '700000021', unit: 'sheet' }),
+              expect.objectContaining({ code: '002003' }),
+              expect.objectContaining({ code: '140000610' }),
+              expect.objectContaining({ code: '700000021' }),
               expect.objectContaining({ code: '0085002', name: 'COMMENT' }),
             ]),
           }),
@@ -439,9 +607,9 @@ describe('order send smoke', () => {
             medicalClassName: 'Treatment',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
-              expect.objectContaining({ code: '002003', unit: 'PART' }),
-              expect.objectContaining({ code: '140000610', unit: 'times' }),
-              expect.objectContaining({ code: '700000021', unit: 'sheet' }),
+              expect.objectContaining({ code: '002003' }),
+              expect.objectContaining({ code: '140000610' }),
+              expect.objectContaining({ code: '700000021' }),
               expect.objectContaining({ code: '0085002', name: 'COMMENT' }),
             ]),
           }),
@@ -941,7 +1109,7 @@ describe('order send smoke', () => {
           medicalClass: '211',
           medicalClassNumber: '7',
           medications: expect.arrayContaining([
-            expect.objectContaining({ code: '620000001', unit: '錠', name: '薬剤A' }),
+            expect.objectContaining({ code: '620000001', name: '薬剤A' }),
             expect.objectContaining({ code: '820100001', name: 'RP患者希望' }),
           ]),
         }),
@@ -962,7 +1130,7 @@ describe('order send smoke', () => {
           medicalClass: '211',
           medicalClassNumber: '7',
           medications: expect.arrayContaining([
-            expect.objectContaining({ code: '620000001', name: '薬剤A', unit: '錠' }),
+            expect.objectContaining({ code: '620000001', name: '薬剤A' }),
           ]),
         }),
       ]),

@@ -697,18 +697,34 @@ const resolveSendContractNote = (entity: string) => {
     return 'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。';
   }
   if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
-    return 'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
+    return 'setCode は展開専用です。数量は ORCA 送信しますが、単位・算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
   }
   if (canonicalEntity === 'bacteriaOrder') {
-    return '細菌検査 subtype・院内補足・自由メモは local-only です。subtype に対応する ORCA 送信 carrier は未実装のため、送信前に明示 block します。';
+    return '細菌検査では admin(検査指示)・subtype・院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。subtype に対応する ORCA carrier は公式 medicalmodv2 にないため、送信前に明示 block します。';
   }
-  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
-    return '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。';
+  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder') {
+    return '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。';
   }
   if (canonicalEntity === 'radiologyOrder') {
     return '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
   }
   return '';
+};
+
+const resolveInstructionLocalOnlyHelp = (entity: string) => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
+    return 'admin(検査指示) は bundle 共通の院内ローカル情報です。複数検査項目をまとめても ORCA へは送信しません。';
+  }
+  return null;
+};
+
+const resolveMemoLocalOnlyHelp = (entity: string) => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
+    return '院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。ORCA 送信 payload には含めません。';
+  }
+  return null;
 };
 const formatUsageMasterSummary = (item: Pick<UsageMasterMeta, 'timingCode' | 'routeCode' | 'daysLimit' | 'dosePerDay'>) => {
   const route = resolveUsageRouteClassification(item.routeCode);
@@ -1172,6 +1188,8 @@ export function OrderBundleEditPanel({
   const showBodyPartSection =
     supportsBodyPartSearch || Boolean(form.bodyPart?.name?.trim() || form.bodyPart?.code?.trim());
   const sendContractNote = resolveSendContractNote(entity);
+  const instructionLocalOnlyHelp = resolveInstructionLocalOnlyHelp(entity);
+  const memoLocalOnlyHelp = resolveMemoLocalOnlyHelp(entity);
   const itemMasterTargets = orderUiProfile.masterSearchPresets;
   const supportsEtensuDetailSearch = itemMasterTargets.some((target) => target.type === 'etensu');
   const itemPredictiveTargetLabel = itemMasterTargets.map((target) => target.label).join(' / ');
@@ -3583,6 +3601,9 @@ export function OrderBundleEditPanel({
                 {usageError}
               </p>
             ) : null}
+            {!supportsUsageSearch && instructionLocalOnlyHelp ? (
+              <p className="charts-side-panel__help">{instructionLocalOnlyHelp}</p>
+            ) : null}
             {supportsUsageSearch && selectedUsageSummary && (
               <p className="charts-side-panel__help">{selectedUsageSummary}</p>
             )}
@@ -3667,6 +3688,7 @@ export function OrderBundleEditPanel({
                       メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
                     </p>
                   )}
+                  {memoLocalOnlyHelp ? <p className="charts-side-panel__help">{memoLocalOnlyHelp}</p> : null}
                 </div>
                 {!isMedOrder ? (
                   <div className="charts-side-panel__field charts-side-panel__meta-section--memo">
@@ -3710,6 +3732,7 @@ export function OrderBundleEditPanel({
                   メモは自由記述の補足欄です。指示・コメントをコードで管理する場合は「コメントコード」に入力してください。
                 </p>
               )}
+              {memoLocalOnlyHelp ? <p className="charts-side-panel__help">{memoLocalOnlyHelp}</p> : null}
             </div>
             {!isMedOrder ? (
               <div className="charts-side-panel__field charts-side-panel__meta-section charts-side-panel__meta-section--memo">

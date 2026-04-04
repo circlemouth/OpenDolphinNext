@@ -29,7 +29,6 @@ export type RpNormalizedMedication = {
   code: string;
   name?: string;
   number?: string;
-  unit?: string;
   genericFlg?: 'yes' | 'no';
 };
 
@@ -238,7 +237,6 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
     code,
     name: item.name?.trim() || undefined,
     number: item.quantity?.trim() || undefined,
-    unit: item.unit?.trim() || undefined,
     genericFlg,
   };
 };
@@ -272,7 +270,6 @@ const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormaliz
       code: usageCode,
       name: usageName,
       number: '',
-      unit: undefined,
       genericFlg: undefined,
     },
     source: { kind: 'usage' },
@@ -329,11 +326,17 @@ export const toMedicalModV2InformationWithSource = (
   const normalized = normalizeOrderBundleToRp(bundle);
   if (!normalized) return null;
 
+  // ORCA medicalmodv2 request has no Medication_Unit_Code carrier.
   const info: MedicalModV2Information = {
     medicalClass: normalized.header.medicalClass,
     medicalClassName: normalized.header.medicalClassName,
     medicalClassNumber: normalized.header.medicalClassNumber,
-    medications: normalized.rows.map((row) => row.medication),
+    medications: normalized.rows.map((row) => ({
+      code: row.medication.code,
+      name: row.medication.name,
+      number: row.medication.number,
+      genericFlg: row.medication.genericFlg,
+    })),
   };
   const source: MedicalModV2InformationSource = {
     ...normalized.header,

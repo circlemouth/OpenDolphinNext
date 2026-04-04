@@ -15,7 +15,6 @@
 
 ### ORCA に送る
 
-- `unit`
 - `classCode / classCodeSystem / className`
 - `admin / adminCode / adminCodeSystem` (`medOrder`, `injectionOrder`)
 - `bodyPart` (`radiologyOrder` と bodyPart 対応 bundle)
@@ -27,6 +26,8 @@
 
 - `bundleName`
 - `startDate`
+- `unit`
+- 600系の `admin`（検査指示）
 - free-form `memo`
 - free-form `item.memo`
 - 注射の `adminMemo`
@@ -43,11 +44,19 @@
 
 ## 600系 Recheck (`20260403T142706Z`)
 
-- `testOrder` / `physiologyOrder` は `admin / adminMemo / memo / item.memo` を save では保持しつつ、ORCA 送信は `classCode 600 + coded row` のみを使う local-only 契約で確定した。
+- `testOrder` / `physiologyOrder` は `admin / adminMemo / memo / item.memo / subtype` を save では保持しつつ、ORCA 送信は `classCode 600 + coded row` のみを使う local-only 契約で確定した。`admin` は UI 上も「院内」明示へ寄せ、silent drop を撤廃した。
 - `bacteriaOrder` は `subtype` を first-class で保持するが、carrier 未対応のため `prepareMedicalModV2SendData` で `unsupported_bacteria_subtype` を返して fail-closed に止める。
+- 600系 bundle の `admin / subtype / adminMemo / memo` は bundle 共通情報としてのみ扱い、複数項目を 1 bundle に積んでも item 個別 carrier は持たせない。
 - `physiologyOrder` の識別は `Medical_Class_Name` 依存ではなく、entity 別 default subtype と stamp token 復元で固定されている。
+- `medicalmodv2` の request 一覧にない `Medication_Unit_Code` / `Medication_Unit_Code_Name` は送信しない。単位は保存・表示専用で、ORCA payload/XML には含めない。internal JSON からも除外し、request contract 自体を送信可能 field のみに絞った。
 - `otherOrder` の server/client hardening は `etensu category 8` 契約に合わせ、`8...` に加えて既存 smoke で使っている `18...` も許容する形へ補正した。
-- 未完了は、`testOrder` / `physiologyOrder` の local-only を UI ラベル/placeholder まで明示することと、600系の複数 item/comment XML 網羅、physiology/bacteria の縦断 smoke 追加。
+- 600系の複数 item/comment XML 網羅と `input set -> save -> fetch -> send` smoke を追加し、複数検査項目 + コメントコードでも崩れないことを固定した。
+
+## ORCA official spec basis (`20260404T002958Z`)
+
+- API overview では `/api21/medicalmodv2` が「中途データ登録/削除/変更」の official endpoint として定義されている。
+- `medicalmodv2` request 一覧の `Medical_Information` 配下は `Medication_Code / Medication_Name / Medication_Number / Medication_Generic_Flg` までで、`Medication_Unit_Code*` は列挙されていない。
+- `85XXXXXXX / 831XXXXXX` コメントコード補足では、中途データ登録側の carrier は `Medication_Code` と `Medication_Number` のみで説明されている。600系コメント行はこの carrier を使う。
 
 ## 主要変更ファイル
 

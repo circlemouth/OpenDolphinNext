@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -115,10 +116,17 @@ describe('OrderBundleEditPanel ORCA support', () => {
   it('600系は subtype/local-only field の送信契約を明示する', () => {
     renderPanel(testProps);
 
+    expect(screen.getByLabelText('検査指示（院内）')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。',
+        '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。',
       ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('admin(検査指示) は bundle 共通の院内ローカル情報です。複数検査項目をまとめても ORCA へは送信しません。'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。ORCA 送信 payload には含めません。'),
     ).toBeInTheDocument();
   });
 
@@ -131,7 +139,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。',
+        '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。',
       ),
     ).toBeInTheDocument();
   });
@@ -150,7 +158,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。',
+        'setCode は展開専用です。数量は ORCA 送信しますが、単位・算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。',
       ),
     ).toBeInTheDocument();
   });
@@ -543,8 +551,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
         classCode: '600',
         classCodeSystem: 'Claim007',
         className: '検査',
+        admin: '院内指示',
         adminMemo: '至急',
-        items: [{ code: '160000010', name: '血液一般', quantity: '1', unit: '回', memo: '' }],
+        memo: 'bundle common memo',
+        items: [
+          { code: '160000010', name: '血液一般', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+          { code: '0085001', name: '採血注意', quantity: '', unit: '', memo: 'note', rowRole: 'comment' },
+          { code: '160000011', name: '生化学', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+        ],
       },
     });
 
@@ -555,7 +569,9 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(await screen.findByRole('button', { name: /T60001.*血液検査セット.*反映/ }));
 
     expect(screen.getByLabelText('検査名')).toHaveValue('血液検査セット');
+    expect(screen.getByLabelText('検査指示（院内）')).toHaveValue('院内指示');
     expect(screen.getByLabelText('院内補足')).toHaveValue('至急');
+    expect(screen.getByLabelText('検査メモ（院内）')).toHaveValue('bundle common memo');
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
@@ -565,8 +581,16 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.classCode).toBe('600');
     expect(operation?.classCodeSystem).toBe('Claim007');
     expect(operation?.className).toBe('検査');
+    expect(operation?.admin).toBe('院内指示');
     expect(operation?.adminMemo).toBe('至急');
-    expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '160000010', unit: '回' })]));
+    expect(operation?.memo).toBe('bundle common memo');
+    expect(operation?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: '160000010', rowRole: 'main' }),
+        expect.objectContaining({ code: '160000011', rowRole: 'main' }),
+        expect.objectContaining({ code: '0085001', rowRole: 'comment' }),
+      ]),
+    );
   });
 
   it('bacteriaOrder は testOrder の 600 input set detail を受け入れて subtype を保持する', async () => {

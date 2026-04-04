@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveCanonicalOrderEntity } from '../orderCategoryRegistry';
+import { buildMedicalModV2RequestXml } from '../orcaClaimApi';
 import {
   collectMedicalModV2BundleIssues,
   fetchMedicalModV2OrderBundles,
   normalizeOrderBundleToRp,
+  toMedicalModV2InformationWithSource,
 } from '../orderRpNormalization';
 import { fetchOrderBundles } from '../orderBundleApi';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
@@ -91,19 +93,23 @@ describe('orderRpNormalization', () => {
     );
   });
 
-  it('normalize は unit を保持する', () => {
-    const normalized = normalizeOrderBundleToRp({
+  it('buildMedicalModV2RequestXml は unsupported な unit を送信payloadから除外する', () => {
+    const normalized = toMedicalModV2InformationWithSource({
       entity: 'radiologyOrder',
       bundleName: '胸部CT',
       bundleNumber: '1',
       items: [{ code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '' }],
     } as any);
 
-    expect(normalized?.rows[0]?.medication).toEqual(
-      expect.objectContaining({
-        unit: '回',
-      }),
-    );
+    const payload = buildMedicalModV2RequestXml({
+      patientId: '000001',
+      performDate: '2026-03-09T09:30:00',
+      departmentCode: '01',
+      physicianCode: '10001',
+      medicalInformation: normalized ? [normalized.info] : [],
+    });
+
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('回');
   });
 
   it('normalize は explicit bodyPart と adminCode を first-class で保持する', () => {
@@ -120,12 +126,49 @@ describe('orderRpNormalization', () => {
     expect(normalized?.header.admin).toBe('静注');
     expect(normalized?.header.adminCode).toBe('4101');
     expect(normalized?.rows.map((row) => row.source.kind)).toEqual(['body_part', 'bundle_item']);
-    expect(normalized?.rows[0]?.medication).toEqual(
-      expect.objectContaining({
-        code: '002001',
-        unit: '部位',
-      }),
-    );
+    expect(normalized?.rows[0]?.medication).toEqual(expect.objectContaining({ code: '002001' }));
+  });
+
+  it('normalize は testOrder の複数検査項目とコメントコードを保持し、admin 系 local-only を送信行へ混ぜない', () => {
+    const bundle = {
+      entity: 'testOrder',
+      bundleName: '採血セット',
+      bundleNumber: '2',
+      classCode: '600',
+      className: '検査',
+      admin: '至急',
+      adminMemo: '空腹時',
+      memo: 'bundle memo',
+      items: [
+        { code: '160000010', name: '血算', quantity: '1', unit: '回', memo: 'item memo A', rowRole: 'main' },
+        { code: '0085001', name: 'コメント', quantity: '', unit: '', memo: 'comment memo', rowRole: 'comment' },
+        { code: '160000011', name: '生化学', quantity: '1', unit: '回', memo: 'item memo B', rowRole: 'main' },
+      ],
+    } as any;
+    const normalized = normalizeOrderBundleToRp(bundle);
+    const medicalInfo = toMedicalModV2InformationWithSource(bundle);
+
+    expect(normalized?.header.admin).toBe('至急');
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['160000010', '160000011', '0085001']);
+    expect(normalized?.rows.map((row) => row.source.kind)).toEqual(['bundle_item', 'bundle_item', 'bundle_item']);
+
+    const payload = buildMedicalModV2RequestXml({
+      patientId: '000001',
+      performDate: '2026-03-09T09:30:00',
+      departmentCode: '01',
+      physicianCode: '10001',
+      medicalInformation: medicalInfo ? [medicalInfo.info] : [],
+    });
+
+    expect(payload.medicalInformation?.[0]?.medications.map((row) => row.code)).toEqual([
+      '160000010',
+      '160000011',
+      '0085001',
+    ]);
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('至急');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('空腹時');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle memo');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('item memo');
   });
   it('normalize は injectionOrder の admin 行と rowRole 順を固定する', () => {
     const normalized = normalizeOrderBundleToRp({
@@ -152,6 +195,26 @@ describe('orderRpNormalization', () => {
       '700000031',
       '0085001',
     ]);
+  });
+
+  it('testOrder normalize は複数検査項目とコメントコードを bundle 共通情報として保持する', () => {
+    const normalized = normalizeOrderBundleToRp({
+      entity: 'testOrder',
+      bundleName: '検査セット',
+      bundleNumber: '2',
+      admin: '院内指示',
+      memo: 'bundle memo',
+      items: [
+        { code: '160000010', name: '血液一般', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+        { code: '0085001', name: '採血注意', quantity: '', unit: '', memo: 'note', rowRole: 'comment' },
+        { code: '160000011', name: '生化学', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+      ],
+    } as any);
+
+    expect(normalized?.header.admin).toBe('院内指示');
+    expect(normalized?.header.adminCode).toBeUndefined();
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['160000010', '160000011', '0085001']);
+    expect(normalized?.rows[2]?.source.kind).toBe('bundle_item');
   });
 
   it('fetchMedicalModV2OrderBundles は medOrder を prescription-orders から組み立てる', async () => {

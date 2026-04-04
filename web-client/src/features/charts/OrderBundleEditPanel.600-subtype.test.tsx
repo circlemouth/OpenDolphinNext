@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 
 import { OrderBundleEditPanel } from './OrderBundleEditPanel';
@@ -57,7 +58,7 @@ afterEach(() => {
 });
 
 describe('OrderBundleEditPanel 600 subtype ui', () => {
-  it('physiologyOrder shows a fixed subtype field and physiology-specific placeholder', () => {
+  it('physiologyOrder shows a fixed subtype field and local-only bundle-common guidance', () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -78,9 +79,14 @@ describe('OrderBundleEditPanel 600 subtype ui', () => {
     expect(subtypeInput?.disabled).toBe(true);
     expect(subtypeInput?.value).toBe('生理');
     expect(itemNameInput?.placeholder).toBe('生理検査項目名');
+    expect(screen.getByLabelText('生理検査指示（院内）')).toHaveAttribute(
+      'placeholder',
+      '例: 安静時 / 12誘導（ORCA送信しない）',
+    );
+    expect(screen.getByText('admin(検査指示) は bundle 共通の院内ローカル情報です。複数検査項目をまとめても ORCA へは送信しません。')).toBeInTheDocument();
   });
 
-  it('bacteriaOrder shows a subtype selector and bacteria-specific placeholder', () => {
+  it('bacteriaOrder shows a subtype selector and local-only/block guidance', () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -100,5 +106,14 @@ describe('OrderBundleEditPanel 600 subtype ui', () => {
     expect(subtypeSelect).not.toBeNull();
     expect(Array.from(subtypeSelect?.options ?? []).map((option) => option.value)).toEqual(['', 'culture', 'sensitivity']);
     expect(itemNameInput?.placeholder).toBe('細菌検査項目名');
+    expect(screen.getByLabelText('細菌検査指示（院内）')).toHaveAttribute(
+      'placeholder',
+      '例: 喀痰 / 至急（ORCA送信しない）',
+    );
+    expect(
+      screen.getByText(
+        '細菌検査 subtype は bundle 共通の院内情報です。検査指示・院内補足・自由メモ・item memo も local-only で、official medicalmodv2 に carrier がないため送信前に block します。',
+      ),
+    ).toBeInTheDocument();
   });
 });
