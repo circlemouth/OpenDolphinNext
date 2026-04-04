@@ -11,6 +11,8 @@ export type OrcaOrderItemMeta = {
   rowSubtype?: OrcaOrderItemRowSubtype;
   // Selection-expression comment metadata.
   category?: string;
+  // Original ORCA master category for charge row classification.
+  masterCategory?: string;
   itemNumber?: string;
   itemNumberBranch?: string;
 };
@@ -22,8 +24,11 @@ export type OrcaOrderItemMetaCarrier = {
   rowRole?: OrcaOrderItemRowRole | null;
   rowSubtype?: OrcaOrderItemRowSubtype | null;
   category?: string | null;
+  masterCategory?: string | null;
   itemNumber?: string | null;
   itemNumberBranch?: string | null;
+  selectionCommentItemNumber?: string | null;
+  selectionCommentItemNumberBranch?: string | null;
 };
 
 const META_PREFIX = '__orca_meta__:';
@@ -62,6 +67,12 @@ const normalizeCategory = (value: unknown): OrcaOrderItemMeta['category'] => {
   return trimmed ? trimmed : undefined;
 };
 
+const normalizeMasterCategory = (value: unknown): OrcaOrderItemMeta['masterCategory'] => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return /^\d{3}$/.test(trimmed) ? trimmed : undefined;
+};
+
 const normalizeItemNumber = (value: unknown): OrcaOrderItemMeta['itemNumber'] => {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -83,6 +94,7 @@ const isEmptyMeta = (meta: OrcaOrderItemMeta) =>
   !meta.rowRole &&
   !meta.rowSubtype &&
   !normalizeCategory(meta.category) &&
+  !normalizeMasterCategory(meta.masterCategory) &&
   !normalizeItemNumber(meta.itemNumber) &&
   !normalizeItemNumberBranch(meta.itemNumberBranch);
 
@@ -104,6 +116,7 @@ export function parseOrcaOrderItemMemo(memo?: string | null): { meta: OrcaOrderI
         rowRole: normalizeRowRole(parsed.rowRole),
         rowSubtype: normalizeRowSubtype(parsed.rowSubtype),
         category: normalizeCategory(parsed.category),
+        masterCategory: normalizeMasterCategory(parsed.masterCategory),
         itemNumber: normalizeItemNumber(parsed.itemNumber),
         itemNumberBranch: normalizeItemNumberBranch(parsed.itemNumberBranch),
       },
@@ -124,6 +137,7 @@ export function formatOrcaOrderItemMemo(meta: OrcaOrderItemMeta, memoText: strin
   if (meta.rowRole) json.rowRole = meta.rowRole;
   if (meta.rowSubtype) json.rowSubtype = meta.rowSubtype;
   if (normalizeCategory(meta.category)) json.category = normalizeCategory(meta.category);
+  if (normalizeMasterCategory(meta.masterCategory)) json.masterCategory = normalizeMasterCategory(meta.masterCategory);
   if (normalizeItemNumber(meta.itemNumber)) json.itemNumber = normalizeItemNumber(meta.itemNumber);
   if (normalizeItemNumberBranch(meta.itemNumberBranch)) json.itemNumberBranch = normalizeItemNumberBranch(meta.itemNumberBranch);
   const metaLine = `${META_PREFIX}${JSON.stringify(json)}`;
@@ -149,11 +163,20 @@ export function updateOrcaOrderItemMeta(memo: string | undefined, patch: Partial
   if (!normalizeCategory(next.category)) {
     delete next.category;
   }
+  if (!normalizeMasterCategory(next.masterCategory)) {
+    delete next.masterCategory;
+  } else {
+    next.masterCategory = normalizeMasterCategory(next.masterCategory);
+  }
   if (!normalizeItemNumber(next.itemNumber)) {
     delete next.itemNumber;
+  } else {
+    next.itemNumber = normalizeItemNumber(next.itemNumber);
   }
   if (!normalizeItemNumberBranch(next.itemNumberBranch)) {
     delete next.itemNumberBranch;
+  } else {
+    next.itemNumberBranch = normalizeItemNumberBranch(next.itemNumberBranch);
   }
   return formatOrcaOrderItemMemo(next, memoText);
 }
@@ -164,6 +187,7 @@ export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | nul
   rowRole?: OrcaOrderItemRowRole;
   rowSubtype?: OrcaOrderItemRowSubtype;
   category?: string;
+  masterCategory?: string;
   itemNumber?: string;
   itemNumberBranch?: string;
   memoText: string;
@@ -175,8 +199,11 @@ export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | nul
     rowRole: normalizeRowRole(item?.rowRole ?? parsed.meta.rowRole),
     rowSubtype: normalizeRowSubtype(item?.rowSubtype ?? parsed.meta.rowSubtype),
     category: normalizeCategory(item?.category ?? parsed.meta.category),
-    itemNumber: normalizeItemNumber(item?.itemNumber ?? parsed.meta.itemNumber),
-    itemNumberBranch: normalizeItemNumberBranch(item?.itemNumberBranch ?? parsed.meta.itemNumberBranch),
+    masterCategory: normalizeMasterCategory(item?.masterCategory ?? parsed.meta.masterCategory),
+    itemNumber: normalizeItemNumber(item?.itemNumber ?? item?.selectionCommentItemNumber ?? parsed.meta.itemNumber),
+    itemNumberBranch: normalizeItemNumberBranch(
+      item?.itemNumberBranch ?? item?.selectionCommentItemNumberBranch ?? parsed.meta.itemNumberBranch,
+    ),
     memoText: parsed.memoText,
   };
 }

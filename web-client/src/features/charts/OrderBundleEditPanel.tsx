@@ -40,7 +40,11 @@ import {
 import {
   canonicalizeChargeBundleMeta,
   deriveChargeClassCodeFromCategory,
+  isChargeClassCompatible,
+  isChargeEntity,
+  isChargeItemCategoryCompatible,
   isChargeOrderEntity,
+  resolveCanonicalChargeClassName,
   resolveCanonicalChargeClassMeta,
 } from './orderChargeClassSupport';
 import {
@@ -221,15 +225,24 @@ const stripRowMeta = (item: OrderBundleItem): OrderBundleItem => {
   } else {
     delete rest.category;
   }
+  if (resolvedItemFields.masterCategory) {
+    rest.masterCategory = resolvedItemFields.masterCategory;
+  } else {
+    delete rest.masterCategory;
+  }
   if (resolvedItemFields.itemNumber) {
     rest.itemNumber = resolvedItemFields.itemNumber;
+    rest.selectionCommentItemNumber = resolvedItemFields.itemNumber;
   } else {
     delete rest.itemNumber;
+    delete rest.selectionCommentItemNumber;
   }
   if (resolvedItemFields.itemNumberBranch) {
     rest.itemNumberBranch = resolvedItemFields.itemNumberBranch;
+    rest.selectionCommentItemNumberBranch = resolvedItemFields.itemNumberBranch;
   } else {
     delete rest.itemNumberBranch;
+    delete rest.selectionCommentItemNumberBranch;
   }
   return rest;
 };
@@ -248,8 +261,12 @@ const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem)
       rowRole: resolvedItemFields.rowRole ?? item.rowRole,
       rowSubtype: resolvedItemFields.rowSubtype ?? item.rowSubtype,
       category: item.category ?? resolvedItemFields.category,
-      itemNumber: item.itemNumber ?? resolvedItemFields.itemNumber,
-      itemNumberBranch: item.itemNumberBranch ?? resolvedItemFields.itemNumberBranch,
+      masterCategory: item.masterCategory ?? resolvedItemFields.masterCategory ?? item.category,
+      itemNumber: item.itemNumber ?? item.selectionCommentItemNumber ?? resolvedItemFields.itemNumber,
+      itemNumberBranch:
+        item.itemNumberBranch ?? item.selectionCommentItemNumberBranch ?? resolvedItemFields.itemNumberBranch,
+      selectionCommentItemNumber: item.selectionCommentItemNumber ?? resolvedItemFields.itemNumber,
+      selectionCommentItemNumberBranch: item.selectionCommentItemNumberBranch ?? resolvedItemFields.itemNumberBranch,
     };
   }
   const fallbackComment = resolvedItemFields.userComment?.trim() || resolvedItemFields.memoText?.trim() || undefined;
@@ -261,8 +278,12 @@ const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem)
     rowRole: resolvedItemFields.rowRole ?? item.rowRole,
     rowSubtype: resolvedItemFields.rowSubtype ?? item.rowSubtype,
     category: item.category ?? resolvedItemFields.category,
-    itemNumber: item.itemNumber ?? resolvedItemFields.itemNumber,
-    itemNumberBranch: item.itemNumberBranch ?? resolvedItemFields.itemNumberBranch,
+    masterCategory: item.masterCategory ?? resolvedItemFields.masterCategory ?? item.category,
+    itemNumber: item.itemNumber ?? item.selectionCommentItemNumber ?? resolvedItemFields.itemNumber,
+    itemNumberBranch:
+      item.itemNumberBranch ?? item.selectionCommentItemNumberBranch ?? resolvedItemFields.itemNumberBranch,
+    selectionCommentItemNumber: item.selectionCommentItemNumber ?? resolvedItemFields.itemNumber,
+    selectionCommentItemNumberBranch: item.selectionCommentItemNumberBranch ?? resolvedItemFields.itemNumberBranch,
   };
 };
 
@@ -378,6 +399,17 @@ const USAGE_ROUTE_CLASSIFICATION_TABLE: Record<string, { label: string; injectio
 const UNKNOWN_USAGE_ROUTE_CLASSIFICATION = { label: '未分類', injectionPriority: 999 };
 
 const isDrugMedicationCode = (code: string) => /^6\d{8}$/.test(code.trim());
+
+const resolveChargeCompatibilityMessage = (entity: string, category?: string | null) => {
+  const normalizedCategory = category?.trim() || '未設定';
+  const target = entity === 'baseChargeOrder' ? '110-125' : '130-150';
+  return `この算定候補は classCode ${normalizedCategory} のため ${entity} (${target}) へは追加できません。`;
+};
+
+const isCompatibleChargeMasterItem = (entity: string, item?: Pick<OrderMasterSearchItem, 'category'> | null) => {
+  if (!isChargeEntity(entity)) return true;
+  return isChargeItemCategoryCompatible(entity, item?.category);
+};
 
 const parseDocumentIds = (value?: string) => {
   if (!value) return { documentId: undefined, letterId: undefined };
@@ -732,6 +764,7 @@ const toOrderBundleFromInputSetDetail = (
       unit: item.unit,
       memo: item.memo,
       category: item.category ?? undefined,
+      masterCategory: item.masterCategory ?? item.category ?? undefined,
       itemNumber: item.itemNumber ?? undefined,
       itemNumberBranch: item.itemNumberBranch ?? undefined,
       rowRole:
@@ -747,6 +780,7 @@ const toOrderBundleFromInputSetDetail = (
       unit: item.unit,
       memo: item.memo,
       category: item.category ?? undefined,
+      masterCategory: item.masterCategory ?? item.category ?? undefined,
       itemNumber: item.itemNumber ?? undefined,
       itemNumberBranch: item.itemNumberBranch ?? undefined,
       rowRole: 'auxiliary',
@@ -760,6 +794,7 @@ const toOrderBundleFromInputSetDetail = (
         unit: item.unit,
         memo: item.memo,
         category: item.category ?? undefined,
+        masterCategory: item.masterCategory ?? item.category ?? undefined,
         itemNumber: item.itemNumber ?? undefined,
         itemNumberBranch: item.itemNumberBranch ?? undefined,
         rowRole: 'comment',
@@ -835,7 +870,7 @@ const resolveSendContractNote = (entity: string) => {
     return 'setCode は展開専用です。otherOrder は etensu category 8 の9桁コード行と classCode 800〜890 のみを扱います。bodyPart と材料行は保持せず、オーダー名・指示・自由メモは院内補足として保存します。';
   }
   if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
-    return 'setCode は展開専用です。charge 系は classCode/className・数量/単位・coded row のみを ORCA へ送ります。算定指示・院内補足・自由メモ・開始日は local-only とし、medicationgetv2 の Item_Number / Branch は候補 metadata として表示します。';
+    return 'setCode は展開専用です。数量/単位とコメント数量は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。';
   }
   if (canonicalEntity === 'bacteriaOrder') {
     return '細菌検査は classCode 600 の coded row を ORCA へ送信します。subtype・specimen・carrier comment metadata は first-class で保持し、ORCA carrier に射影できる部分だけ送信します。';
@@ -1071,6 +1106,35 @@ export const validateBundleForm = ({
       key: 'invalid_body_part_code',
       message: 'bodyPart は 002 系コードのみ保存できます。',
     });
+  }
+  if (isChargeEntity(canonicalEntity)) {
+    const chargeMainRows = valuedItems.filter(
+      (item) => (item.rowRole ?? 'main') === 'main' && !COMMENT_CODE_PATTERN.test(item.code?.trim() ?? ''),
+    );
+    const effectiveChargeClassMeta = resolveCanonicalChargeClassMeta({
+      entity: canonicalEntity,
+      classCode: form.classCode,
+      itemCategory: chargeMainRows[0]?.masterCategory,
+    });
+    const explicitClassCode = form.classCode?.trim();
+    if (explicitClassCode && !isChargeClassCompatible(canonicalEntity, explicitClassCode)) {
+      issues.push({
+        key: 'invalid_charge_class_code',
+        message: `${canonicalEntity} では classCode ${explicitClassCode} を保存できません。`,
+      });
+    }
+    if (chargeMainRows.some((item) => !isChargeItemCategoryCompatible(canonicalEntity, item.masterCategory))) {
+      issues.push({
+        key: 'invalid_charge_item_category',
+        message: '算定項目の class/category が束の charge entity と一致しません。候補を選び直してください。',
+      });
+    }
+    if (!effectiveChargeClassMeta?.className) {
+      issues.push({
+        key: 'missing_charge_class_name',
+        message: '算定束の className を確定できません。対応する算定候補を選択してください。',
+      });
+    }
   }
   if (rule.requiresItems && valuedItems.length === 0) {
     issues.push({
@@ -1956,6 +2020,8 @@ export function OrderBundleEditPanel({
         code,
         name,
         category: item.category,
+        itemNumber: item.itemNumber,
+        itemNumberBranch: item.itemNumberBranch,
       });
     });
     const draftCode = commentDraft.code?.trim();
@@ -1968,6 +2034,8 @@ export function OrderBundleEditPanel({
         name: draftName,
         unit: commentDraft.unit ?? '',
         note: commentDraft.memo ?? '',
+        itemNumber: commentDraft.selectionCommentItemNumber,
+        itemNumberBranch: commentDraft.selectionCommentItemNumberBranch,
       });
       return Array.from(map.values());
     }
@@ -2043,9 +2111,13 @@ export function OrderBundleEditPanel({
 
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
     if (!rowId || !matched) return;
+    if (!isCompatibleChargeMasterItem(entity, matched)) {
+      setNotice({ tone: 'error', message: resolveChargeCompatibilityMessage(entity, matched.category) });
+      return;
+    }
     const derivedClassCode = deriveChargeClassCodeFromCategory(entity, matched.category);
     const derivedChargeMeta = derivedClassCode
-      ? resolveCanonicalChargeClassMeta({ entity, classCode: derivedClassCode })
+      ? resolveCanonicalChargeClassMeta({ entity, classCode: derivedClassCode, itemCategory: matched.category })
       : null;
     const targetLane: 'main' | 'auxiliary' | 'comment' | 'bodyPart' =
       matched.type === 'bodypart'
@@ -2065,6 +2137,7 @@ export function OrderBundleEditPanel({
         name: matched.name,
         unit: row.unit?.trim() ? row.unit : matched.unit ?? '',
         memo: row.memo?.trim() ? row.memo : matched.note ?? '',
+        masterCategory: derivedChargeMeta?.classCode ?? row.masterCategory,
       });
       const sourceMainIndex = prev.items.findIndex((row) => (row as OrderBundleItemWithRowId).rowId === rowId);
       const sourceMaterialIndex = prev.materialItems.findIndex((row) => (row as OrderBundleItemWithRowId).rowId === rowId);
@@ -2163,6 +2236,8 @@ export function OrderBundleEditPanel({
       name: selectedName,
       unit: selected.unit ?? prev.unit ?? '',
       memo: selected.note ?? prev.memo ?? '',
+      selectionCommentItemNumber: selected.itemNumber?.trim() || undefined,
+      selectionCommentItemNumberBranch: selected.itemNumberBranch?.trim() || undefined,
     }));
   }, []);
 
@@ -2368,7 +2443,14 @@ export function OrderBundleEditPanel({
     }));
   };
 
-  const appendCommentItem = (item: { code?: string; name?: string; unit?: string; note?: string }) => {
+  const appendCommentItem = (item: {
+    code?: string;
+    name?: string;
+    unit?: string;
+    note?: string;
+    itemNumber?: string;
+    itemNumberBranch?: string;
+  }) => {
     const code = item.code?.trim() ?? '';
     const name = item.name?.trim() ?? '';
     if (!code || !name) return;
@@ -2382,6 +2464,8 @@ export function OrderBundleEditPanel({
         quantity: '',
         unit: item.unit ?? '',
         memo: item.note ?? '',
+        selectionCommentItemNumber: item.itemNumber?.trim() || undefined,
+        selectionCommentItemNumberBranch: item.itemNumberBranch?.trim() || undefined,
       };
       return {
         ...prev,
@@ -2394,12 +2478,18 @@ export function OrderBundleEditPanel({
       quantity: '',
       unit: item.unit ?? '',
       memo: item.note ?? '',
+      selectionCommentItemNumber: item.itemNumber?.trim() || undefined,
+      selectionCommentItemNumberBranch: item.itemNumberBranch?.trim() || undefined,
     });
   };
 
   const resolveBundleClassMeta = (bundleForm: BundleFormState) => {
     if (!isMedOrder) {
-      const chargeMeta = resolveCanonicalChargeClassMeta({ entity, classCode: bundleForm.classCode });
+      const chargeMeta = resolveCanonicalChargeClassMeta({
+        entity,
+        classCode: bundleForm.classCode,
+        itemCategory: bundleForm.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory,
+      });
       if (chargeMeta) {
         return {
           classCode: chargeMeta.classCode,
@@ -2408,7 +2498,8 @@ export function OrderBundleEditPanel({
         };
       }
       const explicitClassCode = bundleForm.classCode?.trim();
-      const explicitClassName = bundleForm.className?.trim();
+      const explicitClassName =
+        resolveCanonicalChargeClassName(entity, explicitClassCode) ?? bundleForm.className?.trim();
       if (explicitClassCode || explicitClassName) {
         return {
           classCode: explicitClassCode || undefined,
@@ -4699,6 +4790,8 @@ export function OrderBundleEditPanel({
                         code: item.code,
                         name: item.name,
                         note: item.category,
+                        itemNumber: item.itemNumber,
+                        itemNumberBranch: item.itemNumberBranch,
                       })
                     }
                     disabled={isBlocked}
@@ -4831,6 +4924,8 @@ export function OrderBundleEditPanel({
                         quantity: commentDraft.quantity ?? '',
                         unit: commentDraft.unit ?? '',
                         memo: commentDraft.memo ?? '',
+                        selectionCommentItemNumber: commentDraft.selectionCommentItemNumber,
+                        selectionCommentItemNumberBranch: commentDraft.selectionCommentItemNumberBranch,
                       },
                     ],
                   }));

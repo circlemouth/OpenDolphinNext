@@ -51,6 +51,7 @@ class OrcaOrderBundleRecommendationSupportTest {
                 null,
                 null,
                 null,
+                null,
                 null));
         bundle.setClaimItem(new ClaimItem[]{
                 claimItem("0021001", "CHEST", "1", null, null),

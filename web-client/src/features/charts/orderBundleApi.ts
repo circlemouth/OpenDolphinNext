@@ -42,8 +42,11 @@ export type OrderBundleItem = {
   rowRole?: OrderBundleRowRole;
   rowSubtype?: OrderBundleRowSubtype;
   category?: string;
+  masterCategory?: string;
   itemNumber?: string;
   itemNumberBranch?: string;
+  selectionCommentItemNumber?: string;
+  selectionCommentItemNumberBranch?: string;
 };
 
 export type OrderBundleBodyPart = {
@@ -197,6 +200,12 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
   return resolveCanonicalOrderEntity(trimmed) ?? trimmed;
 };
 
+const normalizeOptionalText = (value?: string | null) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+};
+
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
   const canonicalBundle = canonicalizeChargeBundleMeta(bundle);
   return {
@@ -219,8 +228,13 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
         category: fields.category,
+        masterCategory: fields.masterCategory,
         itemNumber: fields.itemNumber,
         itemNumberBranch: fields.itemNumberBranch,
+        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+        selectionCommentItemNumberBranch: normalizeOptionalText(
+          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+        ),
       };
     }),
     materialItems: (canonicalBundle.materialItems ?? []).map((item) => {
@@ -233,8 +247,13 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
         category: fields.category,
+        masterCategory: fields.masterCategory,
         itemNumber: fields.itemNumber,
         itemNumberBranch: fields.itemNumberBranch,
+        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+        selectionCommentItemNumberBranch: normalizeOptionalText(
+          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+        ),
       };
     }),
     commentItems: (canonicalBundle.commentItems ?? []).map((item) => {
@@ -247,8 +266,13 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
         category: fields.category,
+        masterCategory: fields.masterCategory,
         itemNumber: fields.itemNumber,
         itemNumberBranch: fields.itemNumberBranch,
+        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+        selectionCommentItemNumberBranch: normalizeOptionalText(
+          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+        ),
       };
     }),
   };
@@ -276,8 +300,13 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
         category: fields.category,
+        masterCategory: fields.masterCategory,
         itemNumber: fields.itemNumber,
         itemNumberBranch: fields.itemNumberBranch,
+        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+        selectionCommentItemNumberBranch: normalizeOptionalText(
+          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+        ),
       };
     }),
     materialItems: (canonicalOperation.materialItems ?? []).map((item) => {
@@ -290,8 +319,13 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
         category: fields.category,
+        masterCategory: fields.masterCategory,
         itemNumber: fields.itemNumber,
         itemNumberBranch: fields.itemNumberBranch,
+        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+        selectionCommentItemNumberBranch: normalizeOptionalText(
+          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+        ),
       };
     }),
     commentItems: (canonicalOperation.commentItems ?? []).map((item) => {
@@ -304,8 +338,13 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
         category: fields.category,
+        masterCategory: fields.masterCategory,
         itemNumber: fields.itemNumber,
         itemNumberBranch: fields.itemNumberBranch,
+        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+        selectionCommentItemNumberBranch: normalizeOptionalText(
+          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+        ),
       };
     }),
   };

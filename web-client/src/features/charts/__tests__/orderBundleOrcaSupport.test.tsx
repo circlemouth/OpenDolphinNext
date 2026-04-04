@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,7 +7,6 @@ import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
 import { mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
-import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
@@ -53,6 +52,14 @@ const chargeProps = {
   ...baseProps,
   entity: 'baseChargeOrder',
   title: '基本料編集',
+  bundleLabel: '算定',
+  itemQuantityLabel: '回数',
+};
+
+const instractionChargeProps = {
+  ...baseProps,
+  entity: 'instractionChargeOrder',
+  title: '医学管理等編集',
   bundleLabel: '算定',
   itemQuantityLabel: '回数',
 };
@@ -150,12 +157,12 @@ describe('OrderBundleEditPanel ORCA support', () => {
     ).toBeInTheDocument();
   });
 
-  it('charge は unit/local-only/comment parameter の送信契約を明示する', () => {
+  it('charge は更新後の送信契約文言を表示する', () => {
     renderPanel(chargeProps);
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。charge 系は classCode/className・数量/単位・coded row のみを ORCA へ送ります。算定指示・院内補足・自由メモ・開始日は local-only とし、medicationgetv2 の Item_Number / Branch は候補 metadata として表示します。',
+        'setCode は展開専用です。数量/単位とコメント数量は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。',
       ),
     ).toBeInTheDocument();
   });
@@ -384,32 +391,32 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.queryByText('entity が一致しないため診療セットを反映できません。')).toBeNull();
   });
 
-  it('baseChargeOrder の ORCA診療セット適用後も class meta を保存 payload で保持する', async () => {
+  it('instractionChargeOrder の ORCA診療セット適用後も class meta を保存 payload で保持する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'B13001', name: '在宅指導セット', entity: 'baseChargeOrder', itemCount: 1 }],
+      items: [{ setCode: 'B13001', name: '在宅指導セット', entity: 'instractionChargeOrder', itemCount: 1 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'B13001',
-        bundle: {
-          entity: 'baseChargeOrder',
+      bundle: {
+          entity: 'instractionChargeOrder',
           bundleName: '在宅指導セット',
           bundleNumber: '1',
-          classCode: '120',
+          classCode: '130',
           classCodeSystem: 'Claim007',
-          className: '旧名称',
+          className: '医学管理等',
           adminMemo: '算定前確認',
-          items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '' }],
-        },
+        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
+      },
     });
 
-    renderPanel(chargeProps);
+    renderPanel(instractionChargeProps);
 
     await user.type(screen.getByPlaceholderText('診療セット名またはコード'), '在宅');
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
@@ -420,12 +427,13 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
+    await waitFor(() => expect(vi.mocked(mutateOrderBundles)).toHaveBeenCalled());
     const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
-    expect(operation?.entity).toBe('baseChargeOrder');
-    expect(operation?.classCode).toBe('120');
+    expect(operation?.entity).toBe('instractionChargeOrder');
+    expect(operation?.classCode).toBe('130');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe(resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className);
+    expect(operation?.className).toBe('医学管理等');
     expect(operation?.adminMemo).toBe('算定前確認');
   });
 

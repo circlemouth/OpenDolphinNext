@@ -164,8 +164,8 @@ final class OrcaOrderBundleRequestSupport {
             case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
             case IInfoModel.ENTITY_RADIOLOGY_ORDER -> normalizedClassCode.startsWith("7");
             case IInfoModel.ENTITY_OTHER_ORDER -> isValidOtherOrderClassCode(normalizedClassCode);
-            case IInfoModel.ENTITY_BASE_CHARGE_ORDER -> isInRange(normalizedClassCode, 110, 125);
-            case IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> isInRange(normalizedClassCode, 130, 150);
+            case IInfoModel.ENTITY_BASE_CHARGE_ORDER, IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER ->
+                OrcaChargeClassSupport.isChargeClassCompatible(normalizedEntity, normalizedClassCode);
             default -> true;
         };
     }

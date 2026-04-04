@@ -455,9 +455,9 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
                 servletRequest, "set", IInfoModel.ENTITY_BACTERIA_ORDER, "20260309", 1, 20);
 
         assertEquals(1, physiology.getItems().size());
-        assertEquals("testOrder", physiology.getItems().get(0).getEntity());
+        assertEquals(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, physiology.getItems().get(0).getEntity());
         assertEquals(1, bacteria.getItems().size());
-        assertEquals("testOrder", bacteria.getItems().get(0).getEntity());
+        assertEquals(IInfoModel.ENTITY_BACTERIA_ORDER, bacteria.getItems().get(0).getEntity());
     }
 
     @Test
@@ -483,10 +483,10 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
                 servletRequest, "P60002", "20260309", IInfoModel.ENTITY_BACTERIA_ORDER, null);
 
         assertNotNull(physiology.getBundle());
-        assertEquals("testOrder", physiology.getBundle().getEntity());
+        assertEquals(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, physiology.getBundle().getEntity());
         assertEquals("physiology", physiology.getBundle().getSubtype());
         assertNotNull(bacteria.getBundle());
-        assertEquals("testOrder", bacteria.getBundle().getEntity());
+        assertEquals(IInfoModel.ENTITY_BACTERIA_ORDER, bacteria.getBundle().getEntity());
         assertEquals("culture", bacteria.getBundle().getSubtype());
     }
 

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -9,14 +9,18 @@ import { fetchOrderBundles, mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 
-vi.mock('../orderBundleApi', async () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({
-    ok: true,
-    bundles: [],
-    patientId: 'P-1',
-  }),
-  mutateOrderBundles: vi.fn(),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({
+      ok: true,
+      bundles: [],
+      patientId: 'P-1',
+    }),
+    mutateOrderBundles: vi.fn(),
+  };
+});
 
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
@@ -243,7 +247,7 @@ describe('OrderBundleEditPanel bundle number UI', () => {
           adminMemo: '',
           memo: '',
           started: '2025-12-30',
-          items: [{ code: '120000110', name: '再診料', quantity: '1', unit: '回', memo: '' }],
+          items: [{ code: '120000110', name: '再診料', quantity: '1', unit: '回', memo: '', masterCategory: '120' }],
         },
       ],
     });

@@ -234,7 +234,7 @@ class OrcaChartSupportSupportTest {
 
         ChartSupportMedicalModV2Request.MedicalInformation baseCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         baseCharge.setMedicalClass("110");
-        baseCharge.setMedicalClassName("BundleFallback");
+        baseCharge.setMedicalClassName("基本診療料");
         baseCharge.setMedicalClassNumber("1");
         ChartSupportMedicalModV2Request.Medication initialConsultation = new ChartSupportMedicalModV2Request.Medication();
         initialConsultation.setCode("110000110");
@@ -245,7 +245,7 @@ class OrcaChartSupportSupportTest {
 
         ChartSupportMedicalModV2Request.MedicalInformation instructionCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         instructionCharge.setMedicalClass("130");
-        instructionCharge.setMedicalClassName("BundleFallback");
+        instructionCharge.setMedicalClassName("医学管理等");
         instructionCharge.setMedicalClassNumber("2");
         ChartSupportMedicalModV2Request.Medication homeInstruction = new ChartSupportMedicalModV2Request.Medication();
         homeInstruction.setCode("112007410");

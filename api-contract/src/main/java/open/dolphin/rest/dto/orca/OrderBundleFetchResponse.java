@@ -275,6 +275,9 @@ public class OrderBundleFetchResponse {
         private String memo;
         private String genericFlg;
         private String userComment;
+        private String masterCategory;
+        private String selectionCommentItemNumber;
+        private String selectionCommentItemNumberBranch;
         private String rowRole;
         private String rowSubtype;
         private String category;
@@ -335,6 +338,30 @@ public class OrderBundleFetchResponse {
 
         public void setUserComment(String userComment) {
             this.userComment = userComment;
+        }
+
+        public String getMasterCategory() {
+            return masterCategory;
+        }
+
+        public void setMasterCategory(String masterCategory) {
+            this.masterCategory = masterCategory;
+        }
+
+        public String getSelectionCommentItemNumber() {
+            return selectionCommentItemNumber;
+        }
+
+        public void setSelectionCommentItemNumber(String selectionCommentItemNumber) {
+            this.selectionCommentItemNumber = selectionCommentItemNumber;
+        }
+
+        public String getSelectionCommentItemNumberBranch() {
+            return selectionCommentItemNumberBranch;
+        }
+
+        public void setSelectionCommentItemNumberBranch(String selectionCommentItemNumberBranch) {
+            this.selectionCommentItemNumberBranch = selectionCommentItemNumberBranch;
         }
 
         public String getRowRole() {

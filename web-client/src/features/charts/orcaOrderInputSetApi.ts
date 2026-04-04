@@ -66,6 +66,7 @@ export type OrcaOrderInputSetDetailResult = {
       rowRole?: 'main' | 'auxiliary' | 'comment';
       rowSubtype?: 'material' | 'contrastDrug';
       category?: string;
+      masterCategory?: string;
       itemNumber?: string;
       itemNumberBranch?: string;
     }>;
@@ -80,6 +81,7 @@ export type OrcaOrderInputSetDetailResult = {
       rowRole?: 'main' | 'auxiliary' | 'comment';
       rowSubtype?: 'material' | 'contrastDrug';
       category?: string;
+      masterCategory?: string;
       itemNumber?: string;
       itemNumberBranch?: string;
     }>;
@@ -94,6 +96,7 @@ export type OrcaOrderInputSetDetailResult = {
       rowRole?: 'main' | 'auxiliary' | 'comment';
       rowSubtype?: 'material' | 'contrastDrug';
       category?: string;
+      masterCategory?: string;
       itemNumber?: string;
       itemNumberBranch?: string;
     }>;
@@ -243,6 +246,7 @@ export async function fetchOrcaOrderInputSetDetail(params: {
           typeof item.rowSubtype === 'string' ? item.rowSubtype : undefined,
         );
         if (typeof item.category === 'string') detailItem.category = item.category;
+        if (typeof item.masterCategory === 'string') detailItem.masterCategory = item.masterCategory;
         if (typeof item.itemNumber === 'string') detailItem.itemNumber = item.itemNumber;
         if (typeof item.itemNumberBranch === 'string') detailItem.itemNumberBranch = item.itemNumberBranch;
         return detailItem;

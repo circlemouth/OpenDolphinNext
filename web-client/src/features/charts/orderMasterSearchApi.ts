@@ -18,6 +18,8 @@ export type OrderMasterSearchItem = {
   name: string;
   unit?: string;
   category?: string;
+  itemNumber?: string;
+  itemNumberBranch?: string;
   points?: number;
   note?: string;
   validFrom?: string;

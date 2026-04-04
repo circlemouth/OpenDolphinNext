@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 
 import { validateBundleForm } from '../OrderBundleEditPanel';
 
@@ -583,5 +583,48 @@ describe('validateBundleForm', () => {
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_material_code']);
+  });
+
+  it('baseChargeOrder: classCode 130 を reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '基本料',
+        classCode: '130',
+        items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '110' }],
+      } as BundleFormState & { classCode: string },
+      entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+    expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_code');
+  });
+
+  it('baseChargeOrder: main row の masterCategory 130 を reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '基本料',
+        classCode: '110',
+        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
+      } as BundleFormState & { classCode: string },
+      entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+    expect(issues.map((issue) => issue.key)).toContain('invalid_charge_item_category');
+  });
+
+  it('instractionChargeOrder: canonical className を導出できる場合は空の className を許可する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '指導料',
+        classCode: '130',
+        className: '',
+        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
+      } as BundleFormState & { classCode: string; className: string },
+      entity: 'instractionChargeOrder',
+      bundleLabel: '算定',
+    });
+    expect(issues.map((issue) => issue.key)).not.toContain('missing_charge_class_name');
   });
 });

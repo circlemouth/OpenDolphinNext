@@ -89,6 +89,25 @@
 
 ## Verification
 
+### Charge Closeout (`20260404T003058Z`)
+
+- charge canonical rule was fixed to `baseChargeOrder = 110..125 / 基本診療料` and `instractionChargeOrder = 130..150 / 医学管理等`.
+- charge `className` no longer falls back to `bundleName`; client/save/server/send all resolve the canonical name from entity and classCode.
+- charge `masterCategory` is stored in item memo meta and restored on fetch so manual re-edit preserves the selected ORCA classification.
+- selection-comment `itemNumber / itemNumberBranch` are preserved through UI/save/fetch/send via item memo meta and explicit DTO fields.
+- `sourceSetCode` remains local-only, while charge `admin / adminMemo / memo` are preserved locally and excluded from ORCA medicalmodv2 payloads.
+
+### Charge / Comment Verification (`20260404T003058Z`)
+
+- `npm run typecheck`
+  - Result: `passed`
+- `npx vitest run src/features/charts/__tests__/orderBundleValidation.test.ts src/features/charts/__tests__/orderBundleItemActions.test.tsx src/features/charts/__tests__/orderBundleMasterSearch.test.tsx src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx src/features/charts/__tests__/orderBundleApi.test.ts src/features/charts/__tests__/orderBundleRecommendationTransform.test.ts src/features/charts/__tests__/orderSendSmoke.test.ts`
+  - Result: `8 files / 131 tests passed / 1 skipped`
+- `npm run build`
+  - Result: `passed`
+- `docker run --rm --name odn-basecharge-order-20260404t003058z-mvn -v <worktree>:/workspace -v %USERPROFILE%\\.m2:/root/.m2 -w /workspace maven:3.9.9-eclipse-temurin-17 mvn -f pom.server-modernized.xml -pl api-contract,server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaOrderBundleRequestSupportTest,OrcaOrderBundleResource600Test,OrcaChartSupportSupportTest,OrcaOrderInputSetMetadataSupportTest,OrcaOrderBundleMutationSupportTest test`
+  - Result: `36 tests passed`
+
 ### Web client
 
 - `npm --prefix web-client run typecheck`

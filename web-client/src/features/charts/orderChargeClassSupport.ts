@@ -44,8 +44,22 @@ const findChargeRuleByEntity = (entity?: string | null) => {
   return CHARGE_RULES.find((rule) => rule.entity === normalized) ?? null;
 };
 
+export const resolveChargeEntityFromClassCode = (classCode?: string | null): ChargeOrderEntity | null =>
+  findChargeRuleByCode(classCode)?.entity ?? null;
+
 export const isChargeOrderEntity = (entity?: string | null): entity is ChargeOrderEntity =>
   Boolean(findChargeRuleByEntity(entity));
+
+export const isChargeEntity = isChargeOrderEntity;
+
+export const isChargeClassCompatible = (entity?: string | null, classCode?: string | null) => {
+  const rule = findChargeRuleByEntity(entity);
+  if (!rule) return false;
+  return resolveChargeEntityFromClassCode(classCode) === rule.entity;
+};
+
+export const isChargeItemCategoryCompatible = (entity?: string | null, category?: string | null) =>
+  isChargeClassCompatible(entity, category);
 
 export const deriveChargeClassCodeFromCategory = (entity: string, category?: string | null) => {
   const rule = findChargeRuleByEntity(entity);
@@ -57,16 +71,34 @@ export const deriveChargeClassCodeFromCategory = (entity: string, category?: str
   return normalized;
 };
 
+export const resolveCanonicalChargeClassName = (entity?: string | null, classCode?: string | null) => {
+  const explicitRule = findChargeRuleByCode(classCode);
+  if (explicitRule && isChargeOrderEntity(entity) && explicitRule.entity !== entity) {
+    return undefined;
+  }
+  return explicitRule?.className ?? findChargeRuleByEntity(entity)?.className;
+};
+
 export const resolveCanonicalChargeClassMeta = (params: {
   entity?: string | null;
   classCode?: string | null;
+  itemCategory?: string | null;
 }): ChargeClassMeta | null => {
   const entityRule = findChargeRuleByEntity(params.entity);
   if (entityRule) {
+    const categoryRule = findChargeRuleByCode(params.itemCategory);
+    if (categoryRule?.entity === entityRule.entity) {
+      return {
+        classCode: trimToNull(params.itemCategory) ?? categoryRule.defaultClassCode,
+        classCodeSystem: CHARGE_CLASS_CODE_SYSTEM,
+        className: entityRule.className,
+      };
+    }
     const codeRule = findChargeRuleByCode(params.classCode);
     const effectiveRule = codeRule?.entity === entityRule.entity ? codeRule : entityRule;
-    const effectiveClassCode =
-      codeRule?.entity === entityRule.entity ? trimToNull(params.classCode) ?? effectiveRule.defaultClassCode : effectiveRule.defaultClassCode;
+    const effectiveClassCode = codeRule?.entity === entityRule.entity
+      ? trimToNull(params.classCode) ?? effectiveRule.defaultClassCode
+      : effectiveRule.defaultClassCode;
     return {
       classCode: effectiveClassCode,
       classCodeSystem: CHARGE_CLASS_CODE_SYSTEM,

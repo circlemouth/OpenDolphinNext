@@ -88,23 +88,30 @@ final class OrcaOrderBundleMutationSupport {
         bundle.setAdminMemo(operation.getAdminMemo());
         bundle.setMemo(operation.getMemo());
         String entity = resolveEntity(operation);
-        String classCode = OrcaChargeClassCanonicalSupport.canonicalClassCode(
+        OrcaChargeClassSupport.ChargeClassMeta chargeClassMeta = OrcaChargeClassSupport.resolveCanonicalChargeClassMeta(
                 entity,
-                operation.getClassCode());
+                operation.getClassCode(),
+                resolvePrimaryItemCategory(operation));
+        String classCode = chargeClassMeta != null
+                ? chargeClassMeta.classCode()
+                : OrcaChargeClassCanonicalSupport.canonicalClassCode(entity, operation.getClassCode());
         if (OrcaOrderBundleRequestSupport.hasText(classCode)) {
             bundle.setClassCode(classCode);
             bundle.setClassCodeSystem(ClaimConst.CLASS_CODE_ID);
         }
-        String canonicalClassName = OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
-                entity,
-                bundle.getClassCode(),
-                OrcaChargeClassCanonicalSupport.canonicalClassName(
+        String canonicalClassName = chargeClassMeta != null
+                ? chargeClassMeta.className()
+                : OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
                         entity,
                         bundle.getClassCode(),
-                        operation.getClassName()));
+                        OrcaChargeClassCanonicalSupport.canonicalClassName(
+                                entity,
+                                bundle.getClassCode(),
+                                operation.getClassName()));
         if (OrcaOrderBundleRequestSupport.hasText(canonicalClassName)) {
             bundle.setClassName(canonicalClassName);
-        } else if (OrcaOrderBundleRequestSupport.hasText(operation.getBundleName())) {
+        } else if (!OrcaChargeClassSupport.isChargeEntity(entity)
+                && OrcaOrderBundleRequestSupport.hasText(operation.getBundleName())) {
             bundle.setClassName(operation.getBundleName());
         }
         bundle.setClaimItem(toClaimItems(operation));
@@ -230,10 +237,20 @@ final class OrcaOrderBundleMutationSupport {
                 entity, item.getCode(), rowRole, item.getRowSubtype(), parsedMemo.rowSubtype());
         String category = OrcaOrderBundleItemMemoSupport.normalizeCategory(
                 OrcaOrderBundleRequestSupport.hasText(item.getCategory()) ? item.getCategory() : parsedMemo.category());
+        String masterCategory = OrcaOrderBundleItemMemoSupport.normalizeMasterCategory(
+                OrcaOrderBundleRequestSupport.hasText(item.getMasterCategory()) ? item.getMasterCategory() : parsedMemo.masterCategory());
         String itemNumber = OrcaOrderBundleItemMemoSupport.normalizeText(
-                OrcaOrderBundleRequestSupport.hasText(item.getItemNumber()) ? item.getItemNumber() : parsedMemo.itemNumber());
+                OrcaOrderBundleRequestSupport.hasText(item.getSelectionCommentItemNumber())
+                        ? item.getSelectionCommentItemNumber()
+                        : OrcaOrderBundleRequestSupport.hasText(item.getItemNumber())
+                                ? item.getItemNumber()
+                                : parsedMemo.itemNumber());
         String itemNumberBranch = OrcaOrderBundleItemMemoSupport.normalizeText(
-                OrcaOrderBundleRequestSupport.hasText(item.getItemNumberBranch()) ? item.getItemNumberBranch() : parsedMemo.itemNumberBranch());
+                OrcaOrderBundleRequestSupport.hasText(item.getSelectionCommentItemNumberBranch())
+                        ? item.getSelectionCommentItemNumberBranch()
+                        : OrcaOrderBundleRequestSupport.hasText(item.getItemNumberBranch())
+                                ? item.getItemNumberBranch()
+                                : parsedMemo.itemNumberBranch());
         ClaimItem claimItem = new ClaimItem();
         claimItem.setName(item.getName());
         claimItem.setCode(item.getCode());
@@ -245,6 +262,7 @@ final class OrcaOrderBundleMutationSupport {
                 rowRole,
                 rowSubtype,
                 category,
+                masterCategory,
                 itemNumber,
                 itemNumberBranch,
                 parsedMemo.memoText()));
@@ -303,12 +321,32 @@ final class OrcaOrderBundleMutationSupport {
                 OrcaOrderBundleRecommendationSupport.ROW_ROLE_COMMENT,
                 null,
                 comment.getCategory(),
+                null,
                 comment.getItemNumber(),
                 comment.getItemNumberBranch(),
                 ""));
         if (OrcaOrderBundleRequestSupport.hasText(item.getName()) || OrcaOrderBundleRequestSupport.hasText(item.getNumber())) {
             target.add(item);
         }
+    }
+
+    private static String resolvePrimaryItemCategory(OrderBundleMutationRequest.BundleOperation operation) {
+        if (operation == null || operation.getItems() == null) {
+            return null;
+        }
+        for (OrderBundleMutationRequest.BundleItem item : operation.getItems()) {
+            if (item == null) {
+                continue;
+            }
+            if (OrcaOrderBundleRequestSupport.hasText(item.getName()) || OrcaOrderBundleRequestSupport.hasText(item.getCode())) {
+                if (OrcaOrderBundleRequestSupport.hasText(item.getMasterCategory())) {
+                    return OrcaOrderBundleItemMemoSupport.normalizeMasterCategory(item.getMasterCategory());
+                }
+                OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo = OrcaOrderBundleItemMemoSupport.parse(item.getMemo());
+                return parsedMemo.masterCategory();
+            }
+        }
+        return null;
     }
 
     private static String resolveEntity(OrderBundleMutationRequest.BundleOperation operation) {

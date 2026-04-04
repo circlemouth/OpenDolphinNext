@@ -526,7 +526,7 @@ describe('OrderBundleEditPanel item actions', () => {
             adminMemo: '',
             memo: '確認',
             started: '2026-03-09',
-            items: [{ code: '1200001', name: '在宅患者訪問診療料', quantity: '1', unit: '回', memo: '' }],
+            items: [{ code: '1200001', name: '在宅患者訪問診療料', quantity: '1', unit: '回', memo: '', masterCategory: '120' }],
           },
         }}
       />,

@@ -43,8 +43,11 @@ final class OrcaOrderBundleRecommendationSupport {
             entry.setGenericFlg(parsedMemo.genericFlg());
             entry.setUserComment(parsedMemo.userComment());
             entry.setCategory(parsedMemo.category());
+            entry.setMasterCategory(parsedMemo.masterCategory());
             entry.setItemNumber(parsedMemo.itemNumber());
             entry.setItemNumberBranch(parsedMemo.itemNumberBranch());
+            entry.setSelectionCommentItemNumber(parsedMemo.itemNumber());
+            entry.setSelectionCommentItemNumberBranch(parsedMemo.itemNumberBranch());
             String rowRole = resolveRowRole(entity, entry.getCode(), parsedMemo.rowRole(), parsedMemo.rowSubtype());
             entry.setRowRole(rowRole);
             entry.setRowSubtype(resolveRowSubtype(entity, entry.getCode(), rowRole, parsedMemo.rowSubtype(), null));
@@ -324,6 +327,7 @@ final class OrcaOrderBundleRecommendationSupport {
         appendNormalized(builder, item.getRowRole());
         appendNormalized(builder, item.getRowSubtype());
         appendNormalized(builder, item.getCategory());
+        appendNormalized(builder, item.getMasterCategory());
         appendNormalized(builder, item.getItemNumber());
         appendNormalized(builder, item.getItemNumberBranch());
         builder.append("}");

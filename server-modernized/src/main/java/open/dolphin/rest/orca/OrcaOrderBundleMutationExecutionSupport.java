@@ -132,6 +132,11 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)) {
                     hasBodyPart = true;
                 } else if (OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN.equals(rowRole)) {
+                    String itemCategory = resolveEffectiveItemCategory(item, parsedMemo);
+                    if (OrcaChargeClassSupport.isChargeEntity(canonicalEntity)
+                            && !OrcaChargeClassSupport.isChargeItemCategoryCompatible(canonicalEntity, itemCategory)) {
+                        throw validationFailure.invalid("items", "charge items must use a compatible masterCategory");
+                    }
                     hasSendableMainRow = true;
                 }
             } else {
@@ -222,8 +227,11 @@ final class OrcaOrderBundleMutationExecutionSupport {
                         || OrcaOrderBundleRequestSupport.hasText(item.getRowRole())
                         || OrcaOrderBundleRequestSupport.hasText(item.getRowSubtype())
                         || OrcaOrderBundleRequestSupport.hasText(item.getCategory())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getMasterCategory())
                         || OrcaOrderBundleRequestSupport.hasText(item.getItemNumber())
-                        || OrcaOrderBundleRequestSupport.hasText(item.getItemNumberBranch()));
+                        || OrcaOrderBundleRequestSupport.hasText(item.getItemNumberBranch())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getSelectionCommentItemNumber())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getSelectionCommentItemNumberBranch()));
     }
 
     private static List<OrderBundleMutationRequest.BundleItem> collectItems(OrderBundleMutationRequest.BundleOperation op) {
@@ -241,6 +249,18 @@ final class OrcaOrderBundleMutationExecutionSupport {
             return;
         }
         target.addAll(items);
+    }
+
+    private static String resolveEffectiveItemCategory(
+            OrderBundleMutationRequest.BundleItem item,
+            OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo) {
+        if (item == null) {
+            return null;
+        }
+        if (OrcaOrderBundleRequestSupport.hasText(item.getMasterCategory())) {
+            return OrcaOrderBundleItemMemoSupport.normalizeMasterCategory(item.getMasterCategory());
+        }
+        return parsedMemo != null ? parsedMemo.masterCategory() : null;
     }
 
     private static void validateBacteriaMetadata(
