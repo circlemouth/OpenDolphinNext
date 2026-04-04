@@ -210,6 +210,20 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
+  it('injectionOrder: 投与指示が未入力でも本体コード行があれば保存可能', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '',
+        adminCode: '',
+        items: [{ code: '310000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues).toHaveLength(0);
+  });
+
   it('injectionOrder: コードなし行は送信前にブロックする', () => {
     const issues = validateBundleForm({
       form: {
@@ -251,6 +265,21 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_class_code']);
   });
 
+  it('injectionOrder: 非数値 adminCode は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注候補',
+        adminCode: 'Y100',
+        classCode: '310',
+        items: [{ code: '620000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
+      } as BundleFormState & { classCode: string },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_admin_code']);
+  });
+
   it('injectionOrder: 投与指示がある場合は adminCode も必須', () => {
     const issues = validateBundleForm({
       form: {
@@ -271,6 +300,20 @@ describe('validateBundleForm', () => {
         ...baseForm,
         items: [],
         commentItems: [{ code: '0081', name: 'コメント', quantity: '', unit: '', memo: '注意' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['comment_only']);
+  });
+
+  it('injectionOrder: 材料だけの束は保存前に止める', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '4101',
+        materialItems: [{ code: '700000031', name: 'ドリップセット', quantity: '1', unit: '式', memo: '' }],
       },
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',

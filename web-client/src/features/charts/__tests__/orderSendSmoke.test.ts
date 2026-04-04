@@ -239,7 +239,6 @@ describe('order send smoke', () => {
         {
           operation: 'create',
           entity: 'otherOrder',
-          sourceSetCode: 'O80001',
           bundleName: 'certificate-fee',
           bundleNumber: '4',
           classCode: '800',
@@ -571,7 +570,7 @@ describe('order send smoke', () => {
                 adminMemo: '20ml/h',
                 memo: 'bundle-memo-a',
                 items: [
-                  { code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-a', rowRole: 'main' },
+                  { code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: 'freeform-a', userComment: 'local-a', rowRole: 'main' },
                 ],
               },
               {
@@ -587,8 +586,8 @@ describe('order send smoke', () => {
                 memo: 'bundle-memo-b',
                 items: [
                   { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' },
-                  { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
-                  { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-b', rowRole: 'main' },
+                  { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: 'procedure-note', rowRole: 'main' },
+                  { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: 'freeform-b', userComment: 'local-b', rowRole: 'main' },
                 ],
               },
               {
@@ -603,8 +602,8 @@ describe('order send smoke', () => {
                 adminMemo: 'slow-drip',
                 memo: 'bundle-memo-c',
                 items: [
-                  { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
-                  { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-c', rowRole: 'main' },
+                  { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: 'material-note', rowRole: 'material' },
+                  { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: 'freeform-c', userComment: 'local-c', rowRole: 'main' },
                 ],
               },
             ],
@@ -645,7 +644,7 @@ describe('order send smoke', () => {
           adminCode: '4101',
           adminMemo: '20ml/h',
           memo: 'bundle-memo-a',
-          items: [{ code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-a', rowRole: 'main' }],
+          items: [{ code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: 'freeform-a', userComment: 'local-a', rowRole: 'main' }],
         },
         {
           operation: 'create',
@@ -661,8 +660,8 @@ describe('order send smoke', () => {
           memo: 'bundle-memo-b',
           items: [
             { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' },
-            { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
-            { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-b', rowRole: 'main' },
+            { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: 'procedure-note', rowRole: 'main' },
+            { code: '620000011', name: 'DRUG_B', quantity: '1', unit: 'ampoule', memo: 'freeform-b', userComment: 'local-b', rowRole: 'main' },
           ],
         },
         {
@@ -678,8 +677,8 @@ describe('order send smoke', () => {
           adminMemo: 'slow-drip',
           memo: 'bundle-memo-c',
           items: [
-            { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
-            { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-c', rowRole: 'main' },
+            { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: 'material-note', rowRole: 'material' },
+            { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: 'freeform-c', userComment: 'local-c', rowRole: 'main' },
           ],
         },
       ],
@@ -700,11 +699,16 @@ describe('order send smoke', () => {
       ['material', 'main'],
     ]);
     expect(fetched.bundles[1]?.items[2]?.userComment).toBe('local-b');
-    expect(fetched.bundles[1]?.items[2]?.memo).toBe('');
+    expect(fetched.bundles[1]?.items[2]?.memo).toBe('freeform-b');
 
     const normalized = fetched.bundles
       .map((bundle) => toMedicalModV2InformationWithSource(bundle))
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+
+    expect(prepared.requiredIssues).toEqual([]);
+    expect(prepared.bundleIssues).toEqual([]);
+    expect(prepared.codeIssues).toEqual([]);
 
     expect(normalized.map((entry) => entry.info.medications.map((item) => item.code))).toEqual([
       ['4101', '620000010'],
@@ -734,6 +738,12 @@ describe('order send smoke', () => {
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-a');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-b');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-c');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('freeform-a');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('freeform-b');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('freeform-c');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('procedure-note');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('material-note');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('after-procedure');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
 
@@ -756,6 +766,12 @@ describe('order send smoke', () => {
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-a');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-b');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-c');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('freeform-a');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('freeform-b');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('freeform-c');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('procedure-note');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('material-note');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('after-procedure');
   });
 
   it('save fetch no-op save send smoke uses prescription-orders as medOrder source of truth', async () => {

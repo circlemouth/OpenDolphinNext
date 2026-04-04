@@ -35,9 +35,12 @@
 
 ## Injection Recheck (`20260403T142706Z`)
 
-- 注射は `admin/adminCode` を sendable、`memo/adminMemo/speed/route/timing/frequency` と行コメントを local-only に固定した。
-- `recent usage` 由来の自由入力は `adminCode=''` のまま保持されるが、保存前 validation で fail-closed に止める。
+- 注射の sendable な `adminCode` は数字コードのみとし、非数値 code は UI 候補から除外しつつ、既存 bundle/import で残っていても save/send 前に fail-closed に止める。
+- 注射は `admin` がある場合のみ対応する数字 `adminCode` を sendable とし、`memo/adminMemo/speed/route/timing/frequency` と行コメントは local-only に固定した。
+- `recent usage` 由来の自由入力は `adminCode=''` のまま保持されるが、保存前 validation と send-side validation の両方で fail-closed に止める。
+- 既存 bundle/import に残った非数値 `adminCode` は editor 上で候補選択済みに見せず、候補の再選択を促したうえで save/send 前に block する。
 - `classCode=310` 以外の `injectionOrder` は client/server とも reject に固定した。
+- `comment-only` / `material-only` / `local-only only` な注射 bundle は editor/save/send の全段で reject に固定した。
 - `genericFlg` は preserve-only で、editor の read-only 表示と comment 編集時の hidden meta 保持をテストで固定した。
 - editor round-trip は `薬剤のみ / 手技+薬剤 / material+drug` の 3 経路で `rowRole` 保持を確認済み。
 

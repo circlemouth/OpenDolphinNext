@@ -12,6 +12,7 @@ import open.dolphin.infomodel.ModelUtils;
 final class OrcaOrderBundleRequestSupport {
 
     private static final Pattern OTHER_ORDER_CODE_PATTERN = Pattern.compile("^(?:8\\d{8}|18\\d{7})$");
+    private static final Pattern SENDABLE_USAGE_CODE_PATTERN = Pattern.compile("^\\d{4,}$");
 
     private static final Set<String> ORDER_BUNDLE_ENTITIES = Set.of(
             IInfoModel.ENTITY_MED_ORDER,
@@ -124,6 +125,15 @@ final class OrcaOrderBundleRequestSupport {
         return value != null && !value.isBlank();
     }
 
+    static boolean isSendableUsageCode(String code) {
+        String normalized = trimToNull(code);
+        return normalized != null && SENDABLE_USAGE_CODE_PATTERN.matcher(normalized).matches();
+    }
+
+    static boolean isSendableInjectionAdminCode(String code) {
+        return isSendableUsageCode(code);
+    }
+
     static boolean isSupportedOperation(String operation) {
         return "create".equals(operation) || "update".equals(operation) || "delete".equals(operation);
     }
@@ -181,6 +191,10 @@ final class OrcaOrderBundleRequestSupport {
         }
         return "treatmentOrder".equals(normalizedEntity)
                 || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+    }
+
+    static boolean requiresSendableMainRow(String canonicalEntity) {
+        return canonicalEntity != null && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity);
     }
 
     private static String canonicalizeEntity(String entity) {

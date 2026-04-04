@@ -34,6 +34,21 @@ export const RP_REQUIRED_FIELD_LABELS: Record<RpRequiredField, string> = {
 
 export const resolveRpRequiredFieldLabel = (field: RpRequiredField) => RP_REQUIRED_FIELD_LABELS[field] ?? field;
 
+export const SENDABLE_USAGE_CODE_PATTERN = /^\d{4,}$/;
+
+const trimValue = (value?: string | null) => value?.trim() ?? '';
+
+export const isSendableUsageCode = (code?: string | null) => SENDABLE_USAGE_CODE_PATTERN.test(trimValue(code));
+
+export const isSendableInjectionAdminCode = (code?: string | null) => isSendableUsageCode(code);
+
+export const hasInjectionAdminText = (admin?: string | null) => trimValue(admin).length > 0;
+
+export const hasInvalidInjectionAdminCode = (adminCode?: string | null) => {
+  const normalized = trimValue(adminCode);
+  return normalized.length > 0 && !isSendableInjectionAdminCode(normalized);
+};
+
 const RP_REQUIRED_ENTITY_ALIASES: Record<string, RpRequiredEntity> = {
   medorder: 'medOrder',
   prescription: 'medOrder',

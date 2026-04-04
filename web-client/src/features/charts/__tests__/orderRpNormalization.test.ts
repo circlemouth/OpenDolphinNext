@@ -207,6 +207,47 @@ describe('orderRpNormalization', () => {
     ]);
   });
 
+  it('injectionOrder の非数値 adminCode は usage row にせず、送信前 issue で止める', () => {
+    const bundle = {
+      entity: 'injectionOrder',
+      bundleName: 'invalid-admin',
+      bundleNumber: '1',
+      classCode: '310',
+      admin: '静注候補',
+      adminCode: 'Y100',
+      items: [{ code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', rowRole: 'main' }],
+    } as any;
+
+    const normalized = normalizeOrderBundleToRp(bundle);
+    const issues = collectMedicalModV2BundleIssues([bundle]);
+
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['620000012']);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'invalid_injection_admin_code',
+          bundleName: 'invalid-admin',
+        }),
+      ]),
+    );
+  });
+
+  it('injectionOrder は投与指示が未入力でも本体コード行だけで normalize/send 対象にできる', () => {
+    const bundle = {
+      entity: 'injectionOrder',
+      bundleName: 'drug-only',
+      bundleNumber: '1',
+      classCode: '310',
+      items: [{ code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', rowRole: 'main' }],
+    } as any;
+
+    const normalized = normalizeOrderBundleToRp(bundle);
+    const issues = collectMedicalModV2BundleIssues([bundle]);
+
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['620000012']);
+    expect(issues).toEqual([]);
+  });
+
   it('fetchMedicalModV2OrderBundles は medOrder を prescription-orders から組み立てる', async () => {
     vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
       ok: true,

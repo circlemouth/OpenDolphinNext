@@ -226,9 +226,9 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/本体となるコード行/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
-  });
+  await waitFor(() => expect(screen.getByText(/本体となるコード行/)).toBeInTheDocument());
+  expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+});
 
   it('blocks saved otherOrder bundles with invalid classCode before send', async () => {
     const user = userEvent.setup();
@@ -254,6 +254,151 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
     await waitFor(() => expect(screen.getByText(/otherOrder の classCode/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks injection bundles with classCode other than 310', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'bad-class',
+                bundleNumber: '1',
+                classCode: '320',
+                admin: '静注',
+                adminCode: '4101',
+                items: [{ code: '620000010', name: 'drug-a', quantity: '1', unit: 'A' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/classCode 310 のみ送信できます/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks injection bundles when admin is present but sendable adminCode is missing', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'missing-admin-code',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '静注',
+                adminCode: '',
+                items: [{ code: '620000010', name: 'drug-a', quantity: '1', unit: 'A' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/adminCode がありません/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks comment-only injection bundles', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'comment-only-injection',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '静注',
+                adminCode: '4101',
+                items: [{ code: '0082', name: 'comment row', quantity: '', unit: '' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/本体となる注射薬剤\/手技コード行/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks material-only injection bundles', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'material-only-injection',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '点滴',
+                adminCode: '4103',
+                items: [{ code: '700000031', name: 'drip-set', quantity: '1', unit: 'set', rowRole: 'material' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/本体となる注射薬剤\/手技コード行/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('blocks injection bundles with non-sendable usage codes', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'injectionOrder'
+          ? [
+              {
+                entity: 'injectionOrder',
+                bundleName: 'invalid-admin-code',
+                bundleNumber: '1',
+                classCode: '310',
+                admin: '静注候補',
+                adminCode: 'Y100',
+                items: [{ code: '620000010', name: 'drug-a', quantity: '1', unit: 'A' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/非数値 code は送信できません/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 

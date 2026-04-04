@@ -12,6 +12,8 @@ import {
   buildRpRequiredBlockedMessage,
   collectOrderBundleCodeIssues,
   collectRpRequiredIssues,
+  isSendableInjectionAdminCode,
+  isSendableUsageCode,
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
@@ -71,6 +73,9 @@ export type MedicalModV2BundleIssueCode =
   | 'invalid_other_order_code'
   | 'invalid_other_order_class_code'
   | 'unsupported_other_order_body_part'
+  | 'missing_injection_admin_code'
+  | 'invalid_injection_admin_code'
+  | 'invalid_injection_class_code'
   | 'unsupported_bacteria_subtype';
 
 export type MedicalModV2BundleIssue = {
@@ -200,6 +205,32 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
       ),
     ];
   }
+  if (canonicalEntity === 'injectionOrder') {
+    const classCode = bundle.classCode?.trim();
+    if (classCode && classCode !== '310') {
+      return [buildBundleIssue(bundle, 'invalid_injection_class_code', '注射 bundle は classCode 310 のみ送信できます。')];
+    }
+    const admin = bundle.admin?.trim() ?? '';
+    const adminCode = bundle.adminCode?.trim() ?? '';
+    if (admin && !adminCode) {
+      return [
+        buildBundleIssue(
+          bundle,
+          'missing_injection_admin_code',
+          '注射の投与指示に adminCode がありません。数字 adminCode の候補を選択してください。',
+        ),
+      ];
+    }
+    if (admin && !isSendableInjectionAdminCode(adminCode)) {
+      return [
+        buildBundleIssue(
+          bundle,
+          'invalid_injection_admin_code',
+          '注射の投与指示は数字 adminCode の候補のみ送信できます。非数値 code は送信できません。',
+        ),
+      ];
+    }
+  }
   const rows = collectNormalizedRows(bundle);
   const valuedRows = rows.filter((row) => hasBundleItemValue(row.item));
   if (valuedRows.length === 0) {
@@ -229,7 +260,11 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
 
   const sendableMainRows = codedRows.filter((row) => {
     const code = row.item.code?.trim() ?? '';
-    return !isCommentMedicationCode(code) && !isBodyPartCode(code);
+    if (isCommentMedicationCode(code) || isBodyPartCode(code)) return false;
+    if (canonicalEntity === 'injectionOrder') {
+      return resolveBundleItemRowRole(bundle.entity, row.item) === 'main';
+    }
+    return true;
   });
   if (
     canonicalEntity === 'otherOrder' &&
@@ -243,13 +278,15 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
       ),
     ];
   }
-  const requireMainRow = canonicalEntity !== 'medOrder' && canonicalEntity !== 'injectionOrder';
+  const requireMainRow = canonicalEntity !== 'medOrder';
   if (requireMainRow && sendableMainRows.length === 0) {
     return [
       buildBundleIssue(
         bundle,
         'comment_only',
-        '部位やコメントだけでは送信できません。本体となるコード行を1件以上追加してください。',
+        canonicalEntity === 'injectionOrder'
+          ? '投与指示・材料・コメントだけでは送信できません。本体となる注射薬剤/手技コード行を1件以上追加してください。'
+          : '部位やコメントだけでは送信できません。本体となるコード行を1件以上追加してください。',
       ),
     ];
   }
@@ -295,7 +332,7 @@ const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormaliz
   if (!isPrescription && !isInjection) return null;
   const usageCodeCandidate =
     bundle.adminCode?.trim() || (isPrescription && bundle.admin?.trim() ? bundle.admin.trim().split(/\s+/)[0] : '');
-  const usageCode = /^\d{4,}$/.test(usageCodeCandidate) ? usageCodeCandidate : '';
+  const usageCode = isSendableUsageCode(usageCodeCandidate) ? usageCodeCandidate : '';
   if (!usageCode) return null;
   const hasUsageAlready = rows.some((row) => row.medication.code.trim() === usageCode);
   if (hasUsageAlready) return null;
@@ -436,7 +473,7 @@ export const fetchMedicalModV2OrderBundles = async (patientId: string, from: str
 const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSource['kind']) => {
   const normalized = code.trim();
   if (!normalized) return false;
-  if (sourceKind === 'usage') return /^\d+$/.test(normalized);
+  if (sourceKind === 'usage') return isSendableUsageCode(normalized);
   if (sourceKind === 'body_part') return /^002\d{0,}$/.test(normalized);
   return /^\d{9}$/.test(normalized) || isCommentMedicationCode(normalized);
 };
@@ -509,9 +546,16 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
   if (prepared.bundleIssues.length > 0) {
     const preview = prepared.bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
     const remaining = prepared.bundleIssues.length - 4;
+    const hasInjectionContractIssue = prepared.bundleIssues.some(
+      (issue) =>
+        issue.entity === 'injectionOrder' &&
+        ['missing_injection_admin_code', 'invalid_injection_admin_code', 'invalid_injection_class_code', 'comment_only'].includes(issue.code),
+    );
     return {
       message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
-      nextAction: 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
+      nextAction: hasInjectionContractIssue
+        ? '注射は classCode 310、数字 adminCode の投与指示、本体となる注射薬剤/手技コード行をそろえてから再送してください。'
+        : 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
     };
   }
   if (prepared.codeIssues.length > 0) {

@@ -40,6 +40,8 @@ import {
 } from './orderRecommendationApi';
 import {
   buildRpRequiredEditorMessage,
+  hasInvalidInjectionAdminCode,
+  isSendableInjectionAdminCode,
   resolveRpRequiredIssue,
   resolveRpRequiredFieldLabel,
   RP_REQUIRED_ERROR_LABEL,
@@ -315,6 +317,7 @@ const PAGINATED_MASTER_SEARCH_TYPES = new Set<OrderMasterSearchType>([
 const RECENT_USAGE_STORAGE_PREFIX = 'charts-order-recent-usage';
 const RECENT_USAGE_MAX = 10;
 const USAGE_DAYS_LIMIT_ERROR_KEY = 'usage_days_limit_exceeded';
+const INVALID_INJECTION_ADMIN_CODE_ERROR_KEY = 'invalid_injection_admin_code';
 const USAGE_TIMING_LABELS: Record<string, string> = {
   '01': '朝',
   '02': '昼',
@@ -704,7 +707,7 @@ const buildUsageMasterMeta = (item: OrderMasterSearchItem): UsageMasterMeta => (
 const resolveSendContractNote = (entity: string) => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   if (canonicalEntity === 'injectionOrder') {
-    return '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは local-only です。';
+    return '注射送信では数字 adminCode の投与指示・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは local-only です。';
   }
   if (canonicalEntity === 'treatmentOrder') {
     return '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
@@ -896,6 +899,12 @@ export const validateBundleForm = ({
       message: '注射の投与指示を保存するには adminCode を選択してください。自由入力だけでは送信できません。',
     });
   }
+  if (canonicalEntity === 'injectionOrder' && hasInvalidInjectionAdminCode(form.adminCode)) {
+    issues.push({
+      key: INVALID_INJECTION_ADMIN_CODE_ERROR_KEY,
+      message: '注射の adminCode は数値コード候補のみ送信できます。非数値コードは選び直してください。',
+    });
+  }
   if (canonicalEntity === 'injectionOrder' && form.classCode?.trim() && form.classCode.trim() !== '310') {
     issues.push({
       key: 'invalid_injection_class_code',
@@ -929,11 +938,12 @@ export const validateBundleForm = ({
     });
   }
   if (rule.requiresItems && valuedItems.length === 0) {
-    const hasAuxiliaryValue = form.commentItems.some(hasAnyValue) || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
+    const hasAuxiliaryValue =
+      hasMaterialValues || form.commentItems.some(hasAnyValue) || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
     issues.push({
       key: hasAuxiliaryValue ? 'comment_only' : 'missing_items',
       message: hasAuxiliaryValue
-        ? '部位やコメントだけでは保存できません。コード付きの本体項目を入力してください。'
+        ? '部位・材料・コメントだけでは保存できません。コード付きの本体項目を入力してください。'
         : `${rule.itemLabel}を1件以上入力してください。`,
     });
   }
@@ -956,6 +966,17 @@ export const validateBundleForm = ({
           : 'コメントだけでは保存できません。コード付きの本体項目を入力してください。',
       });
     }
+  }
+  if (
+    canonicalEntity === 'injectionOrder' &&
+    valuedItems.length > 0 &&
+    codedItems.length > 0 &&
+    !codedItems.some((item) => resolveBundleItemRowRole(entity, item) === 'main')
+  ) {
+    issues.push({
+      key: 'comment_only',
+      message: '注射は材料・コメントだけでは保存できません。本体となる注射薬剤/手技コード行を入力してください。',
+    });
   }
   if (canonicalEntity === 'otherOrder') {
     if (form.classCode?.trim() && !isValidOtherOrderClassCode(form.classCode)) {
@@ -1623,7 +1644,10 @@ export function OrderBundleEditPanel({
   const usageItems = useMemo(
     () => {
       if (!usageSearchQuery.data?.ok) return [];
-      const sorted = isInjectionOrder ? sortUsageItemsForInjection(usageSearchQuery.data.items) : usageSearchQuery.data.items;
+      const candidates = isInjectionOrder
+        ? usageSearchQuery.data.items.filter((item) => isSendableInjectionAdminCode(item.code))
+        : usageSearchQuery.data.items;
+      const sorted = isInjectionOrder ? sortUsageItemsForInjection(candidates) : candidates;
       return sorted.slice(0, MAX_USAGE_SELECT_OPTIONS);
     },
     [isInjectionOrder, usageSearchQuery.data],
@@ -1655,9 +1679,13 @@ export function OrderBundleEditPanel({
     });
     const currentAdmin = form.admin.trim();
     if (currentAdmin) {
+      const currentAdminCode = form.adminCode?.trim() || undefined;
+      if (isInjectionOrder && !isSendableInjectionAdminCode(currentAdminCode)) {
+        return Array.from(optionMap.values());
+      }
       const currentItem: OrderMasterSearchItem = {
         type: 'youhou',
-        code: form.adminCode?.trim() || undefined,
+        code: currentAdminCode,
         name: currentAdmin,
       };
       const currentOptionKey = buildUsageOptionKey(currentItem);
@@ -1666,13 +1694,17 @@ export function OrderBundleEditPanel({
       }
     }
     return Array.from(optionMap.values());
-  }, [form.admin, form.adminCode, usageItems]);
+  }, [form.admin, form.adminCode, isInjectionOrder, usageItems]);
   const selectedUsageOptionKey = useMemo(() => {
     const currentAdminCode = form.adminCode?.trim() ?? '';
+    if (isInjectionOrder && hasInvalidInjectionAdminCode(currentAdminCode)) {
+      return '';
+    }
     if (currentAdminCode) {
       const matchedByCode = usageSelectOptions.find((item) => item.code?.trim() === currentAdminCode);
       if (matchedByCode) return buildUsageOptionKey(matchedByCode);
     }
+    if (isInjectionOrder) return '';
     const normalizedAdmin = normalizePredictiveLabel(form.admin);
     if (!normalizedAdmin) return '';
     const matchedByLabel =
@@ -1680,13 +1712,17 @@ export function OrderBundleEditPanel({
       usageSelectOptions.find((item) => normalizePredictiveLabel(item.name) === normalizedAdmin) ??
       null;
     return matchedByLabel ? buildUsageOptionKey(matchedByLabel) : '';
-  }, [form.admin, form.adminCode, usageSelectOptions]);
+  }, [form.admin, form.adminCode, isInjectionOrder, usageSelectOptions]);
   const usageMasterMetaFromOptions = useMemo(() => {
     const currentAdminCode = form.adminCode?.trim() ?? '';
+    if (isInjectionOrder && hasInvalidInjectionAdminCode(currentAdminCode)) {
+      return null;
+    }
     if (currentAdminCode) {
       const matchedByCode = usageSelectOptions.find((item) => item.code?.trim() === currentAdminCode);
       if (matchedByCode) return buildUsageMasterMeta(matchedByCode);
     }
+    if (isInjectionOrder) return null;
     const normalizedAdmin = normalizePredictiveLabel(form.admin);
     if (!normalizedAdmin) return null;
     const matchedByLabel =
@@ -1694,7 +1730,7 @@ export function OrderBundleEditPanel({
       usageSelectOptions.find((item) => normalizePredictiveLabel(item.name) === normalizedAdmin) ??
       null;
     return matchedByLabel ? buildUsageMasterMeta(matchedByLabel) : null;
-  }, [form.admin, form.adminCode, usageSelectOptions]);
+  }, [form.admin, form.adminCode, isInjectionOrder, usageSelectOptions]);
   const selectedUsageMeta = usageMasterMetaFromOptions ?? selectedUsageMasterMeta;
   const selectedUsageDaysLimit = selectedUsageMeta?.daysLimit;
   const selectedUsageDosePerDay = selectedUsageMeta?.dosePerDay;
@@ -1992,7 +2028,7 @@ export function OrderBundleEditPanel({
 
   const applyUsage = (item: OrderMasterSearchItem) => {
     const label = formatUsageLabel(item);
-    clearValidationByKeys(['missing_usage', USAGE_DAYS_LIMIT_ERROR_KEY]);
+    clearValidationByKeys(['missing_usage', 'missing_admin_code', USAGE_DAYS_LIMIT_ERROR_KEY, INVALID_INJECTION_ADMIN_CODE_ERROR_KEY]);
     setForm((prev) => ({
       ...prev,
       admin: label,
@@ -2024,7 +2060,7 @@ export function OrderBundleEditPanel({
     const nextValue = value.trim();
     if (!nextValue) return;
     if (applyUsageSelection(nextValue)) return;
-    clearValidationByKeys(['missing_usage', USAGE_DAYS_LIMIT_ERROR_KEY]);
+    clearValidationByKeys(['missing_usage', 'missing_admin_code', USAGE_DAYS_LIMIT_ERROR_KEY, INVALID_INJECTION_ADMIN_CODE_ERROR_KEY]);
     setForm((prev) => ({
       ...prev,
       admin: nextValue,
@@ -2760,6 +2796,7 @@ export function OrderBundleEditPanel({
             return `${entityId}-rp-required-warning`;
           case 'missing_usage':
           case 'missing_admin_code':
+          case 'invalid_injection_admin_code':
           case 'invalid_injection_class_code':
             return `${entityId}-admin`;
           case 'missing_body_part':
@@ -2998,6 +3035,7 @@ export function OrderBundleEditPanel({
   const usageError =
     validationByKey.get('missing_usage') ??
     validationByKey.get('missing_admin_code') ??
+    validationByKey.get(INVALID_INJECTION_ADMIN_CODE_ERROR_KEY) ??
     validationByKey.get('invalid_injection_class_code');
   const bundleNumberError = validationByKey.get(USAGE_DAYS_LIMIT_ERROR_KEY);
   const itemsError =
@@ -3514,7 +3552,7 @@ export function OrderBundleEditPanel({
                   void usageSearchQuery.refetch();
                 }}
                 onChange={(event) => {
-                  clearValidationByKeys(['missing_usage', USAGE_DAYS_LIMIT_ERROR_KEY]);
+                  clearValidationByKeys(['missing_usage', 'missing_admin_code', USAGE_DAYS_LIMIT_ERROR_KEY, INVALID_INJECTION_ADMIN_CODE_ERROR_KEY]);
                   const selected = event.target.value;
                   if (!selected) {
                     setForm((prev) => ({
@@ -3556,7 +3594,7 @@ export function OrderBundleEditPanel({
                 data-orca-warning={orcaWarningTargets.usage ? 'true' : undefined}
                 aria-invalid={usageError ? 'true' : undefined}
                 onChange={(event) => {
-                  clearValidationByKeys(['missing_usage', USAGE_DAYS_LIMIT_ERROR_KEY]);
+                  clearValidationByKeys(['missing_usage', 'missing_admin_code', USAGE_DAYS_LIMIT_ERROR_KEY, INVALID_INJECTION_ADMIN_CODE_ERROR_KEY]);
                   setForm((prev) => ({ ...prev, admin: event.target.value, adminCode: '' }));
                   setSelectedUsageMasterMeta(null);
                 }}
