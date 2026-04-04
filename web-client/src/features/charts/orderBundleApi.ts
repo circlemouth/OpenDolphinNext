@@ -5,6 +5,8 @@ import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta } from './orderCategoryRegistry';
+import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
+import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
@@ -39,6 +41,9 @@ export type OrderBundleItem = {
   userComment?: string;
   rowRole?: OrderBundleRowRole;
   rowSubtype?: OrderBundleRowSubtype;
+  category?: string;
+  itemNumber?: string;
+  itemNumberBranch?: string;
 };
 
 export type OrderBundleBodyPart = {
@@ -58,6 +63,7 @@ export type OrderBundle = {
   bundleNumber?: string;
   sourceSetCode?: string;
   subtype?: string;
+  bacteria?: BacteriaOrderMetadata;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
@@ -74,6 +80,8 @@ export type OrderBundle = {
   authorRole?: string;
   authoredAt?: string;
   items: OrderBundleItem[];
+  materialItems?: OrderBundleItem[];
+  commentItems?: OrderBundleItem[];
   bodyPart?: OrderBundleBodyPart;
 };
 
@@ -106,6 +114,7 @@ export type OrderBundleOperation = {
   bundleName?: string;
   bundleNumber?: string;
   subtype?: string;
+  bacteria?: BacteriaOrderMetadata;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
@@ -117,6 +126,8 @@ export type OrderBundleOperation = {
   startDate?: string;
   endDate?: string;
   items?: OrderBundleItem[];
+  materialItems?: OrderBundleItem[];
+  commentItems?: OrderBundleItem[];
   bodyPart?: OrderBundleBodyPart;
 };
 
@@ -150,6 +161,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
   return {
     ...canonicalBundle,
     entity: normalizeOrderEntityValue(canonicalBundle.entity),
+    bacteria: normalizeBacteriaOrderMetadata(canonicalBundle.bacteria),
     className: normalizeOrderBundleClassName(
       canonicalBundle.entity,
       canonicalBundle.classCode,
@@ -164,6 +176,37 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
         userComment: fields.userComment,
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
+        category: fields.category,
+        itemNumber: fields.itemNumber,
+        itemNumberBranch: fields.itemNumberBranch,
+      };
+    }),
+    materialItems: (canonicalBundle.materialItems ?? []).map((item) => {
+      const fields = resolveOrcaOrderItemFields(item);
+      return {
+        ...item,
+        memo: fields.memoText,
+        genericFlg: fields.genericFlg,
+        userComment: fields.userComment,
+        rowRole: fields.rowRole,
+        rowSubtype: fields.rowSubtype,
+        category: fields.category,
+        itemNumber: fields.itemNumber,
+        itemNumberBranch: fields.itemNumberBranch,
+      };
+    }),
+    commentItems: (canonicalBundle.commentItems ?? []).map((item) => {
+      const fields = resolveOrcaOrderItemFields(item);
+      return {
+        ...item,
+        memo: fields.memoText,
+        genericFlg: fields.genericFlg,
+        userComment: fields.userComment,
+        rowRole: fields.rowRole,
+        rowSubtype: fields.rowSubtype,
+        category: fields.category,
+        itemNumber: fields.itemNumber,
+        itemNumberBranch: fields.itemNumberBranch,
       };
     }),
     bodyPart: canonicalBundle.bodyPart
@@ -180,6 +223,7 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
   return {
     ...canonicalOperation,
     entity: normalizeOrderEntityValue(canonicalOperation.entity),
+    bacteria: normalizeBacteriaOrderMetadata(canonicalOperation.bacteria),
     className: normalizeOrderBundleClassName(
       canonicalOperation.entity,
       canonicalOperation.classCode,
@@ -194,6 +238,37 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         userComment: fields.userComment,
         rowRole: fields.rowRole,
         rowSubtype: fields.rowSubtype,
+        category: fields.category,
+        itemNumber: fields.itemNumber,
+        itemNumberBranch: fields.itemNumberBranch,
+      };
+    }),
+    materialItems: (canonicalOperation.materialItems ?? []).map((item) => {
+      const fields = resolveOrcaOrderItemFields(item);
+      return {
+        ...item,
+        memo: fields.memoText,
+        genericFlg: fields.genericFlg,
+        userComment: fields.userComment,
+        rowRole: fields.rowRole,
+        rowSubtype: fields.rowSubtype,
+        category: fields.category,
+        itemNumber: fields.itemNumber,
+        itemNumberBranch: fields.itemNumberBranch,
+      };
+    }),
+    commentItems: (canonicalOperation.commentItems ?? []).map((item) => {
+      const fields = resolveOrcaOrderItemFields(item);
+      return {
+        ...item,
+        memo: fields.memoText,
+        genericFlg: fields.genericFlg,
+        userComment: fields.userComment,
+        rowRole: fields.rowRole,
+        rowSubtype: fields.rowSubtype,
+        category: fields.category,
+        itemNumber: fields.itemNumber,
+        itemNumberBranch: fields.itemNumberBranch,
       };
     }),
     bodyPart: canonicalOperation.bodyPart

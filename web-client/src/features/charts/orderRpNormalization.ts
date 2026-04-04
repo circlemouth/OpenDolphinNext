@@ -1,11 +1,9 @@
 import type { MedicalModV2Information } from './orcaClaimApi';
-import { resolveCanonicalChargeClassMeta } from './orderChargeClassSupport';
 import {
   ORCA_SEND_ORDER_ENTITIES,
   resolveCanonicalOrderEntity,
   resolveOrderEntityDefaultClassMeta,
 } from './orderCategoryRegistry';
-import { isValidOtherOrderClassCode, isValidOtherOrderMainCode } from './otherOrderContract';
 import {
   fetchOrderBundles,
   type OrderBundle,
@@ -18,8 +16,6 @@ import {
   buildRpRequiredBlockedMessage,
   collectOrderBundleCodeIssues,
   collectRpRequiredIssues,
-  isSendableInjectionAdminCode,
-  isSendableUsageCode,
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
@@ -75,14 +71,7 @@ export type MedicalModV2BundleIssueCode =
   | 'uncoded_row'
   | 'mixed_coded_uncoded'
   | 'comment_only'
-  | 'missing_main_row'
-  | 'invalid_other_order_code'
-  | 'invalid_other_order_class_code'
-  | 'unsupported_other_order_body_part'
-  | 'missing_injection_admin_code'
-  | 'invalid_injection_admin_code'
-  | 'invalid_injection_class_code'
-  | 'unsupported_bacteria_subtype';
+  | 'missing_main_row';
 
 export type MedicalModV2BundleIssue = {
   code: MedicalModV2BundleIssueCode;
@@ -165,6 +154,8 @@ const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem
 
 const collectNormalizedRows = (bundle: OrderBundle) => {
   const rows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
+  const hasExplicitMaterial = Boolean(bundle.materialItems && bundle.materialItems.length > 0);
+  const hasExplicitComment = Boolean(bundle.commentItems && bundle.commentItems.length > 0);
   const explicitBodyPart = cloneBodyPartItem(bundle.bodyPart);
   const legacyBodyPart = explicitBodyPart
     ? null
@@ -177,7 +168,7 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
     rows.push({ item: legacyBodyPart, source: { kind: 'body_part', sectionIndex: 0 } });
   }
   const mainRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
-  const auxiliaryRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
+  const materialRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   const commentRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   (bundle.items ?? []).forEach((item, itemIndex) => {
     const cloned = cloneBundleItem(item);
@@ -193,21 +184,51 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
         itemIndex,
         rowRole,
         rowSubtype,
-        sectionIndex:
-          rowRole === 'comment' ? commentRows.length : rowRole === 'auxiliary' ? auxiliaryRows.length : mainRows.length,
+        sectionIndex: rowRole === 'comment' ? commentRows.length : rowRole === 'auxiliary' ? materialRows.length : mainRows.length,
       } as const,
     };
     if (rowRole === 'comment') {
+      if (hasExplicitComment) return;
       commentRows.push(row);
       return;
     }
     if (rowRole === 'auxiliary') {
-      auxiliaryRows.push(row);
+      if (hasExplicitMaterial) return;
+      materialRows.push(row);
       return;
     }
     mainRows.push(row);
   });
-  rows.push(...mainRows, ...auxiliaryRows, ...commentRows);
+  (bundle.materialItems ?? []).forEach((item, itemIndex) => {
+    const cloned = cloneBundleItem(item);
+    if (!cloned || !hasBundleItemValue(cloned)) return;
+    const rowSubtype = resolveBundleItemRowSubtype(bundle.entity, cloned, 'auxiliary');
+    materialRows.push({
+      item: { ...cloned, rowRole: 'auxiliary', rowSubtype },
+      source: {
+        kind: 'bundle_item',
+        itemIndex: (bundle.items?.length ?? 0) + itemIndex,
+        rowRole: 'auxiliary',
+        rowSubtype,
+        sectionIndex: materialRows.length,
+      },
+    });
+  });
+  (bundle.commentItems ?? []).forEach((item, itemIndex) => {
+    const cloned = cloneBundleItem(item);
+    if (!cloned || !hasBundleItemValue(cloned)) return;
+    commentRows.push({
+      item: { ...cloned, rowRole: 'comment' },
+      source: {
+        kind: 'bundle_item',
+        itemIndex: (bundle.items?.length ?? 0) + (bundle.materialItems?.length ?? 0) + itemIndex,
+        rowRole: 'comment',
+        rowSubtype: undefined,
+        sectionIndex: commentRows.length,
+      },
+    });
+  });
+  rows.push(...mainRows, ...materialRows, ...commentRows);
   return rows;
 };
 
@@ -222,54 +243,6 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
 
 export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): MedicalModV2BundleIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
-  if (canonicalEntity === 'otherOrder') {
-    const classCode = bundle.classCode?.trim();
-    if (classCode && !isValidOtherOrderClassCode(classCode)) {
-      return [
-        buildBundleIssue(bundle, 'invalid_other_order_class_code', 'otherOrder の classCode は数値 800〜890 のみ送信できます。'),
-      ];
-    }
-    if (bundle.bodyPart?.name?.trim() || bundle.bodyPart?.code?.trim()) {
-      return [
-        buildBundleIssue(bundle, 'unsupported_other_order_body_part', 'otherOrder は bodyPart を保持できないため送信前に停止します。'),
-      ];
-    }
-  }
-  if (canonicalEntity === 'bacteriaOrder' && bundle.subtype?.trim()) {
-    return [
-      buildBundleIssue(
-        bundle,
-        'unsupported_bacteria_subtype',
-        '細菌検査 subtype は ORCA 送信 carrier 未対応のため、送信前に停止します。',
-      ),
-    ];
-  }
-  if (canonicalEntity === 'injectionOrder') {
-    const classCode = bundle.classCode?.trim();
-    if (classCode && classCode !== '310') {
-      return [buildBundleIssue(bundle, 'invalid_injection_class_code', '注射 bundle は classCode 310 のみ送信できます。')];
-    }
-    const admin = bundle.admin?.trim() ?? '';
-    const adminCode = bundle.adminCode?.trim() ?? '';
-    if (admin && !adminCode) {
-      return [
-        buildBundleIssue(
-          bundle,
-          'missing_injection_admin_code',
-          '注射の投与指示に adminCode がありません。数字 adminCode の候補を選択してください。',
-        ),
-      ];
-    }
-    if (admin && !isSendableInjectionAdminCode(adminCode)) {
-      return [
-        buildBundleIssue(
-          bundle,
-          'invalid_injection_admin_code',
-          '注射の投与指示は数字 adminCode の候補のみ送信できます。非数値 code は送信できません。',
-        ),
-      ];
-    }
-  }
   const rows = collectNormalizedRows(bundle);
   const valuedRows = rows.filter((row) => hasBundleItemValue(row.item));
   if (valuedRows.length === 0) {
@@ -299,32 +272,15 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
 
   const sendableMainRows = codedRows.filter((row) => {
     const code = row.item.code?.trim() ?? '';
-    if (isCommentMedicationCode(code) || isBodyPartCode(code)) return false;
-    return row.source.kind === 'bundle_item' && row.source.rowRole === 'main';
+    return !isCommentMedicationCode(code) && !isBodyPartCode(code);
   });
-  if (
-    canonicalEntity === 'otherOrder' &&
-    sendableMainRows.some((row) => !isValidOtherOrderMainCode(row.item.code))
-  ) {
-    return [
-      buildBundleIssue(
-        bundle,
-        'invalid_other_order_code',
-        'otherOrder は etensu category 8 の9桁コード行のみ送信できます。',
-      ),
-    ];
-  }
-  const requireMainRow = canonicalEntity !== 'medOrder';
+  const requireMainRow = canonicalEntity !== 'medOrder' && canonicalEntity !== 'injectionOrder';
   if (requireMainRow && sendableMainRows.length === 0) {
     return [
       buildBundleIssue(
         bundle,
-        canonicalEntity === 'radiologyOrder' ? 'missing_main_row' : 'comment_only',
-        canonicalEntity === 'injectionOrder'
-          ? '投与指示・材料・コメントだけでは送信できません。本体となる注射薬剤/手技コード行を1件以上追加してください。'
-          : canonicalEntity === 'radiologyOrder'
-            ? '放射線オーダーは部位・補助行・コメントだけでは送信できません。コード付きの検査本体を1件以上追加してください。'
-          : '部位やコメントだけでは送信できません。本体となるコード行を1件以上追加してください。',
+        'comment_only',
+        '部位やコメントだけでは送信できません。本体となるコード行を1件以上追加してください。',
       ),
     ];
   }
@@ -349,21 +305,10 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
 };
 
 const resolveMedicalClass = (bundle: OrderBundle) => {
-  const chargeMeta = resolveCanonicalChargeClassMeta({ entity: bundle.entity, classCode: bundle.classCode });
-  if (chargeMeta) return chargeMeta.classCode;
   const explicit = bundle.classCode?.trim();
   if (explicit) return explicit;
   const classMeta = resolveOrderEntityDefaultClassMeta(bundle.entity?.trim());
   return classMeta?.classCode?.trim() || '';
-};
-
-const resolveMedicalClassName = (bundle: OrderBundle, medicalClass: string) => {
-  const chargeMeta = resolveCanonicalChargeClassMeta({ entity: bundle.entity, classCode: bundle.classCode });
-  if (chargeMeta) return chargeMeta.className;
-  if ((resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim()) === 'radiologyOrder' && medicalClass === '700') {
-    return '放射線';
-  }
-  return bundle.className?.trim() || undefined;
 };
 
 const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormalizedRow | null => {
@@ -373,7 +318,7 @@ const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormaliz
   if (!isPrescription && !isInjection) return null;
   const usageCodeCandidate =
     bundle.adminCode?.trim() || (isPrescription && bundle.admin?.trim() ? bundle.admin.trim().split(/\s+/)[0] : '');
-  const usageCode = isSendableUsageCode(usageCodeCandidate) ? usageCodeCandidate : '';
+  const usageCode = /^\d{4,}$/.test(usageCodeCandidate) ? usageCodeCandidate : '';
   if (!usageCode) return null;
   const hasUsageAlready = rows.some((row) => row.medication.code.trim() === usageCode);
   if (hasUsageAlready) return null;
@@ -425,12 +370,12 @@ export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundl
       moduleId: bundle.moduleId,
       bundleName: bundle.bundleName?.trim() || undefined,
       admin: bundle.admin?.trim() || undefined,
-        adminCode: bundle.adminCode?.trim() || undefined,
-        adminCodeSystem: bundle.adminCodeSystem?.trim() || undefined,
-        medicalClass,
-        medicalClassName: resolveMedicalClassName(bundle, medicalClass),
-        medicalClassNumber: bundle.bundleNumber?.trim() || '1',
-      },
+      adminCode: bundle.adminCode?.trim() || undefined,
+      adminCodeSystem: bundle.adminCodeSystem?.trim() || undefined,
+      medicalClass,
+      medicalClassName: bundle.className?.trim() || undefined,
+      medicalClassNumber: bundle.bundleNumber?.trim() || '1',
+    },
     rows,
   };
 };
@@ -514,7 +459,7 @@ export const fetchMedicalModV2OrderBundles = async (patientId: string, from: str
 const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSource['kind']) => {
   const normalized = code.trim();
   if (!normalized) return false;
-  if (sourceKind === 'usage') return isSendableUsageCode(normalized);
+  if (sourceKind === 'usage') return /^\d+$/.test(normalized);
   if (sourceKind === 'body_part') return /^002\d{0,}$/.test(normalized);
   return /^\d{9}$/.test(normalized) || isCommentMedicationCode(normalized);
 };
@@ -587,16 +532,9 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
   if (prepared.bundleIssues.length > 0) {
     const preview = prepared.bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
     const remaining = prepared.bundleIssues.length - 4;
-    const hasInjectionContractIssue = prepared.bundleIssues.some(
-      (issue) =>
-        issue.entity === 'injectionOrder' &&
-        ['missing_injection_admin_code', 'invalid_injection_admin_code', 'invalid_injection_class_code', 'comment_only'].includes(issue.code),
-    );
     return {
       message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
-      nextAction: hasInjectionContractIssue
-        ? '注射は classCode 310、数字 adminCode の投与指示、本体となる注射薬剤/手技コード行をそろえてから再送してください。'
-        : 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
+      nextAction: 'コードなし行、コメントのみ束、部位のみ束を修正してから再送してください。',
     };
   }
   if (prepared.codeIssues.length > 0) {

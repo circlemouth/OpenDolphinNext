@@ -41,6 +41,7 @@ import open.dolphin.rest.dto.orca.OrcaOrderInputSetDetailResponse;
 import open.dolphin.rest.dto.orca.OrcaOrderInputSetListResponse;
 import open.dolphin.rest.dto.orca.OrcaOrderInteractionCheckRequest;
 import open.dolphin.rest.dto.orca.OrcaOrderInteractionCheckResponse;
+import open.dolphin.rest.dto.orca.BacteriaOrderMetadata;
 import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
@@ -259,11 +260,15 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "inputset_not_found", "Input set not found");
         }
-        bundle.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(bundle.getEntity()));
+        bundle.setEntity(OrcaOrderBundle600SubtypeSupport.resolveInputSetEntity(
+                normalizedEntity,
+                OrcaOrderBundleRequestSupport.normalizeEntityResponse(bundle.getEntity()),
+                bundle.getClassCode()));
         bundle.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(
                 normalizedEntity != null ? normalizedEntity : bundle.getEntity(),
                 bundle.getSubtype(),
                 null));
+        bundle.setBacteria(deriveBacteriaFromInputSetBundle(bundle));
         if (normalizedEntity != null && !OrcaOrderBundle600SubtypeSupport.matchesInputSetEntity(
                 normalizedEntity, bundle.getEntity(), bundle.getClassCode())) {
             Map<String, Object> audit = new HashMap<>();
@@ -291,6 +296,30 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
         audit.put("itemCount", bundle.getItems().size());
         recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
+    }
+
+    private static BacteriaOrderMetadata deriveBacteriaFromInputSetBundle(OrcaOrderInputSetDetailResponse.Bundle bundle) {
+        if (bundle == null || !IInfoModel.ENTITY_BACTERIA_ORDER.equals(OrcaOrderBundleRequestSupport.normalizeEntityResponse(bundle.getEntity()))) {
+            return null;
+        }
+        BacteriaOrderMetadata metadata = new BacteriaOrderMetadata();
+        List<BacteriaOrderMetadata.CarrierComment> comments = new ArrayList<>();
+        if (bundle.getItems() != null) {
+            for (OrcaOrderInputSetDetailResponse.Item item : bundle.getItems()) {
+                if (item == null || !OrcaOrderBundleRecommendationSupport.isCommentCode(item.getCode())) {
+                    continue;
+                }
+                BacteriaOrderMetadata.CarrierComment comment = new BacteriaOrderMetadata.CarrierComment();
+                comment.setCode(OrcaOrderBundleRequestSupport.trimToNull(item.getCode()));
+                comment.setName(OrcaOrderBundleRequestSupport.trimToNull(item.getName()));
+                if (comment.getCode() != null && comment.getCode().matches("^842\\d{6}$")) {
+                    comment.setInputValue(OrcaOrderBundleRequestSupport.trimToNull(item.getQuantity()));
+                }
+                comments.add(comment);
+            }
+        }
+        metadata.setCarrierComments(comments);
+        return comments.isEmpty() ? null : metadata;
     }
 
     @POST

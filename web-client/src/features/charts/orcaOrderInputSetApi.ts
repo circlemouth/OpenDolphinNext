@@ -1,6 +1,8 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { ensureObservabilityMeta } from '../../libs/observability/observability';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
+import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
+import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { normalizeOrderBundleRowRole, normalizeOrderBundleRowSubtype } from './orderBundleApi';
 
 export type OrcaOrderInputSetSummary = {
@@ -35,6 +37,7 @@ export type OrcaOrderInputSetDetailResult = {
     bundleName?: string;
     bundleNumber?: string;
     subtype?: string;
+    bacteria?: BacteriaOrderMetadata;
     classCode?: string;
     classCodeSystem?: string;
     className?: string;
@@ -62,6 +65,37 @@ export type OrcaOrderInputSetDetailResult = {
       userComment?: string;
       rowRole?: 'main' | 'auxiliary' | 'comment';
       rowSubtype?: 'material' | 'contrastDrug';
+      category?: string;
+      itemNumber?: string;
+      itemNumberBranch?: string;
+    }>;
+    materialItems?: Array<{
+      code?: string;
+      name?: string;
+      quantity?: string;
+      unit?: string;
+      memo?: string;
+      genericFlg?: 'yes' | 'no';
+      userComment?: string;
+      rowRole?: 'main' | 'auxiliary' | 'comment';
+      rowSubtype?: 'material' | 'contrastDrug';
+      category?: string;
+      itemNumber?: string;
+      itemNumberBranch?: string;
+    }>;
+    commentItems?: Array<{
+      code?: string;
+      name?: string;
+      quantity?: string;
+      unit?: string;
+      memo?: string;
+      genericFlg?: 'yes' | 'no';
+      userComment?: string;
+      rowRole?: 'main' | 'auxiliary' | 'comment';
+      rowSubtype?: 'material' | 'contrastDrug';
+      category?: string;
+      itemNumber?: string;
+      itemNumberBranch?: string;
     }>;
   };
   notFound?: boolean;
@@ -190,8 +224,9 @@ export async function fetchOrcaOrderInputSetDetail(params: {
   }
   const bundle = (json as { bundle?: Record<string, unknown> }).bundle ?? {};
   type DetailItem = NonNullable<OrcaOrderInputSetDetailResult['bundle']>['items'][number];
-  const items: NonNullable<OrcaOrderInputSetDetailResult['bundle']>['items'] = Array.isArray((bundle as { items?: unknown[] }).items)
-    ? ((bundle as { items?: Array<Record<string, unknown>> }).items ?? []).map((item): DetailItem => {
+  const normalizeDetailItems = (source: unknown): NonNullable<OrcaOrderInputSetDetailResult['bundle']>['items'] =>
+    Array.isArray(source)
+      ? (source as Array<Record<string, unknown>>).map((item): DetailItem => {
         const detailItem: DetailItem = {};
         if (typeof item.code === 'string') detailItem.code = item.code;
         if (typeof item.name === 'string') detailItem.name = item.name;
@@ -207,9 +242,15 @@ export async function fetchOrcaOrderInputSetDetail(params: {
         detailItem.rowSubtype = normalizeOrderBundleRowSubtype(
           typeof item.rowSubtype === 'string' ? item.rowSubtype : undefined,
         );
+        if (typeof item.category === 'string') detailItem.category = item.category;
+        if (typeof item.itemNumber === 'string') detailItem.itemNumber = item.itemNumber;
+        if (typeof item.itemNumberBranch === 'string') detailItem.itemNumberBranch = item.itemNumberBranch;
         return detailItem;
       })
-    : [];
+      : [];
+  const items = normalizeDetailItems((bundle as { items?: unknown[] }).items);
+  const materialItems = normalizeDetailItems((bundle as { materialItems?: unknown[] }).materialItems);
+  const commentItems = normalizeDetailItems((bundle as { commentItems?: unknown[] }).commentItems);
   const bodyPartSource = (bundle as { bodyPart?: Record<string, unknown> | null }).bodyPart;
   return {
     ok: true,
@@ -221,6 +262,9 @@ export async function fetchOrcaOrderInputSetDetail(params: {
       bundleName: typeof bundle.bundleName === 'string' ? bundle.bundleName : undefined,
       bundleNumber: typeof bundle.bundleNumber === 'string' ? bundle.bundleNumber : undefined,
       subtype: typeof bundle.subtype === 'string' ? bundle.subtype : undefined,
+      bacteria: normalizeBacteriaOrderMetadata(
+        bundle.bacteria && typeof bundle.bacteria === 'object' ? (bundle.bacteria as BacteriaOrderMetadata) : undefined,
+      ),
       classCode: typeof bundle.classCode === 'string' ? bundle.classCode : undefined,
       classCodeSystem: typeof bundle.classCodeSystem === 'string' ? bundle.classCodeSystem : undefined,
       className: typeof bundle.className === 'string' ? bundle.className : undefined,
@@ -242,6 +286,8 @@ export async function fetchOrcaOrderInputSetDetail(params: {
             }
           : null,
       items,
+      materialItems,
+      commentItems,
     },
     runId: parsed.runId ?? meta.runId,
     traceId,

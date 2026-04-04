@@ -1,57 +1,117 @@
 # ORCA Order Remediation Notes (2026-04-03)
 
-- Worktree: `C:/wt/odn-orca-treatment-general-20260403T235043Z`
-- Scope: treatment/general の material code contract, rowRole round-trip, material validation parity, warning focus, server strictness の回帰固定
+- RUN_ID: `20260403T235159Z`
+- Scope: class 600 remediation for `testOrder`, `physiologyOrder`, and `bacteriaOrder`
+- Status: final contract for Web client and modernized server
 
-## Final Contract
+## Final Design
 
-- `treatmentOrder` を canonical entity とし、`generalOrder` は ingress alias のみとする。
-- `classCode=400`, `classCodeSystem=Claim007`, `className=処置` を保存・送信で不変に保つ。
-- `bundleName`, `admin`, `memo`, `adminMemo`, `item.memo` は treatment では local-only として扱い、ORCA 送信 payload には載せない。
-- bodyPart は first-class のまま扱い、treatment/radiology でのみ保持する。
-- treatment/general の coded row は sendable code のみ許可し、非 sendable material code は保存前に reject する。
-- `rowRole` は memo prefix ではなく明示 carrier で保持し、save -> fetch -> reopen -> normalize で意味が変わらないようにする。
+### 1. Class 600 identification
 
-## Regression Coverage Added
+- `generalOrder` is an ingress alias of `treatmentOrder`.
+- `laboTest` is an ingress alias of `testOrder`.
+- `testOrder`, `physiologyOrder`, and `bacteriaOrder` remain distinct public entities in the client/server contract.
+- ORCA input-set list/detail may still expose canonical class 600 rows as `testOrder`; the requester entity is used to resolve the public subtype/entity on apply.
 
-- `web-client/src/features/charts/__tests__/orderBundleValidation.test.ts`
-  - sendable 9桁 material code を許可
-  - code なし material row を `uncoded_material_item` で block
-  - name なし material row を `invalid_material_item` で block
-- `web-client/src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx`
-  - treatment input set 反映後の warning focus を bodyPart/main/material/comment の順で検証
-  - material/comment の rowRole が UI 上の DOM id と整合することを確認
-- `web-client/src/features/charts/__tests__/orderRpNormalization.test.ts`
-  - treatment bundle の normalize 順を bodyPart -> main -> material -> comment に固定
-- `web-client/src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx`
-  - treatment warning を送信 cache に保存した際の sourceKind/sourceItemIndex を検証
-- `web-client/src/features/charts/__tests__/orderBundleApi.test.ts`
-  - memo carrier から `rowRole` を復元する save/fetch round-trip を追加
-- `server-modernized/src/test/java/open/dolphin/rest/orca/OrcaChartSupportSupportTest.java`
-  - treatment bodyPart/material/comment の XML 出力順を検証
-- `server-modernized/src/test/java/open/dolphin/rest/orca/OrcaOrderBundleRecommendationSupportTest.java`
-  - treatment template で bodyPart/main/material/comment を分離して復元することを検証
-- `server-modernized/src/test/java/open/dolphin/rest/orca/OrcaOrderBundleResourceTest.java`
-  - invalid bodyPart code と non-sendable material code の direct API reject を検証
+### 2. Bacteria send policy
 
-## Verification Result
+- `bacteriaOrder` is no longer treated as an automatic ORCA send blocker.
+- Sendable content is still the documented `medicalmodv2` row model: class 600 coded rows plus documented comment/material carriers.
+- `subtype` is first-class and preserved across save/fetch/input-set/recommendation, but it is not emitted into `medicalmodv2` XML because ORCA does not provide a dedicated bacteria subtype tag.
+- `bacteria` metadata is first-class and stored as:
+  - `specimen`
+  - `carrierComments`
+- Only metadata that can be projected onto documented ORCA carriers is converted into comment rows.
+- Metadata without a documented ORCA carrier remains local-only, but it does not stop other bundles from being sent.
 
-- `npm --prefix web-client test -- --run src/features/charts/__tests__/orderBundleApi.test.ts src/features/charts/__tests__/orcaOrderInputSetApi.test.ts`
-  - pass
-- `npm --prefix web-client test -- --run src/features/charts/__tests__/orderBundleValidation.test.ts src/features/charts/__tests__/orderRpNormalization.test.ts`
-  - pass
+### 3. Chart-wide blocking
+
+- The old `unsupported_bacteria_subtype` blanket block was removed.
+- A bacteria bundle is blocked only by the same ordinary validation used for other bundles:
+  - missing required coded rows
+  - invalid code family
+  - mixed coded/uncoded rows
+  - comment-only bundle without a sendable main row
+- The existence of a `bacteriaOrder` bundle must not stop unrelated sendable bundles in the same chart.
+
+## Public Contract
+
+### First-class fields
+
+- `subtype`
+- `bacteria`
+  - `specimen`
+  - `carrierComments`
+- `materialItems`
+- `commentItems`
+- comment metadata on each row:
+  - `category`
+  - `itemNumber`
+  - `itemNumberBranch`
+
+### Preserved across
+
+- UI state
+- bundle save API
+- fetch API
+- ORCA input-set detail
+- recommendation template
+- normalization source model
+
+## Send vs Local-only
+
+### Sent to ORCA
+
+- class-coded main rows
+- explicit `materialItems`
+- explicit `commentItems`
+- bacteria metadata only when it can be projected into documented ORCA comment carriers
+- `classCode`, `classCodeSystem`, `className`
+- `bodyPart` where applicable
+
+### Local-only
+
+- `bundleName`
+- free-text `memo`
+- free-text `item.memo`
+- `adminMemo` unless the entity-specific ORCA carrier explicitly uses it
+- `subtype` itself
+- bacteria metadata that has no documented ORCA carrier
+
+## Persistence Notes
+
+- `stampMemo` token storage is no longer the public contract.
+- Legacy stamp memo parsing may still be used internally for compatibility/read-path recovery, but the external API contract is first-class:
+  - `subtype`
+  - `bacteria`
+  - `materialItems`
+  - `commentItems`
+
+## Verification
+
+### Web client
+
 - `npm --prefix web-client run typecheck`
-  - pass
-- `npm --prefix web-client test -- --run src/features/charts/__tests__/orderBundleValidation.test.ts src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx src/features/charts/__tests__/orderSendSmoke.test.ts src/features/charts/__tests__/orderRpNormalization.test.ts src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx src/features/charts/__tests__/orderBundleApi.test.ts src/features/charts/__tests__/orcaOrderInputSetApi.test.ts`
-  - fail
-  - `orderBundleValidation.test.ts` と `orderRpNormalization.test.ts` は pass
-  - `chartsActionBar.orca-send.test.tsx` は `isSendableMedicalModV2Code is not defined` で fail
-  - `orderBundleOrcaSupport.test.tsx` は warning focus の activeElement 期待で fail
-- `mvn -f pom.server-modernized.xml -pl api-contract,server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaChartSupportSupportTest,OrcaOrderBundleRequestSupportTest,OrcaOrderBundleResourceTest,OrcaOrderBundleMutationSupportTest,OrcaOrderBundleRecommendationSupportTest test`
-  - 未実行: この環境に `mvn` が存在しない
+  - Result: passed
+- `npm --prefix web-client test -- --run src/features/charts/OrderBundleEditPanel.600-subtype.test.tsx src/features/charts/__tests__/orderBundleValidation.test.ts src/features/charts/__tests__/orderBundleApi.test.ts src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx src/features/charts/__tests__/orderRpNormalization.test.ts src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx src/features/charts/__tests__/orderSendSmoke.test.ts src/features/charts/orderSend600SubtypeSmoke.test.ts`
+  - Result: passed (`8 files / 86 tests`)
 
-## Remaining Blockers
+### Server
 
-- `chartsActionBar.orca-send.test.tsx` は runtime で `isSendableMedicalModV2Code is not defined` を拾っており、send 系の最終 green は main-code 側の修正待ち。
-- `orderBundleOrcaSupport.test.tsx` の warning focus は bodyPart/main/material/comment の順で固めたが、activeElement 期待の安定化をもう一段確認したい。
-- server 側は今回の追加 test で strictness を固定したが、実行結果は `mvn` が使える環境で再取得する。
+- Intended command:
+  - `mvn -f pom.server-modernized.xml -pl api-contract,server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaOrderBundle600SubtypeSupportTest,OrcaOrderBundleRequestSupportTest,OrcaOrderBundleResource600Test,OrcaChartSupportSupportTest,OrcaOrderInputSetMetadataSupportTest,OrcaOrderInputSetReadServiceTest test`
+- Result in this workspace:
+  - not executed, because `mvn` and `java` are not installed on the current machine PATH
+
+## Files Touched
+
+- `web-client/src/features/charts/OrderBundleEditPanel.tsx`
+- `web-client/src/features/charts/orderBundleApi.ts`
+- `web-client/src/features/charts/orderRpNormalization.ts`
+- `web-client/src/features/charts/orcaOrderInputSetApi.ts`
+- `web-client/src/features/charts/bacteriaOrderSupport.ts`
+- `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaOrderBundleMutationSupport.java`
+- `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaOrderBundleFetchSupport.java`
+- `server-modernized/src/main/java/open/dolphin/rest/orca/OrcaOrderBundleResource.java`
+- `server-modernized/src/main/java/open/dolphin/orca/read/OrcaOrderInputSetReadService.java`
+- `api-contract/src/main/java/open/dolphin/rest/dto/orca/*.java`

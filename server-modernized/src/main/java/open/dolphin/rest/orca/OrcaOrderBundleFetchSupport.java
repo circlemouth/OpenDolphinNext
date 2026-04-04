@@ -71,7 +71,10 @@ final class OrcaOrderBundleFetchSupport {
         List<OrcaOrderInputSetListResponse.Item> filtered = rows.stream()
                 .filter(Objects::nonNull)
                 .map(row -> {
-                    row.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(row.getEntity()));
+                    row.setEntity(OrcaOrderBundle600SubtypeSupport.resolveInputSetEntity(
+                            entity,
+                            OrcaOrderBundleRequestSupport.normalizeEntityResponse(row.getEntity()),
+                            row.getClassCode()));
                     return row;
                 })
                 .filter(row -> entity == null
@@ -136,6 +139,11 @@ final class OrcaOrderBundleFetchSupport {
                 moduleEntity,
                 null,
                 info != null ? info.getStampMemo() : null));
+        entry.setBacteria(OrcaOrderBundle600SubtypeSupport.resolveBacteria(
+                moduleEntity,
+                null,
+                info != null ? info.getStampMemo() : null,
+                bundle.getClaimItem()));
         String canonicalClassCode = OrcaChargeClassCanonicalSupport.canonicalClassCode(
                 moduleEntity,
                 bundle.getClassCode());
@@ -160,7 +168,13 @@ final class OrcaOrderBundleFetchSupport {
         List<OrderBundleFetchResponse.OrderBundleItem> items =
                 OrcaOrderBundleRecommendationSupport.toItems(moduleEntity, bundle.getClaimItem());
         entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(items));
-        entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(items));
+        entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(
+                OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(
+                        items, OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN)));
+        entry.setMaterialItems(OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(
+                items, OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL));
+        entry.setCommentItems(OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(
+                items, OrcaOrderBundleRecommendationSupport.ROW_ROLE_COMMENT));
         return entry;
     }
 }

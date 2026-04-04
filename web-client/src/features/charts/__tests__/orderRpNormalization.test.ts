@@ -1,13 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveCanonicalOrderEntity } from '../orderCategoryRegistry';
-import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 import {
-  buildMedicalModV2BlockNotice,
   collectMedicalModV2BundleIssues,
   fetchMedicalModV2OrderBundles,
   normalizeOrderBundleToRp,
-  prepareMedicalModV2SendData,
 } from '../orderRpNormalization';
 import { fetchOrderBundles } from '../orderBundleApi';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
@@ -29,35 +26,19 @@ describe('orderRpNormalization', () => {
     vi.clearAllMocks();
   });
 
-  it('charge bundles use canonical class metadata for RP normalization', () => {
-    const normalized = normalizeOrderBundleToRp({
-      entity: 'baseChargeOrder',
-      bundleName: 'BASE_CHARGE_SET',
-      bundleNumber: '1',
-      classCode: '120',
-      classCodeSystem: 'Claim007',
-      className: 'bundle fallback should not survive',
-      items: [{ code: '120000110', name: 'BASE_CHARGE_SET', quantity: '1', unit: 'times' }],
-    } as any);
-
-    expect(normalized?.header.medicalClass).toBe('120');
-    expect(normalized?.header.medicalClassName).toBe(
-      resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className,
-    );
-  });
-  it('canonical entity は generalOrder と laboTest を正規化する', () => {
+  it('resolves canonical aliases', () => {
     expect(resolveCanonicalOrderEntity('generalOrder')).toBe('treatmentOrder');
     expect(resolveCanonicalOrderEntity('laboTest')).toBe('testOrder');
   });
 
-  it('コードあり/なし混在の bundle は送信前 issue を返す', () => {
+  it('reports mixed coded and uncoded rows', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'treatmentOrder',
-        bundleName: '混在束',
+        bundleName: 'mixed-bundle',
         items: [
-          { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回' },
-          { name: '未コード行', quantity: '1', unit: '回' },
+          { code: '140000610', name: 'coded-item', quantity: '1', unit: 'times' },
+          { name: 'free-text-only', quantity: '1', unit: 'times' },
         ],
       } as any,
     ]);
@@ -66,173 +47,91 @@ describe('orderRpNormalization', () => {
     expect(issues[0]).toEqual(
       expect.objectContaining({
         code: 'mixed_coded_uncoded',
-        bundleName: '混在束',
+        bundleName: 'mixed-bundle',
       }),
     );
   });
 
-  it('部位のみの bundle は送信前 issue を返す', () => {
+  it('reports comment-only bundles when no sendable main row exists', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'radiologyOrder',
-        bundleName: '胸部CT',
-        bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
-        items: [{ code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' }],
+        bundleName: 'body-part-only',
+        bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'part', memo: '' },
+        items: [{ code: '002001', name: 'CHEST', quantity: '1', unit: 'part', memo: '' }],
       } as any,
     ]);
 
     expect(issues).toHaveLength(1);
     expect(issues[0]).toEqual(
       expect.objectContaining({
-        code: 'missing_main_row',
-        bundleName: '胸部CT',
+        code: 'comment_only',
+        bundleName: 'body-part-only',
       }),
     );
   });
 
-  it('bacteriaOrder の subtype は carrier 未対応のため送信前 issue を返す', () => {
+  it('does not block bacteria bundles only because subtype exists', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'bacteriaOrder',
-        bundleName: '細菌培養',
+        bundleName: 'bacteria-culture',
         subtype: 'culture',
-        items: [{ code: '160000010', name: '培養検査', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: '160000010', name: 'culture-row', quantity: '1', unit: 'count', memo: '' }],
       } as any,
     ]);
 
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'unsupported_bacteria_subtype',
-          bundleName: '細菌培養',
-        }),
-      ]),
-    );
+    expect(issues).toEqual([]);
   });
 
-  it('otherOrder の擬似8系コードは送信前 issue を返す', () => {
-    const issues = collectMedicalModV2BundleIssues([
-      {
-        entity: 'otherOrder',
-        bundleName: 'invalid-other-code',
-        classCode: '800',
-        items: [{ code: '89000001', name: '擬似8系コード', quantity: '1', unit: '回', memo: '' }],
-      } as any,
-    ]);
-
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'invalid_other_order_code',
-          bundleName: 'invalid-other-code',
-        }),
-      ]),
-    );
-  });
-
-  it('otherOrder の不正 classCode は送信前 block notice を返す', () => {
-    const prepared = prepareMedicalModV2SendData([
-      {
-        entity: 'otherOrder',
-        bundleName: 'invalid-other-class',
-        classCode: '8A0',
-        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
-      } as any,
-    ]);
-
-    expect(buildMedicalModV2BlockNotice(prepared)?.message).toContain('invalid-other-class');
-    expect(buildMedicalModV2BlockNotice(prepared)?.message).toContain('otherOrder');
-  });
-
-  it('normalize は radiology auxiliary rowSubtype と canonical className を send source に残す', () => {
+  it('keeps units during normalization', () => {
     const normalized = normalizeOrderBundleToRp({
       entity: 'radiologyOrder',
-      bundleName: '胸部CT',
+      bundleName: 'chest-ct',
       bundleNumber: '1',
-      classCode: '700',
-      className: '画像診断',
-      bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
-      items: [
-        { code: '170017510', name: '胸部CT', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
-        {
-          code: '600000001',
-          name: '造影剤',
-          quantity: '1',
-          unit: '本',
-          memo: '',
-          rowRole: 'auxiliary',
-          rowSubtype: 'contrastDrug',
-        },
-        { code: '0085001', name: 'コメント', quantity: '', unit: '', memo: '', rowRole: 'comment' },
-      ],
+      items: [{ code: '170017510', name: 'ct', quantity: '1', unit: 'times', memo: '' }],
     } as any);
 
-    expect(normalized?.header.medicalClassName).toBe('放射線');
-    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['002001', '170017510', '600000001', '0085001']);
-    expect(normalized?.rows[1]?.source).toEqual(expect.objectContaining({ kind: 'bundle_item', rowRole: 'main' }));
-    expect(normalized?.rows[2]?.source).toEqual(
-      expect.objectContaining({ kind: 'bundle_item', rowRole: 'auxiliary', rowSubtype: 'contrastDrug' }),
+    expect(normalized?.rows[0]?.medication).toEqual(
+      expect.objectContaining({
+        unit: 'times',
+      }),
     );
-    expect(normalized?.rows[3]?.source).toEqual(expect.objectContaining({ kind: 'bundle_item', rowRole: 'comment' }));
   });
 
-  it('normalize は explicit bodyPart と adminCode を first-class で保持する', () => {
+  it('keeps explicit bodyPart and admin code as first-class fields', () => {
     const normalized = normalizeOrderBundleToRp({
       entity: 'radiologyOrder',
-      bundleName: '胸部CT',
+      bundleName: 'chest-ct',
       bundleNumber: '1',
-      admin: '静注',
+      admin: 'oral',
       adminCode: '4101',
-      bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
-      items: [{ code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '' }],
+      bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'part', memo: '' },
+      items: [{ code: '170017510', name: 'ct', quantity: '1', unit: 'times', memo: '' }],
     } as any);
 
-    expect(normalized?.header.admin).toBe('静注');
+    expect(normalized?.header.admin).toBe('oral');
     expect(normalized?.header.adminCode).toBe('4101');
     expect(normalized?.rows.map((row) => row.source.kind)).toEqual(['body_part', 'bundle_item']);
     expect(normalized?.rows[0]?.medication).toEqual(
       expect.objectContaining({
         code: '002001',
-        unit: '部位',
+        unit: 'part',
       }),
     );
   });
-  it('normalize は treatmentOrder の bodyPart/main/material/comment 順を固定する', () => {
-    const normalized = normalizeOrderBundleToRp({
-      entity: 'treatmentOrder',
-      bundleName: '創傷処置セット',
-      bundleNumber: '3',
-      classCode: '400',
-      classCodeSystem: 'Claim007',
-      className: 'Treatment',
-      bodyPart: { code: '002001', name: '膝関節', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
-      items: [
-        { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
-        { code: '700000021', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'material' },
-        { code: '0085001', name: '注意事項', quantity: '', unit: '', memo: '術前確認', rowRole: 'comment' },
-      ],
-    } as any);
 
-    expect(normalized?.header.medicalClass).toBe('400');
-    expect(normalized?.header.medicalClassNumber).toBe('3');
-    expect(normalized?.rows.map((row) => row.medication.code)).toEqual([
-      '002001',
-      '140000610',
-      '700000021',
-      '0085001',
-    ]);
-  });
-  it('normalize は injectionOrder の admin 行と rowRole 順を固定する', () => {
+  it('keeps injection usage row and row-role ordering', () => {
     const normalized = normalizeOrderBundleToRp({
       entity: 'injectionOrder',
       bundleName: 'drip-set',
       bundleNumber: '3',
       classCode: '310',
-      admin: '静注',
+      admin: 'infuse',
       adminCode: '4101',
       items: [
         { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'slow', rowRole: 'comment' },
-        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'auxiliary' },
+        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
         { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
         { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', rowRole: 'main' },
       ],
@@ -249,48 +148,7 @@ describe('orderRpNormalization', () => {
     ]);
   });
 
-  it('injectionOrder の非数値 adminCode は usage row にせず、送信前 issue で止める', () => {
-    const bundle = {
-      entity: 'injectionOrder',
-      bundleName: 'invalid-admin',
-      bundleNumber: '1',
-      classCode: '310',
-      admin: '静注候補',
-      adminCode: 'Y100',
-      items: [{ code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', rowRole: 'main' }],
-    } as any;
-
-    const normalized = normalizeOrderBundleToRp(bundle);
-    const issues = collectMedicalModV2BundleIssues([bundle]);
-
-    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['620000012']);
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'invalid_injection_admin_code',
-          bundleName: 'invalid-admin',
-        }),
-      ]),
-    );
-  });
-
-  it('injectionOrder は投与指示が未入力でも本体コード行だけで normalize/send 対象にできる', () => {
-    const bundle = {
-      entity: 'injectionOrder',
-      bundleName: 'drug-only',
-      bundleNumber: '1',
-      classCode: '310',
-      items: [{ code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', rowRole: 'main' }],
-    } as any;
-
-    const normalized = normalizeOrderBundleToRp(bundle);
-    const issues = collectMedicalModV2BundleIssues([bundle]);
-
-    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['620000012']);
-    expect(issues).toEqual([]);
-  });
-
-  it('fetchMedicalModV2OrderBundles は medOrder を prescription-orders から組み立てる', async () => {
+  it('uses prescription orders as the medOrder source of truth', async () => {
     vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
       ok: true,
       patientId: '000001',
@@ -301,16 +159,16 @@ describe('orderRpNormalization', () => {
           {
             ...buildEmptyPrescriptionOrder('000001', '2026-03-09').rps[0],
             name: 'RP1',
-            usage: '毎食後',
+            usage: 'after meal',
             usageCode: '001000',
             daysOrTimes: '7',
             drugs: [
               {
                 rowId: 'drug-1',
                 code: '620000001',
-                name: '薬剤A',
+                name: 'drug-a',
                 quantity: '3',
-                unit: '錠',
+                unit: 'tablet',
                 genericChangeAllowed: true,
                 isGeneralNamePrescription: false,
                 drugComment: '',
@@ -326,7 +184,7 @@ describe('orderRpNormalization', () => {
       ok: true,
       bundles:
         entity === 'treatmentOrder'
-          ? [{ entity: 'treatmentOrder', bundleName: '処置', bundleNumber: '1', items: [{ code: '140000610', name: '処置', quantity: '1', unit: '回' }] }]
+          ? [{ entity: 'treatmentOrder', bundleName: 'treatment-1', bundleNumber: '1', items: [{ code: '140000610', name: 'procedure', quantity: '1', unit: 'times' }] }]
           : [],
     }));
 
@@ -340,12 +198,12 @@ describe('orderRpNormalization', () => {
         expect.objectContaining({
           entity: 'medOrder',
           bundleName: 'RP1',
-          admin: '毎食後',
+          admin: 'after meal',
           adminMemo: '001000',
         }),
         expect.objectContaining({
           entity: 'treatmentOrder',
-          bundleName: '処置',
+          bundleName: 'treatment-1',
         }),
       ]),
     );

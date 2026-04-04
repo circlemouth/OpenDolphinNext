@@ -33,6 +33,8 @@ export type MedicalModV2Medication = {
   number?: string;
   unit?: string;
   genericFlg?: 'yes' | 'no';
+  nameInputValue?: string;
+  inputCode?: string;
 };
 
 export type MedicalModV2Information = {

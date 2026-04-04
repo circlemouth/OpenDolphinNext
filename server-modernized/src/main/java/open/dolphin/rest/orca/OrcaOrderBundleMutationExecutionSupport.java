@@ -5,13 +5,17 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.KarteBean;
 import open.dolphin.infomodel.UserModel;
+import open.dolphin.rest.dto.orca.BacteriaOrderMetadata;
 import open.dolphin.rest.dto.orca.OrderBundleMutationRequest;
 
 final class OrcaOrderBundleMutationExecutionSupport {
+
+    private static final Pattern BACTERIA_NUMERIC_COMMENT_VALUE_PATTERN = Pattern.compile("^[+-]?\\d+(?:\\.\\d+)?$");
 
     private OrcaOrderBundleMutationExecutionSupport() {
     }
@@ -86,10 +90,11 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 && !OrcaOrderBundle600SubtypeSupport.isValidSubtype(canonicalEntity, explicitSubtype)) {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
+        validateBacteriaMetadata(canonicalEntity, op.getBacteria(), validationFailure);
         if (IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)) {
             validateInjectionContract(op, validationFailure);
         }
-        List<OrderBundleMutationRequest.BundleItem> items = op.getItems();
+        List<OrderBundleMutationRequest.BundleItem> items = collectItems(op);
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
         boolean hasSendableMainRow = false;
@@ -208,7 +213,72 @@ final class OrcaOrderBundleMutationExecutionSupport {
                         || OrcaOrderBundleRequestSupport.hasText(item.getGenericFlg())
                         || OrcaOrderBundleRequestSupport.hasText(item.getUserComment())
                         || OrcaOrderBundleRequestSupport.hasText(item.getRowRole())
-                        || OrcaOrderBundleRequestSupport.hasText(item.getRowSubtype()));
+                        || OrcaOrderBundleRequestSupport.hasText(item.getRowSubtype())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getCategory())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getItemNumber())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getItemNumberBranch()));
+    }
+
+    private static List<OrderBundleMutationRequest.BundleItem> collectItems(OrderBundleMutationRequest.BundleOperation op) {
+        List<OrderBundleMutationRequest.BundleItem> collected = new ArrayList<>();
+        appendItems(collected, op != null ? op.getItems() : null);
+        appendItems(collected, op != null ? op.getMaterialItems() : null);
+        appendItems(collected, op != null ? op.getCommentItems() : null);
+        return collected;
+    }
+
+    private static void appendItems(
+            List<OrderBundleMutationRequest.BundleItem> target,
+            List<OrderBundleMutationRequest.BundleItem> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        target.addAll(items);
+    }
+
+    private static void validateBacteriaMetadata(
+            String canonicalEntity,
+            BacteriaOrderMetadata bacteria,
+            ValidationFailure validationFailure) {
+        if (bacteria == null) {
+            return;
+        }
+        if (!IInfoModel.ENTITY_BACTERIA_ORDER.equals(canonicalEntity)) {
+            throw validationFailure.invalid("bacteria", "bacteria metadata is incompatible with entity");
+        }
+        validateCarrierComment("bacteria.specimen", bacteria.getSpecimen(), validationFailure);
+        if (bacteria.getCarrierComments() != null) {
+            for (int i = 0; i < bacteria.getCarrierComments().size(); i += 1) {
+                validateCarrierComment("bacteria.carrierComments[" + i + "]", bacteria.getCarrierComments().get(i), validationFailure);
+            }
+        }
+    }
+
+    private static void validateCarrierComment(
+            String field,
+            BacteriaOrderMetadata.CarrierComment comment,
+            ValidationFailure validationFailure) {
+        if (comment == null) {
+            return;
+        }
+        String code = OrcaOrderBundleRequestSupport.trimToNull(comment.getCode());
+        String name = OrcaOrderBundleRequestSupport.trimToNull(comment.getName());
+        String inputValue = OrcaOrderBundleRequestSupport.trimToNull(comment.getInputValue());
+        if (code == null && name == null && inputValue == null) {
+            return;
+        }
+        if (code == null || !OrcaOrderBundleRecommendationSupport.isCommentCode(code)) {
+            throw validationFailure.invalid(field, "bacteria carrier comment code is invalid");
+        }
+        if (code.matches("^842\\d{6}$")) {
+            if (inputValue == null || !BACTERIA_NUMERIC_COMMENT_VALUE_PATTERN.matcher(inputValue).matches()) {
+                throw validationFailure.invalid(field, "842 comment requires numeric inputValue");
+            }
+            return;
+        }
+        if (code.matches("^830\\d{6}$") && inputValue == null) {
+            throw validationFailure.invalid(field, "830 comment requires inputValue");
+        }
     }
 
     private static String invalidCodeMessage(String canonicalEntity, String rowRole) {

@@ -16,14 +16,14 @@ final class OrcaOrderBundleItemMemoSupport {
     static ParsedItem parse(String memo) {
         String raw = memo == null ? "" : memo;
         if (!raw.startsWith(META_PREFIX)) {
-            return new ParsedItem(null, null, null, null, raw);
+            return new ParsedItem(null, null, null, null, null, null, null, raw);
         }
         String[] lines = raw.split("\\n", -1);
         String firstLine = lines.length > 0 ? lines[0] : "";
         String jsonPart = firstLine.substring(META_PREFIX.length()).trim();
         String memoText = lines.length <= 1 ? "" : String.join("\n", java.util.Arrays.copyOfRange(lines, 1, lines.length));
         if (jsonPart.isEmpty()) {
-            return new ParsedItem(null, null, null, null, memoText);
+            return new ParsedItem(null, null, null, null, null, null, null, memoText);
         }
         try {
             Map<String, Object> parsed = OBJECT_MAPPER.readValue(jsonPart, new TypeReference<Map<String, Object>>() {
@@ -33,20 +33,35 @@ final class OrcaOrderBundleItemMemoSupport {
                     normalizeUserComment(parsed.get("userComment")),
                     OrcaOrderBundleRecommendationSupport.normalizeRowRole(parsed.get("rowRole")),
                     OrcaOrderBundleRecommendationSupport.normalizeRowSubtype(parsed.get("rowSubtype")),
+                    normalizeCategory(parsed.get("category")),
+                    normalizeText(parsed.get("itemNumber")),
+                    normalizeText(parsed.get("itemNumberBranch")),
                     memoText);
         } catch (Exception error) {
-            return new ParsedItem(null, null, null, null, raw);
+            return new ParsedItem(null, null, null, null, null, null, null, raw);
         }
     }
 
-    static String format(String genericFlg, String userComment, String rowRole, String rowSubtype, String memoText) {
+    static String format(
+            String genericFlg,
+            String userComment,
+            String rowRole,
+            String rowSubtype,
+            String category,
+            String itemNumber,
+            String itemNumberBranch,
+            String memoText) {
         String normalizedGenericFlg = normalizeGenericFlg(genericFlg);
         String normalizedUserComment = normalizeUserComment(userComment);
         String normalizedRowRole = OrcaOrderBundleRecommendationSupport.normalizeRowRole(rowRole);
         String normalizedRowSubtype = OrcaOrderBundleRecommendationSupport.normalizeRowSubtype(rowSubtype);
+        String normalizedCategory = normalizeCategory(category);
+        String normalizedItemNumber = normalizeText(itemNumber);
+        String normalizedItemNumberBranch = normalizeText(itemNumberBranch);
         String body = memoText == null ? "" : memoText;
         if (normalizedGenericFlg == null && normalizedUserComment == null
-                && normalizedRowRole == null && normalizedRowSubtype == null) {
+                && normalizedRowRole == null && normalizedRowSubtype == null
+                && normalizedCategory == null && normalizedItemNumber == null && normalizedItemNumberBranch == null) {
             return body;
         }
         Map<String, String> payload = new LinkedHashMap<>();
@@ -61,6 +76,15 @@ final class OrcaOrderBundleItemMemoSupport {
         }
         if (normalizedRowSubtype != null) {
             payload.put("rowSubtype", normalizedRowSubtype);
+        }
+        if (normalizedCategory != null) {
+            payload.put("category", normalizedCategory);
+        }
+        if (normalizedItemNumber != null) {
+            payload.put("itemNumber", normalizedItemNumber);
+        }
+        if (normalizedItemNumberBranch != null) {
+            payload.put("itemNumberBranch", normalizedItemNumberBranch);
         }
         try {
             String metaLine = META_PREFIX + OBJECT_MAPPER.writeValueAsString(payload);
@@ -87,6 +111,30 @@ final class OrcaOrderBundleItemMemoSupport {
         return stringValue.isBlank() ? null : stringValue;
     }
 
-    record ParsedItem(String genericFlg, String userComment, String rowRole, String rowSubtype, String memoText) {
+    static String normalizeCategory(Object value) {
+        if (!(value instanceof String stringValue)) {
+            return null;
+        }
+        String trimmed = stringValue.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    static String normalizeText(Object value) {
+        if (!(value instanceof String stringValue)) {
+            return null;
+        }
+        String trimmed = stringValue.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    record ParsedItem(
+            String genericFlg,
+            String userComment,
+            String rowRole,
+            String rowSubtype,
+            String category,
+            String itemNumber,
+            String itemNumberBranch,
+            String memoText) {
     }
 }

@@ -30,6 +30,12 @@ import {
 } from './orcaOrderInputSetApi';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import {
+  bacteriaMetadataToCommentItems,
+  commentItemsToBacteriaMetadata,
+  normalizeBacteriaOrderMetadata,
+  type BacteriaOrderMetadata,
+} from './bacteriaOrderSupport';
+import {
   canonicalizeChargeBundleMeta,
   deriveChargeClassCodeFromCategory,
   isChargeOrderEntity,
@@ -125,6 +131,7 @@ type BundleFormState = {
   bundleNumber: string;
   sourceSetCode?: string;
   subtype: OrderTestSubtype | '';
+  bacteria?: BacteriaOrderMetadata;
   classCode?: string;
   classCodeSystem?: string;
   className?: string;
@@ -207,6 +214,21 @@ const stripRowMeta = (item: OrderBundleItem): OrderBundleItem => {
   } else {
     delete rest.userComment;
   }
+  if (resolvedItemFields.category) {
+    rest.category = resolvedItemFields.category;
+  } else {
+    delete rest.category;
+  }
+  if (resolvedItemFields.itemNumber) {
+    rest.itemNumber = resolvedItemFields.itemNumber;
+  } else {
+    delete rest.itemNumber;
+  }
+  if (resolvedItemFields.itemNumberBranch) {
+    rest.itemNumberBranch = resolvedItemFields.itemNumberBranch;
+  } else {
+    delete rest.itemNumberBranch;
+  }
   return rest;
 };
 
@@ -218,8 +240,14 @@ const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem)
   if (canonicalEntity !== 'injectionOrder') {
     return {
       ...item,
+      memo: resolvedItemFields.memoText?.trim() ? resolvedItemFields.memoText : undefined,
       genericFlg: resolvedItemFields.genericFlg,
       userComment: resolvedItemFields.userComment,
+      rowRole: resolvedItemFields.rowRole ?? item.rowRole,
+      rowSubtype: resolvedItemFields.rowSubtype ?? item.rowSubtype,
+      category: item.category ?? resolvedItemFields.category,
+      itemNumber: item.itemNumber ?? resolvedItemFields.itemNumber,
+      itemNumberBranch: item.itemNumberBranch ?? resolvedItemFields.itemNumberBranch,
     };
   }
   const fallbackComment = resolvedItemFields.userComment?.trim() || resolvedItemFields.memoText?.trim() || undefined;
@@ -228,6 +256,11 @@ const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem)
     memo: resolvedItemFields.memoText?.trim() ? resolvedItemFields.memoText : undefined,
     genericFlg: resolvedItemFields.genericFlg,
     userComment: fallbackComment,
+    rowRole: resolvedItemFields.rowRole ?? item.rowRole,
+    rowSubtype: resolvedItemFields.rowSubtype ?? item.rowSubtype,
+    category: item.category ?? resolvedItemFields.category,
+    itemNumber: item.itemNumber ?? resolvedItemFields.itemNumber,
+    itemNumberBranch: item.itemNumberBranch ?? resolvedItemFields.itemNumberBranch,
   };
 };
 
@@ -495,6 +528,24 @@ const collectBundleItems = (form: BundleFormState) => {
   ];
 };
 
+const mergeCommentItemsWithBacteriaMetadata = (
+  commentItems: OrderBundleItem[],
+  bacteria?: BacteriaOrderMetadata,
+) => {
+  const merged = [...commentItems];
+  const metadataItems = bacteriaMetadataToCommentItems(bacteria);
+  metadataItems.forEach((item) => {
+    if (merged.some((existing) => existing.code?.trim() === item.code?.trim() && existing.name.trim() === (item.name?.trim() ?? ''))) {
+      return;
+    }
+    merged.push({ ...item, name: item.name ?? '', quantity: item.quantity ?? '', unit: item.unit ?? '', memo: item.memo ?? '' });
+  });
+  return merged;
+};
+
+const deriveBacteriaMetadataForForm = (form: BundleFormState) =>
+  normalizeBacteriaOrderMetadata(commentItemsToBacteriaMetadata(form.commentItems, form.bacteria));
+
 const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | undefined => {
   if (!form.bodyPart?.name?.trim()) return undefined;
   return {
@@ -534,6 +585,7 @@ const buildEmptyForm = (today: string): BundleFormState => ({
   bundleNumber: '1',
   sourceSetCode: undefined,
   subtype: '',
+  bacteria: undefined,
   classCode: undefined,
   classCodeSystem: undefined,
   className: undefined,
@@ -549,11 +601,21 @@ const buildEmptyForm = (today: string): BundleFormState => ({
 
 export const toFormState = (bundle: OrderBundle, today: string): BundleFormState => {
   const normalizedBundle = canonicalizeChargeBundleMeta(bundle);
+  const sourceItems =
+    normalizedBundle.items.length > 0
+      ? normalizedBundle.items
+      : [...(normalizedBundle.materialItems ?? []), ...(normalizedBundle.commentItems ?? [])];
   const { normal, material, comment, bodyPart } = splitBundleItems(
     normalizedBundle.entity,
-    normalizedBundle.items,
+    sourceItems,
     normalizedBundle.bodyPart,
   );
+  const effectiveMaterial =
+    normalizedBundle.materialItems && normalizedBundle.materialItems.length > 0 ? normalizedBundle.materialItems : material;
+  const effectiveComment =
+    normalizedBundle.commentItems && normalizedBundle.commentItems.length > 0
+      ? normalizedBundle.commentItems
+      : mergeCommentItemsWithBacteriaMetadata(comment, normalizedBundle.bacteria);
   const prescription = parsePrescriptionClassCode(normalizedBundle.classCode);
   return {
     documentId: normalizedBundle.documentId,
@@ -566,6 +628,7 @@ export const toFormState = (bundle: OrderBundle, today: string): BundleFormState
     bundleNumber: normalizedBundle.bundleNumber ?? '1',
     sourceSetCode: normalizedBundle.sourceSetCode,
     subtype: resolveFormSubtype(normalizedBundle.entity ?? '', normalizedBundle.subtype),
+    bacteria: normalizeBacteriaOrderMetadata(normalizedBundle.bacteria),
     classCode: normalizedBundle.classCode ?? undefined,
     classCodeSystem: normalizedBundle.classCodeSystem ?? undefined,
     className: normalizedBundle.className ?? undefined,
@@ -576,8 +639,10 @@ export const toFormState = (bundle: OrderBundle, today: string): BundleFormState
     items: ensureTrailingEmptyMainItem(
       (normal.length > 0 ? normal : [buildEmptyItem()]).map((item) => normalizeItemForForm(normalizedBundle.entity, item)),
     ),
-    materialItems: material.map((item) => ensureRowId(normalizeItemForForm(normalizedBundle.entity, item))),
-    commentItems: comment.map((item) => ensureRowId(normalizeItemForForm(normalizedBundle.entity, item))),
+    materialItems: effectiveMaterial.map((item) => ensureRowId(normalizeItemForForm(normalizedBundle.entity, item))),
+    commentItems: mergeCommentItemsWithBacteriaMetadata(effectiveComment, normalizedBundle.bacteria).map((item) =>
+      ensureRowId(normalizeItemForForm(normalizedBundle.entity, item)),
+    ),
     bodyPart,
   };
 };
@@ -602,6 +667,7 @@ export const toFormStateFromRecommendation = (template: OrderRecommendationTempl
     adminCodeSystem: template.adminCodeSystem ?? undefined,
     bundleNumber: template.bundleNumber || '1',
     subtype: resolveFormSubtype('', template.subtype),
+    bacteria: normalizeBacteriaOrderMetadata(template.bacteria),
     classCode: chargeMeta?.classCode ?? template.classCode ?? undefined,
     classCodeSystem: chargeMeta?.classCodeSystem ?? template.classCodeSystem ?? undefined,
     className: chargeMeta?.className ?? template.className ?? undefined,
@@ -613,7 +679,9 @@ export const toFormStateFromRecommendation = (template: OrderRecommendationTempl
       template.items.length > 0 ? template.items.map((item) => ensureRowId({ ...item })) : [buildEmptyItem()],
     ),
     materialItems: template.materialItems.map((item) => ensureRowId({ ...item })),
-    commentItems: template.commentItems.map((item) => ({ ...item })),
+    commentItems: mergeCommentItemsWithBacteriaMetadata(template.commentItems, template.bacteria).map((item) =>
+      ensureRowId({ ...item }),
+    ),
     bodyPart: template.bodyPart ? { ...template.bodyPart } : null,
   };
 };
@@ -626,6 +694,9 @@ const isBundleFormEmpty = (form: BundleFormState) => {
     !form.admin.trim() &&
     !hasBundleNumber &&
     !form.memo.trim() &&
+    !form.bacteria?.specimen?.code?.trim() &&
+    !form.bacteria?.specimen?.name?.trim() &&
+    !form.bacteria?.specimen?.inputValue?.trim() &&
     !form.bodyPart?.name?.trim() &&
     form.items.every((item) => !hasOrderBundleItemValue(item)) &&
     form.commentItems.every((item) => !hasOrderBundleItemValue(item)) &&
@@ -650,6 +721,7 @@ const toOrderBundleFromInputSetDetail = (
     bundleNumber: bundle.bundleNumber ?? '1',
     sourceSetCode: bundle.sourceSetCode,
     subtype: resolveFormSubtype(resolvedEntity, bundle.subtype),
+    bacteria: normalizeBacteriaOrderMetadata(bundle.bacteria),
     classCode: bundle.classCode,
     classCodeSystem: bundle.classCodeSystem,
     className: bundle.className,
@@ -675,12 +747,41 @@ const toOrderBundleFromInputSetDetail = (
       quantity: item.quantity,
       unit: item.unit,
       memo: item.memo,
+      category: item.category ?? undefined,
+      itemNumber: item.itemNumber ?? undefined,
+      itemNumberBranch: item.itemNumberBranch ?? undefined,
       rowRole:
         item.rowRole === 'main' || item.rowRole === 'auxiliary' || item.rowRole === 'comment'
           ? item.rowRole
           : undefined,
       rowSubtype: resolveBundleItemRowSubtype(resolvedEntity, item, item.rowRole),
     })),
+    materialItems: (bundle.materialItems ?? []).map((item) => ({
+      code: item.code,
+      name: item.name ?? '',
+      quantity: item.quantity,
+      unit: item.unit,
+      memo: item.memo,
+      category: item.category ?? undefined,
+      itemNumber: item.itemNumber ?? undefined,
+      itemNumberBranch: item.itemNumberBranch ?? undefined,
+      rowRole: 'auxiliary',
+      rowSubtype: resolveBundleItemRowSubtype(resolvedEntity, item, 'auxiliary'),
+    })),
+    commentItems: mergeCommentItemsWithBacteriaMetadata(
+      (bundle.commentItems ?? []).map((item) => ({
+        code: item.code,
+        name: item.name ?? '',
+        quantity: item.quantity,
+        unit: item.unit,
+        memo: item.memo,
+        category: item.category ?? undefined,
+        itemNumber: item.itemNumber ?? undefined,
+        itemNumberBranch: item.itemNumberBranch ?? undefined,
+        rowRole: 'comment',
+      })),
+      bundle.bacteria,
+    ),
   });
 };
 
@@ -753,7 +854,7 @@ const resolveSendContractNote = (entity: string) => {
     return 'setCode は展開専用です。charge 系は classCode/className・数量/単位・coded row のみを ORCA へ送ります。算定指示・院内補足・自由メモ・開始日は local-only とし、medicationgetv2 の Item_Number / Branch は候補 metadata として表示します。';
   }
   if (canonicalEntity === 'bacteriaOrder') {
-    return '細菌検査 subtype・院内補足・自由メモは local-only です。subtype に対応する ORCA 送信 carrier は未実装のため、送信前に明示 block します。';
+    return '細菌検査は classCode 600 の coded row を ORCA へ送信します。subtype・specimen・carrier comment metadata は first-class で保持し、ORCA carrier に射影できる部分だけ送信します。';
   }
   if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
     return '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。';
@@ -2540,9 +2641,10 @@ export function OrderBundleEditPanel({
     mutationFn: async (payload: OrderBundleSubmitPayload) => {
       if (isPreviewMode) throw new Error('preview mode');
       if (!patientId) throw new Error('patientId is required');
-      const filteredItems = collectBundleItems(payload.form)
-        .filter((item) => item.name.trim().length > 0)
-        .map(stripRowMeta);
+      const filteredItems = collectBundleItems(payload.form).filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+      const filteredMaterialItems = payload.form.materialItems.filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+      const filteredCommentItems = payload.form.commentItems.filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+      const bacteria = deriveBacteriaMetadataForForm(payload.form);
 
       const classMeta = resolveBundleClassMeta(payload.form);
       return executeMutateOrderBundles({
@@ -2556,6 +2658,7 @@ export function OrderBundleEditPanel({
             bundleName: payload.form.bundleName,
             bundleNumber: payload.form.bundleNumber,
             subtype: resolveFormSubtype(entity, payload.form.subtype) || undefined,
+            bacteria,
             ...classMeta,
             admin: payload.form.admin,
             adminCode: payload.form.adminCode,
@@ -2564,6 +2667,8 @@ export function OrderBundleEditPanel({
             memo: payload.form.memo,
             startDate: payload.form.startDate,
             items: filteredItems,
+            materialItems: filteredMaterialItems,
+            commentItems: filteredCommentItems,
             bodyPart: resolveOperationBodyPart(payload.form),
           },
         ],
@@ -2624,9 +2729,10 @@ export function OrderBundleEditPanel({
         if (operation === 'create' && result.createdDocumentIds && result.createdDocumentIds.length > 0) {
           const createdDocumentId = result.createdDocumentIds[0];
           const classMeta = resolveBundleClassMeta(payload.form);
-          const normalizedItems = collectBundleItems(payload.form)
-            .filter((item) => item.name.trim().length > 0)
-            .map(stripRowMeta);
+          const normalizedItems = collectBundleItems(payload.form).filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+          const normalizedMaterialItems = payload.form.materialItems.filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+          const normalizedCommentItems = payload.form.commentItems.filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+          const bacteria = deriveBacteriaMetadataForForm(payload.form);
           const optimisticEntry: OrderBundle = {
             documentId: createdDocumentId,
             moduleId: payload.form.moduleId,
@@ -2634,6 +2740,7 @@ export function OrderBundleEditPanel({
             bundleName: payload.form.bundleName,
             bundleNumber: payload.form.bundleNumber,
             subtype: resolveFormSubtype(entity, payload.form.subtype) || undefined,
+            bacteria,
             classCode: classMeta.classCode,
             classCodeSystem: classMeta.classCodeSystem,
             className: classMeta.className,
@@ -2644,6 +2751,8 @@ export function OrderBundleEditPanel({
             memo: payload.form.memo,
             started: payload.form.startDate,
             items: normalizedItems,
+            materialItems: normalizedMaterialItems,
+            commentItems: normalizedCommentItems,
             bodyPart: resolveOperationBodyPart(payload.form),
           };
           setOptimisticBundles((prev) => {
@@ -2653,9 +2762,10 @@ export function OrderBundleEditPanel({
         }
         if (operation === 'update' && payload.form.documentId) {
           const classMeta = resolveBundleClassMeta(payload.form);
-          const normalizedItems = collectBundleItems(payload.form)
-            .filter((item) => item.name.trim().length > 0)
-            .map(stripRowMeta);
+          const normalizedItems = collectBundleItems(payload.form).filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+          const normalizedMaterialItems = payload.form.materialItems.filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+          const normalizedCommentItems = payload.form.commentItems.filter((item) => item.name.trim().length > 0).map(stripRowMeta);
+          const bacteria = deriveBacteriaMetadataForForm(payload.form);
           setOptimisticBundles((prev) =>
             prev.map((bundle) =>
               bundle.documentId === payload.form.documentId
@@ -2664,6 +2774,7 @@ export function OrderBundleEditPanel({
                     bundleName: payload.form.bundleName,
                     bundleNumber: payload.form.bundleNumber,
                     subtype: resolveFormSubtype(entity, payload.form.subtype) || undefined,
+                    bacteria,
                     classCode: classMeta.classCode,
                     classCodeSystem: classMeta.classCodeSystem,
                     className: classMeta.className,
@@ -2674,6 +2785,8 @@ export function OrderBundleEditPanel({
                     memo: payload.form.memo,
                     started: payload.form.startDate,
                     items: normalizedItems,
+                    materialItems: normalizedMaterialItems,
+                    commentItems: normalizedCommentItems,
                     bodyPart: resolveOperationBodyPart(payload.form),
                   }
                 : bundle,

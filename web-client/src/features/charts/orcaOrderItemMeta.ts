@@ -9,6 +9,10 @@ export type OrcaOrderItemMeta = {
   // Explicit row metadata is persisted in memo meta so save -> fetch does not fall back to heuristics.
   rowRole?: OrcaOrderItemRowRole;
   rowSubtype?: OrcaOrderItemRowSubtype;
+  // Selection-expression comment metadata.
+  category?: string;
+  itemNumber?: string;
+  itemNumberBranch?: string;
 };
 
 export type OrcaOrderItemMetaCarrier = {
@@ -17,6 +21,9 @@ export type OrcaOrderItemMetaCarrier = {
   userComment?: string | null;
   rowRole?: OrcaOrderItemRowRole | null;
   rowSubtype?: OrcaOrderItemRowSubtype | null;
+  category?: string | null;
+  itemNumber?: string | null;
+  itemNumberBranch?: string | null;
 };
 
 const META_PREFIX = '__orca_meta__:';
@@ -49,11 +56,35 @@ const normalizeRowSubtype = (value: unknown): OrcaOrderItemMeta['rowSubtype'] =>
   return undefined;
 };
 
+const normalizeCategory = (value: unknown): OrcaOrderItemMeta['category'] => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const normalizeItemNumber = (value: unknown): OrcaOrderItemMeta['itemNumber'] => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const normalizeItemNumberBranch = (value: unknown): OrcaOrderItemMeta['itemNumberBranch'] => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+};
+
 const hasUserComment = (value: OrcaOrderItemMeta['userComment']) =>
   typeof value === 'string' && value.trim().length > 0;
 
 const isEmptyMeta = (meta: OrcaOrderItemMeta) =>
-  !meta.genericFlg && !hasUserComment(meta.userComment) && !meta.rowRole && !meta.rowSubtype;
+  !meta.genericFlg &&
+  !hasUserComment(meta.userComment) &&
+  !meta.rowRole &&
+  !meta.rowSubtype &&
+  !normalizeCategory(meta.category) &&
+  !normalizeItemNumber(meta.itemNumber) &&
+  !normalizeItemNumberBranch(meta.itemNumberBranch);
 
 export function parseOrcaOrderItemMemo(memo?: string | null): { meta: OrcaOrderItemMeta; memoText: string } {
   const raw = typeof memo === 'string' ? memo : '';
@@ -72,6 +103,9 @@ export function parseOrcaOrderItemMemo(memo?: string | null): { meta: OrcaOrderI
         userComment: normalizeUserComment(parsed.userComment),
         rowRole: normalizeRowRole(parsed.rowRole),
         rowSubtype: normalizeRowSubtype(parsed.rowSubtype),
+        category: normalizeCategory(parsed.category),
+        itemNumber: normalizeItemNumber(parsed.itemNumber),
+        itemNumberBranch: normalizeItemNumberBranch(parsed.itemNumberBranch),
       },
       memoText,
     };
@@ -89,6 +123,9 @@ export function formatOrcaOrderItemMemo(meta: OrcaOrderItemMeta, memoText: strin
   if (hasUserComment(meta.userComment)) json.userComment = meta.userComment;
   if (meta.rowRole) json.rowRole = meta.rowRole;
   if (meta.rowSubtype) json.rowSubtype = meta.rowSubtype;
+  if (normalizeCategory(meta.category)) json.category = normalizeCategory(meta.category);
+  if (normalizeItemNumber(meta.itemNumber)) json.itemNumber = normalizeItemNumber(meta.itemNumber);
+  if (normalizeItemNumberBranch(meta.itemNumberBranch)) json.itemNumberBranch = normalizeItemNumberBranch(meta.itemNumberBranch);
   const metaLine = `${META_PREFIX}${JSON.stringify(json)}`;
   if (!body.trim()) return metaLine;
   return `${metaLine}\n${body}`;
@@ -109,6 +146,15 @@ export function updateOrcaOrderItemMeta(memo: string | undefined, patch: Partial
   if (!next.rowSubtype) {
     delete next.rowSubtype;
   }
+  if (!normalizeCategory(next.category)) {
+    delete next.category;
+  }
+  if (!normalizeItemNumber(next.itemNumber)) {
+    delete next.itemNumber;
+  }
+  if (!normalizeItemNumberBranch(next.itemNumberBranch)) {
+    delete next.itemNumberBranch;
+  }
   return formatOrcaOrderItemMemo(next, memoText);
 }
 
@@ -117,6 +163,9 @@ export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | nul
   userComment?: string;
   rowRole?: OrcaOrderItemRowRole;
   rowSubtype?: OrcaOrderItemRowSubtype;
+  category?: string;
+  itemNumber?: string;
+  itemNumberBranch?: string;
   memoText: string;
 } {
   const parsed = parseOrcaOrderItemMemo(item?.memo);
@@ -125,6 +174,9 @@ export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | nul
     userComment: normalizeUserComment(item?.userComment ?? parsed.meta.userComment),
     rowRole: normalizeRowRole(item?.rowRole ?? parsed.meta.rowRole),
     rowSubtype: normalizeRowSubtype(item?.rowSubtype ?? parsed.meta.rowSubtype),
+    category: normalizeCategory(item?.category ?? parsed.meta.category),
+    itemNumber: normalizeItemNumber(item?.itemNumber ?? parsed.meta.itemNumber),
+    itemNumberBranch: normalizeItemNumberBranch(item?.itemNumberBranch ?? parsed.meta.itemNumberBranch),
     memoText: parsed.memoText,
   };
 }

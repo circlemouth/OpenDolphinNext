@@ -144,6 +144,7 @@ public class OrderBundleRecommendationResponse {
         private String adminCodeSystem;
         private String bundleNumber;
         private String subtype;
+        private BacteriaOrderMetadata bacteria;
         private String classCode;
         private String classCodeSystem;
         /** Canonical className resolved on the server. */
@@ -205,6 +206,14 @@ public class OrderBundleRecommendationResponse {
 
         public void setSubtype(String subtype) {
             this.subtype = subtype;
+        }
+
+        public BacteriaOrderMetadata getBacteria() {
+            return bacteria;
+        }
+
+        public void setBacteria(BacteriaOrderMetadata bacteria) {
+            this.bacteria = bacteria;
         }
 
         public String getClassCode() {

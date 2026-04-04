@@ -120,13 +120,29 @@ public class OrcaOrderInputSetReadService {
             if (bundle.getBodyPart() != null) {
                 bundle.getBodyPart().setRowRole("bodyPart");
             }
+            List<OrcaOrderInputSetDetailResponse.Item> mainItems = new ArrayList<>();
+            List<OrcaOrderInputSetDetailResponse.Item> materialItems = new ArrayList<>();
+            List<OrcaOrderInputSetDetailResponse.Item> commentItems = new ArrayList<>();
             for (OrcaOrderInputSetDetailResponse.Item item : bundle.getItems()) {
                 if (item == null) {
                     continue;
                 }
-                item.setRowRole(resolveRowRole(bundle.getEntity(), item.getCode()));
+                String rowRole = resolveRowRole(bundle.getEntity(), item.getCode());
+                item.setRowRole(rowRole);
+                if ("material".equals(rowRole)) {
+                    materialItems.add(item);
+                    continue;
+                }
+                if ("comment".equals(rowRole)) {
+                    commentItems.add(item);
+                    continue;
+                }
+                mainItems.add(item);
             }
-            if (bundle.getItems().isEmpty() && bundle.getBodyPart() == null) {
+            bundle.setItems(mainItems);
+            bundle.setMaterialItems(materialItems);
+            bundle.setCommentItems(commentItems);
+            if (mainItems.isEmpty() && materialItems.isEmpty() && commentItems.isEmpty() && bundle.getBodyPart() == null) {
                 return null;
             }
             return bundle;
