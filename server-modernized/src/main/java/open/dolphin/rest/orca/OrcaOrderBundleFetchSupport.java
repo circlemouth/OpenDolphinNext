@@ -73,6 +73,7 @@ final class OrcaOrderBundleFetchSupport {
                     row.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(row.getEntity()));
                     return row;
                 })
+                .filter(row -> OrcaOrderInputSetMetadataSupport.isSupportedEntity(row.getEntity()))
                 .filter(row -> entity == null
                         || OrcaOrderBundle600SubtypeSupport.matchesInputSetEntity(
                                 entity, row.getEntity(), row.getClassCode()))

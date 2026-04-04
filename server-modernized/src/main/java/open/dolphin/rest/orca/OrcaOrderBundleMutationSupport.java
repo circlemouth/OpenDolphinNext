@@ -131,7 +131,7 @@ final class OrcaOrderBundleMutationSupport {
                 }
             }
         }
-        ClaimItem explicitBodyPart = toClaimItem(operation != null ? operation.getBodyPart() : null);
+        ClaimItem explicitBodyPart = toExplicitBodyPartClaimItem(operation != null ? operation.getBodyPart() : null);
         if (explicitBodyPart != null) {
             List<ClaimItem> prioritized = new ArrayList<>();
             prioritized.add(explicitBodyPart);
@@ -143,6 +143,17 @@ final class OrcaOrderBundleMutationSupport {
             converted = prioritized;
         }
         return converted.isEmpty() ? null : converted.toArray(new ClaimItem[0]);
+    }
+
+    private static ClaimItem toExplicitBodyPartClaimItem(OrderBundleMutationRequest.BundleItem item) {
+        if (item == null) {
+            return null;
+        }
+        String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
+        if (!OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
+            return null;
+        }
+        return toClaimItem(item);
     }
 
     private static ClaimItem toClaimItem(OrderBundleMutationRequest.BundleItem item) {

@@ -31,11 +31,11 @@ vi.mock('../stampApi', async () => ({
       },
       {
         treeName: '共通',
-        entity: 'generalOrder',
+        entity: 'treatmentOrder',
         stampList: [
           {
             name: '創傷処置セット',
-            entity: 'generalOrder',
+            entity: 'treatmentOrder',
             stampId: 'STAMP-2',
           },
         ],

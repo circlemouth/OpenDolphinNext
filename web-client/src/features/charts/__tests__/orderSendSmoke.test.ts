@@ -383,7 +383,7 @@ describe('order send smoke', () => {
       ],
     });
 
-    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'generalOrder' });
+    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'treatmentOrder' });
     expect(fetched.ok).toBe(true);
     expect(fetched.bundles[0]?.entity).toBe('treatmentOrder');
 

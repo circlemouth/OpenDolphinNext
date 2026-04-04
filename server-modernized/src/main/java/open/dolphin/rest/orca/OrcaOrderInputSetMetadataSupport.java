@@ -5,6 +5,9 @@ import org.slf4j.Logger;
 
 final class OrcaOrderInputSetMetadataSupport {
 
+    static final String UNSUPPORTED_ENTITY = "unsupportedOrder";
+    static final String UNSUPPORTED_CLASS_NAME = "unsupported";
+
     private OrcaOrderInputSetMetadataSupport() {
     }
 
@@ -41,6 +44,11 @@ final class OrcaOrderInputSetMetadataSupport {
         } catch (NumberFormatException e) {
             logger.debug("Failed to resolve entity from receipt code {}", receiptCode);
         }
-        return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_GENERAL_ORDER, "汎用");
+        logger.warn("Rejecting unsupported ORCA input-set receipt code {}", receiptCode);
+        return new OrcaOrderInputSetSupport.ClassMetadata(UNSUPPORTED_ENTITY, UNSUPPORTED_CLASS_NAME);
+    }
+
+    static boolean isSupportedEntity(String entity) {
+        return entity != null && !entity.isBlank() && !UNSUPPORTED_ENTITY.equals(entity);
     }
 }

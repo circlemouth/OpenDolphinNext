@@ -86,11 +86,12 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 && !OrcaOrderBundle600SubtypeSupport.isValidSubtype(canonicalEntity, explicitSubtype)) {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
+        boolean hasExplicitBodyPart = validateExplicitBodyPart(canonicalEntity, op.getBodyPart(), validationFailure);
         List<OrderBundleMutationRequest.BundleItem> items = op.getItems();
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
         boolean hasSendableMainRow = false;
-        boolean hasBodyPart = hasBodyPartItem(op.getBodyPart());
+        boolean hasBodyPart = hasExplicitBodyPart;
         for (OrderBundleMutationRequest.BundleItem item : items != null ? items : List.<OrderBundleMutationRequest.BundleItem>of()) {
             if (!hasValuedItem(item)) {
                 continue;
@@ -127,6 +128,30 @@ final class OrcaOrderBundleMutationExecutionSupport {
         }
     }
 
+    private static boolean validateExplicitBodyPart(
+            String canonicalEntity,
+            OrderBundleMutationRequest.BundleItem bodyPart,
+            ValidationFailure validationFailure) {
+        if (!hasValuedItem(bodyPart)) {
+            return false;
+        }
+        if (!OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
+            throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
+        }
+        String name = OrcaOrderBundleRequestSupport.trimToNull(bodyPart.getName());
+        if (name == null) {
+            throw validationFailure.invalid("bodyPart", "bodyPart name is required");
+        }
+        String code = OrcaOrderBundleRequestSupport.trimToNull(bodyPart.getCode());
+        if (code == null) {
+            throw validationFailure.invalid("bodyPart", "bodyPart code is required");
+        }
+        if (!OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
+            throw validationFailure.invalid("bodyPart", "bodyPart must use code family 002");
+        }
+        return true;
+    }
+
     private static boolean requiresSendableMainRow(String canonicalEntity) {
         return canonicalEntity != null
                 && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity)
@@ -135,14 +160,6 @@ final class OrcaOrderBundleMutationExecutionSupport {
 
     private static boolean isOtherOrderCode(String code) {
         return code.startsWith("8") || code.startsWith("18");
-    }
-
-    private static boolean hasBodyPartItem(OrderBundleMutationRequest.BundleItem item) {
-        if (!hasValuedItem(item)) {
-            return false;
-        }
-        String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
-        return code != null && OrcaOrderBundleRecommendationSupport.isBodyPartCode(code);
     }
 
     private static boolean isCommentCode(String code) {

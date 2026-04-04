@@ -260,6 +260,16 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             throw restError(request, Response.Status.NOT_FOUND, "inputset_not_found", "Input set not found");
         }
         bundle.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(bundle.getEntity()));
+        if (!OrcaOrderInputSetMetadataSupport.isSupportedEntity(bundle.getEntity())) {
+            Map<String, Object> audit = new HashMap<>();
+            audit.put("facilityId", facilityId);
+            audit.put("runId", runId);
+            audit.put("setCode", normalizedSetCode);
+            audit.put("effective", normalizedEffective);
+            markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(), "inputset_not_found", "Input set not found");
+            recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
+            throw restError(request, Response.Status.NOT_FOUND, "inputset_not_found", "Input set not found");
+        }
         bundle.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(
                 normalizedEntity != null ? normalizedEntity : bundle.getEntity(),
                 bundle.getSubtype(),

@@ -3,7 +3,6 @@ package open.dolphin.rest.orca;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import open.dolphin.infomodel.IInfoModel;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,26 +14,26 @@ class OrcaOrderInputSetMetadataSupportTest {
     @Test
     void resolveClassMetadataMaps200And400ToCanonicalEntities() {
         assertEquals(
-                IInfoModel.ENTITY_TREATMENT,
+                "treatmentOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("400", LOGGER).entity());
         assertEquals(
                 "testOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("600", LOGGER).entity());
         assertEquals(
-                IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                "radiologyOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("700", LOGGER).entity());
         assertEquals(
-                IInfoModel.ENTITY_OTHER_ORDER,
+                "otherOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("800", LOGGER).entity());
     }
 
     @Test
-    void resolveClassMetadataFallsBackToGeneralEntity() {
+    void resolveClassMetadataMarksUnknownClassAsUnsupported() {
         OrcaOrderInputSetSupport.ClassMetadata metadata =
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("invalid", LOGGER);
 
         assertNotNull(metadata);
-        assertEquals(IInfoModel.ENTITY_GENERAL_ORDER, metadata.entity());
-        assertEquals("汎用", metadata.className());
+        assertEquals(OrcaOrderInputSetMetadataSupport.UNSUPPORTED_ENTITY, metadata.entity());
+        assertEquals(OrcaOrderInputSetMetadataSupport.UNSUPPORTED_CLASS_NAME, metadata.className());
     }
 }

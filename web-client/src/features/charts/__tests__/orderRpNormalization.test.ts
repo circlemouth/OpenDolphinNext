@@ -9,9 +9,13 @@ import {
 import { fetchOrderBundles } from '../orderBundleApi';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
 
-vi.mock('../orderBundleApi', () => ({
-  fetchOrderBundles: vi.fn(),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn(),
+  };
+});
 
 vi.mock('../prescriptionOrderApi', async () => {
   const actual = await vi.importActual<typeof import('../prescriptionOrderApi')>('../prescriptionOrderApi');

@@ -238,6 +238,156 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesRejectsTreatmentBodyPartWithoutCode() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("treatmentOrder");
+        op.setBundleName("treatment-body-part-missing-code");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setName("missing-code");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
+        procedure.setCode("140000610");
+        procedure.setName("treatment-main");
+        op.setItems(List.of(procedure));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart code is required", body.get("message"));
+    }
+
+    @Test
+    void postBundlesRejectsTreatmentBodyPartOutside002Family() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("treatmentOrder");
+        op.setBundleName("treatment-body-part-invalid-code");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("001001");
+        bodyPart.setName("invalid-code");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
+        procedure.setCode("140000610");
+        procedure.setName("treatment-main");
+        op.setItems(List.of(procedure));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart must use code family 002", body.get("message"));
+    }
+
+    @Test
+    void postBundlesRejectsRadiologyBodyPartWithoutCode() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("radiologyOrder");
+        op.setBundleName("radiology-body-part-missing-code");
+        op.setClassCode("700");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setName("missing-code");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem main = new OrderBundleMutationRequest.BundleItem();
+        main.setCode("700000001");
+        main.setName("radiology-main");
+        op.setItems(List.of(main));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart code is required", body.get("message"));
+    }
+
+    @Test
+    void postBundlesRejectsRadiologyBodyPartOutside002Family() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("radiologyOrder");
+        op.setBundleName("radiology-body-part-invalid-code");
+        op.setClassCode("700");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("001001");
+        bodyPart.setName("invalid-code");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem main = new OrderBundleMutationRequest.BundleItem();
+        main.setCode("700000001");
+        main.setName("radiology-main");
+        op.setItems(List.of(main));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart must use code family 002", body.get("message"));
+    }
+
+    @Test
     void postBundlesPrioritizesBodyPartFieldOverLegacyItems() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
@@ -443,6 +593,37 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void getInputSetsDropsUnsupportedMetadataEntity() throws Exception {
+        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+            @Override
+            protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
+                OrcaOrderInputSetListResponse.Item unsupported = new OrcaOrderInputSetListResponse.Item();
+                unsupported.setSetCode("X99999");
+                unsupported.setName("unsupported");
+                unsupported.setEntity(OrcaOrderInputSetMetadataSupport.UNSUPPORTED_ENTITY);
+                unsupported.setKind("X");
+                unsupported.setClassCode("999");
+                unsupported.setClassCodeSystem("Claim007");
+                unsupported.setItemCount(1);
+                unsupported.setValidFrom("20240401");
+                unsupported.setValidTo("99991231");
+                return List.of(unsupported);
+            }
+        };
+        injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
+        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
+        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
+
+        OrcaOrderInputSetListResponse response =
+                inputSetResource.getInputSets(servletRequest, "セット", null, "2026-03-09", 1, 20);
+
+        assertNotNull(response);
+        assertEquals(0, response.getTotalCount());
+        assertEquals(0, response.getItems().size());
+    }
+
+    @Test
     void getInputSetDetailReturnsBundle() throws Exception {
         OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
             @Override
@@ -549,7 +730,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void getInputSetDetailAcceptsGeneralAliasAndReturnsCanonicalEntity() throws Exception {
+    void getInputSetDetailReturnsCanonicalTreatmentEntity() throws Exception {
         OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
@@ -577,12 +758,41 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
 
         OrcaOrderInputSetDetailResponse response =
-                inputSetResource.getInputSetDetail(servletRequest, "S02001", "20260309", "generalOrder", null);
+                inputSetResource.getInputSetDetail(servletRequest, "S02001", "20260309", IInfoModel.ENTITY_TREATMENT, null);
 
         assertTrue(response.isOk());
         assertEquals("S02001", response.getSetCode());
         assertNotNull(response.getBundle());
         assertEquals("treatmentOrder", response.getBundle().getEntity());
+    }
+
+    @Test
+    void getInputSetDetailReturnsNotFoundForUnsupportedMetadataEntity() throws Exception {
+        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+            @Override
+            protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
+                OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
+                bundle.setEntity(OrcaOrderInputSetMetadataSupport.UNSUPPORTED_ENTITY);
+                bundle.setItems(List.of(new OrcaOrderInputSetDetailResponse.Item()));
+                return bundle;
+            }
+        };
+        injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
+        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
+        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
+        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
+
+        WebApplicationException exception = null;
+        try {
+            inputSetResource.getInputSetDetail(servletRequest, "X99999", "20260309", IInfoModel.ENTITY_TREATMENT, null);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(404, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("inputset_not_found", body.get("code"));
     }
 
     @Test
