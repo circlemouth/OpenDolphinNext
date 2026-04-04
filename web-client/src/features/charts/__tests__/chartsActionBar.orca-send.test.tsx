@@ -230,6 +230,33 @@ describe('ChartsActionBar ORCA send', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
+  it('blocks saved otherOrder bundles with invalid classCode before send', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'otherOrder'
+          ? [
+              {
+                entity: 'otherOrder',
+                bundleName: 'invalid-other-class',
+                bundleNumber: '1',
+                classCode: '8A0',
+                items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回' }],
+              },
+            ]
+          : [],
+    }));
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(screen.getByText(/otherOrder の classCode/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
   it('accepts bodyPart and material rows on valid payloads', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({

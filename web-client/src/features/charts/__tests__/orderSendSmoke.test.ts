@@ -200,6 +200,7 @@ describe('order send smoke', () => {
             bundles: [
               {
                 entity: 'otherOrder',
+                sourceSetCode: 'O80001',
                 bundleName: 'certificate-fee',
                 bundleNumber: '4',
                 classCode: '800',
@@ -238,6 +239,7 @@ describe('order send smoke', () => {
         {
           operation: 'create',
           entity: 'otherOrder',
+          sourceSetCode: 'O80001',
           bundleName: 'certificate-fee',
           bundleNumber: '4',
           classCode: '800',
@@ -277,6 +279,7 @@ describe('order send smoke', () => {
     );
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-admin-note');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-free-memo');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('O80001');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
 
@@ -299,6 +302,7 @@ describe('order send smoke', () => {
     );
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-admin-note');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-free-memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('O80001');
   });
 
   it('save fetch normalize send payload smoke keeps treatmentOrder bodyPart and class 400', async () => {

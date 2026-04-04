@@ -140,7 +140,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。',
+        'setCode は展開専用です。otherOrder は etensu category 8 の9桁コード行と classCode 800〜890 のみを扱います。bodyPart と材料行は保持せず、オーダー名・指示・自由メモは院内補足として保存します。',
       ),
     ).toBeInTheDocument();
   });
@@ -520,6 +520,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.classCode).toBe('800');
     expect(operation?.classCodeSystem).toBe('Claim007');
     expect(operation?.className).toBe('その他');
+    expect(operation).not.toHaveProperty('sourceSetCode');
     expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '180000210', unit: '回' })]));
   });
 

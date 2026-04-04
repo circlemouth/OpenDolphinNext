@@ -88,7 +88,18 @@ class OrcaOrderBundleRequestSupportTest {
     @Test
     void isCompatibleClassCodePinsOtherOrderToEightFamily() {
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "800"));
+        assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "890"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "700"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "400"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "8A0"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "891"));
+    }
+
+    @Test
+    void otherOrderHelpersRequireSendableCodeShape() {
+        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("180000210"));
+        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("800000001"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("81234567"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("18ABC0210"));
     }
 }

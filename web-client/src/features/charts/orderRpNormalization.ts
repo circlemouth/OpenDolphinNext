@@ -4,6 +4,7 @@ import {
   resolveCanonicalOrderEntity,
   resolveOrderEntityDefaultClassMeta,
 } from './orderCategoryRegistry';
+import { isValidOtherOrderClassCode, isValidOtherOrderMainCode } from './otherOrderContract';
 import { fetchOrderBundles, type OrderBundle, type OrderBundleItem } from './orderBundleApi';
 import {
   buildOrderBundleCodeBlockedMessage,
@@ -66,6 +67,9 @@ export type MedicalModV2BundleIssueCode =
   | 'mixed_coded_uncoded'
   | 'comment_only'
   | 'missing_main_row'
+  | 'invalid_other_order_code'
+  | 'invalid_other_order_class_code'
+  | 'unsupported_other_order_body_part'
   | 'unsupported_bacteria_subtype';
 
 export type MedicalModV2BundleIssue = {
@@ -173,6 +177,19 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
 
 export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): MedicalModV2BundleIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  if (canonicalEntity === 'otherOrder') {
+    const classCode = bundle.classCode?.trim();
+    if (classCode && !isValidOtherOrderClassCode(classCode)) {
+      return [
+        buildBundleIssue(bundle, 'invalid_other_order_class_code', 'otherOrder の classCode は数値 800〜890 のみ送信できます。'),
+      ];
+    }
+    if (bundle.bodyPart?.name?.trim() || bundle.bodyPart?.code?.trim()) {
+      return [
+        buildBundleIssue(bundle, 'unsupported_other_order_body_part', 'otherOrder は bodyPart を保持できないため送信前に停止します。'),
+      ];
+    }
+  }
   if (canonicalEntity === 'bacteriaOrder' && bundle.subtype?.trim()) {
     return [
       buildBundleIssue(
@@ -213,6 +230,18 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
     const code = row.item.code?.trim() ?? '';
     return !isCommentMedicationCode(code) && !isBodyPartCode(code);
   });
+  if (
+    canonicalEntity === 'otherOrder' &&
+    sendableMainRows.some((row) => !isValidOtherOrderMainCode(row.item.code))
+  ) {
+    return [
+      buildBundleIssue(
+        bundle,
+        'invalid_other_order_code',
+        'otherOrder は etensu category 8 の9桁コード行のみ送信できます。',
+      ),
+    ];
+  }
   const requireMainRow = canonicalEntity !== 'medOrder' && canonicalEntity !== 'injectionOrder';
   if (requireMainRow && sendableMainRows.length === 0) {
     return [

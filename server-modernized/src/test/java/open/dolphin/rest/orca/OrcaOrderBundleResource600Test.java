@@ -154,7 +154,40 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must use code family 8", body.get("message"));
+        assertEquals("otherOrder items must use etensu category 8 sendable codes", body.get("message"));
+    }
+
+    @Test
+    void postBundlesRejectsPseudo8CodeForOtherOrder() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
+        op.setBundleName("other-main");
+        op.setClassCode("800");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("89000001");
+        item.setName("pseudo-other");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("items", body.get("field"));
+        assertEquals("otherOrder items must use etensu category 8 sendable codes", body.get("message"));
     }
 
     @Test
@@ -167,6 +200,39 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
         op.setBundleName("other-main");
         op.setClassCode("700");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("180000210");
+        item.setName("other-main");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("classCode", body.get("field"));
+        assertEquals("classCode is incompatible with entity", body.get("message"));
+    }
+
+    @Test
+    void postBundlesRejectsOtherOrderWithPseudoClassCode() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
+        op.setBundleName("other-main");
+        op.setClassCode("8A0");
         op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
@@ -251,6 +317,54 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
 
         assertNotNull(response);
         assertEquals(1, response.getCreatedDocumentIds().size());
+    }
+
+    @Test
+    void postBundlesCreatesFetchableOtherOrderRoundTrip() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
+        op.setBundleName("other-main");
+        op.setBundleNumber("4");
+        op.setClassCode("800");
+        op.setClassCodeSystem("Claim007");
+        op.setClassName("その他");
+        op.setMemo("local-only");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("180000210");
+        item.setName("other-main");
+        item.setQuantity("1");
+        item.setUnit("回");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        OrderBundleMutationResponse mutation = resource.postBundles(servletRequest, payload);
+
+        assertNotNull(mutation);
+        assertEquals(1, mutation.getCreatedDocumentIds().size());
+
+        OrderBundleFetchResponse fetched = resource.getBundles(
+                servletRequest,
+                "00001",
+                IInfoModel.ENTITY_OTHER_ORDER,
+                "2025-01-01");
+
+        assertNotNull(fetched);
+        assertEquals(1, fetched.getBundles().size());
+        OrderBundleFetchResponse.OrderBundleEntry entry = fetched.getBundles().get(0);
+        assertEquals(IInfoModel.ENTITY_OTHER_ORDER, entry.getEntity());
+        assertEquals("800", entry.getClassCode());
+        assertEquals("Claim007", entry.getClassCodeSystem());
+        assertEquals("その他", entry.getClassName());
+        assertEquals("other-main", entry.getBundleName());
+        assertEquals(1, entry.getItems().size());
+        assertEquals("180000210", entry.getItems().get(0).getCode());
+        assertEquals("回", entry.getItems().get(0).getUnit());
     }
 
     @Test

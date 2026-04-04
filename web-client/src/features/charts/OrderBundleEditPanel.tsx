@@ -48,6 +48,7 @@ import {
   normalizeOrderTestSubtype,
   type OrderTestSubtype,
 } from './orderCategoryRegistry';
+import { isValidOtherOrderClassCode, isValidOtherOrderMainCode } from './otherOrderContract';
 import type { DataSourceTransition } from './authService';
 import type { DocumentOpenRequest } from './DocumentCreatePanel';
 
@@ -694,7 +695,7 @@ const resolveSendContractNote = (entity: string) => {
     return '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
   }
   if (canonicalEntity === 'otherOrder') {
-    return 'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。';
+    return 'setCode は展開専用です。otherOrder は etensu category 8 の9桁コード行と classCode 800〜890 のみを扱います。bodyPart と材料行は保持せず、オーダー名・指示・自由メモは院内補足として保存します。';
   }
   if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
     return 'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
@@ -942,6 +943,12 @@ export const validateBundleForm = ({
     }
   }
   if (canonicalEntity === 'otherOrder') {
+    if (form.classCode?.trim() && !isValidOtherOrderClassCode(form.classCode)) {
+      issues.push({
+        key: 'invalid_other_order_class_code',
+        message: 'otherOrder の classCode は数値 800〜890 のみ保存できます。',
+      });
+    }
     if (hasMaterialValues) {
       issues.push({
         key: 'unsupported_material_item',
@@ -951,12 +958,12 @@ export const validateBundleForm = ({
     if (
       codedItems.some((item) => {
         const code = item.code?.trim() ?? '';
-        return code !== '' && !COMMENT_CODE_PATTERN.test(code) && !/^(8|18)/.test(code);
+        return code !== '' && !isValidOtherOrderMainCode(code);
       })
     ) {
       issues.push({
         key: 'invalid_other_order_code',
-        message: 'otherOrder では etensu category 8 のコード以外を保存できません。',
+        message: 'otherOrder では etensu category 8 の9桁コード以外を保存できません。',
       });
     }
   }
