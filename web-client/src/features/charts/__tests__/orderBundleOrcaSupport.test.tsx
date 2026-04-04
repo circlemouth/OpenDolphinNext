@@ -1,4 +1,5 @@
-﻿import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -17,22 +18,18 @@ vi.mock('../orcaOrderInputSetApi', () => ({
   fetchOrcaOrderInputSetDetail: vi.fn(),
 }));
 
-vi.mock('../orderBundleApi', async () => {
-  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
-  return {
-    ...actual,
-    fetchOrderBundles: vi.fn().mockResolvedValue({
-      ok: true,
-      bundles: [],
-      patientId: 'P-ORDER-001',
-    }),
-    mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER-ORCA-TEST' }),
-  };
-});
+vi.mock('../orderBundleApi', async () => ({
+  fetchOrderBundles: vi.fn().mockResolvedValue({
+    ok: true,
+    bundles: [],
+    patientId: 'P-ORDER-001',
+  }),
+  mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER-ORCA-TEST' }),
+}));
 
 const baseProps = {
   patientId: 'P-ORDER-001',
-  entity: 'treatmentOrder',
+  entity: 'generalOrder',
   title: '一般オーダー',
   bundleLabel: 'オーダー名',
   itemQuantityLabel: '数量',
@@ -52,14 +49,6 @@ const chargeProps = {
   ...baseProps,
   entity: 'baseChargeOrder',
   title: '基本料編集',
-  bundleLabel: '算定',
-  itemQuantityLabel: '回数',
-};
-
-const instractionChargeProps = {
-  ...baseProps,
-  entity: 'instractionChargeOrder',
-  title: '医学管理等編集',
   bundleLabel: '算定',
   itemQuantityLabel: '回数',
 };
@@ -127,10 +116,17 @@ describe('OrderBundleEditPanel ORCA support', () => {
   it('600系は subtype/local-only field の送信契約を明示する', () => {
     renderPanel(testProps);
 
+    expect(screen.getByLabelText('検査指示（院内）')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。',
+        '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。',
       ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('admin(検査指示) は bundle 共通の院内ローカル情報です。複数検査項目をまとめても ORCA へは送信しません。'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。ORCA 送信 payload には含めません。'),
     ).toBeInTheDocument();
   });
 
@@ -143,7 +139,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '600系 subtype・院内補足・自由メモは local-only です。ORCA送信 grouping には classCode 600 とコード付き行だけを使用します。',
+        '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。',
       ),
     ).toBeInTheDocument();
   });
@@ -152,17 +148,17 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。otherOrder は etensu category 8 の9桁コード行と classCode 800〜890 のみを扱います。bodyPart と材料行は保持せず、オーダー名・指示・自由メモは院内補足として保存します。',
+        'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。',
       ),
     ).toBeInTheDocument();
   });
 
-  it('charge は更新後の送信契約文言を表示する', () => {
+  it('charge は unit/local-only/comment parameter の送信契約を明示する', () => {
     renderPanel(chargeProps);
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。数量/単位とコメント数量は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。',
+        'setCode は展開専用です。数量は ORCA 送信しますが、単位・算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。',
       ),
     ).toBeInTheDocument();
   });
@@ -173,7 +169,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '注射送信では数字 adminCode の投与指示・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは local-only です。',
+        '注射送信では admin/adminCode・回数・coded row と rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは local-only です。',
       ),
     ).toBeInTheDocument();
   });
@@ -198,7 +194,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '放射線送信では bodyPart・main/auxiliary/comment の coded row・classCode を使います。検査指示(admin)・instruction補足(adminMemo)・bundle memo・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。材料/造影薬の区別は rowRole=auxiliary + rowSubtype として保存します。',
+        '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
       ),
     ).toBeInTheDocument();
   });
@@ -234,14 +230,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'P02001',
       bundle: {
-        entity: 'treatmentOrder',
+        entity: 'generalOrder',
         sourceSetCode: 'P02001',
         bundleName: '創傷処置セット',
         bundleNumber: '1',
@@ -252,7 +248,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
         bodyPart: { code: '002001', name: '膝関節', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
         items: [
           { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
-          { code: '700000011', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'auxiliary' },
+          { code: 'M001', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'material' },
         ],
       },
     });
@@ -278,13 +274,12 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    await waitFor(() => expect(vi.mocked(mutateOrderBundles)).toHaveBeenCalled());
     const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
     expect(operation?.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: '700000011', rowRole: 'auxiliary', unit: '個' }),
+        expect.objectContaining({ code: 'M001', rowRole: 'material', unit: '個' }),
       ]),
     );
   });
@@ -296,14 +291,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'P02001',
       bundle: {
-        entity: 'treatmentOrder',
+        entity: 'generalOrder',
         bundleName: '創傷処置セット',
         bundleNumber: '1',
         admin: '適宜',
@@ -336,7 +331,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
@@ -360,14 +355,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.getByLabelText('オーダー名')).toHaveValue('');
   });
 
-  it('treatmentOrder に treatmentOrder の診療セット詳細を反映できる', async () => {
+  it('generalOrder に treatmentOrder の診療セット詳細を反映できる', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 1 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 1 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
@@ -391,32 +386,32 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.queryByText('entity が一致しないため診療セットを反映できません。')).toBeNull();
   });
 
-  it('instractionChargeOrder の ORCA診療セット適用後も class meta を保存 payload で保持する', async () => {
+  it('baseChargeOrder の ORCA診療セット適用後も class meta を保存 payload で保持する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'B13001', name: '在宅指導セット', entity: 'instractionChargeOrder', itemCount: 1 }],
+      items: [{ setCode: 'B13001', name: '在宅指導セット', entity: 'baseChargeOrder', itemCount: 1 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'B13001',
       bundle: {
-          entity: 'instractionChargeOrder',
-          bundleName: '在宅指導セット',
-          bundleNumber: '1',
-          classCode: '130',
-          classCodeSystem: 'Claim007',
-          className: '医学管理等',
-          adminMemo: '算定前確認',
-        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
+        entity: 'baseChargeOrder',
+        bundleName: '在宅指導セット',
+        bundleNumber: '1',
+        classCode: '130',
+        classCodeSystem: 'Claim007',
+        className: '指導・在宅',
+        adminMemo: '算定前確認',
+        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '' }],
       },
     });
 
-    renderPanel(instractionChargeProps);
+    renderPanel(chargeProps);
 
     await user.type(screen.getByPlaceholderText('診療セット名またはコード'), '在宅');
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
@@ -427,13 +422,12 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    await waitFor(() => expect(vi.mocked(mutateOrderBundles)).toHaveBeenCalled());
     const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
-    expect(operation?.entity).toBe('instractionChargeOrder');
+    expect(operation?.entity).toBe('baseChargeOrder');
     expect(operation?.classCode).toBe('130');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('医学管理等');
+    expect(operation?.className).toBe('指導・在宅');
     expect(operation?.adminMemo).toBe('算定前確認');
   });
 
@@ -461,15 +455,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
         bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
         items: [
           { code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
-          {
-            code: '700000001',
-            name: '造影剤',
-            quantity: '1',
-            unit: '本',
-            memo: '',
-            rowRole: 'auxiliary',
-            rowSubtype: 'contrastDrug',
-          },
+          { code: '700000001', name: '造影剤', quantity: '1', unit: '本', memo: '', rowRole: 'material' },
         ],
       },
     });
@@ -495,7 +481,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: '170017510', unit: '回', rowRole: 'main' }),
-        expect.objectContaining({ code: '700000001', unit: '本', rowRole: 'auxiliary', rowSubtype: 'contrastDrug' }),
+        expect.objectContaining({ code: '700000001', unit: '本', rowRole: 'material' }),
       ]),
     );
   });
@@ -542,7 +528,6 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.classCode).toBe('800');
     expect(operation?.classCodeSystem).toBe('Claim007');
     expect(operation?.className).toBe('その他');
-    expect(operation).not.toHaveProperty('sourceSetCode');
     expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '180000210', unit: '回' })]));
   });
 
@@ -566,8 +551,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
         classCode: '600',
         classCodeSystem: 'Claim007',
         className: '検査',
+        admin: '院内指示',
         adminMemo: '至急',
-        items: [{ code: '160000010', name: '血液一般', quantity: '1', unit: '回', memo: '' }],
+        memo: 'bundle common memo',
+        items: [
+          { code: '160000010', name: '血液一般', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+          { code: '0085001', name: '採血注意', quantity: '', unit: '', memo: 'note', rowRole: 'comment' },
+          { code: '160000011', name: '生化学', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+        ],
       },
     });
 
@@ -578,7 +569,9 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(await screen.findByRole('button', { name: /T60001.*血液検査セット.*反映/ }));
 
     expect(screen.getByLabelText('検査名')).toHaveValue('血液検査セット');
+    expect(screen.getByLabelText('検査指示（院内）')).toHaveValue('院内指示');
     expect(screen.getByLabelText('院内補足')).toHaveValue('至急');
+    expect(screen.getByLabelText('検査メモ（院内）')).toHaveValue('bundle common memo');
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
@@ -588,8 +581,16 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.classCode).toBe('600');
     expect(operation?.classCodeSystem).toBe('Claim007');
     expect(operation?.className).toBe('検査');
+    expect(operation?.admin).toBe('院内指示');
     expect(operation?.adminMemo).toBe('至急');
-    expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '160000010', unit: '回' })]));
+    expect(operation?.memo).toBe('bundle common memo');
+    expect(operation?.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: '160000010', rowRole: 'main' }),
+        expect.objectContaining({ code: '160000011', rowRole: 'main' }),
+        expect.objectContaining({ code: '0085001', rowRole: 'comment' }),
+      ]),
+    );
   });
 
   it('bacteriaOrder は testOrder の 600 input set detail を受け入れて subtype を保持する', async () => {
@@ -643,22 +644,6 @@ describe('OrderBundleEditPanel ORCA support', () => {
   it('injectionOrder で 7xxxx 候補を main 行に選ぶと material 行へ昇格する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockImplementation(async (params) => {
-      if (params.type === 'youhou') {
-        return {
-          ok: true,
-          items: [
-            {
-              type: 'youhou',
-              code: '4101',
-              name: '静注候補',
-              routeCode: '1',
-              timingCode: 'T1',
-              dosePerDay: 1,
-            },
-          ],
-          totalCount: 1,
-        } as any;
-      }
       if (typeof params?.keyword === 'string' && params.keyword.includes('注射薬A')) {
         return {
           ok: true,
@@ -694,10 +679,6 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     renderPanel(injectionProps);
 
-    const usageSelect = screen.getByLabelText('投与指示') as HTMLSelectElement;
-    await waitFor(() => expect(usageSelect.options.length).toBeGreaterThan(1));
-    await user.selectOptions(usageSelect, usageSelect.options[1]?.value ?? '');
-
     const [firstMainInput] = screen.getAllByPlaceholderText('注射薬剤または手技名');
     await user.type(firstMainInput, '注射薬A');
     await waitFor(() =>
@@ -725,10 +706,9 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    await waitFor(() => expect(vi.mocked(mutateOrderBundles)).toHaveBeenCalled());
     const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
-    expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '700000031', rowRole: 'auxiliary' })]));
+    expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '700000031', rowRole: 'material' })]));
     expect(operation?.items).not.toEqual(expect.arrayContaining([expect.objectContaining({ code: '700000031', rowRole: 'main' })]));
   });
 
@@ -756,7 +736,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
           items: [
             {
               type: 'material',
-              code: '700000012',
+              code: 'M002',
               name: '処置材料B',
               unit: '個',
               note: '',
@@ -807,7 +787,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: '700000012', rowRole: 'auxiliary', unit: '個' }),
+        expect.objectContaining({ code: 'M002', rowRole: 'material', unit: '個' }),
       ]),
     );
   });

@@ -34,10 +34,11 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medical_Uid type=\"string\">M-001</Medical_Uid>"));
         assertTrue(xml.contains("<Medical_Class type=\"string\">11</Medical_Class>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">110000010</Medication_Code>"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
-    void buildMedicalModV2RequestXmlSerializesMedicationUnitAndGenericFlag() {
+    void buildMedicalModV2RequestXmlSerializesMedicationNumberAndGenericFlag() {
         ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
         payload.setPatientId("12345");
         payload.setPerformDate("2026-03-22T08:00:00");
@@ -51,7 +52,6 @@ class OrcaChartSupportSupportTest {
         medication.setCode("620000001");
         medication.setName("amlodipine");
         medication.setNumber("1");
-        medication.setUnit("tablet");
         medication.setGenericFlg("yes");
         information.setMedications(List.of(medication));
         payload.setMedicalInformation(List.of(information));
@@ -62,9 +62,8 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Prescription</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">2</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Number type=\"string\">1</Medication_Number>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">tablet</Medication_Unit_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code_Name type=\"string\">tablet</Medication_Unit_Code_Name>"));
         assertTrue(xml.contains("<Medication_Generic_Flg type=\"string\">yes</Medication_Generic_Flg>"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -83,14 +82,12 @@ class OrcaChartSupportSupportTest {
         firstDrug.setCode("620000001");
         firstDrug.setName("amlodipine-5mg");
         firstDrug.setNumber("1");
-        firstDrug.setUnit("tablet");
         firstDrug.setGenericFlg("no");
 
         ChartSupportMedicalModV2Request.Medication secondDrug = new ChartSupportMedicalModV2Request.Medication();
         secondDrug.setCode("620000002");
         secondDrug.setName("losartan-50mg");
         secondDrug.setNumber("1");
-        secondDrug.setUnit("tablet");
 
         ChartSupportMedicalModV2Request.Medication comment = new ChartSupportMedicalModV2Request.Medication();
         comment.setCode("008200001");
@@ -109,6 +106,7 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medication_Code type=\"string\">620000002</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">008200001</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Name type=\"string\">after-meal-comment</Medication_Name>"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -127,19 +125,16 @@ class OrcaChartSupportSupportTest {
         bodyPart.setCode("002001");
         bodyPart.setName("chest");
         bodyPart.setNumber("1");
-        bodyPart.setUnit("part");
 
         ChartSupportMedicalModV2Request.Medication main = new ChartSupportMedicalModV2Request.Medication();
         main.setCode("170017510");
         main.setName("ct-scan");
         main.setNumber("1");
-        main.setUnit("times");
 
         ChartSupportMedicalModV2Request.Medication material = new ChartSupportMedicalModV2Request.Medication();
         material.setCode("700000001");
         material.setName("contrast");
         material.setNumber("1");
-        material.setUnit("bottle");
 
         ChartSupportMedicalModV2Request.Medication comment = new ChartSupportMedicalModV2Request.Medication();
         comment.setCode("0085001");
@@ -151,15 +146,10 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Medical_Class type=\"string\">700</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">放射線</Medical_Class_Name>"));
-        assertFalse(xml.contains("<Medical_Class_Name type=\"string\">Radiology</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">002001</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">part</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">170017510</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">700000001</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">bottle</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">0085001</Medication_Code>"));
         assertTrue(
                 xml.indexOf("<Medication_Code type=\"string\">002001</Medication_Code>")
@@ -170,59 +160,7 @@ class OrcaChartSupportSupportTest {
         assertTrue(
                 xml.indexOf("<Medication_Code type=\"string\">700000001</Medication_Code>")
                         < xml.indexOf("<Medication_Code type=\"string\">0085001</Medication_Code>"));
-    }
-
-    @Test
-    void buildMedicalModV2RequestXmlSerializesTreatmentBodyPartMaterialAndCommentInOrder() {
-        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
-        payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-22T08:00:00");
-        payload.setDepartmentCode("01");
-
-        ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
-        information.setMedicalClass("400");
-        information.setMedicalClassName("Treatment");
-        information.setMedicalClassNumber("3");
-
-        ChartSupportMedicalModV2Request.Medication bodyPart = new ChartSupportMedicalModV2Request.Medication();
-        bodyPart.setCode("002001");
-        bodyPart.setName("knee");
-        bodyPart.setNumber("1");
-        bodyPart.setUnit("part");
-
-        ChartSupportMedicalModV2Request.Medication main = new ChartSupportMedicalModV2Request.Medication();
-        main.setCode("140000610");
-        main.setName("wound-care");
-        main.setNumber("1");
-        main.setUnit("times");
-
-        ChartSupportMedicalModV2Request.Medication material = new ChartSupportMedicalModV2Request.Medication();
-        material.setCode("700000021");
-        material.setName("gauze");
-        material.setNumber("2");
-        material.setUnit("sheet");
-
-        ChartSupportMedicalModV2Request.Medication comment = new ChartSupportMedicalModV2Request.Medication();
-        comment.setCode("0085002");
-        comment.setName("after-cleaning");
-
-        information.setMedications(List.of(bodyPart, main, material, comment));
-        payload.setMedicalInformation(List.of(information));
-
-        String xml = support.buildMedicalModV2RequestXml(payload);
-
-        assertTrue(xml.contains("<Medical_Class type=\"string\">400</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Treatment</Medical_Class_Name>"));
-        assertTrue(xml.contains("<Medical_Class_Number type=\"string\">3</Medical_Class_Number>"));
-        assertTrue(
-                xml.indexOf("<Medication_Code type=\"string\">002001</Medication_Code>")
-                        < xml.indexOf("<Medication_Code type=\"string\">140000610</Medication_Code>"));
-        assertTrue(
-                xml.indexOf("<Medication_Code type=\"string\">140000610</Medication_Code>")
-                        < xml.indexOf("<Medication_Code type=\"string\">700000021</Medication_Code>"));
-        assertTrue(
-                xml.indexOf("<Medication_Code type=\"string\">700000021</Medication_Code>")
-                        < xml.indexOf("<Medication_Code type=\"string\">0085002</Medication_Code>"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -234,24 +172,22 @@ class OrcaChartSupportSupportTest {
 
         ChartSupportMedicalModV2Request.MedicalInformation baseCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         baseCharge.setMedicalClass("110");
-        baseCharge.setMedicalClassName("基本診療料");
+        baseCharge.setMedicalClassName("BaseCharge");
         baseCharge.setMedicalClassNumber("1");
         ChartSupportMedicalModV2Request.Medication initialConsultation = new ChartSupportMedicalModV2Request.Medication();
         initialConsultation.setCode("110000110");
         initialConsultation.setName("initial-consultation");
         initialConsultation.setNumber("1");
-        initialConsultation.setUnit("times");
         baseCharge.setMedications(List.of(initialConsultation));
 
         ChartSupportMedicalModV2Request.MedicalInformation instructionCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         instructionCharge.setMedicalClass("130");
-        instructionCharge.setMedicalClassName("医学管理等");
+        instructionCharge.setMedicalClassName("Instruction");
         instructionCharge.setMedicalClassNumber("2");
         ChartSupportMedicalModV2Request.Medication homeInstruction = new ChartSupportMedicalModV2Request.Medication();
         homeInstruction.setCode("112007410");
         homeInstruction.setName("home-instruction");
         homeInstruction.setNumber("1");
-        homeInstruction.setUnit("times");
         instructionCharge.setMedications(List.of(homeInstruction));
 
         payload.setMedicalInformation(List.of(baseCharge, instructionCharge));
@@ -262,7 +198,6 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medical_Class_Name type=\"string\">基本診療料</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">110000110</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medical_Class type=\"string\">130</Medical_Class>"));
         assertTrue(xml.contains("<Medical_Class_Name type=\"string\">医学管理等</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">2</Medical_Class_Number>"));
@@ -273,6 +208,7 @@ class OrcaChartSupportSupportTest {
         assertFalse(xml.contains("<Started"));
         assertFalse(xml.contains("BaseCharge"));
         assertFalse(xml.contains("Instruction"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -356,13 +292,11 @@ class OrcaChartSupportSupportTest {
         procedure.setCode("830000001");
         procedure.setName("procedure");
         procedure.setNumber("1");
-        procedure.setUnit("times");
 
         ChartSupportMedicalModV2Request.Medication drug = new ChartSupportMedicalModV2Request.Medication();
         drug.setCode("620000010");
         drug.setName("drug-a");
         drug.setNumber("1");
-        drug.setUnit("ampoule");
 
         injection.setMedications(List.of(admin, procedure, drug));
         payload.setMedicalInformation(List.of(injection));
@@ -375,14 +309,13 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medication_Code type=\"string\">4101</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Name type=\"string\">iv</Medication_Name>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">830000001</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">620000010</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">ampoule</Medication_Unit_Code>"));
         assertFalse(xml.contains("adminMemo"));
         assertFalse(xml.contains("userComment"));
         assertFalse(xml.contains("routeCode"));
         assertFalse(xml.contains("timingCode"));
         assertFalse(xml.contains("dosePerDay"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -405,13 +338,11 @@ class OrcaChartSupportSupportTest {
         mainDrug.setCode("620000012");
         mainDrug.setName("drug-c");
         mainDrug.setNumber("1");
-        mainDrug.setUnit("ampoule");
 
         ChartSupportMedicalModV2Request.Medication dripSet = new ChartSupportMedicalModV2Request.Medication();
         dripSet.setCode("700000031");
         dripSet.setName("drip-set");
         dripSet.setNumber("1");
-        dripSet.setUnit("set");
 
         ChartSupportMedicalModV2Request.Medication comment = new ChartSupportMedicalModV2Request.Medication();
         comment.setCode("0085001");
@@ -428,6 +359,7 @@ class OrcaChartSupportSupportTest {
                 < xml.indexOf("<Medication_Code type=\"string\">700000031</Medication_Code>"));
         assertTrue(xml.indexOf("<Medication_Code type=\"string\">700000031</Medication_Code>")
                 < xml.indexOf("<Medication_Code type=\"string\">0085001</Medication_Code>"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -446,7 +378,6 @@ class OrcaChartSupportSupportTest {
         lab.setCode("160000010");
         lab.setName("lab-general");
         lab.setNumber("1");
-        lab.setUnit("times");
 
         test.setMedications(List.of(lab));
         payload.setMedicalInformation(List.of(test));
@@ -457,7 +388,7 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Test</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">160000010</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -476,7 +407,6 @@ class OrcaChartSupportSupportTest {
         main.setCode("140000610");
         main.setName("wound-care");
         main.setNumber("1");
-        main.setUnit("times");
 
         treatment.setMedications(List.of(main));
         payload.setMedicalInformation(List.of(treatment));
@@ -487,7 +417,7 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Treatment</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">3</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">140000610</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -506,7 +436,6 @@ class OrcaChartSupportSupportTest {
         fee.setCode("180000210");
         fee.setName("certificate-fee");
         fee.setNumber("1");
-        fee.setUnit("times");
 
         other.setMedications(List.of(fee));
         payload.setMedicalInformation(List.of(other));
@@ -517,7 +446,50 @@ class OrcaChartSupportSupportTest {
         assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Other</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">4</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">180000210</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
+        assertNoMedicationUnitTags(xml);
+    }
+
+    @Test
+    void buildMedicalModV2RequestXmlSerializesTestOrderMultipleItemsAndCommentCodesWithoutLocalOnlyFields() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("12345");
+        payload.setPerformDate("2026-03-22T08:00:00");
+        payload.setDepartmentCode("01");
+
+        ChartSupportMedicalModV2Request.MedicalInformation test = new ChartSupportMedicalModV2Request.MedicalInformation();
+        test.setMedicalClass("600");
+        test.setMedicalClassName("Test");
+        test.setMedicalClassNumber("5");
+
+        ChartSupportMedicalModV2Request.Medication first = new ChartSupportMedicalModV2Request.Medication();
+        first.setCode("160000010");
+        first.setName("lab-a");
+        first.setNumber("1");
+
+        ChartSupportMedicalModV2Request.Medication second = new ChartSupportMedicalModV2Request.Medication();
+        second.setCode("160000011");
+        second.setName("lab-b");
+        second.setNumber("2");
+
+        ChartSupportMedicalModV2Request.Medication comment = new ChartSupportMedicalModV2Request.Medication();
+        comment.setCode("008200001");
+        comment.setName("after-meal-comment");
+
+        test.setMedications(List.of(first, second, comment));
+        payload.setMedicalInformation(List.of(test));
+
+        String xml = support.buildMedicalModV2RequestXml(payload);
+
+        assertTrue(xml.contains("<Medical_Class type=\"string\">600</Medical_Class>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Test</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Number type=\"string\">5</Medical_Class_Number>"));
+        assertTrue(xml.indexOf("<Medication_Code type=\"string\">160000010</Medication_Code>")
+                < xml.indexOf("<Medication_Code type=\"string\">160000011</Medication_Code>"));
+        assertTrue(xml.indexOf("<Medication_Code type=\"string\">160000011</Medication_Code>")
+                < xml.indexOf("<Medication_Code type=\"string\">008200001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Name type=\"string\">after-meal-comment</Medication_Name>"));
+        assertFalse(xml.contains("testOrder"));
+        assertNoMedicationUnitTags(xml);
     }
 
     @Test
@@ -585,5 +557,10 @@ class OrcaChartSupportSupportTest {
         assertEquals(20.25, entry.getIcMoney(), 0.0001);
         assertNotNull(entry.getDepartmentName());
         assertEquals("Internal", entry.getDepartmentName());
+    }
+
+    private static void assertNoMedicationUnitTags(String xml) {
+        assertFalse(xml.contains("<Medication_Unit_Code type=\"string\">"));
+        assertFalse(xml.contains("<Medication_Unit_Code_Name type=\"string\">"));
     }
 }

@@ -139,7 +139,6 @@ public class ChartSupportMedicalModV2Request {
         private String code;
         private String name;
         private String number;
-        private String unit;
         private String genericFlg;
 
         public String getCode() {
@@ -164,14 +163,6 @@ public class ChartSupportMedicalModV2Request {
 
         public void setNumber(String number) {
             this.number = number;
-        }
-
-        public String getUnit() {
-            return unit;
-        }
-
-        public void setUnit(String unit) {
-            this.unit = unit;
         }
 
         public String getGenericFlg() {

@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -153,6 +154,10 @@ describe('ChartsActionBar ORCA send', () => {
       sourceBundles: [],
       order: buildSendablePrescriptionOrder(),
     } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('sends a valid medicalmodv2 payload', async () => {

@@ -41,7 +41,6 @@ export type RpNormalizedMedication = {
   code: string;
   name?: string;
   number?: string;
-  unit?: string;
   genericFlg?: 'yes' | 'no';
 };
 
@@ -79,6 +78,7 @@ export type MedicalModV2BundleIssueCode =
   | 'comment_only'
   | 'missing_main_row'
   | 'invalid_other_order_class'
+  | 'unsupported_bacteria_subtype'
   | 'invalid_injection_class'
   | 'missing_injection_admin_code'
   | 'invalid_injection_admin_code';
@@ -326,6 +326,16 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
     }
   }
 
+  if (canonicalEntity === 'bacteriaOrder' && Boolean(bundle.subtype?.trim())) {
+    return [
+      buildBundleIssue(
+        bundle,
+        'unsupported_bacteria_subtype',
+        '細菌検査 subtype に対応する ORCA carrier はありません。院内ローカル情報として保持し、送信前に解消してください。',
+      ),
+    ];
+  }
+
   const sendableMainRows = codedRows.filter((row) => {
     const code = row.item.code?.trim() ?? '';
     if (isCommentMedicationCode(code) || isOrderBundleBodyPartCode(code)) return false;
@@ -366,7 +376,6 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
     code,
     name: item.name?.trim() || undefined,
     number: item.quantity?.trim() || undefined,
-    unit: item.unit?.trim() || undefined,
     genericFlg,
   };
 };
@@ -416,7 +425,6 @@ const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormaliz
       code: usageCode,
       name: usageName,
       number: '',
-      unit: undefined,
       genericFlg: undefined,
     },
     source: { kind: 'usage' },
@@ -474,11 +482,17 @@ export const toMedicalModV2InformationWithSource = (
   const normalized = normalizeOrderBundleToRp(bundle);
   if (!normalized) return null;
 
+  // ORCA medicalmodv2 request has no Medication_Unit_Code carrier.
   const info: MedicalModV2Information = {
     medicalClass: normalized.header.medicalClass,
     medicalClassName: normalized.header.medicalClassName,
     medicalClassNumber: normalized.header.medicalClassNumber,
-    medications: normalized.rows.map((row) => row.medication),
+    medications: normalized.rows.map((row) => ({
+      code: row.medication.code,
+      name: row.medication.name,
+      number: row.medication.number,
+      genericFlg: row.medication.genericFlg,
+    })),
   };
   const source: MedicalModV2InformationSource = {
     ...normalized.header,

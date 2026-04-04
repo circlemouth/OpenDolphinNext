@@ -143,7 +143,8 @@ const cloneMasterSearchPresets = (
 
 const TEST_SPECIMEN_SUBTYPE = {
   label: '600系 subtype',
-  helpText: '検体・一般検査は specimen として保存し、ORCA送信 grouping には使いません。',
+  helpText:
+    '検体・一般検査は specimen として bundle 共通の院内情報に保存し、ORCA送信には使いません。検査指示・院内補足・自由メモ・item memo も local-only です。',
   required: false,
   readOnly: true,
   defaultValue: 'specimen' as OrderTestSubtype,
@@ -152,7 +153,8 @@ const TEST_SPECIMEN_SUBTYPE = {
 
 const TEST_PHYSIOLOGY_SUBTYPE = {
   label: '600系 subtype',
-  helpText: '生理検査は physiology 固定で扱い、検体系とは editor 上で分離します。',
+  helpText:
+    '生理検査は physiology 固定の bundle 共通院内情報として扱い、ORCA送信には使いません。検査指示・院内補足・自由メモ・item memo も local-only です。',
   required: false,
   readOnly: true,
   defaultValue: 'physiology' as OrderTestSubtype,
@@ -161,7 +163,8 @@ const TEST_PHYSIOLOGY_SUBTYPE = {
 
 const TEST_BACTERIA_SUBTYPE = {
   label: '細菌検査 subtype',
-  helpText: '細菌検査は culture または sensitivity を選択してください。ORCA送信 grouping は classCode 600 を維持します。',
+  helpText:
+    '細菌検査 subtype は bundle 共通の院内情報です。検査指示・院内補足・自由メモ・item memo も local-only で、official medicalmodv2 に carrier がないため送信前に block します。',
   required: true,
   readOnly: false,
   options: [
@@ -308,10 +311,10 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 生化学検査',
-      instructionLabel: '検査指示',
-      instructionPlaceholder: '例: 至急 / 空腹時',
-      memoLabel: '検査メモ',
-      memoPlaceholder: '採取条件・備考を入力',
+      instructionLabel: '検査指示（院内）',
+      instructionPlaceholder: '例: 至急 / 空腹時（ORCA送信しない）',
+      memoLabel: '検査メモ（院内）',
+      memoPlaceholder: '採取条件・備考を入力（ORCA送信しない）',
       masterSectionTitle: '検査マスタ検索',
       mainItemLabel: '検査項目',
       mainItemPlaceholder: '検査項目名',
@@ -336,10 +339,10 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 生化学検査',
-      instructionLabel: '検査指示',
-      instructionPlaceholder: '例: 至急 / 空腹時',
-      memoLabel: '検査メモ',
-      memoPlaceholder: '採取条件・備考を入力',
+      instructionLabel: '検査指示（院内）',
+      instructionPlaceholder: '例: 至急 / 空腹時（ORCA送信しない）',
+      memoLabel: '検査メモ（院内）',
+      memoPlaceholder: '採取条件・備考を入力（ORCA送信しない）',
       masterSectionTitle: '検査マスタ検索',
       mainItemLabel: '検査項目',
       mainItemPlaceholder: '検査項目名',
@@ -364,10 +367,10 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 心電図検査',
-      instructionLabel: '生理検査指示',
-      instructionPlaceholder: '例: 安静時 / 12誘導',
-      memoLabel: '生理検査メモ',
-      memoPlaceholder: '実施条件・備考を入力',
+      instructionLabel: '生理検査指示（院内）',
+      instructionPlaceholder: '例: 安静時 / 12誘導（ORCA送信しない）',
+      memoLabel: '生理検査メモ（院内）',
+      memoPlaceholder: '実施条件・備考を入力（ORCA送信しない）',
       masterSectionTitle: '生理検査マスタ検索',
       mainItemLabel: '生理検査項目',
       mainItemPlaceholder: '生理検査項目名',
@@ -392,10 +395,10 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 細菌培養',
-      instructionLabel: '細菌検査指示',
-      instructionPlaceholder: '例: 喀痰 / 至急',
-      memoLabel: '細菌検査メモ',
-      memoPlaceholder: '採取条件・備考を入力',
+      instructionLabel: '細菌検査指示（院内）',
+      instructionPlaceholder: '例: 喀痰 / 至急（ORCA送信しない）',
+      memoLabel: '細菌検査メモ（院内）',
+      memoPlaceholder: '採取条件・備考を入力（ORCA送信しない）',
       masterSectionTitle: '細菌検査マスタ検索',
       mainItemLabel: '細菌検査項目',
       mainItemPlaceholder: '細菌検査項目名',
