@@ -477,12 +477,26 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '不正その他',
-        items: [{ code: '700000001', name: '造影剤', quantity: '1', unit: '本', memo: '' }],
+        items: [{ code: '81234567', name: '擬似8系コード', quantity: '1', unit: '本', memo: '' }],
       },
       entity: 'otherOrder',
       bundleLabel: 'その他',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_other_order_code']);
+  });
+
+  it('otherOrder: classCode が 800〜890 以外なら保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '文書料',
+        classCode: '8A0',
+        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+      } as BundleFormState & { classCode: string },
+      entity: 'otherOrder',
+      bundleLabel: 'その他',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_other_order_class_code']);
   });
 
   it('otherOrder: 材料行は front 契約で reject する', () => {

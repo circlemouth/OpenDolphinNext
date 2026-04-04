@@ -5,10 +5,13 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Set;
+import java.util.regex.Pattern;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.ModelUtils;
 
 final class OrcaOrderBundleRequestSupport {
+
+    private static final Pattern OTHER_ORDER_CODE_PATTERN = Pattern.compile("^(?:8\\d{8}|18\\d{7})$");
 
     private static final Set<String> ORDER_BUNDLE_ENTITIES = Set.of(
             IInfoModel.ENTITY_MED_ORDER,
@@ -146,11 +149,29 @@ final class OrcaOrderBundleRequestSupport {
             case IInfoModel.ENTITY_SURGERY_ORDER -> normalizedClassCode.startsWith("5");
             case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
             case IInfoModel.ENTITY_RADIOLOGY_ORDER -> normalizedClassCode.startsWith("7");
-            case IInfoModel.ENTITY_OTHER_ORDER -> normalizedClassCode.startsWith("8");
+            case IInfoModel.ENTITY_OTHER_ORDER -> isValidOtherOrderClassCode(normalizedClassCode);
             case IInfoModel.ENTITY_BASE_CHARGE_ORDER -> isInRange(normalizedClassCode, 110, 125);
             case IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> isInRange(normalizedClassCode, 130, 150);
             default -> true;
         };
+    }
+
+    static boolean isValidOtherOrderCode(String code) {
+        String normalized = trimToNull(code);
+        return normalized != null && OTHER_ORDER_CODE_PATTERN.matcher(normalized).matches();
+    }
+
+    static boolean isValidOtherOrderClassCode(String classCode) {
+        String normalized = trimToNull(classCode);
+        if (normalized == null || !normalized.matches("\\d{3}")) {
+            return false;
+        }
+        try {
+            int value = Integer.parseInt(normalized);
+            return value >= 800 && value <= 890;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 
     static boolean supportsBodyPartField(String entity) {

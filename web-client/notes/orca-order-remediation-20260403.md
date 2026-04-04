@@ -49,6 +49,14 @@
 - `otherOrder` の server/client hardening は `etensu category 8` 契約に合わせ、`8...` に加えて既存 smoke で使っている `18...` も許容する形へ補正した。
 - 未完了は、`testOrder` / `physiologyOrder` の local-only を UI ラベル/placeholder まで明示することと、600系の複数 item/comment XML 網羅、physiology/bacteria の縦断 smoke 追加。
 
+## otherOrder Final Contract (`20260403T234527Z`)
+
+- `otherOrder` の本体コードは `etensu category 8` の sendable 9桁コードに限定する。許可形は `8xxxxxxxx` または `18xxxxxxx` のみ。
+- `otherOrder` の `classCode` は ORCA `medicalinfo` のその他区分に合わせ、数値 `800` から `890` のみ許可する。`startsWith("8")` ベースの緩い判定は廃止した。
+- `bodyPart`、`materialItems`、comment-only、uncoded row、coded/uncoded mixed row は front/server とも reject に固定した。
+- send-block でも `otherOrder` 専用の invalid code / invalid classCode / hidden bodyPart を検出し、保存済み不正データの ORCA 送信を fail-closed に止める。
+- `sourceSetCode` は引き続き local-only。UI provenance 表示には使うが、save payload / server durable model / medicalmodv2 payload には混入させない。
+
 ## 主要変更ファイル
 
 - `web-client/src/features/charts/orderCategoryRegistry.ts`

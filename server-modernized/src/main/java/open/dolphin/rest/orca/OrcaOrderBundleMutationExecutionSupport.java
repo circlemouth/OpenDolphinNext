@@ -96,18 +96,19 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 continue;
             }
             String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
-            if (code != null) {
-                hasCodedRow = true;
-                if (OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
-                    hasBodyPart = true;
-                } else if (!isCommentCode(code)) {
-                    if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity) && !isOtherOrderCode(code)) {
-                        throw validationFailure.invalid("items", "otherOrder items must use code family 8");
+                if (code != null) {
+                    hasCodedRow = true;
+                    if (OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
+                        hasBodyPart = true;
+                    } else if (!isCommentCode(code)) {
+                        if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity)
+                                && !OrcaOrderBundleRequestSupport.isValidOtherOrderCode(code)) {
+                            throw validationFailure.invalid("items", "otherOrder items must use etensu category 8 sendable codes");
+                        }
+                        hasSendableMainRow = true;
                     }
-                    hasSendableMainRow = true;
-                }
-            } else {
-                hasUncodedRow = true;
+                } else {
+                    hasUncodedRow = true;
             }
         }
         if (hasCodedRow && hasUncodedRow) {
@@ -131,10 +132,6 @@ final class OrcaOrderBundleMutationExecutionSupport {
         return canonicalEntity != null
                 && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity)
                 && !IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity);
-    }
-
-    private static boolean isOtherOrderCode(String code) {
-        return code.startsWith("8") || code.startsWith("18");
     }
 
     private static boolean hasBodyPartItem(OrderBundleMutationRequest.BundleItem item) {

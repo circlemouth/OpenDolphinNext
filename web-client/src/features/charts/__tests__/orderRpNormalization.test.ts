@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveCanonicalOrderEntity } from '../orderCategoryRegistry';
 import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 import {
+  buildMedicalModV2BlockNotice,
   collectMedicalModV2BundleIssues,
   fetchMedicalModV2OrderBundles,
   normalizeOrderBundleToRp,
+  prepareMedicalModV2SendData,
 } from '../orderRpNormalization';
 import { fetchOrderBundles } from '../orderBundleApi';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
@@ -106,6 +108,40 @@ describe('orderRpNormalization', () => {
         }),
       ]),
     );
+  });
+
+  it('otherOrder の擬似8系コードは送信前 issue を返す', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'otherOrder',
+        bundleName: 'invalid-other-code',
+        classCode: '800',
+        items: [{ code: '89000001', name: '擬似8系コード', quantity: '1', unit: '回', memo: '' }],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'invalid_other_order_code',
+          bundleName: 'invalid-other-code',
+        }),
+      ]),
+    );
+  });
+
+  it('otherOrder の不正 classCode は送信前 block notice を返す', () => {
+    const prepared = prepareMedicalModV2SendData([
+      {
+        entity: 'otherOrder',
+        bundleName: 'invalid-other-class',
+        classCode: '8A0',
+        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+      } as any,
+    ]);
+
+    expect(buildMedicalModV2BlockNotice(prepared)?.message).toContain('invalid-other-class');
+    expect(buildMedicalModV2BlockNotice(prepared)?.message).toContain('otherOrder');
   });
 
   it('normalize は unit を保持する', () => {

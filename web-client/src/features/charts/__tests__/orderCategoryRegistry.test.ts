@@ -50,6 +50,7 @@ describe('orderCategoryRegistry', () => {
   it('returns search policy aligned with each entity', () => {
     const injectionPolicy = resolveOrderEntityMasterSearchPolicy('injectionOrder');
     const treatmentPolicy = resolveOrderEntityMasterSearchPolicy('treatmentOrder');
+    const otherPolicy = resolveOrderEntityMasterSearchPolicy('otherOrder');
     const testPolicy = resolveOrderEntityMasterSearchPolicy('testOrder');
     const chargePolicy = resolveOrderEntityMasterSearchPolicy('baseChargeOrder');
     const laboPolicy = resolveOrderEntityMasterSearchPolicy('laboTest');
@@ -58,6 +59,10 @@ describe('orderCategoryRegistry', () => {
     expect(injectionPolicy.defaultMasterSearchType).toBe('drug');
     expect(injectionPolicy.etensuCategory).toBe('3');
     expect(treatmentPolicy.etensuCategory).toBe('4');
+    expect(otherPolicy.masterSearchPresets.map((preset) => preset.type)).toEqual(['etensu']);
+    expect(otherPolicy.defaultMasterSearchType).toBe('etensu');
+    expect(otherPolicy.etensuCategory).toBe('8');
+    expect(resolveOrderEntityUiProfile('otherOrder').supportsBodyPartSearch).toBe(false);
     expect(testPolicy.etensuCategory).toBe('6');
     expect(chargePolicy.etensuCategory).toBe('1');
     expect(laboPolicy).toEqual(testPolicy);
