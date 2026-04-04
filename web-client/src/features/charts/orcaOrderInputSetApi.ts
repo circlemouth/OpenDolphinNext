@@ -1,6 +1,9 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { ensureObservabilityMeta } from '../../libs/observability/observability';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
+import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
+import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+import { resolveOrcaOrderRowRole } from './orcaOrderRowRole';
 
 export type OrcaOrderInputSetSummary = {
   setCode?: string;
@@ -187,20 +190,37 @@ export async function fetchOrcaOrderInputSetDetail(params: {
     };
   }
   const bundle = (json as { bundle?: Record<string, unknown> }).bundle ?? {};
+  const normalizedEntity =
+    typeof bundle.entity === 'string' ? (resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity) : bundle.entity === null ? null : undefined;
   type DetailItem = NonNullable<OrcaOrderInputSetDetailResult['bundle']>['items'][number];
   const items: NonNullable<OrcaOrderInputSetDetailResult['bundle']>['items'] = Array.isArray((bundle as { items?: unknown[] }).items)
     ? ((bundle as { items?: Array<Record<string, unknown>> }).items ?? []).map((item): DetailItem => {
+        const fields = resolveOrcaOrderItemFields({
+          memo: typeof item.memo === 'string' ? item.memo : undefined,
+          genericFlg: item.genericFlg === 'yes' || item.genericFlg === 'no' ? item.genericFlg : undefined,
+          userComment: typeof item.userComment === 'string' ? item.userComment : undefined,
+          rowRole:
+            item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' ? item.rowRole : undefined,
+        });
         const detailItem: DetailItem = {};
         if (typeof item.code === 'string') detailItem.code = item.code;
         if (typeof item.name === 'string') detailItem.name = item.name;
         if (typeof item.quantity === 'string') detailItem.quantity = item.quantity;
         if (typeof item.unit === 'string') detailItem.unit = item.unit;
-        if (typeof item.memo === 'string') detailItem.memo = item.memo;
-        if (item.genericFlg === 'yes' || item.genericFlg === 'no') detailItem.genericFlg = item.genericFlg;
-        if (typeof item.userComment === 'string') detailItem.userComment = item.userComment;
-        if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment') {
-          detailItem.rowRole = item.rowRole;
-        }
+        detailItem.memo = fields.memoText || undefined;
+        detailItem.genericFlg = fields.genericFlg;
+        detailItem.userComment = fields.userComment;
+        detailItem.rowRole = resolveOrcaOrderRowRole({
+          entity: normalizedEntity ?? undefined,
+          item: {
+            code: detailItem.code,
+            name: detailItem.name,
+            quantity: detailItem.quantity,
+            unit: detailItem.unit,
+            memo: detailItem.memo,
+            rowRole: fields.rowRole,
+          },
+        }) as DetailItem['rowRole'];
         return detailItem;
       })
     : [];
@@ -210,7 +230,7 @@ export async function fetchOrcaOrderInputSetDetail(params: {
     status: parsed.status,
     setCode: typeof json.setCode === 'string' ? json.setCode : setCode,
     bundle: {
-      entity: typeof bundle.entity === 'string' ? bundle.entity : bundle.entity === null ? null : undefined,
+      entity: normalizedEntity,
       sourceSetCode: typeof bundle.sourceSetCode === 'string' ? bundle.sourceSetCode : setCode,
       bundleName: typeof bundle.bundleName === 'string' ? bundle.bundleName : undefined,
       bundleNumber: typeof bundle.bundleNumber === 'string' ? bundle.bundleNumber : undefined,
@@ -232,7 +252,7 @@ export async function fetchOrcaOrderInputSetDetail(params: {
               quantity: typeof bodyPartSource.quantity === 'string' ? bodyPartSource.quantity : undefined,
               unit: typeof bodyPartSource.unit === 'string' ? bodyPartSource.unit : undefined,
               memo: typeof bodyPartSource.memo === 'string' ? bodyPartSource.memo : undefined,
-              rowRole: bodyPartSource.rowRole === 'bodyPart' ? 'bodyPart' : undefined,
+              rowRole: 'bodyPart',
             }
           : null,
       items,

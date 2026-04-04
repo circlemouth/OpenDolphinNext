@@ -16,14 +16,14 @@ final class OrcaOrderBundleItemMemoSupport {
     static ParsedItem parse(String memo) {
         String raw = memo == null ? "" : memo;
         if (!raw.startsWith(META_PREFIX)) {
-            return new ParsedItem(null, null, raw);
+            return new ParsedItem(null, null, null, raw);
         }
         String[] lines = raw.split("\\n", -1);
         String firstLine = lines.length > 0 ? lines[0] : "";
         String jsonPart = firstLine.substring(META_PREFIX.length()).trim();
         String memoText = lines.length <= 1 ? "" : String.join("\n", java.util.Arrays.copyOfRange(lines, 1, lines.length));
         if (jsonPart.isEmpty()) {
-            return new ParsedItem(null, null, memoText);
+            return new ParsedItem(null, null, null, memoText);
         }
         try {
             Map<String, Object> parsed = OBJECT_MAPPER.readValue(jsonPart, new TypeReference<Map<String, Object>>() {
@@ -31,17 +31,21 @@ final class OrcaOrderBundleItemMemoSupport {
             return new ParsedItem(
                     normalizeGenericFlg(parsed.get("genericFlg")),
                     normalizeUserComment(parsed.get("userComment")),
+                    parsed.get("rowRole") instanceof String rowRole
+                            ? OrcaOrderBundleRowRoleSupport.normalizeRowRole(rowRole)
+                            : null,
                     memoText);
         } catch (Exception error) {
-            return new ParsedItem(null, null, raw);
+            return new ParsedItem(null, null, null, raw);
         }
     }
 
-    static String format(String genericFlg, String userComment, String memoText) {
+    static String format(String genericFlg, String userComment, String rowRole, String memoText) {
         String normalizedGenericFlg = normalizeGenericFlg(genericFlg);
         String normalizedUserComment = normalizeUserComment(userComment);
+        String normalizedRowRole = OrcaOrderBundleRowRoleSupport.normalizeRowRole(rowRole);
         String body = memoText == null ? "" : memoText;
-        if (normalizedGenericFlg == null && normalizedUserComment == null) {
+        if (normalizedGenericFlg == null && normalizedUserComment == null && normalizedRowRole == null) {
             return body;
         }
         Map<String, String> payload = new LinkedHashMap<>();
@@ -50,6 +54,9 @@ final class OrcaOrderBundleItemMemoSupport {
         }
         if (normalizedUserComment != null) {
             payload.put("userComment", normalizedUserComment);
+        }
+        if (normalizedRowRole != null) {
+            payload.put("rowRole", normalizedRowRole);
         }
         try {
             String metaLine = META_PREFIX + OBJECT_MAPPER.writeValueAsString(payload);
@@ -76,6 +83,6 @@ final class OrcaOrderBundleItemMemoSupport {
         return stringValue.isBlank() ? null : stringValue;
     }
 
-    record ParsedItem(String genericFlg, String userComment, String memoText) {
+    record ParsedItem(String genericFlg, String userComment, String rowRole, String memoText) {
     }
 }

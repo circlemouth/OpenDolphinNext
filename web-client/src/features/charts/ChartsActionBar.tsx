@@ -1474,7 +1474,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               medicationCode: rowSource?.medication.code,
               medicationName: rowSource?.medication.name,
               sourceKind: rowSource?.source.kind,
-              sourceItemIndex: rowSource?.source.kind === 'bundle_item' ? rowSource.source.itemIndex : undefined,
+              sourceItemIndex: typeof rowIndex === 'number' ? rowIndex : undefined,
+              sourceSectionIndex: rowSource?.source.kind === 'bundle_item' ? rowSource.source.sectionIndex : undefined,
+              sourceRowRole: rowSource?.source.kind === 'usage' ? undefined : rowSource?.source.rowRole,
             };
           });
 

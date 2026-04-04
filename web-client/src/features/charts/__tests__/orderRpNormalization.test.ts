@@ -127,6 +127,31 @@ describe('orderRpNormalization', () => {
       }),
     );
   });
+  it('normalize は treatmentOrder の bodyPart/main/material/comment 順を固定する', () => {
+    const normalized = normalizeOrderBundleToRp({
+      entity: 'treatmentOrder',
+      bundleName: '創傷処置セット',
+      bundleNumber: '3',
+      classCode: '400',
+      classCodeSystem: 'Claim007',
+      className: 'Treatment',
+      bodyPart: { code: '002001', name: '膝関節', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
+      items: [
+        { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+        { code: '700000021', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'material' },
+        { code: '0085001', name: '注意事項', quantity: '', unit: '', memo: '術前確認', rowRole: 'comment' },
+      ],
+    } as any);
+
+    expect(normalized?.header.medicalClass).toBe('400');
+    expect(normalized?.header.medicalClassNumber).toBe('3');
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual([
+      '002001',
+      '140000610',
+      '700000021',
+      '0085001',
+    ]);
+  });
   it('normalize は injectionOrder の admin 行と rowRole 順を固定する', () => {
     const normalized = normalizeOrderBundleToRp({
       entity: 'injectionOrder',

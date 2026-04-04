@@ -6,8 +6,17 @@ import { MemoryRouter } from 'react-router-dom';
 import { ChartsActionBar } from '../ChartsActionBar';
 import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles } from '../orderBundleApi';
+import { getOrcaClaimSendEntry } from '../orcaClaimSendCache';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
 import type { ReceptionEntry } from '../../reception/api';
+
+vi.mock('../../../AppRouter', () => ({
+  useOptionalSession: () => ({
+    facilityId: 'F-1',
+    userId: 'U-1',
+    role: 'doctor',
+  }),
+}));
 
 vi.mock('../../../routes/useAppNavigation', () => ({
   useAppNavigation: () => ({
@@ -130,6 +139,9 @@ const renderActionBar = (selectedEntry?: Partial<ReceptionEntry>) =>
 describe('ChartsActionBar ORCA send', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.clear();
+    }
     vi.mocked(fetchOrderBundles).mockResolvedValue({ ok: true, bundles: [] } as any);
     vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
       ok: true,
@@ -271,5 +283,91 @@ describe('ChartsActionBar ORCA send', () => {
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     expect(screen.queryByText(/送信を停止/)).not.toBeInTheDocument();
+  });
+
+  it('caches warning positions for treatment bodyPart main material and comment rows', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
+      ok: true,
+      bundles:
+        entity === 'treatmentOrder'
+          ? [
+              {
+                entity: 'treatmentOrder',
+                bundleName: 'wound-care',
+                bundleNumber: '3',
+                classCode: '400',
+                classCodeSystem: 'Claim007',
+                className: 'Treatment',
+                bodyPart: { code: '002001', name: 'knee', quantity: '1', unit: 'part', memo: '', rowRole: 'bodyPart' },
+                items: [
+                  { code: '140000610', name: 'wound-care', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
+                  { code: '700000021', name: 'gauze', quantity: '2', unit: 'sheet', memo: '', rowRole: 'material' },
+                  { code: '0085002', name: 'comment', quantity: '', unit: '', memo: 'after-cleaning', rowRole: 'comment' },
+                ],
+              },
+            ]
+          : [],
+    }));
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '80',
+      apiResultMessage: 'warning',
+      runId: 'RUN-API-WARN',
+      traceId: 'TRACE-API-WARN',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+      medicalWarnings: [
+        {
+          medicalWarning: 'body-part-warning',
+          medicalWarningMessage: 'body-part-warning',
+          medicalWarningCode: 'BP01',
+          medicalWarningPosition: 1,
+          medicalWarningItemPosition: 1,
+        },
+        {
+          medicalWarning: 'main-warning',
+          medicalWarningMessage: 'main-warning',
+          medicalWarningCode: 'MAIN01',
+          medicalWarningPosition: 1,
+          medicalWarningItemPosition: 2,
+        },
+        {
+          medicalWarning: 'material-warning',
+          medicalWarningMessage: 'material-warning',
+          medicalWarningCode: 'MAT01',
+          medicalWarningPosition: 1,
+          medicalWarningItemPosition: 3,
+        },
+        {
+          medicalWarning: 'comment-warning',
+          medicalWarningMessage: 'comment-warning',
+          medicalWarningCode: 'COM01',
+          medicalWarningPosition: 1,
+          medicalWarningItemPosition: 4,
+        },
+      ],
+    } as any);
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(getOrcaClaimSendEntry({ facilityId: 'F-1', userId: 'U-1' }, '000001')?.medicalWarnings).toBeDefined(),
+    );
+
+    const entry = getOrcaClaimSendEntry({ facilityId: 'F-1', userId: 'U-1' }, '000001');
+    expect(entry?.medicalWarnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ sourceKind: 'body_part', sourceItemIndex: 0 }),
+        expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 1 }),
+        expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 2 }),
+        expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 3 }),
+      ]),
+    );
   });
 });

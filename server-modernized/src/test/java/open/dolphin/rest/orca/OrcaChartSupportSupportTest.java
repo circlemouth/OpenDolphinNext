@@ -170,6 +170,59 @@ class OrcaChartSupportSupportTest {
     }
 
     @Test
+    void buildMedicalModV2RequestXmlSerializesTreatmentBodyPartMaterialAndCommentInOrder() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("12345");
+        payload.setPerformDate("2026-03-22T08:00:00");
+        payload.setDepartmentCode("01");
+
+        ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
+        information.setMedicalClass("400");
+        information.setMedicalClassName("Treatment");
+        information.setMedicalClassNumber("3");
+
+        ChartSupportMedicalModV2Request.Medication bodyPart = new ChartSupportMedicalModV2Request.Medication();
+        bodyPart.setCode("002001");
+        bodyPart.setName("knee");
+        bodyPart.setNumber("1");
+        bodyPart.setUnit("part");
+
+        ChartSupportMedicalModV2Request.Medication main = new ChartSupportMedicalModV2Request.Medication();
+        main.setCode("140000610");
+        main.setName("wound-care");
+        main.setNumber("1");
+        main.setUnit("times");
+
+        ChartSupportMedicalModV2Request.Medication material = new ChartSupportMedicalModV2Request.Medication();
+        material.setCode("700000021");
+        material.setName("gauze");
+        material.setNumber("2");
+        material.setUnit("sheet");
+
+        ChartSupportMedicalModV2Request.Medication comment = new ChartSupportMedicalModV2Request.Medication();
+        comment.setCode("0085002");
+        comment.setName("after-cleaning");
+
+        information.setMedications(List.of(bodyPart, main, material, comment));
+        payload.setMedicalInformation(List.of(information));
+
+        String xml = support.buildMedicalModV2RequestXml(payload);
+
+        assertTrue(xml.contains("<Medical_Class type=\"string\">400</Medical_Class>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Treatment</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Number type=\"string\">3</Medical_Class_Number>"));
+        assertTrue(
+                xml.indexOf("<Medication_Code type=\"string\">002001</Medication_Code>")
+                        < xml.indexOf("<Medication_Code type=\"string\">140000610</Medication_Code>"));
+        assertTrue(
+                xml.indexOf("<Medication_Code type=\"string\">140000610</Medication_Code>")
+                        < xml.indexOf("<Medication_Code type=\"string\">700000021</Medication_Code>"));
+        assertTrue(
+                xml.indexOf("<Medication_Code type=\"string\">700000021</Medication_Code>")
+                        < xml.indexOf("<Medication_Code type=\"string\">0085002</Medication_Code>"));
+    }
+
+    @Test
     void buildMedicalModV2RequestXmlSerializesBasicAndInstructionChargeGroups() {
         ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
         payload.setPatientId("12345");

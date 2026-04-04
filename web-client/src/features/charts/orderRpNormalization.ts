@@ -13,17 +13,38 @@ import {
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+import {
+  hasOrcaOrderRowValue,
+  isOrcaBodyPartCode,
+  isOrcaCommentCode,
+  isOrcaNineDigitCode,
+  isOrcaUsageCode,
+  isSendableCodeForRowRole,
+  resolveOrcaOrderRowRole,
+  type OrcaOrderRowRole,
+} from './orcaOrderRowRole';
 import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
 
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
-const BODY_PART_CODE_PATTERN = /^002/;
 const DRUG_CODE_PATTERN = /^6\d{8}$/;
 
-const isCommentMedicationCode = (code: string) => COMMENT_CODE_PATTERN.test(code.trim());
-const isBodyPartCode = (code: string) => BODY_PART_CODE_PATTERN.test(code.trim());
-
-const hasBundleItemValue = (item: OrderBundleItem) =>
-  Boolean(item.code?.trim() || item.name?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
+export const isCommentMedicationCode = (code: string) => isOrcaCommentCode(code);
+export const isBodyPartCode = (code: string) => isOrcaBodyPartCode(code);
+export const isUsageMedicationCode = (code: string) => isOrcaUsageCode(code);
+export const isNineDigitMedicationCode = (code: string) => isOrcaNineDigitCode(code);
+export const isSendableMaterialOrderCode = (code?: string | null) => {
+  const normalized = code?.trim() ?? '';
+  if (!normalized) return false;
+  return isSendableCodeForRowRole('material', normalized);
+};
+export const isSendableMainOrderCode = (entity?: string | null, code?: string | null) => {
+  const normalized = code?.trim() ?? '';
+  if (!normalized) return false;
+  const canonicalEntity = resolveCanonicalOrderEntity(entity);
+  if (canonicalEntity === 'otherOrder') {
+    return /^(8|18)/.test(normalized);
+  }
+  return isSendableCodeForRowRole('main', normalized);
+};
 
 export type RpNormalizedMedication = {
   code: string;
@@ -34,8 +55,8 @@ export type RpNormalizedMedication = {
 };
 
 export type RpNormalizedRowSource =
-  | { kind: 'body_part' }
-  | { kind: 'bundle_item'; itemIndex: number }
+  | { kind: 'body_part'; rowRole: 'bodyPart'; sectionIndex: 0 }
+  | { kind: 'bundle_item'; itemIndex: number; rowRole: Exclude<OrcaOrderRowRole, 'bodyPart'>; sectionIndex: number }
   | { kind: 'usage' };
 
 export type RpNormalizedRow = {
@@ -101,29 +122,11 @@ const cloneBodyPartItem = (item?: OrderBundle['bodyPart'] | null): OrderBundleIt
     quantity: item.quantity?.trim() || undefined,
     unit: item.unit?.trim() || undefined,
     memo: item.memo?.trim() || undefined,
+    rowRole: 'bodyPart',
   };
 };
 
 const isBodyPartCodeValue = (code?: string | null) => Boolean(code?.trim() && isBodyPartCode(code.trim()));
-
-const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
-  const normalizedCode = code?.trim();
-  if (!normalizedCode || !normalizedCode.startsWith('7')) return false;
-  const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  return canonicalEntity !== 'radiologyOrder';
-};
-
-const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | null) => {
-  if (!item) return 'main' as const;
-  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
-    return item.rowRole;
-  }
-  const code = item.code?.trim();
-  if (isBodyPartCodeValue(code)) return 'bodyPart' as const;
-  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
-  if (code && isCommentMedicationCode(code)) return 'comment' as const;
-  return 'main' as const;
-};
 
 const collectNormalizedRows = (bundle: OrderBundle) => {
   const rows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
@@ -134,29 +137,37 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
         .map(cloneBundleItem)
         .find((item): item is OrderBundleItem => Boolean(item && isBodyPartCodeValue(item.code)));
   if (explicitBodyPart) {
-    rows.push({ item: explicitBodyPart, source: { kind: 'body_part' } });
+    rows.push({ item: explicitBodyPart, source: { kind: 'body_part', rowRole: 'bodyPart', sectionIndex: 0 } });
   } else if (legacyBodyPart) {
-    rows.push({ item: legacyBodyPart, source: { kind: 'body_part' } });
+    rows.push({ item: legacyBodyPart, source: { kind: 'body_part', rowRole: 'bodyPart', sectionIndex: 0 } });
   }
   const mainRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   const materialRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   const commentRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   (bundle.items ?? []).forEach((item, itemIndex) => {
     const cloned = cloneBundleItem(item);
-    if (!cloned || !hasBundleItemValue(cloned)) return;
+    if (!cloned || !hasOrcaOrderRowValue(cloned)) return;
     const code = cloned.code?.trim() ?? '';
     if (isBodyPartCodeValue(code) && (explicitBodyPart || legacyBodyPart)) return;
-    const row = { item: cloned, source: { kind: 'bundle_item', itemIndex } as const };
-    const rowRole = resolveBundleItemRowRole(bundle.entity, cloned);
+    const rowRole = resolveOrcaOrderRowRole({ entity: bundle.entity, item: cloned });
     if (rowRole === 'comment') {
-      commentRows.push(row);
+      commentRows.push({
+        item: cloned,
+        source: { kind: 'bundle_item', itemIndex, rowRole: 'comment', sectionIndex: commentRows.length },
+      });
       return;
     }
     if (rowRole === 'material') {
-      materialRows.push(row);
+      materialRows.push({
+        item: cloned,
+        source: { kind: 'bundle_item', itemIndex, rowRole: 'material', sectionIndex: materialRows.length },
+      });
       return;
     }
-    mainRows.push(row);
+    mainRows.push({
+      item: cloned,
+      source: { kind: 'bundle_item', itemIndex, rowRole: 'main', sectionIndex: mainRows.length },
+    });
   });
   rows.push(...mainRows, ...materialRows, ...commentRows);
   return rows;
@@ -183,7 +194,7 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
     ];
   }
   const rows = collectNormalizedRows(bundle);
-  const valuedRows = rows.filter((row) => hasBundleItemValue(row.item));
+  const valuedRows = rows.filter((row) => hasOrcaOrderRowValue(row.item));
   if (valuedRows.length === 0) {
     return [buildBundleIssue(bundle, 'missing_main_row', '送信対象の行がありません。')];
   }
@@ -209,12 +220,12 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
     ];
   }
 
-  const sendableMainRows = codedRows.filter((row) => {
-    const code = row.item.code?.trim() ?? '';
-    return !isCommentMedicationCode(code) && !isBodyPartCode(code);
+  const semanticMainRows = codedRows.filter((row) => {
+    const rowRole = resolveOrcaOrderRowRole({ entity: bundle.entity, item: row.item });
+    return rowRole === 'main';
   });
   const requireMainRow = canonicalEntity !== 'medOrder' && canonicalEntity !== 'injectionOrder';
-  if (requireMainRow && sendableMainRows.length === 0) {
+  if (requireMainRow && semanticMainRows.length === 0) {
     return [
       buildBundleIssue(
         bundle,
@@ -398,9 +409,9 @@ export const fetchMedicalModV2OrderBundles = async (patientId: string, from: str
 const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSource['kind']) => {
   const normalized = code.trim();
   if (!normalized) return false;
-  if (sourceKind === 'usage') return /^\d+$/.test(normalized);
-  if (sourceKind === 'body_part') return /^002\d{0,}$/.test(normalized);
-  return /^\d{9}$/.test(normalized) || isCommentMedicationCode(normalized);
+  if (sourceKind === 'usage') return isUsageMedicationCode(normalized);
+  if (sourceKind === 'body_part') return isBodyPartCode(normalized);
+  return isNineDigitMedicationCode(normalized) || isCommentMedicationCode(normalized);
 };
 
 export const formatMedicalModV2BundleIssue = (issue: MedicalModV2BundleIssue) => {
@@ -468,6 +479,16 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
       nextAction: RP_REQUIRED_NEXT_ACTION,
     };
   }
+  if (prepared.invalidCodes.length > 0) {
+    const preview = prepared.invalidCodes
+      .slice(0, 5)
+      .map((entry) => `G${entry.group}-L${entry.row}:${entry.code}${entry.name ? `(${entry.name})` : ''}`)
+      .join(' / ');
+    return {
+      message: `ORCA送信を停止: 9桁コード/コメント/部位コード/用法数字コード以外の入力コードがあります: ${preview}`,
+      nextAction: 'オーダー入力に戻り、候補選択またはコード補正候補を適用してください。',
+    };
+  }
   if (prepared.bundleIssues.length > 0) {
     const preview = prepared.bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
     const remaining = prepared.bundleIssues.length - 4;
@@ -486,16 +507,6 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
     return {
       message: `ORCA送信を停止: 中途データ上限を超過（${prepared.limitReasons.join(' / ')}）`,
       nextAction: 'RP/オーダー束を分割して再送してください。',
-    };
-  }
-  if (prepared.invalidCodes.length > 0) {
-    const preview = prepared.invalidCodes
-      .slice(0, 5)
-      .map((entry) => `G${entry.group}-L${entry.row}:${entry.code}${entry.name ? `(${entry.name})` : ''}`)
-      .join(' / ');
-    return {
-      message: `ORCA送信を停止: 9桁コード/コメント/部位コード/用法数字コード以外の入力コードがあります: ${preview}`,
-      nextAction: 'オーダー入力に戻り、候補選択またはコード補正候補を適用してください。',
     };
   }
   return null;

@@ -48,6 +48,13 @@ import {
   normalizeOrderTestSubtype,
   type OrderTestSubtype,
 } from './orderCategoryRegistry';
+import {
+  ORCA_COMMENT_CODE_PATTERN,
+  hasOrcaOrderRowValue,
+  isOrcaBodyPartCode,
+  isSendableCodeForRowRole,
+  resolveOrcaOrderRowRole,
+} from './orcaOrderRowRole';
 import type { DataSourceTransition } from './authService';
 import type { DocumentOpenRequest } from './DocumentCreatePanel';
 
@@ -219,8 +226,7 @@ const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem)
   };
 };
 
-const hasOrderBundleItemValue = (item: OrderBundleItem) =>
-  Boolean(item.name?.trim() || item.code?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
+const hasOrderBundleItemValue = (item: OrderBundleItem) => hasOrcaOrderRowValue(item);
 
 const ensureTrailingEmptyMainItem = (items: OrderBundleItem[]): OrderBundleItemWithRowId[] => {
   if (items.length === 0) return [buildEmptyItem()];
@@ -259,9 +265,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-const MATERIAL_CODE_PREFIX = '7';
-const BODY_PART_CODE_PREFIX = '002';
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 const MIXING_COMMENT_MARKER = '__mixing_comment__';
 const DOCUMENT_ITEM_KEYWORDS = ['文書', '診断書', '紹介状', '返信', '報告', '証明書', '意見書', '指示書'];
 const DEFAULT_PRESCRIPTION_LOCATION: PrescriptionLocation = 'out';
@@ -382,24 +385,8 @@ const resolveDocumentOpenRequest = (bundle: OrderBundle, item: OrderBundleItem):
 const countItems = (items?: OrderBundleItem[]) =>
   items ? items.filter((item) => item.name.trim().length > 0).length : 0;
 
-const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
-  const normalizedCode = code?.trim();
-  if (!normalizedCode || !normalizedCode.startsWith(MATERIAL_CODE_PREFIX)) return false;
-  const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  // Radiology main rows also use 7xx codes, so prefix-only material detection would hide them.
-  return canonicalEntity !== 'radiologyOrder';
-};
-
 const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | OrderBundleBodyPart | null) => {
-  if (!item) return 'main' as const;
-  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
-    return item.rowRole;
-  }
-  const code = item.code?.trim();
-  if (code?.startsWith(BODY_PART_CODE_PREFIX)) return 'bodyPart' as const;
-  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
-  if (code && COMMENT_CODE_PATTERN.test(code)) return 'comment' as const;
-  return 'main' as const;
+  return resolveOrcaOrderRowRole({ entity, item });
 };
 
 const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], explicitBodyPart?: OrderBundleBodyPart) => {
@@ -847,23 +834,21 @@ export const validateBundleForm = ({
   usageDaysLimit?: number;
 }): BundleValidationIssue[] => {
   const issues: BundleValidationIssue[] = [];
-  const hasAnyValue = (item: OrderBundleItem) =>
-    Boolean(
-      item.name?.trim() ||
-        item.code?.trim() ||
-        item.quantity?.trim() ||
-        item.unit?.trim() ||
-        item.memo?.trim(),
-    );
+  const hasAnyValue = (item: OrderBundleItem) => hasOrcaOrderRowValue(item);
   const rule = resolveOrderEntityValidationRule(entity) ?? DEFAULT_VALIDATION_RULE;
   const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
   const resolvedSubtype = resolveFormSubtype(entity, form.subtype);
   const supportsBodyPartField = resolveOrderEntityUiProfile(entity).supportsBodyPartSearch;
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   const valuedItems = form.items.filter(hasAnyValue);
+  const valuedMaterialItems = form.materialItems.filter(hasAnyValue);
+  const valuedCommentItems = form.commentItems.filter(hasAnyValue);
   const codedItems = valuedItems.filter((item) => Boolean(item.code?.trim()));
   const uncodedItems = valuedItems.filter((item) => !item.code?.trim());
-  const hasMaterialValues = form.materialItems.some(hasAnyValue);
+  const codedMaterialItems = valuedMaterialItems.filter((item) => Boolean(item.code?.trim()));
+  const uncodedMaterialItems = valuedMaterialItems.filter((item) => !item.code?.trim());
+  const namelessMaterialItems = valuedMaterialItems.filter((item) => !item.name?.trim());
+  const hasMaterialValues = valuedMaterialItems.length > 0;
   const hasBodyPartValue = Boolean(
     form.bodyPart?.name?.trim() ||
       form.bodyPart?.code?.trim() ||
@@ -906,18 +891,19 @@ export const validateBundleForm = ({
       key: 'missing_body_part_code',
       message: '部位コードを選択してください。',
     });
-  } else if (form.bodyPart?.code?.trim() && !form.bodyPart.code.trim().startsWith(BODY_PART_CODE_PREFIX)) {
+  } else if (form.bodyPart?.code?.trim() && !isOrcaBodyPartCode(form.bodyPart.code)) {
     issues.push({
       key: 'invalid_body_part_code',
       message: 'bodyPart は 002 系コードのみ保存できます。',
     });
   }
   if (rule.requiresItems && valuedItems.length === 0) {
-    const hasAuxiliaryValue = form.commentItems.some(hasAnyValue) || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
+    const hasAuxiliaryValue =
+      valuedCommentItems.length > 0 || valuedMaterialItems.length > 0 || (hasBodyPartValue && Boolean(form.bodyPart?.code?.trim()));
     issues.push({
       key: hasAuxiliaryValue ? 'comment_only' : 'missing_items',
       message: hasAuxiliaryValue
-        ? '部位やコメントだけでは保存できません。コード付きの本体項目を入力してください。'
+        ? '部位・材料・コメントだけでは保存できません。コード付きの本体項目を入力してください。'
         : `${rule.itemLabel}を1件以上入力してください。`,
     });
   }
@@ -936,27 +922,57 @@ export const validateBundleForm = ({
       issues.push({
         key: 'comment_only',
         message: hasBodyPartValue
-          ? '部位だけでは保存できません。コード付きの本体項目を入力してください。'
-          : 'コメントだけでは保存できません。コード付きの本体項目を入力してください。',
+          ? '部位・材料・コメントだけでは保存できません。コード付きの本体項目を入力してください。'
+          : '材料・コメントだけでは保存できません。コード付きの本体項目を入力してください。',
       });
     }
+  }
+  if (valuedMaterialItems.length > 0) {
+    if (namelessMaterialItems.length > 0) {
+      issues.push({
+        key: 'invalid_material_item',
+        message: '材料行は名称を空にできません。名称未設定の材料行を修正または削除してください。',
+      });
+    }
+    if (uncodedMaterialItems.length > 0 && codedMaterialItems.length > 0) {
+      issues.push({
+        key: 'mixed_coded_uncoded_material',
+        message: '材料行でコードあり行とコードなし行が混在しています。コードなし行を削除するか、必ずマスタ選択してください。',
+      });
+    } else if (uncodedMaterialItems.length > 0) {
+      issues.push({
+        key: 'uncoded_material_item',
+        message: 'コードなしの材料行があります。名前だけの材料は ORCA へ送れないため、マスタ選択してください。',
+      });
+    }
+  }
+  if (
+    codedItems.some((item) => !isSendableCodeForRowRole('main', item.code)) ||
+    (canonicalEntity === 'otherOrder' &&
+      codedItems.some((item) => {
+        const code = item.code?.trim() ?? '';
+        return code !== '' && !ORCA_COMMENT_CODE_PATTERN.test(code) && !/^(8|18)/.test(code);
+      }))
+  ) {
+    issues.push({
+      key: canonicalEntity === 'otherOrder' ? 'invalid_other_order_code' : 'invalid_item_code',
+      message:
+        canonicalEntity === 'otherOrder'
+          ? 'otherOrder では etensu category 8 のコード以外を保存できません。'
+          : '本体項目は 9 桁の ORCA コードのみ保存できます。',
+    });
+  }
+  if (codedMaterialItems.some((item) => !isSendableCodeForRowRole('material', item.code))) {
+    issues.push({
+      key: 'invalid_material_code',
+      message: '材料行は 9 桁の ORCA コードのみ保存できます。非 sendable material code は使用できません。',
+    });
   }
   if (canonicalEntity === 'otherOrder') {
     if (hasMaterialValues) {
       issues.push({
         key: 'unsupported_material_item',
         message: 'otherOrder では材料行を保持できません。etensu category 8 の項目のみ入力してください。',
-      });
-    }
-    if (
-      codedItems.some((item) => {
-        const code = item.code?.trim() ?? '';
-        return code !== '' && !COMMENT_CODE_PATTERN.test(code) && !/^(8|18)/.test(code);
-      })
-    ) {
-      issues.push({
-        key: 'invalid_other_order_code',
-        message: 'otherOrder では etensu category 8 のコード以外を保存できません。',
       });
     }
   }
@@ -977,7 +993,7 @@ export const validateBundleForm = ({
       const hasName = Boolean(item.name?.trim());
       const hasValue = hasAnyValue(item);
       if (hasValue && (!hasCode || !hasName)) acc.incomplete = true;
-      if (hasCode && !COMMENT_CODE_PATTERN.test(item.code!.trim())) acc.invalidCode = true;
+      if (hasCode && !isSendableCodeForRowRole('comment', item.code)) acc.invalidCode = true;
       return acc;
     },
     { incomplete: false, invalidCode: false },
@@ -1282,34 +1298,88 @@ export function OrderBundleEditPanel({
     | { kind: 'usage' }
     | { kind: 'bodyPart' }
     | { kind: 'items'; index: number }
+    | { kind: 'materialItems'; index: number }
     | { kind: 'commentItems'; index: number };
 
   const resolveWarningFocusTarget = useCallback(
     (warning: OrcaMedicalWarningUi): { elementId: string; target: WarningFocusTarget } | null => {
+      const mainRowIndices = form.items.flatMap((item, index) => {
+        if (!hasOrcaOrderRowValue(item)) return [];
+        return resolveOrcaOrderRowRole({ entity, item }) === 'main' ? [index] : [];
+      });
+      const materialRowIndices = form.materialItems.flatMap((item, index) => (hasOrcaOrderRowValue(item) ? [index] : []));
+      const commentRowIndices = form.commentItems.flatMap((item, index) => (hasOrcaOrderRowValue(item) ? [index] : []));
+      const resolveSectionIndex = (indices: number[], sectionIndex: number) => {
+        if (indices.length === 0) return 0;
+        const boundedIndex = Math.min(sectionIndex, indices.length - 1);
+        return indices[boundedIndex] ?? indices[0] ?? 0;
+      };
+      const resolveLegacyNormalizedTarget = (normalizedIndex: number) => {
+        const normalizedRows: WarningFocusTarget[] = [];
+        const hasBodyPartCode = Boolean(form.bodyPart?.code?.trim() || form.bodyPart?.name?.trim());
+        if (hasBodyPartCode) {
+          normalizedRows.push({ kind: 'bodyPart' });
+        }
+        mainRowIndices.forEach((index) => {
+          normalizedRows.push({ kind: 'items', index });
+        });
+        materialRowIndices.forEach((index) => {
+          normalizedRows.push({ kind: 'materialItems', index });
+        });
+        commentRowIndices.forEach((index) => {
+          normalizedRows.push({ kind: 'commentItems', index });
+        });
+        const target = normalizedRows[normalizedIndex];
+        if (!target) return null;
+        switch (target.kind) {
+          case 'bodyPart':
+            return { elementId: `${entityId}-bodypart`, target };
+          case 'items':
+            return { elementId: `${entityId}-item-name-${target.index}`, target };
+          case 'materialItems':
+            return { elementId: `${entityId}-material-name-${target.index}`, target };
+          case 'commentItems':
+            return { elementId: `${entityId}-comment-name-${target.index}`, target };
+          default:
+            return null;
+        }
+      };
       if (warning.sourceKind === 'usage') {
         return { elementId: `${entityId}-admin`, target: { kind: 'usage' } };
       }
-      if (typeof warning.sourceItemIndex !== 'number') return null;
-      const bodyPartCount = form.bodyPart && form.bodyPart.name.trim() ? 1 : 0;
-      const sourceIndex = warning.sourceItemIndex;
-      if (sourceIndex < bodyPartCount) {
+      if (warning.sourceKind === 'body_part' || warning.sourceRowRole === 'bodyPart') {
         return { elementId: `${entityId}-bodypart`, target: { kind: 'bodyPart' } };
       }
-      const itemsStart = bodyPartCount;
-      const itemsEnd = itemsStart + form.items.length;
-      if (sourceIndex >= itemsStart && sourceIndex < itemsEnd) {
-        const index = sourceIndex - itemsStart;
+      if (
+        typeof warning.sourceItemIndex === 'number' &&
+        warning.sourceItemIndex >= 0 &&
+        typeof warning.sourceSectionIndex !== 'number' &&
+        !warning.sourceRowRole
+      ) {
+        return resolveLegacyNormalizedTarget(warning.sourceItemIndex);
+      }
+      const sectionIndex =
+        typeof warning.sourceSectionIndex === 'number'
+          ? warning.sourceSectionIndex
+          : typeof warning.sourceItemIndex === 'number'
+            ? warning.sourceItemIndex
+            : undefined;
+      if (typeof sectionIndex !== 'number' || sectionIndex < 0) return null;
+      if (warning.sourceRowRole === 'main') {
+        const index = resolveSectionIndex(mainRowIndices, sectionIndex);
         return { elementId: `${entityId}-item-name-${index}`, target: { kind: 'items', index } };
       }
-      const commentStart = itemsEnd;
-      const commentEnd = commentStart + form.commentItems.length;
-      if (sourceIndex >= commentStart && sourceIndex < commentEnd) {
-        const index = sourceIndex - commentStart;
+      if (warning.sourceRowRole === 'material') {
+        const index = resolveSectionIndex(materialRowIndices, sectionIndex);
+        return { elementId: `${entityId}-material-name-${index}`, target: { kind: 'materialItems', index } };
+      }
+      if (warning.sourceRowRole === 'comment') {
+        const index = resolveSectionIndex(commentRowIndices, sectionIndex);
         return { elementId: `${entityId}-comment-name-${index}`, target: { kind: 'commentItems', index } };
       }
       return null;
     },
-    [entityId, form.bodyPart, form.commentItems.length, form.items.length],
+    [entity, entityId, form.bodyPart?.code, form.bodyPart?.name, form.commentItems, form.items, form.materialItems],
   );
 
   const [warningFocusRequest, setWarningFocusRequest] = useState<OrcaMedicalWarningUi | null>(null);
@@ -1818,7 +1888,19 @@ export function OrderBundleEditPanel({
 
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
     if (!rowId || !matched) return;
-    const promoteToMaterial = matched.type === 'material' || shouldTreatAsMaterialItem(entity, matched.code?.trim() ?? '');
+    const matchedRowRole = resolveOrcaOrderRowRole({
+      entity,
+      item: { code: matched.code, rowRole: matched.type === 'material' ? 'material' : undefined },
+      masterType: matched.type,
+    });
+    const promoteToMaterial = matchedRowRole === 'material';
+    if (promoteToMaterial && !isSendableCodeForRowRole('material', matched.code)) {
+      setNotice({
+        tone: 'error',
+        message: '非 sendable material code は使用できません。9 桁の ORCA 材料コードを選択してください。',
+      });
+      return;
+    }
     const derivedClassCode =
       entity === 'instractionChargeOrder' || entity === 'baseChargeOrder' ? matched.category?.trim() || '' : '';
     setForm((prev) => {
@@ -2352,7 +2434,7 @@ export function OrderBundleEditPanel({
       if (isPreviewMode) throw new Error('preview mode');
       if (!patientId) throw new Error('patientId is required');
       const filteredItems = collectBundleItems(payload.form)
-        .filter((item) => item.name.trim().length > 0)
+        .filter((item) => hasOrderBundleItemValue(item))
         .map(stripRowMeta);
 
       const classMeta = resolveBundleClassMeta(payload.form);
@@ -2436,7 +2518,7 @@ export function OrderBundleEditPanel({
           const createdDocumentId = result.createdDocumentIds[0];
           const classMeta = resolveBundleClassMeta(payload.form);
           const normalizedItems = collectBundleItems(payload.form)
-            .filter((item) => item.name.trim().length > 0)
+            .filter((item) => hasOrderBundleItemValue(item))
             .map(stripRowMeta);
           const optimisticEntry: OrderBundle = {
             documentId: createdDocumentId,
@@ -2465,7 +2547,7 @@ export function OrderBundleEditPanel({
         if (operation === 'update' && payload.form.documentId) {
           const classMeta = resolveBundleClassMeta(payload.form);
           const normalizedItems = collectBundleItems(payload.form)
-            .filter((item) => item.name.trim().length > 0)
+            .filter((item) => hasOrderBundleItemValue(item))
             .map(stripRowMeta);
           setOptimisticBundles((prev) =>
             prev.map((bundle) =>
@@ -2668,6 +2750,7 @@ export function OrderBundleEditPanel({
 
   const orcaWarningTargets = useMemo(() => {
     const items = new Set<number>();
+    const materialItems = new Set<number>();
     const commentItems = new Set<number>();
     let usage = false;
     let bodyPart = false;
@@ -2677,13 +2760,15 @@ export function OrderBundleEditPanel({
       if (resolved.target.kind === 'usage') usage = true;
       if (resolved.target.kind === 'bodyPart') bodyPart = true;
       if (resolved.target.kind === 'items') items.add(resolved.target.index);
+      if (resolved.target.kind === 'materialItems') materialItems.add(resolved.target.index);
       if (resolved.target.kind === 'commentItems') commentItems.add(resolved.target.index);
     });
     if (warningFocusTarget?.kind === 'usage') usage = true;
     if (warningFocusTarget?.kind === 'bodyPart') bodyPart = true;
     if (warningFocusTarget?.kind === 'items') items.add(warningFocusTarget.index);
+    if (warningFocusTarget?.kind === 'materialItems') materialItems.add(warningFocusTarget.index);
     if (warningFocusTarget?.kind === 'commentItems') commentItems.add(warningFocusTarget.index);
-    return { usage, bodyPart, items, commentItems };
+    return { usage, bodyPart, items, materialItems, commentItems };
   }, [orcaWarningsForActiveBundle, resolveWarningFocusTarget, warningFocusTarget]);
 
   const requestWarningFocus = useCallback(
@@ -2724,6 +2809,7 @@ export function OrderBundleEditPanel({
     form.commentItems.length,
     form.documentId,
     form.items.length,
+    form.materialItems.length,
     resolveWarningFocusTarget,
     warningFocusRequest,
   ]);
@@ -2761,6 +2847,7 @@ export function OrderBundleEditPanel({
           case 'missing_body_part':
             return `${entityId}-bodypart`;
           case 'missing_body_part_code':
+          case 'invalid_body_part_code':
             return `${entityId}-bodypart`;
           case 'missing_items':
             return `${entityId}-item-name-0`;
@@ -2775,8 +2862,36 @@ export function OrderBundleEditPanel({
               }
               return !item.code?.trim();
             });
-            return idx >= 0 ? `${entityId}-item-code-${idx}` : `${entityId}-item-name-0`;
+            return idx >= 0 ? `${entityId}-item-name-${idx}` : `${entityId}-item-name-0`;
           }
+          case 'invalid_item_code': {
+            const idx = bundleForm.items.findIndex((item) => {
+              const code = item.code?.trim();
+              return Boolean(code && !isSendableCodeForRowRole('main', code));
+            });
+            return idx >= 0 ? `${entityId}-item-name-${idx}` : `${entityId}-item-name-0`;
+          }
+          case 'mixed_coded_uncoded_material':
+          case 'uncoded_material_item': {
+            const idx = bundleForm.materialItems.findIndex((item) => {
+              if (!hasAnyValue(item)) return false;
+              return !item.code?.trim();
+            });
+            return idx >= 0 ? `${entityId}-material-name-${idx}` : `${entityId}-material-name-0`;
+          }
+          case 'invalid_material_item': {
+            const idx = bundleForm.materialItems.findIndex((item) => hasAnyValue(item) && !item.name?.trim());
+            return idx >= 0 ? `${entityId}-material-name-${idx}` : `${entityId}-material-name-0`;
+          }
+          case 'invalid_material_code': {
+            const idx = bundleForm.materialItems.findIndex((item) => {
+              const code = item.code?.trim();
+              return Boolean(code && !isSendableCodeForRowRole('material', code));
+            });
+            return idx >= 0 ? `${entityId}-material-name-${idx}` : `${entityId}-material-name-0`;
+          }
+          case 'unsupported_material_item':
+            return `${entityId}-material-name-0`;
           case USAGE_DAYS_LIMIT_ERROR_KEY:
             return `${entityId}-bundle-number`;
           case 'invalid_comment_item': {
@@ -2790,7 +2905,7 @@ export function OrderBundleEditPanel({
           case 'invalid_comment_code': {
             const idx = bundleForm.commentItems.findIndex((item) => {
               const code = item.code?.trim();
-              return Boolean(code && !COMMENT_CODE_PATTERN.test(code));
+              return Boolean(code && !ORCA_COMMENT_CODE_PATTERN.test(code));
             });
             return idx >= 0 ? `${entityId}-comment-name-${idx}` : `${entityId}-comment-draft-name`;
           }
@@ -3000,31 +3115,43 @@ export function OrderBundleEditPanel({
     validationByKey.get('missing_items') ??
     validationByKey.get('comment_only') ??
     validationByKey.get('unsupported_material_item') ??
-    validationByKey.get('invalid_other_order_code');
+    validationByKey.get('invalid_other_order_code') ??
+    validationByKey.get('invalid_item_code');
   const subtypeError = validationByKey.get('missing_test_subtype') ?? validationByKey.get('invalid_test_subtype');
   const bodyPartError =
     validationByKey.get('unsupported_body_part') ??
     validationByKey.get('missing_body_part') ??
-    validationByKey.get('missing_body_part_code');
+    validationByKey.get('missing_body_part_code') ??
+    validationByKey.get('invalid_body_part_code');
+  const materialError =
+    validationByKey.get('invalid_material_item') ??
+    validationByKey.get('mixed_coded_uncoded_material') ??
+    validationByKey.get('uncoded_material_item') ??
+    validationByKey.get('invalid_material_code');
   const commentError =
     validationByKey.get('invalid_comment_item') ?? validationByKey.get('invalid_comment_code');
 
+  const invalidMaterialIndices = useMemo(() => {
+    if (!materialError) return new Set<number>();
+    const indices = new Set<number>();
+    form.materialItems.forEach((item, index) => {
+      const hasCode = Boolean(item.code?.trim());
+      const hasName = Boolean(item.name?.trim());
+      const hasValue = hasOrcaOrderRowValue(item);
+      const invalidCode = hasCode && !isSendableCodeForRowRole('material', item.code);
+      if (invalidCode || (hasValue && (!hasCode || !hasName))) indices.add(index);
+    });
+    return indices;
+  }, [form.materialItems, materialError]);
+
   const invalidCommentIndices = useMemo(() => {
     if (!commentError) return new Set<number>();
-    const hasAnyValue = (item: OrderBundleItem) =>
-      Boolean(
-        item.name?.trim() ||
-          item.code?.trim() ||
-          item.quantity?.trim() ||
-          item.unit?.trim() ||
-          item.memo?.trim(),
-      );
     const indices = new Set<number>();
     form.commentItems.forEach((item, index) => {
       const hasCode = Boolean(item.code?.trim());
       const hasName = Boolean(item.name?.trim());
-      const hasValue = hasAnyValue(item);
-      const invalidCode = hasCode && !COMMENT_CODE_PATTERN.test(item.code!.trim());
+      const hasValue = hasOrcaOrderRowValue(item);
+      const invalidCode = hasCode && !ORCA_COMMENT_CODE_PATTERN.test(item.code!.trim());
       if (invalidCode || (hasValue && (!hasCode || !hasName))) indices.add(index);
     });
     return indices;
@@ -4255,12 +4382,18 @@ export function OrderBundleEditPanel({
               <p className="charts-side-panel__help">
                 材料行は `rowRole=material` として保存します。material 候補を main 行で選んだ場合もここへ移します。
               </p>
+              {materialError ? (
+                <p className="charts-side-panel__field-error" role="alert">
+                  {materialError}
+                </p>
+              ) : null}
               {form.materialItems.length === 0 ? (
                 <p className="charts-side-panel__empty">材料行はまだありません。</p>
               ) : null}
               {form.materialItems.map((item, index) => {
                 const rowId = (item as OrderBundleItemWithRowId).rowId;
                 const hasRowValue = hasOrderBundleItemValue(item);
+                const invalid = invalidMaterialIndices.has(index);
                 const rowSummary = [
                   `コード: ${item.code?.trim() || '未設定'}`,
                   formatItemQuantitySummary(item, itemQuantityLabel),
@@ -4269,14 +4402,20 @@ export function OrderBundleEditPanel({
                   <div key={rowId ?? `${entityId}-material-${index}`}>
                     <div
                       className={`charts-side-panel__item-row charts-side-panel__item-row--comment${
+                        orcaWarningTargets.materialItems.has(index) ? ' charts-side-panel__item-row--orca-warning' : ''
+                      }${
+                        invalid ? ' charts-side-panel__item-row--invalid' : ''
+                      }${
                         selectedItemRowId === rowId ? ' charts-side-panel__item-row--selected' : ''
                       }`}
+                      data-invalid={invalid ? 'true' : undefined}
                       onClick={() => setSelectedItemRowId(rowId ?? null)}
                     >
                       <input
                         id={`${entityId}-material-name-${index}`}
                         name={`${entityId}-material-name-${index}`}
                         value={item.name}
+                        aria-invalid={invalid ? 'true' : undefined}
                         list={
                           rowId === selectedItemRowId && itemPredictiveCandidates.length > 0
                             ? `${entityId}-item-predictive-list`
@@ -4284,6 +4423,7 @@ export function OrderBundleEditPanel({
                         }
                         onChange={(event) => {
                           const value = event.target.value;
+                          clearValidationByKeys(['invalid_material_item', 'mixed_coded_uncoded_material', 'uncoded_material_item', 'invalid_material_code']);
                           setForm((prev) => {
                             const next = [...prev.materialItems];
                             next[index] = { ...next[index], name: value };
@@ -4303,6 +4443,7 @@ export function OrderBundleEditPanel({
                         value={item.quantity ?? ''}
                         onChange={(event) => {
                           const value = event.target.value;
+                          clearValidationByKeys(['invalid_material_item', 'mixed_coded_uncoded_material', 'uncoded_material_item']);
                           setForm((prev) => {
                             const next = [...prev.materialItems];
                             next[index] = { ...next[index], quantity: value };
@@ -4319,6 +4460,7 @@ export function OrderBundleEditPanel({
                         value={item.unit ?? ''}
                         onChange={(event) => {
                           const value = event.target.value;
+                          clearValidationByKeys(['invalid_material_item', 'mixed_coded_uncoded_material', 'uncoded_material_item']);
                           setForm((prev) => {
                             const next = [...prev.materialItems];
                             next[index] = { ...next[index], unit: value };
@@ -4333,7 +4475,10 @@ export function OrderBundleEditPanel({
                         type="button"
                         className="charts-side-panel__icon"
                         aria-label={`材料行 ${index + 1} を削除`}
-                        onClick={() => removeMaterialRowById(rowId)}
+                        onClick={() => {
+                          clearValidationByKeys(['invalid_material_item', 'mixed_coded_uncoded_material', 'uncoded_material_item', 'invalid_material_code']);
+                          removeMaterialRowById(rowId);
+                        }}
                         disabled={isBlocked}
                       >
                         ✕

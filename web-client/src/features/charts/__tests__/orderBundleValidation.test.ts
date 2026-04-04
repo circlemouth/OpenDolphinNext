@@ -389,13 +389,13 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
-  it('materialItems: 材料名が空でもエラーにしない（材料は項目行へ統合）', () => {
+  it('generalOrder: 9桁 material code は保存可能', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
-        materialItems: [{ name: '', quantity: '1', unit: '枚', memo: '' }],
+        materialItems: [{ code: '700000021', name: '処置材料A', quantity: '1', unit: '個', memo: '' }],
       },
       entity: 'generalOrder',
       bundleLabel: 'オーダー名',
@@ -403,18 +403,34 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual([]);
   });
 
-  it('materialItems: 行を削除するとエラーが解消される', () => {
+  it('generalOrder: name あり code なし material row は保存前に block する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
-        materialItems: [],
+        materialItems: [{ code: '', name: '処置材料A', quantity: '1', unit: '個', memo: '' }],
       },
       entity: 'generalOrder',
       bundleLabel: 'オーダー名',
     });
-    expect(issues).toHaveLength(0);
+    expect(issues).not.toHaveLength(0);
+    expect(issues.map((issue) => issue.key)).toContain('uncoded_material_item');
+  });
+
+  it('generalOrder: code あり name なし material row は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '処置オーダー',
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        materialItems: [{ code: '700000021', name: '', quantity: '1', unit: '個', memo: '' }],
+      },
+      entity: 'generalOrder',
+      bundleLabel: 'オーダー名',
+    });
+    expect(issues).not.toHaveLength(0);
+    expect(issues.map((issue) => issue.key)).toContain('invalid_material_item');
   });
   it('bacteriaOrder: subtype が無い場合は保存前に block する', () => {
     const issues = validateBundleForm({

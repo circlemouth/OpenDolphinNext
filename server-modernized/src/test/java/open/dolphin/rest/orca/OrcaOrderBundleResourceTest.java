@@ -280,6 +280,91 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesRejectsTreatmentBodyPartWithNon002Code() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("treatmentOrder");
+        op.setBundleName("invalid-body-part-code");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("BP001");
+        bodyPart.setName("invalid-body-part");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
+        procedure.setCode("140000610");
+        procedure.setName("treatment-main");
+        op.setItems(List.of(procedure));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("bodyPart", body.get("field"));
+        assertTrue(String.valueOf(body.get("message")).contains("002"));
+    }
+
+    @Test
+    void postBundlesRejectsTreatmentMaterialWithNonSendableCode() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("treatmentOrder");
+        op.setBundleName("invalid-material-code");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("002999");
+        bodyPart.setName("priority-body-part");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
+        procedure.setCode("140000610");
+        procedure.setName("treatment-main");
+        procedure.setRowRole("main");
+
+        OrderBundleMutationRequest.BundleItem material = new OrderBundleMutationRequest.BundleItem();
+        material.setCode("M001");
+        material.setName("invalid-material");
+        material.setRowRole("material");
+
+        op.setItems(List.of(procedure, material));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertNotNull(body.get("field"));
+        assertTrue(String.valueOf(body.get("message")).contains("material")
+                || String.valueOf(body.get("message")).contains("9桁")
+                || String.valueOf(body.get("message")).contains("sendable"));
+    }
+
+    @Test
     void postBundlesFallsBackToLegacyItemsBodyPartWhenBodyPartFieldMissing() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");

@@ -11,13 +11,10 @@ import open.dolphin.rest.dto.orca.OrderBundleRecommendationResponse;
 
 final class OrcaOrderBundleRecommendationSupport {
 
-    private static final String MATERIAL_CODE_PREFIX = "7";
-    private static final String BODY_PART_CODE_PREFIX = "002";
-    private static final String COMMENT_CODE_REGEX = "^(008[1-6]|8[1-6]|098|099|98|99).*";
-    static final String ROW_ROLE_MAIN = "main";
-    static final String ROW_ROLE_MATERIAL = "material";
-    static final String ROW_ROLE_COMMENT = "comment";
-    static final String ROW_ROLE_BODY_PART = "bodyPart";
+    static final String ROW_ROLE_MAIN = OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN;
+    static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRequestSupport.ROW_ROLE_MATERIAL;
+    static final String ROW_ROLE_COMMENT = OrcaOrderBundleRequestSupport.ROW_ROLE_COMMENT;
+    static final String ROW_ROLE_BODY_PART = OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART;
 
     private OrcaOrderBundleRecommendationSupport() {
     }
@@ -40,7 +37,7 @@ final class OrcaOrderBundleRecommendationSupport {
             entry.setMemo(parsedMemo.memoText());
             entry.setGenericFlg(parsedMemo.genericFlg());
             entry.setUserComment(parsedMemo.userComment());
-            entry.setRowRole(resolveRowRole(entity, entry));
+            entry.setRowRole(OrcaOrderBundleRequestSupport.resolveRowRole(entity, parsedMemo.rowRole(), entry.getCode()));
             list.add(entry);
         }
         return list;
@@ -56,7 +53,7 @@ final class OrcaOrderBundleRecommendationSupport {
             if (item == null) {
                 continue;
             }
-            if (isBodyPartCode(item.getCode())) {
+            if (ROW_ROLE_BODY_PART.equals(resolveRowRole(null, item))) {
                 continue;
             }
             filtered.add(item);
@@ -73,7 +70,7 @@ final class OrcaOrderBundleRecommendationSupport {
             if (item == null) {
                 continue;
             }
-            if (isBodyPartCode(item.getCode())) {
+            if (ROW_ROLE_BODY_PART.equals(resolveRowRole(null, item))) {
                 return item;
             }
         }
@@ -81,38 +78,20 @@ final class OrcaOrderBundleRecommendationSupport {
     }
 
     static boolean isBodyPartCode(String code) {
-        return normalize(code).startsWith(BODY_PART_CODE_PREFIX);
+        return OrcaOrderBundleRequestSupport.isBodyPartCode(code);
     }
 
     static boolean isCommentCode(String code) {
-        return normalize(code).matches(COMMENT_CODE_REGEX);
+        return OrcaOrderBundleRequestSupport.isCommentCode(code);
     }
 
     static String resolveRowRole(String entity, OrderBundleFetchResponse.OrderBundleItem item) {
         if (item == null) {
             return ROW_ROLE_MAIN;
         }
-        String code = normalize(item.getCode());
-        if (isBodyPartCode(code)) {
-            return ROW_ROLE_BODY_PART;
-        }
-        if (shouldTreatAsMaterialItem(entity, code)) {
-            return ROW_ROLE_MATERIAL;
-        }
-        if (isCommentCode(code)) {
-            return ROW_ROLE_COMMENT;
-        }
-        return ROW_ROLE_MAIN;
-    }
-
-    private static boolean shouldTreatAsMaterialItem(String entity, String code) {
-        String normalizedCode = normalize(code);
-        if (!normalizedCode.startsWith(MATERIAL_CODE_PREFIX)) {
-            return false;
-        }
-        String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
-        // Radiology main rows also use 7xx codes, so prefix-only material detection would drop valid main rows.
-        return !IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+        String resolved = OrcaOrderBundleRequestSupport.resolveRowRole(entity, item.getRowRole(), item.getCode());
+        item.setRowRole(resolved);
+        return resolved;
     }
 
     static OrderBundleRecommendationResponse.OrderRecommendationTemplate toRecommendationTemplate(
@@ -220,6 +199,7 @@ final class OrcaOrderBundleRecommendationSupport {
         appendNormalized(builder, item.getMemo());
         appendNormalized(builder, item.getGenericFlg());
         appendNormalized(builder, item.getUserComment());
+        appendNormalized(builder, item.getRowRole());
         builder.append("}");
     }
 

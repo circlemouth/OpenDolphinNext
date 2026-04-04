@@ -6,6 +6,7 @@ import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+import { resolveOrcaOrderRowRole } from './orcaOrderRowRole';
 
 export type OrderBundleItem = {
   code?: string;
@@ -104,33 +105,53 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
   return resolveCanonicalOrderEntity(trimmed) ?? trimmed;
 };
 
-const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
-  ...bundle,
-  entity: normalizeOrderEntityValue(bundle.entity),
-  items: (bundle.items ?? []).map((item) => {
-    const fields = resolveOrcaOrderItemFields(item);
-    return {
-      ...item,
-      memo: fields.memoText,
-      genericFlg: fields.genericFlg,
-      userComment: fields.userComment,
-    };
-  }),
-});
+const normalizeOrderBundleItem = (entity: string | undefined, item: OrderBundleItem): OrderBundleItem => {
+  const fields = resolveOrcaOrderItemFields(item);
+  return {
+    ...item,
+    memo: fields.memoText,
+    genericFlg: fields.genericFlg,
+    userComment: fields.userComment,
+    rowRole: resolveOrcaOrderRowRole({
+      entity,
+      item: {
+        ...item,
+        memo: fields.memoText,
+        genericFlg: fields.genericFlg,
+        userComment: fields.userComment,
+        rowRole: fields.rowRole ?? item.rowRole,
+      },
+    }),
+  };
+};
 
-const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => ({
-  ...operation,
-  entity: normalizeOrderEntityValue(operation.entity),
-  items: (operation.items ?? []).map((item) => {
-    const fields = resolveOrcaOrderItemFields(item);
-    return {
-      ...item,
-      memo: fields.memoText,
-      genericFlg: fields.genericFlg,
-      userComment: fields.userComment,
-    };
-  }),
-});
+const normalizeOrderBundleBodyPart = (bodyPart?: OrderBundleBodyPart | null): OrderBundleBodyPart | undefined => {
+  if (!bodyPart) return undefined;
+  return {
+    ...bodyPart,
+    rowRole: 'bodyPart',
+  };
+};
+
+const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
+  const entity = normalizeOrderEntityValue(bundle.entity);
+  return {
+    ...bundle,
+    entity,
+    bodyPart: normalizeOrderBundleBodyPart(bundle.bodyPart),
+    items: (bundle.items ?? []).map((item) => normalizeOrderBundleItem(entity, item)),
+  };
+};
+
+const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => {
+  const entity = normalizeOrderEntityValue(operation.entity);
+  return {
+    ...operation,
+    entity,
+    bodyPart: normalizeOrderBundleBodyPart(operation.bodyPart),
+    items: (operation.items ?? []).map((item) => normalizeOrderBundleItem(entity, item)),
+  };
+};
 
 export type OrderBundleMutationResult = {
   ok: boolean;

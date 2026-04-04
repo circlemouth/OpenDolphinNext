@@ -1,14 +1,20 @@
+import type { OrcaOrderRowRole } from './orcaOrderRowRole';
+import { normalizeOrcaOrderRowRole } from './orcaOrderRowRole';
+
 export type OrcaOrderItemMeta = {
   // "yes"/"no" only. When omitted, ORCA uses its own default setting.
   genericFlg?: 'yes' | 'no';
   // User comment for each medication row.
   userComment?: string;
+  // Stable row semantics carrier for save -> fetch -> reopen.
+  rowRole?: OrcaOrderRowRole;
 };
 
 export type OrcaOrderItemMetaCarrier = {
   memo?: string | null;
   genericFlg?: 'yes' | 'no';
   userComment?: string | null;
+  rowRole?: OrcaOrderRowRole | null;
 };
 
 const META_PREFIX = '__orca_meta__:';
@@ -27,7 +33,7 @@ const normalizeUserComment = (value: unknown): OrcaOrderItemMeta['userComment'] 
 const hasUserComment = (value: OrcaOrderItemMeta['userComment']) =>
   typeof value === 'string' && value.trim().length > 0;
 
-const isEmptyMeta = (meta: OrcaOrderItemMeta) => !meta.genericFlg && !hasUserComment(meta.userComment);
+const isEmptyMeta = (meta: OrcaOrderItemMeta) => !meta.genericFlg && !hasUserComment(meta.userComment) && !meta.rowRole;
 
 export function parseOrcaOrderItemMemo(memo?: string | null): { meta: OrcaOrderItemMeta; memoText: string } {
   const raw = typeof memo === 'string' ? memo : '';
@@ -44,6 +50,7 @@ export function parseOrcaOrderItemMemo(memo?: string | null): { meta: OrcaOrderI
       meta: {
         genericFlg: normalizeGenericFlg(parsed.genericFlg),
         userComment: normalizeUserComment(parsed.userComment),
+        rowRole: normalizeOrcaOrderRowRole(parsed.rowRole as string | undefined) ?? undefined,
       },
       memoText,
     };
@@ -59,6 +66,7 @@ export function formatOrcaOrderItemMemo(meta: OrcaOrderItemMeta, memoText: strin
   const json: OrcaOrderItemMeta = {};
   if (meta.genericFlg) json.genericFlg = meta.genericFlg;
   if (hasUserComment(meta.userComment)) json.userComment = meta.userComment;
+  if (meta.rowRole) json.rowRole = meta.rowRole;
   const metaLine = `${META_PREFIX}${JSON.stringify(json)}`;
   if (!body.trim()) return metaLine;
   return `${metaLine}\n${body}`;
@@ -73,18 +81,23 @@ export function updateOrcaOrderItemMeta(memo: string | undefined, patch: Partial
   if (!hasUserComment(next.userComment)) {
     delete next.userComment;
   }
+  if (!next.rowRole) {
+    delete next.rowRole;
+  }
   return formatOrcaOrderItemMemo(next, memoText);
 }
 
 export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | null): {
   genericFlg?: 'yes' | 'no';
   userComment?: string;
+  rowRole?: OrcaOrderRowRole;
   memoText: string;
 } {
   const parsed = parseOrcaOrderItemMemo(item?.memo);
   return {
     genericFlg: normalizeGenericFlg(item?.genericFlg ?? parsed.meta.genericFlg),
     userComment: normalizeUserComment(item?.userComment ?? parsed.meta.userComment),
+    rowRole: normalizeOrcaOrderRowRole(item?.rowRole ?? parsed.meta.rowRole) ?? undefined,
     memoText: parsed.memoText,
   };
 }

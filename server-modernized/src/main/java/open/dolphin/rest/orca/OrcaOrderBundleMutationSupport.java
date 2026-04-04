@@ -97,7 +97,7 @@ final class OrcaOrderBundleMutationSupport {
                     ? operation.getClassCodeSystem()
                     : ClaimConst.CLASS_CODE_ID);
         }
-        bundle.setClaimItem(toClaimItems(operation));
+        bundle.setClaimItem(toClaimItems(resolveEntity(operation), operation));
 
         ModuleModel module = new ModuleModel();
         ModuleInfoBean info = new ModuleInfoBean();
@@ -120,23 +120,32 @@ final class OrcaOrderBundleMutationSupport {
         return module;
     }
 
-    private static ClaimItem[] toClaimItems(OrderBundleMutationRequest.BundleOperation operation) {
+    private static ClaimItem[] toClaimItems(String entity, OrderBundleMutationRequest.BundleOperation operation) {
         List<ClaimItem> converted = new ArrayList<>();
         List<OrderBundleMutationRequest.BundleItem> items = operation != null ? operation.getItems() : null;
         if (items != null) {
             for (OrderBundleMutationRequest.BundleItem item : items) {
-                ClaimItem claimItem = toClaimItem(item);
+                ClaimItem claimItem = toClaimItem(entity, item, null);
                 if (claimItem != null) {
                     converted.add(claimItem);
                 }
             }
         }
-        ClaimItem explicitBodyPart = toClaimItem(operation != null ? operation.getBodyPart() : null);
+        ClaimItem explicitBodyPart = toClaimItem(
+                entity,
+                operation != null ? operation.getBodyPart() : null,
+                OrcaOrderBundleRowRoleSupport.ROW_ROLE_BODY_PART);
         if (explicitBodyPart != null) {
             List<ClaimItem> prioritized = new ArrayList<>();
             prioritized.add(explicitBodyPart);
             for (ClaimItem claimItem : converted) {
-                if (claimItem != null && !OrcaOrderBundleRecommendationSupport.isBodyPartCode(claimItem.getCode())) {
+                OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo =
+                        OrcaOrderBundleItemMemoSupport.parse(claimItem != null ? claimItem.getMemo() : null);
+                String rowRole = OrcaOrderBundleRequestSupport.resolveRowRole(
+                        entity,
+                        parsedMemo.rowRole(),
+                        claimItem != null ? claimItem.getCode() : null);
+                if (claimItem != null && !OrcaOrderBundleRowRoleSupport.ROW_ROLE_BODY_PART.equals(rowRole)) {
                     prioritized.add(claimItem);
                 }
             }
@@ -145,8 +154,11 @@ final class OrcaOrderBundleMutationSupport {
         return converted.isEmpty() ? null : converted.toArray(new ClaimItem[0]);
     }
 
-    private static ClaimItem toClaimItem(OrderBundleMutationRequest.BundleItem item) {
-        if (item == null || item.getName() == null || item.getName().isBlank()) {
+    private static ClaimItem toClaimItem(
+            String entity,
+            OrderBundleMutationRequest.BundleItem item,
+            String forcedRowRole) {
+        if (!hasValuedItem(item)) {
             return null;
         }
         OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo = OrcaOrderBundleItemMemoSupport.parse(item.getMemo());
@@ -154,13 +166,31 @@ final class OrcaOrderBundleMutationSupport {
                 OrcaOrderBundleRequestSupport.hasText(item.getGenericFlg()) ? item.getGenericFlg() : parsedMemo.genericFlg());
         String userComment = OrcaOrderBundleItemMemoSupport.normalizeUserComment(
                 OrcaOrderBundleRequestSupport.hasText(item.getUserComment()) ? item.getUserComment() : parsedMemo.userComment());
+        String rowRole = OrcaOrderBundleRequestSupport.resolveRowRole(
+                entity,
+                OrcaOrderBundleRequestSupport.hasText(forcedRowRole)
+                        ? forcedRowRole
+                        : (OrcaOrderBundleRequestSupport.hasText(item.getRowRole()) ? item.getRowRole() : parsedMemo.rowRole()),
+                item.getCode());
         ClaimItem claimItem = new ClaimItem();
         claimItem.setName(item.getName());
         claimItem.setCode(item.getCode());
         claimItem.setNumber(item.getQuantity());
         claimItem.setUnit(item.getUnit());
-        claimItem.setMemo(OrcaOrderBundleItemMemoSupport.format(genericFlg, userComment, parsedMemo.memoText()));
+        claimItem.setMemo(OrcaOrderBundleItemMemoSupport.format(genericFlg, userComment, rowRole, parsedMemo.memoText()));
         return claimItem;
+    }
+
+    private static boolean hasValuedItem(OrderBundleMutationRequest.BundleItem item) {
+        return item != null
+                && (OrcaOrderBundleRequestSupport.hasText(item.getName())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getCode())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getQuantity())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getUnit())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getMemo())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getGenericFlg())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getUserComment())
+                        || OrcaOrderBundleRequestSupport.hasText(item.getRowRole()));
     }
 
     private static String resolveEntity(OrderBundleMutationRequest.BundleOperation operation) {

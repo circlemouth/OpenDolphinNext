@@ -413,6 +413,92 @@ describe('orderBundleApi bodyPart contract', () => {
     );
   });
 
+  it('fetch restores rowRole from memo carrier metadata', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-ROW-ROLE-FETCH',
+          patientId: '000001',
+          bundles: [
+            {
+              entity: 'treatmentOrder',
+              bundleName: 'ROW_ROLE_FETCH',
+              items: [
+                {
+                  code: '700000021',
+                  name: '処置材料A',
+                  quantity: '1',
+                  unit: '個',
+                  memo: '__orca_meta__:{"rowRole":"material"}\n院内メモ',
+                },
+              ],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderBundles({ patientId: '000001', entity: 'treatmentOrder' });
+
+    expect(result.ok).toBe(true);
+    expect((result.bundles[0] as any).items[0]).toEqual(
+      expect.objectContaining({
+        code: '700000021',
+        rowRole: 'material',
+      }),
+    );
+  });
+
+  it('mutation preserves rowRole through memo carrier metadata', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-ROW-ROLE-MUT',
+          createdDocumentIds: [106],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'treatmentOrder',
+          bundleName: 'ROW_ROLE_MUTATE',
+          items: [
+            {
+              code: '700000021',
+              name: '処置材料A',
+              quantity: '1',
+              unit: '個',
+              memo: '__orca_meta__:{"rowRole":"material"}\n院内メモ',
+            },
+          ],
+        } as any,
+      ],
+    });
+
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+
+    expect(body.operations[0]?.items[0]).toEqual(
+      expect.objectContaining({
+        code: '700000021',
+        rowRole: 'material',
+        memo: '院内メモ',
+      }),
+    );
+  });
+
   it('fetch preserves class 600 subtype contract', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(

@@ -240,7 +240,8 @@ describe('OrderBundleEditPanel ORCA support', () => {
         bodyPart: { code: '002001', name: '膝関節', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
         items: [
           { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
-          { code: 'M001', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'material' },
+          { code: '700000021', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'material' },
+          { code: '0085001', name: '注意事項', quantity: '', unit: '', memo: '術前確認', rowRole: 'comment' },
         ],
       },
     });
@@ -271,7 +272,8 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: 'M001', rowRole: 'material', unit: '個' }),
+        expect.objectContaining({ code: '700000021', rowRole: 'material', unit: '個' }),
+        expect.objectContaining({ code: '0085001', rowRole: 'comment' }),
       ]),
     );
   });
@@ -712,7 +714,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
           items: [
             {
               type: 'material',
-              code: 'M002',
+              code: '700000022',
               name: '処置材料B',
               unit: '個',
               note: '',
@@ -763,8 +765,82 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: 'M002', rowRole: 'material', unit: '個' }),
+        expect.objectContaining({ code: '700000022', rowRole: 'material', unit: '個' }),
       ]),
     );
+  });
+
+  it('treatmentOrder の warning focus は bodyPart/main/material/comment の順で正しい入力欄へ飛ぶ', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
+      ok: true,
+      status: 200,
+      totalCount: 1,
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 3 }],
+    });
+    vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
+      ok: true,
+      status: 200,
+      setCode: 'P02001',
+      bundle: {
+        entity: 'generalOrder',
+        sourceSetCode: 'P02001',
+        bundleName: '創傷処置セット',
+        bundleNumber: '1',
+        admin: '適宜',
+        adminMemo: '運用前確認',
+        memo: '消毒後に実施',
+        started: '2026-03-09',
+        bodyPart: { code: '002001', name: '膝関節', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
+        items: [
+          { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
+          { code: '700000021', name: '処置材料A', quantity: '1', unit: '個', memo: '', rowRole: 'material' },
+          { code: '0085001', name: '注意事項', quantity: '', unit: '', memo: '術前確認', rowRole: 'comment' },
+        ],
+      },
+    });
+
+    renderPanel({
+      entity: 'treatmentOrder',
+      title: '処置編集',
+      bundleLabel: '処置オーダー名',
+      itemQuantityLabel: '回数',
+    });
+
+    await user.type(screen.getByPlaceholderText('診療セット名またはコード'), '処置');
+    await user.click(screen.getByRole('button', { name: 'セット検索' }));
+    await user.click(await screen.findByRole('button', { name: /P02001.*処置セット.*反映/ }));
+    await screen.findByText('反映元 setCode: P02001（local-only）');
+
+    const dispatchWarning = (sourceItemIndex: number) => {
+      window.dispatchEvent(
+        new CustomEvent('orca-medical-warning-focus', {
+          detail: {
+            patientId: 'P-ORDER-001',
+            warning: {
+              entity: 'treatmentOrder',
+              sourceKind: 'bundle_item',
+              sourceItemIndex,
+              medicalWarning: 'WARN',
+              medicalWarningMessage: 'WARN',
+              medicalWarningCode: 'W001',
+            },
+          },
+        }),
+      );
+    };
+
+    dispatchWarning(0);
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('id', 'treatmentOrder-bodypart'));
+
+    dispatchWarning(1);
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('id', 'treatmentOrder-item-name-0'));
+
+    dispatchWarning(2);
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('id', 'treatmentOrder-material-name-0'));
+
+    dispatchWarning(3);
+    await waitFor(() => expect(document.activeElement).toHaveAttribute('id', 'treatmentOrder-comment-name-0'));
   });
 });
