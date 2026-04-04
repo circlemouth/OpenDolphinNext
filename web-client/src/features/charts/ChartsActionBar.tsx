@@ -187,6 +187,7 @@ export interface ChartsActionBarProps {
   sendEnabled?: boolean;
   sendDisabledReason?: string;
   patientId?: string;
+  encounterId?: string;
   visitDate?: string;
   queueEntry?: ClaimQueueEntry;
   hasUnsavedDraft?: boolean;
@@ -245,6 +246,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   sendEnabled = true,
   sendDisabledReason,
   patientId,
+  encounterId,
   visitDate,
   queueEntry,
   hasUnsavedDraft = false,
@@ -1332,7 +1334,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           const { actor } = resolveAuditActor();
           onApprovalConfirmed?.({ action: 'send', actor });
 
-          const orderBundleResult = await fetchMedicalModV2OrderBundles(resolvedPatientId, calculationDate);
+          const orderBundleResult = await fetchMedicalModV2OrderBundles(resolvedPatientId, calculationDate, encounterId);
           if (orderBundleResult.errors.length > 0) {
             const failedEntitiesPreview = orderBundleResult.errors.slice(0, 6).join(' / ');
             const remaining = orderBundleResult.errors.length - 6;

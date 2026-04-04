@@ -76,6 +76,29 @@ export type PrescriptionOrderEditorPanelProps = {
   active?: boolean;
 };
 
+const findRpIndexForBundle = (order: PrescriptionOrder, bundle: OrderBundle, patientId: string, encounterId?: string) => {
+  const imported = toPrescriptionOrder([bundle], patientId, encounterId).rps[0];
+  if (!imported) return -1;
+  return order.rps.findIndex((rp) => {
+    if (typeof bundle.documentId === 'number' && typeof rp.documentId === 'number') {
+      return rp.documentId === bundle.documentId;
+    }
+    if (typeof bundle.moduleId === 'number' && typeof rp.moduleId === 'number') {
+      return rp.moduleId === bundle.moduleId;
+    }
+    if (rp.rpId && imported.rpId && rp.rpId === imported.rpId) {
+      return true;
+    }
+    return (
+      rp.name.trim() === imported.name.trim() &&
+      rp.daysOrTimes.trim() === imported.daysOrTimes.trim() &&
+      rp.started === imported.started &&
+      rp.location === imported.location &&
+      rp.category === imported.category
+    );
+  });
+};
+
 const SEARCH_SCOPE_CATEGORY: Record<PrescriptionSearchScope, string> = {
   outside_adopted: 'outer',
   in_hospital_adopted: 'in-hospital',
@@ -313,7 +336,9 @@ export function PrescriptionOrderEditorPanel({
   const domId = useCallback((suffix: string) => `${idPrefix}-${suffix}`, [idPrefix]);
   const isPreviewMode = readOnlyPreview;
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [order, setOrder] = useState<PrescriptionOrder>(() => buildEmptyPrescriptionOrder(patientId ?? '', today));
+  const [order, setOrder] = useState<PrescriptionOrder>(() =>
+    buildEmptyPrescriptionOrder(patientId ?? '', today, meta.encounterId),
+  );
   const [selectedRpIndex, setSelectedRpIndex] = useState(0);
   const [selectedDrugIndex, setSelectedDrugIndex] = useState(0);
   const [bulkDaysValue, setBulkDaysValue] = useState('');
@@ -336,15 +361,17 @@ export function PrescriptionOrderEditorPanel({
     message?: string;
   }>>([]);
   const [pendingSaveAction, setPendingSaveAction] = useState<SaveAction | null>(null);
+  const pendingEditBundleRef = useRef<OrderBundle | null>(null);
 
   const canFetchFromServer = Boolean(patientId) && !bundlesOverride && active;
   const sourceBundleQuery = useQuery({
-    queryKey: ['charts-prescription-order-editor-source', patientId, meta.visitDate ?? today],
+    queryKey: ['charts-prescription-order-editor-source', patientId, meta.visitDate ?? today, meta.encounterId ?? 'none'],
     queryFn: () => {
       if (!patientId) throw new Error('patientId is required');
       return fetchPrescriptionOrder({
         patientId,
         from: (meta.visitDate ?? today).slice(0, 10),
+        encounterId: meta.encounterId,
       });
     },
     enabled: canFetchFromServer,
@@ -355,16 +382,18 @@ export function PrescriptionOrderEditorPanel({
     if (!bundlesOverride || !patientId) return null;
     const medBundles = bundlesOverride.filter((bundle) => (bundle.entity?.trim() ?? '') === 'medOrder');
     if (medBundles.length === 0) return null;
-    return toPrescriptionOrder(medBundles, patientId);
-  }, [bundlesOverride, patientId]);
+    return toPrescriptionOrder(medBundles, patientId, meta.encounterId);
+  }, [bundlesOverride, meta.encounterId, patientId]);
   const sourceOrder = overrideOrder ?? sourceBundleQuery.data?.order ?? null;
 
   const sourceSignature = useMemo(() => {
     if (!sourceOrder) return sourceBundleQuery.isSuccess ? 'empty' : 'pending';
     const order = sourceOrder;
     if (order.rps.length === 0) return 'empty';
-    return order.rps
-      .map((rp) => `${rp.documentId ?? 'none'}:${rp.moduleId ?? 'none'}:${rp.started ?? 'none'}:${rp.rpId}`)
+    return [order.encounterId ?? 'none']
+      .concat(
+        order.rps.map((rp) => `${rp.documentId ?? 'none'}:${rp.moduleId ?? 'none'}:${rp.started ?? 'none'}:${rp.rpId}`),
+      )
       .join('|');
   }, [sourceBundleQuery.isSuccess, sourceOrder]);
 
@@ -374,15 +403,21 @@ export function PrescriptionOrderEditorPanel({
     if (sourceSignature === lastSourceSignatureRef.current) return;
     lastSourceSignatureRef.current = sourceSignature;
     if (!sourceOrder || sourceOrder.rps.length === 0) {
-      setOrder(buildEmptyPrescriptionOrder(patientId, today));
+      setOrder(buildEmptyPrescriptionOrder(patientId, today, meta.encounterId));
       setSelectedRpIndex(0);
       setSelectedDrugIndex(0);
       return;
     }
     setOrder(sourceOrder);
-    setSelectedRpIndex(0);
+    const pendingEditBundle = pendingEditBundleRef.current;
+    const nextRpIndex =
+      pendingEditBundle != null ? findRpIndexForBundle(sourceOrder, pendingEditBundle, patientId, meta.encounterId) : -1;
+    setSelectedRpIndex(nextRpIndex >= 0 ? nextRpIndex : 0);
     setSelectedDrugIndex(0);
-  }, [patientId, sourceOrder, sourceSignature, today]);
+    if (nextRpIndex >= 0) {
+      pendingEditBundleRef.current = null;
+    }
+  }, [meta.encounterId, patientId, sourceOrder, sourceSignature, today]);
 
   const lastRequestIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -395,7 +430,8 @@ export function PrescriptionOrderEditorPanel({
     }
 
     if (request.kind === 'new') {
-      setOrder(buildEmptyPrescriptionOrder(patientId, today));
+      pendingEditBundleRef.current = null;
+      setOrder(buildEmptyPrescriptionOrder(patientId, today, meta.encounterId));
       setSelectedRpIndex(0);
       setSelectedDrugIndex(0);
       setNotice(null);
@@ -405,7 +441,31 @@ export function PrescriptionOrderEditorPanel({
     }
 
     if (request.kind === 'edit') {
-      const imported = toPrescriptionOrder([request.bundle], patientId).rps[0] ?? buildEmptyPrescriptionRp(today);
+      pendingEditBundleRef.current = request.bundle;
+      const sourceRpIndex =
+        sourceOrder != null ? findRpIndexForBundle(sourceOrder, request.bundle, patientId, meta.encounterId) : -1;
+      if (sourceOrder && sourceRpIndex >= 0) {
+        setOrder(sourceOrder);
+        setSelectedRpIndex(sourceRpIndex);
+        setSelectedDrugIndex(0);
+        pendingEditBundleRef.current = null;
+        setNotice(null);
+        setValidationIssues([]);
+        onRequestConsumed?.(request.requestId);
+        return;
+      }
+      if (canFetchFromServer) {
+        setNotice(
+          sourceOrder
+            ? { tone: 'warning', message: '選択した処方セットを現在 encounter の first-class order から解決できませんでした。再取得後に再選択してください。' }
+            : null,
+        );
+        setValidationIssues([]);
+        onRequestConsumed?.(request.requestId);
+        return;
+      }
+
+      const imported = toPrescriptionOrder([request.bundle], patientId, meta.encounterId).rps[0] ?? buildEmptyPrescriptionRp(today);
       setOrder((prev) => {
         const next = { ...prev, rps: [...prev.rps] };
         const targetIndex = next.rps.findIndex((rp) => {
@@ -896,7 +956,10 @@ export function PrescriptionOrderEditorPanel({
       if (!patientId) throw new Error('patientId is required');
       const result = await savePrescriptionOrder({
         patientId,
-        order: payload.order,
+        order: {
+          ...payload.order,
+          encounterId: payload.order.encounterId ?? meta.encounterId,
+        },
       });
       return { result, action: payload.action };
     },
@@ -910,7 +973,9 @@ export function PrescriptionOrderEditorPanel({
       if (ok) {
         queryClient.invalidateQueries({ queryKey: ['charts-order-bundles'] });
         queryClient.invalidateQueries({ queryKey: ['charts-prescription-bundles'] });
-        queryClient.invalidateQueries({ queryKey: ['charts-prescription-order-editor-source', patientId] });
+        queryClient.invalidateQueries({
+          queryKey: ['charts-prescription-order-editor-source', patientId, meta.visitDate ?? today, meta.encounterId ?? 'none'],
+        });
         setOrder((prev) => ({ ...prev, deletedDocumentIds: [] }));
         if (action === 'expand') onClose?.();
       }
@@ -1717,7 +1782,7 @@ export function PrescriptionOrderEditorPanel({
                           </p>
                         ) : null}
                         <p className="charts-side-panel__help">
-                          一般名指定/後発可否/請求コメントは ORCA送信対象です。lower系・numberCode・prescriptionSettings・remarks は preserve-only で、この画面からは編集しません。
+                          一般名指定/請求コメントは ORCA送信対象です。後発可否・lower系・numberCode・prescriptionSettings・remarks は preserve-only で、この画面からは編集しません。
                         </p>
                         {rowIssueGeneric || rowIssueClaim ? (
                           <p className="charts-side-panel__field-error" role="alert">

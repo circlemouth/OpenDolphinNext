@@ -43,6 +43,8 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaPrescriptionOrderResource.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    private static final java.util.regex.Pattern COMMENT_NUMBER_REQUIRED_PATTERN =
+            java.util.regex.Pattern.compile("^(8501|8511|8521|831)");
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -146,6 +148,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         normalized.setEncounterId(trimToNull(normalized.getEncounterId()));
         normalized.setEncounterDate(encounterDate != null ? encounterDate.toString() : null);
         normalized.setPerformDate(performDate != null ? performDate.toString() : null);
+        validateUsageCodes(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
         validateClaimCommentCodes(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
 
         String json = writeJsonOrThrow(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
@@ -226,7 +229,8 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         LocalDate targetEncounterDate = parseOptionalDate(request, "encounterDate", payload.getEncounterDate(),
                 facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         String targetEncounterId = trimToNull(payload.getEncounterId());
-        ensureDoImportUsageCodes(request, payload.getDoOrder(), facilityId, patientId, runId);
+        validateUsageCodes(request, payload.getDoOrder(), facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+        validateClaimCommentCodes(request, payload.getDoOrder(), facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         return new DoImportContext(patientId, targetEncounterId, targetEncounterDate);
     }
 
@@ -273,6 +277,8 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
         merged.setEncounterDate(mergedEncounterDate != null ? mergedEncounterDate.toString() : null);
         merged.setPerformDate(performDate != null ? performDate.toString() : null);
+        validateUsageCodes(request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+        validateClaimCommentCodes(request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         String json = writeJsonOrThrow(
                 request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         return new DoImportResult(merged, mergedEncounterDate, performDate, now, warnings, json);
@@ -328,32 +334,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         audit.put("warnings", response.getWarnings().size());
         audit.put("runId", runId);
         recordAudit(request, "ORCA_PRESCRIPTION_DO_IMPORT", audit, AuditEventEnvelope.Outcome.SUCCESS);
-    }
-
-    private void ensureDoImportUsageCodes(
-            HttpServletRequest request,
-            PrescriptionOrder doOrder,
-            String facilityId,
-            String patientId,
-            String runId) {
-        if (!OrcaPrescriptionOrderImportSupport.hasMissingUsageCode(doOrder)) {
-            return;
-        }
-        Map<String, Object> details = new HashMap<>();
-        details.put("facilityId", facilityId);
-        details.put("patientId", patientId);
-        details.put("runId", runId);
-        details.put("field", "usageCode");
-        details.put("validationError", Boolean.TRUE);
-        markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(), "unregistered_usage",
-                "未登録用法を含むためDo入力を反映できません");
-        recordAudit(request, "ORCA_PRESCRIPTION_DO_IMPORT", details, AuditEventEnvelope.Outcome.FAILURE);
-        throw restError(request,
-                Response.Status.BAD_REQUEST,
-                "unregistered_usage",
-                "未登録用法を含むためDo入力を反映できません",
-                details,
-                null);
     }
 
     private PrescriptionOrder decodeOrderOrThrow(HttpServletRequest request,
@@ -506,6 +486,27 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
             if (rp == null) {
                 continue;
             }
+            List<PrescriptionClaimComment> rpClaimComments = safeList(rp.getClaimComments());
+            for (int commentIndex = 0; commentIndex < rpClaimComments.size(); commentIndex++) {
+                PrescriptionClaimComment claimComment = rpClaimComments.get(commentIndex);
+                if (claimComment == null) {
+                    continue;
+                }
+                String text = trimToNull(claimComment.getText());
+                String code = trimToNull(claimComment.getCode());
+                if (text != null && code == null) {
+                    String field = "rps[" + rpIndex + "].claimComments[" + commentIndex + "].code";
+                    String message = "claim comment code is required when text is present";
+                    recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+                    throw validationError(request, field, message);
+                }
+                if (requiresStructuredClaimCommentNumber(code) && hasText(claimComment.getNote())) {
+                    String field = "rps[" + rpIndex + "].claimComments[" + commentIndex + "].note";
+                    String message = "structured claim comment number is not supported for this code";
+                    recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+                    throw validationError(request, field, message);
+                }
+            }
             List<PrescriptionDrug> drugs = safeList(rp.getDrugs());
             for (int drugIndex = 0; drugIndex < drugs.size(); drugIndex++) {
                 PrescriptionDrug drug = drugs.get(drugIndex);
@@ -526,13 +527,57 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                         recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                         throw validationError(request, field, message);
                     }
+                    if (requiresStructuredClaimCommentNumber(code) && hasText(claimComment.getNote())) {
+                        String field = "rps[" + rpIndex + "].drugs[" + drugIndex + "].claimComments[" + commentIndex + "].note";
+                        String message = "structured claim comment number is not supported for this code";
+                        recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+                        throw validationError(request, field, message);
+                    }
                 }
             }
         }
     }
 
+    private void validateUsageCodes(
+            HttpServletRequest request,
+            PrescriptionOrder order,
+            String facilityId,
+            String patientId,
+            String runId,
+            String action) {
+        int rpIndex = findFirstUsageCodeIssueIndex(order);
+        if (rpIndex >= 0) {
+            String field = "rps[" + rpIndex + "].usageCode";
+            String message = "usageCode is required when drug rows are present";
+            recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+            throw validationError(request, field, message);
+        }
+    }
+
+    private int findFirstUsageCodeIssueIndex(PrescriptionOrder order) {
+        if (order == null) {
+            return -1;
+        }
+        List<PrescriptionRp> rps = safeList(order.getRps());
+        for (int rpIndex = 0; rpIndex < rps.size(); rpIndex++) {
+            PrescriptionRp rp = rps.get(rpIndex);
+            if (rp == null) {
+                continue;
+            }
+            boolean hasDrugRows = safeList(rp.getDrugs()).stream().anyMatch(Objects::nonNull);
+            if (hasDrugRows && !hasText(rp.getUsageCode())) {
+                return rpIndex;
+            }
+        }
+        return -1;
+    }
+
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private boolean requiresStructuredClaimCommentNumber(String code) {
+        return COMMENT_NUMBER_REQUIRED_PATTERN.matcher(trimToEmpty(code)).find();
     }
 
     private String trimToNull(String value) {

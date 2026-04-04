@@ -928,7 +928,7 @@ describe('order send smoke', () => {
 
   it('save fetch no-op save send smoke uses prescription-orders as medOrder source of truth', async () => {
     const requestUrls: string[] = [];
-    const order = buildEmptyPrescriptionOrder('000001', '2026-03-09T09:30:00');
+    const order = buildEmptyPrescriptionOrder('000001', '2026-03-09T09:30:00', 'F001:E900');
     order.prescriptionSettings = [{ code: 'setting-1', name: '院内設定', value: 'enabled' }];
     order.remarks = [{ code: 'remark-1', text: '院内備考' }];
     order.rps = [
@@ -952,8 +952,11 @@ describe('order send smoke', () => {
             name: '薬剤A',
             quantity: '3',
             unit: '錠',
-            genericChangeAllowed: true,
-            isGeneralNamePrescription: false,
+            numberCode: '001',
+            numberCodeSystem: 'urn:orca:number',
+            numberCodeName: 'number-name',
+            genericChangeAllowed: false,
+            isGeneralNamePrescription: true,
             drugComment: '眠前注意',
             lowerUsageCode: 'lower-usage',
             claimComments: [],
@@ -968,6 +971,7 @@ describe('order send smoke', () => {
       found: true,
       order: {
         patientId: '000001',
+        encounterId: 'F001:E900',
         encounterDate: '2026-03-09',
         performDate: '2026-03-09',
         doctorComments: [{ text: '継続処方' }],
@@ -992,8 +996,11 @@ describe('order send smoke', () => {
                 name: '薬剤A',
                 quantity: '3',
                 unit: '錠',
-                genericChangeAllowed: true,
-                generalNamePrescription: false,
+                numberCode: '001',
+                numberCodeSystem: 'urn:orca:number',
+                numberCodeName: 'number-name',
+                genericChangeAllowed: false,
+                generalNamePrescription: true,
                 drugComment: '眠前注意',
                 lowerFields: { lowerUsageCode: 'lower-usage' },
                 claimComments: [],
@@ -1063,6 +1070,7 @@ describe('order send smoke', () => {
     expect(firstSave.ok).toBe(true);
     const firstSaveRequest = vi.mocked(httpFetch).mock.calls[0]?.[1];
     const firstSaveBody = JSON.parse(String((firstSaveRequest as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    expect(firstSaveBody.encounterId).toBe('F001:E900');
     expect(firstSaveBody.prescriptionSettings).toEqual([{ code: 'setting-1', name: '院内設定', value: 'enabled' }]);
     expect(firstSaveBody.remarks).toEqual([{ code: 'remark-1', text: '院内備考' }]);
     expect(firstSaveBody.rps[0]).toEqual(
@@ -1075,11 +1083,16 @@ describe('order send smoke', () => {
     );
     expect(firstSaveBody.rps[0].drugs[0]).toEqual(
       expect.objectContaining({
+        numberCode: '001',
+        numberCodeSystem: 'urn:orca:number',
+        numberCodeName: 'number-name',
+        genericChangeAllowed: false,
+        generalNamePrescription: true,
         lowerFields: { lowerUsageCode: 'lower-usage' },
       }),
     );
 
-    const fetched = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09' });
+    const fetched = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09', encounterId: 'F001:E900' });
     expect(fetched.ok).toBe(true);
     expect(fetched.order.rps[0]?.drugs).toEqual(
       expect.arrayContaining([
@@ -1093,6 +1106,29 @@ describe('order send smoke', () => {
         }),
       ]),
     );
+    expect(
+      requestUrls.some(
+        (url) =>
+          url.startsWith('/api/orca/prescription-orders?') &&
+          url.includes('patientId=000001') &&
+          url.includes('encounterDate=2026-03-09') &&
+          url.includes('encounterId=F001%3AE900'),
+      ),
+    ).toBe(true);
+    expect(fetched.order.encounterId).toBe('F001:E900');
+    expect(fetched.order.rps[0]?.drugs[0]).toMatchObject({
+      code: '620000001',
+      name: '薬剤A',
+      quantity: '3',
+      unit: '錠',
+      drugComment: '眠前注意',
+      numberCode: '001',
+      numberCodeSystem: 'urn:orca:number',
+      numberCodeName: 'number-name',
+      genericChangeAllowed: false,
+      isGeneralNamePrescription: true,
+      lowerUsageCode: 'lower-usage',
+    });
     expect(fetched.order.rps[0]?.claimComments).toEqual([
       expect.objectContaining({ code: '820100001', name: 'RP患者希望', note: 'rp-note' }),
     ]);
@@ -1102,10 +1138,13 @@ describe('order send smoke', () => {
     const secondSave = await savePrescriptionOrder({ patientId: '000001', order: fetched.order });
     expect(secondSave.ok).toBe(true);
 
-    const fetchedBundles = await fetchMedicalModV2OrderBundles('000001', '2026-03-09');
+    const fetchedBundles = await fetchMedicalModV2OrderBundles('000001', '2026-03-09', 'F001:E900');
     expect(fetchedBundles.errors).toEqual([]);
     expect(fetchedBundles.bundles.some((bundle) => bundle.entity === 'medOrder')).toBe(true);
     expect(requestUrls.some((url) => url.includes('/api/orca/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
+    expect(
+      requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?') && url.includes('encounterId=F001%3AE900')).length,
+    ).toBeGreaterThanOrEqual(2);
 
     const prepared = prepareMedicalModV2SendData(fetchedBundles.bundles);
     expect(prepared.requiredIssues).toEqual([]);
@@ -1148,10 +1187,98 @@ describe('order send smoke', () => {
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('院内備考');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('lower-drug');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('lower-usage');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain('number-name');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
     expect(sendResult.ok).toBe(true);
     expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toHaveLength(2);
     expect(requestUrls.filter((url) => url === '/api/orca/prescription-orders')).toHaveLength(2);
+  });
+
+  it('same-day multi-encounter send path uses encounterId scoped prescription order', async () => {
+    const requestUrls: string[] = [];
+    vi.mocked(httpFetch).mockImplementation(async (input) => {
+      const url = String(input);
+      requestUrls.push(url);
+      if (url.startsWith('/api/orca/prescription-orders?')) {
+        const parsed = new URL(`http://localhost${url}`);
+        const encounterId = parsed.searchParams.get('encounterId');
+        const drugName = encounterId === 'F001:E901' ? 'Encounter B薬' : 'Encounter A薬';
+        const drugCode = encounterId === 'F001:E901' ? '620000901' : '620000900';
+        return new Response(
+          JSON.stringify({
+            runId: 'RUN-RX-MULTI',
+            found: true,
+            order: {
+              patientId: '000001',
+              encounterId,
+              encounterDate: '2026-03-09',
+              performDate: '2026-03-09',
+              rps: [
+                {
+                  rpNumber: `rp-${encounterId}`,
+                  bundleName: 'same-day-rp',
+                  medicalClass: '212',
+                  medicalClassNumber: '7',
+                  usageCode: '001000',
+                  usageName: '毎食後',
+                  started: '2026-03-09T09:30:00',
+                  drugs: [
+                    {
+                      code: drugCode,
+                      name: drugName,
+                      quantity: '1',
+                      unit: '錠',
+                      genericChangeAllowed: true,
+                      generalNamePrescription: false,
+                      claimComments: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      if (url.startsWith('/api/orca/order/bundles?')) {
+        return new Response(
+          JSON.stringify({
+            runId: 'RUN-BUNDLES',
+            patientId: '000001',
+            recordsReturned: 0,
+            bundles: [],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
+      }
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const fetchedBundles = await fetchMedicalModV2OrderBundles('000001', '2026-03-09', 'F001:E901');
+    expect(fetchedBundles.errors).toEqual([]);
+    expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toEqual([
+      expect.stringContaining('encounterId=F001%3AE901'),
+    ]);
+    expect(requestUrls.some((url) => url.includes('/api/orca/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
+
+    const prepared = prepareMedicalModV2SendData(fetchedBundles.bundles);
+    expect(prepared.medicalInformation).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          medications: expect.arrayContaining([expect.objectContaining({ code: '620000901', name: 'Encounter B薬' })]),
+        }),
+      ]),
+    );
+    expect(prepared.medicalInformation[0]?.medications).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: '620000901', genericFlg: 'no' })]),
+    );
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('Encounter A薬');
   });
 });

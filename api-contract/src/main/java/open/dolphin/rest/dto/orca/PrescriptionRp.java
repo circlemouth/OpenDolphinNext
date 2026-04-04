@@ -21,6 +21,12 @@ public class PrescriptionRp {
     private Boolean patientRequested;
     private List<PrescriptionDrug> drugs;
     private List<PrescriptionClaimComment> claimComments;
+    private String lowerDrugCode;
+    private String lowerUsageCode;
+    private String lowerClaimCode;
+    private String lowerRouteCode;
+    private String lowerTimingCode;
+    private String lowerClassCode;
 
     public String getRpNumber() {
         return rpNumber;
@@ -140,5 +146,53 @@ public class PrescriptionRp {
 
     public void setClaimComments(List<PrescriptionClaimComment> claimComments) {
         this.claimComments = claimComments;
+    }
+
+    public String getLowerDrugCode() {
+        return lowerDrugCode;
+    }
+
+    public void setLowerDrugCode(String lowerDrugCode) {
+        this.lowerDrugCode = lowerDrugCode;
+    }
+
+    public String getLowerUsageCode() {
+        return lowerUsageCode;
+    }
+
+    public void setLowerUsageCode(String lowerUsageCode) {
+        this.lowerUsageCode = lowerUsageCode;
+    }
+
+    public String getLowerClaimCode() {
+        return lowerClaimCode;
+    }
+
+    public void setLowerClaimCode(String lowerClaimCode) {
+        this.lowerClaimCode = lowerClaimCode;
+    }
+
+    public String getLowerRouteCode() {
+        return lowerRouteCode;
+    }
+
+    public void setLowerRouteCode(String lowerRouteCode) {
+        this.lowerRouteCode = lowerRouteCode;
+    }
+
+    public String getLowerTimingCode() {
+        return lowerTimingCode;
+    }
+
+    public void setLowerTimingCode(String lowerTimingCode) {
+        this.lowerTimingCode = lowerTimingCode;
+    }
+
+    public String getLowerClassCode() {
+        return lowerClassCode;
+    }
+
+    public void setLowerClassCode(String lowerClassCode) {
+        this.lowerClassCode = lowerClassCode;
     }
 }

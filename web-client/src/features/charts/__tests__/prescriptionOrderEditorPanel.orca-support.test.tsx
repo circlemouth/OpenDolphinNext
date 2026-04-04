@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -8,7 +10,7 @@ import { fetchOrcaGenericPrice } from '../orcaGenericPriceApi';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
 import { checkOrcaOrderInteractions } from '../orcaOrderInteractionApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
-import { savePrescriptionOrder } from '../prescriptionOrderApi';
+import { fetchPrescriptionOrder, savePrescriptionOrder } from '../prescriptionOrderApi';
 
 vi.mock('../orderMasterSearchApi', async () => {
   const actual = await vi.importActual<typeof import('../orderMasterSearchApi')>('../orderMasterSearchApi');
@@ -46,10 +48,11 @@ const baseMeta = {
   missingMaster: false,
   fallbackUsed: false,
   dataSourceTransition: 'server' as const,
+  encounterId: 'F001:E100',
   visitDate: '2026-03-09',
 };
 
-const renderPanel = (bundlesOverride = [
+const defaultBundlesOverride = [
   {
     entity: 'medOrder',
     bundleName: '既存RP',
@@ -60,7 +63,9 @@ const renderPanel = (bundlesOverride = [
     started: '2026-03-09',
     items: [{ code: 'A100', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
   },
-]) => {
+];
+
+const renderPanel = (options?: { bundlesOverride?: any[]; request?: any }) => {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -69,7 +74,13 @@ const renderPanel = (bundlesOverride = [
   });
   return render(
     <QueryClientProvider client={client}>
-      <PrescriptionOrderEditorPanel patientId="P-RX-001" meta={baseMeta} active bundlesOverride={bundlesOverride} />
+      <PrescriptionOrderEditorPanel
+        patientId="P-RX-001"
+        meta={baseMeta}
+        active
+        bundlesOverride={options?.bundlesOverride ?? defaultBundlesOverride}
+        request={options?.request}
+      />
     </QueryClientProvider>,
   );
 };
@@ -226,18 +237,20 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
 
-    renderPanel([
-      {
-        entity: 'medOrder',
-        bundleName: '既存RP',
-        bundleNumber: '7',
-        admin: '毎食後',
-        adminMemo: '001000',
-        classCode: '212',
-        started: '2026-03-09',
-        items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
-      },
-    ]);
+    renderPanel({
+      bundlesOverride: [
+        {
+          entity: 'medOrder',
+          bundleName: '既存RP',
+          bundleNumber: '7',
+          admin: '毎食後',
+          adminMemo: '001000',
+          classCode: '212',
+          started: '2026-03-09',
+          items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
+        },
+      ],
+    });
 
     await user.click(screen.getByRole('button', { name: '銘柄指定' }));
     await user.click(screen.getByRole('button', { name: '保存' }));
@@ -255,22 +268,163 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     );
   });
 
+  it('edit request は fetched first-class order を編集 source of truth にし no-op save でも意味を落とさない', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
+      ok: true,
+      patientId: 'P-RX-001',
+      sourceBundles: [
+        {
+          entity: 'medOrder',
+          documentId: 710,
+          moduleId: 820,
+          bundleName: '既存RP',
+          bundleNumber: '7',
+          admin: '毎食後',
+          adminMemo: '001000',
+          classCode: '212',
+          started: '2026-03-09',
+          items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
+        },
+      ],
+      order: {
+        patientId: 'P-RX-001',
+        encounterId: 'F001:E500',
+        encounterDate: '2026-03-09',
+        performDate: '2026-03-09',
+        doctorComment: '全体コメント',
+        prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
+        remarks: [{ code: 'remark-1', text: '院内備考' }],
+        deletedDocumentIds: [],
+        rps: [
+          {
+            rpId: 'rp-enc-1',
+            documentId: 710,
+            moduleId: 820,
+            name: '既存RP',
+            location: 'out',
+            category: 'regular',
+            usage: '毎食後',
+            usageCode: '001000',
+            daysOrTimes: '7',
+            remark: 'local note',
+            refillPattern: 'alternate',
+            doctorComment: 'RPコメント',
+            started: '2026-03-09',
+            claimComments: [{ id: 'rp-claim-1', code: '820100001', name: 'RP患者希望', note: 'rp-note' }],
+            drugs: [
+              {
+                rowId: 'drug-1',
+                code: '620000001',
+                name: '既存薬',
+                quantity: '1',
+                unit: '錠',
+                genericChangeAllowed: false,
+                isGeneralNamePrescription: true,
+                drugComment: '食後',
+                claimComments: [{ id: 'claim-1', code: '810000001', name: '患者希望', note: 'note' }],
+                patientRequest: false,
+              },
+            ],
+          },
+        ],
+      },
+    } as any);
+
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+
+    render(
+      <QueryClientProvider client={client}>
+        <PrescriptionOrderEditorPanel
+          patientId="P-RX-001"
+          meta={{ ...baseMeta, encounterId: 'F001:E500' }}
+          active
+          request={{
+            requestId: 'edit-rx-1',
+            kind: 'edit',
+            bundle: {
+              entity: 'medOrder',
+              documentId: 710,
+              moduleId: 820,
+              bundleName: '既存RP',
+              bundleNumber: '7',
+              admin: '毎食後',
+              adminMemo: '001000',
+              classCode: '212',
+              started: '2026-03-09',
+              items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
+            },
+          }}
+        />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => {
+      expect(fetchPrescriptionOrder).toHaveBeenCalledWith({
+        patientId: 'P-RX-001',
+        from: '2026-03-09',
+        encounterId: 'F001:E500',
+      });
+    });
+    expect(await screen.findByDisplayValue('全体コメント')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(savePrescriptionOrder).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = vi.mocked(savePrescriptionOrder).mock.calls[0]?.[0];
+    expect(payload?.order).toEqual(
+      expect.objectContaining({
+        encounterId: 'F001:E500',
+        doctorComment: '全体コメント',
+        prescriptionSettings: [{ code: 'setting-1', name: '院内設定', value: 'enabled' }],
+        remarks: [{ code: 'remark-1', text: '院内備考' }],
+      }),
+    );
+    expect(payload?.order?.rps[0]).toEqual(
+      expect.objectContaining({
+        documentId: 710,
+        moduleId: 820,
+        doctorComment: 'RPコメント',
+        claimComments: [{ id: 'rp-claim-1', code: '820100001', name: 'RP患者希望', note: 'rp-note' }],
+      }),
+    );
+    expect(payload?.order?.rps[0]?.drugs[0]).toEqual(
+      expect.objectContaining({
+        genericChangeAllowed: false,
+        isGeneralNamePrescription: true,
+        claimComments: [{ id: 'claim-1', code: '810000001', name: '患者希望', note: 'note' }],
+        patientRequest: false,
+      }),
+    );
+  });
+
   it('usageCode の無い自由用法は保存前に block する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
 
-    renderPanel([
-      {
-        entity: 'medOrder',
-        bundleName: '既存RP',
-        bundleNumber: '7',
-        admin: '自由用法だけ',
-        adminMemo: '',
-        classCode: '212',
-        started: '2026-03-09',
-        items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
-      },
-    ]);
+    renderPanel({
+      bundlesOverride: [
+        {
+          entity: 'medOrder',
+          bundleName: '既存RP',
+          bundleNumber: '7',
+          admin: '自由用法だけ',
+          adminMemo: '',
+          classCode: '212',
+          started: '2026-03-09',
+          items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
+        },
+      ],
+    });
 
     await user.click(screen.getByRole('button', { name: '保存' }));
 
@@ -288,22 +442,24 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
       pairs: [{ code1: '620000001', code2: '620000003', interactionName: '併用注意', message: '相互作用が検出されました' }],
     });
 
-    renderPanel([
-      {
-        entity: 'medOrder',
-        bundleName: '既存RP',
-        bundleNumber: '7',
-        admin: '1日1回 朝食後',
-        adminMemo: '001000',
-        classCode: '212',
-        started: '2026-03-09',
-        items: [
-          { code: '620000001', name: '薬A', quantity: '1', unit: '錠', memo: '' },
-          { code: '620000001', name: '薬A重複', quantity: '1', unit: '錠', memo: '' },
-          { code: '620000003', name: '薬B', quantity: '1', unit: '錠', memo: '' },
-        ],
-      },
-    ]);
+    renderPanel({
+      bundlesOverride: [
+        {
+          entity: 'medOrder',
+          bundleName: '既存RP',
+          bundleNumber: '7',
+          admin: '1日1回 朝食後',
+          adminMemo: '001000',
+          classCode: '212',
+          started: '2026-03-09',
+          items: [
+            { code: '620000001', name: '薬A', quantity: '1', unit: '錠', memo: '' },
+            { code: '620000001', name: '薬A重複', quantity: '1', unit: '錠', memo: '' },
+            { code: '620000003', name: '薬B', quantity: '1', unit: '錠', memo: '' },
+          ],
+        },
+      ],
+    });
 
     await user.click(screen.getByRole('button', { name: '保存' }));
 
@@ -329,21 +485,23 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(checkOrcaOrderInteractions).mockRejectedValue(new Error('interaction failed'));
 
-    renderPanel([
-      {
-        entity: 'medOrder',
-        bundleName: '既存RP',
-        bundleNumber: '7',
-        admin: '1日1回 朝食後',
-        adminMemo: '001000',
-        classCode: '212',
-        started: '2026-03-09',
-        items: [
-          { code: '620000001', name: '薬A', quantity: '1', unit: '錠', memo: '' },
-          { code: '620000003', name: '薬B', quantity: '1', unit: '錠', memo: '' },
-        ],
-      },
-    ]);
+    renderPanel({
+      bundlesOverride: [
+        {
+          entity: 'medOrder',
+          bundleName: '既存RP',
+          bundleNumber: '7',
+          admin: '1日1回 朝食後',
+          adminMemo: '001000',
+          classCode: '212',
+          started: '2026-03-09',
+          items: [
+            { code: '620000001', name: '薬A', quantity: '1', unit: '錠', memo: '' },
+            { code: '620000003', name: '薬B', quantity: '1', unit: '錠', memo: '' },
+          ],
+        },
+      ],
+    });
 
     await user.click(screen.getByRole('button', { name: '保存' }));
 
