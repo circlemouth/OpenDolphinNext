@@ -321,6 +321,67 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesPersistsTestOrderLocalOnlyFieldsAndMultipleCommentRows() throws Exception {
+        karteServiceBean = new BasicKarteServiceBean(List.of());
+        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity("testOrder");
+        op.setSubtype("specimen");
+        op.setBundleName("specimen-panel");
+        op.setClassCode("600");
+        op.setClassCodeSystem("Claim007");
+        op.setClassName("検査");
+        op.setAdmin("至急");
+        op.setAdminMemo("空腹時");
+        op.setMemo("bundle memo");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem first = new OrderBundleMutationRequest.BundleItem();
+        first.setCode("160000010");
+        first.setName("blood-test");
+        first.setQuantity("1");
+
+        OrderBundleMutationRequest.BundleItem second = new OrderBundleMutationRequest.BundleItem();
+        second.setCode("160000011");
+        second.setName("biochemistry");
+        second.setQuantity("1");
+
+        OrderBundleMutationRequest.BundleItem comment = new OrderBundleMutationRequest.BundleItem();
+        comment.setCode("0085001");
+        comment.setName("comment-line");
+        comment.setMemo("note");
+
+        op.setItems(List.of(first, second, comment));
+        payload.setOperations(List.of(op));
+
+        OrderBundleMutationResponse mutationResponse = resource.postBundles(servletRequest, payload);
+
+        assertNotNull(mutationResponse);
+        OrderBundleFetchResponse fetched = resource.getBundles(
+                servletRequest,
+                "00001",
+                "testOrder",
+                "2025-01-01");
+
+        assertNotNull(fetched);
+        assertEquals(1, fetched.getBundles().size());
+        OrderBundleFetchResponse.OrderBundleEntry entry = fetched.getBundles().get(0);
+        assertEquals("testOrder", entry.getEntity());
+        assertEquals("specimen", entry.getSubtype());
+        assertEquals("至急", entry.getAdmin());
+        assertEquals("空腹時", entry.getAdminMemo());
+        assertEquals("bundle memo", entry.getMemo());
+        assertEquals(List.of("160000010", "160000011", "0085001"),
+                entry.getItems().stream().map(OrderBundleFetchResponse.OrderBundleItem::getCode).toList());
+        assertEquals("note", entry.getItems().get(2).getMemo());
+    }
+
+    @Test
     void getInputSetsAllowsPhysiologyAndBacteriaToReuseCanonical600Rows() throws Exception {
         OrcaOrderBundleResource inputSetResource = buildResource(new OrcaOrderBundleResource() {
             @Override
@@ -376,6 +437,72 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals("culture", bacteria.getBundle().getSubtype());
     }
 
+    @Test
+    void inputSetDetailSaveFetchRoundTripPreservesTestOrderLocalOnlyFields() throws Exception {
+        OrcaOrderBundleResource roundTripResource = buildResource(new OrcaOrderBundleResource() {
+            @Override
+            protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(
+                    String setCode, String effective, String requestedName) {
+                return buildDetailedInputSetBundle();
+            }
+        }, new BasicKarteServiceBean(List.of()));
+
+        OrcaOrderInputSetDetailResponse detail = roundTripResource.getInputSetDetail(
+                servletRequest, "S60010", "20260309", IInfoModel.ENTITY_LABO_TEST, null);
+
+        assertNotNull(detail.getBundle());
+        assertEquals("testOrder", detail.getBundle().getEntity());
+        assertEquals("specimen", detail.getBundle().getSubtype());
+        assertEquals("検査指示", detail.getBundle().getAdmin());
+        assertEquals("bundle-local-admin-memo", detail.getBundle().getAdminMemo());
+        assertEquals("bundle-local-memo", detail.getBundle().getMemo());
+        assertEquals(3, detail.getBundle().getItems().size());
+
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(detail.getBundle().getEntity());
+        op.setSubtype(detail.getBundle().getSubtype());
+        op.setBundleName(detail.getBundle().getBundleName());
+        op.setBundleNumber(detail.getBundle().getBundleNumber());
+        op.setClassCode(detail.getBundle().getClassCode());
+        op.setClassCodeSystem(detail.getBundle().getClassCodeSystem());
+        op.setClassName(detail.getBundle().getClassName());
+        op.setAdmin(detail.getBundle().getAdmin());
+        op.setAdminCode(detail.getBundle().getAdminCode());
+        op.setAdminCodeSystem(detail.getBundle().getAdminCodeSystem());
+        op.setAdminMemo(detail.getBundle().getAdminMemo());
+        op.setMemo(detail.getBundle().getMemo());
+        op.setStartDate(detail.getBundle().getStarted());
+        op.setItems(detail.getBundle().getItems().stream().map(OrcaOrderBundleResource600Test::toMutationItem).toList());
+        payload.setOperations(List.of(op));
+
+        OrderBundleMutationResponse mutationResponse = roundTripResource.postBundles(servletRequest, payload);
+        assertNotNull(mutationResponse);
+        assertEquals(1, mutationResponse.getCreatedDocumentIds().size());
+
+        OrderBundleFetchResponse fetched = roundTripResource.getBundles(
+                servletRequest,
+                "00001",
+                IInfoModel.ENTITY_LABO_TEST,
+                "2026-03-09");
+
+        assertNotNull(fetched);
+        assertEquals(1, fetched.getBundles().size());
+        OrderBundleFetchResponse.OrderBundleEntry entry = fetched.getBundles().get(0);
+        assertEquals("testOrder", entry.getEntity());
+        assertEquals("specimen", entry.getSubtype());
+        assertEquals("検査指示", entry.getAdmin());
+        assertEquals("bundle-local-admin-memo", entry.getAdminMemo());
+        assertEquals("bundle-local-memo", entry.getMemo());
+        assertEquals(3, entry.getItems().size());
+        assertEquals("160000010", entry.getItems().get(0).getCode());
+        assertEquals("main-a memo", entry.getItems().get(0).getMemo());
+        assertEquals("008200001", entry.getItems().get(2).getCode());
+        assertEquals("comment memo", entry.getItems().get(2).getMemo());
+    }
+
     private OrcaOrderBundleResource buildResource(OrcaOrderBundleResource target, KarteServiceBean karte) throws Exception {
         injectField(target, "sessionAuditDispatcher", auditDispatcher);
         injectField(target, "patientServiceBean", new FakePatientServiceBean());
@@ -404,6 +531,46 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         item.setMemo("");
         bundle.setItems(List.of(item));
         return bundle;
+    }
+
+    private static OrcaOrderInputSetDetailResponse.Bundle buildDetailedInputSetBundle() {
+        OrcaOrderInputSetDetailResponse.Bundle bundle = buildInputSetBundle("testOrder", null, "160000010", "specimen-main");
+        bundle.setBundleName("specimen-main");
+        bundle.setBundleNumber("2");
+        bundle.setAdmin("検査指示");
+        bundle.setAdminCode("0001");
+        bundle.setAdminCodeSystem("Claim007");
+        bundle.setAdminMemo("bundle-local-admin-memo");
+        bundle.setMemo("bundle-local-memo");
+
+        OrcaOrderInputSetDetailResponse.Item first = bundle.getItems().get(0);
+        first.setMemo("main-a memo");
+
+        OrcaOrderInputSetDetailResponse.Item second = new OrcaOrderInputSetDetailResponse.Item();
+        second.setCode("160000011");
+        second.setName("main-b");
+        second.setQuantity("2");
+        second.setUnit("count");
+        second.setMemo("main-b memo");
+
+        OrcaOrderInputSetDetailResponse.Item comment = new OrcaOrderInputSetDetailResponse.Item();
+        comment.setCode("008200001");
+        comment.setName("after-meal-comment");
+        comment.setMemo("comment memo");
+
+        bundle.setItems(List.of(first, second, comment));
+        return bundle;
+    }
+
+    private static OrderBundleMutationRequest.BundleItem toMutationItem(OrcaOrderInputSetDetailResponse.Item item) {
+        OrderBundleMutationRequest.BundleItem mutationItem = new OrderBundleMutationRequest.BundleItem();
+        mutationItem.setCode(item.getCode());
+        mutationItem.setName(item.getName());
+        mutationItem.setQuantity(item.getQuantity());
+        mutationItem.setUnit(item.getUnit());
+        mutationItem.setMemo(item.getMemo());
+        mutationItem.setRowRole(item.getRowRole());
+        return mutationItem;
     }
 
     private static DocumentModel buildStored600Document(

@@ -86,10 +86,6 @@ final class OrcaChartSupportSupport {
                     appendTag(builder, "Medication_Name", medication.getName());
                 }
                 appendTag(builder, "Medication_Number", fallback(medication.getNumber(), ""));
-                if (!isBlank(medication.getUnit())) {
-                    appendTag(builder, "Medication_Unit_Code", medication.getUnit());
-                    appendTag(builder, "Medication_Unit_Code_Name", medication.getUnit());
-                }
                 if (!isBlank(medication.getGenericFlg())) {
                     appendTag(builder, "Medication_Generic_Flg", medication.getGenericFlg());
                 }
