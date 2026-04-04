@@ -21,7 +21,7 @@ describe('order send smoke', () => {
     vi.clearAllMocks();
   });
 
-  it('save fetch normalize send payload smoke keeps radiology row roles and class meta', async () => {
+  it('save fetch normalize send payload smoke keeps radiology ordering, source roles, and canonical class meta', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(
@@ -47,14 +47,14 @@ describe('order send smoke', () => {
                 bundleNumber: '3',
                 classCode: '700',
                 classCodeSystem: 'Claim007',
-                className: 'Radiology',
+                className: '放射線',
                 admin: '検査前説明',
                 memo: 'local-radiology-memo',
                 bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
                 items: [
-                  { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: 'local-item-memo' },
-                  { code: '700000001', name: 'CONTRAST', quantity: '1', unit: 'bottle', memo: '' },
-                  { code: '0085001', name: 'CAUTION', quantity: '', unit: '', memo: 'note' },
+                  { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: 'local-item-memo', rowRole: 'main' },
+                  { code: '600000001', name: 'CONTRAST', quantity: '1', unit: 'bottle', memo: '', rowRole: 'auxiliary', rowSubtype: 'contrastDrug' },
+                  { code: '0085001', name: 'CAUTION', quantity: '', unit: '', memo: 'note', rowRole: 'comment' },
                 ],
               },
             ],
@@ -90,16 +90,16 @@ describe('order send smoke', () => {
           bundleNumber: '3',
           classCode: '700',
           classCodeSystem: 'Claim007',
-          className: 'Radiology',
+          className: '放射線',
           admin: '検査前説明',
           memo: 'local-radiology-memo',
           bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
-            items: [
-              { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: 'local-item-memo' },
-              { code: '700000001', name: 'CONTRAST', quantity: '1', unit: 'bottle', memo: '' },
-              { code: '0085001', name: 'CAUTION', quantity: '', unit: '', memo: 'note' },
-            ],
-          },
+          items: [
+            { code: '170017510', name: 'CT_SCAN', quantity: '1', unit: 'times', memo: 'local-item-memo', rowRole: 'main' },
+            { code: '600000001', name: 'CONTRAST', quantity: '1', unit: 'bottle', memo: '', rowRole: 'auxiliary', rowSubtype: 'contrastDrug' },
+            { code: '0085001', name: 'CAUTION', quantity: '', unit: '', memo: 'note', rowRole: 'comment' },
+          ],
+        },
       ],
     });
 
@@ -109,6 +109,27 @@ describe('order send smoke', () => {
     const normalized = fetched.bundles
       .map((bundle) => toMedicalModV2InformationWithSource(bundle))
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
+
+    expect(normalized[0]?.source.medicalClassName).toBe('放射線');
+    expect(normalized[0]?.source.rows.map((row) => row.source.kind)).toEqual([
+      'body_part',
+      'bundle_item',
+      'bundle_item',
+      'bundle_item',
+    ]);
+    expect(
+      normalized[0]?.source.rows
+        .filter((row) => row.source.kind === 'bundle_item')
+        .map((row) =>
+          row.source.kind === 'bundle_item'
+            ? { rowRole: row.source.rowRole, rowSubtype: row.source.rowSubtype ?? null, code: row.medication.code }
+            : null,
+        ),
+    ).toEqual([
+      { rowRole: 'main', rowSubtype: null, code: '170017510' },
+      { rowRole: 'auxiliary', rowSubtype: 'contrastDrug', code: '600000001' },
+      { rowRole: 'comment', rowSubtype: null, code: '0085001' },
+    ]);
 
     const payload = buildMedicalModV2RequestXml({
       patientId: '000001',
@@ -122,12 +143,12 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '放射線',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001', unit: 'PART' }),
               expect.objectContaining({ code: '170017510', unit: 'times' }),
-              expect.objectContaining({ code: '700000001', unit: 'bottle' }),
+              expect.objectContaining({ code: '600000001', unit: 'bottle' }),
               expect.objectContaining({ code: '0085001', name: 'CAUTION' }),
             ]),
           }),
@@ -137,7 +158,7 @@ describe('order send smoke', () => {
     expect(radiologyMedicalInformation[0]?.medications.map((item) => item.code)).toEqual([
       '002001',
       '170017510',
-      '700000001',
+      '600000001',
       '0085001',
     ]);
     expect(JSON.stringify(radiologyMedicalInformation)).not.toContain('検査前説明');
@@ -157,12 +178,12 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '放射線',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001', unit: 'PART' }),
               expect.objectContaining({ code: '170017510', unit: 'times' }),
-              expect.objectContaining({ code: '700000001', unit: 'bottle' }),
+              expect.objectContaining({ code: '600000001', unit: 'bottle' }),
               expect.objectContaining({ code: '0085001', name: 'CAUTION' }),
             ]),
           }),
@@ -171,7 +192,7 @@ describe('order send smoke', () => {
     expect(body.medicalInformation[0]?.medications.map((item: Record<string, string>) => item.code)).toEqual([
       '002001',
       '170017510',
-      '700000001',
+      '600000001',
       '0085001',
     ]);
     expect(JSON.stringify(body.medicalInformation)).not.toContain('検査前説明');
@@ -599,7 +620,7 @@ describe('order send smoke', () => {
                 adminMemo: 'slow-drip',
                 memo: 'bundle-memo-c',
                 items: [
-                  { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
+                  { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'auxiliary' },
                   { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-c', rowRole: 'main' },
                 ],
               },
@@ -674,7 +695,7 @@ describe('order send smoke', () => {
           adminMemo: 'slow-drip',
           memo: 'bundle-memo-c',
           items: [
-            { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' },
+            { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'auxiliary' },
             { code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', memo: '', userComment: 'local-c', rowRole: 'main' },
           ],
         },
@@ -685,7 +706,7 @@ describe('order send smoke', () => {
     const saveBody = JSON.parse(String(saveRequest?.body ?? '{}')) as Record<string, any>;
     expect(
       saveBody.operations.map((entry: Record<string, any>) => entry.items.map((item: Record<string, string>) => item.rowRole)),
-    ).toEqual([['main'], ['comment', 'main', 'main'], ['material', 'main']]);
+    ).toEqual([['main'], ['comment', 'main', 'main'], ['auxiliary', 'main']]);
     expect(JSON.stringify(saveBody.operations)).not.toContain('__orca_meta__:');
 
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'injectionOrder' });
@@ -693,7 +714,7 @@ describe('order send smoke', () => {
     expect(fetched.bundles.map((bundle) => bundle.items.map((item) => item.rowRole))).toEqual([
       ['main'],
       ['comment', 'main', 'main'],
-      ['material', 'main'],
+      ['auxiliary', 'main'],
     ]);
     expect(fetched.bundles[1]?.items[2]?.userComment).toBe('local-b');
     expect(fetched.bundles[1]?.items[2]?.memo).toBe('');

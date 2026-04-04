@@ -4,7 +4,13 @@ import {
   resolveCanonicalOrderEntity,
   resolveOrderEntityDefaultClassMeta,
 } from './orderCategoryRegistry';
-import { fetchOrderBundles, type OrderBundle, type OrderBundleItem } from './orderBundleApi';
+import {
+  fetchOrderBundles,
+  type OrderBundle,
+  type OrderBundleItem,
+  type OrderBundleRowRole,
+  type OrderBundleRowSubtype,
+} from './orderBundleApi';
 import {
   buildOrderBundleCodeBlockedMessage,
   buildRpRequiredBlockedMessage,
@@ -35,7 +41,7 @@ export type RpNormalizedMedication = {
 
 export type RpNormalizedRowSource =
   | { kind: 'body_part' }
-  | { kind: 'bundle_item'; itemIndex: number }
+  | { kind: 'bundle_item'; itemIndex: number; rowRole: OrderBundleRowRole; rowSubtype?: OrderBundleRowSubtype }
   | { kind: 'usage' };
 
 export type RpNormalizedRow = {
@@ -90,6 +96,7 @@ const cloneBundleItem = (item?: OrderBundleItem | null): OrderBundleItem | null 
     genericFlg: item.genericFlg,
     userComment: item.userComment,
     rowRole: item.rowRole,
+    rowSubtype: item.rowSubtype,
   };
 };
 
@@ -113,14 +120,35 @@ const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null)
   return canonicalEntity !== 'radiologyOrder';
 };
 
+const resolveBundleItemRowSubtype = (
+  entity?: string | null,
+  item?: OrderBundleItem | null,
+  rowRole?: OrderBundleRowRole,
+) => {
+  const resolvedRole = rowRole ?? resolveBundleItemRowRole(entity, item);
+  if (resolvedRole !== 'auxiliary') return undefined;
+  if (item?.rowSubtype === 'material' || item?.rowSubtype === 'contrastDrug') {
+    return item.rowSubtype;
+  }
+  const code = item?.code?.trim() ?? '';
+  if ((resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && DRUG_CODE_PATTERN.test(code)) {
+    return 'contrastDrug' as const;
+  }
+  return 'material' as const;
+};
+
 const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | null) => {
   if (!item) return 'main' as const;
-  if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
+  if (item.rowRole === 'main' || item.rowRole === 'auxiliary' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
     return item.rowRole;
   }
+  if (item.rowRole === 'material') return 'auxiliary' as const;
   const code = item.code?.trim();
   if (isBodyPartCodeValue(code)) return 'bodyPart' as const;
-  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
+  if ((resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && DRUG_CODE_PATTERN.test(code ?? '')) {
+    return 'auxiliary' as const;
+  }
+  if (shouldTreatAsMaterialItem(entity, code)) return 'auxiliary' as const;
   if (code && isCommentMedicationCode(code)) return 'comment' as const;
   return 'main' as const;
 };
@@ -139,26 +167,27 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
     rows.push({ item: legacyBodyPart, source: { kind: 'body_part' } });
   }
   const mainRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
-  const materialRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
+  const auxiliaryRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   const commentRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   (bundle.items ?? []).forEach((item, itemIndex) => {
     const cloned = cloneBundleItem(item);
     if (!cloned || !hasBundleItemValue(cloned)) return;
     const code = cloned.code?.trim() ?? '';
     if (isBodyPartCodeValue(code) && (explicitBodyPart || legacyBodyPart)) return;
-    const row = { item: cloned, source: { kind: 'bundle_item', itemIndex } as const };
     const rowRole = resolveBundleItemRowRole(bundle.entity, cloned);
+    const rowSubtype = resolveBundleItemRowSubtype(bundle.entity, cloned, rowRole);
+    const row = { item: cloned, source: { kind: 'bundle_item', itemIndex, rowRole, rowSubtype } as const };
     if (rowRole === 'comment') {
       commentRows.push(row);
       return;
     }
-    if (rowRole === 'material') {
-      materialRows.push(row);
+    if (rowRole === 'auxiliary') {
+      auxiliaryRows.push(row);
       return;
     }
     mainRows.push(row);
   });
-  rows.push(...mainRows, ...materialRows, ...commentRows);
+  rows.push(...mainRows, ...auxiliaryRows, ...commentRows);
   return rows;
 };
 
@@ -170,6 +199,9 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
   moduleId: bundle.moduleId,
   detail,
 });
+
+const isSendableMainRow = (row: { source: RpNormalizedRowSource }) =>
+  row.source.kind === 'bundle_item' && row.source.rowRole === 'main';
 
 export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): MedicalModV2BundleIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
@@ -209,16 +241,13 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
     ];
   }
 
-  const sendableMainRows = codedRows.filter((row) => {
-    const code = row.item.code?.trim() ?? '';
-    return !isCommentMedicationCode(code) && !isBodyPartCode(code);
-  });
+  const sendableMainRows = codedRows.filter(isSendableMainRow);
   const requireMainRow = canonicalEntity !== 'medOrder' && canonicalEntity !== 'injectionOrder';
   if (requireMainRow && sendableMainRows.length === 0) {
     return [
       buildBundleIssue(
         bundle,
-        'comment_only',
+        canonicalEntity === 'radiologyOrder' ? 'missing_main_row' : 'comment_only',
         '部位やコメントだけでは送信できません。本体となるコード行を1件以上追加してください。',
       ),
     ];
@@ -248,6 +277,13 @@ const resolveMedicalClass = (bundle: OrderBundle) => {
   if (explicit) return explicit;
   const classMeta = resolveOrderEntityDefaultClassMeta(bundle.entity?.trim());
   return classMeta?.classCode?.trim() || '';
+};
+
+const resolveMedicalClassName = (bundle: OrderBundle, medicalClass: string) => {
+  if ((resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim()) === 'radiologyOrder' && medicalClass === '700') {
+    return '放射線';
+  }
+  return bundle.className?.trim() || undefined;
 };
 
 const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormalizedRow | null => {
@@ -312,7 +348,7 @@ export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundl
       adminCode: bundle.adminCode?.trim() || undefined,
       adminCodeSystem: bundle.adminCodeSystem?.trim() || undefined,
       medicalClass,
-      medicalClassName: bundle.className?.trim() || undefined,
+      medicalClassName: resolveMedicalClassName(bundle, medicalClass),
       medicalClassNumber: bundle.bundleNumber?.trim() || '1',
     },
     rows,

@@ -71,8 +71,9 @@ final class OrcaChartSupportSupport {
             }
             builder.append("<Medical_Information_child type=\"record\">");
             appendTag(builder, "Medical_Class", entry.getMedicalClass());
-            if (!isBlank(entry.getMedicalClassName())) {
-                appendTag(builder, "Medical_Class_Name", entry.getMedicalClassName());
+            String medicalClassName = resolveMedicalClassName(entry);
+            if (!isBlank(medicalClassName)) {
+                appendTag(builder, "Medical_Class_Name", medicalClassName);
             }
             appendTag(builder, "Medical_Class_Number", fallback(entry.getMedicalClassNumber(), "1"));
             builder.append("<Medication_info type=\"array\">");
@@ -508,6 +509,16 @@ final class OrcaChartSupportSupport {
         builder.append("<").append(tagName).append(" type=\"string\">");
         builder.append(escapeXml(fallback(value, "")));
         builder.append("</").append(tagName).append(">");
+    }
+
+    private String resolveMedicalClassName(ChartSupportMedicalModV2Request.MedicalInformation entry) {
+        if (entry == null) {
+            return null;
+        }
+        if ("700".equals(fallback(entry.getMedicalClass(), "").trim())) {
+            return "放射線";
+        }
+        return entry.getMedicalClassName();
     }
 
     private String escapeXml(String value) {
