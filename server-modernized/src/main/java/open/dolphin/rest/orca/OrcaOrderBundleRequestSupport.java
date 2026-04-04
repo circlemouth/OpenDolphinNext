@@ -162,6 +162,16 @@ final class OrcaOrderBundleRequestSupport {
                 || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
     }
 
+    static String resolveCanonicalClassName(String entity, String classCode, String className) {
+        String normalizedEntity = canonicalizeEntity(entity);
+        String normalizedClassCode = trimToNull(classCode);
+        if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)
+                && (normalizedClassCode == null || normalizedClassCode.startsWith("7"))) {
+            return "放射線";
+        }
+        return trimToNull(className);
+    }
+
     private static String canonicalizeEntity(String entity) {
         if (entity == null || entity.isBlank()) {
             return null;

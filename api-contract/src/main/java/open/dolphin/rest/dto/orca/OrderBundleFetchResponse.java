@@ -245,6 +245,7 @@ public class OrderBundleFetchResponse {
         private String genericFlg;
         private String userComment;
         private String rowRole;
+        private String rowSubtype;
 
         public String getCode() {
             return code;
@@ -308,6 +309,14 @@ public class OrderBundleFetchResponse {
 
         public void setRowRole(String rowRole) {
             this.rowRole = rowRole;
+        }
+
+        public String getRowSubtype() {
+            return rowSubtype;
+        }
+
+        public void setRowSubtype(String rowSubtype) {
+            this.rowSubtype = rowSubtype;
         }
     }
 }

@@ -137,7 +137,8 @@ final class OrcaOrderBundleFetchSupport {
                 info != null ? info.getStampMemo() : null));
         entry.setClassCode(bundle.getClassCode());
         entry.setClassCodeSystem(bundle.getClassCodeSystem());
-        entry.setClassName(bundle.getClassName());
+        entry.setClassName(OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
+                moduleEntity, bundle.getClassCode(), bundle.getClassName()));
         entry.setAdmin(bundle.getAdmin());
         entry.setAdminCode(bundle.getAdminCode());
         entry.setAdminCodeSystem(bundle.getAdminCodeSystem());

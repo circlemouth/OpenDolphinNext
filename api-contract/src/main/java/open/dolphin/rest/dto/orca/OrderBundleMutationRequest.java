@@ -213,6 +213,7 @@ public class OrderBundleMutationRequest {
         private String genericFlg;
         private String userComment;
         private String rowRole;
+        private String rowSubtype;
 
         public String getName() {
             return name;
@@ -276,6 +277,14 @@ public class OrderBundleMutationRequest {
 
         public void setRowRole(String rowRole) {
             this.rowRole = rowRole;
+        }
+
+        public String getRowSubtype() {
+            return rowSubtype;
+        }
+
+        public void setRowSubtype(String rowSubtype) {
+            this.rowSubtype = rowSubtype;
         }
     }
 }

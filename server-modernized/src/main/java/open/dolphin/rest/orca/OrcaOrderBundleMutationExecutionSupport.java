@@ -96,11 +96,19 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 continue;
             }
             String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
+            String rowRole = OrcaOrderBundleRecommendationSupport.resolveRowRole(
+                    canonicalEntity,
+                    code,
+                    item.getRowRole(),
+                    item.getRowSubtype());
             if (code != null) {
                 hasCodedRow = true;
-                if (OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
+                if (OrcaOrderBundleRecommendationSupport.ROW_ROLE_BODY_PART.equals(rowRole)
+                        || OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
                     hasBodyPart = true;
-                } else if (!isCommentCode(code)) {
+                } else if (!OrcaOrderBundleRecommendationSupport.ROW_ROLE_COMMENT.equals(rowRole)
+                        && !isCommentCode(code)
+                        && !OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL.equals(rowRole)) {
                     if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity) && !isOtherOrderCode(code)) {
                         throw validationFailure.invalid("items", "otherOrder items must use code family 8");
                     }

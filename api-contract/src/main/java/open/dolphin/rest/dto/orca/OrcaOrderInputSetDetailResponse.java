@@ -209,6 +209,7 @@ public class OrcaOrderInputSetDetailResponse {
         private String unit;
         private String memo;
         private String rowRole;
+        private String rowSubtype;
 
         public String getCode() {
             return code;
@@ -256,6 +257,14 @@ public class OrcaOrderInputSetDetailResponse {
 
         public void setRowRole(String rowRole) {
             this.rowRole = rowRole;
+        }
+
+        public String getRowSubtype() {
+            return rowSubtype;
+        }
+
+        public void setRowSubtype(String rowSubtype) {
+            this.rowSubtype = rowSubtype;
         }
     }
 
