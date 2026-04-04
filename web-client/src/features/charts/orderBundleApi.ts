@@ -4,8 +4,29 @@ import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
 import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../shared/orcaPatientImportRecovery';
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
-import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
+import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta } from './orderCategoryRegistry';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+
+export type OrderBundleRowRole = 'main' | 'auxiliary' | 'comment' | 'bodyPart';
+export type OrderBundleRowSubtype = 'material' | 'contrastDrug';
+
+export const normalizeOrderBundleRowRole = (value?: string | null): OrderBundleRowRole | undefined => {
+  const normalized = value?.trim();
+  if (normalized === 'main' || normalized === 'auxiliary' || normalized === 'comment' || normalized === 'bodyPart') {
+    return normalized;
+  }
+  if (normalized === 'material') return 'auxiliary';
+  return undefined;
+};
+
+export const normalizeOrderBundleRowSubtype = (value?: string | null): OrderBundleRowSubtype | undefined => {
+  const normalized = value?.trim();
+  if (normalized === 'material' || normalized === 'contrastDrug') {
+    return normalized;
+  }
+  if (normalized === 'contrast' || normalized === 'drug') return 'contrastDrug';
+  return undefined;
+};
 
 export type OrderBundleItem = {
   code?: string;
@@ -15,7 +36,8 @@ export type OrderBundleItem = {
   memo?: string;
   genericFlg?: 'yes' | 'no';
   userComment?: string;
-  rowRole?: 'main' | 'material' | 'comment' | 'bodyPart';
+  rowRole?: OrderBundleRowRole;
+  rowSubtype?: OrderBundleRowSubtype;
 };
 
 export type OrderBundleBodyPart = {
@@ -24,7 +46,7 @@ export type OrderBundleBodyPart = {
   quantity?: string;
   unit?: string;
   memo?: string;
-  rowRole?: 'bodyPart';
+  rowRole?: Extract<OrderBundleRowRole, 'bodyPart'>;
 };
 
 export type OrderBundle = {
@@ -97,6 +119,24 @@ export type OrderBundleOperation = {
   bodyPart?: OrderBundleBodyPart;
 };
 
+const normalizeOrderBundleClassName = (
+  entity?: string | null,
+  classCode?: string | null,
+  className?: string | null,
+): string | undefined => {
+  const explicit = className?.trim();
+  const normalizedEntity = normalizeOrderEntityValue(entity);
+  const normalizedClassCode = classCode?.trim();
+  const defaultMeta = normalizedEntity ? resolveOrderEntityDefaultClassMeta(normalizedEntity) : undefined;
+  if (defaultMeta && (!normalizedClassCode || normalizedClassCode === defaultMeta.classCode)) {
+    if (!explicit) return defaultMeta.className;
+    if (normalizedEntity === 'radiologyOrder' && explicit === '画像診断') {
+      return defaultMeta.className;
+    }
+  }
+  return explicit || undefined;
+};
+
 const normalizeOrderEntityValue = (value?: string | null): string | undefined => {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -107,6 +147,7 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
   ...bundle,
   entity: normalizeOrderEntityValue(bundle.entity),
+  className: normalizeOrderBundleClassName(bundle.entity, bundle.classCode, bundle.className),
   items: (bundle.items ?? []).map((item) => {
     const fields = resolveOrcaOrderItemFields(item);
     return {
@@ -114,13 +155,22 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
       memo: fields.memoText,
       genericFlg: fields.genericFlg,
       userComment: fields.userComment,
+      rowRole: fields.rowRole,
+      rowSubtype: fields.rowSubtype,
     };
   }),
+  bodyPart: bundle.bodyPart
+    ? {
+        ...bundle.bodyPart,
+        rowRole: 'bodyPart',
+      }
+    : bundle.bodyPart,
 });
 
 const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => ({
   ...operation,
   entity: normalizeOrderEntityValue(operation.entity),
+  className: normalizeOrderBundleClassName(operation.entity, operation.classCode, operation.className),
   items: (operation.items ?? []).map((item) => {
     const fields = resolveOrcaOrderItemFields(item);
     return {
@@ -128,8 +178,16 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
       memo: fields.memoText,
       genericFlg: fields.genericFlg,
       userComment: fields.userComment,
+      rowRole: fields.rowRole,
+      rowSubtype: fields.rowSubtype,
     };
   }),
+  bodyPart: operation.bodyPart
+    ? {
+        ...operation.bodyPart,
+        rowRole: 'bodyPart',
+      }
+    : operation.bodyPart,
 });
 
 export type OrderBundleMutationResult = {

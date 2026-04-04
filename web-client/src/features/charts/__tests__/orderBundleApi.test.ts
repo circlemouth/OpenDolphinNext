@@ -42,7 +42,7 @@ describe('orderBundleApi bodyPart contract', () => {
               adminCodeSystem: 'Claim007',
               items: [{ code: '700001', name: 'CHEST_CT', rowRole: 'main' }],
               bodyPart: {
-                code: 'BP001',
+                code: '002001',
                 name: 'CHEST',
                 quantity: '1',
                 unit: 'part',
@@ -64,7 +64,7 @@ describe('orderBundleApi bodyPart contract', () => {
     expect(result.ok).toBe(true);
     expect((result.bundles[0] as any).bodyPart).toEqual(
       expect.objectContaining({
-        code: 'BP001',
+        code: '002001',
         name: 'CHEST',
       }),
     );
@@ -127,7 +127,7 @@ describe('orderBundleApi bodyPart contract', () => {
           adminCodeSystem: 'Claim007',
           items: [{ code: '700001', name: 'CHEST_CT', rowRole: 'main' }],
           bodyPart: {
-            code: 'BP001',
+            code: '002001',
             name: 'CHEST',
             quantity: '1',
             unit: 'part',
@@ -147,7 +147,7 @@ describe('orderBundleApi bodyPart contract', () => {
         adminCodeSystem: 'Claim007',
         items: [expect.objectContaining({ code: '700001', rowRole: 'main' })],
         bodyPart: expect.objectContaining({
-          code: 'BP001',
+          code: '002001',
           name: 'CHEST',
           rowRole: 'bodyPart',
         }),

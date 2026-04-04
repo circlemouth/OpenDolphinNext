@@ -223,12 +223,12 @@ describe('OrderBundleEditPanel item actions', () => {
       label: 'material+drug',
       bundleName: 'drip-set',
       items: [
-        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' as const },
+        { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'auxiliary' as const },
         { code: '620000012', name: '注射薬C', quantity: '1', unit: 'A', memo: '', rowRole: 'main' as const },
       ],
       expected: [
         { code: '620000012', rowRole: 'main' as const },
-        { code: '700000031', rowRole: 'material' as const },
+        { code: '700000031', rowRole: 'auxiliary' as const },
       ],
     },
   ])('injectionOrder editor は %s の rowRole を round-trip で保持する', async ({ bundleName, items, expected }) => {

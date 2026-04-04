@@ -380,7 +380,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '放射線',
     group: 'test',
     etensuCategory: '7',
-    classMeta: { classCode: '700', className: '画像診断' },
+    classMeta: { classCode: '700', className: '放射線' },
     validation: {
       itemLabel: '画像検査項目',
       requiresItems: true,

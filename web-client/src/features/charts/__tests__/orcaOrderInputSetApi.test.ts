@@ -47,7 +47,15 @@ describe('orcaOrderInputSetApi', () => {
             },
             items: [
               { code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
-              { code: '700000001', name: '造影剤', quantity: '1', unit: '本', memo: '', rowRole: 'material' },
+              {
+                code: '700000001',
+                name: '造影剤',
+                quantity: '1',
+                unit: '本',
+                memo: '',
+                rowRole: 'auxiliary',
+                rowSubtype: 'contrastDrug',
+              },
               { code: '0085001', name: 'コメント', quantity: '', unit: '', memo: '注意', rowRole: 'comment' },
             ],
           },
@@ -72,7 +80,7 @@ describe('orcaOrderInputSetApi', () => {
     );
     expect(result.bundle?.items).toEqual([
       expect.objectContaining({ code: '170017510', rowRole: 'main' }),
-      expect.objectContaining({ code: '700000001', rowRole: 'material' }),
+      expect.objectContaining({ code: '700000001', rowRole: 'auxiliary', rowSubtype: 'contrastDrug' }),
       expect.objectContaining({ code: '0085001', rowRole: 'comment', memo: '注意' }),
     ]);
   });

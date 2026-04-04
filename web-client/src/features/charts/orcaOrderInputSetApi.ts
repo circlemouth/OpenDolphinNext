@@ -1,6 +1,7 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { ensureObservabilityMeta } from '../../libs/observability/observability';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
+import { normalizeOrderBundleRowRole, normalizeOrderBundleRowSubtype } from './orderBundleApi';
 
 export type OrcaOrderInputSetSummary = {
   setCode?: string;
@@ -59,7 +60,8 @@ export type OrcaOrderInputSetDetailResult = {
       memo?: string;
       genericFlg?: 'yes' | 'no';
       userComment?: string;
-      rowRole?: 'main' | 'material' | 'comment';
+      rowRole?: 'main' | 'auxiliary' | 'comment';
+      rowSubtype?: 'material' | 'contrastDrug';
     }>;
   };
   notFound?: boolean;
@@ -198,9 +200,13 @@ export async function fetchOrcaOrderInputSetDetail(params: {
         if (typeof item.memo === 'string') detailItem.memo = item.memo;
         if (item.genericFlg === 'yes' || item.genericFlg === 'no') detailItem.genericFlg = item.genericFlg;
         if (typeof item.userComment === 'string') detailItem.userComment = item.userComment;
-        if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment') {
-          detailItem.rowRole = item.rowRole;
+        const rowRole = normalizeOrderBundleRowRole(typeof item.rowRole === 'string' ? item.rowRole : undefined);
+        if (rowRole && rowRole !== 'bodyPart') {
+          detailItem.rowRole = rowRole;
         }
+        detailItem.rowSubtype = normalizeOrderBundleRowSubtype(
+          typeof item.rowSubtype === 'string' ? item.rowSubtype : undefined,
+        );
         return detailItem;
       })
     : [];

@@ -243,7 +243,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '3',
                 classCode: '700',
                 classCodeSystem: 'Claim007',
-                className: 'Radiology',
+                className: '放射線',
                 bodyPart: { code: '002001', name: 'chest', quantity: '1', unit: 'part', memo: '' },
                 items: [
                   { code: '170017510', name: 'ct', quantity: '1', unit: 'times', memo: '' },

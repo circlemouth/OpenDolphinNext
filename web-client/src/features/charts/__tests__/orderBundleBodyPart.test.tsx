@@ -304,7 +304,7 @@ describe('OrderBundleEditPanel body part search', () => {
           bundleName: '胸部CT',
           started: '2026-02-27',
           items: [{ code: '700001', name: '胸部CT' }],
-          bodyPart: { code: 'BP001', name: '胸部', quantity: '1', unit: '部位', memo: '専用フィールド' },
+          bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '専用フィールド' },
         } as any,
       ],
     });
