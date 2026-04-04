@@ -24,14 +24,18 @@ const mockHistoryBundle = vi.hoisted(() => ({
   ],
 }));
 
-vi.mock('../orderBundleApi', async () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({
-    ok: true,
-    bundles: [mockHistoryBundle],
-    patientId: 'P-1',
-  }),
-  mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER' }),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({
+      ok: true,
+      bundles: [mockHistoryBundle],
+      patientId: 'P-1',
+    }),
+    mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER' }),
+  };
+});
 
 vi.mock('../stampApi', async () => ({
   fetchUserProfile: vi.fn().mockResolvedValue({ ok: true, id: 1, userId: 'facility:doctor' }),

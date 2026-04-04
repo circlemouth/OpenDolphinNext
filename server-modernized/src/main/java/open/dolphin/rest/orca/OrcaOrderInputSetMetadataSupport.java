@@ -14,7 +14,7 @@ final class OrcaOrderInputSetMetadataSupport {
     static OrcaOrderInputSetSupport.ClassMetadata resolveClassMetadata(String receiptCode, Logger logger) {
         try {
             OrcaOrderInputSetSupport.ClassMetadata chargeMetadata =
-                    OrcaChargeClassCanonicalSupport.resolveClassMetadata(receiptCode);
+                    OrcaChargeClassSupport.resolveInputSetClassMetadata(receiptCode);
             if (chargeMetadata != null) {
                 return chargeMetadata;
             }

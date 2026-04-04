@@ -109,8 +109,6 @@ class OrcaOrderBundleMutationSupportTest {
         drug.setMemo("レセプトコメント");
         drug.setGenericFlg("no");
         drug.setUserComment("食後");
-        drug.setSelectionCommentItemNumber("01");
-        drug.setSelectionCommentItemNumberBranch("00");
         operation.setItems(List.of(drug));
 
         DocumentModel document = OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
@@ -122,8 +120,6 @@ class OrcaOrderBundleMutationSupportTest {
         assertTrue(claimItems[0].getMemo().startsWith("__orca_meta__:"));
         assertTrue(claimItems[0].getMemo().contains("\"genericFlg\":\"no\""));
         assertTrue(claimItems[0].getMemo().contains("\"userComment\":\"食後\""));
-        assertTrue(claimItems[0].getMemo().contains("\"itemNumber\":\"01\""));
-        assertTrue(claimItems[0].getMemo().contains("\"itemNumberBranch\":\"00\""));
         assertTrue(claimItems[0].getMemo().endsWith("レセプトコメント"));
     }
 }

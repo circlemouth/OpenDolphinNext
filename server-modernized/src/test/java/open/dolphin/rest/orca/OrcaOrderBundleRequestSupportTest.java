@@ -87,6 +87,22 @@ class OrcaOrderBundleRequestSupportTest {
     }
 
     @Test
+    void resolveCanonicalClassNameUsesChargeCanonicalVocabulary() {
+        assertEquals(
+                "基本診療料",
+                OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
+                        IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+                        "120",
+                        "bundleFallback"));
+        assertEquals(
+                "医学管理等",
+                OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
+                        IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
+                        "140",
+                        "bundleFallback"));
+    }
+
+    @Test
     void injectionAdminCodeHelpersFailClosedOnNonNumericCodes() {
         assertTrue(OrcaOrderBundleRequestSupport.isSendableUsageCode("4101"));
         assertTrue(OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode("001000"));

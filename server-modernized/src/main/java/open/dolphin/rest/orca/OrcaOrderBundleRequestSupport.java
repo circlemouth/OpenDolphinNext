@@ -238,6 +238,13 @@ final class OrcaOrderBundleRequestSupport {
 
     static String resolveCanonicalClassName(String entity, String classCode, String className) {
         String normalizedEntity = canonicalizeEntity(entity);
+        String chargeCanonical = OrcaChargeClassSupport.resolveCanonicalChargeClassName(normalizedEntity, classCode);
+        if (chargeCanonical != null) {
+            return chargeCanonical;
+        }
+        if (OrcaChargeClassSupport.isChargeEntity(normalizedEntity)) {
+            return null;
+        }
         String normalizedClassCode = trimToNull(classCode);
         if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)
                 && (normalizedClassCode == null || normalizedClassCode.startsWith("7"))) {

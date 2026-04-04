@@ -125,6 +125,48 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesRejectsSelectionCommentParametersForChargeBundleItems() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_BASE_CHARGE_ORDER);
+        op.setBundleName("base-charge");
+        op.setClassCode("110");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem main = new OrderBundleMutationRequest.BundleItem();
+        main.setCode("110000110");
+        main.setName("初診料");
+        main.setMasterCategory("110");
+
+        OrderBundleMutationRequest.BundleItem comment = new OrderBundleMutationRequest.BundleItem();
+        comment.setCode("0085001");
+        comment.setName("コメント");
+        comment.setSelectionCommentItemNumber("0166");
+        comment.setSelectionCommentItemNumberBranch("01");
+
+        op.setItems(List.of(main));
+        op.setCommentItems(List.of(comment));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("items", body.get("field"));
+        assertEquals("selection comment itemNumber / branch is unsupported for order bundle items", body.get("message"));
+    }
+
+    @Test
     void postBundlesRejectsNon8CodeForOtherOrder() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");

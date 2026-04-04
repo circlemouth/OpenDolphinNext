@@ -231,6 +231,37 @@ describe('orderBundleApi bodyPart contract', () => {
     );
   });
 
+  it('mutation blocks unsupported selection comment parameters before POST', async () => {
+    const result = await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'baseChargeOrder',
+          bundleName: 'BASE_CHARGE_SET',
+          bundleNumber: '1',
+          classCode: '110',
+          classCodeSystem: 'Claim007',
+          items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', masterCategory: '110' }],
+          commentItems: [
+            {
+              code: '0085001',
+              name: 'コメント',
+              quantity: '',
+              unit: '',
+              selectionCommentItemNumber: '0166',
+              selectionCommentItemNumberBranch: '01',
+            },
+          ],
+        } as any,
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('itemNumber / branch は未対応');
+    expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
+  });
+
   it('mutation keeps mixed coded and uncoded rows in the payload', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(

@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { mutateOrderBundles } from '../orderBundleApi';
+import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 
 vi.mock('../orderBundleApi', async () => {
@@ -478,7 +479,7 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(items.map((item: { name: string }) => item.name)).toEqual(['アムロジピン', 'テルミサルタン']);
   });
 
-  it('instractionChargeOrder は選択項目の category から classCode を導出する', async () => {
+  it('instractionChargeOrder は選択項目の category から canonical class meta を導出する', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type, keyword }) => {
@@ -528,7 +529,9 @@ describe('OrderBundleEditPanel item actions', () => {
     const payload = mutateMock.mock.calls.at(-1)?.[0];
     expect(payload?.operations?.[0]?.entity).toBe('instractionChargeOrder');
     expect(payload?.operations?.[0]?.classCode).toBe('140');
-    expect(payload?.operations?.[0]?.className).toBeUndefined();
+    expect(payload?.operations?.[0]?.className).toBe(
+      resolveCanonicalChargeClassMeta({ entity: 'instractionChargeOrder', classCode: '140' })?.className,
+    );
   });
 
   it('頓用/院内の選択とRP名補正が保存 payload に反映される', async () => {
@@ -601,7 +604,7 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(operation?.className).toBe('処置');
   });
 
-  it('baseChargeOrder の再編集保存は explicit class meta を潰さない', async () => {
+  it('baseChargeOrder の再編集保存でも canonical className を優先する', async () => {
     const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
@@ -637,7 +640,9 @@ describe('OrderBundleEditPanel item actions', () => {
     const operation = payload?.operations?.[0];
     expect(operation?.classCode).toBe('120');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('旧名称');
+    expect(operation?.className).toBe(
+      resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder', classCode: '120' })?.className,
+    );
   });
 
   it('外用の混合トグルで混合コメント行が保存 payload に追加される', async () => {

@@ -229,17 +229,17 @@ describe('OrderDockPanel category quick-add', () => {
     await user.click(screen.getByRole('button', { name: '処置を開く' }));
     const treatmentTabList = screen.getByRole('tablist', { name: '処置種類' });
     const treatmentTab = within(treatmentTabList).getByRole('tab', { name: '処置' });
-    const generalTab = within(treatmentTabList).getByRole('tab', { name: '一般' });
+    const surgeryTab = within(treatmentTabList).getByRole('tab', { name: '手術' });
     const allTreatmentTab = within(treatmentTabList).getByRole('tab', { name: 'すべて' });
 
     expect(treatmentTab).toHaveAttribute('aria-selected', 'true');
     expect(treatmentTab).toHaveAttribute('tabindex', '0');
-    expect(generalTab).toHaveAttribute('aria-selected', 'false');
-    expect(generalTab).toHaveAttribute('tabindex', '-1');
+    expect(surgeryTab).toHaveAttribute('aria-selected', 'false');
+    expect(surgeryTab).toHaveAttribute('tabindex', '-1');
 
     treatmentTab.focus();
     await user.keyboard('{ArrowRight}');
-    expect(generalTab).toHaveAttribute('aria-selected', 'true');
+    expect(surgeryTab).toHaveAttribute('aria-selected', 'true');
 
     await user.keyboard('{End}');
     expect(allTreatmentTab).toHaveAttribute('aria-selected', 'true');

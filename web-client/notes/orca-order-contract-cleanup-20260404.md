@@ -15,6 +15,12 @@
 - client validation と server validation は同じ `002` 契約を使い、`name` のみ・non-`002`・code 欠落の bodyPart を 400 で拒否する。
 - save/fetch/send helper は malformed bodyPart を通常 item として温存しない。
 - input-set list/detail は unsupported metadata を返送しない。detail 取得時は not found として閉じる。
+- charge は `baseChargeOrder=110..125 / 基本診療料`、`instractionChargeOrder=130..150 / 医学管理等` を唯一の canonical rule とし、manual item selection/save/fetch/send/XML で同じ helper を使う。
+- charge manual item selection では cross-range な `masterCategory` 候補を候補一覧から除外し、`classCode` だけでなく `className` も canonical 値へ確定する。`className -> bundleName` fallback は charge で使わない。
+- charge main row は `masterCategory` を item memo meta に保持し、save/fetch/no-op save でも entity/class/item の整合判定を server/client で再利用する。
+- selection comment の `itemNumber / itemNumberBranch` は official `medicalmodv2` request に carrier がないため unsupported とし、UI disable だけで終わらせず save validation / server validation / send block まで fail-closed に止める。
+  根拠:
+  `medicationgetv2` は `Selection_Expression_Information` で `Item_Number / Item_Number_Branch` を返す一方、`medicalmodv2` request は `Medication_Code / Name / Number / Generic_Flg` までで、`Medication_Input_Info` は `medicalsetv2` の 85/831 系補足にだけ現れる。
 
 ## Verification summary
 

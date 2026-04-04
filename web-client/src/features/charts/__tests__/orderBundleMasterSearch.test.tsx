@@ -544,6 +544,49 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
+  it('baseChargeOrder は cross-range な算定候補を一覧に出さない', async () => {
+    localStorage.setItem('devFacilityId', 'facility');
+    localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
+    const searchMock = vi.mocked(fetchOrderMasterSearch);
+    searchMock.mockImplementation(async ({ type, keyword }) => {
+      if (type !== 'etensu' || !keyword.includes('料')) {
+        return { ok: true, items: [], totalCount: 0 };
+      }
+      return {
+        ok: true,
+        items: [
+          { type: 'etensu', code: '112007410', name: '在宅自己注射指導管理料', unit: '回', category: '130' },
+          { type: 'etensu', code: '111000110', name: '再診料', unit: '回', category: '120' },
+        ],
+        totalCount: 2,
+      };
+    });
+
+    renderWithClient(
+      <OrderBundleEditPanel
+        {...baseProps}
+        entity="baseChargeOrder"
+        title="基本料"
+        bundleLabel="算定"
+        itemQuantityLabel="数量"
+      />,
+    );
+
+    const itemNameInput = screen.getByPlaceholderText('算定項目名');
+    await user.type(itemNameInput, '料');
+
+    await waitFor(() =>
+      expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'etensu', category: '1', keyword: '料' })),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('datalist[id$="-item-predictive-list"] option[value="再診料"]')).not.toBeNull(),
+    );
+    expect(
+      document.querySelector('datalist[id$="-item-predictive-list"] option[value="在宅自己注射指導管理料"]'),
+    ).toBeNull();
+  });
+
   it('注射オーダーの統合検索は drug と etensu カテゴリ3を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');

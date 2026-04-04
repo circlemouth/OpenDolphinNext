@@ -18,14 +18,18 @@ vi.mock('../orcaOrderInputSetApi', () => ({
   fetchOrcaOrderInputSetDetail: vi.fn(),
 }));
 
-vi.mock('../orderBundleApi', async () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({
-    ok: true,
-    bundles: [],
-    patientId: 'P-ORDER-001',
-  }),
-  mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER-ORCA-TEST' }),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({
+      ok: true,
+      bundles: [],
+      patientId: 'P-ORDER-001',
+    }),
+    mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER-ORCA-TEST' }),
+  };
+});
 
 const baseProps = {
   patientId: 'P-ORDER-001',
@@ -380,7 +384,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.queryByText('entity が一致しないため診療セットを反映できません。')).toBeNull();
   });
 
-  it('baseChargeOrder の ORCA診療セット適用後も class meta を保存 payload で保持する', async () => {
+  it('baseChargeOrder へ instractionCharge classCode の ORCA診療セットは反映を reject する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
@@ -411,11 +415,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /B13001.*在宅指導セット.*反映/ }));
 
-    expect(screen.getByLabelText('算定')).toHaveValue('在宅指導セット');
-    expect(screen.getByLabelText('院内補足')).toHaveValue('算定前確認');
-
-    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
-
+    expect(await screen.findByText('entity が一致しないため診療セットを反映できません。')).toBeInTheDocument();
     expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 

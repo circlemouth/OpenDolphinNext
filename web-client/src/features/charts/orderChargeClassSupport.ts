@@ -32,6 +32,11 @@ const parseClassCode = (value?: string | null) => {
   return Number.parseInt(normalized, 10);
 };
 
+export const normalizeChargeClassCode = (value?: string | null) => {
+  const parsed = parseClassCode(value);
+  return parsed === null ? null : trimToNull(value);
+};
+
 const findChargeRuleByCode = (value?: string | null) => {
   const parsed = parseClassCode(value);
   if (parsed === null) return null;
@@ -113,6 +118,9 @@ export const resolveCanonicalChargeClassMeta = (params: {
     className: codeRule.className,
   };
 };
+
+export const resolveChargeClassMetaFromItemCategory = (entity?: string | null, category?: string | null) =>
+  resolveCanonicalChargeClassMeta({ entity, itemCategory: category });
 
 export const canonicalizeChargeBundleMeta = <
   T extends {

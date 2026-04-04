@@ -631,6 +631,200 @@ describe('order send smoke', () => {
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-item-memo');
   });
 
+  it('save fetch normalize send payload smoke keeps charge class meta stable and drops local-only fields', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-SAVE-CHARGE',
+            createdDocumentIds: [202],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-FETCH-CHARGE',
+            patientId: '000001',
+            bundles: [
+              {
+                entity: 'baseChargeOrder',
+                sourceSetCode: 'B12001',
+                bundleName: '再診料セット',
+                bundleNumber: '2',
+                classCode: '120',
+                classCodeSystem: 'Claim007',
+                className: 'bundle fallback should not survive',
+                admin: 'local charge admin',
+                adminMemo: 'local charge admin memo',
+                memo: 'local charge memo',
+                items: [
+                  {
+                    code: '120000110',
+                    name: '再診料',
+                    quantity: '1',
+                    unit: '回',
+                    memo: 'item memo',
+                    masterCategory: '120',
+                  },
+                ],
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-SEND-CHARGE',
+            traceId: 'TRACE-SEND-CHARGE',
+            apiResult: '00',
+            apiResultMessage: 'OK',
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'baseChargeOrder',
+          sourceSetCode: 'B12001',
+          bundleName: '再診料セット',
+          bundleNumber: '2',
+          classCode: '120',
+          classCodeSystem: 'Claim007',
+          className: '基本診療料',
+          admin: 'local charge admin',
+          adminMemo: 'local charge admin memo',
+          memo: 'local charge memo',
+          items: [{ code: '120000110', name: '再診料', quantity: '1', unit: '回', memo: 'item memo', masterCategory: '120' }],
+        } as any,
+      ],
+    });
+
+    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'baseChargeOrder' });
+    expect(fetched.ok).toBe(true);
+    expect(fetched.bundles[0]?.classCode).toBe('120');
+    expect(fetched.bundles[0]?.className).toBe('基本診療料');
+    expect(fetched.bundles[0]?.sourceSetCode).toBe('B12001');
+    expect(fetched.bundles[0]?.adminMemo).toBe('local charge admin memo');
+    expect(fetched.bundles[0]?.memo).toBe('local charge memo');
+
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    expect(prepared.bundleIssues).toEqual([]);
+    expect(prepared.medicalInformation[0]).toEqual(
+      expect.objectContaining({
+        medicalClass: '120',
+        medicalClassName: '基本診療料',
+        medicalClassNumber: '2',
+      }),
+    );
+    expect(prepared.medicalInformation[0]?.medications).toEqual([
+      expect.objectContaining({
+        code: '120000110',
+        name: '再診料',
+        number: '1',
+      }),
+    ]);
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('B12001');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('local charge admin');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('local charge admin memo');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('local charge memo');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('item memo');
+    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('"unit"');
+
+    const payload = buildMedicalModV2RequestXml({
+      patientId: '000001',
+      performDate: '2026-03-09T09:30:00',
+      departmentCode: '01',
+      physicianCode: '10001',
+      medicalInformation: prepared.medicalInformation,
+    });
+
+    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
+
+    expect(sendResult.ok).toBe(true);
+    expect(httpFetch).toHaveBeenCalledTimes(3);
+    const request = vi.mocked(httpFetch).mock.calls[2]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
+    expect(body.medicalInformation[0]).toEqual(
+      expect.objectContaining({
+        medicalClass: '120',
+        medicalClassName: '基本診療料',
+        medicalClassNumber: '2',
+      }),
+    );
+    expect(body.medicalInformation[0]?.medications).toEqual([
+      expect.objectContaining({
+        code: '120000110',
+        name: '再診料',
+        number: '1',
+      }),
+    ]);
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('B12001');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local charge admin');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local charge admin memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('local charge memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('item memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('"unit"');
+  });
+
+  it('prepareMedicalModV2SendData blocks selection comment parameters that medicalmodv2 cannot carry', () => {
+    const prepared = prepareMedicalModV2SendData([
+      {
+        entity: 'baseChargeOrder',
+        bundleName: 'parameterized charge',
+        bundleNumber: '1',
+        classCode: '120',
+        classCodeSystem: 'Claim007',
+        className: '基本診療料',
+        items: [
+          {
+            code: '120000110',
+            name: '再診料',
+            quantity: '1',
+            unit: '回',
+            memo: '',
+            masterCategory: '120',
+          },
+          {
+            code: '850100106',
+            name: '往診又は訪問診療年月日（在医総管）',
+            quantity: '1',
+            unit: '',
+            memo: '',
+            selectionCommentItemNumber: '0166',
+            selectionCommentItemNumberBranch: '01',
+          },
+        ],
+      },
+    ] as any);
+
+    expect(prepared.bundleIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_selection_comment_parameter',
+          entity: 'baseChargeOrder',
+        }),
+      ]),
+    );
+    expect(buildMedicalModV2BlockNotice(prepared)?.nextAction).toContain('official medicalmodv2 carrier');
+  });
+
   it('save fetch normalize smoke blocks bacteriaOrder before send when subtype is present', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
@@ -1316,6 +1510,44 @@ describe('order send smoke', () => {
     expect(sendResult.ok).toBe(true);
     expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toHaveLength(2);
     expect(requestUrls.filter((url) => url === '/api/orca/prescription-orders')).toHaveLength(2);
+  });
+
+  it('stale selection comment parameters block medicalmodv2 send before payload generation', () => {
+    const prepared = prepareMedicalModV2SendData([
+      {
+        entity: 'baseChargeOrder',
+        bundleName: '基本料',
+        bundleNumber: '1',
+        classCode: '110',
+        classCodeSystem: 'Claim007',
+        className: '基本診療料',
+        items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '110' }],
+        commentItems: [
+          {
+            code: '0085001',
+            name: 'コメント',
+            quantity: '',
+            unit: '',
+            selectionCommentItemNumber: '0166',
+            selectionCommentItemNumberBranch: '01',
+          },
+        ],
+      },
+    ]);
+
+    expect(prepared.bundleIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_selection_comment_parameter',
+          entity: 'baseChargeOrder',
+        }),
+      ]),
+    );
+    expect(prepared.medicalInformation).toEqual([]);
+
+    const notice = buildMedicalModV2BlockNotice(prepared);
+    expect(notice?.message).toContain('ORCA送信を停止');
+    expect(notice?.nextAction).toContain('itemNumber / branch');
   });
 
   it('same-day multi-encounter send path uses encounterId scoped prescription order', async () => {

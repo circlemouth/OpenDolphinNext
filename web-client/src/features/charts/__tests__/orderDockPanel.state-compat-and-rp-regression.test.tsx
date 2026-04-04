@@ -180,7 +180,7 @@ describe('OrderDockPanel state compatibility', () => {
     expect(within(testGroup).getByRole('button', { name: '旧検査セットを編集' })).toBeInTheDocument();
   });
 
-  it('一般タブを選んでも処置束が canonical match で消えない', async () => {
+  it('処置タブへ戻すと treatmentOrder 束が canonical match で消えない', async () => {
     const user = userEvent.setup();
     renderWithClient(
       <OrderDockPanel
@@ -198,7 +198,8 @@ describe('OrderDockPanel state compatibility', () => {
     }
     await waitFor(() => expect(toggle.getAttribute('aria-expanded')).toBe('true'));
 
-    await user.click(within(treatmentGroup).getByRole('tab', { name: '一般' }));
+    await user.click(within(treatmentGroup).getByRole('tab', { name: 'すべて' }));
+    await user.click(within(treatmentGroup).getByRole('tab', { name: '処置' }));
     expect(within(treatmentGroup).getByRole('button', { name: '創傷処置を編集' })).toBeInTheDocument();
   });
 });

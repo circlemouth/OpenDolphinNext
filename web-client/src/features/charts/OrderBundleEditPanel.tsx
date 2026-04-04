@@ -9,6 +9,7 @@ import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import {
   fetchOrderBundles,
   mutateOrderBundles,
+  normalizeOrderBundleBodyPart,
   type OrderBundle,
   type OrderBundleBodyPart,
   type OrderBundleItem,
@@ -49,7 +50,13 @@ import {
   type RpRequiredField,
 } from './orderRpRequirements';
 import {
+  isChargeClassCompatible,
+  isChargeEntity,
+  isChargeItemCategoryCompatible,
+  resolveCanonicalChargeClassMeta,
+  resolveChargeClassMetaFromItemCategory,
   resolveCanonicalOrderEntity,
+  resolveChargeEntityFromClassCode,
   resolveOrderEntityDefaultClassMeta,
   resolveOrderEntityEtensuCategory,
   resolveOrderEntityPhysiologySendContractGuidance,
@@ -61,6 +68,7 @@ import {
 } from './orderCategoryRegistry';
 import type { DataSourceTransition } from './authService';
 import type { DocumentOpenRequest } from './DocumentCreatePanel';
+import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
 
 export type OrderBundleEditPanelMeta = {
   runId?: string;
@@ -150,6 +158,16 @@ type BundleValidationIssue = {
   message: string;
 };
 
+const CHARGE_CONSISTENCY_ISSUE_KEYS = new Set([
+  'invalid_charge_class_code',
+  'missing_charge_item_category',
+  'invalid_charge_item_category',
+  'missing_charge_class_name',
+  'invalid_charge_class_name',
+]);
+
+const isChargeConsistencyIssueKey = (key: string) => CHARGE_CONSISTENCY_ISSUE_KEYS.has(key);
+
 type UsageMasterMeta = {
   code?: string;
   label: string;
@@ -232,6 +250,33 @@ const normalizeItemForForm = (entity: string | undefined, item: OrderBundleItem)
 };
 
 const hasOrderBundleItemValue = (item: OrderBundleItem) => hasOrderBundleRowValue(item);
+
+const resolveChargeSelectionClassMeta = (entity: string, item?: Pick<OrderMasterSearchItem, 'category'> | null) => {
+  const itemCategory = normalizeChargeMasterCategory(item?.category);
+  if (!isChargeEntity(entity)) return null;
+  if (!itemCategory || !isChargeItemCategoryCompatible(entity, itemCategory)) return null;
+  return resolveChargeClassMetaFromItemCategory(entity, itemCategory) ?? null;
+};
+
+const isUnsupportedChargeSelection = (entity: string, item?: Pick<OrderMasterSearchItem, 'category'> | null) =>
+  isChargeEntity(entity) && !resolveChargeSelectionClassMeta(entity, item);
+
+const resolveChargeItemMasterCategory = (
+  entity: string,
+  item?: Pick<OrderBundleItem, 'masterCategory' | 'category'> | null,
+  fallbackClassCode?: string | null,
+) => {
+  if (!isChargeEntity(entity)) return undefined;
+  const explicitMasterCategory = normalizeChargeMasterCategory(item?.masterCategory);
+  if (explicitMasterCategory) return explicitMasterCategory;
+  const explicitCategory = normalizeChargeMasterCategory(item?.category);
+  if (explicitCategory) return explicitCategory;
+  const normalizedFallback = normalizeChargeMasterCategory(fallbackClassCode);
+  if (normalizedFallback && isChargeItemCategoryCompatible(entity, normalizedFallback)) {
+    return normalizedFallback;
+  }
+  return undefined;
+};
 
 const ensureTrailingEmptyMainItem = (items: OrderBundleItem[]): OrderBundleItemWithRowId[] => {
   if (items.length === 0) return [buildEmptyItem()];
@@ -339,10 +384,34 @@ const USAGE_ROUTE_CLASSIFICATION_TABLE: Record<string, { label: string; injectio
 const UNKNOWN_USAGE_ROUTE_CLASSIFICATION = { label: '未分類', injectionPriority: 999 };
 const UNSUPPORTED_COMMENT_PARAMETER_MESSAGE =
   '選択式コメントの itemNumber / branch は未対応のため追加できません。パラメータ不要のコメントのみ選択してください。';
-
+const buildUnsupportedChargeSelectionMessage = (entity: string) =>
+  entity === 'baseChargeOrder'
+    ? 'baseChargeOrder では 110〜125 の算定項目のみ選択できます。'
+    : 'instractionChargeOrder では 130〜150 の算定項目のみ選択できます。';
 const isDrugMedicationCode = (code: string) => /^6\d{8}$/.test(code.trim());
-const hasUnsupportedCommentSelectionParameter = (item?: { itemNumber?: string; itemNumberBranch?: string }) =>
-  Boolean(item?.itemNumber?.trim() || item?.itemNumberBranch?.trim());
+const hasUnsupportedCommentSelectionParameter = (item?: {
+  itemNumber?: string;
+  itemNumberBranch?: string;
+  selectionCommentItemNumber?: string;
+  selectionCommentItemNumberBranch?: string;
+}) =>
+  Boolean(
+    item?.selectionCommentItemNumber?.trim() ||
+      item?.selectionCommentItemNumberBranch?.trim() ||
+      item?.itemNumber?.trim() ||
+      item?.itemNumberBranch?.trim(),
+  );
+
+const normalizeChargeMasterCategory = (category?: string | null) => {
+  const trimmed = category?.trim();
+  return trimmed && /^\d{3}$/.test(trimmed) ? trimmed : undefined;
+};
+
+const hasUnsupportedSelectionCommentParameterInItem = (item?: OrderBundleItem | null) => {
+  if (!item) return false;
+  const fields = resolveOrcaOrderItemFields(item);
+  return hasUnsupportedCommentSelectionParameter(fields);
+};
 
 const parseDocumentIds = (value?: string) => {
   if (!value) return { documentId: undefined, letterId: undefined };
@@ -469,16 +538,19 @@ const normalizeBundleBodyPartForEntity = (
 ): OrderBundleBodyPart | undefined => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   if (canonicalEntity === 'physiologyOrder') return undefined;
-  const name = bodyPart?.name?.trim();
-  if (!name) return undefined;
-  return {
-    code: bodyPart?.code?.trim() || undefined,
-    name,
-    quantity: bodyPart?.quantity?.trim() || undefined,
-    unit: bodyPart?.unit?.trim() || undefined,
-    memo: bodyPart?.memo?.trim() || undefined,
-    rowRole: 'bodyPart' as const,
-  };
+  return normalizeOrderBundleBodyPart(
+    bodyPart
+      ? {
+          code: bodyPart.code?.trim() || undefined,
+          name: bodyPart.name?.trim() || '',
+          quantity: bodyPart.quantity?.trim() || undefined,
+          unit: bodyPart.unit?.trim() || undefined,
+          memo: bodyPart.memo?.trim() || undefined,
+          rowRole: 'bodyPart',
+        }
+      : undefined,
+    { dropInvalid: true },
+  );
 };
 
 const buildMissingMainRowMessage = ({
@@ -556,29 +628,36 @@ const buildEmptyForm = (today: string): BundleFormState => ({
 });
 
 export const toFormState = (bundle: OrderBundle, today: string): BundleFormState => {
-  const { normal, material, comment, bodyPart } = splitBundleItems(bundle.entity, bundle.items, bundle.bodyPart);
-  const prescription = parsePrescriptionClassCode(bundle.classCode);
+  const canonicalBundle = canonicalizeChargeBundleMeta(bundle);
+  const { normal, material, comment, bodyPart } = splitBundleItems(
+    canonicalBundle.entity,
+    canonicalBundle.items,
+    canonicalBundle.bodyPart,
+  );
+  const prescription = parsePrescriptionClassCode(canonicalBundle.classCode);
   return {
-    documentId: bundle.documentId,
-    moduleId: bundle.moduleId,
-    bundleName: bundle.bundleName ?? '',
-    admin: bundle.admin ?? '',
-    adminMemo: bundle.adminMemo ?? '',
-    adminCode: bundle.adminCode ?? '',
-    adminCodeSystem: bundle.adminCodeSystem ?? undefined,
-    bundleNumber: bundle.bundleNumber ?? '1',
-    sourceSetCode: bundle.sourceSetCode,
-    subtype: resolveFormSubtype(bundle.entity ?? '', bundle.subtype),
-    classCode: bundle.classCode ?? undefined,
-    classCodeSystem: bundle.classCodeSystem ?? undefined,
-    className: bundle.className ?? undefined,
-    memo: bundle.memo ?? '',
-    startDate: bundle.started ?? today,
+    documentId: canonicalBundle.documentId,
+    moduleId: canonicalBundle.moduleId,
+    bundleName: canonicalBundle.bundleName ?? '',
+    admin: canonicalBundle.admin ?? '',
+    adminMemo: canonicalBundle.adminMemo ?? '',
+    adminCode: canonicalBundle.adminCode ?? '',
+    adminCodeSystem: canonicalBundle.adminCodeSystem ?? undefined,
+    bundleNumber: canonicalBundle.bundleNumber ?? '1',
+    sourceSetCode: canonicalBundle.sourceSetCode,
+    subtype: resolveFormSubtype(canonicalBundle.entity ?? '', canonicalBundle.subtype),
+    classCode: canonicalBundle.classCode ?? undefined,
+    classCodeSystem: canonicalBundle.classCodeSystem ?? undefined,
+    className: canonicalBundle.className ?? undefined,
+    memo: canonicalBundle.memo ?? '',
+    startDate: canonicalBundle.started ?? today,
     prescriptionLocation: prescription.location,
     prescriptionTiming: prescription.timing,
-    items: ensureTrailingEmptyMainItem((normal.length > 0 ? normal : [buildEmptyItem()]).map((item) => normalizeItemForForm(bundle.entity, item))),
-    materialItems: material.map((item) => ensureRowId(normalizeItemForForm(bundle.entity, item))),
-    commentItems: comment.map((item) => ensureRowId(normalizeItemForForm(bundle.entity, item))),
+    items: ensureTrailingEmptyMainItem(
+      (normal.length > 0 ? normal : [buildEmptyItem()]).map((item) => normalizeItemForForm(canonicalBundle.entity, item)),
+    ),
+    materialItems: material.map((item) => ensureRowId(normalizeItemForForm(canonicalBundle.entity, item))),
+    commentItems: comment.map((item) => ensureRowId(normalizeItemForForm(canonicalBundle.entity, item))),
     bodyPart,
   };
 };
@@ -593,26 +672,34 @@ const toFormStateFromHistoryCopy = (bundle: OrderBundle, today: string): BundleF
   };
 };
 
-export const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => ({
-  bundleName: template.bundleName,
-  admin: template.admin,
-  adminMemo: template.adminMemo ?? '',
-  adminCode: template.adminCode ?? '',
-  adminCodeSystem: template.adminCodeSystem ?? undefined,
-  bundleNumber: template.bundleNumber || '1',
-  subtype: resolveFormSubtype('', template.subtype),
-  classCode: template.classCode ?? undefined,
-  classCodeSystem: template.classCodeSystem ?? undefined,
-  className: template.className ?? undefined,
-  memo: template.memo,
-  startDate: today,
-  prescriptionLocation: template.prescriptionLocation ?? DEFAULT_PRESCRIPTION_LOCATION,
-  prescriptionTiming: template.prescriptionTiming ?? DEFAULT_PRESCRIPTION_TIMING,
-  items: ensureTrailingEmptyMainItem(template.items.length > 0 ? template.items.map((item) => ensureRowId({ ...item })) : [buildEmptyItem()]),
-  materialItems: template.materialItems.map((item) => ensureRowId({ ...item })),
-  commentItems: template.commentItems.map((item) => ({ ...item })),
-  bodyPart: template.bodyPart ? { ...template.bodyPart } : null,
-});
+export const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => {
+  const chargeClassMeta = resolveCanonicalChargeClassMeta({
+    classCode: template.classCode,
+    itemCategory: template.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory,
+  });
+  return {
+    bundleName: template.bundleName,
+    admin: template.admin,
+    adminMemo: template.adminMemo ?? '',
+    adminCode: template.adminCode ?? '',
+    adminCodeSystem: template.adminCodeSystem ?? undefined,
+    bundleNumber: template.bundleNumber || '1',
+    subtype: resolveFormSubtype('', template.subtype),
+    classCode: chargeClassMeta?.classCode ?? template.classCode ?? undefined,
+    classCodeSystem: chargeClassMeta ? PRESCRIPTION_CLASS_CODE_SYSTEM : template.classCodeSystem ?? undefined,
+    className: chargeClassMeta?.className ?? template.className ?? undefined,
+    memo: template.memo,
+    startDate: today,
+    prescriptionLocation: template.prescriptionLocation ?? DEFAULT_PRESCRIPTION_LOCATION,
+    prescriptionTiming: template.prescriptionTiming ?? DEFAULT_PRESCRIPTION_TIMING,
+    items: ensureTrailingEmptyMainItem(
+      template.items.length > 0 ? template.items.map((item) => ensureRowId({ ...item })) : [buildEmptyItem()],
+    ),
+    materialItems: template.materialItems.map((item) => ensureRowId({ ...item })),
+    commentItems: template.commentItems.map((item) => ({ ...item })),
+    bodyPart: template.bodyPart ? { ...template.bodyPart } : null,
+  };
+};
 
 const isBundleFormEmpty = (form: BundleFormState) => {
   const bundleNumber = form.bundleNumber.trim();
@@ -640,7 +727,7 @@ const toOrderBundleFromInputSetDetail = (
     classCode.startsWith('6') && (requestedEntity === 'physiologyOrder' || requestedEntity === 'bacteriaOrder')
       ? requestedEntity
       : inputSetEntity;
-  return {
+  const canonicalBundle = canonicalizeChargeBundleMeta({
     entity: resolvedEntity,
     bundleName: bundle.bundleName ?? '',
     bundleNumber: bundle.bundleNumber ?? '1',
@@ -656,12 +743,22 @@ const toOrderBundleFromInputSetDetail = (
     memo: bundle.memo ?? '',
     started: bundle.started,
     bodyPart: normalizeBundleBodyPartForEntity(resolvedEntity, bundle.bodyPart),
+  });
+  return {
+    ...canonicalBundle,
     items: bundle.items.map((item) => ({
       code: item.code,
       name: item.name ?? '',
       quantity: item.quantity,
       unit: item.unit,
       memo: item.memo,
+      genericFlg: item.genericFlg,
+      userComment: item.userComment,
+      category: item.category,
+      masterCategory: resolveChargeItemMasterCategory(resolvedEntity, item, canonicalBundle.classCode) ?? item.masterCategory,
+      itemNumber: item.itemNumber,
+      itemNumberBranch: item.itemNumberBranch,
+      rowSubtype: item.rowSubtype,
       rowRole:
         item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment'
           ? item.rowRole
@@ -677,12 +774,14 @@ const matchesOrcaInputSetEntity = (
 ) => {
   const normalizedRequested = resolveCanonicalOrderEntity(requestedEntity ?? '') ?? requestedEntity?.trim() ?? '';
   const normalizedBundle = resolveCanonicalOrderEntity(bundleEntity ?? '') ?? bundleEntity?.trim() ?? '';
-  if (!normalizedRequested || !normalizedBundle) return true;
-  if (normalizedRequested === normalizedBundle) return true;
+  const chargeEntityFromClassCode = resolveChargeEntityFromClassCode(classCode);
+  const effectiveBundleEntity = chargeEntityFromClassCode ?? normalizedBundle;
+  if (!normalizedRequested || !effectiveBundleEntity) return true;
+  if (normalizedRequested === effectiveBundleEntity) return true;
   const normalizedClassCode = classCode?.trim() ?? '';
   return (
     normalizedClassCode.startsWith('6') &&
-    normalizedBundle === 'testOrder' &&
+    effectiveBundleEntity === 'testOrder' &&
     (normalizedRequested === 'physiologyOrder' || normalizedRequested === 'bacteriaOrder')
   );
 };
@@ -1025,6 +1124,15 @@ export const validateBundleForm = ({
       });
     }
   }
+  const unsupportedSelectionParameterRow = combinedItems.find(
+    (item) => hasOrderBundleRowValue(item) && hasUnsupportedSelectionCommentParameterInItem(item),
+  );
+  if (unsupportedSelectionParameterRow) {
+    issues.push({
+      key: 'unsupported_selection_comment_parameter',
+      message: UNSUPPORTED_COMMENT_PARAMETER_MESSAGE,
+    });
+  }
   if (canonicalEntity === 'otherOrder') {
     const normalizedClassCode = form.classCode?.trim() ?? '';
     if (normalizedClassCode && (!/^\d{3}$/.test(normalizedClassCode) || Number(normalizedClassCode) < 800 || Number(normalizedClassCode) > 890)) {
@@ -1064,39 +1172,77 @@ export const validateBundleForm = ({
       });
     }
   }
-  if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
+  if (isChargeEntity(canonicalEntity)) {
     const normalizedClassCode = form.classCode?.trim() ?? '';
-    const isBaseCharge = canonicalEntity === 'baseChargeOrder';
-    if (
-      normalizedClassCode &&
-      (!/^\d+$/.test(normalizedClassCode) ||
-        (isBaseCharge
-          ? Number(normalizedClassCode) < 110 || Number(normalizedClassCode) > 125
-          : Number(normalizedClassCode) < 130 || Number(normalizedClassCode) > 150))
-    ) {
+    if (normalizedClassCode && !isChargeClassCompatible(canonicalEntity, normalizedClassCode)) {
       issues.push({
         key: 'invalid_charge_class_code',
-        message: isBaseCharge
+        message: canonicalEntity === 'baseChargeOrder'
           ? 'baseChargeOrder の classCode は 110〜125 の範囲のみ保存できます。'
           : 'instractionChargeOrder の classCode は 130〜150 の範囲のみ保存できます。',
       });
     }
+    const hasMissingChargeItemCategory = form.items.some((item) => {
+      if (!hasAnyValue(item)) return false;
+      const resolvedFields = resolveOrcaOrderItemFields(item);
+      const masterCategory = resolveChargeItemMasterCategory(canonicalEntity, item, normalizedClassCode);
+      return Boolean(resolvedFields.rowRole !== 'comment' && resolvedFields.rowRole !== 'auxiliary' && !masterCategory);
+    });
+    if (hasMissingChargeItemCategory) {
+      issues.push({
+        key: 'missing_charge_item_category',
+        message: 'charge main row は compatible な masterCategory が必須です。算定項目を候補から選び直してください。',
+      });
+    }
     if (
       form.items.some((item) => {
-        const category = item.masterCategory?.trim() ?? '';
+        const category = resolveChargeItemMasterCategory(canonicalEntity, item, normalizedClassCode) ?? '';
         if (!category) return false;
-        if (!/^\d+$/.test(category)) return true;
-        const numeric = Number(category);
-        return isBaseCharge ? numeric < 110 || numeric > 125 : numeric < 130 || numeric > 150;
+        return !isChargeItemCategoryCompatible(canonicalEntity, category);
       })
     ) {
       issues.push({
         key: 'invalid_charge_item_category',
-        message: isBaseCharge
+        message: canonicalEntity === 'baseChargeOrder'
           ? 'baseChargeOrder の main row は 110〜125 の masterCategory のみ保存できます。'
           : 'instractionChargeOrder の main row は 130〜150 の masterCategory のみ保存できます。',
       });
     }
+    const canonicalClassMeta = resolveCanonicalChargeClassMeta({
+      entity: canonicalEntity,
+      classCode: normalizedClassCode,
+      itemCategory: resolveChargeItemMasterCategory(
+        canonicalEntity,
+        form.items.find((item) => item.name?.trim() || item.code?.trim()),
+        normalizedClassCode,
+      ),
+    });
+    const explicitClassName = form.className?.trim() ?? '';
+    if (!canonicalClassMeta?.className && !explicitClassName) {
+      issues.push({
+        key: 'missing_charge_class_name',
+        message: 'charge bundle の className を決定できません。対応する算定項目を選択してください。',
+      });
+    }
+    if (
+      explicitClassName &&
+      canonicalClassMeta?.className &&
+      explicitClassName !== canonicalClassMeta.className
+    ) {
+      issues.push({
+        key: 'invalid_charge_class_name',
+        message: 'charge bundle の className は entity/classCode に対応する canonical 値のみ保存できます。',
+      });
+    }
+  }
+  const hasUnsupportedSelectionCommentParameterInBundle = collectBundleItems(form).some((item) =>
+    hasUnsupportedCommentSelectionParameter(item),
+  );
+  if (hasUnsupportedSelectionCommentParameterInBundle) {
+    issues.push({
+      key: 'unsupported_selection_comment_parameter',
+      message: UNSUPPORTED_COMMENT_PARAMETER_MESSAGE,
+    });
   }
   const isDaysBasedPrescription =
     entity === 'medOrder' && (form.prescriptionTiming === 'regular' || form.prescriptionTiming === 'gaiyo');
@@ -1744,8 +1890,8 @@ export function OrderBundleEditPanel({
         deduped.set(key, item);
       }
     });
-    return Array.from(deduped.values());
-  }, [itemCorrectionCandidates, itemMasterCandidates]);
+    return Array.from(deduped.values()).filter((item) => !isUnsupportedChargeSelection(entity, item));
+  }, [entity, itemCorrectionCandidates, itemMasterCandidates]);
   const itemPredictiveCandidates = useMemo(
     () =>
       itemPredictiveItems.map((item) => ({
@@ -2015,9 +2161,18 @@ export function OrderBundleEditPanel({
 
   const applyPredictiveItem = (rowId: string | undefined, matched: OrderMasterSearchItem | null) => {
     if (!rowId || !matched) return;
+    const chargeClassMeta = resolveChargeSelectionClassMeta(entity, matched);
+    if (isChargeEntity(entity) && !chargeClassMeta) {
+      setNotice({ tone: 'error', message: buildUnsupportedChargeSelectionMessage(entity) });
+      clearValidationByKeys([
+        'invalid_charge_class_code',
+        'invalid_charge_item_category',
+        'missing_charge_item_category',
+        'invalid_charge_class_name',
+      ]);
+      return;
+    }
     const promoteToMaterial = matched.type === 'material' || shouldTreatAsMaterialItem(entity, matched.code?.trim() ?? '');
-    const derivedClassCode =
-      entity === 'instractionChargeOrder' || entity === 'baseChargeOrder' ? matched.category?.trim() || '' : '';
     setForm((prev) => {
       const updateRow = (row: OrderBundleItem) => ({
         ...row,
@@ -2025,6 +2180,10 @@ export function OrderBundleEditPanel({
         name: matched.name,
         unit: row.unit?.trim() ? row.unit : matched.unit ?? '',
         memo: row.memo?.trim() ? row.memo : matched.note ?? '',
+        category: matched.category?.trim() || undefined,
+        masterCategory: matched.category?.trim() || undefined,
+        itemNumber: matched.itemNumber?.trim() || undefined,
+        itemNumberBranch: matched.itemNumberBranch?.trim() || undefined,
       });
       let promotedMaterialRow: OrderBundleItemWithRowId | null = null;
       const nextItems = ensureTrailingEmptyMainItem(
@@ -2048,16 +2207,20 @@ export function OrderBundleEditPanel({
       }
       return {
         ...prev,
-        classCode:
-          derivedClassCode &&
-          ((entity === 'instractionChargeOrder' && /^(13\d|14\d|150)$/.test(derivedClassCode)) ||
-            (entity === 'baseChargeOrder' && /^(11\d|12[0-5])$/.test(derivedClassCode)))
-            ? derivedClassCode
-            : prev.classCode,
+        classCode: chargeClassMeta?.classCode ?? prev.classCode,
+        classCodeSystem: chargeClassMeta?.classCodeSystem ?? prev.classCodeSystem,
+        className: chargeClassMeta?.className ?? prev.className,
         items: nextItems,
         materialItems: nextMaterialItems,
       };
     });
+    clearValidationByKeys([
+      'invalid_charge_class_code',
+      'invalid_charge_item_category',
+      'missing_charge_item_category',
+      'missing_charge_class_name',
+      'invalid_charge_class_name',
+    ]);
     const youhouCode = matched.youhouCode?.trim();
     if (supportsUsageSearch && !form.admin.trim() && youhouCode) {
       void autoFillUsageFromYouhouCode(youhouCode);
@@ -2168,6 +2331,20 @@ export function OrderBundleEditPanel({
         return;
       }
       const nextForm = toFormState(toOrderBundleFromInputSetDetail(detail.bundle, entity), today);
+      const nextFormIssues = validateBundleForm({
+        form: nextForm,
+        entity,
+        bundleLabel,
+      });
+      const chargeIssues = nextFormIssues.filter((issue) => isChargeConsistencyIssueKey(issue.key));
+      if (chargeIssues.length > 0) {
+        setNotice({ tone: 'error', message: chargeIssues[0]?.message ?? 'charge 診療セットを反映できません。' });
+        return;
+      }
+      if (nextFormIssues.some((issue) => issue.key === 'unsupported_selection_comment_parameter')) {
+        setNotice({ tone: 'error', message: UNSUPPORTED_COMMENT_PARAMETER_MESSAGE });
+        return;
+      }
       if (isBundleFormEmpty(form)) {
         applyOrcaSetForm(nextForm);
         return;
@@ -2324,6 +2501,19 @@ export function OrderBundleEditPanel({
 
   const resolveBundleClassMeta = (bundleForm: BundleFormState) => {
     if (!isMedOrder) {
+      const primaryChargeItem = bundleForm.items.find((item) => item.name?.trim() || item.code?.trim());
+      const chargeClassMeta = resolveCanonicalChargeClassMeta({
+        entity,
+        classCode: bundleForm.classCode,
+        itemCategory: resolveChargeItemMasterCategory(entity, primaryChargeItem, bundleForm.classCode),
+      });
+      if (chargeClassMeta) {
+        return {
+          classCode: chargeClassMeta.classCode,
+          classCodeSystem: PRESCRIPTION_CLASS_CODE_SYSTEM,
+          className: chargeClassMeta.className,
+        };
+      }
       const explicitClassCode = bundleForm.classCode?.trim();
       const explicitClassName = bundleForm.className?.trim();
       if (explicitClassCode || explicitClassName) {
@@ -2964,9 +3154,15 @@ export function OrderBundleEditPanel({
             return `${entityId}-bodypart`;
           case 'missing_items':
           case 'missing_main_row':
+          case 'invalid_charge_item_category':
+          case 'unsupported_selection_comment_parameter':
             return `${entityId}-item-name-0`;
           case 'comment_only':
             return `${entityId}-item-name-0`;
+          case 'invalid_charge_class_code':
+          case 'missing_charge_class_name':
+          case 'invalid_charge_class_name':
+            return `${entityId}-bundle-name`;
           case 'mixed_coded_uncoded':
           case 'uncoded_row':
           case 'missing_item_code': {
@@ -3994,6 +4190,7 @@ export function OrderBundleEditPanel({
                   id={`${entityId}-bodypart`}
                   value={form.bodyPart?.name ?? ''}
                   data-orca-warning={orcaWarningTargets.bodyPart ? 'true' : undefined}
+                  aria-readonly={supportsBodyPartSearch ? 'true' : undefined}
                   aria-invalid={bodyPartError ? 'true' : undefined}
                   onChange={(event) => {
                     clearValidationByKeys(['unsupported_body_part', 'missing_body_part', 'missing_body_part_code']);
@@ -4011,6 +4208,7 @@ export function OrderBundleEditPanel({
                   }}
                   placeholder={supportsBodyPartSearch ? (isRadiologyOrder ? '例: 胸部' : '例: 膝関節') : '保持しない場合はクリアしてください'}
                   disabled={isBlocked}
+                  readOnly={supportsBodyPartSearch}
                 />
                 {bodyPartError ? (
                   <p className="charts-side-panel__field-error" role="alert">

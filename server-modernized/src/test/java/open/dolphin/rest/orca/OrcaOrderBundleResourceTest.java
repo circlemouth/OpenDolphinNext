@@ -625,6 +625,50 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesRejectsUnsupportedSelectionCommentParameters() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_TREATMENT);
+        op.setBundleName("selection-comment-parameter");
+        op.setClassCode("400");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("140000610");
+        item.setName("treatment-main");
+        item.setQuantity("1");
+        item.setUnit("times");
+
+        OrderBundleMutationRequest.BundleItem comment = new OrderBundleMutationRequest.BundleItem();
+        comment.setCode("008200001");
+        comment.setName("parameter-comment");
+        comment.setSelectionCommentItemNumber("0166");
+        comment.setSelectionCommentItemNumberBranch("01");
+
+        op.setItems(List.of(item));
+        op.setCommentItems(List.of(comment));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("items", body.get("field"));
+        assertEquals("selection comment itemNumber / branch is unsupported for order bundle items", body.get("message"));
+    }
+
+    @Test
     void getInputSetsReturnsPagedResponse() throws Exception {
         OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
             @Override

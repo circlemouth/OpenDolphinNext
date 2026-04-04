@@ -220,6 +220,24 @@ const normalizeOptionalText = (value?: string | null) => {
   return trimmed || undefined;
 };
 
+const hasUnsupportedSelectionCommentParameter = (item?: OrderBundleItem | null) => {
+  if (!item) return false;
+  const fields = resolveOrcaOrderItemFields(item);
+  return Boolean(
+    item.selectionCommentItemNumber?.trim() ||
+      item.selectionCommentItemNumberBranch?.trim() ||
+      fields.itemNumber?.trim() ||
+      fields.itemNumberBranch?.trim(),
+  );
+};
+
+const hasUnsupportedSelectionCommentParameterInOperation = (operation?: OrderBundleOperation | null) =>
+  [
+    ...(operation?.items ?? []),
+    ...(operation?.materialItems ?? []),
+    ...(operation?.commentItems ?? []),
+  ].some((item) => hasUnsupportedSelectionCommentParameter(item));
+
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
   const canonicalBundle = canonicalizeChargeBundleMeta(bundle);
   return {
@@ -465,12 +483,20 @@ export async function mutateOrderBundles(params: {
 }): Promise<OrderBundleMutationResult> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
+  const normalizedOperations = params.operations.map(normalizeOrderBundleOperation);
+  if (normalizedOperations.some((operation) => hasUnsupportedSelectionCommentParameterInOperation(operation))) {
+    return {
+      ok: false,
+      runId,
+      message: '選択式コメントの itemNumber / branch は未対応のため保存できません。パラメータ不要のコメントのみ選択してください。',
+    };
+  }
   const response = await httpFetch('/api/orca/order/bundles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       patientId: params.patientId,
-      operations: params.operations.map(normalizeOrderBundleOperation),
+      operations: normalizedOperations,
     }),
   });
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;

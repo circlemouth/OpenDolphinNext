@@ -1,4 +1,12 @@
-import { resolveCanonicalChargeClassMeta as resolveInitialChargeClassMeta } from './orderChargeClassSupport';
+import {
+  isChargeClassCompatible as isChargeClassCompatibleImpl,
+  isChargeEntity as isChargeEntityImpl,
+  isChargeItemCategoryCompatible as isChargeItemCategoryCompatibleImpl,
+  resolveCanonicalChargeClassMeta as resolveCanonicalChargeClassMetaImpl,
+  resolveCanonicalChargeClassName as resolveCanonicalChargeClassNameImpl,
+  resolveChargeClassMetaFromItemCategory as resolveChargeClassMetaFromItemCategoryImpl,
+  resolveChargeEntityFromClassCode as resolveChargeEntityFromClassCodeImpl,
+} from './orderChargeClassSupport';
 import type { OrderMasterSearchType } from './orderMasterSearchApi';
 
 export type OrderGroupKey = 'prescription' | 'injection' | 'treatment' | 'test' | 'charge';
@@ -50,14 +58,6 @@ export type OrderEntityValidationRule = {
 
 export type OrderEntityClassMeta = {
   classCode: string;
-  className: string;
-};
-
-type ChargeClassRule = {
-  entity: Extract<OrderEntity, 'baseChargeOrder' | 'instractionChargeOrder'>;
-  min: number;
-  max: number;
-  defaultClassCode: string;
   className: string;
 };
 
@@ -193,43 +193,6 @@ const TEST_BACTERIA_SUBTYPE = {
     { value: 'culture' as OrderTestSubtype, label: '培養' },
     { value: 'sensitivity' as OrderTestSubtype, label: '感受性' },
   ],
-};
-
-const CHARGE_CLASS_RULES: readonly ChargeClassRule[] = [
-  {
-    entity: 'baseChargeOrder',
-    min: 110,
-    max: 125,
-    defaultClassCode: '110',
-    className: '基本診療料',
-  },
-  {
-    entity: 'instractionChargeOrder',
-    min: 130,
-    max: 150,
-    defaultClassCode: '130',
-    className: '医学管理等',
-  },
-] as const;
-
-const normalizeChargeClassCode = (classCode?: string | null) => {
-  const normalized = classCode?.trim();
-  if (!normalized || !/^\d+$/.test(normalized)) return null;
-  return normalized;
-};
-
-const resolveChargeClassRuleByEntity = (entity?: string | null) => {
-  const resolved = resolveCanonicalOrderEntity(entity);
-  if (resolved !== 'baseChargeOrder' && resolved !== 'instractionChargeOrder') return null;
-  return CHARGE_CLASS_RULES.find((rule) => rule.entity === resolved) ?? null;
-};
-
-const resolveChargeClassRuleByClassCode = (classCode?: string | null) => {
-  const normalized = normalizeChargeClassCode(classCode);
-  if (!normalized) return null;
-  const numeric = Number(normalized);
-  if (!Number.isInteger(numeric)) return null;
-  return CHARGE_CLASS_RULES.find((rule) => numeric >= rule.min && numeric <= rule.max) ?? null;
 };
 
 const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
@@ -474,7 +437,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '基本料',
     group: 'charge',
     etensuCategory: '1',
-    classMeta: resolveInitialChargeClassMeta({ entity: 'baseChargeOrder' })!,
+    classMeta: resolveCanonicalChargeClassMetaImpl({ entity: 'baseChargeOrder' })!,
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 初診料算定',
@@ -498,7 +461,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '指導料',
     group: 'charge',
     etensuCategory: '1',
-    classMeta: resolveInitialChargeClassMeta({ entity: 'instractionChargeOrder' })!,
+    classMeta: resolveCanonicalChargeClassMetaImpl({ entity: 'instractionChargeOrder' })!,
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 初診料算定',
@@ -644,63 +607,31 @@ export const resolveOrderEntityEtensuCategory = (entity: string): string | undef
 export const resolveChargeEntityFromClassCode = (
   classCode?: string | null,
 ): Extract<OrderEntity, 'baseChargeOrder' | 'instractionChargeOrder'> | null =>
-  resolveChargeClassRuleByClassCode(classCode)?.entity ?? null;
+  resolveChargeEntityFromClassCodeImpl(classCode);
 
 export const isChargeEntity = (entity?: string | null): entity is Extract<OrderEntity, 'baseChargeOrder' | 'instractionChargeOrder'> => {
-  const resolved = resolveCanonicalOrderEntity(entity);
-  return resolved === 'baseChargeOrder' || resolved === 'instractionChargeOrder';
+  return isChargeEntityImpl(entity);
 };
 
 export const isChargeOrderEntity = isChargeEntity;
 
-export const isChargeClassCompatible = (entity?: string | null, classCode?: string | null) => {
-  if (!isChargeEntity(entity)) return false;
-  const normalizedClassCode = normalizeChargeClassCode(classCode);
-  if (!normalizedClassCode) return false;
-  return resolveChargeClassRuleByEntity(entity)?.entity === resolveChargeEntityFromClassCode(normalizedClassCode);
-};
+export const isChargeClassCompatible = (entity?: string | null, classCode?: string | null) =>
+  isChargeClassCompatibleImpl(entity, classCode);
 
 export const isChargeItemCategoryCompatible = (entity?: string | null, category?: string | null) =>
-  isChargeClassCompatible(entity, category);
+  isChargeItemCategoryCompatibleImpl(entity, category);
 
-export const resolveCanonicalChargeClassName = (entity?: string | null, classCode?: string | null) => {
-  const explicitRule = resolveChargeClassRuleByClassCode(classCode);
-  if (explicitRule && isChargeEntity(entity) && explicitRule.entity !== resolveCanonicalOrderEntity(entity)) {
-    return undefined;
-  }
-  return explicitRule?.className ?? resolveChargeClassRuleByEntity(entity)?.className;
-};
+export const resolveCanonicalChargeClassName = (entity?: string | null, classCode?: string | null) =>
+  resolveCanonicalChargeClassNameImpl(entity, classCode);
 
 export const resolveCanonicalChargeClassMeta = (params: {
   entity?: string | null;
   classCode?: string | null;
   itemCategory?: string | null;
-}): OrderEntityClassMeta | undefined => {
-  if (!isChargeEntity(params.entity)) return undefined;
-  const entityRule = resolveChargeClassRuleByEntity(params.entity);
-  if (!entityRule) return undefined;
-  const categoryClassCode = normalizeChargeClassCode(params.itemCategory);
-  if (categoryClassCode && isChargeItemCategoryCompatible(params.entity, categoryClassCode)) {
-    return {
-      classCode: categoryClassCode,
-      className: entityRule.className,
-    };
-  }
-  const explicitClassCode = normalizeChargeClassCode(params.classCode);
-  if (explicitClassCode && isChargeClassCompatible(params.entity, explicitClassCode)) {
-    return {
-      classCode: explicitClassCode,
-      className: entityRule.className,
-    };
-  }
-  return {
-    classCode: entityRule.defaultClassCode,
-    className: entityRule.className,
-  };
-};
+}): OrderEntityClassMeta | undefined => resolveCanonicalChargeClassMetaImpl(params) ?? undefined;
 
 export const resolveChargeClassMetaFromItemCategory = (entity?: string | null, category?: string | null) =>
-  resolveCanonicalChargeClassMeta({ entity, itemCategory: category });
+  resolveChargeClassMetaFromItemCategoryImpl(entity, category) ?? undefined;
 
 export const resolveOrderEntityDefaultClassMeta = (entity?: string): OrderEntityClassMeta | undefined => {
   if (!entity) return undefined;

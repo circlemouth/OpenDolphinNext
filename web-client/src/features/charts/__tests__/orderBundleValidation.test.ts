@@ -627,4 +627,48 @@ describe('validateBundleForm', () => {
     });
     expect(issues.map((issue) => issue.key)).not.toContain('missing_charge_class_name');
   });
+
+  it('baseChargeOrder: canonical と一致しない className を reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '基本料',
+        classCode: '120',
+        className: '医学管理等',
+        items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '120' }],
+      } as BundleFormState & { classCode: string; className: string },
+      entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+    expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_name');
+  });
+
+  it('parameter 付き選択式コメントは保存前に reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: 'コメント付き処置',
+        items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
+        commentItems: [
+          {
+            code: '0082',
+            name: '服薬指示',
+            quantity: '',
+            unit: '',
+            memo: '',
+            selectionCommentItemNumber: '0166',
+            selectionCommentItemNumberBranch: '01',
+          },
+        ],
+      } as BundleFormState & {
+        commentItems: Array<BundleFormState['commentItems'][number] & {
+          selectionCommentItemNumber: string;
+          selectionCommentItemNumberBranch: string;
+        }>;
+      },
+      entity: 'treatmentOrder',
+      bundleLabel: 'オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toContain('unsupported_selection_comment_parameter');
+  });
 });

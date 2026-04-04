@@ -6,10 +6,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as auditLogger from '../../../libs/audit/auditLogger';
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 
-vi.mock('../orderBundleApi', () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({ ok: true, bundles: [] }),
-  mutateOrderBundles: vi.fn(),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({ ok: true, bundles: [] }),
+    mutateOrderBundles: vi.fn(),
+  };
+});
 
 const buildQueryClient = () =>
   new QueryClient({

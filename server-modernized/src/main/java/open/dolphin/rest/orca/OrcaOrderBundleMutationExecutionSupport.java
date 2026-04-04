@@ -109,6 +109,11 @@ final class OrcaOrderBundleMutationExecutionSupport {
             }
             String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
             OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo = OrcaOrderBundleItemMemoSupport.parse(item.getMemo());
+            if (hasUnsupportedSelectionCommentParameter(item, parsedMemo)) {
+                throw validationFailure.invalid(
+                        "items",
+                        "selection comment itemNumber / branch is unsupported for order bundle items");
+            }
             String requestedRowRole = OrcaOrderBundleRequestSupport.normalizeRowRole(
                     OrcaOrderBundleRequestSupport.hasText(item.getRowRole()) ? item.getRowRole() : parsedMemo.rowRole());
             if (requestedRowRole != null && code != null
@@ -261,6 +266,21 @@ final class OrcaOrderBundleMutationExecutionSupport {
             return OrcaOrderBundleItemMemoSupport.normalizeMasterCategory(item.getMasterCategory());
         }
         return parsedMemo != null ? parsedMemo.masterCategory() : null;
+    }
+
+    private static boolean hasUnsupportedSelectionCommentParameter(
+            OrderBundleMutationRequest.BundleItem item,
+            OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo) {
+        if (item == null) {
+            return false;
+        }
+        return OrcaOrderBundleRequestSupport.hasText(item.getSelectionCommentItemNumber())
+                || OrcaOrderBundleRequestSupport.hasText(item.getSelectionCommentItemNumberBranch())
+                || OrcaOrderBundleRequestSupport.hasText(item.getItemNumber())
+                || OrcaOrderBundleRequestSupport.hasText(item.getItemNumberBranch())
+                || (parsedMemo != null
+                        && (OrcaOrderBundleRequestSupport.hasText(parsedMemo.itemNumber())
+                                || OrcaOrderBundleRequestSupport.hasText(parsedMemo.itemNumberBranch())));
     }
 
     private static void validateBacteriaMetadata(

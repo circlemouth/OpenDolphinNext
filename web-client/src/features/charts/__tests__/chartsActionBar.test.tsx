@@ -6,7 +6,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { ChartsActionBar } from '../ChartsActionBar';
 import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { postOrcaMedicalModV23Xml } from '../orcaMedicalModApi';
-import { fetchOrderBundles } from '../orderBundleApi';
 import { recordChartsAuditEvent } from '../audit';
 
 vi.mock('../../../routes/useAppNavigation', () => ({
@@ -45,8 +44,22 @@ vi.mock('../orcaMedicalModApi', () => ({
   }),
 }));
 
-vi.mock('../orderBundleApi', () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({ ok: true, bundles: [] }),
+vi.mock('../orderRpNormalization', () => ({
+  buildMedicalModV2BlockNotice: vi.fn().mockReturnValue(null),
+  fetchMedicalModV2OrderBundles: vi.fn().mockResolvedValue({ bundles: [], errors: [] }),
+  prepareMedicalModV2SendData: vi.fn().mockReturnValue({
+    requiredIssues: [],
+    bundleIssues: [],
+    codeIssues: [],
+    medicalInformationWithSource: [],
+    medicalInformationSources: [],
+    medicalInformation: [],
+    totalGroups: 0,
+    groupLimitExceeded: false,
+    rowLimitExceeded: false,
+    limitReasons: [],
+    invalidCodes: [],
+  }),
 }));
 
 vi.mock('../../../libs/audit/auditLogger', () => ({
@@ -73,7 +86,6 @@ const baseProps = {
 describe('ChartsActionBar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(fetchOrderBundles).mockResolvedValue({ ok: true, bundles: [] } as any);
   });
 
   it('ORCA送信の成功をトーストと監査ログに反映する', async () => {

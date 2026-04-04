@@ -12,7 +12,10 @@ final class OrcaChargeClassCanonicalSupport {
     }
 
     static String canonicalClassName(String entity, String classCode, String className) {
-        String canonical = canonicalClassName(entity, classCode);
+        String canonical = OrcaChargeClassSupport.resolveCanonicalChargeClassName(entity, classCode);
+        if (canonical == null) {
+            canonical = canonicalClassName(entity, classCode);
+        }
         if (canonical != null) {
             return canonical;
         }
@@ -20,17 +23,20 @@ final class OrcaChargeClassCanonicalSupport {
     }
 
     static String canonicalClassCode(String entity, String classCode) {
+        OrcaChargeClassSupport.ChargeClassMeta chargeMeta =
+                OrcaChargeClassSupport.resolveCanonicalChargeClassMeta(entity, classCode, null);
+        if (chargeMeta != null) {
+            return chargeMeta.classCode();
+        }
         String normalized = trimToNull(classCode);
-        if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(entity)) {
-            return isInRange(normalized, 110, 125) ? normalized : "110";
-        }
-        if (IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(entity)) {
-            return isInRange(normalized, 130, 150) ? normalized : "130";
-        }
         return normalized;
     }
 
     static String canonicalClassName(String entity, String classCode) {
+        String chargeCanonical = OrcaChargeClassSupport.resolveCanonicalChargeClassName(entity, classCode);
+        if (chargeCanonical != null) {
+            return chargeCanonical;
+        }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
         if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(normalizedEntity)) {
             return isBlank(classCode) || isInRange(classCode, 110, 125) ? BASE_CHARGE_CLASS_NAME : null;

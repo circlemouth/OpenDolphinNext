@@ -64,6 +64,24 @@ final class OrcaChargeClassSupport {
         return new ChargeClassMeta(entityRule.defaultClassCode(), ClaimConst.CLASS_CODE_ID, entityRule.className());
     }
 
+    static String resolveCanonicalClassNameForMedicalClass(String medicalClass) {
+        ChargeClassRule rule = resolveRuleByClassCode(medicalClass);
+        return rule != null ? rule.className() : null;
+    }
+
+    static String resolveCanonicalClassNameForMedicalClass(String medicalClass, String explicitClassName) {
+        String canonical = resolveCanonicalClassNameForMedicalClass(medicalClass);
+        return canonical != null ? canonical : OrcaOrderBundleRequestSupport.trimToNull(explicitClassName);
+    }
+
+    static OrcaOrderInputSetSupport.ClassMetadata resolveInputSetClassMetadata(String receiptCode) {
+        ChargeClassRule rule = resolveRuleByClassCode(receiptCode);
+        if (rule == null) {
+            return null;
+        }
+        return new OrcaOrderInputSetSupport.ClassMetadata(rule.entity(), rule.className());
+    }
+
     private static ChargeClassRule resolveRuleByEntity(String entity) {
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityStorage(entity);
         if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(normalizedEntity)) {

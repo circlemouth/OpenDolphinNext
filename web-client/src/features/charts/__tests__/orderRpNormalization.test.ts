@@ -97,6 +97,36 @@ describe('orderRpNormalization', () => {
     );
   });
 
+  it('parameter 付き選択式コメントは送信前 issue を返す', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'treatmentOrder',
+        bundleName: 'parameter-comment',
+        items: [
+          { code: '140000610', name: '創傷処置', quantity: '1', unit: '回', rowRole: 'main' },
+          {
+            code: '0082',
+            name: '食後',
+            quantity: '',
+            unit: '',
+            rowRole: 'comment',
+            selectionCommentItemNumber: '0166',
+            selectionCommentItemNumberBranch: '01',
+          },
+        ],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_selection_comment_parameter',
+          bundleName: 'parameter-comment',
+        }),
+      ]),
+    );
+  });
+
   it('otherOrder の classCode が非数値なら送信前 issue を返す', () => {
     const issues = collectMedicalModV2BundleIssues([
       {

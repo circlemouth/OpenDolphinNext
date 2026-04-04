@@ -82,6 +82,7 @@ export type MedicalModV2BundleIssueCode =
   | 'invalid_other_order_class'
   | 'unsupported_physiology_order'
   | 'unsupported_bacteria_subtype'
+  | 'unsupported_selection_comment_parameter'
   | 'unsupported_admin_memo';
 
 export type MedicalModV2BundleIssue = {
@@ -258,6 +259,13 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
 
 const resolveMedicalModV2BlockedBundleIssue = (bundle: OrderBundle) => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  if (hasUnsupportedSelectionCommentParameterInBundle(bundle)) {
+    return buildBundleIssue(
+      bundle,
+      'unsupported_selection_comment_parameter',
+      '選択式コメントの itemNumber / branch は official medicalmodv2 request に carrier がないため ORCA送信できません。',
+    );
+  }
   if (canonicalEntity === 'physiologyOrder') {
     return buildBundleIssue(
       bundle,
@@ -282,6 +290,17 @@ const buildInjectionContractItems = (rows: Array<{ item: OrderBundleItem; source
       ...item,
       rowRole: source.rowRole === 'auxiliary' ? ('material' as const) : source.rowRole,
     }));
+
+const hasUnsupportedSelectionCommentParameterInBundle = (bundle: OrderBundle) =>
+  collectNormalizedRows(bundle).some(({ item }) => {
+    const fields = resolveOrcaOrderItemFields(item);
+    return Boolean(
+      item.selectionCommentItemNumber?.trim() ||
+        item.selectionCommentItemNumberBranch?.trim() ||
+        fields.itemNumber?.trim() ||
+        fields.itemNumberBranch?.trim(),
+    );
+  });
 
 export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): MedicalModV2BundleIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
@@ -644,13 +663,18 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
     const remaining = prepared.bundleIssues.length - 4;
     const unsupportedPhysiologyIssue = prepared.bundleIssues.some((issue) => issue.code === 'unsupported_physiology_order');
     const unsupportedBacteriaIssue = prepared.bundleIssues.some((issue) => issue.code === 'unsupported_bacteria_subtype');
+    const unsupportedSelectionCommentIssue = prepared.bundleIssues.some(
+      (issue) => issue.code === 'unsupported_selection_comment_parameter',
+    );
     return {
       message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
       nextAction: unsupportedPhysiologyIssue
         ? MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_NEXT_ACTION
         : unsupportedBacteriaIssue
           ? '細菌検査 subtype は official ORCA carrier がないため送信できません。院内ローカル情報として保持し、ORCA送信対象から外してください。'
-        : 'コードなし行、adminCode 未設定、adminMemo/speed、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',
+          : unsupportedSelectionCommentIssue
+            ? '選択式コメントの itemNumber / branch は official medicalmodv2 carrier がないため送信できません。parameter 付きコメントを削除してください。'
+          : 'コードなし行、adminCode 未設定、adminMemo/speed、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',
     };
   }
   if (prepared.codeIssues.length > 0) {
