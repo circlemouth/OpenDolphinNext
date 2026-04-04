@@ -1,5 +1,6 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { generateRunId, getObservabilityMeta, updateObservabilityMeta } from '../../libs/observability/observability';
+import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
 
 export type UserProfileResult = {
   ok: boolean;
@@ -81,7 +82,6 @@ const TREE_ORDER = [
   'bacteriaOrder',
   'radiologyOrder',
   'otherOrder',
-  'generalOrder',
   'path',
   'text',
 ] as const;
@@ -144,7 +144,8 @@ const parseXmlDocument = (xml: string) => {
 
 const resolveTreeOrder = (entity?: string) => {
   if (!entity) return undefined;
-  const index = TREE_ORDER.indexOf(entity as (typeof TREE_ORDER)[number]);
+  const normalized = resolveCanonicalOrderEntity(entity) ?? entity;
+  const index = TREE_ORDER.indexOf(normalized as (typeof TREE_ORDER)[number]);
   if (index < 0) return undefined;
   return String(index).padStart(2, '0');
 };
@@ -156,10 +157,11 @@ const normalizeStampEntry = (entry: unknown): StampTreeEntry | null => {
   const entity = parseString(record.entity);
   const stampId = parseString(record.stampId);
   if (!name || !entity || !stampId) return null;
+  const normalizedEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   return {
     name,
     role: parseString(record.role),
-    entity,
+    entity: normalizedEntity,
     memo: parseString(record.memo),
     stampId,
   };
@@ -170,13 +172,14 @@ const normalizeStampTree = (entry: unknown): StampTree | null => {
   if (!record) return null;
   const entity = parseString(record.entity);
   if (!entity) return null;
+  const normalizedEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   const stampList = Array.isArray(record.stampList)
     ? record.stampList.map(normalizeStampEntry).filter((item): item is StampTreeEntry => item !== null)
     : [];
   return {
     treeName: parseString(record.treeName),
-    entity,
-    treeOrder: parseString(record.treeOrder) ?? resolveTreeOrder(entity),
+    entity: normalizedEntity,
+    treeOrder: parseString(record.treeOrder) ?? resolveTreeOrder(normalizedEntity),
     stampList,
   };
 };
@@ -189,6 +192,7 @@ const parseStampTreeXml = (xml: string): StampTree[] => {
     .map((root): StampTree | null => {
       const entity = root.getAttribute('entity')?.trim();
       if (!entity) return null;
+      const normalizedEntity = resolveCanonicalOrderEntity(entity) ?? entity;
       const stampList = Array.from(root.getElementsByTagName('stampInfo'))
         .map((entry): StampTreeEntry | null => {
           const stampId = entry.getAttribute('stampId')?.trim();
@@ -197,7 +201,7 @@ const parseStampTreeXml = (xml: string): StampTree[] => {
           return {
             name,
             role: entry.getAttribute('role')?.trim() || undefined,
-            entity: entry.getAttribute('entity')?.trim() || entity,
+            entity: resolveCanonicalOrderEntity(entry.getAttribute('entity')?.trim() || normalizedEntity) ?? (entry.getAttribute('entity')?.trim() || normalizedEntity),
             memo: entry.getAttribute('memo')?.trim() || undefined,
             stampId,
           };
@@ -205,8 +209,8 @@ const parseStampTreeXml = (xml: string): StampTree[] => {
         .filter((entry): entry is StampTreeEntry => entry !== null);
       return {
         treeName: root.getAttribute('name')?.trim() || '（未分類）',
-        entity,
-        treeOrder: resolveTreeOrder(entity),
+        entity: normalizedEntity,
+        treeOrder: resolveTreeOrder(normalizedEntity),
         stampList,
       };
     })

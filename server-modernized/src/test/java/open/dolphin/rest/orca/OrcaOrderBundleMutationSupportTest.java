@@ -53,6 +53,32 @@ class OrcaOrderBundleMutationSupportTest {
     }
 
     @Test
+    void buildDocumentDoesNotDowngradeInvalidExplicitBodyPartIntoNormalClaimItem() {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setEntity(IInfoModel.ENTITY_TREATMENT);
+        operation.setBundleName("蜃ｦ鄂ｮ繧ｻ繝・ヨ");
+        operation.setClassCode("400");
+        operation.setClassCodeSystem("Claim007");
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("001001");
+        bodyPart.setName("invalid-body-part");
+        operation.setBodyPart(bodyPart);
+        OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
+        procedure.setCode("140000610");
+        procedure.setName("treatment-main");
+        operation.setItems(List.of(procedure));
+
+        DocumentModel document =
+                OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
+
+        BundleDolphin bundle = (BundleDolphin) document.getModules().get(0).getModel();
+        ClaimItem[] claimItems = bundle.getClaimItem();
+        assertNotNull(claimItems);
+        assertEquals(1, claimItems.length);
+        assertEquals("140000610", claimItems[0].getCode());
+    }
+
+    @Test
     void updateDocumentWithBundleReusesExistingModuleIdWhenRequestOmitsIt() {
         DocumentModel document = new DocumentModel();
         document.setKarteBean(new KarteBean());

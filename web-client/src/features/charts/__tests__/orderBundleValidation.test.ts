@@ -103,7 +103,7 @@ describe('validateBundleForm', () => {
     expect(issues).toHaveLength(0);
   });
 
-  it('generalOrder: 項目が必須で、用法は必須にしない', () => {
+  it('treatmentOrder: 項目が必須で、用法は必須にしない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -111,13 +111,13 @@ describe('validateBundleForm', () => {
         admin: '',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues).toHaveLength(0);
   });
 
-  it('generalOrder: コードあり/なし混在は明示的にブロックする', () => {
+  it('treatmentOrder: コードあり/なし混在は明示的にブロックする', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -127,26 +127,26 @@ describe('validateBundleForm', () => {
           { code: '', name: '未コード行', quantity: '1', unit: '回', memo: '' },
         ],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['mixed_coded_uncoded']);
   });
 
-  it('generalOrder: コードなし行のみは明示的にブロックする', () => {
+  it('treatmentOrder: コードなし行のみは明示的にブロックする', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '', name: '未コード行', quantity: '1', unit: '回', memo: '' }],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['uncoded_row']);
   });
 
-  it('generalOrder: コメントだけの束は保存前に止める', () => {
+  it('treatmentOrder: コメントだけの束は保存前に止める', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -154,7 +154,7 @@ describe('validateBundleForm', () => {
         items: [],
         commentItems: [{ code: '0081', name: 'コメント', quantity: '', unit: '', memo: '注意' }],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['comment_only']);
@@ -184,14 +184,14 @@ describe('validateBundleForm', () => {
     expect(aliasIssues).toEqual(canonicalIssues);
   });
 
-  it('generalOrder: オーダー名が未入力でも項目があればエラーにしない', () => {
+  it('treatmentOrder: オーダー名が未入力でも項目があればエラーにしない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual([]);
@@ -398,7 +398,7 @@ describe('validateBundleForm', () => {
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [{ code: '0081', name: '', quantity: '', unit: '', memo: '' }],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_comment_item']);
@@ -412,7 +412,7 @@ describe('validateBundleForm', () => {
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [{ code: '123', name: '注意事項', quantity: '', unit: '', memo: '' }],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_comment_code']);
@@ -426,7 +426,7 @@ describe('validateBundleForm', () => {
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues).toHaveLength(0);
@@ -440,7 +440,7 @@ describe('validateBundleForm', () => {
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         materialItems: [{ name: '', quantity: '1', unit: '枚', memo: '' }],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_material_item']);
@@ -469,7 +469,7 @@ describe('validateBundleForm', () => {
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         materialItems: [],
       },
-      entity: 'generalOrder',
+      entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
     expect(issues).toHaveLength(0);

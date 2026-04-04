@@ -9,9 +9,13 @@ import {
 import { fetchOrderBundles } from '../orderBundleApi';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
 
-vi.mock('../orderBundleApi', () => ({
-  fetchOrderBundles: vi.fn(),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn(),
+  };
+});
 
 vi.mock('../prescriptionOrderApi', async () => {
   const actual = await vi.importActual<typeof import('../prescriptionOrderApi')>('../prescriptionOrderApi');
@@ -82,6 +86,67 @@ describe('orderRpNormalization', () => {
     ]);
 
     expect(issues).toEqual([]);
+  });
+
+  it('rejects otherOrder bundles with non-numeric classCode', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'otherOrder',
+        bundleName: 'invalid-other-class',
+        classCode: '8A0',
+        items: [{ code: '180000210', name: 'other-main', quantity: '1', unit: 'times' }],
+      } as any,
+    ]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toEqual(
+      expect.objectContaining({
+        code: 'invalid_other_order_class',
+        bundleName: 'invalid-other-class',
+      }),
+    );
+  });
+
+  it('rejects injection bundles with invalid adminCode', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'injectionOrder',
+        bundleName: 'invalid-admin-code',
+        classCode: '310',
+        admin: 'infuse',
+        adminCode: 'Y100',
+        items: [{ code: '620000012', name: 'drug-c', quantity: '1', unit: 'ampoule', rowRole: 'main' }],
+      } as any,
+    ]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toEqual(
+      expect.objectContaining({
+        code: 'invalid_injection_admin_code',
+        bundleName: 'invalid-admin-code',
+      }),
+    );
+  });
+
+  it('rejects injection bundles without a main sendable row', () => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'injectionOrder',
+        bundleName: 'comment-only-injection',
+        classCode: '310',
+        admin: 'infuse',
+        adminCode: '4101',
+        items: [{ code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'slow', rowRole: 'comment' }],
+      } as any,
+    ]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toEqual(
+      expect.objectContaining({
+        code: 'comment_only',
+        bundleName: 'comment-only-injection',
+      }),
+    );
   });
 
   it('keeps units during normalization', () => {

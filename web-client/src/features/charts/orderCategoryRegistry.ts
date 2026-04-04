@@ -9,7 +9,6 @@ export type OrderEntity =
   | 'medOrder'
   | 'injectionOrder'
   | 'treatmentOrder'
-  | 'generalOrder'
   | 'surgeryOrder'
   | 'otherOrder'
   | 'testOrder'
@@ -23,6 +22,7 @@ export type OrderEntity =
 const ORDER_ENTITY_ALIASES: Record<string, OrderEntity> = {
   prescriptionOrder: 'medOrder',
   laboTest: 'testOrder',
+  generalOrder: 'treatmentOrder',
   instructionChargeOrder: 'instractionChargeOrder',
 };
 
@@ -30,7 +30,6 @@ const CANONICAL_ORDER_ENTITY_ALIASES: Record<OrderEntity, OrderEntity> = {
   medOrder: 'medOrder',
   injectionOrder: 'injectionOrder',
   treatmentOrder: 'treatmentOrder',
-  generalOrder: 'treatmentOrder',
   surgeryOrder: 'surgeryOrder',
   otherOrder: 'otherOrder',
   testOrder: 'testOrder',
@@ -226,15 +225,6 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     validation: BASE_EDITOR_VALIDATION,
     ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: true },
     editor: { title: '処置', bundleLabel: '処置名', itemQuantityLabel: '数量' },
-  },
-  generalOrder: {
-    label: '一般',
-    group: 'treatment',
-    etensuCategory: '4',
-    classMeta: { classCode: '400', className: '処置' },
-    validation: BASE_EDITOR_VALIDATION,
-    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: true },
-    editor: { title: '一般オーダー（処置400別表示）', bundleLabel: 'オーダー名', itemQuantityLabel: '数量' },
   },
   surgeryOrder: {
     label: '手術',
@@ -471,7 +461,7 @@ export const ORDER_GROUP_REGISTRY: Array<{
   {
     key: 'treatment',
     label: '処置',
-    entities: ['treatmentOrder', 'generalOrder', 'surgeryOrder', 'otherOrder'],
+    entities: ['treatmentOrder', 'surgeryOrder', 'otherOrder'],
     defaultEntity: 'treatmentOrder',
   },
   {

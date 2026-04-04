@@ -18,18 +18,22 @@ vi.mock('../orcaOrderInputSetApi', () => ({
   fetchOrcaOrderInputSetDetail: vi.fn(),
 }));
 
-vi.mock('../orderBundleApi', async () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({
-    ok: true,
-    bundles: [],
-    patientId: 'P-ORDER-001',
-  }),
-  mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER-ORCA-TEST' }),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({
+      ok: true,
+      bundles: [],
+      patientId: 'P-ORDER-001',
+    }),
+    mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER-ORCA-TEST' }),
+  };
+});
 
 const baseProps = {
   patientId: 'P-ORDER-001',
-  entity: 'generalOrder',
+  entity: 'treatmentOrder',
   title: '一般オーダー',
   bundleLabel: 'オーダー名',
   itemQuantityLabel: '数量',
@@ -223,14 +227,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'P02001',
       bundle: {
-        entity: 'generalOrder',
+        entity: 'treatmentOrder',
         sourceSetCode: 'P02001',
         bundleName: '創傷処置セット',
         bundleNumber: '1',
@@ -285,14 +289,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'P02001',
       bundle: {
-        entity: 'generalOrder',
+        entity: 'treatmentOrder',
         bundleName: '創傷処置セット',
         bundleNumber: '1',
         admin: '適宜',
@@ -325,7 +329,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
@@ -349,14 +353,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.getByLabelText('オーダー名')).toHaveValue('');
   });
 
-  it('generalOrder に treatmentOrder の診療セット詳細を反映できる', async () => {
+  it('treatmentOrder に treatmentOrder の診療セット詳細を反映できる', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 1 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 1 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,

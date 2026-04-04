@@ -149,6 +149,47 @@ const normalizeOrderBundleClassName = (
   return explicit || undefined;
 };
 
+export const ORDER_BUNDLE_BODY_PART_CODE_PREFIX = '002';
+
+const normalizeBodyPartText = (value?: string | null): string | undefined => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const hasOrderBundleBodyPartValue = (bodyPart?: OrderBundleBodyPart | null) =>
+  Boolean(
+    bodyPart?.code?.trim() ||
+      bodyPart?.name?.trim() ||
+      bodyPart?.quantity?.trim() ||
+      bodyPart?.unit?.trim() ||
+      bodyPart?.memo?.trim(),
+  );
+
+export const isOrderBundleBodyPartCode = (code?: string | null) =>
+  Boolean(normalizeBodyPartText(code)?.startsWith(ORDER_BUNDLE_BODY_PART_CODE_PREFIX));
+
+export const normalizeOrderBundleBodyPart = (
+  bodyPart?: OrderBundleBodyPart | null,
+  options?: { dropInvalid?: boolean },
+): OrderBundleBodyPart | undefined => {
+  if (!hasOrderBundleBodyPartValue(bodyPart)) return undefined;
+  const normalized: OrderBundleBodyPart = {
+    code: normalizeBodyPartText(bodyPart?.code),
+    name: normalizeBodyPartText(bodyPart?.name) ?? '',
+    quantity: normalizeBodyPartText(bodyPart?.quantity),
+    unit: normalizeBodyPartText(bodyPart?.unit),
+    memo: normalizeBodyPartText(bodyPart?.memo),
+    rowRole: 'bodyPart',
+  };
+  if (!normalized.name) {
+    return options?.dropInvalid ? undefined : normalized;
+  }
+  if (!normalized.code || !isOrderBundleBodyPartCode(normalized.code)) {
+    return options?.dropInvalid ? undefined : normalized;
+  }
+  return normalized;
+};
+
 const normalizeOrderEntityValue = (value?: string | null): string | undefined => {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -162,6 +203,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
     ...canonicalBundle,
     entity: normalizeOrderEntityValue(canonicalBundle.entity),
     bacteria: normalizeBacteriaOrderMetadata(canonicalBundle.bacteria),
+    bodyPart: normalizeOrderBundleBodyPart(canonicalBundle.bodyPart, { dropInvalid: true }),
     className: normalizeOrderBundleClassName(
       canonicalBundle.entity,
       canonicalBundle.classCode,
@@ -209,12 +251,6 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
         itemNumberBranch: fields.itemNumberBranch,
       };
     }),
-    bodyPart: canonicalBundle.bodyPart
-      ? {
-          ...canonicalBundle.bodyPart,
-          rowRole: 'bodyPart',
-        }
-      : canonicalBundle.bodyPart,
   };
 };
 
@@ -224,6 +260,7 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
     ...canonicalOperation,
     entity: normalizeOrderEntityValue(canonicalOperation.entity),
     bacteria: normalizeBacteriaOrderMetadata(canonicalOperation.bacteria),
+    bodyPart: normalizeOrderBundleBodyPart(canonicalOperation.bodyPart),
     className: normalizeOrderBundleClassName(
       canonicalOperation.entity,
       canonicalOperation.classCode,
@@ -271,12 +308,6 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         itemNumberBranch: fields.itemNumberBranch,
       };
     }),
-    bodyPart: canonicalOperation.bodyPart
-      ? {
-          ...canonicalOperation.bodyPart,
-          rowRole: 'bodyPart',
-        }
-      : canonicalOperation.bodyPart,
   };
 };
 

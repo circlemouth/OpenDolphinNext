@@ -297,7 +297,7 @@ describe('orderBundleApi bodyPart contract', () => {
                 entity: 'radiologyOrder',
                 bundleName: 'BRAIN_MRI',
                 items: [{ code: '700100', name: 'BRAIN_MRI' }],
-                bodyPart: { code: 'BP090', name: 'HEAD' },
+                bodyPart: { code: '002090', name: 'HEAD' },
               },
             ],
           }),

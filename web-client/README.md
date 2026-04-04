@@ -14,6 +14,7 @@
 - フィードバック表示の current contract: [notes/feedback-spec.md](./notes/feedback-spec.md)
 - UI 棚卸しと verification 境界: [notes/ui-current-contract.md](./notes/ui-current-contract.md)
 - ORCAオーダー是正の canonical/local-only 契約: [notes/orca-order-remediation-20260403.md](./notes/orca-order-remediation-20260403.md)
+- ORCAオーダー残タスクの cleanup 契約: [notes/orca-order-contract-cleanup-20260404.md](./notes/orca-order-contract-cleanup-20260404.md)
 - release gate の current contract: [notes/release-gate.md](./notes/release-gate.md)
 - security の正本: [notes/security-spec.md](./notes/security-spec.md)
 

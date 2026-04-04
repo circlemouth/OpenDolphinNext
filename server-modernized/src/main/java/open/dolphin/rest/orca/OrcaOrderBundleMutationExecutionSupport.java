@@ -94,29 +94,12 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)) {
             validateInjectionContract(op, validationFailure);
         }
+        boolean hasExplicitBodyPart = validateExplicitBodyPart(canonicalEntity, op.getBodyPart(), validationFailure);
         List<OrderBundleMutationRequest.BundleItem> items = collectItems(op);
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
         boolean hasSendableMainRow = false;
-        boolean hasBodyPart = false;
-        OrderBundleMutationRequest.BundleItem explicitBodyPart = op.getBodyPart();
-        if (hasValuedItem(explicitBodyPart)) {
-            if (!OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
-                throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
-            }
-            String explicitBodyPartName = OrcaOrderBundleRequestSupport.trimToNull(explicitBodyPart.getName());
-            String explicitBodyPartCode = OrcaOrderBundleRequestSupport.trimToNull(explicitBodyPart.getCode());
-            if (explicitBodyPartName == null) {
-                throw validationFailure.invalid("bodyPart", "bodyPart name is required");
-            }
-            if (!OrcaOrderBundleRequestSupport.isValidCodeForRowRole(
-                    canonicalEntity,
-                    OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART,
-                    explicitBodyPartCode)) {
-                throw validationFailure.invalid("bodyPart", "bodyPart must use 002 code");
-            }
-            hasBodyPart = true;
-        }
+        boolean hasBodyPart = hasExplicitBodyPart;
         for (OrderBundleMutationRequest.BundleItem item : items != null ? items : List.<OrderBundleMutationRequest.BundleItem>of()) {
             if (!hasValuedItem(item)) {
                 continue;
@@ -195,6 +178,30 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (!OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode(adminCode)) {
             throw validationFailure.invalid("adminCode", "adminCode must be a sendable numeric code for injectionOrder");
         }
+    }
+
+    private static boolean validateExplicitBodyPart(
+            String canonicalEntity,
+            OrderBundleMutationRequest.BundleItem bodyPart,
+            ValidationFailure validationFailure) {
+        if (!hasValuedItem(bodyPart)) {
+            return false;
+        }
+        if (!OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
+            throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
+        }
+        String name = OrcaOrderBundleRequestSupport.trimToNull(bodyPart.getName());
+        if (name == null) {
+            throw validationFailure.invalid("bodyPart", "bodyPart name is required");
+        }
+        String code = OrcaOrderBundleRequestSupport.trimToNull(bodyPart.getCode());
+        if (code == null) {
+            throw validationFailure.invalid("bodyPart", "bodyPart code is required");
+        }
+        if (!OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
+            throw validationFailure.invalid("bodyPart", "bodyPart must use code family 002");
+        }
+        return true;
     }
 
     private static boolean requiresSendableMainRow(String canonicalEntity) {

@@ -9,14 +9,18 @@ import { fetchOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 import { fetchOrcaMedicationGet } from '../orcaMedicationGetApi';
 
-vi.mock('../orderBundleApi', async () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({
-    ok: true,
-    bundles: [],
-    patientId: 'P-1',
-  }),
-  mutateOrderBundles: vi.fn(),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({
+      ok: true,
+      bundles: [],
+      patientId: 'P-1',
+    }),
+    mutateOrderBundles: vi.fn(),
+  };
+});
 
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
@@ -298,7 +302,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
-        entity="generalOrder"
+        entity="treatmentOrder"
         title="オーダー編集"
         bundleLabel="オーダー名"
         itemQuantityLabel="数量"
@@ -355,14 +359,14 @@ describe('OrderBundleEditPanel master search UI', () => {
     addButtons.forEach((button) => expect(button).toBeDisabled());
   });
 
-  it('generalOrder の場合はリハビリ部位検索が表示される', async () => {
+  it('treatmentOrder の場合はリハビリ部位検索が表示される', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
-        entity="generalOrder"
+        entity="treatmentOrder"
         title="オーダー編集"
         bundleLabel="オーダー名"
         itemQuantityLabel="数量"
@@ -429,7 +433,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('generalOrder の手技検索は etensu カテゴリ4を使用する', async () => {
+  it('treatmentOrder の手技検索は etensu カテゴリ4を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
@@ -443,7 +447,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
-        entity="generalOrder"
+        entity="treatmentOrder"
         title="オーダー編集"
         bundleLabel="オーダー名"
         itemQuantityLabel="数量"

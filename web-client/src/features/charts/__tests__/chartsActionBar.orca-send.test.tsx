@@ -58,9 +58,13 @@ vi.mock('../orcaMedicalModApi', () => ({
   }),
 }));
 
-vi.mock('../orderBundleApi', () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({ ok: true, bundles: [] }),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({ ok: true, bundles: [] }),
+  };
+});
 
 vi.mock('../prescriptionOrderApi', async () => {
   const actual = await vi.importActual<typeof import('../prescriptionOrderApi')>('../prescriptionOrderApi');

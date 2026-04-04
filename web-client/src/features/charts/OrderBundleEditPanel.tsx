@@ -8,7 +8,9 @@ import { useOptionalSession } from '../../AppRouter';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import {
   fetchOrderBundles,
+  isOrderBundleBodyPartCode,
   mutateOrderBundles,
+  normalizeOrderBundleBodyPart,
   type OrderBundle,
   type OrderBundleBodyPart,
   type OrderBundleItem,
@@ -305,7 +307,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 const MATERIAL_CODE_PREFIX = '7';
-const BODY_PART_CODE_PREFIX = '002';
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 const MIXING_COMMENT_MARKER = '__mixing_comment__';
 const DOCUMENT_ITEM_KEYWORDS = ['文書', '診断書', '紹介状', '返信', '報告', '証明書', '意見書', '指示書'];
@@ -447,7 +448,7 @@ const resolveBundleItemRowRole = (
   }
   if (item.rowRole === 'material') return 'auxiliary' as const;
   const code = item.code?.trim();
-  if (code?.startsWith(BODY_PART_CODE_PREFIX)) return 'bodyPart' as const;
+  if (isOrderBundleBodyPartCode(code)) return 'bodyPart' as const;
   if ((resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && isDrugMedicationCode(code ?? '')) {
     return 'auxiliary' as const;
   }
@@ -474,16 +475,7 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
   const normal: OrderBundleItem[] = [];
   const material: OrderBundleItem[] = [];
   const comment: OrderBundleItem[] = [];
-  const explicit = explicitBodyPart?.name?.trim()
-    ? {
-        code: explicitBodyPart.code?.trim() || undefined,
-        name: explicitBodyPart.name.trim(),
-        quantity: explicitBodyPart.quantity?.trim() || undefined,
-        unit: explicitBodyPart.unit?.trim() || undefined,
-        memo: explicitBodyPart.memo?.trim() || undefined,
-        rowRole: 'bodyPart' as const,
-      }
-    : null;
+  const explicit = normalizeOrderBundleBodyPart(explicitBodyPart, { dropInvalid: true }) ?? null;
   let bodyPart: OrderBundleBodyPart | null = explicit;
   let bodyPartResolvedFromItems = Boolean(explicit);
   (items ?? []).forEach((item) => {
@@ -547,15 +539,7 @@ const deriveBacteriaMetadataForForm = (form: BundleFormState) =>
   normalizeBacteriaOrderMetadata(commentItemsToBacteriaMetadata(form.commentItems, form.bacteria));
 
 const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | undefined => {
-  if (!form.bodyPart?.name?.trim()) return undefined;
-  return {
-    code: form.bodyPart.code?.trim() || undefined,
-    name: form.bodyPart.name.trim(),
-    quantity: form.bodyPart.quantity?.trim() || undefined,
-    unit: form.bodyPart.unit?.trim() || undefined,
-    memo: form.bodyPart.memo?.trim() || undefined,
-    rowRole: 'bodyPart',
-  };
+  return normalizeOrderBundleBodyPart(form.bodyPart);
 };
 
 const DEFAULT_VALIDATION_RULE: BundleValidationRule = {
@@ -1071,12 +1055,18 @@ export const validateBundleForm = ({
       message: 'この種別では bodyPart を保持できません。部位をクリアしてください。',
     });
   }
+  if (hasBodyPartValue && !form.bodyPart?.name?.trim() && !issues.some((issue) => issue.key === 'missing_body_part')) {
+    issues.push({
+      key: 'missing_body_part',
+      message: '部位は 002 系コードを持つマスタから選択してください。',
+    });
+  }
   if (form.bodyPart?.name?.trim() && !form.bodyPart.code?.trim()) {
     issues.push({
       key: 'missing_body_part_code',
-      message: '部位コードを選択してください。',
+      message: '部位は 002 系コードを持つマスタから選択してください。',
     });
-  } else if (form.bodyPart?.code?.trim() && !form.bodyPart.code.trim().startsWith(BODY_PART_CODE_PREFIX)) {
+  } else if (form.bodyPart?.code?.trim() && !isOrderBundleBodyPartCode(form.bodyPart.code)) {
     issues.push({
       key: 'invalid_body_part_code',
       message: 'bodyPart は 002 系コードのみ保存できます。',
@@ -1327,7 +1317,7 @@ export function OrderBundleEditPanel({
   const isChargeOrder = isChargeOrderEntity(entity);
   const isCompactOrderLayout = isMedOrder || isInjectionOrder;
   const isRadiologyOrder = entity === 'radiologyOrder';
-  const isRehabOrder = entity === 'generalOrder' || entity === 'treatmentOrder';
+  const isRehabOrder = entity === 'treatmentOrder';
   const isGaiyoPrescription = isMedOrder && form.prescriptionTiming === 'gaiyo';
   const rpRequiredIssueForForm = useMemo(
     () =>
@@ -2365,7 +2355,7 @@ export function OrderBundleEditPanel({
   };
 
   const applyBodyPart = (item: OrderMasterSearchItem) => {
-    clearValidationByKeys(['missing_body_part', 'missing_body_part_code']);
+    clearValidationByKeys(['missing_body_part', 'missing_body_part_code', 'invalid_body_part_code']);
     setForm((prev) => ({
       ...prev,
       bodyPart: {
@@ -3067,6 +3057,7 @@ export function OrderBundleEditPanel({
           case 'missing_body_part':
             return `${entityId}-bodypart`;
           case 'missing_body_part_code':
+          case 'invalid_body_part_code':
             return `${entityId}-bodypart`;
           case 'missing_items':
           case 'missing_main_row':
@@ -3327,7 +3318,8 @@ export function OrderBundleEditPanel({
   const bodyPartError =
     validationByKey.get('unsupported_body_part') ??
     validationByKey.get('missing_body_part') ??
-    validationByKey.get('missing_body_part_code');
+    validationByKey.get('missing_body_part_code') ??
+    validationByKey.get('invalid_body_part_code');
   const commentError =
     validationByKey.get('invalid_comment_item') ?? validationByKey.get('invalid_comment_code');
 
@@ -4125,21 +4117,9 @@ export function OrderBundleEditPanel({
                   value={form.bodyPart?.name ?? ''}
                   data-orca-warning={orcaWarningTargets.bodyPart ? 'true' : undefined}
                   aria-invalid={bodyPartError ? 'true' : undefined}
-                  onChange={(event) => {
-                    clearValidationByKeys(['unsupported_body_part', 'missing_body_part', 'missing_body_part_code']);
-                    const nextName = event.target.value;
-                    setForm((prev) => ({
-                      ...prev,
-                      bodyPart: {
-                        code: prev.bodyPart?.code,
-                        name: nextName,
-                        quantity: prev.bodyPart?.quantity ?? '',
-                        unit: prev.bodyPart?.unit ?? '',
-                        memo: prev.bodyPart?.memo ?? '',
-                      },
-                    }));
-                  }}
-                  placeholder={supportsBodyPartSearch ? (isRadiologyOrder ? '例: 胸部' : '例: 膝関節') : '保持しない場合はクリアしてください'}
+                  readOnly
+                  aria-readonly="true"
+                  placeholder={supportsBodyPartSearch ? '部位検索から選択してください' : '保持しない場合はクリアしてください'}
                   disabled={isBlocked}
                 />
                 {bodyPartError ? (
@@ -4171,19 +4151,22 @@ export function OrderBundleEditPanel({
               <button
                 type="button"
                 className="charts-side-panel__action charts-side-panel__action--clear"
-                onClick={() => setForm((prev) => ({ ...prev, bodyPart: null }))}
+                onClick={() => {
+                  clearValidationByKeys(['unsupported_body_part', 'missing_body_part', 'missing_body_part_code', 'invalid_body_part_code']);
+                  setForm((prev) => ({ ...prev, bodyPart: null }));
+                }}
                 disabled={isBlocked || !form.bodyPart?.name}
               >
                 部位クリア
               </button>
             </div>
-            {!isRadiologyOrder && (
-              <p className="charts-side-panel__message">
-                {supportsBodyPartSearch
-                  ? 'リハビリ部位は任意入力です。部位マスタから選択するか、手入力で補足できます。'
-                  : 'この種別では bodyPart を保存・送信しません。値が残っている場合はクリアしてください。'}
-              </p>
-            )}
+            <p className="charts-side-panel__message">
+              {supportsBodyPartSearch
+                ? isRadiologyOrder
+                  ? '放射線は 002 系の部位マスタ選択が必須です。自由入力では保存できません。'
+                  : 'bodyPart を保存する場合は 002 系の部位マスタから選択してください。自由入力では保存できません。'
+                : 'この種別では bodyPart を保存・送信しません。値が残っている場合はクリアしてください。'}
+            </p>
             {supportsBodyPartSearch && bodyPartSearchQuery.data && !bodyPartSearchQuery.data.ok && (
               <div className="charts-side-panel__notice charts-side-panel__notice--error" role="alert" aria-live="assertive">
                 {bodyPartSearchQuery.data.message ?? '部位マスタの検索に失敗しました。'}

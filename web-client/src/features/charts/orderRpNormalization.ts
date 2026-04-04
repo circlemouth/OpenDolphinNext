@@ -6,6 +6,8 @@ import {
 } from './orderCategoryRegistry';
 import {
   fetchOrderBundles,
+  isOrderBundleBodyPartCode,
+  normalizeOrderBundleBodyPart,
   type OrderBundle,
   type OrderBundleItem,
   type OrderBundleRowRole,
@@ -16,17 +18,18 @@ import {
   buildRpRequiredBlockedMessage,
   collectOrderBundleCodeIssues,
   collectRpRequiredIssues,
+  hasInjectionAdminText,
+  hasInvalidInjectionAdminCode,
+  isSendableInjectionAdminCode,
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
-const BODY_PART_CODE_PATTERN = /^002/;
 const DRUG_CODE_PATTERN = /^6\d{8}$/;
 
 const isCommentMedicationCode = (code: string) => COMMENT_CODE_PATTERN.test(code.trim());
-const isBodyPartCode = (code: string) => BODY_PART_CODE_PATTERN.test(code.trim());
 
 const hasBundleItemValue = (item: OrderBundleItem) =>
   Boolean(item.code?.trim() || item.name?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
@@ -71,7 +74,11 @@ export type MedicalModV2BundleIssueCode =
   | 'uncoded_row'
   | 'mixed_coded_uncoded'
   | 'comment_only'
-  | 'missing_main_row';
+  | 'missing_main_row'
+  | 'invalid_other_order_class'
+  | 'invalid_injection_class'
+  | 'missing_injection_admin_code'
+  | 'invalid_injection_admin_code';
 
 export type MedicalModV2BundleIssue = {
   code: MedicalModV2BundleIssueCode;
@@ -100,17 +107,18 @@ const cloneBundleItem = (item?: OrderBundleItem | null): OrderBundleItem | null 
 };
 
 const cloneBodyPartItem = (item?: OrderBundle['bodyPart'] | null): OrderBundleItem | null => {
-  if (!item?.name?.trim()) return null;
+  const normalized = normalizeOrderBundleBodyPart(item, { dropInvalid: true });
+  if (!normalized) return null;
   return {
-    code: item.code?.trim() || undefined,
-    name: item.name.trim(),
-    quantity: item.quantity?.trim() || undefined,
-    unit: item.unit?.trim() || undefined,
-    memo: item.memo?.trim() || undefined,
+    code: normalized.code,
+    name: normalized.name,
+    quantity: normalized.quantity,
+    unit: normalized.unit,
+    memo: normalized.memo,
   };
 };
 
-const isBodyPartCodeValue = (code?: string | null) => Boolean(code?.trim() && isBodyPartCode(code.trim()));
+const isBodyPartCodeValue = (code?: string | null) => isOrderBundleBodyPartCode(code);
 
 const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
   const normalizedCode = code?.trim();
@@ -270,10 +278,63 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
     ];
   }
 
+  const medicalClass = resolveMedicalClass(bundle);
+  if (canonicalEntity === 'otherOrder' && !/^\d+$/.test(medicalClass)) {
+    return [
+      buildBundleIssue(
+        bundle,
+        'invalid_other_order_class',
+        'otherOrder の classCode は数字のみ送信できます。classCode を 800 系の有効値へ修正してください。',
+      ),
+    ];
+  }
+
+  if (canonicalEntity === 'injectionOrder') {
+    if (medicalClass !== '310') {
+      return [
+        buildBundleIssue(
+          bundle,
+          'invalid_injection_class',
+          '注射 bundle は classCode 310 のみ送信できます。classCode を 310 に修正してください。',
+        ),
+      ];
+    }
+    const adminCode = bundle.adminCode?.trim() ?? '';
+    if (hasInjectionAdminText(bundle.admin) && !adminCode) {
+      return [
+        buildBundleIssue(
+          bundle,
+          'missing_injection_admin_code',
+          '注射 bundle に admin はありますが adminCode がありません。送信可能な adminCode を設定してください。',
+        ),
+      ];
+    }
+    if (hasInvalidInjectionAdminCode(adminCode) || (adminCode && !isSendableInjectionAdminCode(adminCode))) {
+      return [
+        buildBundleIssue(
+          bundle,
+          'invalid_injection_admin_code',
+          '非数値 code は送信できません。送信可能な adminCode を設定してください。',
+        ),
+      ];
+    }
+  }
+
   const sendableMainRows = codedRows.filter((row) => {
     const code = row.item.code?.trim() ?? '';
-    return !isCommentMedicationCode(code) && !isBodyPartCode(code);
+    if (isCommentMedicationCode(code) || isOrderBundleBodyPartCode(code)) return false;
+    if (row.source.kind !== 'bundle_item') return false;
+    return row.source.rowRole === 'main';
   });
+  if (canonicalEntity === 'injectionOrder' && sendableMainRows.length === 0) {
+    return [
+      buildBundleIssue(
+        bundle,
+        'comment_only',
+        '本体となる注射薬剤/手技コード行がありません。主行となる送信可能コードを 1 行以上設定してください。',
+      ),
+    ];
+  }
   const requireMainRow = canonicalEntity !== 'medOrder' && canonicalEntity !== 'injectionOrder';
   if (requireMainRow && sendableMainRows.length === 0) {
     return [
@@ -460,7 +521,7 @@ const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSou
   const normalized = code.trim();
   if (!normalized) return false;
   if (sourceKind === 'usage') return /^\d+$/.test(normalized);
-  if (sourceKind === 'body_part') return /^002\d{0,}$/.test(normalized);
+  if (sourceKind === 'body_part') return isOrderBundleBodyPartCode(normalized);
   return /^\d{9}$/.test(normalized) || isCommentMedicationCode(normalized);
 };
 

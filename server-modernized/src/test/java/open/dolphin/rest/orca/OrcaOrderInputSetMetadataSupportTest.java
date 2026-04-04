@@ -18,13 +18,13 @@ class OrcaOrderInputSetMetadataSupportTest {
                 IInfoModel.ENTITY_BASE_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("110", LOGGER).entity());
         assertEquals(
-                "基本診療料",
+                OrcaChargeClassCanonicalSupport.BASE_CHARGE_CLASS_NAME,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("125", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("130", LOGGER).entity());
         assertEquals(
-                "医学管理等",
+                OrcaChargeClassCanonicalSupport.INSTRUCTION_CHARGE_CLASS_NAME,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("150", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_TREATMENT,
@@ -33,20 +33,20 @@ class OrcaOrderInputSetMetadataSupportTest {
                 "testOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("600", LOGGER).entity());
         assertEquals(
-                IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                "radiologyOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("700", LOGGER).entity());
         assertEquals(
-                IInfoModel.ENTITY_OTHER_ORDER,
+                "otherOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("800", LOGGER).entity());
     }
 
     @Test
-    void resolveClassMetadataFallsBackToGeneralEntity() {
+    void resolveClassMetadataMarksUnknownClassAsUnsupported() {
         OrcaOrderInputSetSupport.ClassMetadata metadata =
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("invalid", LOGGER);
 
         assertNotNull(metadata);
-        assertEquals(IInfoModel.ENTITY_GENERAL_ORDER, metadata.entity());
-        assertEquals("汎用", metadata.className());
+        assertEquals(OrcaOrderInputSetMetadataSupport.UNSUPPORTED_ENTITY, metadata.entity());
+        assertEquals(OrcaOrderInputSetMetadataSupport.UNSUPPORTED_CLASS_NAME, metadata.className());
     }
 }

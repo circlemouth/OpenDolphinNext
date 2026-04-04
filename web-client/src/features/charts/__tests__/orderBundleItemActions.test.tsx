@@ -9,14 +9,18 @@ import { mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 
-vi.mock('../orderBundleApi', async () => ({
-  fetchOrderBundles: vi.fn().mockResolvedValue({
-    ok: true,
-    bundles: [],
-    patientId: 'P-1',
-  }),
-  mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER' }),
-}));
+vi.mock('../orderBundleApi', async () => {
+  const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
+  return {
+    ...actual,
+    fetchOrderBundles: vi.fn().mockResolvedValue({
+      ok: true,
+      bundles: [],
+      patientId: 'P-1',
+    }),
+    mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER' }),
+  };
+});
 
 vi.mock('../stampApi', async () => ({
   fetchUserProfile: vi.fn().mockResolvedValue({ ok: true, id: 1, userId: 'facility:doctor' }),
@@ -69,7 +73,7 @@ const injectionProps = {
 };
 const generalProps = {
   ...baseProps,
-  entity: 'generalOrder',
+  entity: 'treatmentOrder',
   title: '一般オーダー編集',
   bundleLabel: 'オーダー名',
   itemQuantityLabel: '回数',
@@ -460,7 +464,7 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(operation?.className).toBe('頓服薬剤（院内処方）');
   });
 
-  it('generalOrder は仕様準拠の Medical_Class を保存 payload に付与する', async () => {
+  it('treatmentOrder は仕様準拠の Medical_Class を保存 payload に付与する', async () => {
     const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type, keyword }) => {

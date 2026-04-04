@@ -36,7 +36,7 @@ import {
 import { normalizeInline, resolvePrescriptionTiming, stripLeadingCode } from './orderDetailFormatters';
 import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 
-type TreatmentOrderEntity = 'treatmentOrder' | 'generalOrder' | 'surgeryOrder' | 'otherOrder';
+type TreatmentOrderEntity = 'treatmentOrder' | 'surgeryOrder' | 'otherOrder';
 type TestOrderEntity = 'testOrder' | 'physiologyOrder' | 'bacteriaOrder' | 'radiologyOrder';
 type ChargeOrderEntity = 'baseChargeOrder' | 'instractionChargeOrder';
 type OrderDockPanelStateChange = {
@@ -302,7 +302,6 @@ const quickAddCategories = [
 
 const treatmentSubtypeTabs = [
   { key: 'treatmentOrder' as const, label: '処置' },
-  { key: 'generalOrder' as const, label: '一般(処置400別表示)' },
   { key: 'surgeryOrder' as const, label: '手術' },
   { key: 'otherOrder' as const, label: 'その他' },
 ] as const;
@@ -545,7 +544,7 @@ export function OrderDockPanel(props: {
         : quickSearchGroup === 'injection'
           ? ['injectionOrder']
           : quickSearchGroup === 'treatment'
-            ? ['treatmentOrder', 'generalOrder', 'surgeryOrder', 'otherOrder']
+            ? ['treatmentOrder', 'surgeryOrder', 'otherOrder']
             : quickSearchGroup === 'test'
               ? ['testOrder', 'physiologyOrder', 'bacteriaOrder', 'radiologyOrder']
               : quickSearchGroup === 'charge'

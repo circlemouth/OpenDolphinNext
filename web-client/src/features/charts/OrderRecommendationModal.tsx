@@ -18,8 +18,6 @@ const resolveEntityLabel = (entity?: string | null): string => {
   switch ((entity ?? '').trim()) {
     case 'treatmentOrder':
       return '処置';
-    case 'generalOrder':
-      return '一般';
     case 'surgeryOrder':
       return '手術';
     case 'otherOrder':

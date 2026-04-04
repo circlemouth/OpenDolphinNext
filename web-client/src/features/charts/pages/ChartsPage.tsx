@@ -550,7 +550,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
 	  type PastOrderEntity =
 	    | 'medOrder'
-	    | 'generalOrder'
 	    | 'injectionOrder'
 	    | 'treatmentOrder'
 	    | 'surgeryOrder'

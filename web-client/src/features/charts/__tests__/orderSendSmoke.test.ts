@@ -94,6 +94,8 @@ describe('order send smoke', () => {
     });
 
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'radiologyOrder' });
+    expect(fetched.ok).toBe(true);
+    expect(fetched.bundles[0]?.entity).toBe('radiologyOrder');
     const normalized = fetched.bundles
       .map((bundle) => toMedicalModV2InformationWithSource(bundle))
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));

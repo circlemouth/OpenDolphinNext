@@ -6,6 +6,7 @@ import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { useOptionalSession } from '../../AppRouter';
 import { readStoredSession } from '../../libs/session/storedSession';
 import type { OrderBundleItem } from './orderBundleApi';
+import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
 import { fetchStampDetail, fetchStampTree, type StampBundleJson, type StampTree } from './stampApi';
 import {
   deleteLocalStamp,
@@ -59,7 +60,6 @@ const DEFAULT_STAMP_TARGET = 'medOrder';
 
 const STAMP_TARGET_OPTIONS = [
   { value: 'medOrder', label: '処方' },
-  { value: 'generalOrder', label: '一般(処置400別表示)' },
   { value: 'injectionOrder', label: '注射' },
   { value: 'treatmentOrder', label: '処置' },
   { value: 'surgeryOrder', label: '手術' },
@@ -93,6 +93,12 @@ const cloneBundle = (bundle: LocalStampEntry['bundle']): LocalStampEntry['bundle
   ...bundle,
   items: (bundle.items ?? []).map((item) => ({ ...item })),
 });
+
+const normalizeStampEntity = (value?: string | null) => {
+  const normalized = value?.trim();
+  if (!normalized) return '';
+  return resolveCanonicalOrderEntity(normalized) ?? normalized;
+};
 
 const toLocalBundleFromStamp = (stamp: StampBundleJson, today: string): LocalStampEntry['bundle'] => ({
   bundleName: stamp.orderName ?? stamp.className ?? '',
@@ -244,8 +250,8 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
     return localStamps.map((stamp) => ({
       source: 'local',
       category: stamp.category?.trim() ? stamp.category : '（未分類）',
-      target: stamp.target,
-      entity: stamp.entity,
+      target: normalizeStampEntity(stamp.target),
+      entity: normalizeStampEntity(stamp.entity),
       id: stamp.id,
       name: stamp.name,
       stamp,
@@ -283,7 +289,7 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
   const entities = useMemo(() => {
     const treeEntities = collectStampTreeEntities(trees);
     const localEntities = localStamps
-      .flatMap((stamp) => [stamp.target, stamp.entity])
+      .flatMap((stamp) => [normalizeStampEntity(stamp.target), normalizeStampEntity(stamp.entity)])
       .filter((value): value is string => Boolean(value && value.trim()));
     return Array.from(new Set([...treeEntities, ...localEntities])).sort();
   }, [localStamps, trees]);
@@ -349,7 +355,7 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
   };
 
   const applyEditorFromLocalStamp = (stamp: LocalStampEntry) => {
-    const target = stamp.target?.trim() || stamp.entity?.trim() || DEFAULT_STAMP_TARGET;
+    const target = normalizeStampEntity(stamp.target) || normalizeStampEntity(stamp.entity) || DEFAULT_STAMP_TARGET;
     setEditor({
       localStampId: stamp.id,
       name: stamp.name,
@@ -364,7 +370,7 @@ export function StampLibraryPanel({ phase }: StampLibraryPanelProps) {
       localStampId: undefined,
       name: item.name || stamp.orderName || stamp.className || '',
       category: item.treeName,
-      target: item.entity?.trim() || DEFAULT_STAMP_TARGET,
+      target: normalizeStampEntity(item.entity) || DEFAULT_STAMP_TARGET,
       bundle: toLocalBundleFromStamp(stamp, today),
     });
   };

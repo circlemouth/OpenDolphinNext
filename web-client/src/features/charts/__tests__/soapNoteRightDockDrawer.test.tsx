@@ -553,8 +553,8 @@ describe('SoapNotePanel right dock drawer', () => {
         items: [{ name: '創部洗浄', quantity: '1', unit: '回' }],
       },
       {
-        entity: 'generalOrder',
-        bundleName: '一般処置B',
+        entity: 'otherOrder',
+        bundleName: 'その他オーダーB',
         started: '2026-02-27T10:00:00+09:00',
         documentId: 402,
         moduleId: 42,
@@ -580,21 +580,20 @@ describe('SoapNotePanel right dock drawer', () => {
     await user.click(screen.getByRole('button', { name: '処置を開く' }));
     const tabList = await screen.findByRole('tablist', { name: '処置サブカテゴリ' });
     const treatmentTab = within(tabList).getByRole('tab', { name: '処置' });
-    const generalTab = within(tabList).getByRole('tab', { name: '一般' });
+    const otherTab = within(tabList).getByRole('tab', { name: 'その他' });
 
     expect(treatmentTab).toHaveAttribute('aria-selected', 'true');
-    expect(generalTab).toHaveAttribute('aria-selected', 'false');
+    expect(otherTab).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByText('処置セットA')).toBeInTheDocument();
-    expect(screen.queryByText('一般処置B')).not.toBeInTheDocument();
+    expect(screen.queryByText('その他オーダーB')).not.toBeInTheDocument();
 
-    treatmentTab.focus();
-    fireEvent.keyDown(treatmentTab, { key: 'ArrowRight' });
+    await user.click(otherTab);
 
     await waitFor(() => {
       const currentTabList = screen.getByRole('tablist', { name: '処置サブカテゴリ' });
-      expect(within(currentTabList).getByRole('tab', { name: '一般' })).toHaveAttribute('aria-selected', 'true');
+      expect(within(currentTabList).getByRole('tab', { name: 'その他' })).toHaveAttribute('aria-selected', 'true');
     });
-    expect(screen.getByText('一般処置B')).toBeInTheDocument();
+    expect(screen.getByText('その他オーダーB')).toBeInTheDocument();
     expect(screen.queryByText('処置セットA')).not.toBeInTheDocument();
   });
 
