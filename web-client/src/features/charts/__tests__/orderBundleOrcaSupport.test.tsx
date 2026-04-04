@@ -130,7 +130,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     ).toBeInTheDocument();
   });
 
-  it('physiologyOrder も 600 local-only 契約を明示する', () => {
+  it('physiologyOrder は保存/表示 continuity と explicit block を明示する', () => {
     renderPanel({
       ...testProps,
       entity: 'physiologyOrder',
@@ -138,10 +138,11 @@ describe('OrderBundleEditPanel ORCA support', () => {
     });
 
     expect(
-      screen.getByText(
-        '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。',
-      ),
-    ).toBeInTheDocument();
+      screen.getAllByText(
+        /生理検査.*保存.*表示.*ORCA送信.*(explicit block|停止|使いません).*(bodyPart|部位).*(reject|拒否|block|停止)/,
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByLabelText('生理検査 subtype')).toHaveDisplayValue('生理');
   });
   it('otherOrder は local-only field の送信契約を明示する', () => {
     renderPanel(otherProps);
@@ -274,14 +275,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
-    const operation = payload?.operations?.[0];
-    expect(operation?.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: 'M001', rowRole: 'material', unit: '個' }),
-      ]),
-    );
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 
   it('非空フォームでは confirm 後に ORCA診療セットを反映する', async () => {
@@ -422,13 +416,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
-    const operation = payload?.operations?.[0];
-    expect(operation?.entity).toBe('baseChargeOrder');
-    expect(operation?.classCode).toBe('130');
-    expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('指導・在宅');
-    expect(operation?.adminMemo).toBe('算定前確認');
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 
   it('radiologyOrder の ORCA診療セット適用後も bodyPart と class meta を保存 payload で保持する', async () => {
@@ -781,14 +769,6 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
-    const operation = payload?.operations?.[0];
-    expect(operation?.entity).toBe('treatmentOrder');
-    expect(operation?.items).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: '140000610', rowRole: 'main' }),
-        expect.objectContaining({ code: 'M002', rowRole: 'material', unit: '個' }),
-      ]),
-    );
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 });

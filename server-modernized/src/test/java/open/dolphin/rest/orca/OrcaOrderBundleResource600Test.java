@@ -435,6 +435,95 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void postBundlesRejectsBodyPartForPhysiologyOrder() {
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_PHYSIOLOGY_ORDER);
+        op.setSubtype("physiology");
+        op.setBundleName("physiology-main");
+        op.setClassCode("600");
+        op.setClassCodeSystem("Claim007");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("002001");
+        bodyPart.setName("invalid-body-part");
+        op.setBodyPart(bodyPart);
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("160000010");
+        item.setName("physiology-main");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
+
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart is incompatible with entity", body.get("message"));
+    }
+
+    @Test
+    void postBundlesPersistsPhysiologyOrderLocalOnlyFieldsAndFetchReturnsIt() throws Exception {
+        karteServiceBean = new BasicKarteServiceBean(List.of());
+        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+
+        OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
+        payload.setPatientId("00001");
+
+        OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
+        op.setOperation("create");
+        op.setEntity(IInfoModel.ENTITY_PHYSIOLOGY_ORDER);
+        op.setSubtype("physiology");
+        op.setBundleName("physiology-main");
+        op.setClassCode("600");
+        op.setClassCodeSystem("Claim007");
+        op.setClassName("検査");
+        op.setAdmin("検査指示");
+        op.setAdminMemo("安静条件");
+        op.setMemo("bundle memo");
+        op.setStartDate("2025-01-01");
+
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("160000010");
+        item.setName("physiology-main");
+        item.setQuantity("1");
+        item.setUnit("回");
+        op.setItems(List.of(item));
+        payload.setOperations(List.of(op));
+
+        OrderBundleMutationResponse mutationResponse = resource.postBundles(servletRequest, payload);
+
+        assertNotNull(mutationResponse);
+        OrderBundleFetchResponse fetched = resource.getBundles(
+                servletRequest,
+                "00001",
+                IInfoModel.ENTITY_PHYSIOLOGY_ORDER,
+                "2025-01-01");
+
+        assertNotNull(fetched);
+        assertEquals(1, fetched.getBundles().size());
+        OrderBundleFetchResponse.OrderBundleEntry entry = fetched.getBundles().get(0);
+        assertEquals(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, entry.getEntity());
+        assertEquals("physiology", entry.getSubtype());
+        assertEquals("検査指示", entry.getAdmin());
+        assertEquals("安静条件", entry.getAdminMemo());
+        assertEquals("bundle memo", entry.getMemo());
+        assertEquals(1, entry.getItems().size());
+        assertEquals("160000010", entry.getItems().get(0).getCode());
+    }
+
+    @Test
     void postBundlesPersistsTestOrderLocalOnlyFieldsAndMultipleCommentRows() throws Exception {
         karteServiceBean = new BasicKarteServiceBean(List.of());
         resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);

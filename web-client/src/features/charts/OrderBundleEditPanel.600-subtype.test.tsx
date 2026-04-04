@@ -58,7 +58,7 @@ afterEach(() => {
 });
 
 describe('OrderBundleEditPanel 600 subtype ui', () => {
-  it('physiologyOrder shows a fixed subtype field and local-only bundle-common guidance', () => {
+  it('physiologyOrder shows a fixed subtype field and explicit block guidance', () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -83,7 +83,9 @@ describe('OrderBundleEditPanel 600 subtype ui', () => {
       'placeholder',
       '例: 安静時 / 12誘導（ORCA送信しない）',
     );
-    expect(screen.getByText('admin(検査指示) は bundle 共通の院内ローカル情報です。複数検査項目をまとめても ORCA へは送信しません。')).toBeInTheDocument();
+    expect(
+      screen.getByText('検査指示は院内ローカル保存のみです。official ORCA carrier 不足のため ORCA送信は停止します。'),
+    ).toBeInTheDocument();
   });
 
   it('bacteriaOrder shows a subtype selector and local-only/block guidance', () => {

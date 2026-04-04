@@ -15,7 +15,12 @@ import { httpFetch } from '../../../libs/http/httpClient';
 import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles, mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrcaOrderInputSetDetail } from '../orcaOrderInputSetApi';
-import { fetchMedicalModV2OrderBundles, prepareMedicalModV2SendData, toMedicalModV2InformationWithSource } from '../orderRpNormalization';
+import {
+  buildMedicalModV2BlockNotice,
+  fetchMedicalModV2OrderBundles,
+  prepareMedicalModV2SendData,
+  toMedicalModV2InformationWithSource,
+} from '../orderRpNormalization';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder, savePrescriptionOrder } from '../prescriptionOrderApi';
 
 describe('order send smoke', () => {
@@ -701,6 +706,124 @@ describe('order send smoke', () => {
       ]),
     );
     expect(httpFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('save fetch normalize smoke blocks physiologyOrder before send and keeps save/display continuity', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            setCode: 'P60001',
+            bundle: {
+              entity: 'physiologyOrder',
+              sourceSetCode: 'P60001',
+              bundleName: '生理検査セット',
+              bundleNumber: '7',
+              subtype: 'physiology',
+              classCode: '600',
+              classCodeSystem: 'Claim007',
+              className: '検査',
+              admin: '至急',
+              adminMemo: '安静条件',
+              memo: 'bundle memo',
+              items: [{ code: '160000090', name: '生理検査A', quantity: '1', unit: '回', memo: '' }],
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-SAVE-PHYSIOLOGY',
+            createdDocumentIds: [505],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-FETCH-PHYSIOLOGY',
+            patientId: '000001',
+            bundles: [
+              {
+                entity: 'physiologyOrder',
+                bundleName: '生理検査セット',
+                bundleNumber: '7',
+                subtype: 'physiology',
+                classCode: '600',
+                classCodeSystem: 'Claim007',
+                className: '検査',
+                admin: '至急',
+                adminMemo: '安静条件',
+                memo: 'bundle memo',
+                items: [{ code: '160000090', name: '生理検査A', quantity: '1', unit: '回', memo: '' }],
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+    const inputSet = await fetchOrcaOrderInputSetDetail({
+      setCode: 'P60001',
+      effective: '20260309',
+      entity: 'physiologyOrder',
+    });
+    expect(inputSet.ok).toBe(true);
+    expect(inputSet.bundle?.entity).toBe('physiologyOrder');
+    expect(inputSet.bundle?.subtype).toBe('physiology');
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'physiologyOrder',
+          subtype: inputSet.bundle?.subtype,
+          bundleName: inputSet.bundle?.bundleName,
+          bundleNumber: inputSet.bundle?.bundleNumber,
+          classCode: inputSet.bundle?.classCode,
+          classCodeSystem: inputSet.bundle?.classCodeSystem,
+          className: inputSet.bundle?.className,
+          admin: inputSet.bundle?.admin,
+          adminMemo: inputSet.bundle?.adminMemo,
+          memo: inputSet.bundle?.memo,
+          items: inputSet.bundle?.items as any,
+        },
+      ],
+    });
+
+    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'physiologyOrder' });
+    expect(fetched.ok).toBe(true);
+    expect(fetched.bundles[0]?.entity).toBe('physiologyOrder');
+    expect(fetched.bundles[0]?.subtype).toBe('physiology');
+    expect(fetched.bundles[0]?.admin).toBe('至急');
+    expect(fetched.bundles[0]?.adminMemo).toBe('安静条件');
+    expect(fetched.bundles[0]?.memo).toBe('bundle memo');
+
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    expect(prepared.bundleIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          entity: 'physiologyOrder',
+          detail: expect.stringMatching(/(physiology|生理|送信|block|停止)/),
+        }),
+      ]),
+    );
+    expect(buildMedicalModV2BlockNotice(prepared)).not.toBeNull();
+    expect(buildMedicalModV2BlockNotice(prepared)?.message).toMatch(/(physiology|生理)/);
+    expect(httpFetch).toHaveBeenCalledTimes(3);
   });
 
   it('save fetch normalize send payload smoke keeps injection rowRole patterns and drops local-only fields', async () => {

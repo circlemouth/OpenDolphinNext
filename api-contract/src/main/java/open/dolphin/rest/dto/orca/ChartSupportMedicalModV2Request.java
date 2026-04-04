@@ -97,10 +97,20 @@ public class ChartSupportMedicalModV2Request {
     }
 
     public static class MedicalInformation {
+        /** Local-only carrier. physiologyOrder is not first-class in ORCA payload/XML. */
+        private String entity;
         private String medicalClass;
         private String medicalClassName;
         private String medicalClassNumber;
         private List<Medication> medications = new ArrayList<>();
+
+        public String getEntity() {
+            return entity;
+        }
+
+        public void setEntity(String entity) {
+            this.entity = entity;
+        }
 
         public String getMedicalClass() {
             return medicalClass;
@@ -132,6 +142,10 @@ public class ChartSupportMedicalModV2Request {
 
         public void setMedications(List<Medication> medications) {
             this.medications = medications;
+        }
+
+        public boolean isPhysiologyOrder() {
+            return "physiologyOrder".equals(entity != null ? entity.trim() : null);
         }
     }
 
@@ -171,6 +185,24 @@ public class ChartSupportMedicalModV2Request {
 
         public void setGenericFlg(String genericFlg) {
             this.genericFlg = genericFlg;
+        }
+    }
+
+    public boolean hasPhysiologyOrder() {
+        if (medicalInformation == null || medicalInformation.isEmpty()) {
+            return false;
+        }
+        for (MedicalInformation information : medicalInformation) {
+            if (information != null && information.isPhysiologyOrder()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void validateForOrcaSend() {
+        if (hasPhysiologyOrder()) {
+            throw new IllegalArgumentException("physiologyOrder is not supported for ORCA medical-mod-v2");
         }
     }
 }

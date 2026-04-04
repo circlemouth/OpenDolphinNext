@@ -608,6 +608,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         item.setName("initial-consultation");
         item.setQuantity("1");
         item.setUnit("times");
+        item.setMasterCategory("110");
         op.setItems(List.of(item));
         payload.setOperations(List.of(op));
 

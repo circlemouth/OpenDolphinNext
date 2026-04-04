@@ -37,6 +37,7 @@ export type MedicalModV2Medication = {
 };
 
 export type MedicalModV2Information = {
+  entity?: string;
   medicalClass: string;
   medicalClassName?: string;
   medicalClassNumber?: string;
@@ -57,6 +58,7 @@ export type MedicalModV2RequestPayload = {
 export const buildMedicalModV2RequestXml = (params: MedicalModV2RequestPayload): MedicalModV2RequestPayload => ({
   ...params,
   medicalInformation: params.medicalInformation?.map((info) => ({
+    entity: info.entity,
     medicalClass: info.medicalClass,
     medicalClassName: info.medicalClassName,
     medicalClassNumber: info.medicalClassNumber,
@@ -75,6 +77,21 @@ export async function postOrcaMedicalModV2Xml(
 ): Promise<OrcaClaimSendResult> {
   const runId = getObservabilityMeta().runId;
   const requestPayload = buildMedicalModV2RequestXml(payload);
+  const hasUnsupportedPhysiologyPayload = Boolean(
+    requestPayload.medicalInformation?.some((info) => info.entity?.trim() === 'physiologyOrder'),
+  );
+  if (hasUnsupportedPhysiologyPayload) {
+    const message = 'ORCA送信を停止: physiologyOrder は generic 600 送信に対応していません。';
+    return {
+      ok: false,
+      apiOk: false,
+      status: 400,
+      apiResultMessage: message,
+      runId: getObservabilityMeta().runId ?? runId,
+      traceId: getObservabilityMeta().traceId,
+      error: message,
+    };
+  }
   const response = await httpFetch(ORCA_MEDICALMODV2_PATH, {
     method: 'POST',
     headers: {

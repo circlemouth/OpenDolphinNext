@@ -24,6 +24,7 @@ import org.xml.sax.InputSource;
 final class OrcaChartSupportSupport {
 
     String buildMedicalModV2RequestXml(ChartSupportMedicalModV2Request payload) {
+        validateMedicalModV2Request(payload);
         String performDate = payload.getPerformDate();
         String datePart = performDate != null && performDate.length() >= 10 ? performDate.substring(0, 10) : safe(payload.getPerformDate());
         String timePart = performDate != null && performDate.length() >= 19 ? performDate.substring(11, 19) : "00:00:00";
@@ -101,6 +102,16 @@ final class OrcaChartSupportSupport {
         builder.append("</medicalreq>");
         builder.append("</data>");
         return builder.toString();
+    }
+
+    void validateMedicalModV2Request(ChartSupportMedicalModV2Request payload) {
+        if (payload == null) {
+            throw new IllegalArgumentException("payload is required");
+        }
+        if (payload.getMedicalInformation() == null) {
+            return;
+        }
+        payload.validateForOrcaSend();
     }
 
     String buildMedicalModV23RequestXml(ChartSupportMedicalModV23Request payload) {

@@ -37,6 +37,8 @@
 
 - 注射の `adminMemo/speed`
 - ORCA MedicalModV2 carrier 未対応のため、入力が残っている間は ORCA 送信を停止する項目
+- `physiologyOrder` の ORCA 送信
+- `physiologyOrder` の `bodyPart`
 
 ## Injection Recheck (`20260403T142706Z`)
 
@@ -48,13 +50,15 @@
 
 ## 600系 Recheck (`20260403T142706Z`)
 
-- `testOrder` / `physiologyOrder` は `admin / adminMemo / memo / item.memo / subtype` を save では保持しつつ、ORCA 送信は `classCode 600 + coded row` のみを使う local-only 契約で確定した。`admin` は UI 上も「院内」明示へ寄せ、silent drop を撤廃した。
+- `testOrder` / `bacteriaOrder` は `admin / adminMemo / memo / item.memo / subtype` を save では保持しつつ、既存の 600 系 regression を維持する。
+- `physiologyOrder` は official payload/XML で first-class carrier が見つからないため、save / fetch / display continuity を維持しつつ ORCA 送信は explicit block とした。`bodyPart` も physiology では reject する。
 - `bacteriaOrder` は `subtype` を first-class で保持するが、carrier 未対応のため `prepareMedicalModV2SendData` で `unsupported_bacteria_subtype` を返して fail-closed に止める。
 - 600系 bundle の `admin / subtype / adminMemo / memo` は bundle 共通情報としてのみ扱い、複数項目を 1 bundle に積んでも item 個別 carrier は持たせない。
 - `physiologyOrder` の識別は `Medical_Class_Name` 依存ではなく、entity 別 default subtype と stamp token 復元で固定されている。
 - `medicalmodv2` の request 一覧にない `Medication_Unit_Code` / `Medication_Unit_Code_Name` は送信しない。単位は保存・表示専用で、ORCA payload/XML には含めない。internal JSON からも除外し、request contract 自体を送信可能 field のみに絞った。
 - `otherOrder` の server/client hardening は `etensu category 8` 契約に合わせ、`8...` に加えて既存 smoke で使っている `18...` も許容する形へ補正した。
 - 600系の複数 item/comment XML 網羅と `input set -> save -> fetch -> send` smoke を追加し、複数検査項目 + コメントコードでも崩れないことを固定した。
+- `physiologyOrder` を payload/XML で first-class 識別する carrier は official docs で見つからなかったため、generic 600 送信は禁止し、save / fetch / display continuity だけを維持する。
 
 ## ORCA official spec basis (`20260404T002958Z`)
 

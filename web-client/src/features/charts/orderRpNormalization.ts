@@ -21,6 +21,8 @@ import {
   buildRpRequiredBlockedMessage,
   collectOrderBundleCodeIssues,
   collectRpRequiredIssues,
+  MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_ERROR_LABEL,
+  MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_NEXT_ACTION,
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
 import { collectInjectionBundleContractIssues } from './orderBundleContract';
@@ -78,6 +80,7 @@ export type MedicalModV2BundleIssueCode =
   | 'comment_only'
   | 'missing_main_row'
   | 'invalid_other_order_class'
+  | 'unsupported_physiology_order'
   | 'unsupported_bacteria_subtype'
   | 'unsupported_admin_memo';
 
@@ -253,6 +256,25 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
   detail,
 });
 
+const resolveMedicalModV2BlockedBundleIssue = (bundle: OrderBundle) => {
+  const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  if (canonicalEntity === 'physiologyOrder') {
+    return buildBundleIssue(
+      bundle,
+      'unsupported_physiology_order',
+      MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_ERROR_LABEL,
+    );
+  }
+  if (canonicalEntity === 'bacteriaOrder' && Boolean(bundle.subtype?.trim())) {
+    return buildBundleIssue(
+      bundle,
+      'unsupported_bacteria_subtype',
+      '細菌検査 subtype に対応する ORCA carrier はありません。院内ローカル情報として保持し、送信前に解消してください。',
+    );
+  }
+  return null;
+};
+
 const buildInjectionContractItems = (rows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }>) =>
   rows
     .filter((row): row is { item: OrderBundleItem; source: Extract<RpNormalizedRowSource, { kind: 'bundle_item' }> } => row.source.kind === 'bundle_item')
@@ -263,6 +285,10 @@ const buildInjectionContractItems = (rows: Array<{ item: OrderBundleItem; source
 
 export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): MedicalModV2BundleIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  const blockedIssue = resolveMedicalModV2BlockedBundleIssue(bundle);
+  if (blockedIssue) {
+    return [blockedIssue];
+  }
   const rows = collectNormalizedRows(bundle);
   if (canonicalEntity === 'injectionOrder') {
     const injectionIssues = collectInjectionBundleContractIssues(
@@ -323,16 +349,6 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
         bundle,
         'invalid_other_order_class',
         'otherOrder の classCode は数字のみ送信できます。classCode を 800 系の有効値へ修正してください。',
-      ),
-    ];
-  }
-
-  if (canonicalEntity === 'bacteriaOrder' && Boolean(bundle.subtype?.trim())) {
-    return [
-      buildBundleIssue(
-        bundle,
-        'unsupported_bacteria_subtype',
-        '細菌検査 subtype に対応する ORCA carrier はありません。院内ローカル情報として保持し、送信前に解消してください。',
       ),
     ];
   }
@@ -424,6 +440,7 @@ const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormaliz
 };
 
 export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundle | null => {
+  if (resolveMedicalModV2BlockedBundleIssue(bundle)) return null;
   const bundleRows: RpNormalizedRow[] = collectNormalizedRows(bundle).flatMap(({ item, source }) => {
     const medication = toRpNormalizedMedication(item);
     if (!medication) return [];
@@ -476,6 +493,7 @@ export const toMedicalModV2InformationWithSource = (
 
   // ORCA medicalmodv2 request has no Medication_Unit_Code carrier.
   const info: MedicalModV2Information = {
+    entity: normalized.header.entity,
     medicalClass: normalized.header.medicalClass,
     medicalClassName: normalized.header.medicalClassName,
     medicalClassNumber: normalized.header.medicalClassNumber,
@@ -564,7 +582,9 @@ export const prepareMedicalModV2SendData = (bundles: OrderBundle[]) => {
   const requiredIssues = collectRpRequiredIssues(bundles);
   const bundleIssues = collectMedicalModV2BundleIssues(bundles);
   const codeIssues = collectOrderBundleCodeIssues(bundles);
-  const medicalInformationWithSource = bundles
+  // physiologyOrder / bacteriaOrder subtype は sendable payload に落とさず、ここで明示的に除外する。
+  const sendableBundles = bundles.filter((bundle) => !resolveMedicalModV2BlockedBundleIssue(bundle));
+  const medicalInformationWithSource = sendableBundles
     .map(toMedicalModV2InformationWithSource)
     .filter(
       (entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry),
@@ -622,9 +642,15 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
   if (prepared.bundleIssues.length > 0) {
     const preview = prepared.bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
     const remaining = prepared.bundleIssues.length - 4;
+    const unsupportedPhysiologyIssue = prepared.bundleIssues.some((issue) => issue.code === 'unsupported_physiology_order');
+    const unsupportedBacteriaIssue = prepared.bundleIssues.some((issue) => issue.code === 'unsupported_bacteria_subtype');
     return {
       message: `ORCA送信を停止: 非送信データを検出（${preview}${remaining > 0 ? ` / 他${remaining}件` : ''}）`,
-      nextAction: 'コードなし行、adminCode 未設定、adminMemo/speed、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',
+      nextAction: unsupportedPhysiologyIssue
+        ? MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_NEXT_ACTION
+        : unsupportedBacteriaIssue
+          ? '細菌検査 subtype は official ORCA carrier がないため送信できません。院内ローカル情報として保持し、ORCA送信対象から外してください。'
+        : 'コードなし行、adminCode 未設定、adminMemo/speed、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',
     };
   }
   if (prepared.codeIssues.length > 0) {

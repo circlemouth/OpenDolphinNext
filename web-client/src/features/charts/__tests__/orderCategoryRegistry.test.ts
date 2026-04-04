@@ -79,7 +79,10 @@ describe('orderCategoryRegistry', () => {
     expect(specimen?.helpText).toContain('bundle 共通');
     expect(physiology?.readOnly).toBe(true);
     expect(physiology?.defaultValue).toBe('physiology');
-    expect(physiology?.helpText).toContain('ORCA送信には使いません');
+    expect(physiology?.helpText).toContain('保存');
+    expect(physiology?.helpText).toContain('表示');
+    expect(physiology?.helpText).toContain('ORCA送信');
+    expect(physiology?.helpText).toMatch(/(explicit block|停止|使いません)/);
     expect(bacteria?.required).toBe(true);
     expect(bacteria?.helpText).toContain('carrier がない');
     expect(bacteria?.options.map((option) => option.value)).toEqual(['culture', 'sensitivity']);

@@ -66,7 +66,13 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         String runId = resolveRunId(request);
         String traceId = resolveTraceId(request);
         String facilityId = requireFacilityId(request);
-        String requestXml = support().buildMedicalModV2RequestXml(payload);
+        String requestXml;
+        try {
+            support().validateMedicalModV2Request(payload);
+            requestXml = support().buildMedicalModV2RequestXml(payload);
+        } catch (IllegalArgumentException ex) {
+            throw validationError(request, "payload.medicalInformation", ex.getMessage());
+        }
         OrcaTransportResult result = orcaTransport.invoke(
                 facilityId,
                 OrcaEndpoint.MEDICAL_MOD,

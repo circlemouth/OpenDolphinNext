@@ -1411,6 +1411,38 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               },
             );
           }
+          if (preparedSendData.bundleIssues.length > 0) {
+            const eventId = buildOrderHubEventId();
+            recordOrderHubKpi(
+              {
+                runId,
+                cacheHit,
+                missingMaster,
+                fallbackUsed,
+                dataSourceTransition,
+                patientId: resolvedPatientId,
+                appointmentId: resolvedAppointmentId,
+              },
+              {
+                category: 'OUI-04',
+                source: 'system',
+                result: 'blocked',
+                eventId,
+                reason: 'bundle_unsupported',
+                details: {
+                  issueCount: preparedSendData.bundleIssues.length,
+                  issues: preparedSendData.bundleIssues.slice(0, 8).map((issue) => ({
+                    code: issue.code,
+                    entity: issue.entity ?? null,
+                    bundleName: issue.bundleName ?? null,
+                    documentId: issue.documentId ?? null,
+                    moduleId: issue.moduleId ?? null,
+                    detail: issue.detail,
+                  })),
+                },
+              },
+            );
+          }
           const blockNotice = buildMedicalModV2BlockNotice(preparedSendData);
           if (blockNotice) {
             setBanner({

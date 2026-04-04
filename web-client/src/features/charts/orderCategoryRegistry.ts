@@ -152,13 +152,35 @@ const TEST_SPECIMEN_SUBTYPE = {
 };
 
 const TEST_PHYSIOLOGY_SUBTYPE = {
-  label: '600系 subtype',
+  label: '生理検査 subtype',
   helpText:
-    '生理検査は physiology 固定の bundle 共通院内情報として扱い、ORCA送信には使いません。検査指示・院内補足・自由メモ・item memo も local-only です。',
+    '生理検査は official ORCA carrier 不足のため、保存/表示 continuity のみ維持し、ORCA送信は explicit block します。bundleName・検査指示・院内補足・自由メモ・item memo・subtype は院内ローカル保存、bodyPart は reject します。',
   required: false,
   readOnly: true,
   defaultValue: 'physiology' as OrderTestSubtype,
   options: [{ value: 'physiology' as OrderTestSubtype, label: '生理' }],
+};
+
+export type OrderEntityPhysiologySendContractGuidance = {
+  blocked: true;
+  reason: string;
+  sendableFields: string[];
+  localOnlyFields: string[];
+  separateFields: string[];
+};
+
+export const resolveOrderEntityPhysiologySendContractGuidance = (
+  entity: string,
+): OrderEntityPhysiologySendContractGuidance | null => {
+  const resolved = resolveCanonicalOrderEntity(entity);
+  if (resolved !== 'physiologyOrder') return null;
+  return {
+    blocked: true,
+    reason: 'official ORCA carrier が見つからないため physiologyOrder は fail-closed で ORCA送信を停止します。',
+    sendableFields: ['classCode 600', 'コード付き検査項目', 'コメントコード'],
+    localOnlyFields: ['bundleName', '検査指示', '院内補足', '自由メモ', 'item memo', 'subtype'],
+    separateFields: ['bodyPart'],
+  };
 };
 
 const TEST_BACTERIA_SUBTYPE = {
@@ -524,7 +546,6 @@ export const ORDER_GROUP_REGISTRY: Array<{
 export const ORCA_SEND_ORDER_ENTITIES: readonly OrderEntity[] = [
   'treatmentOrder',
   'testOrder',
-  'physiologyOrder',
   'bacteriaOrder',
   'instractionChargeOrder',
   'surgeryOrder',

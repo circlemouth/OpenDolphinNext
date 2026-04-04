@@ -25,6 +25,7 @@ import {
   fetchOrcaOrderInputSets,
   type OrcaOrderInputSetSummary,
 } from './orcaOrderInputSetApi';
+import { fetchOrcaMedicationGet } from './orcaMedicationGetApi';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import {
   fetchOrderRecommendations,
@@ -51,6 +52,7 @@ import {
   resolveCanonicalOrderEntity,
   resolveOrderEntityDefaultClassMeta,
   resolveOrderEntityEtensuCategory,
+  resolveOrderEntityPhysiologySendContractGuidance,
   resolveOrderEntityTestSubtypeConfig,
   resolveOrderEntityUiProfile,
   resolveOrderEntityValidationRule,
@@ -437,7 +439,7 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
     }
     normal.push({ ...item, rowRole: 'main' });
   });
-  return { normal, material, comment, bodyPart };
+  return { normal, material, comment, bodyPart: normalizeBundleBodyPartForEntity(entity, bodyPart) ?? null };
 };
 
 const collectBundleItems = (form: BundleFormState) => {
@@ -446,6 +448,37 @@ const collectBundleItems = (form: BundleFormState) => {
     ...form.materialItems.map((item) => ({ ...item, rowRole: 'material' as const })),
     ...form.commentItems.map((item) => ({ ...item, rowRole: 'comment' as const })),
   ];
+};
+
+const hasBundleBodyPartValue = (bodyPart?: OrderBundleBodyPart | null) =>
+  Boolean(bodyPart?.name?.trim() || bodyPart?.code?.trim() || bodyPart?.quantity?.trim() || bodyPart?.unit?.trim() || bodyPart?.memo?.trim());
+
+const normalizeBundleBodyPartForEntity = (
+  entity: string | null | undefined,
+  bodyPart?:
+    | OrderBundleBodyPart
+    | {
+        code?: string;
+        name?: string;
+        quantity?: string;
+        unit?: string;
+        memo?: string;
+        rowRole?: 'bodyPart';
+      }
+    | null,
+): OrderBundleBodyPart | undefined => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  if (canonicalEntity === 'physiologyOrder') return undefined;
+  const name = bodyPart?.name?.trim();
+  if (!name) return undefined;
+  return {
+    code: bodyPart?.code?.trim() || undefined,
+    name,
+    quantity: bodyPart?.quantity?.trim() || undefined,
+    unit: bodyPart?.unit?.trim() || undefined,
+    memo: bodyPart?.memo?.trim() || undefined,
+    rowRole: 'bodyPart' as const,
+  };
 };
 
 const buildMissingMainRowMessage = ({
@@ -479,17 +512,8 @@ const buildMissingMainRowMessage = ({
   return 'コード付きの本体項目を入力してください。';
 };
 
-const resolveOperationBodyPart = (form: BundleFormState): OrderBundleBodyPart | undefined => {
-  if (!form.bodyPart?.name?.trim()) return undefined;
-  return {
-    code: form.bodyPart.code?.trim() || undefined,
-    name: form.bodyPart.name.trim(),
-    quantity: form.bodyPart.quantity?.trim() || undefined,
-    unit: form.bodyPart.unit?.trim() || undefined,
-    memo: form.bodyPart.memo?.trim() || undefined,
-    rowRole: 'bodyPart',
-  };
-};
+const resolveOperationBodyPart = (entity: string, form: BundleFormState): OrderBundleBodyPart | undefined =>
+  normalizeBundleBodyPartForEntity(entity, form.bodyPart);
 
 const DEFAULT_VALIDATION_RULE: BundleValidationRule = {
   itemLabel: '項目',
@@ -631,16 +655,7 @@ const toOrderBundleFromInputSetDetail = (
     adminCodeSystem: bundle.adminCodeSystem ?? undefined,
     memo: bundle.memo ?? '',
     started: bundle.started,
-    bodyPart: bundle.bodyPart?.name
-      ? {
-          code: bundle.bodyPart.code?.trim() || undefined,
-          name: bundle.bodyPart.name.trim(),
-          quantity: bundle.bodyPart.quantity?.trim() || undefined,
-          unit: bundle.bodyPart.unit?.trim() || undefined,
-          memo: bundle.bodyPart.memo?.trim() || undefined,
-          rowRole: 'bodyPart',
-        }
-      : undefined,
+    bodyPart: normalizeBundleBodyPartForEntity(resolvedEntity, bundle.bodyPart),
     items: bundle.items.map((item) => ({
       code: item.code,
       name: item.name ?? '',
@@ -726,7 +741,10 @@ const resolveSendContractNote = (entity: string) => {
   if (canonicalEntity === 'bacteriaOrder') {
     return '細菌検査では admin(検査指示)・subtype・院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。subtype に対応する ORCA carrier は公式 medicalmodv2 にないため、送信前に明示 block します。';
   }
-  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder') {
+  if (canonicalEntity === 'physiologyOrder') {
+    return '生理検査は official ORCA carrier 不足のため、保存/表示 continuity のみ維持し、ORCA送信は fail-closed で停止します。bodyPart は reject し、送信候補と院内ローカル項目を明確に分離してください。';
+  }
+  if (canonicalEntity === 'testOrder') {
     return '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。';
   }
   if (canonicalEntity === 'radiologyOrder') {
@@ -737,7 +755,10 @@ const resolveSendContractNote = (entity: string) => {
 
 const resolveInstructionLocalOnlyHelp = (entity: string) => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
-  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
+  if (canonicalEntity === 'physiologyOrder') {
+    return '検査指示は院内ローカル保存のみです。official ORCA carrier 不足のため ORCA送信は停止します。';
+  }
+  if (canonicalEntity === 'testOrder' || canonicalEntity === 'bacteriaOrder') {
     return 'admin(検査指示) は bundle 共通の院内ローカル情報です。複数検査項目をまとめても ORCA へは送信しません。';
   }
   return null;
@@ -745,7 +766,10 @@ const resolveInstructionLocalOnlyHelp = (entity: string) => {
 
 const resolveMemoLocalOnlyHelp = (entity: string) => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
-  if (canonicalEntity === 'testOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
+  if (canonicalEntity === 'physiologyOrder') {
+    return '院内補足・自由メモ・item memo は院内ローカル保存のみです。official ORCA carrier 不足のため ORCA送信は停止します。';
+  }
+  if (canonicalEntity === 'testOrder' || canonicalEntity === 'bacteriaOrder') {
     return '院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。ORCA 送信 payload には含めません。';
   }
   return null;
@@ -916,13 +940,7 @@ export const validateBundleForm = ({
       : [];
   const hasMaterialValues = form.materialItems.some(hasAnyValue);
   const hasCommentValues = form.commentItems.some(hasAnyValue);
-  const hasBodyPartValue = Boolean(
-    form.bodyPart?.name?.trim() ||
-      form.bodyPart?.code?.trim() ||
-      form.bodyPart?.quantity?.trim() ||
-      form.bodyPart?.unit?.trim() ||
-      form.bodyPart?.memo?.trim(),
-  );
+  const hasBodyPartValue = hasBundleBodyPartValue(form.bodyPart);
   const requiresSendableMainRow = rule.requiresItems && canonicalEntity !== 'medOrder';
   const hasAuxiliaryOnlyBundleContent =
     requiresSendableMainRow &&
@@ -940,10 +958,16 @@ export const validateBundleForm = ({
   if (form.subtype && !resolvedSubtype) {
     issues.push({ key: 'invalid_test_subtype', message: '600系 subtype が不正です。' });
   }
+  if (canonicalEntity === 'physiologyOrder' && hasBodyPartValue) {
+    issues.push({
+      key: 'unsupported_body_part',
+      message: '生理検査では bodyPart を保存しません。値をクリアしてください。',
+    });
+  }
   if (rule.requiresBodyPart && !form.bodyPart?.name?.trim()) {
     issues.push({ key: 'missing_body_part', message: '部位を入力してください。' });
   }
-  if (hasBodyPartValue && !supportsBodyPartField) {
+  if (hasBodyPartValue && !supportsBodyPartField && canonicalEntity !== 'physiologyOrder') {
     issues.push({
       key: 'unsupported_body_part',
       message: 'この種別では bodyPart を保持できません。部位をクリアしてください。',
@@ -1002,6 +1026,13 @@ export const validateBundleForm = ({
     }
   }
   if (canonicalEntity === 'otherOrder') {
+    const normalizedClassCode = form.classCode?.trim() ?? '';
+    if (normalizedClassCode && (!/^\d{3}$/.test(normalizedClassCode) || Number(normalizedClassCode) < 800 || Number(normalizedClassCode) > 890)) {
+      issues.push({
+        key: 'invalid_other_order_class_code',
+        message: 'otherOrder の classCode は 800〜890 の3桁数値のみ保存できます。',
+      });
+    }
     if (hasMaterialValues) {
       issues.push({
         key: 'unsupported_material_item',
@@ -1009,14 +1040,61 @@ export const validateBundleForm = ({
       });
     }
     if (
-      contractStats.codedRows.some(({ item }) => {
+      form.items.some((item) => {
         const code = item.code?.trim() ?? '';
-        return code !== '' && !isOrderBundleCommentCode(code) && !/^(8|18)/.test(code);
+        return code !== '' && !isOrderBundleCommentCode(code) && !/^(?:8\d{8}|18\d{7})$/.test(code);
       })
     ) {
       issues.push({
         key: 'invalid_other_order_code',
         message: 'otherOrder では etensu category 8 のコード以外を保存できません。',
+      });
+    }
+  }
+  if (canonicalEntity !== 'otherOrder' && hasMaterialValues) {
+    if (
+      form.materialItems.some((item) => {
+        const code = item.code?.trim() ?? '';
+        return code !== '' && !/^7\d{8}$/.test(code);
+      })
+    ) {
+      issues.push({
+        key: 'invalid_material_code',
+        message: '材料行は 7 から始まる9桁コードのみ保存できます。',
+      });
+    }
+  }
+  if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
+    const normalizedClassCode = form.classCode?.trim() ?? '';
+    const isBaseCharge = canonicalEntity === 'baseChargeOrder';
+    if (
+      normalizedClassCode &&
+      (!/^\d+$/.test(normalizedClassCode) ||
+        (isBaseCharge
+          ? Number(normalizedClassCode) < 110 || Number(normalizedClassCode) > 125
+          : Number(normalizedClassCode) < 130 || Number(normalizedClassCode) > 150))
+    ) {
+      issues.push({
+        key: 'invalid_charge_class_code',
+        message: isBaseCharge
+          ? 'baseChargeOrder の classCode は 110〜125 の範囲のみ保存できます。'
+          : 'instractionChargeOrder の classCode は 130〜150 の範囲のみ保存できます。',
+      });
+    }
+    if (
+      form.items.some((item) => {
+        const category = item.masterCategory?.trim() ?? '';
+        if (!category) return false;
+        if (!/^\d+$/.test(category)) return true;
+        const numeric = Number(category);
+        return isBaseCharge ? numeric < 110 || numeric > 125 : numeric < 130 || numeric > 150;
+      })
+    ) {
+      issues.push({
+        key: 'invalid_charge_item_category',
+        message: isBaseCharge
+          ? 'baseChargeOrder の main row は 110〜125 の masterCategory のみ保存できます。'
+          : 'instractionChargeOrder の main row は 130〜150 の masterCategory のみ保存できます。',
       });
     }
   }
@@ -1219,9 +1297,16 @@ export function OrderBundleEditPanel({
     }));
   }, [form.prescriptionTiming, isMedOrder, mixingCommentIndex]);
 
+  useEffect(() => {
+    if (resolveCanonicalOrderEntity(entity) !== 'physiologyOrder') return;
+    if (!hasBundleBodyPartValue(form.bodyPart)) return;
+    setForm((prev) => (hasBundleBodyPartValue(prev.bodyPart) ? { ...prev, bodyPart: null } : prev));
+  }, [entity, form.bodyPart]);
+
   const supportsUsageSearch = orderUiProfile.supportsUsageSearch;
   const supportsBodyPartSearch = orderUiProfile.supportsBodyPartSearch;
   const supportsCommentCodes = orderUiProfile.supportsCommentCodes;
+  const physiologySendContractGuidance = resolveOrderEntityPhysiologySendContractGuidance(entity);
   const supportsMaterialRows =
     isInjectionOrder ||
     isRehabOrder ||
@@ -1230,10 +1315,28 @@ export function OrderBundleEditPanel({
   const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
   const effectiveTestSubtype = resolveFormSubtype(entity, form.subtype);
   const showBodyPartSection =
-    supportsBodyPartSearch || Boolean(form.bodyPart?.name?.trim() || form.bodyPart?.code?.trim());
+    supportsBodyPartSearch || (resolveCanonicalOrderEntity(entity) !== 'physiologyOrder' && hasBundleBodyPartValue(form.bodyPart));
   const sendContractNote = resolveSendContractNote(entity);
   const instructionLocalOnlyHelp = resolveInstructionLocalOnlyHelp(entity);
   const memoLocalOnlyHelp = resolveMemoLocalOnlyHelp(entity);
+  const physiologyContractGuidanceBlock = physiologySendContractGuidance ? (
+    <div
+      className="charts-side-panel__notice charts-side-panel__notice--warning"
+      role="status"
+      aria-live={resolveAriaLive('warning')}
+    >
+      <div className="charts-side-panel__warning-header">
+        <strong>生理検査のORCA送信</strong>
+        <span>停止</span>
+      </div>
+      <p className="charts-side-panel__notice-detail">{physiologySendContractGuidance.reason}</p>
+      <ul className="charts-side-panel__notice-list" aria-label="生理検査の送信区分">
+        <li>送信候補: {physiologySendContractGuidance.sendableFields.join(' / ')}</li>
+        <li>院内ローカル: {physiologySendContractGuidance.localOnlyFields.join(' / ')}</li>
+        <li>別扱い: {physiologySendContractGuidance.separateFields.join(' / ')}</li>
+      </ul>
+    </div>
+  ) : null;
   const itemMasterTargets = orderUiProfile.masterSearchPresets;
   const supportsEtensuDetailSearch = itemMasterTargets.some((target) => target.type === 'etensu');
   const itemPredictiveTargetLabel = itemMasterTargets.map((target) => target.label).join(' / ');
@@ -1482,6 +1585,7 @@ export function OrderBundleEditPanel({
     return rows.find((row) => row.rowId === selectedItemRowId) ?? rows[0];
   }, [form.items, form.materialItems, selectedItemRowId]);
   const selectedItemPredictionKeyword = selectedItemForPrediction?.name?.trim() ?? '';
+  const selectedItemPredictionCode = selectedItemForPrediction?.code?.trim() ?? '';
   const debouncedItemPredictionKeyword = useDebouncedValue(selectedItemPredictionKeyword, 260);
   const itemPredictiveSearchTypes = useMemo<OrderMasterSearchType[]>(
     () => Array.from(new Set(itemMasterTargets.map((target) => target.type))),
@@ -1489,6 +1593,11 @@ export function OrderBundleEditPanel({
   );
   const etensuCategory = useMemo(() => resolveOrderEntityEtensuCategory(entity), [entity]);
   const isItemCodeSearch = isLikelyCodeSearch(debouncedItemPredictionKeyword);
+  const medicationGetRequestCode = /^\d{9}$/.test(selectedItemPredictionCode)
+    ? selectedItemPredictionCode
+    : /^\d{9}$/.test(debouncedItemPredictionKeyword)
+      ? debouncedItemPredictionKeyword
+      : '';
   const itemPredictiveQuery = useQuery({
     queryKey: [
       'charts-order-item-predictive',
@@ -1496,10 +1605,20 @@ export function OrderBundleEditPanel({
       itemPredictiveSearchTypes.join(','),
       etensuCategory ?? '',
       debouncedItemPredictionKeyword,
+      medicationGetRequestCode,
+      form.startDate,
       pointsMinInput,
       pointsMaxInput,
     ],
     queryFn: async () => {
+      const medicationGetResult =
+        medicationGetRequestCode
+          ? await fetchOrcaMedicationGet({
+              requestCode: medicationGetRequestCode,
+              baseDate: form.startDate,
+              requestNumber: '02',
+            })
+          : null;
       const responses = await Promise.all(
         itemPredictiveSearchTypes.map(async (type) => {
           const items: OrderMasterSearchItem[] = [];
@@ -1559,6 +1678,22 @@ export function OrderBundleEditPanel({
       const correctionCandidates = successful.flatMap((entry) => entry.result.correctionCandidates ?? []);
       const correctionMeta = successful.map((entry) => entry.result.correctionMeta).find((meta) => Boolean(meta));
       const selectionComments = successful.flatMap((entry) => entry.result.selectionComments ?? []);
+      if (medicationGetResult?.ok) {
+        selectionComments.push(
+          ...(medicationGetResult.selections ?? []).flatMap((selection) => {
+            const code = selection.commentCode?.trim();
+            const name = selection.commentName?.trim();
+            if (!code || !name) return [];
+            return [{
+              code,
+              name,
+              category: selection.category,
+              itemNumber: selection.itemNumber,
+              itemNumberBranch: selection.itemNumberBranch,
+            }];
+          }),
+        );
+      }
       const failedMessages = responses
         .filter((entry) => !entry.result.ok)
         .map((entry) => entry.result.message)
@@ -1570,7 +1705,7 @@ export function OrderBundleEditPanel({
         correctionMeta,
         selectionComments,
         failedTypes,
-        message: failedMessages[0],
+        message: failedMessages[0] ?? medicationGetResult?.message,
       };
     },
     enabled: debouncedItemPredictionKeyword.length > 0,
@@ -2413,6 +2548,9 @@ export function OrderBundleEditPanel({
     mutationFn: async (payload: OrderBundleSubmitPayload) => {
       if (isPreviewMode) throw new Error('preview mode');
       if (!patientId) throw new Error('patientId is required');
+      if (resolveCanonicalOrderEntity(entity) === 'physiologyOrder') {
+        throw new Error('生理検査は official ORCA carrier がないため ORCA 送信を停止します。');
+      }
       const filteredItems = collectBundleItems(payload.form)
         .filter((item) => item.name.trim().length > 0)
         .map(stripRowMeta);
@@ -2437,7 +2575,7 @@ export function OrderBundleEditPanel({
             memo: payload.form.memo,
             startDate: payload.form.startDate,
             items: filteredItems,
-            bodyPart: resolveOperationBodyPart(payload.form),
+            bodyPart: resolveOperationBodyPart(entity, payload.form),
           },
         ],
       });
@@ -2517,7 +2655,7 @@ export function OrderBundleEditPanel({
             memo: payload.form.memo,
             started: payload.form.startDate,
             items: normalizedItems,
-            bodyPart: resolveOperationBodyPart(payload.form),
+            bodyPart: resolveOperationBodyPart(entity, payload.form),
           };
           setOptimisticBundles((prev) => {
             if (prev.some((bundle) => bundle.documentId === createdDocumentId)) return prev;
@@ -2547,7 +2685,7 @@ export function OrderBundleEditPanel({
                     memo: payload.form.memo,
                     started: payload.form.startDate,
                     items: normalizedItems,
-                    bodyPart: resolveOperationBodyPart(payload.form),
+                    bodyPart: resolveOperationBodyPart(entity, payload.form),
                   }
                 : bundle,
             ),
@@ -3749,6 +3887,7 @@ export function OrderBundleEditPanel({
                     <p className="charts-side-panel__help">院内ローカル情報として保存します。ORCA 送信対象にはしません。</p>
                   </div>
                 ) : null}
+                {physiologyContractGuidanceBlock}
               </div>
             </div>
           </details>
@@ -3793,6 +3932,7 @@ export function OrderBundleEditPanel({
                 <p className="charts-side-panel__help">院内ローカル情報として保存します。ORCA 送信対象にはしません。</p>
               </div>
             ) : null}
+            {physiologyContractGuidanceBlock}
             {testSubtypeConfig ? (
               <div className="charts-side-panel__field charts-side-panel__meta-section">
                 <label htmlFor={`${entityId}-test-subtype`}>{testSubtypeConfig.label}</label>

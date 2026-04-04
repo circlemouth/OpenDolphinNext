@@ -1,4 +1,4 @@
-﻿import { afterEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -73,9 +73,16 @@ afterEach(() => {
 });
 
 describe('OrderBundleEditPanel master search UI', () => {
+  let user: ReturnType<typeof userEvent.setup>;
+
+  beforeEach(() => {
+    user = userEvent.setup();
+  });
+
   it('検索条件変更時に結果が更新される', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type, keyword }) => {
       if (type !== 'drug') {
@@ -108,8 +115,6 @@ describe('OrderBundleEditPanel master search UI', () => {
         totalCount: 1,
       };
     });
-
-    const user = userEvent.setup();
     renderWithClient(<OrderBundleEditPanel {...baseProps} />);
 
     const itemNameInput = screen.getByPlaceholderText('薬剤名');
@@ -280,6 +285,7 @@ describe('OrderBundleEditPanel master search UI', () => {
   it('リハビリ部位検索で選択した部位が反映される', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type }) => {
       if (type === 'bodypart') {
@@ -297,8 +303,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       }
       return { ok: true, items: [], totalCount: 0 };
     });
-
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -400,6 +404,7 @@ describe('OrderBundleEditPanel master search UI', () => {
   it('手術オーダーの手技検索は etensu カテゴリ5を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockResolvedValue({
       ok: true,
@@ -407,7 +412,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -436,6 +440,7 @@ describe('OrderBundleEditPanel master search UI', () => {
   it('treatmentOrder の手技検索は etensu カテゴリ4を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockResolvedValue({
       ok: true,
@@ -443,7 +448,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -472,14 +476,13 @@ describe('OrderBundleEditPanel master search UI', () => {
   it('treatmentOrder の手技検索は etensu カテゴリ4を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockResolvedValue({
       ok: true,
       items: [],
       totalCount: 0,
     });
-
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -508,6 +511,7 @@ describe('OrderBundleEditPanel master search UI', () => {
   it('算定オーダーの手技検索は etensu カテゴリ1を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockResolvedValue({
       ok: true,
@@ -515,7 +519,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -544,6 +547,7 @@ describe('OrderBundleEditPanel master search UI', () => {
   it('注射オーダーの統合検索は drug と etensu カテゴリ3を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
+    const user = userEvent.setup();
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockResolvedValue({
       ok: true,
@@ -551,7 +555,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -591,7 +594,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -635,7 +637,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -674,8 +675,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       items: [],
       totalCount: 0,
     });
-
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -714,8 +713,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       items: [],
       totalCount: 0,
     });
-
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -755,7 +752,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -799,7 +795,6 @@ describe('OrderBundleEditPanel master search UI', () => {
       totalCount: 0,
     });
 
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -959,8 +954,6 @@ describe('OrderBundleEditPanel master search UI', () => {
         },
       ],
     });
-
-    const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -997,8 +990,10 @@ describe('OrderBundleEditPanel master search UI', () => {
     const selectionCommentButton =
       selectionCommentButtons.find((button) => button.className.includes('charts-side-panel__search-row--correction')) ??
       selectionCommentButtons[0];
-    expect(selectionCommentButton).toBeEnabled();
-    await user.click(selectionCommentButton);
-    await waitFor(() => expect(screen.getAllByDisplayValue('食後').length).toBeGreaterThan(0));
+    expect(selectionCommentButton).toBeDisabled();
+    expect(selectionCommentButton).toHaveAttribute(
+      'title',
+      '選択式コメントの itemNumber / branch は未対応のため追加できません。パラメータ不要のコメントのみ選択してください。',
+    );
   });
 });

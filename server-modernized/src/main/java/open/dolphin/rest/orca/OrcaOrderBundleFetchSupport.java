@@ -136,10 +136,14 @@ final class OrcaOrderBundleFetchSupport {
         entry.setEntity(OrcaOrderBundleRequestSupport.normalizeEntityResponse(moduleEntity));
         entry.setBundleName(OrcaOrderBundleDisplaySupport.resolveBundleName(bundle, info));
         entry.setBundleNumber(bundle.getBundleNumber());
-        entry.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(
+        String resolvedSubtype = OrcaOrderBundle600SubtypeSupport.resolveSubtype(
                 moduleEntity,
                 null,
-                info != null ? info.getStampMemo() : null));
+                info != null ? info.getStampMemo() : null);
+        if (OrcaOrderBundleRequestSupport.isPhysiologyOrder(moduleEntity) && resolvedSubtype == null) {
+            resolvedSubtype = "physiology";
+        }
+        entry.setSubtype(resolvedSubtype);
         entry.setBacteria(OrcaOrderBundle600SubtypeSupport.resolveBacteria(
                 moduleEntity,
                 null,

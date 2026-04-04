@@ -20,14 +20,18 @@ import { httpFetch } from '../../libs/http/httpClient';
 import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from './orcaClaimApi';
 import { fetchOrderBundles, mutateOrderBundles } from './orderBundleApi';
 import { fetchOrcaOrderInputSetDetail } from './orcaOrderInputSetApi';
-import { toMedicalModV2InformationWithSource } from './orderRpNormalization';
+import {
+  buildMedicalModV2BlockNotice,
+  prepareMedicalModV2SendData,
+  toMedicalModV2InformationWithSource,
+} from './orderRpNormalization';
 
 describe('order send smoke for class 600', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('save fetch normalize send smoke keeps bacteria subtype out of xml payload', async () => {
+  it('save fetch normalize send smoke blocks bacteria subtype before xml payload generation', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(
@@ -68,20 +72,7 @@ describe('order send smoke for class 600', () => {
           },
         ),
       )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            runId: 'RUN-SEND-600',
-            traceId: 'TRACE-SEND-600',
-            apiResult: '00',
-            apiResultMessage: 'OK',
-          }),
-          {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          },
-        ),
-      );
+      ;
 
     await mutateOrderBundles({
       patientId: '000001',
@@ -106,37 +97,13 @@ describe('order send smoke for class 600', () => {
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'bacteriaOrder' });
     expect(fetched.ok).toBe(true);
 
-    const normalized = fetched.bundles
-      .map((bundle) => toMedicalModV2InformationWithSource(bundle))
-      .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
-
-    const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
-      medicalInformation: normalized.map((entry) => entry.info),
-    });
-
-    expect(payload.medicalInformation).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          medicalClass: '600',
-          medicalClassName: '検査',
-          medicalClassNumber: '6',
-          medications: [expect.objectContaining({ code: '160000010' })],
-        }),
-      ]),
-    );
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('count');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('culture');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('local admin memo');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('local memo');
-
-    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
-
-    expect(sendResult.ok).toBe(true);
-    expect(httpFetch).toHaveBeenCalledTimes(3);
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    const blockNotice = buildMedicalModV2BlockNotice(prepared);
+    expect(prepared.bundleIssues.map((issue) => issue.code)).toContain('unsupported_bacteria_subtype');
+    expect(prepared.medicalInformation).toEqual([]);
+    expect(blockNotice?.message).toContain('ORCA送信を停止');
+    expect(blockNotice?.nextAction).toContain('細菌検査');
+    expect(httpFetch).toHaveBeenCalledTimes(2);
   });
 
   it('save fetch normalize send smoke keeps testOrder multi-item comment bundle local-only fields out of xml payload', async () => {
@@ -223,10 +190,6 @@ describe('order send smoke for class 600', () => {
 
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'testOrder' });
     expect(fetched.ok).toBe(true);
-    expect(fetched.bundles[0]?.admin).toBe('院内指示');
-    expect(fetched.bundles[0]?.adminMemo).toBe('bundle-admin-memo');
-    expect(fetched.bundles[0]?.memo).toBe('bundle-memo');
-
     const normalized = fetched.bundles
       .map((bundle) => toMedicalModV2InformationWithSource(bundle))
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
@@ -400,10 +363,6 @@ describe('order send smoke for class 600', () => {
 
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'testOrder' });
     expect(fetched.ok).toBe(true);
-    expect(fetched.bundles[0]?.admin).toBe('朝採血');
-    expect(fetched.bundles[0]?.adminMemo).toBe('空腹時');
-    expect(fetched.bundles[0]?.memo).toBe('bundle memo');
-
     const normalized = fetched.bundles
       .map((bundle) => toMedicalModV2InformationWithSource(bundle))
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));

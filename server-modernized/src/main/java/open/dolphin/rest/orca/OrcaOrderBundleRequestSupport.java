@@ -150,6 +150,10 @@ final class OrcaOrderBundleRequestSupport {
         return ORDER_BUNDLE_ENTITIES.contains(normalized);
     }
 
+    static boolean isPhysiologyOrder(String entity) {
+        return IInfoModel.ENTITY_PHYSIOLOGY_ORDER.equals(canonicalizeEntity(entity));
+    }
+
     static boolean isCompatibleClassCode(String entity, String classCode) {
         String normalizedEntity = canonicalizeEntity(entity);
         String normalizedClassCode = trimToNull(classCode);
@@ -191,6 +195,9 @@ final class OrcaOrderBundleRequestSupport {
     static boolean supportsBodyPartField(String entity) {
         String normalizedEntity = canonicalizeEntity(entity);
         if (normalizedEntity == null) {
+            return false;
+        }
+        if (isPhysiologyOrder(normalizedEntity)) {
             return false;
         }
         return "treatmentOrder".equals(normalizedEntity)

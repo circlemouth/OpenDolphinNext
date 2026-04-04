@@ -166,8 +166,9 @@ ORCAオーダー系の保存、再読込、送信正規化、medicalmodv2 XML �
 
 ### 4-5. 600 系（検体 / 生理 / 細菌）
 
-- [x] canonical entity と subtype を save / fetch / input set / recommendation / send で保持するようにした。
-- [x] 600 系 subtype support を server 側に追加した。
+ - [x] canonical entity と subtype を save / fetch / input set / recommendation で保持するようにした。
+- [x] `testOrder` / `bacteriaOrder` の 600 系 regression を維持し、`physiologyOrder` は ORCA payload/XML へ送らず explicit block にした。
+- [x] `physiologyOrder` の save / fetch / display continuity を維持しつつ、bodyPart は physiology で reject するようにした。
 - [x] 600 系 subtype の client / server smoke test を追加した。
 
 ---
@@ -187,7 +188,7 @@ ORCAオーダー系の保存、再読込、送信正規化、medicalmodv2 XML �
 - [x] 基本 / 指導料: class meta 再編集保存
 - [x] 一般 / 処置 / その他: mixed row block
 - [x] 放射線: bodyPart + 本体 + 材料 / 造影
-- [x] 検体 / 生理 / 細菌: canonical entity + subtype + input set
+- [x] 検体 / 生理 / 細菌: canonical entity + subtype + input set + physiology explicit block + bodyPart reject
 
 ---
 

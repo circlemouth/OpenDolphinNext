@@ -308,7 +308,7 @@ const treatmentSubtypeTabs = [
 
 const testSubtypeTabs = [
   { key: 'testOrder' as const, label: '検査' },
-  { key: 'physiologyOrder' as const, label: '生理' },
+  { key: 'physiologyOrder' as const, label: '生理（送信停止）' },
   { key: 'bacteriaOrder' as const, label: '細菌' },
   { key: 'radiologyOrder' as const, label: '放射線' },
 ] as const;

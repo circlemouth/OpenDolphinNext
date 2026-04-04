@@ -32,6 +32,10 @@ export const RP_REQUIRED_FIELD_LABELS: Record<RpRequiredField, string> = {
   Medication_info: 'Medication_info（薬剤明細）',
 };
 
+export const MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_ERROR_LABEL = 'ORCA送信を停止: physiologyOrder は generic 600 送信に対応していません。';
+export const MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_NEXT_ACTION =
+  '生理オーダーは送信対象から外し、院内保存または別経路で処理してください。';
+
 export const resolveRpRequiredFieldLabel = (field: RpRequiredField) => RP_REQUIRED_FIELD_LABELS[field] ?? field;
 
 export const SENDABLE_USAGE_CODE_PATTERN = /^\d{4,}$/;

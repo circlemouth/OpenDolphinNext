@@ -198,6 +198,15 @@ export const normalizeOrderBundleBodyPart = (
   return normalized;
 };
 
+const normalizeOrderBundleBodyPartForEntity = (
+  entity?: string | null,
+  bodyPart?: OrderBundleBodyPart | null,
+  options?: { dropInvalid?: boolean },
+) => {
+  if (resolveCanonicalOrderEntity(entity) === 'physiologyOrder') return undefined;
+  return normalizeOrderBundleBodyPart(bodyPart, options);
+};
+
 const normalizeOrderEntityValue = (value?: string | null): string | undefined => {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -217,7 +226,9 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
     ...canonicalBundle,
     entity: normalizeOrderEntityValue(canonicalBundle.entity),
     bacteria: normalizeBacteriaOrderMetadata(canonicalBundle.bacteria),
-    bodyPart: normalizeOrderBundleBodyPart(canonicalBundle.bodyPart, { dropInvalid: true }),
+    bodyPart: normalizeOrderBundleBodyPartForEntity(canonicalBundle.entity, canonicalBundle.bodyPart, {
+      dropInvalid: true,
+    }),
     className: normalizeOrderBundleClassName(
       canonicalBundle.entity,
       canonicalBundle.classCode,
@@ -289,7 +300,7 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
     ...canonicalOperation,
     entity: normalizeOrderEntityValue(canonicalOperation.entity),
     bacteria: normalizeBacteriaOrderMetadata(canonicalOperation.bacteria),
-    bodyPart: normalizeOrderBundleBodyPart(canonicalOperation.bodyPart),
+    bodyPart: normalizeOrderBundleBodyPartForEntity(canonicalOperation.entity, canonicalOperation.bodyPart),
     className: normalizeOrderBundleClassName(
       canonicalOperation.entity,
       canonicalOperation.classCode,

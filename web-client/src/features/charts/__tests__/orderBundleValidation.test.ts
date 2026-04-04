@@ -501,6 +501,21 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
   });
 
+  it('physiologyOrder: bodyPart は保存前に reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: 'Physiology',
+        subtype: 'physiology' as BundleFormState['subtype'],
+        items: [{ code: '160000010', name: '生理検査', quantity: '1', unit: '回', memo: '' }],
+        bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
+      },
+      entity: 'physiologyOrder',
+      bundleLabel: '生理検査オーダー',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
+  });
+
   it('otherOrder: bodyPart は front 契約で reject する', () => {
     const issues = validateBundleForm({
       form: {
@@ -520,7 +535,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '不正その他',
-        items: [{ code: '81234567', name: '擬似8系コード', quantity: '1', unit: '本', memo: '' }],
+        items: [{ code: '912345678', name: '9系コード', quantity: '1', unit: '本', memo: '' }],
       },
       entity: 'otherOrder',
       bundleLabel: 'その他',
