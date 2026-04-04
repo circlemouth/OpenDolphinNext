@@ -222,7 +222,7 @@ describe('OrderBundleEditPanel bundle number UI', () => {
     expect(screen.getByText('頓用は回数として扱われます。')).toBeInTheDocument();
   });
 
-  it('charge 編集保存では明示 class meta を entity default に潰さない', async () => {
+  it('charge 編集保存では className を canonical charge class へ正規化する', async () => {
     const user = userEvent.setup();
     vi.mocked(mutateOrderBundles).mockResolvedValueOnce({ ok: true, runId: 'RUN-ORDER' });
     vi.mocked(fetchOrderBundles).mockResolvedValueOnce({
@@ -257,6 +257,6 @@ describe('OrderBundleEditPanel bundle number UI', () => {
     const operation = mutateMock.mock.calls[0]?.[0]?.operations?.[0];
     expect(operation?.classCode).toBe('120');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('再診料');
+    expect(operation?.className).toBe('基本診療料');
   });
 });

@@ -178,7 +178,7 @@ class OrcaChartSupportSupportTest {
 
         ChartSupportMedicalModV2Request.MedicalInformation baseCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         baseCharge.setMedicalClass("110");
-        baseCharge.setMedicalClassName("BaseCharge");
+        baseCharge.setMedicalClassName("基本診療料");
         baseCharge.setMedicalClassNumber("1");
         ChartSupportMedicalModV2Request.Medication initialConsultation = new ChartSupportMedicalModV2Request.Medication();
         initialConsultation.setCode("110000110");
@@ -189,7 +189,7 @@ class OrcaChartSupportSupportTest {
 
         ChartSupportMedicalModV2Request.MedicalInformation instructionCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         instructionCharge.setMedicalClass("130");
-        instructionCharge.setMedicalClassName("Instruction");
+        instructionCharge.setMedicalClassName("医学管理等");
         instructionCharge.setMedicalClassNumber("2");
         ChartSupportMedicalModV2Request.Medication homeInstruction = new ChartSupportMedicalModV2Request.Medication();
         homeInstruction.setCode("112007410");
@@ -203,12 +203,12 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Medical_Class type=\"string\">110</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">BaseCharge</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">基本診療料</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">110000110</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Unit_Code type=\"string\">times</Medication_Unit_Code>"));
         assertTrue(xml.contains("<Medical_Class type=\"string\">130</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Instruction</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">医学管理等</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">2</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">112007410</Medication_Code>"));
     }

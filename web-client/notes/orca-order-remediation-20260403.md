@@ -11,6 +11,26 @@
 - `rpNumber` は stable RP identifier とし、`Medical_Class_Number` と分離する。
 - `genericFlg` は廃止し、`isGeneralNamePrescription` と `genericChangeAllowed` に分離する。
 
+## Charge Closeout (`20260404T003058Z`)
+
+- charge の canonical class rule を `baseChargeOrder = 110..125 / 基本診療料`、`instractionChargeOrder = 130..150 / 医学管理等` に固定した。
+- `className` は charge では item 名や `bundleName` にフォールバックせず、entity と classCode から canonical に再決定する。
+- manual item 選択時は item category と charge entity/classCode の不整合を UI/save/server の全段で reject する。cross-range item は silent fallback させない。
+- charge item の `masterCategory` は item memo meta に保存し、`save -> fetch -> normalize` で round-trip できる。
+- 選択式コメントの `itemNumber / itemNumberBranch` は ORCA 送信に必要な carrier として item memo meta に保存し、UI/save/fetch/send で保持する。
+- `sourceSetCode` は local-only の provenance として維持し、charge の `admin / adminMemo / memo` は保存・再読込では保持するが ORCA send carrier には混ぜない。
+
+## Charge / Comment Verification (`20260404T003058Z`)
+
+- `npm run typecheck`
+  - Result: `passed`
+- `npx vitest run src/features/charts/__tests__/orderBundleValidation.test.ts src/features/charts/__tests__/orderBundleItemActions.test.tsx src/features/charts/__tests__/orderBundleMasterSearch.test.tsx src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx src/features/charts/__tests__/orderBundleApi.test.ts src/features/charts/__tests__/orderBundleRecommendationTransform.test.ts src/features/charts/__tests__/orderSendSmoke.test.ts`
+  - Result: `8 files / 131 tests passed / 1 skipped`
+- `npm run build`
+  - Result: `passed`
+- `docker run --rm --name odn-basecharge-order-20260404t003058z-mvn -v <worktree>:/workspace -v %USERPROFILE%\\.m2:/root/.m2 -w /workspace maven:3.9.9-eclipse-temurin-17 mvn -f pom.server-modernized.xml -pl api-contract,server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaOrderBundleRequestSupportTest,OrcaOrderBundleResource600Test,OrcaChartSupportSupportTest,OrcaOrderInputSetMetadataSupportTest,OrcaOrderBundleMutationSupportTest test`
+  - Result: `36 tests passed`
+
 ## Send Vs Local-only
 
 ### ORCA に送る

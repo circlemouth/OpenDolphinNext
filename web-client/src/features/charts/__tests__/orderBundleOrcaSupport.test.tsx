@@ -52,6 +52,12 @@ const chargeProps = {
   itemQuantityLabel: '回数',
 };
 
+const instractionChargeProps = {
+  ...chargeProps,
+  entity: 'instractionChargeOrder',
+  title: '医学管理等編集',
+};
+
 const injectionProps = {
   ...baseProps,
   entity: 'injectionOrder',
@@ -150,7 +156,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。数量/単位は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。',
+        'setCode は展開専用です。数量/単位とコメント数量は ORCA 送信し、算定指示・院内補足・自由メモは院内補足としてのみ保持します。',
       ),
     ).toBeInTheDocument();
   });
@@ -378,32 +384,32 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.queryByText('entity が一致しないため診療セットを反映できません。')).toBeNull();
   });
 
-  it('baseChargeOrder の ORCA診療セット適用後も class meta を保存 payload で保持する', async () => {
+  it('instractionChargeOrder の ORCA診療セット適用後も class meta を保存 payload で保持する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'B13001', name: '在宅指導セット', entity: 'baseChargeOrder', itemCount: 1 }],
+      items: [{ setCode: 'B13001', name: '在宅指導セット', entity: 'instractionChargeOrder', itemCount: 1 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'B13001',
       bundle: {
-        entity: 'baseChargeOrder',
+        entity: 'instractionChargeOrder',
         bundleName: '在宅指導セット',
         bundleNumber: '1',
         classCode: '130',
         classCodeSystem: 'Claim007',
-        className: '指導・在宅',
+        className: '医学管理等',
         adminMemo: '算定前確認',
         items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '' }],
       },
     });
 
-    renderPanel(chargeProps);
+    renderPanel(instractionChargeProps);
 
     await user.type(screen.getByPlaceholderText('診療セット名またはコード'), '在宅');
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
@@ -416,10 +422,10 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
     const operation = payload?.operations?.[0];
-    expect(operation?.entity).toBe('baseChargeOrder');
+    expect(operation?.entity).toBe('instractionChargeOrder');
     expect(operation?.classCode).toBe('130');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('指導・在宅');
+    expect(operation?.className).toBe('医学管理等');
     expect(operation?.adminMemo).toBe('算定前確認');
   });
 

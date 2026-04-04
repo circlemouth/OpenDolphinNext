@@ -1,7 +1,10 @@
-import type { MedicalModV2Information } from './orcaClaimApi';
+﻿import type { MedicalModV2Information } from './orcaClaimApi';
 import {
+  isChargeEntity,
   ORCA_SEND_ORDER_ENTITIES,
   resolveCanonicalOrderEntity,
+  resolveCanonicalChargeClassMeta,
+  resolveCanonicalChargeClassName,
   resolveOrderEntityDefaultClassMeta,
 } from './orderCategoryRegistry';
 import { fetchOrderBundles, type OrderBundle, type OrderBundleItem } from './orderBundleApi';
@@ -89,6 +92,9 @@ const cloneBundleItem = (item?: OrderBundleItem | null): OrderBundleItem | null 
     memo: item.memo?.trim() || undefined,
     genericFlg: item.genericFlg,
     userComment: item.userComment,
+    masterCategory: item.masterCategory,
+    selectionCommentItemNumber: item.selectionCommentItemNumber,
+    selectionCommentItemNumberBranch: item.selectionCommentItemNumberBranch,
     rowRole: item.rowRole,
   };
 };
@@ -244,10 +250,26 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
 };
 
 const resolveMedicalClass = (bundle: OrderBundle) => {
+  const chargeClassMeta = resolveCanonicalChargeClassMeta({
+    entity: bundle.entity,
+    classCode: bundle.classCode,
+    itemCategory: bundle.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory,
+  });
+  if (chargeClassMeta?.classCode) return chargeClassMeta.classCode;
   const explicit = bundle.classCode?.trim();
   if (explicit) return explicit;
   const classMeta = resolveOrderEntityDefaultClassMeta(bundle.entity?.trim());
   return classMeta?.classCode?.trim() || '';
+};
+
+const resolveMedicalClassName = (bundle: OrderBundle, medicalClass: string) => {
+  const explicit = bundle.className?.trim();
+  if (explicit && (!isChargeEntity(bundle.entity) || resolveCanonicalChargeClassName(bundle.entity, medicalClass) === explicit)) {
+    return explicit;
+  }
+  const canonicalChargeClassName = resolveCanonicalChargeClassName(bundle.entity, medicalClass);
+  if (canonicalChargeClassName) return canonicalChargeClassName;
+  return explicit || undefined;
 };
 
 const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormalizedRow | null => {
@@ -289,6 +311,7 @@ export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundl
 
   const medicalClass = resolveMedicalClass(bundle);
   if (!medicalClass) return null;
+  const medicalClassName = resolveMedicalClassName(bundle, medicalClass);
 
   const usageRow = buildUsageRow(bundle, bundleRows);
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
@@ -312,7 +335,7 @@ export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundl
       adminCode: bundle.adminCode?.trim() || undefined,
       adminCodeSystem: bundle.adminCodeSystem?.trim() || undefined,
       medicalClass,
-      medicalClassName: bundle.className?.trim() || undefined,
+      medicalClassName,
       medicalClassNumber: bundle.bundleNumber?.trim() || '1',
     },
     rows,

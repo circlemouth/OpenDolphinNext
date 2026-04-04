@@ -15,6 +15,9 @@ export type OrderBundleItem = {
   memo?: string;
   genericFlg?: 'yes' | 'no';
   userComment?: string;
+  masterCategory?: string;
+  selectionCommentItemNumber?: string;
+  selectionCommentItemNumberBranch?: string;
   rowRole?: 'main' | 'material' | 'comment' | 'bodyPart';
 };
 
@@ -104,6 +107,12 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
   return resolveCanonicalOrderEntity(trimmed) ?? trimmed;
 };
 
+const normalizeOptionalText = (value?: string | null) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+};
+
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
   ...bundle,
   entity: normalizeOrderEntityValue(bundle.entity),
@@ -114,6 +123,11 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => ({
       memo: fields.memoText,
       genericFlg: fields.genericFlg,
       userComment: fields.userComment,
+      masterCategory: fields.masterCategory,
+      selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+      selectionCommentItemNumberBranch: normalizeOptionalText(
+        item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+      ),
     };
   }),
 });
@@ -128,6 +142,11 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
       memo: fields.memoText,
       genericFlg: fields.genericFlg,
       userComment: fields.userComment,
+      masterCategory: fields.masterCategory,
+      selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
+      selectionCommentItemNumberBranch: normalizeOptionalText(
+        item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
+      ),
     };
   }),
 });

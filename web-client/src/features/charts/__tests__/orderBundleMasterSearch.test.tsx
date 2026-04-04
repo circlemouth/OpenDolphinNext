@@ -969,7 +969,15 @@ describe('OrderBundleEditPanel master search UI', () => {
     await waitFor(() => expect(screen.getByText('選択式コメント候補（medicationgetv2）')).toBeInTheDocument());
     const selectionCommentButton = screen.getAllByText('食後')[0]?.closest('button');
     expect(selectionCommentButton).not.toBeNull();
-    expect(selectionCommentButton).toBeDisabled();
-    expect(selectionCommentButton).toHaveAttribute('title', expect.stringContaining('未対応'));
+    expect(selectionCommentButton).toBeEnabled();
+
+    await user.click(selectionCommentButton!);
+
+    const commentCodeInput = container.querySelector<HTMLInputElement>('input[id$="-comment-code-0"]');
+    const commentNameInput = container.querySelector<HTMLInputElement>('input[id$="-comment-name-0"]');
+    const commentQuantityInput = container.querySelector<HTMLInputElement>('input[id$="-comment-quantity-0"]');
+    expect(commentCodeInput?.value).toBe('0082');
+    expect(commentNameInput?.value).toBe('食後');
+    expect(commentQuantityInput?.value).toBe('');
   });
 });

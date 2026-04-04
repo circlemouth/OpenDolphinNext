@@ -40,6 +40,9 @@ final class OrcaOrderBundleRecommendationSupport {
             entry.setMemo(parsedMemo.memoText());
             entry.setGenericFlg(parsedMemo.genericFlg());
             entry.setUserComment(parsedMemo.userComment());
+            entry.setMasterCategory(parsedMemo.masterCategory());
+            entry.setSelectionCommentItemNumber(parsedMemo.itemNumber());
+            entry.setSelectionCommentItemNumberBranch(parsedMemo.itemNumberBranch());
             entry.setRowRole(resolveRowRole(entity, entry));
             list.add(entry);
         }

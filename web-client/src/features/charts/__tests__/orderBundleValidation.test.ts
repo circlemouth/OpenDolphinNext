@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 
 import { validateBundleForm } from '../OrderBundleEditPanel';
 
@@ -497,5 +497,53 @@ describe('validateBundleForm', () => {
       bundleLabel: 'その他',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_material_item']);
+  });
+
+  it('baseChargeOrder: 110-125 以外の classCode を reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '基本診療料',
+        classCode: '130',
+        className: '医学管理等',
+        items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '110' }],
+      } as BundleFormState & { classCode: string; className: string },
+      entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+
+    expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_code');
+  });
+
+  it('baseChargeOrder: main row の masterCategory 不整合を reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '基本診療料',
+        classCode: '110',
+        className: '基本診療料',
+        items: [{ code: '112007410', name: '在宅指導料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
+      } as BundleFormState & { classCode: string; className: string },
+      entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+
+    expect(issues.map((issue) => issue.key)).toContain('invalid_charge_item_category');
+  });
+
+  it('instractionChargeOrder: canonical className は保存前に補完できる', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '医学管理等',
+        classCode: '130',
+        className: '',
+        items: [{ code: '112007410', name: '在宅指導料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
+      } as BundleFormState & { classCode: string; className: string },
+      entity: 'instractionChargeOrder',
+      bundleLabel: '算定',
+    });
+
+    expect(issues).toEqual([]);
   });
 });

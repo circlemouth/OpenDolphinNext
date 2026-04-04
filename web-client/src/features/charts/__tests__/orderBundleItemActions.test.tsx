@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+﻿import { afterEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -489,23 +489,24 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(operation?.className).toBe('処置');
   });
 
-  it('baseChargeOrder の再編集保存は explicit class meta を潰さない', async () => {
+  it('instractionChargeOrder の再編集保存は explicit class meta を潰さない', async () => {
     const user = userEvent.setup();
     renderWithClient(
       <OrderBundleEditPanel
         {...chargeProps}
+        entity="instractionChargeOrder"
         request={{
           requestId: 'req-charge-edit',
           kind: 'edit',
           bundle: {
             documentId: 10,
             moduleId: 20,
-            entity: 'baseChargeOrder',
+            entity: 'instractionChargeOrder',
             bundleName: '在宅指導',
             bundleNumber: '1',
             classCode: '130',
             classCodeSystem: 'Claim007',
-            className: '指導・在宅',
+            className: '医学管理等',
             admin: '',
             adminMemo: '',
             memo: '確認',
@@ -525,7 +526,7 @@ describe('OrderBundleEditPanel item actions', () => {
     const operation = payload?.operations?.[0];
     expect(operation?.classCode).toBe('130');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('指導・在宅');
+    expect(operation?.className).toBe('医学管理等');
   });
 
   it('外用の混合トグルで混合コメント行が保存 payload に追加される', async () => {

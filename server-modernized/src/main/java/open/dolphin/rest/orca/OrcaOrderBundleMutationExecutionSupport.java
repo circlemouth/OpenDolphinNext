@@ -96,11 +96,16 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 continue;
             }
             String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
+            String itemCategory = resolveItemCategory(item);
             if (code != null) {
                 hasCodedRow = true;
                 if (OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
                     hasBodyPart = true;
                 } else if (!isCommentCode(code)) {
+                    if (OrcaChargeClassSupport.isChargeEntity(canonicalEntity)
+                            && !OrcaChargeClassSupport.isChargeItemCategoryCompatible(canonicalEntity, itemCategory)) {
+                        throw validationFailure.invalid("items", "charge items must use a compatible masterCategory");
+                    }
                     if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity) && !isOtherOrderCode(code)) {
                         throw validationFailure.invalid("items", "otherOrder items must use code family 8");
                     }
@@ -156,6 +161,17 @@ final class OrcaOrderBundleMutationExecutionSupport {
                         || OrcaOrderBundleRequestSupport.hasText(item.getQuantity())
                         || OrcaOrderBundleRequestSupport.hasText(item.getUnit())
                         || OrcaOrderBundleRequestSupport.hasText(item.getMemo()));
+    }
+
+    private static String resolveItemCategory(OrderBundleMutationRequest.BundleItem item) {
+        if (item == null) {
+            return null;
+        }
+        if (OrcaOrderBundleRequestSupport.hasText(item.getMasterCategory())) {
+            return OrcaOrderBundleItemMemoSupport.normalizeMasterCategory(item.getMasterCategory());
+        }
+        OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo = OrcaOrderBundleItemMemoSupport.parse(item.getMemo());
+        return parsedMemo.masterCategory();
     }
 
     private static void createDocument(

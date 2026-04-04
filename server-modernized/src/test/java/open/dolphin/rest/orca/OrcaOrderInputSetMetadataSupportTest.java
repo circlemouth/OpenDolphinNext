@@ -15,6 +15,18 @@ class OrcaOrderInputSetMetadataSupportTest {
     @Test
     void resolveClassMetadataMaps200And400ToCanonicalEntities() {
         assertEquals(
+                IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("110", LOGGER).entity());
+        assertEquals(
+                "基本診療料",
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("110", LOGGER).className());
+        assertEquals(
+                IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("130", LOGGER).entity());
+        assertEquals(
+                "医学管理等",
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("130", LOGGER).className());
+        assertEquals(
                 IInfoModel.ENTITY_TREATMENT,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("400", LOGGER).entity());
         assertEquals(
