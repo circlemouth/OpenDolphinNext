@@ -50,6 +50,7 @@
 ## 後方互換性について
 *   既存データがない環境を想定しており、もともとのOpenDolphinのデータ保存方式を温存する意義が乏しくNextには後方互換性は担保しておりません。
 *   現時点ではデータ移行ツールを作成する予定はありません。
+*   クライアントについても後方互換性はありません。WEBクライアントを新規開発しております。
 
 ### 謝辞
 *   本リポジトリは、以下のプロジェクトを大いに活用をさせて頂きました。
@@ -62,10 +63,9 @@
     - [OpenAI Codex](https://github.com/openai/codex)
   - 
 *   御本人のご希望で匿名とさせていただきますが、ORCA APIの点数マスタのAPIについての情報提供やその他過去の開発状況に関する情報をご提供いただきました。深く感謝申し上げます。
-*   PR [#68](https://github.com/circlemouth/OpenDolphinNext/pull/68)  により、サーバーデータ保存形式の見直しに関する具体的な修正、ご意見を頂けた H.Inomata 様(https://x.com/h_inomata?s=21)に感謝いたします。
-*   ライセンス上の検討およびサーバーデータ保存形式に関する有益な[議論](https://x.com/allnightnihon2b/status/2030508273812820403?s=61)に対し、[@allnightnihon2b](https://x.com/allnightnihon2b?s=21) 様に感謝いたします。
-*   カルテデータ保存形式に関する有益な[議論](https://x.com/air_h_128k_ilI/status/2030995854061142486?s=20)に対し、[@air_h_128k_ili](https://x.com/air_h_128k_ili?s=21) 様に感謝いたします。
 *   orca受付eventの処理周りでは、元町皮ふ科の松村先生の[リポジトリ](https://github.com/pinus/OpenDolphin-1.3.0)を参考にさせて頂きました。
+*   カルテデータ保存形式やライセンスに関して以下の方々からXでご意見を頂きました。最終的に異なる方式のデータ保存形式を採用しましたが、考える切っ掛けになりました。一部同一人物ですが、別アカウントとして挙げさせていただいております。[@h_inomata](https://x.com/h_inomata?s=21、[@air_h_128k_ili](https://x.com/air_h_128k_ili?s=21)、[@allnightnihon2b](https://x.com/allnightnihon2b?s=21) 
+
 
 
 
@@ -77,14 +77,11 @@
 
 このリポジトリを利用を検討される方の判断材料とすべく、開発と並行して、あくまでgit履歴からおえる事実をまとめていきます。現時点では調査途上です。
 
-OpenDolphinLab 関連資料: [OpenDolphin-Lab-A4.pdf](src/discovery/OpenDolphin-Lab-A4.pdf)
-
 
 - Git 履歴調査: [minagawa署名git履歴調査_20260310.md](src/discovery/minagawa署名git履歴調査_20260310.md)
 - Git 履歴調査: [LICENSE_git履歴調査_20260310.md](src/discovery/LICENSE_git履歴調査_20260310.md)
 - Git 履歴調査: [ライセンス_コード著者アカウント同一性時系列調査_20260313.md](src/discovery/ライセンス_コード著者アカウント同一性時系列調査_20260313.md)
-
-
+OpenDolphinLab 関連資料: [OpenDolphin-Lab-A4.pdf](src/discovery/OpenDolphin-Lab-A4.pdf)
 
 
 ### OpenDolphin 2.7.1
@@ -103,6 +100,7 @@ OpenDolphinLab 関連資料: [OpenDolphin-Lab-A4.pdf](src/discovery/OpenDolphin-
 
 ### このリポジトリの開発につきまして
 2026年3月10日現在、GPT 5.4Pro 思考拡張モードによる方針策定、およびgpt 5.4 highをメインにしたバイブコーディングで作業を行っております。
+
 PR、Issue大歓迎で、マージも積極的にさせていただきますが、方針転換でマージ直後に上書きされて実質無効化されてしまう事案も度々発生するかと思います。
 サーバー側の仕様は概ね固めたつもりですが、何卒ご容赦のほどよろしくお願いいたします。
 
