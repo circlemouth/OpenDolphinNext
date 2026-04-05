@@ -47,6 +47,9 @@
 > `artifacts/`、`output/`、`src/LEGACY:*` などの生成物・参照専用資産は、現行の主要開発対象ではありません。
 > 現在の実装作業は `server-modernized/` と `web-client/` を中心に進めます。
 
+## 後方互換性について
+*   既存データがない環境を想定しており、もともとのOpenDolphinのデータ保存方式を温存する意義が乏しくNextには後方互換性は担保しておりません。
+*   現時点ではデータ移行ツールを作成する予定はありません。
 
 ### 謝辞
 *   本リポジトリは、以下のプロジェクトを大いに活用をさせて頂きました。
@@ -58,6 +61,7 @@
     - [multi-agent-shogun](https://github.com/yohey-w/multi-agent-shogun.git)
     - [OpenAI Codex](https://github.com/openai/codex)
   - 
+*   御本人のご希望で匿名とさせていただきますが、ORCA APIの点数マスタのAPIについての情報提供やその他過去の開発状況に関する情報をご提供いただきました。深く感謝申し上げます。
 *   PR [#68](https://github.com/circlemouth/OpenDolphinNext/pull/68)  により、サーバーデータ保存形式の見直しに関する具体的な修正、ご意見を頂けた H.Inomata 様(https://x.com/h_inomata?s=21)に感謝いたします。
 *   ライセンス上の検討およびサーバーデータ保存形式に関する有益な[議論](https://x.com/allnightnihon2b/status/2030508273812820403?s=61)に対し、[@allnightnihon2b](https://x.com/allnightnihon2b?s=21) 様に感謝いたします。
 *   カルテデータ保存形式に関する有益な[議論](https://x.com/air_h_128k_ilI/status/2030995854061142486?s=20)に対し、[@air_h_128k_ili](https://x.com/air_h_128k_ili?s=21) 様に感謝いたします。
@@ -68,14 +72,19 @@
 ## Original License & Credits
 
 本プロジェクトは以下の OpenDolphin 2.7.1 をフォーク・継承しています。
-フォーク元のライセンスについては議論があります。必ずフォーク元のライセンスの議論についてはお調べ頂きますよう、お願いいたします。
+フォーク元のライセンスについては議論があり、現在表記しているライセンスは整理しきれていません。
+現時点では未完成ですが、最終的には過去のgit履歴やフォーク元の権利を所有されているメドレー株式会社様に確認をとらせていただき、ライセンス整備を行います。
 
 このリポジトリを利用を検討される方の判断材料とすべく、開発と並行して、あくまでgit履歴からおえる事実をまとめていきます。現時点では調査途上です。
+
+OpenDolphinLab 関連資料: [OpenDolphin-Lab-A4.pdf](src/discovery/OpenDolphin-Lab-A4.pdf)
 
 
 - Git 履歴調査: [minagawa署名git履歴調査_20260310.md](src/discovery/minagawa署名git履歴調査_20260310.md)
 - Git 履歴調査: [LICENSE_git履歴調査_20260310.md](src/discovery/LICENSE_git履歴調査_20260310.md)
 - Git 履歴調査: [ライセンス_コード著者アカウント同一性時系列調査_20260313.md](src/discovery/ライセンス_コード著者アカウント同一性時系列調査_20260313.md)
+
+
 
 
 ### OpenDolphin 2.7.1
@@ -94,8 +103,8 @@
 
 ### このリポジトリの開発につきまして
 2026年3月10日現在、GPT 5.4Pro 思考拡張モードによる方針策定、およびgpt 5.4 highをメインにしたバイブコーディングで作業を行っております。
-PR、Issue大歓迎で、マージも積極的にさせていただきますが、H.Inomata 様のPR [#68](https://github.com/circlemouth/OpenDolphinNext/pull/68)のように、マージ直後に上書きされて実質無効化されてしまう事案も度々発生するかと思います。
-何卒ご容赦のほどよろしくお願いいたします。
+PR、Issue大歓迎で、マージも積極的にさせていただきますが、方針転換でマージ直後に上書きされて実質無効化されてしまう事案も度々発生するかと思います。
+サーバー側の仕様は概ね固めたつもりですが、何卒ご容赦のほどよろしくお願いいたします。
 
 なお、このリポジトリの開発のモチベーションは、以下の２点につきます。
   - [自分用に好きにカスタマイズして使える、自前管理できるカルテがほしい](https://x.com/MedRecMate/status/2031004763761066177?s=20)
