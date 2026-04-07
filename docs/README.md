@@ -27,6 +27,9 @@
 - [web-client-overview.md](architecture/web-client-overview.md)
 - [server-internal-modernization-adr.md](architecture/server-internal-modernization-adr.md)
 
+## Implementation
+- [orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
+
 ## Live Runbooks
 - [release-validation.md](runbooks/release-validation.md)
 
