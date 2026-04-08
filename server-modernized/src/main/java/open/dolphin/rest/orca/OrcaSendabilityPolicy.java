@@ -54,7 +54,15 @@ final class OrcaSendabilityPolicy {
         return OrcaMedicalClassCatalog.supportsBodyPartField(entity);
     }
 
+    static boolean supportsBodyPartField(String entity, String classCode) {
+        return OrcaMedicalClassCatalog.supportsBodyPartField(entity, classCode);
+    }
+
     static boolean requiresSendableMainRow(String entity) {
         return OrcaMedicalClassCatalog.requiresSendableMainRow(entity);
+    }
+
+    static boolean requiresSendableMainRow(String entity, String classCode) {
+        return OrcaMedicalClassCatalog.requiresSendableMainRow(entity, classCode);
     }
 }

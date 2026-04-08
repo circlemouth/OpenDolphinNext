@@ -68,8 +68,8 @@ const injectionProps = {
 const radiologyProps = {
   ...baseProps,
   entity: 'radiologyOrder',
-  title: '放射線編集',
-  bundleLabel: '放射線オーダー名',
+  title: '画像診断編集',
+  bundleLabel: '画像診断オーダー名',
   itemQuantityLabel: '回数',
 };
 
@@ -123,7 +123,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.getByLabelText('検査指示（院内）')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。',
+        '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では exact allowlist class のみを使い、640/643 は fail-close します。',
       ),
     ).toBeInTheDocument();
     expect(
@@ -199,7 +199,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '画像診断送信では exact classCode と coded row を使います。bodyPart は modality により要否が変わるため blanket 必須にせず、検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+        '画像診断送信では exact classCode と coded row を使います。bodyPart は current release では classCode 700 のみ扱い、それ以外は fail-close します。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
       ),
     ).toBeInTheDocument();
   });
@@ -454,7 +454,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /R70001.*胸部CTセット.*反映/ }));
 
-    expect(screen.getByLabelText('放射線オーダー名')).toHaveValue('胸部CTセット');
+    expect(screen.getByLabelText('画像診断オーダー名')).toHaveValue('胸部CTセット');
     expect(screen.getByLabelText('部位', { selector: 'input' })).toHaveValue('胸部');
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));

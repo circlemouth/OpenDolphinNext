@@ -1,5 +1,5 @@
 import type { OrcaOrderEntity } from './orcaMedicalClassCatalog';
-import { resolveCanonicalOrcaOrderEntity } from './orcaMedicalClassCatalog';
+import { resolveCanonicalOrcaOrderEntity, supportsBodyPartForEntityClass } from './orcaMedicalClassCatalog';
 
 export type OrcaEntityMode = 'sendable' | 'sendable-with-blocked-usage' | 'local-only' | 'import-only';
 
@@ -79,18 +79,10 @@ export const blocksBodyPartForEntity = (entity?: string | null) => {
 export const resolveOrcaOrderBodyPartPolicy = (entity?: string | null, classCode?: string | null) => {
   const canonical = resolveCanonicalOrcaOrderEntity(entity);
   if (!canonical) return undefined;
-  if (ENTITY_SENDABILITY[canonical].blocksBodyPart) {
+  if (ENTITY_SENDABILITY[canonical].blocksBodyPart || !supportsBodyPartForEntityClass(canonical, classCode)) {
     return 'blocked';
   }
-  if (canonical !== 'radiologyOrder') {
-    return 'optional';
-  }
-  const normalizedClassCode = classCode?.trim();
-  if (!normalizedClassCode || normalizedClassCode === '700') return 'plain_xray_or_photo';
-  if (normalizedClassCode === '701' || normalizedClassCode === '702' || normalizedClassCode === '703' || normalizedClassCode === '704' || normalizedClassCode === '731' || normalizedClassCode === '732') {
-    return 'standalone_class';
-  }
-  return 'selection_comment_required';
+  return canonical === 'radiologyOrder' ? 'plain_xray_or_photo' : 'optional';
 };
 
 export const isLocalOnlyField = (field: string) => LOCAL_ONLY_FIELDS.includes(field as (typeof LOCAL_ONLY_FIELDS)[number]);

@@ -14,7 +14,7 @@
 - `physiologyOrder` は import-only + local save/fetch 可 + send-block。
 - `bacteriaOrder` は local-only + local save/fetch 可 + send-block。
 - `otherOrder` は local-only + send-block。
-- `radiologyOrder` は `700/701/702/703/704/731/732` のみを扱い、className は `画像診断` を使う。bodyPart は blanket required ではなく modality-aware に扱う。
+- `radiologyOrder` は `700/701/702/703/704/731/732` のみを扱い、className は `画像診断` を使う。bodyPart は current release では `700` のみ許可し、その他 class は fail-close に reject する。
 - `baseChargeOrder` は `110/114/120/124`、`instractionChargeOrder` は `130/132/133/140/141/142/143/148/149` のみを扱う。
 - `Item_Number / Item_Number_Branch` は selection metadata として見えても outbound には出さない。selection comment は fail-closed に block する。
 

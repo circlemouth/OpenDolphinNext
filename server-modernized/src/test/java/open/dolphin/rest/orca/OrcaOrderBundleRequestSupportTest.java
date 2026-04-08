@@ -142,10 +142,10 @@ class OrcaOrderBundleRequestSupportTest {
     void isCompatibleClassCodeDoesNotApplyOutboundAllowlistToOtherOrderLocalSave() {
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "800"));
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "890"));
-        assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "700"));
-        assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "400"));
-        assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "8A0"));
-        assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "891"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "700"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "400"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "8A0"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_OTHER_ORDER, "891"));
     }
 
     @Test
@@ -161,7 +161,7 @@ class OrcaOrderBundleRequestSupportTest {
     void otherOrderHelpersAllowLocalOnlyCodeShape() {
         assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("180000210"));
         assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("800000001"));
-        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("81234567"));
-        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("18ABC0210"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("81234567"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("18ABC0210"));
     }
 }

@@ -156,6 +156,9 @@ final class OrcaOrderBundleRequestSupport {
         if (normalizedEntity == null || normalizedClassCode == null) {
             return true;
         }
+        if (IInfoModel.ENTITY_OTHER_ORDER.equals(normalizedEntity)) {
+            return isValidOtherOrderClassCode(normalizedClassCode);
+        }
         if (!OrcaSendabilityPolicy.isSendableEntity(normalizedEntity)) {
             return true;
         }
@@ -166,16 +169,25 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static boolean isValidOtherOrderCode(String code) {
-        return trimToNull(code) != null;
+        String normalized = trimToNull(code);
+        return normalized != null && normalized.matches("^(?:8\\d{8}|18\\d{7})$");
     }
 
     static boolean isValidOtherOrderClassCode(String classCode) {
-        return trimToNull(classCode) != null;
+        String normalized = trimToNull(classCode);
+        return normalized != null && normalized.matches("^\\d{3}$")
+                && Integer.parseInt(normalized) >= 800
+                && Integer.parseInt(normalized) <= 890;
     }
 
     static boolean supportsBodyPartField(String entity) {
         String normalizedEntity = canonicalizeEntity(entity);
         return normalizedEntity != null && OrcaSendabilityPolicy.supportsBodyPartField(normalizedEntity);
+    }
+
+    static boolean supportsBodyPartField(String entity, String classCode) {
+        String normalizedEntity = canonicalizeEntity(entity);
+        return normalizedEntity != null && OrcaSendabilityPolicy.supportsBodyPartField(normalizedEntity, classCode);
     }
 
     static String normalizeRowRole(String rowRole) {
@@ -208,6 +220,10 @@ final class OrcaOrderBundleRequestSupport {
 
     static boolean requiresSendableMainRow(String canonicalEntity) {
         return OrcaSendabilityPolicy.requiresSendableMainRow(canonicalEntity);
+    }
+
+    static boolean requiresSendableMainRow(String canonicalEntity, String classCode) {
+        return OrcaSendabilityPolicy.requiresSendableMainRow(canonicalEntity, classCode);
     }
 
     static String resolveCanonicalClassName(String entity, String classCode, String className) {

@@ -3,12 +3,14 @@ import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
 import {
   ORDER_GROUP_REGISTRY,
   resolveBundleNumberLabel,
+  resolveCanonicalOrderEntity,
   resolveOrderEntity,
   resolveOrderGroupKeyByEntity,
   type BundleNumberLabel,
   type OrderEntity,
   type OrderGroupKey,
 } from './orderCategoryRegistry';
+import { resolveCanonicalChargeClassName } from './orderChargeClassSupport';
 import {
   extractIngredientAmount,
   formatBodyPartLine,
@@ -21,6 +23,7 @@ import {
   stripLeadingCode,
   toSafeMemoText,
 } from './orderDetailFormatters';
+import { resolveMedicalClassName } from './orcaMedicalClassCatalog';
 
 export type OrderDetailDisplayCategoryKey = OrderGroupKey | 'document';
 
@@ -77,44 +80,14 @@ const SUMMARY_CATEGORIES: SummaryCategorySpec[] = [
   { key: 'document', label: '文書' },
 ];
 
-const RADIOLOGY_CLASS_NAMES = {
-  '700': '画像診断',
-  '701': '画像診断薬剤',
-  '702': '画像診断材料',
-  '703': 'X線フィルム',
-  '704': '画像診断加算料',
-  '731': '造影剤・注入手技',
-  '732': '造影剤・注入手技',
-} as const;
-const BASE_CHARGE_CLASS_NAMES = {
-  '110': '初診料',
-  '114': '初診加算料',
-  '120': '再診',
-  '124': '再診加算料',
-} as const;
-const INSTRUCTION_CHARGE_CLASS_NAMES = {
-  '130': '管理料',
-  '132': '管理材料',
-  '133': '管理加算料',
-  '140': '在宅料',
-  '141': '在宅薬剤',
-  '142': '在宅材料',
-  '143': '在宅加算料',
-  '148': '在宅薬剤（院外処方）',
-  '149': '在宅材料（院外処方）',
-} as const;
-
 const resolveBundleDisplayClassName = (bundle: OrderBundle) => {
-  const entity = bundle.entity?.trim() ?? '';
+  const entity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
   const classCode = bundle.classCode?.trim() ?? '';
   if (entity === 'radiologyOrder') {
-    return RADIOLOGY_CLASS_NAMES[classCode as keyof typeof RADIOLOGY_CLASS_NAMES] ?? RADIOLOGY_CLASS_NAMES['700'];
+    return resolveMedicalClassName(classCode) ?? resolveMedicalClassName('700');
   }
-  if (entity === 'baseChargeOrder') {
-    return BASE_CHARGE_CLASS_NAMES[classCode as keyof typeof BASE_CHARGE_CLASS_NAMES] ?? BASE_CHARGE_CLASS_NAMES['110'];
-  }
-  if (entity === 'instractionChargeOrder') {
-    return INSTRUCTION_CHARGE_CLASS_NAMES[classCode as keyof typeof INSTRUCTION_CHARGE_CLASS_NAMES] ?? INSTRUCTION_CHARGE_CLASS_NAMES['130'];
+  if (entity === 'baseChargeOrder' || entity === 'instractionChargeOrder') {
+    return resolveCanonicalChargeClassName(entity, classCode) ?? resolveCanonicalChargeClassName(entity);
   }
   return bundle.className?.trim() || undefined;
 };

@@ -6,9 +6,9 @@
 ## Single Source Of Truth
 
 - `treatmentOrder` を 400 系処置の canonical entity とする。`generalOrder` は ingress / query 境界でのみ `treatmentOrder` へ正規化する alias として扱う。
-- `bodyPart` は first-class field のまま保持するが、保存・再構成・送信に使うかどうかは entity / modality ごとの policy で判定する。
+- `bodyPart` は first-class field のまま保持するが、保存・再構成・送信に使うかどうかは entity / exact class ごとの policy で判定する。
 - `injectionOrder` は exact allowlist を持ち、`admin/adminCode/adminMemo/speed` は local-only として wire carrier にしない。
-- `radiologyOrder` は `700/701/702/703/704/731/732` を exact allowlist とし、`className=画像診断` を canonical にする。
+- `radiologyOrder` は `700/701/702/703/704/731/732` を exact allowlist とし、`className=画像診断` を canonical にする。bodyPart は `classCode=700` のみ許可する。
 - `otherOrder` は local-only + send-block であり、送信候補として扱わない。
 - `physiologyOrder` は import-only + local save/fetch 可 + send-block であり、bodyPart も reject する。
 - `bacteriaOrder` は local-only + local save/fetch 可 + send-block であり、subtype は院内保存専用とする。

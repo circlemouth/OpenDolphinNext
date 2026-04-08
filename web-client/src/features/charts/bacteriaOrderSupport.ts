@@ -1,3 +1,8 @@
+import {
+  isBacteriaStructuredCommentFamilyAllowed,
+  resolveOrcaCommentCarrierRule,
+} from './orcaCommentCarrierRules';
+
 export type BacteriaCarrierCommentRole = 'specimen' | 'condition' | 'instruction' | 'remark';
 
 export type BacteriaCarrierComment = {
@@ -64,13 +69,16 @@ export const normalizeBacteriaOrderMetadata = (metadata?: BacteriaOrderMetadata 
   };
 };
 
-const is842Comment = (code?: string) => /^842\d{6}$/.test(code?.trim() ?? '');
-const is830Comment = (code?: string) => /^830\d{6}$/.test(code?.trim() ?? '');
+const resolveBacteriaStructuredFamily = (code?: string | null) => {
+  if (!isBacteriaStructuredCommentFamilyAllowed(code)) return undefined;
+  return resolveOrcaCommentCarrierRule(code)?.family;
+};
 
 export const bacteriaCarrierCommentToOrderItem = (comment?: BacteriaCarrierComment | null): CommentLikeItem | null => {
   const normalized = normalizeCarrierComment(comment);
   if (!normalized?.code) return null;
-  if (is842Comment(normalized.code)) {
+  const family = resolveBacteriaStructuredFamily(normalized.code);
+  if (family === '842') {
     return {
       code: normalized.code,
       name: normalized.name ?? '',
@@ -82,7 +90,7 @@ export const bacteriaCarrierCommentToOrderItem = (comment?: BacteriaCarrierComme
       itemNumberBranch: normalized.itemNumberBranch,
     };
   }
-  if (is830Comment(normalized.code)) {
+  if (family === '830') {
     return {
       code: normalized.code,
       name: normalized.inputValue ?? normalized.name ?? '',
@@ -94,16 +102,7 @@ export const bacteriaCarrierCommentToOrderItem = (comment?: BacteriaCarrierComme
       itemNumberBranch: normalized.itemNumberBranch,
     };
   }
-  return {
-    code: normalized.code,
-    name: normalized.name ?? normalized.inputValue ?? '',
-    quantity: '',
-    unit: '',
-    rowRole: 'comment',
-    category: normalized.category,
-    itemNumber: normalized.itemNumber,
-    itemNumberBranch: normalized.itemNumberBranch,
-  };
+  return null;
 };
 
 export const bacteriaMetadataToCommentItems = (metadata?: BacteriaOrderMetadata | null): CommentLikeItem[] => {
@@ -139,10 +138,12 @@ export const commentItemsToBacteriaMetadata = (
     .map((item): BacteriaCarrierComment | undefined => {
       const code = trimOrUndefined(item.code);
       if (!code) return undefined;
+      const family = resolveBacteriaStructuredFamily(code);
+      if (!family) return undefined;
       return normalizeCarrierComment({
         code,
-        name: is830Comment(code) ? normalizedCurrent?.carrierComments?.find((entry) => entry.code === code)?.name ?? undefined : item.name,
-        inputValue: is842Comment(code) ? trimOrUndefined(item.quantity) : is830Comment(code) ? item.name : undefined,
+        name: family === '830' ? normalizedCurrent?.carrierComments?.find((entry) => entry.code === code)?.name ?? undefined : item.name,
+        inputValue: family === '842' ? trimOrUndefined(item.quantity) : family === '830' ? item.name : undefined,
         category: trimOrUndefined(item.category),
         itemNumber: trimOrUndefined(item.itemNumber),
         itemNumberBranch: trimOrUndefined(item.itemNumberBranch),

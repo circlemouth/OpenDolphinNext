@@ -134,8 +134,8 @@ final class OrcaOrderBundleRowRoleSupport {
             case open.dolphin.infomodel.IInfoModel.ENTITY_MED_ORDER,
                     open.dolphin.infomodel.IInfoModel.ENTITY_INJECTION_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
             case open.dolphin.infomodel.IInfoModel.ENTITY_PHYSIOLOGY_ORDER,
-                    open.dolphin.infomodel.IInfoModel.ENTITY_BACTERIA_ORDER,
-                    open.dolphin.infomodel.IInfoModel.ENTITY_OTHER_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
+                    open.dolphin.infomodel.IInfoModel.ENTITY_BACTERIA_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
+            case open.dolphin.infomodel.IInfoModel.ENTITY_OTHER_ORDER -> isOtherOrderCode(code);
             default -> !isBodyPartCode(code) && !isCommentCode(code);
         };
     }

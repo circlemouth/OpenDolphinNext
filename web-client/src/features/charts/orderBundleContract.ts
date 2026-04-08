@@ -57,8 +57,12 @@ export const resolveOrderBundleItemRowRole = (
   entity?: string | null,
   item?: ContractRow | ContractBodyPart | null,
 ): OrderBundleContractRowRole => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity);
   if (!item) return 'main';
   if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
+    if (item.rowRole === 'material' && canonicalEntity === 'surgeryOrder') {
+      return 'main';
+    }
     return item.rowRole;
   }
   const code = item.code?.trim();

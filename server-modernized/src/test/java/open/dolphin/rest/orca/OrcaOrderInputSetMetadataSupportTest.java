@@ -36,7 +36,7 @@ class OrcaOrderInputSetMetadataSupportTest {
                 "radiologyOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("700", LOGGER).entity());
         assertEquals(
-                "otherOrder",
+                OrcaOrderInputSetMetadataSupport.UNSUPPORTED_ENTITY,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("800", LOGGER).entity());
     }
 

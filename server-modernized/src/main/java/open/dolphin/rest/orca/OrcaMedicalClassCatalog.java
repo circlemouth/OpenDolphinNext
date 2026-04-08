@@ -49,6 +49,14 @@ final class OrcaMedicalClassCatalog {
             IInfoModel.ENTITY_RADIOLOGY_ORDER, Set.of("710", "711", "712", "713", "720", "721", "723", "724"),
             IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, Set.of("131", "144", "145", "146", "147", "150"));
 
+    private static final Map<String, Map<String, String>> CLASS_MODE_BY_ENTITY = Map.of(
+            "treatmentOrder", Map.of(
+                    "400", "procedure-capable",
+                    "401", "drug-only",
+                    "402", "material-only",
+                    "403", "add-on-only",
+                    "409", "procedure-capable"));
+
     private static final Map<String, String> EXACT_CLASS_NAMES = Map.ofEntries(
             Map.entry("110", "初診料"),
             Map.entry("114", "初診加算料"),
@@ -175,14 +183,69 @@ final class OrcaMedicalClassCatalog {
         return EXACT_CLASS_NAMES.get(normalizedClassCode);
     }
 
-    static boolean supportsBodyPartField(String entity) {
+    static String resolveEntityForClassCode(String classCode) {
+        String normalizedClassCode = trimToNull(classCode);
+        if (normalizedClassCode == null) {
+            return null;
+        }
+        for (Map.Entry<String, Set<String>> entry : ALLOWLIST_BY_ENTITY.entrySet()) {
+            if (entry.getValue().contains(normalizedClassCode)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
+    static String resolveEntityLabel(String entity) {
         String normalized = normalizeEntity(entity);
-        return IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalized);
+        if (normalized == null) {
+            return null;
+        }
+        return switch (normalized) {
+            case IInfoModel.ENTITY_MED_ORDER -> "RP";
+            case IInfoModel.ENTITY_INJECTION_ORDER -> "注射";
+            case "treatmentOrder" -> "処置";
+            case IInfoModel.ENTITY_SURGERY_ORDER -> "手術";
+            case "testOrder" -> "検査";
+            case IInfoModel.ENTITY_RADIOLOGY_ORDER -> "画像診断";
+            case IInfoModel.ENTITY_OTHER_ORDER -> "その他";
+            default -> null;
+        };
+    }
+
+    static boolean supportsBodyPartField(String entity) {
+        return supportsBodyPartField(entity, null);
+    }
+
+    static boolean supportsBodyPartField(String entity, String classCode) {
+        String normalized = normalizeEntity(entity);
+        String normalizedClassCode = trimToNull(classCode);
+        return IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalized)
+                && (normalizedClassCode == null || "700".equals(normalizedClassCode));
     }
 
     static boolean requiresSendableMainRow(String entity) {
+        return requiresSendableMainRow(entity, null);
+    }
+
+    static boolean requiresSendableMainRow(String entity, String classCode) {
         String normalized = normalizeEntity(entity);
-        return isSendableEntity(normalized) && !IInfoModel.ENTITY_MED_ORDER.equals(normalized);
+        if (!isSendableEntity(normalized)
+                || IInfoModel.ENTITY_MED_ORDER.equals(normalized)
+                || IInfoModel.ENTITY_OTHER_ORDER.equals(normalized)
+                || IInfoModel.ENTITY_PHYSIOLOGY_ORDER.equals(normalized)
+                || IInfoModel.ENTITY_BACTERIA_ORDER.equals(normalized)) {
+            return false;
+        }
+        if ("treatmentOrder".equals(normalized)) {
+            String normalizedClassCode = trimToNull(classCode);
+            if (normalizedClassCode == null) {
+                return true;
+            }
+            String classMode = CLASS_MODE_BY_ENTITY.getOrDefault(normalized, Map.of()).get(normalizedClassCode);
+            return classMode == null || "procedure-capable".equals(classMode);
+        }
+        return true;
     }
 
     static boolean isMedOrderUsageBlocked(String entity) {

@@ -210,6 +210,23 @@ export const resolveMedicalClassMode = (entity?: string | null, classCode?: stri
   return resolveOrcaEntityCatalog(entity)?.classModes?.[normalizedClassCode];
 };
 
+export const requiresSendableMainRowForEntityClass = (entity?: string | null, classCode?: string | null) => {
+  const canonical = resolveCanonicalOrcaOrderEntity(entity);
+  if (!canonical) return false;
+  if (canonical === 'medOrder') return false;
+  if (canonical === 'otherOrder' || canonical === 'physiologyOrder' || canonical === 'bacteriaOrder') return false;
+  if (canonical !== 'treatmentOrder') return true;
+  const classMode = resolveMedicalClassMode(canonical, classCode);
+  return classMode === undefined || classMode === 'procedure-capable';
+};
+
+export const supportsBodyPartForEntityClass = (entity?: string | null, classCode?: string | null) => {
+  const canonical = resolveCanonicalOrcaOrderEntity(entity);
+  if (canonical !== 'radiologyOrder') return false;
+  const normalizedClassCode = classCode?.trim();
+  return !normalizedClassCode || normalizedClassCode === '700';
+};
+
 export const resolveOrcaEntityDefaultClassMeta = resolveDefaultMedicalClassMeta;
 export const isOrcaEntityClassAllowed = isAllowedMedicalClassForEntity;
 export const isOrcaEntityClassBlocked = isBlockedMedicalClassForEntity;

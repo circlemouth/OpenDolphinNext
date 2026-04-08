@@ -410,7 +410,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     editor: { title: '細菌検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
   radiologyOrder: {
-    label: '放射線',
+    label: '画像診断',
     group: 'test',
     etensuCategory: '7',
     classMeta: resolveOrcaEntityDefaultClassMetaImpl('radiologyOrder'),
@@ -418,7 +418,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
       itemLabel: '画像検査項目',
       requiresItems: true,
       requiresUsage: false,
-      requiresBodyPart: true,
+      requiresBodyPart: false,
     },
     ui: {
       bundleNamePlaceholder: '例: 胸部CT（造影）',
@@ -440,7 +440,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
       ],
       defaultMasterSearchType: 'etensu',
     },
-    editor: { title: '放射線', bundleLabel: '検査名', itemQuantityLabel: '数量' },
+    editor: { title: '画像診断', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
   baseChargeOrder: {
     label: '基本料',

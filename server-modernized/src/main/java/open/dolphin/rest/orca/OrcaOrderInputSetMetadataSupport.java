@@ -18,27 +18,21 @@ final class OrcaOrderInputSetMetadataSupport {
             if (chargeMetadata != null) {
                 return chargeMetadata;
             }
+            String normalizedReceiptCode = receiptCode != null ? receiptCode.trim() : null;
+            String exactEntity = OrcaMedicalClassCatalog.resolveEntityForClassCode(normalizedReceiptCode);
+            if (exactEntity != null) {
+                String exactClassName = OrcaMedicalClassCatalog.resolveExactClassName(exactEntity, normalizedReceiptCode);
+                String fallbackLabel = OrcaMedicalClassCatalog.resolveEntityLabel(exactEntity);
+                return new OrcaOrderInputSetSupport.ClassMetadata(
+                        exactEntity,
+                        exactClassName != null ? exactClassName : fallbackLabel);
+            }
             int number = Integer.parseInt(receiptCode);
             if (number >= 200 && number <= 299) {
                 return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_MED_ORDER, "RP");
             }
             if (number >= 300 && number <= 399) {
                 return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_INJECTION_ORDER, "注射");
-            }
-            if (number >= 400 && number <= 499) {
-                return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_TREATMENT, "処置");
-            }
-            if (number >= 500 && number <= 599) {
-                return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_SURGERY_ORDER, "手術");
-            }
-            if (number >= 600 && number <= 699) {
-                return new OrcaOrderInputSetSupport.ClassMetadata("testOrder", "検査");
-            }
-            if (number >= 700 && number <= 799) {
-                return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_RADIOLOGY_ORDER, "放射線");
-            }
-            if (number >= 800 && number <= 899) {
-                return new OrcaOrderInputSetSupport.ClassMetadata(IInfoModel.ENTITY_OTHER_ORDER, "その他");
             }
         } catch (NumberFormatException e) {
             logger.debug("Failed to resolve entity from receipt code {}", receiptCode);

@@ -91,12 +91,14 @@ final class OrcaOrderBundleMutationExecutionSupport {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
         validateBacteriaMetadata(canonicalEntity, op.getBacteria(), validationFailure);
-        boolean hasExplicitBodyPart = validateExplicitBodyPart(canonicalEntity, op.getClassCode(), op.getBodyPart(), validationFailure);
+        String normalizedClassCode = OrcaOrderBundleRequestSupport.trimToNull(op.getClassCode());
+        boolean hasExplicitBodyPart = validateExplicitBodyPart(canonicalEntity, normalizedClassCode, op.getBodyPart(), validationFailure);
         List<OrderBundleMutationRequest.BundleItem> items = collectItems(op);
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
         boolean hasSendableMainRow = false;
         boolean hasBodyPart = hasExplicitBodyPart;
+        String chargeMainCategory = null;
         for (OrderBundleMutationRequest.BundleItem item : items != null ? items : List.<OrderBundleMutationRequest.BundleItem>of()) {
             if (!hasValuedItem(item)) {
                 continue;
@@ -105,6 +107,9 @@ final class OrcaOrderBundleMutationExecutionSupport {
                 throw validationFailure.invalid("items", "items contain blank name rows");
             }
             String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
+            if (OrcaCommentCarrierRules.hasUnknownStructuredFamily(code)) {
+                throw validationFailure.invalid("items", "structured comment family is unsupported");
+            }
             OrcaOrderBundleItemMemoSupport.ParsedItem parsedMemo = OrcaOrderBundleItemMemoSupport.parse(item.getMemo());
             if (hasUnsupportedSelectionCommentParameter(item, parsedMemo)) {
                 throw validationFailure.invalid(
@@ -113,19 +118,11 @@ final class OrcaOrderBundleMutationExecutionSupport {
             }
             String requestedRowRole = OrcaOrderBundleRequestSupport.normalizeRowRole(
                     OrcaOrderBundleRequestSupport.hasText(item.getRowRole()) ? item.getRowRole() : parsedMemo.rowRole());
-            if (requestedRowRole != null && code != null
-                    && !OrcaOrderBundleRequestSupport.isValidCodeForRowRole(canonicalEntity, requestedRowRole, code)) {
-                if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(requestedRowRole)
-                        && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
-                    throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
-                }
-                throw validationFailure.invalid("items", invalidCodeMessage(canonicalEntity, requestedRowRole));
-            }
             String rowRole = OrcaOrderBundleRequestSupport.resolveRowRole(canonicalEntity, requestedRowRole, code);
             if (code != null) {
                 hasCodedRow = true;
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)
-                        && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
+                        && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity, normalizedClassCode)) {
                     throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
                 }
                 if (!OrcaOrderBundleRequestSupport.isValidCodeForRowRole(canonicalEntity, rowRole, code)) {
@@ -141,12 +138,24 @@ final class OrcaOrderBundleMutationExecutionSupport {
                             && !OrcaMedicalClassCatalog.isAllowedClassCode(canonicalEntity, itemCategory)) {
                         throw validationFailure.invalid("items", "charge items must use a compatible masterCategory");
                     }
+                    if ((IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(canonicalEntity)
+                            || IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(canonicalEntity))
+                            && itemCategory != null) {
+                        if (normalizedClassCode != null && !normalizedClassCode.equals(itemCategory)) {
+                            throw validationFailure.invalid("items", "charge bundle classCode and main row masterCategory must match");
+                        }
+                        if (chargeMainCategory == null) {
+                            chargeMainCategory = itemCategory;
+                        } else if (!chargeMainCategory.equals(itemCategory)) {
+                            throw validationFailure.invalid("items", "charge bundle main rows must share one exact masterCategory");
+                        }
+                    }
                     hasSendableMainRow = true;
                 }
             } else {
                 hasUncodedRow = true;
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)
-                        && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
+                        && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity, normalizedClassCode)) {
                     throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
                 }
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_MATERIAL.equals(rowRole)
@@ -164,10 +173,10 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (hasUncodedRow) {
             throw validationFailure.invalid("items", "items contain uncoded rows");
         }
-        if (hasBodyPart && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
+        if (hasBodyPart && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity, normalizedClassCode)) {
             throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
         }
-        if (requiresSendableMainRow(canonicalEntity) && !hasSendableMainRow) {
+        if (requiresSendableMainRow(canonicalEntity, normalizedClassCode) && !hasSendableMainRow) {
             throw validationFailure.invalid("items", "items do not contain a sendable main row");
         }
     }
@@ -180,7 +189,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (!hasValuedItem(bodyPart)) {
             return false;
         }
-        if (!OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
+        if (!OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity, classCode)) {
             throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
         }
         String name = OrcaOrderBundleRequestSupport.trimToNull(bodyPart.getName());
@@ -197,8 +206,8 @@ final class OrcaOrderBundleMutationExecutionSupport {
         return true;
     }
 
-    private static boolean requiresSendableMainRow(String canonicalEntity) {
-        return OrcaSendabilityPolicy.requiresSendableMainRow(canonicalEntity);
+    private static boolean requiresSendableMainRow(String canonicalEntity, String classCode) {
+        return OrcaSendabilityPolicy.requiresSendableMainRow(canonicalEntity, classCode);
     }
 
     private static boolean hasValuedItem(OrderBundleMutationRequest.BundleItem item) {
@@ -295,7 +304,8 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (code == null && name == null && inputValue == null) {
             return;
         }
-        if (code == null || !OrcaCommentCarrierRules.isKnownCommentCode(code)) {
+        if (code == null || !OrcaCommentCarrierRules.isKnownCommentCode(code)
+                || !OrcaCommentCarrierRules.isBacteriaStructuredFamilyAllowed(code)) {
             throw validationFailure.invalid(field, "bacteria carrier comment code is invalid");
         }
         if (!OrcaCommentCarrierRules.hasSupportedValue(code, inputValue)) {

@@ -9,6 +9,10 @@ import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
 import { isOrcaEntityClassAllowed, resolveOrcaEntityClassMeta } from './orcaMedicalClassCatalog';
+import {
+  hasUnknownStructuredOrcaCommentFamily,
+  ORCA_UNKNOWN_STRUCTURED_COMMENT_FAMILY_BLOCK_REASON,
+} from './orcaCommentCarrierRules';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export type OrderBundleRowRole = 'main' | 'auxiliary' | 'material' | 'comment' | 'bodyPart';
@@ -241,6 +245,13 @@ const hasUnsupportedSelectionCommentParameterInOperation = (operation?: OrderBun
     ...(operation?.materialItems ?? []),
     ...(operation?.commentItems ?? []),
   ].some((item) => hasUnsupportedSelectionCommentParameter(item));
+
+const hasUnknownStructuredCommentFamilyInOperation = (operation?: OrderBundleOperation | null) =>
+  [
+    ...(operation?.items ?? []),
+    ...(operation?.materialItems ?? []),
+    ...(operation?.commentItems ?? []),
+  ].some((item) => hasUnknownStructuredOrcaCommentFamily(item?.code));
 
 const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
   const canonicalBundle = canonicalizeChargeBundleMeta(bundle);
@@ -481,14 +492,21 @@ export async function mutateOrderBundles(params: {
 }): Promise<OrderBundleMutationResult> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
-  const normalizedOperations = params.operations.map(normalizeOrderBundleOperation);
-  if (normalizedOperations.some((operation) => hasUnsupportedSelectionCommentParameterInOperation(operation))) {
+  if (params.operations.some((operation) => hasUnsupportedSelectionCommentParameterInOperation(operation))) {
     return {
       ok: false,
       runId,
       message: '選択式コメントの itemNumber / branch は local-only のため保存できません。パラメータ不要のコメントのみ選択してください。',
     };
   }
+  if (params.operations.some((operation) => hasUnknownStructuredCommentFamilyInOperation(operation))) {
+    return {
+      ok: false,
+      runId,
+      message: ORCA_UNKNOWN_STRUCTURED_COMMENT_FAMILY_BLOCK_REASON,
+    };
+  }
+  const normalizedOperations = params.operations.map(normalizeOrderBundleOperation);
   const response = await httpFetch('/api/orca/order/bundles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
