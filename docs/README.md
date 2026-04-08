@@ -29,6 +29,7 @@
 
 ## Implementation
 - [orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
+- [orca-order-alignment/closure packet](implementation/orca-order-alignment/orca_order_alignment_closure_packet_20260408.md)
 
 ## Live Runbooks
 - [release-validation.md](runbooks/release-validation.md)
