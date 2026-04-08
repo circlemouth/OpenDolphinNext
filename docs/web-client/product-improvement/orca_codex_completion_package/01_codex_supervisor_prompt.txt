@@ -3,9 +3,9 @@
 中途半端な「一部成立」は失敗です。`catalog` 上の見かけではなく、**save / send / server mutation / read / help / test** がすべて current contract で閉じるところまでやってください。
 
 # 必ず最初に読むもの
-- `03_development_spec.md`
-- `04_verification_matrix.md`
-- `02_subagent_prompts.md`
+- `docs/web-client/product-improvement/orca_codex_completion_package/03_development_spec.md`
+- `docs/web-client/product-improvement/orca_codex_completion_package/04_verification_matrix.md`
+- `docs/web-client/product-improvement/orca_codex_completion_package/02_subagent_prompts.md`
 
 # 非交渉ルール
 - 根拠は **現在コード** と上記ドキュメントだけに限定する
