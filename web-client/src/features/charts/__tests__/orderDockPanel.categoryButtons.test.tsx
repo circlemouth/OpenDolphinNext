@@ -67,7 +67,7 @@ describe('OrderDockPanel category quick-add', () => {
       { category: 'injection', keyword: '注射', candidateLabel: '注射を新規追加', expectedTitle: '注射' },
       { category: 'treatment', keyword: '処置', candidateLabel: '処置を新規追加', expectedTitle: '処置' },
       { category: 'test', keyword: '検査', candidateLabel: '検査を新規追加', expectedTitle: '検査' },
-      { category: 'charge', keyword: '基本料', candidateLabel: '基本料を新規追加', expectedTitle: '基本料' },
+      { category: 'charge', keyword: '初診料', candidateLabel: '初診料を新規追加', expectedTitle: '初診料' },
     ] as const;
 
     for (const scenario of scenarios) {
@@ -205,7 +205,7 @@ describe('OrderDockPanel category quick-add', () => {
     }
 
     await user.click(screen.getByRole('button', { name: '算定を追加' }));
-    expect(screen.getByLabelText('基本料入力')).toBeInTheDocument();
+    expect(screen.getByLabelText('初診料入力')).toBeInTheDocument();
   });
 
   it('サブカテゴリタブは role=tab/aria-selected で、矢印キーで切替できる', async () => {

@@ -7,11 +7,11 @@ import {
 } from '../orcaOrderItemMeta';
 
 describe('orcaOrderItemMeta', () => {
-  it('parse で genericFlg と userComment を読み取る', () => {
-    const parsed = parseOrcaOrderItemMemo('__orca_meta__:{"genericFlg":"yes","userComment":"食後"}\n元メモ');
+  it('parse で genericFlg tri-state と userComment を読み取る', () => {
+    const parsed = parseOrcaOrderItemMemo('__orca_meta__:{"genericFlg":"inherit","userComment":"食後"}\n元メモ');
 
     expect(parsed.meta).toEqual({
-      genericFlg: 'yes',
+      genericFlg: 'inherit',
       userComment: '食後',
     });
     expect(parsed.memoText).toBe('元メモ');
@@ -24,31 +24,31 @@ describe('orcaOrderItemMeta', () => {
     expect(parsed.meta.userComment).toBeUndefined();
   });
 
-  it('format で userComment を含む meta を出力する', () => {
+  it('format で tri-state genericFlg と userComment を出力する', () => {
     const formatted = formatOrcaOrderItemMemo(
       {
-        genericFlg: 'yes',
+        genericFlg: 'inherit',
         userComment: '食後',
       },
       '元メモ',
     );
 
-    expect(formatted).toBe('__orca_meta__:{"genericFlg":"yes","userComment":"食後"}\n元メモ');
+    expect(formatted).toBe('__orca_meta__:{"genericFlg":"inherit","userComment":"食後"}\n元メモ');
   });
 
-  it('update で空白のみ userComment を除去し genericFlg を保持する', () => {
-    const updated = updateOrcaOrderItemMeta('__orca_meta__:{"genericFlg":"yes","userComment":"食後"}\n元メモ', {
+  it('update で空白のみ userComment を除去し genericFlg tri-state を保持する', () => {
+    const updated = updateOrcaOrderItemMeta('__orca_meta__:{"genericFlg":"inherit","userComment":"食後"}\n元メモ', {
       userComment: '   ',
     });
 
     const parsed = parseOrcaOrderItemMemo(updated);
-    expect(parsed.meta.genericFlg).toBe('yes');
+    expect(parsed.meta.genericFlg).toBe('inherit');
     expect(parsed.meta.userComment).toBeUndefined();
     expect(parsed.memoText).toBe('元メモ');
   });
 
   it('update で meta が空になれば本文のみを残す', () => {
-    const updated = updateOrcaOrderItemMeta('__orca_meta__:{"genericFlg":"yes","userComment":"食後"}\n元メモ', {
+    const updated = updateOrcaOrderItemMeta('__orca_meta__:{"genericFlg":"inherit","userComment":"食後"}\n元メモ', {
       genericFlg: undefined,
       userComment: '   ',
     });

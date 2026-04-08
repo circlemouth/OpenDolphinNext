@@ -236,7 +236,7 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['uncoded_row']);
   });
 
-  it('injectionOrder: adminCode が無い自由入力用法は保存前に block する', () => {
+  it('injectionOrder: adminCode が無い自由入力用法でも local-only のため保存前 block にしない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -247,10 +247,10 @@ describe('validateBundleForm', () => {
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['missing_admin_code']);
+    expect(issues.map((issue) => issue.key)).toEqual([]);
   });
 
-  it('injectionOrder: classCode 310 以外は保存前に block する', () => {
+  it('injectionOrder: classCode 320 も exact allowlist のため保存前 block にしない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -262,10 +262,10 @@ describe('validateBundleForm', () => {
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_class_code']);
+    expect(issues.map((issue) => issue.key)).toEqual([]);
   });
 
-  it('injectionOrder: 投与指示がある場合は adminCode も必須', () => {
+  it('injectionOrder: 投与指示があっても adminCode は local-only のため必須にしない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -276,7 +276,7 @@ describe('validateBundleForm', () => {
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['missing_admin_code']);
+    expect(issues.map((issue) => issue.key)).toEqual([]);
   });
 
   it('injectionOrder: コメントだけの束は保存前に止める', () => {
@@ -321,7 +321,7 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
   });
 
-  it('radiologyOrder: 部位が未入力の場合にエラー', () => {
+  it('radiologyOrder: 部位は modality-aware のため blanket 必須にしない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -330,9 +330,9 @@ describe('validateBundleForm', () => {
         bodyPart: null,
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['missing_body_part']);
+    expect(issues.map((issue) => issue.key)).toEqual([]);
   });
 
   it('radiologyOrder: 部位が入力済みならエラーなし', () => {
@@ -341,10 +341,10 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '胸部撮影',
         items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
-        bodyPart: { code: '002000', name: '胸部', quantity: '', unit: '', memo: '' },
+        bodyPart: { code: '002', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
     expect(issues).toHaveLength(0);
   });
@@ -358,7 +358,7 @@ describe('validateBundleForm', () => {
         bodyPart: { code: '', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['missing_body_part_code']);
   });
@@ -369,10 +369,10 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '胸部撮影',
         items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
-        bodyPart: { code: '001001', name: '胸部', quantity: '', unit: '', memo: '' },
+        bodyPart: { code: '001', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_body_part_code']);
   });
@@ -382,7 +382,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
-        bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
+        bodyPart: { code: '002', name: '胸部', quantity: '1', unit: '部位', memo: '' },
       },
       entity: 'otherOrder',
       bundleLabel: 'その他オーダー名',
@@ -493,7 +493,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: 'Test',
         items: [{ code: '160000010', name: 'Lab', quantity: '1', unit: 'count', memo: '' }],
-        bodyPart: { code: '002001', name: 'Chest', quantity: '', unit: '', memo: '' },
+        bodyPart: { code: '002', name: 'Chest', quantity: '', unit: '', memo: '' },
       },
       entity: 'testOrder',
       bundleLabel: '検査オーダー',
@@ -508,7 +508,7 @@ describe('validateBundleForm', () => {
         bundleName: 'Physiology',
         subtype: 'physiology' as BundleFormState['subtype'],
         items: [{ code: '160000010', name: '生理検査', quantity: '1', unit: '回', memo: '' }],
-        bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
+        bodyPart: { code: '002', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'physiologyOrder',
       bundleLabel: '生理検査オーダー',
@@ -522,7 +522,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '文書料',
         items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
-        bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
+        bodyPart: { code: '002', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'otherOrder',
       bundleLabel: 'その他',
@@ -530,7 +530,7 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
   });
 
-  it('otherOrder: 8系以外の main code は保存前に block する', () => {
+  it('otherOrder: 非数値の main code は保存前に block する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -543,7 +543,7 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_other_order_code']);
   });
 
-  it('otherOrder: classCode が 800〜890 以外なら保存前に block する', () => {
+  it('otherOrder: 非数値の classCode は保存前に block する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -585,15 +585,29 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_material_code']);
   });
 
-  it('baseChargeOrder: classCode 130 を reject する', () => {
+  it('baseChargeOrder: classCode 125 を reject する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
-        bundleName: '基本料',
-        classCode: '130',
+        bundleName: '初診料',
+        classCode: '125',
         items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '110' }],
       } as BundleFormState & { classCode: string },
       entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+    expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_code');
+  });
+
+  it('instractionChargeOrder: classCode 150 を reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '管理料',
+        classCode: '150',
+        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '140' }],
+      } as BundleFormState & { classCode: string },
+      entity: 'instractionChargeOrder',
       bundleLabel: '算定',
     });
     expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_code');
@@ -603,7 +617,7 @@ describe('validateBundleForm', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
-        bundleName: '基本料',
+        bundleName: '初診料',
         classCode: '110',
         items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
       } as BundleFormState & { classCode: string },
@@ -617,7 +631,7 @@ describe('validateBundleForm', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
-        bundleName: '指導料',
+        bundleName: '管理料',
         classCode: '130',
         className: '',
         items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
@@ -628,16 +642,31 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).not.toContain('missing_charge_class_name');
   });
 
-  it('baseChargeOrder: canonical と一致しない className を reject する', () => {
+  it('baseChargeOrder: exact className と一致しない className を reject する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
-        bundleName: '基本料',
+        bundleName: '再診料',
         classCode: '120',
-        className: '医学管理等',
+        className: '初診料',
         items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '120' }],
       } as BundleFormState & { classCode: string; className: string },
       entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+    expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_name');
+  });
+
+  it('instractionChargeOrder: exact className と一致しない className を reject する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '管理料',
+        classCode: '130',
+        className: '再診',
+        items: [{ code: '112007410', name: '在宅自己注射指導管理料', quantity: '1', unit: '回', memo: '', masterCategory: '130' }],
+      } as BundleFormState & { classCode: string; className: string },
+      entity: 'instractionChargeOrder',
       bundleLabel: '算定',
     });
     expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_name');

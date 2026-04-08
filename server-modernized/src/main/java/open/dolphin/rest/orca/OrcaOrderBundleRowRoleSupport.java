@@ -1,7 +1,6 @@
 package open.dolphin.rest.orca;
 
 import java.util.Locale;
-import java.util.regex.Pattern;
 import open.dolphin.infomodel.IInfoModel;
 
 final class OrcaOrderBundleRowRoleSupport {
@@ -10,11 +9,6 @@ final class OrcaOrderBundleRowRoleSupport {
     static final String ROW_ROLE_AUXILIARY = "auxiliary";
     static final String ROW_ROLE_COMMENT = "comment";
     static final String ROW_ROLE_BODY_PART = "bodyPart";
-
-    private static final Pattern BODY_PART_CODE_PATTERN = Pattern.compile("^002\\d+$");
-    private static final Pattern COMMENT_CODE_PATTERN = Pattern.compile("^(008[1-6]|8[1-6]|098|099|98|99).*");
-    private static final Pattern NINE_DIGIT_CODE_PATTERN = Pattern.compile("^\\d{9}$");
-    private static final Pattern DIGITS_ONLY_PATTERN = Pattern.compile("^\\d+$");
 
     private OrcaOrderBundleRowRoleSupport() {
     }
@@ -34,26 +28,25 @@ final class OrcaOrderBundleRowRoleSupport {
 
     static boolean isBodyPartCode(String code) {
         String normalized = OrcaOrderBundleRequestSupport.trimToNull(code);
-        return normalized != null && BODY_PART_CODE_PATTERN.matcher(normalized).matches();
+        return normalized != null && normalized.startsWith("002");
     }
 
     static boolean isCommentCode(String code) {
-        String normalized = OrcaOrderBundleRequestSupport.trimToNull(code);
-        return normalized != null && COMMENT_CODE_PATTERN.matcher(normalized).matches();
+        return OrcaCommentCarrierRules.isKnownCommentCode(code);
     }
 
     static boolean isNineDigitCode(String code) {
         String normalized = OrcaOrderBundleRequestSupport.trimToNull(code);
-        return normalized != null && NINE_DIGIT_CODE_PATTERN.matcher(normalized).matches();
+        return normalized != null && normalized.matches("^\\d{9}$");
     }
 
     static boolean isUsageCode(String code) {
         String normalized = OrcaOrderBundleRequestSupport.trimToNull(code);
-        return normalized != null && DIGITS_ONLY_PATTERN.matcher(normalized).matches();
+        return normalized != null && normalized.matches("^\\d+$");
     }
 
     static boolean isSendableMedicalModV2Code(String code) {
-        return isBodyPartCode(code) || isCommentCode(code) || isNineDigitCode(code) || isUsageCode(code);
+        return isBodyPartCode(code) || isCommentCode(code) || isNineDigitCode(code);
     }
 
     static boolean isOtherOrderCode(String code) {
@@ -134,24 +127,20 @@ final class OrcaOrderBundleRowRoleSupport {
         }
         return switch (normalizedEntity) {
             case "treatmentOrder",
-                    IInfoModel.ENTITY_RADIOLOGY_ORDER,
                     "testOrder",
-                    IInfoModel.ENTITY_PHYSIOLOGY_ORDER,
-                    IInfoModel.ENTITY_BACTERIA_ORDER -> isNineDigitCode(code);
-            case IInfoModel.ENTITY_OTHER_ORDER -> isOtherOrderCode(code);
-            case IInfoModel.ENTITY_BASE_CHARGE_ORDER, IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> isNineDigitCode(code);
-            case IInfoModel.ENTITY_MED_ORDER, IInfoModel.ENTITY_INJECTION_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
+                    open.dolphin.infomodel.IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                    open.dolphin.infomodel.IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+                    open.dolphin.infomodel.IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> isNineDigitCode(code);
+            case open.dolphin.infomodel.IInfoModel.ENTITY_MED_ORDER,
+                    open.dolphin.infomodel.IInfoModel.ENTITY_INJECTION_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
+            case open.dolphin.infomodel.IInfoModel.ENTITY_PHYSIOLOGY_ORDER,
+                    open.dolphin.infomodel.IInfoModel.ENTITY_BACTERIA_ORDER,
+                    open.dolphin.infomodel.IInfoModel.ENTITY_OTHER_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
             default -> !isBodyPartCode(code) && !isCommentCode(code);
         };
     }
 
     private static boolean shouldTreatAsLegacyAuxiliary(String entity, String code) {
-        String normalizedCode = OrcaOrderBundleRequestSupport.trimToNull(code);
-        if (normalizedCode == null || !normalizedCode.startsWith("7")) {
-            return false;
-        }
-        String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
-        return "treatmentOrder".equals(normalizedEntity)
-                || IInfoModel.ENTITY_INJECTION_ORDER.equals(normalizedEntity);
+        return false;
     }
 }

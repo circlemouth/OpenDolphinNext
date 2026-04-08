@@ -31,7 +31,7 @@ import { getOrcaClaimSendEntry, saveOrcaClaimSendCache, type OrcaMedicalWarningU
 import { ReportPrintDialog } from './print/ReportPrintDialog';
 import { useOrcaReportPrint } from './print/useOrcaReportPrint';
 import { MISSING_MASTER_RECOVERY_NEXT_STEPS } from '../shared/missingMasterRecovery';
-import { ORCA_SEND_ORDER_ENTITIES } from './orderCategoryRegistry';
+import { ORCA_SEND_ORDER_ENTITIES, isOrderEntitySendable, resolveCanonicalOrderEntity } from './orderCategoryRegistry';
 import { buildOrderHubEventId, recordOrderHubKpi } from './orderHubKpi';
 import {
   buildMedicalModV2BlockNotice,
@@ -1347,6 +1347,45 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             setRunningAction(null);
             return;
           }
+          const localOnlyInjectionBundle = orderBundleResult.bundles.find((bundle) => {
+            const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+            if (canonicalEntity !== 'injectionOrder') return false;
+            return Boolean(bundle.adminMemo?.trim());
+          });
+          if (localOnlyInjectionBundle) {
+            const bundleLabel =
+              localOnlyInjectionBundle.bundleName?.trim() ||
+              resolveCanonicalOrderEntity(localOnlyInjectionBundle.entity) ||
+              'injectionOrder';
+            setBanner({
+              tone: 'warning',
+              message: `${bundleLabel} は local-only です。adminMemo/speed は ORCA送信できません。`,
+              nextAction: 'adminMemo/speed を削除してから再送してください。',
+            });
+            setIsRunning(false);
+            setRunningAction(null);
+            return;
+          }
+          const invalidTestOrderBundle = orderBundleResult.bundles.find((bundle) => {
+            const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+            if (canonicalEntity !== 'testOrder') return false;
+            const classCode = bundle.classCode?.trim() ?? '';
+            return !['600', '601', '602', '603', '610'].includes(classCode);
+          });
+          if (invalidTestOrderBundle) {
+            const bundleLabel =
+              invalidTestOrderBundle.bundleName?.trim() ||
+              resolveCanonicalOrderEntity(invalidTestOrderBundle.entity) ||
+              'testOrder';
+            setBanner({
+              tone: 'warning',
+              message: `${bundleLabel} は testOrder の送信許可 classCode ではありません。600/601/602/603/610 のみ ORCA送信できます。`,
+              nextAction: 'classCode を 600/601/602/603/610 に合わせてから再送してください。',
+            });
+            setIsRunning(false);
+            setRunningAction(null);
+            return;
+          }
           const preparedSendData = prepareMedicalModV2SendData(orderBundleResult.bundles);
           if (preparedSendData.requiredIssues.length > 0) {
             const eventId = buildOrderHubEventId();
@@ -1442,6 +1481,29 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
                 },
               },
             );
+            const blockNotice = buildMedicalModV2BlockNotice(preparedSendData);
+            if (blockNotice) {
+              setBanner({
+                tone: 'warning',
+                message: blockNotice.message,
+                nextAction: blockNotice.nextAction,
+              });
+            }
+            setIsRunning(false);
+            setRunningAction(null);
+            return;
+          }
+          const nonSendableBundle = orderBundleResult.bundles.find((bundle) => !isOrderEntitySendable(bundle.entity));
+          if (nonSendableBundle) {
+            const canonicalEntity = resolveCanonicalOrderEntity(nonSendableBundle.entity) ?? nonSendableBundle.entity;
+            setBanner({
+              tone: 'warning',
+              message: `${canonicalEntity} は local-only / import-only のため ORCA送信できません。`,
+              nextAction: '送信対象の entity を選び直してください。',
+            });
+            setIsRunning(false);
+            setRunningAction(null);
+            return;
           }
           const blockNotice = buildMedicalModV2BlockNotice(preparedSendData);
           if (blockNotice) {

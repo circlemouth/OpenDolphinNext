@@ -163,7 +163,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。数量は ORCA 送信しますが、単位・算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。',
+        'setCode は展開専用です。baseChargeOrder は 110/114/120/124、instractionChargeOrder は 130/132/133/140/141/142/143/148/149 の exact class を使います。単位・算定指示・院内補足・自由メモは院内補足としてのみ保持し、選択式コメントの parameter 付き候補は追加できません。',
       ),
     ).toBeInTheDocument();
   });
@@ -189,7 +189,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+        '処置は 400/401/402/403/409 の exact class のみを扱います。bodyPart は reject です。bundleName / admin / memo / free text は local-only です。',
       ),
     ).toBeInTheDocument();
   });
@@ -199,7 +199,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+        '画像診断送信では exact classCode と coded row を使います。bodyPart は modality により要否が変わるため blanket 必須にせず、検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
       ),
     ).toBeInTheDocument();
   });
@@ -262,7 +262,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+        '処置は 400/401/402/403/409 の exact class のみを扱います。bodyPart は reject です。bundleName / admin / memo / free text は local-only です。',
       ),
     ).toBeInTheDocument();
 
@@ -464,7 +464,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.entity).toBe('radiologyOrder');
     expect(operation?.classCode).toBe('700');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('放射線');
+    expect(operation?.className).toBe('画像診断');
     expect(operation?.bodyPart).toEqual(expect.objectContaining({ code: '002001', name: '胸部', unit: '部位' }));
     expect(operation?.items).toEqual(
       expect.arrayContaining([

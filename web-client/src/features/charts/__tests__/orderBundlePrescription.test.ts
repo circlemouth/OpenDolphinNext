@@ -76,7 +76,7 @@ describe('toFormState non-prescription split rules', () => {
       bundleNumber: '3',
       classCode: '700',
       classCodeSystem: 'Claim007',
-      className: '放射線',
+      className: '画像診断',
       bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
       items: [
         { code: '700000001', name: '胸部CT本体', quantity: '1', unit: '回', memo: '' },

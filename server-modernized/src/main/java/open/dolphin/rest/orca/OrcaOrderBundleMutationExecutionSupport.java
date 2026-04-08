@@ -5,7 +5,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.KarteBean;
@@ -14,8 +13,6 @@ import open.dolphin.rest.dto.orca.BacteriaOrderMetadata;
 import open.dolphin.rest.dto.orca.OrderBundleMutationRequest;
 
 final class OrcaOrderBundleMutationExecutionSupport {
-
-    private static final Pattern BACTERIA_NUMERIC_COMMENT_VALUE_PATTERN = Pattern.compile("^[+-]?\\d+(?:\\.\\d+)?$");
 
     private OrcaOrderBundleMutationExecutionSupport() {
     }
@@ -76,6 +73,9 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (canonicalEntity == null) {
             canonicalEntity = IInfoModel.ENTITY_TREATMENT;
         }
+        if (!OrcaMedicalClassCatalog.isSupportedEntity(canonicalEntity)) {
+            throw validationFailure.invalid("entity", "entity is invalid");
+        }
         if (!OrcaOrderBundleRequestSupport.isCompatibleClassCode(canonicalEntity, op.getClassCode())) {
             throw validationFailure.invalid("classCode", "classCode is incompatible with entity");
         }
@@ -91,10 +91,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
         validateBacteriaMetadata(canonicalEntity, op.getBacteria(), validationFailure);
-        if (IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)) {
-            validateInjectionContract(op, validationFailure);
-        }
-        boolean hasExplicitBodyPart = validateExplicitBodyPart(canonicalEntity, op.getBodyPart(), validationFailure);
+        boolean hasExplicitBodyPart = validateExplicitBodyPart(canonicalEntity, op.getClassCode(), op.getBodyPart(), validationFailure);
         List<OrderBundleMutationRequest.BundleItem> items = collectItems(op);
         boolean hasCodedRow = false;
         boolean hasUncodedRow = false;
@@ -138,8 +135,10 @@ final class OrcaOrderBundleMutationExecutionSupport {
                     hasBodyPart = true;
                 } else if (OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN.equals(rowRole)) {
                     String itemCategory = resolveEffectiveItemCategory(item, parsedMemo);
-                    if (OrcaChargeClassSupport.isChargeEntity(canonicalEntity)
-                            && !OrcaChargeClassSupport.isChargeItemCategoryCompatible(canonicalEntity, itemCategory)) {
+                    if ((IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(canonicalEntity)
+                            || IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(canonicalEntity))
+                            && itemCategory != null
+                            && !OrcaMedicalClassCatalog.isAllowedClassCode(canonicalEntity, itemCategory)) {
                         throw validationFailure.invalid("items", "charge items must use a compatible masterCategory");
                     }
                     hasSendableMainRow = true;
@@ -168,31 +167,14 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (hasBodyPart && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity)) {
             throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
         }
-        if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(canonicalEntity) && !hasBodyPart) {
-            throw validationFailure.invalid("bodyPart", "bodyPart is required for radiologyOrder");
-        }
         if (requiresSendableMainRow(canonicalEntity) && !hasSendableMainRow) {
             throw validationFailure.invalid("items", "items do not contain a sendable main row");
         }
     }
 
-    private static void validateInjectionContract(
-            OrderBundleMutationRequest.BundleOperation op,
-            ValidationFailure validationFailure) {
-        if (!OrcaOrderBundleRequestSupport.hasText(op.getAdmin())) {
-            return;
-        }
-        String adminCode = OrcaOrderBundleRequestSupport.trimToNull(op.getAdminCode());
-        if (adminCode == null) {
-            throw validationFailure.invalid("adminCode", "adminCode is required when admin is provided");
-        }
-        if (!OrcaOrderBundleRequestSupport.isSendableInjectionAdminCode(adminCode)) {
-            throw validationFailure.invalid("adminCode", "adminCode must be a sendable numeric code for injectionOrder");
-        }
-    }
-
     private static boolean validateExplicitBodyPart(
             String canonicalEntity,
+            String classCode,
             OrderBundleMutationRequest.BundleItem bodyPart,
             ValidationFailure validationFailure) {
         if (!hasValuedItem(bodyPart)) {
@@ -216,8 +198,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
     }
 
     private static boolean requiresSendableMainRow(String canonicalEntity) {
-        return canonicalEntity != null
-                && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity);
+        return OrcaSendabilityPolicy.requiresSendableMainRow(canonicalEntity);
     }
 
     private static boolean hasValuedItem(OrderBundleMutationRequest.BundleItem item) {
@@ -314,24 +295,18 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (code == null && name == null && inputValue == null) {
             return;
         }
-        if (code == null || !OrcaOrderBundleRecommendationSupport.isCommentCode(code)) {
+        if (code == null || !OrcaCommentCarrierRules.isKnownCommentCode(code)) {
             throw validationFailure.invalid(field, "bacteria carrier comment code is invalid");
         }
-        if (code.matches("^842\\d{6}$")) {
-            if (inputValue == null || !BACTERIA_NUMERIC_COMMENT_VALUE_PATTERN.matcher(inputValue).matches()) {
-                throw validationFailure.invalid(field, "842 comment requires numeric inputValue");
-            }
-            return;
-        }
-        if (code.matches("^830\\d{6}$") && inputValue == null) {
-            throw validationFailure.invalid(field, "830 comment requires inputValue");
+        if (!OrcaCommentCarrierRules.hasSupportedValue(code, inputValue)) {
+            throw validationFailure.invalid(field, "bacteria carrier comment requires a supported inputValue");
         }
     }
 
     private static String invalidCodeMessage(String canonicalEntity, String rowRole) {
         String normalizedRole = OrcaOrderBundleRequestSupport.normalizeRowRole(rowRole);
         if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity)) {
-            return "otherOrder items must use etensu category 8 sendable codes";
+            return "otherOrder items are local-only";
         }
         if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(normalizedRole)) {
             return "bodyPart must use 002 code";
@@ -342,12 +317,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (OrcaOrderBundleRequestSupport.ROW_ROLE_MATERIAL.equals(normalizedRole)) {
             return "auxiliary rows require sendable 9-digit code";
         }
-        if (IInfoModel.ENTITY_TREATMENT.equals(canonicalEntity)
-                || IInfoModel.ENTITY_GENERAL_ORDER.equals(canonicalEntity)
-                || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(canonicalEntity)
-                || "testOrder".equals(canonicalEntity)
-                || IInfoModel.ENTITY_PHYSIOLOGY_ORDER.equals(canonicalEntity)
-                || IInfoModel.ENTITY_BACTERIA_ORDER.equals(canonicalEntity)) {
+        if (OrcaSendabilityPolicy.isSendableEntity(canonicalEntity)) {
             return "main rows require sendable 9-digit code";
         }
         return "rowRole is incompatible with code";

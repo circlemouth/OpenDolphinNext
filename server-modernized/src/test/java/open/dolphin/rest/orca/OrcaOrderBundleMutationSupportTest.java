@@ -107,7 +107,7 @@ class OrcaOrderBundleMutationSupportTest {
         drug.setQuantity("1");
         drug.setUnit("錠");
         drug.setMemo("レセプトコメント");
-        drug.setGenericFlg("no");
+        drug.setGenericFlg("inherit");
         drug.setUserComment("食後");
         operation.setItems(List.of(drug));
 
@@ -118,7 +118,7 @@ class OrcaOrderBundleMutationSupportTest {
         assertNotNull(claimItems);
         assertEquals(1, claimItems.length);
         assertTrue(claimItems[0].getMemo().startsWith("__orca_meta__:"));
-        assertTrue(claimItems[0].getMemo().contains("\"genericFlg\":\"no\""));
+        assertTrue(claimItems[0].getMemo().contains("\"genericFlg\":\"inherit\""));
         assertTrue(claimItems[0].getMemo().contains("\"userComment\":\"食後\""));
         assertTrue(claimItems[0].getMemo().endsWith("レセプトコメント"));
     }

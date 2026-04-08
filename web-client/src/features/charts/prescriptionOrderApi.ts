@@ -15,6 +15,7 @@ import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 export type PrescriptionLocation = 'in' | 'out';
 export type PrescriptionCategory = 'regular' | 'tonyo' | 'gaiyo';
 export type PrescriptionRefillPattern = 'none' | 'standard' | 'alternate';
+export type PrescriptionGenericFlagState = 'yes' | 'no' | 'inherit';
 
 export type PrescriptionLowerFields = {
   lowerDrugCode?: string;
@@ -45,7 +46,7 @@ export type PrescriptionDrug = PrescriptionLowerFields & PrescriptionNumberField
   quantity: string;
   unit: string;
   genericChangeAllowed: boolean;
-  isGeneralNamePrescription: boolean;
+  isGeneralNamePrescription?: boolean;
   drugComment: string;
   claimComments: PrescriptionClaimComment[];
   patientRequest: boolean;
@@ -67,6 +68,8 @@ export type PrescriptionRp = PrescriptionLowerFields & {
   documentId?: number;
   moduleId?: number;
   name: string;
+  medicalClass?: string;
+  medicalClassNumber?: string;
   location: PrescriptionLocation;
   category: PrescriptionCategory;
   usage: string;
@@ -107,7 +110,7 @@ export type PrescriptionClaimCommentCodeIssue = {
   commentName: string;
 };
 
-type PrescriptionClaimCommentNumberIssue = {
+type PrescriptionClaimCommentStructuredValueIssue = {
   rpIndex: number;
   drugIndex: number;
   commentIndex: number;
@@ -208,7 +211,7 @@ type ServerPrescriptionOrder = {
 };
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
-const COMMENT_NUMBER_REQUIRED_PATTERN = /^(8501|8511|8521|831)/;
+const STRUCTURED_COMMENT_CODE_PATTERN = /^(830|842|8501|8511|8521|831)/;
 const RX_RP_META_PREFIX = '__rx_rp_meta__:';
 const RX_DRUG_META_PREFIX = '__rx_drug_meta__:';
 const RX_CLAIM_LINK_PREFIX = '__rx_claim_target__:';
@@ -265,8 +268,14 @@ const parsePrescriptionClassCode = (classCode?: string | null): { location: Pres
   return { location, category: 'regular' };
 };
 
-const resolvePrescriptionClassCode = (category: PrescriptionCategory, location: PrescriptionLocation) =>
-  PRESCRIPTION_CLASS_CODES[category][location];
+const resolvePrescriptionClassCode = (
+  category: PrescriptionCategory,
+  location: PrescriptionLocation,
+  medicalClass?: string | null,
+) => medicalClass?.trim() || PRESCRIPTION_CLASS_CODES[category][location];
+
+const resolveGenericFlagState = (value?: boolean | null): PrescriptionGenericFlagState =>
+  value === true ? 'yes' : value === false ? 'no' : 'inherit';
 
 function normalizePrescriptionOrder(order: PrescriptionOrder): PrescriptionOrder {
   return {
@@ -320,7 +329,7 @@ const buildEmptyDrug = (): PrescriptionDrug => ({
   numberCodeSystem: undefined,
   numberCodeName: undefined,
   genericChangeAllowed: true,
-  isGeneralNamePrescription: false,
+  isGeneralNamePrescription: undefined,
   drugComment: '',
   claimComments: [],
   patientRequest: true,
@@ -409,18 +418,19 @@ export const findFirstPrescriptionClaimCommentCodeIssue = (
   return null;
 };
 
-const requiresStructuredClaimCommentNumber = (code?: string) => COMMENT_NUMBER_REQUIRED_PATTERN.test(code?.trim() ?? '');
+const requiresStructuredClaimCommentValue = (code?: string | null) =>
+  STRUCTURED_COMMENT_CODE_PATTERN.test(code?.trim() ?? '');
 
-const findFirstUnsupportedPrescriptionClaimCommentNumberIssue = (
+const findFirstPrescriptionStructuredClaimCommentIssue = (
   order: PrescriptionOrder,
-): PrescriptionClaimCommentNumberIssue | null => {
+): PrescriptionClaimCommentStructuredValueIssue | null => {
   for (let rpIndex = 0; rpIndex < order.rps.length; rpIndex += 1) {
     const rp = order.rps[rpIndex];
     const rpClaimComments = normalizeClaimComments(rp.claimComments ?? []);
     for (let commentIndex = 0; commentIndex < rpClaimComments.length; commentIndex += 1) {
       const comment = rpClaimComments[commentIndex];
       const code = comment.code?.trim() ?? '';
-      if (comment.note?.trim() && requiresStructuredClaimCommentNumber(code)) {
+      if (requiresStructuredClaimCommentValue(code) && !comment.note?.trim()) {
         return { rpIndex, drugIndex: -1, commentIndex, commentCode: code };
       }
     }
@@ -430,7 +440,7 @@ const findFirstUnsupportedPrescriptionClaimCommentNumberIssue = (
       for (let commentIndex = 0; commentIndex < claimComments.length; commentIndex += 1) {
         const comment = claimComments[commentIndex];
         const code = comment.code?.trim() ?? '';
-        if (comment.note?.trim() && requiresStructuredClaimCommentNumber(code)) {
+        if (requiresStructuredClaimCommentValue(code) && !comment.note?.trim()) {
           return { rpIndex, drugIndex, commentIndex, commentCode: code };
         }
       }
@@ -461,7 +471,9 @@ const toDrugFromItem = (item: OrderBundleItem): PrescriptionDrug => {
     unit: item.unit?.trim() || '',
     ...(drugMeta?.numberFields ?? {}),
     genericChangeAllowed: true,
-    isGeneralNamePrescription: drugMeta?.isGeneralNamePrescription ?? parsed.genericFlg === 'yes',
+    isGeneralNamePrescription:
+      drugMeta?.isGeneralNamePrescription ??
+      (parsed.genericFlg === 'yes' ? true : parsed.genericFlg === 'no' ? false : undefined),
     drugComment: parsed.userComment?.trim() || '',
     claimComments,
     patientRequest: drugMeta?.patientRequest ?? true,
@@ -504,6 +516,8 @@ const toRpFromBundle = (bundle: OrderBundle): PrescriptionRp => {
     documentId: bundle.documentId,
     moduleId: bundle.moduleId,
     name: bundle.bundleName?.trim() || '',
+    medicalClass: bundle.classCode?.trim() || undefined,
+    medicalClassNumber: bundle.bundleNumber?.trim() || undefined,
     location: classParsed.location,
     category: classParsed.category,
     usage: bundle.admin?.trim() || '',
@@ -525,6 +539,8 @@ export const buildEmptyPrescriptionRp = (started?: string, classCode?: string): 
   return {
     rpId: createStableId('rp'),
     name: '',
+    medicalClass: classCode?.trim() || resolvePrescriptionClassCode(classParsed.category, classParsed.location),
+    medicalClassNumber: undefined,
     location: classParsed.location,
     category: classParsed.category,
     usage: '',
@@ -735,9 +751,10 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
 
     const drugMeta = normalizeDrugMeta(drug);
     const memoText = withJsonMetaLine('', RX_DRUG_META_PREFIX, drugMeta, Boolean(
+      drugMeta.isGeneralNamePrescription !== undefined ||
       drugMeta.patientRequest !== undefined ||
-        (drugMeta.claimComments && drugMeta.claimComments.length > 0) ||
-        hasAnyLowerField(drugMeta.lowerFields),
+      (drugMeta.claimComments && drugMeta.claimComments.length > 0) ||
+      hasAnyLowerField(drugMeta.lowerFields),
     ));
 
     items.push({
@@ -746,7 +763,10 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
       quantity: drug.quantity.trim() || '',
       unit: drug.unit.trim() || '',
       memo: memoText,
-      genericFlg: drug.isGeneralNamePrescription ? 'yes' : 'no',
+      genericFlg:
+        resolveGenericFlagState(drug.isGeneralNamePrescription) === 'inherit'
+          ? undefined
+          : resolveGenericFlagState(drug.isGeneralNamePrescription),
       userComment: drug.drugComment.trim() || undefined,
     });
 
@@ -776,7 +796,7 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
   const normalizedOrder = normalizePrescriptionOrder(order);
   const operations: OrderBundleOperation[] = [];
   normalizedOrder.rps.forEach((rp) => {
-    const classCode = resolvePrescriptionClassCode(rp.category, rp.location);
+    const classCode = resolvePrescriptionClassCode(rp.category, rp.location, rp.medicalClass);
     const rpMeta = normalizeRpMeta(rp, normalizedOrder.doctorComment);
     const memo = withJsonMetaLine(
       rp.remark.trim(),
@@ -797,7 +817,7 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
       moduleId: rp.moduleId,
       entity: 'medOrder',
       bundleName: rp.name.trim() || '処方RP',
-      bundleNumber: rp.daysOrTimes.trim() || '1',
+      bundleNumber: rp.medicalClassNumber?.trim() || rp.daysOrTimes.trim() || '1',
       classCode,
       classCodeSystem: 'Claim007',
       className: undefined,
@@ -832,9 +852,12 @@ export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): Ord
       items.push({
         code,
         name,
-        quantity: drug.quantity.trim() || '',
-        unit: drug.unit.trim() || '',
-        genericFlg: drug.isGeneralNamePrescription ? 'yes' : 'no',
+      quantity: drug.quantity.trim() || '',
+      unit: drug.unit.trim() || '',
+      genericFlg:
+        resolveGenericFlagState(drug.isGeneralNamePrescription) === 'inherit'
+          ? undefined
+          : resolveGenericFlagState(drug.isGeneralNamePrescription),
       });
       normalizeClaimComments(drug.claimComments).forEach((comment) => {
         items.push({
@@ -860,8 +883,8 @@ export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): Ord
       documentId: rp.documentId,
       moduleId: rp.moduleId,
       bundleName: rp.name.trim() || '処方RP',
-      bundleNumber: rp.daysOrTimes.trim() || '1',
-      classCode: resolvePrescriptionClassCode(rp.category, rp.location),
+      bundleNumber: rp.medicalClassNumber?.trim() || rp.daysOrTimes.trim() || '1',
+      classCode: resolvePrescriptionClassCode(rp.category, rp.location, rp.medicalClass),
       classCodeSystem: 'Claim007',
       className: undefined,
       admin: rp.usage.trim(),
@@ -892,8 +915,8 @@ const toServerPrescriptionOrder = (order: PrescriptionOrder): ServerPrescription
   const rps: ServerPrescriptionRp[] = normalizedOrder.rps.map((rp) => ({
     rpNumber: rp.rpId?.trim() || undefined,
     bundleName: rp.name.trim() || undefined,
-    medicalClass: resolvePrescriptionClassCode(rp.category, rp.location),
-    medicalClassNumber: rp.daysOrTimes.trim() || undefined,
+    medicalClass: resolvePrescriptionClassCode(rp.category, rp.location, rp.medicalClass),
+    medicalClassNumber: rp.medicalClassNumber?.trim() || rp.daysOrTimes.trim() || undefined,
     usageCode: rp.usageCode?.trim() || undefined,
     usageName: rp.usage.trim() || undefined,
     memo: undefined,
@@ -942,7 +965,7 @@ const fromServerDrug = (drug: ServerPrescriptionDrug): PrescriptionDrug => ({
   numberCodeSystem: drug.numberCodeSystem?.trim() || undefined,
   numberCodeName: drug.numberCodeName?.trim() || undefined,
   genericChangeAllowed: drug.genericChangeAllowed ?? true,
-  isGeneralNamePrescription: drug.generalNamePrescription ?? false,
+  isGeneralNamePrescription: drug.generalNamePrescription == null ? undefined : Boolean(drug.generalNamePrescription),
   drugComment: drug.drugComment?.trim() || '',
   claimComments: (drug.claimComments ?? []).map(fromServerClaimComment).filter((entry) => entry.name.trim()),
   patientRequest: drug.patientRequested ?? true,
@@ -958,6 +981,8 @@ const fromServerPrescriptionOrder = (order: ServerPrescriptionOrder, patientId: 
       documentId: undefined,
       moduleId: undefined,
       name: rp.bundleName?.trim() || '',
+      medicalClass: rp.medicalClass?.trim() || resolvePrescriptionClassCode(classParsed.category, classParsed.location),
+      medicalClassNumber: rp.medicalClassNumber?.trim() || undefined,
       location: classParsed.location,
       category: classParsed.category,
       usage: rp.usageName?.trim() || '',
@@ -1012,7 +1037,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
             note: comment.note?.trim() || undefined,
             lowerFields: hasAnyLowerField(comment.lowerFields) ? comment.lowerFields : undefined,
           })),
-          isGeneralNamePrescription: drug.generalNamePrescription ?? false,
+          isGeneralNamePrescription: drug.generalNamePrescription == null ? undefined : Boolean(drug.generalNamePrescription),
           patientRequest: drug.patientRequested ?? true,
           numberFields: normalizeNumberFields({
             numberCode: drug.numberCode,
@@ -1022,6 +1047,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
           lowerFields: hasAnyLowerField(drug.lowerFields) ? drug.lowerFields : undefined,
         },
         Boolean(
+          drug.generalNamePrescription != null ||
           (drug.claimComments?.length ?? 0) > 0 ||
             drug.patientRequested !== undefined ||
             normalizeNumberFields({
@@ -1038,7 +1064,9 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
         quantity: drug.quantity?.trim() || '',
         unit: drug.unit?.trim() || '',
         memo: itemMemo,
-        genericFlg: drug.generalNamePrescription ? 'yes' : 'no',
+        genericFlg: resolveGenericFlagState(drug.generalNamePrescription) === 'inherit'
+          ? undefined
+          : resolveGenericFlagState(drug.generalNamePrescription),
         userComment: drug.drugComment?.trim() || undefined,
       };
       const commentItems = (drug.claimComments ?? []).map<OrderBundleItem>((comment) => ({
@@ -1171,6 +1199,19 @@ const fetchPrescriptionOrderBase = async (params: {
   if (fetchResponse.order?.performDate) {
     order.performDate = fetchResponse.order.performDate;
   }
+  if (fetchResponse.order?.prescriptionSettings) {
+    order.prescriptionSettings = fetchResponse.order.prescriptionSettings.map((setting) => ({
+      code: setting.code?.trim() || undefined,
+      name: setting.name?.trim() || undefined,
+      value: setting.value?.trim() || undefined,
+    }));
+  }
+  if (fetchResponse.order?.remarks) {
+    order.remarks = fetchResponse.order.remarks.map((remark) => ({
+      code: remark.code?.trim() || undefined,
+      text: remark.text?.trim() || undefined,
+    }));
+  }
   if (fetchResponse.order?.doctorComments && fetchResponse.order.doctorComments.length > 0) {
     const latestComment = fetchResponse.order.doctorComments[fetchResponse.order.doctorComments.length - 1];
     const text = latestComment?.text?.trim();
@@ -1258,12 +1299,14 @@ export async function savePrescriptionOrder(params: {
       `RP${claimCommentCodeIssue.rpIndex + 1} ${commentTarget}: 請求コメントコード未入力のコメントは保存できません。`,
     );
   }
-  const claimCommentNumberIssue = findFirstUnsupportedPrescriptionClaimCommentNumberIssue(normalizedOrder);
-  if (claimCommentNumberIssue) {
+  const claimCommentStructuredValueIssue = findFirstPrescriptionStructuredClaimCommentIssue(normalizedOrder);
+  if (claimCommentStructuredValueIssue) {
     const commentTarget =
-      claimCommentNumberIssue.drugIndex >= 0 ? `薬剤${claimCommentNumberIssue.drugIndex + 1}` : 'RPコメント';
+      claimCommentStructuredValueIssue.drugIndex >= 0
+        ? `薬剤${claimCommentStructuredValueIssue.drugIndex + 1}`
+        : 'RPコメント';
     throw new Error(
-      `RP${claimCommentNumberIssue.rpIndex + 1} ${commentTarget}: ${claimCommentNumberIssue.commentCode} 系コメントの補足値送信は未対応のため保存できません。`,
+      `RP${claimCommentStructuredValueIssue.rpIndex + 1} ${commentTarget}: ${claimCommentStructuredValueIssue.commentCode} 系コメントの構造化値が未入力のため保存できません。`,
     );
   }
   const usageCodeIssueIndex = normalizedOrder.rps.findIndex(
@@ -1346,10 +1389,11 @@ export const mutatePrescriptionOrderBundles = async (params: {
     const bundleName = operation.bundleName?.trim();
     if (!bundleName || rp.name.trim() !== bundleName) return false;
     const operationClass = operation.classCode?.trim() ?? '';
-    const rpClass = resolvePrescriptionClassCode(rp.category, rp.location);
+    const rpClass = resolvePrescriptionClassCode(rp.category, rp.location, rp.medicalClass);
     if (operationClass && operationClass !== rpClass) return false;
     const operationNumber = operation.bundleNumber?.trim() ?? '';
-    if (operationNumber && operationNumber !== rp.daysOrTimes.trim()) return false;
+    const rpNumber = rp.medicalClassNumber?.trim() || rp.daysOrTimes.trim();
+    if (operationNumber && operationNumber !== rpNumber) return false;
     return true;
   };
 

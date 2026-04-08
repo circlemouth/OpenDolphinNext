@@ -1,4 +1,5 @@
 import { resolveOrderEntityDefaultClassMeta, resolveOrderEntityLabel } from './orderCategoryRegistry';
+import { isOrcaEntityClassAllowed } from './orcaMedicalClassCatalog';
 import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
 
 export type RpRequiredField = 'Medical_Class' | 'Medical_Class_Number' | 'Medication_info';
@@ -72,8 +73,8 @@ const normalizeEntity = (entity?: string | null): RpRequiredEntity | null => {
 const inferEntityFromClassCode = (classCode?: string | null): RpRequiredEntity | null => {
   const normalized = (classCode ?? '').trim();
   if (!normalized) return null;
-  if (normalized.startsWith('2')) return 'medOrder';
-  if (normalized.startsWith('3')) return 'injectionOrder';
+  if (isOrcaEntityClassAllowed('medOrder', normalized)) return 'medOrder';
+  if (isOrcaEntityClassAllowed('injectionOrder', normalized)) return 'injectionOrder';
   return null;
 };
 
@@ -85,7 +86,7 @@ const hasItemValue = (item?: Pick<OrderBundleItem, 'name' | 'quantity' | 'unit' 
 
 const resolveMedicalClass = (entity: RpRequiredEntity, classCode?: string | null) => {
   const explicit = classCode?.trim();
-  if (explicit) return explicit;
+  if (explicit) return isOrcaEntityClassAllowed(entity, explicit) ? explicit : '';
   return resolveOrderEntityDefaultClassMeta(entity)?.classCode?.trim() ?? '';
 };
 

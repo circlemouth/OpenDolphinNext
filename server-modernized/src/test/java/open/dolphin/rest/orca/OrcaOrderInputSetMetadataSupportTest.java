@@ -13,19 +13,19 @@ class OrcaOrderInputSetMetadataSupportTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaOrderInputSetMetadataSupportTest.class);
 
     @Test
-    void resolveClassMetadataMaps200And400ToCanonicalEntities() {
+    void resolveClassMetadataMapsExactChargeAndOrderEntities() {
         assertEquals(
                 IInfoModel.ENTITY_BASE_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("110", LOGGER).entity());
         assertEquals(
-                OrcaChargeClassCanonicalSupport.BASE_CHARGE_CLASS_NAME,
-                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("125", LOGGER).className());
+                "再診加算料",
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("124", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("130", LOGGER).entity());
         assertEquals(
-                OrcaChargeClassCanonicalSupport.INSTRUCTION_CHARGE_CLASS_NAME,
-                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("150", LOGGER).className());
+                "在宅材料（院外処方）",
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("149", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_TREATMENT,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("400", LOGGER).entity());

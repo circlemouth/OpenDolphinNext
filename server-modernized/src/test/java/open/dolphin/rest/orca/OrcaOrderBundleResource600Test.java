@@ -196,7 +196,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must use etensu category 8 sendable codes", body.get("message"));
+        assertEquals("otherOrder items are local-only; ORCA send is blocked", body.get("message"));
     }
 
     @Test
@@ -229,7 +229,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must use etensu category 8 sendable codes", body.get("message"));
+        assertEquals("otherOrder items are local-only; ORCA send is blocked", body.get("message"));
     }
 
     @Test

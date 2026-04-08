@@ -2,8 +2,8 @@ export type OrcaOrderItemRowRole = 'main' | 'auxiliary' | 'material' | 'comment'
 export type OrcaOrderItemRowSubtype = 'material' | 'contrastDrug';
 
 export type OrcaOrderItemMeta = {
-  // "yes"/"no" only. When omitted, ORCA uses its own default setting.
-  genericFlg?: 'yes' | 'no';
+  // "inherit" means preserve omission for outbound ORCA payload.
+  genericFlg?: 'yes' | 'no' | 'inherit';
   // User comment for each medication row.
   userComment?: string;
   // Explicit row metadata is persisted in memo meta so save -> fetch does not fall back to heuristics.
@@ -19,7 +19,7 @@ export type OrcaOrderItemMeta = {
 
 export type OrcaOrderItemMetaCarrier = {
   memo?: string | null;
-  genericFlg?: 'yes' | 'no';
+  genericFlg?: 'yes' | 'no' | 'inherit';
   userComment?: string | null;
   rowRole?: OrcaOrderItemRowRole | null;
   rowSubtype?: OrcaOrderItemRowSubtype | null;
@@ -34,7 +34,7 @@ export type OrcaOrderItemMetaCarrier = {
 const META_PREFIX = '__orca_meta__:';
 
 const normalizeGenericFlg = (value: unknown): OrcaOrderItemMeta['genericFlg'] => {
-  if (value === 'yes' || value === 'no') return value;
+  if (value === 'yes' || value === 'no' || value === 'inherit') return value;
   return undefined;
 };
 
@@ -179,7 +179,7 @@ export function updateOrcaOrderItemMeta(memo: string | undefined, patch: Partial
 }
 
 export function resolveOrcaOrderItemFields(item?: OrcaOrderItemMetaCarrier | null): {
-  genericFlg?: 'yes' | 'no';
+  genericFlg?: 'yes' | 'no' | 'inherit';
   userComment?: string;
   rowRole?: OrcaOrderItemRowRole;
   rowSubtype?: OrcaOrderItemRowSubtype;

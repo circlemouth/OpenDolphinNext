@@ -43,8 +43,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaPrescriptionOrderResource.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
-    private static final java.util.regex.Pattern COMMENT_NUMBER_REQUIRED_PATTERN =
-            java.util.regex.Pattern.compile("^(8501|8511|8521|831)");
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -500,12 +498,15 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                     recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                     throw validationError(request, field, message);
                 }
-                if (requiresStructuredClaimCommentNumber(code) && hasText(claimComment.getNote())) {
-                    String field = "rps[" + rpIndex + "].claimComments[" + commentIndex + "].note";
-                    String message = "structured claim comment number is not supported for this code";
-                    recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
-                    throw validationError(request, field, message);
-                }
+                validateStructuredClaimCommentValue(
+                        request,
+                        facilityId,
+                        patientId,
+                        runId,
+                        action,
+                        "rps[" + rpIndex + "].claimComments[" + commentIndex + "].note",
+                        code,
+                        claimComment.getNote());
             }
             List<PrescriptionDrug> drugs = safeList(rp.getDrugs());
             for (int drugIndex = 0; drugIndex < drugs.size(); drugIndex++) {
@@ -527,15 +528,38 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                         recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                         throw validationError(request, field, message);
                     }
-                    if (requiresStructuredClaimCommentNumber(code) && hasText(claimComment.getNote())) {
-                        String field = "rps[" + rpIndex + "].drugs[" + drugIndex + "].claimComments[" + commentIndex + "].note";
-                        String message = "structured claim comment number is not supported for this code";
-                        recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
-                        throw validationError(request, field, message);
-                    }
+                    validateStructuredClaimCommentValue(
+                            request,
+                            facilityId,
+                            patientId,
+                            runId,
+                            action,
+                            "rps[" + rpIndex + "].drugs[" + drugIndex + "].claimComments[" + commentIndex + "].note",
+                            code,
+                            claimComment.getNote());
                 }
             }
         }
+    }
+
+    private void validateStructuredClaimCommentValue(
+            HttpServletRequest request,
+            String facilityId,
+            String patientId,
+            String runId,
+            String action,
+            String field,
+            String code,
+            String note) {
+        if (!OrcaCommentCarrierRules.isKnownCommentCode(code)) {
+            return;
+        }
+        if (OrcaCommentCarrierRules.hasSupportedValue(code, note)) {
+            return;
+        }
+        String message = "structured claim comment value is required";
+        recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+        throw validationError(request, field, message);
     }
 
     private void validateUsageCodes(
@@ -576,16 +600,8 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         return value != null && !value.isBlank();
     }
 
-    private boolean requiresStructuredClaimCommentNumber(String code) {
-        return COMMENT_NUMBER_REQUIRED_PATTERN.matcher(trimToEmpty(code)).find();
-    }
-
     private String trimToNull(String value) {
         return OrcaPrescriptionOrderImportSupport.trimToNull(value);
-    }
-
-    private String trimToEmpty(String value) {
-        return OrcaPrescriptionOrderImportSupport.trimToEmpty(value);
     }
 
     private <T> List<T> safeList(List<T> source) {

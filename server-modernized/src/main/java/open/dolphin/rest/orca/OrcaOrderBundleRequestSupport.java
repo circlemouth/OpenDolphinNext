@@ -5,7 +5,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.Set;
-import java.util.regex.Pattern;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.ModelUtils;
 
@@ -14,9 +13,6 @@ final class OrcaOrderBundleRequestSupport {
     static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRowRoleSupport.ROW_ROLE_AUXILIARY;
     static final String ROW_ROLE_COMMENT = OrcaOrderBundleRowRoleSupport.ROW_ROLE_COMMENT;
     static final String ROW_ROLE_BODY_PART = OrcaOrderBundleRowRoleSupport.ROW_ROLE_BODY_PART;
-
-    private static final Pattern OTHER_ORDER_CODE_PATTERN = Pattern.compile("^(?:8\\d{8}|18\\d{7})$");
-    private static final Pattern SENDABLE_USAGE_CODE_PATTERN = Pattern.compile("^\\d{4,}$");
 
     private static final Set<String> ORDER_BUNDLE_ENTITIES = Set.of(
             IInfoModel.ENTITY_MED_ORDER,
@@ -130,12 +126,12 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static boolean isSendableUsageCode(String code) {
-        String normalized = trimToNull(code);
-        return normalized != null && SENDABLE_USAGE_CODE_PATTERN.matcher(normalized).matches();
+        return trimToNull(code) != null;
     }
 
     static boolean isSendableInjectionAdminCode(String code) {
-        return isSendableUsageCode(code);
+        String normalized = trimToNull(code);
+        return normalized != null && normalized.matches("^\\d{6}$");
     }
 
     static boolean isSupportedOperation(String operation) {
@@ -160,48 +156,26 @@ final class OrcaOrderBundleRequestSupport {
         if (normalizedEntity == null || normalizedClassCode == null) {
             return true;
         }
-        return switch (normalizedEntity) {
-            case IInfoModel.ENTITY_MED_ORDER -> Set.of("211", "212", "221", "222", "231", "232").contains(normalizedClassCode);
-            case IInfoModel.ENTITY_INJECTION_ORDER -> "310".equals(normalizedClassCode);
-            case "treatmentOrder" -> "400".equals(normalizedClassCode);
-            case IInfoModel.ENTITY_SURGERY_ORDER -> normalizedClassCode.startsWith("5");
-            case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
-            case IInfoModel.ENTITY_RADIOLOGY_ORDER -> normalizedClassCode.startsWith("7");
-            case IInfoModel.ENTITY_OTHER_ORDER -> isValidOtherOrderClassCode(normalizedClassCode);
-            case IInfoModel.ENTITY_BASE_CHARGE_ORDER, IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER ->
-                OrcaChargeClassSupport.isChargeClassCompatible(normalizedEntity, normalizedClassCode);
-            default -> true;
-        };
+        if (!OrcaSendabilityPolicy.isSendableEntity(normalizedEntity)) {
+            return true;
+        }
+        if (OrcaMedicalClassCatalog.isBlockedClassCode(normalizedEntity, normalizedClassCode)) {
+            return false;
+        }
+        return OrcaMedicalClassCatalog.isAllowedClassCode(normalizedEntity, normalizedClassCode);
     }
 
     static boolean isValidOtherOrderCode(String code) {
-        String normalized = trimToNull(code);
-        return normalized != null && OTHER_ORDER_CODE_PATTERN.matcher(normalized).matches();
+        return trimToNull(code) != null;
     }
 
     static boolean isValidOtherOrderClassCode(String classCode) {
-        String normalized = trimToNull(classCode);
-        if (normalized == null || !normalized.matches("\\d{3}")) {
-            return false;
-        }
-        try {
-            int value = Integer.parseInt(normalized);
-            return value >= 800 && value <= 890;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
+        return trimToNull(classCode) != null;
     }
 
     static boolean supportsBodyPartField(String entity) {
         String normalizedEntity = canonicalizeEntity(entity);
-        if (normalizedEntity == null) {
-            return false;
-        }
-        if (isPhysiologyOrder(normalizedEntity)) {
-            return false;
-        }
-        return "treatmentOrder".equals(normalizedEntity)
-                || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+        return normalizedEntity != null && OrcaSendabilityPolicy.supportsBodyPartField(normalizedEntity);
     }
 
     static String normalizeRowRole(String rowRole) {
@@ -233,22 +207,14 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static boolean requiresSendableMainRow(String canonicalEntity) {
-        return canonicalEntity != null && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity);
+        return OrcaSendabilityPolicy.requiresSendableMainRow(canonicalEntity);
     }
 
     static String resolveCanonicalClassName(String entity, String classCode, String className) {
         String normalizedEntity = canonicalizeEntity(entity);
-        String chargeCanonical = OrcaChargeClassSupport.resolveCanonicalChargeClassName(normalizedEntity, classCode);
-        if (chargeCanonical != null) {
-            return chargeCanonical;
-        }
-        if (OrcaChargeClassSupport.isChargeEntity(normalizedEntity)) {
-            return null;
-        }
-        String normalizedClassCode = trimToNull(classCode);
-        if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)
-                && (normalizedClassCode == null || normalizedClassCode.startsWith("7"))) {
-            return OrcaChargeClassCanonicalSupport.RADIOLOGY_CLASS_NAME;
+        String exactClassName = OrcaMedicalClassCatalog.resolveExactClassName(normalizedEntity, classCode);
+        if (exactClassName != null) {
+            return exactClassName;
         }
         return trimToNull(className);
     }
@@ -271,12 +237,4 @@ final class OrcaOrderBundleRequestSupport {
         return normalized;
     }
 
-    private static boolean isInRange(String classCode, int minInclusive, int maxInclusive) {
-        try {
-            int value = Integer.parseInt(classCode);
-            return value >= minInclusive && value <= maxInclusive;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
-    }
 }

@@ -336,7 +336,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     expect(bodyPartInput.value).toBe('膝関節');
   });
 
-  it('readOnly の場合は放射線の部位/コメント入力が無効化される', async () => {
+  it('readOnly の場合は画像診断の部位/コメント入力が無効化される', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -344,8 +344,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="radiologyOrder"
-        title="放射線"
-        bundleLabel="放射線オーダー名"
+        title="画像診断"
+        bundleLabel="画像診断オーダー名"
         meta={{
           ...baseProps.meta,
           readOnly: true,
@@ -523,7 +523,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="baseChargeOrder"
-        title="基本料"
+        title="初診料"
         bundleLabel="算定"
         itemQuantityLabel="数量"
       />,
@@ -567,7 +567,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="baseChargeOrder"
-        title="基本料"
+        title="再診料"
         bundleLabel="算定"
         itemQuantityLabel="数量"
       />,
@@ -627,7 +627,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('放射線オーダーの統合検索は etensuカテゴリ7 / material / drug を使用する', async () => {
+  it('画像診断オーダーの統合検索は etensuカテゴリ7 / material / drug を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
@@ -641,8 +641,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="radiologyOrder"
-        title="放射線"
-        bundleLabel="放射線オーダー名"
+        title="画像診断"
+        bundleLabel="画像診断オーダー名"
         itemQuantityLabel="数量"
       />,
     );
@@ -828,7 +828,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('指導料オーダーの手技検索は etensu カテゴリ1を使用する', async () => {
+  it('管理料オーダーの手技検索は etensu カテゴリ1を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
@@ -842,8 +842,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="instractionChargeOrder"
-        title="指導料"
-        bundleLabel="指導料"
+        title="管理料"
+        bundleLabel="管理料"
         itemQuantityLabel="数量"
       />,
     );
@@ -863,7 +863,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('放射線オーダーでは統合検索対象が表示される', async () => {
+  it('画像診断オーダーでは統合検索対象が表示される', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -871,8 +871,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="radiologyOrder"
-        title="放射線"
-        bundleLabel="放射線オーダー名"
+        title="画像診断"
+        bundleLabel="画像診断オーダー名"
         itemQuantityLabel="数量"
       />,
     );

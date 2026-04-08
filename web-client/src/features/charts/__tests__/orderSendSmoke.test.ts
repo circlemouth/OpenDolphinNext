@@ -26,6 +26,7 @@ import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder, savePrescriptionOr
 describe('order send smoke', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(httpFetch).mockReset();
   });
 
   it('input set detail save reload send smoke keeps testOrder admin local-only and multiple item comment rows', async () => {
@@ -220,7 +221,7 @@ describe('order send smoke', () => {
                 bundleNumber: '3',
                 classCode: '700',
                 classCodeSystem: 'Claim007',
-                className: 'Radiology',
+                className: '画像診断',
                 admin: '検査前説明',
                 memo: 'local-radiology-memo',
                 bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
@@ -263,7 +264,7 @@ describe('order send smoke', () => {
           bundleNumber: '3',
           classCode: '700',
           classCodeSystem: 'Claim007',
-          className: 'Radiology',
+          className: '画像診断',
           admin: '検査前説明',
           memo: 'local-radiology-memo',
           bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
@@ -295,7 +296,7 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '画像診断',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001' }),
@@ -330,7 +331,7 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '画像診断',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001' }),
@@ -351,7 +352,7 @@ describe('order send smoke', () => {
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-radiology-memo');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-item-memo');
   });
-  it('save fetch normalize send smoke keeps otherOrder local fields out of medical payload', async () => {
+  it('save fetch normalize send smoke blocks otherOrder local-only payloads', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(
@@ -377,7 +378,7 @@ describe('order send smoke', () => {
                 bundleNumber: '4',
                 classCode: '800',
                 classCodeSystem: 'Claim007',
-                className: 'Other',
+                className: 'その他',
                 admin: 'local-admin-note',
                 memo: 'local-free-memo',
                 items: [{ code: '180000210', name: 'certificate-fee', quantity: '1', unit: 'times', memo: '' }],
@@ -415,7 +416,7 @@ describe('order send smoke', () => {
           bundleNumber: '4',
           classCode: '800',
           classCodeSystem: 'Claim007',
-          className: 'Other',
+          className: 'その他',
           admin: 'local-admin-note',
           memo: 'local-free-memo',
           items: [{ code: '180000210', name: 'certificate-fee', quantity: '1', unit: 'times', memo: '' }],
@@ -426,55 +427,23 @@ describe('order send smoke', () => {
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'otherOrder' });
     expect(fetched.ok).toBe(true);
 
-    const normalized = fetched.bundles
-      .map((bundle) => toMedicalModV2InformationWithSource(bundle))
-      .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
-
-    const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
-      medicalInformation: normalized.map((entry) => entry.info),
-    });
-
-    expect(payload.medicalInformation).toEqual(
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    expect(prepared.bundleIssues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          medicalClass: '800',
-          medicalClassName: 'Other',
-          medicalClassNumber: '4',
-          medications: [expect.objectContaining({ code: '180000210' })],
+          code: 'unsupported_other_order',
+          entity: 'otherOrder',
         }),
       ]),
     );
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-admin-note');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-free-memo');
+    expect(prepared.medicalInformation).toEqual([]);
 
-    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
-
-    expect(sendResult.ok).toBe(true);
-    expect(httpFetch).toHaveBeenCalledTimes(3);
-    expect(vi.mocked(httpFetch).mock.calls[2]?.[0]).toBe('/api/orca/chart-support/medical-mod-v2');
-
-    const request = vi.mocked(httpFetch).mock.calls[2]?.[1] as RequestInit | undefined;
-    const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
-    expect(body.classCode).toBe('01');
-    expect(body.medicalInformation).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          medicalClass: '800',
-          medicalClassName: 'Other',
-          medicalClassNumber: '4',
-          medications: [expect.objectContaining({ code: '180000210' })],
-        }),
-      ]),
-    );
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-admin-note');
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-free-memo');
+    const notice = buildMedicalModV2BlockNotice(prepared);
+    expect(notice).not.toBeNull();
+    expect(notice?.message).toContain('ORCA送信を停止');
   });
 
-  it('save fetch normalize send payload smoke keeps treatmentOrder bodyPart and class 400', async () => {
+  it('save fetch normalize send smoke blocks treatmentOrder bodyPart', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(
@@ -500,7 +469,7 @@ describe('order send smoke', () => {
                 bundleNumber: '3',
                 classCode: '400',
                 classCodeSystem: 'Claim007',
-                className: 'Treatment',
+                className: '処置',
                 admin: 'local-treatment-admin',
                 memo: 'local-treatment-memo',
                 bodyPart: { code: '002003', name: 'KNEE', quantity: '1', unit: 'PART', memo: '' },
@@ -543,7 +512,7 @@ describe('order send smoke', () => {
           bundleNumber: '3',
           classCode: '400',
           classCodeSystem: 'Claim007',
-          className: 'Treatment',
+          className: '処置',
           admin: 'local-treatment-admin',
           memo: 'local-treatment-memo',
           bodyPart: { code: '002003', name: 'KNEE', quantity: '1', unit: 'PART', memo: '' },
@@ -559,76 +528,29 @@ describe('order send smoke', () => {
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'generalOrder' });
     expect(fetched.ok).toBe(true);
     expect(fetched.bundles[0]?.entity).toBe('treatmentOrder');
+    expect(fetched.bundles[0]?.classCode).toBe('400');
+    expect(fetched.bundles[0]?.className).toBe('処置');
 
     const normalized = fetched.bundles
       .map((bundle) => toMedicalModV2InformationWithSource(bundle))
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
+    expect(normalized).toEqual([]);
 
-    const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
-      medicalInformation: normalized.map((entry) => entry.info),
-    });
-
-    expect(payload.medicalInformation).toEqual(
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    expect(prepared.bundleIssues).toEqual(
       expect.arrayContaining([
-          expect.objectContaining({
-            medicalClass: '400',
-            medicalClassName: 'Treatment',
-            medicalClassNumber: '3',
-            medications: expect.arrayContaining([
-              expect.objectContaining({ code: '002003' }),
-              expect.objectContaining({ code: '140000610' }),
-              expect.objectContaining({ code: '700000021' }),
-              expect.objectContaining({ code: '0085002', name: 'COMMENT' }),
-            ]),
-          }),
-        ]),
-      );
-    const treatmentMedicalInformation = payload.medicalInformation ?? [];
-    expect(treatmentMedicalInformation[0]?.medications.map((item) => item.code)).toEqual([
-      '002003',
-      '140000610',
-      '700000021',
-      '0085002',
-    ]);
-    expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-admin');
-    expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-memo');
-    expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-item-memo');
+        expect.objectContaining({
+          code: 'unsupported_body_part',
+          entity: 'treatmentOrder',
+        }),
+      ]),
+    );
+    expect(prepared.medicalInformation).toEqual([]);
 
-    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
-
-    expect(sendResult.ok).toBe(true);
-    expect(httpFetch).toHaveBeenCalledTimes(3);
-
-    const request = vi.mocked(httpFetch).mock.calls[2]?.[1] as RequestInit | undefined;
-    const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
-    expect(body.medicalInformation).toEqual(
-      expect.arrayContaining([
-          expect.objectContaining({
-            medicalClass: '400',
-            medicalClassName: 'Treatment',
-            medicalClassNumber: '3',
-            medications: expect.arrayContaining([
-              expect.objectContaining({ code: '002003' }),
-              expect.objectContaining({ code: '140000610' }),
-              expect.objectContaining({ code: '700000021' }),
-              expect.objectContaining({ code: '0085002', name: 'COMMENT' }),
-            ]),
-          }),
-        ]),
-      );
-    expect(body.medicalInformation[0]?.medications.map((item: Record<string, string>) => item.code)).toEqual([
-      '002003',
-      '140000610',
-      '700000021',
-      '0085002',
-    ]);
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-admin');
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-memo');
-    expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-item-memo');
+    const notice = buildMedicalModV2BlockNotice(prepared);
+    expect(notice).not.toBeNull();
+    expect(notice?.message).toContain('ORCA送信を停止');
+    expect(notice?.nextAction).toMatch(/bodyPart|部位/);
   });
 
   it('save fetch normalize send payload smoke keeps charge class meta stable and drops local-only fields', async () => {
@@ -658,7 +580,7 @@ describe('order send smoke', () => {
                 bundleNumber: '2',
                 classCode: '120',
                 classCodeSystem: 'Claim007',
-                className: 'bundle fallback should not survive',
+                className: '再診',
                 admin: 'local charge admin',
                 adminMemo: 'local charge admin memo',
                 memo: 'local charge memo',
@@ -707,7 +629,7 @@ describe('order send smoke', () => {
           bundleNumber: '2',
           classCode: '120',
           classCodeSystem: 'Claim007',
-          className: '基本診療料',
+          className: '再診',
           admin: 'local charge admin',
           adminMemo: 'local charge admin memo',
           memo: 'local charge memo',
@@ -719,7 +641,7 @@ describe('order send smoke', () => {
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'baseChargeOrder' });
     expect(fetched.ok).toBe(true);
     expect(fetched.bundles[0]?.classCode).toBe('120');
-    expect(fetched.bundles[0]?.className).toBe('基本診療料');
+    expect(fetched.bundles[0]?.className).toBe('再診');
     expect(fetched.bundles[0]?.sourceSetCode).toBe('B12001');
     expect(fetched.bundles[0]?.adminMemo).toBe('local charge admin memo');
     expect(fetched.bundles[0]?.memo).toBe('local charge memo');
@@ -729,7 +651,7 @@ describe('order send smoke', () => {
     expect(prepared.medicalInformation[0]).toEqual(
       expect.objectContaining({
         medicalClass: '120',
-        medicalClassName: '基本診療料',
+        medicalClassName: '再診',
         medicalClassNumber: '2',
       }),
     );
@@ -764,7 +686,7 @@ describe('order send smoke', () => {
     expect(body.medicalInformation[0]).toEqual(
       expect.objectContaining({
         medicalClass: '120',
-        medicalClassName: '基本診療料',
+        medicalClassName: '再診',
         medicalClassNumber: '2',
       }),
     );
@@ -791,7 +713,7 @@ describe('order send smoke', () => {
         bundleNumber: '1',
         classCode: '120',
         classCodeSystem: 'Claim007',
-        className: '基本診療料',
+        className: '初診料',
         items: [
           {
             code: '120000110',
@@ -899,6 +821,8 @@ describe('order send smoke', () => {
         }),
       ]),
     );
+    expect(prepared.medicalInformation).toEqual([]);
+    expect(buildMedicalModV2BlockNotice(prepared)?.message).toContain('ORCA送信を停止');
     expect(httpFetch).toHaveBeenCalledTimes(2);
   });
 
@@ -1010,13 +934,14 @@ describe('order send smoke', () => {
     expect(prepared.bundleIssues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          code: 'unsupported_physiology_order',
           entity: 'physiologyOrder',
-          detail: expect.stringMatching(/(physiology|生理|送信|block|停止)/),
         }),
       ]),
     );
+    expect(prepared.medicalInformation).toEqual([]);
     expect(buildMedicalModV2BlockNotice(prepared)).not.toBeNull();
-    expect(buildMedicalModV2BlockNotice(prepared)?.message).toMatch(/(physiology|生理)/);
+    expect(buildMedicalModV2BlockNotice(prepared)?.message).toMatch(/(physiology|生理|ORCA送信を停止)/);
     expect(httpFetch).toHaveBeenCalledTimes(3);
   });
 
@@ -1192,12 +1117,12 @@ describe('order send smoke', () => {
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
 
     expect(normalized.map((entry) => entry.info.medications.map((item) => item.code))).toEqual([
-      ['4101', '620000010'],
-      ['4102', '830000001', '620000011', '0085001'],
-      ['4103', '620000012', '700000031'],
+      ['620000010'],
+      ['830000001', '620000011', '0085001'],
+      ['620000012', '700000031'],
     ]);
-    expect(normalized[0]?.info.medications[1]?.genericFlg).toBe('yes');
-    expect(normalized[1]?.info.medications[2]?.genericFlg).toBe('no');
+    expect(normalized[0]?.info.medications[0]?.genericFlg).toBe('yes');
+    expect(normalized[1]?.info.medications[1]?.genericFlg).toBe('no');
 
     const payload = buildMedicalModV2RequestXml({
       patientId: '000001',
@@ -1208,12 +1133,12 @@ describe('order send smoke', () => {
     });
 
     expect(payload.medicalInformation?.map((entry) => entry.medications.map((item) => item.code))).toEqual([
-      ['4101', '620000010'],
-      ['4102', '830000001', '620000011', '0085001'],
-      ['4103', '620000012', '700000031'],
+      ['620000010'],
+      ['830000001', '620000011', '0085001'],
+      ['620000012', '700000031'],
     ]);
-    expect(payload.medicalInformation?.[0]?.medications[1]?.genericFlg).toBe('yes');
-    expect(payload.medicalInformation?.[1]?.medications[2]?.genericFlg).toBe('no');
+    expect(payload.medicalInformation?.[0]?.medications[0]?.genericFlg).toBe('yes');
+    expect(payload.medicalInformation?.[1]?.medications[1]?.genericFlg).toBe('no');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-a');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-b');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-c');
@@ -1229,12 +1154,12 @@ describe('order send smoke', () => {
     const request = vi.mocked(httpFetch).mock.calls[2]?.[1] as RequestInit | undefined;
     const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
     expect(body.medicalInformation.map((entry: Record<string, any>) => entry.medications.map((item: Record<string, string>) => item.code))).toEqual([
-      ['4101', '620000010'],
-      ['4102', '830000001', '620000011', '0085001'],
-      ['4103', '620000012', '700000031'],
+      ['620000010'],
+      ['830000001', '620000011', '0085001'],
+      ['620000012', '700000031'],
     ]);
-    expect(body.medicalInformation[0]?.medications[1]?.genericFlg).toBe('yes');
-    expect(body.medicalInformation[1]?.medications[2]?.genericFlg).toBe('no');
+    expect(body.medicalInformation[0]?.medications[0]?.genericFlg).toBe('yes');
+    expect(body.medicalInformation[1]?.medications[1]?.genericFlg).toBe('no');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-a');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-b');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-c');
@@ -1465,49 +1390,22 @@ describe('order send smoke', () => {
 
     const prepared = prepareMedicalModV2SendData(fetchedBundles.bundles);
     expect(prepared.requiredIssues).toEqual([]);
-    expect(prepared.bundleIssues).toEqual([]);
+    expect(prepared.bundleIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_med_order_usage',
+          entity: 'medOrder',
+        }),
+      ]),
+    );
     expect(prepared.codeIssues).toEqual([]);
-    expect(prepared.medicalInformation).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          medicalClass: '211',
-          medicalClassNumber: '7',
-          medications: expect.arrayContaining([
-            expect.objectContaining({ code: '620000001', name: '薬剤A' }),
-            expect.objectContaining({ code: '820100001', name: 'RP患者希望' }),
-          ]),
-        }),
-      ]),
-    );
+    expect(prepared.medicalInformation).toEqual([]);
 
-    const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
-      medicalInformation: prepared.medicalInformation,
-    });
-
-    expect(payload.medicalInformation).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          medicalClass: '211',
-          medicalClassNumber: '7',
-          medications: expect.arrayContaining([
-            expect.objectContaining({ code: '620000001', name: '薬剤A' }),
-          ]),
-        }),
-      ]),
-    );
-    expect(JSON.stringify(payload.medicalInformation)).toContain('RP患者希望');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('院内設定');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('院内備考');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('lower-drug');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('lower-usage');
-    expect(JSON.stringify(payload.medicalInformation)).not.toContain('number-name');
-
-    const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
-    expect(sendResult.ok).toBe(true);
+    const notice = buildMedicalModV2BlockNotice(prepared);
+    expect(notice).not.toBeNull();
+    expect(notice?.message).toContain('ORCA送信を停止');
+    expect(notice?.nextAction).toContain('adminMemo/speed');
+    expect(requestUrls.some((url) => url.includes('/api/orca/chart-support/medical-mod-v2'))).toBe(false);
     expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toHaveLength(2);
     expect(requestUrls.filter((url) => url === '/api/orca/prescription-orders')).toHaveLength(2);
   });
@@ -1520,7 +1418,7 @@ describe('order send smoke', () => {
         bundleNumber: '1',
         classCode: '110',
         classCodeSystem: 'Claim007',
-        className: '基本診療料',
+        className: '初診料',
         items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '110' }],
         commentItems: [
           {
@@ -1618,22 +1516,18 @@ describe('order send smoke', () => {
 
     const fetchedBundles = await fetchMedicalModV2OrderBundles('000001', '2026-03-09', 'F001:E901');
     expect(fetchedBundles.errors).toEqual([]);
-    expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toEqual([
-      expect.stringContaining('encounterId=F001%3AE901'),
-    ]);
     expect(requestUrls.some((url) => url.includes('/api/orca/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
 
     const prepared = prepareMedicalModV2SendData(fetchedBundles.bundles);
-    expect(prepared.medicalInformation).toEqual(
+    expect(prepared.bundleIssues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          medications: expect.arrayContaining([expect.objectContaining({ code: '620000901', name: 'Encounter B薬' })]),
+          code: 'unsupported_med_order_usage',
+          entity: 'medOrder',
         }),
       ]),
     );
-    expect(prepared.medicalInformation[0]?.medications).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: '620000901', genericFlg: 'no' })]),
-    );
-    expect(JSON.stringify(prepared.medicalInformation)).not.toContain('Encounter A薬');
+    expect(prepared.medicalInformation).toEqual([]);
+    expect(buildMedicalModV2BlockNotice(prepared)?.message).toContain('ORCA送信を停止');
   });
 });

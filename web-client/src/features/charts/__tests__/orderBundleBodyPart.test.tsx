@@ -48,8 +48,8 @@ const renderWithClient = (ui: ReactElement) => {
 const baseProps = {
   patientId: 'P-1',
   entity: 'radiologyOrder',
-  title: '放射線オーダー編集',
-  bundleLabel: '放射線オーダー名',
+  title: '画像診断オーダー編集',
+  bundleLabel: '画像診断オーダー名',
   itemQuantityLabel: '数量',
   meta: {
     runId: 'RUN-ORDER',

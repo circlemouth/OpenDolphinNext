@@ -7,6 +7,16 @@ import {
   resolveChargeClassMetaFromItemCategory as resolveChargeClassMetaFromItemCategoryImpl,
   resolveChargeEntityFromClassCode as resolveChargeEntityFromClassCodeImpl,
 } from './orderChargeClassSupport';
+import {
+  isOrcaOrderEntityImportOnly,
+  isOrcaOrderEntityLocalOnly,
+  isOrcaOrderEntitySendable,
+  resolveOrcaOrderEntitySendabilityPolicy,
+} from './orcaSendabilityPolicy';
+import {
+  resolveOrcaEntityDefaultClassMeta as resolveOrcaEntityDefaultClassMetaImpl,
+  resolveAllowedMedicalClasses as resolveAllowedMedicalClassesImpl,
+} from './orcaMedicalClassCatalog';
 import type { OrderMasterSearchType } from './orderMasterSearchApi';
 
 export type OrderGroupKey = 'prescription' | 'injection' | 'treatment' | 'test' | 'charge';
@@ -176,8 +186,8 @@ export const resolveOrderEntityPhysiologySendContractGuidance = (
   if (resolved !== 'physiologyOrder') return null;
   return {
     blocked: true,
-    reason: 'official ORCA carrier が見つからないため physiologyOrder は fail-closed で ORCA送信を停止します。',
-    sendableFields: ['classCode 600', 'コード付き検査項目', 'コメントコード'],
+    reason: 'physiologyOrder は import-only です。local save/fetch は許可し、ORCA 送信は block します。',
+    sendableFields: ['classCode 600 exact', 'local save/fetch only'],
     localOnlyFields: ['bundleName', '検査指示', '院内補足', '自由メモ', 'item memo', 'subtype'],
     separateFields: ['bodyPart'],
   };
@@ -254,16 +264,16 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '処置',
     group: 'treatment',
     etensuCategory: '4',
-    classMeta: { classCode: '400', className: '処置' },
+    classMeta: resolveOrcaEntityDefaultClassMetaImpl('treatmentOrder'),
     validation: BASE_EDITOR_VALIDATION,
-    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: true },
+    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: false },
     editor: { title: '処置', bundleLabel: '処置名', itemQuantityLabel: '数量' },
   },
   surgeryOrder: {
     label: '手術',
     group: 'treatment',
     etensuCategory: '5',
-    classMeta: { classCode: '500', className: '手術' },
+    classMeta: resolveOrcaEntityDefaultClassMetaImpl('surgeryOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: BASE_EDITOR_UI,
     editor: { title: '手術', bundleLabel: '手技', itemQuantityLabel: '数量' },
@@ -272,7 +282,6 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: 'その他',
     group: 'treatment',
     etensuCategory: '8',
-    classMeta: { classCode: '800', className: 'その他' },
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       ...BASE_EDITOR_UI,
@@ -292,7 +301,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '検査',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaEntityDefaultClassMetaImpl('testOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 生化学検査',
@@ -320,7 +329,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '検査',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaEntityDefaultClassMetaImpl('laboTest'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 生化学検査',
@@ -348,7 +357,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '生理',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaEntityDefaultClassMetaImpl('physiologyOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 心電図検査',
@@ -376,7 +385,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '細菌',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaEntityDefaultClassMetaImpl('bacteriaOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 細菌培養',
@@ -404,7 +413,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: '放射線',
     group: 'test',
     etensuCategory: '7',
-    classMeta: { classCode: '700', className: '放射線' },
+    classMeta: resolveOrcaEntityDefaultClassMetaImpl('radiologyOrder'),
     validation: {
       itemLabel: '画像検査項目',
       requiresItems: true,
@@ -507,16 +516,14 @@ export const ORDER_GROUP_REGISTRY: Array<{
 ];
 
 export const ORCA_SEND_ORDER_ENTITIES: readonly OrderEntity[] = [
+  'medOrder',
+  'injectionOrder',
   'treatmentOrder',
-  'testOrder',
-  'bacteriaOrder',
-  'instractionChargeOrder',
   'surgeryOrder',
-  'otherOrder',
+  'testOrder',
   'radiologyOrder',
   'baseChargeOrder',
-  'injectionOrder',
-  'medOrder',
+  'instractionChargeOrder',
 ] as const;
 
 export const resolveOrderEntity = (value: string): OrderEntity | null => {
@@ -635,11 +642,36 @@ export const resolveChargeClassMetaFromItemCategory = (entity?: string | null, c
 
 export const resolveOrderEntityDefaultClassMeta = (entity?: string): OrderEntityClassMeta | undefined => {
   if (!entity) return undefined;
+  const catalogMeta = resolveOrcaEntityDefaultClassMetaImpl(entity);
+  if (catalogMeta) return catalogMeta;
   const chargeMeta = resolveCanonicalChargeClassMeta({ entity });
   if (chargeMeta) return chargeMeta;
   const resolved = resolveOrderEntity(entity);
   if (!resolved) return undefined;
   return ORDER_ENTITY_REGISTRY[resolved].classMeta;
+};
+
+export const resolveAllowedMedicalClasses = (entity?: string | null): string[] =>
+  resolveAllowedMedicalClassesImpl(entity);
+
+export const resolveOrderEntitySendabilityPolicy = (entity: string) => {
+  const resolved = resolveCanonicalOrderEntity(entity) ?? entity;
+  return resolveOrcaOrderEntitySendabilityPolicy(resolved);
+};
+
+export const isOrderEntitySendable = (entity?: string | null) => {
+  const resolved = resolveCanonicalOrderEntity(entity ?? undefined) ?? entity ?? undefined;
+  return isOrcaOrderEntitySendable(resolved);
+};
+
+export const isOrderEntityLocalOnly = (entity?: string | null) => {
+  const resolved = resolveCanonicalOrderEntity(entity ?? undefined) ?? entity ?? undefined;
+  return isOrcaOrderEntityLocalOnly(resolved);
+};
+
+export const isOrderEntityImportOnly = (entity?: string | null) => {
+  const resolved = resolveCanonicalOrderEntity(entity ?? undefined) ?? entity ?? undefined;
+  return isOrcaOrderEntityImportOnly(resolved);
 };
 
 export const resolveOrderEntityEditorMeta = (entity: string): OrderEntityEditorMeta | null => {
@@ -674,8 +706,10 @@ export const resolveBundleNumberLabel = (params: {
   if (params.group !== 'prescription') return '回数';
 
   const classCode = (params.classCode ?? '').trim();
-  if (classCode.startsWith('22')) return '回数';
-  if (classCode.startsWith('21') || classCode.startsWith('23')) return '日数';
+  const countClassCodes = new Set(['220', '221', '222', '223']);
+  const dayClassCodes = new Set(['210', '211', '212', '213', '230', '231', '232', '233']);
+  if (countClassCodes.has(classCode)) return '回数';
+  if (dayClassCodes.has(classCode)) return '日数';
 
   const timing = normalizePrescriptionTiming(params.prescriptionTiming);
   if (timing === 'tonyo') return '回数';

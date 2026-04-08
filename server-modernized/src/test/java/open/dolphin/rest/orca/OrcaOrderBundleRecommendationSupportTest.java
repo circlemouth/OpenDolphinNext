@@ -56,7 +56,7 @@ class OrcaOrderBundleRecommendationSupportTest {
         bundle.setClaimItem(new ClaimItem[]{
                 claimItem("0021001", "CHEST", "1", null, null),
                 material,
-                claimItem("0085001", "COMMENT", "1", null, "after-meal"),
+                claimItem("850100001", "COMMENT", "1", null, "after-meal"),
                 claimItem("100001", "AMLODIPINE", "2", "tablet", "morning")
         });
 
@@ -102,7 +102,7 @@ class OrcaOrderBundleRecommendationSupportTest {
                         IInfoModel.ENTITY_BASE_CHARGE_ORDER,
                         null);
 
-        assertEquals("基本診療料", template.getClassName());
+        assertEquals("初診料", template.getClassName());
     }
 
     @Test
@@ -111,12 +111,12 @@ class OrcaOrderBundleRecommendationSupportTest {
         bundle.setBundleNumber("3");
         bundle.setClassCode("400");
         bundle.setClassCodeSystem("Claim007");
-        bundle.setClassName("Treatment");
+        bundle.setClassName("処置");
         bundle.setClaimItem(new ClaimItem[]{
                 claimItem("002001", "KNEE", "1", "part", null),
                 claimItem("140000610", "WOUND_CARE", "1", "times", null),
                 claimItem("700000021", "GAUZE", "2", "sheet", null),
-                claimItem("0085002", "COMMENT", "1", null, "after-cleaning")
+                claimItem("850100002", "COMMENT", "1", null, "after-cleaning")
         });
 
         OrderBundleRecommendationResponse.OrderRecommendationTemplate template =
@@ -132,14 +132,14 @@ class OrcaOrderBundleRecommendationSupportTest {
         assertEquals("700000021", template.getMaterialItems().get(0).getCode());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL, template.getMaterialItems().get(0).getRowRole());
         assertEquals(1, template.getCommentItems().size());
-        assertEquals("0085002", template.getCommentItems().get(0).getCode());
+        assertEquals("850100002", template.getCommentItems().get(0).getCode());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_COMMENT, template.getCommentItems().get(0).getRowRole());
         assertEquals(1, template.getItems().size());
         assertEquals("140000610", template.getItems().get(0).getCode());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN, template.getItems().get(0).getRowRole());
         assertEquals("400", template.getClassCode());
         assertEquals("Claim007", template.getClassCodeSystem());
-        assertEquals("Treatment", template.getClassName());
+        assertEquals("処置", template.getClassName());
     }
 
     @Test
@@ -181,7 +181,7 @@ class OrcaOrderBundleRecommendationSupportTest {
         bundle.setBundleNumber("3");
         bundle.setClassCode("700");
         bundle.setClassCodeSystem("Claim007");
-        bundle.setClassName("Radiology");
+        bundle.setClassName("画像診断");
         bundle.setClaimItem(new ClaimItem[]{
                 claimItem("002001", "CHEST", "1", "part", null),
                 claimItem("700000001", "RAD_MAIN_A", "1", "bottle", null),

@@ -620,7 +620,14 @@ describe('prescriptionOrderApi first-class contract', () => {
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });
 
-  it('save は 85/831 系 claim comment の補足値を未実装 carrier として fail-closed にする', async () => {
+  it('save は 85/831 系 claim comment の構造化値を first-class DTO に保持する', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ runId: 'RUN-SAVE-STRUCTURED' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
     const order: PrescriptionOrder = {
       patientId: '000001',
       encounterDate: '2026-03-09',
@@ -659,8 +666,63 @@ describe('prescriptionOrderApi first-class contract', () => {
       ],
     };
 
+    const result = await savePrescriptionOrder({ patientId: '000001', order });
+
+    expect(result.ok).toBe(true);
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    expect(body.rps[0].claimComments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: '850100001',
+          text: '特記事項',
+          note: '3',
+        }),
+      ]),
+    );
+  });
+
+  it('save は 85/831 系 claim comment の構造化値が欠けている row を fail-closed で拒否する', async () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '処方RP',
+          location: 'out',
+          category: 'regular',
+          usage: '1日1回',
+          usageCode: '001000',
+          daysOrTimes: '1',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          claimComments: [{ id: 'rp-claim-1', code: '850100001', name: '特記事項' }],
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
     await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
-      'RP1 RPコメント: 850100001 系コメントの補足値送信は未対応のため保存できません。',
+      'RP1 RPコメント: 850100001 系コメントの構造化値が未入力のため保存できません。',
     );
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });

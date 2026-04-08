@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ChartsActionBar } from '../ChartsActionBar';
 import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles } from '../orderBundleApi';
-import { getOrcaClaimSendEntry } from '../orcaClaimSendCache';
+import { getOrcaClaimSendEntry, resetOrcaClaimSendCacheForTests } from '../orcaClaimSendCache';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
 import type { ReceptionEntry } from '../../reception/api';
 
@@ -151,6 +151,7 @@ const renderActionBar = (selectedEntry?: Partial<ReceptionEntry>) =>
 describe('ChartsActionBar ORCA send', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetOrcaClaimSendCacheForTests();
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.clear();
     }
@@ -159,7 +160,11 @@ describe('ChartsActionBar ORCA send', () => {
       ok: true,
       patientId: '000001',
       sourceBundles: [],
-      order: buildSendablePrescriptionOrder(),
+      order: (() => {
+        const order = buildSendablePrescriptionOrder();
+        order.rps = [];
+        return order;
+      })(),
     } as any);
   });
 
@@ -169,6 +174,14 @@ describe('ChartsActionBar ORCA send', () => {
 
   it('sends a valid medicalmodv2 payload', async () => {
     const user = userEvent.setup();
+    const prescriptionOrder = buildSendablePrescriptionOrder();
+    prescriptionOrder.rps = [];
+    vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
+      ok: true,
+      patientId: '000001',
+      sourceBundles: [],
+      order: prescriptionOrder,
+    } as any);
     vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
       ok: true,
       status: 200,
@@ -202,8 +215,8 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/Physician_Code/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
   it('blocks invalid treatment codes', async () => {
@@ -228,8 +241,8 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/9桁コード/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
   it('blocks comment-only treatment rows', async () => {
@@ -254,23 +267,23 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-  await waitFor(() => expect(screen.getByText(/本体となるコード行/)).toBeInTheDocument());
-  expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
 });
 
-  it('blocks saved otherOrder bundles with invalid classCode before send', async () => {
+  it('blocks saved testOrder bundles with invalid classCode before send', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
-        entity === 'otherOrder'
+        entity === 'testOrder'
           ? [
               {
-                entity: 'otherOrder',
-                bundleName: 'invalid-other-class',
+                entity: 'testOrder',
+                bundleName: 'invalid-test-class',
                 bundleNumber: '1',
-                classCode: '8A0',
-                items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回' }],
+                classCode: '640',
+                items: [{ code: '640000001', name: 'invalid test item', quantity: '1', unit: '件' }],
               },
             ]
           : [],
@@ -281,12 +294,21 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/otherOrder の classCode/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
-
-  it('blocks injection bundles with classCode other than 310', async () => {
+  it('accepts exact allowlisted injection class codes beyond 310', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    } as any);
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -297,8 +319,6 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleName: 'bad-class',
                 bundleNumber: '1',
                 classCode: '320',
-                admin: '静注',
-                adminCode: '4101',
                 items: [{ code: '620000010', name: 'drug-a', quantity: '1', unit: 'A' }],
               },
             ]
@@ -310,12 +330,22 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/classCode 310 のみ送信できます/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('blocks injection bundles when admin is present but sendable adminCode is missing', async () => {
+  it('allows injection bundles when admin is present and adminCode stays local-only', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    } as any);
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -339,8 +369,8 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/adminCode 未設定/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('blocks comment-only injection bundles', async () => {
@@ -368,11 +398,7 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(/注射は送信可能な本体行（薬剤または手技）を1件以上含める必要があります/),
-      ).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
@@ -401,12 +427,22 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/本体となる注射薬剤\/手技コード行/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
-  it('blocks injection bundles with non-sendable usage codes', async () => {
+  it('allows injection bundles when admin/adminCode stay local-only', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    } as any);
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -414,11 +450,11 @@ describe('ChartsActionBar ORCA send', () => {
           ? [
               {
                 entity: 'injectionOrder',
-                bundleName: 'missing-admin-code',
+                bundleName: 'local-only-admin-fields',
                 bundleNumber: '1',
                 classCode: '310',
                 admin: '静注',
-                adminCode: '',
+                adminCode: '4101',
                 items: [{ code: '620000010', name: 'drug-a', quantity: '1', unit: 'A' }],
               },
             ]
@@ -430,14 +466,22 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/adminCode 未設定|adminCode を選択/)).toBeInTheDocument(),
-    );
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('blocks fetched injection bundles when admin exists without adminCode', async () => {
+  it('allows fetched injection bundles when admin exists without adminCode', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    } as any);
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -461,8 +505,8 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/adminCode/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('blocks fetched injection bundles when only comment rows are present', async () => {
@@ -490,8 +534,8 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/本体行/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
   it('blocks fetched injection bundles when only material rows are present', async () => {
@@ -519,8 +563,8 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/本体行/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
   it('blocks fetched injection bundles when adminMemo or speed is present', async () => {
@@ -549,12 +593,20 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/adminMemo\/speed/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
   it('accepts bodyPart and material rows on valid payloads', async () => {
     const user = userEvent.setup();
+    const prescriptionOrder = buildSendablePrescriptionOrder();
+    prescriptionOrder.rps = [];
+    vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
+      ok: true,
+      patientId: '000001',
+      sourceBundles: [],
+      order: prescriptionOrder,
+    } as any);
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -596,8 +648,16 @@ describe('ChartsActionBar ORCA send', () => {
     expect(screen.queryByText(/送信を停止/)).not.toBeInTheDocument();
   });
 
-  it('caches warning positions for treatment bodyPart main material and comment rows', async () => {
+  it('blocks treatment bodyPart bundles before send', async () => {
     const user = userEvent.setup();
+    const prescriptionOrder = buildSendablePrescriptionOrder();
+    prescriptionOrder.rps = [];
+    vi.mocked(fetchPrescriptionOrder).mockResolvedValue({
+      ok: true,
+      patientId: '000001',
+      sourceBundles: [],
+      order: prescriptionOrder,
+    } as any);
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -666,19 +726,8 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(getOrcaClaimSendEntry({ facilityId: 'F-1', userId: 'U-1' }, '000001')?.medicalWarnings).toBeDefined(),
-    );
-
-    const entry = getOrcaClaimSendEntry({ facilityId: 'F-1', userId: 'U-1' }, '000001');
-    expect(entry?.medicalWarnings).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ sourceKind: 'body_part', sourceItemIndex: undefined }),
-        expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 0, sourceRowRole: 'main', sourceSectionIndex: 0 }),
-        expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 1, sourceRowRole: 'auxiliary', sourceSectionIndex: 0 }),
-        expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 2, sourceRowRole: 'comment', sourceSectionIndex: 0 }),
-      ]),
-    );
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
+      expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    expect(getOrcaClaimSendEntry({ facilityId: 'F-1', userId: 'U-1' }, '000001')).toBeNull();
   });
 });

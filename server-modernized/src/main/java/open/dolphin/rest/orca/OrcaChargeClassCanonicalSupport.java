@@ -2,11 +2,19 @@ package open.dolphin.rest.orca;
 
 import open.dolphin.infomodel.IInfoModel;
 
+import java.util.Map;
+
 final class OrcaChargeClassCanonicalSupport {
 
-    static final String BASE_CHARGE_CLASS_NAME = "基本診療料";
-    static final String INSTRUCTION_CHARGE_CLASS_NAME = "医学管理等";
-    static final String RADIOLOGY_CLASS_NAME = "放射線";
+    private static final Map<String, String> RADIOLOGY_CLASS_NAMES = Map.of(
+            "700", "画像診断",
+            "701", "画像診断薬剤",
+            "702", "画像診断材料",
+            "703", "X線フィルム",
+            "704", "画像診断加算料",
+            "731", "造影剤・注入手技",
+            "732", "造影剤・注入手技");
+    private static final String RADIOLOGY_DEFAULT_CLASS_CODE = "700";
 
     private OrcaChargeClassCanonicalSupport() {
     }
@@ -19,6 +27,12 @@ final class OrcaChargeClassCanonicalSupport {
         if (canonical != null) {
             return canonical;
         }
+        String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
+        if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(normalizedEntity)
+                || IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(normalizedEntity)
+                || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)) {
+            return null;
+        }
         return trimToNull(className);
     }
 
@@ -27,6 +41,22 @@ final class OrcaChargeClassCanonicalSupport {
                 OrcaChargeClassSupport.resolveCanonicalChargeClassMeta(entity, classCode, null);
         if (chargeMeta != null) {
             return chargeMeta.classCode();
+        }
+        String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
+        if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)) {
+            String normalized = trimToNull(classCode);
+            if (normalized == null) {
+                return RADIOLOGY_DEFAULT_CLASS_CODE;
+            }
+            return RADIOLOGY_CLASS_NAMES.containsKey(normalized) ? normalized : null;
+        }
+        if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(normalizedEntity)
+                || IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(normalizedEntity)) {
+            String normalized = trimToNull(classCode);
+            if (normalized == null) {
+                return null;
+            }
+            return OrcaChargeClassSupport.resolveCanonicalChargeClassName(normalizedEntity, normalized) != null ? normalized : null;
         }
         String normalized = trimToNull(classCode);
         return normalized;
@@ -38,11 +68,16 @@ final class OrcaChargeClassCanonicalSupport {
             return chargeCanonical;
         }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
-        if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(normalizedEntity)) {
-            return isBlank(classCode) || isInRange(classCode, 110, 125) ? BASE_CHARGE_CLASS_NAME : null;
+        if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)) {
+            String normalized = trimToNull(classCode);
+            if (normalized == null) {
+                return RADIOLOGY_CLASS_NAMES.get(RADIOLOGY_DEFAULT_CLASS_CODE);
+            }
+            return RADIOLOGY_CLASS_NAMES.get(normalized);
         }
-        if (IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(normalizedEntity)) {
-            return isBlank(classCode) || isInRange(classCode, 130, 150) ? INSTRUCTION_CHARGE_CLASS_NAME : null;
+        if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(normalizedEntity)
+                || IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(normalizedEntity)) {
+            return null;
         }
         return null;
     }
@@ -56,46 +91,39 @@ final class OrcaChargeClassCanonicalSupport {
     }
 
     static String canonicalClassNameForMedicalClass(String medicalClass) {
-        if (isInRange(medicalClass, 700, 799)) {
-            return RADIOLOGY_CLASS_NAME;
+        String normalized = trimToNull(medicalClass);
+        if (normalized == null) {
+            return null;
         }
-        if (isInRange(medicalClass, 110, 125)) {
-            return BASE_CHARGE_CLASS_NAME;
+        String radiology = RADIOLOGY_CLASS_NAMES.get(normalized);
+        if (radiology != null) {
+            return radiology;
         }
-        if (isInRange(medicalClass, 130, 150)) {
-            return INSTRUCTION_CHARGE_CLASS_NAME;
+        String chargeCanonical = OrcaChargeClassSupport.resolveCanonicalChargeClassName(null, normalized);
+        if (chargeCanonical != null) {
+            return chargeCanonical;
         }
         return null;
     }
 
     static OrcaOrderInputSetSupport.ClassMetadata resolveClassMetadata(String receiptCode) {
-        if (isInRange(receiptCode, 110, 125)) {
-            return new OrcaOrderInputSetSupport.ClassMetadata(
-                    IInfoModel.ENTITY_BASE_CHARGE_ORDER,
-                    BASE_CHARGE_CLASS_NAME);
+        String normalized = trimToNull(receiptCode);
+        if (normalized == null) {
+            return null;
         }
-        if (isInRange(receiptCode, 130, 150)) {
+        String chargeEntity = OrcaChargeClassSupport.resolveChargeEntityFromClassCode(normalized);
+        if (chargeEntity != null) {
+            String chargeCanonical = OrcaChargeClassSupport.resolveCanonicalClassNameForMedicalClass(normalized);
+            if (chargeCanonical != null) {
+                return new OrcaOrderInputSetSupport.ClassMetadata(chargeEntity, chargeCanonical);
+            }
+        }
+        if (RADIOLOGY_CLASS_NAMES.containsKey(normalized)) {
             return new OrcaOrderInputSetSupport.ClassMetadata(
-                    IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
-                    INSTRUCTION_CHARGE_CLASS_NAME);
+                    IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                    RADIOLOGY_CLASS_NAMES.get(normalized));
         }
         return null;
-    }
-
-    private static boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    private static boolean isInRange(String value, int lowerInclusive, int upperInclusive) {
-        if (isBlank(value)) {
-            return false;
-        }
-        try {
-            int number = Integer.parseInt(value.trim());
-            return number >= lowerInclusive && number <= upperInclusive;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
     }
 
     private static String trimToNull(String value) {

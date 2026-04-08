@@ -620,7 +620,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
         assertNotNull(saved);
         BundleDolphin bundle = (BundleDolphin) saved.getModules().get(0).getModel();
-        assertEquals("基本診療料", bundle.getClassName());
+        assertEquals("初診料", bundle.getClassName());
         assertEquals("110", bundle.getClassCode());
     }
 

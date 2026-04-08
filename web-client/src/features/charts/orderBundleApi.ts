@@ -8,6 +8,7 @@ import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta } from 
 import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
+import { isOrcaEntityClassAllowed, resolveOrcaEntityClassMeta } from './orcaMedicalClassCatalog';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export type OrderBundleRowRole = 'main' | 'auxiliary' | 'material' | 'comment' | 'bodyPart';
@@ -42,7 +43,7 @@ export type OrderBundleItem = {
   quantity?: string;
   unit?: string;
   memo?: string;
-  genericFlg?: 'yes' | 'no';
+  genericFlg?: 'yes' | 'no' | 'inherit';
   userComment?: string;
   rowRole?: OrderBundleRowRole;
   rowSubtype?: OrderBundleRowSubtype;
@@ -147,12 +148,15 @@ const normalizeOrderBundleClassName = (
   const explicit = className?.trim();
   const normalizedEntity = normalizeOrderEntityValue(entity);
   const normalizedClassCode = classCode?.trim();
-  const defaultMeta = normalizedEntity ? resolveOrderEntityDefaultClassMeta(normalizedEntity) : undefined;
-  if (defaultMeta && (!normalizedClassCode || normalizedClassCode === defaultMeta.classCode)) {
-    if (!explicit) return defaultMeta.className;
-    if (normalizedEntity === 'radiologyOrder' && explicit === '画像診断') {
-      return defaultMeta.className;
+  const exactMeta = resolveOrcaEntityClassMeta(normalizedEntity, normalizedClassCode);
+  if (exactMeta) {
+    return exactMeta.className;
+  }
+  if (normalizedEntity && normalizedClassCode) {
+    if (isOrcaEntityClassAllowed(normalizedEntity, normalizedClassCode)) {
+      return resolveOrderEntityDefaultClassMeta(normalizedEntity)?.className ?? explicit ?? undefined;
     }
+    return undefined;
   }
   return explicit || undefined;
 };
@@ -335,12 +339,10 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         rowSubtype: fields.rowSubtype,
         category: fields.category,
         masterCategory: fields.masterCategory,
-        itemNumber: fields.itemNumber,
-        itemNumberBranch: fields.itemNumberBranch,
-        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
-        selectionCommentItemNumberBranch: normalizeOptionalText(
-          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
-        ),
+        itemNumber: undefined,
+        itemNumberBranch: undefined,
+        selectionCommentItemNumber: undefined,
+        selectionCommentItemNumberBranch: undefined,
       };
     }),
     materialItems: (canonicalOperation.materialItems ?? []).map((item) => {
@@ -354,12 +356,10 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         rowSubtype: fields.rowSubtype,
         category: fields.category,
         masterCategory: fields.masterCategory,
-        itemNumber: fields.itemNumber,
-        itemNumberBranch: fields.itemNumberBranch,
-        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
-        selectionCommentItemNumberBranch: normalizeOptionalText(
-          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
-        ),
+        itemNumber: undefined,
+        itemNumberBranch: undefined,
+        selectionCommentItemNumber: undefined,
+        selectionCommentItemNumberBranch: undefined,
       };
     }),
     commentItems: (canonicalOperation.commentItems ?? []).map((item) => {
@@ -373,12 +373,10 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
         rowSubtype: fields.rowSubtype,
         category: fields.category,
         masterCategory: fields.masterCategory,
-        itemNumber: fields.itemNumber,
-        itemNumberBranch: fields.itemNumberBranch,
-        selectionCommentItemNumber: normalizeOptionalText(item.selectionCommentItemNumber ?? fields.itemNumber),
-        selectionCommentItemNumberBranch: normalizeOptionalText(
-          item.selectionCommentItemNumberBranch ?? fields.itemNumberBranch,
-        ),
+        itemNumber: undefined,
+        itemNumberBranch: undefined,
+        selectionCommentItemNumber: undefined,
+        selectionCommentItemNumberBranch: undefined,
       };
     }),
   };
@@ -488,7 +486,7 @@ export async function mutateOrderBundles(params: {
     return {
       ok: false,
       runId,
-      message: '選択式コメントの itemNumber / branch は未対応のため保存できません。パラメータ不要のコメントのみ選択してください。',
+      message: '選択式コメントの itemNumber / branch は local-only のため保存できません。パラメータ不要のコメントのみ選択してください。',
     };
   }
   const response = await httpFetch('/api/orca/order/bundles', {

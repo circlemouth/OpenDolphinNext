@@ -91,6 +91,8 @@ const findRpIndexForBundle = (order: PrescriptionOrder, bundle: OrderBundle, pat
     }
     return (
       rp.name.trim() === imported.name.trim() &&
+      (rp.medicalClass?.trim() || '') === (imported.medicalClass?.trim() || '') &&
+      (rp.medicalClassNumber?.trim() || '') === (imported.medicalClassNumber?.trim() || '') &&
       rp.daysOrTimes.trim() === imported.daysOrTimes.trim() &&
       rp.started === imported.started &&
       rp.location === imported.location &&
@@ -175,10 +177,17 @@ const clampByFullWidth = (value: string, fullWidthLimit: number) => {
   return result;
 };
 
-const resolveClassCode = (category: PrescriptionCategory, location: PrescriptionLocation) => {
-  if (category === 'regular') return location === 'out' ? '212' : '211';
-  if (category === 'tonyo') return location === 'out' ? '222' : '221';
-  return location === 'out' ? '232' : '231';
+const resolveClassCode = (rp: Pick<PrescriptionRp, 'category' | 'location' | 'medicalClass'>) => {
+  if (rp.medicalClass?.trim()) return rp.medicalClass.trim();
+  if (rp.category === 'regular') return rp.location === 'out' ? '212' : '211';
+  if (rp.category === 'tonyo') return rp.location === 'out' ? '222' : '221';
+  return rp.location === 'out' ? '232' : '231';
+};
+
+const cycleGenericFlag = (value?: boolean): boolean | undefined => {
+  if (value === undefined) return true;
+  if (value === true) return false;
+  return undefined;
 };
 
 const toRpFromRecommendation = (
@@ -193,7 +202,7 @@ const toRpFromRecommendation = (
     quantity: item.quantity?.trim() || '',
     unit: item.unit?.trim() || '',
     genericChangeAllowed: true,
-    isGeneralNamePrescription: false,
+    isGeneralNamePrescription: undefined,
     drugComment: '',
     claimComments: [],
     patientRequest: true,
@@ -206,7 +215,7 @@ const toRpFromRecommendation = (
       quantity: '',
       unit: '',
       genericChangeAllowed: true,
-      isGeneralNamePrescription: false,
+      isGeneralNamePrescription: undefined,
       drugComment: '',
       claimComments: [],
       patientRequest: true,
@@ -231,7 +240,7 @@ const mergeRpRequired = (order: PrescriptionOrder): { issue: ReturnType<typeof r
     const issue = resolveRpRequiredIssue({
       entity: 'medOrder',
       bundleName: rp.name,
-      classCode: resolveClassCode(rp.category, rp.location),
+      classCode: resolveClassCode(rp),
       bundleNumber: rp.daysOrTimes,
       items: rp.drugs.map((drug) => ({
         code: drug.code,
@@ -276,7 +285,7 @@ const toRpFromInputSetDetail = (
         quantity: item.quantity?.trim() ?? '',
         unit: item.unit?.trim() ?? '',
         genericChangeAllowed: true,
-        isGeneralNamePrescription: false,
+        isGeneralNamePrescription: undefined,
         drugComment: item.memo?.trim() ?? '',
         claimComments: [] as PrescriptionClaimComment[],
         patientRequest: true,
@@ -301,7 +310,7 @@ const toRpFromInputSetDetail = (
               quantity: '',
               unit: '',
               genericChangeAllowed: true,
-              isGeneralNamePrescription: false,
+              isGeneralNamePrescription: undefined,
               drugComment: '',
               claimComments: [],
               patientRequest: true,
@@ -392,7 +401,10 @@ export function PrescriptionOrderEditorPanel({
     if (order.rps.length === 0) return 'empty';
     return [order.encounterId ?? 'none']
       .concat(
-        order.rps.map((rp) => `${rp.documentId ?? 'none'}:${rp.moduleId ?? 'none'}:${rp.started ?? 'none'}:${rp.rpId}`),
+        order.rps.map(
+          (rp) =>
+            `${rp.documentId ?? 'none'}:${rp.moduleId ?? 'none'}:${rp.started ?? 'none'}:${rp.rpId}:${rp.medicalClass ?? 'none'}:${rp.medicalClassNumber ?? 'none'}:${rp.daysOrTimes ?? 'none'}:${rp.drugs.map((drug) => (drug.isGeneralNamePrescription === undefined ? 'inherit' : drug.isGeneralNamePrescription ? 'yes' : 'no')).join(',')}`,
+        ),
       )
       .join('|');
   }, [sourceBundleQuery.isSuccess, sourceOrder]);
@@ -622,7 +634,7 @@ export function PrescriptionOrderEditorPanel({
           quantity: '',
           unit: '',
           genericChangeAllowed: true,
-          isGeneralNamePrescription: false,
+          isGeneralNamePrescription: undefined,
           drugComment: '',
           claimComments: [],
           patientRequest: true,
@@ -646,7 +658,7 @@ export function PrescriptionOrderEditorPanel({
               quantity: '',
               unit: '',
               genericChangeAllowed: true,
-              isGeneralNamePrescription: false,
+              isGeneralNamePrescription: undefined,
               drugComment: '',
               claimComments: [],
               patientRequest: true,
@@ -1666,15 +1678,25 @@ export function PrescriptionOrderEditorPanel({
                         <button
                           type="button"
                           className="charts-side-panel__switch-button"
-                          data-active={drug.isGeneralNamePrescription ? 'true' : 'false'}
+                          data-active={
+                            drug.isGeneralNamePrescription === undefined
+                              ? 'inherit'
+                              : drug.isGeneralNamePrescription
+                                ? 'true'
+                                : 'false'
+                          }
                           onClick={() =>
                             updateDrug(selectedRpIndex, drugIndex, (current) => ({
                               ...current,
-                              isGeneralNamePrescription: !current.isGeneralNamePrescription,
+                              isGeneralNamePrescription: cycleGenericFlag(current.isGeneralNamePrescription),
                             }))
                           }
                         >
-                          {drug.isGeneralNamePrescription ? '一般名指定' : '銘柄指定'}
+                          {drug.isGeneralNamePrescription === undefined
+                            ? '一般名 継承'
+                            : drug.isGeneralNamePrescription
+                              ? '一般名指定'
+                              : '銘柄指定'}
                         </button>
                         <button
                           type="button"

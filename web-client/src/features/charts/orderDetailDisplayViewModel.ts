@@ -77,6 +77,48 @@ const SUMMARY_CATEGORIES: SummaryCategorySpec[] = [
   { key: 'document', label: '文書' },
 ];
 
+const RADIOLOGY_CLASS_NAMES = {
+  '700': '画像診断',
+  '701': '画像診断薬剤',
+  '702': '画像診断材料',
+  '703': 'X線フィルム',
+  '704': '画像診断加算料',
+  '731': '造影剤・注入手技',
+  '732': '造影剤・注入手技',
+} as const;
+const BASE_CHARGE_CLASS_NAMES = {
+  '110': '初診料',
+  '114': '初診加算料',
+  '120': '再診',
+  '124': '再診加算料',
+} as const;
+const INSTRUCTION_CHARGE_CLASS_NAMES = {
+  '130': '管理料',
+  '132': '管理材料',
+  '133': '管理加算料',
+  '140': '在宅料',
+  '141': '在宅薬剤',
+  '142': '在宅材料',
+  '143': '在宅加算料',
+  '148': '在宅薬剤（院外処方）',
+  '149': '在宅材料（院外処方）',
+} as const;
+
+const resolveBundleDisplayClassName = (bundle: OrderBundle) => {
+  const entity = bundle.entity?.trim() ?? '';
+  const classCode = bundle.classCode?.trim() ?? '';
+  if (entity === 'radiologyOrder') {
+    return RADIOLOGY_CLASS_NAMES[classCode as keyof typeof RADIOLOGY_CLASS_NAMES] ?? RADIOLOGY_CLASS_NAMES['700'];
+  }
+  if (entity === 'baseChargeOrder') {
+    return BASE_CHARGE_CLASS_NAMES[classCode as keyof typeof BASE_CHARGE_CLASS_NAMES] ?? BASE_CHARGE_CLASS_NAMES['110'];
+  }
+  if (entity === 'instractionChargeOrder') {
+    return INSTRUCTION_CHARGE_CLASS_NAMES[classCode as keyof typeof INSTRUCTION_CHARGE_CLASS_NAMES] ?? INSTRUCTION_CHARGE_CLASS_NAMES['130'];
+  }
+  return bundle.className?.trim() || undefined;
+};
+
 const parseStartedTimestamp = (bundle: OrderBundle): number | null => {
   const raw = bundle.started?.trim();
   if (!raw) return null;
@@ -109,7 +151,7 @@ const compareBundleSortMeta = (left: BundleSortMeta, right: BundleSortMeta) => {
 };
 
 const normalizeBundleName = (bundle: OrderBundle) => {
-  const value = normalizeInline(bundle.bundleName) || normalizeInline(bundle.className);
+  const value = normalizeInline(bundle.bundleName) || normalizeInline(resolveBundleDisplayClassName(bundle));
   return value || '名称未設定';
 };
 
@@ -269,7 +311,6 @@ const buildBundleDetailLines = (group: OrderGroupKey, bundle: OrderBundle, bundl
 
 const buildGroupSpecificModel = (
   group: OrderGroupKey,
-  entity: OrderEntity,
   bundle: OrderBundle,
   bundleNumberLabel: BundleNumberLabel,
   bundleNumberValue: string,
@@ -327,9 +368,6 @@ const buildGroupSpecificModel = (
     });
     const detailLines = buildBundleDetailLines(group, bundle, bundleNumberLabel);
     const resolvedMissingFlags = [...missingFlags];
-    if (entity === 'radiologyOrder' && !resolveBundleBodyPart(bundle)) {
-      resolvedMissingFlags.push('missing_body_part');
-    }
     return {
       title: '',
       items,
@@ -369,7 +407,7 @@ const buildOrderDetailDisplayRow = (
 ): OrderDetailDisplayViewModel => {
   const entity = normalizeBundleEntity(bundle, fallbackEntity);
   const { bundleNumberLabel, bundleNumberValue } = resolveBundleNumberMeta(group, bundle);
-  const grouped = buildGroupSpecificModel(group, entity, bundle, bundleNumberLabel, bundleNumberValue);
+  const grouped = buildGroupSpecificModel(group, bundle, bundleNumberLabel, bundleNumberValue);
   return {
     id: buildRowId(group, bundle, index),
     group,

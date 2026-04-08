@@ -3,12 +3,34 @@ package open.dolphin.rest.orca;
 import open.dolphin.infomodel.ClaimConst;
 import open.dolphin.infomodel.IInfoModel;
 
+import java.util.Map;
+
 final class OrcaChargeClassSupport {
 
     private static final ChargeClassRule BASE_CHARGE_RULE = new ChargeClassRule(
-            IInfoModel.ENTITY_BASE_CHARGE_ORDER, 110, 125, "110", "基本診療料");
+            IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+            "110",
+            Map.of(
+                    "110", "初診料",
+                    "114", "初診加算料",
+                    "120", "再診",
+                    "124", "再診加算料"));
     private static final ChargeClassRule INSTRUCTION_CHARGE_RULE = new ChargeClassRule(
-            IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, 130, 150, "130", "医学管理等");
+            IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
+            "130",
+            Map.of(
+                    "130", "管理料",
+                    "132", "管理材料",
+                    "133", "管理加算料",
+                    "140", "在宅料",
+                    "141", "在宅薬剤",
+                    "142", "在宅材料",
+                    "143", "在宅加算料",
+                    "148", "在宅薬剤（院外処方）",
+                    "149", "在宅材料（院外処方）"));
+    private static final Map<String, ChargeClassRule> CHARGE_RULES_BY_ENTITY = Map.of(
+            BASE_CHARGE_RULE.entity(), BASE_CHARGE_RULE,
+            INSTRUCTION_CHARGE_RULE.entity(), INSTRUCTION_CHARGE_RULE);
 
     private OrcaChargeClassSupport() {
     }
@@ -32,7 +54,8 @@ final class OrcaChargeClassSupport {
         if (normalizedClassCode == null) {
             return false;
         }
-        return resolveRuleByEntity(entity) == resolveRuleByClassCode(normalizedClassCode);
+        ChargeClassRule entityRule = resolveRuleByEntity(entity);
+        return entityRule != null && entityRule.isAllowed(normalizedClassCode);
     }
 
     static boolean isChargeItemCategoryCompatible(String entity, String category) {
@@ -40,12 +63,22 @@ final class OrcaChargeClassSupport {
     }
 
     static String resolveCanonicalChargeClassName(String entity, String classCode) {
+        ChargeClassRule entityRule = resolveRuleByEntity(entity);
         ChargeClassRule explicitRule = resolveRuleByClassCode(classCode);
-        if (explicitRule != null && isChargeEntity(entity) && explicitRule != resolveRuleByEntity(entity)) {
+        String normalizedClassCode = trimDigits(classCode);
+        if (explicitRule != null) {
+            if (entityRule != null && explicitRule != entityRule) {
+                return null;
+            }
+            return explicitRule.className(normalizedClassCode);
+        }
+        if (entityRule == null) {
             return null;
         }
-        ChargeClassRule resolvedRule = explicitRule != null ? explicitRule : resolveRuleByEntity(entity);
-        return resolvedRule != null ? resolvedRule.className() : null;
+        if (normalizedClassCode == null) {
+            return entityRule.defaultClassName();
+        }
+        return null;
     }
 
     static ChargeClassMeta resolveCanonicalChargeClassMeta(String entity, String classCode, String itemCategory) {
@@ -54,19 +87,27 @@ final class OrcaChargeClassSupport {
             return null;
         }
         String normalizedCategory = trimDigits(itemCategory);
-        if (normalizedCategory != null && isChargeItemCategoryCompatible(entity, normalizedCategory)) {
-            return new ChargeClassMeta(normalizedCategory, ClaimConst.CLASS_CODE_ID, entityRule.className());
-        }
         String normalizedClassCode = trimDigits(classCode);
-        if (normalizedClassCode != null && isChargeClassCompatible(entity, normalizedClassCode)) {
-            return new ChargeClassMeta(normalizedClassCode, ClaimConst.CLASS_CODE_ID, entityRule.className());
+        if (normalizedClassCode != null) {
+            ChargeClassRule classRule = resolveRuleByClassCode(normalizedClassCode);
+            if (classRule != entityRule) {
+                return null;
+            }
+            return new ChargeClassMeta(normalizedClassCode, ClaimConst.CLASS_CODE_ID, entityRule.className(normalizedClassCode));
         }
-        return new ChargeClassMeta(entityRule.defaultClassCode(), ClaimConst.CLASS_CODE_ID, entityRule.className());
+        if (normalizedCategory != null) {
+            ChargeClassRule categoryRule = resolveRuleByClassCode(normalizedCategory);
+            if (categoryRule != entityRule) {
+                return null;
+            }
+            return new ChargeClassMeta(normalizedCategory, ClaimConst.CLASS_CODE_ID, entityRule.className(normalizedCategory));
+        }
+        return new ChargeClassMeta(entityRule.defaultClassCode(), ClaimConst.CLASS_CODE_ID, entityRule.defaultClassName());
     }
 
     static String resolveCanonicalClassNameForMedicalClass(String medicalClass) {
         ChargeClassRule rule = resolveRuleByClassCode(medicalClass);
-        return rule != null ? rule.className() : null;
+        return rule != null ? rule.className(trimDigits(medicalClass)) : null;
     }
 
     static String resolveCanonicalClassNameForMedicalClass(String medicalClass, String explicitClassName) {
@@ -79,18 +120,13 @@ final class OrcaChargeClassSupport {
         if (rule == null) {
             return null;
         }
-        return new OrcaOrderInputSetSupport.ClassMetadata(rule.entity(), rule.className());
+        String normalizedReceiptCode = trimDigits(receiptCode);
+        return new OrcaOrderInputSetSupport.ClassMetadata(rule.entity(), rule.className(normalizedReceiptCode));
     }
 
     private static ChargeClassRule resolveRuleByEntity(String entity) {
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityStorage(entity);
-        if (IInfoModel.ENTITY_BASE_CHARGE_ORDER.equals(normalizedEntity)) {
-            return BASE_CHARGE_RULE;
-        }
-        if (IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER.equals(normalizedEntity)) {
-            return INSTRUCTION_CHARGE_RULE;
-        }
-        return null;
+        return CHARGE_RULES_BY_ENTITY.get(normalizedEntity);
     }
 
     private static ChargeClassRule resolveRuleByClassCode(String classCode) {
@@ -98,11 +134,10 @@ final class OrcaChargeClassSupport {
         if (normalizedClassCode == null) {
             return null;
         }
-        int numeric = Integer.parseInt(normalizedClassCode);
-        if (numeric >= BASE_CHARGE_RULE.min() && numeric <= BASE_CHARGE_RULE.max()) {
+        if (BASE_CHARGE_RULE.isAllowed(normalizedClassCode)) {
             return BASE_CHARGE_RULE;
         }
-        if (numeric >= INSTRUCTION_CHARGE_RULE.min() && numeric <= INSTRUCTION_CHARGE_RULE.max()) {
+        if (INSTRUCTION_CHARGE_RULE.isAllowed(normalizedClassCode)) {
             return INSTRUCTION_CHARGE_RULE;
         }
         return null;
@@ -122,6 +157,17 @@ final class OrcaChargeClassSupport {
     record ChargeClassMeta(String classCode, String classCodeSystem, String className) {
     }
 
-    private record ChargeClassRule(String entity, int min, int max, String defaultClassCode, String className) {
+    private record ChargeClassRule(String entity, String defaultClassCode, Map<String, String> classNames) {
+        boolean isAllowed(String classCode) {
+            return classNames.containsKey(classCode);
+        }
+
+        String className(String classCode) {
+            return classNames.get(classCode);
+        }
+
+        String defaultClassName() {
+            return className(defaultClassCode);
+        }
     }
 }

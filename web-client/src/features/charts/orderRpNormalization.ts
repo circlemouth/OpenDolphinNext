@@ -1,10 +1,7 @@
 ﻿import type { MedicalModV2Information } from './orcaClaimApi';
 import {
-  isChargeEntity,
   ORCA_SEND_ORDER_ENTITIES,
   resolveCanonicalOrderEntity,
-  resolveCanonicalChargeClassMeta,
-  resolveCanonicalChargeClassName,
   resolveOrderEntityDefaultClassMeta,
 } from './orderCategoryRegistry';
 import {
@@ -27,21 +24,133 @@ import {
 } from './orderRpRequirements';
 import { collectInjectionBundleContractIssues } from './orderBundleContract';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+import { resolveOrcaOrderBodyPartPolicy } from './orcaSendabilityPolicy';
 import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
 
 const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 const DRUG_CODE_PATTERN = /^6\d{8}$/;
+const RADIOLOGY_CLASS_NAMES = {
+  '700': '画像診断',
+  '701': '画像診断薬剤',
+  '702': '画像診断材料',
+  '703': 'X線フィルム',
+  '704': '画像診断加算料',
+  '731': '造影剤・注入手技',
+  '732': '造影剤・注入手技',
+} as const;
+const BASE_CHARGE_CLASS_NAMES = {
+  '110': '初診料',
+  '114': '初診加算料',
+  '120': '再診',
+  '124': '再診加算料',
+} as const;
+const INSTRUCTION_CHARGE_CLASS_NAMES = {
+  '130': '管理料',
+  '132': '管理材料',
+  '133': '管理加算料',
+  '140': '在宅料',
+  '141': '在宅薬剤',
+  '142': '在宅材料',
+  '143': '在宅加算料',
+  '148': '在宅薬剤（院外処方）',
+  '149': '在宅材料（院外処方）',
+} as const;
+const RADIOLOGY_ALLOWED_CLASS_CODES = new Set(Object.keys(RADIOLOGY_CLASS_NAMES));
+const BASE_CHARGE_ALLOWED_CLASS_CODES = new Set(Object.keys(BASE_CHARGE_CLASS_NAMES));
+const INSTRUCTION_CHARGE_ALLOWED_CLASS_CODES = new Set(Object.keys(INSTRUCTION_CHARGE_CLASS_NAMES));
 
 const isCommentMedicationCode = (code: string) => COMMENT_CODE_PATTERN.test(code.trim());
 
 const hasBundleItemValue = (item: OrderBundleItem) =>
   Boolean(item.code?.trim() || item.name?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
 
+type ExactClassMeta = {
+  classCode: string;
+  className: string;
+};
+
+const trimDigits = (value?: string | null) => {
+  const normalized = value?.trim();
+  return normalized && /^\d+$/.test(normalized) ? normalized : null;
+};
+
+const resolveExactRadiologyClassMeta = (classCode?: string | null): ExactClassMeta | null => {
+  const normalized = trimDigits(classCode);
+  if (!normalized) {
+    return { classCode: '700', className: RADIOLOGY_CLASS_NAMES['700'] };
+  }
+  const className = RADIOLOGY_CLASS_NAMES[normalized as keyof typeof RADIOLOGY_CLASS_NAMES];
+  return className ? { classCode: normalized, className } : null;
+};
+
+const resolveExactChargeClassMeta = (
+  entity?: string | null,
+  classCode?: string | null,
+  itemCategory?: string | null,
+): ExactClassMeta | null => {
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity?.trim() ?? '';
+  const normalizedClassCode = trimDigits(classCode);
+  const normalizedCategory = trimDigits(itemCategory);
+  const allowedCodes =
+    canonicalEntity === 'baseChargeOrder'
+      ? BASE_CHARGE_ALLOWED_CLASS_CODES
+      : canonicalEntity === 'instractionChargeOrder'
+        ? INSTRUCTION_CHARGE_ALLOWED_CLASS_CODES
+        : null;
+  if (!allowedCodes) {
+    return null;
+  }
+  if (normalizedClassCode) {
+    if (!allowedCodes.has(normalizedClassCode)) {
+      return null;
+    }
+    return {
+      classCode: normalizedClassCode,
+      className:
+        canonicalEntity === 'baseChargeOrder'
+          ? BASE_CHARGE_CLASS_NAMES[normalizedClassCode as keyof typeof BASE_CHARGE_CLASS_NAMES]
+          : INSTRUCTION_CHARGE_CLASS_NAMES[normalizedClassCode as keyof typeof INSTRUCTION_CHARGE_CLASS_NAMES],
+    };
+  }
+  if (normalizedCategory) {
+    if (!allowedCodes.has(normalizedCategory)) {
+      return null;
+    }
+    return {
+      classCode: normalizedCategory,
+      className:
+        canonicalEntity === 'baseChargeOrder'
+          ? BASE_CHARGE_CLASS_NAMES[normalizedCategory as keyof typeof BASE_CHARGE_CLASS_NAMES]
+          : INSTRUCTION_CHARGE_CLASS_NAMES[normalizedCategory as keyof typeof INSTRUCTION_CHARGE_CLASS_NAMES],
+    };
+  }
+  const defaultClassCode = canonicalEntity === 'baseChargeOrder' ? '110' : '130';
+  return {
+    classCode: defaultClassCode,
+    className:
+      canonicalEntity === 'baseChargeOrder'
+        ? BASE_CHARGE_CLASS_NAMES[defaultClassCode as keyof typeof BASE_CHARGE_CLASS_NAMES]
+        : INSTRUCTION_CHARGE_CLASS_NAMES[defaultClassCode as keyof typeof INSTRUCTION_CHARGE_CLASS_NAMES],
+  };
+};
+
+const resolveExactBundleClassMeta = (bundle: OrderBundle): ExactClassMeta | null => {
+  const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  if (canonicalEntity === 'radiologyOrder') {
+    return resolveExactRadiologyClassMeta(bundle.classCode);
+  }
+  if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
+    const primaryCategory = bundle.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory;
+    return resolveExactChargeClassMeta(canonicalEntity, bundle.classCode, primaryCategory);
+  }
+  return null;
+};
+
 export type RpNormalizedMedication = {
   code: string;
   name?: string;
   number?: string;
-  genericFlg?: 'yes' | 'no';
+  genericFlg?: 'yes' | 'no' | 'inherit';
 };
 
 export type RpNormalizedRowSource =
@@ -80,10 +189,15 @@ export type MedicalModV2BundleIssueCode =
   | 'comment_only'
   | 'missing_main_row'
   | 'invalid_other_order_class'
+  | 'invalid_charge_class_code'
+  | 'invalid_radiology_class_code'
+  | 'unsupported_med_order_usage'
+  | 'unsupported_other_order'
   | 'unsupported_physiology_order'
   | 'unsupported_bacteria_subtype'
   | 'unsupported_selection_comment_parameter'
-  | 'unsupported_admin_memo';
+  | 'unsupported_admin_memo'
+  | 'unsupported_body_part';
 
 export type MedicalModV2BundleIssue = {
   code: MedicalModV2BundleIssueCode;
@@ -259,11 +373,51 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
 
 const resolveMedicalModV2BlockedBundleIssue = (bundle: OrderBundle) => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  const explicitClassCode = bundle.classCode?.trim() ?? '';
+  if (canonicalEntity === 'medOrder' && (bundle.admin?.trim() || bundle.adminCode?.trim())) {
+    return buildBundleIssue(
+      bundle,
+      'unsupported_med_order_usage',
+      '処方の usage は current release では ORCA carrier 未確認のため送信できません。',
+    );
+  }
+  if (canonicalEntity === 'radiologyOrder' && explicitClassCode && !RADIOLOGY_ALLOWED_CLASS_CODES.has(explicitClassCode)) {
+    return buildBundleIssue(
+      bundle,
+      'invalid_radiology_class_code',
+      'radiologyOrder の classCode は 700/701/702/703/704/731/732 の exact class のみ送信できます。',
+    );
+  }
+  if (canonicalEntity === 'baseChargeOrder' && explicitClassCode && !BASE_CHARGE_ALLOWED_CLASS_CODES.has(explicitClassCode)) {
+    return buildBundleIssue(
+      bundle,
+      'invalid_charge_class_code',
+      'baseChargeOrder の classCode は 110/114/120/124 の exact class のみ送信できます。',
+    );
+  }
+  if (
+    canonicalEntity === 'instractionChargeOrder' &&
+    explicitClassCode &&
+    !INSTRUCTION_CHARGE_ALLOWED_CLASS_CODES.has(explicitClassCode)
+  ) {
+    return buildBundleIssue(
+      bundle,
+      'invalid_charge_class_code',
+      'instractionChargeOrder の classCode は 130/132/133/140/141/142/143/148/149 の exact class のみ送信できます。',
+    );
+  }
   if (hasUnsupportedSelectionCommentParameterInBundle(bundle)) {
     return buildBundleIssue(
       bundle,
       'unsupported_selection_comment_parameter',
       '選択式コメントの itemNumber / branch は official medicalmodv2 request に carrier がないため ORCA送信できません。',
+    );
+  }
+  if (canonicalEntity === 'otherOrder') {
+    return buildBundleIssue(
+      bundle,
+      'unsupported_other_order',
+      'otherOrder は local-only です。ORCA outbound には対応していません。',
     );
   }
   if (canonicalEntity === 'physiologyOrder') {
@@ -273,11 +427,19 @@ const resolveMedicalModV2BlockedBundleIssue = (bundle: OrderBundle) => {
       MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_ERROR_LABEL,
     );
   }
-  if (canonicalEntity === 'bacteriaOrder' && Boolean(bundle.subtype?.trim())) {
+  if (canonicalEntity === 'bacteriaOrder') {
     return buildBundleIssue(
       bundle,
       'unsupported_bacteria_subtype',
-      '細菌検査 subtype に対応する ORCA carrier はありません。院内ローカル情報として保持し、送信前に解消してください。',
+      'bacteriaOrder は local-only です。subtype/specimen を含め ORCA outbound には対応していません。',
+    );
+  }
+  const hasBodyPartRow = collectNormalizedRows(bundle).some((row) => row.source.kind === 'body_part');
+  if (hasBodyPartRow && resolveOrcaOrderBodyPartPolicy(canonicalEntity, explicitClassCode || undefined) === 'blocked') {
+    return buildBundleIssue(
+      bundle,
+      'unsupported_body_part',
+      `${canonicalEntity || 'order'} では bodyPart を ORCA outbound へ送信できません。local-only として保持するか削除してください。`,
     );
   }
   return null;
@@ -398,7 +560,8 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
   const code = item.code?.trim();
   if (!code) return null;
   const { genericFlg: resolvedGenericFlg } = resolveOrcaOrderItemFields(item);
-  const genericFlg = DRUG_CODE_PATTERN.test(code) ? resolvedGenericFlg : undefined;
+  const genericFlg =
+    DRUG_CODE_PATTERN.test(code) && resolvedGenericFlg !== 'inherit' ? resolvedGenericFlg : undefined;
   return {
     code,
     name: item.name?.trim() || undefined,
@@ -408,12 +571,8 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
 };
 
 const resolveMedicalClass = (bundle: OrderBundle) => {
-  const chargeClassMeta = resolveCanonicalChargeClassMeta({
-    entity: bundle.entity,
-    classCode: bundle.classCode,
-    itemCategory: bundle.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory,
-  });
-  if (chargeClassMeta?.classCode) return chargeClassMeta.classCode;
+  const exactClassMeta = resolveExactBundleClassMeta(bundle);
+  if (exactClassMeta?.classCode) return exactClassMeta.classCode;
   const explicit = bundle.classCode?.trim();
   if (explicit) return explicit;
   const classMeta = resolveOrderEntityDefaultClassMeta(bundle.entity?.trim());
@@ -421,20 +580,25 @@ const resolveMedicalClass = (bundle: OrderBundle) => {
 };
 
 const resolveMedicalClassName = (bundle: OrderBundle, medicalClass: string) => {
-  const explicit = bundle.className?.trim();
-  if (explicit && (!isChargeEntity(bundle.entity) || resolveCanonicalChargeClassName(bundle.entity, medicalClass) === explicit)) {
-    return explicit;
+  const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  if (canonicalEntity === 'radiologyOrder') {
+    return RADIOLOGY_CLASS_NAMES[medicalClass as keyof typeof RADIOLOGY_CLASS_NAMES] ?? bundle.className?.trim() ?? undefined;
   }
-  const canonicalChargeClassName = resolveCanonicalChargeClassName(bundle.entity, medicalClass);
-  if (canonicalChargeClassName) return canonicalChargeClassName;
-  return explicit || undefined;
+  if (canonicalEntity === 'baseChargeOrder') {
+    return BASE_CHARGE_CLASS_NAMES[medicalClass as keyof typeof BASE_CHARGE_CLASS_NAMES] ?? bundle.className?.trim() ?? undefined;
+  }
+  if (canonicalEntity === 'instractionChargeOrder') {
+    return INSTRUCTION_CHARGE_CLASS_NAMES[medicalClass as keyof typeof INSTRUCTION_CHARGE_CLASS_NAMES] ?? bundle.className?.trim() ?? undefined;
+  }
+  const explicit = bundle.className?.trim();
+  if (explicit) return explicit;
+  return resolveOrderEntityDefaultClassMeta(bundle.entity?.trim())?.className?.trim() || undefined;
 };
 
 const buildUsageRow = (bundle: OrderBundle, rows: RpNormalizedRow[]): RpNormalizedRow | null => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
   const isPrescription = canonicalEntity === 'medOrder';
-  const isInjection = canonicalEntity === 'injectionOrder';
-  if (!isPrescription && !isInjection) return null;
+  if (!isPrescription) return null;
   const usageCodeCandidate =
     bundle.adminCode?.trim() || (isPrescription && bundle.admin?.trim() ? bundle.admin.trim().split(/\s+/)[0] : '');
   const usageCode = /^\d{4,}$/.test(usageCodeCandidate) ? usageCodeCandidate : '';
@@ -520,7 +684,7 @@ export const toMedicalModV2InformationWithSource = (
       code: row.medication.code,
       name: row.medication.name,
       number: row.medication.number,
-      genericFlg: row.medication.genericFlg,
+      genericFlg: row.medication.genericFlg === 'inherit' ? undefined : row.medication.genericFlg,
     })),
   };
   const source: MedicalModV2InformationSource = {
@@ -674,7 +838,7 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
           ? '細菌検査 subtype は official ORCA carrier がないため送信できません。院内ローカル情報として保持し、ORCA送信対象から外してください。'
           : unsupportedSelectionCommentIssue
             ? '選択式コメントの itemNumber / branch は official medicalmodv2 carrier がないため送信できません。parameter 付きコメントを削除してください。'
-          : 'コードなし行、adminCode 未設定、adminMemo/speed、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',
+          : 'コードなし行、adminMemo/speed、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',
     };
   }
   if (prepared.codeIssues.length > 0) {

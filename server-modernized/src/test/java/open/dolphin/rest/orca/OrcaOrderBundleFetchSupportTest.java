@@ -44,7 +44,7 @@ class OrcaOrderBundleFetchSupportTest {
         assertEquals(1, entries.size());
         OrderBundleFetchResponse.OrderBundleEntry entry = entries.get(0);
         assertNotNull(entry);
-        assertEquals("基本診療料", entry.getClassName());
+        assertEquals("初診料", entry.getClassName());
         assertEquals("110", entry.getClassCode());
     }
 }

@@ -8,6 +8,7 @@ import {
   resolveOrderEntity,
   resolveOrderEntityDefaultClassMeta,
   resolveOrderEntityEtensuCategory,
+  resolveOrderEntityPhysiologySendContractGuidance,
   resolveOrderEntityLabel,
   resolveOrderEntityMasterSearchPolicy,
   resolveOrderEntityTestSubtypeConfig,
@@ -35,16 +36,29 @@ describe('orderCategoryRegistry', () => {
     const medUi = resolveOrderEntityUiProfile('medOrder');
     const medRule = resolveOrderEntityValidationRule('medOrder');
     const injClass = resolveOrderEntityDefaultClassMeta('injectionOrder');
+    const baseClass = resolveOrderEntityDefaultClassMeta('baseChargeOrder');
+    const instructionClass = resolveOrderEntityDefaultClassMeta('instractionChargeOrder');
 
     expect(medUi.defaultMasterSearchType).toBe('drug');
     expect(medRule.requiresUsage).toBe(true);
     expect(resolveOrderEntityUiProfile('injectionOrder').supportsInjectionNoProcedure).toBe(false);
     expect(injClass?.classCode).toBe('310');
+    expect(baseClass).toEqual({ classCode: '110', className: '初診料' });
+    expect(instructionClass).toEqual({ classCode: '130', className: '管理料' });
     expect(resolveOrderEntityEtensuCategory('radiologyOrder')).toBe('7');
-    expect(ORCA_SEND_ORDER_ENTITIES).toContain('medOrder');
-    expect(ORCA_SEND_ORDER_ENTITIES).toContain('injectionOrder');
-    expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('laboTest');
-    expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('generalOrder');
+    expect(ORCA_SEND_ORDER_ENTITIES).toEqual([
+      'medOrder',
+      'injectionOrder',
+      'treatmentOrder',
+      'surgeryOrder',
+      'testOrder',
+      'radiologyOrder',
+      'baseChargeOrder',
+      'instractionChargeOrder',
+    ]);
+    expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('otherOrder');
+    expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('physiologyOrder');
+    expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('bacteriaOrder');
   });
 
   it('returns search policy aligned with each entity', () => {
@@ -54,6 +68,7 @@ describe('orderCategoryRegistry', () => {
     const testPolicy = resolveOrderEntityMasterSearchPolicy('testOrder');
     const chargePolicy = resolveOrderEntityMasterSearchPolicy('baseChargeOrder');
     const laboPolicy = resolveOrderEntityMasterSearchPolicy('laboTest');
+    const physiologyGuidance = resolveOrderEntityPhysiologySendContractGuidance('physiologyOrder');
 
     expect(injectionPolicy.masterSearchPresets.map((preset) => preset.type)).toEqual(['drug', 'etensu']);
     expect(injectionPolicy.defaultMasterSearchType).toBe('drug');
@@ -66,6 +81,12 @@ describe('orderCategoryRegistry', () => {
     expect(testPolicy.etensuCategory).toBe('6');
     expect(chargePolicy.etensuCategory).toBe('1');
     expect(laboPolicy).toEqual(testPolicy);
+    expect(physiologyGuidance).toEqual(
+      expect.objectContaining({
+        blocked: true,
+        reason: expect.stringContaining('fail-closed'),
+      }),
+    );
   });
 
   it('exposes class 600 subtype config by entity', () => {
@@ -82,9 +103,9 @@ describe('orderCategoryRegistry', () => {
     expect(physiology?.helpText).toContain('保存');
     expect(physiology?.helpText).toContain('表示');
     expect(physiology?.helpText).toContain('ORCA送信');
-    expect(physiology?.helpText).toMatch(/(explicit block|停止|使いません)/);
+    expect(physiology?.helpText).toMatch(/(explicit block|停止|使いません|block)/);
     expect(bacteria?.required).toBe(true);
-    expect(bacteria?.helpText).toContain('carrier がない');
+    expect(bacteria?.helpText).toContain('local-only');
     expect(bacteria?.options.map((option) => option.value)).toEqual(['culture', 'sensitivity']);
     expect(testUi.instructionLabel).toBe('検査指示（院内）');
     expect(testUi.memoLabel).toBe('検査メモ（院内）');
