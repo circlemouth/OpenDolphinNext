@@ -57,6 +57,7 @@ build/
 tmp/
 output/
 artifacts/source-archives/
+artifacts/review-bundles/
 web-client/tmp/
 .playwright-cli/
 artifacts/verification/
