@@ -87,7 +87,7 @@ const resolveBundleDisplayClassName = (bundle: OrderBundle) => {
     return resolveMedicalClassName(classCode);
   }
   if (entity === 'baseChargeOrder' || entity === 'instractionChargeOrder') {
-    return resolveCanonicalChargeClassName(entity, classCode) ?? resolveCanonicalChargeClassName(entity);
+    return resolveCanonicalChargeClassName(entity, classCode);
   }
   return bundle.className?.trim() || undefined;
 };

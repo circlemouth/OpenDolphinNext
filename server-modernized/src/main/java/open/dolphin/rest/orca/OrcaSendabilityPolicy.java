@@ -51,7 +51,7 @@ final class OrcaSendabilityPolicy {
     }
 
     static boolean supportsBodyPartField(String entity) {
-        return OrcaMedicalClassCatalog.supportsBodyPartField(entity);
+        return false;
     }
 
     static boolean supportsBodyPartField(String entity, String classCode) {

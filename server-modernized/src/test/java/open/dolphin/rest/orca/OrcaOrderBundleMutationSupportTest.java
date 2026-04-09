@@ -75,6 +75,24 @@ class OrcaOrderBundleMutationSupportTest {
     }
 
     @Test
+    void buildDocumentDoesNotBackfillChargeClassNameFromBundleNameWithoutExplicitClassCode() {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setEntity(IInfoModel.ENTITY_BASE_CHARGE_ORDER);
+        operation.setBundleName("charge-fallback");
+        OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
+        item.setCode("110000110");
+        item.setName("initial-consultation");
+        item.setMasterCategory("110");
+        operation.setItems(List.of(item));
+
+        DocumentModel document = OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
+
+        BundleDolphin bundle = (BundleDolphin) document.getModules().get(0).getModel();
+        assertEquals(null, bundle.getClassCode());
+        assertEquals(null, bundle.getClassName());
+    }
+
+    @Test
     void updateDocumentWithBundleReusesExistingModuleIdWhenRequestOmitsIt() {
         DocumentModel document = new DocumentModel();
         document.setKarteBean(new KarteBean());

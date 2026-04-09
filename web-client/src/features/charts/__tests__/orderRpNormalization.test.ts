@@ -4,8 +4,10 @@ import { resolveCanonicalOrderEntity } from '../orderCategoryRegistry';
 import { buildMedicalModV2RequestXml } from '../orcaClaimApi';
 import {
   collectMedicalModV2BundleIssues,
+  collectMedicalModV2BundleIssuesForBundle,
   fetchMedicalModV2OrderBundles,
   normalizeOrderBundleToRp,
+  prepareMedicalModV2SendData,
   toMedicalModV2InformationWithSource,
 } from '../orderRpNormalization';
 import { fetchOrderBundles } from '../orderBundleApi';
@@ -79,12 +81,16 @@ describe('orderRpNormalization', () => {
     );
   });
 
-  it('bacteriaOrder の subtype は carrier 未対応のため送信前 issue を返す', () => {
+  it.each([
+    { subtype: '', label: 'subtype 空' },
+    { subtype: 'culture', label: 'subtype あり' },
+  ])('bacteriaOrder は $label でも entity 単位で送信前 issue を返す', ({ subtype }) => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'bacteriaOrder',
         bundleName: '細菌培養',
-        subtype: 'culture',
+        subtype,
+        classCode: '600',
         items: [{ code: '160000010', name: '培養検査', quantity: '1', unit: '回', memo: '' }],
       } as any,
     ]);
@@ -92,11 +98,41 @@ describe('orderRpNormalization', () => {
     expect(issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: 'unsupported_bacteria_subtype',
+          code: 'unsupported_bacteria_order',
           bundleName: '細菌培養',
         }),
       ]),
     );
+  });
+
+  it('prepareMedicalModV2SendData は bacteriaOrder を subtype に依存せず fail-close する', () => {
+    const bundle = {
+      entity: 'bacteriaOrder',
+      bundleName: '細菌培養',
+      bundleNumber: '1',
+      classCode: '600',
+      items: [{ code: '160000010', name: '培養検査', quantity: '1', unit: '回', memo: '' }],
+    } as any;
+
+    expect(collectMedicalModV2BundleIssuesForBundle(bundle)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_bacteria_order',
+          bundleName: '細菌培養',
+        }),
+      ]),
+    );
+
+    const prepared = prepareMedicalModV2SendData([bundle]);
+    expect(prepared.bundleIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_bacteria_order',
+          entity: 'bacteriaOrder',
+        }),
+      ]),
+    );
+    expect(prepared.medicalInformation).toEqual([]);
   });
 
   it('parameter 付き選択式コメントは送信前 issue を返す', () => {
@@ -206,6 +242,87 @@ describe('orderRpNormalization', () => {
         bundleName: 'comment-only-injection',
       }),
     );
+  });
+
+  it.each(['332', '335', '352'])('injectionOrder は exact allowlist 外 classCode=%s を送信前に reject する', (classCode) => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity: 'injectionOrder',
+        bundleName: `invalid-injection-${classCode}`,
+        classCode,
+        admin: '静注',
+        adminCode: '4101',
+        items: [{ code: '620000012', name: 'DRUG_C', quantity: '1', unit: 'ampoule', rowRole: 'main' }],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'invalid_injection_class_code',
+          bundleName: `invalid-injection-${classCode}`,
+        }),
+      ]),
+    );
+  });
+
+  it('surgeryOrder の 7xxxxxxxxx 行は explicit rowRole がなくても send 正規化で material になる', () => {
+    const normalized = normalizeOrderBundleToRp({
+      entity: 'surgeryOrder',
+      bundleName: '手術材料',
+      bundleNumber: '1',
+      classCode: '500',
+      items: [
+        { code: '150000001', name: '手術主行', quantity: '1', unit: '回', memo: '' },
+        { code: '700000031', name: '縫合糸', quantity: '1', unit: '本', memo: '' },
+      ],
+    } as any);
+
+    expect(normalized?.rows.map((row) => row.medication.code)).toEqual(['150000001', '700000031']);
+    expect(normalized?.rows.map((row) => row.source.kind === 'bundle_item' ? row.source.rowRole : 'bodyPart')).toEqual([
+      'main',
+      'material',
+    ]);
+  });
+
+  it('surgeryOrder の implicit material は send row partition で main row に混ざらない', () => {
+    const normalized = toMedicalModV2InformationWithSource({
+      entity: 'surgeryOrder',
+      bundleName: '手術材料',
+      bundleNumber: '1',
+      classCode: '500',
+      items: [
+        { code: '150000001', name: '手術主行', quantity: '1', unit: '回', memo: '' },
+        { code: '700000031', name: '縫合糸', quantity: '1', unit: '本', memo: '' },
+      ],
+    } as any);
+
+    expect(normalized?.source.rows.map((row) => row.source.kind === 'bundle_item' ? row.source.rowRole : 'bodyPart')).toEqual([
+      'main',
+      'material',
+    ]);
+    expect(normalized?.info.medications.map((row) => row.code)).toEqual(['150000001', '700000031']);
+  });
+
+  it('surgeryOrder 501/502 standalone は material-only でも main-row 必須除外を維持する', () => {
+    const bundle = {
+      entity: 'surgeryOrder',
+      bundleName: '手術材料のみ',
+      bundleNumber: '1',
+      classCode: '501',
+      items: [{ code: '700000031', name: '縫合糸', quantity: '1', unit: '本', memo: '' }],
+    } as any;
+
+    expect(collectMedicalModV2BundleIssues([bundle])).toEqual([]);
+
+    const prepared = prepareMedicalModV2SendData([bundle]);
+    expect(prepared.bundleIssues).toEqual([]);
+    expect(prepared.medicalInformation).toEqual([
+      expect.objectContaining({
+        medicalClass: '501',
+        medications: [expect.objectContaining({ code: '700000031', name: '縫合糸' })],
+      }),
+    ]);
   });
 
   it('buildMedicalModV2RequestXml は unsupported な unit を送信 payload から除外する', () => {

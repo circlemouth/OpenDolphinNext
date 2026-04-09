@@ -31,7 +31,7 @@ describe('order send smoke for class 600', () => {
     vi.clearAllMocks();
   });
 
-  it('save fetch normalize send smoke blocks bacteria subtype before xml payload generation', async () => {
+  it('save fetch normalize send smoke blocks bacteriaOrder with blank subtype before xml payload generation', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(
@@ -55,7 +55,7 @@ describe('order send smoke for class 600', () => {
                 entity: 'bacteriaOrder',
                 bundleName: 'bacteria bundle',
                 bundleNumber: '6',
-                subtype: 'culture',
+                subtype: '',
                 classCode: '600',
                 classCodeSystem: 'Claim007',
                 className: '検査',
@@ -82,6 +82,84 @@ describe('order send smoke for class 600', () => {
           entity: 'bacteriaOrder',
           bundleName: 'bacteria bundle',
           bundleNumber: '6',
+          subtype: '',
+          classCode: '600',
+          classCodeSystem: 'Claim007',
+          className: '検査',
+          admin: '院内指示',
+          adminMemo: 'local admin memo',
+          memo: 'local memo',
+          items: [{ code: '160000010', name: 'lab item', quantity: '1', unit: 'count', memo: '' }],
+        },
+      ],
+    });
+
+    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'bacteriaOrder' });
+    expect(fetched.ok).toBe(true);
+    expect(fetched.bundles[0]?.entity).toBe('bacteriaOrder');
+    expect(fetched.bundles[0]?.subtype).toBe('');
+    expect(fetched.bundles[0]?.admin).toBe('院内指示');
+    expect(fetched.bundles[0]?.memo).toBe('local memo');
+
+    const prepared = prepareMedicalModV2SendData(fetched.bundles);
+    const blockNotice = buildMedicalModV2BlockNotice(prepared);
+    expect(prepared.bundleIssues.map((issue) => issue.code)).toContain('unsupported_bacteria_order');
+    expect(prepared.medicalInformation).toEqual([]);
+    expect(blockNotice?.message).toContain('ORCA送信を停止');
+    expect(blockNotice?.nextAction).toContain('local-only');
+    expect(httpFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('save fetch normalize send smoke blocks bacteriaOrder with subtype set before xml payload generation', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-SAVE-600-SUBTYPE',
+            createdDocumentIds: [304],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            runId: 'RUN-FETCH-600-SUBTYPE',
+            patientId: '000001',
+            bundles: [
+              {
+                entity: 'bacteriaOrder',
+                bundleName: 'bacteria bundle subtype',
+                bundleNumber: '7',
+                subtype: 'culture',
+                classCode: '600',
+                classCodeSystem: 'Claim007',
+                className: '検査',
+                admin: '院内指示',
+                adminMemo: 'local admin memo',
+                memo: 'local memo',
+                items: [{ code: '160000010', name: 'lab item', quantity: '1', unit: 'count', memo: '' }],
+              },
+            ],
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity: 'bacteriaOrder',
+          bundleName: 'bacteria bundle subtype',
+          bundleNumber: '7',
           subtype: 'culture',
           classCode: '600',
           classCodeSystem: 'Claim007',
@@ -96,13 +174,19 @@ describe('order send smoke for class 600', () => {
 
     const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'bacteriaOrder' });
     expect(fetched.ok).toBe(true);
+    expect(fetched.bundles[0]?.subtype).toBe('culture');
 
     const prepared = prepareMedicalModV2SendData(fetched.bundles);
-    const blockNotice = buildMedicalModV2BlockNotice(prepared);
-    expect(prepared.bundleIssues.map((issue) => issue.code)).toContain('unsupported_bacteria_subtype');
+    expect(prepared.bundleIssues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'unsupported_bacteria_order',
+          entity: 'bacteriaOrder',
+          bundleName: 'bacteria bundle subtype',
+        }),
+      ]),
+    );
     expect(prepared.medicalInformation).toEqual([]);
-    expect(blockNotice?.message).toContain('ORCA送信を停止');
-    expect(blockNotice?.nextAction).toContain('細菌検査');
     expect(httpFetch).toHaveBeenCalledTimes(2);
   });
 

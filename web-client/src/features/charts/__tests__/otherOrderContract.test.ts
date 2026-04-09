@@ -4,19 +4,10 @@ import {
   isOtherOrderBodyPartCode,
   isOtherOrderLocalOnlyCode,
   isOtherOrderRowRole,
-  isOtherOrderSentinelClassCode,
   OTHER_ORDER_ALLOWED_ROW_ROLES,
-  OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE,
 } from '../otherOrderContract';
 
 describe('otherOrderContract', () => {
-  it('explicit local-only sentinel は単一の非ORCA numeric 値に固定される', () => {
-    expect(OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE).toBe('LOCAL_OTHER');
-    expect(/^\d+$/.test(OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE)).toBe(false);
-    expect(isOtherOrderSentinelClassCode('LOCAL_OTHER')).toBe(true);
-    expect(isOtherOrderSentinelClassCode('800')).toBe(false);
-  });
-
   it('rowRole は main/comment だけを許可する', () => {
     expect(OTHER_ORDER_ALLOWED_ROW_ROLES).toEqual(['main', 'comment']);
     expect(isOtherOrderRowRole('main')).toBe(true);

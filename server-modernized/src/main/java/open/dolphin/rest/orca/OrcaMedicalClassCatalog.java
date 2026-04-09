@@ -26,17 +26,17 @@ final class OrcaMedicalClassCatalog {
     private static final Map<String, String> ENTITY_ALIASES = buildEntityAliases();
 
     private static final Map<String, EntityContract> ENTITY_CONTRACTS = Map.ofEntries(
-            Map.entry(IInfoModel.ENTITY_MED_ORDER, new EntityContract("処方", new ClassMeta("212", "処方"), MED_CLASS_CODES, Set.of(), true, false, false)),
-            Map.entry(IInfoModel.ENTITY_INJECTION_ORDER, new EntityContract("注射", new ClassMeta("310", "注射"), INJECTION_CLASS_CODES, Set.of(), true, false, false)),
-            Map.entry(IInfoModel.ENTITY_TREATMENT, new EntityContract("処置", new ClassMeta("400", "処置"), TREATMENT_CLASS_CODES, Set.of(), true, false, false)),
-            Map.entry(IInfoModel.ENTITY_SURGERY_ORDER, new EntityContract("手術", new ClassMeta("500", "手術"), SURGERY_CLASS_CODES, Set.of(), true, false, false)),
-            Map.entry(IInfoModel.ENTITY_OTHER_ORDER, new EntityContract("その他", null, Set.of(), Set.of(), false, true, false)),
-            Map.entry("testOrder", new EntityContract("検査", new ClassMeta("600", "検査"), TEST_CLASS_CODES, Set.of(), true, false, false)),
-            Map.entry(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, new EntityContract("生理検査", new ClassMeta("600", "検査"), Set.of("600"), Set.of(), false, false, true)),
-            Map.entry(IInfoModel.ENTITY_BACTERIA_ORDER, new EntityContract("細菌検査", new ClassMeta("600", "検査"), Set.of("600"), Set.of(), false, true, false)),
-            Map.entry(IInfoModel.ENTITY_RADIOLOGY_ORDER, new EntityContract(RADIOLOGY_LABEL, new ClassMeta("700", RADIOLOGY_LABEL), RADIOLOGY_CLASS_CODES, Set.of("700"), true, false, false)),
-            Map.entry(IInfoModel.ENTITY_BASE_CHARGE_ORDER, new EntityContract("基本料", new ClassMeta("110", BASE_CHARGE_LABEL), BASE_CHARGE_CLASS_CODES, Set.of(), true, false, false)),
-            Map.entry(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, new EntityContract("指導料", new ClassMeta("130", INSTRUCTION_CHARGE_LABEL), INSTRUCTION_CHARGE_CLASS_CODES, Set.of(), true, false, false)));
+            Map.entry(IInfoModel.ENTITY_MED_ORDER, new EntityContract("処方", new ClassMeta("212", "処方"), MED_CLASS_CODES, Set.of(), true, true, false, false)),
+            Map.entry(IInfoModel.ENTITY_INJECTION_ORDER, new EntityContract("注射", new ClassMeta("310", "注射"), INJECTION_CLASS_CODES, Set.of(), true, true, false, false)),
+            Map.entry(IInfoModel.ENTITY_TREATMENT, new EntityContract("処置", new ClassMeta("400", "処置"), TREATMENT_CLASS_CODES, Set.of(), true, true, false, false)),
+            Map.entry(IInfoModel.ENTITY_SURGERY_ORDER, new EntityContract("手術", new ClassMeta("500", "手術"), SURGERY_CLASS_CODES, Set.of(), true, true, false, false)),
+            Map.entry(IInfoModel.ENTITY_OTHER_ORDER, new EntityContract("その他", null, Set.of(), Set.of(), false, false, true, false)),
+            Map.entry("testOrder", new EntityContract("検査", new ClassMeta("600", "検査"), TEST_CLASS_CODES, Set.of(), true, true, false, false)),
+            Map.entry(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, new EntityContract("生理検査", new ClassMeta("600", "検査"), Set.of("600"), Set.of(), false, true, false, true)),
+            Map.entry(IInfoModel.ENTITY_BACTERIA_ORDER, new EntityContract("細菌検査", new ClassMeta("600", "検査"), Set.of("600"), Set.of(), false, true, true, false)),
+            Map.entry(IInfoModel.ENTITY_RADIOLOGY_ORDER, new EntityContract(RADIOLOGY_LABEL, new ClassMeta("700", RADIOLOGY_LABEL), RADIOLOGY_CLASS_CODES, Set.of("700"), true, true, false, false)),
+            Map.entry(IInfoModel.ENTITY_BASE_CHARGE_ORDER, new EntityContract("基本料", new ClassMeta("110", BASE_CHARGE_LABEL), BASE_CHARGE_CLASS_CODES, Set.of(), true, true, false, false)),
+            Map.entry(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, new EntityContract("指導料", new ClassMeta("130", INSTRUCTION_CHARGE_LABEL), INSTRUCTION_CHARGE_CLASS_CODES, Set.of(), true, true, false, false)));
 
     private OrcaMedicalClassCatalog() {
     }
@@ -70,7 +70,7 @@ final class OrcaMedicalClassCatalog {
 
     static boolean requiresClassCode(String entity) {
         EntityContract contract = resolveContract(entity);
-        return contract != null && !contract.localOnly() && !contract.allowedClassCodes().isEmpty();
+        return contract != null && contract.classCodeRequired();
     }
 
     static boolean isChargeEntity(String entity) {
@@ -119,8 +119,7 @@ final class OrcaMedicalClassCatalog {
     }
 
     static boolean supportsBodyPartField(String entity) {
-        ClassMeta defaultClassMeta = resolveDefaultClassMeta(entity);
-        return defaultClassMeta != null && supportsBodyPartField(entity, defaultClassMeta.classCode());
+        return false;
     }
 
     static boolean supportsBodyPartField(String entity, String classCode) {
@@ -150,11 +149,6 @@ final class OrcaMedicalClassCatalog {
     static String resolveEntityLabel(String entity) {
         EntityContract contract = resolveContract(entity);
         return contract != null ? contract.label() : null;
-    }
-
-    static ClassMeta resolveDefaultClassMeta(String entity) {
-        EntityContract contract = resolveContract(entity);
-        return contract != null ? contract.defaultClassMeta() : null;
     }
 
     static boolean isBaseChargeClassCode(String classCode) {
@@ -192,55 +186,36 @@ final class OrcaMedicalClassCatalog {
         if (!isChargeEntity(normalizedEntity)) {
             return null;
         }
-        ClassMeta defaultMeta = resolveDefaultClassMeta(normalizedEntity);
-        if (defaultMeta == null) {
+        String normalizedClassCode = trimToNull(classCode);
+        if (normalizedClassCode == null || !isChargeClassCompatible(normalizedEntity, normalizedClassCode)) {
             return null;
         }
         String normalizedCategory = trimToNull(itemCategory);
-        if (normalizedCategory != null && isChargeItemCategoryCompatible(normalizedEntity, normalizedCategory)) {
-            return new ChargeClassMeta(normalizedCategory, open.dolphin.infomodel.ClaimConst.CLASS_CODE_ID, defaultMeta.className());
+        if (normalizedCategory != null && !isChargeItemCategoryCompatible(normalizedEntity, normalizedCategory)) {
+            return null;
         }
-        String normalizedClassCode = trimToNull(classCode);
-        if (normalizedClassCode != null && isChargeClassCompatible(normalizedEntity, normalizedClassCode)) {
-            return new ChargeClassMeta(normalizedClassCode, open.dolphin.infomodel.ClaimConst.CLASS_CODE_ID, defaultMeta.className());
-        }
-        return new ChargeClassMeta(defaultMeta.classCode(), open.dolphin.infomodel.ClaimConst.CLASS_CODE_ID, defaultMeta.className());
+        return new ChargeClassMeta(
+                normalizedClassCode,
+                open.dolphin.infomodel.ClaimConst.CLASS_CODE_ID,
+                resolveChargeClassName(normalizedClassCode));
     }
 
     static String resolveCatalogClassCode(String entity, String classCode) {
-        ChargeClassMeta chargeMeta = resolveChargeClassMeta(entity, classCode, null);
-        if (chargeMeta != null) {
-            return chargeMeta.classCode();
-        }
         String normalizedEntity = normalizeEntity(entity);
         String normalizedClassCode = trimToNull(classCode);
-        if (normalizedClassCode == null) {
+        if (normalizedEntity == null || normalizedClassCode == null) {
             return null;
         }
-        if (normalizedEntity != null && isCompatibleClassCode(normalizedEntity, normalizedClassCode)) {
-            return normalizedClassCode;
-        }
-        return resolveClassNameByCode(normalizedClassCode) != null ? normalizedClassCode : null;
+        return isCompatibleClassCode(normalizedEntity, normalizedClassCode) ? normalizedClassCode : null;
     }
 
     static String resolveCatalogClassName(String entity, String classCode) {
-        String normalizedEntity = normalizeEntity(entity);
-        String normalizedClassCode = resolveCatalogClassCode(normalizedEntity, classCode);
-        if (normalizedClassCode != null) {
-            String resolvedFromCode = resolveClassNameByCode(normalizedClassCode);
-            if (resolvedFromCode != null) {
-                return resolvedFromCode;
-            }
-        }
-        if (normalizedEntity != null && (requiresClassCode(normalizedEntity) || isChargeEntity(normalizedEntity))) {
-            ClassMeta defaultClassMeta = resolveDefaultClassMeta(normalizedEntity);
-            return defaultClassMeta != null ? defaultClassMeta.className() : null;
-        }
-        return null;
+        String normalizedClassCode = resolveCatalogClassCode(entity, classCode);
+        return normalizedClassCode != null ? resolveClassNameByCode(normalizedClassCode) : null;
     }
 
     static String resolveExactClassName(String entity, String classCode) {
-        String normalizedClassCode = resolveCatalogClassCode(entity, classCode);
+        String normalizedClassCode = trimToNull(classCode);
         if (normalizedClassCode == null) {
             return null;
         }
@@ -381,6 +356,7 @@ final class OrcaMedicalClassCatalog {
             Set<String> allowedClassCodes,
             Set<String> bodyPartAllowedClassCodes,
             boolean sendable,
+            boolean classCodeRequired,
             boolean localOnly,
             boolean importOnly) {
     }

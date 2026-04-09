@@ -2,6 +2,7 @@ package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.List;
 import open.dolphin.infomodel.BundleDolphin;
@@ -80,5 +81,37 @@ class OrcaOrderBundleFetchSupportTest {
         assertNotNull(entry);
         assertEquals("画像診断", entry.getClassName());
         assertEquals("701", entry.getClassCode());
+    }
+
+    @Test
+    void collectBundlesDoesNotBackfillClassNameWithoutExplicitClassCode() {
+        DocumentModel document = new DocumentModel();
+        document.setId(102L);
+
+        ModuleInfoBean info = new ModuleInfoBean();
+        info.setEntity(IInfoModel.ENTITY_BASE_CHARGE_ORDER);
+        info.setStampName("bundle-name");
+
+        BundleDolphin bundle = new BundleDolphin();
+        bundle.setOrderName("bundle-name");
+        bundle.setBundleNumber("1");
+        bundle.setClassName("persisted-fallback");
+
+        ModuleModel module = new ModuleModel();
+        module.setId(202L);
+        module.setModuleInfoBean(info);
+        module.setModel(bundle);
+        document.setModules(List.of(module));
+
+        List<OrderBundleFetchResponse.OrderBundleEntry> entries = OrcaOrderBundleFetchSupport.collectBundles(
+                List.of(document),
+                IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+                ignored -> bundle);
+
+        assertEquals(1, entries.size());
+        OrderBundleFetchResponse.OrderBundleEntry entry = entries.get(0);
+        assertNotNull(entry);
+        assertNull(entry.getClassCode());
+        assertNull(entry.getClassName());
     }
 }

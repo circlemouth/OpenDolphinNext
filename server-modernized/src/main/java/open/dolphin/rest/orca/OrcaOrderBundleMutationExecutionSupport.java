@@ -122,21 +122,21 @@ final class OrcaOrderBundleMutationExecutionSupport {
             String requestedRowRole = OrcaOrderBundleRequestSupport.normalizeRowRole(
                     OrcaOrderBundleRequestSupport.hasText(item.getRowRole()) ? item.getRowRole() : parsedMemo.rowRole());
             if (requestedRowRole != null && code != null
-                    && !OrcaOrderBundleRequestSupport.isValidCodeForRowRole(canonicalEntity, requestedRowRole, code)) {
+                    && !OrcaOrderBundleRequestSupport.isValidCodeForRowRole(canonicalEntity, normalizedClassCode, requestedRowRole, code)) {
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(requestedRowRole)
                         && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity, normalizedClassCode)) {
                     throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
                 }
                 throw validationFailure.invalid("items", invalidCodeMessage(canonicalEntity, requestedRowRole));
             }
-            String rowRole = OrcaOrderBundleRequestSupport.resolveRowRole(canonicalEntity, requestedRowRole, code);
+            String rowRole = OrcaOrderBundleRequestSupport.resolveRowRole(canonicalEntity, normalizedClassCode, requestedRowRole, code);
             if (code != null) {
                 hasCodedRow = true;
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)
                         && !OrcaOrderBundleRequestSupport.supportsBodyPartField(canonicalEntity, normalizedClassCode)) {
                     throw validationFailure.invalid("bodyPart", "bodyPart is incompatible with entity");
                 }
-                if (!OrcaOrderBundleRequestSupport.isValidCodeForRowRole(canonicalEntity, rowRole, code)) {
+                if (!OrcaOrderBundleRequestSupport.isValidCodeForRowRole(canonicalEntity, normalizedClassCode, rowRole, code)) {
                     throw validationFailure.invalid("items", invalidCodeMessage(canonicalEntity, rowRole));
                 }
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)) {

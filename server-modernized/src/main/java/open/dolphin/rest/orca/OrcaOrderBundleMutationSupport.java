@@ -89,12 +89,10 @@ final class OrcaOrderBundleMutationSupport {
         bundle.setMemo(operation.getMemo());
         String entity = resolveEntity(operation);
         OrcaMedicalClassCatalog.ChargeClassMeta chargeClassMeta =
-                OrcaOrderBundleRequestSupport.hasText(operation.getClassCode())
-                        ? OrcaMedicalClassCatalog.resolveChargeClassMeta(
-                                entity,
-                                operation.getClassCode(),
-                                resolvePrimaryItemCategory(operation))
-                        : null;
+                OrcaMedicalClassCatalog.resolveChargeClassMeta(
+                        entity,
+                        operation.getClassCode(),
+                        resolvePrimaryItemCategory(operation));
         String classCode = chargeClassMeta != null
                 ? chargeClassMeta.classCode()
                 : OrcaMedicalClassCatalog.resolveCatalogClassCode(entity, operation.getClassCode());
@@ -107,9 +105,6 @@ final class OrcaOrderBundleMutationSupport {
                 : OrcaMedicalClassCatalog.resolveCatalogClassName(entity, bundle.getClassCode());
         if (OrcaOrderBundleRequestSupport.hasText(canonicalClassName)) {
             bundle.setClassName(canonicalClassName);
-        } else if (!OrcaMedicalClassCatalog.isChargeEntity(entity)
-                && OrcaOrderBundleRequestSupport.hasText(operation.getBundleName())) {
-            bundle.setClassName(operation.getBundleName());
         }
         bundle.setClaimItem(toClaimItems(operation));
 
@@ -140,9 +135,10 @@ final class OrcaOrderBundleMutationSupport {
         boolean useBacteriaMetadata = IInfoModel.ENTITY_BACTERIA_ORDER.equals(entity)
                 && operation != null
                 && operation.getBacteria() != null;
-        appendClaimItems(converted, entity, operation != null ? operation.getItems() : null, useBacteriaMetadata);
-        appendClaimItems(converted, entity, operation != null ? operation.getMaterialItems() : null, useBacteriaMetadata);
-        appendClaimItems(converted, entity, operation != null ? operation.getCommentItems() : null, useBacteriaMetadata);
+        String classCode = operation != null ? operation.getClassCode() : null;
+        appendClaimItems(converted, entity, classCode, operation != null ? operation.getItems() : null, useBacteriaMetadata);
+        appendClaimItems(converted, entity, classCode, operation != null ? operation.getMaterialItems() : null, useBacteriaMetadata);
+        appendClaimItems(converted, entity, classCode, operation != null ? operation.getCommentItems() : null, useBacteriaMetadata);
         ClaimItem explicitBodyPart = toExplicitBodyPartClaimItem(
                 entity,
                 operation != null ? operation.getClassCode() : null,
@@ -166,6 +162,7 @@ final class OrcaOrderBundleMutationSupport {
     private static void appendClaimItems(
             List<ClaimItem> target,
             String entity,
+            String classCode,
             List<OrderBundleMutationRequest.BundleItem> items,
             boolean useBacteriaMetadata) {
         if (items == null || items.isEmpty()) {
@@ -175,7 +172,7 @@ final class OrcaOrderBundleMutationSupport {
             if (useBacteriaMetadata && isCommentItem(item)) {
                 continue;
             }
-            ClaimItem claimItem = toClaimItem(entity, item);
+            ClaimItem claimItem = toClaimItem(entity, classCode, item);
             if (claimItem != null && !containsEquivalentClaimItem(target, claimItem)) {
                 target.add(claimItem);
             }
@@ -224,10 +221,10 @@ final class OrcaOrderBundleMutationSupport {
                 || !OrcaMedicalClassCatalog.supportsBodyPartField(entity, canonicalClassCode)) {
             return null;
         }
-        return toClaimItem(entity, item);
+        return toClaimItem(entity, classCode, item);
     }
 
-    private static ClaimItem toClaimItem(String entity, OrderBundleMutationRequest.BundleItem item) {
+    private static ClaimItem toClaimItem(String entity, String classCode, OrderBundleMutationRequest.BundleItem item) {
         if (item == null || item.getName() == null || item.getName().isBlank()) {
             return null;
         }
@@ -237,7 +234,7 @@ final class OrcaOrderBundleMutationSupport {
         String userComment = OrcaOrderBundleItemMemoSupport.normalizeUserComment(
                 OrcaOrderBundleRequestSupport.hasText(item.getUserComment()) ? item.getUserComment() : parsedMemo.userComment());
         String rowRole = OrcaOrderBundleRecommendationSupport.resolveRowRole(
-                entity, item.getCode(), item.getRowRole(), item.getRowSubtype());
+                entity, classCode, item.getCode(), item.getRowRole(), item.getRowSubtype());
         String rowSubtype = OrcaOrderBundleRecommendationSupport.resolveRowSubtype(
                 entity, item.getCode(), rowRole, item.getRowSubtype(), parsedMemo.rowSubtype());
         String category = OrcaOrderBundleItemMemoSupport.normalizeCategory(
@@ -334,12 +331,7 @@ final class OrcaOrderBundleMutationSupport {
     }
 
     private static String resolveCanonicalClassCode(String entity, String classCode) {
-        OrcaMedicalClassCatalog.ClassMeta defaultMeta = OrcaMedicalClassCatalog.resolveDefaultClassMeta(entity);
-        String normalized = OrcaOrderBundleRequestSupport.trimToNull(classCode);
-        if (normalized != null) {
-            return normalized;
-        }
-        return defaultMeta != null ? defaultMeta.classCode() : null;
+        return OrcaOrderBundleRequestSupport.trimToNull(classCode);
     }
 
     private static String resolvePrimaryItemCategory(OrderBundleMutationRequest.BundleOperation operation) {

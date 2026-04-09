@@ -23,6 +23,10 @@ final class OrcaOrderBundleRecommendationSupport {
     }
 
     static List<OrderBundleFetchResponse.OrderBundleItem> toItems(String entity, ClaimItem[] items) {
+        return toItems(entity, null, items);
+    }
+
+    static List<OrderBundleFetchResponse.OrderBundleItem> toItems(String entity, String classCode, ClaimItem[] items) {
         if (items == null || items.length == 0) {
             return List.of();
         }
@@ -46,7 +50,7 @@ final class OrcaOrderBundleRecommendationSupport {
             entry.setItemNumberBranch(parsedMemo.itemNumberBranch());
             entry.setSelectionCommentItemNumber(parsedMemo.itemNumber());
             entry.setSelectionCommentItemNumberBranch(parsedMemo.itemNumberBranch());
-            String rowRole = resolveRowRole(entity, entry.getCode(), parsedMemo.rowRole(), parsedMemo.rowSubtype());
+            String rowRole = resolveRowRole(entity, classCode, entry.getCode(), parsedMemo.rowRole(), parsedMemo.rowSubtype());
             entry.setRowRole(rowRole);
             entry.setRowSubtype(resolveRowSubtype(entity, entry.getCode(), rowRole, parsedMemo.rowSubtype(), null));
             list.add(entry);
@@ -138,29 +142,27 @@ final class OrcaOrderBundleRecommendationSupport {
         return null;
     }
 
-    static String resolveRowRole(String entity, OrderBundleFetchResponse.OrderBundleItem item) {
+    static String resolveRowRole(String entity, String classCode, OrderBundleFetchResponse.OrderBundleItem item) {
         if (item == null) {
             return ROW_ROLE_MAIN;
         }
-        String resolved = resolveRowRole(entity, item.getCode(), item.getRowRole(), item.getRowSubtype());
+        String resolved = resolveRowRole(entity, classCode, item.getCode(), item.getRowRole(), item.getRowSubtype());
         item.setRowRole(resolved);
         return resolved;
     }
 
-    static String resolveRowRole(String entity, String code, String explicitRowRole, String explicitRowSubtype) {
+    static String resolveRowRole(String entity, String classCode, String code, String explicitRowRole, String explicitRowSubtype) {
         String normalizedExplicitRole = normalizeRowRole(explicitRowRole);
         String normalizedExplicitSubtype = normalizeRowSubtype(explicitRowSubtype);
-        if (normalizedExplicitRole != null) {
-            if (ROW_ROLE_MATERIAL.equals(normalizedExplicitRole)) {
-                return ROW_ROLE_MATERIAL;
-            }
+        String normalizedCode = normalize(code);
+        if (normalizedExplicitRole != null
+                && OrcaOrderBundleRequestSupport.isValidCodeForRowRole(entity, classCode, normalizedExplicitRole, normalizedCode)) {
             return normalizedExplicitRole;
         }
         if (normalizedExplicitSubtype != null) {
             return ROW_ROLE_MATERIAL;
         }
-        String normalizedCode = normalize(code);
-        if (isBodyPartCode(normalizedCode)) {
+        if (OrcaMedicalClassCatalog.supportsBodyPartField(entity, classCode) && isBodyPartCode(normalizedCode)) {
             return ROW_ROLE_BODY_PART;
         }
         if (IInfoModel.ENTITY_OTHER_ORDER.equals(OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity))) {
@@ -225,11 +227,12 @@ final class OrcaOrderBundleRecommendationSupport {
         List<OrderBundleFetchResponse.OrderBundleItem> materialItems = new ArrayList<>();
         List<OrderBundleFetchResponse.OrderBundleItem> commentItems = new ArrayList<>();
         OrderBundleFetchResponse.OrderBundleItem bodyPart = null;
-        for (OrderBundleFetchResponse.OrderBundleItem item : toItems(entity, bundle.getClaimItem())) {
+        String canonicalClassCode = OrcaMedicalClassCatalog.resolveCatalogClassCode(entity, bundle.getClassCode());
+        for (OrderBundleFetchResponse.OrderBundleItem item : toItems(entity, canonicalClassCode, bundle.getClaimItem())) {
             if (item == null) {
                 continue;
             }
-            String rowRole = resolveRowRole(entity, item);
+            String rowRole = resolveRowRole(entity, canonicalClassCode, item);
             if (ROW_ROLE_BODY_PART.equals(rowRole)) {
                 if (bodyPart == null) {
                     item.setRowRole(ROW_ROLE_BODY_PART);
@@ -261,7 +264,6 @@ final class OrcaOrderBundleRecommendationSupport {
         template.setAdminCode(normalize(bundle.getAdminCode()));
         template.setAdminCodeSystem(normalize(bundle.getAdminCodeSystem()));
         template.setBundleNumber(hasText(bundle.getBundleNumber()) ? bundle.getBundleNumber().trim() : "1");
-        String canonicalClassCode = OrcaMedicalClassCatalog.resolveCatalogClassCode(entity, bundle.getClassCode());
         template.setClassCode(normalize(canonicalClassCode));
         template.setClassCodeSystem(canonicalClassCode != null ? ClaimConst.CLASS_CODE_ID : normalize(bundle.getClassCodeSystem()));
         template.setClassName(OrcaMedicalClassCatalog.resolveCatalogClassName(entity, canonicalClassCode));
@@ -273,10 +275,10 @@ final class OrcaOrderBundleRecommendationSupport {
             template.setPrescriptionLocation(prescriptionMeta.location());
             template.setPrescriptionTiming(prescriptionMeta.timing());
         }
-        template.setItems(removeBodyPartItems(entity, bundle.getClassCode(), normalItems));
+        template.setItems(removeBodyPartItems(entity, canonicalClassCode, normalItems));
         template.setMaterialItems(materialItems);
         template.setCommentItems(commentItems);
-        template.setBodyPart(OrcaMedicalClassCatalog.supportsBodyPartField(entity, bundle.getClassCode()) ? bodyPart : null);
+        template.setBodyPart(OrcaMedicalClassCatalog.supportsBodyPartField(entity, canonicalClassCode) ? bodyPart : null);
         return template;
     }
 

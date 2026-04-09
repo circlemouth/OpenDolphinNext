@@ -2,6 +2,7 @@ package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import open.dolphin.infomodel.BundleDolphin;
@@ -19,17 +20,18 @@ class OrcaOrderBundleRecommendationSupportTest {
         ClaimItem drug = claimItem("100001", "AMLODIPINE", "2", "tablet", "morning");
 
         List<OrderBundleFetchResponse.OrderBundleItem> items =
-                OrcaOrderBundleRecommendationSupport.toItems(IInfoModel.ENTITY_TREATMENT, new ClaimItem[]{bodyPart, drug});
+                OrcaOrderBundleRecommendationSupport.toItems(IInfoModel.ENTITY_TREATMENT, "400", new ClaimItem[]{bodyPart, drug});
         List<OrderBundleFetchResponse.OrderBundleItem> filtered =
                 OrcaOrderBundleRecommendationSupport.removeBodyPartItems(IInfoModel.ENTITY_TREATMENT, "400", items);
 
         assertEquals(2, items.size());
         assertEquals("0021001", items.get(0).getCode());
-        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_BODY_PART, items.get(0).getRowRole());
+        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN, items.get(0).getRowRole());
         assertEquals(null, OrcaOrderBundleRecommendationSupport.extractBodyPart(IInfoModel.ENTITY_TREATMENT, "400", items));
         assertEquals(1, filtered.size());
         assertEquals("100001", filtered.get(0).getCode());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN, filtered.get(0).getRowRole());
+        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN, items.get(1).getRowRole());
     }
 
     @Test
@@ -101,6 +103,24 @@ class OrcaOrderBundleRecommendationSupportTest {
                         null);
 
         assertEquals("基本診療料", template.getClassName());
+    }
+
+    @Test
+    void toRecommendationTemplateDoesNotBackfillClassNameWithoutExplicitClassCode() {
+        BundleDolphin bundle = new BundleDolphin();
+        bundle.setBundleNumber("1");
+        bundle.setClassName("BundleFallback");
+        bundle.setClaimItem(new ClaimItem[]{claimItem("110000110", "INITIAL", "1", "times", null)});
+
+        OrderBundleRecommendationResponse.OrderRecommendationTemplate template =
+                OrcaOrderBundleRecommendationSupport.toRecommendationTemplate(
+                        "BASE",
+                        bundle,
+                        IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+                        null);
+
+        assertTrue(template.getClassCode() == null || template.getClassCode().isBlank());
+        assertTrue(template.getClassName() == null || template.getClassName().isBlank());
     }
 
     @Test

@@ -1,4 +1,4 @@
-import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta, resolveOrderEntityLabel } from './orderCategoryRegistry';
+import { resolveCanonicalOrderEntity, resolveOrderEntityLabel } from './orderCategoryRegistry';
 import { isOrcaEntityClassAllowed } from './orcaMedicalClassCatalog';
 import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
 
@@ -74,8 +74,7 @@ const hasItemValue = (item?: Pick<OrderBundleItem, 'name' | 'quantity' | 'unit' 
 
 const resolveMedicalClass = (entity: RpRequiredEntity, classCode?: string | null) => {
   const explicit = classCode?.trim();
-  if (explicit) return isOrcaEntityClassAllowed(entity, explicit) ? explicit : '';
-  return resolveOrderEntityDefaultClassMeta(entity)?.classCode?.trim() ?? '';
+  return explicit && isOrcaEntityClassAllowed(entity, explicit) ? explicit : '';
 };
 
 export const resolveRpRequiredIssue = (input: {

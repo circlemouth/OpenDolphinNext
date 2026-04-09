@@ -155,7 +155,7 @@ final class OrcaOrderBundleFetchSupport {
         entry.setClassCode(canonicalClassCode);
         entry.setClassCodeSystem(canonicalClassCode != null ? ClaimConst.CLASS_CODE_ID : bundle.getClassCodeSystem());
         String canonicalClassName = OrcaMedicalClassCatalog.resolveCatalogClassName(moduleEntity, canonicalClassCode);
-        entry.setClassName(OrcaOrderBundleRequestSupport.hasText(canonicalClassName) ? canonicalClassName : bundle.getClassName());
+        entry.setClassName(OrcaOrderBundleRequestSupport.hasText(canonicalClassName) ? canonicalClassName : null);
         entry.setAdmin(bundle.getAdmin());
         entry.setAdminCode(bundle.getAdminCode());
         entry.setAdminCodeSystem(bundle.getAdminCodeSystem());
@@ -166,7 +166,7 @@ final class OrcaOrderBundleFetchSupport {
         entry.setEnteredByName(OrcaOrderBundleDisplaySupport.resolveEnteredByName(enteredBy));
         entry.setEnteredByRole(OrcaOrderBundleDisplaySupport.resolveEnteredByRole(enteredBy));
         List<OrderBundleFetchResponse.OrderBundleItem> items =
-                OrcaOrderBundleRecommendationSupport.toItems(moduleEntity, bundle.getClaimItem());
+                OrcaOrderBundleRecommendationSupport.toItems(moduleEntity, canonicalClassCode, bundle.getClaimItem());
         entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(moduleEntity, canonicalClassCode, items));
         entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(
                 moduleEntity,
