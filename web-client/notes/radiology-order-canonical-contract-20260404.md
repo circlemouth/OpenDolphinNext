@@ -30,7 +30,7 @@
 ## Local-only
 
 - radiology の `admin`、`adminMemo`、bundle `memo`、free-form `item.memo` は local-only とする。
-- local-only 項目は editor 上で ORCA 非送信であることを明示し、send payload / XML には投影しない。
+- local-only 項目は editor 上で `検査指示（院内）`、`画像検査メモ（院内）`、`院内補足`、item memo ごとに ORCA 非送信であることを明示し、send payload / XML には投影しない。
 - bodyPart UI / fetch 復元は `classCode=700` のときだけ許可し、`701/702/703/704/731/732` では fail-close で再構成しない。
 
 ## Regression Coverage

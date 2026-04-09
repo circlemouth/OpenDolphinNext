@@ -27,5 +27,5 @@
 
 - This snapshot records the original cleanup run. It does not replace current workspace verification.
 - `git grep -n "BP001" -- web-client server-modernized` was 0 at the time of that run.
-- `git grep -n "generalOrder" -- web-client/src server-modernized/src` resolved to the boundary alias helper, its minimal test coverage, and the server boundary alias at the time of that run.
-- `git grep -n "ENTITY_GENERAL_ORDER" -- server-modernized/src/main/java/open/dolphin/rest/orca server-modernized/src/test/java/open/dolphin/rest/orca` resolved to the request boundary alias and its test coverage at the time of that run.
+- `git grep -n "generalOrder" -- web-client/src server-modernized/src` resolved to the boundary alias helper, alias-specific tests, and the server boundary alias at the time of that run.
+- `git grep -n "ENTITY_GENERAL_ORDER" -- server-modernized/src/main/java/open/dolphin/rest/orca server-modernized/src/test/java/open/dolphin/rest/orca` resolved to the request boundary alias and alias-specific test coverage at the time of that run.

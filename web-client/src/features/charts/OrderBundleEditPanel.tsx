@@ -45,6 +45,14 @@ import {
 } from './orderBundleContract';
 import { isOtherOrderLocalOnlyCode } from './otherOrderContract';
 import {
+  resolveOrcaAdminMemoLocalOnlyHelp,
+  resolveOrcaInstructionLocalOnlyHelp,
+  resolveOrcaItemMemoLocalOnlyHelp,
+  resolveOrcaMemoLocalOnlyHelp,
+  resolveOrcaSendContractNote,
+  resolveOrcaUsageLocalOnlyHelp,
+} from './orcaSendabilityPolicy';
+import {
   buildRpRequiredEditorMessage,
   resolveRpRequiredIssue,
   resolveRpRequiredFieldLabel,
@@ -62,6 +70,7 @@ import {
   resolveOrderEntityDefaultClassMeta,
   resolveOrderEntityEtensuCategory,
   resolveOrderEntityPhysiologySendContractGuidance,
+  resolveOrderEntityUsageUiCopy,
   resolveOrderEntityTestSubtypeConfig,
   resolveOrderEntityUiProfile,
   resolveOrderEntityValidationRule,
@@ -842,56 +851,6 @@ const buildUsageMasterMeta = (item: OrderMasterSearchItem): UsageMasterMeta => (
   youhouCode: item.youhouCode?.trim() || undefined,
 });
 
-const resolveSendContractNote = (entity: string) => {
-  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
-  if (canonicalEntity === 'injectionOrder') {
-    return '注射では admin/adminCode/adminMemo は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。';
-  }
-  if (canonicalEntity === 'treatmentOrder') {
-    return '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。';
-  }
-  if (canonicalEntity === 'otherOrder') {
-    return 'setCode は展開専用です。otherOrder は explicit local-only 契約で保存し、ORCA 送信しません。bodyPart は保持せず、オーダー名・指示・自由メモは院内補足として保存します。';
-  }
-  if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
-    return 'setCode は展開専用です。数量は ORCA 送信しますが、単位・算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
-  }
-  if (canonicalEntity === 'bacteriaOrder') {
-    return '細菌検査では admin(検査指示)・subtype・院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。subtype に対応する ORCA carrier は公式 medicalmodv2 にないため、送信前に明示 block します。';
-  }
-  if (canonicalEntity === 'physiologyOrder') {
-    return '生理検査は official ORCA carrier 不足のため、保存/表示 continuity のみ維持し、ORCA送信は fail-closed で停止します。bodyPart は reject し、送信候補と院内ローカル項目を明確に分離してください。';
-  }
-  if (canonicalEntity === 'testOrder') {
-    return '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。';
-  }
-  if (canonicalEntity === 'radiologyOrder') {
-    return '画像診断送信では classCode と coded row を使います。bodyPart は classCode=700 のときだけ保持し、検査指示・自由メモ・item memo は院内ローカル情報として保持します。';
-  }
-  return '';
-};
-
-const resolveInstructionLocalOnlyHelp = (entity: string) => {
-  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
-  if (canonicalEntity === 'physiologyOrder') {
-    return '検査指示は院内ローカル保存のみです。official ORCA carrier 不足のため ORCA送信は停止します。';
-  }
-  if (canonicalEntity === 'testOrder' || canonicalEntity === 'bacteriaOrder') {
-    return 'admin(検査指示) は bundle 共通の院内ローカル情報です。複数検査項目をまとめても ORCA へは送信しません。';
-  }
-  return null;
-};
-
-const resolveMemoLocalOnlyHelp = (entity: string) => {
-  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
-  if (canonicalEntity === 'physiologyOrder') {
-    return '院内補足・自由メモ・item memo は院内ローカル保存のみです。official ORCA carrier 不足のため ORCA送信は停止します。';
-  }
-  if (canonicalEntity === 'testOrder' || canonicalEntity === 'bacteriaOrder') {
-    return '院内補足・自由メモ・item memo は bundle 共通の院内ローカル情報です。ORCA 送信 payload には含めません。';
-  }
-  return null;
-};
 const formatUsageMasterSummary = (item: Pick<UsageMasterMeta, 'timingCode' | 'routeCode' | 'daysLimit' | 'dosePerDay'>) => {
   const route = resolveUsageRouteClassification(item.routeCode);
   const segments = [`タイミング: ${resolveUsageTimingLabel(item.timingCode)}`, `経路: ${route.label}`];
@@ -1383,6 +1342,7 @@ export function OrderBundleEditPanel({
     apiMessage?: string;
   } | null>(null);
   const orderUiProfile = useMemo(() => resolveOrderEntityUiProfile(entity), [entity]);
+  const usageUiCopy = useMemo(() => resolveOrderEntityUsageUiCopy(entity), [entity]);
 
   const resetEditorForm = useCallback(() => {
     setForm(buildEmptyForm(today));
@@ -1431,11 +1391,12 @@ export function OrderBundleEditPanel({
       contraConfirmResolveRef.current = null;
     };
   }, []);
-  const isMedOrder = entity === 'medOrder';
-  const isInjectionOrder = entity === 'injectionOrder';
+  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
+  const isMedOrder = canonicalEntity === 'medOrder';
+  const isInjectionOrder = canonicalEntity === 'injectionOrder';
   const isCompactOrderLayout = isMedOrder || isInjectionOrder;
-  const isRadiologyOrder = entity === 'radiologyOrder';
-  const isRehabOrder = entity === 'generalOrder' || entity === 'treatmentOrder';
+  const isRadiologyOrder = canonicalEntity === 'radiologyOrder';
+  const isRehabOrder = canonicalEntity === 'treatmentOrder';
   const isGaiyoPrescription = isMedOrder && form.prescriptionTiming === 'gaiyo';
   const rpRequiredIssueForForm = useMemo(
     () =>
@@ -1500,11 +1461,14 @@ export function OrderBundleEditPanel({
     form.materialItems.some((item) => hasOrderBundleItemValue(item));
   const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
   const effectiveTestSubtype = resolveFormSubtype(entity, form.subtype);
-  const showBodyPartSection =
-    supportsBodyPartSearch || (resolveCanonicalOrderEntity(entity) !== 'physiologyOrder' && hasBundleBodyPartValue(form.bodyPart));
-  const sendContractNote = resolveSendContractNote(entity);
-  const instructionLocalOnlyHelp = resolveInstructionLocalOnlyHelp(entity);
-  const memoLocalOnlyHelp = resolveMemoLocalOnlyHelp(entity);
+  const showBodyPartSection = supportsBodyPartSearch || (canonicalEntity !== 'physiologyOrder' && hasBundleBodyPartValue(form.bodyPart));
+  const sendContractNote = resolveOrcaSendContractNote(entity) ?? '';
+  const usageLocalOnlyHelp = resolveOrcaUsageLocalOnlyHelp(entity);
+  const instructionLocalOnlyHelp = resolveOrcaInstructionLocalOnlyHelp(entity);
+  const memoLocalOnlyHelp = resolveOrcaMemoLocalOnlyHelp(entity);
+  const adminMemoLocalOnlyHelp =
+    resolveOrcaAdminMemoLocalOnlyHelp(entity) ?? '院内ローカル情報として保存します。ORCA 送信対象にはしません。';
+  const itemMemoLocalOnlyHelp = resolveOrcaItemMemoLocalOnlyHelp(entity);
   const physiologyContractGuidanceBlock = physiologySendContractGuidance ? (
     <div
       className="charts-side-panel__notice charts-side-panel__notice--warning"
@@ -3970,7 +3934,7 @@ export function OrderBundleEditPanel({
                 disabled={isBlocked}
               >
                 <option value="">
-                  {usageSearchQuery.isFetching ? '用法候補を取得中...' : '候補を選択'}
+                  {usageSearchQuery.isFetching ? usageUiCopy.usageLoadingLabel : usageUiCopy.usageSelectPlaceholder}
                 </option>
                 {usageSelectOptions.map((item) => {
                   const optionKey = buildUsageOptionKey(item);
@@ -3998,14 +3962,14 @@ export function OrderBundleEditPanel({
             )}
             {supportsUsageSearch && (
               <>
-                <label htmlFor={`${entityId}-admin-recent`}>最近使った用法</label>
+                <label htmlFor={`${entityId}-admin-recent`}>{usageUiCopy.recentUsageLabel}</label>
                 <select
                   id={`${entityId}-admin-recent`}
                   value=""
                   onChange={(event) => applyRecentUsageSelection(event.target.value)}
                   disabled={isBlocked || recentUsageHistory.length === 0}
                 >
-                  <option value="">候補を選択</option>
+                  <option value="">{usageUiCopy.usageSelectPlaceholder}</option>
                   {recentUsageHistory.map((usage) => (
                     <option key={`${entityId}-recent-usage-${usage}`} value={usage}>
                       {usage}
@@ -4019,6 +3983,7 @@ export function OrderBundleEditPanel({
                 {usageError}
               </p>
             ) : null}
+            {usageLocalOnlyHelp ? <p className="charts-side-panel__help">{usageLocalOnlyHelp}</p> : null}
             {!supportsUsageSearch && instructionLocalOnlyHelp ? (
               <p className="charts-side-panel__help">{instructionLocalOnlyHelp}</p>
             ) : null}
@@ -4029,14 +3994,14 @@ export function OrderBundleEditPanel({
               <p className="charts-side-panel__help">1日量目安: {selectedUsageDosePerDay}（参考表示のみ）</p>
             )}
             {supportsUsageSearch && usageSearchQuery.isFetching && (
-              <p className="charts-side-panel__help">用法候補を読み込み中です。</p>
+              <p className="charts-side-panel__help">{usageUiCopy.usageSearchHelp}</p>
             )}
             {supportsUsageSearch && usageSearchQuery.data?.ok && (
               <p className="charts-side-panel__help">候補 {usageItems.length}件（最大 {MAX_USAGE_SELECT_OPTIONS}件）</p>
             )}
             {supportsUsageSearch && usageSearchQuery.data && !usageSearchQuery.data.ok && (
               <div className="charts-side-panel__notice charts-side-panel__notice--error">
-                {usageSearchQuery.data.message ?? '用法マスタの検索に失敗しました。'}
+                {usageSearchQuery.data.message ?? usageUiCopy.usageSearchError}
               </div>
             )}
           </div>
@@ -4056,7 +4021,9 @@ export function OrderBundleEditPanel({
               <p className="charts-side-panel__help">{bundleNumberHelp}</p>
             )}
             {isMedOrder && typeof selectedUsageDaysLimit === 'number' && (
-              <p className="charts-side-panel__help">用法マスタ上限日数: {selectedUsageDaysLimit}日</p>
+              <p className="charts-side-panel__help">
+                {usageUiCopy.usageDaysLimitLabel}: {selectedUsageDaysLimit}日
+              </p>
             )}
             {bundleNumberError ? (
               <p className="charts-side-panel__field-error" role="alert">
@@ -4118,7 +4085,7 @@ export function OrderBundleEditPanel({
                       placeholder="院内運用向けの補足を入力"
                       disabled={isBlocked}
                     />
-                    <p className="charts-side-panel__help">院内ローカル情報として保存します。ORCA 送信対象にはしません。</p>
+                    <p className="charts-side-panel__help">{adminMemoLocalOnlyHelp}</p>
                   </div>
                 ) : null}
                 {physiologyContractGuidanceBlock}
@@ -4163,7 +4130,7 @@ export function OrderBundleEditPanel({
                   placeholder="院内運用向けの補足を入力"
                   disabled={isBlocked}
                 />
-                <p className="charts-side-panel__help">院内ローカル情報として保存します。ORCA 送信対象にはしません。</p>
+                <p className="charts-side-panel__help">{adminMemoLocalOnlyHelp}</p>
               </div>
             ) : null}
             {physiologyContractGuidanceBlock}
@@ -4374,6 +4341,7 @@ export function OrderBundleEditPanel({
               {itemsError}
             </p>
           ) : null}
+          {itemMemoLocalOnlyHelp ? <p className="charts-side-panel__help">{itemMemoLocalOnlyHelp}</p> : null}
           <p className="charts-side-panel__help">候補対象: {itemPredictiveTargetLabel}</p>
           <p className="charts-side-panel__help">
             {selectedItemPredictionKeyword

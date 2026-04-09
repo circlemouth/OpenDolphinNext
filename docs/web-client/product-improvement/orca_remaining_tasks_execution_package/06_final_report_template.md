@@ -67,13 +67,15 @@
 <result>
 ```
 - `-Pstatic-analysis verify` は SpotBugs / FindSecBugs の verify entrypoint として記録する。Checkstyle / PMD は execution があっても skip=true のため、このテンプレートでは「通した」と読める表現にしない。
+- `includeTests=false` のため、server test source まで static-analysis したかのような表現は避ける。
 
 ## 6. grep gate
 ```text
 <command>
 <result>
-<justification if any hit remains or if the hit is intentionally retained as a boundary alias>
+<why the hit is acceptable only when it is intentionally retained as a boundary alias or canonicalization helper>
 ```
+- literal 0 hit を完了条件にしない。通常 UI / 通常 test / current notes に stale alias や stale wording が残っていないかを実質評価する。
 
 ## 7. 互換ロジック / dead code の削除一覧
 - ...
