@@ -33,8 +33,8 @@ vi.mock('../orderBundleApi', async () => {
 
 const baseProps = {
   patientId: 'P-ORDER-001',
-  entity: 'generalOrder',
-  title: '一般オーダー',
+  entity: 'treatmentOrder',
+  title: '処置オーダー編集',
   bundleLabel: 'オーダー名',
   itemQuantityLabel: '数量',
   meta: {
@@ -117,6 +117,19 @@ afterEach(() => {
 });
 
 describe('OrderBundleEditPanel ORCA support', () => {
+  it('medOrder は usage local-only を editor 上で明示する', () => {
+    renderPanel({
+      entity: 'medOrder',
+      title: '処方編集',
+      bundleLabel: 'RP名',
+      itemQuantityLabel: '用量',
+    });
+
+    expect(screen.getByLabelText('用法')).toBeInTheDocument();
+    expect(screen.getByLabelText('最近使った用法')).toBeInTheDocument();
+    expect(screen.getByText('処方の usage は local-only persisted / outbound strip です。ORCA送信では保持しません。')).toBeInTheDocument();
+  });
+
   it('600系は subtype/local-only field の送信契約を明示する', () => {
     renderPanel(testProps);
 
@@ -177,6 +190,12 @@ describe('OrderBundleEditPanel ORCA support', () => {
         '注射では admin/adminCode/adminMemo は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。',
       ),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('最近使った投与指示')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '投与指示は院内ローカル保存です。最近使った投与指示を含めて、admin/adminCode/adminMemo は ORCA送信では保持しません。',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('treatmentOrder は bundleName/admin/memo の local-only 契約を明示する', () => {
@@ -197,11 +216,16 @@ describe('OrderBundleEditPanel ORCA support', () => {
   it('radiologyOrder は instruction/memo/item memo の local-only 契約を明示する', () => {
     renderPanel(radiologyProps);
 
+    expect(screen.getByLabelText('検査指示（院内）')).toBeInTheDocument();
     expect(
       screen.getByText(
         '画像診断送信では classCode と coded row を使います。bodyPart は classCode=700 のときだけ保持し、検査指示・自由メモ・item memo は院内ローカル情報として保持します。',
       ),
     ).toBeInTheDocument();
+    expect(screen.getByText('検査指示は画像診断の院内ローカル情報です。ORCA送信では保持しません。')).toBeInTheDocument();
+    expect(screen.getByText('画像検査メモは院内ローカル保存のみです。ORCA送信では保持しません。')).toBeInTheDocument();
+    expect(screen.getByText('院内補足は画像診断の院内ローカル情報です。ORCA送信では保持しません。')).toBeInTheDocument();
+    expect(screen.getByText('item memo は画像診断の院内ローカル情報です。ORCA送信では保持しません。')).toBeInTheDocument();
   });
 
   it('点数検索（詳細）は値保持と invalid range を扱う', async () => {
@@ -235,14 +259,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'P02001',
       bundle: {
-        entity: 'generalOrder',
+        entity: 'treatmentOrder',
         sourceSetCode: 'P02001',
         bundleName: '創傷処置セット',
         bundleNumber: '1',
@@ -289,14 +313,14 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
       status: 200,
       setCode: 'P02001',
       bundle: {
-        entity: 'generalOrder',
+        entity: 'treatmentOrder',
         bundleName: '創傷処置セット',
         bundleNumber: '1',
         admin: '適宜',
@@ -329,7 +353,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
       ok: true,
       status: 200,
       totalCount: 1,
-      items: [{ setCode: 'P02001', name: '処置セット', entity: 'generalOrder', itemCount: 2 }],
+      items: [{ setCode: 'P02001', name: '処置セット', entity: 'treatmentOrder', itemCount: 2 }],
     });
     vi.mocked(fetchOrcaOrderInputSetDetail).mockResolvedValue({
       ok: true,
@@ -353,7 +377,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(screen.getByLabelText('オーダー名')).toHaveValue('');
   });
 
-  it('generalOrder に treatmentOrder の診療セット詳細を反映できる', async () => {
+  it('generalOrder boundary alias でも treatmentOrder の診療セット詳細を反映できる', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
@@ -514,7 +538,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 
-  it('testOrder は laboTest 入力セット詳細を canonical entity のまま保存 payload に変換する', async () => {
+  it('laboTest boundary alias を testOrder に正規化して保存 payload に変換する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({

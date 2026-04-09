@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { validateBundleForm } from '../OrderBundleEditPanel';
+import { resolveOrderEntityDefaultClassMeta } from '../orderCategoryRegistry';
 
 type BundleFormState = Parameters<typeof validateBundleForm>[0]['form'];
 
@@ -20,6 +21,19 @@ const baseForm: BundleFormState = {
   materialItems: [],
   commentItems: [],
   bodyPart: null,
+};
+
+const withEntityClassSeed = (entity: string, form: BundleFormState): BundleFormState => {
+  if (entity === 'medOrder' || entity === 'otherOrder') return form;
+  if (form.classCode?.trim()) return form;
+  const classMeta = resolveOrderEntityDefaultClassMeta(entity);
+  if (!classMeta) return form;
+  return {
+    ...form,
+    classCode: classMeta.classCode,
+    classCodeSystem: classMeta.classCodeSystem,
+    className: classMeta.className,
+  };
 };
 
 describe('validateBundleForm', () => {
@@ -105,12 +119,12 @@ describe('validateBundleForm', () => {
 
   it('treatmentOrder: 項目が必須で、用法は必須にしない', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         admin: '',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -119,14 +133,14 @@ describe('validateBundleForm', () => {
 
   it('treatmentOrder: コードあり/なし混在は明示的にブロックする', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [
           { code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' },
           { code: '', name: '未コード行', quantity: '1', unit: '回', memo: '' },
         ],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -135,11 +149,11 @@ describe('validateBundleForm', () => {
 
   it('treatmentOrder: コードなし行のみは明示的にブロックする', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '', name: '未コード行', quantity: '1', unit: '回', memo: '' }],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -148,12 +162,12 @@ describe('validateBundleForm', () => {
 
   it('treatmentOrder: コメントだけの束は保存前に止める', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [],
         commentItems: [{ code: '0081', name: 'コメント', quantity: '', unit: '', memo: '注意' }],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -162,7 +176,7 @@ describe('validateBundleForm', () => {
 
   it.each(['treatmentOrder', 'testOrder'])('BaseEditor系 %s は項目必須', (entity) => {
     const issues = validateBundleForm({
-      form: { ...baseForm, bundleName: 'BaseEditor', admin: '' },
+      form: withEntityClassSeed(entity, { ...baseForm, bundleName: 'BaseEditor', admin: '' }),
       entity,
       bundleLabel: 'オーダー名',
     });
@@ -171,12 +185,12 @@ describe('validateBundleForm', () => {
 
   it('laboTest alias も testOrder と同じ必須判定になる', () => {
     const aliasIssues = validateBundleForm({
-      form: { ...baseForm, bundleName: 'BaseEditor', admin: '' },
+      form: withEntityClassSeed('laboTest', { ...baseForm, bundleName: 'BaseEditor', admin: '' }),
       entity: 'laboTest',
       bundleLabel: 'オーダー名',
     });
     const canonicalIssues = validateBundleForm({
-      form: { ...baseForm, bundleName: 'BaseEditor', admin: '' },
+      form: withEntityClassSeed('testOrder', { ...baseForm, bundleName: 'BaseEditor', admin: '' }),
       entity: 'testOrder',
       bundleLabel: 'オーダー名',
     });
@@ -186,11 +200,11 @@ describe('validateBundleForm', () => {
 
   it('treatmentOrder: オーダー名が未入力でも項目があればエラーにしない', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -199,11 +213,11 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: メモの自由記述は保存可能', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         memo: '手技料なし',
         items: [{ code: '310000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -212,12 +226,12 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: 投与指示が未入力でも本体コード行があれば保存可能', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         admin: '',
         adminCode: '',
         items: [{ code: '310000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -226,10 +240,10 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: コードなし行は送信前にブロックする', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         items: [{ code: '', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -238,12 +252,12 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: adminCode なしの自由入力用法も local-only として保存できる', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         admin: '静注',
         adminCode: '',
         items: [{ code: '620000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -267,12 +281,12 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: 投与指示だけでも local-only 保存を阻害しない', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         admin: '静注',
         adminCode: '',
         items: [{ code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -281,11 +295,11 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: コメントだけの束は保存前に止める', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         items: [],
         commentItems: [{ code: '0081', name: 'コメント', quantity: '', unit: '', memo: '注意' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -294,13 +308,13 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: coded main + uncoded material は保存前に block する', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         admin: '静注',
         adminCode: '4101',
         items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', memo: '' }],
         materialItems: [{ code: '', name: '未コード材料', quantity: '1', unit: '式', memo: '' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -309,12 +323,12 @@ describe('validateBundleForm', () => {
 
   it('injectionOrder: 材料だけの束は保存前に止める', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('injectionOrder', {
         ...baseForm,
         admin: '静注',
         adminCode: '4101',
         materialItems: [{ code: '700000031', name: 'ドリップセット', quantity: '1', unit: '式', memo: '' }],
-      },
+      }),
       entity: 'injectionOrder',
       bundleLabel: '注射オーダー名',
     });
@@ -396,12 +410,12 @@ describe('validateBundleForm', () => {
 
   it('commentItems: コメントコードか内容が欠ける場合はエラー', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [{ code: '0081', name: '', quantity: '', unit: '', memo: '' }],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -410,12 +424,12 @@ describe('validateBundleForm', () => {
 
   it('commentItems: 不正なコメントコードはエラー', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [{ code: '123', name: '注意事項', quantity: '', unit: '', memo: '' }],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -424,12 +438,12 @@ describe('validateBundleForm', () => {
 
   it('commentItems: 行を削除するとエラーが解消される', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         commentItems: [],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -438,12 +452,12 @@ describe('validateBundleForm', () => {
 
   it('materialItems: コードなし材料行は混在エラーとして保存前に止める', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         materialItems: [{ name: '', quantity: '1', unit: '枚', memo: '' }],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -452,12 +466,12 @@ describe('validateBundleForm', () => {
 
   it('materialItems: 行を削除するとエラーが解消される', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('treatmentOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         materialItems: [],
-      },
+      }),
       entity: 'treatmentOrder',
       bundleLabel: 'オーダー名',
     });
@@ -465,12 +479,12 @@ describe('validateBundleForm', () => {
   });
   it('bacteriaOrder: subtype が無い場合は保存前に block する', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('bacteriaOrder', {
         ...baseForm,
         bundleName: 'Bacteria',
         subtype: '',
         items: [{ code: '160000010', name: 'Culture', quantity: '1', unit: 'count', memo: '' }],
-      },
+      }),
       entity: 'bacteriaOrder',
       bundleLabel: '検査オーダー',
     });
@@ -479,12 +493,12 @@ describe('validateBundleForm', () => {
 
   it('bacteriaOrder: 許可されない subtype は保存前に block する', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('bacteriaOrder', {
         ...baseForm,
         bundleName: 'Bacteria',
         subtype: 'specimen' as BundleFormState['subtype'],
         items: [{ code: '160000010', name: 'Culture', quantity: '1', unit: 'count', memo: '' }],
-      },
+      }),
       entity: 'bacteriaOrder',
       bundleLabel: '検査オーダー',
     });
@@ -493,12 +507,12 @@ describe('validateBundleForm', () => {
 
   it('testOrder: hidden bodyPart が残っている場合は保存前に block する', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('testOrder', {
         ...baseForm,
         bundleName: 'Test',
         items: [{ code: '160000010', name: 'Lab', quantity: '1', unit: 'count', memo: '' }],
         bodyPart: { code: '002001', name: 'Chest', quantity: '', unit: '', memo: '' },
-      },
+      }),
       entity: 'testOrder',
       bundleLabel: '検査オーダー',
     });
@@ -507,13 +521,13 @@ describe('validateBundleForm', () => {
 
   it('physiologyOrder: bodyPart は保存前に reject する', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('physiologyOrder', {
         ...baseForm,
         bundleName: 'Physiology',
         subtype: 'physiology' as BundleFormState['subtype'],
         items: [{ code: '160000010', name: '生理検査', quantity: '1', unit: '回', memo: '' }],
         bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
-      },
+      }),
       entity: 'physiologyOrder',
       bundleLabel: '生理検査オーダー',
     });
@@ -618,12 +632,12 @@ describe('validateBundleForm', () => {
 
   it('materialItems: non-sendable code は保存前に block する', () => {
     const issues = validateBundleForm({
-      form: {
+      form: withEntityClassSeed('generalOrder', {
         ...baseForm,
         bundleName: '処置オーダー',
         items: [{ code: '140000001', name: '処置A', quantity: '1', unit: '回', memo: '' }],
         materialItems: [{ code: 'M001', name: '処置材料A', quantity: '1', unit: '個', memo: '' }],
-      },
+      }),
       entity: 'generalOrder',
       bundleLabel: 'オーダー名',
     });

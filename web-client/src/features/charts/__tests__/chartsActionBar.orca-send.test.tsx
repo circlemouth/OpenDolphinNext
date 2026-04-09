@@ -669,7 +669,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '3',
                 classCode: '400',
                 classCodeSystem: 'Claim007',
-                className: 'Treatment',
+                className: '処置',
                 bodyPart: { code: '002001', name: 'knee', quantity: '1', unit: 'part', memo: '', rowRole: 'bodyPart' },
                 items: [
                   { code: '140000610', name: 'wound-care', quantity: '1', unit: 'times', memo: '', rowRole: 'main' },
@@ -739,9 +739,9 @@ describe('ChartsActionBar ORCA send', () => {
         expect.objectContaining({
           sourceKind: 'bundle_item',
           sourceItemIndex: 1,
-          sourceRowRole: 'auxiliary',
+          sourceRowRole: 'material',
           sourceRowSubtype: 'material',
-          sourceSectionIndex: 1,
+          sourceSectionIndex: 0,
         }),
         expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 2, sourceRowRole: 'comment', sourceSectionIndex: 0 }),
       ]),

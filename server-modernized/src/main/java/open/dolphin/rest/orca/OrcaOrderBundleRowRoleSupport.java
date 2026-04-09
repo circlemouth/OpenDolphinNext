@@ -84,13 +84,13 @@ final class OrcaOrderBundleRowRoleSupport {
         return true;
     }
 
-    static String resolveRowRole(String entity, String explicitRowRole, String code) {
+    static String resolveRowRole(String entity, String classCode, String explicitRowRole, String code) {
         String normalizedRole = normalizeRowRole(explicitRowRole);
         String normalizedCode = OrcaOrderBundleRequestSupport.trimToNull(code);
         if (normalizedRole != null
                 && ((entity == null || entity.isBlank())
                         ? isSendableCodeForRowRole(null, normalizedRole, normalizedCode)
-                        : isCodeCompatibleWithRole(entity, normalizedRole, normalizedCode))) {
+                        : isCodeCompatibleWithRole(entity, classCode, normalizedRole, normalizedCode))) {
             return normalizedRole;
         }
         if (isBodyPartCode(normalizedCode)) {
@@ -108,7 +108,7 @@ final class OrcaOrderBundleRowRoleSupport {
         return ROW_ROLE_MAIN;
     }
 
-    static boolean isCodeCompatibleWithRole(String entity, String rowRole, String code) {
+    static boolean isCodeCompatibleWithRole(String entity, String classCode, String rowRole, String code) {
         String normalizedRole = normalizeRowRole(rowRole);
         String normalizedCode = OrcaOrderBundleRequestSupport.trimToNull(code);
         if (normalizedRole == null || normalizedCode == null) {
@@ -121,7 +121,7 @@ final class OrcaOrderBundleRowRoleSupport {
             };
         }
         return switch (normalizedRole) {
-            case ROW_ROLE_BODY_PART -> OrcaOrderBundleRequestSupport.supportsBodyPartField(entity) && isBodyPartCode(normalizedCode);
+            case ROW_ROLE_BODY_PART -> OrcaOrderBundleRequestSupport.supportsBodyPartField(entity, classCode) && isBodyPartCode(normalizedCode);
             case ROW_ROLE_COMMENT -> isCommentCode(normalizedCode);
             case ROW_ROLE_MATERIAL -> isSendableMaterialCode(entity, normalizedCode);
             case ROW_ROLE_MAIN -> isSendableMainCode(entity, normalizedCode);
@@ -143,7 +143,7 @@ final class OrcaOrderBundleRowRoleSupport {
                 default -> false;
             };
         }
-        return isCodeCompatibleWithRole(entity, normalizedRole, normalizedCode);
+        return isCodeCompatibleWithRole(entity, null, normalizedRole, normalizedCode);
     }
 
     static boolean isSendableMaterialCode(String entity, String code) {

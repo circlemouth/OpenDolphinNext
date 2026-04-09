@@ -35,8 +35,16 @@ import {
   requiresOrcaClassCode,
   resolveCanonicalOrcaClassName,
 } from './orcaMedicalClassCatalog';
-import { collectInjectionBundleContractIssues, isStandaloneSurgeryClassCode } from './orderBundleContract';
+import {
+  collectInjectionBundleContractIssues,
+  isStandaloneSurgeryClassCode,
+  resolveOrderBundleItemRowRole as resolveSharedOrderBundleItemRowRole,
+} from './orderBundleContract';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
+import {
+  ORCA_POLICY_MESSAGES,
+  resolveOrcaOrderEntitySendabilityPolicy,
+} from './orcaSendabilityPolicy';
 import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
 
 const DRUG_CODE_PATTERN = /^6\d{8}$/;
@@ -89,7 +97,7 @@ export type MedicalModV2BundleIssueCode =
   | 'missing_main_row'
   | 'invalid_other_order_class'
   | 'unsupported_physiology_order'
-  | 'unsupported_bacteria_subtype'
+  | 'unsupported_bacteria_order'
   | 'unsupported_selection_comment_parameter'
   | 'unsupported_body_part';
 
@@ -136,13 +144,8 @@ const cloneBodyPartItem = (item?: OrderBundle['bodyPart'] | null): OrderBundleIt
 };
 
 const isBodyPartCodeValue = (code?: string | null) => isOrderBundleBodyPartCode(code);
-
-const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
-  const normalizedCode = code?.trim();
-  if (!normalizedCode || !isAuxiliaryMaterialCode(normalizedCode)) return false;
-  const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  return canonicalEntity === 'treatmentOrder' || canonicalEntity === 'injectionOrder';
-};
+const isRadiologyContrastDrugCode = (entity?: string | null, code?: string | null) =>
+  (resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && DRUG_CODE_PATTERN.test(code?.trim() ?? '');
 
 const resolveBundleItemRowSubtype = (
   entity?: string | null,
@@ -155,7 +158,7 @@ const resolveBundleItemRowSubtype = (
     return item.rowSubtype;
   }
   const code = item?.code?.trim() ?? '';
-  if ((resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && DRUG_CODE_PATTERN.test(code)) {
+  if (isRadiologyContrastDrugCode(entity, code)) {
     return 'contrastDrug' as const;
   }
   return 'material' as const;
@@ -163,18 +166,15 @@ const resolveBundleItemRowSubtype = (
 
 const resolveBundleItemRowRole = (entity?: string | null, item?: OrderBundleItem | null) => {
   if (!item) return 'main' as const;
-  if (item.rowRole === 'main' || item.rowRole === 'auxiliary' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
-    return item.rowRole;
+  if (item.rowRole === 'auxiliary') {
+    const code = item.code?.trim();
+    return isRadiologyContrastDrugCode(entity, code) || isAuxiliaryMaterialCode(code) ? 'material' : 'main';
   }
-  if (item.rowRole === 'material') return 'material' as const;
-  const code = item.code?.trim();
-  if (isBodyPartCodeValue(code)) return 'bodyPart' as const;
-  if ((resolveCanonicalOrderEntity(entity) ?? entity) === 'radiologyOrder' && DRUG_CODE_PATTERN.test(code ?? '')) {
+  const sharedRole = resolveSharedOrderBundleItemRowRole(entity, item);
+  if (sharedRole === 'main' && isRadiologyContrastDrugCode(entity, item.code)) {
     return 'material' as const;
   }
-  if (shouldTreatAsMaterialItem(entity, code)) return 'material' as const;
-  if (code && isCommentMedicationCode(code)) return 'comment' as const;
-  return 'main' as const;
+  return sharedRole;
 };
 
 const collectNormalizedRows = (bundle: OrderBundle) => {
@@ -299,32 +299,31 @@ const resolveMedicalModV2BlockedBundleIssue = (bundle: OrderBundle) => {
   if (invalidClassIssue) {
     return invalidClassIssue;
   }
+  const sendabilityPolicy = resolveOrcaOrderEntitySendabilityPolicy(canonicalEntity);
+  if (sendabilityPolicy && !sendabilityPolicy.sendable) {
+    if (canonicalEntity === 'physiologyOrder') {
+      return buildBundleIssue(
+        bundle,
+        'unsupported_physiology_order',
+        MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_ERROR_LABEL,
+      );
+    }
+    if (canonicalEntity === 'otherOrder') {
+      return buildBundleIssue(
+        bundle,
+        'invalid_other_order_class',
+        'otherOrder は explicit local-only 契約のため ORCA 送信しません。',
+      );
+    }
+    if (canonicalEntity === 'bacteriaOrder') {
+      return buildBundleIssue(bundle, 'unsupported_bacteria_order', ORCA_POLICY_MESSAGES.bacteriaBlocked);
+    }
+  }
   if (hasUnsupportedSelectionCommentParameterInBundle(bundle)) {
     return buildBundleIssue(
       bundle,
       'unsupported_selection_comment_parameter',
       '選択式コメントの itemNumber / branch は official medicalmodv2 request に carrier がないため ORCA送信できません。',
-    );
-  }
-  if (canonicalEntity === 'physiologyOrder') {
-    return buildBundleIssue(
-      bundle,
-      'unsupported_physiology_order',
-      MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_ERROR_LABEL,
-    );
-  }
-  if (canonicalEntity === 'otherOrder') {
-    return buildBundleIssue(
-      bundle,
-      'invalid_other_order_class',
-      'otherOrder は explicit local-only 契約のため ORCA 送信しません。',
-    );
-  }
-  if (canonicalEntity === 'bacteriaOrder' && Boolean(bundle.subtype?.trim())) {
-    return buildBundleIssue(
-      bundle,
-      'unsupported_bacteria_subtype',
-      '細菌検査 subtype に対応する ORCA carrier はありません。院内ローカル情報として保持し、送信前に解消してください。',
     );
   }
   return null;
@@ -461,13 +460,7 @@ const resolveMedicalClass = (bundle: OrderBundle) => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
   const explicit = normalizeOrcaClassCode(bundle.classCode);
   if (isChargeEntity(canonicalEntity)) {
-    return resolveCanonicalChargeClassMeta({
-      entity: bundle.entity,
-      classCode: explicit,
-      itemCategory: explicit
-        ? bundle.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory
-        : undefined,
-    })?.classCode ?? '';
+    return resolveCanonicalChargeClassMeta({ entity: bundle.entity, classCode: explicit })?.classCode ?? '';
   }
   if (explicit) return explicit;
   return '';
@@ -615,7 +608,7 @@ export const prepareMedicalModV2SendData = (bundles: OrderBundle[]) => {
   const requiredIssues = collectRpRequiredIssues(bundles);
   const bundleIssues = collectMedicalModV2BundleIssues(bundles);
   const codeIssues = collectOrderBundleCodeIssues(bundles);
-  // physiologyOrder / bacteriaOrder subtype は sendable payload に落とさず、ここで明示的に除外する。
+  // local-only / import-only bundle は sendable payload に落とさず、ここで fail-close する。
   const sendableBundles = bundles.filter((bundle) => collectMedicalModV2BundleIssuesForBundle(bundle).length === 0);
   const medicalInformationWithSource = sendableBundles
     .map(toMedicalModV2InformationWithSource)
@@ -676,7 +669,7 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
     const preview = prepared.bundleIssues.slice(0, 4).map(formatMedicalModV2BundleIssue).join(' / ');
     const remaining = prepared.bundleIssues.length - 4;
     const unsupportedPhysiologyIssue = prepared.bundleIssues.some((issue) => issue.code === 'unsupported_physiology_order');
-    const unsupportedBacteriaIssue = prepared.bundleIssues.some((issue) => issue.code === 'unsupported_bacteria_subtype');
+    const unsupportedBacteriaIssue = prepared.bundleIssues.some((issue) => issue.code === 'unsupported_bacteria_order');
     const unsupportedSelectionCommentIssue = prepared.bundleIssues.some(
       (issue) => issue.code === 'unsupported_selection_comment_parameter',
     );
@@ -685,7 +678,7 @@ export const buildMedicalModV2BlockNotice = (prepared: ReturnType<typeof prepare
       nextAction: unsupportedPhysiologyIssue
         ? MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_NEXT_ACTION
         : unsupportedBacteriaIssue
-          ? '細菌検査 subtype は official ORCA carrier がないため送信できません。院内ローカル情報として保持し、ORCA送信対象から外してください。'
+          ? 'bacteriaOrder は local-only 契約です。院内ローカル保存/表示 continuity のみ維持し、ORCA送信対象から常に外してください。'
           : unsupportedSelectionCommentIssue
             ? '選択式コメントの itemNumber / branch は official medicalmodv2 carrier がないため送信できません。parameter 付きコメントを削除してください。'
           : 'コードなし行、classCode allowlist、コメントのみ束、材料のみ束、部位のみ束を修正してから再送してください。',

@@ -207,11 +207,19 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static boolean isValidCodeForRowRole(String entity, String rowRole, String code) {
-        return OrcaOrderBundleRowRoleSupport.isCodeCompatibleWithRole(entity, rowRole, code);
+        return isValidCodeForRowRole(entity, null, rowRole, code);
+    }
+
+    static boolean isValidCodeForRowRole(String entity, String classCode, String rowRole, String code) {
+        return OrcaOrderBundleRowRoleSupport.isCodeCompatibleWithRole(entity, classCode, rowRole, code);
     }
 
     static String resolveRowRole(String entity, String rowRole, String code) {
-        return OrcaOrderBundleRowRoleSupport.resolveRowRole(entity, rowRole, code);
+        return resolveRowRole(entity, null, rowRole, code);
+    }
+
+    static String resolveRowRole(String entity, String classCode, String rowRole, String code) {
+        return OrcaOrderBundleRowRoleSupport.resolveRowRole(entity, classCode, rowRole, code);
     }
 
     static boolean requiresSendableMainRow(String canonicalEntity) {

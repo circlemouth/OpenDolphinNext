@@ -71,11 +71,11 @@ const injectionProps = {
   bundleLabel: '注射オーダー名',
   itemQuantityLabel: '回数',
 };
-const generalProps = {
+const treatmentProps = {
   ...baseProps,
   entity: 'treatmentOrder',
-  title: '一般オーダー編集',
-  bundleLabel: 'オーダー名',
+  title: '処置オーダー編集',
+  bundleLabel: '処置オーダー名',
   itemQuantityLabel: '回数',
 };
 const chargeProps = {
@@ -182,7 +182,7 @@ describe('OrderBundleEditPanel item actions', () => {
             bundleNumber: '2',
             classCode: '310',
             classCodeSystem: 'Claim007',
-            className: 'Injection',
+            className: '注射',
             admin: '静注',
             adminCode: '4101',
             adminMemo: '20ml/h',
@@ -286,7 +286,7 @@ describe('OrderBundleEditPanel item actions', () => {
             bundleNumber: '1',
             classCode: '310',
             classCodeSystem: 'Claim007',
-            className: 'Injection',
+            className: '注射',
             admin: '静注',
             adminCode: '4101',
             items,
@@ -318,7 +318,7 @@ describe('OrderBundleEditPanel item actions', () => {
             bundleNumber: '2',
             classCode: '310',
             classCodeSystem: 'Claim007',
-            className: 'Injection',
+            className: '注射',
             admin: '静注',
             adminCode: '4101',
             adminMemo: '20ml/h',
@@ -389,7 +389,7 @@ describe('OrderBundleEditPanel item actions', () => {
             bundleNumber: '1',
             classCode: '310',
             classCodeSystem: 'Claim007',
-            className: 'Injection',
+            className: '注射',
             admin: '点滴',
             adminCode: '4101',
             items: [
@@ -577,7 +577,7 @@ describe('OrderBundleEditPanel item actions', () => {
       }
       return { ok: true, items: [], totalCount: 0 };
     });
-    renderWithClient(<OrderBundleEditPanel {...generalProps} />);
+    renderWithClient(<OrderBundleEditPanel {...treatmentProps} />);
 
     const itemInput = screen.getByPlaceholderText('処置項目名') as HTMLInputElement;
     await user.type(itemInput, '創傷処置');
@@ -808,10 +808,19 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'youhou', keyword: '', allowEmpty: true }));
   });
 
-  it('injectionOrder の最近使った用法 fallback は local-only usage として保存できる', async () => {
+  it('injectionOrder の投与指示は local-only 投与指示として保存できる', async () => {
     const user = userEvent.setup();
     localStorage.setItem(injectionRecentUsageStorageKey, JSON.stringify(['院内メモ用の自由入力']));
-    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+    vi.mocked(fetchOrderMasterSearch).mockImplementation(async ({ type }) => {
+      if (type === 'youhou') {
+        return {
+          ok: true,
+          items: [{ type: 'youhou', code: '', name: '院内メモ用の自由入力' }],
+          totalCount: 1,
+        };
+      }
+      return { ok: true, items: [], totalCount: 0 };
+    });
 
     renderWithClient(
       <OrderBundleEditPanel
@@ -825,15 +834,21 @@ describe('OrderBundleEditPanel item actions', () => {
             bundleNumber: '1',
             classCode: '310',
             classCodeSystem: 'Claim007',
-            className: 'Injection',
+            className: '注射',
             items: [{ code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '', rowRole: 'main' }],
           },
         }}
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText('最近使った用法'), '院内メモ用の自由入力');
-    expect((screen.getByLabelText('投与指示') as HTMLSelectElement).value).toContain('院内メモ用の自由入力');
+    const usageSelect = screen.getByLabelText('投与指示') as HTMLSelectElement;
+    let targetOption: HTMLOptionElement | undefined;
+    await waitFor(() => {
+      targetOption = Array.from(usageSelect.options).find((option) => option.text === '院内メモ用の自由入力');
+      expect(targetOption).toBeDefined();
+    });
+    await user.selectOptions(usageSelect, targetOption as HTMLOptionElement);
+    expect(usageSelect.selectedOptions[0]?.text).toBe('院内メモ用の自由入力');
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
     const mutateMock = vi.mocked(mutateOrderBundles);

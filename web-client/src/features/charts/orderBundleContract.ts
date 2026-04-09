@@ -3,7 +3,6 @@ import {
   isOtherOrderLocalOnlyCode,
   isOtherOrderRowRole,
   OTHER_ORDER_ALLOWED_ROW_ROLES,
-  OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE,
 } from './otherOrderContract';
 import { isOrderBundleCommentCode as isOrderBundleCommentCodeImpl } from './orcaCommentCarrierRules';
 import { isAuxiliaryMaterialCode } from './orcaMedicalClassCatalog';
@@ -72,7 +71,7 @@ export const isStandaloneSurgeryClassCode = (classCode?: string | null) =>
   STANDALONE_SURGERY_CLASS_CODES.includes((classCode?.trim() ?? '') as (typeof STANDALONE_SURGERY_CLASS_CODES)[number]);
 
 export const isOtherOrderLocalOnlyClassCode = (classCode?: string | null) =>
-  !classCode?.trim() || classCode.trim() === OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE;
+  !classCode?.trim();
 
 export const isOtherOrderLocalOnlyRowRole = (rowRole?: string | null) => isOtherOrderRowRole(rowRole);
 
@@ -219,7 +218,7 @@ export const collectInjectionBundleContractIssues = (
 
   const normalizedClassCode = classCode?.trim() ?? '';
   const hasCompatibleClassCode = normalizedClassCode && isOrcaEntityClassAllowed('injectionOrder', normalizedClassCode);
-  if ((mode === 'send' && !hasCompatibleClassCode) || (mode === 'save' && normalizedClassCode !== '' && !hasCompatibleClassCode)) {
+  if (!hasCompatibleClassCode) {
     issues.push({
       code: 'invalid_injection_class_code',
       detail: buildInjectionContractDetail('invalid_injection_class_code', mode),
@@ -261,5 +260,4 @@ export const collectInjectionBundleContractIssues = (
 export {
   isOtherOrderLocalOnlyCode,
   OTHER_ORDER_ALLOWED_ROW_ROLES,
-  OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE,
 };

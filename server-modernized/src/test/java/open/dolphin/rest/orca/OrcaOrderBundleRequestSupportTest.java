@@ -63,12 +63,24 @@ class OrcaOrderBundleRequestSupportTest {
     @Test
     void supportsBodyPartFieldIsLimitedToRadiologyClass700() {
         assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_TREATMENT, "400"));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_RADIOLOGY_ORDER));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_RADIOLOGY_ORDER, null));
         assertTrue(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_RADIOLOGY_ORDER, "700"));
         assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_RADIOLOGY_ORDER, "701"));
-        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_OTHER_ORDER));
-        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField("testOrder"));
-        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_PHYSIOLOGY_ORDER));
-        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_BACTERIA_ORDER));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidCodeForRowRole(
+                IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                null,
+                OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART,
+                "002001"));
+        assertTrue(OrcaOrderBundleRequestSupport.isValidCodeForRowRole(
+                IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                "700",
+                OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART,
+                "002001"));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_OTHER_ORDER, null));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField("testOrder", null));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, null));
+        assertFalse(OrcaOrderBundleRequestSupport.supportsBodyPartField(IInfoModel.ENTITY_BACTERIA_ORDER, null));
     }
 
     @Test
@@ -110,6 +122,9 @@ class OrcaOrderBundleRequestSupportTest {
                 OrcaOrderBundleRequestSupport.resolveCatalogClassName(
                         IInfoModel.ENTITY_RADIOLOGY_ORDER,
                         "701"));
+        assertNull(OrcaOrderBundleRequestSupport.resolveCatalogClassName(IInfoModel.ENTITY_BASE_CHARGE_ORDER, null));
+        assertNull(OrcaOrderBundleRequestSupport.resolveCatalogClassName(IInfoModel.ENTITY_BASE_CHARGE_ORDER, "701"));
+        assertNull(OrcaOrderBundleRequestSupport.resolveCatalogClassName(IInfoModel.ENTITY_RADIOLOGY_ORDER, null));
     }
 
     @Test
@@ -148,6 +163,7 @@ class OrcaOrderBundleRequestSupportTest {
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_SURGERY_ORDER, null));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode("testOrder", null));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, null));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_BACTERIA_ORDER, null));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_RADIOLOGY_ORDER, null));
     }
 

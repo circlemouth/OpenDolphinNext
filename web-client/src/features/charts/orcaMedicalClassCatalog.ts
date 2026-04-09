@@ -22,11 +22,18 @@ export type OrcaResolvedClassMeta = OrcaEntityClassMeta & {
   entity: CanonicalOrcaOrderEntity;
 };
 
+export type ChargeOrderEntity = Extract<CanonicalOrcaOrderEntity, 'baseChargeOrder' | 'instractionChargeOrder'>;
+
+export type ChargeClassMeta = OrcaEntityClassMeta & {
+  classCodeSystem: 'Claim007';
+};
+
 type OrcaEntityContract = {
   label: string;
   defaultClassMeta?: OrcaEntityClassMeta;
   allowedClassCodes?: readonly string[];
   bodyPartAllowedClassCodes?: readonly string[];
+  classCodeRequired: boolean;
   sendable: boolean;
   localOnly?: boolean;
   importOnly?: boolean;
@@ -64,28 +71,33 @@ const ENTITY_CONTRACTS: Record<CanonicalOrcaOrderEntity, OrcaEntityContract> = {
     label: '処方',
     defaultClassMeta: { classCode: '212', className: '処方' },
     allowedClassCodes: EXACT_MED_CLASS_CODES,
+    classCodeRequired: true,
     sendable: true,
   },
   injectionOrder: {
     label: '注射',
     defaultClassMeta: { classCode: '310', className: '注射' },
     allowedClassCodes: EXACT_INJECTION_CLASS_CODES,
+    classCodeRequired: true,
     sendable: true,
   },
   treatmentOrder: {
     label: '処置',
     defaultClassMeta: { classCode: '400', className: '処置' },
     allowedClassCodes: EXACT_TREATMENT_CLASS_CODES,
+    classCodeRequired: true,
     sendable: true,
   },
   surgeryOrder: {
     label: '手術',
     defaultClassMeta: { classCode: '500', className: '手術' },
     allowedClassCodes: EXACT_SURGERY_CLASS_CODES,
+    classCodeRequired: true,
     sendable: true,
   },
   otherOrder: {
     label: 'その他',
+    classCodeRequired: false,
     sendable: false,
     localOnly: true,
   },
@@ -93,12 +105,14 @@ const ENTITY_CONTRACTS: Record<CanonicalOrcaOrderEntity, OrcaEntityContract> = {
     label: '検査',
     defaultClassMeta: { classCode: '600', className: '検査' },
     allowedClassCodes: EXACT_TEST_CLASS_CODES,
+    classCodeRequired: true,
     sendable: true,
   },
   physiologyOrder: {
     label: '生理検査',
     defaultClassMeta: { classCode: '600', className: '検査' },
     allowedClassCodes: ['600'],
+    classCodeRequired: true,
     sendable: false,
     importOnly: true,
   },
@@ -106,6 +120,7 @@ const ENTITY_CONTRACTS: Record<CanonicalOrcaOrderEntity, OrcaEntityContract> = {
     label: '細菌検査',
     defaultClassMeta: { classCode: '600', className: '検査' },
     allowedClassCodes: ['600'],
+    classCodeRequired: true,
     sendable: false,
     localOnly: true,
   },
@@ -114,18 +129,21 @@ const ENTITY_CONTRACTS: Record<CanonicalOrcaOrderEntity, OrcaEntityContract> = {
     defaultClassMeta: { classCode: '700', className: '画像診断' },
     allowedClassCodes: EXACT_RADIOLOGY_CLASS_CODES,
     bodyPartAllowedClassCodes: ['700'],
+    classCodeRequired: true,
     sendable: true,
   },
   baseChargeOrder: {
     label: '基本料',
     defaultClassMeta: { classCode: '110', className: '基本診療料' },
     allowedClassCodes: EXACT_BASE_CHARGE_CLASS_CODES,
+    classCodeRequired: true,
     sendable: true,
   },
   instractionChargeOrder: {
     label: '指導料',
     defaultClassMeta: { classCode: '130', className: '医学管理等' },
     allowedClassCodes: EXACT_INSTRUCTION_CHARGE_CLASS_CODES,
+    classCodeRequired: true,
     sendable: true,
   },
 };
@@ -151,6 +169,8 @@ const trimToNull = (value?: string | null) => {
   return trimmed ? trimmed : null;
 };
 
+export const CHARGE_CLASS_CODE_SYSTEM: ChargeClassMeta['classCodeSystem'] = 'Claim007';
+
 export const resolveCanonicalOrcaOrderEntity = (value?: string | null): CanonicalOrcaOrderEntity | null => {
   const normalized = trimToNull(value);
   if (!normalized) return null;
@@ -174,7 +194,7 @@ export const normalizeOrcaClassCode = (value?: string | null) => trimToNull(valu
 
 export const requiresOrcaClassCode = (value?: string | null) => {
   const contract = resolveOrcaEntityContract(value);
-  return Boolean(contract && !contract.localOnly && contract.allowedClassCodes && contract.allowedClassCodes.length > 0);
+  return Boolean(contract?.classCodeRequired);
 };
 
 export const resolveOrcaClassMetaByCode = (classCode?: string | null): OrcaResolvedClassMeta | undefined => {
@@ -228,16 +248,80 @@ export const resolveCanonicalOrcaClassName = (
 ) => {
   const normalizedEntity = resolveCanonicalOrcaOrderEntity(entity);
   const normalizedClassCode = trimToNull(classCode);
-  if (normalizedEntity && normalizedClassCode && isOrcaEntityClassAllowed(normalizedEntity, normalizedClassCode)) {
-    return resolveOrcaDefaultClassMeta(normalizedEntity)?.className;
+  if (normalizedEntity) {
+    if (!normalizedClassCode) return undefined;
+    return isOrcaEntityClassAllowed(normalizedEntity, normalizedClassCode)
+      ? resolveOrcaDefaultClassMeta(normalizedEntity)?.className
+      : undefined;
   }
-  if (normalizedClassCode) {
-    return resolveOrcaClassMetaByCode(normalizedClassCode)?.className;
+  return normalizedClassCode ? resolveOrcaClassMetaByCode(normalizedClassCode)?.className : undefined;
+};
+
+export const isChargeEntity = (entity?: string | null): entity is ChargeOrderEntity => {
+  const canonical = resolveCanonicalOrcaOrderEntity(entity);
+  return canonical === 'baseChargeOrder' || canonical === 'instractionChargeOrder';
+};
+
+export const resolveChargeEntityFromClassCode = (
+  classCode?: string | null,
+): ChargeOrderEntity | null => {
+  const resolved = resolveOrcaEntityFromClassCode(classCode);
+  return resolved === 'baseChargeOrder' || resolved === 'instractionChargeOrder' ? resolved : null;
+};
+
+export const isChargeClassCompatible = (entity?: string | null, classCode?: string | null) =>
+  isChargeEntity(entity) && isOrcaEntityClassAllowed(entity, classCode);
+
+export const isChargeItemCategoryCompatible = (entity?: string | null, category?: string | null) =>
+  isChargeClassCompatible(entity, category);
+
+export const resolveCanonicalChargeClassMeta = (params: {
+  entity?: string | null;
+  classCode?: string | null;
+  itemCategory?: string | null;
+}): ChargeClassMeta | null => {
+  const normalizedEntity = resolveCanonicalOrcaOrderEntity(params.entity);
+  const explicitCategory = normalizeOrcaClassCode(params.itemCategory);
+  const explicitClassCode = normalizeOrcaClassCode(params.classCode);
+  if (isChargeEntity(normalizedEntity)) {
+    const candidateClassCode =
+      (explicitCategory && isChargeItemCategoryCompatible(normalizedEntity, explicitCategory) ? explicitCategory : undefined) ??
+      (explicitClassCode && isChargeClassCompatible(normalizedEntity, explicitClassCode) ? explicitClassCode : undefined);
+    if (!candidateClassCode) return null;
+    const className = resolveCanonicalOrcaClassName(normalizedEntity, candidateClassCode);
+    return className ? { classCode: candidateClassCode, classCodeSystem: CHARGE_CLASS_CODE_SYSTEM, className } : null;
   }
-  if (normalizedEntity && requiresOrcaClassCode(normalizedEntity)) {
-    return resolveOrcaDefaultClassMeta(normalizedEntity)?.className;
-  }
-  return undefined;
+  const resolvedEntity = resolveChargeEntityFromClassCode(explicitClassCode ?? explicitCategory);
+  const resolvedClassCode = explicitClassCode ?? explicitCategory;
+  if (!resolvedEntity || !resolvedClassCode) return null;
+  const className = resolveCanonicalOrcaClassName(resolvedEntity, resolvedClassCode);
+  return className ? { classCode: resolvedClassCode, classCodeSystem: CHARGE_CLASS_CODE_SYSTEM, className } : null;
+};
+
+export const resolveChargeClassMetaFromItemCategory = (entity?: string | null, category?: string | null) =>
+  resolveCanonicalChargeClassMeta({ entity, itemCategory: category });
+
+export const resolveCanonicalChargeClassName = (entity?: string | null, classCode?: string | null) =>
+  resolveCanonicalChargeClassMeta({ entity, classCode })?.className;
+
+export const canonicalizeChargeBundleMeta = <
+  T extends {
+    entity?: string | null;
+    classCode?: string | null;
+    classCodeSystem?: string | null;
+    className?: string | null;
+  },
+>(
+  value: T,
+): T => {
+  const canonical = resolveCanonicalChargeClassMeta({ entity: value.entity, classCode: value.classCode });
+  if (!canonical) return value;
+  return {
+    ...value,
+    classCode: canonical.classCode,
+    classCodeSystem: canonical.classCodeSystem,
+    className: canonical.className,
+  };
 };
 
 export const resolveMedicalClassName = (classCode?: string | null) => {

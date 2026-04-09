@@ -30,6 +30,7 @@ export type OrderEntityValidationRule = {
 
 export type OrderEntityClassMeta = {
   classCode: string;
+  classCodeSystem?: string;
   className: string;
 };
 
@@ -69,6 +70,15 @@ export type OrderEntityEditorMeta = {
   title: string;
   bundleLabel: string;
   itemQuantityLabel: string;
+};
+
+export type OrderEntityUsageUiCopy = {
+  recentUsageLabel: string;
+  usageSelectPlaceholder: string;
+  usageLoadingLabel: string;
+  usageSearchHelp: string;
+  usageSearchError: string;
+  usageDaysLimitLabel: string;
 };
 
 type OrderEntityRegistryEntry = {
@@ -112,6 +122,24 @@ const BASE_EDITOR_UI: OrderEntityUiProfile = {
 const cloneMasterSearchPresets = (
   presets: OrderEntityUiProfile['masterSearchPresets'],
 ): Array<{ type: OrderMasterSearchType; label: string }> => presets.map((preset) => ({ ...preset }));
+
+const MED_ORDER_USAGE_UI_COPY: OrderEntityUsageUiCopy = {
+  recentUsageLabel: '最近使った用法',
+  usageSelectPlaceholder: '候補を選択',
+  usageLoadingLabel: '用法候補を取得中...',
+  usageSearchHelp: '用法候補を読み込み中です。',
+  usageSearchError: '用法マスタの検索に失敗しました。',
+  usageDaysLimitLabel: '用法マスタ上限日数',
+};
+
+const INJECTION_ORDER_USAGE_UI_COPY: OrderEntityUsageUiCopy = {
+  recentUsageLabel: '最近使った投与指示',
+  usageSelectPlaceholder: '投与指示候補を選択',
+  usageLoadingLabel: '投与指示候補を取得中...',
+  usageSearchHelp: '投与指示候補を読み込み中です。',
+  usageSearchError: '投与指示マスタの検索に失敗しました。',
+  usageDaysLimitLabel: '投与指示マスタ上限日数',
+};
 
 const TEST_SPECIMEN_SUBTYPE = {
   label: '600系 subtype',
@@ -384,10 +412,10 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     },
     ui: {
       bundleNamePlaceholder: '例: 胸部CT（造影）',
-      instructionLabel: '検査指示',
-      instructionPlaceholder: '例: 造影あり / 単純',
-      memoLabel: '画像検査メモ',
-      memoPlaceholder: '撮影条件・依頼目的を入力',
+      instructionLabel: '検査指示（院内）',
+      instructionPlaceholder: '例: 造影あり / 単純（ORCA送信しない）',
+      memoLabel: '画像検査メモ（院内）',
+      memoPlaceholder: '撮影条件・依頼目的を入力（ORCA送信しない）',
       masterSectionTitle: '画像検査マスタ検索',
       mainItemLabel: '画像検査項目',
       mainItemPlaceholder: '画像検査名',
@@ -534,6 +562,12 @@ export const resolveOrderEntityUiProfile = (entity: string): OrderEntityUiProfil
   const resolved = resolveOrderEntity(entity);
   if (resolved) return ORDER_ENTITY_REGISTRY[resolved].ui;
   return BASE_EDITOR_UI;
+};
+
+export const resolveOrderEntityUsageUiCopy = (entity: string): OrderEntityUsageUiCopy => {
+  const resolved = resolveOrderEntity(entity);
+  if (resolved === 'injectionOrder') return INJECTION_ORDER_USAGE_UI_COPY;
+  return MED_ORDER_USAGE_UI_COPY;
 };
 
 export const resolveOrderEntityTestSubtypeConfig = (entity: string): OrderEntityUiProfile['testSubtype'] => {

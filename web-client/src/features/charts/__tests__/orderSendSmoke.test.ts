@@ -38,7 +38,7 @@ describe('order send smoke', () => {
           JSON.stringify({
             setCode: 'T60001',
             bundle: {
-              entity: 'laboTest',
+              entity: 'testOrder',
               sourceSetCode: 'T60001',
               bundleName: '採血セット',
               bundleNumber: '2',
@@ -124,7 +124,7 @@ describe('order send smoke', () => {
       entity: 'testOrder',
     });
     expect(inputSet.ok).toBe(true);
-    expect(inputSet.bundle?.entity).toBe('laboTest');
+    expect(inputSet.bundle?.entity).toBe('testOrder');
 
     await mutateOrderBundles({
       patientId: '000001',
@@ -465,6 +465,7 @@ describe('order send smoke', () => {
                 classCode: '400',
                 classCodeSystem: 'Claim007',
                 className: '処置',
+                bodyPart: { code: '002001', name: '膝関節', quantity: '1', unit: '部位', memo: 'local-treatment-body-part' },
                 admin: 'local-treatment-admin',
                 memo: 'local-treatment-memo',
                 items: [
@@ -518,9 +519,10 @@ describe('order send smoke', () => {
       ],
     });
 
-    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'generalOrder' });
+    const fetched = await fetchOrderBundles({ patientId: '000001', entity: 'treatmentOrder' });
     expect(fetched.ok).toBe(true);
     expect(fetched.bundles[0]?.entity).toBe('treatmentOrder');
+    expect(fetched.bundles[0]?.bodyPart).toBeUndefined();
 
     const normalized = fetched.bundles
       .map((bundle) => toMedicalModV2InformationWithSource(bundle))
@@ -557,6 +559,7 @@ describe('order send smoke', () => {
     expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-admin');
     expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-memo');
     expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('local-treatment-item-memo');
+    expect(JSON.stringify(treatmentMedicalInformation)).not.toContain('002001');
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
 
@@ -587,6 +590,7 @@ describe('order send smoke', () => {
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-admin');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-memo');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-treatment-item-memo');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain('002001');
   });
 
   it('save fetch normalize send payload smoke keeps charge class meta stable and drops local-only fields', async () => {
@@ -852,7 +856,7 @@ describe('order send smoke', () => {
     expect(prepared.bundleIssues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: 'unsupported_bacteria_subtype',
+          code: 'unsupported_bacteria_order',
           entity: 'bacteriaOrder',
         }),
       ]),
@@ -1004,7 +1008,7 @@ describe('order send smoke', () => {
                 bundleNumber: '1',
                 classCode: '310',
                 classCodeSystem: 'Claim007',
-                className: 'Injection',
+                className: '注射',
                 admin: '静注',
                 adminCode: buildInjectionAdminCode(1),
                 adminMemo: '',
@@ -1019,7 +1023,7 @@ describe('order send smoke', () => {
                 bundleNumber: '2',
                 classCode: '310',
                 classCodeSystem: 'Claim007',
-                className: 'Injection',
+                className: '注射',
                 admin: '筋注',
                 adminCode: buildInjectionAdminCode(2),
                 adminMemo: '',
@@ -1036,7 +1040,7 @@ describe('order send smoke', () => {
                 bundleNumber: '3',
                 classCode: '310',
                 classCodeSystem: 'Claim007',
-                className: 'Injection',
+                className: '注射',
                 admin: '点滴',
                 adminCode: buildInjectionAdminCode(3),
                 adminMemo: '',
@@ -1079,7 +1083,7 @@ describe('order send smoke', () => {
           bundleNumber: '1',
           classCode: '310',
           classCodeSystem: 'Claim007',
-          className: 'Injection',
+          className: '注射',
           admin: '静注',
           adminCode: buildInjectionAdminCode(1),
           adminMemo: '',
@@ -1093,7 +1097,7 @@ describe('order send smoke', () => {
           bundleNumber: '2',
           classCode: '310',
           classCodeSystem: 'Claim007',
-          className: 'Injection',
+          className: '注射',
           admin: '筋注',
           adminCode: buildInjectionAdminCode(2),
           adminMemo: '',
@@ -1111,7 +1115,7 @@ describe('order send smoke', () => {
           bundleNumber: '3',
           classCode: '310',
           classCodeSystem: 'Claim007',
-          className: 'Injection',
+          className: '注射',
           admin: '点滴',
           adminCode: buildInjectionAdminCode(3),
           adminMemo: '',

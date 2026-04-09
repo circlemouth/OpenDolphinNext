@@ -1,4 +1,3 @@
-export const OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE = 'LOCAL_OTHER';
 export const OTHER_ORDER_LOCAL_ONLY_CODE_PREFIX = 'LOCAL_OTHER:';
 
 export const OTHER_ORDER_ALLOWED_ROW_ROLES = ['main', 'comment'] as const;
@@ -12,9 +11,6 @@ const trimToNull = (value?: string | null) => {
 
 export const isOtherOrderRowRole = (value?: string | null): value is OtherOrderRowRole =>
   value === 'main' || value === 'comment';
-
-export const isOtherOrderSentinelClassCode = (value?: string | null) =>
-  trimToNull(value) === OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE;
 
 export const isOtherOrderBodyPartCode = (value?: string | null) => (trimToNull(value) ?? '').startsWith('002');
 
