@@ -23,8 +23,9 @@
   根拠:
   `medicationgetv2` は `Selection_Expression_Information` で `Item_Number / Item_Number_Branch` を返す一方、`medicalmodv2` request は `Medication_Code / Name / Number / Generic_Flg` までで、`Medication_Input_Info` は `medicalsetv2` の `830/842/8501/8511/8521/831` structured family 補足にだけ現れる。
 
-## Verification summary
+## Historical Verification Snapshot
 
-- `git grep -n "BP001" -- web-client server-modernized` は 0 件。
-- `git grep -n "generalOrder" -- web-client/src server-modernized/src` は boundary alias helper とその最小テスト、および server 境界 alias のみ。
-- `git grep -n "ENTITY_GENERAL_ORDER" -- server-modernized/src/main/java/open/dolphin/rest/orca server-modernized/src/test/java/open/dolphin/rest/orca` は request boundary alias とそのテストのみ。
+- This snapshot records the original cleanup run. It does not replace current workspace verification.
+- `git grep -n "BP001" -- web-client server-modernized` was 0 at the time of that run.
+- `git grep -n "generalOrder" -- web-client/src server-modernized/src` resolved to the boundary alias helper, its minimal test coverage, and the server boundary alias at the time of that run.
+- `git grep -n "ENTITY_GENERAL_ORDER" -- server-modernized/src/main/java/open/dolphin/rest/orca server-modernized/src/test/java/open/dolphin/rest/orca` resolved to the request boundary alias and its test coverage at the time of that run.
