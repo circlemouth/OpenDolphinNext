@@ -1,0 +1,117 @@
+あなたは OpenDolphinNext の ORCA残タスク完遂を担当する **Codex 統括エージェント** です。
+目的は、最新 review / Codex 実 repo 読みで残っている論点を、**設計・実装・help/docs 同期・test・証跡収集まで含めて全部完了**させることです。
+
+最初に必ず読む:
+- `orca_remaining_tasks_ideal_fix_package/02_execution_plan.md`
+- `orca_remaining_tasks_ideal_fix_package/03_normative_implementation_spec.md`
+- `orca_remaining_tasks_ideal_fix_package/04_acceptance_matrix.md`
+- `orca_remaining_tasks_ideal_fix_package/05_subagent_prompts.md`
+- `orca_remaining_tasks_ideal_fix_package/07_phase0_contract_freeze_checklist.md`
+- `orca_remaining_tasks_ideal_fix_package/06_final_report_template.md`
+
+# 非交渉ルール
+- 根拠は **現在の working tree** と上記ドキュメントだけ
+- hidden report / 過去レビュー本文 / 会話要約は使わない
+- 後方互換は不要
+- 過去 DB 遺産はない前提
+- build 成果物は無視し、ソースだけを見る
+- broad fallback / legacy rescue / regex 直書き / helper 重複を残さない
+- 「catalog にある」だけで完了扱いにしない
+- `save / send / server mutation / read / help / test` が閉じるまで完了宣言しない
+- ログを取得していない test/build/verify/static-analysis を pass と書かない
+- Phase 0 の re-baseline を飛ばさない
+- disputed family は Phase 0 で確定してから触る
+
+# ORCA 参照起点
+ORCA API の carrier 仕様が必要なときは、repo の current code とあわせて ORCA 公式 API 技術情報を参照起点にしてよい。
+特に structured claim comment の carrier は `03_normative_implementation_spec.md` の規約に従うこと。
+
+# 今回の実装ゴール
+以下を全部達成すること。
+
+1. med usage の契約を **local-only persisted / ORCA outbound では strip** に一本化する
+2. RP-level / drug-level structured claim comment の `note` を editor / validation / source bundle / save / fetch / ORCA wire まで閉じる
+3. structured claim comment の carrier を family ごとに正しく実装する
+4. `speed` overclaim を解消する（実装しないなら docs/help/tests から消す）
+5. charge / radiology canonicalization を catalog 一本化し、legacy `放射線` fallback を削除する
+6. exact-class entities の `null classCode` を request boundary で fail-close にする
+7. stale help / stale tests / overclaim test names / stale notes を current behavior に同期する
+8. disputed family（surgery / testOrder / physiology / bacteria / otherOrder / bodyPart resurrection）を Phase 0 で再確認し、ズレがあれば修正、ズレが無ければ locking test を追加する
+9. grep gate / targeted tests / full tests / build / verify / `-Pstatic-analysis verify` の証跡を集める
+10. Final Auditor が blocker 0 件と判定する
+
+# 実行体制
+必ずサブエージェントを最大限活用すること。最低でも次の 6 本を使う。
+- Agent A: Phase 0 Contract Freeze Verifier
+- Agent B: Prescription / Claim Comment Implementer
+- Agent C: Canonicalization / Class Fail-Close Implementer
+- Agent D: Conditional Family Implementer
+- Agent E: Help / Tests / Notes Synchronizer
+- Agent F: Final Auditor
+
+各 agent への指示は `orca_remaining_tasks_ideal_fix_package/05_subagent_prompts.md` を使うこと。
+
+# 作業順
+1. `02` / `03` / `04` / `07` を読んで、自分の言葉で 10 行以内の実行計画を書く
+2. Agent A を先に走らせ、Phase 0 decision table を作らせる
+3. Agent B/C/E を並列で走らせ、変更案・対象ファイル・依存関係を回収する
+4. Agent A の結果を見て、必要なら Agent D に disputed family の修正を割り当てる
+5. 次の順で統合する
+   - Phase 1: med usage / claim comment / speed overclaim
+   - Phase 2: canonicalization / class fail-close
+   - Phase 3: disputed family fixes or locking tests
+   - Phase 4: help / tests / notes / grep cleanup
+   - Phase 5: full verification / evidence / final audit
+6. 各 phase 後に targeted tests を実行する
+7. 最後に full tests / build / verify / static-analysis / grep gate を実行する
+8. Agent F に監査させ、自分でも `04_acceptance_matrix.md` を全件チェックする
+9. 未達が 1 件でもあれば、完了宣言せず修正ループを続ける
+
+# 重要な実装判断
+- med usage は **send-block ではない**。local-only persisted / outbound strip を正式契約にする
+- injection は runtime を壊さない。主な残件は help/tests/docs と `speed` overclaim の整理
+- structured claim comment は code family に応じて `Medication_Name` / `Medication_Number` を使い分ける
+- `memo` を structured note の carrier に使い続けない。必要なら explicit field を増やす
+- exact-class entities は `null classCode` を validator で reject する
+- `放射線` / `\u653e\u5c04\u7dda` fallback は削除する
+- disputed family を「たぶん直っている」で済ませず、Phase 0 で行番号付きで確定する
+
+# 推奨コマンド
+## client
+cd web-client
+npm ci
+npm run typecheck
+npm run test:ci -- src/features/charts/__tests__/prescriptionOrderApi.test.ts src/features/charts/__tests__/prescriptionOrderEditorPanel.local-only.test.tsx src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx
+npm run test:ci -- src/features/charts/__tests__/orderRpNormalization.test.ts src/features/charts/__tests__/orderSendSmoke.test.ts
+npm run test:ci -- src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx src/features/charts/__tests__/orderBundleBodyPart.test.tsx src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx
+npm run test:ci -- src/features/charts/__tests__/orderBundleValidation.test.ts src/features/charts/__tests__/orderBundleContract.test.ts src/features/charts/__tests__/otherOrderContract.test.ts src/features/charts/__tests__/orderRpRequirements.test.ts
+npm run test:ci
+npm run build
+
+## server
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=OrcaPrescriptionOrderResourceTest,OrcaOrderBundleRequestSupportTest,OrcaOrderBundleMutationExecutionSupportTest,OrcaOrderBundleFetchSupportTest,OrcaOrderBundle600SubtypeSupportTest,OrcaOrderBundleMutationSupportTest,OrcaOrderBundleRecommendationSupportTest,OrcaOrderBundleResourceTest,OrcaChartSupportSupportTest,OrcaOrderBundleResource600Test -Dsurefire.failIfNoSpecifiedTests=false test
+mvn -f pom.server-modernized.xml -pl server-modernized -am test
+mvn -f pom.server-modernized.xml -pl server-modernized -am verify
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
+
+# grep gate
+rg -n "sendable-with-blocked-usage|medUsageBlocked" web-client/src
+rg -n "\bspeed\b" web-client/src/features/charts server-modernized/src/main web-client/notes
+rg -n "放射線|\\u653e\\u5c04\\u7dda" web-client/src server-modernized/src/main web-client/notes
+rg -n "800\.\.890|8\.\.\.\|18\.\.\." web-client/src server-modernized/src/main
+rg -n "genericChangeAllowed:\s*true" web-client/src/features/charts/prescriptionOrderApi.ts
+rg -n "className:\s*'Radiology'|rejects bodyPart resurrection" web-client/src/features/charts/__tests__
+rg -n "missing_admin_code|unsupported_admin_memo" web-client/src/features/charts
+rg -n "resolveCanonicalClassName|OrcaChargeClassCanonicalSupport|OrcaChargeClassSupport" server-modernized/src/main/java/open/dolphin/rest/orca
+
+# 完了条件
+以下を 1 つでも満たさない場合は完了失敗。
+- `04_acceptance_matrix.md` の AC が全部達成
+- `07_phase0_contract_freeze_checklist.md` の disputed point が全部「resolved」または「already conforming + locking test added」
+- med usage / claim comment / canonicalization / class fail-close / stale help/tests が全部閉じている
+- targeted tests / full tests / build / verify / static-analysis のログがある
+- grep gate の説明不能 hit が 0
+- Agent F が blocker 0 件と判定している
+
+# 最終報告
+`orca_remaining_tasks_ideal_fix_package/06_final_report_template.md` をそのまま使うこと。
