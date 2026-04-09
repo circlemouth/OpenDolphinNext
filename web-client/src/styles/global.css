@@ -430,6 +430,20 @@ body {
   box-shadow: none;
 }
 
+.login-form__actions button + button {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+  box-shadow: none;
+}
+
+.login-form__actions button + button:hover:not(:disabled) {
+  transform: none;
+  background: var(--ui-surface-muted);
+  border-color: var(--ui-border-strong);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
 /* Status Messages */
 .status-message {
   padding: 1rem;
@@ -451,6 +465,39 @@ body {
   background: #f0fdf4;
   border-color: #86efac;
   color: #166534;
+}
+
+.login-card__header .status-message,
+.login-form .status-message {
+  width: min(100%, 420px);
+}
+
+.status-message--step {
+  background: #ffffff;
+  border-color: #dbeafe;
+  color: var(--ui-text);
+}
+
+.status-message--destination {
+  background: #f8fafc;
+  border-color: var(--ui-border-subtle);
+  color: var(--ui-text-muted);
+}
+
+.status-message--quiet {
+  background: #ffffff;
+  border-color: var(--ui-border);
+  color: var(--ui-text);
+}
+
+.status-message--feedback {
+  width: min(100%, 420px);
+}
+
+.status-message__detail {
+  margin: 0.35rem 0 0;
+  line-height: 1.55;
+  color: inherit;
 }
 
 @keyframes slideUp {

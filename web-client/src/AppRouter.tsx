@@ -1565,7 +1565,7 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
         <header className="app-shell__topbar" data-run-id={resolvedRunId}>
           <div className="app-shell__brand">
             <span className="app-shell__title">OpenDolphin Web</span>
-            <small className="app-shell__subtitle">電子カルテデモシェル</small>
+            <small className="app-shell__subtitle">臨床業務ワークスペース</small>
           </div>
           <div className="app-shell__session" data-run-id={resolvedRunId}>
             <span className="app-shell__pill app-shell__pill--fixed">施設ID: {session.facilityId}</span>
@@ -1579,10 +1579,10 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
               type="button"
               className="app-shell__debug-copy"
               onClick={handleCopyRunId}
-              aria-label="障害情報コピー"
+              aria-label="RUN_ID をコピー"
               title={resolvedRunId ? `RUN_ID をコピー: ${resolvedRunId}` : 'RUN_ID をコピー'}
             >
-              障害情報コピー
+              RUN_ID コピー
             </button>
           </div>
         </header>

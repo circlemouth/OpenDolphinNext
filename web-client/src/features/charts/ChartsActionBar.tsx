@@ -110,7 +110,7 @@ const ACTION_LABEL: Record<ChartAction, string> = {
   print: '印刷',
 };
 
-const CHARTS_SUPPORT_GUIDE = '必要に応じて障害情報コピーで RUN_ID を共有してください。';
+const CHARTS_SUPPORT_GUIDE = '必要に応じて RUN_ID コピーで実行IDを共有してください。';
 
 const buildActionSuccessDetail = (action: ChartAction) => {
   if (action === 'send') {

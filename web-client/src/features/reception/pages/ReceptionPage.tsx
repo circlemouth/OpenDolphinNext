@@ -224,7 +224,7 @@ const RECEPTION_REALTIME_STATUS_TONE: Record<
 
 const ACCEPT_SUCCESS_RESULTS = new Set(['00', '0000', 'K3']);
 const ACCEPT_WARNING_RESULTS = new Set(['16', '21']);
-const RECEPTION_SUPPORT_GUIDE = '必要に応じて障害情報コピーで RUN_ID を共有してください。';
+const RECEPTION_SUPPORT_GUIDE = '必要に応じて RUN_ID コピーで実行IDを共有してください。';
 
 const buildReceptionAcceptResultDetail = () => '結果を確認し、必要なら一覧を再取得してください。';
 

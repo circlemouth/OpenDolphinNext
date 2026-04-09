@@ -74,7 +74,7 @@ const SIDEBAR_WIDTH_DEFAULT = 380;
 const SIDEBAR_WIDTH_MIN = 320;
 const SIDEBAR_WIDTH_MAX = 520;
 const SIDEBAR_WIDTH_KEY_STEP = 16;
-const PATIENTS_SUPPORT_GUIDE = '必要に応じて障害情報コピーで RUN_ID を共有してください。';
+const PATIENTS_SUPPORT_GUIDE = '必要に応じて RUN_ID コピーで実行IDを共有してください。';
 
 const DEFAULT_FILTER = {
   keyword: '',

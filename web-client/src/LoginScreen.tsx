@@ -531,9 +531,9 @@ export const LoginScreen = ({
   }, [isLoading, isSuccess, step]);
 
   const statusClassName = useMemo(() => {
-    if (feedbackTone === 'success') return 'status-message is-success';
-    if (feedbackTone === 'info') return 'status-message';
-    return 'status-message is-error';
+    if (feedbackTone === 'success') return 'status-message status-message--feedback is-success';
+    if (feedbackTone === 'info') return 'status-message status-message--feedback';
+    return 'status-message status-message--feedback is-error';
   }, [feedbackTone]);
   const feedbackRole = feedbackTone === 'error' ? 'alert' : 'status';
   const feedbackLive = feedbackTone === 'error' ? 'assertive' : 'polite';
@@ -550,13 +550,13 @@ export const LoginScreen = ({
               <img src={SYSTEM_ICON_URL} alt="OpenDolphin システムアイコン" />
             </div>
           </div>
-          <div className="status-message" role="status" aria-live="polite">
+          <div className="status-message status-message--step" role="status" aria-live="polite">
             <p style={{ margin: 0, fontWeight: 700 }}>{stepMeta.badge}</p>
             <p style={{ margin: '0.25rem 0 0', fontWeight: 700 }}>{stepMeta.title}</p>
             <p className="status-message__detail">{stepMeta.body}</p>
           </div>
           {destinationSummary ? (
-            <div className="status-message" role="status" aria-live="polite">
+            <div className="status-message status-message--destination" role="status" aria-live="polite">
               <p style={{ margin: 0, fontWeight: 700 }}>{destinationSummary.title}</p>
               <p className="status-message__detail">{destinationSummary.body}</p>
             </div>
@@ -631,7 +631,7 @@ export const LoginScreen = ({
             </>
           ) : (
             <>
-              <div className="status-message" role="status" aria-live="polite">
+              <div className="status-message status-message--quiet" role="status" aria-live="polite">
                 {AUTH_COPY.factor2Required}
                 <p className="status-message__detail">
                   対象: {pendingSecondFactor?.facilityId}:{pendingSecondFactor?.userId}
