@@ -1,0 +1,355 @@
+{
+  "version": "2026-04-07",
+  "purpose": "Self-contained ORCA order alignment decision tables for implementation.",
+  "sendableEntities": [
+    "medOrder",
+    "injectionOrder",
+    "treatmentOrder",
+    "surgeryOrder",
+    "testOrder",
+    "radiologyOrder",
+    "baseChargeOrder",
+    "instractionChargeOrder"
+  ],
+  "entityModes": {
+    "otherOrder": "local-only",
+    "physiologyOrder": "import-only",
+    "bacteriaOrder": "local-only"
+  },
+  "aliases": {
+    "generalOrder": "treatmentOrder",
+    "laboTest": "testOrder",
+    "instructionChargeOrder": "instractionChargeOrder"
+  },
+  "localOnlyFields": [
+    "bundleName",
+    "admin",
+    "adminCode",
+    "adminCodeSystem",
+    "adminMemo",
+    "memo",
+    "started",
+    "startDate",
+    "rowRole",
+    "rowSubtype",
+    "unit",
+    "sourceSetCode",
+    "itemMemo",
+    "itemNumber",
+    "itemNumberBranch",
+    "selectionCommentItemNumber",
+    "selectionCommentItemNumberBranch",
+    "genericChangeAllowed",
+    "doctorComment",
+    "remarks",
+    "prescriptionSettings",
+    "numberCode",
+    "numberCodeSystem",
+    "numberCodeName",
+    "lowerCode",
+    "lowerCodeSystem",
+    "lowerName",
+    "subtype",
+    "specimen"
+  ],
+  "commentCarrierRules": {
+    "830": {
+      "carrier": "Medication_Name",
+      "valueType": "text",
+      "required": true
+    },
+    "842": {
+      "carrier": "Medication_Number",
+      "valueType": "number",
+      "required": true
+    },
+    "8501": {
+      "carrier": "Medication_Number",
+      "valueType": "date",
+      "required": true
+    },
+    "8511": {
+      "carrier": "Medication_Number",
+      "valueType": "time",
+      "required": true
+    },
+    "8521": {
+      "carrier": "Medication_Number",
+      "valueType": "duration",
+      "required": true
+    },
+    "831": {
+      "carrier": "Medication_Number",
+      "valueType": "procedureCode9",
+      "required": true
+    }
+  },
+  "selectionComment": {
+    "policy": "block-on-picker-save-server-send",
+    "outboundCarrier": "none-in-generic-medicalmodv2"
+  },
+  "classNameMap": {
+    "110": "初診料",
+    "114": "初診加算料",
+    "120": "再診",
+    "124": "再診加算料",
+    "130": "管理料",
+    "132": "管理材料",
+    "133": "管理加算料",
+    "140": "在宅料",
+    "141": "在宅薬剤",
+    "142": "在宅材料",
+    "143": "在宅加算料",
+    "148": "在宅薬剤（院外処方）",
+    "149": "在宅材料（院外処方）",
+    "400": "処置",
+    "401": "処置薬剤",
+    "402": "処置材料",
+    "403": "処置加算料",
+    "409": "処置",
+    "500": "手術",
+    "501": "手術薬剤",
+    "502": "手術材料",
+    "510": "輸血",
+    "600": "検査",
+    "601": "検査薬剤",
+    "602": "検査材料",
+    "603": "検査加算料",
+    "610": "検査",
+    "700": "画像診断",
+    "701": "画像診断薬剤",
+    "702": "画像診断材料",
+    "703": "X線フィルム",
+    "704": "画像診断加算料",
+    "731": "造影剤・注入手技",
+    "732": "造影剤・注入手技"
+  },
+  "entities": {
+    "medOrder": {
+      "status": "sendable-with-blocked-usage",
+      "allowlist": [
+        "210",
+        "211",
+        "212",
+        "213",
+        "220",
+        "221",
+        "222",
+        "223",
+        "230",
+        "231",
+        "232",
+        "233",
+        "290",
+        "291",
+        "292",
+        "293",
+        "294",
+        "295",
+        "296",
+        "297",
+        "298"
+      ],
+      "requirements": [
+        "raw-medical-class-lossless",
+        "generic-flag-tristate",
+        "structured-comment-table"
+      ],
+      "blockedConditions": [
+        "usage-present",
+        "selection-comment-parameter-present",
+        "structured-comment-value-missing",
+        "unresolved-code"
+      ]
+    },
+    "injectionOrder": {
+      "status": "sendable",
+      "allowlist": [
+        "310",
+        "311",
+        "312",
+        "320",
+        "321",
+        "330",
+        "331",
+        "334",
+        "340",
+        "350"
+      ],
+      "blockedClasses": [
+        "335",
+        "332",
+        "352"
+      ],
+      "localOnly": [
+        "admin",
+        "adminCode",
+        "adminMemo",
+        "speed"
+      ],
+      "blockedFields": [
+        "bodyPart"
+      ],
+      "flags": [
+        "no-synthetic-admin-row"
+      ]
+    },
+    "treatmentOrder": {
+      "status": "sendable",
+      "allowlist": [
+        "400",
+        "401",
+        "402",
+        "403",
+        "409"
+      ],
+      "blockedFields": [
+        "bodyPart"
+      ],
+      "classModes": {
+        "400": "procedure-capable",
+        "409": "procedure-capable",
+        "401": "drug-only",
+        "402": "material-only",
+        "403": "add-on-only"
+      }
+    },
+    "surgeryOrder": {
+      "status": "sendable-subset",
+      "allowlist": [
+        "500",
+        "501",
+        "502",
+        "510"
+      ],
+      "blockedClasses": [
+        "520",
+        "540",
+        "541",
+        "542"
+      ],
+      "blockedFields": [
+        "bodyPart"
+      ],
+      "classModes": {
+        "500": "procedure-capable",
+        "501": "drug-only",
+        "502": "material-only",
+        "510": "procedure-capable"
+      }
+    },
+    "testOrder": {
+      "status": "sendable",
+      "allowlist": [
+        "600",
+        "601",
+        "602",
+        "603",
+        "610"
+      ],
+      "blockedClasses": [
+        "640",
+        "643"
+      ],
+      "classModes": {
+        "600": "main-test",
+        "610": "main-test",
+        "601": "drug-only",
+        "602": "material-only",
+        "603": "add-on-only"
+      }
+    },
+    "physiologyOrder": {
+      "status": "import-only",
+      "allowlist": [],
+      "notes": [
+        "local save/fetch allowed",
+        "generic 600 family sendability belongs to testOrder, not physiologyOrder"
+      ]
+    },
+    "bacteriaOrder": {
+      "status": "local-only",
+      "allowlist": [],
+      "notes": [
+        "subtype optional local-only metadata",
+        "specimen local-only convenience",
+        "send blocked at entity level"
+      ]
+    },
+    "radiologyOrder": {
+      "status": "sendable-subset",
+      "allowlist": [
+        "700",
+        "701",
+        "702",
+        "703",
+        "704",
+        "731",
+        "732"
+      ],
+      "blockedClasses": [
+        "710",
+        "711",
+        "712",
+        "713",
+        "720",
+        "721",
+        "723",
+        "724"
+      ],
+      "bodyPartPolicy": {
+        "plain_xray_or_photo": "002-allowed",
+        "ct_mri": "selection-comment-bodypart-required-002-forbidden",
+        "mammography": "optional",
+        "standalone_class": "no-dedicated-bodypart-field"
+      },
+      "blockedFields": [
+        "contrastDrugAsCanonicalSubtype",
+        "materialAsCanonicalSubtype"
+      ]
+    },
+    "baseChargeOrder": {
+      "status": "sendable",
+      "allowlist": [
+        "110",
+        "114",
+        "120",
+        "124"
+      ],
+      "rules": [
+        "one-bundle-one-exact-class",
+        "no-umbrella-class-name"
+      ]
+    },
+    "instractionChargeOrder": {
+      "status": "sendable",
+      "allowlist": [
+        "130",
+        "132",
+        "133",
+        "140",
+        "141",
+        "142",
+        "143",
+        "148",
+        "149"
+      ],
+      "blockedClasses": [
+        "131",
+        "144",
+        "145",
+        "146",
+        "147",
+        "150"
+      ],
+      "rules": [
+        "one-bundle-one-exact-class",
+        "no-umbrella-class-name"
+      ]
+    },
+    "otherOrder": {
+      "status": "local-only",
+      "allowlist": []
+    }
+  }
+}

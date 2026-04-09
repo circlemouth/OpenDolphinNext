@@ -31,8 +31,8 @@ final class OrcaChartSupportSupport {
         List<ChartSupportMedicalModV2Request.MedicalInformation> information = new ArrayList<>();
         if (payload.isIncludeInitialConsultation()) {
             ChartSupportMedicalModV2Request.MedicalInformation initial = new ChartSupportMedicalModV2Request.MedicalInformation();
-            initial.setMedicalClass("11");
-            initial.setMedicalClassName("基本診療料");
+            initial.setMedicalClass("110");
+            initial.setMedicalClassName(OrcaMedicalClassCatalog.resolveExactClassName(null, "110"));
             initial.setMedicalClassNumber("1");
             ChartSupportMedicalModV2Request.Medication medication = new ChartSupportMedicalModV2Request.Medication();
             medication.setCode("110000010");
@@ -72,8 +72,10 @@ final class OrcaChartSupportSupport {
             }
             builder.append("<Medical_Information_child type=\"record\">");
             appendTag(builder, "Medical_Class", entry.getMedicalClass());
-            String medicalClassName = OrcaChargeClassCanonicalSupport.canonicalClassNameForMedicalClass(
-                    entry.getMedicalClass(), entry.getMedicalClassName());
+            String medicalClassName = OrcaMedicalClassCatalog.resolveExactClassName(null, entry.getMedicalClass());
+            if (isBlank(medicalClassName)) {
+                medicalClassName = safe(entry.getMedicalClassName());
+            }
             if (!isBlank(medicalClassName)) {
                 appendTag(builder, "Medical_Class_Name", medicalClassName);
             }

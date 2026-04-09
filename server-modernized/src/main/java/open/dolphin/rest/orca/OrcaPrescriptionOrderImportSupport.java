@@ -72,7 +72,7 @@ final class OrcaPrescriptionOrderImportSupport {
             return false;
         }
         for (PrescriptionRp rp : doOrder.getRps()) {
-            if (rp == null || rp.getDrugs() == null || rp.getDrugs().isEmpty()) {
+            if (rp == null || safeList(rp.getDrugs()).isEmpty()) {
                 continue;
             }
             if (!hasText(rp.getUsageCode())) {

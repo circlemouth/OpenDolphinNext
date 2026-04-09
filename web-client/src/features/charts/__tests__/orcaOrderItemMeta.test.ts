@@ -24,7 +24,7 @@ describe('orcaOrderItemMeta', () => {
     expect(parsed.meta.userComment).toBeUndefined();
   });
 
-  it('format で userComment を含む meta を出力する', () => {
+  it('format で genericFlg と userComment を出力する', () => {
     const formatted = formatOrcaOrderItemMemo(
       {
         genericFlg: 'yes',

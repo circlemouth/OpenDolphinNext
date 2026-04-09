@@ -84,6 +84,7 @@ export type MedicalModV2BundleIssueCode =
   | 'unsupported_physiology_order'
   | 'unsupported_bacteria_subtype'
   | 'unsupported_selection_comment_parameter'
+  | 'unsupported_body_part'
   | 'unsupported_admin_memo';
 
 export type MedicalModV2BundleIssue = {

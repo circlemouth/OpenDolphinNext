@@ -3,12 +3,14 @@ import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
 import {
   ORDER_GROUP_REGISTRY,
   resolveBundleNumberLabel,
+  resolveCanonicalOrderEntity,
   resolveOrderEntity,
   resolveOrderGroupKeyByEntity,
   type BundleNumberLabel,
   type OrderEntity,
   type OrderGroupKey,
 } from './orderCategoryRegistry';
+import { resolveCanonicalChargeClassName } from './orderChargeClassSupport';
 import {
   extractIngredientAmount,
   formatBodyPartLine,
@@ -21,6 +23,7 @@ import {
   stripLeadingCode,
   toSafeMemoText,
 } from './orderDetailFormatters';
+import { resolveMedicalClassName } from './orcaMedicalClassCatalog';
 
 export type OrderDetailDisplayCategoryKey = OrderGroupKey | 'document';
 
@@ -77,6 +80,18 @@ const SUMMARY_CATEGORIES: SummaryCategorySpec[] = [
   { key: 'document', label: '文書' },
 ];
 
+const resolveBundleDisplayClassName = (bundle: OrderBundle) => {
+  const entity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  const classCode = bundle.classCode?.trim() ?? '';
+  if (entity === 'radiologyOrder') {
+    return resolveMedicalClassName(classCode) ?? resolveMedicalClassName('700');
+  }
+  if (entity === 'baseChargeOrder' || entity === 'instractionChargeOrder') {
+    return resolveCanonicalChargeClassName(entity, classCode) ?? resolveCanonicalChargeClassName(entity);
+  }
+  return bundle.className?.trim() || undefined;
+};
+
 const parseStartedTimestamp = (bundle: OrderBundle): number | null => {
   const raw = bundle.started?.trim();
   if (!raw) return null;
@@ -109,7 +124,7 @@ const compareBundleSortMeta = (left: BundleSortMeta, right: BundleSortMeta) => {
 };
 
 const normalizeBundleName = (bundle: OrderBundle) => {
-  const value = normalizeInline(bundle.bundleName) || normalizeInline(bundle.className);
+  const value = normalizeInline(bundle.bundleName) || normalizeInline(resolveBundleDisplayClassName(bundle));
   return value || '名称未設定';
 };
 
@@ -269,7 +284,6 @@ const buildBundleDetailLines = (group: OrderGroupKey, bundle: OrderBundle, bundl
 
 const buildGroupSpecificModel = (
   group: OrderGroupKey,
-  entity: OrderEntity,
   bundle: OrderBundle,
   bundleNumberLabel: BundleNumberLabel,
   bundleNumberValue: string,
@@ -327,9 +341,6 @@ const buildGroupSpecificModel = (
     });
     const detailLines = buildBundleDetailLines(group, bundle, bundleNumberLabel);
     const resolvedMissingFlags = [...missingFlags];
-    if (entity === 'radiologyOrder' && !resolveBundleBodyPart(bundle)) {
-      resolvedMissingFlags.push('missing_body_part');
-    }
     return {
       title: '',
       items,
@@ -369,7 +380,7 @@ const buildOrderDetailDisplayRow = (
 ): OrderDetailDisplayViewModel => {
   const entity = normalizeBundleEntity(bundle, fallbackEntity);
   const { bundleNumberLabel, bundleNumberValue } = resolveBundleNumberMeta(group, bundle);
-  const grouped = buildGroupSpecificModel(group, entity, bundle, bundleNumberLabel, bundleNumberValue);
+  const grouped = buildGroupSpecificModel(group, bundle, bundleNumberLabel, bundleNumberValue);
   return {
     id: buildRowId(group, bundle, index),
     group,

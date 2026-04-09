@@ -55,4 +55,8 @@ final class OrcaCommentCarrierRules {
     static boolean isUnknownStructuredPrescriptionClaimCommentFamily(String code) {
         return "unknown".equals(resolvePrescriptionStructuredCommentFamily(code));
     }
+
+    static boolean isSelectionCommentParameterAllowed() {
+        return false;
+    }
 }

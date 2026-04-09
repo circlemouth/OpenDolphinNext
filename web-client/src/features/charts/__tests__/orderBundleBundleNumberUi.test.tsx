@@ -66,7 +66,7 @@ const injectionProps = {
 const chargeProps = {
   ...baseProps,
   entity: 'baseChargeOrder',
-  title: '基本料編集',
+  title: '初診料編集',
   bundleLabel: '算定',
   itemQuantityLabel: '数量',
 };

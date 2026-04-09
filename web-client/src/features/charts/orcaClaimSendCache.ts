@@ -43,6 +43,10 @@ type OrcaClaimSendCacheStore = Record<string, OrcaClaimSendCacheEntry>;
 const AUTH_STORAGE_KEY = 'opendolphin:web-client:auth';
 const volatileClaimSendCache = new Map<string, OrcaClaimSendCacheEntry>();
 
+export function resetOrcaClaimSendCacheForTests() {
+  volatileClaimSendCache.clear();
+}
+
 const buildKey = (scope: StorageScope) => {
   const facility = scope.facilityId ?? 'unknown-facility';
   const user = scope.userId ?? 'unknown-user';

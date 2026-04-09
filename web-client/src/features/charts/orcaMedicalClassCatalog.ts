@@ -164,12 +164,18 @@ export const isOrcaClassCodeCompatible = (value?: string | null, classCode?: str
   return contract.allowedClassCodes.includes(normalizedClassCode);
 };
 
+export const isOrcaEntityClassAllowed = (value?: string | null, classCode?: string | null) =>
+  isOrcaClassCodeCompatible(value, classCode);
+
 export const supportsOrcaBodyPartField = (value?: string | null, classCode?: string | null) => {
   const contract = resolveOrcaEntityContract(value);
   const normalizedClassCode = trimToNull(classCode);
   if (!contract?.bodyPartAllowedClassCodes || !normalizedClassCode) return false;
   return contract.bodyPartAllowedClassCodes.includes(normalizedClassCode);
 };
+
+export const supportsBodyPartForEntityClass = (value?: string | null, classCode?: string | null) =>
+  supportsOrcaBodyPartField(value, classCode);
 
 export const isLocalOnlyOrcaEntity = (value?: string | null) => Boolean(resolveOrcaEntityContract(value)?.localOnly);
 
@@ -183,6 +189,20 @@ export const normalizeRadiologyLabel = (value?: string | null) => {
   const normalized = trimToNull(value);
   if (!normalized) return undefined;
   return normalized === LEGACY_RADIOLOGY_LABEL ? '画像診断' : normalized;
+};
+
+export const resolveMedicalClassName = (classCode?: string | null) => {
+  const normalized = trimToNull(classCode);
+  if (!normalized) return undefined;
+  if (EXACT_MED_CLASS_CODES.includes(normalized as (typeof EXACT_MED_CLASS_CODES)[number])) return '処方';
+  if (EXACT_INJECTION_CLASS_CODES.includes(normalized as (typeof EXACT_INJECTION_CLASS_CODES)[number])) return '注射';
+  if (EXACT_TREATMENT_CLASS_CODES.includes(normalized as (typeof EXACT_TREATMENT_CLASS_CODES)[number])) return '処置';
+  if (EXACT_SURGERY_CLASS_CODES.includes(normalized as (typeof EXACT_SURGERY_CLASS_CODES)[number])) return '手術';
+  if (EXACT_TEST_CLASS_CODES.includes(normalized as (typeof EXACT_TEST_CLASS_CODES)[number])) return '検査';
+  if (EXACT_RADIOLOGY_CLASS_CODES.includes(normalized as (typeof EXACT_RADIOLOGY_CLASS_CODES)[number])) return '画像診断';
+  if (EXACT_BASE_CHARGE_CLASS_CODES.includes(normalized as (typeof EXACT_BASE_CHARGE_CLASS_CODES)[number])) return '基本診療料';
+  if (EXACT_INSTRUCTION_CHARGE_CLASS_CODES.includes(normalized as (typeof EXACT_INSTRUCTION_CHARGE_CLASS_CODES)[number])) return '医学管理等';
+  return undefined;
 };
 
 export const isAuxiliaryMaterialCode = (value?: string | null) => /^7\d{8}$/.test(trimToNull(value) ?? '');

@@ -80,6 +80,20 @@ final class OrcaMedicalClassCatalog {
         return !contract.allowedClassCodes().isEmpty() && contract.allowedClassCodes().contains(normalizedClassCode);
     }
 
+    static boolean isAllowedClassCode(String entity, String classCode) {
+        String normalizedClassCode = trimToNull(classCode);
+        return normalizedClassCode != null && isCompatibleClassCode(entity, normalizedClassCode);
+    }
+
+    static boolean isMedOrderUsageBlocked(String entity) {
+        return IInfoModel.ENTITY_MED_ORDER.equals(normalizeEntity(entity));
+    }
+
+    static boolean supportsBodyPartField(String entity) {
+        ClassMeta defaultClassMeta = resolveDefaultClassMeta(entity);
+        return defaultClassMeta != null && supportsBodyPartField(entity, defaultClassMeta.classCode());
+    }
+
     static boolean supportsBodyPartField(String entity, String classCode) {
         EntityContract contract = resolveContract(entity);
         String normalizedClassCode = trimToNull(classCode);
@@ -87,6 +101,18 @@ final class OrcaMedicalClassCatalog {
             return false;
         }
         return contract.bodyPartAllowedClassCodes().contains(normalizedClassCode);
+    }
+
+    static boolean requiresSendableMainRow(String entity) {
+        String normalizedEntity = normalizeEntity(entity);
+        return normalizedEntity != null && !IInfoModel.ENTITY_MED_ORDER.equals(normalizedEntity);
+    }
+
+    static boolean requiresSendableMainRow(String entity, String classCode) {
+        if (!isCompatibleClassCode(entity, classCode)) {
+            return false;
+        }
+        return requiresSendableMainRow(entity);
     }
 
     static String resolveEntityLabel(String entity) {
@@ -135,6 +161,24 @@ final class OrcaMedicalClassCatalog {
             return null;
         }
         return LEGACY_RADIOLOGY_LABEL.equals(normalized) ? RADIOLOGY_LABEL : normalized;
+    }
+
+    static String resolveExactClassName(String entity, String classCode) {
+        String normalizedClassCode = trimToNull(classCode);
+        if (normalizedClassCode == null) {
+            return null;
+        }
+        String chargeClassName = resolveChargeClassName(normalizedClassCode);
+        if (chargeClassName != null) {
+            return chargeClassName;
+        }
+        String normalizedEntity = normalizeEntity(entity);
+        if (normalizedEntity != null && isCompatibleClassCode(normalizedEntity, normalizedClassCode)) {
+            ClassMeta defaultClassMeta = resolveDefaultClassMeta(normalizedEntity);
+            return defaultClassMeta != null ? defaultClassMeta.className() : null;
+        }
+        OrcaOrderInputSetSupport.ClassMetadata metadata = resolveInputSetClassMetadata(normalizedClassCode);
+        return metadata != null ? metadata.className() : null;
     }
 
     static OrcaOrderInputSetSupport.ClassMetadata resolveInputSetClassMetadata(String receiptCode) {

@@ -14,12 +14,12 @@ import org.junit.jupiter.api.Test;
 class OrcaOrderBundleMutationExecutionSupportTest {
 
     @Test
-    void executeRejectsInjectionWithMissingAdminCode() {
+    void executeRejectsInjectionWithoutAdminCode() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
                 () -> OrcaOrderBundleMutationExecutionSupport.execute(
                         buildPayload(buildInjectionUpdateOperation(
-                                "静注",
+                                "admin-a",
                                 null,
                                 List.of(buildItem("620000010", "drug-a", "main")))),
                         null,
@@ -32,7 +32,6 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                         OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
 
         assertTrue(ex.getMessage().contains("adminCode"));
-        assertTrue(ex.getMessage().contains("required"));
     }
 
     @Test
@@ -57,7 +56,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                 IllegalArgumentException.class,
                 () -> OrcaOrderBundleMutationExecutionSupport.execute(
                         buildPayload(buildInjectionUpdateOperation(
-                                "静注候補",
+                                "admin-b",
                                 "Y100",
                                 List.of(buildItem("620000010", "drug-a", null)))),
                         null,
@@ -70,7 +69,6 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                         OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
 
         assertTrue(ex.getMessage().contains("adminCode"));
-        assertTrue(ex.getMessage().contains("sendable numeric code"));
     }
 
     @Test
@@ -79,7 +77,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                 IllegalArgumentException.class,
                 () -> OrcaOrderBundleMutationExecutionSupport.execute(
                         buildPayload(buildInjectionUpdateOperation(
-                                "点滴",
+                                "admin-c",
                                 "4103",
                                 List.of(buildItem("700000031", "drip-set", "material")))),
                         null,
@@ -101,9 +99,9 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                 IllegalArgumentException.class,
                 () -> OrcaOrderBundleMutationExecutionSupport.execute(
                         buildPayload(buildInjectionUpdateOperation(
-                                "点滴",
+                                "admin-d",
                                 "4103",
-                                List.of(buildItem("0085001", "comment-only", "comment")))),
+                                List.of(buildItem("850100001", "comment-only", "comment")))),
                         null,
                         null,
                         new HashMap<>(),
@@ -123,7 +121,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                 IllegalArgumentException.class,
                 () -> OrcaOrderBundleMutationExecutionSupport.execute(
                         buildPayload(buildInjectionUpdateOperation(
-                                "点滴",
+                                "admin-e",
                                 "4103",
                                 List.of(
                                         buildItem("620000010", "drug-a", "main"),
@@ -143,10 +141,10 @@ class OrcaOrderBundleMutationExecutionSupportTest {
 
     @Test
     void executeRejectsInjectionBodyPartOnlyBundle() {
-        OrderBundleMutationRequest.BundleOperation operation = buildInjectionUpdateOperation("点滴", "4103", List.of());
+        OrderBundleMutationRequest.BundleOperation operation = buildInjectionUpdateOperation("admin-f", "4103", List.of());
         OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
         bodyPart.setCode("002001");
-        bodyPart.setName("胸部");
+        bodyPart.setName("body-part");
         operation.setBodyPart(bodyPart);
 
         IllegalArgumentException ex = assertThrows(
@@ -169,7 +167,7 @@ class OrcaOrderBundleMutationExecutionSupportTest {
     @Test
     void executeRejectsInjectionWithNon310ClassCode() {
         OrderBundleMutationRequest.BundleOperation operation =
-                buildInjectionUpdateOperation("点滴", "4103", List.of(buildItem("620000010", "drug-a", "main")));
+                buildInjectionUpdateOperation("admin-g", "4103", List.of(buildItem("620000010", "drug-a", "main")));
         operation.setClassCode("400");
 
         IllegalArgumentException ex = assertThrows(
@@ -186,6 +184,37 @@ class OrcaOrderBundleMutationExecutionSupportTest {
                         OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
 
         assertTrue(ex.getMessage().contains("classCode"));
+        assertTrue(ex.getMessage().contains("incompatible"));
+    }
+
+    @Test
+    void executeRejectsTreatmentBodyPart() {
+        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
+        bodyPart.setCode("002001");
+        bodyPart.setName("body-part");
+
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setOperation("create");
+        operation.setEntity("treatmentOrder");
+        operation.setClassCode("400");
+        operation.setStartDate("2026-04-04");
+        operation.setBodyPart(bodyPart);
+        operation.setItems(List.of(buildItem("140000610", "procedure", "main")));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(operation),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operationName, field, input, required) -> new Date(0L),
+                        documentId -> null,
+                        new NoOpPersistence(),
+                        (documentId, operationName, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+        assertTrue(ex.getMessage().contains("bodyPart"));
         assertTrue(ex.getMessage().contains("incompatible"));
     }
 

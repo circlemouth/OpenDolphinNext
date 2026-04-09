@@ -146,7 +146,7 @@ describe('orderRpNormalization', () => {
     );
   });
 
-  it('injectionOrder で admin があり adminCode が無い bundle は送信前 issue を返す', () => {
+  it('injectionOrder で admin があり adminCode が無くても main row があれば送信前 issue を返さない', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'injectionOrder',
@@ -158,13 +158,7 @@ describe('orderRpNormalization', () => {
       } as any,
     ]);
 
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toEqual(
-      expect.objectContaining({
-        code: 'missing_admin_code',
-        bundleName: 'missing-admin-code',
-      }),
-    );
+    expect(issues).toHaveLength(0);
   });
 
   it('injectionOrder で comment-only bundle は送信前 issue を返す', () => {
@@ -319,7 +313,7 @@ describe('orderRpNormalization', () => {
     );
   });
 
-  it('injectionOrder は rowRole-aware 判定で bodyPart/comment/material を sendable main row に数えない', () => {
+  it('injectionOrder は rowRole-aware 判定で bodyPart を local-only として block する', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'injectionOrder',
@@ -338,7 +332,7 @@ describe('orderRpNormalization', () => {
     expect(issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: 'missing_main_row',
+          code: 'unsupported_body_part',
           bundleName: 'aux-only',
         }),
       ]),

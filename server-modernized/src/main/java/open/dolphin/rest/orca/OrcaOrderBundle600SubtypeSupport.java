@@ -139,7 +139,7 @@ final class OrcaOrderBundle600SubtypeSupport {
         String normalizedClassCode = OrcaOrderBundleRequestSupport.trimToNull(classCode);
         if (normalizedRequested != null
                 && normalizedClassCode != null
-                && normalizedClassCode.startsWith("6")
+                && OrcaMedicalClassCatalog.isAllowedClassCode("testOrder", normalizedClassCode)
                 && "testOrder".equals(normalizedBundle)
                 && (IInfoModel.ENTITY_PHYSIOLOGY_ORDER.equals(normalizedRequested)
                         || IInfoModel.ENTITY_BACTERIA_ORDER.equals(normalizedRequested))) {

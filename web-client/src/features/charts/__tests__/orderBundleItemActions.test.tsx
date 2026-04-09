@@ -81,7 +81,7 @@ const generalProps = {
 const chargeProps = {
   ...baseProps,
   entity: 'baseChargeOrder',
-  title: '基本料編集',
+  title: '初診料編集',
   bundleLabel: '算定',
   itemQuantityLabel: '回数',
 };
@@ -497,7 +497,7 @@ describe('OrderBundleEditPanel item actions', () => {
       <OrderBundleEditPanel
         {...chargeProps}
         entity="instractionChargeOrder"
-        title="指導料編集"
+        title="管理料編集"
         bundleLabel="算定"
         itemQuantityLabel="回数"
       />,

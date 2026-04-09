@@ -490,7 +490,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="baseChargeOrder"
-        title="基本料"
+        title="初診料"
         bundleLabel="算定"
         itemQuantityLabel="数量"
       />,
@@ -534,7 +534,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="baseChargeOrder"
-        title="基本料"
+        title="再診料"
         bundleLabel="算定"
         itemQuantityLabel="数量"
       />,
@@ -795,7 +795,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('指導料オーダーの手技検索は etensu カテゴリ1を使用する', async () => {
+  it('管理料オーダーの手技検索は etensu カテゴリ1を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
@@ -809,8 +809,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="instractionChargeOrder"
-        title="指導料"
-        bundleLabel="指導料"
+        title="管理料"
+        bundleLabel="管理料"
         itemQuantityLabel="数量"
       />,
     );
