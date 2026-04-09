@@ -264,7 +264,7 @@ describe('orderRpNormalization', () => {
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('item memo');
   });
 
-  it('normalize は injectionOrder の admin 行と rowRole 順を固定する', () => {
+  it('normalize は injectionOrder の local-only admin 行を送信 payload へ含めない', () => {
     const normalized = normalizeOrderBundleToRp({
       entity: 'injectionOrder',
       bundleName: 'drip-set',
@@ -283,7 +283,6 @@ describe('orderRpNormalization', () => {
     expect(normalized?.header.medicalClass).toBe('310');
     expect(normalized?.header.medicalClassNumber).toBe('3');
     expect(normalized?.rows.map((row) => row.medication.code)).toEqual([
-      '4101',
       '830000001',
       '620000012',
       '700000031',
@@ -339,7 +338,7 @@ describe('orderRpNormalization', () => {
     );
   });
 
-  it('injectionOrder で adminMemo/speed を持つ bundle は送信前 issue を返す', () => {
+  it('injectionOrder は adminMemo/speed を持っていても local-only として送信前 issue を返さない', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'injectionOrder',
@@ -352,14 +351,7 @@ describe('orderRpNormalization', () => {
       } as any,
     ]);
 
-    expect(issues).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: 'unsupported_admin_memo',
-          bundleName: 'admin-memo',
-        }),
-      ]),
-    );
+    expect(issues).toHaveLength(0);
   });
 
   it('fetchMedicalModV2OrderBundles は medOrder を prescription-orders から組み立てる', async () => {
@@ -416,8 +408,6 @@ describe('orderRpNormalization', () => {
         expect.objectContaining({
           entity: 'medOrder',
           bundleName: 'RP1',
-          admin: '毎食後',
-          adminMemo: '001000',
         }),
         expect.objectContaining({
           entity: 'treatmentOrder',

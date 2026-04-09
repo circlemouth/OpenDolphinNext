@@ -101,7 +101,7 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Medical_Class type=\"string\">212</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Oral</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">処方</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">7</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">620000001</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Generic_Flg type=\"string\">no</Medication_Generic_Flg>"));
@@ -197,11 +197,11 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Medical_Class type=\"string\">110</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">初診料</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">基本診療料</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">1</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">110000110</Medication_Code>"));
         assertTrue(xml.contains("<Medical_Class type=\"string\">130</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">管理料</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">医学管理等</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">2</Medical_Class_Number>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">112007410</Medication_Code>"));
         assertFalse(xml.contains("<Admin"));
@@ -306,12 +306,12 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Medical_Class type=\"string\">310</Medical_Class>"));
-        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">Injection</Medical_Class_Name>"));
+        assertTrue(xml.contains("<Medical_Class_Name type=\"string\">注射</Medical_Class_Name>"));
         assertTrue(xml.contains("<Medical_Class_Number type=\"string\">2</Medical_Class_Number>"));
-        assertTrue(xml.contains("<Medication_Code type=\"string\">4101</Medication_Code>"));
-        assertTrue(xml.contains("<Medication_Name type=\"string\">iv</Medication_Name>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">830000001</Medication_Code>"));
         assertTrue(xml.contains("<Medication_Code type=\"string\">620000010</Medication_Code>"));
+        assertFalse(xml.contains("<Medication_Code type=\"string\">4101</Medication_Code>"));
+        assertFalse(xml.contains("<Medication_Name type=\"string\">iv</Medication_Name>"));
         assertFalse(xml.contains("adminMemo"));
         assertFalse(xml.contains("userComment"));
         assertFalse(xml.contains("routeCode"));

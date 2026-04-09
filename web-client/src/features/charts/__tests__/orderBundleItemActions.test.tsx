@@ -208,7 +208,8 @@ describe('OrderBundleEditPanel item actions', () => {
           text.includes('coded row') &&
           text.includes('rowRole') &&
           text.includes('adminMemo/speed') &&
-          text.includes('carrier 未対応'),
+          text.includes('bodyPart は reject') &&
+          text.includes('payload/XML'),
       ),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('注射メモ')).toHaveAttribute(
@@ -807,7 +808,7 @@ describe('OrderBundleEditPanel item actions', () => {
     expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'youhou', keyword: '', allowEmpty: true }));
   });
 
-  it('injectionOrder の最近使った用法 fallback は adminCode 空のまま保存前 block する', async () => {
+  it('injectionOrder の最近使った用法 fallback は local-only usage として保存できる', async () => {
     const user = userEvent.setup();
     localStorage.setItem(injectionRecentUsageStorageKey, JSON.stringify(['院内メモ用の自由入力']));
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
@@ -835,10 +836,15 @@ describe('OrderBundleEditPanel item actions', () => {
     expect((screen.getByLabelText('投与指示') as HTMLSelectElement).value).toContain('院内メモ用の自由入力');
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    expect(
-      await screen.findAllByText('注射の投与指示を保存するには adminCode を選択してください。自由入力だけでは送信できません。'),
-    ).toHaveLength(2);
-    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
+    const mutateMock = vi.mocked(mutateOrderBundles);
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+    expect(await screen.findByText('オーダーを保存しました。')).toBeInTheDocument();
+    expect(mutateMock.mock.calls.at(-1)?.[0]?.operations?.[0]).toEqual(
+      expect.objectContaining({
+        admin: '院内メモ用の自由入力',
+        adminCode: '',
+      }),
+    );
   });
 
   it.each([

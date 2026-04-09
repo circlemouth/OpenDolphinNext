@@ -14,24 +14,22 @@ import org.junit.jupiter.api.Test;
 class OrcaOrderBundleMutationExecutionSupportTest {
 
     @Test
-    void executeRejectsInjectionWithoutAdminCode() {
-        IllegalArgumentException ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> OrcaOrderBundleMutationExecutionSupport.execute(
-                        buildPayload(buildInjectionUpdateOperation(
-                                "admin-a",
-                                null,
-                                List.of(buildItem("620000010", "drug-a", "main")))),
+    void executeAllowsInjectionWithoutAdminCode() {
+        OrcaOrderBundleMutationExecutionSupport.MutationResult result = OrcaOrderBundleMutationExecutionSupport.execute(
+                buildPayload(buildInjectionUpdateOperation(
+                        "admin-a",
                         null,
-                        null,
-                        new HashMap<>(),
-                        (operation, field, input, required) -> new Date(0L),
-                        documentId -> null,
-                        new NoOpPersistence(),
-                        (documentId, operation, runtimeEx) -> runtimeEx,
-                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+                        List.of(buildItem("620000010", "drug-a", "main")))),
+                null,
+                null,
+                new HashMap<>(),
+                (operation, field, input, required) -> new Date(0L),
+                documentId -> null,
+                new NoOpPersistence(),
+                (documentId, operation, runtimeEx) -> runtimeEx,
+                OrcaOrderBundleMutationExecutionSupportTest::validationFailure);
 
-        assertTrue(ex.getMessage().contains("adminCode"));
+        assertTrue(result.updated().isEmpty());
     }
 
     @Test
@@ -51,24 +49,22 @@ class OrcaOrderBundleMutationExecutionSupportTest {
     }
 
     @Test
-    void executeRejectsInjectionWithNonSendableAdminCode() {
-        IllegalArgumentException ex = assertThrows(
-                IllegalArgumentException.class,
-                () -> OrcaOrderBundleMutationExecutionSupport.execute(
-                        buildPayload(buildInjectionUpdateOperation(
-                                "admin-b",
-                                "Y100",
-                                List.of(buildItem("620000010", "drug-a", null)))),
-                        null,
-                        null,
-                        new HashMap<>(),
-                        (operation, field, input, required) -> new Date(0L),
-                        documentId -> null,
-                        new NoOpPersistence(),
-                        (documentId, operation, runtimeEx) -> runtimeEx,
-                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+    void executeAllowsInjectionWithLocalOnlyAdminCode() {
+        OrcaOrderBundleMutationExecutionSupport.MutationResult result = OrcaOrderBundleMutationExecutionSupport.execute(
+                buildPayload(buildInjectionUpdateOperation(
+                        "admin-b",
+                        "Y100",
+                        List.of(buildItem("620000010", "drug-a", null)))),
+                null,
+                null,
+                new HashMap<>(),
+                (operation, field, input, required) -> new Date(0L),
+                documentId -> null,
+                new NoOpPersistence(),
+                (documentId, operation, runtimeEx) -> runtimeEx,
+                OrcaOrderBundleMutationExecutionSupportTest::validationFailure);
 
-        assertTrue(ex.getMessage().contains("adminCode"));
+        assertTrue(result.updated().isEmpty());
     }
 
     @Test

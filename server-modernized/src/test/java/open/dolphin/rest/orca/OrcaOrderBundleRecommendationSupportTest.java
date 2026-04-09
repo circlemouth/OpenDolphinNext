@@ -77,7 +77,7 @@ class OrcaOrderBundleRecommendationSupportTest {
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN, template.getItems().get(0).getRowRole());
         assertEquals("212", template.getClassCode());
         assertEquals("Claim007", template.getClassCodeSystem());
-        assertEquals("RP", template.getClassName());
+        assertEquals("処方", template.getClassName());
         assertEquals("4101", template.getAdminCode());
         assertEquals("Claim007", template.getAdminCodeSystem());
         assertEquals("out", template.getPrescriptionLocation());
@@ -198,6 +198,19 @@ class OrcaOrderBundleRecommendationSupportTest {
         assertEquals(
                 List.of("700000001", "700000099"),
                 template.getItems().stream().map(OrderBundleFetchResponse.OrderBundleItem::getCode).toList());
+    }
+
+    @Test
+    void toItemsKeepsSurgeryMaterialAsCanonicalMaterial() {
+        ClaimItem material = claimItem("700000123", "SURGERY_MATERIAL", "1", "piece", null);
+
+        List<OrderBundleFetchResponse.OrderBundleItem> items =
+                OrcaOrderBundleRecommendationSupport.toItems(IInfoModel.ENTITY_SURGERY_ORDER, new ClaimItem[]{material});
+
+        assertEquals(1, items.size());
+        assertEquals("700000123", items.get(0).getCode());
+        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL, items.get(0).getRowRole());
+        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_SUBTYPE_MATERIAL, items.get(0).getRowSubtype());
     }
 
     private static ClaimItem claimItem(String code, String name, String number, String unit, String memo) {

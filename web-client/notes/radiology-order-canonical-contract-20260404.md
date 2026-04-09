@@ -6,6 +6,7 @@
 ## Canonical Decision
 
 - `classCode=700` の `className` は `画像診断` に統一する。
+- radiology の exact class/name map は catalog を正本とし、request/fetch/recommendation の canonical helper は delegation のみとする。
 - row 分類は `bodyPart / main / auxiliary / comment` を canonical とする。
 - `auxiliary` の内部種別は `rowSubtype=material | contrastDrug` を first-class に保持する。
 - `bodyPart` は `002...` code の専用 field を canonical source of truth にする。
@@ -30,6 +31,7 @@
 
 - radiology の `admin`、`adminMemo`、bundle `memo`、free-form `item.memo` は local-only とする。
 - local-only 項目は editor 上で ORCA 非送信であることを明示し、send payload / XML には投影しない。
+- bodyPart UI / fetch 復元は `classCode=700` のときだけ許可し、`701/702/703/704/731/732` では fail-close で再構成しない。
 
 ## Regression Coverage
 

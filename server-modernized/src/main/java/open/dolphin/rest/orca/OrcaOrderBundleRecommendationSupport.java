@@ -163,6 +163,9 @@ final class OrcaOrderBundleRecommendationSupport {
         if (isBodyPartCode(normalizedCode)) {
             return ROW_ROLE_BODY_PART;
         }
+        if (IInfoModel.ENTITY_OTHER_ORDER.equals(OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity))) {
+            return ROW_ROLE_MAIN;
+        }
         if (isContrastDrugCode(entity, normalizedCode)) {
             return ROW_ROLE_MATERIAL;
         }
@@ -209,6 +212,7 @@ final class OrcaOrderBundleRecommendationSupport {
         }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
         return "treatmentOrder".equals(normalizedEntity)
+                || IInfoModel.ENTITY_SURGERY_ORDER.equals(normalizedEntity)
                 || IInfoModel.ENTITY_INJECTION_ORDER.equals(normalizedEntity);
     }
 

@@ -1,4 +1,10 @@
 import type { OrderBundleBodyPart, OrderBundleItem } from './orderBundleApi';
+import {
+  isOtherOrderOpaqueLocalCode,
+  isOtherOrderRowRole,
+  OTHER_ORDER_ALLOWED_ROW_ROLES,
+  OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE,
+} from './otherOrderContract';
 import { isOrderBundleCommentCode as isOrderBundleCommentCodeImpl } from './orcaCommentCarrierRules';
 import { isAuxiliaryMaterialCode } from './orcaMedicalClassCatalog';
 import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
@@ -7,6 +13,9 @@ import { resolveOrcaOrderBodyPartPolicy } from './orcaSendabilityPolicy';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export const ORDER_BUNDLE_BODY_PART_CODE_PREFIX = '002';
+export const EXACT_TEST_ORDER_CLASS_CODES = ['600', '601', '602', '603', '610'] as const;
+export const REJECTED_TEST_ORDER_CLASS_CODES = ['640', '643'] as const;
+export const STANDALONE_SURGERY_CLASS_CODES = ['501', '502'] as const;
 
 export type OrderBundleContractRowRole = 'main' | 'material' | 'comment' | 'bodyPart';
 
@@ -51,7 +60,33 @@ export const shouldTreatAsMaterialItem = (entity?: string | null, code?: string 
   const normalizedCode = code?.trim();
   if (!normalizedCode || !isAuxiliaryMaterialCode(normalizedCode)) return false;
   const canonicalEntity = resolveCanonicalOrderEntity(entity);
-  return canonicalEntity === 'treatmentOrder' || canonicalEntity === 'injectionOrder';
+  return canonicalEntity === 'treatmentOrder' || canonicalEntity === 'injectionOrder' || canonicalEntity === 'surgeryOrder';
+};
+
+export const isExactTestOrderClassCode = (classCode?: string | null) =>
+  EXACT_TEST_ORDER_CLASS_CODES.includes((classCode?.trim() ?? '') as (typeof EXACT_TEST_ORDER_CLASS_CODES)[number]);
+
+export const isRejectedTestOrderClassCode = (classCode?: string | null) =>
+  REJECTED_TEST_ORDER_CLASS_CODES.includes((classCode?.trim() ?? '') as (typeof REJECTED_TEST_ORDER_CLASS_CODES)[number]);
+
+export const isStandaloneSurgeryClassCode = (classCode?: string | null) =>
+  STANDALONE_SURGERY_CLASS_CODES.includes((classCode?.trim() ?? '') as (typeof STANDALONE_SURGERY_CLASS_CODES)[number]);
+
+export const isOtherOrderLocalOnlyClassCode = (classCode?: string | null) =>
+  !classCode?.trim() || classCode.trim() === OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE;
+
+export const isOtherOrderLocalOnlyRowRole = (rowRole?: string | null) => isOtherOrderRowRole(rowRole);
+
+export const resolveOtherOrderLocalOnlyRowRole = (
+  item?: Pick<ContractRow | ContractBodyPart, 'code' | 'rowRole'> | null,
+): Exclude<OrderBundleContractRowRole, 'material' | 'bodyPart'> => {
+  if (item?.rowRole === 'comment' && isOtherOrderRowRole(item.rowRole)) {
+    return 'comment';
+  }
+  if (item?.rowRole === 'main' && isOtherOrderRowRole(item.rowRole)) {
+    return 'main';
+  }
+  return 'main';
 };
 
 export const resolveOrderBundleItemRowRole = (
@@ -60,10 +95,10 @@ export const resolveOrderBundleItemRowRole = (
 ): OrderBundleContractRowRole => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity);
   if (!item) return 'main';
+  if (canonicalEntity === 'otherOrder') {
+    return resolveOtherOrderLocalOnlyRowRole(item);
+  }
   if (item.rowRole === 'main' || item.rowRole === 'material' || item.rowRole === 'comment' || item.rowRole === 'bodyPart') {
-    if (item.rowRole === 'material' && canonicalEntity === 'surgeryOrder') {
-      return 'main';
-    }
     return item.rowRole;
   }
   const code = item.code?.trim();
@@ -234,4 +269,10 @@ export const collectInjectionBundleContractIssues = (
   }
 
   return issues;
+};
+
+export {
+  isOtherOrderOpaqueLocalCode,
+  OTHER_ORDER_ALLOWED_ROW_ROLES,
+  OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE,
 };

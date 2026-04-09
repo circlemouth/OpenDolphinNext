@@ -82,7 +82,8 @@ final class OrcaChartSupportSupport {
             appendTag(builder, "Medical_Class_Number", fallback(entry.getMedicalClassNumber(), "1"));
             builder.append("<Medication_info type=\"array\">");
             for (ChartSupportMedicalModV2Request.Medication medication : entry.getMedications()) {
-                if (medication == null || isBlank(medication.getCode())) {
+                if (medication == null || isBlank(medication.getCode())
+                        || shouldSkipMedicalModV2Medication(medication.getCode())) {
                     continue;
                 }
                 builder.append("<Medication_info_child type=\"record\">");
@@ -104,6 +105,14 @@ final class OrcaChartSupportSupport {
         builder.append("</medicalreq>");
         builder.append("</data>");
         return builder.toString();
+    }
+
+    private boolean shouldSkipMedicalModV2Medication(String code) {
+        String normalized = safe(code).trim();
+        return OrcaOrderBundleRequestSupport.isSendableUsageCode(normalized)
+                && !OrcaOrderBundleRequestSupport.isNineDigitCode(normalized)
+                && !OrcaOrderBundleRequestSupport.isBodyPartCode(normalized)
+                && !OrcaCommentCarrierRules.isOrderBundleCommentCode(normalized);
     }
 
     void validateMedicalModV2Request(ChartSupportMedicalModV2Request payload) {

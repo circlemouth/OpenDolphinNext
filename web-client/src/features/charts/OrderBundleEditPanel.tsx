@@ -37,6 +37,7 @@ import {
   collectInjectionBundleContractIssues,
   collectOrderBundleContractStats,
   hasOrderBundleRowValue,
+  isStandaloneSurgeryClassCode,
   isOrderBundleCommentCode,
   ORDER_BUNDLE_BODY_PART_CODE_PREFIX,
   resolveOrderBundleItemRowRole,
@@ -69,7 +70,7 @@ import {
 import type { DataSourceTransition } from './authService';
 import type { DocumentOpenRequest } from './DocumentCreatePanel';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
-import { isAuxiliaryMaterialCode, supportsOrcaBodyPartField } from './orcaMedicalClassCatalog';
+import { getAllowedClassCodesForEntity, isAuxiliaryMaterialCode, isOrcaEntityClassAllowed, supportsOrcaBodyPartField } from './orcaMedicalClassCatalog';
 
 export type OrderBundleEditPanelMeta = {
   runId?: string;
@@ -838,7 +839,7 @@ const buildUsageMasterMeta = (item: OrderMasterSearchItem): UsageMasterMeta => (
 const resolveSendContractNote = (entity: string) => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   if (canonicalEntity === 'injectionOrder') {
-    return '注射送信では admin/adminCode・回数・coded row・generic flag・rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは carrier 未対応のため入力がある間は送信を停止します。';
+    return '注射では admin/adminCode/adminMemo/speed を院内ローカル情報として保存できますが、ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使います。bodyPart は reject し、local-only 項目は payload/XML に含めません。';
   }
   if (canonicalEntity === 'treatmentOrder') {
     return '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。';
@@ -1052,7 +1053,11 @@ export const validateBundleForm = ({
   const hasMaterialValues = form.materialItems.some(hasAnyValue);
   const hasCommentValues = form.commentItems.some(hasAnyValue);
   const hasBodyPartValue = hasBundleBodyPartValue(form.bodyPart);
-  const requiresSendableMainRow = rule.requiresItems && canonicalEntity !== 'medOrder';
+  const normalizedClassCode = form.classCode?.trim() ?? '';
+  const requiresSendableMainRow =
+    rule.requiresItems &&
+    canonicalEntity !== 'medOrder' &&
+    !(canonicalEntity === 'surgeryOrder' && isStandaloneSurgeryClassCode(normalizedClassCode));
   const hasAuxiliaryOnlyBundleContent =
     requiresSendableMainRow &&
     contractStats.sendableMainRows.length === 0 &&
@@ -1063,6 +1068,22 @@ export const validateBundleForm = ({
   injectionContractIssues.forEach((issue) => {
     issues.push({ key: issue.code, message: issue.detail });
   });
+  if (
+    canonicalEntity !== 'otherOrder' &&
+    canonicalEntity !== 'injectionOrder' &&
+    normalizedClassCode &&
+    !isChargeEntity(canonicalEntity) &&
+    !isOrcaEntityClassAllowed(canonicalEntity, normalizedClassCode)
+  ) {
+    const allowlist = getAllowedClassCodesForEntity(canonicalEntity);
+    issues.push({
+      key: canonicalEntity === 'injectionOrder' ? 'invalid_injection_class_code' : 'invalid_class_code',
+      message:
+        allowlist.length > 0
+          ? `${canonicalEntity} は exact allowlist（${allowlist.join('/')}）のみ保存できます。`
+          : `${canonicalEntity} の classCode は保存契約外です。`,
+    });
+  }
   if (testSubtypeConfig?.required && !resolvedSubtype) {
     issues.push({ key: 'missing_test_subtype', message: `${testSubtypeConfig.label}を選択してください。` });
   }

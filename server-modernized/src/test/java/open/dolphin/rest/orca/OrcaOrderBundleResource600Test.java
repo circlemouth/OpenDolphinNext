@@ -228,7 +228,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("items do not contain a sendable main row", body.get("message"));
+        assertEquals("otherOrder items must be coded main rows and do not accept classCode/bodyPart/material/comment", body.get("message"));
     }
 
     @Test

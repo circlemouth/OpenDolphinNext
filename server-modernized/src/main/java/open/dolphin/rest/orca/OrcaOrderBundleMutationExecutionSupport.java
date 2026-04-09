@@ -99,9 +99,6 @@ final class OrcaOrderBundleMutationExecutionSupport {
             throw validationFailure.invalid("subtype", "subtype is incompatible with entity");
         }
         validateBacteriaMetadata(canonicalEntity, op.getBacteria(), validationFailure);
-        if (IInfoModel.ENTITY_INJECTION_ORDER.equals(canonicalEntity)) {
-            validateInjectionContract(op, validationFailure);
-        }
         boolean hasExplicitBodyPart = validateExplicitBodyPart(canonicalEntity, normalizedClassCode, op.getBodyPart(), validationFailure);
         List<OrderBundleMutationRequest.BundleItem> items = collectItems(op);
         boolean hasCodedRow = false;
@@ -179,23 +176,8 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(canonicalEntity) && "700".equals(normalizedClassCode) && !hasBodyPart) {
             throw validationFailure.invalid("bodyPart", "bodyPart is required for radiologyOrder classCode 700");
         }
-        if (requiresSendableMainRow(canonicalEntity, normalizedClassCode) && !hasMainRow) {
+        if (OrcaMedicalClassCatalog.requiresSendableMainRow(canonicalEntity, normalizedClassCode) && !hasMainRow) {
             throw validationFailure.invalid("items", "items do not contain a sendable main row");
-        }
-    }
-
-    private static void validateInjectionContract(
-            OrderBundleMutationRequest.BundleOperation op,
-            ValidationFailure validationFailure) {
-        if (!OrcaOrderBundleRequestSupport.hasText(op.getAdmin())) {
-            return;
-        }
-        String adminCode = OrcaOrderBundleRequestSupport.trimToNull(op.getAdminCode());
-        if (adminCode == null) {
-            throw validationFailure.invalid("adminCode", "adminCode is required when admin is provided");
-        }
-        if (!OrcaOrderBundleRequestSupport.isSendableUsageCode(adminCode)) {
-            throw validationFailure.invalid("adminCode", "adminCode must be a sendable numeric code for injectionOrder");
         }
     }
 
@@ -220,17 +202,6 @@ final class OrcaOrderBundleMutationExecutionSupport {
         }
         if (!OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
             throw validationFailure.invalid("bodyPart", "bodyPart must use code family 002");
-        }
-        return true;
-    }
-
-    private static boolean requiresSendableMainRow(String canonicalEntity, String classCode) {
-        if (canonicalEntity == null || IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity)) {
-            return false;
-        }
-        if (IInfoModel.ENTITY_SURGERY_ORDER.equals(canonicalEntity)
-                && OrcaMedicalClassCatalog.isSurgeryStandaloneClassCode(classCode)) {
-            return false;
         }
         return true;
     }

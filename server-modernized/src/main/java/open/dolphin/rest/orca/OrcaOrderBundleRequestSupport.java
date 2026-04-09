@@ -11,7 +11,7 @@ import open.dolphin.infomodel.ModelUtils;
 
 final class OrcaOrderBundleRequestSupport {
     static final String ROW_ROLE_MAIN = OrcaOrderBundleRowRoleSupport.ROW_ROLE_MAIN;
-    static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRowRoleSupport.ROW_ROLE_AUXILIARY;
+    static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRowRoleSupport.ROW_ROLE_MATERIAL;
     static final String ROW_ROLE_COMMENT = OrcaOrderBundleRowRoleSupport.ROW_ROLE_COMMENT;
     static final String ROW_ROLE_BODY_PART = OrcaOrderBundleRowRoleSupport.ROW_ROLE_BODY_PART;
     private static final Pattern SENDABLE_USAGE_CODE_PATTERN = Pattern.compile("^\\d{4,}$");
@@ -166,14 +166,19 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static boolean isValidOtherOrderCode(String code) {
-        String normalized = trimToNull(code);
-        return normalized != null
-                && !OrcaOrderBundleRowRoleSupport.isBodyPartCode(normalized)
-                && !OrcaOrderBundleRowRoleSupport.isCommentCode(normalized);
+        return OrcaOrderBundleRowRoleSupport.isOtherOrderLocalCode(code);
     }
 
     static boolean isValidOtherOrderClassCode(String classCode) {
         return trimToNull(classCode) == null;
+    }
+
+    static boolean isExactTestOrderClassCode(String classCode) {
+        return OrcaMedicalClassCatalog.isExactTestOrderClassCode(classCode);
+    }
+
+    static boolean isRejectedTestOrderClassCode(String classCode) {
+        return OrcaMedicalClassCatalog.isRejectedTestOrderClassCode(classCode);
     }
 
     static boolean supportsBodyPartField(String entity) {

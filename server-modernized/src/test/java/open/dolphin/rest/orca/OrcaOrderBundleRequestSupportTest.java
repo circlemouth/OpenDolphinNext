@@ -120,6 +120,9 @@ class OrcaOrderBundleRequestSupportTest {
         assertFalse(OrcaOrderBundleRequestSupport.requiresSendableMainRow(IInfoModel.ENTITY_MED_ORDER));
         assertTrue(OrcaOrderBundleRequestSupport.requiresSendableMainRow(IInfoModel.ENTITY_INJECTION_ORDER));
         assertTrue(OrcaOrderBundleRequestSupport.requiresSendableMainRow(IInfoModel.ENTITY_TREATMENT));
+        assertFalse(OrcaMedicalClassCatalog.requiresSendableMainRow(IInfoModel.ENTITY_SURGERY_ORDER, "501"));
+        assertFalse(OrcaMedicalClassCatalog.requiresSendableMainRow(IInfoModel.ENTITY_SURGERY_ORDER, "502"));
+        assertTrue(OrcaMedicalClassCatalog.requiresSendableMainRow(IInfoModel.ENTITY_SURGERY_ORDER, "500"));
     }
 
     @Test
@@ -134,11 +137,26 @@ class OrcaOrderBundleRequestSupportTest {
 
     @Test
     void otherOrderHelpersRejectOnlyCommentAndBodyPartShapes() {
+        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("LOCAL-001"));
         assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("180000210"));
         assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("800000001"));
         assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("002001"));
         assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("0085001"));
-        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("81234567"));
+        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("81234567"));
         assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("18ABC0210"));
+    }
+
+    @Test
+    void testOrderClassCodeHelpersStayExactFailClosed() {
+        assertTrue(OrcaOrderBundleRequestSupport.isExactTestOrderClassCode("600"));
+        assertTrue(OrcaOrderBundleRequestSupport.isExactTestOrderClassCode("610"));
+        assertFalse(OrcaOrderBundleRequestSupport.isExactTestOrderClassCode("611"));
+        assertFalse(OrcaOrderBundleRequestSupport.isExactTestOrderClassCode("699"));
+        assertTrue(OrcaOrderBundleRequestSupport.isRejectedTestOrderClassCode("640"));
+        assertTrue(OrcaOrderBundleRequestSupport.isRejectedTestOrderClassCode("643"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode("testOrder", "640"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode("testOrder", "643"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode("testOrder", "611"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode("testOrder", "699"));
     }
 }

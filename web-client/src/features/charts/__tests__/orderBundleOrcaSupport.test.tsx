@@ -174,7 +174,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '注射送信では admin/adminCode・回数・coded row・generic flag・rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは carrier 未対応のため入力がある間は送信を停止します。',
+        '注射では admin/adminCode/adminMemo/speed を院内ローカル情報として保存できますが、ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使います。bodyPart は reject し、local-only 項目は payload/XML に含めません。',
       ),
     ).toBeInTheDocument();
   });

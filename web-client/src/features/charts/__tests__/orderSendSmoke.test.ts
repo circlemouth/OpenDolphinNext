@@ -23,6 +23,8 @@ import {
 } from '../orderRpNormalization';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder, savePrescriptionOrder } from '../prescriptionOrderApi';
 
+const buildInjectionAdminCode = (suffix: 1 | 2 | 3) => `410${suffix}`;
+
 describe('order send smoke', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1004,7 +1006,7 @@ describe('order send smoke', () => {
                 classCodeSystem: 'Claim007',
                 className: 'Injection',
                 admin: '静注',
-                adminCode: '4101',
+                adminCode: buildInjectionAdminCode(1),
                 adminMemo: '',
                 memo: 'bundle-memo-a',
                 items: [
@@ -1019,7 +1021,7 @@ describe('order send smoke', () => {
                 classCodeSystem: 'Claim007',
                 className: 'Injection',
                 admin: '筋注',
-                adminCode: '4102',
+                adminCode: buildInjectionAdminCode(2),
                 adminMemo: '',
                 memo: 'bundle-memo-b',
                 items: [
@@ -1036,7 +1038,7 @@ describe('order send smoke', () => {
                 classCodeSystem: 'Claim007',
                 className: 'Injection',
                 admin: '点滴',
-                adminCode: '4103',
+                adminCode: buildInjectionAdminCode(3),
                 adminMemo: '',
                 memo: 'bundle-memo-c',
                 items: [
@@ -1079,7 +1081,7 @@ describe('order send smoke', () => {
           classCodeSystem: 'Claim007',
           className: 'Injection',
           admin: '静注',
-          adminCode: '4101',
+          adminCode: buildInjectionAdminCode(1),
           adminMemo: '',
           memo: 'bundle-memo-a',
           items: [{ code: '620000010', name: 'DRUG_A', quantity: '1', unit: 'ampoule', memo: '', genericFlg: 'yes', userComment: 'local-a', rowRole: 'main' }],
@@ -1093,7 +1095,7 @@ describe('order send smoke', () => {
           classCodeSystem: 'Claim007',
           className: 'Injection',
           admin: '筋注',
-          adminCode: '4102',
+          adminCode: buildInjectionAdminCode(2),
           adminMemo: '',
           memo: 'bundle-memo-b',
           items: [
@@ -1111,7 +1113,7 @@ describe('order send smoke', () => {
           classCodeSystem: 'Claim007',
           className: 'Injection',
           admin: '点滴',
-          adminCode: '4103',
+          adminCode: buildInjectionAdminCode(3),
           adminMemo: '',
           memo: 'bundle-memo-c',
           items: [
@@ -1148,12 +1150,20 @@ describe('order send smoke', () => {
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
 
     expect(normalized.map((entry) => entry.info.medications.map((item) => item.code))).toEqual([
-      ['4101', '620000010'],
-      ['4102', '830000001', '620000011', '0085001'],
-      ['4103', '620000012', '700000031'],
+      ['620000010'],
+      ['830000001', '620000011', '0085001'],
+      ['620000012', '700000031'],
     ]);
-    expect(normalized[0]?.info.medications[1]?.genericFlg).toBe('yes');
-    expect(normalized[1]?.info.medications[2]?.genericFlg).toBe('no');
+    expect(normalized[0]?.info.medications[0]?.genericFlg).toBe('yes');
+    expect(normalized[1]?.info.medications[1]?.genericFlg).toBe('no');
+    expect(JSON.stringify(normalized.map((entry) => entry.info))).not.toContain(buildInjectionAdminCode(1));
+    expect(JSON.stringify(normalized.map((entry) => entry.info))).not.toContain(buildInjectionAdminCode(2));
+    expect(JSON.stringify(normalized.map((entry) => entry.info))).not.toContain(buildInjectionAdminCode(3));
+    expect(normalized.map((entry) => entry.source.adminCode)).toEqual([
+      buildInjectionAdminCode(1),
+      buildInjectionAdminCode(2),
+      buildInjectionAdminCode(3),
+    ]);
 
     const payload = buildMedicalModV2RequestXml({
       patientId: '000001',
@@ -1164,18 +1174,21 @@ describe('order send smoke', () => {
     });
 
     expect(payload.medicalInformation?.map((entry) => entry.medications.map((item) => item.code))).toEqual([
-      ['4101', '620000010'],
-      ['4102', '830000001', '620000011', '0085001'],
-      ['4103', '620000012', '700000031'],
+      ['620000010'],
+      ['830000001', '620000011', '0085001'],
+      ['620000012', '700000031'],
     ]);
-    expect(payload.medicalInformation?.[0]?.medications[1]?.genericFlg).toBe('yes');
-    expect(payload.medicalInformation?.[1]?.medications[2]?.genericFlg).toBe('no');
+    expect(payload.medicalInformation?.[0]?.medications[0]?.genericFlg).toBe('yes');
+    expect(payload.medicalInformation?.[1]?.medications[1]?.genericFlg).toBe('no');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-a');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-b');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('bundle-memo-c');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-a');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-b');
     expect(JSON.stringify(payload.medicalInformation)).not.toContain('local-c');
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain(buildInjectionAdminCode(1));
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain(buildInjectionAdminCode(2));
+    expect(JSON.stringify(payload.medicalInformation)).not.toContain(buildInjectionAdminCode(3));
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
 
@@ -1185,18 +1198,21 @@ describe('order send smoke', () => {
     const request = vi.mocked(httpFetch).mock.calls[2]?.[1] as RequestInit | undefined;
     const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
     expect(body.medicalInformation.map((entry: Record<string, any>) => entry.medications.map((item: Record<string, string>) => item.code))).toEqual([
-      ['4101', '620000010'],
-      ['4102', '830000001', '620000011', '0085001'],
-      ['4103', '620000012', '700000031'],
+      ['620000010'],
+      ['830000001', '620000011', '0085001'],
+      ['620000012', '700000031'],
     ]);
-    expect(body.medicalInformation[0]?.medications[1]?.genericFlg).toBe('yes');
-    expect(body.medicalInformation[1]?.medications[2]?.genericFlg).toBe('no');
+    expect(body.medicalInformation[0]?.medications[0]?.genericFlg).toBe('yes');
+    expect(body.medicalInformation[1]?.medications[1]?.genericFlg).toBe('no');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-a');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-b');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('bundle-memo-c');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-a');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-b');
     expect(JSON.stringify(body.medicalInformation)).not.toContain('local-c');
+    expect(JSON.stringify(body.medicalInformation)).not.toContain(buildInjectionAdminCode(1));
+    expect(JSON.stringify(body.medicalInformation)).not.toContain(buildInjectionAdminCode(2));
+    expect(JSON.stringify(body.medicalInformation)).not.toContain(buildInjectionAdminCode(3));
   });
 
   it('save fetch no-op save send smoke uses prescription-orders as medOrder source of truth', async () => {

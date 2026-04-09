@@ -118,4 +118,27 @@ class OrcaOrderBundleMutationSupportTest {
         assertTrue(claimItems[0].getMemo().contains("\"userComment\":\"食後\""));
         assertTrue(claimItems[0].getMemo().endsWith("レセプトコメント"));
     }
+
+    @Test
+    void buildDocumentPersistsSurgeryMaterialAsCanonicalMaterialRowRole() {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setEntity(IInfoModel.ENTITY_SURGERY_ORDER);
+        operation.setBundleName("手術セット");
+        operation.setClassCode("501");
+        OrderBundleMutationRequest.BundleItem material = new OrderBundleMutationRequest.BundleItem();
+        material.setCode("700000123");
+        material.setName("縫合糸");
+        material.setQuantity("1");
+        material.setUnit("本");
+        material.setRowRole("material");
+        operation.setItems(List.of(material));
+
+        DocumentModel document = OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
+
+        BundleDolphin bundle = (BundleDolphin) document.getModules().get(0).getModel();
+        ClaimItem[] claimItems = bundle.getClaimItem();
+        assertNotNull(claimItems);
+        assertEquals(1, claimItems.length);
+        assertTrue(claimItems[0].getMemo().contains("\"rowRole\":\"material\""));
+    }
 }

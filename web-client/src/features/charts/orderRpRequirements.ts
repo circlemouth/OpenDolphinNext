@@ -1,4 +1,4 @@
-import { resolveOrderEntityDefaultClassMeta, resolveOrderEntityLabel } from './orderCategoryRegistry';
+import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta, resolveOrderEntityLabel } from './orderCategoryRegistry';
 import { isOrcaEntityClassAllowed } from './orcaMedicalClassCatalog';
 import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
 
@@ -45,29 +45,17 @@ const trimValue = (value?: string | null) => value?.trim() ?? '';
 
 export const isSendableUsageCode = (code?: string | null) => SENDABLE_USAGE_CODE_PATTERN.test(trimValue(code));
 
-export const isSendableInjectionAdminCode = (code?: string | null) => isSendableUsageCode(code);
-
 export const hasInjectionAdminText = (admin?: string | null) => trimValue(admin).length > 0;
 
 export const hasInvalidInjectionAdminCode = (adminCode?: string | null) => {
   const normalized = trimValue(adminCode);
-  return normalized.length > 0 && !isSendableInjectionAdminCode(normalized);
+  return normalized.length > 0 && !isSendableUsageCode(normalized);
 };
 
-const RP_REQUIRED_ENTITY_ALIASES: Record<string, RpRequiredEntity> = {
-  medorder: 'medOrder',
-  prescription: 'medOrder',
-  rp: 'medOrder',
-  injectionorder: 'injectionOrder',
-  injection: 'injectionOrder',
-};
-
-const normalizeEntity = (entity?: string | null): RpRequiredEntity | null => {
-  const normalized = (entity ?? '').trim();
-  if (!normalized) return null;
-  if (RP_REQUIRED_ENTITIES.has(normalized as RpRequiredEntity)) return normalized as RpRequiredEntity;
-  const alias = normalized.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return RP_REQUIRED_ENTITY_ALIASES[alias] ?? null;
+const resolveRpRequiredEntity = (entity?: string | null): RpRequiredEntity | null => {
+  const canonical = resolveCanonicalOrderEntity(entity);
+  if (!canonical) return null;
+  return RP_REQUIRED_ENTITIES.has(canonical as RpRequiredEntity) ? (canonical as RpRequiredEntity) : null;
 };
 
 const inferEntityFromClassCode = (classCode?: string | null): RpRequiredEntity | null => {
@@ -99,7 +87,7 @@ export const resolveRpRequiredIssue = (input: {
   bundleNumber?: string | null;
   items?: Array<Pick<OrderBundleItem, 'code'>> | null;
 }): RpRequiredIssue | null => {
-  const entity = normalizeEntity(input.entity) ?? inferEntityFromClassCode(input.classCode);
+  const entity = resolveRpRequiredEntity(input.entity) ?? inferEntityFromClassCode(input.classCode);
   if (!entity) return null;
   const missing: RpRequiredField[] = [];
   if (!resolveMedicalClass(entity, input.classCode)) missing.push('Medical_Class');

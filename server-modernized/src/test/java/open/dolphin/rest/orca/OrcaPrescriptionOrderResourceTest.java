@@ -114,15 +114,17 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void saveOrderReturns400WhenUsageCodeIsMissing() {
+    void saveOrderAllowsMissingUsageCode() {
         PrescriptionOrder payload = buildPayload();
         payload.getRps().get(0).setUsageCode(null);
 
-        WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.saveOrder(servletRequest, payload));
+        PrescriptionOrderSaveResponse response = resource.saveOrder(servletRequest, payload);
 
-        assertValidationError(ex, "rps[0].usageCode");
-        assertEquals(0, fakeRepository.saveCalls);
+        assertNotNull(response);
+        assertEquals("00", response.getApiResult());
+        assertEquals(1, fakeRepository.saveCalls);
+        assertTrue(fakeRepository.savedPayloadJson.contains("\"usageName\":\"after meal\""));
+        assertFalse(fakeRepository.savedPayloadJson.contains("\"usageCode\":\"001000\""));
     }
 
     @Test
@@ -134,6 +136,18 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
                 () -> resource.saveOrder(servletRequest, payload));
 
         assertValidationError(ex, "rps[0].claimComments[0].note");
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void saveOrderReturns400WhenUnknownStructuredClaimCommentFamilyIsProvided() {
+        PrescriptionOrder payload = buildPayload();
+        payload.getRps().get(0).setClaimComments(List.of(claimComment("850000001", "unknown family", "note")));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertValidationError(ex, "rps[0].claimComments[0].code");
         assertEquals(0, fakeRepository.saveCalls);
     }
 

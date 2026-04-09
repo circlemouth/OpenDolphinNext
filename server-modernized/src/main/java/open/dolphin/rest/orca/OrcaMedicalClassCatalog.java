@@ -19,6 +19,7 @@ final class OrcaMedicalClassCatalog {
     private static final Set<String> TREATMENT_CLASS_CODES = Set.of("400", "401", "402", "403", "409");
     private static final Set<String> SURGERY_CLASS_CODES = Set.of("500", "501", "502", "510");
     private static final Set<String> TEST_CLASS_CODES = Set.of("600", "601", "602", "603", "610");
+    private static final Set<String> REJECTED_TEST_CLASS_CODES = Set.of("640", "643");
     private static final Set<String> RADIOLOGY_CLASS_CODES = Set.of("700", "701", "702", "703", "704", "731", "732");
     private static final Set<String> BASE_CHARGE_CLASS_CODES = Set.of("110", "114", "120", "124");
     private static final Set<String> INSTRUCTION_CHARGE_CLASS_CODES = Set.of("130", "132", "133", "140", "141", "142", "143", "148", "149");
@@ -85,6 +86,16 @@ final class OrcaMedicalClassCatalog {
         return normalizedClassCode != null && isCompatibleClassCode(entity, normalizedClassCode);
     }
 
+    static boolean isExactTestOrderClassCode(String classCode) {
+        String normalized = trimToNull(classCode);
+        return normalized != null && TEST_CLASS_CODES.contains(normalized);
+    }
+
+    static boolean isRejectedTestOrderClassCode(String classCode) {
+        String normalized = trimToNull(classCode);
+        return normalized != null && REJECTED_TEST_CLASS_CODES.contains(normalized);
+    }
+
     static boolean isMedOrderUsageBlocked(String entity) {
         return IInfoModel.ENTITY_MED_ORDER.equals(normalizeEntity(entity));
     }
@@ -110,6 +121,9 @@ final class OrcaMedicalClassCatalog {
 
     static boolean requiresSendableMainRow(String entity, String classCode) {
         if (!isCompatibleClassCode(entity, classCode)) {
+            return false;
+        }
+        if (IInfoModel.ENTITY_SURGERY_ORDER.equals(normalizeEntity(entity)) && isSurgeryStandaloneClassCode(classCode)) {
             return false;
         }
         return requiresSendableMainRow(entity);

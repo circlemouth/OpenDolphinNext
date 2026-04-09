@@ -286,7 +286,7 @@ const toRpFromInputSetDetail = (
     ...buildEmptyPrescriptionRp(detail.started ?? started, detail.classCode),
     name: detail.bundleName ?? '',
     usage: detail.admin ?? '',
-    usageCode: detail.adminMemo?.trim() || undefined,
+    usageCode: detail.adminCode?.trim() || undefined,
     daysOrTimes: detail.bundleNumber ?? '1',
     remark: detail.memo?.trim() ?? '',
     claimComments,
@@ -887,13 +887,6 @@ export function PrescriptionOrderEditorPanel({
         issues.push({
           key: `rp_items_${rpIndex}`,
           message: `RP${rpIndex + 1} に薬剤を1件以上入力してください。`,
-          rpIndex,
-        });
-      }
-      if (!rp.usageCode?.trim()) {
-        issues.push({
-          key: `rp_usage_code_${rpIndex}`,
-          message: `RP${rpIndex + 1}: 用法マスタコードを選択してください。自由入力だけの用法は保存できません。`,
           rpIndex,
         });
       }

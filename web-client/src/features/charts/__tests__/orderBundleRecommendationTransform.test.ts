@@ -26,7 +26,7 @@ describe('orderBundle recommendation transform', () => {
 
     expect(form.classCode).toBe('130');
     expect(form.classCodeSystem).toBe('Claim007');
-    expect(form.className).toBe('管理料');
+    expect(form.className).toBe('医学管理等');
     expect(form.adminMemo).toBe('訪問頻度補足');
     expect(form.adminCode).toBe('4101');
     expect(form.adminCodeSystem).toBe('Claim007');

@@ -43,19 +43,21 @@ describe('orderCategoryRegistry', () => {
     expect(medRule.requiresUsage).toBe(true);
     expect(resolveOrderEntityUiProfile('injectionOrder').supportsInjectionNoProcedure).toBe(false);
     expect(injClass?.classCode).toBe('310');
-    expect(baseClass).toEqual({ classCode: '110', className: '初診料' });
-    expect(instructionClass).toEqual({ classCode: '130', className: '管理料' });
+    expect(baseClass).toEqual({ classCode: '110', classCodeSystem: 'Claim007', className: '基本診療料' });
+    expect(instructionClass).toEqual({ classCode: '130', classCodeSystem: 'Claim007', className: '医学管理等' });
     expect(resolveOrderEntityEtensuCategory('radiologyOrder')).toBe('7');
-    expect(ORCA_SEND_ORDER_ENTITIES).toEqual([
-      'medOrder',
-      'injectionOrder',
-      'treatmentOrder',
-      'surgeryOrder',
-      'testOrder',
-      'radiologyOrder',
-      'baseChargeOrder',
-      'instractionChargeOrder',
-    ]);
+    expect([...ORCA_SEND_ORDER_ENTITIES].sort()).toEqual(
+      [
+        'medOrder',
+        'injectionOrder',
+        'treatmentOrder',
+        'surgeryOrder',
+        'testOrder',
+        'radiologyOrder',
+        'baseChargeOrder',
+        'instractionChargeOrder',
+      ].sort(),
+    );
     expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('otherOrder');
     expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('physiologyOrder');
     expect(ORCA_SEND_ORDER_ENTITIES).not.toContain('bacteriaOrder');

@@ -145,7 +145,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         normalized.setEncounterId(trimToNull(normalized.getEncounterId()));
         normalized.setEncounterDate(encounterDate != null ? encounterDate.toString() : null);
         normalized.setPerformDate(performDate != null ? performDate.toString() : null);
-        validateUsageCodes(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
         validateClaimCommentCodes(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
 
         String json = writeJsonOrThrow(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
@@ -226,7 +225,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         LocalDate targetEncounterDate = parseOptionalDate(request, "encounterDate", payload.getEncounterDate(),
                 facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         String targetEncounterId = trimToNull(payload.getEncounterId());
-        validateUsageCodes(request, payload.getDoOrder(), facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         validateClaimCommentCodes(request, payload.getDoOrder(), facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         return new DoImportContext(patientId, targetEncounterId, targetEncounterDate);
     }
@@ -274,7 +272,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
         merged.setEncounterDate(mergedEncounterDate != null ? mergedEncounterDate.toString() : null);
         merged.setPerformDate(performDate != null ? performDate.toString() : null);
-        validateUsageCodes(request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         validateClaimCommentCodes(request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
         String json = writeJsonOrThrow(
                 request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
@@ -547,40 +544,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                 }
             }
         }
-    }
-
-    private void validateUsageCodes(
-            HttpServletRequest request,
-            PrescriptionOrder order,
-            String facilityId,
-            String patientId,
-            String runId,
-            String action) {
-        int rpIndex = findFirstUsageCodeIssueIndex(order);
-        if (rpIndex >= 0) {
-            String field = "rps[" + rpIndex + "].usageCode";
-            String message = "usageCode is required when drug rows are present";
-            recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
-            throw validationError(request, field, message);
-        }
-    }
-
-    private int findFirstUsageCodeIssueIndex(PrescriptionOrder order) {
-        if (order == null) {
-            return -1;
-        }
-        List<PrescriptionRp> rps = safeList(order.getRps());
-        for (int rpIndex = 0; rpIndex < rps.size(); rpIndex++) {
-            PrescriptionRp rp = rps.get(rpIndex);
-            if (rp == null) {
-                continue;
-            }
-            boolean hasDrugRows = safeList(rp.getDrugs()).stream().anyMatch(Objects::nonNull);
-            if (hasDrugRows && !hasText(rp.getUsageCode())) {
-                return rpIndex;
-            }
-        }
-        return -1;
     }
 
     private boolean hasText(String value) {

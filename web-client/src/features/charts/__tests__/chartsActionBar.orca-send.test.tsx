@@ -93,6 +93,9 @@ const baseProps = {
   fallbackUsed: false,
 };
 
+const buildInjectionAdminCode = (suffix: 1 | 3) => `410${suffix}`;
+const NON_SENDABLE_INJECTION_ADMIN_CODE = 'Y100';
+
 const buildSendablePrescriptionOrder = () => {
   const order = buildEmptyPrescriptionOrder('000001', '2026-01-20') as ReturnType<typeof buildEmptyPrescriptionOrder> & {
     encounterId: string;
@@ -285,8 +288,18 @@ describe('ChartsActionBar ORCA send', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
-  it('blocks injection bundles with classCode other than 310', async () => {
+  it('sends injection bundles for allowed non-310 classCode and strips local-only admin fields', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    });
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -294,11 +307,12 @@ describe('ChartsActionBar ORCA send', () => {
           ? [
               {
                 entity: 'injectionOrder',
-                bundleName: 'bad-class',
+                bundleName: 'allowed-class',
                 bundleNumber: '1',
                 classCode: '320',
                 admin: '静注',
-                adminCode: '4101',
+                adminCode: buildInjectionAdminCode(1),
+                adminMemo: '20ml/h',
                 items: [{ code: '620000010', name: 'drug-a', quantity: '1', unit: 'A' }],
               },
             ]
@@ -310,12 +324,25 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/classCode 310 のみ送信できます/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
+    expect(JSON.stringify(payload)).not.toContain(buildInjectionAdminCode(1));
+    expect(JSON.stringify(payload)).not.toContain('静注');
+    expect(JSON.stringify(payload)).not.toContain('20ml/h');
   });
 
-  it('blocks injection bundles when admin is present but sendable adminCode is missing', async () => {
+  it('sends injection bundles when adminCode is missing because admin fields are local-only', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    });
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -339,8 +366,10 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/adminCode 未設定/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
+    expect(JSON.stringify(payload)).not.toContain('静注');
+    expect(JSON.stringify(payload)).not.toContain('"adminCode"');
   });
 
   it('blocks comment-only injection bundles', async () => {
@@ -356,7 +385,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '1',
                 classCode: '310',
                 admin: '静注',
-                adminCode: '4101',
+                adminCode: buildInjectionAdminCode(1),
                 items: [{ code: '0082', name: 'comment row', quantity: '', unit: '' }],
               },
             ]
@@ -389,7 +418,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '1',
                 classCode: '310',
                 admin: '点滴',
-                adminCode: '4103',
+                adminCode: buildInjectionAdminCode(3),
                 items: [{ code: '700000031', name: 'drip-set', quantity: '1', unit: 'set', rowRole: 'auxiliary' }],
               },
             ]
@@ -405,8 +434,18 @@ describe('ChartsActionBar ORCA send', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
-  it('blocks injection bundles with non-sendable usage codes', async () => {
+  it('sends injection bundles even when stored adminCode is non-sendable', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    });
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -414,11 +453,11 @@ describe('ChartsActionBar ORCA send', () => {
           ? [
               {
                 entity: 'injectionOrder',
-                bundleName: 'missing-admin-code',
+                bundleName: 'invalid-admin-code',
                 bundleNumber: '1',
                 classCode: '310',
                 admin: '静注',
-                adminCode: '',
+                adminCode: NON_SENDABLE_INJECTION_ADMIN_CODE,
                 items: [{ code: '620000010', name: 'drug-a', quantity: '1', unit: 'A' }],
               },
             ]
@@ -430,14 +469,23 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/adminCode 未設定|adminCode を選択/)).toBeInTheDocument(),
-    );
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
+    expect(JSON.stringify(payload)).not.toContain(NON_SENDABLE_INJECTION_ADMIN_CODE);
   });
 
-  it('blocks fetched injection bundles when admin exists without adminCode', async () => {
+  it('sends fetched injection bundles when admin exists without adminCode', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    });
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -461,8 +509,10 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/adminCode/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
+    expect(JSON.stringify(payload)).not.toContain('点滴');
+    expect(JSON.stringify(payload)).not.toContain('"adminCode"');
   });
 
   it('blocks fetched injection bundles when only comment rows are present', async () => {
@@ -478,7 +528,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '1',
                 classCode: '310',
                 admin: '点滴',
-                adminCode: '4101',
+                adminCode: buildInjectionAdminCode(1),
                 items: [{ code: '0085001', name: 'COMMENT', quantity: '', unit: '', rowRole: 'comment' }],
               },
             ]
@@ -507,7 +557,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '1',
                 classCode: '310',
                 admin: '点滴',
-                adminCode: '4101',
+                adminCode: buildInjectionAdminCode(1),
                 items: [{ code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', rowRole: 'material' }],
               },
             ]
@@ -523,8 +573,18 @@ describe('ChartsActionBar ORCA send', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
-  it('blocks fetched injection bundles when adminMemo or speed is present', async () => {
+  it('sends fetched injection bundles when adminMemo is present because it is local-only', async () => {
     const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: 'RUN-API',
+      traceId: 'TRACE-API',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    });
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
       bundles:
@@ -536,7 +596,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '1',
                 classCode: '310',
                 admin: '点滴',
-                adminCode: '4101',
+                adminCode: buildInjectionAdminCode(1),
                 adminMemo: '20ml/h',
                 items: [{ code: '620000001', name: '注射薬A', quantity: '1', unit: 'A', rowRole: 'main' }],
               },
@@ -549,8 +609,9 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/adminMemo\/speed/)).toBeInTheDocument());
-    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+    await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
+    const payload = vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0];
+    expect(JSON.stringify(payload)).not.toContain('20ml/h');
   });
 
   it('accepts bodyPart and material rows on valid payloads', async () => {
@@ -676,7 +737,13 @@ describe('ChartsActionBar ORCA send', () => {
       expect.arrayContaining([
         expect.objectContaining({ sourceKind: 'body_part', sourceItemIndex: undefined }),
         expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 0, sourceRowRole: 'main', sourceSectionIndex: 0 }),
-        expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 1, sourceRowRole: 'auxiliary', sourceSectionIndex: 0 }),
+        expect.objectContaining({
+          sourceKind: 'bundle_item',
+          sourceItemIndex: 1,
+          sourceRowRole: 'auxiliary',
+          sourceRowSubtype: 'material',
+          sourceSectionIndex: 1,
+        }),
         expect.objectContaining({ sourceKind: 'bundle_item', sourceItemIndex: 2, sourceRowRole: 'comment', sourceSectionIndex: 0 }),
       ]),
     );

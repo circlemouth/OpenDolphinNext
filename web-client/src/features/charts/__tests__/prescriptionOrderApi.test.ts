@@ -16,9 +16,11 @@ vi.mock('../../outpatient/orcaPatientImportApi', () => ({
 
 import { httpFetch } from '../../../libs/http/httpClient';
 import {
+  buildPrescriptionOrderSendBundles,
   buildPrescriptionMutationOperations,
   fetchPrescriptionOrder,
   savePrescriptionOrder,
+  toPrescriptionOrder,
   type PrescriptionOrder,
 } from '../prescriptionOrderApi';
 
@@ -276,6 +278,8 @@ describe('prescriptionOrderApi first-class contract', () => {
         name: 'RP患者希望',
       }),
     );
+    expect(result.sourceBundles[0]?.adminCode).toBe('200');
+    expect(result.sourceBundles[0]?.adminMemo).toBe('');
     expect(result.sourceBundles[0]?.items[1]).toEqual(
       expect.objectContaining({
         genericFlg: 'yes',
@@ -338,6 +342,61 @@ describe('prescriptionOrderApi first-class contract', () => {
         note: 'note',
       }),
     );
+  });
+
+  it('source bundle 経由でも RP-level claim comment note を round-trip する', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          found: true,
+          runId: 'RUN-FETCH-RP-CLAIM',
+          order: {
+            patientId: '000001',
+            encounterId: 'F001:E210',
+            encounterDate: '2026-03-09',
+            performDate: '2026-03-09',
+            rps: [
+              {
+                rpNumber: 'rp-claim-roundtrip',
+                bundleName: '請求コメントRP',
+                medicalClass: '212',
+                medicalClassNumber: '5',
+                usageName: '毎食後',
+                claimComments: [{ code: '850100001', text: '特記事項', note: '補足メモ' }],
+                drugs: [
+                  {
+                    code: '620000001',
+                    name: 'アムロジピン',
+                    quantity: '1',
+                    unit: '錠',
+                    genericChangeAllowed: true,
+                    generalNamePrescription: false,
+                    patientRequested: true,
+                    claimComments: [],
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchPrescriptionOrder({ patientId: '000001', from: '2026-03-09', encounterId: 'F001:E210' } as any);
+    const reconstructed = toPrescriptionOrder(result.sourceBundles, '000001', 'F001:E210');
+
+    expect(result.ok).toBe(true);
+    expect(reconstructed.rps[0]?.claimComments).toEqual([
+      expect.objectContaining({
+        code: '850100001',
+        name: '特記事項',
+        note: '補足メモ',
+      }),
+    ]);
   });
 
   it('save -> fetch -> no-op save で first-class order の generic / claim / usage 情報が落ちない', async () => {
@@ -575,6 +634,118 @@ describe('prescriptionOrderApi first-class contract', () => {
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });
 
+  it('save は usageCode が無くても local-only usage として保存できる', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ runId: 'RUN-SAVE-NO-USAGE-CODE' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '自由用法RP',
+          location: 'out',
+          category: 'regular',
+          usage: '食後すぐ',
+          usageCode: undefined,
+          daysOrTimes: '1',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          claimComments: [],
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    await expect(savePrescriptionOrder({ patientId: '000001', order })).resolves.toEqual(
+      expect.objectContaining({ ok: true }),
+    );
+
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
+    expect(body.rps[0]).toEqual(
+      expect.objectContaining({
+        usageName: '食後すぐ',
+      }),
+    );
+    expect(body.rps[0]?.usageCode).toBeUndefined();
+  });
+
+  it('send bundle は usage/admin/adminCode/adminMemo を ORCA send path へ出さない', () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '送信RP',
+          location: 'out',
+          category: 'regular',
+          usage: '毎食後',
+          usageCode: '001000',
+          daysOrTimes: '7',
+          remark: 'local note',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          claimComments: [{ id: 'rp-claim-1', code: '820100001', name: 'RP患者希望', note: 'rp-note' }],
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    const bundles = buildPrescriptionOrderSendBundles(order);
+
+    expect(bundles[0]).toEqual(
+      expect.objectContaining({
+        admin: '',
+        adminMemo: '',
+      }),
+    );
+    expect(bundles[0]?.adminCode).toBeUndefined();
+    expect(bundles[0]?.memo).not.toContain('"usageCode"');
+    expect(bundles[0]?.memo).toContain('"claimComments"');
+  });
+
 
   it('save は RP-level code なし請求コメントも送信前に fail-closed で拒否する', async () => {
     const order: PrescriptionOrder = {
@@ -660,6 +831,50 @@ describe('prescriptionOrderApi first-class contract', () => {
     };
 
     await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow('RP1 RPコメント: 850100001 系コメントは補足値が必須です。');
+    expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
+  });
+
+  it('save は unknown structured family を引き続き fail-closed にする', async () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '処方RP',
+          location: 'out',
+          category: 'regular',
+          usage: '1日1回',
+          daysOrTimes: '1',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          claimComments: [{ id: 'rp-claim-1', code: '850000001', name: '未対応構造化コメント', note: 'x' }],
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
+      'RP1 RPコメント: 850000001 系コメント family は未対応のため保存できません。',
+    );
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });
 });

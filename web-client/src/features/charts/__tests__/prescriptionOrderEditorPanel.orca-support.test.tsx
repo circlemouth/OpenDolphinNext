@@ -162,7 +162,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     expect(screen.getByRole('button', { name: /RP2: 降圧セット/ })).toBeInTheDocument();
   });
 
-  it('ORCA入力セットは 221 系の class semantics と usageCode/請求コメントを保存 payload に引き継ぐ', async () => {
+  it('ORCA入力セットは 221 系の class semantics と local-only usage/請求コメントを保存 payload に引き継ぐ', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
@@ -211,7 +211,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         category: 'tonyo',
         location: 'in',
         usage: '頓服',
-        usageCode: '200',
+        usageCode: undefined,
         daysOrTimes: '3',
         remark: '入力セット備考',
       }),
@@ -407,7 +407,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     );
   });
 
-  it('usageCode の無い自由用法は保存前に block する', async () => {
+  it('usageCode の無い自由用法は local-only usage として保存できる', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
 
@@ -428,8 +428,17 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存' }));
 
-    expect(await screen.findByText('RP1: 用法マスタコードを選択してください。自由入力だけの用法は保存できません。')).toBeInTheDocument();
-    expect(savePrescriptionOrder).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(savePrescriptionOrder).toHaveBeenCalledTimes(1);
+    });
+    expect(await screen.findByText('処方オーダーを保存しました。')).toBeInTheDocument();
+    const payload = vi.mocked(savePrescriptionOrder).mock.calls[0]?.[0];
+    expect(payload?.order?.rps[0]).toEqual(
+      expect.objectContaining({
+        usage: '自由用法だけ',
+        usageCode: undefined,
+      }),
+    );
   });
 
   it('相互作用ありでは確認 dialog を出し、続行時だけ保存する', async () => {

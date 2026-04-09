@@ -250,4 +250,33 @@ describe('OrderBundleEditPanel body part contract', () => {
     const bodyPartInput = screen.getByLabelText('部位', { selector: 'input[id$="-bodypart"]' });
     expect(bodyPartInput).toHaveValue('');
   });
+
+  it('radiologyOrder でも classCode 701 では bodyPart UI を再構成しない', async () => {
+    localStorage.setItem('devFacilityId', 'facility');
+    localStorage.setItem('devUserId', 'doctor');
+    vi.mocked(fetchOrderBundles).mockResolvedValueOnce({
+      ok: true,
+      patientId: 'P-1',
+      bundles: [
+        {
+          documentId: 702,
+          moduleId: 72,
+          entity: 'radiologyOrder',
+          bundleName: '胸部MRI',
+          classCode: '701',
+          started: '2026-02-27',
+          items: [{ code: '701001', name: '胸部MRI' }],
+          bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: 'should-not-restore' },
+        } as any,
+      ],
+    });
+
+    const user = userEvent.setup();
+    renderWithClient(<OrderBundleEditPanel {...baseProps} />);
+
+    await user.click(await screen.findByRole('button', { name: '編集' }));
+
+    expect(screen.queryByLabelText('部位検索', { selector: 'input[id$="-bodypart-keyword"]' })).toBeNull();
+    expect(screen.queryByLabelText('部位', { selector: 'input[id$="-bodypart"]' })).toBeNull();
+  });
 });

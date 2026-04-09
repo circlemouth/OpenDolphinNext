@@ -548,7 +548,7 @@ const toRpFromBundle = (bundle: OrderBundle): PrescriptionRp => {
     location: classParsed.location,
     category: classParsed.category,
     usage: bundle.admin?.trim() || '',
-    usageCode: rpMeta?.usageCode ?? (bundle.adminMemo?.trim() || undefined),
+    usageCode: rpMeta?.usageCode ?? (bundle.adminCode?.trim() || undefined),
     daysOrTimes: bundle.bundleNumber?.trim() || '1',
     remark: memoParsed.text,
     refillCount: refillCount === 1 || refillCount === 2 || refillCount === 3 ? refillCount : undefined,
@@ -653,7 +653,11 @@ const toPrescriptionRpFromOperation = (operation: OrderBundleOperation, started?
     bodyPart: operation.bodyPart,
   });
 
-const normalizeRpMeta = (rp: PrescriptionRp, _doctorComment: string): StoredRpMeta => {
+const normalizeRpMeta = (
+  rp: PrescriptionRp,
+  _doctorComment: string,
+  options: { includeUsageCode?: boolean } = {},
+): StoredRpMeta => {
   const lowerFields = hasAnyLowerField({
     lowerDrugCode: rp.lowerDrugCode,
     lowerUsageCode: rp.lowerUsageCode,
@@ -677,7 +681,7 @@ const normalizeRpMeta = (rp: PrescriptionRp, _doctorComment: string): StoredRpMe
     refillCount: rp.refillCount,
     refillPattern: rp.refillPattern,
     doctorComment: trimmedDoctorComment || undefined,
-    usageCode: rp.usageCode?.trim() || undefined,
+    usageCode: options.includeUsageCode === false ? undefined : rp.usageCode?.trim() || undefined,
     claimComments: normalizeClaimComments(rp.claimComments ?? []).map((comment) => ({
       code: comment.code,
       name: comment.name,
@@ -703,6 +707,17 @@ const normalizeRpMeta = (rp: PrescriptionRp, _doctorComment: string): StoredRpMe
     lowerFields,
   };
 };
+
+const shouldKeepRpMeta = (rpMeta: StoredRpMeta, options: { includeUsageCode?: boolean } = {}) =>
+  Boolean(
+    rpMeta.rpId ||
+      rpMeta.refillCount ||
+      rpMeta.refillPattern ||
+      (rpMeta.doctorComment && rpMeta.doctorComment.trim()) ||
+      (options.includeUsageCode !== false && rpMeta.usageCode && rpMeta.usageCode.trim()) ||
+      (rpMeta.claimComments && rpMeta.claimComments.length > 0) ||
+      hasAnyLowerField(rpMeta.lowerFields),
+  );
 
 const normalizeDrugMeta = (drug: PrescriptionDrug): StoredDrugMeta => {
   const lowerFields = hasAnyLowerField({
@@ -847,14 +862,7 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
       rp.remark.trim(),
       RX_RP_META_PREFIX,
       rpMeta,
-      Boolean(
-        rpMeta.refillCount ||
-          (rpMeta.refillPattern && rpMeta.refillPattern !== 'none') ||
-          (rpMeta.doctorComment && rpMeta.doctorComment.trim()) ||
-          (rpMeta.usageCode && rpMeta.usageCode.trim()) ||
-          (rpMeta.claimComments && rpMeta.claimComments.length > 0) ||
-          hasAnyLowerField(rpMeta.lowerFields),
-      ),
+      shouldKeepRpMeta(rpMeta),
     );
 
     operations.push({
@@ -869,7 +877,7 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
       className: undefined,
       admin: rp.usage.trim(),
       adminCode: rp.usageCode?.trim() || undefined,
-      adminMemo: rp.usageCode?.trim() || '',
+      adminMemo: '',
       memo,
       startDate: rp.started,
       items: toOrderBundleItems(rp),
@@ -890,19 +898,12 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
 
 export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): OrderBundle[] =>
   normalizePrescriptionOrder(order).rps.map((rp) => {
-    const rpMeta = normalizeRpMeta(rp, order.doctorComment);
+    const rpMeta = normalizeRpMeta(rp, order.doctorComment, { includeUsageCode: false });
     const memo = withJsonMetaLine(
       rp.remark.trim(),
       RX_RP_META_PREFIX,
       rpMeta,
-      Boolean(
-        rpMeta.refillCount ||
-          (rpMeta.refillPattern && rpMeta.refillPattern !== 'none') ||
-          (rpMeta.doctorComment && rpMeta.doctorComment.trim()) ||
-          (rpMeta.usageCode && rpMeta.usageCode.trim()) ||
-          (rpMeta.claimComments && rpMeta.claimComments.length > 0) ||
-          hasAnyLowerField(rpMeta.lowerFields),
-      ),
+      shouldKeepRpMeta(rpMeta, { includeUsageCode: false }),
     );
     return {
       entity: 'medOrder',
@@ -913,9 +914,9 @@ export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): Ord
       classCode: resolvePrescriptionClassCode(rp.category, rp.location),
       classCodeSystem: 'Claim007',
       className: undefined,
-      admin: rp.usage.trim(),
-      adminCode: rp.usageCode?.trim() || undefined,
-      adminMemo: rp.usageCode?.trim() || '',
+      admin: '',
+      adminCode: undefined,
+      adminMemo: '',
       memo,
       started: rp.started,
       items: toOrderBundleItems(rp),
@@ -1120,14 +1121,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
       rp.remark?.trim() || '',
       RX_RP_META_PREFIX,
       rpMeta,
-      Boolean(
-        rpMeta.rpId ||
-          rpMeta.refillCount ||
-          rpMeta.refillPattern ||
-          rpMeta.doctorComment ||
-          rpMeta.usageCode ||
-          hasAnyLowerField(rpMeta.lowerFields),
-      ),
+      shouldKeepRpMeta(rpMeta),
     );
     return {
       documentId: rp.documentId,
@@ -1140,7 +1134,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
       className: undefined,
       admin: rp.usageName?.trim() || '',
       adminCode: rp.usageCode?.trim() || undefined,
-      adminMemo: rp.usageCode?.trim() || '',
+      adminMemo: '',
       memo: memoText,
       started: rp.started?.trim() || undefined,
       items: [
@@ -1322,12 +1316,6 @@ export async function savePrescriptionOrder(params: {
     throw new Error(
       `RP${claimCommentNumberIssue.rpIndex + 1} ${commentTarget}: ${claimCommentNumberIssue.message}`,
     );
-  }
-  const usageCodeIssueIndex = normalizedOrder.rps.findIndex(
-    (rp) => rp.drugs.some((drug) => drug.name.trim() || drug.code?.trim()) && !rp.usageCode?.trim(),
-  );
-  if (usageCodeIssueIndex >= 0) {
-    throw new Error(`RP${usageCodeIssueIndex + 1}: 用法コード未確定の自由入力は保存できません。候補選択で用法を確定してください。`);
   }
   const payload = toServerPrescriptionOrder(normalizedOrder);
   const response = await httpFetch('/api/orca/prescription-orders', {
