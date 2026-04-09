@@ -14,8 +14,6 @@ final class OrcaOrderBundleRequestSupport {
     static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRowRoleSupport.ROW_ROLE_AUXILIARY;
     static final String ROW_ROLE_COMMENT = OrcaOrderBundleRowRoleSupport.ROW_ROLE_COMMENT;
     static final String ROW_ROLE_BODY_PART = OrcaOrderBundleRowRoleSupport.ROW_ROLE_BODY_PART;
-
-    private static final Pattern OTHER_ORDER_CODE_PATTERN = Pattern.compile("^(?:8\\d{8}|18\\d{7})$");
     private static final Pattern SENDABLE_USAGE_CODE_PATTERN = Pattern.compile("^\\d{4,}$");
 
     private static final Set<String> ORDER_BUNDLE_ENTITIES = Set.of(
@@ -35,15 +33,20 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static String normalizeEntityQuery(String entity) {
-        return canonicalizeEntity(entity);
+        return OrcaMedicalClassCatalog.normalizeEntity(entity);
+    }
+
+    static boolean isInvalidEntityQuery(String entity) {
+        String trimmed = trimToNull(entity);
+        return trimmed != null && OrcaMedicalClassCatalog.normalizeEntity(trimmed) == null;
     }
 
     static String normalizeEntityResponse(String entity) {
-        return canonicalizeEntity(entity);
+        return OrcaMedicalClassCatalog.normalizeEntity(entity);
     }
 
     static String normalizeEntityStorage(String entity) {
-        return canonicalizeEntity(entity);
+        return OrcaMedicalClassCatalog.normalizeEntity(entity);
     }
 
     static boolean entitiesMatch(String requestedEntity, String moduleEntity) {
@@ -53,8 +56,8 @@ final class OrcaOrderBundleRequestSupport {
         if (moduleEntity == null || moduleEntity.isBlank()) {
             return false;
         }
-        String requested = canonicalizeEntity(requestedEntity);
-        String actual = canonicalizeEntity(moduleEntity);
+        String requested = OrcaMedicalClassCatalog.normalizeEntity(requestedEntity);
+        String actual = OrcaMedicalClassCatalog.normalizeEntity(moduleEntity);
         if (requested == null || actual == null) {
             return false;
         }
@@ -134,74 +137,51 @@ final class OrcaOrderBundleRequestSupport {
         return normalized != null && SENDABLE_USAGE_CODE_PATTERN.matcher(normalized).matches();
     }
 
-    static boolean isSendableInjectionAdminCode(String code) {
-        return isSendableUsageCode(code);
-    }
-
     static boolean isSupportedOperation(String operation) {
         return "create".equals(operation) || "update".equals(operation) || "delete".equals(operation);
     }
 
     static boolean isValidEntity(String entity) {
-        String normalized = canonicalizeEntity(entity);
-        if (normalized == null) {
-            return false;
-        }
-        return ORDER_BUNDLE_ENTITIES.contains(normalized);
+        String normalized = OrcaMedicalClassCatalog.normalizeEntity(entity);
+        return normalized != null && ORDER_BUNDLE_ENTITIES.contains(normalized);
     }
 
     static boolean isPhysiologyOrder(String entity) {
-        return IInfoModel.ENTITY_PHYSIOLOGY_ORDER.equals(canonicalizeEntity(entity));
+        return IInfoModel.ENTITY_PHYSIOLOGY_ORDER.equals(OrcaMedicalClassCatalog.normalizeEntity(entity));
     }
 
     static boolean isCompatibleClassCode(String entity, String classCode) {
-        String normalizedEntity = canonicalizeEntity(entity);
+        String normalizedEntity = OrcaMedicalClassCatalog.normalizeEntity(entity);
         String normalizedClassCode = trimToNull(classCode);
-        if (normalizedEntity == null || normalizedClassCode == null) {
+        if (normalizedEntity == null) {
+            return false;
+        }
+        if (normalizedClassCode == null) {
             return true;
         }
-        return switch (normalizedEntity) {
-            case IInfoModel.ENTITY_MED_ORDER -> Set.of("211", "212", "221", "222", "231", "232").contains(normalizedClassCode);
-            case IInfoModel.ENTITY_INJECTION_ORDER -> "310".equals(normalizedClassCode);
-            case "treatmentOrder" -> "400".equals(normalizedClassCode);
-            case IInfoModel.ENTITY_SURGERY_ORDER -> normalizedClassCode.startsWith("5");
-            case "testOrder", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, IInfoModel.ENTITY_BACTERIA_ORDER -> normalizedClassCode.startsWith("6");
-            case IInfoModel.ENTITY_RADIOLOGY_ORDER -> normalizedClassCode.startsWith("7");
-            case IInfoModel.ENTITY_OTHER_ORDER -> isValidOtherOrderClassCode(normalizedClassCode);
-            case IInfoModel.ENTITY_BASE_CHARGE_ORDER, IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER ->
-                OrcaChargeClassSupport.isChargeClassCompatible(normalizedEntity, normalizedClassCode);
-            default -> true;
-        };
+        if (OrcaChargeClassSupport.isChargeEntity(normalizedEntity)) {
+            return OrcaChargeClassSupport.isChargeClassCompatible(normalizedEntity, normalizedClassCode);
+        }
+        return OrcaMedicalClassCatalog.isCompatibleClassCode(normalizedEntity, normalizedClassCode);
     }
 
     static boolean isValidOtherOrderCode(String code) {
         String normalized = trimToNull(code);
-        return normalized != null && OTHER_ORDER_CODE_PATTERN.matcher(normalized).matches();
+        return normalized != null
+                && !OrcaOrderBundleRowRoleSupport.isBodyPartCode(normalized)
+                && !OrcaOrderBundleRowRoleSupport.isCommentCode(normalized);
     }
 
     static boolean isValidOtherOrderClassCode(String classCode) {
-        String normalized = trimToNull(classCode);
-        if (normalized == null || !normalized.matches("\\d{3}")) {
-            return false;
-        }
-        try {
-            int value = Integer.parseInt(normalized);
-            return value >= 800 && value <= 890;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
+        return trimToNull(classCode) == null;
     }
 
     static boolean supportsBodyPartField(String entity) {
-        String normalizedEntity = canonicalizeEntity(entity);
-        if (normalizedEntity == null) {
-            return false;
-        }
-        if (isPhysiologyOrder(normalizedEntity)) {
-            return false;
-        }
-        return "treatmentOrder".equals(normalizedEntity)
-                || IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity);
+        return supportsBodyPartField(entity, null);
+    }
+
+    static boolean supportsBodyPartField(String entity, String classCode) {
+        return OrcaMedicalClassCatalog.supportsBodyPartField(entity, classCode);
     }
 
     static String normalizeRowRole(String rowRole) {
@@ -237,7 +217,7 @@ final class OrcaOrderBundleRequestSupport {
     }
 
     static String resolveCanonicalClassName(String entity, String classCode, String className) {
-        String normalizedEntity = canonicalizeEntity(entity);
+        String normalizedEntity = OrcaMedicalClassCatalog.normalizeEntity(entity);
         String chargeCanonical = OrcaChargeClassSupport.resolveCanonicalChargeClassName(normalizedEntity, classCode);
         if (chargeCanonical != null) {
             return chargeCanonical;
@@ -247,36 +227,9 @@ final class OrcaOrderBundleRequestSupport {
         }
         String normalizedClassCode = trimToNull(classCode);
         if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)
-                && (normalizedClassCode == null || normalizedClassCode.startsWith("7"))) {
+                && (normalizedClassCode == null || OrcaMedicalClassCatalog.isRadiologyClassCode(normalizedClassCode))) {
             return OrcaChargeClassCanonicalSupport.RADIOLOGY_CLASS_NAME;
         }
-        return trimToNull(className);
-    }
-
-    private static String canonicalizeEntity(String entity) {
-        if (entity == null || entity.isBlank()) {
-            return null;
-        }
-        String normalized = entity.trim();
-        if ("laboTest".equals(normalized) || IInfoModel.ENTITY_LABO_TEST.equals(normalized)) {
-            return "testOrder";
-        }
-        if (IInfoModel.ENTITY_GENERAL_ORDER.equals(normalized) || "generalOrder".equals(normalized)
-                || IInfoModel.ENTITY_TREATMENT.equals(normalized)) {
-            return "treatmentOrder";
-        }
-        if ("instructionChargeOrder".equals(normalized)) {
-            return IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER;
-        }
-        return normalized;
-    }
-
-    private static boolean isInRange(String classCode, int minInclusive, int maxInclusive) {
-        try {
-            int value = Integer.parseInt(classCode);
-            return value >= minInclusive && value <= maxInclusive;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
+        return OrcaMedicalClassCatalog.normalizeRadiologyLabel(className);
     }
 }

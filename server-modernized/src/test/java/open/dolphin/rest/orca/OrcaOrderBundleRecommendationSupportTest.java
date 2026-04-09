@@ -14,19 +14,19 @@ import org.junit.jupiter.api.Test;
 class OrcaOrderBundleRecommendationSupportTest {
 
     @Test
-    void toItemsAndExtractBodyPartSeparateLegacyBodyPartFromItems() {
+    void toItemsDropsLegacyBodyPartResurrectionOutsideRadiology700() {
         ClaimItem bodyPart = claimItem("0021001", "CHEST", "1", null, null);
         ClaimItem drug = claimItem("100001", "AMLODIPINE", "2", "tablet", "morning");
 
         List<OrderBundleFetchResponse.OrderBundleItem> items =
                 OrcaOrderBundleRecommendationSupport.toItems(IInfoModel.ENTITY_TREATMENT, new ClaimItem[]{bodyPart, drug});
         List<OrderBundleFetchResponse.OrderBundleItem> filtered =
-                OrcaOrderBundleRecommendationSupport.removeBodyPartItems(items);
+                OrcaOrderBundleRecommendationSupport.removeBodyPartItems(IInfoModel.ENTITY_TREATMENT, "400", items);
 
         assertEquals(2, items.size());
         assertEquals("0021001", items.get(0).getCode());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_BODY_PART, items.get(0).getRowRole());
-        assertEquals("0021001", OrcaOrderBundleRecommendationSupport.extractBodyPart(items).getCode());
+        assertEquals(null, OrcaOrderBundleRecommendationSupport.extractBodyPart(IInfoModel.ENTITY_TREATMENT, "400", items));
         assertEquals(1, filtered.size());
         assertEquals("100001", filtered.get(0).getCode());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN, filtered.get(0).getRowRole());
@@ -67,9 +67,7 @@ class OrcaOrderBundleRecommendationSupportTest {
                         IInfoModel.ENTITY_MED_ORDER,
                         null);
 
-        assertNotNull(template.getBodyPart());
-        assertEquals("0021001", template.getBodyPart().getCode());
-        assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_BODY_PART, template.getBodyPart().getRowRole());
+        assertEquals(null, template.getBodyPart());
         assertEquals(1, template.getMaterialItems().size());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL, template.getMaterialItems().get(0).getRowRole());
         assertEquals(1, template.getCommentItems().size());
@@ -126,8 +124,7 @@ class OrcaOrderBundleRecommendationSupportTest {
                         IInfoModel.ENTITY_TREATMENT,
                         null);
 
-        assertNotNull(template.getBodyPart());
-        assertEquals("002001", template.getBodyPart().getCode());
+        assertEquals(null, template.getBodyPart());
         assertEquals(1, template.getMaterialItems().size());
         assertEquals("700000021", template.getMaterialItems().get(0).getCode());
         assertEquals(OrcaOrderBundleRecommendationSupport.ROW_ROLE_MATERIAL, template.getMaterialItems().get(0).getRowRole());
@@ -181,7 +178,7 @@ class OrcaOrderBundleRecommendationSupportTest {
         bundle.setBundleNumber("3");
         bundle.setClassCode("700");
         bundle.setClassCodeSystem("Claim007");
-        bundle.setClassName("Radiology");
+        bundle.setClassName("画像診断");
         bundle.setClaimItem(new ClaimItem[]{
                 claimItem("002001", "CHEST", "1", "part", null),
                 claimItem("700000001", "RAD_MAIN_A", "1", "bottle", null),

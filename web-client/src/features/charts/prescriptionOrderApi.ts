@@ -10,6 +10,11 @@ import {
   type OrderBundleMutationResult,
   type OrderBundleOperation,
 } from './orderBundleApi';
+import {
+  isOrderBundleCommentCode,
+  isUnknownStructuredPrescriptionClaimCommentFamily,
+  requiresStructuredPrescriptionClaimCommentNote,
+} from './orcaCommentCarrierRules';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export type PrescriptionLocation = 'in' | 'out';
@@ -125,11 +130,13 @@ type StoredRpMeta = {
   refillPattern?: PrescriptionRefillPattern;
   doctorComment?: string;
   usageCode?: string;
+  claimComments?: Array<{ code?: string; name?: string; note?: string; lowerFields?: PrescriptionLowerFields }>;
   lowerFields?: PrescriptionLowerFields;
 };
 
 type StoredDrugMeta = {
   claimComments?: Array<{ code?: string; name?: string; note?: string; lowerFields?: PrescriptionLowerFields }>;
+  genericChangeAllowed?: boolean;
   isGeneralNamePrescription?: boolean;
   patientRequest?: boolean;
   numberFields?: PrescriptionNumberFields;
@@ -207,8 +214,6 @@ type ServerPrescriptionOrder = {
   remarks?: ServerPrescriptionRemark[];
 };
 
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
-const COMMENT_NUMBER_REQUIRED_PATTERN = /^(8501|8511|8521|831)/;
 const RX_RP_META_PREFIX = '__rx_rp_meta__:';
 const RX_DRUG_META_PREFIX = '__rx_drug_meta__:';
 const RX_CLAIM_LINK_PREFIX = '__rx_claim_target__:';
@@ -292,7 +297,7 @@ function normalizePrescriptionOrder(order: PrescriptionOrder): PrescriptionOrder
 
 const isClaimCommentItem = (item: OrderBundleItem) => {
   const code = item.code?.trim() ?? '';
-  return code.length > 0 && COMMENT_CODE_PATTERN.test(code);
+  return code.length > 0 && isOrderBundleCommentCode(code);
 };
 
 const parseClaimTargetIndex = (memo?: string | null): number | null => {
@@ -409,19 +414,32 @@ export const findFirstPrescriptionClaimCommentCodeIssue = (
   return null;
 };
 
-const requiresStructuredClaimCommentNumber = (code?: string) => COMMENT_NUMBER_REQUIRED_PATTERN.test(code?.trim() ?? '');
-
-const findFirstUnsupportedPrescriptionClaimCommentNumberIssue = (
+const findFirstStructuredPrescriptionClaimCommentIssue = (
   order: PrescriptionOrder,
-): PrescriptionClaimCommentNumberIssue | null => {
+): (PrescriptionClaimCommentNumberIssue & { message: string }) | null => {
   for (let rpIndex = 0; rpIndex < order.rps.length; rpIndex += 1) {
     const rp = order.rps[rpIndex];
     const rpClaimComments = normalizeClaimComments(rp.claimComments ?? []);
     for (let commentIndex = 0; commentIndex < rpClaimComments.length; commentIndex += 1) {
       const comment = rpClaimComments[commentIndex];
       const code = comment.code?.trim() ?? '';
-      if (comment.note?.trim() && requiresStructuredClaimCommentNumber(code)) {
-        return { rpIndex, drugIndex: -1, commentIndex, commentCode: code };
+      if (isUnknownStructuredPrescriptionClaimCommentFamily(code)) {
+        return {
+          rpIndex,
+          drugIndex: -1,
+          commentIndex,
+          commentCode: code,
+          message: `${code} 系コメント family は未対応のため保存できません。`,
+        };
+      }
+      if (requiresStructuredPrescriptionClaimCommentNote(code) && !comment.note?.trim()) {
+        return {
+          rpIndex,
+          drugIndex: -1,
+          commentIndex,
+          commentCode: code,
+          message: `${code} 系コメントは補足値が必須です。`,
+        };
       }
     }
     for (let drugIndex = 0; drugIndex < rp.drugs.length; drugIndex += 1) {
@@ -430,8 +448,23 @@ const findFirstUnsupportedPrescriptionClaimCommentNumberIssue = (
       for (let commentIndex = 0; commentIndex < claimComments.length; commentIndex += 1) {
         const comment = claimComments[commentIndex];
         const code = comment.code?.trim() ?? '';
-        if (comment.note?.trim() && requiresStructuredClaimCommentNumber(code)) {
-          return { rpIndex, drugIndex, commentIndex, commentCode: code };
+        if (isUnknownStructuredPrescriptionClaimCommentFamily(code)) {
+          return {
+            rpIndex,
+            drugIndex,
+            commentIndex,
+            commentCode: code,
+            message: `${code} 系コメント family は未対応のため保存できません。`,
+          };
+        }
+        if (requiresStructuredPrescriptionClaimCommentNote(code) && !comment.note?.trim()) {
+          return {
+            rpIndex,
+            drugIndex,
+            commentIndex,
+            commentCode: code,
+            message: `${code} 系コメントは補足値が必須です。`,
+          };
         }
       }
     }
@@ -460,7 +493,7 @@ const toDrugFromItem = (item: OrderBundleItem): PrescriptionDrug => {
     quantity: item.quantity?.trim() || '',
     unit: item.unit?.trim() || '',
     ...(drugMeta?.numberFields ?? {}),
-    genericChangeAllowed: true,
+    genericChangeAllowed: drugMeta?.genericChangeAllowed ?? true,
     isGeneralNamePrescription: drugMeta?.isGeneralNamePrescription ?? parsed.genericFlg === 'yes',
     drugComment: parsed.userComment?.trim() || '',
     claimComments,
@@ -474,7 +507,15 @@ const toRpFromBundle = (bundle: OrderBundle): PrescriptionRp => {
   const memoParsed = splitMetaText<StoredRpMeta>(bundle.memo, RX_RP_META_PREFIX);
   const rpMeta = memoParsed.meta;
   const drugs: PrescriptionDrug[] = [];
-  const rpClaimComments: PrescriptionClaimComment[] = [];
+  const rpClaimComments: PrescriptionClaimComment[] = normalizeClaimComments(
+    (rpMeta?.claimComments ?? []).map((entry) => ({
+      id: createStableId('claim'),
+      code: entry.code?.trim() || undefined,
+      name: entry.name?.trim() || '',
+      note: entry.note?.trim() || undefined,
+      ...(entry.lowerFields ?? {}),
+    })),
+  );
 
   bundle.items.forEach((item) => {
     if (isClaimCommentItem(item)) {
@@ -637,6 +678,28 @@ const normalizeRpMeta = (rp: PrescriptionRp, _doctorComment: string): StoredRpMe
     refillPattern: rp.refillPattern,
     doctorComment: trimmedDoctorComment || undefined,
     usageCode: rp.usageCode?.trim() || undefined,
+    claimComments: normalizeClaimComments(rp.claimComments ?? []).map((comment) => ({
+      code: comment.code,
+      name: comment.name,
+      note: comment.note,
+      lowerFields: hasAnyLowerField({
+        lowerDrugCode: comment.lowerDrugCode,
+        lowerUsageCode: comment.lowerUsageCode,
+        lowerClaimCode: comment.lowerClaimCode,
+        lowerRouteCode: comment.lowerRouteCode,
+        lowerTimingCode: comment.lowerTimingCode,
+        lowerClassCode: comment.lowerClassCode,
+      })
+        ? {
+            lowerDrugCode: comment.lowerDrugCode,
+            lowerUsageCode: comment.lowerUsageCode,
+            lowerClaimCode: comment.lowerClaimCode,
+            lowerRouteCode: comment.lowerRouteCode,
+            lowerTimingCode: comment.lowerTimingCode,
+            lowerClassCode: comment.lowerClassCode,
+          }
+        : undefined,
+    })),
     lowerFields,
   };
 };
@@ -661,6 +724,7 @@ const normalizeDrugMeta = (drug: PrescriptionDrug): StoredDrugMeta => {
     : undefined;
 
   return {
+    genericChangeAllowed: drug.genericChangeAllowed,
     isGeneralNamePrescription: drug.isGeneralNamePrescription,
     patientRequest: drug.patientRequest,
     numberFields: normalizeNumberFields(drug),
@@ -735,6 +799,7 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
 
     const drugMeta = normalizeDrugMeta(drug);
     const memoText = withJsonMetaLine('', RX_DRUG_META_PREFIX, drugMeta, Boolean(
+      drugMeta.genericChangeAllowed !== undefined ||
       drugMeta.patientRequest !== undefined ||
         (drugMeta.claimComments && drugMeta.claimComments.length > 0) ||
         hasAnyLowerField(drugMeta.lowerFields),
@@ -787,6 +852,7 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
           (rpMeta.refillPattern && rpMeta.refillPattern !== 'none') ||
           (rpMeta.doctorComment && rpMeta.doctorComment.trim()) ||
           (rpMeta.usageCode && rpMeta.usageCode.trim()) ||
+          (rpMeta.claimComments && rpMeta.claimComments.length > 0) ||
           hasAnyLowerField(rpMeta.lowerFields),
       ),
     );
@@ -824,37 +890,20 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
 
 export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): OrderBundle[] =>
   normalizePrescriptionOrder(order).rps.map((rp) => {
-    const items: OrderBundleItem[] = [];
-    rp.drugs.forEach((drug, drugIndex) => {
-      const code = drug.code?.trim() || undefined;
-      const name = drug.name.trim();
-      if (!name && !code) return;
-      items.push({
-        code,
-        name,
-        quantity: drug.quantity.trim() || '',
-        unit: drug.unit.trim() || '',
-        genericFlg: drug.isGeneralNamePrescription ? 'yes' : 'no',
-      });
-      normalizeClaimComments(drug.claimComments).forEach((comment) => {
-        items.push({
-          code: comment.code?.trim() || undefined,
-          name: comment.name.trim(),
-          quantity: '',
-          unit: '',
-          memo: `${RX_CLAIM_LINK_PREFIX}${drugIndex}`,
-        });
-      });
-    });
-    normalizeClaimComments(rp.claimComments ?? []).forEach((comment) => {
-      items.push({
-        code: comment.code?.trim() || undefined,
-        name: comment.name.trim(),
-        quantity: '',
-        unit: '',
-        memo: `${RX_CLAIM_LINK_PREFIX}${RX_RP_CLAIM_LINK_TARGET}`,
-      });
-    });
+    const rpMeta = normalizeRpMeta(rp, order.doctorComment);
+    const memo = withJsonMetaLine(
+      rp.remark.trim(),
+      RX_RP_META_PREFIX,
+      rpMeta,
+      Boolean(
+        rpMeta.refillCount ||
+          (rpMeta.refillPattern && rpMeta.refillPattern !== 'none') ||
+          (rpMeta.doctorComment && rpMeta.doctorComment.trim()) ||
+          (rpMeta.usageCode && rpMeta.usageCode.trim()) ||
+          (rpMeta.claimComments && rpMeta.claimComments.length > 0) ||
+          hasAnyLowerField(rpMeta.lowerFields),
+      ),
+    );
     return {
       entity: 'medOrder',
       documentId: rp.documentId,
@@ -867,9 +916,9 @@ export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): Ord
       admin: rp.usage.trim(),
       adminCode: rp.usageCode?.trim() || undefined,
       adminMemo: rp.usageCode?.trim() || '',
-      memo: undefined,
+      memo,
       started: rp.started,
-      items,
+      items: toOrderBundleItems(rp),
     } satisfies OrderBundle;
   });
 
@@ -1012,6 +1061,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
             note: comment.note?.trim() || undefined,
             lowerFields: hasAnyLowerField(comment.lowerFields) ? comment.lowerFields : undefined,
           })),
+          genericChangeAllowed: drug.genericChangeAllowed ?? true,
           isGeneralNamePrescription: drug.generalNamePrescription ?? false,
           patientRequest: drug.patientRequested ?? true,
           numberFields: normalizeNumberFields({
@@ -1023,6 +1073,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
         },
         Boolean(
           (drug.claimComments?.length ?? 0) > 0 ||
+            drug.genericChangeAllowed !== undefined ||
             drug.patientRequested !== undefined ||
             normalizeNumberFields({
               numberCode: drug.numberCode,
@@ -1057,6 +1108,12 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
       refillPattern: rp.refillPattern ?? undefined,
       doctorComment: rp.doctorComment?.trim() || undefined,
       usageCode: rp.usageCode?.trim() || undefined,
+      claimComments: (rp.claimComments ?? []).map((comment) => ({
+        code: comment.code?.trim() || undefined,
+        name: comment.text?.trim() || '',
+        note: comment.note?.trim() || undefined,
+        lowerFields: hasAnyLowerField(comment.lowerFields) ? comment.lowerFields : undefined,
+      })),
       lowerFields: hasAnyLowerField(rp.lowerFields) ? rp.lowerFields : undefined,
     };
     const memoText = withJsonMetaLine(
@@ -1258,12 +1315,12 @@ export async function savePrescriptionOrder(params: {
       `RP${claimCommentCodeIssue.rpIndex + 1} ${commentTarget}: 請求コメントコード未入力のコメントは保存できません。`,
     );
   }
-  const claimCommentNumberIssue = findFirstUnsupportedPrescriptionClaimCommentNumberIssue(normalizedOrder);
+  const claimCommentNumberIssue = findFirstStructuredPrescriptionClaimCommentIssue(normalizedOrder);
   if (claimCommentNumberIssue) {
     const commentTarget =
       claimCommentNumberIssue.drugIndex >= 0 ? `薬剤${claimCommentNumberIssue.drugIndex + 1}` : 'RPコメント';
     throw new Error(
-      `RP${claimCommentNumberIssue.rpIndex + 1} ${commentTarget}: ${claimCommentNumberIssue.commentCode} 系コメントの補足値送信は未対応のため保存できません。`,
+      `RP${claimCommentNumberIssue.rpIndex + 1} ${commentTarget}: ${claimCommentNumberIssue.message}`,
     );
   }
   const usageCodeIssueIndex = normalizedOrder.rps.findIndex(

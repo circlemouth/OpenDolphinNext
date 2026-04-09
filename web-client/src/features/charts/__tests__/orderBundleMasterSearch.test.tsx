@@ -282,27 +282,10 @@ describe('OrderBundleEditPanel master search UI', () => {
     expect(fetchOrderBundles).toHaveBeenCalled();
   });
 
-  it('リハビリ部位検索で選択した部位が反映される', async () => {
+  it('treatmentOrder では部位検索 UI を表示しない', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
-    const user = userEvent.setup();
-    const searchMock = vi.mocked(fetchOrderMasterSearch);
-    searchMock.mockImplementation(async ({ type }) => {
-      if (type === 'bodypart') {
-        return {
-          ok: true,
-          items: [
-            {
-              type: 'bodypart',
-              code: '002001',
-              name: '膝関節',
-            },
-          ],
-          totalCount: 1,
-        };
-      }
-      return { ok: true, items: [], totalCount: 0 };
-    });
+
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -313,30 +296,12 @@ describe('OrderBundleEditPanel master search UI', () => {
       />,
     );
 
-    const keywordInput = screen.getByLabelText('部位検索', {
-      selector: 'input[id$="-bodypart-keyword"]',
-    });
-    await user.type(keywordInput, '膝');
-
-    const searchButton = screen.getByRole('button', { name: '部位検索' });
-    await user.click(searchButton);
-
-    await waitFor(() =>
-      expect(searchMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'bodypart', keyword: '膝' })),
-    );
-    await waitFor(() => expect(screen.getByText('膝関節')).toBeInTheDocument());
-
-    const rowButton = screen.getByText('膝関節').closest('button');
-    expect(rowButton).not.toBeNull();
-    await user.click(rowButton!);
-
-    const bodyPartInput = screen.getByLabelText('部位', {
-      selector: 'input[id$="-bodypart"]',
-    }) as HTMLInputElement;
-    expect(bodyPartInput.value).toBe('膝関節');
+    expect(screen.queryByLabelText('部位')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('部位検索')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '部位検索' })).not.toBeInTheDocument();
   });
 
-  it('readOnly の場合は放射線の部位/コメント入力が無効化される', async () => {
+  it('readOnly の場合は画像診断の部位/コメント入力が無効化される', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -344,8 +309,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="radiologyOrder"
-        title="放射線"
-        bundleLabel="放射線オーダー名"
+        title="画像診断"
+        bundleLabel="画像診断オーダー名"
         meta={{
           ...baseProps.meta,
           readOnly: true,
@@ -363,7 +328,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     addButtons.forEach((button) => expect(button).toBeDisabled());
   });
 
-  it('treatmentOrder の場合はリハビリ部位検索が表示される', async () => {
+  it('treatmentOrder の help は bodyPart 非対応の current contract を示す', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -377,9 +342,11 @@ describe('OrderBundleEditPanel master search UI', () => {
       />,
     );
 
-    expect(screen.getByLabelText('部位')).toBeEnabled();
-    expect(screen.getByLabelText('部位検索')).toBeEnabled();
-    expect(screen.getByRole('button', { name: '部位検索' })).toBeEnabled();
+    expect(
+      screen.getByText(
+        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('注射オーダーでは注射専用フォームが表示される', async () => {
@@ -627,7 +594,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('放射線オーダーの統合検索は etensuカテゴリ7 / material / drug を使用する', async () => {
+  it('画像診断オーダーの統合検索は etensuカテゴリ7 / material / drug を使用する', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
@@ -641,8 +608,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="radiologyOrder"
-        title="放射線"
-        bundleLabel="放射線オーダー名"
+        title="画像診断"
+        bundleLabel="画像診断オーダー名"
         itemQuantityLabel="数量"
       />,
     );
@@ -785,7 +752,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('その他オーダーの統合検索は etensuカテゴリ8 のみを使用する', async () => {
+  it('その他オーダーの統合検索は explicit local-only 契約に沿って etensu 検索のみを使う', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
     const searchMock = vi.mocked(fetchOrderMasterSearch);
@@ -812,7 +779,7 @@ describe('OrderBundleEditPanel master search UI', () => {
       const hasEtensu = searchMock.mock.calls.some(
         ([params]) =>
           params?.type === 'etensu' &&
-          params?.category === '8' &&
+          params?.category == null &&
           typeof params?.keyword === 'string' &&
           params.keyword.includes('創'),
       );
@@ -863,7 +830,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     });
   });
 
-  it('放射線オーダーでは統合検索対象が表示される', async () => {
+  it('画像診断オーダーでは統合検索対象が表示される', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
 
@@ -871,8 +838,8 @@ describe('OrderBundleEditPanel master search UI', () => {
       <OrderBundleEditPanel
         {...baseProps}
         entity="radiologyOrder"
-        title="放射線"
-        bundleLabel="放射線オーダー名"
+        title="画像診断"
+        bundleLabel="画像診断オーダー名"
         itemQuantityLabel="数量"
       />,
     );

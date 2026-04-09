@@ -66,7 +66,7 @@ const STAMP_TARGET_OPTIONS = [
   { value: 'testOrder', label: '検査' },
   { value: 'physiologyOrder', label: '生理検査' },
   { value: 'bacteriaOrder', label: '細菌検査' },
-  { value: 'radiologyOrder', label: '放射線' },
+  { value: 'radiologyOrder', label: '画像診断' },
   { value: 'otherOrder', label: 'その他' },
 ] as const;
 

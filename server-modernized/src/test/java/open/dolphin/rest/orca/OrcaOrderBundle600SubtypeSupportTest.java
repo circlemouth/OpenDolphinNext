@@ -20,7 +20,7 @@ class OrcaOrderBundle600SubtypeSupportTest {
         assertEquals("culture", OrcaOrderBundle600SubtypeSupport.resolveSubtype(
                 IInfoModel.ENTITY_BACTERIA_ORDER,
                 null,
-                "[orca-order-subtype:culture]"));
+                "[orca-order-600-meta:{\"subtype\":\"culture\"}]"));
     }
 
     @Test
@@ -35,12 +35,12 @@ class OrcaOrderBundle600SubtypeSupportTest {
     void updateStampMemoPersistsOnlyNonDefaultSubtype() {
         assertNull(OrcaOrderBundle600SubtypeSupport.updateStampMemo(null, "testOrder", "specimen"));
         assertEquals(
-                "[orca-order-subtype:culture]",
+                "[orca-order-600-meta:{\"subtype\":\"culture\",\"bacteria\":null}]",
                 OrcaOrderBundle600SubtypeSupport.updateStampMemo(null, IInfoModel.ENTITY_BACTERIA_ORDER, "culture"));
         assertEquals(
-                "memo [orca-order-subtype:sensitivity]",
+                "memo [orca-order-600-meta:{\"subtype\":\"sensitivity\",\"bacteria\":null}]",
                 OrcaOrderBundle600SubtypeSupport.updateStampMemo(
-                        "memo [orca-order-subtype:culture]",
+                        "memo [orca-order-600-meta:{\"subtype\":\"culture\",\"bacteria\":null}]",
                         IInfoModel.ENTITY_BACTERIA_ORDER,
                         "sensitivity"));
     }

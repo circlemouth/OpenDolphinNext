@@ -69,6 +69,7 @@ import {
 import type { DataSourceTransition } from './authService';
 import type { DocumentOpenRequest } from './DocumentCreatePanel';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
+import { isAuxiliaryMaterialCode, supportsOrcaBodyPartField } from './orcaMedicalClassCatalog';
 
 export type OrderBundleEditPanelMeta = {
   runId?: string;
@@ -466,7 +467,12 @@ const canEditInjectionGenericFlag = (entity?: string | null, item?: OrderBundleI
   return isDrugMedicationCode(item?.code?.trim() ?? '');
 };
 
-const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], explicitBodyPart?: OrderBundleBodyPart) => {
+const splitBundleItems = (
+  entity?: string | null,
+  classCode?: string | null,
+  items?: OrderBundleItem[],
+  explicitBodyPart?: OrderBundleBodyPart,
+) => {
   const normal: OrderBundleItem[] = [];
   const material: OrderBundleItem[] = [];
   const comment: OrderBundleItem[] = [];
@@ -480,22 +486,9 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
         rowRole: 'bodyPart' as const,
       }
     : null;
-  let bodyPart: OrderBundleBodyPart | null = explicit;
-  let bodyPartResolvedFromItems = Boolean(explicit);
   (items ?? []).forEach((item) => {
     const rowRole = resolveOrderBundleItemRowRole(entity, item);
     if (rowRole === 'bodyPart') {
-      if (!bodyPartResolvedFromItems) {
-        bodyPart = {
-          code: item.code?.trim() || undefined,
-          name: item.name.trim(),
-          quantity: item.quantity?.trim() || undefined,
-          unit: item.unit?.trim() || undefined,
-          memo: item.memo?.trim() || undefined,
-          rowRole: 'bodyPart',
-        };
-        bodyPartResolvedFromItems = true;
-      }
       return;
     }
     if (rowRole === 'material') {
@@ -508,7 +501,12 @@ const splitBundleItems = (entity?: string | null, items?: OrderBundleItem[], exp
     }
     normal.push({ ...item, rowRole: 'main' });
   });
-  return { normal, material, comment, bodyPart: normalizeBundleBodyPartForEntity(entity, bodyPart) ?? null };
+  return {
+    normal,
+    material,
+    comment,
+    bodyPart: normalizeBundleBodyPartForEntity(entity, classCode, explicit) ?? null,
+  };
 };
 
 const collectBundleItems = (form: BundleFormState) => {
@@ -524,6 +522,7 @@ const hasBundleBodyPartValue = (bodyPart?: OrderBundleBodyPart | null) =>
 
 const normalizeBundleBodyPartForEntity = (
   entity: string | null | undefined,
+  classCode: string | null | undefined,
   bodyPart?:
     | OrderBundleBodyPart
     | {
@@ -536,8 +535,7 @@ const normalizeBundleBodyPartForEntity = (
       }
     | null,
 ): OrderBundleBodyPart | undefined => {
-  const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
-  if (canonicalEntity === 'physiologyOrder') return undefined;
+  if (!supportsOrcaBodyPartField(entity, classCode)) return undefined;
   return normalizeOrderBundleBodyPart(
     bodyPart
       ? {
@@ -585,7 +583,7 @@ const buildMissingMainRowMessage = ({
 };
 
 const resolveOperationBodyPart = (entity: string, form: BundleFormState): OrderBundleBodyPart | undefined =>
-  normalizeBundleBodyPartForEntity(entity, form.bodyPart);
+  normalizeBundleBodyPartForEntity(entity, form.classCode, form.bodyPart);
 
 const DEFAULT_VALIDATION_RULE: BundleValidationRule = {
   itemLabel: '項目',
@@ -627,10 +625,24 @@ const buildEmptyForm = (today: string): BundleFormState => ({
   bodyPart: null,
 });
 
+const applyDefaultClassMeta = (entity: string, form: BundleFormState): BundleFormState => {
+  if (entity === 'medOrder') return form;
+  if (form.classCode?.trim()) return form;
+  const defaultClassMeta = resolveOrderEntityDefaultClassMeta(entity);
+  if (!defaultClassMeta) return form;
+  return {
+    ...form,
+    classCode: defaultClassMeta.classCode,
+    classCodeSystem: PRESCRIPTION_CLASS_CODE_SYSTEM,
+    className: defaultClassMeta.className,
+  };
+};
+
 export const toFormState = (bundle: OrderBundle, today: string): BundleFormState => {
   const canonicalBundle = canonicalizeChargeBundleMeta(bundle);
   const { normal, material, comment, bodyPart } = splitBundleItems(
     canonicalBundle.entity,
+    canonicalBundle.classCode,
     canonicalBundle.items,
     canonicalBundle.bodyPart,
   );
@@ -742,7 +754,7 @@ const toOrderBundleFromInputSetDetail = (
     adminCodeSystem: bundle.adminCodeSystem ?? undefined,
     memo: bundle.memo ?? '',
     started: bundle.started,
-    bodyPart: normalizeBundleBodyPartForEntity(resolvedEntity, bundle.bodyPart),
+    bodyPart: normalizeBundleBodyPartForEntity(resolvedEntity, bundle.classCode, bundle.bodyPart),
   });
   return {
     ...canonicalBundle,
@@ -829,10 +841,10 @@ const resolveSendContractNote = (entity: string) => {
     return '注射送信では admin/adminCode・回数・coded row・generic flag・rowRole を使います。用法候補の route/timing/dosePerDay は参照表示のみで、adminMemo/speed と行ごとの注射コメントは carrier 未対応のため入力がある間は送信を停止します。';
   }
   if (canonicalEntity === 'treatmentOrder') {
-    return '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
+    return '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。';
   }
   if (canonicalEntity === 'otherOrder') {
-    return 'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。';
+    return 'setCode は展開専用です。otherOrder は explicit local-only 契約で保存し、ORCA 送信しません。bodyPart は保持せず、オーダー名・指示・自由メモは院内補足として保存します。';
   }
   if (canonicalEntity === 'baseChargeOrder' || canonicalEntity === 'instractionChargeOrder') {
     return 'setCode は展開専用です。数量は ORCA 送信しますが、単位・算定指示・院内補足・自由メモは院内補足としてのみ保持します。選択式コメントの parameter 付き候補は追加できません。';
@@ -847,7 +859,7 @@ const resolveSendContractNote = (entity: string) => {
     return '600系では admin(検査指示)・院内補足・自由メモ・item memo・subtype は bundle 共通の院内ローカル情報です。ORCA送信では classCode 600 とコード付き行（複数検査項目・コメントコードを含む）だけを使用します。';
   }
   if (canonicalEntity === 'radiologyOrder') {
-    return '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。';
+    return '画像診断送信では classCode と coded row を使います。bodyPart は classCode=700 のときだけ保持し、検査指示・自由メモ・item memo は院内ローカル情報として保持します。';
   }
   return '';
 };
@@ -1014,7 +1026,7 @@ export const validateBundleForm = ({
   const rule = resolveOrderEntityValidationRule(entity) ?? DEFAULT_VALIDATION_RULE;
   const testSubtypeConfig = resolveOrderEntityTestSubtypeConfig(entity);
   const resolvedSubtype = resolveFormSubtype(entity, form.subtype);
-  const supportsBodyPartField = resolveOrderEntityUiProfile(entity).supportsBodyPartSearch;
+  const supportsBodyPartField = supportsOrcaBodyPartField(entity, form.classCode);
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   const combinedItems = collectBundleItems(form);
   const contractStats = collectOrderBundleContractStats({
@@ -1063,7 +1075,7 @@ export const validateBundleForm = ({
       message: '生理検査では bodyPart を保存しません。値をクリアしてください。',
     });
   }
-  if (rule.requiresBodyPart && !form.bodyPart?.name?.trim()) {
+  if ((rule.requiresBodyPart || (canonicalEntity === 'radiologyOrder' && supportsBodyPartField)) && !form.bodyPart?.name?.trim()) {
     issues.push({ key: 'missing_body_part', message: '部位を入力してください。' });
   }
   if (hasBodyPartValue && !supportsBodyPartField && canonicalEntity !== 'physiologyOrder') {
@@ -1134,28 +1146,16 @@ export const validateBundleForm = ({
     });
   }
   if (canonicalEntity === 'otherOrder') {
-    const normalizedClassCode = form.classCode?.trim() ?? '';
-    if (normalizedClassCode && (!/^\d{3}$/.test(normalizedClassCode) || Number(normalizedClassCode) < 800 || Number(normalizedClassCode) > 890)) {
+    if (form.classCode?.trim()) {
       issues.push({
         key: 'invalid_other_order_class_code',
-        message: 'otherOrder の classCode は 800〜890 の3桁数値のみ保存できます。',
+        message: 'otherOrder は explicit local-only 契約のため classCode を保持しません。classCode をクリアしてください。',
       });
     }
     if (hasMaterialValues) {
       issues.push({
         key: 'unsupported_material_item',
-        message: 'otherOrder では材料行を保持できません。etensu category 8 の項目のみ入力してください。',
-      });
-    }
-    if (
-      form.items.some((item) => {
-        const code = item.code?.trim() ?? '';
-        return code !== '' && !isOrderBundleCommentCode(code) && !/^(?:8\d{8}|18\d{7})$/.test(code);
-      })
-    ) {
-      issues.push({
-        key: 'invalid_other_order_code',
-        message: 'otherOrder では etensu category 8 のコード以外を保存できません。',
+        message: 'otherOrder では材料行を保持できません。',
       });
     }
   }
@@ -1163,7 +1163,7 @@ export const validateBundleForm = ({
     if (
       form.materialItems.some((item) => {
         const code = item.code?.trim() ?? '';
-        return code !== '' && !/^7\d{8}$/.test(code);
+        return code !== '' && !isAuxiliaryMaterialCode(code);
       })
     ) {
       issues.push({
@@ -1449,8 +1449,12 @@ export function OrderBundleEditPanel({
     setForm((prev) => (hasBundleBodyPartValue(prev.bodyPart) ? { ...prev, bodyPart: null } : prev));
   }, [entity, form.bodyPart]);
 
+  useEffect(() => {
+    setForm((prev) => applyDefaultClassMeta(entity, prev));
+  }, [entity]);
+
   const supportsUsageSearch = orderUiProfile.supportsUsageSearch;
-  const supportsBodyPartSearch = orderUiProfile.supportsBodyPartSearch;
+  const supportsBodyPartSearch = supportsOrcaBodyPartField(entity, form.classCode);
   const supportsCommentCodes = orderUiProfile.supportsCommentCodes;
   const physiologySendContractGuidance = resolveOrderEntityPhysiologySendContractGuidance(entity);
   const supportsMaterialRows =

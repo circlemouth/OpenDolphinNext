@@ -3,6 +3,7 @@ package open.dolphin.rest.orca;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -177,7 +178,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void getBundlesReturnsBodyPartFieldAndStripsLegacyBodyPartItems() {
+    void getBundlesStripsLegacyBodyPartItemsForUnsupportedEntity() {
         OrderBundleFetchResponse response = resource.getBundles(
                 servletRequest,
                 "00001",
@@ -186,9 +187,8 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
         assertNotNull(response);
         var first = response.getBundles().get(0);
-        assertNotNull(first.getBodyPart());
-        assertEquals("0021001", first.getBodyPart().getCode());
-        assertEquals("胸部", first.getBodyPart().getName());
+        assertEquals("medOrder", first.getEntity());
+        assertNull(first.getBodyPart());
         assertEquals(1, first.getItems().size());
         assertEquals("100001", first.getItems().get(0).getCode());
     }
@@ -271,7 +271,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         Map<String, Object> body = getErrorBody(exception);
         assertEquals(Boolean.TRUE, body.get("validationError"));
         assertEquals("bodyPart", body.get("field"));
-        assertEquals("bodyPart code is required", body.get("message"));
+        assertEquals("bodyPart is incompatible with entity", body.get("message"));
     }
 
     @Test
@@ -309,7 +309,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         Map<String, Object> body = getErrorBody(exception);
         assertEquals(Boolean.TRUE, body.get("validationError"));
         assertEquals("bodyPart", body.get("field"));
-        assertEquals("bodyPart must use code family 002", body.get("message"));
+        assertEquals("bodyPart is incompatible with entity", body.get("message"));
     }
 
     @Test
@@ -388,14 +388,14 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void postBundlesPrioritizesBodyPartFieldOverLegacyItems() {
+    void postBundlesRejectsLegacyBodyPartItemsEvenWhenExplicitBodyPartFieldExists() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
         OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
         op.setOperation("create");
-        op.setEntity("treatmentOrder");
+        op.setEntity("radiologyOrder");
         op.setBundleName("bodyPart-priority");
-        op.setClassCode("400");
+        op.setClassCode("700");
         op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
@@ -408,25 +408,24 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         legacyBodyPart.setCode("002111");
         legacyBodyPart.setName("legacy-body-part");
         OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
-        procedure.setCode("140000610");
-        procedure.setName("treatment-main");
+        procedure.setCode("170017510");
+        procedure.setName("radiology-main");
         op.setItems(List.of(legacyBodyPart, procedure));
         payload.setOperations(List.of(op));
 
-        OrderBundleMutationResponse response = resource.postBundles(servletRequest, payload);
-        assertNotNull(response);
-        assertEquals(1, response.getCreatedDocumentIds().size());
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
 
-        DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
-        assertNotNull(saved);
-        assertNotNull(saved.getModules().get(0).getBeanJson());
-        BundleDolphin bundle = (BundleDolphin) saved.getModules().get(0).getModel();
-        ClaimItem[] claimItems = bundle.getClaimItem();
-        assertNotNull(claimItems);
-        assertEquals(2, claimItems.length);
-        assertEquals("002999", claimItems[0].getCode());
-        assertEquals("priority-body-part", claimItems[0].getName());
-        assertEquals("140000610", claimItems[1].getCode());
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("items", body.get("field"));
+        assertEquals("bodyPart must use 002 code", body.get("message"));
     }
 
     @Test
@@ -464,7 +463,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         Map<String, Object> body = getErrorBody(exception);
         assertEquals(Boolean.TRUE, body.get("validationError"));
         assertEquals("bodyPart", body.get("field"));
-        assertTrue(String.valueOf(body.get("message")).contains("002"));
+        assertEquals("bodyPart is incompatible with entity", body.get("message"));
     }
 
     @Test
@@ -478,11 +477,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         op.setClassCode("400");
         op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
-
-        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
-        bodyPart.setCode("002999");
-        bodyPart.setName("priority-body-part");
-        op.setBodyPart(bodyPart);
 
         OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
         procedure.setCode("140000610");
@@ -508,21 +502,21 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals(Boolean.TRUE, body.get("validationError"));
-        assertNotNull(body.get("field"));
+        assertEquals("items", body.get("field"));
         assertTrue(String.valueOf(body.get("message")).contains("material")
                 || String.valueOf(body.get("message")).contains("9桁")
                 || String.valueOf(body.get("message")).contains("sendable"));
     }
 
     @Test
-    void postBundlesFallsBackToLegacyItemsBodyPartWhenBodyPartFieldMissing() {
+    void postBundlesRejectsLegacyItemsBodyPartWhenBodyPartFieldMissing() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
         OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
         op.setOperation("create");
-        op.setEntity("treatmentOrder");
+        op.setEntity("radiologyOrder");
         op.setBundleName("legacy-body-part-fallback");
-        op.setClassCode("400");
+        op.setClassCode("700");
         op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
@@ -530,25 +524,24 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         legacyBodyPart.setCode("002777");
         legacyBodyPart.setName("legacy-body-part");
         OrderBundleMutationRequest.BundleItem procedure = new OrderBundleMutationRequest.BundleItem();
-        procedure.setCode("140000610");
-        procedure.setName("treatment-main");
+        procedure.setCode("170017510");
+        procedure.setName("radiology-main");
         op.setItems(List.of(legacyBodyPart, procedure));
         payload.setOperations(List.of(op));
 
-        OrderBundleMutationResponse response = resource.postBundles(servletRequest, payload);
-        assertNotNull(response);
-        assertEquals(1, response.getCreatedDocumentIds().size());
+        WebApplicationException exception = null;
+        try {
+            resource.postBundles(servletRequest, payload);
+        } catch (WebApplicationException ex) {
+            exception = ex;
+        }
 
-        DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
-        assertNotNull(saved);
-        assertNotNull(saved.getModules().get(0).getBeanJson());
-        BundleDolphin bundle = (BundleDolphin) saved.getModules().get(0).getModel();
-        ClaimItem[] claimItems = bundle.getClaimItem();
-        assertNotNull(claimItems);
-        assertEquals(2, claimItems.length);
-        assertEquals("002777", claimItems[0].getCode());
-        assertEquals("legacy-body-part", claimItems[0].getName());
-        assertEquals("140000610", claimItems[1].getCode());
+        assertNotNull(exception);
+        assertEquals(400, exception.getResponse().getStatus());
+        Map<String, Object> body = getErrorBody(exception);
+        assertEquals(Boolean.TRUE, body.get("validationError"));
+        assertEquals("items", body.get("field"));
+        assertEquals("bodyPart must use 002 code", body.get("message"));
     }
 
     @Test
@@ -562,11 +555,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         op.setClassCode("400");
         op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
-
-        OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
-        bodyPart.setCode("002001");
-        bodyPart.setName("body-part-only");
-        op.setBodyPart(bodyPart);
 
         OrderBundleMutationRequest.BundleItem comment = new OrderBundleMutationRequest.BundleItem();
         comment.setCode("0085001");

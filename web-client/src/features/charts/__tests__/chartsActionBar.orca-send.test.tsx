@@ -258,7 +258,7 @@ describe('ChartsActionBar ORCA send', () => {
   expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
 });
 
-  it('blocks saved otherOrder bundles with invalid classCode before send', async () => {
+  it('blocks saved otherOrder bundles before send with explicit local-only notice', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderBundles).mockImplementation(async ({ entity }) => ({
       ok: true,
@@ -281,7 +281,7 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/otherOrder の classCode/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/otherOrder.*explicit local-only 契約.*ORCA 送信しません/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
@@ -566,7 +566,7 @@ describe('ChartsActionBar ORCA send', () => {
                 bundleNumber: '3',
                 classCode: '700',
                 classCodeSystem: 'Claim007',
-                className: '放射線',
+                className: '画像診断',
                 bodyPart: { code: '002001', name: 'chest', quantity: '1', unit: 'part', memo: '' },
                 items: [
                   { code: '170017510', name: 'ct', quantity: '1', unit: 'times', memo: '' },

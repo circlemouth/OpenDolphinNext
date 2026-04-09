@@ -260,7 +260,7 @@ const buildBundleDetailLines = (group: OrderGroupKey, bundle: OrderBundle, bundl
   }
 
   const bodyPart = resolveBundleBodyPart(bundle);
-  if (bodyPart && (group === 'test' || group === 'treatment')) {
+  if (bodyPart && bundle.entity === 'radiologyOrder') {
     detailLines.push(formatBodyPartLine(bodyPart));
   }
 

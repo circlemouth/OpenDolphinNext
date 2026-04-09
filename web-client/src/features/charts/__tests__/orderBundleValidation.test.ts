@@ -321,16 +321,17 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['missing_main_row']);
   });
 
-  it('radiologyOrder: 部位が未入力の場合にエラー', () => {
+  it('radiologyOrder: classCode 700 では部位が未入力だとエラー', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
         bundleName: '胸部撮影',
+        classCode: '700',
         items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
         bodyPart: null,
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['missing_body_part']);
   });
@@ -340,11 +341,12 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '胸部撮影',
+        classCode: '700',
         items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
         bodyPart: { code: '002000', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
     expect(issues).toHaveLength(0);
   });
@@ -354,11 +356,12 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '胸部撮影',
+        classCode: '700',
         items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
         bodyPart: { code: '', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['missing_body_part_code']);
   });
@@ -368,11 +371,12 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '胸部撮影',
+        classCode: '700',
         items: [{ code: '700000001', name: '胸部X線', quantity: '1', unit: '回', memo: '' }],
         bodyPart: { code: '001001', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'radiologyOrder',
-      bundleLabel: '放射線オーダー名',
+      bundleLabel: '画像診断オーダー名',
     });
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_body_part_code']);
   });
@@ -530,7 +534,7 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
   });
 
-  it('otherOrder: 8系以外の main code は保存前に block する', () => {
+  it('otherOrder: explicit local-only 契約では main code の family 範囲を ORCA shape で検証しない', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -540,7 +544,7 @@ describe('validateBundleForm', () => {
       entity: 'otherOrder',
       bundleLabel: 'その他',
     });
-    expect(issues.map((issue) => issue.key)).toEqual(['invalid_other_order_code']);
+    expect(issues).toHaveLength(0);
   });
 
   it('otherOrder: classCode が 800〜890 以外なら保存前に block する', () => {

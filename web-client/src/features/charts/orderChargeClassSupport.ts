@@ -1,3 +1,5 @@
+import { getAllowedClassCodesForEntity } from './orcaMedicalClassCatalog';
+
 export type ChargeOrderEntity = 'baseChargeOrder' | 'instractionChargeOrder';
 
 export type ChargeClassMeta = {
@@ -8,17 +10,26 @@ export type ChargeClassMeta = {
 
 type ChargeRule = {
   entity: ChargeOrderEntity;
-  min: number;
-  max: number;
   defaultClassCode: string;
   className: string;
+  allowedClassCodes: readonly string[];
 };
 
 export const CHARGE_CLASS_CODE_SYSTEM: ChargeClassMeta['classCodeSystem'] = 'Claim007';
 
 const CHARGE_RULES: readonly ChargeRule[] = [
-  { entity: 'baseChargeOrder', min: 110, max: 125, defaultClassCode: '110', className: '基本診療料' },
-  { entity: 'instractionChargeOrder', min: 130, max: 150, defaultClassCode: '130', className: '医学管理等' },
+  {
+    entity: 'baseChargeOrder',
+    defaultClassCode: '110',
+    className: '基本診療料',
+    allowedClassCodes: getAllowedClassCodesForEntity('baseChargeOrder'),
+  },
+  {
+    entity: 'instractionChargeOrder',
+    defaultClassCode: '130',
+    className: '医学管理等',
+    allowedClassCodes: getAllowedClassCodesForEntity('instractionChargeOrder'),
+  },
 ] as const;
 
 const trimToNull = (value?: string | null) => {
@@ -38,9 +49,9 @@ export const normalizeChargeClassCode = (value?: string | null) => {
 };
 
 const findChargeRuleByCode = (value?: string | null) => {
-  const parsed = parseClassCode(value);
-  if (parsed === null) return null;
-  return CHARGE_RULES.find((rule) => parsed >= rule.min && parsed <= rule.max) ?? null;
+  const normalized = trimToNull(value);
+  if (!normalized) return null;
+  return CHARGE_RULES.find((rule) => rule.allowedClassCodes.includes(normalized)) ?? null;
 };
 
 const findChargeRuleByEntity = (entity?: string | null) => {
@@ -71,8 +82,7 @@ export const deriveChargeClassCodeFromCategory = (entity: string, category?: str
   if (!rule) return undefined;
   const normalized = trimToNull(category);
   if (!normalized || !/^\d+$/.test(normalized)) return undefined;
-  const parsed = Number.parseInt(normalized, 10);
-  if (parsed < rule.min || parsed > rule.max) return undefined;
+  if (!rule.allowedClassCodes.includes(normalized)) return undefined;
   return normalized;
 };
 

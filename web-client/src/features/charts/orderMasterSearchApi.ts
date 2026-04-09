@@ -1,6 +1,7 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { ensureObservabilityMeta, getObservabilityMeta } from '../../libs/observability/observability';
 import type { DataSourceTransition } from './authService';
+import { isOrderBundleCommentCode } from './orcaCommentCarrierRules';
 
 export type OrderMasterSearchType =
   | 'drug'
@@ -116,8 +117,6 @@ const MASTER_ENDPOINT_MAP: Record<OrderMasterSearchType, string> = {
   comment: '/api/orca/master/comment',
   bodypart: '/api/orca/master/bodypart',
 };
-
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 
 const normalizeDrugEntry = (entry: OrcaDrugMasterEntry, type: OrderMasterSearchType): OrderMasterSearchItem | null => {
   const name = entry.name?.trim();
@@ -380,7 +379,7 @@ export async function fetchOrderMasterSearch(params: {
       params.type === 'comment'
         ? normalizedAll.filter((item) => {
             const code = item.code?.trim() ?? '';
-            if (COMMENT_CODE_PATTERN.test(code)) return true;
+            if (isOrderBundleCommentCode(code)) return true;
             const category = item.category?.toLowerCase() ?? '';
             return category.includes('comment') || category.includes('コメント');
           })

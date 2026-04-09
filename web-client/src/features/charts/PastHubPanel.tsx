@@ -31,7 +31,7 @@ const ORDER_ENTITY_LABEL: Record<PastHubOrderEntity, string> = {
   testOrder: '検査',
   physiologyOrder: '生理検査',
   bacteriaOrder: '細菌検査',
-  radiologyOrder: '放射線',
+  radiologyOrder: '画像診断',
   instractionChargeOrder: '指導料',
   baseChargeOrder: '基本料',
 };

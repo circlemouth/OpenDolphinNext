@@ -6,6 +6,7 @@ import { resolveAriaLive } from '../../libs/observability/observability';
 import type { OrderBundleEditPanelMeta, OrderBundleEditPanelRequest, OrderBundleEditingContext } from './OrderBundleEditPanel';
 import type { OrderBundle } from './orderBundleApi';
 import { fetchOrderMasterSearch, type OrderMasterSearchItem } from './orderMasterSearchApi';
+import { isOrderBundleCommentCode } from './orcaCommentCarrierRules';
 import {
   buildRpRequiredEditorMessage,
   resolveRpRequiredFieldLabel,
@@ -135,7 +136,6 @@ const CLAIM_COMMENT_TEMPLATES: Array<{ code?: string; name: string }> = [
 ];
 
 const DRUG_COMMENT_TEMPLATES = ['食後服用を指導', '眠気に注意', '残薬確認済み'];
-const INPUT_SET_CLAIM_COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 
 const createClaimComment = (name: string, code?: string, note?: string): PrescriptionClaimComment => ({
   id: `claim-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
@@ -265,7 +265,7 @@ const toRpFromInputSetDetail = (
     .flatMap((item) => {
       const code = item.code?.trim() || undefined;
       const name = item.name?.trim() ?? '';
-      if (code && INPUT_SET_CLAIM_COMMENT_CODE_PATTERN.test(code) && name) {
+      if (code && isOrderBundleCommentCode(code) && name) {
         claimComments.push(createClaimComment(name, code, item.memo));
         return [];
       }

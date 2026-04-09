@@ -1,5 +1,6 @@
 package open.dolphin.rest.orca;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -154,7 +155,7 @@ final class OrcaOrderBundle600SubtypeSupport {
         BacteriaOrderMetadata metadata = new BacteriaOrderMetadata();
         List<BacteriaOrderMetadata.CarrierComment> comments = new ArrayList<>();
         for (ClaimItem item : claimItems) {
-            if (item == null || !OrcaOrderBundleRecommendationSupport.isCommentCode(item.getCode())) {
+            if (item == null || !OrcaCommentCarrierRules.isStrictBacteriaStructuredCommentCode(item.getCode())) {
                 continue;
             }
             BacteriaOrderMetadata.CarrierComment comment = new BacteriaOrderMetadata.CarrierComment();
@@ -214,6 +215,9 @@ final class OrcaOrderBundle600SubtypeSupport {
         normalized.setCategory(OrcaOrderBundleRequestSupport.trimToNull(comment.getCategory()));
         normalized.setItemNumber(OrcaOrderBundleRequestSupport.trimToNull(comment.getItemNumber()));
         normalized.setItemNumberBranch(OrcaOrderBundleRequestSupport.trimToNull(comment.getItemNumberBranch()));
+        if (!OrcaCommentCarrierRules.isStrictBacteriaStructuredCommentCode(normalized.getCode())) {
+            return null;
+        }
         if (normalized.getCode() == null && normalized.getName() == null && normalized.getInputValue() == null) {
             return null;
         }
@@ -245,7 +249,7 @@ final class OrcaOrderBundle600SubtypeSupport {
             stored.subtype = normalizeSubtype(stored.subtype);
             stored.bacteria = normalizeBacteria(stored.bacteria);
             return stored;
-        } catch (Exception ex) {
+        } catch (JsonProcessingException ex) {
             return new Stored600Meta();
         }
     }

@@ -1,11 +1,11 @@
-# 放射線オーダー canonical contract (2026-04-04)
+# 画像診断オーダー canonical contract (2026-04-04)
 
 - RUN_ID: `20260404T084800Z`
 - 対象: `radiologyOrder`
 
 ## Canonical Decision
 
-- `classCode=700` の `className` は `放射線` に統一する。
+- `classCode=700` の `className` は `画像診断` に統一する。
 - row 分類は `bodyPart / main / auxiliary / comment` を canonical とする。
 - `auxiliary` の内部種別は `rowSubtype=material | contrastDrug` を first-class に保持する。
 - `bodyPart` は `002...` code の専用 field を canonical source of truth にする。
@@ -23,7 +23,7 @@
 ## Validation
 
 - `materialItems` は quantity/unit/memo のみ入力、または name あり code なしを保存前に reject する。
-- 放射線オーダーは `bodyPart` 必須、`002...` 以外の bodyPart 禁止、sendable `main` 必須、comment/bodyPart のみ禁止、coded/uncoded 混在禁止、uncoded auxiliary 禁止で front/server を一致させる。
+- 画像診断オーダーは `classCode=700` のときだけ `bodyPart` 必須とし、`002...` 以外の bodyPart を禁止する。`700` 以外では bodyPart を受け付けず、sendable `main` 必須、comment/bodyPart のみ禁止、coded/uncoded 混在禁止、uncoded auxiliary 禁止で front/server を一致させる。
 - invalid row は silent drop せず、保存前または server validation で fail-closed にする。
 
 ## Local-only

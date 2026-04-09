@@ -1,5 +1,6 @@
 package open.dolphin.rest.orca;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.LinkedHashMap;
@@ -38,7 +39,7 @@ final class OrcaOrderBundleItemMemoSupport {
                     normalizeText(parsed.get("itemNumber")),
                     normalizeText(parsed.get("itemNumberBranch")),
                     memoText);
-        } catch (Exception error) {
+        } catch (JsonProcessingException error) {
             return new ParsedItem(null, null, null, null, null, null, null, null, raw);
         }
     }

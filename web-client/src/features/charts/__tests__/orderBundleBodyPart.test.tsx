@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 
 import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
-import { fetchOrderBundles, mutateOrderBundles } from '../orderBundleApi';
+import { fetchOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 
 vi.mock('../orderBundleApi', async () => {
@@ -48,8 +48,8 @@ const renderWithClient = (ui: ReactElement) => {
 const baseProps = {
   patientId: 'P-1',
   entity: 'radiologyOrder',
-  title: '放射線オーダー編集',
-  bundleLabel: '放射線オーダー名',
+  title: '画像診断オーダー編集',
+  bundleLabel: '画像診断オーダー名',
   itemQuantityLabel: '数量',
   meta: {
     runId: 'RUN-ORDER',
@@ -138,29 +138,10 @@ describe('OrderBundleEditPanel body part contract', () => {
     expect(bodyPartInput).toHaveValue('胸部');
   });
 
-  it('treatmentOrder では bodyPart を専用フィールドに分離し、主項目は items に残る', async () => {
+  it('treatmentOrder では bodyPart 検索 UI を表示しない', async () => {
     localStorage.setItem('devFacilityId', 'facility');
     localStorage.setItem('devUserId', 'doctor');
-    const searchMock = vi.mocked(fetchOrderMasterSearch);
-    searchMock.mockImplementation(async ({ type }) => {
-      if (type === 'etensu') {
-        return {
-          ok: true,
-          items: [{ type: 'etensu', code: '140000610', name: 'テスト項目', unit: '回', category: '4' }],
-          totalCount: 1,
-        };
-      }
-      if (type === 'bodypart') {
-        return {
-          ok: true,
-          items: [{ type: 'bodypart', code: '002003', name: '肩部', unit: '部位', category: '2' }],
-          totalCount: 1,
-        };
-      }
-      return { ok: true, items: [], totalCount: 0 };
-    });
-
-    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     renderWithClient(
       <OrderBundleEditPanel
         {...baseProps}
@@ -171,31 +152,8 @@ describe('OrderBundleEditPanel body part contract', () => {
       />,
     );
 
-    await user.type(screen.getByPlaceholderText('処置項目名'), 'テスト項目');
-    await waitFor(() =>
-      expect(
-        searchMock.mock.calls.some(([params]) => params?.type === 'etensu' && params?.keyword === 'テスト項目'),
-      ).toBe(true),
-    );
-    await waitFor(() =>
-      expect(document.querySelector('datalist[id$="-item-predictive-list"] option[value="テスト項目"]')).not.toBeNull(),
-    );
-    await user.tab();
-
-    await user.type(screen.getByLabelText('部位検索', { selector: 'input[id$="-bodypart-keyword"]' }), '肩');
-    await user.click(await screen.findByRole('button', { name: /肩部/ }));
-    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
-
-    await waitFor(() => expect(mutateOrderBundles).toHaveBeenCalled());
-    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
-    const operation = payload?.operations?.[0];
-    expect(operation?.items).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: '140000610', name: 'テスト項目' })]),
-    );
-    expect(operation?.items).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: '002003', name: '肩部' })]),
-    );
-    expect(operation?.bodyPart).toEqual(expect.objectContaining({ code: '002003', name: '肩部', rowRole: 'bodyPart' }));
+    expect(screen.queryByLabelText('部位検索', { selector: 'input[id$="-bodypart-keyword"]' })).toBeNull();
+    expect(screen.queryByLabelText('部位', { selector: 'input[id$="-bodypart"]' })).toBeNull();
   });
 
   it('bodyPart 検索失敗時は aria-live=assertive のエラーを表示する', async () => {
@@ -246,6 +204,7 @@ describe('OrderBundleEditPanel body part contract', () => {
           moduleId: 70,
           entity: 'radiologyOrder',
           bundleName: '胸部CT',
+          classCode: '700',
           started: '2026-02-27',
           items: [{ code: '700001', name: '胸部CT' }],
           bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '専用フィールド' },
@@ -275,6 +234,7 @@ describe('OrderBundleEditPanel body part contract', () => {
           moduleId: 71,
           entity: 'radiologyOrder',
           bundleName: '胸部CT',
+          classCode: '700',
           started: '2026-02-27',
           items: [{ code: '700001', name: '胸部CT' }],
           bodyPart: { code: '001001', name: '胸部', quantity: '1', unit: '部位', memo: 'invalid' },

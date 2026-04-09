@@ -7,47 +7,19 @@ import {
   resolveChargeClassMetaFromItemCategory as resolveChargeClassMetaFromItemCategoryImpl,
   resolveChargeEntityFromClassCode as resolveChargeEntityFromClassCodeImpl,
 } from './orderChargeClassSupport';
+import {
+  type CanonicalOrcaOrderEntity,
+  isSendableOrcaEntity,
+  resolveCanonicalOrcaOrderEntity,
+  resolveOrcaDefaultClassMeta,
+  resolveOrcaEntityLabel,
+} from './orcaMedicalClassCatalog';
 import type { OrderMasterSearchType } from './orderMasterSearchApi';
 
 export type OrderGroupKey = 'prescription' | 'injection' | 'treatment' | 'test' | 'charge';
 export type BundleNumberLabel = '日数' | '回数';
 export type OrderTestSubtype = 'specimen' | 'physiology' | 'culture' | 'sensitivity';
-
-export type OrderEntity =
-  | 'medOrder'
-  | 'injectionOrder'
-  | 'treatmentOrder'
-  | 'surgeryOrder'
-  | 'otherOrder'
-  | 'testOrder'
-  | 'laboTest'
-  | 'physiologyOrder'
-  | 'bacteriaOrder'
-  | 'radiologyOrder'
-  | 'baseChargeOrder'
-  | 'instractionChargeOrder';
-
-const ORDER_ENTITY_ALIASES: Record<string, OrderEntity> = {
-  prescriptionOrder: 'medOrder',
-  laboTest: 'testOrder',
-  generalOrder: 'treatmentOrder',
-  instructionChargeOrder: 'instractionChargeOrder',
-};
-
-const CANONICAL_ORDER_ENTITY_ALIASES: Record<OrderEntity, OrderEntity> = {
-  medOrder: 'medOrder',
-  injectionOrder: 'injectionOrder',
-  treatmentOrder: 'treatmentOrder',
-  surgeryOrder: 'surgeryOrder',
-  otherOrder: 'otherOrder',
-  testOrder: 'testOrder',
-  laboTest: 'testOrder',
-  physiologyOrder: 'physiologyOrder',
-  bacteriaOrder: 'bacteriaOrder',
-  radiologyOrder: 'radiologyOrder',
-  baseChargeOrder: 'baseChargeOrder',
-  instractionChargeOrder: 'instractionChargeOrder',
-};
+export type OrderEntity = CanonicalOrcaOrderEntity | 'laboTest';
 
 export type OrderEntityValidationRule = {
   itemLabel: string;
@@ -251,28 +223,27 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     editor: { title: '注射', bundleLabel: '注射名', itemQuantityLabel: '数量' },
   },
   treatmentOrder: {
-    label: '処置',
+    label: resolveOrcaEntityLabel('treatmentOrder') ?? '処置',
     group: 'treatment',
     etensuCategory: '4',
-    classMeta: { classCode: '400', className: '処置' },
+    classMeta: resolveOrcaDefaultClassMeta('treatmentOrder') ?? { classCode: '400', className: '処置' },
     validation: BASE_EDITOR_VALIDATION,
-    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: true },
+    ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: false },
     editor: { title: '処置', bundleLabel: '処置名', itemQuantityLabel: '数量' },
   },
   surgeryOrder: {
-    label: '手術',
+    label: resolveOrcaEntityLabel('surgeryOrder') ?? '手術',
     group: 'treatment',
     etensuCategory: '5',
-    classMeta: { classCode: '500', className: '手術' },
+    classMeta: resolveOrcaDefaultClassMeta('surgeryOrder') ?? { classCode: '500', className: '手術' },
     validation: BASE_EDITOR_VALIDATION,
     ui: BASE_EDITOR_UI,
     editor: { title: '手術', bundleLabel: '手技', itemQuantityLabel: '数量' },
   },
   otherOrder: {
-    label: 'その他',
+    label: resolveOrcaEntityLabel('otherOrder') ?? 'その他',
     group: 'treatment',
-    etensuCategory: '8',
-    classMeta: { classCode: '800', className: 'その他' },
+    classMeta: undefined,
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       ...BASE_EDITOR_UI,
@@ -289,10 +260,10 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     editor: { title: 'その他', bundleLabel: '項目', itemQuantityLabel: '数量' },
   },
   testOrder: {
-    label: '検査',
+    label: resolveOrcaEntityLabel('testOrder') ?? '検査',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaDefaultClassMeta('testOrder') ?? { classCode: '600', className: '検査' },
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 生化学検査',
@@ -317,7 +288,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     editor: { title: '検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
   laboTest: {
-    label: '検査',
+    label: resolveOrcaEntityLabel('testOrder') ?? '検査',
     group: 'test',
     etensuCategory: '6',
     classMeta: { classCode: '600', className: '検査' },
@@ -345,7 +316,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     editor: { title: '検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
   physiologyOrder: {
-    label: '生理',
+    label: resolveOrcaEntityLabel('physiologyOrder') ?? '生理検査',
     group: 'test',
     etensuCategory: '6',
     classMeta: { classCode: '600', className: '検査' },
@@ -373,7 +344,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     editor: { title: '生理検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
   bacteriaOrder: {
-    label: '細菌',
+    label: resolveOrcaEntityLabel('bacteriaOrder') ?? '細菌検査',
     group: 'test',
     etensuCategory: '6',
     classMeta: { classCode: '600', className: '検査' },
@@ -401,15 +372,15 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     editor: { title: '細菌検査', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
   radiologyOrder: {
-    label: '放射線',
+    label: resolveOrcaEntityLabel('radiologyOrder') ?? '画像診断',
     group: 'test',
     etensuCategory: '7',
-    classMeta: { classCode: '700', className: '放射線' },
+    classMeta: resolveOrcaDefaultClassMeta('radiologyOrder') ?? { classCode: '700', className: '画像診断' },
     validation: {
       itemLabel: '画像検査項目',
       requiresItems: true,
       requiresUsage: false,
-      requiresBodyPart: true,
+      requiresBodyPart: false,
     },
     ui: {
       bundleNamePlaceholder: '例: 胸部CT（造影）',
@@ -431,7 +402,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
       ],
       defaultMasterSearchType: 'etensu',
     },
-    editor: { title: '放射線', bundleLabel: '検査名', itemQuantityLabel: '数量' },
+    editor: { title: '画像診断', bundleLabel: '検査名', itemQuantityLabel: '数量' },
   },
   baseChargeOrder: {
     label: '基本料',
@@ -509,31 +480,32 @@ export const ORDER_GROUP_REGISTRY: Array<{
 export const ORCA_SEND_ORDER_ENTITIES: readonly OrderEntity[] = [
   'treatmentOrder',
   'testOrder',
-  'bacteriaOrder',
   'instractionChargeOrder',
   'surgeryOrder',
-  'otherOrder',
   'radiologyOrder',
   'baseChargeOrder',
   'injectionOrder',
   'medOrder',
-] as const;
+].filter((entity): entity is OrderEntity => isSendableOrcaEntity(entity));
+
+export const ORCA_SEND_PREFLIGHT_ORDER_ENTITIES: readonly OrderEntity[] = [
+  ...ORCA_SEND_ORDER_ENTITIES,
+  'physiologyOrder',
+  'bacteriaOrder',
+  'otherOrder',
+];
 
 export const resolveOrderEntity = (value: string): OrderEntity | null => {
   const normalized = value.trim();
   if (!normalized) return null;
-  const alias = ORDER_ENTITY_ALIASES[normalized];
-  if (alias) return alias;
+  const canonical = resolveCanonicalOrcaOrderEntity(normalized);
+  if (canonical) return canonical;
   if (normalized in ORDER_ENTITY_REGISTRY) return normalized as OrderEntity;
   return null;
 };
 
-export const resolveCanonicalOrderEntity = (value?: string | null): OrderEntity | null => {
-  if (!value) return null;
-  const resolved = resolveOrderEntity(value);
-  if (!resolved) return null;
-  return CANONICAL_ORDER_ENTITY_ALIASES[resolved] ?? resolved;
-};
+export const resolveCanonicalOrderEntity = (value?: string | null): CanonicalOrcaOrderEntity | null =>
+  resolveCanonicalOrcaOrderEntity(value);
 
 export const isOrderEntity = (value: string): value is OrderEntity => {
   const normalized = value.trim();
@@ -637,6 +609,8 @@ export const resolveOrderEntityDefaultClassMeta = (entity?: string): OrderEntity
   if (!entity) return undefined;
   const chargeMeta = resolveCanonicalChargeClassMeta({ entity });
   if (chargeMeta) return chargeMeta;
+  const defaultMeta = resolveOrcaDefaultClassMeta(entity);
+  if (defaultMeta) return defaultMeta;
   const resolved = resolveOrderEntity(entity);
   if (!resolved) return undefined;
   return ORDER_ENTITY_REGISTRY[resolved].classMeta;

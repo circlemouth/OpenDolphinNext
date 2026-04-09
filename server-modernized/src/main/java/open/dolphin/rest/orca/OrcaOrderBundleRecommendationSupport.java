@@ -12,8 +12,6 @@ import open.dolphin.rest.dto.orca.OrderBundleFetchResponse;
 import open.dolphin.rest.dto.orca.OrderBundleRecommendationResponse;
 
 final class OrcaOrderBundleRecommendationSupport {
-
-    private static final String MATERIAL_CODE_PREFIX = "7";
     static final String ROW_ROLE_MAIN = OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN;
     static final String ROW_ROLE_MATERIAL = OrcaOrderBundleRequestSupport.ROW_ROLE_MATERIAL;
     static final String ROW_ROLE_COMMENT = OrcaOrderBundleRequestSupport.ROW_ROLE_COMMENT;
@@ -57,6 +55,8 @@ final class OrcaOrderBundleRecommendationSupport {
     }
 
     static List<OrderBundleFetchResponse.OrderBundleItem> removeBodyPartItems(
+            String entity,
+            String classCode,
             List<OrderBundleFetchResponse.OrderBundleItem> items) {
         if (items == null || items.isEmpty()) {
             return List.of();
@@ -75,8 +75,10 @@ final class OrcaOrderBundleRecommendationSupport {
     }
 
     static OrderBundleFetchResponse.OrderBundleItem extractBodyPart(
+            String entity,
+            String classCode,
             List<OrderBundleFetchResponse.OrderBundleItem> items) {
-        if (items == null || items.isEmpty()) {
+        if (!OrcaMedicalClassCatalog.supportsBodyPartField(entity, classCode) || items == null || items.isEmpty()) {
             return null;
         }
         for (OrderBundleFetchResponse.OrderBundleItem item : items) {
@@ -113,7 +115,7 @@ final class OrcaOrderBundleRecommendationSupport {
     }
 
     static boolean isCommentCode(String code) {
-        return OrcaOrderBundleRequestSupport.isCommentCode(code);
+        return OrcaCommentCarrierRules.isOrderBundleCommentCode(code);
     }
 
     static String normalizeRowRole(Object value) {
@@ -202,7 +204,7 @@ final class OrcaOrderBundleRecommendationSupport {
             return false;
         }
         String normalizedCode = normalize(code);
-        if (!normalizedCode.startsWith(MATERIAL_CODE_PREFIX)) {
+        if (!OrcaMedicalClassCatalog.isAuxiliaryMaterialCode(normalizedCode)) {
             return false;
         }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);
@@ -273,10 +275,10 @@ final class OrcaOrderBundleRecommendationSupport {
             template.setPrescriptionLocation(prescriptionMeta.location());
             template.setPrescriptionTiming(prescriptionMeta.timing());
         }
-        template.setItems(removeBodyPartItems(normalItems));
+        template.setItems(removeBodyPartItems(entity, bundle.getClassCode(), normalItems));
         template.setMaterialItems(materialItems);
         template.setCommentItems(commentItems);
-        template.setBodyPart(bodyPart);
+        template.setBodyPart(OrcaMedicalClassCatalog.supportsBodyPartField(entity, bundle.getClassCode()) ? bodyPart : null);
         return template;
     }
 

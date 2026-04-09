@@ -115,7 +115,7 @@ const INPUT_SET_DETAILS: Record<string, MockInputSetDetail> = {
       bundleNumber: '1',
       classCode: '700',
       classCodeSystem: 'Claim007',
-      className: '放射線',
+      className: '画像診断',
       admin: '',
       adminMemo: '',
       memo: '撮影条件あり',

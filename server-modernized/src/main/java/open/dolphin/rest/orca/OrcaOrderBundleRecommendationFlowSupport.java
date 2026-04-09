@@ -79,7 +79,8 @@ final class OrcaOrderBundleRecommendationFlowSupport {
             throw orderBundleValidationFailure(resource, request, "ORCA_ORDER_RECOMMENDATION_FETCH", facilityId, null, runId, "patientId", "patientId is required");
         }
         String resolvedEntity = OrcaOrderBundleRequestSupport.normalizeEntityQuery(entity);
-        if (resolvedEntity != null && !OrcaOrderBundleRequestSupport.isValidEntity(resolvedEntity)) {
+        if (OrcaOrderBundleRequestSupport.isInvalidEntityQuery(entity)
+                || (resolvedEntity != null && !OrcaOrderBundleRequestSupport.isValidEntity(resolvedEntity))) {
             throw orderBundleValidationFailure(resource, request, "ORCA_ORDER_RECOMMENDATION_FETCH", facilityId, patientId, runId, "entity", "entity is invalid");
         }
         PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);

@@ -1,8 +1,9 @@
 import type { OrderBundleBodyPart, OrderBundleItem } from './orderBundleApi';
+import { isOrderBundleCommentCode as isOrderBundleCommentCodeImpl } from './orcaCommentCarrierRules';
+import { isAuxiliaryMaterialCode } from './orcaMedicalClassCatalog';
 import { resolveCanonicalOrderEntity } from './orderCategoryRegistry';
 
 export const ORDER_BUNDLE_BODY_PART_CODE_PREFIX = '002';
-export const ORDER_BUNDLE_COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 
 export type OrderBundleContractRowRole = 'main' | 'material' | 'comment' | 'bodyPart';
 
@@ -31,7 +32,7 @@ export const hasOrderBundleRowValue = (item?: ContractRow | ContractBodyPart | n
 
 export const hasBundleRowValue = hasOrderBundleRowValue;
 
-export const isOrderBundleCommentCode = (code: string) => ORDER_BUNDLE_COMMENT_CODE_PATTERN.test(code.trim());
+export const isOrderBundleCommentCode = (code: string) => isOrderBundleCommentCodeImpl(code);
 
 export const isCommentBundleCode = (code?: string | null) => Boolean(code?.trim() && isOrderBundleCommentCode(code.trim()));
 
@@ -41,7 +42,7 @@ export const isBodyPartBundleCode = (code?: string | null) => Boolean(code?.trim
 
 export const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
   const normalizedCode = code?.trim();
-  if (!normalizedCode || !normalizedCode.startsWith('7')) return false;
+  if (!normalizedCode || !isAuxiliaryMaterialCode(normalizedCode)) return false;
   const canonicalEntity = resolveCanonicalOrderEntity(entity);
   return canonicalEntity !== 'radiologyOrder';
 };

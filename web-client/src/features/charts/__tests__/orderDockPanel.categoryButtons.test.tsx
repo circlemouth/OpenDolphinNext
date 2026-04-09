@@ -78,7 +78,12 @@ describe('OrderDockPanel category quick-add', () => {
       await user.type(searchInput, scenario.keyword);
 
       const listbox = await screen.findByRole('listbox', { name: '検索候補' });
-      const candidateButton = within(listbox).getByRole('button', { name: new RegExp(scenario.candidateLabel) });
+      const candidateButton = within(listbox)
+        .getAllByRole('button')
+        .find((button) => within(button).queryByText(scenario.candidateLabel));
+      if (!candidateButton) {
+        throw new Error(`missing candidate: ${scenario.candidateLabel}`);
+      }
       await user.click(candidateButton);
 
       expect(screen.getByLabelText(`${scenario.expectedTitle}入力`)).toBeInTheDocument();

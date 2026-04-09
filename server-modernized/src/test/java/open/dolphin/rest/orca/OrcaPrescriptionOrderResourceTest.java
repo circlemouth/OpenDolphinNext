@@ -126,9 +126,9 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void saveOrderReturns400WhenStructuredClaimCommentNumberIsNotSupported() {
+    void saveOrderReturns400WhenStructuredClaimCommentNoteIsMissing() {
         PrescriptionOrder payload = buildPayload();
-        payload.getRps().get(0).setClaimComments(List.of(claimComment("850100001", "special comment", "3")));
+        payload.getRps().get(0).setClaimComments(List.of(claimComment("850100001", "special comment", null)));
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.saveOrder(servletRequest, payload));

@@ -172,8 +172,10 @@ final class OrcaOrderBundleFetchSupport {
         entry.setEnteredByRole(OrcaOrderBundleDisplaySupport.resolveEnteredByRole(enteredBy));
         List<OrderBundleFetchResponse.OrderBundleItem> items =
                 OrcaOrderBundleRecommendationSupport.toItems(moduleEntity, bundle.getClaimItem());
-        entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(items));
+        entry.setBodyPart(OrcaOrderBundleRecommendationSupport.extractBodyPart(moduleEntity, canonicalClassCode, items));
         entry.setItems(OrcaOrderBundleRecommendationSupport.removeBodyPartItems(
+                moduleEntity,
+                canonicalClassCode,
                 OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(
                         items, OrcaOrderBundleRecommendationSupport.ROW_ROLE_MAIN)));
         entry.setMaterialItems(OrcaOrderBundleRecommendationSupport.filterItemsByRowRole(

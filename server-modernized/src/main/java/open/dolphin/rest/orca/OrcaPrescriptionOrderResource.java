@@ -43,9 +43,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaPrescriptionOrderResource.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
-    private static final java.util.regex.Pattern COMMENT_NUMBER_REQUIRED_PATTERN =
-            java.util.regex.Pattern.compile("^(8501|8511|8521|831)");
-
     @Inject
     private PatientServiceBean patientServiceBean;
 
@@ -500,9 +497,16 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                     recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                     throw validationError(request, field, message);
                 }
-                if (requiresStructuredClaimCommentNumber(code) && hasText(claimComment.getNote())) {
+                if (OrcaCommentCarrierRules.isUnknownStructuredPrescriptionClaimCommentFamily(code)) {
+                    String field = "rps[" + rpIndex + "].claimComments[" + commentIndex + "].code";
+                    String message = "structured claim comment family is unsupported";
+                    recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+                    throw validationError(request, field, message);
+                }
+                if (OrcaCommentCarrierRules.requiresStructuredPrescriptionClaimCommentNote(code)
+                        && !hasText(claimComment.getNote())) {
                     String field = "rps[" + rpIndex + "].claimComments[" + commentIndex + "].note";
-                    String message = "structured claim comment number is not supported for this code";
+                    String message = "structured claim comment note is required for this code";
                     recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                     throw validationError(request, field, message);
                 }
@@ -527,9 +531,16 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                         recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                         throw validationError(request, field, message);
                     }
-                    if (requiresStructuredClaimCommentNumber(code) && hasText(claimComment.getNote())) {
+                    if (OrcaCommentCarrierRules.isUnknownStructuredPrescriptionClaimCommentFamily(code)) {
+                        String field = "rps[" + rpIndex + "].drugs[" + drugIndex + "].claimComments[" + commentIndex + "].code";
+                        String message = "structured claim comment family is unsupported";
+                        recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
+                        throw validationError(request, field, message);
+                    }
+                    if (OrcaCommentCarrierRules.requiresStructuredPrescriptionClaimCommentNote(code)
+                            && !hasText(claimComment.getNote())) {
                         String field = "rps[" + rpIndex + "].drugs[" + drugIndex + "].claimComments[" + commentIndex + "].note";
-                        String message = "structured claim comment number is not supported for this code";
+                        String message = "structured claim comment note is required for this code";
                         recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                         throw validationError(request, field, message);
                     }
@@ -574,10 +585,6 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
-    }
-
-    private boolean requiresStructuredClaimCommentNumber(String code) {
-        return COMMENT_NUMBER_REQUIRED_PATTERN.matcher(trimToEmpty(code)).find();
     }
 
     private String trimToNull(String value) {

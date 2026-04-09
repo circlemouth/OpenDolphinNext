@@ -13,19 +13,19 @@ class OrcaOrderInputSetMetadataSupportTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaOrderInputSetMetadataSupportTest.class);
 
     @Test
-    void resolveClassMetadataMaps200And400ToCanonicalEntities() {
+    void resolveClassMetadataMapsExactReceiptCodesToCanonicalEntities() {
         assertEquals(
                 IInfoModel.ENTITY_BASE_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("110", LOGGER).entity());
         assertEquals(
                 OrcaChargeClassCanonicalSupport.BASE_CHARGE_CLASS_NAME,
-                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("125", LOGGER).className());
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("124", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("130", LOGGER).entity());
         assertEquals(
                 OrcaChargeClassCanonicalSupport.INSTRUCTION_CHARGE_CLASS_NAME,
-                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("150", LOGGER).className());
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("149", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_TREATMENT,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("400", LOGGER).entity());
@@ -36,7 +36,10 @@ class OrcaOrderInputSetMetadataSupportTest {
                 "radiologyOrder",
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("700", LOGGER).entity());
         assertEquals(
-                "otherOrder",
+                OrcaMedicalClassCatalog.RADIOLOGY_LABEL,
+                OrcaOrderInputSetMetadataSupport.resolveClassMetadata("700", LOGGER).className());
+        assertEquals(
+                OrcaOrderInputSetMetadataSupport.UNSUPPORTED_ENTITY,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("800", LOGGER).entity());
     }
 

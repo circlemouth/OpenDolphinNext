@@ -1,4 +1,5 @@
 import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
+import { supportsOrcaBodyPartField } from './orcaMedicalClassCatalog';
 
 const BODY_PART_CODE_PREFIX = '002';
 
@@ -147,23 +148,12 @@ const toBodyPart = (value: unknown): OrderBodyPart | null => {
   };
 };
 
-const resolveBodyPartFromItems = (items: OrderBundleItem[]): OrderBodyPart | null => {
-  const matched = items.find((item) => isBodyPartItem(item) && normalizeInline(item.name));
-  if (!matched) return null;
-  return {
-    code: normalizeInline(matched.code) || undefined,
-    name: normalizeInline(matched.name),
-    quantity: normalizeInline(matched.quantity) || undefined,
-    unit: normalizeInline(matched.unit) || undefined,
-    memo: normalizeInline(matched.memo) || undefined,
-  };
-};
-
 export const resolveBundleBodyPart = (bundle: OrderBundle): OrderBodyPart | null => {
   const source = bundle as unknown as Record<string, unknown>;
+  if (!supportsOrcaBodyPartField(bundle.entity, bundle.classCode)) return null;
   const explicit = toBodyPart(source.bodyPart);
   if (explicit) return explicit;
-  return resolveBodyPartFromItems(bundle.items ?? []);
+  return null;
 };
 
 export const resolveDisplayItemsWithoutBodyPart = (bundle: OrderBundle): OrderBundleItem[] => {

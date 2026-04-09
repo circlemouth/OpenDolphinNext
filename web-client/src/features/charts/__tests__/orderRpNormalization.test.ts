@@ -127,7 +127,7 @@ describe('orderRpNormalization', () => {
     );
   });
 
-  it('otherOrder の classCode が非数値なら送信前 issue を返す', () => {
+  it('otherOrder は explicit local-only 契約として送信前 issue を返す', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'otherOrder',

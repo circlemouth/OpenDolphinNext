@@ -61,7 +61,7 @@ describe('orderCategoryRegistry', () => {
     expect(treatmentPolicy.etensuCategory).toBe('4');
     expect(otherPolicy.masterSearchPresets.map((preset) => preset.type)).toEqual(['etensu']);
     expect(otherPolicy.defaultMasterSearchType).toBe('etensu');
-    expect(otherPolicy.etensuCategory).toBe('8');
+    expect(otherPolicy.etensuCategory).toBeUndefined();
     expect(resolveOrderEntityUiProfile('otherOrder').supportsBodyPartSearch).toBe(false);
     expect(testPolicy.etensuCategory).toBe('6');
     expect(chargePolicy.etensuCategory).toBe('1');

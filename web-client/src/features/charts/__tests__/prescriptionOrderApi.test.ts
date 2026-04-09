@@ -620,7 +620,7 @@ describe('prescriptionOrderApi first-class contract', () => {
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });
 
-  it('save は 85/831 系 claim comment の補足値を未実装 carrier として fail-closed にする', async () => {
+  it('save は 85/831 系 claim comment の note 欠落を fail-closed にする', async () => {
     const order: PrescriptionOrder = {
       patientId: '000001',
       encounterDate: '2026-03-09',
@@ -640,7 +640,7 @@ describe('prescriptionOrderApi first-class contract', () => {
           refillPattern: 'none',
           doctorComment: '',
           started: '2026-03-09',
-          claimComments: [{ id: 'rp-claim-1', code: '850100001', name: '特記事項', note: '3' }],
+          claimComments: [{ id: 'rp-claim-1', code: '850100001', name: '特記事項', note: '' }],
           drugs: [
             {
               rowId: 'drug-1',
@@ -659,9 +659,7 @@ describe('prescriptionOrderApi first-class contract', () => {
       ],
     };
 
-    await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow(
-      'RP1 RPコメント: 850100001 系コメントの補足値送信は未対応のため保存できません。',
-    );
+    await expect(savePrescriptionOrder({ patientId: '000001', order })).rejects.toThrow('RP1 RPコメント: 850100001 系コメントは補足値が必須です。');
     expect(vi.mocked(httpFetch)).not.toHaveBeenCalled();
   });
 });

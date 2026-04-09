@@ -4,9 +4,10 @@ import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
 import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../shared/orcaPatientImportRecovery';
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
-import { resolveCanonicalOrderEntity, resolveOrderEntityDefaultClassMeta } from './orderCategoryRegistry';
+import { resolveOrderEntityDefaultClassMeta } from './orderCategoryRegistry';
 import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
+import { normalizeRadiologyLabel, resolveCanonicalOrcaOrderEntity, supportsOrcaBodyPartField } from './orcaMedicalClassCatalog';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
@@ -150,11 +151,9 @@ const normalizeOrderBundleClassName = (
   const defaultMeta = normalizedEntity ? resolveOrderEntityDefaultClassMeta(normalizedEntity) : undefined;
   if (defaultMeta && (!normalizedClassCode || normalizedClassCode === defaultMeta.classCode)) {
     if (!explicit) return defaultMeta.className;
-    if (normalizedEntity === 'radiologyOrder' && explicit === '画像診断') {
-      return defaultMeta.className;
-    }
+    if (normalizedEntity === 'radiologyOrder') return normalizeRadiologyLabel(explicit) ?? defaultMeta.className;
   }
-  return explicit || undefined;
+  return normalizeRadiologyLabel(explicit) || undefined;
 };
 
 export const ORDER_BUNDLE_BODY_PART_CODE_PREFIX = '002';
@@ -200,10 +199,11 @@ export const normalizeOrderBundleBodyPart = (
 
 const normalizeOrderBundleBodyPartForEntity = (
   entity?: string | null,
+  classCode?: string | null,
   bodyPart?: OrderBundleBodyPart | null,
   options?: { dropInvalid?: boolean },
 ) => {
-  if (resolveCanonicalOrderEntity(entity) === 'physiologyOrder') return undefined;
+  if (!supportsOrcaBodyPartField(entity, classCode)) return undefined;
   return normalizeOrderBundleBodyPart(bodyPart, options);
 };
 
@@ -211,7 +211,7 @@ const normalizeOrderEntityValue = (value?: string | null): string | undefined =>
   if (!value) return undefined;
   const trimmed = value.trim();
   if (!trimmed) return undefined;
-  return resolveCanonicalOrderEntity(trimmed) ?? trimmed;
+  return resolveCanonicalOrcaOrderEntity(trimmed) ?? trimmed;
 };
 
 const normalizeOptionalText = (value?: string | null) => {
@@ -244,7 +244,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
     ...canonicalBundle,
     entity: normalizeOrderEntityValue(canonicalBundle.entity),
     bacteria: normalizeBacteriaOrderMetadata(canonicalBundle.bacteria),
-    bodyPart: normalizeOrderBundleBodyPartForEntity(canonicalBundle.entity, canonicalBundle.bodyPart, {
+    bodyPart: normalizeOrderBundleBodyPartForEntity(canonicalBundle.entity, canonicalBundle.classCode, canonicalBundle.bodyPart, {
       dropInvalid: true,
     }),
     className: normalizeOrderBundleClassName(
@@ -318,7 +318,7 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
     ...canonicalOperation,
     entity: normalizeOrderEntityValue(canonicalOperation.entity),
     bacteria: normalizeBacteriaOrderMetadata(canonicalOperation.bacteria),
-    bodyPart: normalizeOrderBundleBodyPartForEntity(canonicalOperation.entity, canonicalOperation.bodyPart),
+    bodyPart: normalizeOrderBundleBodyPartForEntity(canonicalOperation.entity, canonicalOperation.classCode, canonicalOperation.bodyPart),
     className: normalizeOrderBundleClassName(
       canonicalOperation.entity,
       canonicalOperation.classCode,

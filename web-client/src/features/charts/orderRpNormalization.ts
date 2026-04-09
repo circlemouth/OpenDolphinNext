@@ -1,7 +1,7 @@
 ﻿import type { MedicalModV2Information } from './orcaClaimApi';
 import {
   isChargeEntity,
-  ORCA_SEND_ORDER_ENTITIES,
+  ORCA_SEND_PREFLIGHT_ORDER_ENTITIES,
   resolveCanonicalOrderEntity,
   resolveCanonicalChargeClassMeta,
   resolveCanonicalChargeClassName,
@@ -25,14 +25,15 @@ import {
   MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_NEXT_ACTION,
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
+import { isOrderBundleCommentCode as isOrderBundleCommentCodeImpl } from './orcaCommentCarrierRules';
+import { isAuxiliaryMaterialCode } from './orcaMedicalClassCatalog';
 import { collectInjectionBundleContractIssues } from './orderBundleContract';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
 
-const COMMENT_CODE_PATTERN = /^(008[1-6]|8[1-6]|098|099|98|99)/;
 const DRUG_CODE_PATTERN = /^6\d{8}$/;
 
-const isCommentMedicationCode = (code: string) => COMMENT_CODE_PATTERN.test(code.trim());
+const isCommentMedicationCode = (code: string) => isOrderBundleCommentCodeImpl(code);
 
 const hasBundleItemValue = (item: OrderBundleItem) =>
   Boolean(item.code?.trim() || item.name?.trim() || item.quantity?.trim() || item.unit?.trim() || item.memo?.trim());
@@ -130,7 +131,7 @@ const isBodyPartCodeValue = (code?: string | null) => isOrderBundleBodyPartCode(
 
 const shouldTreatAsMaterialItem = (entity?: string | null, code?: string | null) => {
   const normalizedCode = code?.trim();
-  if (!normalizedCode || !normalizedCode.startsWith('7')) return false;
+  if (!normalizedCode || !isAuxiliaryMaterialCode(normalizedCode)) return false;
   const canonicalEntity = resolveCanonicalOrderEntity(entity);
   return canonicalEntity === 'treatmentOrder' || canonicalEntity === 'injectionOrder';
 };
@@ -173,15 +174,8 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
   const hasExplicitMaterial = Boolean(bundle.materialItems && bundle.materialItems.length > 0);
   const hasExplicitComment = Boolean(bundle.commentItems && bundle.commentItems.length > 0);
   const explicitBodyPart = cloneBodyPartItem(bundle.bodyPart);
-  const legacyBodyPart = explicitBodyPart
-    ? null
-    : (bundle.items ?? [])
-        .map(cloneBundleItem)
-        .find((item): item is OrderBundleItem => Boolean(item && isBodyPartCodeValue(item.code)));
   if (explicitBodyPart) {
     rows.push({ item: explicitBodyPart, source: { kind: 'body_part', sectionIndex: 0 } });
-  } else if (legacyBodyPart) {
-    rows.push({ item: legacyBodyPart, source: { kind: 'body_part', sectionIndex: 0 } });
   }
   const mainRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
   const materialRows: Array<{ item: OrderBundleItem; source: RpNormalizedRowSource }> = [];
@@ -190,7 +184,7 @@ const collectNormalizedRows = (bundle: OrderBundle) => {
     const cloned = cloneBundleItem(item);
     if (!cloned || !hasBundleItemValue(cloned)) return;
     const code = cloned.code?.trim() ?? '';
-    if (isBodyPartCodeValue(code) && (explicitBodyPart || legacyBodyPart)) return;
+    if (isBodyPartCodeValue(code) && explicitBodyPart) return;
     const rowRole = resolveBundleItemRowRole(bundle.entity, cloned);
     const rowSubtype = resolveBundleItemRowSubtype(bundle.entity, cloned, rowRole);
     const row = {
@@ -271,6 +265,13 @@ const resolveMedicalModV2BlockedBundleIssue = (bundle: OrderBundle) => {
       bundle,
       'unsupported_physiology_order',
       MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_ERROR_LABEL,
+    );
+  }
+  if (canonicalEntity === 'otherOrder') {
+    return buildBundleIssue(
+      bundle,
+      'invalid_other_order_class',
+      'otherOrder は explicit local-only 契約のため ORCA 送信しません。',
     );
   }
   if (canonicalEntity === 'bacteriaOrder' && Boolean(bundle.subtype?.trim())) {
@@ -360,18 +361,6 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
       ),
     ];
   }
-
-  const medicalClass = resolveMedicalClass(bundle);
-  if (canonicalEntity === 'otherOrder' && !/^\d+$/.test(medicalClass)) {
-    return [
-      buildBundleIssue(
-        bundle,
-        'invalid_other_order_class',
-        'otherOrder の classCode は数字のみ送信できます。classCode を 800 系の有効値へ修正してください。',
-      ),
-    ];
-  }
-
   const sendableMainRows = codedRows.filter((row) => {
     const code = row.item.code?.trim() ?? '';
     if (isCommentMedicationCode(code) || isOrderBundleBodyPartCode(code)) return false;
@@ -535,7 +524,7 @@ export const toMedicalModV2Information = (bundle: OrderBundle): MedicalModV2Info
 
 export const fetchMedicalModV2OrderBundles = async (patientId: string, from: string, encounterId?: string) => {
   const results = await Promise.allSettled(
-    ORCA_SEND_ORDER_ENTITIES.map(async (entity) => {
+    ORCA_SEND_PREFLIGHT_ORDER_ENTITIES.map(async (entity) => {
       if (entity === 'medOrder') {
         const prescriptionOrder = await fetchPrescriptionOrder({ patientId, from, encounterId });
         if (!prescriptionOrder.ok) {
@@ -561,7 +550,7 @@ export const fetchMedicalModV2OrderBundles = async (patientId: string, from: str
   const bundles: OrderBundle[] = [];
   const errors: string[] = [];
   results.forEach((result, index) => {
-    const entity = ORCA_SEND_ORDER_ENTITIES[index];
+    const entity = ORCA_SEND_PREFLIGHT_ORDER_ENTITIES[index];
     if (result.status === 'fulfilled') {
       if (!result.value.ok) {
         const status = typeof result.value.status === 'number' ? `HTTP ${result.value.status}` : 'request_failed';

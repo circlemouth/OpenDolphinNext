@@ -22,11 +22,10 @@ class OrcaOrderBundleMutationSupportTest {
     @Test
     void buildDocumentPrioritizesExplicitBodyPartOverLegacyBodyPartItems() {
         OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
-        operation.setEntity(IInfoModel.ENTITY_MED_ORDER);
-        operation.setBundleName("降圧薬セット");
-        operation.setAdmin("静注");
-        operation.setAdminCode("4101");
-        operation.setAdminCodeSystem("Claim007");
+        operation.setEntity(IInfoModel.ENTITY_RADIOLOGY_ORDER);
+        operation.setBundleName("画像診断セット");
+        operation.setClassCode("700");
+        operation.setClassCodeSystem("Claim007");
         OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
         bodyPart.setCode("002999");
         bodyPart.setName("右下肢");
@@ -34,22 +33,19 @@ class OrcaOrderBundleMutationSupportTest {
         OrderBundleMutationRequest.BundleItem legacyBodyPart = new OrderBundleMutationRequest.BundleItem();
         legacyBodyPart.setCode("002111");
         legacyBodyPart.setName("旧部位");
-        OrderBundleMutationRequest.BundleItem drug = new OrderBundleMutationRequest.BundleItem();
-        drug.setCode("100001");
-        drug.setName("アムロジピン");
-        operation.setItems(List.of(legacyBodyPart, drug));
+        OrderBundleMutationRequest.BundleItem main = new OrderBundleMutationRequest.BundleItem();
+        main.setCode("170017510");
+        main.setName("ＣＴ撮影");
+        operation.setItems(List.of(legacyBodyPart, main));
 
         DocumentModel document = OrcaOrderBundleMutationSupport.buildDocument(new KarteBean(), new UserModel(), operation, new Date(0L));
 
         BundleDolphin bundle = (BundleDolphin) document.getModules().get(0).getModel();
-        assertEquals("静注", bundle.getAdmin());
-        assertEquals("4101", bundle.getAdminCode());
-        assertEquals("Claim007", bundle.getAdminCodeSystem());
         ClaimItem[] claimItems = bundle.getClaimItem();
         assertNotNull(claimItems);
         assertEquals(2, claimItems.length);
         assertEquals("002999", claimItems[0].getCode());
-        assertEquals("100001", claimItems[1].getCode());
+        assertEquals("170017510", claimItems[1].getCode());
     }
 
     @Test

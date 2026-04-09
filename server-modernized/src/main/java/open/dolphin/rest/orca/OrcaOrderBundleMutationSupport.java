@@ -146,7 +146,10 @@ final class OrcaOrderBundleMutationSupport {
         appendClaimItems(converted, entity, operation != null ? operation.getItems() : null, useBacteriaMetadata);
         appendClaimItems(converted, entity, operation != null ? operation.getMaterialItems() : null, useBacteriaMetadata);
         appendClaimItems(converted, entity, operation != null ? operation.getCommentItems() : null, useBacteriaMetadata);
-        ClaimItem explicitBodyPart = toExplicitBodyPartClaimItem(entity, operation != null ? operation.getBodyPart() : null);
+        ClaimItem explicitBodyPart = toExplicitBodyPartClaimItem(
+                entity,
+                operation != null ? operation.getClassCode() : null,
+                operation != null ? operation.getBodyPart() : null);
         if (explicitBodyPart != null) {
             List<ClaimItem> prioritized = new ArrayList<>();
             prioritized.add(explicitBodyPart);
@@ -211,12 +214,17 @@ final class OrcaOrderBundleMutationSupport {
                         OrcaOrderBundleRequestSupport.normalizeRowRole(item.getRowRole()));
     }
 
-    private static ClaimItem toExplicitBodyPartClaimItem(String entity, OrderBundleMutationRequest.BundleItem item) {
+    private static ClaimItem toExplicitBodyPartClaimItem(
+            String entity,
+            String classCode,
+            OrderBundleMutationRequest.BundleItem item) {
         if (item == null) {
             return null;
         }
         String code = OrcaOrderBundleRequestSupport.trimToNull(item.getCode());
-        if (!OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)) {
+        String canonicalClassCode = resolveCanonicalClassCode(entity, classCode);
+        if (!OrcaOrderBundleRecommendationSupport.isBodyPartCode(code)
+                || !OrcaMedicalClassCatalog.supportsBodyPartField(entity, canonicalClassCode)) {
             return null;
         }
         return toClaimItem(entity, item);
@@ -302,18 +310,16 @@ final class OrcaOrderBundleMutationSupport {
         }
         ClaimItem item = new ClaimItem();
         item.setCode(code);
-        if (code.matches("^842\\d{6}$")) {
+        if (OrcaCommentCarrierRules.isBacteria842CommentCode(code)) {
             item.setName(OrcaOrderBundleRequestSupport.trimToNull(comment.getName()));
             item.setNumber(OrcaOrderBundleRequestSupport.trimToNull(comment.getInputValue()));
             item.setUnit("");
-        } else if (code.matches("^830\\d{6}$")) {
+        } else if (OrcaCommentCarrierRules.isBacteria830CommentCode(code)) {
             item.setName(OrcaOrderBundleRequestSupport.trimToNull(comment.getInputValue()));
             item.setNumber("");
             item.setUnit("");
         } else {
-            item.setName(OrcaOrderBundleRequestSupport.trimToNull(comment.getName()));
-            item.setNumber("");
-            item.setUnit("");
+            return;
         }
         item.setMemo(OrcaOrderBundleItemMemoSupport.format(
                 null,
@@ -328,6 +334,15 @@ final class OrcaOrderBundleMutationSupport {
         if (OrcaOrderBundleRequestSupport.hasText(item.getName()) || OrcaOrderBundleRequestSupport.hasText(item.getNumber())) {
             target.add(item);
         }
+    }
+
+    private static String resolveCanonicalClassCode(String entity, String classCode) {
+        OrcaMedicalClassCatalog.ClassMeta defaultMeta = OrcaMedicalClassCatalog.resolveDefaultClassMeta(entity);
+        String normalized = OrcaOrderBundleRequestSupport.trimToNull(classCode);
+        if (normalized != null) {
+            return normalized;
+        }
+        return defaultMeta != null ? defaultMeta.classCode() : null;
     }
 
     private static String resolvePrimaryItemCategory(OrderBundleMutationRequest.BundleOperation operation) {

@@ -30,7 +30,7 @@ describe('orcaOrderInputSetApi', () => {
             bundleNumber: '3',
             classCode: '700',
             classCodeSystem: 'Claim007',
-            className: '放射線',
+            className: '画像診断',
             admin: '適宜',
             adminCode: '4101',
             adminCodeSystem: 'Claim007',

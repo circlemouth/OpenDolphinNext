@@ -181,7 +181,8 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityQuery(entity);
         String normalizedKeyword = keyword != null ? keyword.trim() : null;
 
-        if (normalizedEntity != null && !OrcaOrderBundleRequestSupport.isValidEntity(normalizedEntity)) {
+        if (OrcaOrderBundleRequestSupport.isInvalidEntityQuery(entity)
+                || (normalizedEntity != null && !OrcaOrderBundleRequestSupport.isValidEntity(normalizedEntity))) {
             Map<String, Object> audit = new HashMap<>();
             audit.put("facilityId", facilityId);
             audit.put("runId", runId);
@@ -239,7 +240,8 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             throw validationError(request, "setCode", "setCode is required");
         }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityQuery(entity);
-        if (normalizedEntity != null && !OrcaOrderBundleRequestSupport.isValidEntity(normalizedEntity)) {
+        if (OrcaOrderBundleRequestSupport.isInvalidEntityQuery(entity)
+                || (normalizedEntity != null && !OrcaOrderBundleRequestSupport.isValidEntity(normalizedEntity))) {
             Map<String, Object> audit = new HashMap<>();
             audit.put("facilityId", facilityId);
             audit.put("runId", runId);

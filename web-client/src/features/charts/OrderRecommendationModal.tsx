@@ -29,7 +29,7 @@ const resolveEntityLabel = (entity?: string | null): string => {
     case 'bacteriaOrder':
       return '細菌';
     case 'radiologyOrder':
-      return '放射線';
+      return '画像診断';
     case 'instractionChargeOrder':
       return '指導料';
     case 'baseChargeOrder':
@@ -247,4 +247,3 @@ export function OrderRecommendationModal(props: {
     </FocusTrapDialog>
   );
 }
-

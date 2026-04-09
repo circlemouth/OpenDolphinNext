@@ -26,6 +26,8 @@ import { resolveCanonicalChargeClassMeta } from '../orderChargeClassSupport';
 describe('orderBundleApi bodyPart contract', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(httpFetch).mockReset();
+    vi.mocked(importPatientsFromOrca).mockReset();
   });
 
   it('fetch restores bodyPart and adminCode as first-class fields', async () => {
@@ -38,6 +40,9 @@ describe('orderBundleApi bodyPart contract', () => {
             {
               entity: 'radiologyOrder',
               bundleName: 'CHEST_CT',
+              classCode: '700',
+              classCodeSystem: 'Claim007',
+              className: '画像診断',
               admin: 'once-daily',
               adminCode: '1234',
               adminCodeSystem: 'Claim007',
@@ -123,6 +128,9 @@ describe('orderBundleApi bodyPart contract', () => {
           operation: 'create',
           entity: 'radiologyOrder',
           bundleName: 'CHEST_CT',
+          classCode: '700',
+          classCodeSystem: 'Claim007',
+          className: '画像診断',
           admin: 'once-daily',
           adminCode: '1234',
           adminCodeSystem: 'Claim007',
@@ -327,6 +335,9 @@ describe('orderBundleApi bodyPart contract', () => {
               {
                 entity: 'radiologyOrder',
                 bundleName: 'BRAIN_MRI',
+                classCode: '700',
+                classCodeSystem: 'Claim007',
+                className: '画像診断',
                 items: [{ code: '700100', name: 'BRAIN_MRI' }],
                 bodyPart: { code: '002090', name: 'HEAD' },
               },
@@ -352,7 +363,7 @@ describe('orderBundleApi bodyPart contract', () => {
     expect((result.bundles[0] as any).bodyPart).toEqual(expect.objectContaining({ name: 'HEAD' }));
   });
 
-  it('fetch restores otherOrder explicit class meta and local-only fields', async () => {
+  it('fetch keeps otherOrder local-only fields and drops legacy class meta', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -363,9 +374,6 @@ describe('orderBundleApi bodyPart contract', () => {
               entity: 'otherOrder',
               bundleName: 'CERTIFICATE_FEE',
               bundleNumber: '5',
-              classCode: '800',
-              classCodeSystem: 'Claim007',
-              className: 'Other',
               admin: 'LOCAL_ADMIN_NOTE',
               memo: 'LOCAL_MEMO',
               items: [{ code: '180000210', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
@@ -386,16 +394,16 @@ describe('orderBundleApi bodyPart contract', () => {
       expect.objectContaining({
         entity: 'otherOrder',
         bundleName: 'CERTIFICATE_FEE',
-        classCode: '800',
-        classCodeSystem: 'Claim007',
-        className: 'Other',
         admin: 'LOCAL_ADMIN_NOTE',
         memo: 'LOCAL_MEMO',
       }),
     );
+    expect(result.bundles[0]?.classCode).toBeUndefined();
+    expect(result.bundles[0]?.classCodeSystem).toBeUndefined();
+    expect(result.bundles[0]?.className).toBeUndefined();
   });
 
-  it('mutation keeps otherOrder explicit class meta and local-only fields', async () => {
+  it('mutation keeps otherOrder local-only fields and drops legacy class meta', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -417,9 +425,6 @@ describe('orderBundleApi bodyPart contract', () => {
           entity: 'otherOrder',
           bundleName: 'CERTIFICATE_FEE',
           bundleNumber: '5',
-          classCode: '800',
-          classCodeSystem: 'Claim007',
-          className: 'Other',
           admin: 'LOCAL_ADMIN_NOTE',
           memo: 'LOCAL_MEMO',
           items: [{ code: '180000210', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
@@ -435,14 +440,14 @@ describe('orderBundleApi bodyPart contract', () => {
         entity: 'otherOrder',
         bundleName: 'CERTIFICATE_FEE',
         bundleNumber: '5',
-        classCode: '800',
-        classCodeSystem: 'Claim007',
-        className: 'Other',
         admin: 'LOCAL_ADMIN_NOTE',
         memo: 'LOCAL_MEMO',
         items: expect.arrayContaining([expect.objectContaining({ code: '180000210', unit: 'times' })]),
       }),
     );
+    expect(body.operations[0]?.classCode).toBeUndefined();
+    expect(body.operations[0]?.classCodeSystem).toBeUndefined();
+    expect(body.operations[0]?.className).toBeUndefined();
   });
 
   it('fetch canonicalizes charge className from classCode and entity', async () => {

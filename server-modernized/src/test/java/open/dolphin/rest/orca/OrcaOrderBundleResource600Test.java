@@ -2,6 +2,7 @@ package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -167,7 +168,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void postBundlesRejectsNon8CodeForOtherOrder() {
+    void postBundlesRejectsMaterialShapeForOtherOrder() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
 
@@ -175,13 +176,12 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setOperation("create");
         op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
         op.setBundleName("other-main");
-        op.setClassCode("800");
-        op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
         item.setCode("700000001");
         item.setName("invalid-material");
+        item.setRowRole("material");
         op.setItems(List.of(item));
         payload.setOperations(List.of(op));
 
@@ -196,11 +196,11 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must use etensu category 8 sendable codes", body.get("message"));
+        assertEquals("otherOrder items must be coded main rows and do not accept classCode/bodyPart/material/comment", body.get("message"));
     }
 
     @Test
-    void postBundlesRejectsPseudo8CodeForOtherOrder() {
+    void postBundlesRejectsCommentShapeForOtherOrder() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
 
@@ -208,13 +208,12 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setOperation("create");
         op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
         op.setBundleName("other-main");
-        op.setClassCode("800");
-        op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("89000001");
-        item.setName("pseudo-other");
+        item.setCode("0085001");
+        item.setName("comment-like");
+        item.setRowRole("comment");
         op.setItems(List.of(item));
         payload.setOperations(List.of(op));
 
@@ -229,7 +228,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must use etensu category 8 sendable codes", body.get("message"));
+        assertEquals("items do not contain a sendable main row", body.get("message"));
     }
 
     @Test
@@ -307,8 +306,6 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setOperation("create");
         op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
         op.setBundleName("other-main");
-        op.setClassCode("800");
-        op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
@@ -317,7 +314,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setBodyPart(bodyPart);
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("800000001");
+        item.setCode("180000210");
         item.setName("other-main");
         op.setItems(List.of(item));
         payload.setOperations(List.of(op));
@@ -345,8 +342,6 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setOperation("create");
         op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
         op.setBundleName("other-main");
-        op.setClassCode("800");
-        op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
@@ -371,9 +366,6 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
         op.setBundleName("other-main");
         op.setBundleNumber("4");
-        op.setClassCode("800");
-        op.setClassCodeSystem("Claim007");
-        op.setClassName("その他");
         op.setMemo("local-only");
         op.setStartDate("2025-01-01");
 
@@ -400,13 +392,14 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(1, fetched.getBundles().size());
         OrderBundleFetchResponse.OrderBundleEntry entry = fetched.getBundles().get(0);
         assertEquals(IInfoModel.ENTITY_OTHER_ORDER, entry.getEntity());
-        assertEquals("800", entry.getClassCode());
-        assertEquals("Claim007", entry.getClassCodeSystem());
-        assertEquals("その他", entry.getClassName());
+        assertNull(entry.getClassCode());
+        assertNull(entry.getClassCodeSystem());
+        assertEquals("other-main", entry.getClassName());
         assertEquals("other-main", entry.getBundleName());
         assertEquals(1, entry.getItems().size());
         assertEquals("180000210", entry.getItems().get(0).getCode());
         assertEquals("回", entry.getItems().get(0).getUnit());
+        assertNull(entry.getBodyPart());
     }
 
     @Test

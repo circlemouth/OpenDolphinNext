@@ -310,7 +310,7 @@ const testSubtypeTabs = [
   { key: 'testOrder' as const, label: '検査' },
   { key: 'physiologyOrder' as const, label: '生理（送信停止）' },
   { key: 'bacteriaOrder' as const, label: '細菌' },
-  { key: 'radiologyOrder' as const, label: '放射線' },
+  { key: 'radiologyOrder' as const, label: '画像診断' },
 ] as const;
 
 const chargeSubtypeTabs = [

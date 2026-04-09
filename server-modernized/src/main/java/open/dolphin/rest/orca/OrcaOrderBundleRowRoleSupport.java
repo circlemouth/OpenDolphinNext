@@ -12,7 +12,6 @@ final class OrcaOrderBundleRowRoleSupport {
     static final String ROW_ROLE_BODY_PART = "bodyPart";
 
     private static final Pattern BODY_PART_CODE_PATTERN = Pattern.compile("^002\\d+$");
-    private static final Pattern COMMENT_CODE_PATTERN = Pattern.compile("^(008[1-6]|8[1-6]|098|099|98|99).*");
     private static final Pattern NINE_DIGIT_CODE_PATTERN = Pattern.compile("^\\d{9}$");
     private static final Pattern DIGITS_ONLY_PATTERN = Pattern.compile("^\\d+$");
 
@@ -39,7 +38,7 @@ final class OrcaOrderBundleRowRoleSupport {
 
     static boolean isCommentCode(String code) {
         String normalized = OrcaOrderBundleRequestSupport.trimToNull(code);
-        return normalized != null && COMMENT_CODE_PATTERN.matcher(normalized).matches();
+        return normalized != null && OrcaCommentCarrierRules.isOrderBundleCommentCode(normalized);
     }
 
     static boolean isNineDigitCode(String code) {
@@ -138,7 +137,7 @@ final class OrcaOrderBundleRowRoleSupport {
                     "testOrder",
                     IInfoModel.ENTITY_PHYSIOLOGY_ORDER,
                     IInfoModel.ENTITY_BACTERIA_ORDER -> isNineDigitCode(code);
-            case IInfoModel.ENTITY_OTHER_ORDER -> isOtherOrderCode(code);
+            case IInfoModel.ENTITY_OTHER_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
             case IInfoModel.ENTITY_BASE_CHARGE_ORDER, IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> isNineDigitCode(code);
             case IInfoModel.ENTITY_MED_ORDER, IInfoModel.ENTITY_INJECTION_ORDER -> !isBodyPartCode(code) && !isCommentCode(code);
             default -> !isBodyPartCode(code) && !isCommentCode(code);
@@ -147,7 +146,7 @@ final class OrcaOrderBundleRowRoleSupport {
 
     private static boolean shouldTreatAsLegacyAuxiliary(String entity, String code) {
         String normalizedCode = OrcaOrderBundleRequestSupport.trimToNull(code);
-        if (normalizedCode == null || !normalizedCode.startsWith("7")) {
+        if (normalizedCode == null || !OrcaMedicalClassCatalog.isAuxiliaryMaterialCode(normalizedCode)) {
             return false;
         }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityResponse(entity);

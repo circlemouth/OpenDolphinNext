@@ -68,8 +68,8 @@ const injectionProps = {
 const radiologyProps = {
   ...baseProps,
   entity: 'radiologyOrder',
-  title: '放射線編集',
-  bundleLabel: '放射線オーダー名',
+  title: '画像診断編集',
+  bundleLabel: '画像診断オーダー名',
   itemQuantityLabel: '回数',
 };
 
@@ -153,7 +153,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        'setCode は展開専用です。otherOrder は etensu category 8 のコード付き行のみを扱い、bodyPart は保存しません。オーダー名・指示・自由メモは院内補足として保存します。',
+        'setCode は展開専用です。otherOrder は explicit local-only 契約で保存し、ORCA 送信しません。bodyPart は保持せず、オーダー名・指示・自由メモは院内補足として保存します。',
       ),
     ).toBeInTheDocument();
   });
@@ -189,7 +189,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。',
       ),
     ).toBeInTheDocument();
   });
@@ -199,7 +199,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '放射線送信では bodyPart・coded row・classCode を使います。検査指示・自由メモ・item memo は院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+        '画像診断送信では classCode と coded row を使います。bodyPart は classCode=700 のときだけ保持し、検査指示・自由メモ・item memo は院内ローカル情報として保持します。',
       ),
     ).toBeInTheDocument();
   });
@@ -262,7 +262,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(
       screen.getByText(
-        '処置送信では classCode・bodyPart・coded row のみを使います。オーダー名・処置指示・自由メモは院内ローカル情報として保持し、ORCA 送信 payload には含めません。',
+        '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。',
       ),
     ).toBeInTheDocument();
 
@@ -272,7 +272,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(screen.queryByText('診療セットを反映しますか？')).toBeNull();
     expect(screen.getByLabelText('オーダー名')).toHaveValue('創傷処置セット');
-    expect(screen.getByLabelText('部位', { selector: 'input' })).toHaveValue('膝関節');
+    expect(screen.queryByLabelText('部位', { selector: 'input' })).toBeNull();
     expect(screen.getByLabelText('院内補足')).toHaveValue('運用前確認');
     expect(screen.getByDisplayValue('処置材料A')).toBeInTheDocument();
     expect(screen.getByText('反映元 setCode: P02001（local-only）')).toBeInTheDocument();
@@ -439,7 +439,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
         bundleNumber: '3',
         classCode: '700',
         classCodeSystem: 'Claim007',
-        className: '放射線',
+        className: '画像診断',
         bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '', rowRole: 'bodyPart' },
         items: [
           { code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '', rowRole: 'main' },
@@ -454,7 +454,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: 'セット検索' }));
     await user.click(await screen.findByRole('button', { name: /R70001.*胸部CTセット.*反映/ }));
 
-    expect(screen.getByLabelText('放射線オーダー名')).toHaveValue('胸部CTセット');
+    expect(screen.getByLabelText('画像診断オーダー名')).toHaveValue('胸部CTセット');
     expect(screen.getByLabelText('部位', { selector: 'input' })).toHaveValue('胸部');
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
@@ -464,7 +464,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     expect(operation?.entity).toBe('radiologyOrder');
     expect(operation?.classCode).toBe('700');
     expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('放射線');
+    expect(operation?.className).toBe('画像診断');
     expect(operation?.bodyPart).toEqual(expect.objectContaining({ code: '002001', name: '胸部', unit: '部位' }));
     expect(operation?.items).toEqual(
       expect.arrayContaining([
@@ -474,7 +474,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     );
   });
 
-  it('otherOrder の ORCA診療セット適用後も explicit class meta を保存 payload で保持する', async () => {
+  it('otherOrder の ORCA診療セット適用後は legacy class meta を保存前に reject する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
@@ -510,13 +510,8 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    const payload = vi.mocked(mutateOrderBundles).mock.calls[0]?.[0];
-    const operation = payload?.operations?.[0];
-    expect(operation?.entity).toBe('otherOrder');
-    expect(operation?.classCode).toBe('800');
-    expect(operation?.classCodeSystem).toBe('Claim007');
-    expect(operation?.className).toBe('その他');
-    expect(operation?.items).toEqual(expect.arrayContaining([expect.objectContaining({ code: '180000210', unit: '回' })]));
+    expect(await screen.findByText('otherOrder は explicit local-only 契約のため classCode を保持しません。classCode をクリアしてください。')).toBeInTheDocument();
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
   });
 
   it('testOrder は laboTest 入力セット詳細を canonical entity のまま保存 payload に変換する', async () => {
