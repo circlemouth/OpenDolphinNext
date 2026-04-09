@@ -1,6 +1,6 @@
 import type { OrderBundleBodyPart, OrderBundleItem } from './orderBundleApi';
 import {
-  isOtherOrderOpaqueLocalCode,
+  isOtherOrderLocalOnlyCode,
   isOtherOrderRowRole,
   OTHER_ORDER_ALLOWED_ROW_ROLES,
   OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE,
@@ -32,7 +32,6 @@ export type InjectionBundleContractIssueCode =
   | 'mixed_coded_uncoded'
   | 'uncoded_row'
   | 'missing_main_row'
-  | 'unsupported_admin_memo'
   | 'unsupported_selection_comment_parameter'
   | 'unsupported_body_part';
 
@@ -120,8 +119,6 @@ const buildInjectionContractDetail = (code: InjectionBundleContractIssueCode, mo
       return 'コードなし行が含まれています。注射は材料行を含めて ORCA に送れないため、すべてマスタ選択してください。';
     case 'missing_main_row':
       return '注射は送信可能な本体行（薬剤または手技）を1件以上含める必要があります。材料・コメント・部位・ローカルメモだけでは保存/送信できません。';
-    case 'unsupported_admin_memo':
-      return '注射メモ（adminMemo/speed）が入った bundle は ORCA 送信できません。ORCA carrier 未対応のため、送信前に空にしてください。';
     case 'unsupported_selection_comment_parameter':
       return '選択式コメントの itemNumber / itemNumberBranch は local-only です。保存・送信には使えません。';
     case 'unsupported_body_part':
@@ -195,7 +192,6 @@ export const collectInjectionBundleContractIssues = (
     classCode,
     admin,
     adminCode,
-    adminMemo,
     items,
     bodyPart,
   }: {
@@ -203,11 +199,10 @@ export const collectInjectionBundleContractIssues = (
     classCode?: string | null;
     admin?: string | null;
     adminCode?: string | null;
-    adminMemo?: string | null;
     items?: Array<ContractRow | null | undefined>;
     bodyPart?: ContractBodyPart | null;
   },
-  options: { mode?: InjectionBundleContractMode; blockAdminMemo?: boolean } = {},
+  options: { mode?: InjectionBundleContractMode } = {},
 ): InjectionBundleContractIssue[] => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity?.trim() ?? '';
   if (canonicalEntity !== 'injectionOrder') return [];
@@ -222,14 +217,13 @@ export const collectInjectionBundleContractIssues = (
   });
   const issues: InjectionBundleContractIssue[] = [];
 
-  if (hasText(classCode)) {
-    const normalizedClassCode = classCode?.trim() ?? '';
-    if (!isOrcaEntityClassAllowed('injectionOrder', normalizedClassCode)) {
-      issues.push({
-        code: 'invalid_injection_class_code',
-        detail: buildInjectionContractDetail('invalid_injection_class_code', mode),
-      });
-    }
+  const normalizedClassCode = classCode?.trim() ?? '';
+  const hasCompatibleClassCode = normalizedClassCode && isOrcaEntityClassAllowed('injectionOrder', normalizedClassCode);
+  if ((mode === 'send' && !hasCompatibleClassCode) || (mode === 'save' && normalizedClassCode !== '' && !hasCompatibleClassCode)) {
+    issues.push({
+      code: 'invalid_injection_class_code',
+      detail: buildInjectionContractDetail('invalid_injection_class_code', mode),
+    });
   }
   if (stats.uncodedRows.length > 0 && stats.codedRows.length > 0) {
     issues.push({ code: 'mixed_coded_uncoded', detail: buildInjectionContractDetail('mixed_coded_uncoded', mode) });
@@ -261,18 +255,11 @@ export const collectInjectionBundleContractIssues = (
   ) {
     issues.push({ code: 'missing_main_row', detail: buildInjectionContractDetail('missing_main_row', mode) });
   }
-  if (options.blockAdminMemo && hasText(adminMemo)) {
-    issues.push({
-      code: 'unsupported_admin_memo',
-      detail: buildInjectionContractDetail('unsupported_admin_memo', mode),
-    });
-  }
-
   return issues;
 };
 
 export {
-  isOtherOrderOpaqueLocalCode,
+  isOtherOrderLocalOnlyCode,
   OTHER_ORDER_ALLOWED_ROW_ROLES,
   OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE,
 };

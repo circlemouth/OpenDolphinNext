@@ -7,6 +7,7 @@
 
 - `treatmentOrder` を 400 系処置の single source of truth とする。`generalOrder` は ingress / query 境界でのみ `treatmentOrder` へ正規化する alias として扱う。
 - `bodyPart` は first-class field のまま保持するが、保存・再構成・送信に使えるのは `radiologyOrder(classCode=700)` に限定し、かつ `002` で始まる code を持つ値だけとする。
+- `radiologyOrder(classCode=700)` の `className` は `画像診断` を canonical とする。
 - unknown / invalid ORCA input-set receiptCode は supported entity に誤分類せず、unsupported として fail-closed に扱う。
 
 ## Contract decisions
@@ -20,7 +21,7 @@
 - charge main row は `masterCategory` を item memo meta に保持し、save/fetch/no-op save でも entity/class/item の整合判定を server/client で再利用する。
 - selection comment の `itemNumber / itemNumberBranch` は official `medicalmodv2` request に carrier がないため unsupported とし、UI disable だけで終わらせず save validation / server validation / send block まで fail-closed に止める。
   根拠:
-  `medicationgetv2` は `Selection_Expression_Information` で `Item_Number / Item_Number_Branch` を返す一方、`medicalmodv2` request は `Medication_Code / Name / Number / Generic_Flg` までで、`Medication_Input_Info` は `medicalsetv2` の 85/831 系補足にだけ現れる。
+  `medicationgetv2` は `Selection_Expression_Information` で `Item_Number / Item_Number_Branch` を返す一方、`medicalmodv2` request は `Medication_Code / Name / Number / Generic_Flg` までで、`Medication_Input_Info` は `medicalsetv2` の `830/842/8501/8511/8521/831` structured family 補足にだけ現れる。
 
 ## Verification summary
 

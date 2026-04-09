@@ -149,18 +149,13 @@ final class OrcaOrderBundleFetchSupport {
                 null,
                 info != null ? info.getStampMemo() : null,
                 bundle.getClaimItem()));
-        String canonicalClassCode = OrcaChargeClassCanonicalSupport.canonicalClassCode(
+        String canonicalClassCode = OrcaMedicalClassCatalog.resolveCatalogClassCode(
                 moduleEntity,
                 bundle.getClassCode());
         entry.setClassCode(canonicalClassCode);
         entry.setClassCodeSystem(canonicalClassCode != null ? ClaimConst.CLASS_CODE_ID : bundle.getClassCodeSystem());
-        entry.setClassName(OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
-                moduleEntity,
-                canonicalClassCode,
-                OrcaChargeClassCanonicalSupport.canonicalClassName(
-                        moduleEntity,
-                        canonicalClassCode,
-                        bundle.getClassName())));
+        String canonicalClassName = OrcaMedicalClassCatalog.resolveCatalogClassName(moduleEntity, canonicalClassCode);
+        entry.setClassName(OrcaOrderBundleRequestSupport.hasText(canonicalClassName) ? canonicalClassName : bundle.getClassName());
         entry.setAdmin(bundle.getAdmin());
         entry.setAdminCode(bundle.getAdminCode());
         entry.setAdminCodeSystem(bundle.getAdminCodeSystem());

@@ -84,7 +84,7 @@ const renderPanel = (bundlesOverride = [
     bundleName: '既存RP',
     bundleNumber: '7',
     admin: '1日1回 朝食後',
-    adminMemo: '001000',
+    adminCode: '001000',
     classCode: '212',
     started: '2026-03-09',
     items: [{ code: '620000001', name: 'アムロジピン錠5mg', quantity: '1', unit: '錠', memo: '' }],
@@ -213,7 +213,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         bundleName: '既存RP',
         bundleNumber: '7',
         admin: '1日1回 朝食後',
-        adminMemo: '001000',
+        adminCode: '001000',
         classCode: '212',
         started: '2026-03-09',
         items: [

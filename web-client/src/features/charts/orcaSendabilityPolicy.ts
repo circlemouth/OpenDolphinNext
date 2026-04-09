@@ -1,7 +1,7 @@
 import type { CanonicalOrcaOrderEntity } from './orcaMedicalClassCatalog';
 import { resolveCanonicalOrcaOrderEntity, supportsBodyPartForEntityClass } from './orcaMedicalClassCatalog';
 
-export type OrcaEntityMode = 'sendable' | 'sendable-with-blocked-usage' | 'local-only' | 'import-only';
+export type OrcaEntityMode = 'sendable' | 'local-only' | 'import-only';
 
 type SendabilityEntry = {
   mode: OrcaEntityMode;
@@ -42,7 +42,7 @@ const LOCAL_ONLY_FIELDS = [
 ] as const;
 
 const ENTITY_SENDABILITY: Record<CanonicalOrcaOrderEntity, SendabilityEntry> = {
-  medOrder: { mode: 'sendable-with-blocked-usage', blocksBodyPart: true },
+  medOrder: { mode: 'sendable', blocksBodyPart: true },
   injectionOrder: { mode: 'sendable', blocksBodyPart: true },
   treatmentOrder: { mode: 'sendable', blocksBodyPart: true },
   surgeryOrder: { mode: 'sendable', blocksBodyPart: true },
@@ -64,7 +64,7 @@ export const resolveOrcaEntityMode = (entity?: string | null): OrcaEntityMode | 
 
 export const isEntitySendableToOrca = (entity?: string | null) => {
   const mode = resolveOrcaEntityMode(entity);
-  return mode === 'sendable' || mode === 'sendable-with-blocked-usage';
+  return mode === 'sendable';
 };
 
 export const isEntityLocalOnly = (entity?: string | null) => resolveOrcaEntityMode(entity) === 'local-only';
@@ -91,7 +91,7 @@ export const ORCA_POLICY_MESSAGES = {
   physiologyBlocked: 'ORCA送信を停止: physiologyOrder は import-only です。generic 600 送信には対応していません。',
   bacteriaBlocked: 'ORCA送信を停止: bacteriaOrder は local-only です。ORCA outbound には対応していません。',
   otherBlocked: 'ORCA送信を停止: otherOrder は local-only です。ORCA outbound には対応していません。',
-  medUsageBlocked: '処方の usage は current release では ORCA送信できません。候補選択済みでも send-block します。',
+  medUsageLocalOnly: '処方の usage は local-only persisted / outbound strip です。ORCA送信では保持しません。',
   selectionCommentBlocked: '選択式コメントの itemNumber / branch は official medicalmodv2 request に carrier がないため ORCA送信できません。',
 } as const;
 
@@ -102,7 +102,7 @@ export const resolveOrcaOrderEntitySendabilityPolicy = (entity?: string | null) 
   return {
     entity: canonical,
     mode: entry.mode,
-    sendable: entry.mode === 'sendable' || entry.mode === 'sendable-with-blocked-usage',
+    sendable: entry.mode === 'sendable',
     localOnly: entry.mode === 'local-only',
     importOnly: entry.mode === 'import-only',
     blocksBodyPart: Boolean(entry.blocksBodyPart),

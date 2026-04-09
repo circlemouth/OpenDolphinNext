@@ -216,6 +216,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         op.setOperation("create");
         op.setEntity("medOrder");
         op.setBundleName("降圧薬セット");
+        op.setClassCode("212");
         op.setStartDate("2025/01/01");
         payload.setOperations(List.of(op));
 

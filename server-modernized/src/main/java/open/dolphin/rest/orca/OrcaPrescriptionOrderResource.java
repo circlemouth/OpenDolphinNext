@@ -507,6 +507,20 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                     recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                     throw validationError(request, field, message);
                 }
+                String normalizedNote = OrcaCommentCarrierRules.normalizeStructuredPrescriptionClaimCommentNote(
+                        code,
+                        claimComment.getNote());
+                String noteFormatMessage = OrcaCommentCarrierRules.validateStructuredPrescriptionClaimCommentNote(
+                        code,
+                        claimComment.getNote());
+                if (noteFormatMessage != null) {
+                    String field = "rps[" + rpIndex + "].claimComments[" + commentIndex + "].note";
+                    recordValidationFailure(request, facilityId, patientId, runId, field, noteFormatMessage, action);
+                    throw validationError(request, field, noteFormatMessage);
+                }
+                if (normalizedNote != null || hasText(claimComment.getNote())) {
+                    claimComment.setNote(normalizedNote);
+                }
             }
             List<PrescriptionDrug> drugs = safeList(rp.getDrugs());
             for (int drugIndex = 0; drugIndex < drugs.size(); drugIndex++) {
@@ -540,6 +554,20 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                         String message = "structured claim comment note is required for this code";
                         recordValidationFailure(request, facilityId, patientId, runId, field, message, action);
                         throw validationError(request, field, message);
+                    }
+                    String normalizedNote = OrcaCommentCarrierRules.normalizeStructuredPrescriptionClaimCommentNote(
+                            code,
+                            claimComment.getNote());
+                    String noteFormatMessage = OrcaCommentCarrierRules.validateStructuredPrescriptionClaimCommentNote(
+                            code,
+                            claimComment.getNote());
+                    if (noteFormatMessage != null) {
+                        String field = "rps[" + rpIndex + "].drugs[" + drugIndex + "].claimComments[" + commentIndex + "].note";
+                        recordValidationFailure(request, facilityId, patientId, runId, field, noteFormatMessage, action);
+                        throw validationError(request, field, noteFormatMessage);
+                    }
+                    if (normalizedNote != null || hasText(claimComment.getNote())) {
+                        claimComment.setNote(normalizedNote);
                     }
                 }
             }

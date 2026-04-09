@@ -143,8 +143,8 @@ final class OrcaOrderBundleMutationExecutionSupport {
                     hasBodyPart = true;
                 } else if (OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN.equals(rowRole)) {
                     String itemCategory = resolveEffectiveItemCategory(item, parsedMemo);
-                    if (OrcaChargeClassSupport.isChargeEntity(canonicalEntity)
-                            && !OrcaChargeClassSupport.isChargeItemCategoryCompatible(canonicalEntity, itemCategory)) {
+                    if (OrcaMedicalClassCatalog.isChargeEntity(canonicalEntity)
+                            && !OrcaMedicalClassCatalog.isChargeItemCategoryCompatible(canonicalEntity, itemCategory)) {
                         throw validationFailure.invalid("items", "charge items must use a compatible masterCategory");
                     }
                     hasMainRow = true;
@@ -176,7 +176,9 @@ final class OrcaOrderBundleMutationExecutionSupport {
         if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(canonicalEntity) && "700".equals(normalizedClassCode) && !hasBodyPart) {
             throw validationFailure.invalid("bodyPart", "bodyPart is required for radiologyOrder classCode 700");
         }
-        if (OrcaMedicalClassCatalog.requiresSendableMainRow(canonicalEntity, normalizedClassCode) && !hasMainRow) {
+        boolean requiresMainRow = OrcaMedicalClassCatalog.requiresSendableMainRow(canonicalEntity, normalizedClassCode)
+                || IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity);
+        if (requiresMainRow && !hasMainRow) {
             throw validationFailure.invalid("items", "items do not contain a sendable main row");
         }
     }
@@ -317,7 +319,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
     private static String invalidCodeMessage(String canonicalEntity, String rowRole) {
         String normalizedRole = OrcaOrderBundleRequestSupport.normalizeRowRole(rowRole);
         if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity)) {
-            return "otherOrder items must be coded main rows and do not accept classCode/bodyPart/material/comment";
+            return "otherOrder items must use LOCAL_OTHER:... local-only codes and do not accept classCode/bodyPart/material/comment";
         }
         if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(normalizedRole)) {
             return "bodyPart must use 002 code";

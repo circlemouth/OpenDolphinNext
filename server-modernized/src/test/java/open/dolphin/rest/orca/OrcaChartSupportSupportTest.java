@@ -112,6 +112,68 @@ class OrcaChartSupportSupportTest {
     }
 
     @Test
+    void buildMedicalModV2RequestXmlUsesStructuredClaimCommentCarrierPerFamily() {
+        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
+        payload.setPatientId("12345");
+        payload.setPerformDate("2026-03-22T08:00:00");
+        payload.setDepartmentCode("01");
+
+        ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
+        information.setMedicalClass("212");
+        information.setMedicalClassName("Prescription");
+        information.setMedicalClassNumber("1");
+
+        ChartSupportMedicalModV2Request.Medication rp830 = new ChartSupportMedicalModV2Request.Medication();
+        rp830.setCode("830000001");
+        rp830.setName("補足メモ");
+
+        ChartSupportMedicalModV2Request.Medication rp842 = new ChartSupportMedicalModV2Request.Medication();
+        rp842.setCode("842000001");
+        rp842.setName("数量指定");
+        rp842.setNumber("1.5");
+
+        ChartSupportMedicalModV2Request.Medication drug8501 = new ChartSupportMedicalModV2Request.Medication();
+        drug8501.setCode("850100001");
+        drug8501.setName("日付");
+        drug8501.setNumber("2026-04-09");
+
+        ChartSupportMedicalModV2Request.Medication drug8511 = new ChartSupportMedicalModV2Request.Medication();
+        drug8511.setCode("851100001");
+        drug8511.setName("月日");
+        drug8511.setNumber("04-09");
+
+        ChartSupportMedicalModV2Request.Medication drug8521 = new ChartSupportMedicalModV2Request.Medication();
+        drug8521.setCode("852100001");
+        drug8521.setName("回数");
+        drug8521.setNumber("12");
+
+        ChartSupportMedicalModV2Request.Medication rp831 = new ChartSupportMedicalModV2Request.Medication();
+        rp831.setCode("831000001");
+        rp831.setName("管理番号");
+        rp831.setNumber("123456789");
+
+        information.setMedications(List.of(rp830, rp842, drug8501, drug8511, drug8521, rp831));
+        payload.setMedicalInformation(List.of(information));
+
+        String xml = support.buildMedicalModV2RequestXml(payload);
+
+        assertTrue(xml.contains("<Medication_Code type=\"string\">830000001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Name type=\"string\">補足メモ</Medication_Name>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">842000001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Name type=\"string\">数量指定</Medication_Name>"));
+        assertTrue(xml.contains("<Medication_Number type=\"string\">1.5</Medication_Number>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">850100001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Number type=\"string\">2026-04-09</Medication_Number>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">851100001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Number type=\"string\">04-09</Medication_Number>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">852100001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Number type=\"string\">12</Medication_Number>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">831000001</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Number type=\"string\">123456789</Medication_Number>"));
+        assertNoMedicationUnitTags(xml);
+    }
+
+    @Test
     void buildMedicalModV2RequestXmlSerializesRadiologyBodyPartMaterialAndCommentInOrder() {
         ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
         payload.setPatientId("12345");

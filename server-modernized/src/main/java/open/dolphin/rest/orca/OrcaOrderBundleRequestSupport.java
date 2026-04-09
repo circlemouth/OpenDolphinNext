@@ -157,10 +157,7 @@ final class OrcaOrderBundleRequestSupport {
             return false;
         }
         if (normalizedClassCode == null) {
-            return true;
-        }
-        if (OrcaChargeClassSupport.isChargeEntity(normalizedEntity)) {
-            return OrcaChargeClassSupport.isChargeClassCompatible(normalizedEntity, normalizedClassCode);
+            return !OrcaMedicalClassCatalog.requiresClassCode(normalizedEntity);
         }
         return OrcaMedicalClassCatalog.isCompatibleClassCode(normalizedEntity, normalizedClassCode);
     }
@@ -221,20 +218,8 @@ final class OrcaOrderBundleRequestSupport {
         return canonicalEntity != null && !IInfoModel.ENTITY_MED_ORDER.equals(canonicalEntity);
     }
 
-    static String resolveCanonicalClassName(String entity, String classCode, String className) {
-        String normalizedEntity = OrcaMedicalClassCatalog.normalizeEntity(entity);
-        String chargeCanonical = OrcaChargeClassSupport.resolveCanonicalChargeClassName(normalizedEntity, classCode);
-        if (chargeCanonical != null) {
-            return chargeCanonical;
-        }
-        if (OrcaChargeClassSupport.isChargeEntity(normalizedEntity)) {
-            return null;
-        }
-        String normalizedClassCode = trimToNull(classCode);
-        if (IInfoModel.ENTITY_RADIOLOGY_ORDER.equals(normalizedEntity)
-                && (normalizedClassCode == null || OrcaMedicalClassCatalog.isRadiologyClassCode(normalizedClassCode))) {
-            return OrcaChargeClassCanonicalSupport.RADIOLOGY_CLASS_NAME;
-        }
-        return OrcaMedicalClassCatalog.normalizeRadiologyLabel(className);
+    static String resolveCatalogClassName(String entity, String classCode) {
+        return OrcaMedicalClassCatalog.resolveCatalogClassName(entity, classCode);
     }
+
 }

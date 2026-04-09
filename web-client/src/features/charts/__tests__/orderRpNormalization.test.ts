@@ -9,7 +9,7 @@ import {
   toMedicalModV2InformationWithSource,
 } from '../orderRpNormalization';
 import { fetchOrderBundles } from '../orderBundleApi';
-import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
+import { buildEmptyPrescriptionOrder, buildPrescriptionOrderSendBundles, fetchPrescriptionOrder, type PrescriptionOrder } from '../prescriptionOrderApi';
 
 vi.mock('../orderBundleApi', async () => {
   const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
@@ -42,6 +42,7 @@ describe('orderRpNormalization', () => {
       {
         entity: 'treatmentOrder',
         bundleName: '混在束',
+        classCode: '400',
         items: [
           { code: '140000610', name: '創傷処置（１００ｃｍ２未満）', quantity: '1', unit: '回' },
           { name: '未コード行', quantity: '1', unit: '回' },
@@ -63,6 +64,7 @@ describe('orderRpNormalization', () => {
       {
         entity: 'radiologyOrder',
         bundleName: '胸部CT',
+        classCode: '700',
         bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
         items: [{ code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' }],
       } as any,
@@ -102,6 +104,7 @@ describe('orderRpNormalization', () => {
       {
         entity: 'treatmentOrder',
         bundleName: 'parameter-comment',
+        classCode: '400',
         items: [
           { code: '140000610', name: '創傷処置', quantity: '1', unit: '回', rowRole: 'main' },
           {
@@ -133,7 +136,7 @@ describe('orderRpNormalization', () => {
         entity: 'otherOrder',
         bundleName: 'invalid-other-class',
         classCode: '8A0',
-        items: [{ code: '180000210', name: 'other-main', quantity: '1', unit: '回' }],
+        items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: 'other-main', quantity: '1', unit: '回' }],
       } as any,
     ]);
 
@@ -143,6 +146,29 @@ describe('orderRpNormalization', () => {
         code: 'invalid_other_order_class',
         bundleName: 'invalid-other-class',
       }),
+    );
+  });
+
+  it.each([
+    { entity: 'treatmentOrder', expected: 'invalid_class_code' },
+    { entity: 'injectionOrder', expected: 'invalid_injection_class_code' },
+    { entity: 'baseChargeOrder', expected: 'invalid_class_code' },
+  ])('exact-class entity $entity rejects blank classCode before ORCA send', ({ entity, expected }) => {
+    const issues = collectMedicalModV2BundleIssues([
+      {
+        entity,
+        bundleName: 'missing-class-code',
+        items: [{ code: '140000610', name: 'main-item', quantity: '1', unit: '回', rowRole: 'main' }],
+      } as any,
+    ]);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: expected,
+          bundleName: 'missing-class-code',
+        }),
+      ]),
     );
   });
 
@@ -187,6 +213,7 @@ describe('orderRpNormalization', () => {
       entity: 'radiologyOrder',
       bundleName: '胸部CT',
       bundleNumber: '1',
+      classCode: '700',
       items: [{ code: '170017510', name: 'ＣＴ撮影', quantity: '1', unit: '回', memo: '' }],
     } as any);
 
@@ -206,6 +233,7 @@ describe('orderRpNormalization', () => {
       entity: 'radiologyOrder',
       bundleName: '胸部CT',
       bundleNumber: '1',
+      classCode: '700',
       admin: '静注',
       adminCode: '4101',
       bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
@@ -290,6 +318,68 @@ describe('orderRpNormalization', () => {
     ]);
   });
 
+  it('medOrder structured claim comment は family ごとに correct carrier を使う', () => {
+    const order: PrescriptionOrder = {
+      patientId: '000001',
+      encounterDate: '2026-03-09',
+      performDate: '2026-03-09',
+      doctorComment: '',
+      deletedDocumentIds: [],
+      rps: [
+        {
+          rpId: 'rp-1',
+          name: '処方RP',
+          location: 'out',
+          category: 'regular',
+          usage: '毎食後',
+          usageCode: '001000',
+          daysOrTimes: '7',
+          remark: '',
+          refillPattern: 'none',
+          doctorComment: '',
+          started: '2026-03-09',
+          claimComments: [
+            { id: 'rp-830', code: '830000001', name: '自由記載', note: '補足メモ' },
+            { id: 'rp-842', code: '842000001', name: '数量指定', note: '1.5' },
+            { id: 'rp-831', code: '831000001', name: '管理番号', note: '123456789' },
+          ],
+          drugs: [
+            {
+              rowId: 'drug-1',
+              code: '620000001',
+              name: 'アムロジピン',
+              quantity: '1',
+              unit: '錠',
+              genericChangeAllowed: true,
+              isGeneralNamePrescription: false,
+              drugComment: '',
+              claimComments: [
+                { id: 'claim-8501', code: '850100001', name: '日付', note: '2026-04-09' },
+                { id: 'claim-8511', code: '851100001', name: '月日', note: '04-09' },
+                { id: 'claim-8521', code: '852100001', name: '回数', note: '12' },
+              ],
+              patientRequest: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    const bundle = buildPrescriptionOrderSendBundles(order)[0];
+    const medicalInfo = toMedicalModV2InformationWithSource(bundle);
+
+    expect(medicalInfo?.info.medications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: '830000001', name: '補足メモ', number: undefined }),
+        expect.objectContaining({ code: '842000001', name: '数量指定', number: '1.5' }),
+        expect.objectContaining({ code: '831000001', name: '管理番号', number: '123456789' }),
+        expect.objectContaining({ code: '850100001', name: '日付', number: '2026-04-09' }),
+        expect.objectContaining({ code: '851100001', name: '月日', number: '04-09' }),
+        expect.objectContaining({ code: '852100001', name: '回数', number: '12' }),
+      ]),
+    );
+  });
+
   it('injectionOrder で material row は main-row requirement を満たさない', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
@@ -338,7 +428,7 @@ describe('orderRpNormalization', () => {
     );
   });
 
-  it('injectionOrder は adminMemo/speed を持っていても local-only として送信前 issue を返さない', () => {
+  it('injectionOrder は adminMemo を持っていても local-only として送信前 issue を返さない', () => {
     const issues = collectMedicalModV2BundleIssues([
       {
         entity: 'injectionOrder',

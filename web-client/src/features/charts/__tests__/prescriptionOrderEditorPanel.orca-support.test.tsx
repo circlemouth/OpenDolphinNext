@@ -58,7 +58,7 @@ const defaultBundlesOverride = [
     bundleName: '既存RP',
     bundleNumber: '7',
     admin: '1日1回 朝食後',
-    adminMemo: '001000',
+    adminCode: '001000',
     classCode: '212',
     started: '2026-03-09',
     items: [{ code: 'A100', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
@@ -181,7 +181,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         bundleNumber: '3',
         classCode: '221',
         admin: '頓服',
-        adminMemo: '200',
+        adminCode: '200',
         memo: '入力セット備考',
         started: '2026-03-09',
         items: [
@@ -211,7 +211,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
         category: 'tonyo',
         location: 'in',
         usage: '頓服',
-        usageCode: undefined,
+        usageCode: '200',
         daysOrTimes: '3',
         remark: '入力セット備考',
       }),
@@ -244,7 +244,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
           bundleName: '既存RP',
           bundleNumber: '7',
           admin: '毎食後',
-          adminMemo: '001000',
+          adminCode: '001000',
           classCode: '212',
           started: '2026-03-09',
           items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
@@ -282,7 +282,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
           bundleName: '既存RP',
           bundleNumber: '7',
           admin: '毎食後',
-          adminMemo: '001000',
+          adminCode: '001000',
           classCode: '212',
           started: '2026-03-09',
           items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
@@ -355,7 +355,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
               bundleName: '既存RP',
               bundleNumber: '7',
               admin: '毎食後',
-              adminMemo: '001000',
+              adminCode: '001000',
               classCode: '212',
               started: '2026-03-09',
               items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
@@ -418,7 +418,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
           bundleName: '既存RP',
           bundleNumber: '7',
           admin: '自由用法だけ',
-          adminMemo: '',
+          adminCode: '',
           classCode: '212',
           started: '2026-03-09',
           items: [{ code: '620000001', name: '既存薬', quantity: '1', unit: '錠', memo: '' }],
@@ -441,6 +441,67 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     );
   });
 
+  it('structured claim comment note を editor で表示し no-op save でも保持する', async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
+
+    renderPanel({
+      bundlesOverride: [
+        {
+          entity: 'medOrder',
+          bundleName: '構造化コメントRP',
+          bundleNumber: '7',
+          admin: '毎食後',
+          adminCode: '001000',
+          classCode: '212',
+          started: '2026-03-09',
+          items: [
+            {
+              code: '830000001',
+              name: '自由記載',
+              quantity: '',
+              unit: '',
+              memo: '__rx_claim_target__:__rp__',
+              structuredCommentValue: '補足メモ',
+            },
+            {
+              code: '620000001',
+              name: '既存薬',
+              quantity: '1',
+              unit: '錠',
+              memo: '',
+            },
+            {
+              code: '850100001',
+              name: '日付',
+              quantity: '',
+              unit: '',
+              memo: '__rx_claim_target__:0',
+              structuredCommentValue: '2026-04-09',
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(await screen.findByDisplayValue('補足メモ')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('2026-04-09')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    await waitFor(() => {
+      expect(savePrescriptionOrder).toHaveBeenCalledTimes(1);
+    });
+
+    const payload = vi.mocked(savePrescriptionOrder).mock.calls[0]?.[0];
+    expect(payload?.order?.rps[0]?.claimComments).toEqual([
+      expect.objectContaining({ code: '830000001', note: '補足メモ' }),
+    ]);
+    expect(payload?.order?.rps[0]?.drugs[0]?.claimComments).toEqual([
+      expect.objectContaining({ code: '850100001', note: '2026-04-09' }),
+    ]);
+  });
+
   it('相互作用ありでは確認 dialog を出し、続行時だけ保存する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
@@ -458,7 +519,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
           bundleName: '既存RP',
           bundleNumber: '7',
           admin: '1日1回 朝食後',
-          adminMemo: '001000',
+          adminCode: '001000',
           classCode: '212',
           started: '2026-03-09',
           items: [
@@ -501,7 +562,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
           bundleName: '既存RP',
           bundleNumber: '7',
           admin: '1日1回 朝食後',
-          adminMemo: '001000',
+          adminCode: '001000',
           classCode: '212',
           started: '2026-03-09',
           items: [

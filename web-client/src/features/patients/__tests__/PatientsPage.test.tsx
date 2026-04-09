@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { clearAuditEventLog, logAuditEvent } from '../../../libs/audit/auditLogger';
+import { clearChartsEncounterContext } from '../../charts/encounterContext';
 
 type MockQueryData = {
   patients: Array<Record<string, any>>;
@@ -229,6 +230,7 @@ beforeEach(() => {
   mockMutationError = null;
   mockMutationPending = false;
   mockMutationCallCount = 0;
+  clearChartsEncounterContext();
   setRouterSearch('');
   mockLocationState = null;
   mockSetSearchParams.mockClear();
@@ -503,8 +505,8 @@ describe('PatientsPage initial selection', () => {
     setRouterSearch('');
     renderPatientsPage();
 
-    expect(screen.getByText('患者を選択してください。')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '患者未選択' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('患者未選択');
     expect(screen.getByRole('button', { name: /山田 花子/ })).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -522,7 +524,10 @@ describe('PatientsPage initial selection', () => {
     setRouterState({ patientId: 'P-001' });
     renderPatientsPage();
 
-    expect(screen.getByRole('heading', { name: /ORCA患者番号（Patient_ID） P-001/ })).toBeInTheDocument();
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    expect(within(identityBar).getByRole('heading', { name: '山田 花子' })).toBeInTheDocument();
+    expect(identityBar).toHaveTextContent('患者ID');
+    expect(identityBar).toHaveTextContent('P-001');
     expect(screen.getByRole('button', { name: /山田 花子/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
@@ -658,7 +663,9 @@ describe('PatientsPage switch guard', () => {
     expect(screen.getByText('未保存の変更があります')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'キャンセル' }));
     expect(screen.queryByText('未保存の変更があります')).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /ORCA患者番号（Patient_ID） P-001/ })).toBeInTheDocument();
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    expect(identityBar).toHaveTextContent('P-001');
+    expect(identityBar).not.toHaveTextContent('P-002');
   });
 
   it('破棄して切り替えで次の患者へ移動する', async () => {
@@ -683,7 +690,9 @@ describe('PatientsPage switch guard', () => {
     await user.click(target);
 
     await user.click(screen.getByRole('button', { name: '破棄して切り替え' }));
-    expect(screen.getByRole('heading', { name: /ORCA患者番号（Patient_ID） P-002/ })).toBeInTheDocument();
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    expect(within(identityBar).getByRole('heading', { name: '佐藤 次郎' })).toBeInTheDocument();
+    expect(identityBar).toHaveTextContent('P-002');
   });
 });
 

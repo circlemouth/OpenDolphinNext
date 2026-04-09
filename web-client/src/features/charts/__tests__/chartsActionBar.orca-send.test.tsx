@@ -231,7 +231,7 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-    await waitFor(() => expect(screen.getByText(/9桁コード/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/classCode が必須/)).toBeInTheDocument());
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
@@ -257,9 +257,9 @@ describe('ChartsActionBar ORCA send', () => {
     await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
     await user.click(screen.getByRole('button', { name: '送信する' }));
 
-  await waitFor(() => expect(screen.getByText(/本体となるコード行/)).toBeInTheDocument());
-  expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
-});
+    await waitFor(() => expect(screen.getByText(/classCode が必須/)).toBeInTheDocument());
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
 
   it('blocks saved otherOrder bundles before send with explicit local-only notice', async () => {
     const user = userEvent.setup();
@@ -272,8 +272,7 @@ describe('ChartsActionBar ORCA send', () => {
                 entity: 'otherOrder',
                 bundleName: 'invalid-other-class',
                 bundleNumber: '1',
-                classCode: '8A0',
-                items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回' }],
+                items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: '診断書料', quantity: '1', unit: '回' }],
               },
             ]
           : [],

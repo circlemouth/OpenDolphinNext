@@ -15,7 +15,7 @@ final class OrcaOrderBundleRowRoleSupport {
     private static final Pattern BODY_PART_CODE_PATTERN = Pattern.compile("^002\\d+$");
     private static final Pattern NINE_DIGIT_CODE_PATTERN = Pattern.compile("^\\d{9}$");
     private static final Pattern DIGITS_ONLY_PATTERN = Pattern.compile("^\\d+$");
-    private static final Pattern OTHER_ORDER_RESERVED_COMMENT_CODE_PATTERN = Pattern.compile("^(?:008[1-6]|098|099|98|99).*");
+    private static final String OTHER_ORDER_LOCAL_ONLY_CODE_PREFIX = "LOCAL_OTHER:";
 
     private OrcaOrderBundleRowRoleSupport() {
     }
@@ -63,9 +63,25 @@ final class OrcaOrderBundleRowRoleSupport {
 
     static boolean isOtherOrderLocalCode(String code) {
         String normalized = OrcaOrderBundleRequestSupport.trimToNull(code);
-        return normalized != null
-                && !isBodyPartCode(normalized)
-                && !OTHER_ORDER_RESERVED_COMMENT_CODE_PATTERN.matcher(normalized).matches();
+        if (normalized == null || !normalized.startsWith(OTHER_ORDER_LOCAL_ONLY_CODE_PREFIX)) {
+            return false;
+        }
+        String suffix = normalized.substring(OTHER_ORDER_LOCAL_ONLY_CODE_PREFIX.length());
+        if (suffix.isEmpty()) {
+            return false;
+        }
+        for (int index = 0; index < suffix.length(); index++) {
+            char character = suffix.charAt(index);
+            boolean allowed = (character >= 'A' && character <= 'Z')
+                    || (character >= '0' && character <= '9')
+                    || character == '.'
+                    || character == '_'
+                    || character == '-';
+            if (!allowed) {
+                return false;
+            }
+        }
+        return true;
     }
 
     static String resolveRowRole(String entity, String explicitRowRole, String code) {

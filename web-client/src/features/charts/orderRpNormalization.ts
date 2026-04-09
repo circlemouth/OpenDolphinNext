@@ -4,8 +4,6 @@ import {
   ORCA_SEND_PREFLIGHT_ORDER_ENTITIES,
   resolveCanonicalOrderEntity,
   resolveCanonicalChargeClassMeta,
-  resolveCanonicalChargeClassName,
-  resolveOrderEntityDefaultClassMeta,
 } from './orderCategoryRegistry';
 import {
   fetchOrderBundles,
@@ -25,8 +23,18 @@ import {
   MEDICAL_MOD_V2_UNSUPPORTED_PHYSIOLOGY_NEXT_ACTION,
   RP_REQUIRED_NEXT_ACTION,
 } from './orderRpRequirements';
-import { isOrderBundleCommentCode as isOrderBundleCommentCodeImpl } from './orcaCommentCarrierRules';
-import { getAllowedClassCodesForEntity, isAuxiliaryMaterialCode, isOrcaEntityClassAllowed } from './orcaMedicalClassCatalog';
+import {
+  isOrderBundleCommentCode as isOrderBundleCommentCodeImpl,
+  resolvePrescriptionStructuredCommentSpec,
+} from './orcaCommentCarrierRules';
+import {
+  getAllowedClassCodesForEntity,
+  isAuxiliaryMaterialCode,
+  isOrcaEntityClassAllowed,
+  normalizeOrcaClassCode,
+  requiresOrcaClassCode,
+  resolveCanonicalOrcaClassName,
+} from './orcaMedicalClassCatalog';
 import { collectInjectionBundleContractIssues, isStandaloneSurgeryClassCode } from './orderBundleContract';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import { buildPrescriptionOrderSendBundles, fetchPrescriptionOrder } from './prescriptionOrderApi';
@@ -47,8 +55,7 @@ export type RpNormalizedMedication = {
 
 export type RpNormalizedRowSource =
   | { kind: 'body_part'; sectionIndex: 0 }
-  | { kind: 'bundle_item'; itemIndex: number; rowRole: OrderBundleRowRole; rowSubtype?: OrderBundleRowSubtype; sectionIndex: number }
-  | { kind: 'usage' };
+  | { kind: 'bundle_item'; itemIndex: number; rowRole: OrderBundleRowRole; rowSubtype?: OrderBundleRowSubtype; sectionIndex: number };
 
 export type RpNormalizedRow = {
   medication: RpNormalizedMedication;
@@ -75,7 +82,6 @@ export type RpNormalizedBundle = {
 
 export type MedicalModV2BundleIssueCode =
   | 'invalid_class_code'
-  | 'missing_admin_code'
   | 'invalid_injection_class_code'
   | 'uncoded_row'
   | 'mixed_coded_uncoded'
@@ -106,6 +112,7 @@ const cloneBundleItem = (item?: OrderBundleItem | null): OrderBundleItem | null 
     quantity: item.quantity?.trim() || undefined,
     unit: item.unit?.trim() || undefined,
     memo: item.memo?.trim() || undefined,
+    structuredCommentValue: item.structuredCommentValue?.trim() || undefined,
     genericFlg: item.genericFlg,
     userComment: item.userComment,
     masterCategory: item.masterCategory,
@@ -254,9 +261,17 @@ const buildBundleIssue = (bundle: OrderBundle, code: MedicalModV2BundleIssueCode
 
 const resolveInvalidClassIssue = (bundle: OrderBundle) => {
   const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
-  const classCode = bundle.classCode?.trim();
-  if (!classCode || canonicalEntity === 'otherOrder' || canonicalEntity === 'physiologyOrder' || canonicalEntity === 'bacteriaOrder') {
+  const classCode = normalizeOrcaClassCode(bundle.classCode);
+  if (canonicalEntity === 'otherOrder' || canonicalEntity === 'bacteriaOrder') {
     return null;
+  }
+  if (!classCode) {
+    if (!requiresOrcaClassCode(canonicalEntity)) return null;
+    return buildBundleIssue(
+      bundle,
+      canonicalEntity === 'injectionOrder' ? 'invalid_injection_class_code' : 'invalid_class_code',
+      `${canonicalEntity} は classCode が必須です。`,
+    );
   }
   if (isOrcaEntityClassAllowed(canonicalEntity, classCode)) {
     return null;
@@ -363,9 +378,7 @@ export const collectMedicalModV2BundleIssuesForBundle = (bundle: OrderBundle): M
       { mode: 'send' },
     );
     if (injectionIssues.length > 0) {
-      const bundleIssues = injectionIssues.flatMap((issue) =>
-        issue.code === 'unsupported_admin_memo' ? [] : [buildBundleIssue(bundle, issue.code, issue.detail)],
-      );
+      const bundleIssues = injectionIssues.map((issue) => buildBundleIssue(bundle, issue.code, issue.detail));
       if (bundleIssues.length > 0) {
         return bundleIssues;
       }
@@ -426,35 +439,42 @@ const toRpNormalizedMedication = (item: OrderBundleItem): RpNormalizedMedication
   if (!code) return null;
   const { genericFlg: resolvedGenericFlg } = resolveOrcaOrderItemFields(item);
   const genericFlg = DRUG_CODE_PATTERN.test(code) ? resolvedGenericFlg : undefined;
+  const structuredSpec = resolvePrescriptionStructuredCommentSpec(code);
+  const structuredValue = item.structuredCommentValue?.trim();
+  const name =
+    structuredSpec?.carrier === 'Medication_Name'
+      ? structuredValue || undefined
+      : item.name?.trim() || undefined;
+  const number =
+    structuredSpec?.carrier === 'Medication_Number'
+      ? structuredValue || undefined
+      : item.quantity?.trim() || undefined;
   return {
     code,
-    name: item.name?.trim() || undefined,
-    number: item.quantity?.trim() || undefined,
+    name,
+    number,
     genericFlg,
   };
 };
 
 const resolveMedicalClass = (bundle: OrderBundle) => {
-  const chargeClassMeta = resolveCanonicalChargeClassMeta({
-    entity: bundle.entity,
-    classCode: bundle.classCode,
-    itemCategory: bundle.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory,
-  });
-  if (chargeClassMeta?.classCode) return chargeClassMeta.classCode;
-  const explicit = bundle.classCode?.trim();
+  const canonicalEntity = resolveCanonicalOrderEntity(bundle.entity) ?? bundle.entity?.trim() ?? '';
+  const explicit = normalizeOrcaClassCode(bundle.classCode);
+  if (isChargeEntity(canonicalEntity)) {
+    return resolveCanonicalChargeClassMeta({
+      entity: bundle.entity,
+      classCode: explicit,
+      itemCategory: explicit
+        ? bundle.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory
+        : undefined,
+    })?.classCode ?? '';
+  }
   if (explicit) return explicit;
-  const classMeta = resolveOrderEntityDefaultClassMeta(bundle.entity?.trim());
-  return classMeta?.classCode?.trim() || '';
+  return '';
 };
 
 const resolveMedicalClassName = (bundle: OrderBundle, medicalClass: string) => {
-  const explicit = bundle.className?.trim();
-  if (explicit && (!isChargeEntity(bundle.entity) || resolveCanonicalChargeClassName(bundle.entity, medicalClass) === explicit)) {
-    return explicit;
-  }
-  const canonicalChargeClassName = resolveCanonicalChargeClassName(bundle.entity, medicalClass);
-  if (canonicalChargeClassName) return canonicalChargeClassName;
-  return explicit || undefined;
+  return resolveCanonicalOrcaClassName(bundle.entity, medicalClass, bundle.className);
 };
 
 export const normalizeOrderBundleToRp = (bundle: OrderBundle): RpNormalizedBundle | null => {
@@ -581,7 +601,6 @@ export const fetchMedicalModV2OrderBundles = async (patientId: string, from: str
 const isAllowedMedicalModV2Code = (code: string, sourceKind?: RpNormalizedRowSource['kind']) => {
   const normalized = code.trim();
   if (!normalized) return false;
-  if (sourceKind === 'usage') return /^\d+$/.test(normalized);
   if (sourceKind === 'body_part') return isOrderBundleBodyPartCode(normalized);
   return /^\d{9}$/.test(normalized) || isCommentMedicationCode(normalized);
 };

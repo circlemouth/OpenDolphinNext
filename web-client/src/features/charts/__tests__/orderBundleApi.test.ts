@@ -185,6 +185,7 @@ describe('orderBundleApi bodyPart contract', () => {
           operation: 'create',
           entity: 'laboTest',
           bundleName: 'LAB_GENERAL',
+          classCode: '600',
           items: [{ code: '160000010', name: 'LAB_GENERAL' }],
         } as any,
       ],
@@ -217,6 +218,7 @@ describe('orderBundleApi bodyPart contract', () => {
           operation: 'create',
           entity: 'treatmentOrder',
           bundleName: 'TREATMENT_SET',
+          classCode: '400',
           admin: 'once-per-day',
           adminCode: '31001',
           adminCodeSystem: 'Claim007',
@@ -237,6 +239,64 @@ describe('orderBundleApi bodyPart contract', () => {
         adminMemo: 'ADMIN_MEMO',
       }),
     );
+  });
+
+  it.each([
+    'medOrder',
+    'injectionOrder',
+    'treatmentOrder',
+    'surgeryOrder',
+    'testOrder',
+    'physiologyOrder',
+    'radiologyOrder',
+    'baseChargeOrder',
+    'instractionChargeOrder',
+  ])('mutation rejects blank classCode for exact-class entity %s', async (entity) => {
+    const result = await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        {
+          operation: 'create',
+          entity,
+          bundleName: 'CLASS_REQUIRED',
+          items: [{ code: '620000001', name: 'ITEM_A', quantity: '1', unit: '回', rowRole: 'main' }],
+        } as any,
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('classCode');
+    expect(httpFetch).not.toHaveBeenCalled();
+  });
+
+  it('fetch canonicalizes radiology className from classCode without trusting response label', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-FETCH-RAD',
+          patientId: '000001',
+          bundles: [
+            {
+              entity: 'radiologyOrder',
+              bundleName: 'HEAD_CT',
+              classCode: '701',
+              classCodeSystem: 'Claim007',
+              className: 'UNTRUSTED_LABEL',
+              items: [{ code: '170017510', name: 'HEAD_CT', rowRole: 'main' }],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderBundles({ patientId: '000001' });
+
+    expect(result.ok).toBe(true);
+    expect(result.bundles[0]?.className).toBe('画像診断');
   });
 
   it('mutation blocks unsupported selection comment parameters before POST', async () => {
@@ -292,6 +352,7 @@ describe('orderBundleApi bodyPart contract', () => {
           entity: 'treatmentOrder',
           bundleName: 'MIXED_ORDER',
           bundleNumber: '1',
+          classCode: '400',
           items: [
             { code: '140000610', name: 'TREATMENT_ITEM', quantity: '1', unit: 'times' },
             { name: 'UNCODED_ROW', quantity: '1', unit: 'times' },
@@ -376,7 +437,7 @@ describe('orderBundleApi bodyPart contract', () => {
               bundleNumber: '5',
               admin: 'LOCAL_ADMIN_NOTE',
               memo: 'LOCAL_MEMO',
-              items: [{ code: '180000210', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
+              items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
             },
           ],
         }),
@@ -398,9 +459,41 @@ describe('orderBundleApi bodyPart contract', () => {
         memo: 'LOCAL_MEMO',
       }),
     );
+    expect(result.bundles[0]?.items[0]?.code).toBe('LOCAL_OTHER:CERTIFICATE_FEE');
     expect(result.bundles[0]?.classCode).toBeUndefined();
     expect(result.bundles[0]?.classCodeSystem).toBeUndefined();
     expect(result.bundles[0]?.className).toBeUndefined();
+  });
+
+  it('fetch drops legacy otherOrder item codes that are not explicit local-only', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-OTHER-FETCH-LEGACY',
+          patientId: '000001',
+          bundles: [
+            {
+              entity: 'otherOrder',
+              bundleName: 'CERTIFICATE_FEE',
+              bundleNumber: '5',
+              admin: 'LOCAL_ADMIN_NOTE',
+              memo: 'LOCAL_MEMO',
+              items: [{ code: '180000210', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderBundles({ patientId: '000001', entity: 'otherOrder' });
+
+    expect(result.ok).toBe(true);
+    expect(result.bundles[0]?.items[0]?.code).toBeUndefined();
+    expect(result.bundles[0]?.items[0]?.name).toBe('CERTIFICATE_FEE');
   });
 
   it('mutation keeps otherOrder local-only fields and drops legacy class meta', async () => {
@@ -427,7 +520,7 @@ describe('orderBundleApi bodyPart contract', () => {
           bundleNumber: '5',
           admin: 'LOCAL_ADMIN_NOTE',
           memo: 'LOCAL_MEMO',
-          items: [{ code: '180000210', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
+          items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: 'CERTIFICATE_FEE', quantity: '1', unit: 'times' }],
         } as any,
       ],
     });
@@ -442,7 +535,7 @@ describe('orderBundleApi bodyPart contract', () => {
         bundleNumber: '5',
         admin: 'LOCAL_ADMIN_NOTE',
         memo: 'LOCAL_MEMO',
-        items: expect.arrayContaining([expect.objectContaining({ code: '180000210', unit: 'times' })]),
+        items: expect.arrayContaining([expect.objectContaining({ code: 'LOCAL_OTHER:CERTIFICATE_FEE', unit: 'times' })]),
       }),
     );
     expect(body.operations[0]?.classCode).toBeUndefined();

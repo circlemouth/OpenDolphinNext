@@ -208,13 +208,13 @@
 }
 
 .app-shell__tool[aria-current='page'] {
-  border-color: var(--ui-primary);
-  background: var(--ui-surface-muted);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+  border-color: var(--ui-selected-border);
+  background: var(--ui-selected-bg);
+  box-shadow:
+    inset 3px 0 0 var(--ui-selected-rail),
+    0 10px 20px rgba(15, 23, 42, 0.1);
   font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.22em;
+  color: var(--ui-text);
 }
 
 .app-shell__nav {
@@ -376,12 +376,11 @@
 }
 
 .workspace-tabs__tab.is-active {
-  border-color: var(--ui-primary);
-  background: var(--ui-surface-muted);
+  border-color: var(--ui-selected-border);
+  background: var(--ui-selected-bg);
   color: var(--ui-primary);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.23em;
+  box-shadow: inset 3px 0 0 var(--ui-selected-rail);
+  font-weight: 700;
 }
 
 .workspace-tabs__tab--shortcut {
@@ -401,11 +400,12 @@
 }
 
 .workspace-tabs__tab--shortcut.is-active {
-  border-color: var(--ui-primary);
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.22em;
+  border-color: var(--ui-selected-border);
+  background: var(--ui-selected-bg);
+  box-shadow:
+    inset 3px 0 0 var(--ui-selected-rail),
+    0 10px 20px rgba(15, 23, 42, 0.1);
+  font-weight: 700;
 }
 
 .workspace-tabs__tab--reception {
@@ -619,14 +619,13 @@
 }
 
 .app-shell__nav-link.is-active {
-  background: var(--ui-surface-muted);
+  background: var(--ui-selected-bg);
   color: var(--ui-primary);
-  border-color: var(--ui-primary);
-  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.1);
+  border-color: var(--ui-selected-border);
+  box-shadow:
+    inset 3px 0 0 var(--ui-selected-rail),
+    0 12px 22px rgba(15, 23, 42, 0.1);
   font-weight: 800;
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.24em;
 }
 
 .app-shell__nav-link.is-disabled {

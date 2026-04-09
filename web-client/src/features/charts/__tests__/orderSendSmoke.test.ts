@@ -223,7 +223,7 @@ describe('order send smoke', () => {
                 bundleNumber: '3',
                 classCode: '700',
                 classCodeSystem: 'Claim007',
-                className: 'Radiology',
+                className: '画像診断',
                 admin: '検査前説明',
                 memo: 'local-radiology-memo',
                 bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
@@ -266,7 +266,7 @@ describe('order send smoke', () => {
           bundleNumber: '3',
           classCode: '700',
           classCodeSystem: 'Claim007',
-          className: 'Radiology',
+          className: '画像診断',
           admin: '検査前説明',
           memo: 'local-radiology-memo',
           bodyPart: { code: '002001', name: 'CHEST', quantity: '1', unit: 'PART', memo: '' },
@@ -298,7 +298,7 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '画像診断',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001' }),
@@ -333,7 +333,7 @@ describe('order send smoke', () => {
       expect.arrayContaining([
           expect.objectContaining({
             medicalClass: '700',
-            medicalClassName: 'Radiology',
+            medicalClassName: '画像診断',
             medicalClassNumber: '3',
             medications: expect.arrayContaining([
               expect.objectContaining({ code: '002001' }),
@@ -380,9 +380,9 @@ describe('order send smoke', () => {
                 bundleNumber: '4',
                 admin: 'local-admin-note',
                 memo: 'local-free-memo',
-                items: [{ code: '180000210', name: 'certificate-fee', quantity: '1', unit: 'times', memo: '' }],
+                items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: 'certificate-fee', quantity: '1', unit: 'times', memo: '' }],
               },
-            ],
+          ],
           }),
           {
             status: 200,
@@ -402,7 +402,7 @@ describe('order send smoke', () => {
           bundleNumber: '4',
           admin: 'local-admin-note',
           memo: 'local-free-memo',
-          items: [{ code: '180000210', name: 'certificate-fee', quantity: '1', unit: 'times', memo: '' }],
+          items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: 'certificate-fee', quantity: '1', unit: 'times', memo: '' }],
         },
       ],
     });
@@ -438,7 +438,7 @@ describe('order send smoke', () => {
     expect(httpFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('save fetch normalize send payload smoke keeps treatmentOrder class 400 and rejects bodyPart resurrection', async () => {
+  it('save fetch normalize send payload smoke keeps treatmentOrder class 400 and rejects resurrected 002 bodyPart from fetched bundle', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
         new Response(

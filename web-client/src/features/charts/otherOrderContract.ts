@@ -1,4 +1,5 @@
-export const OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE = 'LOCAL_OTHER_ORDER';
+export const OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE = 'LOCAL_OTHER';
+export const OTHER_ORDER_LOCAL_ONLY_CODE_PREFIX = 'LOCAL_OTHER:';
 
 export const OTHER_ORDER_ALLOWED_ROW_ROLES = ['main', 'comment'] as const;
 
@@ -17,9 +18,18 @@ export const isOtherOrderSentinelClassCode = (value?: string | null) =>
 
 export const isOtherOrderBodyPartCode = (value?: string | null) => (trimToNull(value) ?? '').startsWith('002');
 
-const isOtherOrderReservedCommentCode = (value?: string | null) => /^(?:008[1-6]|098|099|98|99)/.test(trimToNull(value) ?? '');
+const isOtherOrderLocalOnlyToken = (value: string) =>
+  [...value].every((character) => {
+    const isUpperAlpha = character >= 'A' && character <= 'Z';
+    const isDigit = character >= '0' && character <= '9';
+    return isUpperAlpha || isDigit || character === '.' || character === '_' || character === '-';
+  });
 
-export const isOtherOrderOpaqueLocalCode = (value?: string | null) => {
+export const isOtherOrderLocalOnlyCode = (value?: string | null) => {
   const normalized = trimToNull(value);
-  return Boolean(normalized && !isOtherOrderBodyPartCode(normalized) && !isOtherOrderReservedCommentCode(normalized));
+  if (!normalized || !normalized.startsWith(OTHER_ORDER_LOCAL_ONLY_CODE_PREFIX)) {
+    return false;
+  }
+  const suffix = normalized.slice(OTHER_ORDER_LOCAL_ONLY_CODE_PREFIX.length);
+  return suffix.length > 0 && isOtherOrderLocalOnlyToken(suffix);
 };

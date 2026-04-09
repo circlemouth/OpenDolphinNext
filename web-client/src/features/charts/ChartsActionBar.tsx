@@ -2457,7 +2457,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       data-status-tone={statusTone}
     >
       <header className="charts-actions__header">
-        <div>
+        <div className="charts-actions__header-main">
           <p className="charts-actions__kicker">
             {embedded ? '診療操作' : compactHeader ? '診察状況・送信パネル' : '診察状況更新と送信制御'}
           </p>
@@ -2480,7 +2480,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             </div>
           ) : null}
         </div>
-        <div className={`charts-actions__meta${compactHeader ? ' charts-actions__meta--compact' : ''}`}>
+        <div className={`charts-actions__meta charts-actions__header-meta${compactHeader ? ' charts-actions__meta--compact' : ''}`}>
           {headerMetaCollapsed ? null : (
             <>
               <StatusPill

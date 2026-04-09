@@ -27,11 +27,11 @@ describe('orderBundleContract grammar', () => {
     ).toBe('material');
   });
 
-  it('otherOrder は ORCA comment code を暗黙 comment 扱いしない', () => {
+  it('otherOrder は explicit local-only code を main 扱いする', () => {
     expect(
       resolveOrderBundleItemRowRole('otherOrder', {
-        code: '0085001',
-        name: 'legacy-comment-shape',
+        code: 'LOCAL_OTHER:CERTIFICATE_FEE',
+        name: 'explicit-local-only-shape',
       }),
     ).toBe('main');
   });

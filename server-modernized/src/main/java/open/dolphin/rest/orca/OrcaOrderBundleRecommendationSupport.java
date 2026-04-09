@@ -261,16 +261,10 @@ final class OrcaOrderBundleRecommendationSupport {
         template.setAdminCode(normalize(bundle.getAdminCode()));
         template.setAdminCodeSystem(normalize(bundle.getAdminCodeSystem()));
         template.setBundleNumber(hasText(bundle.getBundleNumber()) ? bundle.getBundleNumber().trim() : "1");
-        String canonicalClassCode = OrcaChargeClassCanonicalSupport.canonicalClassCode(entity, bundle.getClassCode());
+        String canonicalClassCode = OrcaMedicalClassCatalog.resolveCatalogClassCode(entity, bundle.getClassCode());
         template.setClassCode(normalize(canonicalClassCode));
         template.setClassCodeSystem(canonicalClassCode != null ? ClaimConst.CLASS_CODE_ID : normalize(bundle.getClassCodeSystem()));
-        template.setClassName(OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
-                entity,
-                canonicalClassCode,
-                OrcaChargeClassCanonicalSupport.canonicalClassName(
-                        entity,
-                        canonicalClassCode,
-                        bundle.getClassName())));
+        template.setClassName(OrcaMedicalClassCatalog.resolveCatalogClassName(entity, canonicalClassCode));
         template.setAdminMemo(normalize(bundle.getAdminMemo()));
         template.setMemo(normalize(bundle.getMemo()));
         template.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(entity, null, stampMemo));

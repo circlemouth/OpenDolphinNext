@@ -1,4 +1,10 @@
-import { getAllowedClassCodesForEntity } from './orcaMedicalClassCatalog';
+import {
+  isOrcaEntityClassAllowed,
+  normalizeOrcaClassCode,
+  resolveCanonicalOrcaClassName,
+  resolveOrcaDefaultClassMeta,
+  resolveOrcaEntityFromClassCode,
+} from './orcaMedicalClassCatalog';
 
 export type ChargeOrderEntity = 'baseChargeOrder' | 'instractionChargeOrder';
 
@@ -8,90 +14,39 @@ export type ChargeClassMeta = {
   className: string;
 };
 
-type ChargeRule = {
-  entity: ChargeOrderEntity;
-  defaultClassCode: string;
-  className: string;
-  allowedClassCodes: readonly string[];
-};
-
 export const CHARGE_CLASS_CODE_SYSTEM: ChargeClassMeta['classCodeSystem'] = 'Claim007';
 
-const CHARGE_RULES: readonly ChargeRule[] = [
-  {
-    entity: 'baseChargeOrder',
-    defaultClassCode: '110',
-    className: '基本診療料',
-    allowedClassCodes: getAllowedClassCodesForEntity('baseChargeOrder'),
-  },
-  {
-    entity: 'instractionChargeOrder',
-    defaultClassCode: '130',
-    className: '医学管理等',
-    allowedClassCodes: getAllowedClassCodesForEntity('instractionChargeOrder'),
-  },
-] as const;
+const isChargeOrderEntityValue = (entity?: string | null): entity is ChargeOrderEntity =>
+  entity === 'baseChargeOrder' || entity === 'instractionChargeOrder';
 
-const trimToNull = (value?: string | null) => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
+export const resolveChargeEntityFromClassCode = (classCode?: string | null): ChargeOrderEntity | null => {
+  const resolved = resolveOrcaEntityFromClassCode(classCode);
+  return isChargeOrderEntityValue(resolved) ? resolved : null;
 };
-
-const parseClassCode = (value?: string | null) => {
-  const normalized = trimToNull(value);
-  if (!normalized || !/^\d+$/.test(normalized)) return null;
-  return Number.parseInt(normalized, 10);
-};
-
-export const normalizeChargeClassCode = (value?: string | null) => {
-  const parsed = parseClassCode(value);
-  return parsed === null ? null : trimToNull(value);
-};
-
-const findChargeRuleByCode = (value?: string | null) => {
-  const normalized = trimToNull(value);
-  if (!normalized) return null;
-  return CHARGE_RULES.find((rule) => rule.allowedClassCodes.includes(normalized)) ?? null;
-};
-
-const findChargeRuleByEntity = (entity?: string | null) => {
-  const normalized = trimToNull(entity);
-  if (!normalized) return null;
-  return CHARGE_RULES.find((rule) => rule.entity === normalized) ?? null;
-};
-
-export const resolveChargeEntityFromClassCode = (classCode?: string | null): ChargeOrderEntity | null =>
-  findChargeRuleByCode(classCode)?.entity ?? null;
 
 export const isChargeOrderEntity = (entity?: string | null): entity is ChargeOrderEntity =>
-  Boolean(findChargeRuleByEntity(entity));
+  isChargeOrderEntityValue(entity);
 
 export const isChargeEntity = isChargeOrderEntity;
 
-export const isChargeClassCompatible = (entity?: string | null, classCode?: string | null) => {
-  const rule = findChargeRuleByEntity(entity);
-  if (!rule) return false;
-  return resolveChargeEntityFromClassCode(classCode) === rule.entity;
-};
+export const isChargeClassCompatible = (entity?: string | null, classCode?: string | null) =>
+  isChargeOrderEntity(entity) && isOrcaEntityClassAllowed(entity, classCode);
 
 export const isChargeItemCategoryCompatible = (entity?: string | null, category?: string | null) =>
   isChargeClassCompatible(entity, category);
 
 export const deriveChargeClassCodeFromCategory = (entity: string, category?: string | null) => {
-  const rule = findChargeRuleByEntity(entity);
-  if (!rule) return undefined;
-  const normalized = trimToNull(category);
-  if (!normalized || !/^\d+$/.test(normalized)) return undefined;
-  if (!rule.allowedClassCodes.includes(normalized)) return undefined;
-  return normalized;
+  if (!isChargeOrderEntity(entity)) return undefined;
+  const normalizedCategory = normalizeOrcaClassCode(category);
+  return normalizedCategory && isChargeClassCompatible(entity, normalizedCategory) ? normalizedCategory : undefined;
 };
 
 export const resolveCanonicalChargeClassName = (entity?: string | null, classCode?: string | null) => {
-  const explicitRule = findChargeRuleByCode(classCode);
-  if (explicitRule && isChargeOrderEntity(entity) && explicitRule.entity !== entity) {
-    return undefined;
+  if (!isChargeOrderEntity(entity)) {
+    const resolvedEntity = resolveChargeEntityFromClassCode(classCode);
+    return resolvedEntity ? resolveOrcaDefaultClassMeta(resolvedEntity)?.className : undefined;
   }
-  return explicitRule?.className ?? findChargeRuleByEntity(entity)?.className;
+  return resolveCanonicalOrcaClassName(entity, classCode);
 };
 
 export const resolveCanonicalChargeClassMeta = (params: {
@@ -99,33 +54,29 @@ export const resolveCanonicalChargeClassMeta = (params: {
   classCode?: string | null;
   itemCategory?: string | null;
 }): ChargeClassMeta | null => {
-  const entityRule = findChargeRuleByEntity(params.entity);
-  if (entityRule) {
-    const categoryRule = findChargeRuleByCode(params.itemCategory);
-    if (categoryRule?.entity === entityRule.entity) {
-      return {
-        classCode: trimToNull(params.itemCategory) ?? categoryRule.defaultClassCode,
-        classCodeSystem: CHARGE_CLASS_CODE_SYSTEM,
-        className: entityRule.className,
-      };
-    }
-    const codeRule = findChargeRuleByCode(params.classCode);
-    const effectiveRule = codeRule?.entity === entityRule.entity ? codeRule : entityRule;
-    const effectiveClassCode = codeRule?.entity === entityRule.entity
-      ? trimToNull(params.classCode) ?? effectiveRule.defaultClassCode
-      : effectiveRule.defaultClassCode;
+  const entity = params.entity;
+  if (isChargeOrderEntity(entity)) {
+    const defaultMeta = resolveOrcaDefaultClassMeta(entity);
+    if (!defaultMeta) return null;
+    const candidateClassCode =
+      deriveChargeClassCodeFromCategory(entity, params.itemCategory) ??
+      (isChargeClassCompatible(entity, params.classCode) ? normalizeOrcaClassCode(params.classCode) : undefined);
     return {
-      classCode: effectiveClassCode,
+      classCode: candidateClassCode ?? defaultMeta.classCode,
       classCodeSystem: CHARGE_CLASS_CODE_SYSTEM,
-      className: effectiveRule.className,
+      className: defaultMeta.className,
     };
   }
-  const codeRule = findChargeRuleByCode(params.classCode);
-  if (!codeRule) return null;
+
+  const resolvedEntity = resolveChargeEntityFromClassCode(params.classCode);
+  if (!resolvedEntity) return null;
+  const defaultMeta = resolveOrcaDefaultClassMeta(resolvedEntity);
+  const classCode = normalizeOrcaClassCode(params.classCode);
+  if (!defaultMeta || !classCode) return null;
   return {
-    classCode: trimToNull(params.classCode) ?? codeRule.defaultClassCode,
+    classCode,
     classCodeSystem: CHARGE_CLASS_CODE_SYSTEM,
-    className: codeRule.className,
+    className: defaultMeta.className,
   };
 };
 
@@ -142,6 +93,8 @@ export const canonicalizeChargeBundleMeta = <
 >(
   value: T,
 ): T => {
+  const hasChargeClassSource = Boolean(normalizeOrcaClassCode(value.classCode));
+  if (!hasChargeClassSource) return value;
   const canonical = resolveCanonicalChargeClassMeta({ entity: value.entity, classCode: value.classCode });
   if (!canonical) return value;
   return {

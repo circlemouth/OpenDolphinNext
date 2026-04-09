@@ -6,7 +6,14 @@ import { resolveAriaLive } from '../../libs/observability/observability';
 import type { OrderBundleEditPanelMeta, OrderBundleEditPanelRequest, OrderBundleEditingContext } from './OrderBundleEditPanel';
 import type { OrderBundle } from './orderBundleApi';
 import { fetchOrderMasterSearch, type OrderMasterSearchItem } from './orderMasterSearchApi';
-import { isOrderBundleCommentCode } from './orcaCommentCarrierRules';
+import {
+  isOrderBundleCommentCode,
+  isUnknownStructuredPrescriptionClaimCommentFamily,
+  normalizeStructuredPrescriptionClaimCommentNote,
+  resolvePrescriptionStructuredCommentSpec,
+  requiresStructuredPrescriptionClaimCommentNote,
+  validateStructuredPrescriptionClaimCommentNote,
+} from './orcaCommentCarrierRules';
 import {
   buildRpRequiredEditorMessage,
   resolveRpRequiredFieldLabel,
@@ -46,6 +53,7 @@ type SaveAction = 'save' | 'expand' | 'expand_continue';
 type ClaimDraft = {
   code: string;
   name: string;
+  note: string;
 };
 
 type ValidationIssue = {
@@ -143,6 +151,15 @@ const createClaimComment = (name: string, code?: string, note?: string): Prescri
   name: name.trim(),
   note: note?.trim() || undefined,
 });
+
+const resolveStructuredCommentUiMeta = (code?: string | null) => {
+  const spec = resolvePrescriptionStructuredCommentSpec(code);
+  if (!spec) return null;
+  return {
+    placeholder: spec.placeholder,
+    hint: spec.hint,
+  };
+};
 
 const normalizeSearchText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
@@ -342,7 +359,8 @@ export function PrescriptionOrderEditorPanel({
   const [selectedRpIndex, setSelectedRpIndex] = useState(0);
   const [selectedDrugIndex, setSelectedDrugIndex] = useState(0);
   const [bulkDaysValue, setBulkDaysValue] = useState('');
-  const [claimDraft, setClaimDraft] = useState<ClaimDraft>({ code: '', name: '' });
+  const [claimDraft, setClaimDraft] = useState<ClaimDraft>({ code: '', name: '', note: '' });
+  const [rpClaimDraft, setRpClaimDraft] = useState<ClaimDraft>({ code: '', name: '', note: '' });
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchMethod, setSearchMethod] = useState<PrescriptionSearchMethod>('prefix');
   const [searchScope, setSearchScope] = useState<PrescriptionSearchScope>('outside_adopted');
@@ -563,6 +581,22 @@ export function PrescriptionOrderEditorPanel({
     [updateRp],
   );
 
+  const buildStructuredClaimCommentIssue = useCallback((comment: PrescriptionClaimComment) => {
+    const code = comment.code?.trim() ?? '';
+    if (!code) return null;
+    if (isUnknownStructuredPrescriptionClaimCommentFamily(code)) {
+      return `${code} 系コメント family は未対応のため保存できません。`;
+    }
+    if (requiresStructuredPrescriptionClaimCommentNote(code) && !comment.note?.trim()) {
+      return `${code} 系コメントは補足値が必須です。`;
+    }
+    const formatIssue = validateStructuredPrescriptionClaimCommentNote(code, comment.note);
+    if (formatIssue) {
+      return `${code} 系コメント: ${formatIssue}`;
+    }
+    return null;
+  }, []);
+
   const addRp = () => {
     if (isPreviewMode) return;
     setOrder((prev) => ({
@@ -672,13 +706,63 @@ export function PrescriptionOrderEditorPanel({
       setNotice({ tone: 'error', message: '請求コメントはコード付きで追加してください。自由文は薬剤コメントへ入力してください。' });
       return;
     }
-    const comment = createClaimComment(name, code);
+    const normalizedNote = normalizeStructuredPrescriptionClaimCommentNote(code, claimDraft.note);
+    const comment = createClaimComment(name, code, normalizedNote ?? claimDraft.note);
+    const issue = buildStructuredClaimCommentIssue(comment);
+    if (issue) {
+      setNotice({ tone: 'error', message: issue });
+      return;
+    }
     updateDrug(selectedRpIndex, selectedDrugIndex, (drug) => ({
       ...drug,
       claimComments: [...drug.claimComments, comment],
     }));
-    setClaimDraft({ code: '', name: '' });
-  }, [claimDraft.code, claimDraft.name, isPreviewMode, selectedDrug, selectedDrugIndex, selectedRp, selectedRpIndex, updateDrug]);
+    setClaimDraft({ code: '', name: '', note: '' });
+  }, [
+    buildStructuredClaimCommentIssue,
+    claimDraft.code,
+    claimDraft.name,
+    claimDraft.note,
+    isPreviewMode,
+    selectedDrug,
+    selectedDrugIndex,
+    selectedRp,
+    selectedRpIndex,
+    updateDrug,
+  ]);
+
+  const applyRpClaimDraft = useCallback(() => {
+    if (isPreviewMode) return;
+    if (!selectedRp) return;
+    const code = rpClaimDraft.code.trim();
+    const name = rpClaimDraft.name.trim();
+    if (!name) return;
+    if (!code) {
+      setNotice({ tone: 'error', message: 'RP請求コメントはコード付きで追加してください。自由文は備考へ入力してください。' });
+      return;
+    }
+    const normalizedNote = normalizeStructuredPrescriptionClaimCommentNote(code, rpClaimDraft.note);
+    const comment = createClaimComment(name, code, normalizedNote ?? rpClaimDraft.note);
+    const issue = buildStructuredClaimCommentIssue(comment);
+    if (issue) {
+      setNotice({ tone: 'error', message: issue });
+      return;
+    }
+    updateRp(selectedRpIndex, (rp) => ({
+      ...rp,
+      claimComments: [...(rp.claimComments ?? []), comment],
+    }));
+    setRpClaimDraft({ code: '', name: '', note: '' });
+  }, [
+    buildStructuredClaimCommentIssue,
+    isPreviewMode,
+    rpClaimDraft.code,
+    rpClaimDraft.name,
+    rpClaimDraft.note,
+    selectedRp,
+    selectedRpIndex,
+    updateRp,
+  ]);
 
   const trimmedSearchKeyword = normalizeSearchText(searchKeyword);
   const searchEffectiveDate = (meta.visitDate ?? today).slice(0, 10);
@@ -897,6 +981,15 @@ export function PrescriptionOrderEditorPanel({
           rpIndex,
         });
       }
+      (rp.claimComments ?? []).forEach((comment, commentIndex) => {
+        const issue = buildStructuredClaimCommentIssue(comment);
+        if (!issue) return;
+        issues.push({
+          key: `rp_structured_claim_${rpIndex}_${commentIndex}`,
+          message: `RP${rpIndex + 1} RPコメント${commentIndex + 1}: ${issue}`,
+          rpIndex,
+        });
+      });
       rp.drugs.forEach((drug, drugIndex) => {
         if (drug.patientRequest) return;
         if (drug.genericChangeAllowed) {
@@ -923,6 +1016,16 @@ export function PrescriptionOrderEditorPanel({
             drugIndex,
           });
         }
+        drug.claimComments.forEach((comment, commentIndex) => {
+          const issue = buildStructuredClaimCommentIssue(comment);
+          if (!issue) return;
+          issues.push({
+            key: `drug_structured_claim_${rpIndex}_${drugIndex}_${commentIndex}`,
+            message: `RP${rpIndex + 1} 薬剤${drugIndex + 1} コメント${commentIndex + 1}: ${issue}`,
+            rpIndex,
+            drugIndex,
+          });
+        });
       });
       if (rp.refillCount && ![1, 2, 3].includes(rp.refillCount)) {
         issues.push({
@@ -1495,21 +1598,55 @@ export function PrescriptionOrderEditorPanel({
                     {(selectedRp.claimComments ?? []).length === 0 ? (
                       <span className="charts-side-panel__empty-chip">未設定</span>
                     ) : (
-                      (selectedRp.claimComments ?? []).map((comment, commentIndex) => (
-                        <button
-                          key={comment.id}
-                          type="button"
-                          className="charts-side-panel__chip-button charts-side-panel__chip-button--selected"
-                          onClick={() =>
-                            updateRp(selectedRpIndex, (rp) => ({
-                              ...rp,
-                              claimComments: (rp.claimComments ?? []).filter((_, idx) => idx !== commentIndex),
-                            }))
-                          }
-                        >
-                          {comment.name}
-                        </button>
-                      ))
+                      (selectedRp.claimComments ?? []).map((comment, commentIndex) => {
+                        const uiMeta = resolveStructuredCommentUiMeta(comment.code);
+                        return (
+                          <div key={comment.id} className="charts-side-panel__item-actions">
+                            <button
+                              type="button"
+                              className="charts-side-panel__chip-button charts-side-panel__chip-button--selected"
+                              onClick={() =>
+                                updateRp(selectedRpIndex, (rp) => ({
+                                  ...rp,
+                                  claimComments: (rp.claimComments ?? []).filter((_, idx) => idx !== commentIndex),
+                                }))
+                              }
+                            >
+                              {comment.code ? `${comment.code} ` : ''}
+                              {comment.name}
+                            </button>
+                            {uiMeta ? (
+                              <div className="charts-side-panel__field">
+                                <label htmlFor={domId(`rp-claim-note-${commentIndex}`)}>RP請求コメント {commentIndex + 1} 補足値</label>
+                                <input
+                                  id={domId(`rp-claim-note-${commentIndex}`)}
+                                  value={comment.note ?? ''}
+                                  onChange={(event) =>
+                                    updateRp(selectedRpIndex, (rp) => ({
+                                      ...rp,
+                                      claimComments: (rp.claimComments ?? []).map((entry, idx) =>
+                                        idx === commentIndex
+                                          ? {
+                                              ...entry,
+                                              note: (() => {
+                                                const normalized =
+                                                  normalizeStructuredPrescriptionClaimCommentNote(entry.code, event.target.value);
+                                                const fallback = event.target.value.trim() || undefined;
+                                                return normalized ?? fallback;
+                                              })(),
+                                            }
+                                          : entry,
+                                      ),
+                                    }))
+                                  }
+                                  placeholder={uiMeta.placeholder}
+                                />
+                                <p className="charts-side-panel__help">{uiMeta.hint}</p>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                   <div className="charts-side-panel__chip-list">
@@ -1529,6 +1666,35 @@ export function PrescriptionOrderEditorPanel({
                       </button>
                     ))}
                   </div>
+                  <div className="charts-side-panel__item-actions" aria-label="RP請求コメント入力">
+                    <input
+                      value={rpClaimDraft.code}
+                      onChange={(event) => setRpClaimDraft((prev) => ({ ...prev, code: event.target.value }))}
+                      placeholder="RP請求コメントコード"
+                    />
+                    <input
+                      value={rpClaimDraft.name}
+                      onChange={(event) => setRpClaimDraft((prev) => ({ ...prev, name: event.target.value }))}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && event.shiftKey) {
+                          event.preventDefault();
+                          applyRpClaimDraft();
+                        }
+                      }}
+                      placeholder="RP請求コメント名（Shift+Enterで確定）"
+                    />
+                    <input
+                      value={rpClaimDraft.note}
+                      onChange={(event) => setRpClaimDraft((prev) => ({ ...prev, note: event.target.value }))}
+                      placeholder={resolveStructuredCommentUiMeta(rpClaimDraft.code)?.placeholder ?? '補足値（structured family のみ）'}
+                    />
+                    <button type="button" className="charts-side-panel__action" onClick={applyRpClaimDraft}>
+                      RPコメント追加
+                    </button>
+                  </div>
+                  {resolveStructuredCommentUiMeta(rpClaimDraft.code) ? (
+                    <p className="charts-side-panel__help">{resolveStructuredCommentUiMeta(rpClaimDraft.code)?.hint}</p>
+                  ) : null}
                   <p className="charts-side-panel__help">
                     RP請求コメントは先頭薬剤へ寄せず、このRPの first-class field として保存・再取得・送信します。
                   </p>
@@ -1713,23 +1879,58 @@ export function PrescriptionOrderEditorPanel({
                           ))}
                         </div>
                         <div className="charts-side-panel__template-actions" aria-label={`薬剤${drugIndex + 1}請求用コメント一覧`}>
-                          {drug.claimComments.map((comment, commentIndex) => (
-                            <button
-                              key={comment.id}
-                              type="button"
-                              className="charts-side-panel__chip-button charts-side-panel__chip-button--recommend"
-                              onClick={() =>
-                                updateDrug(selectedRpIndex, drugIndex, (current) => ({
-                                  ...current,
-                                  claimComments: current.claimComments.filter((_, idx) => idx !== commentIndex),
-                                }))
-                              }
-                              title="クリックで削除"
-                            >
-                              {comment.code ? `${comment.code} ` : ''}
-                              {comment.name}
-                            </button>
-                          ))}
+                          {drug.claimComments.map((comment, commentIndex) => {
+                            const uiMeta = resolveStructuredCommentUiMeta(comment.code);
+                            return (
+                              <div key={comment.id} className="charts-side-panel__item-actions">
+                                <button
+                                  type="button"
+                                  className="charts-side-panel__chip-button charts-side-panel__chip-button--recommend"
+                                  onClick={() =>
+                                    updateDrug(selectedRpIndex, drugIndex, (current) => ({
+                                      ...current,
+                                      claimComments: current.claimComments.filter((_, idx) => idx !== commentIndex),
+                                    }))
+                                  }
+                                  title="クリックで削除"
+                                >
+                                  {comment.code ? `${comment.code} ` : ''}
+                                  {comment.name}
+                                </button>
+                                {uiMeta ? (
+                                  <div className="charts-side-panel__field">
+                                    <label htmlFor={domId(`drug-claim-note-${drugIndex}-${commentIndex}`)}>
+                                      薬剤{drugIndex + 1} 請求コメント {commentIndex + 1} 補足値
+                                    </label>
+                                    <input
+                                      id={domId(`drug-claim-note-${drugIndex}-${commentIndex}`)}
+                                      value={comment.note ?? ''}
+                                      onChange={(event) =>
+                                        updateDrug(selectedRpIndex, drugIndex, (current) => ({
+                                          ...current,
+                                          claimComments: current.claimComments.map((entry, idx) =>
+                                            idx === commentIndex
+                                              ? {
+                                                  ...entry,
+                                                  note: (() => {
+                                                    const normalized =
+                                                      normalizeStructuredPrescriptionClaimCommentNote(entry.code, event.target.value);
+                                                    const fallback = event.target.value.trim() || undefined;
+                                                    return normalized ?? fallback;
+                                                  })(),
+                                                }
+                                              : entry,
+                                          ),
+                                        }))
+                                      }
+                                      placeholder={uiMeta.placeholder}
+                                    />
+                                    <p className="charts-side-panel__help">{uiMeta.hint}</p>
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
                         </div>
                         {selectedDrugIndex === drugIndex ? (
                           <div className="charts-side-panel__item-actions" aria-label="請求用コメント入力">
@@ -1748,6 +1949,11 @@ export function PrescriptionOrderEditorPanel({
                                 }
                               }}
                               placeholder="請求用コメント（Shift+Enterで確定）"
+                            />
+                            <input
+                              value={claimDraft.note}
+                              onChange={(event) => setClaimDraft((prev) => ({ ...prev, note: event.target.value }))}
+                              placeholder={resolveStructuredCommentUiMeta(claimDraft.code)?.placeholder ?? '補足値（structured family のみ）'}
                             />
                             <button type="button" className="charts-side-panel__action" onClick={applyClaimDraft}>
                               コメント追加
@@ -1768,6 +1974,9 @@ export function PrescriptionOrderEditorPanel({
                               </button>
                             ))}
                           </div>
+                        ) : null}
+                        {selectedDrugIndex === drugIndex && resolveStructuredCommentUiMeta(claimDraft.code) ? (
+                          <p className="charts-side-panel__help">{resolveStructuredCommentUiMeta(claimDraft.code)?.hint}</p>
                         ) : null}
                         {enforceRule ? (
                           <p className="charts-side-panel__help">

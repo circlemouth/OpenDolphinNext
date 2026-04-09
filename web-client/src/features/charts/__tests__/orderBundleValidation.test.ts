@@ -385,7 +385,7 @@ describe('validateBundleForm', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
-        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
         bodyPart: { code: '002001', name: '胸部', quantity: '1', unit: '部位', memo: '' },
       },
       entity: 'otherOrder',
@@ -525,7 +525,7 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: '文書料',
-        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
         bodyPart: { code: '002001', name: '胸部', quantity: '', unit: '', memo: '' },
       },
       entity: 'otherOrder',
@@ -534,7 +534,20 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['unsupported_body_part']);
   });
 
-  it('otherOrder: explicit local-only 契約では main code の family 範囲を ORCA shape で検証しない', () => {
+  it('otherOrder: explicit local-only code だけを保存できる', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '文書料',
+        items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+      },
+      entity: 'otherOrder',
+      bundleLabel: 'その他',
+    });
+    expect(issues).toHaveLength(0);
+  });
+
+  it('otherOrder: old numeric shape は保存前に block する', () => {
     const issues = validateBundleForm({
       form: {
         ...baseForm,
@@ -544,7 +557,7 @@ describe('validateBundleForm', () => {
       entity: 'otherOrder',
       bundleLabel: 'その他',
     });
-    expect(issues).toHaveLength(0);
+    expect(issues.map((issue) => issue.key)).toContain('invalid_other_order_code');
   });
 
   it('otherOrder: classCode を保持しようとすると保存前に block する', () => {
@@ -553,7 +566,7 @@ describe('validateBundleForm', () => {
         ...baseForm,
         bundleName: '文書料',
         classCode: '8A0',
-        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
       } as BundleFormState & { classCode: string },
       entity: 'otherOrder',
       bundleLabel: 'その他',
@@ -594,8 +607,8 @@ describe('validateBundleForm', () => {
       form: {
         ...baseForm,
         bundleName: 'その他',
-        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
-        materialItems: [{ code: '180000211', name: '文書材料', quantity: '1', unit: '本', memo: '' }],
+        items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        materialItems: [{ code: 'LOCAL_OTHER:MATERIAL', name: '文書材料', quantity: '1', unit: '本', memo: '' }],
       },
       entity: 'otherOrder',
       bundleLabel: 'その他',

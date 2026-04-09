@@ -43,6 +43,7 @@ import {
   resolveOrderBundleItemRowRole,
   shouldTreatAsMaterialItem,
 } from './orderBundleContract';
+import { isOtherOrderLocalOnlyCode } from './otherOrderContract';
 import {
   buildRpRequiredEditorMessage,
   resolveRpRequiredIssue,
@@ -70,7 +71,12 @@ import {
 import type { DataSourceTransition } from './authService';
 import type { DocumentOpenRequest } from './DocumentCreatePanel';
 import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
-import { getAllowedClassCodesForEntity, isAuxiliaryMaterialCode, isOrcaEntityClassAllowed, supportsOrcaBodyPartField } from './orcaMedicalClassCatalog';
+import {
+  getAllowedClassCodesForEntity,
+  isAuxiliaryMaterialCode,
+  isOrcaEntityClassAllowed,
+  supportsOrcaBodyPartField,
+} from './orcaMedicalClassCatalog';
 
 export type OrderBundleEditPanelMeta = {
   runId?: string;
@@ -839,7 +845,7 @@ const buildUsageMasterMeta = (item: OrderMasterSearchItem): UsageMasterMeta => (
 const resolveSendContractNote = (entity: string) => {
   const canonicalEntity = resolveCanonicalOrderEntity(entity) ?? entity;
   if (canonicalEntity === 'injectionOrder') {
-    return '注射では admin/adminCode/adminMemo/speed を院内ローカル情報として保存できますが、ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使います。bodyPart は reject し、local-only 項目は payload/XML に含めません。';
+    return '注射では admin/adminCode/adminMemo は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。';
   }
   if (canonicalEntity === 'treatmentOrder') {
     return '処置送信では classCode と coded row のみを使います。bodyPart は受け付けず、オーダー名・処置指示・自由メモは院内ローカル情報として保持します。';
@@ -1171,6 +1177,15 @@ export const validateBundleForm = ({
       issues.push({
         key: 'invalid_other_order_class_code',
         message: 'otherOrder は explicit local-only 契約のため classCode を保持しません。classCode をクリアしてください。',
+      });
+    }
+    const invalidLocalOnlyRow = combinedItems.find(
+      (item) => hasAnyValue(item) && Boolean(item.code?.trim()) && !isOtherOrderLocalOnlyCode(item.code),
+    );
+    if (invalidLocalOnlyRow) {
+      issues.push({
+        key: 'invalid_other_order_code',
+        message: 'otherOrder は explicit local-only code 形式のみ保存できます。LOCAL_OTHER:... で始まるコードを入力してください。',
       });
     }
     if (hasMaterialValues) {
@@ -3170,7 +3185,6 @@ export function OrderBundleEditPanel({
           case 'rp_required':
             return `${entityId}-rp-required-warning`;
           case 'missing_usage':
-          case 'missing_admin_code':
           case 'invalid_injection_class_code':
             return `${entityId}-admin`;
           case 'missing_body_part':
@@ -3415,7 +3429,6 @@ export function OrderBundleEditPanel({
   }, [validationIssues]);
   const usageError =
     validationByKey.get('missing_usage') ??
-    validationByKey.get('missing_admin_code') ??
     validationByKey.get('invalid_injection_class_code');
   const bundleNumberError = validationByKey.get(USAGE_DAYS_LIMIT_ERROR_KEY);
   const itemsError =

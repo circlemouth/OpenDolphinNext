@@ -1486,8 +1486,29 @@ export function SoapNotePanel({
       style={soapNoteStyle}
     >
       <header className="soap-note__header">
-        <div>
-          <h2>SOAP 記載</h2>
+        <div className="soap-note__header-main">
+          <p className="soap-note__eyebrow">Primary Workspace</p>
+          <div className="soap-note__title-row">
+            <h2>SOAP 記載</h2>
+            <div className="soap-note__sync" role="status" aria-live={resolveAriaLive(syncState.error ? 'error' : 'info')}>
+              <span
+                className={`soap-note__sync-badge${
+                  syncState.serverSynced ? ' soap-note__sync-badge--synced' : syncState.localSaved ? ' soap-note__sync-badge--local' : ''
+                }${syncState.error ? ' soap-note__sync-badge--error' : ''}`}
+                title={syncState.savedAt ? `最終保存: ${formatSoapAuthoredAt(syncState.savedAt)}` : undefined}
+              >
+                {syncState.isSaving
+                  ? '保存中'
+                  : syncState.error
+                    ? '保存エラー'
+                    : syncState.serverSynced
+                      ? '保存済'
+                      : syncState.localSaved
+                        ? 'ローカル保存済 / サーバ未反映'
+                        : '未保存'}
+              </span>
+            </div>
+          </div>
           <p className="soap-note__subtitle soap-note__subtitle--meta">{authoredSummary}</p>
           <details className="soap-note__meta-details">
             <summary className="soap-note__subtitle">記載情報</summary>
@@ -1497,24 +1518,6 @@ export function SoapNotePanel({
               最終: {authoredLast ? `${formatSoapAuthoredAt(authoredLast.authoredAt)} / ${resolveEntryActor(authoredLast)}` : '—'}
             </p>
           </details>
-          <div className="soap-note__sync" role="status" aria-live={resolveAriaLive(syncState.error ? 'error' : 'info')}>
-            <span
-              className={`soap-note__sync-badge${
-                syncState.serverSynced ? ' soap-note__sync-badge--synced' : syncState.localSaved ? ' soap-note__sync-badge--local' : ''
-              }${syncState.error ? ' soap-note__sync-badge--error' : ''}`}
-              title={syncState.savedAt ? `最終保存: ${formatSoapAuthoredAt(syncState.savedAt)}` : undefined}
-            >
-              {syncState.isSaving
-                ? '保存中'
-                : syncState.error
-                  ? '保存エラー'
-                : syncState.serverSynced
-                  ? '保存済'
-                  : syncState.localSaved
-                    ? 'ローカル保存済 / サーバ未反映'
-                    : '未保存'}
-            </span>
-          </div>
         </div>
         <div className="soap-note__actions">
           <button
@@ -1774,15 +1777,22 @@ export function SoapNotePanel({
                   return (
                     <article key={section} className="soap-note__section" data-section={section}>
                       <div className="soap-note__section-header">
-                        <strong>{SOAP_SECTION_LABELS[section]}</strong>
-                        {templateLabel ? <span className="soap-note__section-chip">テンプレ: {templateLabel}</span> : null}
-                        {latest ? (
-                          <span>
-                            最終更新: {formatSoapAuthoredAt(latest.authoredAt)} ／ {resolveEntryActor(latest)}
+                        <div className="soap-note__section-title-row">
+                          <span className="soap-note__section-code" aria-hidden="true">
+                            {section === 'free' ? 'F' : resolveSoapCategory(section)}
                           </span>
-                        ) : (
-                          <span>記載履歴なし</span>
-                        )}
+                          <strong>{SOAP_SECTION_LABELS[section]}</strong>
+                        </div>
+                        <div className="soap-note__section-meta">
+                          {templateLabel ? <span className="soap-note__section-chip">テンプレ: {templateLabel}</span> : null}
+                          {latest ? (
+                            <span>
+                              最終更新: {formatSoapAuthoredAt(latest.authoredAt)} ／ {resolveEntryActor(latest)}
+                            </span>
+                          ) : (
+                            <span>記載履歴なし</span>
+                          )}
+                        </div>
                       </div>
                       <textarea
                         id={`soap-note-${section}`}

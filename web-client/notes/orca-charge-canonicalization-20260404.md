@@ -4,7 +4,7 @@
 
 - `baseChargeOrder` は `110/114/120/124` を exact class として扱う。
 - `instractionChargeOrder` は `130/132/133/140/141/142/143/148/149` を exact class として扱う。
-- canonical source は catalog の exact class map と default class meta であり、client の `orderChargeClassSupport.ts` と server の `OrcaChargeClassSupport.java` / `OrcaChargeClassCanonicalSupport.java` は delegation helper として扱う。
+- canonical source は catalog の exact class map と default class meta であり、client / server ともに catalog API を単一正本として扱う。legacy charge canonicalization helper は残さない。
 
 ## Canonicalization Contract
 

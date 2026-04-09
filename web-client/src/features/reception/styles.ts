@@ -243,11 +243,11 @@ export const receptionStyles = css`
   }
 
   .reception-page__header {
-    background: #ffffff;
-    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+    border-radius: var(--ui-radius-lg);
     padding: 1.5rem;
-    box-shadow: var(--ui-shadow);
-    border: 1px solid var(--ui-border);
+    box-shadow: var(--ui-shadow-soft);
+    border: 1px solid var(--ui-border-subtle);
   }
 
   .reception-page__title {
@@ -288,10 +288,10 @@ export const receptionStyles = css`
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
-    background: #ffffff;
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 16px;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: var(--ui-radius-lg);
+    box-shadow: none;
     padding: 0.9rem;
   }
 
@@ -307,13 +307,15 @@ export const receptionStyles = css`
     flex-wrap: wrap;
     align-items: flex-end;
     gap: 0.55rem;
+    padding-right: 0.85rem;
+    border-right: 1px solid rgba(226, 232, 240, 0.9);
   }
 
   .reception-toolbar__advanced {
     margin-top: -1rem;
     background: #f8fafc;
-    border: 1px solid rgba(148, 163, 184, 0.28);
-    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: var(--ui-radius-md);
     padding: 0.85rem;
   }
 
@@ -1973,9 +1975,9 @@ export const receptionStyles = css`
 
   .reception-search__actions [role='group'] .reception-search__button[aria-pressed='true'] {
     font-weight: 800;
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-    text-decoration-thickness: 2px;
+    border-color: var(--ui-selected-border);
+    background: var(--ui-selected-bg);
+    box-shadow: inset 3px 0 0 var(--ui-selected-rail);
   }
 
   .reception-exceptions {
@@ -2446,10 +2448,10 @@ export const receptionStyles = css`
 
   .reception-status-tabs {
     background: #ffffff;
-    border-radius: 14px;
-    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: var(--ui-radius-lg);
+    border: 1px solid rgba(148, 163, 184, 0.18);
     padding: 0.75rem 0.85rem;
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+    box-shadow: none;
   }
 
   .reception-status-tabs__header {
@@ -2477,7 +2479,7 @@ export const receptionStyles = css`
     border: 1px solid rgba(148, 163, 184, 0.48);
     background: #ffffff;
     color: #1f2937;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     padding: 0.42rem 0.68rem;
     min-height: 2.25rem;
     display: inline-flex;
@@ -2489,13 +2491,11 @@ export const receptionStyles = css`
   }
 
   .reception-status-tabs__tab.is-active {
-    border-color: rgba(30, 64, 175, 0.62);
-    background: #dbeafe;
-    color: #1e3a8a;
+    border-color: var(--ui-selected-border);
+    background: var(--ui-selected-bg);
+    color: var(--ui-text);
     font-weight: 800;
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-    text-decoration-thickness: 2px;
+    box-shadow: inset 3px 0 0 var(--ui-selected-rail);
   }
 
   .reception-status-tabs__dot {
@@ -2630,9 +2630,9 @@ export const receptionStyles = css`
 
   .reception-board__toggle[aria-expanded='true'] {
     font-weight: 800;
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
-    text-decoration-thickness: 2px;
+    border-color: var(--ui-selected-border);
+    background: var(--ui-selected-bg);
+    box-shadow: inset 3px 0 0 var(--ui-selected-rail);
   }
 
   .reception-board__body {
@@ -3489,10 +3489,9 @@ export const receptionStyles = css`
   }
 
   .reception-results-toolbar__toggle[aria-pressed='true'] {
-    background: #eef2ff;
-    border-color: rgba(37, 99, 235, 0.45);
-    text-decoration: underline;
-    text-underline-offset: 0.18em;
+    background: var(--ui-selected-bg);
+    border-color: var(--ui-selected-border);
+    box-shadow: inset 3px 0 0 var(--ui-selected-rail);
   }
 
   .reception-section {
@@ -3621,16 +3620,16 @@ export const receptionStyles = css`
   }
 
   .reception-table__row {
-    transition: background 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   }
 
   .reception-table__row--selected {
-    background: #eef2ff;
-    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.6), inset 4px 0 0 #2563eb;
+    background: var(--ui-selected-bg);
+    box-shadow: inset 0 0 0 1px var(--ui-selected-border), inset 3px 0 0 var(--ui-selected-rail);
   }
 
   .reception-table__row--selected:hover {
-    background: #e0e7ff;
+    background: rgba(219, 234, 254, 0.8);
   }
 
   .reception-table__empty {

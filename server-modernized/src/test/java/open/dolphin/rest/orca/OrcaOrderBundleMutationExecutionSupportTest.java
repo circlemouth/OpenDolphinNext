@@ -214,6 +214,35 @@ class OrcaOrderBundleMutationExecutionSupportTest {
         assertTrue(ex.getMessage().contains("incompatible"));
     }
 
+    @Test
+    void executeRejectsBlankClassCodeForExactClassEntities() {
+        for (String entity : List.of(
+                IInfoModel.ENTITY_MED_ORDER,
+                IInfoModel.ENTITY_INJECTION_ORDER,
+                IInfoModel.ENTITY_TREATMENT,
+                IInfoModel.ENTITY_SURGERY_ORDER,
+                "testOrder",
+                IInfoModel.ENTITY_PHYSIOLOGY_ORDER,
+                IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                IInfoModel.ENTITY_BASE_CHARGE_ORDER,
+                IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER)) {
+            IllegalArgumentException ex = assertThrows(
+                    IllegalArgumentException.class,
+                    () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                            buildPayload(buildExactClassRequiredOperation(entity)),
+                            null,
+                            null,
+                            new HashMap<>(),
+                            (operationName, field, input, required) -> new Date(0L),
+                            documentId -> null,
+                            new NoOpPersistence(),
+                            (documentId, operationName, runtimeEx) -> runtimeEx,
+                            OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+            assertTrue(ex.getMessage().contains("classCode"));
+        }
+    }
+
     private static OrderBundleMutationRequest buildPayload(OrderBundleMutationRequest.BundleOperation operation) {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setOperations(List.of(operation));
@@ -244,6 +273,26 @@ class OrcaOrderBundleMutationExecutionSupportTest {
         item.setUnit("A");
         item.setRowRole(rowRole);
         return item;
+    }
+
+    private static OrderBundleMutationRequest.BundleOperation buildExactClassRequiredOperation(String entity) {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setOperation("create");
+        operation.setEntity(entity);
+        operation.setStartDate("2026-04-04");
+        operation.setBundleName("class-required");
+        operation.setItems(List.of(buildMainItemForEntity(entity)));
+        return operation;
+    }
+
+    private static OrderBundleMutationRequest.BundleItem buildMainItemForEntity(String entity) {
+        return switch (entity) {
+            case IInfoModel.ENTITY_MED_ORDER -> buildItem("620000010", "drug-a", "main");
+            case IInfoModel.ENTITY_INJECTION_ORDER -> buildItem("620000010", "drug-a", "main");
+            case IInfoModel.ENTITY_BASE_CHARGE_ORDER -> buildItem("110000110", "base-charge", "main");
+            case IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER -> buildItem("130000140", "instruction-charge", "main");
+            default -> buildItem("140000610", "procedure-a", "main");
+        };
     }
 
     private static IllegalArgumentException validationFailure(String field, String message) {

@@ -76,34 +76,40 @@ class OrcaOrderBundleRequestSupportTest {
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INJECTION_ORDER, "310"));
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INJECTION_ORDER, "320"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INJECTION_ORDER, "399"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INJECTION_ORDER, null));
 
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_BASE_CHARGE_ORDER, "110"));
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_BASE_CHARGE_ORDER, "124"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_BASE_CHARGE_ORDER, "109"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_BASE_CHARGE_ORDER, "125"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_BASE_CHARGE_ORDER, "126"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_BASE_CHARGE_ORDER, null));
 
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, "130"));
         assertTrue(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, "149"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, "129"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, "150"));
         assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, "151"));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER, null));
     }
 
     @Test
-    void resolveCanonicalClassNameUsesChargeCanonicalVocabulary() {
+    void resolveCatalogClassNameUsesCatalogVocabulary() {
         assertEquals(
                 "基本診療料",
-                OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
+                OrcaOrderBundleRequestSupport.resolveCatalogClassName(
                         IInfoModel.ENTITY_BASE_CHARGE_ORDER,
-                        "120",
-                        "bundleFallback"));
+                        "120"));
         assertEquals(
                 "医学管理等",
-                OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
+                OrcaOrderBundleRequestSupport.resolveCatalogClassName(
                         IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
-                        "140",
-                        "bundleFallback"));
+                        "140"));
+        assertEquals(
+                "画像診断",
+                OrcaOrderBundleRequestSupport.resolveCatalogClassName(
+                        IInfoModel.ENTITY_RADIOLOGY_ORDER,
+                        "701"));
     }
 
     @Test
@@ -136,14 +142,30 @@ class OrcaOrderBundleRequestSupportTest {
     }
 
     @Test
-    void otherOrderHelpersRejectOnlyCommentAndBodyPartShapes() {
-        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("LOCAL-001"));
-        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("180000210"));
-        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("800000001"));
+    void exactClassEntitiesFailClosedWhenClassCodeIsBlank() {
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_MED_ORDER, null));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_TREATMENT, null));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_SURGERY_ORDER, null));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode("testOrder", null));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_PHYSIOLOGY_ORDER, null));
+        assertFalse(OrcaOrderBundleRequestSupport.isCompatibleClassCode(IInfoModel.ENTITY_RADIOLOGY_ORDER, null));
+    }
+
+    @Test
+    void otherOrderHelpersRequireExplicitLocalOnlyCodeShape() {
+        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("LOCAL_OTHER:CERTIFICATE_FEE"));
+        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("LOCAL_OTHER:LOCAL-NOTE.01"));
+        assertTrue(OrcaOrderBundleRequestSupport.isValidCodeForRowRole(IInfoModel.ENTITY_OTHER_ORDER, OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN, "LOCAL_OTHER:CERTIFICATE_FEE"));
+        assertTrue(OrcaOrderBundleRequestSupport.isValidCodeForRowRole(IInfoModel.ENTITY_OTHER_ORDER, OrcaOrderBundleRequestSupport.ROW_ROLE_COMMENT, "LOCAL_OTHER:LOCAL-NOTE.01"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidCodeForRowRole(IInfoModel.ENTITY_OTHER_ORDER, OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN, "180000210"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidCodeForRowRole(IInfoModel.ENTITY_OTHER_ORDER, OrcaOrderBundleRequestSupport.ROW_ROLE_COMMENT, "0085001"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("LOCAL-001"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("180000210"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("800000001"));
         assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("002001"));
         assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("0085001"));
-        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("81234567"));
-        assertTrue(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("18ABC0210"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("81234567"));
+        assertFalse(OrcaOrderBundleRequestSupport.isValidOtherOrderCode("18ABC0210"));
     }
 
     @Test

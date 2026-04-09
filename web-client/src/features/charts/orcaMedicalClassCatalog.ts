@@ -18,6 +18,10 @@ export type OrcaEntityClassMeta = {
   className: string;
 };
 
+export type OrcaResolvedClassMeta = OrcaEntityClassMeta & {
+  entity: CanonicalOrcaOrderEntity;
+};
+
 type OrcaEntityContract = {
   label: string;
   defaultClassMeta?: OrcaEntityClassMeta;
@@ -36,7 +40,6 @@ const EXACT_TEST_CLASS_CODES = ['600', '601', '602', '603', '610'] as const;
 const EXACT_RADIOLOGY_CLASS_CODES = ['700', '701', '702', '703', '704', '731', '732'] as const;
 const EXACT_BASE_CHARGE_CLASS_CODES = ['110', '114', '120', '124'] as const;
 const EXACT_INSTRUCTION_CHARGE_CLASS_CODES = ['130', '132', '133', '140', '141', '142', '143', '148', '149'] as const;
-const LEGACY_RADIOLOGY_LABEL = '\u653e\u5c04\u7dda';
 
 const ENTITY_ALIASES: Record<string, CanonicalOrcaOrderEntity> = {
   prescriptionOrder: 'medOrder',
@@ -127,6 +130,22 @@ const ENTITY_CONTRACTS: Record<CanonicalOrcaOrderEntity, OrcaEntityContract> = {
   },
 };
 
+const CLASS_META_BY_CODE = new Map<string, OrcaResolvedClassMeta>();
+
+for (const [entity, contract] of Object.entries(ENTITY_CONTRACTS) as Array<[CanonicalOrcaOrderEntity, OrcaEntityContract]>) {
+  const defaultClassMeta = contract.defaultClassMeta;
+  if (!defaultClassMeta) continue;
+  for (const classCode of contract.allowedClassCodes ?? [defaultClassMeta.classCode]) {
+    if (!CLASS_META_BY_CODE.has(classCode)) {
+      CLASS_META_BY_CODE.set(classCode, {
+        entity,
+        classCode,
+        className: defaultClassMeta.className,
+      });
+    }
+  }
+}
+
 const trimToNull = (value?: string | null) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
@@ -153,19 +172,36 @@ export const resolveOrcaDefaultClassMeta = (value?: string | null): OrcaEntityCl
 
 export const normalizeOrcaClassCode = (value?: string | null) => trimToNull(value) ?? undefined;
 
+export const requiresOrcaClassCode = (value?: string | null) => {
+  const contract = resolveOrcaEntityContract(value);
+  return Boolean(contract && !contract.localOnly && contract.allowedClassCodes && contract.allowedClassCodes.length > 0);
+};
+
+export const resolveOrcaClassMetaByCode = (classCode?: string | null): OrcaResolvedClassMeta | undefined => {
+  const normalized = trimToNull(classCode);
+  if (!normalized) return undefined;
+  const meta = CLASS_META_BY_CODE.get(normalized);
+  return meta ? { ...meta } : undefined;
+};
+
+export const resolveOrcaEntityFromClassCode = (classCode?: string | null): CanonicalOrcaOrderEntity | null =>
+  resolveOrcaClassMetaByCode(classCode)?.entity ?? null;
+
 export const isOrcaClassCodeCompatible = (value?: string | null, classCode?: string | null) => {
   const contract = resolveOrcaEntityContract(value);
   const normalizedClassCode = trimToNull(classCode);
   if (!contract) return false;
   if (normalizedClassCode == null) {
-    return !contract.localOnly;
+    return !requiresOrcaClassCode(value);
   }
   if (!contract.allowedClassCodes) return false;
   return contract.allowedClassCodes.includes(normalizedClassCode);
 };
 
-export const isOrcaEntityClassAllowed = (value?: string | null, classCode?: string | null) =>
-  isOrcaClassCodeCompatible(value, classCode);
+export const isOrcaEntityClassAllowed = (value?: string | null, classCode?: string | null) => {
+  const normalizedClassCode = trimToNull(classCode);
+  return normalizedClassCode != null && isOrcaClassCodeCompatible(value, normalizedClassCode);
+};
 
 export const supportsOrcaBodyPartField = (value?: string | null, classCode?: string | null) => {
   const contract = resolveOrcaEntityContract(value);
@@ -185,24 +221,27 @@ export const isSendableOrcaEntity = (value?: string | null) => Boolean(resolveOr
 
 export const isRadiologyClassCode = (value?: string | null) => Boolean(trimToNull(value) && EXACT_RADIOLOGY_CLASS_CODES.includes(trimToNull(value)! as (typeof EXACT_RADIOLOGY_CLASS_CODES)[number]));
 
-export const normalizeRadiologyLabel = (value?: string | null) => {
-  const normalized = trimToNull(value);
-  if (!normalized) return undefined;
-  return normalized === LEGACY_RADIOLOGY_LABEL ? '画像診断' : normalized;
+export const resolveCanonicalOrcaClassName = (
+  entity?: string | null,
+  classCode?: string | null,
+  _className?: string | null,
+) => {
+  const normalizedEntity = resolveCanonicalOrcaOrderEntity(entity);
+  const normalizedClassCode = trimToNull(classCode);
+  if (normalizedEntity && normalizedClassCode && isOrcaEntityClassAllowed(normalizedEntity, normalizedClassCode)) {
+    return resolveOrcaDefaultClassMeta(normalizedEntity)?.className;
+  }
+  if (normalizedClassCode) {
+    return resolveOrcaClassMetaByCode(normalizedClassCode)?.className;
+  }
+  if (normalizedEntity && requiresOrcaClassCode(normalizedEntity)) {
+    return resolveOrcaDefaultClassMeta(normalizedEntity)?.className;
+  }
+  return undefined;
 };
 
 export const resolveMedicalClassName = (classCode?: string | null) => {
-  const normalized = trimToNull(classCode);
-  if (!normalized) return undefined;
-  if (EXACT_MED_CLASS_CODES.includes(normalized as (typeof EXACT_MED_CLASS_CODES)[number])) return '処方';
-  if (EXACT_INJECTION_CLASS_CODES.includes(normalized as (typeof EXACT_INJECTION_CLASS_CODES)[number])) return '注射';
-  if (EXACT_TREATMENT_CLASS_CODES.includes(normalized as (typeof EXACT_TREATMENT_CLASS_CODES)[number])) return '処置';
-  if (EXACT_SURGERY_CLASS_CODES.includes(normalized as (typeof EXACT_SURGERY_CLASS_CODES)[number])) return '手術';
-  if (EXACT_TEST_CLASS_CODES.includes(normalized as (typeof EXACT_TEST_CLASS_CODES)[number])) return '検査';
-  if (EXACT_RADIOLOGY_CLASS_CODES.includes(normalized as (typeof EXACT_RADIOLOGY_CLASS_CODES)[number])) return '画像診断';
-  if (EXACT_BASE_CHARGE_CLASS_CODES.includes(normalized as (typeof EXACT_BASE_CHARGE_CLASS_CODES)[number])) return '基本診療料';
-  if (EXACT_INSTRUCTION_CHARGE_CLASS_CODES.includes(normalized as (typeof EXACT_INSTRUCTION_CHARGE_CLASS_CODES)[number])) return '医学管理等';
-  return undefined;
+  return resolveOrcaClassMetaByCode(classCode)?.className;
 };
 
 export const isAuxiliaryMaterialCode = (value?: string | null) => /^7\d{8}$/.test(trimToNull(value) ?? '');

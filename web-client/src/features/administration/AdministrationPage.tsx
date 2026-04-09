@@ -1166,6 +1166,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
             `環境: ${environmentLabel}`,
             '認可の正本: route-level',
           ];
+  const isDeliveryTab = activeTab === 'delivery';
 
   return (
     <>
@@ -1180,53 +1181,64 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
         tabIndex={-1}
       >
         <div className="administration-page__header">
-          <h1>管理画面</h1>
-          <p className="administration-page__lead" role="status" aria-live={infoLive}>
-            {sectionLead}
-          </p>
+          <div className="administration-page__masthead">
+            <div className="administration-page__masthead-copy">
+              <p className="administration-page__eyebrow">Clinical operations console</p>
+              <h1>管理画面</h1>
+              <p className="administration-page__lead" role="status" aria-live={infoLive}>
+                {sectionLead}
+              </p>
+            </div>
 
-          <div className="admin-header-blocks">
-            <section className="admin-header-block">
-              <h2>{sectionMetricsHeading}</h2>
-              <div className="administration-page__meta" aria-live={infoLive}>
-                {sectionMetrics.map((metric) => (
-                  <span key={metric} className="administration-page__pill">
-                    {metric}
-                  </span>
-                ))}
-              </div>
-            </section>
+            <section className="administration-page__summary-rail" aria-label="運用サマリー">
+              <div className="admin-header-blocks">
+                <section className="admin-header-block">
+                  <h2>{sectionMetricsHeading}</h2>
+                  <div className="administration-page__meta" aria-live={infoLive}>
+                    {sectionMetrics.map((metric) => (
+                      <span key={metric} className="administration-page__pill">
+                        {metric}
+                      </span>
+                    ))}
+                  </div>
+                </section>
 
-            <section className="admin-header-block">
-              <h2>識別子</h2>
-              <div className="administration-page__meta">
-                <RunIdBadge runId={resolvedRunId} />
-                <AuditSummaryInline
-                  auditEvent={latestAuditEvent}
-                  className="administration-page__pill"
-                  variant="inline"
-                  runId={resolvedRunId}
-                />
-                <span className="administration-page__pill">
-                  施設ID: {session.facilityId}
-                  <button type="button" className="admin-pill-copy" onClick={() => handleCopyValue(session.facilityId, '施設ID')}>
-                    コピー
-                  </button>
-                </span>
-                <span className="administration-page__pill">権限: {formatRoleLabel(role)}</span>
-                <span className="administration-page__pill">
-                  traceId: {traceId ?? '―'}
-                  {traceId ? (
-                    <button type="button" className="admin-pill-copy" onClick={() => handleCopyValue(traceId, 'traceId')}>
-                      コピー
-                    </button>
-                  ) : null}
-                </span>
+                <section className="admin-header-block">
+                  <h2>識別子</h2>
+                  <div className="administration-page__meta">
+                    <RunIdBadge runId={resolvedRunId} />
+                    <AuditSummaryInline
+                      auditEvent={latestAuditEvent}
+                      className="administration-page__pill"
+                      variant="inline"
+                      runId={resolvedRunId}
+                    />
+                    <span className="administration-page__pill">
+                      施設ID: {session.facilityId}
+                      <button
+                        type="button"
+                        className="admin-pill-copy"
+                        onClick={() => handleCopyValue(session.facilityId, '施設ID')}
+                      >
+                        コピー
+                      </button>
+                    </span>
+                    <span className="administration-page__pill">権限: {formatRoleLabel(role)}</span>
+                    <span className="administration-page__pill">
+                      traceId: {traceId ?? '―'}
+                      {traceId ? (
+                        <button type="button" className="admin-pill-copy" onClick={() => handleCopyValue(traceId, 'traceId')}>
+                          コピー
+                        </button>
+                      ) : null}
+                    </span>
+                  </div>
+                </section>
               </div>
             </section>
           </div>
 
-          <nav className="administration-tabs" aria-label="管理画面セクション">
+          <nav className="administration-tabs" aria-label="管理画面の主要ナビゲーション">
             <button
               type="button"
               aria-current={activeTab === 'delivery' ? 'page' : undefined}
@@ -1267,214 +1279,225 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
               マスタ更新
             </button>
           </nav>
-
-          {activeTab === 'delivery' ? (
-            <DeliverySubNav
-              activeSection={activeDeliverySection}
-              onChange={(next) => {
-                const params = new URLSearchParams(searchParams);
-                params.delete('tab');
-                params.set('section', next);
-                setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
-              }}
-            />
-          ) : null}
-
-          {feedback ? <AdminAlert tone={feedback.tone} message={feedback.message} className="administration-page__feedback" /> : null}
-          {orcaConnectionFeedback && activeTab === 'delivery' && activeDeliverySection === 'connection' ? (
-            <AdminAlert
-              tone={orcaConnectionFeedback.tone}
-              message={orcaConnectionFeedback.message}
-              className="administration-page__feedback"
-            />
-          ) : null}
-
-          {isForbidden && activeTab === 'delivery' ? (
-            <ToneBanner
-              tone="error"
-              message="管理APIへのアクセスが拒否されました。権限を確認し、必要ならシステム管理者へ依頼してください。"
-              destination="管理画面"
-              runId={resolvedRunId}
-              nextAction="権限確認 / サポート依頼"
-            />
-          ) : null}
         </div>
 
-        {activeTab === 'orca-users' ? (
-          <div className="administration-grid administration-grid--wide">
-            <OrcaUserManagementPanel runId={panelRunId} role={role} />
-            <AccessManagementPanel runId={panelRunId} role={role} mode="linked-only" />
-          </div>
-        ) : activeTab === 'master-updates' ? (
-          <div className="administration-grid administration-grid--wide">
-            <MasterUpdatesPanel runId={panelRunId} role={role} />
-          </div>
-        ) : (
-          <>
-            {warningEntries.length > 0 ? (
-              <ToneBanner
-                tone="warning"
-                message={`未配信・失敗バンドルが ${warningEntries.length} 件あります（遅延判定:${warningThresholdMinutes}分）。再送または破棄を実施してください。`}
-                destination="ORCA queue"
-                runId={resolvedRunId}
-                nextAction="再送/破棄・再取得"
-              />
-            ) : null}
-
-            {activeDeliverySection === 'dashboard' ? (
-              <DeliveryDashboard
-                deliverySummary={deliverySummary.summary}
-                deliveryMode={deliveryMode}
-                lastDeliveredAt={formatTimestampWithAgo(lastDeliveredAt)}
-                webOrcaConnection={webOrcaConnectionLabel}
-                queueSummary={queueSummary}
-                environmentLabel={environmentLabel}
-                warningThresholdMinutes={warningThresholdMinutes}
-                onNavigate={(next) => {
+        <div className={`administration-page__workspace${isDeliveryTab ? ' administration-page__workspace--delivery' : ''}`}>
+          {isDeliveryTab ? (
+            <aside className="administration-page__rail" aria-label="配信・運用の操作レール">
+              <section className="administration-page__rail-card">
+                <p className="administration-page__eyebrow">Ops rail</p>
+                <h2>配信・運用</h2>
+                <p className="admin-quiet">設定 / 状態確認 / 調査をこのレールで切り替えます。</p>
+              </section>
+              <DeliverySubNav
+                activeSection={activeDeliverySection}
+                onChange={(next) => {
                   const params = new URLSearchParams(searchParams);
                   params.delete('tab');
                   params.set('section', next);
                   setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
                 }}
               />
-            ) : null}
+            </aside>
+          ) : null}
 
-            {activeDeliverySection === 'connection' ? (
-              <WebOrcaConnectionCard
-                form={orcaConnectionForm}
-                fieldErrors={orcaConnectionFieldErrors}
-                isSystemAdmin={isSystemAdmin}
-                accessVerified={orcaConnectionAccessVerified}
-                authBlocked={orcaConnectionAuthBlocked}
-                dirty={orcaConnectionDirty}
-                statusTone={orcaConnectionStatusTone}
-                statusLabel={orcaConnectionStatusLabel}
-                testSummary={orcaConnectionTestResult}
-                savePending={orcaConnectionSaveMutation.isPending}
-                testPending={orcaConnectionTestMutation.isPending}
-                refetchPending={orcaConnectionQuery.isFetching}
-                onPatch={patchOrcaConnectionForm}
-                onToggleWeborca={handleOrcaConnectionWeborcaToggle}
-                onSave={handleOrcaConnectionSave}
-                onTest={handleOrcaConnectionTest}
-                onRefetch={() => orcaConnectionQuery.refetch()}
-                onCopyRequestTemplate={handleCopyRequestTemplate}
-                requestTemplate={requestTemplate}
-                guardDetailsId={guardDetailsId}
+          <section className="administration-page__pane">
+            {feedback ? <AdminAlert tone={feedback.tone} message={feedback.message} className="administration-page__feedback" /> : null}
+            {orcaConnectionFeedback && activeTab === 'delivery' && activeDeliverySection === 'connection' ? (
+              <AdminAlert
+                tone={orcaConnectionFeedback.tone}
+                message={orcaConnectionFeedback.message}
+                className="administration-page__feedback"
               />
             ) : null}
 
-            {activeDeliverySection === 'config' ? (
-              <div className="administration-grid">
-                <AdminDeliveryConfigCard
-                  form={form}
-                  isSystemAdmin={isSystemAdmin}
-                  showAdminDebugToggles={showAdminDebugToggles}
-                  dirty={configDirty}
-                  updatedAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
-                  note={configQuery.data?.note}
-                  guardDetailsId={guardDetailsId}
-                  saving={configMutation.isPending}
-                  refetching={configQuery.isFetching}
-                  onFieldChange={handleInputChange}
-                  onChartsMasterSourceChange={handleChartsMasterSourceChange}
-                  onSaveRequest={handleSave}
-                  onRefetch={() => configQuery.refetch()}
-                />
-                <AdminDeliveryStatusCard
-                  deliveryId={configQuery.data?.deliveryId}
-                  deliveryVersion={configQuery.data?.deliveryVersion}
-                  deliveryEtag={effectiveDeliveryEtag}
-                  deliveredAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
-                  environmentLabel={environmentLabel}
-                  deliveryMode={deliveryMode}
-                  verified={configQuery.data?.verified}
-                  onCopy={handleCopyValue}
-                />
+            {isForbidden && activeTab === 'delivery' ? (
+              <ToneBanner
+                tone="error"
+                message="管理APIへのアクセスが拒否されました。権限を確認し、必要ならシステム管理者へ依頼してください。"
+                destination="管理画面"
+                runId={resolvedRunId}
+                nextAction="権限確認 / サポート依頼"
+              />
+            ) : null}
+
+            {activeTab === 'orca-users' ? (
+              <div className="administration-grid administration-grid--wide">
+                <OrcaUserManagementPanel runId={panelRunId} role={role} />
+                <AccessManagementPanel runId={panelRunId} role={role} mode="linked-only" />
               </div>
-            ) : null}
-
-            {activeDeliverySection === 'queue' ? (
-              <OrcaQueueCard
-                entries={queueEntries}
-                isSystemAdmin={isSystemAdmin}
-                guardDetailsId={guardDetailsId}
-                pending={queueMutation.isPending}
-                warningThresholdMs={ORCA_QUEUE_STALL_THRESHOLD_MS}
-                onRetry={handleRetry}
-                onDiscardRequest={handleDiscardRequest}
-              />
-            ) : null}
-
-            {activeDeliverySection === 'operations' ? (
-              <OperationsHealthCard
-                healthResult={operationsHealthQuery.data ?? null}
-                readinessResult={operationsReadinessQuery.data ?? null}
-                pvtWorkerResult={pvtWorkerHealthQuery.data ?? null}
-                healthPending={operationsHealthQuery.isFetching}
-                readinessPending={operationsReadinessQuery.isFetching}
-                pvtWorkerPending={pvtWorkerHealthQuery.isFetching}
-                orcaConnectionStatusTone={orcaConnectionStatusTone}
-                orcaConnectionStatusLabel={orcaConnectionStatusLabel}
-                orcaConnectionResult={orcaConnectionTestResult}
-                onRefresh={handleOperationsRefresh}
-                refreshPending={
-                  operationsHealthQuery.isFetching || operationsReadinessQuery.isFetching || pvtWorkerHealthQuery.isFetching
-                }
-              />
-            ) : null}
-
-            {activeDeliverySection === 'debug' ? (
+            ) : activeTab === 'master-updates' ? (
+              <div className="administration-grid administration-grid--wide">
+                <MasterUpdatesPanel runId={panelRunId} role={role} />
+              </div>
+            ) : (
               <>
-                <section className="administration-card" aria-label="診断一括疎通">
-                  <h2 className="administration-card__title">診断/デバッグ</h2>
-                  <p className="admin-note">このセクションは運用設定から隔離されています。診断用途のみで使用してください。</p>
-                  <div className="admin-actions">
-                    <button
-                      type="button"
-                      className="admin-button admin-button--secondary"
-                      onClick={handleRunConnectivityGroup}
-                      disabled={!isSystemAdmin}
-                    >
-                      一括疎通（グループ）
-                    </button>
+                {warningEntries.length > 0 ? (
+                  <ToneBanner
+                    tone="warning"
+                    message={`未配信・失敗バンドルが ${warningEntries.length} 件あります（遅延判定:${warningThresholdMinutes}分）。再送または破棄を実施してください。`}
+                    destination="ORCA queue"
+                    runId={resolvedRunId}
+                    nextAction="再送/破棄・再取得"
+                  />
+                ) : null}
+
+                {activeDeliverySection === 'dashboard' ? (
+                  <DeliveryDashboard
+                    deliverySummary={deliverySummary.summary}
+                    deliveryMode={deliveryMode}
+                    lastDeliveredAt={formatTimestampWithAgo(lastDeliveredAt)}
+                    webOrcaConnection={webOrcaConnectionLabel}
+                    queueSummary={queueSummary}
+                    environmentLabel={environmentLabel}
+                    warningThresholdMinutes={warningThresholdMinutes}
+                    onNavigate={(next) => {
+                      const params = new URLSearchParams(searchParams);
+                      params.delete('tab');
+                      params.set('section', next);
+                      setSearchParams(normalizeAdministrationSearchParams(params), { replace: false });
+                    }}
+                  />
+                ) : null}
+
+                {activeDeliverySection === 'connection' ? (
+                  <WebOrcaConnectionCard
+                    form={orcaConnectionForm}
+                    fieldErrors={orcaConnectionFieldErrors}
+                    isSystemAdmin={isSystemAdmin}
+                    accessVerified={orcaConnectionAccessVerified}
+                    authBlocked={orcaConnectionAuthBlocked}
+                    dirty={orcaConnectionDirty}
+                    statusTone={orcaConnectionStatusTone}
+                    statusLabel={orcaConnectionStatusLabel}
+                    testSummary={orcaConnectionTestResult}
+                    savePending={orcaConnectionSaveMutation.isPending}
+                    testPending={orcaConnectionTestMutation.isPending}
+                    refetchPending={orcaConnectionQuery.isFetching}
+                    onPatch={patchOrcaConnectionForm}
+                    onToggleWeborca={handleOrcaConnectionWeborcaToggle}
+                    onSave={handleOrcaConnectionSave}
+                    onTest={handleOrcaConnectionTest}
+                    onRefetch={() => orcaConnectionQuery.refetch()}
+                    onCopyRequestTemplate={handleCopyRequestTemplate}
+                    requestTemplate={requestTemplate}
+                    guardDetailsId={guardDetailsId}
+                  />
+                ) : null}
+
+                {activeDeliverySection === 'config' ? (
+                  <div className="administration-grid">
+                    <AdminDeliveryConfigCard
+                      form={form}
+                      isSystemAdmin={isSystemAdmin}
+                      showAdminDebugToggles={showAdminDebugToggles}
+                      dirty={configDirty}
+                      updatedAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
+                      note={configQuery.data?.note}
+                      guardDetailsId={guardDetailsId}
+                      saving={configMutation.isPending}
+                      refetching={configQuery.isFetching}
+                      onFieldChange={handleInputChange}
+                      onChartsMasterSourceChange={handleChartsMasterSourceChange}
+                      onSaveRequest={handleSave}
+                      onRefetch={() => configQuery.refetch()}
+                    />
+                    <AdminDeliveryStatusCard
+                      deliveryId={configQuery.data?.deliveryId}
+                      deliveryVersion={configQuery.data?.deliveryVersion}
+                      deliveryEtag={effectiveDeliveryEtag}
+                      deliveredAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
+                      environmentLabel={environmentLabel}
+                      deliveryMode={deliveryMode}
+                      verified={configQuery.data?.verified}
+                      onCopy={handleCopyValue}
+                    />
                   </div>
-                  {connectivitySummary ? (
-                    <div className="admin-result admin-result--stack">
-                      <div>testedAt: {formatTimestamp(connectivitySummary.testedAt)}</div>
-                      <div>
-                        success: {connectivitySummary.success} / failure: {connectivitySummary.failure}
-                      </div>
-                      <ul className="placeholder-page__list">
-                        {connectivitySummary.details.map((detail) => (
-                          <li key={detail}>{detail}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                </section>
-                <div className="administration-grid administration-grid--wide">
-                  <OrcaInternalWrapperCard
+                ) : null}
+
+                {activeDeliverySection === 'queue' ? (
+                  <OrcaQueueCard
+                    entries={queueEntries}
                     isSystemAdmin={isSystemAdmin}
                     guardDetailsId={guardDetailsId}
-                    options={internalWrapperOptions}
-                    target={orcaInternalWrapperTarget}
-                    currentOption={internalWrapperOption}
-                    currentState={currentInternalWrapper}
-                    result={internalWrapperResult}
-                    statusTone={internalWrapperStatusTone}
-                    statusLabel={internalWrapperStatusLabel}
-                    pending={internalWrapperMutation.isPending}
-                    onTargetChange={setOrcaInternalWrapperTarget}
-                    onPayloadChange={handleInternalWrapperPayloadChange}
-                    onSubmit={handleInternalWrapperSubmit}
-                    onReset={handleInternalWrapperReset}
+                    pending={queueMutation.isPending}
+                    warningThresholdMs={ORCA_QUEUE_STALL_THRESHOLD_MS}
+                    onRetry={handleRetry}
+                    onDiscardRequest={handleDiscardRequest}
                   />
-                </div>
+                ) : null}
+
+                {activeDeliverySection === 'operations' ? (
+                  <OperationsHealthCard
+                    healthResult={operationsHealthQuery.data ?? null}
+                    readinessResult={operationsReadinessQuery.data ?? null}
+                    pvtWorkerResult={pvtWorkerHealthQuery.data ?? null}
+                    healthPending={operationsHealthQuery.isFetching}
+                    readinessPending={operationsReadinessQuery.isFetching}
+                    pvtWorkerPending={pvtWorkerHealthQuery.isFetching}
+                    orcaConnectionStatusTone={orcaConnectionStatusTone}
+                    orcaConnectionStatusLabel={orcaConnectionStatusLabel}
+                    orcaConnectionResult={orcaConnectionTestResult}
+                    onRefresh={handleOperationsRefresh}
+                    refreshPending={
+                      operationsHealthQuery.isFetching || operationsReadinessQuery.isFetching || pvtWorkerHealthQuery.isFetching
+                    }
+                  />
+                ) : null}
+
+                {activeDeliverySection === 'debug' ? (
+                  <>
+                    <section className="administration-card" aria-label="診断一括疎通">
+                      <h2 className="administration-card__title">診断/デバッグ</h2>
+                      <p className="admin-note">このセクションは運用設定から隔離されています。診断用途のみで使用してください。</p>
+                      <div className="admin-actions">
+                        <button
+                          type="button"
+                          className="admin-button admin-button--secondary"
+                          onClick={handleRunConnectivityGroup}
+                          disabled={!isSystemAdmin}
+                        >
+                          一括疎通（グループ）
+                        </button>
+                      </div>
+                      {connectivitySummary ? (
+                        <div className="admin-result admin-result--stack">
+                          <div>testedAt: {formatTimestamp(connectivitySummary.testedAt)}</div>
+                          <div>
+                            success: {connectivitySummary.success} / failure: {connectivitySummary.failure}
+                          </div>
+                          <ul className="placeholder-page__list">
+                            {connectivitySummary.details.map((detail) => (
+                              <li key={detail}>{detail}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </section>
+                    <div className="administration-grid administration-grid--wide">
+                      <OrcaInternalWrapperCard
+                        isSystemAdmin={isSystemAdmin}
+                        guardDetailsId={guardDetailsId}
+                        options={internalWrapperOptions}
+                        target={orcaInternalWrapperTarget}
+                        currentOption={internalWrapperOption}
+                        currentState={currentInternalWrapper}
+                        result={internalWrapperResult}
+                        statusTone={internalWrapperStatusTone}
+                        statusLabel={internalWrapperStatusLabel}
+                        pending={internalWrapperMutation.isPending}
+                        onTargetChange={setOrcaInternalWrapperTarget}
+                        onPayloadChange={handleInternalWrapperPayloadChange}
+                        onSubmit={handleInternalWrapperSubmit}
+                        onReset={handleInternalWrapperReset}
+                      />
+                    </div>
+                  </>
+                ) : null}
               </>
-            ) : null}
-          </>
-        )}
+            )}
+          </section>
+        </div>
       </main>
 
       <ConfirmDialog

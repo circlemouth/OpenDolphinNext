@@ -140,6 +140,18 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void saveOrderReturns400WhenStructuredClaimCommentNoteFormatIsInvalid() {
+        PrescriptionOrder payload = buildPayload();
+        payload.getRps().get(0).setClaimComments(List.of(claimComment("842000001", "numeric comment", "abc")));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.saveOrder(servletRequest, payload));
+
+        assertValidationError(ex, "rps[0].claimComments[0].note");
+        assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
     void saveOrderReturns400WhenUnknownStructuredClaimCommentFamilyIsProvided() {
         PrescriptionOrder payload = buildPayload();
         payload.getRps().get(0).setClaimComments(List.of(claimComment("850000001", "unknown family", "note")));
@@ -149,6 +161,30 @@ class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
 
         assertValidationError(ex, "rps[0].claimComments[0].code");
         assertEquals(0, fakeRepository.saveCalls);
+    }
+
+    @Test
+    void saveOrderNormalizesStructuredClaimCommentNotesBeforePersisting() throws Exception {
+        PrescriptionOrder payload = buildPayload();
+        payload.getRps().get(0).setClaimComments(List.of(
+                claimComment("830000001", "free text", "  補足メモ  "),
+                claimComment("842000001", "numeric", "1.5"),
+                claimComment("831000001", "management", "123456789")));
+        payload.getRps().get(0).getDrugs().get(0).setClaimComments(List.of(
+                claimComment("850100001", "date", "2026/4/9"),
+                claimComment("851100001", "month-day", "4/9"),
+                claimComment("852100001", "integer", "12")));
+
+        PrescriptionOrderSaveResponse response = resource.saveOrder(servletRequest, payload);
+
+        assertNotNull(response);
+        PrescriptionOrder saved = OBJECT_MAPPER.readValue(fakeRepository.savedPayloadJson, PrescriptionOrder.class);
+        assertEquals("補足メモ", saved.getRps().get(0).getClaimComments().get(0).getNote());
+        assertEquals("1.5", saved.getRps().get(0).getClaimComments().get(1).getNote());
+        assertEquals("123456789", saved.getRps().get(0).getClaimComments().get(2).getNote());
+        assertEquals("2026-04-09", saved.getRps().get(0).getDrugs().get(0).getClaimComments().get(0).getNote());
+        assertEquals("04-09", saved.getRps().get(0).getDrugs().get(0).getClaimComments().get(1).getNote());
+        assertEquals("12", saved.getRps().get(0).getDrugs().get(0).getClaimComments().get(2).getNote());
     }
 
     @Test

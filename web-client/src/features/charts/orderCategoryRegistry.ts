@@ -226,7 +226,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: resolveOrcaEntityLabel('treatmentOrder') ?? '処置',
     group: 'treatment',
     etensuCategory: '4',
-    classMeta: resolveOrcaDefaultClassMeta('treatmentOrder') ?? { classCode: '400', className: '処置' },
+    classMeta: resolveOrcaDefaultClassMeta('treatmentOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: { ...BASE_EDITOR_UI, supportsBodyPartSearch: false },
     editor: { title: '処置', bundleLabel: '処置名', itemQuantityLabel: '数量' },
@@ -235,7 +235,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: resolveOrcaEntityLabel('surgeryOrder') ?? '手術',
     group: 'treatment',
     etensuCategory: '5',
-    classMeta: resolveOrcaDefaultClassMeta('surgeryOrder') ?? { classCode: '500', className: '手術' },
+    classMeta: resolveOrcaDefaultClassMeta('surgeryOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: BASE_EDITOR_UI,
     editor: { title: '手術', bundleLabel: '手技', itemQuantityLabel: '数量' },
@@ -263,7 +263,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: resolveOrcaEntityLabel('testOrder') ?? '検査',
     group: 'test',
     etensuCategory: '6',
-    classMeta: resolveOrcaDefaultClassMeta('testOrder') ?? { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaDefaultClassMeta('testOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 生化学検査',
@@ -291,7 +291,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: resolveOrcaEntityLabel('testOrder') ?? '検査',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaDefaultClassMeta('testOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 生化学検査',
@@ -319,7 +319,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: resolveOrcaEntityLabel('physiologyOrder') ?? '生理検査',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaDefaultClassMeta('physiologyOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 心電図検査',
@@ -347,7 +347,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: resolveOrcaEntityLabel('bacteriaOrder') ?? '細菌検査',
     group: 'test',
     etensuCategory: '6',
-    classMeta: { classCode: '600', className: '検査' },
+    classMeta: resolveOrcaDefaultClassMeta('bacteriaOrder'),
     validation: BASE_EDITOR_VALIDATION,
     ui: {
       bundleNamePlaceholder: '例: 細菌培養',
@@ -375,7 +375,7 @@ const ORDER_ENTITY_REGISTRY: Record<OrderEntity, OrderEntityRegistryEntry> = {
     label: resolveOrcaEntityLabel('radiologyOrder') ?? '画像診断',
     group: 'test',
     etensuCategory: '7',
-    classMeta: resolveOrcaDefaultClassMeta('radiologyOrder') ?? { classCode: '700', className: '画像診断' },
+    classMeta: resolveOrcaDefaultClassMeta('radiologyOrder'),
     validation: {
       itemLabel: '画像検査項目',
       requiresItems: true,

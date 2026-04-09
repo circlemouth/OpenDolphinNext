@@ -168,13 +168,13 @@ describe('OrderBundleEditPanel ORCA support', () => {
     ).toBeInTheDocument();
   });
 
-  it('injectionOrder は route/timing/dosePerDay/speed と注射コメントの送信契約を明示する', () => {
+  it('injectionOrder は route/timing/dosePerDay と注射コメントの送信契約を明示する', () => {
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     renderPanel(injectionProps);
 
     expect(
       screen.getByText(
-        '注射では admin/adminCode/adminMemo/speed を院内ローカル情報として保存できますが、ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使います。bodyPart は reject し、local-only 項目は payload/XML に含めません。',
+        '注射では admin/adminCode/adminMemo は local-only persisted / outbound strip です。ORCA送信では classCode・回数・coded row・generic flag・rowRole だけを使い、bodyPart は reject します。',
       ),
     ).toBeInTheDocument();
   });
@@ -495,7 +495,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
         classCode: '800',
         classCodeSystem: 'Claim007',
         className: 'その他',
-        items: [{ code: '180000210', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
+        items: [{ code: 'LOCAL_OTHER:CERTIFICATE_FEE', name: '診断書料', quantity: '1', unit: '回', memo: '' }],
       },
     });
 

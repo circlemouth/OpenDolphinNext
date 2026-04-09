@@ -179,7 +179,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("700000001");
+        item.setCode("LOCAL_OTHER:CERTIFICATE_FEE");
         item.setName("invalid-material");
         item.setRowRole("material");
         op.setItems(List.of(item));
@@ -196,7 +196,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must be coded main rows and do not accept classCode/bodyPart/material/comment", body.get("message"));
+        assertEquals("otherOrder items must use LOCAL_OTHER:... local-only codes and do not accept classCode/bodyPart/material/comment", body.get("message"));
     }
 
     @Test
@@ -211,7 +211,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("0085001");
+        item.setCode("LOCAL_OTHER:CERTIFICATE_FEE");
         item.setName("comment-like");
         item.setRowRole("comment");
         op.setItems(List.of(item));
@@ -228,11 +228,11 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must be coded main rows and do not accept classCode/bodyPart/material/comment", body.get("message"));
+        assertEquals("items do not contain a sendable main row", body.get("message"));
     }
 
     @Test
-    void postBundlesRejectsOtherOrderWithWrongClassCodeFamily() {
+    void postBundlesRejectsOtherOrderLegacyCodeShape() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
 
@@ -240,8 +240,6 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setOperation("create");
         op.setEntity(IInfoModel.ENTITY_OTHER_ORDER);
         op.setBundleName("other-main");
-        op.setClassCode("700");
-        op.setClassCodeSystem("Claim007");
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
@@ -260,8 +258,8 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertNotNull(exception);
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
-        assertEquals("classCode", body.get("field"));
-        assertEquals("classCode is incompatible with entity", body.get("message"));
+        assertEquals("items", body.get("field"));
+        assertEquals("otherOrder items must use LOCAL_OTHER:... local-only codes and do not accept classCode/bodyPart/material/comment", body.get("message"));
     }
 
     @Test
@@ -278,7 +276,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("180000210");
+        item.setCode("LOCAL_OTHER:CERTIFICATE_FEE");
         item.setName("other-main");
         op.setItems(List.of(item));
         payload.setOperations(List.of(op));
@@ -314,7 +312,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setBodyPart(bodyPart);
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("180000210");
+        item.setCode("LOCAL_OTHER:CERTIFICATE_FEE");
         item.setName("other-main");
         op.setItems(List.of(item));
         payload.setOperations(List.of(op));
@@ -334,7 +332,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void postBundlesAcceptsOtherOrder18FamilyCode() {
+    void postBundlesAcceptsOtherOrderExplicitLocalOnlyCode() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
 
@@ -345,7 +343,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("180000210");
+        item.setCode("LOCAL_OTHER:CERTIFICATE_FEE");
         item.setName("other-main");
         op.setItems(List.of(item));
         payload.setOperations(List.of(op));
@@ -370,7 +368,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem item = new OrderBundleMutationRequest.BundleItem();
-        item.setCode("180000210");
+        item.setCode("LOCAL_OTHER:CERTIFICATE_FEE");
         item.setName("other-main");
         item.setQuantity("1");
         item.setUnit("回");
@@ -397,7 +395,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals("other-main", entry.getClassName());
         assertEquals("other-main", entry.getBundleName());
         assertEquals(1, entry.getItems().size());
-        assertEquals("180000210", entry.getItems().get(0).getCode());
+        assertEquals("LOCAL_OTHER:CERTIFICATE_FEE", entry.getItems().get(0).getCode());
         assertEquals("回", entry.getItems().get(0).getUnit());
         assertNull(entry.getBodyPart());
     }

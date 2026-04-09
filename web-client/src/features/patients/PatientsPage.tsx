@@ -17,6 +17,7 @@ import { getChartToneDetails, type ChartTonePayload } from '../../ux/charts/tone
 import { ApiFailureBanner } from '../shared/ApiFailureBanner';
 import { AdminBroadcastBanner } from '../shared/AdminBroadcastBanner';
 import { MissingMasterRecoveryGuide } from '../shared/MissingMasterRecoveryGuide';
+import { PatientIdentityBar } from '../shared/PatientIdentityBar';
 import { ReturnToBar } from '../shared/ReturnToBar';
 import { RunIdBadge } from '../shared/RunIdBadge';
 import { StatusPill } from '../shared/StatusPill';
@@ -2063,15 +2064,10 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   onClick={() => handleSelect(patient)}
                   aria-pressed={selected}
                 >
-                  <StatusPill
-                    className="patients-page__row-id"
-                    size="xs"
-                    tone="info"
-                    runId={resolvedRunId}
-                    ariaLabel={`ORCA患者番号（Patient_ID） ${patient.patientId ?? '—'}`}
-                  >
-                    {patient.patientId ?? '—'}
-                  </StatusPill>
+                  <span className="patients-page__row-id" aria-label={`ORCA患者番号（Patient_ID） ${patient.patientId ?? '—'}`}>
+                    <span className="patients-page__row-id-label">ORCA患者番号</span>
+                    <span className="patients-page__row-id-value">{patient.patientId ?? '—'}</span>
+                  </span>
 
                   <div className="patients-page__row-name">
                     <strong className="patients-page__row-name-main">{patient.name ?? '氏名未登録'}</strong>
@@ -2133,44 +2129,36 @@ export function PatientsPage({ runId }: PatientsPageProps) {
 
         <div className="patients-page__form" aria-live={resolveAriaLive(blocking ? 'warning' : 'info')} id="patients-detail-pane">
           <div className="patients-detail__context" role="status" aria-live={infoLive}>
-            <div className="patients-detail__context-head">
-              <p className="patients-detail__context-kicker">選択中の患者</p>
-              <h2 className="patients-detail__context-title">
-                {form.patientId ? `ORCA患者番号（Patient_ID） ${form.patientId}` : '患者未選択'}
-              </h2>
-            </div>
-
-            {form.patientId ? (
-              <div className="patients-detail__context-meta">
-                <div className="patients-detail__context-name">
-                  <strong className="patients-detail__context-name-main">{form.name ?? '氏名未登録'}</strong>
-                  <span className="patients-detail__context-name-kana">{form.kana ?? 'カナ未登録'}</span>
-                </div>
-
-                <div className="patients-detail__context-facts">
-                  <span>
-                    {resolveAgeLabel(form.birthDate)} / {resolveSexLabel(form.sex)}
-                  </span>
-                  <span>{form.lastVisit ? `最終受診 ${form.lastVisit}` : '受診履歴なし'}</span>
-                  <span title={form.insurance ?? '保険未設定'}>
-                    {form.insurance ? truncateText(form.insurance, 36) : '保険未設定'}
-                  </span>
-                </div>
-
-                <div className="patients-detail__context-badges" role="status" aria-live="polite">
+            <PatientIdentityBar
+              className="patients-detail__identity-bar"
+              eyebrow="患者マスタ / 監査"
+              patientId={form.patientId}
+              patientName={form.name}
+              patientKana={form.kana}
+              sex={resolveSexLabel(form.sex)}
+              age={resolveAgeLabel(form.birthDate)}
+              note={form.lastVisit ? `最終受診 ${form.lastVisit}` : '受診履歴なし'}
+              selected={Boolean(form.patientId)}
+              chips={
+                <>
                   {selectedUnlinkedBadge ? (
-                    <span className="patients-detail__badge is-unlinked">{selectedUnlinkedBadge}</span>
+                    <StatusPill className="patients-detail__badge" tone="warning" size="xs">
+                      {selectedUnlinkedBadge}
+                    </StatusPill>
                   ) : null}
                   {blocking ? (
-                    <span className="patients-detail__badge is-blocked">編集ブロック中</span>
+                    <StatusPill className="patients-detail__badge" tone="error" size="xs">
+                      編集ブロック中
+                    </StatusPill>
                   ) : null}
-                </div>
-              </div>
-            ) : (
-              <div className="patients-page__selection-placeholder" role="status" aria-live="polite">
-                患者を選択してください。
-              </div>
-            )}
+                  {form.insurance ? (
+                    <StatusPill className="patients-detail__badge" tone="neutral" size="xs">
+                      {truncateText(form.insurance, 36)}
+                    </StatusPill>
+                  ) : null}
+                </>
+              }
+            />
           </div>
           <div className="patients-page__detail-tabs" role="tablist" aria-label="患者詳細タブ">
             {PATIENTS_DETAIL_TABS.map((tab) => (

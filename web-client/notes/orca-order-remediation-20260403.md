@@ -5,9 +5,9 @@
 
 ## Current Contract
 
-- `medOrder` は raw `Medical_Class` と generic flag の tri-state を保持し、`830 -> Medication_Name`、`842/8501/8511/8521/831 -> Medication_Number` を使う。
-- `medOrder` の usage は current release では send-block とし、未確認 carrier へは倒さない。
-- `injectionOrder` は `310/311/312/320/321/330/331/334/340/350` のみ sendable で、`admin/adminCode/adminMemo/speed` は local save/fetch では保持できるが ORCA send payload / XML には投影しない。
+- `medOrder` は raw `Medical_Class` と generic flag の tri-state を保持し、structured claim comment は `note` を explicit field で round-trip する。`830 -> Medication_Name`、`842/8501/8511/8521/831 -> Medication_Number` を使い、usage は local-only persisted / outbound strip とする。
+- `injectionOrder` は `310/311/312/320/321/330/331/334/340/350` のみ sendable で、`admin/adminCode/adminMemo` は local save/fetch では保持できるが ORCA send payload / XML には投影しない。
+- `radiologyOrder` は `classCode=700` の `className` を `画像診断` に統一し、bodyPart は `700` のときだけ canonical に保持する。
 - `treatmentOrder` は `400/401/402/403/409` を class-aware に扱い、bodyPart は reject。
 - `surgeryOrder` は `500/501/502/510` のみ sendable で、`520/540/541/542` は block。
 - `testOrder` は `600/601/602/603/610` のみ sendable で、`640/643` は reject。

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import { ChartsPatientSummaryBar } from '../ChartsPatientSummaryBar';
 
@@ -21,7 +20,7 @@ const baseProps = {
 
 describe('ChartsPatientSummaryBar', () => {
   it('note が空のときは患者メモパネルを表示しない', () => {
-    const { container } = render(
+    render(
       <ChartsPatientSummaryBar
         {...baseProps}
         patientDisplay={{
@@ -36,22 +35,21 @@ describe('ChartsPatientSummaryBar', () => {
     expect(screen.getByRole('button', { name: '閉じる' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '患者メモ' })).toBeNull();
     expect(screen.queryByText('患者メモなし')).toBeNull();
-    expect(container.querySelector('.charts-patient-summary__layout')?.getAttribute('data-has-memo')).toBe('false');
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    expect(identityBar).toHaveTextContent('1980-05-20');
+    expect(identityBar).toHaveTextContent('〒100-0001');
+    expect(identityBar).toHaveTextContent('東京都千代田区千代田1-1');
   });
 
-  it('note があるときは患者メモパネルを表示する', () => {
-    const { container } = render(<ChartsPatientSummaryBar {...baseProps} />);
+  it('note があるときは識別帯の supporting copy に集約表示する', () => {
+    render(<ChartsPatientSummaryBar {...baseProps} />);
 
-    expect(screen.getByRole('heading', { name: '患者メモ' })).toBeInTheDocument();
-    expect(screen.getByText('転倒歴あり。採血時は左腕を優先。')).toBeInTheDocument();
-    expect(container.querySelector('.charts-patient-summary__layout')?.getAttribute('data-has-memo')).toBe('true');
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    expect(identityBar).toHaveTextContent('転倒歴あり。採血時は左腕を優先。');
+    expect(identityBar).toHaveTextContent('患者ID: 000001');
   });
 
-  it('住所は詳細を開くまで表示されない', async () => {
-    const user = userEvent.setup();
-    const addressLabel = '東京都千代田区千代田1-1';
-    const zipLabel = '〒100-0001';
-
+  it('住所と郵便番号は識別帯の supporting copy に統合表示する', () => {
     render(
       <ChartsPatientSummaryBar
         {...baseProps}
@@ -62,12 +60,9 @@ describe('ChartsPatientSummaryBar', () => {
       />,
     );
 
-    expect(screen.getByText(addressLabel)).not.toBeVisible();
-    expect(screen.getByText(zipLabel)).not.toBeVisible();
-
-    await user.click(screen.getByText('詳細'));
-
-    expect(screen.getByText(addressLabel)).toBeVisible();
-    expect(screen.getByText(zipLabel)).toBeVisible();
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    expect(identityBar).toHaveTextContent('東京都千代田区千代田1-1');
+    expect(identityBar).toHaveTextContent('〒100-0001');
+    expect(screen.queryByRole('button', { name: '詳細' })).toBeNull();
   });
 });

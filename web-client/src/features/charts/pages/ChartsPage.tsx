@@ -4667,7 +4667,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                 <div className="charts-workbench__sticky-grid">
                 <div className="charts-encounter-header" aria-label="患者情報と診療操作">
                   <div
-                    className="charts-card charts-card--summary charts-card--summary-with-actions"
+                    className="charts-card charts-card--summary charts-card--summary-with-actions charts-card--identity"
                     id="charts-patient-summary"
                     tabIndex={-1}
                     data-focus-anchor="true"
@@ -4808,7 +4808,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
             </div>
             <div className="charts-workbench__layout">
               <div className="charts-workbench__body">
-                <div className="charts-workbench__column charts-workbench__column--left">
+                <div className="charts-workbench__column charts-workbench__column--left" data-column-role="support">
                   <div className="charts-column-header">
                     <span className="charts-column-header__label">病名・過去カルテ</span>
                     <span className="charts-column-header__meta">保険病名 / Past Hub / Do</span>
@@ -4860,12 +4860,12 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                     </div>
                   ) : null}
                 </div>
-                <div className="charts-workbench__column charts-workbench__column--center">
+                <div className="charts-workbench__column charts-workbench__column--center" data-column-role="primary">
                   <div className="charts-column-header">
                     <span className="charts-column-header__label">カルテ記載</span>
                     <span className="charts-column-header__meta">SOAP / 履歴 / オーダー</span>
                   </div>
-                  <div className="charts-card" id="charts-soap-note" tabIndex={-1} data-focus-anchor="true">
+                  <div className="charts-card charts-card--soap-primary" id="charts-soap-note" tabIndex={-1} data-focus-anchor="true">
 			                    <SoapNotePanel
 			                      history={soapHistory}
 			                      meta={soapNoteMeta}

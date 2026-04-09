@@ -207,9 +207,9 @@ describe('OrderBundleEditPanel item actions', () => {
           text.includes('admin/adminCode') &&
           text.includes('coded row') &&
           text.includes('rowRole') &&
-          text.includes('adminMemo/speed') &&
+          text.includes('local-only persisted / outbound strip') &&
           text.includes('bodyPart は reject') &&
-          text.includes('payload/XML'),
+          text.includes('ORCA送信では classCode'),
       ),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('注射メモ')).toHaveAttribute(

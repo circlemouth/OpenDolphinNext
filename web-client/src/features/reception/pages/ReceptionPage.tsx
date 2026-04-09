@@ -39,6 +39,7 @@ import { useAdminBroadcast } from '../../../libs/admin/useAdminBroadcast';
 import { AdminBroadcastBanner } from '../../shared/AdminBroadcastBanner';
 import { ApiFailureBanner } from '../../shared/ApiFailureBanner';
 import { AuditSummaryInline } from '../../shared/AuditSummaryInline';
+import { PatientIdentityBar } from '../../shared/PatientIdentityBar';
 import { ReturnToBar } from '../../shared/ReturnToBar';
 import { RunIdBadge } from '../../shared/RunIdBadge';
 import { StatusPill } from '../../shared/StatusPill';
@@ -4063,16 +4064,23 @@ export function ReceptionPage({
       className={`reception-accept__detail-panel${placement === 'modal' ? ' reception-accept__detail-panel--modal' : ''}`}
       data-test-id={placement === 'modal' ? 'reception-accept-detail-modal' : 'reception-accept-detail-sidepane'}
     >
-      <PatientMetaRow
-        as="div"
-        variant="detailed"
-        separator="slash"
+      <PatientIdentityBar
+        className="reception-accept__identity-bar"
+        eyebrow={placement === 'modal' ? '受付登録モーダル' : '受付登録'}
+        title="受付登録"
+        patientName={selectedPatientName}
         patientId={acceptTarget.patientId}
-        birthDateIso={acceptTarget.birthDate}
+        patientKana={patientSearchSelected?.kana?.trim() ?? undefined}
         sex={acceptTarget.sex}
-        showLabels
-        showEmpty
-        runId={resolvedRunId}
+        note={`受付対象: ${selectedPatientName}`}
+        selected={Boolean(selectedPatientId)}
+        chips={
+          isManualPatientMismatch ? (
+            <StatusPill tone="warning" size="xs">
+              手入力不一致
+            </StatusPill>
+          ) : undefined
+        }
       />
       {acceptTargetMetaMissing ? (
         <small className="reception-accept__optional">
@@ -6090,18 +6098,19 @@ export function ReceptionPage({
               <p>
                 この受付を取消します。実行後は受付一覧へ反映されます。
               </p>
-              <PatientMetaRow
-                as="div"
-                variant="detailed"
-                showLabels
-                showEmpty
-                separator="slash"
+              <PatientIdentityBar
+                className="reception-cancel__identity-bar"
+                eyebrow="受付取消"
+                title={cancelConfirmState.entry.name ?? '取消対象'}
                 patientId={cancelConfirmState.entry.patientId}
+                patientKana={cancelConfirmState.entry.kana}
                 receptionId={cancelConfirmState.entry.receptionId}
                 appointmentId={cancelConfirmState.entry.appointmentId}
-                birthDateIso={cancelConfirmState.entry.birthDate}
                 sex={cancelConfirmState.entry.sex}
-                runId={resolvedRunId}
+                note={`氏名: ${cancelConfirmState.entry.name ?? '—'} / 状態: ${
+                  SECTION_LABEL[cancelConfirmState.entry.status] ?? cancelConfirmState.entry.status
+                }`}
+                selected
               />
               <p>
                 氏名: {cancelConfirmState.entry.name ?? '—'} / 状態: {SECTION_LABEL[cancelConfirmState.entry.status] ?? cancelConfirmState.entry.status}

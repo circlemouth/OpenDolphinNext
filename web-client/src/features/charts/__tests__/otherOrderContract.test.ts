@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isOtherOrderBodyPartCode,
-  isOtherOrderOpaqueLocalCode,
+  isOtherOrderLocalOnlyCode,
   isOtherOrderRowRole,
   isOtherOrderSentinelClassCode,
   OTHER_ORDER_ALLOWED_ROW_ROLES,
@@ -11,9 +11,9 @@ import {
 
 describe('otherOrderContract', () => {
   it('explicit local-only sentinel は単一の非ORCA numeric 値に固定される', () => {
-    expect(OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE).toBe('LOCAL_OTHER_ORDER');
+    expect(OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE).toBe('LOCAL_OTHER');
     expect(/^\d+$/.test(OTHER_ORDER_LOCAL_ONLY_SENTINEL_CLASS_CODE)).toBe(false);
-    expect(isOtherOrderSentinelClassCode('LOCAL_OTHER_ORDER')).toBe(true);
+    expect(isOtherOrderSentinelClassCode('LOCAL_OTHER')).toBe(true);
     expect(isOtherOrderSentinelClassCode('800')).toBe(false);
   });
 
@@ -25,12 +25,14 @@ describe('otherOrderContract', () => {
     expect(isOtherOrderRowRole('bodyPart')).toBe(false);
   });
 
-  it('opaque local code は bodyPart/comment carrier shape を reject する', () => {
-    expect(isOtherOrderOpaqueLocalCode('LOCAL-001')).toBe(true);
-    expect(isOtherOrderOpaqueLocalCode('180000210')).toBe(true);
-    expect(isOtherOrderOpaqueLocalCode('81234567')).toBe(true);
-    expect(isOtherOrderOpaqueLocalCode('002001')).toBe(false);
-    expect(isOtherOrderOpaqueLocalCode('0085001')).toBe(false);
+  it('explicit local-only code は LOCAL_OTHER: プレフィックスに固定される', () => {
+    expect(isOtherOrderLocalOnlyCode('LOCAL_OTHER:CERTIFICATE_FEE')).toBe(true);
+    expect(isOtherOrderLocalOnlyCode('LOCAL_OTHER:LOCAL-NOTE.01')).toBe(true);
+    expect(isOtherOrderLocalOnlyCode('180000210')).toBe(false);
+    expect(isOtherOrderLocalOnlyCode('LOCAL-001')).toBe(false);
+    expect(isOtherOrderLocalOnlyCode('LOCAL_OTHER:')).toBe(false);
+    expect(isOtherOrderLocalOnlyCode('002001')).toBe(false);
+    expect(isOtherOrderLocalOnlyCode('0085001')).toBe(false);
     expect(isOtherOrderBodyPartCode('002001')).toBe(true);
   });
 });

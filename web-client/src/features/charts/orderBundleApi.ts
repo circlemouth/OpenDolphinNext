@@ -4,11 +4,19 @@ import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
 import { buildPatientImportFailureMessage, isRecoverableOrcaNotFound } from '../shared/orcaPatientImportRecovery';
 import type { OrcaResponseErrorKind } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
-import { resolveOrderEntityDefaultClassMeta } from './orderCategoryRegistry';
 import type { BacteriaOrderMetadata } from './bacteriaOrderSupport';
 import { normalizeBacteriaOrderMetadata } from './bacteriaOrderSupport';
-import { normalizeRadiologyLabel, resolveCanonicalOrcaOrderEntity, supportsOrcaBodyPartField } from './orcaMedicalClassCatalog';
-import { canonicalizeChargeBundleMeta } from './orderChargeClassSupport';
+import {
+  getAllowedClassCodesForEntity,
+  isOrcaEntityClassAllowed,
+  normalizeOrcaClassCode,
+  requiresOrcaClassCode,
+  resolveCanonicalOrcaClassName,
+  resolveCanonicalOrcaOrderEntity,
+  supportsOrcaBodyPartField,
+} from './orcaMedicalClassCatalog';
+import { isOtherOrderLocalOnlyCode } from './otherOrderContract';
+import { canonicalizeChargeBundleMeta, isChargeClassCompatible, isChargeEntity } from './orderChargeClassSupport';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
 export type OrderBundleRowRole = 'main' | 'auxiliary' | 'material' | 'comment' | 'bodyPart';
@@ -43,6 +51,7 @@ export type OrderBundleItem = {
   quantity?: string;
   unit?: string;
   memo?: string;
+  structuredCommentValue?: string;
   genericFlg?: 'yes' | 'no';
   userComment?: string;
   rowRole?: OrderBundleRowRole;
@@ -144,17 +153,7 @@ const normalizeOrderBundleClassName = (
   entity?: string | null,
   classCode?: string | null,
   className?: string | null,
-): string | undefined => {
-  const explicit = className?.trim();
-  const normalizedEntity = normalizeOrderEntityValue(entity);
-  const normalizedClassCode = classCode?.trim();
-  const defaultMeta = normalizedEntity ? resolveOrderEntityDefaultClassMeta(normalizedEntity) : undefined;
-  if (defaultMeta && (!normalizedClassCode || normalizedClassCode === defaultMeta.classCode)) {
-    if (!explicit) return defaultMeta.className;
-    if (normalizedEntity === 'radiologyOrder') return normalizeRadiologyLabel(explicit) ?? defaultMeta.className;
-  }
-  return normalizeRadiologyLabel(explicit) || undefined;
-};
+): string | undefined => resolveCanonicalOrcaClassName(normalizeOrderEntityValue(entity), classCode, className);
 
 export const ORDER_BUNDLE_BODY_PART_CODE_PREFIX = '002';
 
@@ -220,6 +219,39 @@ const normalizeOptionalText = (value?: string | null) => {
   return trimmed || undefined;
 };
 
+const validateOperationClassCode = (operation: OrderBundleOperation) => {
+  const canonicalEntity = normalizeOrderEntityValue(operation.entity) ?? 'treatmentOrder';
+  const normalizedClassCode = normalizeOrcaClassCode(operation.classCode);
+  if (canonicalEntity === 'otherOrder') {
+    return normalizedClassCode ? 'otherOrder は classCode を受け付けません。' : null;
+  }
+  if (requiresOrcaClassCode(canonicalEntity) && !normalizedClassCode) {
+    return `${canonicalEntity} は classCode が必須です。`;
+  }
+  if (!normalizedClassCode) return null;
+  if (isChargeEntity(canonicalEntity)) {
+    return isChargeClassCompatible(canonicalEntity, normalizedClassCode)
+      ? null
+      : `${canonicalEntity} は charge catalog の exact classCode のみ保存できます。`;
+  }
+  if (isOrcaEntityClassAllowed(canonicalEntity, normalizedClassCode)) {
+    return null;
+  }
+  const allowlist = getAllowedClassCodesForEntity(canonicalEntity);
+  return allowlist.length > 0
+    ? `${canonicalEntity} は exact allowlist（${allowlist.join('/')}）のみ保存できます。`
+    : `${canonicalEntity} の classCode は保存契約外です。`;
+};
+
+const normalizeOtherOrderItemCode = (entity?: string | null, code?: string | null) => {
+  const normalizedEntity = normalizeOrderEntityValue(entity);
+  const normalizedCode = normalizeOptionalText(code);
+  if (normalizedEntity !== 'otherOrder') {
+    return normalizedCode;
+  }
+  return normalizedCode && isOtherOrderLocalOnlyCode(normalizedCode) ? normalizedCode : undefined;
+};
+
 const hasUnsupportedSelectionCommentParameter = (item?: OrderBundleItem | null) => {
   if (!item) return false;
   const fields = resolveOrcaOrderItemFields(item);
@@ -256,6 +288,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
       const fields = resolveOrcaOrderItemFields(item);
       return {
         ...item,
+        code: normalizeOtherOrderItemCode(canonicalBundle.entity, item.code),
         memo: fields.memoText,
         genericFlg: fields.genericFlg,
         userComment: fields.userComment,
@@ -275,6 +308,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
       const fields = resolveOrcaOrderItemFields(item);
       return {
         ...item,
+        code: normalizeOtherOrderItemCode(canonicalBundle.entity, item.code),
         memo: fields.memoText,
         genericFlg: fields.genericFlg,
         userComment: fields.userComment,
@@ -294,6 +328,7 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
       const fields = resolveOrcaOrderItemFields(item);
       return {
         ...item,
+        code: normalizeOtherOrderItemCode(canonicalBundle.entity, item.code),
         memo: fields.memoText,
         genericFlg: fields.genericFlg,
         userComment: fields.userComment,
@@ -328,6 +363,7 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
       const fields = resolveOrcaOrderItemFields(item);
       return {
         ...item,
+        code: normalizeOtherOrderItemCode(canonicalOperation.entity, item.code),
         memo: fields.memoText,
         genericFlg: fields.genericFlg,
         userComment: fields.userComment,
@@ -347,6 +383,7 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
       const fields = resolveOrcaOrderItemFields(item);
       return {
         ...item,
+        code: normalizeOtherOrderItemCode(canonicalOperation.entity, item.code),
         memo: fields.memoText,
         genericFlg: fields.genericFlg,
         userComment: fields.userComment,
@@ -366,6 +403,7 @@ const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBu
       const fields = resolveOrcaOrderItemFields(item);
       return {
         ...item,
+        code: normalizeOtherOrderItemCode(canonicalOperation.entity, item.code),
         memo: fields.memoText,
         genericFlg: fields.genericFlg,
         userComment: fields.userComment,
@@ -484,6 +522,16 @@ export async function mutateOrderBundles(params: {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
   const normalizedOperations = params.operations.map(normalizeOrderBundleOperation);
+  const classCodeValidationError = normalizedOperations
+    .map(validateOperationClassCode)
+    .find((message): message is string => Boolean(message));
+  if (classCodeValidationError) {
+    return {
+      ok: false,
+      runId,
+      message: classCodeValidationError,
+    };
+  }
   if (normalizedOperations.some((operation) => hasUnsupportedSelectionCommentParameterInOperation(operation))) {
     return {
       ok: false,

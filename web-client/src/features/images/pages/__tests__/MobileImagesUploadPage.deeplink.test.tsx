@@ -70,6 +70,9 @@ describe('MobileImagesUploadPage deeplink fallback', () => {
     await waitFor(() => {
       expect(vi.mocked(fetchPatientImageList)).toHaveBeenCalledWith('123');
     });
+    const identityBar = screen.getByRole('region', { name: '患者識別帯' });
+    expect(identityBar).toBeInTheDocument();
+    expect(identityBar).toHaveTextContent('患者ID: 123');
     expect(screen.queryByText('患者文脈が引き継がれていないため、この画面だけでは再開できません。戻り導線から患者を選び直してください。')).not.toBeInTheDocument();
     expect(document.querySelector('[data-test-id="mobile-image-capture-input"]')).toBeEnabled();
     expect(document.querySelector('[data-test-id="mobile-image-file-input"]')).toBeEnabled();

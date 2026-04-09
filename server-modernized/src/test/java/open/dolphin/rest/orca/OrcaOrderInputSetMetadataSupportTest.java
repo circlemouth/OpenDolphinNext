@@ -18,13 +18,13 @@ class OrcaOrderInputSetMetadataSupportTest {
                 IInfoModel.ENTITY_BASE_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("110", LOGGER).entity());
         assertEquals(
-                OrcaChargeClassCanonicalSupport.BASE_CHARGE_CLASS_NAME,
+                OrcaMedicalClassCatalog.BASE_CHARGE_LABEL,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("124", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_INSTRACTION_CHARGE_ORDER,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("130", LOGGER).entity());
         assertEquals(
-                OrcaChargeClassCanonicalSupport.INSTRUCTION_CHARGE_CLASS_NAME,
+                OrcaMedicalClassCatalog.INSTRUCTION_CHARGE_LABEL,
                 OrcaOrderInputSetMetadataSupport.resolveClassMetadata("149", LOGGER).className());
         assertEquals(
                 IInfoModel.ENTITY_TREATMENT,

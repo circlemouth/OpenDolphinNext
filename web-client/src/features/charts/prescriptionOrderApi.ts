@@ -13,7 +13,9 @@ import {
 import {
   isOrderBundleCommentCode,
   isUnknownStructuredPrescriptionClaimCommentFamily,
+  normalizeStructuredPrescriptionClaimCommentNote,
   requiresStructuredPrescriptionClaimCommentNote,
+  validateStructuredPrescriptionClaimCommentNote,
 } from './orcaCommentCarrierRules';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 
@@ -129,7 +131,6 @@ type StoredRpMeta = {
   refillCount?: 1 | 2 | 3;
   refillPattern?: PrescriptionRefillPattern;
   doctorComment?: string;
-  usageCode?: string;
   claimComments?: Array<{ code?: string; name?: string; note?: string; lowerFields?: PrescriptionLowerFields }>;
   lowerFields?: PrescriptionLowerFields;
 };
@@ -312,8 +313,10 @@ const toClaimComment = (item: OrderBundleItem): PrescriptionClaimComment => ({
   id: createStableId('claim'),
   code: item.code?.trim() || undefined,
   name: item.name?.trim() || '',
-  note: item.memo?.trim() || undefined,
+  note: item.structuredCommentValue?.trim() || undefined,
 });
+
+const DEFAULT_GENERIC_CHANGE_ALLOWED = true;
 
 const buildEmptyDrug = (): PrescriptionDrug => ({
   rowId: createStableId('drug'),
@@ -324,7 +327,7 @@ const buildEmptyDrug = (): PrescriptionDrug => ({
   numberCode: undefined,
   numberCodeSystem: undefined,
   numberCodeName: undefined,
-  genericChangeAllowed: true,
+  genericChangeAllowed: DEFAULT_GENERIC_CHANGE_ALLOWED,
   isGeneralNamePrescription: false,
   drugComment: '',
   claimComments: [],
@@ -368,11 +371,14 @@ const normalizeClaimComments = (comments: PrescriptionClaimComment[]) => {
     const key = `${code}|${name}`;
     if (seen.has(key)) return;
     seen.add(key);
+    const trimmedNote = comment.note?.trim() || undefined;
+    const normalizedStructuredNote = normalizeStructuredPrescriptionClaimCommentNote(code, trimmedNote);
     next.push({
       ...comment,
       id: comment.id || createStableId('claim'),
       code: code || undefined,
       name,
+      note: normalizedStructuredNote ?? trimmedNote,
     });
   });
   return next;
@@ -441,6 +447,16 @@ const findFirstStructuredPrescriptionClaimCommentIssue = (
           message: `${code} 系コメントは補足値が必須です。`,
         };
       }
+      const noteFormatIssue = validateStructuredPrescriptionClaimCommentNote(code, comment.note);
+      if (noteFormatIssue) {
+        return {
+          rpIndex,
+          drugIndex: -1,
+          commentIndex,
+          commentCode: code,
+          message: `${code} 系コメント: ${noteFormatIssue}`,
+        };
+      }
     }
     for (let drugIndex = 0; drugIndex < rp.drugs.length; drugIndex += 1) {
       const drug = rp.drugs[drugIndex];
@@ -464,6 +480,16 @@ const findFirstStructuredPrescriptionClaimCommentIssue = (
             commentIndex,
             commentCode: code,
             message: `${code} 系コメントは補足値が必須です。`,
+          };
+        }
+        const noteFormatIssue = validateStructuredPrescriptionClaimCommentNote(code, comment.note);
+        if (noteFormatIssue) {
+          return {
+            rpIndex,
+            drugIndex,
+            commentIndex,
+            commentCode: code,
+            message: `${code} 系コメント: ${noteFormatIssue}`,
           };
         }
       }
@@ -548,7 +574,7 @@ const toRpFromBundle = (bundle: OrderBundle): PrescriptionRp => {
     location: classParsed.location,
     category: classParsed.category,
     usage: bundle.admin?.trim() || '',
-    usageCode: rpMeta?.usageCode ?? (bundle.adminCode?.trim() || undefined),
+    usageCode: bundle.adminCode?.trim() || undefined,
     daysOrTimes: bundle.bundleNumber?.trim() || '1',
     remark: memoParsed.text,
     refillCount: refillCount === 1 || refillCount === 2 || refillCount === 3 ? refillCount : undefined,
@@ -646,6 +672,7 @@ const toPrescriptionRpFromOperation = (operation: OrderBundleOperation, started?
       quantity: item.quantity,
       unit: item.unit,
       memo: item.memo,
+      structuredCommentValue: item.structuredCommentValue,
       genericFlg: item.genericFlg,
       userComment: item.userComment,
       rowRole: item.rowRole,
@@ -656,7 +683,6 @@ const toPrescriptionRpFromOperation = (operation: OrderBundleOperation, started?
 const normalizeRpMeta = (
   rp: PrescriptionRp,
   _doctorComment: string,
-  options: { includeUsageCode?: boolean } = {},
 ): StoredRpMeta => {
   const lowerFields = hasAnyLowerField({
     lowerDrugCode: rp.lowerDrugCode,
@@ -681,7 +707,6 @@ const normalizeRpMeta = (
     refillCount: rp.refillCount,
     refillPattern: rp.refillPattern,
     doctorComment: trimmedDoctorComment || undefined,
-    usageCode: options.includeUsageCode === false ? undefined : rp.usageCode?.trim() || undefined,
     claimComments: normalizeClaimComments(rp.claimComments ?? []).map((comment) => ({
       code: comment.code,
       name: comment.name,
@@ -708,13 +733,12 @@ const normalizeRpMeta = (
   };
 };
 
-const shouldKeepRpMeta = (rpMeta: StoredRpMeta, options: { includeUsageCode?: boolean } = {}) =>
+const shouldKeepRpMeta = (rpMeta: StoredRpMeta) =>
   Boolean(
     rpMeta.rpId ||
       rpMeta.refillCount ||
       rpMeta.refillPattern ||
       (rpMeta.doctorComment && rpMeta.doctorComment.trim()) ||
-      (options.includeUsageCode !== false && rpMeta.usageCode && rpMeta.usageCode.trim()) ||
       (rpMeta.claimComments && rpMeta.claimComments.length > 0) ||
       hasAnyLowerField(rpMeta.lowerFields),
   );
@@ -837,6 +861,7 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
         quantity: '',
         unit: '',
         memo: `${RX_CLAIM_LINK_PREFIX}${drugIndex}`,
+        structuredCommentValue: comment.note?.trim() || undefined,
       });
     });
   });
@@ -847,6 +872,7 @@ const toOrderBundleItems = (rp: PrescriptionRp): OrderBundleItem[] => {
       quantity: '',
       unit: '',
       memo: `${RX_CLAIM_LINK_PREFIX}${RX_RP_CLAIM_LINK_TARGET}`,
+      structuredCommentValue: comment.note?.trim() || undefined,
     });
   });
   return items;
@@ -898,12 +924,12 @@ export const buildPrescriptionMutationOperations = (order: PrescriptionOrder): O
 
 export const buildPrescriptionOrderSendBundles = (order: PrescriptionOrder): OrderBundle[] =>
   normalizePrescriptionOrder(order).rps.map((rp) => {
-    const rpMeta = normalizeRpMeta(rp, order.doctorComment, { includeUsageCode: false });
+    const rpMeta = normalizeRpMeta(rp, order.doctorComment);
     const memo = withJsonMetaLine(
       rp.remark.trim(),
       RX_RP_META_PREFIX,
       rpMeta,
-      shouldKeepRpMeta(rpMeta, { includeUsageCode: false }),
+      shouldKeepRpMeta(rpMeta),
     );
     return {
       entity: 'medOrder',
@@ -1099,6 +1125,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
         quantity: '',
         unit: '',
         memo: `${RX_CLAIM_LINK_PREFIX}${drugIndex}`,
+        structuredCommentValue: comment.note?.trim() || undefined,
       }));
       return [mainItem, ...commentItems];
     });
@@ -1108,7 +1135,6 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
         rp.refillCount === 1 || rp.refillCount === 2 || rp.refillCount === 3 ? rp.refillCount : undefined,
       refillPattern: rp.refillPattern ?? undefined,
       doctorComment: rp.doctorComment?.trim() || undefined,
-      usageCode: rp.usageCode?.trim() || undefined,
       claimComments: (rp.claimComments ?? []).map((comment) => ({
         code: comment.code?.trim() || undefined,
         name: comment.text?.trim() || '',
@@ -1144,6 +1170,7 @@ const toSourceBundlesFromServerOrder = (order: ServerPrescriptionOrder): OrderBu
           quantity: '',
           unit: '',
           memo: `${RX_CLAIM_LINK_PREFIX}${RX_RP_CLAIM_LINK_TARGET}`,
+          structuredCommentValue: comment.note?.trim() || undefined,
         })),
         ...drugs,
       ],

@@ -3,12 +3,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.6rem 0.85rem;
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
-  backdrop-filter: blur(10px);
+  padding: 0.72rem 0.95rem;
+  border-radius: var(--ui-radius-lg);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--ui-shadow-soft);
 }
 
 .return-to-bar__main {
@@ -20,15 +19,15 @@
 }
 
 .return-to-bar__back {
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(15, 23, 42, 0.95);
-  color: white;
-  padding: 0.45rem 0.75rem;
-  border-radius: 12px;
+  border: 1px solid var(--ui-selected-border);
+  background: var(--ui-selected-bg);
+  color: var(--ui-text);
+  padding: 0.5rem 0.82rem;
+  border-radius: var(--ui-radius-md);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: inset 3px 0 0 var(--ui-selected-rail);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -36,14 +35,13 @@
 .return-to-bar__back:hover,
 .return-to-bar__back:focus-visible {
   outline: none;
-  transform: translateY(-1px);
-  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.22);
+  background: rgba(219, 234, 254, 0.78);
 }
 
 .return-to-bar__hint {
-  color: #334155;
-  font-weight: 700;
-  font-size: 0.92rem;
+  color: var(--ui-text-muted);
+  font-weight: 600;
+  font-size: 0.88rem;
   line-height: 1.4;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -58,21 +56,21 @@
 }
 
 .return-to-bar__link {
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  background: rgba(248, 250, 252, 0.9);
-  color: #0f172a;
-  padding: 0.35rem 0.6rem;
-  border-radius: 999px;
-  font-weight: 800;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--ui-text);
+  padding: 0.38rem 0.65rem;
+  border-radius: var(--ui-radius-sm);
+  font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .return-to-bar__link:hover,
 .return-to-bar__link:focus-visible {
   outline: none;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  background: rgba(239, 246, 255, 0.78);
+  border-color: rgba(37, 99, 235, 0.22);
 }
 
 @media (max-width: 720px) {

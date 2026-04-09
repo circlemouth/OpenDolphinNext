@@ -38,6 +38,8 @@ describe('orderCategoryRegistry', () => {
     const injClass = resolveOrderEntityDefaultClassMeta('injectionOrder');
     const baseClass = resolveOrderEntityDefaultClassMeta('baseChargeOrder');
     const instructionClass = resolveOrderEntityDefaultClassMeta('instractionChargeOrder');
+    const physiologyClass = resolveOrderEntityDefaultClassMeta('physiologyOrder');
+    const radiologyClass = resolveOrderEntityDefaultClassMeta('radiologyOrder');
 
     expect(medUi.defaultMasterSearchType).toBe('drug');
     expect(medRule.requiresUsage).toBe(true);
@@ -45,6 +47,8 @@ describe('orderCategoryRegistry', () => {
     expect(injClass?.classCode).toBe('310');
     expect(baseClass).toEqual({ classCode: '110', classCodeSystem: 'Claim007', className: '基本診療料' });
     expect(instructionClass).toEqual({ classCode: '130', classCodeSystem: 'Claim007', className: '医学管理等' });
+    expect(physiologyClass).toEqual({ classCode: '600', className: '検査' });
+    expect(radiologyClass).toEqual({ classCode: '700', className: '画像診断' });
     expect(resolveOrderEntityEtensuCategory('radiologyOrder')).toBe('7');
     expect([...ORCA_SEND_ORDER_ENTITIES].sort()).toEqual(
       [

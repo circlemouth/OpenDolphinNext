@@ -88,29 +88,26 @@ final class OrcaOrderBundleMutationSupport {
         bundle.setAdminMemo(operation.getAdminMemo());
         bundle.setMemo(operation.getMemo());
         String entity = resolveEntity(operation);
-        OrcaChargeClassSupport.ChargeClassMeta chargeClassMeta = OrcaChargeClassSupport.resolveCanonicalChargeClassMeta(
-                entity,
-                operation.getClassCode(),
-                resolvePrimaryItemCategory(operation));
+        OrcaMedicalClassCatalog.ChargeClassMeta chargeClassMeta =
+                OrcaOrderBundleRequestSupport.hasText(operation.getClassCode())
+                        ? OrcaMedicalClassCatalog.resolveChargeClassMeta(
+                                entity,
+                                operation.getClassCode(),
+                                resolvePrimaryItemCategory(operation))
+                        : null;
         String classCode = chargeClassMeta != null
                 ? chargeClassMeta.classCode()
-                : OrcaChargeClassCanonicalSupport.canonicalClassCode(entity, operation.getClassCode());
+                : OrcaMedicalClassCatalog.resolveCatalogClassCode(entity, operation.getClassCode());
         if (OrcaOrderBundleRequestSupport.hasText(classCode)) {
             bundle.setClassCode(classCode);
             bundle.setClassCodeSystem(ClaimConst.CLASS_CODE_ID);
         }
         String canonicalClassName = chargeClassMeta != null
                 ? chargeClassMeta.className()
-                : OrcaOrderBundleRequestSupport.resolveCanonicalClassName(
-                        entity,
-                        bundle.getClassCode(),
-                        OrcaChargeClassCanonicalSupport.canonicalClassName(
-                                entity,
-                                bundle.getClassCode(),
-                                operation.getClassName()));
+                : OrcaMedicalClassCatalog.resolveCatalogClassName(entity, bundle.getClassCode());
         if (OrcaOrderBundleRequestSupport.hasText(canonicalClassName)) {
             bundle.setClassName(canonicalClassName);
-        } else if (!OrcaChargeClassSupport.isChargeEntity(entity)
+        } else if (!OrcaMedicalClassCatalog.isChargeEntity(entity)
                 && OrcaOrderBundleRequestSupport.hasText(operation.getBundleName())) {
             bundle.setClassName(operation.getBundleName());
         }
