@@ -31,5 +31,7 @@
   - evidence pack と quick win 実装を統括する Codex 用プロンプト。
 - `chatgpt_prompt_phase0_product_contract_20260329.txt`
   - auth 例外 matrix、redirect reason taxonomy、lost-context matrix、feedback copy、a11y minimum をコード変更前に固めるための prompt。
+- `orca_remaining_tasks_execution_package/`
+  - ORCA 再検証の未解決タスクを、実装・検証・同期まで完遂する execution package。`01_codex_supervisor_prompt.txt`、`02_execution_plan.md`、`03_detailed_remaining_task_spec.md`、`04_acceptance_and_verification_matrix.md`、`05_subagent_prompts.md`、`06_final_report_template.md` を収録する。
 - `orca_codex_completion_package/`
   - ORCA 整合修復の完遂に使う development document set。`01_codex_supervisor_prompt.txt`、`02_subagent_prompts.md`、`03_development_spec.md`、`04_verification_matrix.md` を収録する。

@@ -1,0 +1,164 @@
+あなたは OpenDolphinNext の ORCA残タスク完遂を担当する **Codex 統括エージェント** です。
+今回の目的は、最新の再検証で未解消と判定された残タスクを **設計・実装・テスト・help/docs 同期・証跡収集まで含めて全部完了** させることです。
+
+まず最初に次を読むこと。
+- `02_execution_plan.md`
+- `03_detailed_remaining_task_spec.md`
+- `04_acceptance_and_verification_matrix.md`
+- `05_subagent_prompts.md`
+- `06_final_report_template.md`
+
+# 非交渉ルール
+- 根拠は **現在コード** と上記ドキュメントだけ
+- hidden report / 過去レビュー本文 / 会話要約を根拠にしない
+- 後方互換は不要
+- 過去の DB 遺産はない前提で production-ready に直す
+- build 生成物は無視し、コードだけを見る
+- broad range / broad regex / legacy fallback / resurrection を残さない
+- `catalog にある` だけで完了扱いにしない
+- `save / send / server mutation / read / help / test` が閉じるまで完了宣言しない
+- ログなしで test/build/verify/static-analysis pass と主張しない
+- docs/help/tests を後回しにしない
+
+# ORCA仕様参照起点
+server 側で ORCA wire / XML / REST 送受信判断が必要なときは、repo の current code とあわせて以下を起点に参照してよい。
+https://www.orca.med.or.jp/receipt/users/tec/api/overview.html
+
+# 今回の完了目標
+次をすべて達成すること。
+
+1. injection の `admin/adminCode/adminMemo/speed` を local save/fetch では保持し、wire には出さない
+2. med usage send-block を first-class prescription save / send / server resource まで閉じる
+3. RP-level structured claim comment `note` を source bundle 経由でも round-trip させる
+4. otherOrder を explicit local-only contract に置き換え、legacy `800..890` / `8...|18...` を除去する
+5. surgery `501/502` standalone と rowRole `material` semantics を client/server/fetch で一致させる
+6. testOrder を save/send/server 共通の exact fail-close にする
+7. SoT の重複 canonicalization を整理し、charge/radiology canonicalization を catalog 委譲へ寄せる
+8. stale help / tests / notes を current behavior に同期する
+9. no-regression 領域を壊さない
+10. 必須テスト、build、verify、`-Pstatic-analysis verify` のログを残す
+
+# 実行体制
+必ずサブエージェントを最大限活用すること。最低でも以下の 5 本を並列で使う。
+- Agent A: Contract Architect
+- Agent B: Prescription / Injection Implementer
+- Agent C: Bundle Grammar Implementer
+- Agent D: SoT / Docs & Tests Implementer
+- Agent E: Final Auditor
+
+各エージェントへの指示には `05_subagent_prompts.md` を使うこと。
+
+# 統括の作業順
+1. `03` と `04` を読み、実行計画を 10 行以内で要約する
+2. Agent A〜D を起動し、まず「変更案・対象ファイル・依存関係」を回収する
+3. 依存関係を整理して、以下の順で統合する
+   - Phase 1: injection / med / claim comment
+   - Phase 2: surgery / otherOrder / testOrder
+   - Phase 3: SoT cleanup / help / tests / notes / grep gate
+   - Phase 4: full verification / evidence / final audit
+4. 各 phase ごとに targeted tests を回す
+5. 最後に full tests / build / verify / static-analysis / grep gate を回す
+6. Agent E に最終監査させ、自分でも残件 0 を確認する
+7. 1 項目でも未達なら完了宣言せず修正ループを続ける
+
+# 変更方針
+## injection
+- `admin/adminCode/adminMemo/speed` は local-only
+- local save/fetch は可
+- send payload / XML には出さない
+- `admin -> adminCode required` の server logic を除去する
+- help/tests を同期する
+
+## med
+- usage 系は local-only
+- send row を作らない
+- server resource は usageCode を必須扱いしない
+- editor restore bug を直す
+
+## RP-level claim comment
+- `StoredRpMeta.claimComments` を保持し、source bundle keep 条件に入れる
+- `85/831` note が link marker に化けないようにする
+- unknown family reject は維持する
+
+## otherOrder
+- legacy `800..890` / `8...|18...` を削除する
+- explicit local-only contract に置き換える
+- classCode は validation 根拠に使わない。型都合で必要なら shared local-only sentinel を使う
+- rowRole は `main/comment` のみ
+- send-block は維持
+
+## surgery
+- allow=`500/501/502/510`, block=`520/540/541/542`
+- `501/502` standalone を許可
+- canonical rowRole は `main/material/comment`
+- `material` を `main` や `auxiliary` に揺らさない
+- validation / persistence / fetch / display の全部で同じ resolver を使う
+
+## testOrder
+- allow=`600/601/602/603/610`
+- reject=`640/643` と allowlist 外全体
+- save/send/server が同じ helper/table を見る
+
+## SoT / canonicalization
+- client の `orderRpRequirements.ts` 独自 canonicalization を catalog 委譲へ寄せる
+- server の charge/radiology canonicalization map を catalog 委譲へ寄せる
+- stale helper は削除または本実装へ寄せる
+
+## docs / tests / notes
+- injection help を local-only 契約へ直す
+- `orderBundleOrcaSupport.test.tsx` を同期
+- `orderSendSmoke.test.ts` の旧注射 usage row 期待を削除
+- `chartsActionBar.orca-send.test.tsx` の stale treatment bodyPart expectation を current reject 契約へ直す
+- notes の文言を current class map に合わせる
+
+# 推奨コマンド
+## client
+```bash
+cd web-client
+npm ci
+npm run typecheck
+npm run test:ci -- src/features/charts/__tests__/prescriptionOrderApi.test.ts
+npm run test:ci -- src/features/charts/__tests__/orderRpNormalization.test.ts
+npm run test:ci -- src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx
+npm run test:ci -- src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx
+npm run test:ci -- src/features/charts/__tests__/orderBundleBodyPart.test.tsx
+npm run test:ci -- src/features/charts/__tests__/orderSendSmoke.test.ts
+npm run test:ci
+npm run build
+```
+
+## server
+```bash
+mvn -f pom.server-modernized.xml -pl server-modernized -am \
+  -Dtest=OrcaPrescriptionOrderResourceTest,OrcaOrderBundleRequestSupportTest,OrcaOrderBundleMutationExecutionSupportTest,OrcaOrderBundleFetchSupportTest,OrcaOrderBundle600SubtypeSupportTest,OrcaOrderBundleMutationSupportTest,OrcaOrderBundleRecommendationSupportTest,OrcaOrderBundleResourceTest \
+  -Dsurefire.failIfNoSpecifiedTests=false test
+
+mvn -f pom.server-modernized.xml -pl server-modernized -am test
+mvn -f pom.server-modernized.xml -pl server-modernized -am verify
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
+```
+
+# grep gate
+以下は説明できない hit があれば未完了。
+
+```bash
+rg -n "800\.\.890|8\.\.\.\|18\.\.\." web-client/src server-modernized/src/main
+rg -n "isSendableInjectionAdminCode" web-client/src server-modernized/src/main
+rg -n "usageCode\s*<-\s*adminMemo|adminMemo.*usageCode|usageCode.*adminMemo" web-client/src
+rg -n "4101|4102|4103" web-client/src/features/charts/__tests__ server-modernized/src/test
+rg -n "adminCode required|usageCode required" server-modernized/src/main/java/open/dolphin/rest/orca
+rg -n "放射線" web-client/src web-client/notes server-modernized/src
+rg -n "resolveCanonicalClassName|OrcaChargeClassCanonicalSupport|OrcaChargeClassSupport" server-modernized/src/main/java/open/dolphin/rest/orca
+```
+
+# 完了判定
+以下を 1 つでも満たさない場合は **完了失敗**。
+- `03_detailed_remaining_task_spec.md` の task が全部完了
+- `04_acceptance_and_verification_matrix.md` の AC が全部達成
+- stale help/tests/docs が消えている
+- targeted tests / full tests / build / verify / static-analysis のログがある
+- grep gate の説明できない hit が 0
+- Final Auditor が未解決 0 件と判定している
+
+# 最終報告フォーマット
+`06_final_report_template.md` を使うこと。
