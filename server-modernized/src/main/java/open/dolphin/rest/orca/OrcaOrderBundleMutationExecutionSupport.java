@@ -38,12 +38,14 @@ final class OrcaOrderBundleMutationExecutionSupport {
             if (op == null || op.getOperation() == null || op.getOperation().isBlank()) {
                 throw validationFailure.invalid("operation", "operation is required");
             }
+            if (op.getEntity() == null || op.getEntity().isBlank()) {
+                throw validationFailure.invalid("entity", "entity is required");
+            }
             String operation = op.getOperation().toLowerCase(Locale.ROOT);
             if (!OrcaOrderBundleRequestSupport.isSupportedOperation(operation)) {
                 throw validationFailure.invalid("operation", "operation is invalid");
             }
-            if (op.getEntity() != null && !op.getEntity().isBlank()
-                    && !OrcaOrderBundleRequestSupport.isValidEntity(op.getEntity())) {
+            if (!OrcaOrderBundleRequestSupport.isValidEntity(op.getEntity())) {
                 throw validationFailure.invalid("entity", "entity is invalid");
             }
             validateOperationStructure(op, validationFailure);
@@ -140,7 +142,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
                     throw validationFailure.invalid("items", invalidCodeMessage(canonicalEntity, rowRole));
                 }
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)) {
-                    hasBodyPart = true;
+                    throw validationFailure.invalid("bodyPart", "bodyPart rows must use bodyPart field");
                 } else if (OrcaOrderBundleRequestSupport.ROW_ROLE_MAIN.equals(rowRole)) {
                     String itemCategory = resolveEffectiveItemCategory(item, parsedMemo);
                     if (OrcaMedicalClassCatalog.isChargeEntity(canonicalEntity)
@@ -160,7 +162,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
                     throw validationFailure.invalid("items", "auxiliary rows require sendable 9-digit code");
                 }
                 if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(rowRole)) {
-                    throw validationFailure.invalid("bodyPart", "bodyPart must use 002 code");
+                    throw validationFailure.invalid("bodyPart", "bodyPart rows must use bodyPart field");
                 }
             }
         }
@@ -319,7 +321,7 @@ final class OrcaOrderBundleMutationExecutionSupport {
     private static String invalidCodeMessage(String canonicalEntity, String rowRole) {
         String normalizedRole = OrcaOrderBundleRequestSupport.normalizeRowRole(rowRole);
         if (IInfoModel.ENTITY_OTHER_ORDER.equals(canonicalEntity)) {
-            return "otherOrder items must use LOCAL_OTHER:... local-only codes and do not accept classCode/bodyPart/material/comment";
+            return "otherOrder items must use LOCAL_OTHER:... local-only codes and only accept main/comment rows without classCode/bodyPart/material";
         }
         if (OrcaOrderBundleRequestSupport.ROW_ROLE_BODY_PART.equals(normalizedRole)) {
             return "bodyPart must use 002 code";

@@ -1,9 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
 import { validateBundleForm } from '../OrderBundleEditPanel';
-import { resolveOrderEntityDefaultClassMeta } from '../orderCategoryRegistry';
 
 type BundleFormState = Parameters<typeof validateBundleForm>[0]['form'];
+
+const ENTITY_CLASS_SEED: Record<string, { classCode: string; classCodeSystem?: string; className: string }> = {
+  injectionOrder: { classCode: '310', classCodeSystem: 'Claim007', className: '注射' },
+  treatmentOrder: { classCode: '400', className: '処置' },
+  generalOrder: { classCode: '400', className: '処置' },
+  surgeryOrder: { classCode: '500', className: '手術' },
+  testOrder: { classCode: '600', className: '検査' },
+  laboTest: { classCode: '600', className: '検査' },
+  physiologyOrder: { classCode: '600', className: '検査' },
+  bacteriaOrder: { classCode: '600', className: '検査' },
+  radiologyOrder: { classCode: '700', className: '画像診断' },
+  baseChargeOrder: { classCode: '110', classCodeSystem: 'Claim007', className: '基本診療料' },
+  instractionChargeOrder: { classCode: '130', classCodeSystem: 'Claim007', className: '医学管理等' },
+};
 
 const baseForm: BundleFormState = {
   bundleName: '',
@@ -26,7 +39,7 @@ const baseForm: BundleFormState = {
 const withEntityClassSeed = (entity: string, form: BundleFormState): BundleFormState => {
   if (entity === 'medOrder' || entity === 'otherOrder') return form;
   if (form.classCode?.trim()) return form;
-  const classMeta = resolveOrderEntityDefaultClassMeta(entity);
+  const classMeta = ENTITY_CLASS_SEED[entity];
   if (!classMeta) return form;
   return {
     ...form,
@@ -279,6 +292,20 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_class_code']);
   });
 
+  it('injectionOrder: classCode 未指定は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        admin: '静注',
+        adminCode: '4101',
+        items: [{ code: '620000001', name: 'ビタミン注射', quantity: '1', unit: '回', memo: '' }],
+      },
+      entity: 'injectionOrder',
+      bundleLabel: '注射オーダー名',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['invalid_injection_class_code']);
+  });
+
   it('injectionOrder: 投与指示だけでも local-only 保存を阻害しない', () => {
     const issues = validateBundleForm({
       form: withEntityClassSeed('injectionOrder', {
@@ -491,6 +518,20 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['missing_test_subtype']);
   });
 
+  it('bacteriaOrder: classCode が空なら保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: 'Bacteria',
+        subtype: 'culture',
+        items: [{ code: '160000010', name: 'Culture', quantity: '1', unit: 'count', memo: '' }],
+      },
+      entity: 'bacteriaOrder',
+      bundleLabel: '検査オーダー',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_class_code']);
+  });
+
   it('bacteriaOrder: 許可されない subtype は保存前に block する', () => {
     const issues = validateBundleForm({
       form: withEntityClassSeed('bacteriaOrder', {
@@ -602,6 +643,19 @@ describe('validateBundleForm', () => {
     expect(issues.map((issue) => issue.key)).toEqual(['invalid_class_code']);
   });
 
+  it('testOrder: classCode 未指定は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '検査',
+        items: [{ code: '160000010', name: 'Lab', quantity: '1', unit: 'count', memo: '' }],
+      },
+      entity: 'testOrder',
+      bundleLabel: '検査オーダー',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_class_code']);
+  });
+
   it('surgeryOrder: 501/502 は standalone material のみでも保存前 block しない', () => {
     const issues = validateBundleForm({
       form: {
@@ -700,6 +754,19 @@ describe('validateBundleForm', () => {
       bundleLabel: '算定',
     });
     expect(issues.map((issue) => issue.key)).toContain('invalid_charge_class_name');
+  });
+
+  it('baseChargeOrder: classCode 未指定は保存前に block する', () => {
+    const issues = validateBundleForm({
+      form: {
+        ...baseForm,
+        bundleName: '基本料',
+        items: [{ code: '110000110', name: '初診料', quantity: '1', unit: '回', memo: '', masterCategory: '110' }],
+      },
+      entity: 'baseChargeOrder',
+      bundleLabel: '算定',
+    });
+    expect(issues.map((issue) => issue.key)).toEqual(['missing_charge_class_code']);
   });
 
   it('parameter 付き選択式コメントは保存前に reject する', () => {

@@ -354,16 +354,9 @@ final class OrcaOrderBundleMutationSupport {
     }
 
     private static String resolveEntity(OrderBundleMutationRequest.BundleOperation operation) {
-        String normalizedEntity = operation.getEntity() != null && !operation.getEntity().isBlank()
+        return operation.getEntity() != null && !operation.getEntity().isBlank()
                 ? OrcaOrderBundleRequestSupport.normalizeEntityStorage(operation.getEntity())
                 : null;
-        if (OrcaOrderBundleRequestSupport.isPhysiologyOrder(normalizedEntity)) {
-            return normalizedEntity;
-        }
-        if (normalizedEntity != null) {
-            return normalizedEntity;
-        }
-        return IInfoModel.ENTITY_TREATMENT;
     }
 
     private static String resolveTitle(OrderBundleMutationRequest.BundleOperation operation) {

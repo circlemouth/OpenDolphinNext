@@ -196,7 +196,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must use LOCAL_OTHER:... local-only codes and do not accept classCode/bodyPart/material/comment", body.get("message"));
+        assertEquals("otherOrder items must use LOCAL_OTHER:... local-only codes and only accept main/comment rows without classCode/bodyPart/material", body.get("message"));
     }
 
     @Test
@@ -259,7 +259,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals("items", body.get("field"));
-        assertEquals("otherOrder items must use LOCAL_OTHER:... local-only codes and do not accept classCode/bodyPart/material/comment", body.get("message"));
+        assertEquals("otherOrder items must use LOCAL_OTHER:... local-only codes and only accept main/comment rows without classCode/bodyPart/material", body.get("message"));
     }
 
     @Test
@@ -392,7 +392,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals(IInfoModel.ENTITY_OTHER_ORDER, entry.getEntity());
         assertNull(entry.getClassCode());
         assertNull(entry.getClassCodeSystem());
-        assertEquals("other-main", entry.getClassName());
+        assertNull(entry.getClassName());
         assertEquals("other-main", entry.getBundleName());
         assertEquals(1, entry.getItems().size());
         assertEquals("LOCAL_OTHER:CERTIFICATE_FEE", entry.getItems().get(0).getCode());

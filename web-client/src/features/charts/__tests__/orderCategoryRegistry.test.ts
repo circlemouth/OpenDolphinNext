@@ -76,7 +76,6 @@ describe('orderCategoryRegistry', () => {
     const otherPolicy = resolveOrderEntityMasterSearchPolicy('otherOrder');
     const testPolicy = resolveOrderEntityMasterSearchPolicy('testOrder');
     const chargePolicy = resolveOrderEntityMasterSearchPolicy('baseChargeOrder');
-    const instructionChargePolicy = resolveOrderEntityMasterSearchPolicy('instractionChargeOrder');
     const laboPolicy = resolveOrderEntityMasterSearchPolicy('laboTest');
     const physiologyGuidance = resolveOrderEntityPhysiologySendContractGuidance('physiologyOrder');
 
@@ -90,8 +89,6 @@ describe('orderCategoryRegistry', () => {
     expect(resolveOrderEntityUiProfile('otherOrder').supportsBodyPartSearch).toBe(false);
     expect(testPolicy.etensuCategory).toBe('6');
     expect(chargePolicy.etensuCategory).toBe('1');
-    expect(chargePolicy.classMeta).toEqual({ classCode: '110', classCodeSystem: 'Claim007', className: '\u57fa\u672c\u8a3a\u7642\u6599' });
-    expect(instructionChargePolicy.classMeta).toEqual({ classCode: '130', classCodeSystem: 'Claim007', className: '\u533b\u5b66\u7ba1\u7406\u7b49' });
     expect(laboPolicy).toEqual(testPolicy);
     expect(physiologyGuidance).toEqual(
       expect.objectContaining({
@@ -143,25 +140,19 @@ describe('orderCategoryRegistry', () => {
   it('keeps charge canonical meta fail-closed for invalid explicit input and preserves valid explicit mappings', () => {
     expect(resolveCanonicalChargeClassMetaRaw({ entity: 'baseChargeOrder', classCode: '130' })).toBeNull();
     expect(resolveCanonicalChargeClassMetaRaw({ entity: 'instractionChargeOrder', itemCategory: '110' })).toBeNull();
+    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'baseChargeOrder', classCode: '120', itemCategory: '110' })).toBeNull();
+    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'instractionChargeOrder', classCode: '140', itemCategory: '130' })).toBeNull();
     expect(resolveCanonicalChargeClassMetaRaw({ entity: 'baseChargeOrder', classCode: '120' })).toEqual({
       classCode: '120',
       classCodeSystem: 'Claim007',
       className: '\u57fa\u672c\u8a3a\u7642\u6599',
     });
-    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'instractionChargeOrder', itemCategory: '140' })).toEqual({
+    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'instractionChargeOrder', classCode: '140', itemCategory: '140' })).toEqual({
       classCode: '140',
       classCodeSystem: 'Claim007',
       className: '\u533b\u5b66\u7ba1\u7406\u7b49',
     });
-    expect(resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder' })).toEqual({
-      classCode: '110',
-      classCodeSystem: 'Claim007',
-      className: '\u57fa\u672c\u8a3a\u7642\u6599',
-    });
-    expect(resolveCanonicalChargeClassMeta({ entity: 'instractionChargeOrder' })).toEqual({
-      classCode: '130',
-      classCodeSystem: 'Claim007',
-      className: '\u533b\u5b66\u7ba1\u7406\u7b49',
-    });
+    expect(resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder' })).toBeUndefined();
+    expect(resolveCanonicalChargeClassMeta({ entity: 'instractionChargeOrder' })).toBeUndefined();
   });
 });

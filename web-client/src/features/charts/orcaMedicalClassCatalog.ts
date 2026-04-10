@@ -281,34 +281,25 @@ export const resolveCanonicalChargeClassMeta = (params: {
   itemCategory?: string | null;
 }): ChargeClassMeta | null => {
   const normalizedEntity = resolveCanonicalOrcaOrderEntity(params.entity);
+  if (!isChargeEntity(normalizedEntity)) return null;
   const explicitCategory = normalizeOrcaClassCode(params.itemCategory);
   const explicitClassCode = normalizeOrcaClassCode(params.classCode);
-  if (isChargeEntity(normalizedEntity)) {
-    if (!explicitCategory && !explicitClassCode) {
-      const defaultMeta = resolveOrcaDefaultClassMeta(normalizedEntity);
-      return defaultMeta
-        ? {
-            ...defaultMeta,
-            classCodeSystem: CHARGE_CLASS_CODE_SYSTEM,
-          }
-        : null;
-    }
-    const candidateClassCode =
-      (explicitCategory && isChargeItemCategoryCompatible(normalizedEntity, explicitCategory) ? explicitCategory : undefined) ??
-      (explicitClassCode && isChargeClassCompatible(normalizedEntity, explicitClassCode) ? explicitClassCode : undefined);
-    if (!candidateClassCode) return null;
-    const className = resolveCanonicalOrcaClassName(normalizedEntity, candidateClassCode);
-    return className ? { classCode: candidateClassCode, classCodeSystem: CHARGE_CLASS_CODE_SYSTEM, className } : null;
-  }
-  const resolvedEntity = resolveChargeEntityFromClassCode(explicitClassCode ?? explicitCategory);
-  const resolvedClassCode = explicitClassCode ?? explicitCategory;
-  if (!resolvedEntity || !resolvedClassCode) return null;
-  const className = resolveCanonicalOrcaClassName(resolvedEntity, resolvedClassCode);
-  return className ? { classCode: resolvedClassCode, classCodeSystem: CHARGE_CLASS_CODE_SYSTEM, className } : null;
+  if (!explicitClassCode || !isChargeClassCompatible(normalizedEntity, explicitClassCode)) return null;
+  if (explicitCategory && !isChargeItemCategoryCompatible(normalizedEntity, explicitCategory)) return null;
+  if (explicitCategory && explicitCategory !== explicitClassCode) return null;
+  const className = resolveCanonicalOrcaClassName(normalizedEntity, explicitClassCode);
+  return className ? { classCode: explicitClassCode, classCodeSystem: CHARGE_CLASS_CODE_SYSTEM, className } : null;
 };
 
-export const resolveChargeClassMetaFromItemCategory = (entity?: string | null, category?: string | null) =>
-  resolveCanonicalChargeClassMeta({ entity, itemCategory: category });
+export const resolveChargeClassMetaFromItemCategory = (entity?: string | null, category?: string | null) => {
+  const normalizedEntity = resolveCanonicalOrcaOrderEntity(entity);
+  const explicitCategory = normalizeOrcaClassCode(category);
+  if (!isChargeEntity(normalizedEntity) || !explicitCategory || !isChargeItemCategoryCompatible(normalizedEntity, explicitCategory)) {
+    return null;
+  }
+  const className = resolveCanonicalOrcaClassName(normalizedEntity, explicitCategory);
+  return className ? { classCode: explicitCategory, classCodeSystem: CHARGE_CLASS_CODE_SYSTEM, className } : null;
+};
 
 export const resolveCanonicalChargeClassName = (entity?: string | null, classCode?: string | null) =>
   resolveCanonicalChargeClassMeta({ entity, classCode })?.className;
