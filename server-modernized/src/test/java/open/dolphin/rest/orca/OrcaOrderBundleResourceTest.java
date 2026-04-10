@@ -425,8 +425,8 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals(Boolean.TRUE, body.get("validationError"));
-        assertEquals("items", body.get("field"));
-        assertEquals("bodyPart must use 002 code", body.get("message"));
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart rows must use bodyPart field", body.get("message"));
     }
 
     @Test
@@ -442,7 +442,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         op.setStartDate("2025-01-01");
 
         OrderBundleMutationRequest.BundleItem bodyPart = new OrderBundleMutationRequest.BundleItem();
-        bodyPart.setCode("BP001");
+        bodyPart.setCode("001001");
         bodyPart.setName("invalid-body-part");
         op.setBodyPart(bodyPart);
 
@@ -510,7 +510,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void postBundlesRejectsLegacyItemsBodyPartWhenBodyPartFieldMissing() {
+    void postBundlesRejectsLegacyBodyPartItemsWhenRadiologyClass700IsExplicit() {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
         OrderBundleMutationRequest.BundleOperation op = new OrderBundleMutationRequest.BundleOperation();
@@ -541,8 +541,8 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals(400, exception.getResponse().getStatus());
         Map<String, Object> body = getErrorBody(exception);
         assertEquals(Boolean.TRUE, body.get("validationError"));
-        assertEquals("items", body.get("field"));
-        assertEquals("bodyPart must use 002 code", body.get("message"));
+        assertEquals("bodyPart", body.get("field"));
+        assertEquals("bodyPart rows must use bodyPart field", body.get("message"));
     }
 
     @Test

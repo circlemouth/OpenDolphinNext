@@ -845,7 +845,7 @@ describe('OrderBundleEditPanel master search UI', () => {
     );
 
     expect(screen.getByText('候補対象: 画像検査 / 画像器材 / 造影薬剤')).toBeInTheDocument();
-    expect(screen.getByLabelText('検査指示')).toBeInTheDocument();
+    expect(screen.getByLabelText('検査指示（院内）')).toBeInTheDocument();
   });
 
   it('otherOrder では bodyPart 検索を表示しない', async () => {

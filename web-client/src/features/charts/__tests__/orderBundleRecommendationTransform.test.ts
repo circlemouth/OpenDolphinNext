@@ -5,6 +5,7 @@ import { toFormStateFromRecommendation } from '../OrderBundleEditPanel';
 describe('orderBundle recommendation transform', () => {
   it('recommendation の class/admin/material を form state へ保持する', () => {
     const form = toFormStateFromRecommendation(
+      'instractionChargeOrder',
       {
         bundleName: '訪問看護指示料',
         admin: '1日1回',

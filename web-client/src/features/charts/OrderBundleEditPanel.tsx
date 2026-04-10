@@ -281,17 +281,12 @@ const isUnsupportedChargeSelection = (entity: string, item?: Pick<OrderMasterSea
 const resolveChargeItemMasterCategory = (
   entity: string,
   item?: Pick<OrderBundleItem, 'masterCategory' | 'category'> | null,
-  fallbackClassCode?: string | null,
 ) => {
   if (!isChargeEntity(entity)) return undefined;
   const explicitMasterCategory = normalizeChargeMasterCategory(item?.masterCategory);
   if (explicitMasterCategory) return explicitMasterCategory;
   const explicitCategory = normalizeChargeMasterCategory(item?.category);
   if (explicitCategory) return explicitCategory;
-  const normalizedFallback = normalizeChargeMasterCategory(fallbackClassCode);
-  if (normalizedFallback && isChargeItemCategoryCompatible(entity, normalizedFallback)) {
-    return normalizedFallback;
-  }
   return undefined;
 };
 
@@ -700,8 +695,13 @@ const toFormStateFromHistoryCopy = (bundle: OrderBundle, today: string): BundleF
   };
 };
 
-export const toFormStateFromRecommendation = (template: OrderRecommendationTemplate, today: string): BundleFormState => {
+export const toFormStateFromRecommendation = (
+  entity: string,
+  template: OrderRecommendationTemplate,
+  today: string,
+): BundleFormState => {
   const chargeClassMeta = resolveCanonicalChargeClassMeta({
+    entity,
     classCode: template.classCode,
     itemCategory: template.items.find((item) => item.name?.trim() || item.code?.trim())?.masterCategory,
   });
@@ -783,7 +783,7 @@ const toOrderBundleFromInputSetDetail = (
       genericFlg: item.genericFlg,
       userComment: item.userComment,
       category: item.category,
-      masterCategory: resolveChargeItemMasterCategory(resolvedEntity, item, canonicalBundle.classCode) ?? item.masterCategory,
+      masterCategory: resolveChargeItemMasterCategory(resolvedEntity, item) ?? item.masterCategory,
       itemNumber: item.itemNumber,
       itemNumberBranch: item.itemNumberBranch,
       rowSubtype: item.rowSubtype,
@@ -1019,6 +1019,12 @@ export const validateBundleForm = ({
   const hasCommentValues = form.commentItems.some(hasAnyValue);
   const hasBodyPartValue = hasBundleBodyPartValue(form.bodyPart);
   const normalizedClassCode = form.classCode?.trim() ?? '';
+  const requiresExactClassCode =
+    canonicalEntity !== 'medOrder' &&
+    canonicalEntity !== 'otherOrder' &&
+    canonicalEntity !== 'injectionOrder' &&
+    !isChargeEntity(canonicalEntity) &&
+    getAllowedClassCodesForEntity(canonicalEntity).length > 0;
   const requiresSendableMainRow =
     rule.requiresItems &&
     canonicalEntity !== 'medOrder' &&
@@ -1033,13 +1039,16 @@ export const validateBundleForm = ({
   injectionContractIssues.forEach((issue) => {
     issues.push({ key: issue.code, message: issue.detail });
   });
-  if (
-    canonicalEntity !== 'otherOrder' &&
-    canonicalEntity !== 'injectionOrder' &&
-    normalizedClassCode &&
-    !isChargeEntity(canonicalEntity) &&
-    !isOrcaEntityClassAllowed(canonicalEntity, normalizedClassCode)
-  ) {
+  if (requiresExactClassCode && !normalizedClassCode) {
+    const allowlist = getAllowedClassCodesForEntity(canonicalEntity);
+    issues.push({
+      key: canonicalEntity === 'injectionOrder' ? 'missing_injection_class_code' : 'missing_class_code',
+      message:
+        allowlist.length > 0
+          ? `${canonicalEntity} は exact allowlist（${allowlist.join('/')}）の classCode が必須です。`
+          : `${canonicalEntity} は classCode が必須です。`,
+    });
+  } else if (requiresExactClassCode && !isOrcaEntityClassAllowed(canonicalEntity, normalizedClassCode)) {
     const allowlist = getAllowedClassCodesForEntity(canonicalEntity);
     issues.push({
       key: canonicalEntity === 'injectionOrder' ? 'invalid_injection_class_code' : 'invalid_class_code',
@@ -1169,7 +1178,12 @@ export const validateBundleForm = ({
   }
   if (isChargeEntity(canonicalEntity)) {
     const normalizedClassCode = form.classCode?.trim() ?? '';
-    if (normalizedClassCode && !isChargeClassCompatible(canonicalEntity, normalizedClassCode)) {
+    if (!normalizedClassCode) {
+      issues.push({
+        key: 'missing_charge_class_code',
+        message: 'charge bundle は explicit classCode が必須です。',
+      });
+    } else if (!isChargeClassCompatible(canonicalEntity, normalizedClassCode)) {
       issues.push({
         key: 'invalid_charge_class_code',
         message: canonicalEntity === 'baseChargeOrder'
@@ -1180,7 +1194,7 @@ export const validateBundleForm = ({
     const hasMissingChargeItemCategory = form.items.some((item) => {
       if (!hasAnyValue(item)) return false;
       const resolvedFields = resolveOrcaOrderItemFields(item);
-      const masterCategory = resolveChargeItemMasterCategory(canonicalEntity, item, normalizedClassCode);
+      const masterCategory = resolveChargeItemMasterCategory(canonicalEntity, item);
       return Boolean(resolvedFields.rowRole !== 'comment' && resolvedFields.rowRole !== 'auxiliary' && !masterCategory);
     });
     if (hasMissingChargeItemCategory) {
@@ -1191,7 +1205,7 @@ export const validateBundleForm = ({
     }
     if (
       form.items.some((item) => {
-        const category = resolveChargeItemMasterCategory(canonicalEntity, item, normalizedClassCode) ?? '';
+        const category = resolveChargeItemMasterCategory(canonicalEntity, item) ?? '';
         if (!category) return false;
         return !isChargeItemCategoryCompatible(canonicalEntity, category);
       })
@@ -1206,14 +1220,10 @@ export const validateBundleForm = ({
     const canonicalClassMeta = resolveCanonicalChargeClassMeta({
       entity: canonicalEntity,
       classCode: normalizedClassCode,
-      itemCategory: resolveChargeItemMasterCategory(
-        canonicalEntity,
-        form.items.find((item) => item.name?.trim() || item.code?.trim()),
-        normalizedClassCode,
-      ),
+      itemCategory: resolveChargeItemMasterCategory(canonicalEntity, form.items.find((item) => item.name?.trim() || item.code?.trim())),
     });
     const explicitClassName = form.className?.trim() ?? '';
-    if (!canonicalClassMeta?.className && !explicitClassName) {
+    if (normalizedClassCode && !canonicalClassMeta?.className && !explicitClassName) {
       issues.push({
         key: 'missing_charge_class_name',
         message: 'charge bundle の className を決定できません。対応する算定項目を選択してください。',
@@ -1405,7 +1415,7 @@ export function OrderBundleEditPanel({
         bundleName: form.bundleName,
         classCode: isMedOrder
           ? resolvePrescriptionClassCode(form.prescriptionTiming, form.prescriptionLocation)
-          : form.classCode?.trim() || resolveOrderEntityDefaultClassMeta(entity)?.classCode,
+          : form.classCode?.trim(),
         bundleNumber: form.bundleNumber,
         items: form.items,
       }),
@@ -2274,7 +2284,7 @@ export function OrderBundleEditPanel({
 
   const applyRecommendation = (candidate: OrderRecommendationCandidate) => {
     if (isBlocked) return;
-    const nextForm = toFormStateFromRecommendation(candidate.template, today);
+    const nextForm = toFormStateFromRecommendation(entity, candidate.template, today);
     const firstComment = candidate.template.commentItems[0] ?? { code: '', name: '', quantity: '', unit: '', memo: '' };
     setForm(nextForm);
     setSelectedUsageMasterMeta(null);
@@ -2509,7 +2519,7 @@ export function OrderBundleEditPanel({
       const chargeClassMeta = resolveCanonicalChargeClassMeta({
         entity,
         classCode: bundleForm.classCode,
-        itemCategory: resolveChargeItemMasterCategory(entity, primaryChargeItem, bundleForm.classCode),
+        itemCategory: resolveChargeItemMasterCategory(entity, primaryChargeItem),
       });
       if (chargeClassMeta) {
         return {
@@ -2527,13 +2537,7 @@ export function OrderBundleEditPanel({
           className: explicitClassName || undefined,
         };
       }
-      const mapped = resolveOrderEntityDefaultClassMeta(entity);
-      if (!mapped) return {};
-      return {
-        classCode: mapped.classCode,
-        classCodeSystem: PRESCRIPTION_CLASS_CODE_SYSTEM,
-        className: mapped.className,
-      };
+      return {};
     }
     const classCode = resolvePrescriptionClassCode(bundleForm.prescriptionTiming, bundleForm.prescriptionLocation);
     return {
@@ -3257,7 +3261,7 @@ export function OrderBundleEditPanel({
       bundleName: normalizedForm.bundleName,
       classCode: isMedOrder
         ? resolvePrescriptionClassCode(normalizedForm.prescriptionTiming, normalizedForm.prescriptionLocation)
-        : normalizedForm.classCode?.trim() || resolveOrderEntityDefaultClassMeta(entity)?.classCode,
+        : normalizedForm.classCode?.trim(),
       bundleNumber: normalizedForm.bundleNumber,
       items: normalizedForm.items,
     });

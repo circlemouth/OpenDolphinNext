@@ -243,6 +243,31 @@ class OrcaOrderBundleMutationExecutionSupportTest {
         }
     }
 
+    @Test
+    void executeRejectsMissingEntity() {
+        OrderBundleMutationRequest.BundleOperation operation = new OrderBundleMutationRequest.BundleOperation();
+        operation.setOperation("create");
+        operation.setStartDate("2026-04-04");
+        operation.setBundleName("missing-entity");
+        operation.setItems(List.of(buildItem("140000610", "procedure-a", "main")));
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> OrcaOrderBundleMutationExecutionSupport.execute(
+                        buildPayload(operation),
+                        null,
+                        null,
+                        new HashMap<>(),
+                        (operationName, field, input, required) -> new Date(0L),
+                        documentId -> null,
+                        new NoOpPersistence(),
+                        (documentId, operationName, runtimeEx) -> runtimeEx,
+                        OrcaOrderBundleMutationExecutionSupportTest::validationFailure));
+
+        assertTrue(ex.getMessage().contains("entity"));
+        assertTrue(ex.getMessage().contains("required"));
+    }
+
     private static OrderBundleMutationRequest buildPayload(OrderBundleMutationRequest.BundleOperation operation) {
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setOperations(List.of(operation));

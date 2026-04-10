@@ -582,6 +582,39 @@ describe('orderBundleApi bodyPart contract', () => {
     );
   });
 
+  it('fetch does not backfill charge class metadata without explicit classCode', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-CHARGE-FETCH-BLANK',
+          patientId: '000001',
+          bundles: [
+            {
+              entity: 'baseChargeOrder',
+              bundleName: 'BASE_CHARGE_SET',
+              bundleNumber: '1',
+              className: 'bundle fallback should not survive',
+              adminMemo: 'LOCAL_NOTE',
+              items: [{ code: '120000110', name: 'BASE_CHARGE_SET', quantity: '1', unit: 'times' }],
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOrderBundles({ patientId: '000001', entity: 'baseChargeOrder' });
+
+    expect(result.ok).toBe(true);
+    expect(result.bundles[0]?.entity).toBe('baseChargeOrder');
+    expect(result.bundles[0]?.classCode).toBeUndefined();
+    expect(result.bundles[0]?.classCodeSystem).toBeUndefined();
+    expect(result.bundles[0]?.className).toBeUndefined();
+  });
+
   it('mutation canonicalizes charge className before send', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(

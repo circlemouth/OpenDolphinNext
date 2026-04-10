@@ -66,8 +66,8 @@ mkdir -p "$OUT_DIR"
 OUT_DIR_ABS="$(cd "$OUT_DIR" && pwd)"
 ZIP_FILE="${OUT_DIR_ABS}/${REPO_NAME}-review-${RUN_ID}.zip"
 
-TRACKED_EXCLUDE_REGEX='(^|/)node_modules(/|$)|(^|/)dist(/|$)|(^|/)target(/|$)|(^|/)coverage(/|$)|(^|/)test-results(/|$)|(^|/)artifacts(/|$)|(^|/)tmp(/|$)|(^|/)\.playwright-cli(/|$)|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$|^docs/working-notes/|^docs/implementation/|^docs/managerdocs/|^docs/web-client/product-improvement/|^managerdocs_seed_bundle/'
-FORBIDDEN_ENTRY_REGEX='(^|/)node_modules(/|$)|(^|/)dist(/|$)|(^|/)target(/|$)|(^|/)coverage(/|$)|(^|/)test-results(/|$)|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$|^docs/working-notes/|^docs/implementation/|^docs/managerdocs/|^docs/web-client/product-improvement/|^managerdocs_seed_bundle/'
+TRACKED_EXCLUDE_REGEX='(^|/)node_modules(/|$)|(^|/)dist(/|$)|(^|/)target(/|$)|(^|/)coverage(/|$)|(^|/)test-results(/|$)|(^|/)artifacts(/|$)|(^|/)tmp(/|$)|(^|/)\.playwright-cli(/|$)|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$|^docs/working-notes/|^docs/web-client/product-improvement/|^managerdocs_seed_bundle/'
+FORBIDDEN_ENTRY_REGEX='(^|/)node_modules(/|$)|(^|/)dist(/|$)|(^|/)target(/|$)|(^|/)coverage(/|$)|(^|/)test-results(/|$)|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$|^docs/working-notes/|^docs/web-client/product-improvement/|^managerdocs_seed_bundle/'
 LOG_ROOT_REGEX='^(artifacts/|tmp/|\.playwright-cli/)'
 ALLOWED_LOG_ENTRY_REGEX='^(artifacts/|tmp/|\.playwright-cli/).*(\.log|.*log.*\.txt)$'
 
@@ -154,8 +154,6 @@ Tracked-file exclusions:
 - node_modules, dist, target, coverage, test-results
 - artifacts/, tmp/, .playwright-cli/ (logs are re-added separately)
 - docs/working-notes/
-- docs/implementation/
-- docs/managerdocs/
 - docs/web-client/product-improvement/
 - managerdocs_seed_bundle/
 - __MACOSX, .DS_Store, Thumbs.db
