@@ -21,11 +21,19 @@ param(
     ),
     [string[]]$ExcludeFileExtensions = @(
         ".log",
+        ".map",
+        ".tmp",
+        ".bak",
+        ".swp",
+        ".orig",
         ".tsbuildinfo",
         ".zip"
     ),
     [string[]]$ExcludeFileNames = @(
-        ".env.local"
+        ".env.local",
+        ".DS_Store",
+        "Thumbs.db",
+        "desktop.ini"
     )
 )
 
@@ -114,8 +122,51 @@ function Build-SourceArchive {
                 [System.IO.Compression.CompressionLevel]::Optimal
             ) | Out-Null
         }
+    }
+    finally {
+        $archive.Dispose()
+    }
 
-        Write-Host "created: $zipPath" -ForegroundColor Green
+    Assert-ArchiveContents -ZipPath $zipPath
+    Write-Host "created: $zipPath" -ForegroundColor Green
+}
+
+function Assert-ArchiveContents {
+    param(
+        [string]$ZipPath
+    )
+
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($ZipPath)
+    try {
+        $entries = $archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') }
+        if (-not $entries -or $entries.Count -eq 0) {
+            throw "Archive is empty: $ZipPath"
+        }
+
+        $unexpectedEntries = $entries | Where-Object {
+            $_ -match '(^|/)(node_modules|target|dist|build|out|artifacts|coverage|tmp|temp|\.cache|\.vite|\.parcel-cache|\.turbo|\.nyc_output|bin|obj)(/|$)' -or
+            $_ -match '(^|/)\.env\.local$' -or
+            $_ -match '(^|/)\.env\..+\.local$' -or
+            $_ -match '(^|/)\.DS_Store$' -or
+            $_ -match '(^|/)Thumbs\.db$' -or
+            $_ -match '(^|/)desktop\.ini$' -or
+            $_ -match '\.log$' -or
+            $_ -match '\.map$' -or
+            $_ -match '\.zip$' -or
+            $_ -match '\.tsbuildinfo$'
+        }
+
+        if ($unexpectedEntries) {
+            throw "Archive contains excluded entries: $($unexpectedEntries -join ', ')"
+        }
+
+        $invalidPaths = $entries | Where-Object {
+            $_ -match '(^/)|(^\\)|(\.\./)|(\.\.\\)' -or $_ -match '\\'
+        }
+
+        if ($invalidPaths) {
+            throw "Archive contains invalid paths: $($invalidPaths -join ', ')"
+        }
     }
     finally {
         $archive.Dispose()
