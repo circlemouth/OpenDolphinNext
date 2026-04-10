@@ -12,7 +12,6 @@
 ## Manager 向け正本
 - [managerdocs/README.md](managerdocs/README.md)
 - `docs/managerdocs/` は manager handoff、release readiness、repo-external sign-off、UI improvement program の正本です。
-- product improvement の manager 用進行表は [managerdocs/09_web_product_improvement_execution_plan_20260329.md](managerdocs/09_web_product_improvement_execution_plan_20260329.md) を参照してください。
 
 ## Current Contracts
 - [runtime-config.md](contracts/runtime-config.md)
@@ -40,7 +39,8 @@
 ## Code-Adjacent Docs
 - [web-client/README.md](../web-client/README.md)
 - `web-client/notes/`
-- [web-client/product-improvement/README.md](web-client/product-improvement/README.md)
+- `docs/web-client/architecture/`
+- `docs/web-client/ux/`
 - [server-modernized/reporting/README.md](../server-modernized/reporting/README.md)
 - [server-modernized/tools/flyway/README.md](../server-modernized/tools/flyway/README.md)
 - [ops/README.md](../ops/README.md)
@@ -56,7 +56,7 @@
 - docs は delete by default、keep by exception とする。
 - code changes と related docs updates は同じ変更で揃える。
 - repo に証拠がなければ unknown と扱う。
-- `docs/web-client/product-improvement/` は開発オーケストレーション資料置き場であり、current contract の正本ではありません。
+- dated plan、prompt pack、working note、seed bundle は current contract の正本として残さない。
 
 ## Add / Delete Rule
 - 新しい docs を追加してよいのは、current contract、manager handoff、live runbook、enduring architecture summary、code-adjacent README のいずれかに直接該当する場合だけです。

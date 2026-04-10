@@ -1,7 +1,7 @@
 # scripts/tools
 
 ## create-review-archive.sh
-- 目的: このリポジトリの網羅的レビュー向け zip を生成する。現行コード/設定/契約 docs は残し、`docs/working-notes/` や `docs/web-client/product-improvement/` などの過去開発資料と、`node_modules` / `dist` / `target` などの生成物は除外する。
+- 目的: このリポジトリの網羅的レビュー向け zip を生成する。現行コード/設定/正本 docs は残し、`docs/working-notes/`、`docs/web-client/product-improvement/`、`managerdocs_seed_bundle/` などの過去開発資料と、`node_modules` / `dist` / `target` などの生成物は除外する。
 - ログ方針: `artifacts/`、`tmp/`、`.playwright-cli/` 配下で、フルパスが `*.log` または `*log*.txt` に該当するファイルだけを再取り込みし、レビュー補助ログとして zip に含める。
 - 使い方:
   - リポジトリルートで `./scripts/create-review-archive.sh` を実行する。
