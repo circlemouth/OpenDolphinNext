@@ -4,6 +4,7 @@ import {
   ORCA_SEND_ORDER_ENTITIES,
   normalizeOrderTestSubtype,
   resolveCanonicalOrderEntity,
+  resolveCanonicalChargeClassMeta,
   resolveOrderDockCategoryLabel,
   resolveOrderEntity,
   resolveOrderEntityDefaultClassMeta,
@@ -16,20 +17,22 @@ import {
   resolveOrderEntityValidationRule,
   resolveOrderGroupKeyByEntity,
 } from '../orderCategoryRegistry';
+import { resolveCanonicalChargeClassMeta as resolveCanonicalChargeClassMetaRaw } from '../orcaMedicalClassCatalog';
 
 describe('orderCategoryRegistry', () => {
   it('normalizes aliases and group keys consistently', () => {
-    expect(resolveOrderEntityLabel('medOrder')).toBe('処方');
+    expect(resolveOrderEntityLabel('medOrder')).toBe('\u51e6\u65b9');
     expect(resolveOrderGroupKeyByEntity('medOrder')).toBe('prescription');
     expect(resolveOrderGroupKeyByEntity('laboTest')).toBe('test');
     expect(resolveOrderEntity('prescriptionOrder')).toBe('medOrder');
     expect(resolveOrderEntity('laboTest')).toBe('testOrder');
     expect(resolveOrderEntity(' laboTest ')).toBe('testOrder');
     expect(resolveCanonicalOrderEntity('laboTest')).toBe('testOrder');
+    expect(resolveCanonicalOrderEntity('instructionChargeOrder')).toBe('instractionChargeOrder');
     expect(resolveCanonicalOrderEntity('generalOrder')).toBe('treatmentOrder');
     expect(resolveCanonicalOrderEntity(' generalOrder ')).toBe('treatmentOrder');
     expect(resolveOrderGroupKeyByEntity('prescriptionOrder')).toBe('prescription');
-    expect(resolveOrderDockCategoryLabel('charge')).toBe('算定');
+    expect(resolveOrderDockCategoryLabel('charge')).toBe('\u7b97\u5b9a');
   });
 
   it('returns entity specific ui, validation, and send metadata', () => {
@@ -45,10 +48,10 @@ describe('orderCategoryRegistry', () => {
     expect(medRule.requiresUsage).toBe(true);
     expect(resolveOrderEntityUiProfile('injectionOrder').supportsInjectionNoProcedure).toBe(false);
     expect(injClass?.classCode).toBe('310');
-    expect(baseClass).toEqual({ classCode: '110', classCodeSystem: 'Claim007', className: '基本診療料' });
-    expect(instructionClass).toEqual({ classCode: '130', classCodeSystem: 'Claim007', className: '医学管理等' });
-    expect(physiologyClass).toEqual({ classCode: '600', className: '検査' });
-    expect(radiologyClass).toEqual({ classCode: '700', className: '画像診断' });
+    expect(baseClass).toEqual({ classCode: '110', classCodeSystem: 'Claim007', className: '\u57fa\u672c\u8a3a\u7642\u6599' });
+    expect(instructionClass).toEqual({ classCode: '130', classCodeSystem: 'Claim007', className: '\u533b\u5b66\u7ba1\u7406\u7b49' });
+    expect(physiologyClass).toEqual({ classCode: '600', className: '\u691c\u67fb' });
+    expect(radiologyClass).toEqual({ classCode: '700', className: '\u753b\u50cf\u8a3a\u65ad' });
     expect(resolveOrderEntityEtensuCategory('radiologyOrder')).toBe('7');
     expect([...ORCA_SEND_ORDER_ENTITIES].sort()).toEqual(
       [
@@ -73,6 +76,7 @@ describe('orderCategoryRegistry', () => {
     const otherPolicy = resolveOrderEntityMasterSearchPolicy('otherOrder');
     const testPolicy = resolveOrderEntityMasterSearchPolicy('testOrder');
     const chargePolicy = resolveOrderEntityMasterSearchPolicy('baseChargeOrder');
+    const instructionChargePolicy = resolveOrderEntityMasterSearchPolicy('instractionChargeOrder');
     const laboPolicy = resolveOrderEntityMasterSearchPolicy('laboTest');
     const physiologyGuidance = resolveOrderEntityPhysiologySendContractGuidance('physiologyOrder');
 
@@ -86,6 +90,8 @@ describe('orderCategoryRegistry', () => {
     expect(resolveOrderEntityUiProfile('otherOrder').supportsBodyPartSearch).toBe(false);
     expect(testPolicy.etensuCategory).toBe('6');
     expect(chargePolicy.etensuCategory).toBe('1');
+    expect(chargePolicy.classMeta).toEqual({ classCode: '110', classCodeSystem: 'Claim007', className: '\u57fa\u672c\u8a3a\u7642\u6599' });
+    expect(instructionChargePolicy.classMeta).toEqual({ classCode: '130', classCodeSystem: 'Claim007', className: '\u533b\u5b66\u7ba1\u7406\u7b49' });
     expect(laboPolicy).toEqual(testPolicy);
     expect(physiologyGuidance).toEqual(
       expect.objectContaining({
@@ -103,18 +109,28 @@ describe('orderCategoryRegistry', () => {
 
     expect(specimen?.readOnly).toBe(true);
     expect(specimen?.defaultValue).toBe('specimen');
-    expect(specimen?.helpText).toContain('bundle 共通');
+    expect(specimen?.label).toBe('\u0036\u0030\u0030\u7cfb subtype');
+    expect(specimen?.helpText).toContain('specimen');
+    expect(specimen?.helpText).toContain('bundle');
+    expect(specimen?.helpText).toContain('local-only');
+    expect(specimen?.options.map((option) => option.value)).toEqual(['specimen']);
+
     expect(physiology?.readOnly).toBe(true);
     expect(physiology?.defaultValue).toBe('physiology');
-    expect(physiology?.helpText).toContain('保存');
-    expect(physiology?.helpText).toContain('表示');
-    expect(physiology?.helpText).toContain('ORCA送信');
-    expect(physiology?.helpText).toMatch(/(explicit block|停止|使いません|block)/);
+    expect(physiology?.label).toBe('\u751f\u7406\u691c\u67fb subtype');
+    expect(physiology?.helpText).toContain('explicit block');
+    expect(physiology?.helpText).toContain('bodyPart');
+    expect(physiology?.helpText).toContain('ORCA');
+    expect(physiology?.options.map((option) => option.value)).toEqual(['physiology']);
+
     expect(bacteria?.required).toBe(true);
+    expect(bacteria?.label).toBe('\u7d30\u83cc\u691c\u67fb subtype');
     expect(bacteria?.helpText).toContain('local-only');
+    expect(bacteria?.helpText).toContain('carrier');
+    expect(bacteria?.helpText).toContain('block');
     expect(bacteria?.options.map((option) => option.value)).toEqual(['culture', 'sensitivity']);
-    expect(testUi.instructionLabel).toBe('検査指示（院内）');
-    expect(testUi.memoLabel).toBe('検査メモ（院内）');
+    expect(testUi.instructionLabel).toBe('\u691c\u67fb\u6307\u793a\uff08\u9662\u5185\uff09');
+    expect(testUi.memoLabel).toBe('\u691c\u67fb\u30e1\u30e2\uff08\u9662\u5185\uff09');
   });
 
   it('normalizes class 600 subtype by entity contract', () => {
@@ -122,5 +138,30 @@ describe('orderCategoryRegistry', () => {
     expect(normalizeOrderTestSubtype('physiologyOrder', 'PHYSIOLOGY')).toBe('physiology');
     expect(normalizeOrderTestSubtype('bacteriaOrder', 'culture')).toBe('culture');
     expect(normalizeOrderTestSubtype('bacteriaOrder', 'invalid')).toBeUndefined();
+  });
+
+  it('keeps charge canonical meta fail-closed for invalid explicit input and preserves valid explicit mappings', () => {
+    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'baseChargeOrder', classCode: '130' })).toBeNull();
+    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'instractionChargeOrder', itemCategory: '110' })).toBeNull();
+    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'baseChargeOrder', classCode: '120' })).toEqual({
+      classCode: '120',
+      classCodeSystem: 'Claim007',
+      className: '\u57fa\u672c\u8a3a\u7642\u6599',
+    });
+    expect(resolveCanonicalChargeClassMetaRaw({ entity: 'instractionChargeOrder', itemCategory: '140' })).toEqual({
+      classCode: '140',
+      classCodeSystem: 'Claim007',
+      className: '\u533b\u5b66\u7ba1\u7406\u7b49',
+    });
+    expect(resolveCanonicalChargeClassMeta({ entity: 'baseChargeOrder' })).toEqual({
+      classCode: '110',
+      classCodeSystem: 'Claim007',
+      className: '\u57fa\u672c\u8a3a\u7642\u6599',
+    });
+    expect(resolveCanonicalChargeClassMeta({ entity: 'instractionChargeOrder' })).toEqual({
+      classCode: '130',
+      classCodeSystem: 'Claim007',
+      className: '\u533b\u5b66\u7ba1\u7406\u7b49',
+    });
   });
 });

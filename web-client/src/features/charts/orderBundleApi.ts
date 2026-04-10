@@ -225,7 +225,7 @@ const validateOperationClassCode = (operation: OrderBundleOperation) => {
   if (canonicalEntity === 'otherOrder') {
     return normalizedClassCode ? 'otherOrder は classCode を受け付けません。' : null;
   }
-  if (requiresOrcaClassCode(canonicalEntity) && !normalizedClassCode) {
+  if ((requiresOrcaClassCode(canonicalEntity) || isChargeEntity(canonicalEntity)) && !normalizedClassCode) {
     return `${canonicalEntity} は classCode が必須です。`;
   }
   if (!normalizedClassCode) return null;
@@ -348,7 +348,8 @@ const normalizeOrderBundle = (bundle: OrderBundle): OrderBundle => {
 };
 
 const normalizeOrderBundleOperation = (operation: OrderBundleOperation): OrderBundleOperation => {
-  const canonicalOperation = canonicalizeChargeBundleMeta(operation);
+  const shouldCanonicalizeCharge = normalizeOrcaClassCode(operation.classCode) != null;
+  const canonicalOperation = shouldCanonicalizeCharge ? canonicalizeChargeBundleMeta(operation) : operation;
   return {
     ...canonicalOperation,
     entity: normalizeOrderEntityValue(canonicalOperation.entity),

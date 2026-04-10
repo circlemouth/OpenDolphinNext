@@ -284,6 +284,15 @@ export const resolveCanonicalChargeClassMeta = (params: {
   const explicitCategory = normalizeOrcaClassCode(params.itemCategory);
   const explicitClassCode = normalizeOrcaClassCode(params.classCode);
   if (isChargeEntity(normalizedEntity)) {
+    if (!explicitCategory && !explicitClassCode) {
+      const defaultMeta = resolveOrcaDefaultClassMeta(normalizedEntity);
+      return defaultMeta
+        ? {
+            ...defaultMeta,
+            classCodeSystem: CHARGE_CLASS_CODE_SYSTEM,
+          }
+        : null;
+    }
     const candidateClassCode =
       (explicitCategory && isChargeItemCategoryCompatible(normalizedEntity, explicitCategory) ? explicitCategory : undefined) ??
       (explicitClassCode && isChargeClassCompatible(normalizedEntity, explicitClassCode) ? explicitClassCode : undefined);
