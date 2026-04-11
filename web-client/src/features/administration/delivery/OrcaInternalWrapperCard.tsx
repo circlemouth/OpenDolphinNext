@@ -94,7 +94,7 @@ export function OrcaInternalWrapperCard({
   return (
     <AdminCard
       title="ORCA内製ラッパー"
-      description="利用可能な wrapper だけを表示し、official/local の実際の挙動と stub 状態を分けて表示します。"
+      description="capability で許可された local-only wrapper だけを表示します。official ORCA API 互換の画面ではありません。"
       status={<AdminStatusPill status={statusTone} value={statusLabel} />}
     >
       <div className="admin-inline-meta">
@@ -107,6 +107,12 @@ export function OrcaInternalWrapperCard({
       </div>
       {result?.stub ? (
         <AdminAlert tone="warn" message="この wrapper は現在 stub 応答を返しています。official ORCA 実データではありません。" />
+      ) : null}
+      {routeNamespaceLabel !== 'official' ? (
+        <AdminAlert
+          tone="info"
+          message={`この導線は ${routeNamespaceLabel} namespace の ${behaviorLabel} contract です。official ORCA bridge としては扱いません。`}
+        />
       ) : null}
 
       <AdminField label="エンドポイント" htmlFor="orca-internal-endpoint" hint={currentOption.hint}>

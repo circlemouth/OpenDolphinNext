@@ -137,7 +137,6 @@ const validateUpdateDraft = (draft: OrcaUpdateDraft): string | null => {
   const userId = draft.userId.trim();
   if (!userId) return 'ORCA User_Id は必須です。';
   if (!isValidOrcaUserId(userId)) return 'ORCA User_Id は半角英数字とアンダーバーのみ使用できます。';
-  if (!draft.staffClass.trim()) return '職員区分は必須です。';
   if (!draft.fullName.trim()) return '氏名は必須です。';
   return null;
 };
@@ -250,7 +249,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
       const countLabel = typeof count === 'number' ? ` / 取得件数: ${count}` : '';
       setFeedback({
         tone: 'success',
-        message: `ORCA職員マスタを再取得しました${countLabel} ${buildApiResultSuffix(result)}`.trim(),
+        message: `ORCAユーザを再取得しました${countLabel} ${buildApiResultSuffix(result)}`.trim(),
       });
       logAuditEvent({
         runId,
@@ -266,7 +265,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
       });
     },
     onError: (error) => {
-      setFeedback({ tone: 'error', message: buildFailureMessage('ORCA職員マスタ再取得', error) });
+      setFeedback({ tone: 'error', message: buildFailureMessage('ORCAユーザ再取得', error) });
     },
   });
 
@@ -303,7 +302,6 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
         password: params.payload.password.trim() || undefined,
         fullName: params.payload.fullName.trim(),
         fullNameKana: params.payload.fullNameKana.trim() || undefined,
-        isAdmin: params.payload.isAdmin,
       };
       return updateOrcaUser(params.orcaUserId, payload);
     },
@@ -564,13 +562,8 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
           </div>
         </div>
         <div className="admin-callout__actions">
-          <button
-            type="button"
-            className="admin-button admin-button--primary"
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-          >
-            ORCA職員マスタ再取得
+          <button type="button" className="admin-button admin-button--primary" onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending}>
+            ORCAユーザ再取得
           </button>
           <button
             type="button"
@@ -628,7 +621,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
         </div>
       </div>
 
-      {usersQuery.isPending ? <p className="admin-quiet">ORCA職員マスタを読み込み中...</p> : null}
+      {usersQuery.isPending ? <p className="admin-quiet">ORCAユーザを読み込み中...</p> : null}
       {usersQuery.isError ? <p className="admin-error">取得に失敗しました: {toErrorMessage(usersQuery.error)}</p> : null}
 
       <div className="admin-scroll" aria-label="ORCAユーザー一覧">
@@ -942,16 +935,18 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
             <div className="admin-toggle">
               <div className="admin-toggle__label">
                 <span>管理者権限</span>
-                <span className="admin-toggle__hint">ORCA側管理者権限</span>
+                <span className="admin-toggle__hint">create 時のみ指定可能</span>
               </div>
               <input
                 type="checkbox"
                 checked={editDraft.isAdmin}
-                onChange={(event) =>
-                  setEditDraft((prev) => ({ ...(prev ?? buildUpdateDraft(editTarget)), isAdmin: event.target.checked }))
-                }
+                disabled
+                readOnly
+                aria-readonly="true"
+                aria-label="ORCA管理者権限（読み取り専用）"
               />
             </div>
+            <p className="admin-quiet">ORCA側管理者権限は official update request では変更しません。</p>
 
             <div className="admin-actions">
               <button

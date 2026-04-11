@@ -245,6 +245,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         body.put("pushUrl", record.getPushUrl());
         body.put("pushTenantId", record.getPushTenantId());
         body.put("pushConfigured", record.getPushUrl() != null && !record.getPushUrl().isBlank());
+        body.put("pushTenantConfigured", record.getPushTenantId() != null && !record.getPushTenantId().isBlank());
         body.put("passwordConfigured", record.getPasswordEncrypted() != null && !record.getPasswordEncrypted().isBlank());
         body.put("passwordUpdatedAt", record.getPasswordUpdatedAt());
         body.put("clientAuthEnabled", Boolean.TRUE.equals(record.getClientAuthEnabled()));

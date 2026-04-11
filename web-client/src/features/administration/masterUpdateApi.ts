@@ -34,6 +34,9 @@ export type MasterUpdateOfficialSource = {
   updateDetected?: boolean;
   latestRunId?: string;
   latestJobMessage?: string;
+  officialLastUpdateDate?: string;
+  officialCapturedAt?: string;
+  officialSummary?: string;
 };
 
 export type MasterUpdateLocalArtifacts = {

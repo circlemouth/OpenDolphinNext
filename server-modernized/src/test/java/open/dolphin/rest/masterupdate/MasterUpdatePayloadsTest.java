@@ -31,7 +31,7 @@ class MasterUpdatePayloadsTest {
         version.capturedAt = "2026-04-11T00:10:00Z";
         version.artifactPath = "/tmp/master.xml";
         version.sourceUrl = "orca:masterlastupdatev3";
-        version.summary = "summary";
+        version.summary = "Api_Result=0000 / Last_Update_Date=2026-04-11";
         version.triggerType = "MANUAL";
         version.current = true;
         state.versions = List.of(version);
@@ -45,6 +45,7 @@ class MasterUpdatePayloadsTest {
         Map<String, Object> localArtifacts = (Map<String, Object>) detail.get("localArtifacts");
         assertThat(officialSource.get("kind")).isEqualTo("masterlastupdatev3");
         assertThat(officialSource.get("updateDetected")).isEqualTo(true);
+        assertThat(officialSource.get("officialLastUpdateDate")).isEqualTo("2026-04-11");
         assertThat(localArtifacts.get("currentArtifactPath")).isEqualTo("/tmp/master.xml");
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> versions = (List<Map<String, Object>>) localArtifacts.get("versions");

@@ -141,7 +141,17 @@ beforeEach(() => {
     verifyAdminDelivery: true,
   });
   mockFetchOrcaQueue.mockResolvedValue({ runId: 'RUN-QUEUE', queue: [] });
-  mockFetchOrcaCapabilities.mockResolvedValue({ ok: true, internalWrappers: [] });
+  mockFetchOrcaCapabilities.mockResolvedValue({
+    ok: true,
+    connection: {
+      available: true,
+      testedScope: 'api_only',
+      pushConfigured: false,
+      pushTenantConfigured: false,
+      pushMode: 'none',
+    },
+    internalWrappers: [],
+  });
   mockSaveOrcaConnectionConfig.mockResolvedValue({ ok: true, status: 200 });
 });
 
@@ -163,6 +173,17 @@ describe('AdministrationPage connection section', () => {
 
   it('pushUrl / pushTenantId を表示し保存 request に含める', async () => {
     const user = userEvent.setup();
+    mockFetchOrcaCapabilities.mockResolvedValue({
+      ok: true,
+      connection: {
+        available: true,
+        testedScope: 'api_only',
+        pushConfigured: true,
+        pushTenantConfigured: true,
+        pushMode: 'push_url_and_tenant',
+      },
+      internalWrappers: [],
+    });
     mockFetchOrcaConnectionConfig.mockResolvedValue({
       ok: true,
       status: 200,
@@ -185,6 +206,8 @@ describe('AdministrationPage connection section', () => {
     const pushTenantId = screen.getByLabelText('Push tenant ID');
     expect(pushUrl).toHaveValue('wss://push.old.invalid/ws');
     expect(pushTenantId).toHaveValue('tenant-old');
+    expect(screen.getByText('保存済みPush設定: Push URL + tenant ID 設定済み')).toBeInTheDocument();
+    expect(screen.getByText('接続テスト範囲: API到達のみ')).toBeInTheDocument();
 
     await user.clear(pushUrl);
     await user.type(pushUrl, 'wss://push.new.invalid/ws');

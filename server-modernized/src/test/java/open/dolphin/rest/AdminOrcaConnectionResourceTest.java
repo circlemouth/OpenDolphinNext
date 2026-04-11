@@ -115,6 +115,7 @@ class AdminOrcaConnectionResourceTest {
         assertEquals("wss://push.orca.med.or.jp/ws/notifications", body.get("pushUrl"));
         assertEquals("tenant-001", body.get("pushTenantId"));
         assertEquals(Boolean.TRUE, body.get("pushConfigured"));
+        assertEquals(Boolean.TRUE, body.get("pushTenantConfigured"));
         assertEquals(Boolean.TRUE, body.get("passwordConfigured"));
         assertTrue(!body.containsKey("password"));
     }
@@ -183,6 +184,7 @@ class AdminOrcaConnectionResourceTest {
         assertEquals("wss://push.orca.med.or.jp/ws/notifications", body.get("pushUrl"));
         assertEquals("tenant-001", body.get("pushTenantId"));
         assertEquals(Boolean.TRUE, body.get("pushConfigured"));
+        assertEquals(Boolean.TRUE, body.get("pushTenantConfigured"));
         assertEquals(Boolean.TRUE, body.get("passwordConfigured"));
         verify(configStore).update(eq("FACILITY"), org.mockito.ArgumentMatchers.any(), isNull(), isNull(), eq("RUN-SAVE"), eq("FACILITY:admin"));
         verify(restOrcaTransport).reloadSettings("FACILITY");
@@ -235,6 +237,7 @@ class AdminOrcaConnectionResourceTest {
         assertEquals("F001", body.get("defaultFacilityId"));
         assertEquals("wss://facility.example.orca/push", body.get("pushUrl"));
         assertEquals("tenant-f001", body.get("pushTenantId"));
+        assertEquals(Boolean.TRUE, body.get("pushTenantConfigured"));
         verify(configStore).updateDefaultFacilityId("F001", "RUN-DEFAULT", "FACILITY:admin");
         verify(restOrcaTransport).reloadSettings("F001");
     }

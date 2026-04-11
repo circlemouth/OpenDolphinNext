@@ -1180,9 +1180,9 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       ? '接続OK'
       : '接続NG'
     : orcaConnectionAccessVerified
-      ? '設定取得可（未テスト）'
+      ? '管理画面権限確認済み / ORCA未テスト'
       : orcaConnectionAuthBlocked
-        ? '権限要確認'
+        ? '管理画面権限未取得'
         : '未確認';
 
   const abnormalSummary = (() => {
@@ -1428,6 +1428,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                     isSystemAdmin={isSystemAdmin}
                     accessVerified={orcaConnectionAccessVerified}
                     authBlocked={orcaConnectionAuthBlocked}
+                    connectionCapability={orcaCapabilitiesQuery.data?.connection}
                     dirty={orcaConnectionDirty}
                     statusTone={orcaConnectionStatusTone}
                     statusLabel={orcaConnectionStatusLabel}

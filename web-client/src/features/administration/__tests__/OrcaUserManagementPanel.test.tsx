@@ -96,7 +96,7 @@ describe('OrcaUserManagementPanel', () => {
     const user = userEvent.setup();
     renderPanel();
 
-    expect(await screen.findByRole('button', { name: 'ORCA職員マスタ再取得' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'ORCAユーザ再取得' })).toBeInTheDocument();
     expect(await screen.findByText('山田 太郎')).toBeInTheDocument();
     expect(screen.getByText('最終再取得日時')).toBeInTheDocument();
     expect(screen.getByText('最終再取得件数')).toBeInTheDocument();
@@ -110,6 +110,8 @@ describe('OrcaUserManagementPanel', () => {
     expect(screen.getAllByLabelText('職員区分').at(-1)).toHaveAttribute('readonly');
     expect(screen.getAllByLabelText('職員番号').at(-1)).toHaveAttribute('readonly');
     expect(screen.getByText('official update request では変更しません。')).toBeInTheDocument();
+    expect(screen.getByLabelText('ORCA管理者権限（読み取り専用）')).toBeDisabled();
+    expect(screen.getByText('ORCA側管理者権限は official update request では変更しません。')).toBeInTheDocument();
   });
 
   it('作成フォームで職員番号入力を無効化する', async () => {

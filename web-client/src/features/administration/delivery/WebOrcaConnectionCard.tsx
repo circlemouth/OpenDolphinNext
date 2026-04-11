@@ -1,3 +1,4 @@
+import type { OrcaConnectionCapability } from '../orcaCapabilitiesApi';
 import { AdminCard } from '../components/AdminCard';
 import { AdminField } from '../components/AdminField';
 import { AdminStatusPill } from '../components/AdminStatusPill';
@@ -45,6 +46,10 @@ type OrcaConnectionTestSummary = {
   errorCategory?: string;
   error?: string;
   testedAt?: string;
+  testedScope?: string;
+  pushTested?: boolean;
+  pushConfigured?: boolean;
+  pushTenantConfigured?: boolean;
 };
 
 type WebOrcaConnectionCardProps = {
@@ -53,6 +58,7 @@ type WebOrcaConnectionCardProps = {
   isSystemAdmin: boolean;
   accessVerified: boolean;
   authBlocked: boolean;
+  connectionCapability?: OrcaConnectionCapability;
   dirty: boolean;
   statusTone: 'ok' | 'warn' | 'error' | 'pending' | 'idle';
   statusLabel: string;
@@ -83,6 +89,7 @@ export function WebOrcaConnectionCard({
   isSystemAdmin,
   accessVerified,
   authBlocked,
+  connectionCapability,
   dirty,
   statusTone,
   statusLabel,
@@ -100,8 +107,12 @@ export function WebOrcaConnectionCard({
   guardDetailsId,
 }: WebOrcaConnectionCardProps) {
   const disabledByRole = !isSystemAdmin;
-  const accessStatusLabel = accessVerified ? '設定取得可' : authBlocked ? '権限要確認' : '未確認';
+  const accessStatusLabel = accessVerified ? '確認済み' : authBlocked ? '権限要確認' : '未確認';
   const accessStatusTone = accessVerified ? 'ok' : authBlocked ? 'error' : 'idle';
+  const pushConfigured = connectionCapability?.pushConfigured ?? Boolean(form.pushUrl.trim());
+  const pushTenantConfigured = connectionCapability?.pushTenantConfigured ?? Boolean(form.pushTenantId.trim());
+  const pushModeLabel = pushConfigured ? (pushTenantConfigured ? 'Push URL + tenant ID 設定済み' : 'Push URL のみ設定済み') : '未設定';
+  const testedScopeLabel = connectionCapability?.testedScope === 'api_only' ? 'API到達のみ' : '保存済み設定';
 
   return (
     <AdminCard
@@ -214,6 +225,10 @@ export function WebOrcaConnectionCard({
 
           <div className="admin-group">
             <h3 className="admin-group__title">Push 連携（任意）</h3>
+            <div className="admin-inline-meta">
+              <AdminStatusPill status={pushConfigured ? 'ok' : 'idle'} value={`保存済みPush設定: ${pushModeLabel}`} />
+              <AdminStatusPill status="idle" value={`接続テスト範囲: ${testedScopeLabel}`} />
+            </div>
             <AdminField label="Push URL" htmlFor="orca-connection-push-url" hint="例: wss://push.example.orca/ws">
               <input
                 id="orca-connection-push-url"
@@ -240,6 +255,9 @@ export function WebOrcaConnectionCard({
                 aria-describedby={disabledByRole ? guardDetailsId : undefined}
               />
             </AdminField>
+            <p className="admin-quiet">
+              Push 設定は保存されますが、接続テストは WebORCA API の到達確認のみです。push WebSocket の接続確認は別途運用確認してください。
+            </p>
           </div>
 
           <div className="admin-group">
@@ -343,6 +361,8 @@ export function WebOrcaConnectionCard({
               <div>HTTP: {testSummary.orcaHttpStatus ?? '―'}</div>
               <div>Api_Result: {testSummary.apiResult ?? '―'}</div>
               <div>testedAt: {formatTimestamp(testSummary.testedAt)}</div>
+              <div>テスト範囲: {testSummary.testedScope === 'api_only' ? 'WebORCA API 到達確認のみ' : '保存済み接続設定'}</div>
+              <div>Push WebSocket: {testSummary.pushTested ? '検証済み' : 'このテストでは未検証'}</div>
               {!testSummary.ok ? <div>失敗理由の詳細は通常表示に出さず、RUN_ID と traceId で確認します。</div> : null}
             </div>
           ) : null}

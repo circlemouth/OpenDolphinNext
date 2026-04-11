@@ -9,9 +9,19 @@ export type OrcaInternalWrapperCapability = {
   hint?: string;
 };
 
+export type OrcaConnectionCapability = {
+  available: boolean;
+  testedScope?: string;
+  pushConfigured?: boolean;
+  pushTenantConfigured?: boolean;
+  pushMode?: 'none' | 'push_url_only' | 'push_url_and_tenant' | string;
+  hint?: string;
+};
+
 export type OrcaCapabilitiesResponse = {
   ok: boolean;
   runId?: string;
+  connection?: OrcaConnectionCapability;
   internalWrappers: OrcaInternalWrapperCapability[];
 };
 
@@ -20,6 +30,19 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
 
 const getString = (value: unknown) => (typeof value === 'string' ? value : undefined);
 const getBoolean = (value: unknown) => (typeof value === 'boolean' ? value : undefined);
+const normalizeConnectionCapability = (value: unknown): OrcaConnectionCapability | undefined => {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  return {
+    available: getBoolean(record.available) ?? false,
+    testedScope: getString(record.testedScope),
+    pushConfigured: getBoolean(record.pushConfigured),
+    pushTenantConfigured: getBoolean(record.pushTenantConfigured),
+    pushMode: getString(record.pushMode) as OrcaConnectionCapability['pushMode'] | undefined,
+    hint: getString(record.hint),
+  };
+};
+
 const normalizeInternalWrapperCapability = (value: unknown): OrcaInternalWrapperCapability | null => {
   const record = asRecord(value);
   if (!record) return null;
@@ -59,6 +82,7 @@ export async function fetchOrcaCapabilities(): Promise<OrcaCapabilitiesResponse>
   return {
     ok: response.ok && (getBoolean(body.ok) ?? true),
     runId: getString(body.runId),
+    connection: normalizeConnectionCapability(body.connection),
     internalWrappers,
   };
 }
