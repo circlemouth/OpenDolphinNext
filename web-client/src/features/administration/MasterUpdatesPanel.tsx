@@ -44,6 +44,12 @@ const normalizeSchedule = (schedule?: MasterUpdateSchedule): MasterUpdateSchedul
   datasetAutoEnabledOverrides: schedule?.datasetAutoEnabledOverrides ?? {},
 });
 
+const resolveOfficialSourceLabel = (dataset?: MasterUpdateDataset) => {
+  const kind = dataset?.officialSource?.kind;
+  if (kind === 'masterlastupdatev3') return 'official masterlastupdatev3';
+  return 'official source metadata';
+};
+
 export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
   const isSystemAdmin = isSystemAdminRole(role);
   const queryClient = useQueryClient();
@@ -199,8 +205,9 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                   <td>
                     <strong>{dataset.name}</strong>
                     <div className="admin-quiet">{dataset.code}</div>
+                    <div className="admin-quiet">{resolveOfficialSourceLabel(dataset)}</div>
                   </td>
-                  <td>{formatTimestamp(dataset.lastSuccessfulAt ?? dataset.currentCapturedAt)}</td>
+                  <td>{formatTimestamp(dataset.officialSource?.lastCheckedAt ?? dataset.lastSuccessfulAt)}</td>
                   <td>{dataset.currentRecordCount ?? '―'}</td>
                   <td>{dataset.updateDetected ? '更新あり' : '更新なし'}</td>
                   <td className="admin-master__actions">
@@ -217,7 +224,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                       disabled={!isSystemAdmin || dataset.running || runMutation.isPending}
                       onClick={() => runMutation.mutate({ code: dataset.code, force: false })}
                     >
-                      手動更新
+                      official再取得
                     </button>
                   </td>
                 </tr>
@@ -249,12 +256,15 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
             </div>
 
             <details className="admin-master__minor">
-              <summary>取得元・利用注意（必要時のみ表示）</summary>
+              <summary>official 取得状況</summary>
               <ul className="placeholder-page__list">
-                <li>取得元URL: {detailDataset.sourceUrl ?? '―'}</li>
-                <li>更新頻度: {detailDataset.updateFrequency ?? '―'}</li>
-                <li>保存形式: {detailDataset.format ?? '―'}</li>
-                <li>利用注意: {detailDataset.usageNotes ?? '―'}</li>
+                <li>取得方式: {resolveOfficialSourceLabel(detailDataset)}</li>
+                <li>取得元URL: {detailDataset.officialSource?.sourceUrl ?? detailDataset.sourceUrl ?? '―'}</li>
+                <li>更新頻度: {detailDataset.officialSource?.updateFrequency ?? detailDataset.updateFrequency ?? '―'}</li>
+                <li>保存形式: {detailDataset.officialSource?.format ?? detailDataset.format ?? '―'}</li>
+                <li>利用注意: {detailDataset.officialSource?.usageNotes ?? detailDataset.usageNotes ?? '―'}</li>
+                <li>最終照会: {formatTimestamp(detailDataset.officialSource?.lastCheckedAt ?? detailDataset.lastCheckedAt)}</li>
+                <li>更新検知: {(detailDataset.officialSource?.updateDetected ?? detailDataset.updateDetected) ? 'あり' : 'なし'}</li>
               </ul>
             </details>
 
@@ -265,12 +275,17 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                 disabled={!isSystemAdmin || detailDataset.running || runMutation.isPending}
                 onClick={() => runMutation.mutate({ code: detailDataset.code, force: true })}
               >
-                手動更新（再取得）
+                official再取得
               </button>
               <button
                 type="button"
                 className="admin-button admin-button--secondary"
-                disabled={!detailDataset.manualUploadAllowed || !isSystemAdmin || uploadMutation.isPending || detailDataset.running}
+                disabled={
+                  !(detailDataset.localArtifacts?.manualUploadAllowed ?? detailDataset.manualUploadAllowed)
+                  || !isSystemAdmin
+                  || uploadMutation.isPending
+                  || detailDataset.running
+                }
                 onClick={() => {
                   if (!uploadFile) {
                     enqueue({ tone: 'warning', message: 'アップロードするファイルを選択してください。' });
@@ -279,12 +294,17 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                   uploadMutation.mutate({ code: detailDataset.code, file: uploadFile });
                 }}
               >
-                手動アップロード更新
+                local artifact をアップロード
               </button>
               <input
                 type="file"
                 onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
-                disabled={!detailDataset.manualUploadAllowed || !isSystemAdmin || uploadMutation.isPending || detailDataset.running}
+                disabled={
+                  !(detailDataset.localArtifacts?.manualUploadAllowed ?? detailDataset.manualUploadAllowed)
+                  || !isSystemAdmin
+                  || uploadMutation.isPending
+                  || detailDataset.running
+                }
               />
             </div>
 
@@ -293,6 +313,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                 <thead>
                   <tr>
                     <th>版ID</th>
+                    <th>取得元</th>
                     <th>取り込み日時</th>
                     <th>件数</th>
                     <th>差分</th>
@@ -301,9 +322,10 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(detailDataset.versions ?? []).slice(0, 5).map((version) => (
+                  {(detailDataset.localArtifacts?.versions ?? detailDataset.versions ?? []).slice(0, 5).map((version) => (
                     <tr key={version.versionId}>
                       <td>{version.versionId}</td>
+                      <td>{version.sourceKind === 'local_upload' ? 'local upload' : 'official fetch'}</td>
                       <td>{formatTimestamp(version.capturedAt)}</td>
                       <td>{version.recordCount ?? '―'}</td>
                       <td>
@@ -322,9 +344,9 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                       </td>
                     </tr>
                   ))}
-                  {(detailDataset.versions ?? []).length === 0 ? (
+                  {(detailDataset.localArtifacts?.versions ?? detailDataset.versions ?? []).length === 0 ? (
                     <tr>
-                      <td colSpan={6}>まだ版がありません。</td>
+                      <td colSpan={7}>まだ local artifact 履歴がありません。</td>
                     </tr>
                   ) : null}
                 </tbody>

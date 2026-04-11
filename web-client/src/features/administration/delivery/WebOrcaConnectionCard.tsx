@@ -8,6 +8,8 @@ type OrcaConnectionFormValue = {
   serverUrl: string;
   port: string;
   username: string;
+  pushUrl: string;
+  pushTenantId: string;
   password: string;
   passwordConfigured: boolean;
   passwordUpdatedAt?: string;
@@ -98,17 +100,23 @@ export function WebOrcaConnectionCard({
   guardDetailsId,
 }: WebOrcaConnectionCardProps) {
   const disabledByRole = !isSystemAdmin;
+  const accessStatusLabel = accessVerified ? '設定取得可' : authBlocked ? '権限要確認' : '未確認';
+  const accessStatusTone = accessVerified ? 'ok' : authBlocked ? 'error' : 'idle';
 
   return (
     <AdminCard
       title="WebORCA接続設定"
-      description="接続先・認証・証明書を分離して管理し、誤テストを防止します。"
+      description="管理画面権限、接続先設定、ORCA接続テストを分離して扱い、local admin 権限と ORCA 到達確認を混同しません。"
       status={<AdminStatusPill status={statusTone} value={`接続テスト: ${statusLabel}`} />}
     >
       {accessVerified ? (
         <>
+          <div className="admin-inline-meta">
+            <AdminStatusPill status={accessStatusTone} value={`管理画面権限: ${accessStatusLabel}`} />
+            <AdminStatusPill status={statusTone} value={`ORCA接続テスト: ${statusLabel}`} />
+          </div>
           <p className="admin-note">
-            接続テストは保存済み設定で実行されます。未保存の変更（ドラフト）は反映されません。
+            接続テストは保存済み設定で実行されます。未保存の変更（ドラフト）は反映されません。管理画面が表示できても ORCA 接続成功とは限りません。
           </p>
           <DirtyStateBar dirty={dirty} updatedAt={form.updatedAt} />
 
@@ -201,6 +209,36 @@ export function WebOrcaConnectionCard({
                 <AdminStatusPill status={form.passwordConfigured ? 'ok' : 'idle'} value={form.passwordConfigured ? '設定済み' : '未設定'} />
                 <span>最終更新: {formatTimestamp(form.passwordUpdatedAt)}</span>
               </div>
+            </AdminField>
+          </div>
+
+          <div className="admin-group">
+            <h3 className="admin-group__title">Push 連携（任意）</h3>
+            <AdminField label="Push URL" htmlFor="orca-connection-push-url" hint="例: wss://push.example.orca/ws">
+              <input
+                id="orca-connection-push-url"
+                type="url"
+                value={form.pushUrl}
+                onChange={(event) => onPatch({ pushUrl: event.target.value })}
+                readOnly={disabledByRole}
+                aria-readonly={disabledByRole}
+                aria-describedby={disabledByRole ? guardDetailsId : undefined}
+              />
+            </AdminField>
+            <AdminField
+              label="Push tenant ID"
+              htmlFor="orca-connection-push-tenant-id"
+              hint="Push 利用時のみ指定します。"
+            >
+              <input
+                id="orca-connection-push-tenant-id"
+                type="text"
+                value={form.pushTenantId}
+                onChange={(event) => onPatch({ pushTenantId: event.target.value })}
+                readOnly={disabledByRole}
+                aria-readonly={disabledByRole}
+                aria-describedby={disabledByRole ? guardDetailsId : undefined}
+              />
             </AdminField>
           </div>
 
@@ -301,7 +339,7 @@ export function WebOrcaConnectionCard({
 
           {testSummary ? (
             <div className="admin-result admin-result--stack">
-              <div>結果: {testSummary.ok ? '接続確認済み' : '要確認'}</div>
+              <div>結果: {testSummary.ok ? '接続テスト成功' : '接続テスト失敗'}</div>
               <div>HTTP: {testSummary.orcaHttpStatus ?? '―'}</div>
               <div>Api_Result: {testSummary.apiResult ?? '―'}</div>
               <div>testedAt: {formatTimestamp(testSummary.testedAt)}</div>
@@ -312,10 +350,11 @@ export function WebOrcaConnectionCard({
       ) : (
         <div className="admin-form">
           <p className="admin-note">
-            WebORCA 接続設定は管理者アカウントで認証済み（`/api/admin/orca/connection` が 200）時のみ表示します。
+            WebORCA 接続設定は管理画面の接続設定取得権限が確認できたセッションでのみ表示します。この状態は ORCA 接続成功を意味しません。
           </p>
           <ul className="placeholder-page__list">
-            <li>認証状態: {authBlocked ? '未認証 / 権限不足' : '確認中または未取得'}</li>
+            <li>管理画面権限: {authBlocked ? '未取得 / 権限不足' : '確認中または未取得'}</li>
+            <li>ORCA 接続成否: 接続テスト未実行</li>
             <li>運用依頼テンプレをコピーして管理者へ依頼してください。</li>
           </ul>
           <div className="admin-request-template">
@@ -326,7 +365,7 @@ export function WebOrcaConnectionCard({
           </div>
           <div className="admin-actions">
             <button type="button" className="admin-button admin-button--secondary" onClick={onRefetch} disabled={refetchPending}>
-              認証状態を再確認
+              権限状態を再確認
             </button>
           </div>
         </div>

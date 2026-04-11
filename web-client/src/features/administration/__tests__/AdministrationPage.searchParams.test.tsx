@@ -9,11 +9,13 @@ const {
   mockFetchAdminConfig,
   mockFetchOrcaQueue,
   mockFetchOrcaConnectionConfig,
+  mockFetchOrcaCapabilities,
   mockUseAuthService,
 } = vi.hoisted(() => ({
   mockFetchAdminConfig: vi.fn(),
   mockFetchOrcaQueue: vi.fn(),
   mockFetchOrcaConnectionConfig: vi.fn(),
+  mockFetchOrcaCapabilities: vi.fn(),
   mockUseAuthService: vi.fn(),
 }));
 
@@ -159,6 +161,10 @@ vi.mock('../orcaConnectionApi', () => ({
   testOrcaConnection: vi.fn().mockResolvedValue({ ok: true, status: 200, orcaHttpStatus: 200, apiResult: '00' }),
 }));
 
+vi.mock('../orcaCapabilitiesApi', () => ({
+  fetchOrcaCapabilities: mockFetchOrcaCapabilities,
+}));
+
 vi.mock('../orcaInternalWrapperApi', () => ({
   postBirthDelivery: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
   postMedicalRecords: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
@@ -230,6 +236,7 @@ beforeEach(() => {
     ok: false,
     error: 'forbidden',
   });
+  mockFetchOrcaCapabilities.mockResolvedValue({ ok: true, internalWrappers: [] });
 });
 
 afterEach(() => {

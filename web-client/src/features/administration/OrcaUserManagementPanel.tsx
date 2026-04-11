@@ -33,7 +33,6 @@ type OrcaCreateDraft = {
   staffClass: string;
   fullName: string;
   fullNameKana: string;
-  staffNumber: string;
   isAdmin: boolean;
 };
 
@@ -53,7 +52,6 @@ const buildCreateDraft = (): OrcaCreateDraft => ({
   staffClass: '',
   fullName: '',
   fullNameKana: '',
-  staffNumber: '',
   isAdmin: false,
 });
 
@@ -247,12 +245,12 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
   const syncMutation = useMutation({
     mutationFn: syncOrcaUsers,
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orca-users'] });
+      void queryClient.refetchQueries({ queryKey: ['admin-orca-users'] });
       const count = result.syncStatus?.syncedCount;
-      const countLabel = typeof count === 'number' ? ` / 同期件数: ${count}` : '';
+      const countLabel = typeof count === 'number' ? ` / 取得件数: ${count}` : '';
       setFeedback({
         tone: 'success',
-        message: `ORCA同期を実行しました${countLabel} ${buildApiResultSuffix(result)}`.trim(),
+        message: `ORCA職員マスタを再取得しました${countLabel} ${buildApiResultSuffix(result)}`.trim(),
       });
       logAuditEvent({
         runId,
@@ -268,14 +266,14 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
       });
     },
     onError: (error) => {
-      setFeedback({ tone: 'error', message: buildFailureMessage('ORCA同期', error) });
+      setFeedback({ tone: 'error', message: buildFailureMessage('ORCA職員マスタ再取得', error) });
     },
   });
 
   const createMutation = useMutation({
     mutationFn: createOrcaUser,
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orca-users'] });
+      void queryClient.refetchQueries({ queryKey: ['admin-orca-users'] });
       setFeedback({
         tone: 'success',
         message: `ORCAユーザを作成しました: ${result.user?.userId ?? createDraft.userId.trim()} ${buildApiResultSuffix(result)}`.trim(),
@@ -302,21 +300,18 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
   const updateMutation = useMutation({
     mutationFn: (params: { orcaUserId: string; payload: OrcaUpdateDraft }) => {
       const payload = {
-        userId: params.payload.userId.trim(),
         password: params.payload.password.trim() || undefined,
-        staffClass: params.payload.staffClass.trim(),
         fullName: params.payload.fullName.trim(),
         fullNameKana: params.payload.fullNameKana.trim() || undefined,
-        staffNumber: params.payload.staffNumber.trim() || undefined,
         isAdmin: params.payload.isAdmin,
       };
       return updateOrcaUser(params.orcaUserId, payload);
     },
     onSuccess: (result, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-orca-users'] });
+      void queryClient.refetchQueries({ queryKey: ['admin-orca-users'] });
       setFeedback({
         tone: 'success',
-        message: `ORCAユーザを更新しました: ${variables.payload.userId.trim()} ${buildApiResultSuffix(result)}`.trim(),
+        message: `ORCAユーザを更新しました: ${variables.orcaUserId} ${buildApiResultSuffix(result)}`.trim(),
       });
       setEditTarget(null);
       setEditDraft(null);
@@ -328,7 +323,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
           operation: 'update',
           actor: `${session.facilityId}:${session.userId}`,
           previousUserId: variables.orcaUserId,
-          userId: variables.payload.userId.trim(),
+          userId: variables.orcaUserId,
           apiResult: result.apiResult,
           apiResultMessage: result.apiResultMessage,
         },
@@ -439,7 +434,6 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
       staffClass: createDraft.staffClass.trim(),
       fullName: createDraft.fullName.trim(),
       fullNameKana: createDraft.fullNameKana.trim() || undefined,
-      staffNumber: createDraft.staffNumber.trim() || undefined,
       isAdmin: createDraft.isAdmin,
     });
   };
@@ -550,11 +544,11 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
           <p className="admin-callout__title">ORCA連携ステータス</p>
           <div className="admin-summary">
             <div className="admin-summary__row">
-              <span className="admin-summary__label">最終同期日時</span>
+              <span className="admin-summary__label">最終再取得日時</span>
               <span>{formatTimestamp(syncStatus?.lastSyncedAt)}</span>
             </div>
             <div className="admin-summary__row">
-              <span className="admin-summary__label">同期件数</span>
+              <span className="admin-summary__label">最終再取得件数</span>
               <span>{typeof syncStatus?.syncedCount === 'number' ? syncStatus.syncedCount : '―'}</span>
             </div>
             <div className="admin-summary__row">
@@ -576,7 +570,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending}
           >
-            今すぐ同期
+            ORCA職員マスタ再取得
           </button>
           <button
             type="button"
@@ -589,7 +583,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
           {syncMutation.isPending ? (
             <span className="admin-inline-progress" role="status" aria-live={resolveAriaLive('info')}>
               <span className="admin-spinner" aria-hidden="true" />
-              同期中...
+              再取得中...
             </span>
           ) : null}
         </div>
@@ -826,14 +820,17 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
             />
           </div>
           <div className="admin-form__field">
-            <label htmlFor="orca-create-staff-number">職員番号（任意）</label>
+            <label htmlFor="orca-create-staff-number">職員番号</label>
             <input
               id="orca-create-staff-number"
               type="text"
-              value={createDraft.staffNumber}
-              onChange={(event) => setCreateDraft((prev) => ({ ...prev, staffNumber: event.target.value }))}
-              placeholder="例: 10001"
+              value=""
+              disabled
+              readOnly
+              aria-readonly="true"
+              placeholder="作成後の再取得で ORCA 採番値を反映"
             />
+            <p className="admin-quiet">official create request では指定せず、作成後の再取得で採番済み値を反映します。</p>
           </div>
         </div>
 
@@ -886,11 +883,10 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
                 id="orca-edit-user-id"
                 type="text"
                 value={editDraft.userId}
-                onChange={(event) => setEditDraft((prev) => ({ ...(prev ?? buildUpdateDraft(editTarget)), userId: event.target.value }))}
+                readOnly
+                aria-readonly="true"
               />
-              {!isValidOrcaUserId(editDraft.userId) ? (
-                <p className="admin-error">半角英数字とアンダーバーのみ使用できます。</p>
-              ) : null}
+              <p className="admin-quiet">official update request では変更しません。</p>
             </div>
             <div className="admin-form__field">
               <label htmlFor="orca-edit-full-name">氏名</label>
@@ -927,10 +923,10 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
                 id="orca-edit-staff-class"
                 type="text"
                 value={editDraft.staffClass}
-                onChange={(event) =>
-                  setEditDraft((prev) => ({ ...(prev ?? buildUpdateDraft(editTarget)), staffClass: event.target.value }))
-                }
+                readOnly
+                aria-readonly="true"
               />
+              <p className="admin-quiet">職員区分は読み取り専用です。</p>
             </div>
             <div className="admin-form__field">
               <label htmlFor="orca-edit-staff-number">職員番号</label>
@@ -938,10 +934,10 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
                 id="orca-edit-staff-number"
                 type="text"
                 value={editDraft.staffNumber}
-                onChange={(event) =>
-                  setEditDraft((prev) => ({ ...(prev ?? buildUpdateDraft(editTarget)), staffNumber: event.target.value }))
-                }
+                readOnly
+                aria-readonly="true"
               />
+              <p className="admin-quiet">職員番号は ORCA 採番値のため更新しません。</p>
             </div>
             <div className="admin-toggle">
               <div className="admin-toggle__label">

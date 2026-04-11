@@ -20,6 +20,8 @@ type OrcaInternalWrapperOption = {
   label: string;
   hint: string;
   stubFixed?: boolean;
+  routeNamespace?: 'official' | 'master' | 'local';
+  behavior?: string;
 };
 
 type OrcaInternalWrapperResult = OrcaInternalWrapperBase & {
@@ -86,21 +88,25 @@ export function OrcaInternalWrapperCard({
   };
 
   const stubLabel = result ? (result.stub ? 'stub' : result.ok ? 'real' : 'error') : '―';
+  const routeNamespaceLabel = currentOption.routeNamespace ?? 'unknown';
+  const behaviorLabel = currentOption.behavior ?? (currentOption.stubFixed ? 'stub_fixed' : 'custom');
 
   return (
     <AdminCard
       title="ORCA内製ラッパー"
-      description="stub混在を明示し、payload整形・parse error統一表示を行います。"
+      description="利用可能な wrapper だけを表示し、official/local の実際の挙動と stub 状態を分けて表示します。"
       status={<AdminStatusPill status={statusTone} value={statusLabel} />}
     >
       <div className="admin-inline-meta">
         <span>HTTP: {result?.status ?? '―'}</span>
         <span>Api_Result: {result?.apiResult ?? '―'}</span>
+        <AdminStatusPill status="idle" value={`namespace: ${routeNamespaceLabel}`} />
+        <AdminStatusPill status="idle" value={`behavior: ${behaviorLabel}`} />
         <AdminStatusPill status={result?.stub ? 'warn' : result?.ok ? 'ok' : 'idle'} value={`source: ${stubLabel}`} />
         {currentOption.stubFixed ? <AdminStatusPill status="warn" value="stub固定" /> : null}
       </div>
       {result?.stub ? (
-        <AdminAlert tone="warn" message="source: stub（運用では期待通りではありません）" />
+        <AdminAlert tone="warn" message="この wrapper は現在 stub 応答を返しています。official ORCA 実データではありません。" />
       ) : null}
 
       <AdminField label="エンドポイント" htmlFor="orca-internal-endpoint" hint={currentOption.hint}>

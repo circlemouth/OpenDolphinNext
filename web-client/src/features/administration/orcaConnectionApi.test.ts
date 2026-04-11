@@ -149,4 +149,32 @@ describe('orcaConnectionApi', () => {
     expect(result.status).toBe(401);
     expect(result.ok).toBe(false);
   });
+
+  it('設定保存で pushUrl / pushTenantId を config payload に含める', async () => {
+    mockHttpFetch.mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, facilityId: '9001' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await saveOrcaConnectionConfig({
+      useWeborca: true,
+      serverUrl: 'https://weborca.example.invalid',
+      port: 443,
+      username: 'orca-admin',
+      pushUrl: 'wss://push.example.invalid/ws',
+      pushTenantId: 'tenant-01',
+      clientAuthEnabled: false,
+    });
+
+    const [, init] = mockHttpFetch.mock.calls[0];
+    if (!init) throw new Error('fetch init is undefined');
+    const formData = init.body as FormData;
+    const config = JSON.parse(String(formData.get('config'))) as Record<string, unknown>;
+    expect(config).toMatchObject({
+      pushUrl: 'wss://push.example.invalid/ws',
+      pushTenantId: 'tenant-01',
+    });
+  });
 });

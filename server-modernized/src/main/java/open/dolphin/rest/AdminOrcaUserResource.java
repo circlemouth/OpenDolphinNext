@@ -144,28 +144,29 @@ public class AdminOrcaUserResource extends AbstractResource {
         String staffClass = AdminOrcaUserSupport.requiredToken(this, request, payload, "staffClass", "Staff_Class");
         String fullName = AdminOrcaUserSupport.requiredToken(this, request, payload, "fullName", "WholeName");
         String fullNameKana = AdminOrcaUserSupport.optionalToken(payload, "fullNameKana", "WholeName_inKana", "kanaName", "Kana_Name");
-        String staffNumber = AdminOrcaUserSupport.optionalToken(payload, "staffNumber", "Staff_Number", "userNumber", "User_Number");
         Boolean isAdmin = AdminOrcaUserSupport.optionalBoolean(payload, "isAdmin", "Admin_Flag", "admin");
 
         AdminOrcaUserSupport.ManageUsersResult result = invokeManageUsers(
                 request,
                 runId,
                 AdminOrcaUserSupport.buildCreateRequestXml(
-                        userId, password, staffClass, fullName, fullNameKana, staffNumber, isAdmin));
+                        userId, password, staffClass, fullName, fullNameKana, isAdmin));
         AdminOrcaUserSupport.ensureManageUsersSuccess(this, request, result);
 
+        AdminOrcaUserSupport.ManageUsersResult refreshed = fetchOrcaUsers(request, runId);
+
         Map<String, Object> body =
-                AdminOrcaUserSupport.baseEnvelope(runId, request, result.apiResult(), result.apiResultMessage(), true);
+                AdminOrcaUserSupport.baseEnvelope(runId, request, refreshed.apiResult(), refreshed.apiResultMessage(), true);
         body.put("status", Response.Status.OK.getStatusCode());
         body.put("user", AdminOrcaUserSupport.toUserPayload(
-                AdminOrcaUserSupport.findUser(result.users(), userId), null));
+                AdminOrcaUserSupport.findUser(refreshed.users(), userId), null));
         body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "create");
         details.put("userId", userId);
-        details.put("apiResult", result.apiResult());
-        details.put("apiResultMessage", result.apiResultMessage());
+        details.put("apiResult", refreshed.apiResult());
+        details.put("apiResultMessage", refreshed.apiResultMessage());
         recordAudit(request, "ADMIN_ORCA_USERS_CREATE", actor, runId, details,
                 AuditEventEnvelope.Outcome.SUCCESS, null, null);
 
@@ -184,20 +185,13 @@ public class AdminOrcaUserResource extends AbstractResource {
         adminStepUpGuard.require(request, "admin:mutation");
 
         String currentUserId = requireValidUserId(request, orcaUserId);
-        String newUserId = AdminOrcaUserSupport.optionalToken(payload, "userId", "User_Id", "newUserId");
         String newPassword = AdminOrcaUserSupport.optionalToken(payload, "password", "Password");
-        String newStaffClass = AdminOrcaUserSupport.optionalToken(payload, "staffClass", "Staff_Class");
         String newFullName = AdminOrcaUserSupport.optionalToken(payload, "fullName", "WholeName");
         String newFullNameKana = AdminOrcaUserSupport.optionalToken(payload, "fullNameKana", "WholeName_inKana", "newKanaName", "New_Kana_Name");
-        String newStaffNumber = AdminOrcaUserSupport.optionalToken(payload, "staffNumber", "Staff_Number", "newUserNumber");
         boolean newAdminSpecified = AdminOrcaUserSupport.hasAnyKey(payload, "isAdmin", "Admin_Flag");
         Boolean newAdmin = newAdminSpecified ? AdminOrcaUserSupport.optionalBoolean(payload, "isAdmin", "Admin_Flag") : null;
 
-        if (newUserId != null && !newUserId.matches("^[A-Za-z0-9_]+$")) {
-            throw restError(request, Response.Status.BAD_REQUEST, "invalid_user_id", "ORCA User_Id が不正です。");
-        }
-        if (newUserId == null && newPassword == null && newStaffClass == null
-                && newFullName == null && newFullNameKana == null && newStaffNumber == null && !newAdminSpecified) {
+        if (newPassword == null && newFullName == null && newFullNameKana == null && !newAdminSpecified) {
             throw restError(request, Response.Status.BAD_REQUEST, "update_required", "更新項目が指定されていません。");
         }
 
@@ -205,22 +199,19 @@ public class AdminOrcaUserResource extends AbstractResource {
                 request,
                 runId,
                 AdminOrcaUserSupport.buildUpdateRequestXml(
-                        currentUserId, newUserId, newPassword, newStaffClass,
-                        newFullName, newFullNameKana, newStaffNumber, newAdmin));
+                        currentUserId, newPassword, newFullName, newFullNameKana, newAdmin));
         AdminOrcaUserSupport.ensureManageUsersSuccess(this, request, result);
 
-        String effectiveUserId = newUserId != null ? newUserId : currentUserId;
         Map<String, Object> body =
                 AdminOrcaUserSupport.baseEnvelope(runId, request, result.apiResult(), result.apiResultMessage(), true);
         body.put("status", Response.Status.OK.getStatusCode());
         body.put("user", AdminOrcaUserSupport.toUserPayload(
-                AdminOrcaUserSupport.findUser(result.users(), effectiveUserId), null));
+                AdminOrcaUserSupport.findUser(result.users(), currentUserId), null));
         body.put("syncStatus", AdminOrcaUserSupport.toSyncStatusPayload(syncState));
 
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("operation", "update");
         details.put("currentUserId", currentUserId);
-        details.put("newUserId", newUserId);
         details.put("apiResult", result.apiResult());
         details.put("apiResultMessage", result.apiResultMessage());
         recordAudit(request, "ADMIN_ORCA_USERS_UPDATE", actor, runId, details,
