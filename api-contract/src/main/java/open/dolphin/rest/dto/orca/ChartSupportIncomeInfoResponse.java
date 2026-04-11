@@ -15,6 +15,9 @@ public class ChartSupportIncomeInfoResponse {
     private String informationDate;
     private String informationTime;
     private List<Entry> entries = new ArrayList<>();
+    private Double unpaidMoneyTotal;
+    private Boolean unpaidMoneyInformationOverflow;
+    private List<UnpaidMoneyEntry> unpaidMoneyInformation = new ArrayList<>();
     private String runId;
     private String traceId;
     private String error;
@@ -83,6 +86,30 @@ public class ChartSupportIncomeInfoResponse {
         this.entries = entries;
     }
 
+    public Double getUnpaidMoneyTotal() {
+        return unpaidMoneyTotal;
+    }
+
+    public void setUnpaidMoneyTotal(Double unpaidMoneyTotal) {
+        this.unpaidMoneyTotal = unpaidMoneyTotal;
+    }
+
+    public Boolean getUnpaidMoneyInformationOverflow() {
+        return unpaidMoneyInformationOverflow;
+    }
+
+    public void setUnpaidMoneyInformationOverflow(Boolean unpaidMoneyInformationOverflow) {
+        this.unpaidMoneyInformationOverflow = unpaidMoneyInformationOverflow;
+    }
+
+    public List<UnpaidMoneyEntry> getUnpaidMoneyInformation() {
+        return unpaidMoneyInformation;
+    }
+
+    public void setUnpaidMoneyInformation(List<UnpaidMoneyEntry> unpaidMoneyInformation) {
+        this.unpaidMoneyInformation = unpaidMoneyInformation;
+    }
+
     public String getRunId() {
         return runId;
     }
@@ -111,8 +138,11 @@ public class ChartSupportIncomeInfoResponse {
     public static class Entry {
         private String performDate;
         private String performEndDate;
+        private String issuedDate;
         private String inOut;
         private String invoiceNumber;
+        private String groupInvoiceNumber;
+        private String departmentCode;
         private String departmentName;
         private String insuranceCombinationNumber;
         private Double acMoney;
@@ -137,6 +167,14 @@ public class ChartSupportIncomeInfoResponse {
             this.performEndDate = performEndDate;
         }
 
+        public String getIssuedDate() {
+            return issuedDate;
+        }
+
+        public void setIssuedDate(String issuedDate) {
+            this.issuedDate = issuedDate;
+        }
+
         public String getInOut() {
             return inOut;
         }
@@ -151,6 +189,22 @@ public class ChartSupportIncomeInfoResponse {
 
         public void setInvoiceNumber(String invoiceNumber) {
             this.invoiceNumber = invoiceNumber;
+        }
+
+        public String getGroupInvoiceNumber() {
+            return groupInvoiceNumber;
+        }
+
+        public void setGroupInvoiceNumber(String groupInvoiceNumber) {
+            this.groupInvoiceNumber = groupInvoiceNumber;
+        }
+
+        public String getDepartmentCode() {
+            return departmentCode;
+        }
+
+        public void setDepartmentCode(String departmentCode) {
+            this.departmentCode = departmentCode;
         }
 
         public String getDepartmentName() {
@@ -207,6 +261,46 @@ public class ChartSupportIncomeInfoResponse {
 
         public void setMlSmoney(Double mlSmoney) {
             this.mlSmoney = mlSmoney;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class UnpaidMoneyEntry {
+        private String performDate;
+        private String inOut;
+        private String invoiceNumber;
+        private Double unpaidMoney;
+
+        public String getPerformDate() {
+            return performDate;
+        }
+
+        public void setPerformDate(String performDate) {
+            this.performDate = performDate;
+        }
+
+        public String getInOut() {
+            return inOut;
+        }
+
+        public void setInOut(String inOut) {
+            this.inOut = inOut;
+        }
+
+        public String getInvoiceNumber() {
+            return invoiceNumber;
+        }
+
+        public void setInvoiceNumber(String invoiceNumber) {
+            this.invoiceNumber = invoiceNumber;
+        }
+
+        public Double getUnpaidMoney() {
+            return unpaidMoney;
+        }
+
+        public void setUnpaidMoney(Double unpaidMoney) {
+            this.unpaidMoney = unpaidMoney;
         }
     }
 }

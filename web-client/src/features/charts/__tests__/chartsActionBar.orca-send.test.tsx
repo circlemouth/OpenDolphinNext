@@ -49,17 +49,6 @@ vi.mock('../orcaClaimApi', async () => {
   };
 });
 
-vi.mock('../orcaMedicalModApi', () => ({
-  buildMedicalModV23RequestXml: vi.fn().mockReturnValue('<data></data>'),
-  postOrcaMedicalModV23Xml: vi.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    apiResult: '00',
-    rawXml: '<xml></xml>',
-    missingTags: [],
-  }),
-}));
-
 vi.mock('../orderBundleApi', async () => {
   const actual = await vi.importActual<typeof import('../orderBundleApi')>('../orderBundleApi');
   return {
@@ -134,6 +123,12 @@ const defaultSelectedEntry: ReceptionEntry = {
   department: '01',
   physician: '10001',
   patientId: '000001',
+  visitDate: '2026-01-20',
+  departmentCode: '01',
+  physicianCode: '10001',
+  insuranceCombinationNumber: '0001',
+  voucherNumber: '1234',
+  sequentialNumber: '1',
 };
 
 const renderActionBar = (selectedEntry?: Partial<ReceptionEntry>) =>
@@ -192,20 +187,31 @@ describe('ChartsActionBar ORCA send', () => {
 
     await waitFor(() => expect(postOrcaMedicalModV2Xml).toHaveBeenCalled());
     expect(fetchPrescriptionOrder).toHaveBeenCalledWith({ patientId: '000001', from: '2026-01-20', encounterId: 'F001:E100' });
+    expect(vi.mocked(postOrcaMedicalModV2Xml).mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        encounterContext: expect.objectContaining({
+          patientId: '000001',
+          visitDate: '2026-01-20',
+          departmentCode: '01',
+          physicianCode: '10001',
+          insuranceCombinationNumber: '0001',
+          voucherNumber: '1234',
+          sequentialNumber: '1',
+        }),
+      }),
+    );
     expect(screen.getByText(/ORCA送信/)).toBeInTheDocument();
     expect(screen.queryByText(/Invoice_Number=INV-999/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Data_Id=DATA-999/)).not.toBeInTheDocument();
   });
 
   it('blocks missing physician code', async () => {
-    const user = userEvent.setup();
+    renderActionBar({ department: '01', physician: undefined, physicianCode: undefined, patientId: '000001' });
 
-    renderActionBar({ department: '01', physician: undefined, patientId: '000001' });
-
-    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
-    await user.click(screen.getByRole('button', { name: '送信する' }));
-
-    await waitFor(() => expect(screen.getByText(/Physician_Code/)).toBeInTheDocument());
+    const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
+    expect(sendButton).toBeDisabled();
+    expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
+    expect(screen.getByText(/Physician_Code/)).toBeInTheDocument();
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 

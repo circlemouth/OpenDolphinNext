@@ -9,6 +9,11 @@ export type ReceptionEntry = {
   scheduleKey?: string;
   encounterKey?: string;
   patientId?: string;
+  departmentCode?: string;
+  physicianCode?: string;
+  voucherNumber?: string;
+  sequentialNumber?: string;
+  insuranceCombinationNumber?: string;
   name?: string;
   kana?: string;
   birthDate?: string;

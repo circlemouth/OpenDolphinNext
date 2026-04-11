@@ -5,7 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { ChartsActionBar } from '../ChartsActionBar';
 import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
-import { postOrcaMedicalModV23Xml } from '../orcaMedicalModApi';
 import { recordChartsAuditEvent } from '../audit';
 
 vi.mock('../../../routes/useAppNavigation', () => ({
@@ -31,17 +30,6 @@ vi.mock('../../../routes/useAppNavigation', () => ({
 vi.mock('../orcaClaimApi', () => ({
   postOrcaMedicalModV2Xml: vi.fn(),
   buildMedicalModV2RequestXml: vi.fn().mockReturnValue('<data></data>'),
-}));
-
-vi.mock('../orcaMedicalModApi', () => ({
-  buildMedicalModV23RequestXml: vi.fn().mockReturnValue('<data></data>'),
-  postOrcaMedicalModV23Xml: vi.fn().mockResolvedValue({
-    ok: true,
-    status: 200,
-    apiResult: '00',
-    rawXml: '<xml></xml>',
-    missingTags: [],
-  }),
 }));
 
 vi.mock('../orderRpNormalization', () => ({
@@ -109,7 +97,15 @@ describe('ChartsActionBar', () => {
           {...baseProps}
           patientId="P-100"
           visitDate="2026-01-03"
-          selectedEntry={{ patientId: 'P-100', department: '01 内科', physician: '10001 主治医' } as any}
+          selectedEntry={{
+            patientId: 'P-100',
+            visitDate: '2026-01-03',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
         />
       </MemoryRouter>,
     );
@@ -143,7 +139,15 @@ describe('ChartsActionBar', () => {
           {...baseProps}
           patientId="P-777"
           visitDate="2026-01-08"
-          selectedEntry={{ patientId: 'P-777', department: '01 内科' } as any}
+          selectedEntry={{
+            patientId: 'P-777',
+            visitDate: '2026-01-08',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          } as any}
           sendConfirmSummary={{
             patientName: '山田太郎',
             patientId: 'P-777',
@@ -179,7 +183,7 @@ describe('ChartsActionBar', () => {
     expect(screen.getByText('2件')).toBeInTheDocument();
   });
 
-  it('診察終了で blocked route を叩かず local after-finish フローを完了する', async () => {
+  it('診察終了は ORCA 追加送信を行わず local after-finish フローを完了する', async () => {
     const user = userEvent.setup();
     const onAfterFinish = vi.fn();
 
@@ -198,7 +202,7 @@ describe('ChartsActionBar', () => {
     await user.click(screen.getByRole('button', { name: '診察終了' }));
 
     await waitFor(() => expect(onAfterFinish).toHaveBeenCalledTimes(1));
-    expect(postOrcaMedicalModV23Xml).toHaveBeenCalled();
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
     expect(screen.getByText('診察終了を完了')).toBeInTheDocument();
     expect(recordChartsAuditEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -206,35 +210,29 @@ describe('ChartsActionBar', () => {
         outcome: 'success',
         details: expect.objectContaining({
           completionMode: 'local_finish',
-          postFinishAction: 'medicalmodv23',
-          visitDate: '2026-01-04',
         }),
       }),
     );
   });
 
-  it('診察終了後の追加更新で必須項目不足時は warning banner を出す', async () => {
-    const user = userEvent.setup();
-
+  it('encounter context が不足している場合は ORCA 送信を disable し不足理由を表示する', async () => {
     render(
       <MemoryRouter>
-        <ChartsActionBar {...baseProps} patientId="P-201" visitDate="2026-01-04" selectedEntry={{ patientId: 'P-201' } as any} />
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-201"
+          visitDate="2026-01-04"
+          selectedEntry={{ patientId: 'P-201', visitDate: '2026-01-04', departmentCode: '01' } as any}
+        />
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: '診察終了' }));
-
-    expect(await screen.findByText(/診療終了後の追加更新を停止/)).toBeInTheDocument();
-    expect(postOrcaMedicalModV23Xml).not.toHaveBeenCalled();
-    expect(recordChartsAuditEvent).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: 'ORCA_MEDICAL_MOD_V23',
-        outcome: 'blocked',
-        details: expect.objectContaining({
-          endpoint: '/api/orca/chart-support/medical-mod-v23',
-        }),
-      }),
-    );
+    const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
+    expect(sendButton).toBeDisabled();
+    expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
+    expect(screen.getByText(/Physician_Code/)).toBeInTheDocument();
+    expect(screen.getByText(/Insurance_Combination_Number/)).toBeInTheDocument();
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
   it('診察開始は afterStart 成功後のみ success toast を出す', async () => {

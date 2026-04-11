@@ -82,6 +82,9 @@
 - deep link query は処理後に scrub します。
 - reload 跨ぎの文脈復元は行いません。
 - active patient の workspace tab switch/close は、未保存入力がある場合に save/discard/cancel guard を通します。
+- ORCA 送信ボタンは canonical encounter context (`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber`) が揃わない限り enable しません。
+- `visitDate` の `today` fallback や display string parsing は ORCA 送信文脈に使いません。
+- `medicalmodv23` の chart flow 後続呼び出しは current contract に含めません。chart send/finish の official outbound は `medicalmodv2` と `incomeinfv2` のみです。
 
 ### Terminology
 - 「参照カルテ」と「参照パネル」は current docs 上で完全同義とは断定しません。
@@ -91,6 +94,10 @@
 - runtime smoke: `runtime-ready-smoke.mjs` が release 前 mandatory
 - runtime smoke は主要 route / guard の確認根拠であり、debug-only surface の常時表示までは断定しません。
 - manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / 管理画面 への遷移確認
+- guard minimum:
+  - canonical encounter context 不足時は ORCA送信を fail-close
+  - ORCA収納情報は official income semantics (`未収`, `請求`, `入金`, `保険適用`, `自費`) を表示
+  - ローカル診療サマリと ORCA収納情報の責務を混ぜない
 - unknown: pane geometry、最小 state schema
 
 ## Patients Surface

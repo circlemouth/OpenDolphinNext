@@ -24,8 +24,8 @@ import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
-import open.dolphin.rest.dto.orca.ChartSupportMedicalModV23Request;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
+import open.dolphin.rest.dto.orca.OrcaEncounterContext;
 
 @Path("/orca/chart-support")
 public class OrcaChartSupportResource extends AbstractOrcaRestResource {
@@ -45,9 +45,14 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             ChartSupportMedicalModV2Request payload) {
         requireRemoteUser(request);
         requireFacilityId(request);
-        if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getPerformDate())
-                || isBlank(payload.getDepartmentCode()) || isBlank(payload.getClassCode())) {
-            throw validationError(request, "payload", "patientId, performDate, departmentCode, classCode are required");
+        OrcaEncounterContext encounterContext = payload != null ? payload.getEncounterContext() : null;
+        if (payload == null || encounterContext == null || isBlank(payload.getPatientId()) || isBlank(payload.getPerformDate())
+                || isBlank(payload.getDepartmentCode()) || isBlank(payload.getPhysicianCode())
+                || isBlank(payload.getInsuranceCombinationNumber()) || isBlank(encounterContext.getVoucherNumber())
+                || isBlank(encounterContext.getSequentialNumber()) || isBlank(payload.getClassCode())) {
+            throw validationError(request, "payload",
+                    "encounterContext.patientId, visitDate, departmentCode, physicianCode, "
+                            + "insuranceCombinationNumber, voucherNumber, sequentialNumber, classCode are required");
         }
         String classCode;
         try {
@@ -84,6 +89,10 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("traceId", traceId);
         details.put("patientId", payload.getPatientId());
         details.put("departmentCode", payload.getDepartmentCode());
+        details.put("physicianCode", payload.getPhysicianCode());
+        details.put("insuranceCombinationNumber", payload.getInsuranceCombinationNumber());
+        details.put("voucherNumber", encounterContext.getVoucherNumber());
+        details.put("sequentialNumber", encounterContext.getSequentialNumber());
         details.put("classCode", classCode);
         details.put("medicalInformationCount",
                 payload.getMedicalInformation() != null ? payload.getMedicalInformation().size() : 0);
@@ -92,41 +101,6 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
         recordAudit(request, "ORCA_MEDICAL_MOD_V2", details,
-                response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
-        return response;
-    }
-
-    @POST
-    @Path("/medical-mod-v23")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public ChartSupportMedicalModResponse medicalModV23(
-            @Context HttpServletRequest request,
-            ChartSupportMedicalModV23Request payload) {
-        requireRemoteUser(request);
-        requireFacilityId(request);
-        if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getDepartmentCode())) {
-            throw validationError(request, "payload", "patientId and departmentCode are required");
-        }
-
-        String runId = resolveRunId(request);
-        String traceId = resolveTraceId(request);
-        String facilityId = requireFacilityId(request);
-        String requestXml = support().buildMedicalModV23RequestXml(payload);
-        OrcaTransportResult result = orcaTransport.invoke(
-                facilityId,
-                OrcaEndpoint.MEDICAL_MOD_V23,
-                OrcaTransportRequest.post(requestXml));
-        ChartSupportMedicalModResponse response = support().parseMedicalModResponse(result, runId, traceId);
-
-        Map<String, Object> details = new LinkedHashMap<>();
-        details.put("runId", runId);
-        details.put("traceId", traceId);
-        details.put("patientId", payload.getPatientId());
-        details.put("departmentCode", payload.getDepartmentCode());
-        details.put("apiResult", response.getApiResult());
-        details.put("httpStatus", response.getStatus());
-        recordAudit(request, "ORCA_MEDICAL_MOD_V23", details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
     }
@@ -227,8 +201,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         requireRemoteUser(request);
         requireFacilityId(request);
         if (payload == null || isBlank(payload.getPatientId())
-                || (isBlank(payload.getPerformMonth()) && isBlank(payload.getPerformYear()))) {
-            throw validationError(request, "payload", "patientId and performMonth or performYear are required");
+                || (isBlank(payload.getPerformDate()) && isBlank(payload.getPerformMonth()) && isBlank(payload.getPerformYear()))) {
+            throw validationError(request, "payload", "patientId and one of performDate/performMonth/performYear are required");
         }
 
         String runId = resolveRunId(request);
@@ -245,6 +219,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("runId", runId);
         details.put("traceId", traceId);
         details.put("patientId", payload.getPatientId());
+        details.put("performDate", payload.getPerformDate());
         details.put("performMonth", payload.getPerformMonth());
         details.put("performYear", payload.getPerformYear());
         details.put("apiResult", response.getApiResult());

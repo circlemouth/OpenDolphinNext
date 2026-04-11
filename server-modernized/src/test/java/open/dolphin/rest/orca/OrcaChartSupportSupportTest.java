@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import open.dolphin.orca.transport.OrcaTransportResult;
+import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoRequest;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
@@ -16,13 +17,22 @@ class OrcaChartSupportSupportTest {
 
     private final OrcaChartSupportSupport support = new OrcaChartSupportSupport();
 
-    @Test
-    void buildMedicalModV2RequestXmlIncludesInitialConsultation() {
+    private static ChartSupportMedicalModV2Request newMedicalModPayload() {
         ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
         payload.setPatientId("12345");
         payload.setPerformDate("2026-03-22T08:00:00");
-        payload.setClassCode("01");
         payload.setDepartmentCode("01");
+        payload.setPhysicianCode("10001");
+        payload.setInsuranceCombinationNumber("0001");
+        payload.setVoucherNumber("1234");
+        payload.setSequentialNumber("1");
+        return payload;
+    }
+
+    @Test
+    void buildMedicalModV2RequestXmlIncludesInitialConsultation() {
+        ChartSupportMedicalModV2Request payload = newMedicalModPayload();
+        payload.setClassCode("01");
         payload.setIncludeInitialConsultation(true);
         payload.setMedicalPush("Yes");
         payload.setMedicalUid("M-001");
@@ -30,6 +40,7 @@ class OrcaChartSupportSupportTest {
         String xml = support.buildMedicalModV2RequestXml(payload);
 
         assertTrue(xml.contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
+        assertTrue(xml.contains("<Insurance_Combination_Number type=\"string\">0001</Insurance_Combination_Number>"));
         assertTrue(xml.contains("<Medical_Push type=\"string\">Yes</Medical_Push>"));
         assertTrue(xml.contains("<Medical_Uid type=\"string\">M-001</Medical_Uid>"));
         assertTrue(xml.contains("<Medical_Class type=\"string\">110</Medical_Class>"));
@@ -41,10 +52,7 @@ class OrcaChartSupportSupportTest {
 
     @Test
     void buildMedicalModV2RequestXmlSerializesMedicationNumberAndGenericFlag() {
-        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
-        payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-22T08:00:00");
-        payload.setDepartmentCode("01");
+        ChartSupportMedicalModV2Request payload = newMedicalModPayload();
 
         ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
         information.setMedicalClass("21");
@@ -70,10 +78,7 @@ class OrcaChartSupportSupportTest {
 
     @Test
     void buildMedicalModV2RequestXmlSerializesPrescriptionWithTwoDrugsAndComment() {
-        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
-        payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-22T08:00:00");
-        payload.setDepartmentCode("01");
+        ChartSupportMedicalModV2Request payload = newMedicalModPayload();
 
         ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
         information.setMedicalClass("212");
@@ -113,10 +118,7 @@ class OrcaChartSupportSupportTest {
 
     @Test
     void buildMedicalModV2RequestXmlUsesStructuredClaimCommentCarrierPerFamily() {
-        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
-        payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-22T08:00:00");
-        payload.setDepartmentCode("01");
+        ChartSupportMedicalModV2Request payload = newMedicalModPayload();
 
         ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
         information.setMedicalClass("212");
@@ -175,10 +177,7 @@ class OrcaChartSupportSupportTest {
 
     @Test
     void buildMedicalModV2RequestXmlSerializesRadiologyBodyPartMaterialAndCommentInOrder() {
-        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
-        payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-22T08:00:00");
-        payload.setDepartmentCode("01");
+        ChartSupportMedicalModV2Request payload = newMedicalModPayload();
 
         ChartSupportMedicalModV2Request.MedicalInformation information = new ChartSupportMedicalModV2Request.MedicalInformation();
         information.setMedicalClass("700");
@@ -229,10 +228,7 @@ class OrcaChartSupportSupportTest {
 
     @Test
     void buildMedicalModV2RequestXmlSerializesBasicAndInstructionChargeGroups() {
-        ChartSupportMedicalModV2Request payload = new ChartSupportMedicalModV2Request();
-        payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-22T08:00:00");
-        payload.setDepartmentCode("01");
+        ChartSupportMedicalModV2Request payload = newMedicalModPayload();
 
         ChartSupportMedicalModV2Request.MedicalInformation baseCharge = new ChartSupportMedicalModV2Request.MedicalInformation();
         baseCharge.setMedicalClass("110");
@@ -588,11 +584,16 @@ class OrcaChartSupportSupportTest {
                     <Api_Result_Message>OK</Api_Result_Message>
                     <Information_Date>20260322</Information_Date>
                     <Information_Time>081500</Information_Time>
+                    <Unpaid_Money_Total>300.0</Unpaid_Money_Total>
+                    <Unpaid_Money_Information_Overflow>true</Unpaid_Money_Information_Overflow>
                     <Income_Information_child type="record">
                       <Perform_Date>2026-03-01</Perform_Date>
                       <Perform_End_Date>2026-03-31</Perform_End_Date>
+                      <Issued_Date>2026-03-02</Issued_Date>
                       <InOut>O</InOut>
                       <Invoice_Number>INV-1</Invoice_Number>
+                      <Group_Invoice_Number>G-1</Group_Invoice_Number>
+                      <Department_Code>01</Department_Code>
                       <Department_Name>Internal</Department_Name>
                       <Insurance_Combination_Number>ABCD</Insurance_Combination_Number>
                       <Cd_Information type="record">
@@ -603,6 +604,12 @@ class OrcaChartSupportSupportTest {
                         <Ml_Smoney>0.0</Ml_Smoney>
                       </Cd_Information>
                     </Income_Information_child>
+                    <Unpaid_Money_Information_child type="record">
+                      <Perform_Date>2026-03-01</Perform_Date>
+                      <InOut>O</InOut>
+                      <Invoice_Number>INV-1</Invoice_Number>
+                      <Unpaid_Money>300.0</Unpaid_Money>
+                    </Unpaid_Money_Information_child>
                   </incomeinfores>
                 </data>
                 """;
@@ -615,12 +622,33 @@ class OrcaChartSupportSupportTest {
         assertEquals("0000", response.getApiResult());
         assertTrue(response.isOk());
         assertTrue(response.isApiOk());
+        assertEquals(300.0, response.getUnpaidMoneyTotal(), 0.0001);
+        assertTrue(Boolean.TRUE.equals(response.getUnpaidMoneyInformationOverflow()));
+        assertEquals(1, response.getUnpaidMoneyInformation().size());
         assertEquals(1, response.getEntries().size());
         ChartSupportIncomeInfoResponse.Entry entry = response.getEntries().get(0);
         assertEquals(100.5, entry.getAcMoney(), 0.0001);
         assertEquals(20.25, entry.getIcMoney(), 0.0001);
+        assertEquals("2026-03-02", entry.getIssuedDate());
+        assertEquals("G-1", entry.getGroupInvoiceNumber());
+        assertEquals("01", entry.getDepartmentCode());
         assertNotNull(entry.getDepartmentName());
         assertEquals("Internal", entry.getDepartmentName());
+    }
+
+    @Test
+    void buildIncomeInfoRequestXmlPrefersPerformDateOverMonthAndYear() {
+        ChartSupportIncomeInfoRequest payload = new ChartSupportIncomeInfoRequest();
+        payload.setPatientId("12345");
+        payload.setPerformDate("2026-03-09");
+        payload.setPerformMonth("2026-03");
+        payload.setPerformYear("2026");
+
+        String xml = support.buildIncomeInfoRequestXml(payload);
+
+        assertTrue(xml.contains("<Perform_Date type=\"string\">2026-03-09</Perform_Date>"));
+        assertFalse(xml.contains("<Perform_Month type=\"string\">2026-03</Perform_Month>"));
+        assertFalse(xml.contains("<Perform_Year type=\"string\">2026</Perform_Year>"));
     }
 
     private static void assertNoMedicationUnitTags(String xml) {

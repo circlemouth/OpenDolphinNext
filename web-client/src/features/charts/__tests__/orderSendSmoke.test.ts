@@ -165,10 +165,15 @@ describe('order send smoke', () => {
     expect(JSON.stringify(prepared.medicalInformation)).not.toContain('"unit"');
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: prepared.medicalInformation,
     });
 
@@ -287,10 +292,15 @@ describe('order send smoke', () => {
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: normalized.map((entry) => entry.info),
     });
 
@@ -529,10 +539,15 @@ describe('order send smoke', () => {
       .filter((entry): entry is NonNullable<ReturnType<typeof toMedicalModV2InformationWithSource>> => Boolean(entry));
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: normalized.map((entry) => entry.info),
     });
 
@@ -710,10 +725,15 @@ describe('order send smoke', () => {
     expect(JSON.stringify(prepared.medicalInformation)).not.toContain('"unit"');
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: prepared.medicalInformation,
     });
 
@@ -1170,10 +1190,15 @@ describe('order send smoke', () => {
     ]);
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: normalized.map((entry) => entry.info),
     });
 
@@ -1457,10 +1482,15 @@ describe('order send smoke', () => {
     );
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: prepared.medicalInformation,
     });
 

@@ -245,11 +245,10 @@ const gotoCharts = async (page: E2EPage) => {
   }, { runId: RUN_ID, traceId: TRACE_ID });
 };
 
-test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)', () => {
+test.describe('ORCA公式経路 送信本線化 (medicalmodv2)', () => {
   test('伝票番号とData_Idを取得してトースト表示する', async ({ page }, testInfo) => {
     const telemetryLogs: string[] = [];
     let medicalmodv2Response = '';
-    let medicalmodv23Response = '';
     page.on('console', (message) => {
       const text = message.text();
       if (text.includes('[telemetry]')) {
@@ -260,9 +259,6 @@ test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)',
       const url = response.url();
       if (url.includes('/api21/medicalmodv2')) {
         medicalmodv2Response = await response.text();
-      }
-      if (url.includes('/api21/medicalmodv23')) {
-        medicalmodv23Response = await response.text();
       }
     });
     await page.context().setExtraHTTPHeaders({
@@ -293,28 +289,11 @@ test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)',
       '  </medicalres>',
       '</xmlio2>',
     ].join('');
-    const medicalmodv23Xml = [
-      '<xmlio2>',
-      '  <medicalmodv23res>',
-      '    <Api_Result>00</Api_Result>',
-      '    <Api_Result_Message>OK</Api_Result_Message>',
-      `    <Information_Date>${CLAIM_DATE}</Information_Date>`,
-      '    <Information_Time>09:00:00</Information_Time>',
-      '  </medicalmodv23res>',
-      '</xmlio2>',
-    ].join('');
     await page.route('**/api21/medicalmodv2**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/xml',
         body: medicalmodv2Xml,
-      }),
-    );
-    await page.route('**/api21/medicalmodv23**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/xml',
-        body: medicalmodv23Xml,
       }),
     );
     await setupSession(page);
@@ -385,13 +364,7 @@ test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)',
     writeArtifact(
       auditDir,
       responseName,
-      [
-        'medicalmodv2:',
-        medicalmodv2Response || '(empty)',
-        '',
-        'medicalmodv23:',
-        medicalmodv23Response || '(empty)',
-      ].join('\n'),
+      ['medicalmodv2:', medicalmodv2Response || '(empty)'].join('\n'),
     );
     writeArtifact(
       auditDir,
@@ -427,7 +400,6 @@ test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)',
     const telemetryLogs: string[] = [];
     const auditLogs: string[] = [];
     let medicalmodv2Response = '';
-    let medicalmodv23Response = '';
     page.on('console', (message) => {
       const text = message.text();
       if (text.includes('[telemetry]')) telemetryLogs.push(text);
@@ -437,9 +409,6 @@ test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)',
       const url = response.url();
       if (url.includes('/api21/medicalmodv2')) {
         medicalmodv2Response = await response.text();
-      }
-      if (url.includes('/api21/medicalmodv23')) {
-        medicalmodv23Response = await response.text();
       }
     });
     await page.context().setExtraHTTPHeaders({
@@ -507,28 +476,11 @@ test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)',
       '  </medicalres>',
       '</xmlio2>',
     ].join('');
-    const medicalmodv23Xml = [
-      '<xmlio2>',
-      '  <medicalmodv23res>',
-      '    <Api_Result>00</Api_Result>',
-      '    <Api_Result_Message>OK</Api_Result_Message>',
-      `    <Information_Date>${CLAIM_DATE}</Information_Date>`,
-      '    <Information_Time>09:00:00</Information_Time>',
-      '  </medicalmodv23res>',
-      '</xmlio2>',
-    ].join('');
     await page.route('**/api21/medicalmodv2**', (route) =>
       route.fulfill({
         status: 500,
         contentType: 'application/xml',
         body: medicalmodv2ErrorXml,
-      }),
-    );
-    await page.route('**/api21/medicalmodv23**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/xml',
-        body: medicalmodv23Xml,
       }),
     );
 
@@ -601,13 +553,7 @@ test.describe('ORCA公式経路 送信本線化 (medicalmodv2→medicalmodv23)',
     writeArtifact(
       auditDir,
       responseName,
-      [
-        'medicalmodv2:',
-        medicalmodv2Response || '(empty)',
-        '',
-        'medicalmodv23:',
-        medicalmodv23Response || '(empty)',
-      ].join('\n'),
+      ['medicalmodv2:', medicalmodv2Response || '(empty)'].join('\n'),
     );
     await page.screenshot({
       path: path.join(screenshotsDir, `${RUN_ID}-${safeTitle}-error.png`),

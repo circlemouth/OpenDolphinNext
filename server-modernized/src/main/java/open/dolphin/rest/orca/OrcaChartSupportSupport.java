@@ -14,7 +14,6 @@ import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
-import open.dolphin.rest.dto.orca.ChartSupportMedicalModV23Request;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -63,6 +62,11 @@ final class OrcaChartSupportSupport {
         appendTag(builder, "Department_Code", payload.getDepartmentCode());
         if (!isBlank(payload.getPhysicianCode())) {
             appendTag(builder, "Physician_Code", payload.getPhysicianCode());
+        }
+        if (!isBlank(payload.getInsuranceCombinationNumber())) {
+            builder.append("<HealthInsurance_Information type=\"record\">");
+            appendTag(builder, "Insurance_Combination_Number", payload.getInsuranceCombinationNumber());
+            builder.append("</HealthInsurance_Information>");
         }
         builder.append("<Medical_Information type=\"array\">");
         for (ChartSupportMedicalModV2Request.MedicalInformation entry : information) {
@@ -123,20 +127,6 @@ final class OrcaChartSupportSupport {
             return;
         }
         payload.validateForOrcaSend();
-    }
-
-    String buildMedicalModV23RequestXml(ChartSupportMedicalModV23Request payload) {
-        StringBuilder builder = new StringBuilder();
-        builder.append("<data>");
-        builder.append("<medicalv2req3 type=\"record\">");
-        appendTag(builder, "Request_Number", fallback(payload.getRequestNumber(), ""));
-        appendTag(builder, "Patient_ID", payload.getPatientId());
-        appendTag(builder, "First_Calculation_Date", fallback(payload.getFirstCalculationDate(), ""));
-        appendTag(builder, "LastVisit_Date", fallback(payload.getLastVisitDate(), ""));
-        appendTag(builder, "Department_Code", fallback(payload.getDepartmentCode(), ""));
-        builder.append("</medicalv2req3>");
-        builder.append("</data>");
-        return builder.toString();
     }
 
     ChartSupportMedicalModResponse parseMedicalModResponse(
@@ -321,8 +311,11 @@ final class OrcaChartSupportSupport {
                 ChartSupportIncomeInfoResponse.Entry entry = new ChartSupportIncomeInfoResponse.Entry();
                 entry.setPerformDate(readFirst(element, "Perform_Date"));
                 entry.setPerformEndDate(readFirst(element, "Perform_End_Date"));
+                entry.setIssuedDate(readFirst(element, "Issued_Date"));
                 entry.setInOut(readFirst(element, "InOut"));
                 entry.setInvoiceNumber(readFirst(element, "Invoice_Number"));
+                entry.setGroupInvoiceNumber(readFirst(element, "Group_Invoice_Number"));
+                entry.setDepartmentCode(readFirst(element, "Department_Code"));
                 entry.setDepartmentName(readFirst(element, "Department_Name"));
                 entry.setInsuranceCombinationNumber(readFirst(element, "Insurance_Combination_Number"));
                 Element cd = firstElement(element, "Cd_Information");
@@ -336,6 +329,22 @@ final class OrcaChartSupportSupport {
                 entries.add(entry);
             }
             response.setEntries(entries);
+            response.setUnpaidMoneyTotal(parseDouble(readFirst(document, "Unpaid_Money_Total")));
+            response.setUnpaidMoneyInformationOverflow(parseBoolean(readFirst(document, "Unpaid_Money_Information_Overflow")));
+            List<ChartSupportIncomeInfoResponse.UnpaidMoneyEntry> unpaidEntries = new ArrayList<>();
+            for (Element element : elements(document, "Unpaid_Money_Information_child")) {
+                ChartSupportIncomeInfoResponse.UnpaidMoneyEntry entry =
+                        new ChartSupportIncomeInfoResponse.UnpaidMoneyEntry();
+                entry.setPerformDate(readFirst(element, "Perform_Date"));
+                entry.setInOut(readFirst(element, "InOut"));
+                entry.setInvoiceNumber(readFirst(element, "Invoice_Number"));
+                entry.setUnpaidMoney(parseDouble(readFirst(element, "Unpaid_Money")));
+                if (!isBlank(entry.getPerformDate()) || !isBlank(entry.getInvoiceNumber())
+                        || !isBlank(entry.getInOut()) || entry.getUnpaidMoney() != null) {
+                    unpaidEntries.add(entry);
+                }
+            }
+            response.setUnpaidMoneyInformation(unpaidEntries);
             setResponseResultFlags(response, response.getApiResult(), response.getApiResultMessage());
         } catch (Exception ex) {
             response.setOk(false);
@@ -389,8 +398,13 @@ final class OrcaChartSupportSupport {
         builder.append("<incomeinfreq type=\"record\">");
         appendTag(builder, "Request_Number", "01");
         appendTag(builder, "Patient_ID", payload.getPatientId());
-        appendTag(builder, "Perform_Month", payload.getPerformMonth());
-        appendTag(builder, "Perform_Year", payload.getPerformYear());
+        if (!isBlank(payload.getPerformDate())) {
+            appendTag(builder, "Perform_Date", payload.getPerformDate());
+        } else if (!isBlank(payload.getPerformMonth())) {
+            appendTag(builder, "Perform_Month", payload.getPerformMonth());
+        } else {
+            appendTag(builder, "Perform_Year", payload.getPerformYear());
+        }
         builder.append("</incomeinfreq>");
         builder.append("</data>");
         return builder.toString();
@@ -511,6 +525,20 @@ final class OrcaChartSupportSupport {
         } catch (NumberFormatException ex) {
             return null;
         }
+    }
+
+    private Boolean parseBoolean(String value) {
+        if (isBlank(value)) {
+            return null;
+        }
+        String normalized = value.trim().toLowerCase();
+        if ("true".equals(normalized)) {
+            return true;
+        }
+        if ("false".equals(normalized)) {
+            return false;
+        }
+        return null;
     }
 
     private Element firstElement(Element parent, String tagName) {

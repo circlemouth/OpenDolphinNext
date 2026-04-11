@@ -15,7 +15,6 @@ import type { ReceptionEntry, ReceptionStatus } from '../reception/api';
 import type { AppointmentDataBanner } from '../outpatient/appointmentDataBanner';
 import {
   normalizeVisitDate,
-  resolveEncounterPatientIdFromEntry,
   type OutpatientEncounterContext,
   type ReceptionCarryoverParams,
 } from './encounterContext';
@@ -26,8 +25,8 @@ import { OrcaHokenjaReferenceDialog } from './OrcaHokenjaReferenceDialog';
 import { PatientInfoEditDialog } from './PatientInfoEditDialog';
 
 const resolveEntryPatientId = (
-  entry?: Pick<ReceptionEntry, 'patientId' | 'id' | 'appointmentId' | 'receptionId'>,
-): string | undefined => resolveEncounterPatientIdFromEntry(entry);
+  entry?: Pick<ReceptionEntry, 'patientId'>,
+): string | undefined => entry?.patientId?.trim() || undefined;
 
 const resolveEncounterSelectionKey = (
   value?: Partial<Pick<OutpatientEncounterContext, 'encounterKey' | 'scheduleKey' | 'receptionId' | 'appointmentId' | 'patientId'>>,

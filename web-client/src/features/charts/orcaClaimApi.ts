@@ -1,5 +1,6 @@
 import { httpFetch } from '../../libs/http/httpClient';
 import { getObservabilityMeta } from '../../libs/observability/observability';
+import type { OrcaEncounterContext } from './orcaEncounterContext';
 
 export type OrcaClaimSendResult = {
   ok: boolean;
@@ -45,10 +46,7 @@ export type MedicalModV2Information = {
 };
 
 export type MedicalModV2RequestPayload = {
-  patientId: string;
-  performDate: string;
-  departmentCode: string;
-  physicianCode?: string;
+  encounterContext: OrcaEncounterContext;
   requestNumber?: string;
   medicalUid?: string;
   includeInitialConsultation?: boolean;
@@ -56,7 +54,10 @@ export type MedicalModV2RequestPayload = {
 };
 
 export const buildMedicalModV2RequestXml = (params: MedicalModV2RequestPayload): MedicalModV2RequestPayload => ({
-  ...params,
+  encounterContext: params.encounterContext,
+  requestNumber: params.requestNumber,
+  medicalUid: params.medicalUid,
+  includeInitialConsultation: params.includeInitialConsultation,
   medicalInformation: params.medicalInformation?.map((info) => ({
     entity: info.entity,
     medicalClass: info.medicalClass,

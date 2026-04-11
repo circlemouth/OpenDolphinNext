@@ -71,10 +71,10 @@ import {
   parseChartsEncounterContext,
   parseChartsNavigationMeta,
   parseReceptionCarryoverParams,
-  resolveEncounterPatientIdFromEntry,
   storeChartsEncounterContext,
   type OutpatientEncounterContext,
 } from '../encounterContext';
+import { buildOrcaEncounterContext } from '../orcaEncounterContext';
 import {
   buildChartsApprovalStorageKey,
   clearChartsApprovalRecord,
@@ -624,7 +624,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   useEffect(() => {
     const patientId = normalizeEncounterId(encounterContext.patientId);
     if (!patientId || !hasHandoffEncounterKey(encounterContext)) return;
-    const visitDate = normalizeVisitDate(encounterContext.visitDate) ?? today;
+    const visitDate = normalizeVisitDate(encounterContext.visitDate);
+    if (!visitDate) return;
     setPatientTabsState((prev) =>
       applyEncounterTabState(prev, {
         patientId,
@@ -642,7 +643,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     encounterContext.receptionId,
     encounterContext.scheduleKey,
     encounterContext.visitDate,
-    today,
   ]);
   const [draftState, setDraftState] = useState<{
     dirty: boolean;
@@ -847,8 +847,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     (next: OutpatientEncounterContext, options?: { name?: string; department?: string }) => {
       const normalizedNext = normalizeEncounterContext(next);
       const patientId = normalizedNext.patientId;
-      if (!patientId || !hasHandoffEncounterKey(normalizedNext)) return;
-      const visitDate = normalizedNext.visitDate ?? today;
+      const visitDate = normalizedNext.visitDate;
+      if (!patientId || !visitDate || !hasHandoffEncounterKey(normalizedNext)) return;
       const name = options?.name?.trim() || undefined;
       const department = options?.department?.trim() || undefined;
       suppressUrlContextSyncRef.current = true;
@@ -876,7 +876,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       }));
       setContextAlert(null);
     },
-    [today],
+    [],
   );
 
   const forceSelectPatientTab = useCallback(
@@ -953,7 +953,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           normalizeDisplayText(activePatientTab?.name) ??
           (encounterContext.patientId ? `患者 ID:${encounterContext.patientId}` : '患者未選択'),
         patientId: encounterContext.patientId,
-        visitDate: normalizeVisitDate(encounterContext.visitDate) ?? today,
+        visitDate: normalizeVisitDate(encounterContext.visitDate),
         dirtySources: draftState.dirtySources ?? [],
         saveError: null,
         canSave: canSaveBeforeTabTransition,
@@ -966,7 +966,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       encounterContext.patientId,
       encounterContext.visitDate,
       patientTabs,
-      today,
     ],
   );
 
@@ -2184,6 +2183,10 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       today,
     [encounterContext.visitDate, selectedEntry?.visitDate, today],
   );
+  const actionOrcaEncounterContext = useMemo(
+    () => buildOrcaEncounterContext(selectedEntry),
+    [selectedEntry],
+  );
 
   const patientFallbackQuery = useQuery({
     queryKey: ['charts-patient-fallback', patientId],
@@ -2311,8 +2314,8 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const prefetchPatientTabData = useCallback(
     async (tab: ChartsPatientTab, runId: number) => {
       const patientId = normalizeEncounterId(tab.patientId);
-      const visitDate = normalizeVisitDate(tab.visitDate) ?? today;
-      if (!patientId) return;
+      const visitDate = normalizeVisitDate(tab.visitDate);
+      if (!patientId || !visitDate) return;
       const shouldContinue = () => prefetchRunIdRef.current === runId;
 
       const encounterKey = normalizeEncounterKey(tab.encounterKey);
@@ -2649,12 +2652,13 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const patientTabKeyForContext = useMemo(() => {
     const pid = (patientId ?? '').trim();
     if (!pid) return null;
-    const visitDate = normalizeVisitDate(encounterContext.visitDate) ?? actionVisitDate ?? today;
+    const visitDate = normalizeVisitDate(encounterContext.visitDate) ?? actionVisitDate;
+    if (!visitDate) return null;
     return buildPatientTabKey(pid, visitDate, {
       scheduleKey: encounterContext.scheduleKey,
       encounterKey: encounterContext.encounterKey,
     });
-  }, [actionVisitDate, encounterContext.encounterKey, encounterContext.scheduleKey, encounterContext.visitDate, patientId, today]);
+  }, [actionVisitDate, encounterContext.encounterKey, encounterContext.scheduleKey, encounterContext.visitDate, patientId]);
 
   useEffect(() => {
     const key = patientTabKeyForContext;
@@ -3100,12 +3104,12 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       return;
     }
     const nextContext = normalizeEncounterContext({
-      patientId: resolveEncounterPatientIdFromEntry(chosen) ?? encounterContext.patientId,
+      patientId: chosen.patientId ?? encounterContext.patientId,
       appointmentId: chosen.appointmentId,
       receptionId: chosen.receptionId,
       scheduleKey: chosen.scheduleKey ?? encounterContext.scheduleKey,
       encounterKey: chosen.encounterKey ?? encounterContext.encounterKey,
-      visitDate: normalizeVisitDate(chosen.visitDate) ?? encounterContext.visitDate ?? today,
+      visitDate: normalizeVisitDate(chosen.visitDate) ?? encounterContext.visitDate,
     });
     if (!sameEncounterContext(nextContext, encounterContext)) {
       suppressUrlContextSyncRef.current = true;
@@ -3121,7 +3125,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     sameEncounterContext,
     selectedEntry,
     tabLock.isReadOnly,
-    today,
   ]);
 
   const latestAuditEvent = useMemo(() => {
@@ -4270,7 +4273,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                 const merged = normalizeEncounterContext({
                   ...prev,
                   ...next,
-                  visitDate: normalizeVisitDate(next.visitDate) ?? normalizeVisitDate(prev.visitDate) ?? today,
+                  visitDate: normalizeVisitDate(next.visitDate) ?? normalizeVisitDate(prev.visitDate),
                 });
                 return sameEncounterContext(prev, merged) ? prev : merged;
               });
@@ -4712,6 +4715,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           patientId={patientId}
                           encounterId={encounterContext.encounterKey}
                           visitDate={actionVisitDate}
+                          orcaEncounterContext={actionOrcaEncounterContext}
                           queueEntry={actionBarQueueEntry}
                           hasUnsavedDraft={draftState.dirty}
                           hasPermission={hasPermission}
@@ -4846,7 +4850,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           const merged = normalizeEncounterContext({
                             ...prev,
                             ...next,
-                            visitDate: normalizeVisitDate(next.visitDate) ?? normalizeVisitDate(prev.visitDate) ?? today,
+                            visitDate: normalizeVisitDate(next.visitDate) ?? normalizeVisitDate(prev.visitDate),
                           });
                           return sameEncounterContext(prev, merged) ? prev : merged;
                         });
@@ -4898,6 +4902,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           appointmentMeta={appointmentMeta}
                           patientId={encounterContext.patientId}
                           visitDate={encounterContext.visitDate}
+                          orcaEncounterContext={actionOrcaEncounterContext}
                           onRefresh={handleRefreshSummary}
                           isRefreshing={isManualRefreshing}
                           showOperationalMeta={false}

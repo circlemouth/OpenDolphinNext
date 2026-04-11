@@ -29,8 +29,6 @@ const GLOBAL_SCOPE_KEY = '__global__';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const RUN_ID_RE = /^\d{8}T\d{6}Z$/;
-const NUMERIC_ID_RE = /^\d+$/;
-
 const volatileEncounterContexts = new Map<string, OutpatientEncounterContext>();
 
 const cloneContext = (context: OutpatientEncounterContext): OutpatientEncounterContext => ({
@@ -93,29 +91,6 @@ export const normalizeEncounterContext = (context?: OutpatientEncounterContext |
     normalized.encounterKey = encounterKey;
   }
   return normalized;
-};
-
-type EncounterEntryLike = {
-  patientId?: string;
-  id?: string;
-  appointmentId?: string;
-  receptionId?: string;
-};
-
-export const resolveEncounterPatientIdFromEntry = (entry?: EncounterEntryLike): string | undefined => {
-  const directPatientId = normalizeEncounterId(entry?.patientId);
-  if (directPatientId) return directPatientId;
-
-  const fallbackId = normalizeEncounterId(entry?.id);
-  if (!fallbackId || !NUMERIC_ID_RE.test(fallbackId)) return undefined;
-
-  // 受付/予約IDが数値の場合は row id と同値になり得るため、患者ID代替としては扱わない。
-  const receptionId = normalizeEncounterId(entry?.receptionId);
-  if (receptionId && receptionId === fallbackId) return undefined;
-  const appointmentId = normalizeEncounterId(entry?.appointmentId);
-  if (appointmentId && appointmentId === fallbackId) return undefined;
-
-  return fallbackId;
 };
 
 export const CHARTS_CONTEXT_QUERY_KEYS = {

@@ -40,7 +40,6 @@ export type UiAction =
   | 'system_health'
   | 'medicalset_search'
   | 'orca_xml_proxy'
-  | 'medicalmodv23'
   | 'orca_original_fetch'
   | 'orca_insurance_list_fetch'
   | 'orca_api_console_send';

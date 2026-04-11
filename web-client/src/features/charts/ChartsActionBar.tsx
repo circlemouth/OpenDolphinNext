@@ -4,7 +4,6 @@ import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { isSystemAdminRole } from '../../libs/auth/roles';
 import { resolveAuditActor } from '../../libs/auth/storedAuth';
-import { httpFetch } from '../../libs/http/httpClient';
 import { getObservabilityMeta, resolveAriaLive } from '../../libs/observability/observability';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import { ToneBanner, type BannerTone } from '../reception/components/ToneBanner';
@@ -25,7 +24,6 @@ import { isNetworkError } from '../shared/apiError';
 import { useOptionalSession } from '../../AppRouter';
 import { buildPrintUrl } from '../../routes/appNavigation';
 import { useAppNavigation } from '../../routes/useAppNavigation';
-import { buildMedicalModV23RequestXml, postOrcaMedicalModV23Xml } from './orcaMedicalModApi';
 import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from './orcaClaimApi';
 import { getOrcaClaimSendEntry, saveOrcaClaimSendCache, type OrcaMedicalWarningUi } from './orcaClaimSendCache';
 import { ReportPrintDialog } from './print/ReportPrintDialog';
@@ -38,6 +36,12 @@ import {
   fetchMedicalModV2OrderBundles,
   prepareMedicalModV2SendData,
 } from './orderRpNormalization';
+import {
+  buildOrcaEncounterContext,
+  formatMissingOrcaEncounterContextLabels,
+  resolveMissingOrcaEncounterContextFields,
+  type OrcaEncounterContext,
+} from './orcaEncounterContext';
 import { retryOrcaQueue } from '../outpatient/orcaQueueApi';
 
 type ChartAction = 'start' | 'pause' | 'finish' | 'send' | 'draft' | 'cancel' | 'print';
@@ -74,6 +78,7 @@ type GuardReason = {
     | 'network_degraded'
     | 'not_server_route'
     | 'patient_not_selected'
+    | 'missing_encounter_context'
     | 'locked'
     | 'approval_locked';
   summary: string;
@@ -189,6 +194,7 @@ export interface ChartsActionBarProps {
   patientId?: string;
   encounterId?: string;
   visitDate?: string;
+  orcaEncounterContext?: Partial<OrcaEncounterContext>;
   queueEntry?: ClaimQueueEntry;
   hasUnsavedDraft?: boolean;
   hasPermission?: boolean;
@@ -248,6 +254,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   patientId,
   encounterId,
   visitDate,
+  orcaEncounterContext,
   queueEntry,
   hasUnsavedDraft = false,
   hasPermission = true,
@@ -312,6 +319,33 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     () => visitDate ?? selectedEntry?.visitDate,
     [selectedEntry?.visitDate, visitDate],
   );
+  const resolvedOrcaEncounterContext = useMemo(
+    () =>
+      buildOrcaEncounterContext({
+        patientId: resolvedPatientId,
+        visitDate: resolvedVisitDate,
+        departmentCode: selectedEntry?.departmentCode,
+        physicianCode: selectedEntry?.physicianCode,
+        insuranceCombinationNumber: selectedEntry?.insuranceCombinationNumber,
+        voucherNumber: selectedEntry?.voucherNumber,
+        sequentialNumber: selectedEntry?.sequentialNumber,
+        ...orcaEncounterContext,
+      }),
+    [
+      orcaEncounterContext,
+      resolvedPatientId,
+      resolvedVisitDate,
+      selectedEntry?.departmentCode,
+      selectedEntry?.insuranceCombinationNumber,
+      selectedEntry?.physicianCode,
+      selectedEntry?.sequentialNumber,
+      selectedEntry?.voucherNumber,
+    ],
+  );
+  const missingOrcaEncounterContextFields = useMemo(
+    () => resolveMissingOrcaEncounterContextFields(resolvedOrcaEncounterContext),
+    [resolvedOrcaEncounterContext],
+  );
   const orcaSendEntry = getOrcaClaimSendEntry(storageScope, resolvedPatientId);
   const reportPrint = useOrcaReportPrint({
     dialogOpen: printDialogOpen,
@@ -347,64 +381,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     resolvedReportType,
     requestReportPreview,
   } = reportPrint;
-
-  const resolveDepartmentCode = (department?: string) => {
-    if (!department) return undefined;
-    const trimmed = department.trim();
-    if (!trimmed) return undefined;
-    const leading = trimmed.match(/^(\d{2})(?:\D|$)/)?.[1];
-    if (leading) return leading;
-    const match = trimmed.match(/\b(\d{2})\b/);
-    return match?.[1];
-  };
-
-  const resolvePhysicianCode = (physician?: string) => {
-    if (!physician) return undefined;
-    const trimmed = physician.trim();
-    if (!trimmed) return undefined;
-    const leading = trimmed.match(/^(\d{4,5})(?:\D|$)/)?.[1];
-    if (!leading) return undefined;
-    return leading.length === 4 ? `1${leading}` : leading;
-  };
-
-  const fetchVisitContextCodes = async (
-    patientId: string,
-    visitDate: string,
-    signal?: AbortSignal,
-  ): Promise<{ departmentCode?: string; physicianCode?: string }> => {
-    try {
-      const response = await httpFetch('/api/orca/visits/list', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ visitDate, requestNumber: '01' }),
-        signal,
-      });
-      if (!response.ok) return {};
-      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-      const visits = Array.isArray(payload.visits) ? payload.visits : [];
-      const matched = visits.find((entry) => {
-        if (!entry || typeof entry !== 'object') return false;
-        const candidate =
-          (entry as { patientId?: string }).patientId ??
-          ((entry as { patient?: { patientId?: string } }).patient?.patientId ?? undefined);
-        return typeof candidate === 'string' && candidate.trim() === patientId;
-      });
-      if (!matched || typeof matched !== 'object') return {};
-      const rawDepartment =
-        (matched as { departmentCode?: unknown }).departmentCode ??
-        (matched as { Department_Code?: unknown }).Department_Code ??
-        (matched as { department?: unknown }).department;
-      const rawPhysician =
-        (matched as { physicianCode?: unknown }).physicianCode ??
-        (matched as { Physician_Code?: unknown }).Physician_Code ??
-        (matched as { physician?: unknown }).physician;
-      const departmentCode = resolveDepartmentCode(typeof rawDepartment === 'string' ? rawDepartment : undefined);
-      const physicianCode = resolvePhysicianCode(typeof rawPhysician === 'string' ? rawPhysician : undefined);
-      return { departmentCode, physicianCode };
-    } catch {
-      return {};
-    }
-  };
 
   const normalizeVisitDate = (value?: string) => {
     if (!value) return undefined;
@@ -530,6 +506,16 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       });
     }
 
+    if (missingOrcaEncounterContextFields.length > 0) {
+      const missingLabels = formatMissingOrcaEncounterContextLabels(missingOrcaEncounterContextFields);
+      reasons.push({
+        key: 'missing_encounter_context',
+        summary: '来院文脈不足: 正式送信条件を満たさず送信不可',
+        detail: `${missingLabels.join(', ')} が不足しているため送信できません。`,
+        next: ['受付一覧を再取得', '対象来院を開き直して文脈を再同期'],
+      });
+    }
+
     if (requireServerRouteForSend && !isServerRoute) {
       reasons.push({
         key: 'not_server_route',
@@ -613,6 +599,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     approvalReason,
     readOnly,
     readOnlyReason,
+    missingOrcaEncounterContextFields,
     requireServerRouteForSend,
     requirePatientForSend,
     sendDisabledReason,
@@ -1299,20 +1286,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
 
       if (action === 'send' || action === 'finish') {
         if (action === 'send') {
-          const calculationDate = normalizeVisitDate(resolvedVisitDate);
-          let departmentCode = resolveDepartmentCode(selectedEntry?.department);
-          let physicianCode = resolvePhysicianCode(selectedEntry?.physician);
-          if ((!departmentCode || !physicianCode) && resolvedPatientId && calculationDate) {
-            const resolvedCodes = await fetchVisitContextCodes(resolvedPatientId, calculationDate, signal);
-            departmentCode = departmentCode ?? resolvedCodes.departmentCode;
-            physicianCode = physicianCode ?? resolvedCodes.physicianCode;
-          }
-          const missingFields = [
-            !resolvedPatientId ? 'Patient_ID' : undefined,
-            !calculationDate ? 'Perform_Date' : undefined,
-            !departmentCode ? 'Department_Code' : undefined,
-            !physicianCode ? 'Physician_Code' : undefined,
-          ].filter((field): field is string => Boolean(field));
+          const missingFields = formatMissingOrcaEncounterContextLabels(missingOrcaEncounterContextFields);
           if (missingFields.length > 0) {
             const blockedReason = `medicalmodv2 を停止: ${missingFields.join(', ')} が不足しています。`;
             setBanner({
@@ -1325,7 +1299,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             return;
           }
 
-          if (!resolvedPatientId || !calculationDate || !departmentCode || !physicianCode) {
+          if (!resolvedPatientId) {
             setIsRunning(false);
             setRunningAction(null);
             return;
@@ -1334,7 +1308,15 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           const { actor } = resolveAuditActor();
           onApprovalConfirmed?.({ action: 'send', actor });
 
-          const orderBundleResult = await fetchMedicalModV2OrderBundles(resolvedPatientId, calculationDate, encounterId);
+          const calculationDate = resolvedOrcaEncounterContext.visitDate;
+          if (!calculationDate) {
+            throw new Error('Perform_Date is required');
+          }
+          const orderBundleResult = await fetchMedicalModV2OrderBundles(
+            resolvedPatientId,
+            calculationDate,
+            encounterId,
+          );
           if (orderBundleResult.errors.length > 0) {
             const failedEntitiesPreview = orderBundleResult.errors.slice(0, 6).join(' / ');
             const remaining = orderBundleResult.errors.length - 6;
@@ -1456,10 +1438,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           }
 
           const requestXml = buildMedicalModV2RequestXml({
-            patientId: resolvedPatientId,
-            performDate: calculationDate,
-            departmentCode,
-            physicianCode,
+            encounterContext: resolvedOrcaEncounterContext as OrcaEncounterContext,
             medicalInformation: preparedSendData.medicalInformation,
           });
           const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01', signal });
@@ -1567,8 +1546,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               httpStatus: result.status,
               apiResult: result.apiResult,
               apiResultMessage: result.apiResultMessage,
-              departmentCode,
-              physicianCode,
+              departmentCode: resolvedOrcaEncounterContext.departmentCode,
+              physicianCode: resolvedOrcaEncounterContext.physicianCode,
+              insuranceCombinationNumber: resolvedOrcaEncounterContext.insuranceCombinationNumber,
               invoiceNumber: result.invoiceNumber,
               dataId: result.dataId,
               transportOk,
@@ -1590,7 +1570,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               {
                 patientId: resolvedPatientId,
                 appointmentId: resolvedAppointmentId,
-                performDate: calculationDate,
+                performDate: resolvedOrcaEncounterContext.visitDate,
                 invoiceNumber: result.invoiceNumber,
                 dataId: result.dataId,
                 runId: nextRunId,
@@ -1602,20 +1582,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               },
               storageScope,
             );
-          }
-
-          // medicalmodv23 を後続で実行（診療終了相当）。結果は参考情報として扱う。
-          const v23RequestXml = buildMedicalModV23RequestXml({
-            patientId: resolvedPatientId ?? '',
-            requestNumber: '01',
-            firstCalculationDate: calculationDate,
-            lastVisitDate: calculationDate,
-            departmentCode,
-          });
-          try {
-            await postOrcaMedicalModV23Xml(v23RequestXml, { signal });
-          } catch {
-            // v23 失敗は警告のみ（既存ロジックで捕捉済み）。ここでは握りつぶす。
           }
 
           void Promise.resolve(onAfterSend?.()).catch((error) => {
@@ -1649,184 +1615,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             phase: 'do',
             details: {
               completionMode: 'local_finish',
-              postFinishAction: 'medicalmodv23',
               traceId: nextTraceId,
             },
           });
-
-          const departmentCode = resolveDepartmentCode(selectedEntry?.department);
-          const calculationDate = normalizeVisitDate(resolvedVisitDate);
-          const missingFields = [
-            !resolvedPatientId ? 'Patient_ID' : undefined,
-            !calculationDate ? 'First_Calculation_Date' : undefined,
-            !calculationDate ? 'LastVisit_Date' : undefined,
-            !departmentCode ? 'Department_Code' : undefined,
-          ].filter((field): field is string => typeof field === 'string');
-
-          if (missingFields.length > 0) {
-            const blockedReason = `medicalmodv23 をスキップ: ${missingFields.join(', ')} が不足しています。`;
-            setBanner({
-              tone: 'warning',
-              message: `診療終了後の追加更新を停止: ${blockedReason}`,
-              nextAction: '受付情報（患者/診療科/日付）を確認してください。',
-            });
-            logUiState({
-              action: 'medicalmodv23',
-              screen: 'charts/action-bar',
-              controlId: 'action-finish',
-              runId,
-              cacheHit,
-              missingMaster,
-              dataSourceTransition,
-              fallbackUsed,
-              details: {
-                operationPhase: 'lock',
-                blocked: true,
-                missingFields,
-                patientId: resolvedPatientId,
-                appointmentId: resolvedAppointmentId,
-                traceId: resolvedTraceId,
-              },
-            });
-            recordChartsAuditEvent({
-              action: 'ORCA_MEDICAL_MOD_V23',
-              outcome: 'blocked',
-              subject: 'medicalmodv23',
-              note: blockedReason,
-              patientId: resolvedPatientId,
-              appointmentId: resolvedAppointmentId,
-              runId,
-              cacheHit,
-              missingMaster,
-              fallbackUsed,
-              dataSourceTransition,
-              details: {
-                operationPhase: 'lock',
-                trigger: 'missing_fields',
-                missingFields,
-                endpoint: '/api/orca/chart-support/medical-mod-v23',
-              },
-            });
-          } else {
-            const requestXml = buildMedicalModV23RequestXml({
-              patientId: resolvedPatientId ?? '',
-              requestNumber: '01',
-              firstCalculationDate: calculationDate,
-              lastVisitDate: calculationDate,
-              departmentCode,
-            });
-            try {
-              const result = await postOrcaMedicalModV23Xml(requestXml, { signal });
-              const transportOk = result.ok;
-              const apiOk = result.apiOk ?? isApiResultOk(result.apiResult);
-              const hasMissingTags = Boolean(result.missingTags?.length);
-              const outcome = transportOk && apiOk && !hasMissingTags ? 'success' : transportOk ? 'warning' : 'error';
-              const bannerDetail = [
-                `Api_Result=${result.apiResult ?? '—'}`,
-                result.apiResultMessage ? `Message=${result.apiResultMessage}` : undefined,
-                hasMissingTags ? `missingTags=${result.missingTags?.join(', ')}` : undefined,
-              ].filter((part): part is string => typeof part === 'string' && part.length > 0);
-
-              if (outcome !== 'success') {
-                setBanner({
-                  tone: outcome === 'error' ? 'error' : 'warning',
-                  message: `診療終了後の追加更新(${outcome}) / ${bannerDetail.join(' / ')}`,
-                  nextAction: 'ORCA 応答を確認し、必要なら再送してください。',
-                });
-              }
-
-              logUiState({
-                action: 'medicalmodv23',
-                screen: 'charts/action-bar',
-                controlId: 'action-finish',
-                runId: result.runId ?? runId,
-                cacheHit,
-                missingMaster,
-                dataSourceTransition,
-                fallbackUsed,
-                details: {
-                  operationPhase: 'do',
-                  patientId: resolvedPatientId,
-                  appointmentId: resolvedAppointmentId,
-                  traceId: result.traceId ?? resolvedTraceId,
-                  endpoint: '/api/orca/chart-support/medical-mod-v23',
-                  httpStatus: result.status,
-                  apiResult: result.apiResult,
-                  apiResultMessage: result.apiResultMessage,
-                  transportOk,
-                  apiOk,
-                  missingTags: result.missingTags,
-                },
-              });
-
-              recordChartsAuditEvent({
-                action: 'ORCA_MEDICAL_MOD_V23',
-                outcome,
-                subject: 'medicalmodv23',
-                patientId: resolvedPatientId,
-                appointmentId: resolvedAppointmentId,
-                runId: result.runId ?? runId,
-                cacheHit,
-                missingMaster,
-                fallbackUsed,
-                dataSourceTransition,
-                details: {
-                  operationPhase: 'do',
-                  endpoint: '/api/orca/chart-support/medical-mod-v23',
-                  httpStatus: result.status,
-                  apiResult: result.apiResult,
-                  apiResultMessage: result.apiResultMessage,
-                  transportOk,
-                  apiOk,
-                  missingTags: result.missingTags,
-                },
-              });
-            } catch (error) {
-              const detail = error instanceof Error ? error.message : String(error);
-              setBanner({
-                tone: 'error',
-                message: `診療終了後の追加更新に失敗: ${detail}`,
-                nextAction: 'ORCA 接続と診療科情報を確認してください。',
-              });
-              logUiState({
-                action: 'medicalmodv23',
-                screen: 'charts/action-bar',
-                controlId: 'action-finish',
-                runId,
-                cacheHit,
-                missingMaster,
-                dataSourceTransition,
-                fallbackUsed,
-                details: {
-                  operationPhase: 'do',
-                  patientId: resolvedPatientId,
-                  appointmentId: resolvedAppointmentId,
-                  traceId: resolvedTraceId,
-                  endpoint: '/api/orca/chart-support/medical-mod-v23',
-                  error: detail,
-                },
-              });
-              recordChartsAuditEvent({
-                action: 'ORCA_MEDICAL_MOD_V23',
-                outcome: 'error',
-                subject: 'medicalmodv23',
-                note: detail,
-                error: detail,
-                patientId: resolvedPatientId,
-                appointmentId: resolvedAppointmentId,
-                runId,
-                cacheHit,
-                missingMaster,
-                fallbackUsed,
-                dataSourceTransition,
-                details: {
-                  operationPhase: 'do',
-                  endpoint: '/api/orca/chart-support/medical-mod-v23',
-                  error: detail,
-                },
-              });
-            }
-          }
         }
 
         const finishMeta = await Promise.resolve(onAfterFinish?.());

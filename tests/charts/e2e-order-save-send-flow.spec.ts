@@ -205,7 +205,6 @@ test('オーダー入力改修後: カテゴリ限定表示 + 用法プルダウ
       const state = {
         bundles: [] as Array<Record<string, unknown>>,
         capturedMedicalmodv2Request: '',
-        capturedMedicalmodv23Request: '',
       };
       (window as any).__E2E_ORDER_FLOW_STATE__ = state;
       const drugItems = [
@@ -346,25 +345,6 @@ test('オーダー入力改修後: カテゴリ限定表示 + 用法プルダウ
             {
               status: 200,
               headers: { 'Content-Type': 'application/json' },
-            },
-          );
-        }
-        if (requestUrl.includes('/api21/medicalmodv23')) {
-          state.capturedMedicalmodv23Request = await resolveBody(input, init);
-          return new Response(
-            [
-              '<xmlio2>',
-              '  <medicalmodv23res>',
-              '    <Api_Result>00</Api_Result>',
-              '    <Api_Result_Message>OK</Api_Result_Message>',
-              '    <Information_Date>2026-02-04</Information_Date>',
-              '    <Information_Time>09:31:00</Information_Time>',
-              '  </medicalmodv23res>',
-              '</xmlio2>',
-            ].join(''),
-            {
-              status: 200,
-              headers: { 'Content-Type': 'application/xml' },
             },
           );
         }

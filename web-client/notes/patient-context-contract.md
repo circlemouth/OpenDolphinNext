@@ -16,14 +16,18 @@
 
 ## Minimal Encounter Context
 - docs に置いてよい最小項目は `patientId`, `appointmentId`, `receptionId`, `scheduleKey`, `encounterKey`, `visitDate` です。
+- ORCA chart send で authoritative に使う canonical context は別扱いで、`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber` の 7 項目です。
+- canonical context は display string や row id から再推測しません。Patients / Charts の選択結果に含まれる structured field だけを採用し、不足時は fail-close します。
 - route ごとの minimal schema は次です。
   - Charts:
     - handoff には `scheduleKey` または `encounterKey` が必要です。
     - `patientId`, `appointmentId`, `receptionId`, `visitDate` は補助的に carry します。
+    - ORCA 送信は canonical context が全項目揃った時だけ有効化します。
   - Patients:
     - 読み取り対象は `patientId`, `appointmentId`, `receptionId`, `visitDate` です。
     - 入力 source 優先度は `location.state` top-level -> `location.state.encounter` -> scoped volatile encounter context です。
     - Patients 画面は route query の `patientId` を権威入力として読みません。
+    - 患者選択の補助 UI でも row id を患者 ID の代替に使いません。
     - current repo では `patients:returnTo` の reader / writer を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
   - Mobile Images:
     - 現行の minimal schema は `patientId` のみです。

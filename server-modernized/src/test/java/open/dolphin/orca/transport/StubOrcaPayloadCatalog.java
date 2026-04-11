@@ -34,7 +34,6 @@ final class StubOrcaPayloadCatalog {
         RESOURCES.put(OrcaEndpoint.MEDICAL_GET, "orca/stub/58_medicalgetv2_response.sample.xml");
         RESOURCES.put(OrcaEndpoint.MEDICAL_MOD, "orca/stub/59_medicalmodv2_response.sample.xml");
         RESOURCES.put(OrcaEndpoint.TEMP_MEDICAL_GET, "orca/stub/60_tmedicalgetv2_response.sample.xml");
-        RESOURCES.put(OrcaEndpoint.MEDICAL_MOD_V23, "orca/stub/61_medicalmodv23_response.sample.xml");
         RESOURCES.put(OrcaEndpoint.INCOME_INFO, "orca/stub/62_incomeinfv2_response.sample.xml");
         RESOURCES.put(OrcaEndpoint.SUBJECTIVES_LIST, "orca/stub/63_subjectiveslstv2_response.sample.xml");
         RESOURCES.put(OrcaEndpoint.SUBJECTIVES_MOD, "orca/stub/64_subjectivesv2_response.sample.xml");

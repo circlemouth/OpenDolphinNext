@@ -3,6 +3,7 @@ package open.dolphin.rest.dto.orca;
 public class ChartSupportIncomeInfoRequest {
 
     private String patientId;
+    private String performDate;
     private String performMonth;
     private String performYear;
 
@@ -12,6 +13,14 @@ public class ChartSupportIncomeInfoRequest {
 
     public void setPatientId(String patientId) {
         this.patientId = patientId;
+    }
+
+    public String getPerformDate() {
+        return performDate;
+    }
+
+    public void setPerformDate(String performDate) {
+        this.performDate = performDate;
     }
 
     public String getPerformMonth() {

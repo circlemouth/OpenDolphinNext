@@ -3717,10 +3717,15 @@ export function ReceptionPage({
           return;
         }
         const requestXml = buildMedicalModV2RequestXml({
-          patientId,
-          performDate: calculationDate,
-          departmentCode,
-          physicianCode,
+          encounterContext: {
+            patientId,
+            visitDate: calculationDate,
+            departmentCode,
+            physicianCode: physicianCode ?? '',
+            insuranceCombinationNumber: '',
+            voucherNumber: '',
+            sequentialNumber: '',
+          },
           medicalInformation: preparedSendData.medicalInformation,
         });
         const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01' });

@@ -10,7 +10,6 @@ import {
   parseChartsEncounterContext,
   parseChartsNavigationMeta,
   parseReceptionCarryoverParams,
-  resolveEncounterPatientIdFromEntry,
   storeChartsEncounterContext,
   normalizeRunId,
 } from '../encounterContext';
@@ -165,41 +164,6 @@ describe('charts encounterContext', () => {
       visitDate: undefined,
     });
     expect(parsed).not.toHaveProperty('runId');
-  });
-
-  it('resolveEncounterPatientIdFromEntry: patientId を最優先で採用する', () => {
-    expect(
-      resolveEncounterPatientIdFromEntry({
-        patientId: ' 000123 ',
-        id: '999999',
-        receptionId: '999999',
-      }),
-    ).toBe('000123');
-  });
-
-  it('resolveEncounterPatientIdFromEntry: id が受付/予約IDと同値なら患者ID代替にしない', () => {
-    expect(
-      resolveEncounterPatientIdFromEntry({
-        patientId: undefined,
-        id: '100200',
-        receptionId: '100200',
-      }),
-    ).toBeUndefined();
-    expect(
-      resolveEncounterPatientIdFromEntry({
-        patientId: undefined,
-        id: '300400',
-        appointmentId: '300400',
-      }),
-    ).toBeUndefined();
-  });
-
-  it('resolveEncounterPatientIdFromEntry: id しかない legacy 行は数値IDを代替採用する', () => {
-    expect(
-      resolveEncounterPatientIdFromEntry({
-        id: '500600',
-      }),
-    ).toBe('500600');
   });
 
   it('load does not restore legacy sessionStorage payloads', () => {

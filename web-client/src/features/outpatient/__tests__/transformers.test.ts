@@ -49,4 +49,33 @@ describe('outpatient transformers', () => {
     expect(entries[0]?.encounterKey).toBe('F001:E200');
     expect(entries[0]?.scheduleKey).toBe('F001:S200');
   });
+
+  it('keeps visit canonical ORCA context fields from raw payloads', () => {
+    const entries = parseAppointmentEntries({
+      visitDate: '2026-03-26',
+      visits: [
+        {
+          voucherNumber: 'V-100',
+          sequentialNumber: 'S-100',
+          insuranceCombinationNumber: '0003',
+          departmentCode: '01',
+          physicianCode: '10001',
+          patient: { patientId: '000003' },
+        },
+      ],
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toEqual(
+      expect.objectContaining({
+        patientId: '000003',
+        visitDate: '2026-03-26',
+        voucherNumber: 'V-100',
+        sequentialNumber: 'S-100',
+        insuranceCombinationNumber: '0003',
+        departmentCode: '01',
+        physicianCode: '10001',
+      }),
+    );
+  });
 });

@@ -335,10 +335,15 @@ describe('orderRpNormalization', () => {
     } as any);
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: normalized ? [normalized.info] : [],
     });
 
@@ -391,10 +396,15 @@ describe('orderRpNormalization', () => {
     expect(normalized?.rows.map((row) => row.source.kind)).toEqual(['bundle_item', 'bundle_item', 'bundle_item']);
 
     const payload = buildMedicalModV2RequestXml({
-      patientId: '000001',
-      performDate: '2026-03-09T09:30:00',
-      departmentCode: '01',
-      physicianCode: '10001',
+      encounterContext: {
+        patientId: '000001',
+        visitDate: '2026-03-09T09:30:00',
+        departmentCode: '01',
+        physicianCode: '10001',
+        insuranceCombinationNumber: '0001',
+        voucherNumber: '1234',
+        sequentialNumber: '1',
+      },
       medicalInformation: medicalInfo ? [medicalInfo.info] : [],
     });
 

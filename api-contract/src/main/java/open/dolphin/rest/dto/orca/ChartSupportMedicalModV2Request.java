@@ -1,35 +1,43 @@
 package open.dolphin.rest.dto.orca;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ChartSupportMedicalModV2Request {
 
-    private String patientId;
-    private String performDate;
     private String classCode;
-    private String departmentCode;
-    private String physicianCode;
     private String requestNumber;
     private String medicalPush;
     private String medicalUid;
     private boolean includeInitialConsultation;
+    private OrcaEncounterContext encounterContext;
     private List<MedicalInformation> medicalInformation = new ArrayList<>();
 
-    public String getPatientId() {
-        return patientId;
+    public OrcaEncounterContext getEncounterContext() {
+        return encounterContext;
     }
 
+    public void setEncounterContext(OrcaEncounterContext encounterContext) {
+        this.encounterContext = encounterContext;
+    }
+
+    public String getPatientId() {
+        return encounterContext != null ? encounterContext.getPatientId() : null;
+    }
+
+    @JsonIgnore
     public void setPatientId(String patientId) {
-        this.patientId = patientId;
+        ensureEncounterContext().setPatientId(patientId);
     }
 
     public String getPerformDate() {
-        return performDate;
+        return encounterContext != null ? encounterContext.getVisitDate() : null;
     }
 
+    @JsonIgnore
     public void setPerformDate(String performDate) {
-        this.performDate = performDate;
+        ensureEncounterContext().setVisitDate(performDate);
     }
 
     public String getClassCode() {
@@ -41,19 +49,48 @@ public class ChartSupportMedicalModV2Request {
     }
 
     public String getDepartmentCode() {
-        return departmentCode;
+        return encounterContext != null ? encounterContext.getDepartmentCode() : null;
     }
 
+    @JsonIgnore
     public void setDepartmentCode(String departmentCode) {
-        this.departmentCode = departmentCode;
+        ensureEncounterContext().setDepartmentCode(departmentCode);
     }
 
     public String getPhysicianCode() {
-        return physicianCode;
+        return encounterContext != null ? encounterContext.getPhysicianCode() : null;
     }
 
+    @JsonIgnore
     public void setPhysicianCode(String physicianCode) {
-        this.physicianCode = physicianCode;
+        ensureEncounterContext().setPhysicianCode(physicianCode);
+    }
+
+    public String getInsuranceCombinationNumber() {
+        return encounterContext != null ? encounterContext.getInsuranceCombinationNumber() : null;
+    }
+
+    @JsonIgnore
+    public void setInsuranceCombinationNumber(String insuranceCombinationNumber) {
+        ensureEncounterContext().setInsuranceCombinationNumber(insuranceCombinationNumber);
+    }
+
+    public String getVoucherNumber() {
+        return encounterContext != null ? encounterContext.getVoucherNumber() : null;
+    }
+
+    @JsonIgnore
+    public void setVoucherNumber(String voucherNumber) {
+        ensureEncounterContext().setVoucherNumber(voucherNumber);
+    }
+
+    public String getSequentialNumber() {
+        return encounterContext != null ? encounterContext.getSequentialNumber() : null;
+    }
+
+    @JsonIgnore
+    public void setSequentialNumber(String sequentialNumber) {
+        ensureEncounterContext().setSequentialNumber(sequentialNumber);
     }
 
     public String getRequestNumber() {
@@ -204,5 +241,12 @@ public class ChartSupportMedicalModV2Request {
         if (hasPhysiologyOrder()) {
             throw new IllegalArgumentException("physiologyOrder is not supported for ORCA medical-mod-v2");
         }
+    }
+
+    private OrcaEncounterContext ensureEncounterContext() {
+        if (encounterContext == null) {
+            encounterContext = new OrcaEncounterContext();
+        }
+        return encounterContext;
     }
 }

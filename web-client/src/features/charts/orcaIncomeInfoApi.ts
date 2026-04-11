@@ -4,19 +4,30 @@ import { getObservabilityMeta } from '../../libs/observability/observability';
 export type IncomeInfoEntry = {
   performDate?: string;
   performEndDate?: string;
+  issuedDate?: string;
   inOut?: string;
   invoiceNumber?: string;
+  groupInvoiceNumber?: string;
+  departmentCode?: string;
   departmentName?: string;
   insuranceCombinationNumber?: string;
-  acMoney?: number;
-  icMoney?: number;
-  aiMoney?: number;
-  oeMoney?: number;
-  mlSmoney?: number;
+  claimAmount?: number;
+  paymentAmount?: number;
+  insuranceAppliedAmount?: number;
+  selfPayAmount?: number;
+  mealLivingCopayAmount?: number;
+};
+
+export type UnpaidMoneyEntry = {
+  performDate?: string;
+  inOut?: string;
+  invoiceNumber?: string;
+  unpaidMoney?: number;
 };
 
 export type IncomeInfoRequest = {
   patientId: string;
+  performDate?: string;
   performMonth?: string;
   performYear?: string;
 };
@@ -30,6 +41,9 @@ export type IncomeInfoResponse = {
   informationDate?: string;
   informationTime?: string;
   entries: IncomeInfoEntry[];
+  unpaidMoneyTotal?: number;
+  unpaidMoneyInformationOverflow?: boolean;
+  unpaidMoneyInformation: UnpaidMoneyEntry[];
   runId?: string;
   traceId?: string;
   error?: string;
@@ -53,37 +67,69 @@ const normalizeEntry = (value: unknown): IncomeInfoEntry | null => {
   return {
     performDate: asString(record.performDate),
     performEndDate: asString(record.performEndDate),
+    issuedDate: asString(record.issuedDate),
     inOut: asString(record.inOut),
     invoiceNumber: asString(record.invoiceNumber),
+    groupInvoiceNumber: asString(record.groupInvoiceNumber),
+    departmentCode: asString(record.departmentCode),
     departmentName: asString(record.departmentName),
     insuranceCombinationNumber: asString(record.insuranceCombinationNumber),
-    acMoney: asNumber(record.acMoney),
-    icMoney: asNumber(record.icMoney),
-    aiMoney: asNumber(record.aiMoney),
-    oeMoney: asNumber(record.oeMoney),
-    mlSmoney: asNumber(record.mlSmoney),
+    claimAmount: asNumber(record.claimAmount ?? record.acMoney),
+    paymentAmount: asNumber(record.paymentAmount ?? record.icMoney),
+    insuranceAppliedAmount: asNumber(record.insuranceAppliedAmount ?? record.aiMoney),
+    selfPayAmount: asNumber(record.selfPayAmount ?? record.oeMoney),
+    mealLivingCopayAmount: asNumber(record.mealLivingCopayAmount ?? record.mlSmoney),
   };
 };
 
-export const buildIncomeInfoRequest = (params: IncomeInfoRequest): IncomeInfoRequest => ({
-  patientId: params.patientId,
-  performMonth: params.performMonth,
-  performYear: params.performYear,
-});
+const normalizeUnpaidMoneyEntry = (value: unknown): UnpaidMoneyEntry | null => {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    performDate: asString(record.performDate),
+    inOut: asString(record.inOut),
+    invoiceNumber: asString(record.invoiceNumber),
+    unpaidMoney: asNumber(record.unpaidMoney),
+  };
+};
+
+export const buildIncomeInfoRequest = (params: IncomeInfoRequest): IncomeInfoRequest => {
+  const request: IncomeInfoRequest = {
+    patientId: params.patientId,
+  };
+  if (params.performDate) {
+    request.performDate = params.performDate;
+    return request;
+  }
+  if (params.performMonth) {
+    request.performMonth = params.performMonth;
+    return request;
+  }
+  if (params.performYear) {
+    request.performYear = params.performYear;
+  }
+  return request;
+};
 
 export async function fetchOrcaIncomeInfo(request: IncomeInfoRequest): Promise<IncomeInfoResponse> {
   const runId = getObservabilityMeta().runId;
+  const payload = buildIncomeInfoRequest(request);
   const response = await httpFetch(ORCA_INCOME_INFO_PATH, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify(payload),
   });
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
   const entries = Array.isArray(json.entries)
     ? json.entries.map(normalizeEntry).filter((entry): entry is IncomeInfoEntry => entry !== null)
+    : [];
+  const unpaidMoneyInformation = Array.isArray(json.unpaidMoneyInformation)
+    ? json.unpaidMoneyInformation
+        .map(normalizeUnpaidMoneyEntry)
+        .filter((entry): entry is UnpaidMoneyEntry => entry !== null)
     : [];
 
   return {
@@ -95,6 +141,9 @@ export async function fetchOrcaIncomeInfo(request: IncomeInfoRequest): Promise<I
     informationDate: asString(json.informationDate),
     informationTime: asString(json.informationTime),
     entries,
+    unpaidMoneyTotal: asNumber(json.unpaidMoneyTotal),
+    unpaidMoneyInformationOverflow: typeof json.unpaidMoneyInformationOverflow === 'boolean' ? json.unpaidMoneyInformationOverflow : undefined,
+    unpaidMoneyInformation,
     runId: asString(json.runId) ?? getObservabilityMeta().runId ?? runId,
     traceId: asString(json.traceId) ?? getObservabilityMeta().traceId,
     error: asString(json.error),
