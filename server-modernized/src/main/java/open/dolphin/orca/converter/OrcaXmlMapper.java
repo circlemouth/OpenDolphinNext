@@ -190,7 +190,11 @@ public class OrcaXmlMapper {
     }
 
     public PatientSearchResponse toPatientSearch(String xml, String searchTerm) {
-        JsonNode body = read(xml).path("patientlst3res");
+        JsonNode root = read(xml);
+        JsonNode body = root.path("patientlst2res");
+        if (body.isMissingNode() || body.isNull()) {
+            body = root.path("patientlst3res");
+        }
         PatientSearchResponse response = new PatientSearchResponse();
         populateCommon(body, response);
         populatePatientList(body, response);

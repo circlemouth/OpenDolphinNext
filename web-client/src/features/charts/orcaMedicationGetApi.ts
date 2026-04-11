@@ -40,12 +40,10 @@ export type OrcaMedicationGetResult = {
   traceId?: string;
 };
 
-const todayYmd = () => new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
-const normalizeYmd = (value?: string) => {
-  if (!value) return todayYmd();
+const normalizeBaseDate = (value?: string) => {
+  if (!value) return null;
   const digits = value.replace(/[^0-9]/g, '');
-  return digits.length === 8 ? digits : todayYmd();
+  return digits.length === 8 ? digits : null;
 };
 
 const normalizeRequestCode = (value: string) => value.trim();
@@ -60,6 +58,7 @@ export async function fetchOrcaMedicationGet(params: {
 }): Promise<OrcaMedicationGetResult> {
   const requestNumber = params.requestNumber ?? '02';
   const requestCode = normalizeRequestCode(params.requestCode);
+  const meta = ensureObservabilityMeta();
   if (!isValidRequestCode(requestNumber, requestCode)) {
     return {
       ok: false,
@@ -69,9 +68,21 @@ export async function fetchOrcaMedicationGet(params: {
         requestNumber === '01'
           ? 'Request_Number=01 の requestCode は英数字で指定してください。'
           : '診療行為コードは9桁数字で指定してください。',
+      runId: meta.runId,
+      traceId: meta.traceId,
     };
   }
-  const meta = ensureObservabilityMeta();
+  const baseDate = normalizeBaseDate(params.baseDate);
+  if (!baseDate) {
+    return {
+      ok: false,
+      status: 0,
+      selections: [],
+      message: 'baseDate は YYYY-MM-DD の診療開始日で指定してください。',
+      runId: meta.runId,
+      traceId: meta.traceId,
+    };
+  }
   const response = await httpFetch('/api/orca/chart-support/medication-get', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -79,7 +90,7 @@ export async function fetchOrcaMedicationGet(params: {
     body: JSON.stringify({
       requestNumber,
       requestCode,
-      baseDate: normalizeYmd(params.baseDate),
+      baseDate,
     }),
   });
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '選択式コメント候補の取得に失敗しました。' });

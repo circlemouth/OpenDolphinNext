@@ -73,11 +73,32 @@ const chargeProps = {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
   localStorage.clear();
 });
 
 describe('OrderBundleEditPanel bundle number UI', () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const requestUrl = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+      if (requestUrl.includes('/api/orca/chart-support/contraindication-check')) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            apiOk: true,
+            apiResult: '0000',
+            apiResultMessage: 'OK',
+            results: [],
+            symptomInfo: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      throw new Error(`unexpected fetch: ${requestUrl}`);
+    });
+  });
+
   const mockUsageMaster = () => {
     const searchMock = vi.mocked(fetchOrderMasterSearch);
     searchMock.mockImplementation(async ({ type, keyword }) => {

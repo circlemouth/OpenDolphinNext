@@ -232,6 +232,55 @@ class OrcaVisitResourceTest {
         verify(wrapperService).mutateVisit("F001", request);
     }
 
+    @Test
+    void visitMutationPreservesApiResult21ForInsuranceMismatch() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("21");
+        stub.setApiResultMessage("保険の組み合わせが一致しません");
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("01");
+        request.setPatientId("000021");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+
+        VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("21", response.getApiResult());
+        assertEquals("保険の組み合わせが一致しません", response.getApiResultMessage());
+        assertGeneratedRunId(response.getRunId());
+        verify(wrapperService).mutateVisit("F001", request);
+    }
+
+    @Test
+    void visitMutationPreservesApiResult60ForMissingAcceptance() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("60");
+        stub.setApiResultMessage("受付は存在しません");
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("02");
+        request.setPatientId("000060");
+        request.setAcceptanceId("A-060");
+
+        VisitMutationResponse response = resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("60", response.getApiResult());
+        assertEquals("受付は存在しません", response.getApiResultMessage());
+        assertGeneratedRunId(response.getRunId());
+        verify(wrapperService).mutateVisit("F001", request);
+    }
+
     private HttpServletRequest createRequest(String remoteUser, Map<String, String> headers) {
         Map<String, Object> attributes = new HashMap<>();
         return (HttpServletRequest) Proxy.newProxyInstance(

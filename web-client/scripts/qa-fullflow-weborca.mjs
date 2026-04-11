@@ -100,7 +100,7 @@ const redactHeaders = (headers) => {
 
 const isMedicalModV2Url = (url) => {
   if (!url) return false;
-  // Avoid matching /api21/medicalmodv23 (substring collision).
+  // Match the exact v2 route only and avoid partial-path collisions.
   if (url.includes('/api21/medicalmodv2?')) return true;
   return /\/api21\/medicalmodv2(?:$|#)/.test(url);
 };

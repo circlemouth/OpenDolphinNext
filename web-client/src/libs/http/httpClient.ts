@@ -287,7 +287,13 @@ export async function httpFetch(input: RequestInfo | URL, init?: HttpFetchInit) 
   const cache = initWithHeaders.cache ?? (shouldUseNoStoreCache(requestUrl, requestMethod) ? 'no-store' : undefined);
   // 認証クッキー（JSESSIONID 等）を常に送るため、デフォルトで include を付与する。
   const credentials = initWithHeaders.credentials ?? 'include';
-  const response = await fetch(input, { ...initWithHeaders, cache, credentials });
+  const resolvedInput =
+    typeof input === 'string' && requestUrl
+      ? requestUrl.toString()
+      : input instanceof Request && requestUrl
+        ? new Request(requestUrl.toString(), input)
+        : input;
+  const response = await fetch(resolvedInput, { ...initWithHeaders, cache, credentials });
   captureObservabilityFromResponse(response);
   const resolvedInit =
     init?.notifySessionExpired === undefined && isOrcaEndpoint(requestUrl)

@@ -344,7 +344,10 @@ final class OrcaChartSupportSupport {
             }
             response.setEntries(entries);
             response.setUnpaidMoneyTotal(parseDouble(readFirst(document, "Unpaid_Money_Total")));
-            response.setUnpaidMoneyInformationOverflow(parseBoolean(readFirst(document, "Unpaid_Money_Information_Overflow")));
+            String unpaidMoneyOverflow = readFirst(document, "Unpaid_Money_Information_Overflow");
+            if (isBooleanLiteral(unpaidMoneyOverflow)) {
+                response.setUnpaidMoneyInformationOverflow(parseBoolean(unpaidMoneyOverflow));
+            }
             List<ChartSupportIncomeInfoResponse.UnpaidMoneyEntry> unpaidEntries = new ArrayList<>();
             for (Element element : elements(document, "Unpaid_Money_Information_child")) {
                 ChartSupportIncomeInfoResponse.UnpaidMoneyEntry entry =
@@ -541,18 +544,16 @@ final class OrcaChartSupportSupport {
         }
     }
 
-    private Boolean parseBoolean(String value) {
+    private boolean parseBoolean(String value) {
+        return "true".equals(value.trim().toLowerCase());
+    }
+
+    private boolean isBooleanLiteral(String value) {
         if (isBlank(value)) {
-            return null;
-        }
-        String normalized = value.trim().toLowerCase();
-        if ("true".equals(normalized)) {
-            return true;
-        }
-        if ("false".equals(normalized)) {
             return false;
         }
-        return null;
+        String normalized = value.trim().toLowerCase();
+        return "true".equals(normalized) || "false".equals(normalized);
     }
 
     private Element firstElement(Element parent, String tagName) {

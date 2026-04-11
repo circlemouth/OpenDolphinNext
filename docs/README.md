@@ -36,6 +36,9 @@
 ## Operations
 - [ORCA_CERTIFICATION_ONLY.md](operations/ORCA_CERTIFICATION_ONLY.md)
 
+## Releases
+- [orca-remediation-cutover.md](releases/orca-remediation-cutover.md)
+
 ## Code-Adjacent Docs
 - [web-client/README.md](../web-client/README.md)
 - `web-client/notes/`

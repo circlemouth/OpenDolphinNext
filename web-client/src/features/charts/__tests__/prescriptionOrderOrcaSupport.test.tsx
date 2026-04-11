@@ -8,7 +8,7 @@ import { PrescriptionOrderEditorPanel } from '../PrescriptionOrderEditorPanel';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 import { fetchOrcaGenericPrice } from '../orcaGenericPriceApi';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
-import { checkOrcaOrderInteractions } from '../orcaOrderInteractionApi';
+import { checkOrcaStaticOrderInteractions } from '../orcaOrderInteractionApi';
 import { savePrescriptionOrder } from '../prescriptionOrderApi';
 
 vi.mock('../orderMasterSearchApi', async () => {
@@ -43,7 +43,7 @@ vi.mock('../orcaOrderInputSetApi', () => ({
 }));
 
 vi.mock('../orcaOrderInteractionApi', () => ({
-  checkOrcaOrderInteractions: vi.fn().mockResolvedValue({
+  checkOrcaStaticOrderInteractions: vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
     totalCount: 0,
@@ -101,6 +101,23 @@ const renderPanel = (bundlesOverride = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const requestUrl = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+    if (requestUrl.includes('/api/orca/chart-support/contraindication-check')) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          apiOk: true,
+          apiResult: '0000',
+          apiResultMessage: 'OK',
+          results: [],
+          symptomInfo: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    throw new Error(`unexpected fetch: ${requestUrl}`);
+  });
   vi.mocked(fetchOrderMasterSearch).mockImplementation(async ({ type, keyword }) => {
     if (type === 'youhou') return { ok: true, items: [], totalCount: 0 };
     if (type === 'drug') {
@@ -118,6 +135,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
 });
 
 describe('PrescriptionOrderEditorPanel ORCA support', () => {
@@ -191,7 +209,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
   });
 
   it('相互作用ありのとき確認後に 1 回だけ保存する', async () => {
-    vi.mocked(checkOrcaOrderInteractions).mockResolvedValue({
+    vi.mocked(checkOrcaStaticOrderInteractions).mockResolvedValue({
       ok: true,
       status: 200,
       totalCount: 1,
@@ -224,7 +242,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     ]);
 
     await user.click(screen.getByRole('button', { name: '保存' }));
-    expect(await screen.findByText('相互作用チェックの警告')).toBeInTheDocument();
+    expect(await screen.findByText('マスタ相互作用チェックの警告')).toBeInTheDocument();
     expect(screen.getByText(/620000001 \/ 620000002 \/ 併用注意/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '編集に戻る' }));

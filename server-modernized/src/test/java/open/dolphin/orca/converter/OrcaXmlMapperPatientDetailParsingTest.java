@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import open.dolphin.rest.dto.orca.PatientBatchResponse;
 import open.dolphin.rest.dto.orca.PatientDetail;
+import open.dolphin.rest.dto.orca.PatientSearchResponse;
 import org.junit.jupiter.api.Test;
 
 class OrcaXmlMapperPatientDetailParsingTest {
@@ -51,5 +52,35 @@ class OrcaXmlMapperPatientDetailParsingTest {
         assertEquals("0312345678", detail.getPhoneNumber1());
         assertEquals("09012345678", detail.getPhoneNumber2());
     }
-}
 
+    @Test
+    void parsesPatientSearchResponseUsingOfficialPatientlst3StubShape() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmlio2>
+                  <patientlst2res>
+                    <Api_Result>0000</Api_Result>
+                    <Api_Result_Message>正常終了</Api_Result_Message>
+                    <Target_Patient_Count>1</Target_Patient_Count>
+                    <No_Target_Patient_Count>0</No_Target_Patient_Count>
+                    <Patient_Information>
+                      <Patient_ID>000001</Patient_ID>
+                      <WholeName>山田太郎</WholeName>
+                      <WholeName_inKana>ヤマダタロウ</WholeName_inKana>
+                      <BirthDate>1975-04-01</BirthDate>
+                      <Sex>1</Sex>
+                    </Patient_Information>
+                  </patientlst2res>
+                </xmlio2>
+                """;
+
+        OrcaXmlMapper mapper = new OrcaXmlMapper();
+        PatientSearchResponse response = mapper.toPatientSearch(xml, "山田");
+        assertNotNull(response);
+        assertEquals("0000", response.getApiResult());
+        assertEquals(1, response.getTargetPatientCount());
+        assertEquals(1, response.getPatients().size());
+        assertEquals("000001", response.getPatients().get(0).getSummary().getPatientId());
+        assertEquals("山田", response.getSearchTerm());
+    }
+}

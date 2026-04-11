@@ -316,6 +316,15 @@ describe('httpFetch session expiry reasons', () => {
     expect(requestInit?.credentials).toBe('include');
   });
 
+  it('resolves relative request paths before calling fetch', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
+    const { httpClient } = await importSubjects();
+
+    await httpClient.httpFetch('/api/orca/chart-support/contraindication-check', { method: 'POST' });
+
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(`${window.location.origin}/api/orca/chart-support/contraindication-check`);
+  });
+
   it('applies no-store cache only to PHI GET requests', async () => {
     setSession();
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));

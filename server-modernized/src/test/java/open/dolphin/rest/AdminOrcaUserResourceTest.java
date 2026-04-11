@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -104,6 +105,12 @@ class AdminOrcaUserResourceTest {
         Map<String, Object> syncStatus = (Map<String, Object>) body.get("syncStatus");
         assertNotNull(syncStatus);
         assertEquals(Boolean.FALSE, syncStatus.get("running"));
+        verify(orcaTransport).invoke(
+                anyString(),
+                eq(OrcaEndpoint.MANAGE_USERS),
+                argThat((OrcaTransportRequest requestPayload) ->
+                        requestPayload != null
+                                && requestPayload.getBody().contains("<Request_Number type=\"string\">01</Request_Number>")));
     }
 
     @Test
@@ -203,6 +210,25 @@ class AdminOrcaUserResourceTest {
         assertTrue(!xml.contains("<New_Group_Number"));
         assertTrue(!xml.contains("<New_User_Number"));
         assertTrue(!xml.contains("<New_User_Id"));
+    }
+
+    @Test
+    void deleteOrcaUserUsesOfficialDeleteXml() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-DELETE");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
+                .thenReturn(okManageUsersResponse());
+
+        Response response = resource.deleteOrcaUser(request, "orca_01");
+
+        assertEquals(200, response.getStatus());
+        ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
+        verify(orcaTransport).invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), captor.capture());
+        String xml = captor.getValue().getBody();
+        assertNotNull(xml);
+        assertTrue(xml.contains("<Request_Number type=\"string\">04</Request_Number>"));
+        assertTrue(xml.contains("<User_Id type=\"string\">orca_01</User_Id>"));
     }
 
     private OrcaTransportResult okManageUsersResponse() {

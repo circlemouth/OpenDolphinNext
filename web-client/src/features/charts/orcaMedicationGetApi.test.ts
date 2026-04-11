@@ -141,4 +141,13 @@ describe('fetchOrcaMedicationGet', () => {
       }),
     );
   });
+
+  it('baseDate が無い場合は暗黙補完せず fail-close する', async () => {
+    const result = await fetchOrcaMedicationGet({ requestCode: '114030710' });
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(0);
+    expect(result.message).toBe('baseDate は YYYY-MM-DD の診療開始日で指定してください。');
+    expect(mockHttpFetch).not.toHaveBeenCalled();
+  });
 });

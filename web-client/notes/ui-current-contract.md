@@ -84,7 +84,7 @@
 - active patient の workspace tab switch/close は、未保存入力がある場合に save/discard/cancel guard を通します。
 - ORCA 送信ボタンは canonical encounter context (`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber`) が揃わない限り enable しません。
 - `visitDate` の `today` fallback や display string parsing は ORCA 送信文脈に使いません。
-- `medicalmodv23` の chart flow 後続呼び出しは current contract に含めません。chart send/finish の official outbound は `medicalmodv2` と `incomeinfv2` のみです。
+- chart flow 後続の旧 follow-up route は current contract に含めません。chart send/finish の official outbound は `medicalmodv2` と `incomeinfv2` のみです。
 
 ### Terminology
 - 「参照カルテ」と「参照パネル」は current docs 上で完全同義とは断定しません。

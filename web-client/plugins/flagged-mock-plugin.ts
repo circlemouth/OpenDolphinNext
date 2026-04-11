@@ -400,15 +400,6 @@ const createFlagAwareMiddleware = (): NextHandleFunction => (req, res, next) => 
     }
   }
 
-  if (url.pathname.startsWith('/api21/medicalmodv23')) {
-    if (shouldUseFlaggedOutpatientMock(req, url)) {
-      res.statusCode = 200;
-      res.setHeader('content-type', 'application/xml; charset=UTF-8');
-      res.end(buildMedicalModXml('00', '正常終了'));
-      return;
-    }
-  }
-
   next();
 };
 

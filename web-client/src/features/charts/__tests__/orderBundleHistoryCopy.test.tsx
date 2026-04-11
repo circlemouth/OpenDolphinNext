@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -69,9 +69,30 @@ const baseProps = {
   },
 };
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const requestUrl = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+    if (requestUrl.includes('/api/orca/chart-support/contraindication-check')) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          apiOk: true,
+          apiResult: '0000',
+          apiResultMessage: 'OK',
+          results: [],
+          symptomInfo: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+    throw new Error(`unexpected fetch: ${requestUrl}`);
+  });
+});
+
 afterEach(() => {
   cleanup();
-  vi.clearAllMocks();
+  vi.restoreAllMocks();
   localStorage.clear();
 });
 

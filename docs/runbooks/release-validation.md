@@ -17,6 +17,16 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis ver
 cd web-client && node scripts/runtime-ready-smoke.mjs
 ```
 
+## Worker G の post-merge 確認
+```bash
+rg -n "/api/orca/patient/mutation|medicalmodv23|ORCAへ反映|症状詳記（ORCA）" web-client server-modernized docs tests -S
+rg -n "patientlst3v2|acceptmodv2|manageusersv2|contraindicationcheckv2|medicationgetv2|incomeinfv2|patientmodv2" web-client server-modernized api-contract tests -S
+```
+
+- `medicalmodv23` は runtime route / mock route / UI copy に残さない。
+- chart flow の official outbound は `medicalmodv2` と `incomeinfv2` のみ。
+- Reception / Patients / Charts / Admin の UI と server contract が上記 grep で一致していることを確認する。
+
 ## 補助コマンド
 ```bash
 bash server-modernized/tools/ci/check-doc-links.sh
@@ -35,6 +45,11 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `runtime-ready-smoke` が成功する。
 - direct runtime lookup grep は `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` 1 件だけを返す。
 - `dolphin.facilityId` grep は 0 件。
+
+## 証跡保存先
+- runtime smoke の既知出力先は `web-client/artifacts/webclient/runtime-gate-ready/<RUN_ID>`。
+- ORCA 接続確認の既知出力先は `artifacts/orca-connectivity/<RUN_ID>/`。
+- Worker G の smoke memo / diff / grep 結果は release 判定に使う artifact 配下へまとめ、cutover 記録と分離しない。
 
 ## 手動確認
 ### Health
@@ -83,3 +98,4 @@ zipinfo -1 /tmp/OpenDolphinNext-clean.zip | \
 - `check-no-generated-artifacts.sh` は tracked / untracked の両方を検査する。
 - `check-no-direct-runtime-lookup.sh` は `ServerConfigurationResolver.java` 以外の direct runtime lookup を許可しない。
 - どれか 1 つでも失敗したら release は見送る。
+- cutover / rollback の実施順序と停止条件は [../releases/orca-remediation-cutover.md](../releases/orca-remediation-cutover.md) を正本とする。

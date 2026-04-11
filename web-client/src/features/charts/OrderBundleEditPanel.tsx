@@ -458,13 +458,13 @@ const normalizeChargeMasterCategory = (category?: string | null) => {
 };
 
 const normalizePerformMonth = (value?: string) => {
-  if (!value) return new Date().toISOString().slice(0, 7);
+  if (!value) return null;
   const digits = value.replace(/[^0-9]/g, '');
   if (digits.length >= 6) {
     return `${digits.slice(0, 4)}-${digits.slice(4, 6)}`;
   }
   const trimmed = value.trim();
-  return /^\d{4}-\d{2}$/.test(trimmed) ? trimmed : new Date().toISOString().slice(0, 7);
+  return /^\d{4}-\d{2}$/.test(trimmed) ? trimmed : null;
 };
 
 const buildContraindicationDetails = (result: ContraindicationCheckResult) => {
@@ -495,20 +495,46 @@ const buildContraindicationDetails = (result: ContraindicationCheckResult) => {
 };
 
 const fetchOrcaContraindicationCheck = async (params: {
-  patientId: string;
-  performMonth: string;
+  patientId?: string;
+  performMonth?: string;
   medications?: ContraindicationCheckMedication[];
   requestNumber?: '01' | '02';
   checkTerm?: string;
 }): Promise<ContraindicationCheckResult> => {
   const meta = ensureObservabilityMeta();
+  const patientId = params.patientId?.trim();
+  if (!patientId) {
+    return {
+      ok: false,
+      status: 0,
+      apiOk: false,
+      results: [],
+      symptomInfo: [],
+      message: 'patientId が未解決のため禁忌チェックを実行できません。',
+      runId: meta.runId,
+      traceId: meta.traceId,
+    };
+  }
+  const performMonth = normalizePerformMonth(params.performMonth);
+  if (!performMonth) {
+    return {
+      ok: false,
+      status: 0,
+      apiOk: false,
+      results: [],
+      symptomInfo: [],
+      message: 'performMonth は YYYY-MM の診療月で指定してください。',
+      runId: meta.runId,
+      traceId: meta.traceId,
+    };
+  }
   const response = await httpFetch('/api/orca/chart-support/contraindication-check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     notifySessionExpired: false,
     body: JSON.stringify({
-      patientId: params.patientId,
-      performMonth: normalizePerformMonth(params.performMonth),
+      patientId,
+      performMonth,
       requestNumber: params.requestNumber ?? '01',
       checkTerm: params.checkTerm ?? '1',
       medications: params.medications ?? [],

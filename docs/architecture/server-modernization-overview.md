@@ -37,6 +37,7 @@
 - `docs/contracts/document-integrity.md`
 - `docs/contracts/patient-images.md`
 - `docs/runbooks/release-validation.md`
+- `docs/releases/orca-remediation-cutover.md`
 
 ## release gate
 ```bash
