@@ -83,7 +83,7 @@ const createSessionContext = async (browser) => {
 };
 
 const isOrcaRequest = (url) => url.includes('/orca/') || url.includes('/orca21/') || url.includes('/api/orca/');
-const isClaimRequest = (url) => url.includes('/orca/claim/outpatient') || url.includes('/api/orca/claim/outpatient');
+const isClaimRequest = (url) => url.includes('claim/outpatient') && isOrcaRequest(url);
 
 const run = async () => {
   const browser = await chromium.launch({ headless: true });
@@ -160,7 +160,7 @@ const run = async () => {
       )
       .join('\n');
 
-  const log = `# CLAIM 廃止検証（/orca/claim/outpatient 呼び出しゼロ確認）\n\n` +
+  const log = `# CLAIM 廃止検証（legacy claim outpatient 呼び出しゼロ確認）\n\n` +
     `- RUN_ID: ${summary.runId}\n` +
     `- 実施日時: ${summary.executedAt}\n` +
     `- Base URL: ${summary.baseURL}\n` +

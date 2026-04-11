@@ -194,7 +194,7 @@ describe('httpFetch session expiry reasons', () => {
     const { sessionExpiry, httpClient } = await importSubjects();
     const notifySpy = vi.spyOn(sessionExpiry, 'notifySessionExpired');
 
-    await httpClient.httpFetch('/api/orca/appointments/list');
+    await httpClient.httpFetch('/api/orca/official/appointments/list');
     expect(notifySpy).not.toHaveBeenCalled();
   });
 
@@ -235,7 +235,7 @@ describe('httpFetch session expiry reasons', () => {
     const adminHeaders = new Headers((fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(adminHeaders.get('Authorization')).toBeNull();
 
-    await httpClient.httpFetch('/api/orca/appointments/list', { method: 'GET' });
+    await httpClient.httpFetch('/api/orca/official/appointments/list', { method: 'GET' });
     const orcaHeaders = new Headers((fetchSpy.mock.calls[1]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(orcaHeaders.get('Authorization')).toBeNull();
 
@@ -271,7 +271,7 @@ describe('httpFetch session expiry reasons', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('https://evil.example/orca/appointments/list', { method: 'GET' });
+    await httpClient.httpFetch('https://evil.example/api/orca/official/appointments/list', { method: 'GET' });
     const headers = new Headers((fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(headers.get('Authorization')).toBeNull();
   });
@@ -311,7 +311,7 @@ describe('httpFetch session expiry reasons', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('/api/orca/appointments/list', { method: 'GET' });
+    await httpClient.httpFetch('/api/orca/official/appointments/list', { method: 'GET' });
     const requestInit = fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined;
     expect(requestInit?.credentials).toBe('include');
   });
@@ -320,9 +320,9 @@ describe('httpFetch session expiry reasons', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('/api/orca/chart-support/contraindication-check', { method: 'POST' });
+    await httpClient.httpFetch('/api/orca/official/chart-support/contraindication-check', { method: 'POST' });
 
-    expect(fetchSpy.mock.calls[0]?.[0]).toBe(`${window.location.origin}/api/orca/chart-support/contraindication-check`);
+    expect(fetchSpy.mock.calls[0]?.[0]).toBe(`${window.location.origin}/api/orca/official/chart-support/contraindication-check`);
   });
 
   it('applies no-store cache only to PHI GET requests', async () => {

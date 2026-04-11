@@ -35,7 +35,7 @@ import open.dolphin.session.framework.SessionOperation;
 /**
  * REST wrapper for appointment, billing simulation, and visit helper endpoints.
  */
-@Path("/orca")
+@Path("/orca/official")
 @SessionOperation
 public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
 

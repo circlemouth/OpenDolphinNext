@@ -68,7 +68,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
                     String name = method.getName();
                     if ("getRemoteUser".equals(name)) return "F001:doctor01";
                     if ("getRemoteAddr".equals(name)) return "127.0.0.1";
-                    if ("getRequestURI".equals(name)) return "/api/orca/order/recommendations";
+                    if ("getRequestURI".equals(name)) return "/api/local/order/recommendations";
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         String header = String.valueOf(args[0]);
                         return switch (header) {
@@ -659,7 +659,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetsReturnsPagedResponse() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
                 OrcaOrderInputSetListResponse.Item med = new OrcaOrderInputSetListResponse.Item();
@@ -687,10 +687,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         OrcaOrderInputSetListResponse response =
                 inputSetResource.getInputSets(servletRequest, "セット", null, "2026-03-09", 1, 20);
 
@@ -703,7 +699,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetsCanonicalizesTestEntityFromLegacyAlias() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
                 OrcaOrderInputSetListResponse.Item test = new OrcaOrderInputSetListResponse.Item();
@@ -731,10 +727,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         OrcaOrderInputSetListResponse response =
                 inputSetResource.getInputSets(servletRequest, "セット", "laboTest", "2026-03-09", 1, 20);
 
@@ -747,7 +739,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetsDropsUnsupportedMetadataEntity() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
                 OrcaOrderInputSetListResponse.Item unsupported = new OrcaOrderInputSetListResponse.Item();
@@ -764,10 +756,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         OrcaOrderInputSetListResponse response =
                 inputSetResource.getInputSets(servletRequest, "セット", null, "2026-03-09", 1, 20);
 
@@ -778,7 +766,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetDetailReturnsBundle() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
                 OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
@@ -819,10 +807,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         OrcaOrderInputSetDetailResponse response =
                 inputSetResource.getInputSetDetail(servletRequest, "P01001", "20260309", IInfoModel.ENTITY_MED_ORDER, null);
 
@@ -847,7 +831,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetDetailAcceptsLegacyAliasAndReturnsCanonicalEntity() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
                 OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
@@ -869,10 +853,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         OrcaOrderInputSetDetailResponse response =
                 inputSetResource.getInputSetDetail(servletRequest, "P01001", "20260309", "laboTest", null);
 
@@ -884,7 +864,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetDetailReturnsCanonicalTreatmentEntity() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
                 OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
@@ -906,10 +886,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         OrcaOrderInputSetDetailResponse response =
                 inputSetResource.getInputSetDetail(servletRequest, "S02001", "20260309", IInfoModel.ENTITY_TREATMENT, null);
 
@@ -921,7 +897,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetDetailReturnsNotFoundForUnsupportedMetadataEntity() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
                 OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
@@ -931,10 +907,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         WebApplicationException exception = null;
         try {
             inputSetResource.getInputSetDetail(servletRequest, "X99999", "20260309", IInfoModel.ENTITY_TREATMENT, null);
@@ -950,7 +922,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetDetailReturnsNotFoundWhenEntityMismatch() throws Exception {
-        OrcaOrderBundleResource inputSetResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(String setCode, String effective, String requestedName) {
                 OrcaOrderInputSetDetailResponse.Bundle bundle = new OrcaOrderInputSetDetailResponse.Bundle();
@@ -960,10 +932,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(inputSetResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(inputSetResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(inputSetResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(inputSetResource, "userServiceBean", new FakeUserServiceBean());
-
         WebApplicationException exception = null;
         try {
             inputSetResource.getInputSetDetail(servletRequest, "P01001", "20260309", IInfoModel.ENTITY_TREATMENT, null);
@@ -977,7 +945,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void checkInteractionsReturnsPairsAndDedupes() throws Exception {
-        OrcaOrderBundleResource interactionResource = new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource interactionResource = new OrcaOrderMasterResource() {
             @Override
             protected List<OrcaOrderInteractionCheckResponse.Pair> loadInteractionPairs(List<String> codes, List<String> existingCodes) {
                 OrcaOrderInteractionCheckResponse.Pair pair = new OrcaOrderInteractionCheckResponse.Pair();
@@ -990,10 +958,6 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
             }
         };
         injectField(interactionResource, "sessionAuditDispatcher", auditDispatcher);
-        injectField(interactionResource, "patientServiceBean", new FakePatientServiceBean());
-        injectField(interactionResource, "karteServiceBean", fakeKarteServiceBean);
-        injectField(interactionResource, "userServiceBean", new FakeUserServiceBean());
-
         OrcaOrderInteractionCheckRequest body = new OrcaOrderInteractionCheckRequest();
         body.setCodes(List.of("620000001", "620000001", "620000002"));
         body.setExistingCodes(List.of("620000003", "620000003", "620000001"));
@@ -1007,13 +971,13 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void checkInteractionsRejectsMissingCodes() {
+    void checkInteractionsRejectsMissingCodes() throws Exception {
         OrcaOrderInteractionCheckRequest body = new OrcaOrderInteractionCheckRequest();
         body.setCodes(new java.util.ArrayList<>(java.util.Arrays.asList(" ", null)));
 
         WebApplicationException exception = null;
         try {
-            resource.checkInteractions(servletRequest, body);
+            buildMasterResource(new OrcaOrderMasterResource()).checkInteractions(servletRequest, body);
         } catch (WebApplicationException ex) {
             exception = ex;
         }
@@ -1044,6 +1008,11 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         }
         field.setAccessible(true);
         field.set(target, value);
+    }
+
+    private OrcaOrderMasterResource buildMasterResource(OrcaOrderMasterResource target) throws Exception {
+        injectField(target, "sessionAuditDispatcher", auditDispatcher);
+        return target;
     }
 
     private static final class RecordingSessionAuditDispatcher extends SessionAuditDispatcher {

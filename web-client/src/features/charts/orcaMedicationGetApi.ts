@@ -83,7 +83,7 @@ export async function fetchOrcaMedicationGet(params: {
       traceId: meta.traceId,
     };
   }
-  const response = await httpFetch('/api/orca/chart-support/medication-get', {
+  const response = await httpFetch('/api/orca/official/chart-support/medication-get', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     notifySessionExpired: false,

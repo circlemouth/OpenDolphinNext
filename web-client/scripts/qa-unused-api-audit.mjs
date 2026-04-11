@@ -102,17 +102,17 @@ const OUTPUT_ROOT = path.resolve(
 const TARGETS = [
   {
     id: 'orca-master-generic-price',
-    endpoint: '/orca/master/generic-price',
+    endpoint: '/api/orca/master/generic-price',
     match: /\/(?:api\/)?orca\/master\/generic-price(?:[/?#]|$)/,
   },
   {
     id: 'orca-master-hokenja',
-    endpoint: '/orca/master/hokenja',
+    endpoint: '/api/orca/master/hokenja',
     match: /\/(?:api\/)?orca\/master\/hokenja(?:[/?#]|$)/,
   },
   {
     id: 'orca-master-address',
-    endpoint: '/orca/master/address',
+    endpoint: '/api/orca/master/address',
     match: /\/(?:api\/)?orca\/master\/address(?:[/?#]|$)/,
   },
   {

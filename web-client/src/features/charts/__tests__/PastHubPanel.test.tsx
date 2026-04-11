@@ -90,7 +90,7 @@ describe('PastHubPanel', () => {
     mockedFetchOrderBundles.mockResolvedValueOnce({
       ok: false,
       bundles: [],
-      message: 'backend order route missing /api/orca/order/bundles stacktrace',
+      message: 'backend order route missing /api/local/order/bundles stacktrace',
     } as any);
 
     renderWithQueryClient(

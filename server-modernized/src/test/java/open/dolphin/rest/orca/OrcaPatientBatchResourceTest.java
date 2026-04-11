@@ -48,7 +48,7 @@ class OrcaPatientBatchResourceTest {
         request.getPatientIds().add("000002");
 
         PatientBatchResponse response = resource.patientBatch(
-                createRequest("F001:doctor01", "/api/orca/patients/batch", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/patients/batch", Map.of()), request);
         assertEquals(2, response.getPatients().size());
         assertEquals(2, response.getTargetPatientCount());
         assertEquals(0, response.getNoTargetPatientCount());
@@ -64,7 +64,7 @@ class OrcaPatientBatchResourceTest {
         request.getPatientIds().add("000001");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.patientBatch(createRequest(null, "/api/orca/patients/batch", Map.of()), request));
+                () -> resource.patientBatch(createRequest(null, "/api/orca/official/patients/batch", Map.of()), request));
         assertEquals(401, ex.getResponse().getStatus());
     }
 
@@ -105,7 +105,7 @@ class OrcaPatientBatchResourceTest {
         request.setName("山田");
 
         PatientSearchResponse response = resource.patientSearch(
-                createRequest("F001:doctor01", "/api/orca/patients/name-search", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/patients/name-search", Map.of()), request);
         assertEquals(1, response.getTargetPatientCount());
         assertEquals(0, response.getNoTargetPatientCount());
     }
@@ -118,7 +118,7 @@ class OrcaPatientBatchResourceTest {
         request.setPatientId("000020");
 
         FormerNameHistoryResponse response = resource.formerNames(
-                createRequest("F001:doctor01", "/api/orca/patients/former-names", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/patients/former-names", Map.of()), request);
         assertEquals(2, response.getFormerNames().size());
     }
 
@@ -131,7 +131,7 @@ class OrcaPatientBatchResourceTest {
         request.setIncludeTestPatient(true);
 
         PatientIdListResponse response = resource.patientIdList(
-                createRequest("F001:doctor01", "/api/orca/patients/id-list", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/patients/id-list", Map.of()), request);
         assertEquals(2, response.getTargetPatientCount());
         assertEquals("0", response.getPatients().get(0).getTestPatientFlag());
     }
@@ -146,7 +146,7 @@ class OrcaPatientBatchResourceTest {
         request.setRangeEnd("2025-11-01");
 
         assertThrows(WebApplicationException.class, () ->
-                resource.insuranceCombinations(createRequest("F001:doctor01", "/api/orca/patients/insurance", Map.of()), request));
+                resource.insuranceCombinations(createRequest("F001:doctor01", "/api/orca/official/insurance/combinations", Map.of()), request));
     }
 
     private HttpServletRequest createRequest(String remoteUser, String uri, Map<String, String> headers) {

@@ -1,7 +1,7 @@
 import { test, expect } from '../playwright/fixtures';
 import { gotoOrcaMaster, seedAuthSession, runId as defaultRunId } from './helpers/orcaMaster';
 
-// This smoke relies on page.route stubs for /orca/master/* and must not be
+// This smoke relies on page.route stubs for /api/orca/master/* and must not be
 // preempted by MSW service-worker fetch handlers.
 test.use({ ignoreHTTPSErrors: true, serviceWorkers: 'block' });
 
@@ -49,7 +49,7 @@ const expectMeta = (meta: AuditMeta, expected: { missingMaster: boolean; fallbac
 test('@master-bridge ORCA master audit smoke', async ({ page }) => {
   const sourceHint = (process.env.WEB_ORCA_MASTER_SOURCE ?? 'mock').toLowerCase();
   if (shouldStub) {
-    await page.route('**/orca/master/**', (route) => {
+    await page.route('**/api/orca/master/**', (route) => {
       const url = new URL(route.request().url());
       const isFallback = url.pathname.includes('/address') && url.searchParams.get('zip') !== '1000001';
       route.fulfill({
@@ -67,7 +67,7 @@ test('@master-bridge ORCA master audit smoke', async ({ page }) => {
     });
   } else {
     // Let requests hit the configured bridge (proxy to VITE_ORCA_MASTER_BRIDGE/VITE_DEV_PROXY_TARGET if provided)
-    await page.route('**/orca/master/**', async (route) => {
+    await page.route('**/api/orca/master/**', async (route) => {
       if (!proxyTargetBase) {
         await route.continue();
         return;
@@ -87,9 +87,9 @@ test('@master-bridge ORCA master audit smoke', async ({ page }) => {
   await gotoOrcaMaster(page, '/charts/72001');
 
   const primaryResponsePromise = page.waitForResponse((res) =>
-    res.url().includes('/orca/master/generic-class'),
+    res.url().includes('/api/orca/master/generic-class'),
   );
-  await page.evaluate(() => fetch('/orca/master/generic-class'));
+  await page.evaluate(() => fetch('/api/orca/master/generic-class'));
   const primaryJson = (await primaryResponsePromise).json() as Promise<AuditMeta>;
   const primaryMeta = await primaryJson;
   // Log raw meta before assertions so sp4-runtime-flag.log captures server responses even on failure
@@ -99,9 +99,9 @@ test('@master-bridge ORCA master audit smoke', async ({ page }) => {
   logMeta('primary', primaryMeta);
 
   const fallbackResponsePromise = page.waitForResponse((res) =>
-    res.url().includes('/orca/master/address'),
+    res.url().includes('/api/orca/master/address'),
   );
-  await page.evaluate(() => fetch('/orca/master/address?zip=0000000'));
+  await page.evaluate(() => fetch('/api/orca/master/address?zip=0000000'));
   const fallbackJson = (await fallbackResponsePromise).json() as Promise<AuditMeta>;
   const fallbackMeta = await fallbackJson;
   // eslint-disable-next-line no-console

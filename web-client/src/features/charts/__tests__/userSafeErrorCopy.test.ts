@@ -10,10 +10,10 @@ describe('userSafeErrorCopy', () => {
   });
 
   it('fetch failure は raw internal detail を generic retry copy に寄せる', () => {
-    const message = resolveUserSafeFetchFailure('オーダー情報', 'HTTP 500 (/api/orca/order/bundles)');
+    const message = resolveUserSafeFetchFailure('オーダー情報', 'HTTP 500 (/api/local/order/bundles)');
 
     expect(message).toBe('オーダー情報の取得に失敗しました。時間をおいて再試行してください。');
-    expect(message).not.toContain('/api/orca/order/bundles');
+    expect(message).not.toContain('/api/local/order/bundles');
   });
 
   it('operation failure は network hint を安全な再試行 guidance に寄せる', () => {

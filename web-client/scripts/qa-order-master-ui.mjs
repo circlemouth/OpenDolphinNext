@@ -123,13 +123,13 @@ const run = async () => {
   await page.route('**/api/admin/config**', (route) => {
     respondJson(route, adminConfigPayload);
   });
-  await page.route('**/orca/master/generic-class**', (route) => {
+  await page.route('**/api/orca/master/generic-class**', (route) => {
     respondJson(route, { items: genericItems, totalCount: genericItems.length, runId });
   });
-  await page.route('**/orca/master/material**', (route) => {
+  await page.route('**/api/orca/master/material**', (route) => {
     respondJson(route, { items: materialItems, totalCount: materialItems.length, runId });
   });
-  await page.route('**/orca/master/youhou**', (route) => {
+  await page.route('**/api/orca/master/youhou**', (route) => {
     respondJson(route, { items: youhouItems, totalCount: youhouItems.length, runId });
   });
 
@@ -138,7 +138,7 @@ const run = async () => {
     if (response.status() >= 400) {
       httpErrors.push({ url, status: response.status(), statusText: response.statusText() });
     }
-    if (!url.includes('/orca/master/')) return;
+    if (!url.includes('/api/orca/master/')) return;
     masterResponses.push({ url, status: response.status(), statusText: response.statusText() });
   });
 

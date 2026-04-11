@@ -95,10 +95,10 @@ const redactHeaders = (headers) => {
 };
 
 const isTarget = (url) =>
-  url.includes('/orca/master/material') ||
   url.includes('/api/orca/master/material') ||
-  url.includes('/orca/order/bundles') ||
-  url.includes('/api/orca/order/bundles');
+  url.includes('/api/orca/master/material') ||
+  url.includes('/api/local/order/bundles') ||
+  url.includes('/api/local/order/bundles');
 
 const shouldRewriteRunIdHeader = (urlString) => {
   try {
@@ -310,10 +310,10 @@ const run = async () => {
   // Capture additional API activity needed to debug "patient not selected" / empty patients tab.
   const shouldRecordDebug = (url) =>
     isTarget(url) ||
-    url.includes('/orca/appointments/list') ||
-    url.includes('/orca/visits/list') ||
-    url.includes('/api/orca/appointments/list') ||
-    url.includes('/api/orca/visits/list');
+    url.includes('/api/orca/official/appointments/list') ||
+    url.includes('/api/orca/official/visits/list') ||
+    url.includes('/api/orca/official/appointments/list') ||
+    url.includes('/api/orca/official/visits/list');
 
   // Force `x-run-id` to be within DB constraints for any API calls hitting the dev server origin.
   // Without this, audit logging can fail with "value too long for type character varying(64)" and break verification.
@@ -386,7 +386,7 @@ const run = async () => {
   if (forceMaterialTransition) {
     // Force the transition header for material master requests so we can validate
     // MSW/UI behaviors deterministically (e.g. snapshot -> MSW 200 items=[]).
-    await page.route('**/orca/master/material**', async (route) => {
+    await page.route('**/api/orca/master/material**', async (route) => {
       const headers = {
         ...route.request().headers(),
         'x-run-id': runIdHeader,
@@ -440,7 +440,7 @@ const run = async () => {
       await writeScreenshot(page, '00c-reception-accept-filled');
 
       const acceptResponsePromise = page
-        .waitForResponse((response) => response.url().includes('/orca/visits/mutation'), { timeout: 20000 })
+        .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
         .catch(() => null);
       await acceptForm.locator('button[type="submit"]').first().click();
       const resp = await acceptResponsePromise;
@@ -713,7 +713,7 @@ const run = async () => {
   const materialEmpty = materialSection.locator('.charts-side-panel__empty').first();
 
   const materialResponsePromise = page
-    .waitForResponse((response) => response.url().includes('/orca/master/material') && response.request().method() === 'GET', { timeout: 15000 })
+    .waitForResponse((response) => response.url().includes('/api/orca/master/material') && response.request().method() === 'GET', { timeout: 15000 })
     .catch(() => null);
 
   if (beforeMaterialTransition) {
@@ -776,7 +776,7 @@ const run = async () => {
         .waitForResponse((response) => {
           const url = response.url();
           return (
-            (url.includes('/orca/order/bundles') || url.includes('/api/orca/order/bundles')) &&
+            (url.includes('/api/local/order/bundles') || url.includes('/api/local/order/bundles')) &&
             response.request().method() === 'POST'
           );
         }, { timeout: 15000 })
@@ -810,7 +810,7 @@ const run = async () => {
   const orderBundlePosts = requestRecords
     .filter(
       (record) =>
-        (record.url.includes('/orca/order/bundles') || record.url.includes('/api/orca/order/bundles')) &&
+        (record.url.includes('/api/local/order/bundles') || record.url.includes('/api/local/order/bundles')) &&
         record.method === 'POST',
     )
     .map((record) => ({

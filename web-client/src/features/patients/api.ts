@@ -91,9 +91,9 @@ export type PatientMutationResult = {
 };
 
 const LOCAL_PATIENT_SEARCH_ENDPOINTS = ['/api/local/patients/search'];
-const OFFICIAL_PATIENT_CREATE_ENDPOINT = '/api/orca/patientmodv2/outpatient/create';
-const OFFICIAL_PATIENT_UPDATE_ENDPOINT = '/api/orca/patientmodv2/outpatient/update';
-const OFFICIAL_PATIENT_BATCH_ENDPOINT = '/api/orca/patients/batch';
+const OFFICIAL_PATIENT_CREATE_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/create';
+const OFFICIAL_PATIENT_UPDATE_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/update';
+const OFFICIAL_PATIENT_BATCH_ENDPOINT = '/api/orca/official/patients/batch';
 
 const normalizeBoolean = (value: unknown) => {
   if (typeof value === 'boolean') return value;

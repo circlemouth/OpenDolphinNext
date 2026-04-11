@@ -70,7 +70,7 @@ const clickCancelActionForEntry = async (page: Page, entry: Locator) => {
 
 test.use({ trace: 'off' });
 
-test.describe('Reception acceptmodv2 (/orca/visits/mutation)', () => {
+test.describe('Reception acceptmodv2 (/api/orca/official/visits/mutation)', () => {
   test.beforeEach(async ({ page }) => {
     fs.mkdirSync(artifactRoot, { recursive: true });
     await seedAuthSession(page);
@@ -90,7 +90,7 @@ test.describe('Reception acceptmodv2 (/orca/visits/mutation)', () => {
       await handler(route);
     };
 
-    await page.route('**/orca/visits/mutation**', async (route) =>
+    await page.route('**/api/orca/official/visits/mutation**', async (route) =>
       fulfillIfFetch(route, async (routed) => {
         const body = JSON.parse(routed.request().postData() ?? '{}') as Record<string, any>;
         const patientId = body.patientId ?? '';
@@ -162,7 +162,7 @@ test.describe('Reception acceptmodv2 (/orca/visits/mutation)', () => {
         });
       }),
     );
-	    await page.route('**/orca/appointments/list**', (route) =>
+	    await page.route('**/api/orca/official/appointments/list**', (route) =>
 	      fulfillIfFetch(route, (r) =>
 	        fulfillJson(r, {
 	          visitDate: '2026-01-20',
@@ -188,7 +188,7 @@ test.describe('Reception acceptmodv2 (/orca/visits/mutation)', () => {
 	        }),
 	      ),
 	    );
-	    await page.route('**/orca/visits/list**', (route) =>
+	    await page.route('**/api/orca/official/visits/list**', (route) =>
 	      fulfillIfFetch(route, (r) =>
 	        fulfillJson(r, {
 	          visitDate: '2026-01-20',
@@ -243,7 +243,7 @@ test.describe('Reception acceptmodv2 (/orca/visits/mutation)', () => {
     await ensureAcceptRequiredSelections(acceptSection);
 
     const registerRequest = page.waitForRequest((request) => {
-      if (!request.url().includes('/orca/visits/mutation')) return false;
+      if (!request.url().includes('/api/orca/official/visits/mutation')) return false;
       try {
         const body = JSON.parse(request.postData() ?? '{}') as Record<string, any>;
         return body.requestNumber === '01' && body.patientId === '000123';
@@ -314,7 +314,7 @@ test.describe('Reception acceptmodv2 (/orca/visits/mutation)', () => {
     await ensureAcceptRequiredSelections(acceptSection);
 
     const warningRequest = page.waitForRequest((request) => {
-      if (!request.url().includes('/orca/visits/mutation')) return false;
+      if (!request.url().includes('/api/orca/official/visits/mutation')) return false;
       try {
         const body = JSON.parse(request.postData() ?? '{}') as Record<string, any>;
         return body.requestNumber === '01' && body.patientId === '00021';
@@ -363,7 +363,7 @@ test.describe('Reception acceptmodv2 (/orca/visits/mutation)', () => {
     await expect(cancelModal).toBeVisible();
 
     const cancelRequest = page.waitForRequest((request) => {
-      if (!request.url().includes('/orca/visits/mutation')) return false;
+      if (!request.url().includes('/api/orca/official/visits/mutation')) return false;
       try {
         const body = JSON.parse(request.postData() ?? '{}') as Record<string, any>;
         return body.requestNumber === '02' && body.patientId === '000555';

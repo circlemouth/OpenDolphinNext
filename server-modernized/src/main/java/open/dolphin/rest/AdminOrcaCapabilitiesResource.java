@@ -33,19 +33,19 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
         body.put("internalWrappers", List.of(
                 capability(
                         "medical-sets",
-                        "/api/orca/medical-sets（診療セット）",
-                        "official",
+                        "/api/admin/internal/orca/medical-sets（診療セット）",
+                        "local",
                         "stub_fixed",
                         true,
-                        "Trial 環境では stub 応答固定（Api_Result=79）"
+                        "official surface ではなく admin internal wrapper 表示です。Trial 環境では stub 応答固定（Api_Result=79）"
                 ),
                 capability(
                         "birth-delivery",
-                        "/api/orca/birth-delivery（出産育児一時金）",
-                        "official",
+                        "/api/admin/internal/orca/birth-delivery（出産育児一時金）",
+                        "local",
                         "stub_fixed",
                         true,
-                        "Trial 環境では stub 応答固定（Api_Result=79）"
+                        "official surface ではなく admin internal wrapper 表示です。Trial 環境では stub 応答固定（Api_Result=79）"
                 ),
                 capability(
                         "medical-records",
@@ -69,7 +69,7 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
                         "local",
                         "local_write",
                         true,
-                        "official subjectivesv2 ではなく院内カルテへの主観記録保存 contract です"
+                        "official ORCA bridge ではなく院内カルテへの主観記録保存 contract です"
                 )
         ));
         return Response.ok(body).header("x-run-id", runId).build();

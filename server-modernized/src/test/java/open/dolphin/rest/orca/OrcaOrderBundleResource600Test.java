@@ -621,7 +621,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetsAllowsPhysiologyAndBacteriaToReuseCanonical600Rows() throws Exception {
-        OrcaOrderBundleResource inputSetResource = buildResource(new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetResource = buildMasterResource(new OrcaOrderMasterResource() {
             @Override
             protected List<OrcaOrderInputSetListResponse.Item> loadInputSetSummaries(String keyword, String effective) {
                 OrcaOrderInputSetListResponse.Item canonical = new OrcaOrderInputSetListResponse.Item();
@@ -632,7 +632,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
                 canonical.setClassCodeSystem("Claim007");
                 return List.of(canonical);
             }
-        }, new BasicKarteServiceBean(List.of()));
+        });
 
         OrcaOrderInputSetListResponse physiology = inputSetResource.getInputSets(
                 servletRequest, "set", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, "20260309", 1, 20);
@@ -647,20 +647,20 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
 
     @Test
     void getInputSetDetailAllowsPhysiologyAndBacteriaRequestsForCanonical600Set() throws Exception {
-        OrcaOrderBundleResource physiologyResource = buildResource(new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource physiologyResource = buildMasterResource(new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(
                     String setCode, String effective, String requestedName) {
                 return buildInputSetBundle("testOrder", null, "160000010", "specimen-main");
             }
-        }, new BasicKarteServiceBean(List.of()));
-        OrcaOrderBundleResource bacteriaResource = buildResource(new OrcaOrderBundleResource() {
+        });
+        OrcaOrderMasterResource bacteriaResource = buildMasterResource(new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(
                     String setCode, String effective, String requestedName) {
                 return buildInputSetBundle("testOrder", "culture", "160000010", "culture-main");
             }
-        }, new BasicKarteServiceBean(List.of()));
+        });
 
         OrcaOrderInputSetDetailResponse physiology = physiologyResource.getInputSetDetail(
                 servletRequest, "P60001", "20260309", IInfoModel.ENTITY_PHYSIOLOGY_ORDER, null);
@@ -677,15 +677,16 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
 
     @Test
     void inputSetDetailSaveFetchRoundTripPreservesTestOrderLocalOnlyFields() throws Exception {
-        OrcaOrderBundleResource roundTripResource = buildResource(new OrcaOrderBundleResource() {
+        OrcaOrderMasterResource inputSetDetailResource = buildMasterResource(new OrcaOrderMasterResource() {
             @Override
             protected OrcaOrderInputSetDetailResponse.Bundle loadInputSetDetailData(
                     String setCode, String effective, String requestedName) {
                 return buildDetailedInputSetBundle();
             }
-        }, new BasicKarteServiceBean(List.of()));
+        });
+        OrcaOrderBundleResource roundTripResource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
 
-        OrcaOrderInputSetDetailResponse detail = roundTripResource.getInputSetDetail(
+        OrcaOrderInputSetDetailResponse detail = inputSetDetailResource.getInputSetDetail(
                 servletRequest, "S60010", "20260309", IInfoModel.ENTITY_LABO_TEST, null);
 
         assertNotNull(detail.getBundle());
@@ -747,6 +748,11 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         injectField(target, "patientServiceBean", new FakePatientServiceBean());
         injectField(target, "karteServiceBean", karte);
         injectField(target, "userServiceBean", new FakeUserServiceBean());
+        return target;
+    }
+
+    private OrcaOrderMasterResource buildMasterResource(OrcaOrderMasterResource target) throws Exception {
+        injectField(target, "sessionAuditDispatcher", auditDispatcher);
         return target;
     }
 
@@ -862,7 +868,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
                     String name = method.getName();
                     if ("getRemoteUser".equals(name)) return "F001:doctor01";
                     if ("getRemoteAddr".equals(name)) return "127.0.0.1";
-                    if ("getRequestURI".equals(name)) return "/api/orca/order/bundles";
+                    if ("getRequestURI".equals(name)) return "/api/local/order/bundles";
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         String header = String.valueOf(args[0]);
                         return switch (header) {

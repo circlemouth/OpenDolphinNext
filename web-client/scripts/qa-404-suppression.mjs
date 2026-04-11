@@ -83,8 +83,8 @@ const createSessionContext = async (browser) => {
 };
 
 const isTarget = (url) =>
-  url.includes('/orca/appointments/list') ||
-  url.includes('/orca/visits/list') ||
+  url.includes('/api/orca/official/appointments/list') ||
+  url.includes('/api/orca/official/visits/list') ||
   url.includes('/orca21/medicalmodv2/outpatient');
 
 const run = async () => {

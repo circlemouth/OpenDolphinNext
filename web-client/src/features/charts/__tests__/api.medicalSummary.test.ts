@@ -51,7 +51,7 @@ describe('charts medical summary api', () => {
           fetchedAt: '2026-03-26T01:00:00.000Z',
           recordsReturned: 1,
           outcome: 'SUCCESS',
-          sourcePath: '/api/local-summary/encounters/{encounterKey}/medical-summary',
+          sourcePath: '/api/local/encounters/{encounterKey}/medical-summary',
           payload: {
             outpatientList: [
               {
@@ -79,8 +79,8 @@ describe('charts medical summary api', () => {
 
     const summary = await fetchChartsMedicalSummary(undefined, { encounterKey: 'F001:E100' });
 
-    expect(httpFetch).toHaveBeenCalledWith('/api/local-summary/encounters/F001%3AE100/medical-summary', { method: 'GET' });
-    expect(summary.sourcePath).toBe('/api/local-summary/encounters/{encounterKey}/medical-summary');
+    expect(httpFetch).toHaveBeenCalledWith('/api/local/encounters/F001%3AE100/medical-summary', { method: 'GET' });
+    expect(summary.sourcePath).toBe('/api/local/encounters/{encounterKey}/medical-summary');
     expect(summary.recordsReturned).toBe(1);
     expect(summary.outcome).toBe('SUCCESS');
     expect(summary.requestId).toBe('req-1');
@@ -126,7 +126,7 @@ describe('charts medical summary api', () => {
     expect(summary.httpStatus).toBe(404);
     expect(summary.outcome).toBe('ERROR');
     expect(summary.requestId).toBe('req-404');
-    expect(summary.sourcePath).toBe('/api/local-summary/encounters/{encounterKey}/medical-summary');
+    expect(summary.sourcePath).toBe('/api/local/encounters/{encounterKey}/medical-summary');
     expect(summary.payload).toEqual({ outpatientList: [] });
   });
 
@@ -161,7 +161,7 @@ describe('charts medical summary api', () => {
   it('buildUnavailableMedicalSummary は encounterKey ありでも blocked route に戻さない', () => {
     const summary = buildUnavailableMedicalSummary(undefined, { encounterKey: 'F001:E100' });
 
-    expect(summary.sourcePath).toBe('/api/local-summary/encounters/{encounterKey}/medical-summary');
+    expect(summary.sourcePath).toBe('/api/local/encounters/{encounterKey}/medical-summary');
     expect(JSON.stringify(summary)).not.toContain(BLOCKED_MEDICAL_ROUTE);
   });
 });

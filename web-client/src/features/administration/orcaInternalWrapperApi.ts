@@ -109,8 +109,8 @@ export type PatientMutationResponse = OrcaInternalWrapperBase & {
   patientId?: string;
 };
 
-const ORCA_MEDICAL_SETS_ENDPOINT = '/api/orca/medical-sets';
-const ORCA_BIRTH_DELIVERY_ENDPOINT = '/api/orca/birth-delivery';
+const ORCA_MEDICAL_SETS_ENDPOINT = '/api/admin/internal/orca/medical-sets';
+const ORCA_BIRTH_DELIVERY_ENDPOINT = '/api/admin/internal/orca/birth-delivery';
 const LOCAL_MEDICAL_RECORDS_ENDPOINT = '/api/local/charts/medical-records';
 const LOCAL_PATIENT_MUTATION_ENDPOINT = '/api/local/patients/mutation';
 const LOCAL_CHART_SUBJECTIVES_ENDPOINT = '/api/local/charts/subjectives';
@@ -386,11 +386,11 @@ export const ORCA_INTERNAL_WRAPPER_ENDPOINTS: ReadonlyArray<{
   description: string;
   stub?: boolean;
 }> = [
-  { id: 'medical-sets', path: ORCA_MEDICAL_SETS_ENDPOINT, label: 'medical-sets', description: '診療セット登録', stub: false },
-  { id: 'birth-delivery', path: ORCA_BIRTH_DELIVERY_ENDPOINT, label: 'birth-delivery', description: '出産内容登録', stub: true },
-  { id: 'medical-records', path: LOCAL_MEDICAL_RECORDS_ENDPOINT, label: 'medical-records', description: '院内診療記録取得', stub: false },
-  { id: 'patient-mutation', path: LOCAL_PATIENT_MUTATION_ENDPOINT, label: 'patient-mutation', description: '院内患者 CRUD', stub: false },
-  { id: 'chart-subjectives', path: LOCAL_CHART_SUBJECTIVES_ENDPOINT, label: 'chart-subjectives', description: '院内 SOAP 主観記録', stub: true },
+  { id: 'medical-sets', path: ORCA_MEDICAL_SETS_ENDPOINT, label: 'medical-sets', description: 'scope=local admin internal 診療セット登録', stub: false },
+  { id: 'birth-delivery', path: ORCA_BIRTH_DELIVERY_ENDPOINT, label: 'birth-delivery', description: 'scope=local admin internal 出産内容登録', stub: true },
+  { id: 'medical-records', path: LOCAL_MEDICAL_RECORDS_ENDPOINT, label: 'medical-records', description: 'scope=local 院内診療記録取得', stub: false },
+  { id: 'patient-mutation', path: LOCAL_PATIENT_MUTATION_ENDPOINT, label: 'patient-mutation', description: 'scope=local 院内患者 CRUD', stub: false },
+  { id: 'chart-subjectives', path: LOCAL_CHART_SUBJECTIVES_ENDPOINT, label: 'chart-subjectives', description: 'scope=local 院内 SOAP 主観記録', stub: true },
 ];
 
 export async function postMedicalSets(payload: MedicalSetMutationRequest | Record<string, unknown>) {

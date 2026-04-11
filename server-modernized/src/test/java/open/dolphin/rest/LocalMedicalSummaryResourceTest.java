@@ -62,7 +62,7 @@ class LocalMedicalSummaryResourceTest {
         assertEquals("req-001", response.getRequestId());
         assertEquals("trace-001", response.getTraceId());
         assertEquals("run-001", response.getRunId());
-        assertEquals("/api/local-summary/encounters/{encounterKey}/medical-summary", response.getSourcePath());
+        assertEquals("/api/local/encounters/{encounterKey}/medical-summary", response.getSourcePath());
         assertEquals("SUCCESS", response.getOutcome());
         assertEquals(1, response.getRecordsReturned());
         assertThat(response.getPayload().getOutpatientList()).hasSize(1);

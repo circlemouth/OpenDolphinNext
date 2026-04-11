@@ -49,7 +49,7 @@ export type IncomeInfoResponse = {
   error?: string;
 };
 
-const ORCA_INCOME_INFO_PATH = '/api/orca/chart-support/income-info';
+const ORCA_INCOME_INFO_PATH = '/api/orca/official/chart-support/income-info';
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;

@@ -307,7 +307,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     expect(mockHttpFetch).toHaveBeenNthCalledWith(
       2,
-      '/api/orca/chart-support/contraindication-check',
+      '/api/orca/official/chart-support/contraindication-check',
       expect.objectContaining({
         method: 'POST',
         notifySessionExpired: false,

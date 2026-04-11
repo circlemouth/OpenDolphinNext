@@ -26,7 +26,7 @@ const buildMedicalModV2Response = (options: {
 };
 
 export const orcaClaimHandlers = [
-  http.post('/api/orca/chart-support/medical-mod-v2', async ({ request }) => {
+  http.post('/api/orca/official/chart-support/medical-mod-v2', async ({ request }) => {
     const fault = parseFaultSpec(request);
     await applyFaultDelay(fault);
     const apiResult = fault.tokens.has('api-21') ? '21' : fault.tokens.has('api-error') ? 'E99' : '00';

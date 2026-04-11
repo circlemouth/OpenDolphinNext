@@ -3,33 +3,26 @@ package open.dolphin.rest.orca;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.orca.sync.OrcaPatientImportService;
-import open.dolphin.orca.sync.OrcaPatientSyncPlanner;
 import open.dolphin.orca.sync.OrcaPatientSyncRunner;
-import open.dolphin.orca.sync.OrcaPatientSyncService;
-import open.dolphin.orca.sync.OrcaSyncCursorStore;
-import open.dolphin.orca.sync.OrcaSyncRunStore;
 import open.dolphin.rest.dto.orca.PatientImportRequest;
 import open.dolphin.rest.dto.orca.PatientImportResponse;
 import open.dolphin.rest.dto.orca.PatientSyncRequest;
-import open.dolphin.rest.dto.orca.PatientSyncStatusResponse;
 import open.dolphin.session.framework.SessionOperation;
 
 /**
  * ORCA patient import/sync endpoints (ORCA -> local d_patient upsert).
  */
-@Path("/orca")
+@Path("/orca/official")
 @SessionOperation
 public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
 
@@ -39,24 +32,14 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
     @Inject
     private OrcaPatientSyncRunner syncRunner;
 
-    @Inject
-    private OrcaSyncCursorStore cursorStore;
-
-    @Inject
-    private OrcaSyncRunStore runStore;
-
     public OrcaPatientSyncResource() {
         // Default constructor for RESTEasy resource instantiation.
     }
 
     public OrcaPatientSyncResource(OrcaPatientImportService importService,
-            OrcaPatientSyncRunner syncRunner,
-            OrcaSyncCursorStore cursorStore,
-            OrcaSyncRunStore runStore) {
+            OrcaPatientSyncRunner syncRunner) {
         this.importService = Objects.requireNonNull(importService, "importService");
         this.syncRunner = Objects.requireNonNull(syncRunner, "syncRunner");
-        this.cursorStore = Objects.requireNonNull(cursorStore, "cursorStore");
-        this.runStore = Objects.requireNonNull(runStore, "runStore");
     }
 
     @POST
@@ -140,45 +123,4 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
         }
     }
 
-    @GET
-    @Path("/patients/sync/status")
-    @Produces(MediaType.APPLICATION_JSON)
-    public PatientSyncStatusResponse syncStatus(@Context HttpServletRequest request) {
-        Map<String, Object> details = newAuditDetails(request);
-        details.put("operation", "patientSyncStatus");
-        String facilityId = requireFacilityId(request);
-        details.put("facilityId", facilityId);
-
-        PatientSyncStatusResponse response = new PatientSyncStatusResponse();
-        response.setFacilityId(facilityId);
-        response.setStatePath("db:opendolphin.d_orca_sync_cursor,db:opendolphin.d_orca_sync_run");
-        if (cursorStore != null) {
-            OrcaSyncCursorStore.CursorRow cursor = cursorStore.load(facilityId, OrcaPatientSyncPlanner.STREAM_KIND);
-            if (cursor != null) {
-                response.setLastSyncDate(cursor.cursorValue());
-                response.setLastRunId(cursor.lastAppliedRunId());
-            }
-        }
-        if (runStore != null) {
-            OrcaSyncRunStore.RunRow run = runStore.findLatest(facilityId, OrcaPatientSyncPlanner.STREAM_KIND);
-            if (run != null) {
-                if (response.getLastRunId() == null || response.getLastRunId().isBlank()) {
-                    response.setLastRunId(run.runId());
-                }
-                Instant finishedAt = run.finishedAt();
-                if (finishedAt != null) {
-                    response.setLastSyncedAt(finishedAt.toString());
-                }
-                if ("partial".equals(run.status()) || "failed".equals(run.status())) {
-                    response.setLastError(run.errorMessage());
-                }
-            }
-        }
-        response.setApiResult("00");
-        response.setApiResultMessage("OK");
-        applyResponseMetadata(response, details);
-        markSuccessDetails(details);
-        recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
-        return response;
-    }
 }

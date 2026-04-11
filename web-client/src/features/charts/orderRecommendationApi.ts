@@ -65,7 +65,7 @@ export async function fetchOrderRecommendations(params: {
   if (typeof params.patientLimit === 'number') query.set('patientLimit', String(params.patientLimit));
   if (typeof params.facilityLimit === 'number') query.set('facilityLimit', String(params.facilityLimit));
   if (typeof params.scanLimit === 'number') query.set('scanLimit', String(params.scanLimit));
-  const endpoint = `/api/orca/order/recommendations?patientId=${encodeURIComponent(params.patientId)}${query.toString() ? `&${query.toString()}` : ''}`;
+  const endpoint = `/api/local/order/recommendations?patientId=${encodeURIComponent(params.patientId)}${query.toString() ? `&${query.toString()}` : ''}`;
   try {
     const response = await httpFetch(endpoint);
     const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;

@@ -27,7 +27,7 @@ import open.dolphin.session.framework.SessionOperation;
 /**
  * REST wrapper for patient synchronization endpoints.
  */
-@Path("/orca")
+@Path("/orca/official")
 @SessionOperation
 public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
 

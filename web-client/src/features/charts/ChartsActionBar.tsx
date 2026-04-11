@@ -1542,7 +1542,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           logAudit(action, outcome === 'success' ? 'success' : 'error', detailParts.join(' / '), durationMs, {
             phase: 'do',
             details: {
-              endpoint: '/api/orca/chart-support/medical-mod-v2',
+              endpoint: '/api/orca/official/chart-support/medical-mod-v2',
               httpStatus: result.status,
               apiResult: result.apiResult,
               apiResultMessage: result.apiResultMessage,

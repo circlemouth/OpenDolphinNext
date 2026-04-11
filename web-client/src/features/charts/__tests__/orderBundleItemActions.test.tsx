@@ -93,7 +93,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const requestUrl = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
-    if (requestUrl.includes('/api/orca/chart-support/contraindication-check')) {
+    if (requestUrl.includes('/api/orca/official/chart-support/contraindication-check')) {
       return new Response(
         JSON.stringify({
           ok: true,

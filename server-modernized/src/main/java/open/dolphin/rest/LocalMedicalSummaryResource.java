@@ -20,10 +20,10 @@ import open.dolphin.encounter.LocalMedicalSummaryService.LocalMedicalSummaryFail
 import open.dolphin.rest.dto.localsummary.LocalMedicalSummaryErrorResponse;
 import open.dolphin.rest.dto.localsummary.LocalMedicalSummaryResponse;
 
-@Path("/local-summary/encounters")
+@Path("/local/encounters")
 public class LocalMedicalSummaryResource extends AbstractResource {
 
-    private static final String SOURCE_PATH = "/api/local-summary/encounters/{encounterKey}/medical-summary";
+    private static final String SOURCE_PATH = "/api/local/encounters/{encounterKey}/medical-summary";
 
     @Inject
     private EncounterProjectionRepository encounterProjectionRepository;

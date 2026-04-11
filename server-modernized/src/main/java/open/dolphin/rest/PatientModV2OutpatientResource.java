@@ -31,13 +31,13 @@ import open.dolphin.session.PatientServiceBean;
  * <p>Create/update are reflected to ORCA (patientmodv2 class=01/class=02) and then re-imported (ORCA -> local)
  * so the local patient table stays consistent with ORCA.</p>
  */
-@Path("/orca/patientmodv2/outpatient")
+@Path("/orca/official/patientmodv2/outpatient")
 public final class PatientModV2OutpatientResource extends AbstractResource {
 
     private static final String DATA_SOURCE_SERVER = "server";
     private static final String ROUTE_NAMESPACE = "official";
-    private static final String CREATE_RESOURCE_PATH = "/api/orca/patientmodv2/outpatient/create";
-    private static final String UPDATE_RESOURCE_PATH = "/api/orca/patientmodv2/outpatient/update";
+    private static final String CREATE_RESOURCE_PATH = "/api/orca/official/patientmodv2/outpatient/create";
+    private static final String UPDATE_RESOURCE_PATH = "/api/orca/official/patientmodv2/outpatient/update";
     private static final String CREATE_AUDIT_ACTION = "OFFICIAL_PATIENT_CREATE";
     private static final String UPDATE_AUDIT_ACTION = "OFFICIAL_PATIENT_UPDATE";
 
@@ -266,7 +266,7 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
         }
         AuditEventPayload payload = new AuditEventPayload();
         payload.setAction(action);
-        payload.setResource(request != null ? request.getRequestURI() : "/api/orca/patientmodv2/outpatient");
+        payload.setResource(request != null ? request.getRequestURI() : "/api/orca/official/patientmodv2/outpatient");
         payload.setDetails(details);
         payload.setTraceId(resolveTraceId(request));
         payload.setRequestId(request != null ? request.getHeader("X-Request-Id") : null);

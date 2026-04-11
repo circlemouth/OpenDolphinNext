@@ -356,7 +356,7 @@ describe('order send smoke for class 600', () => {
     } as any);
     vi.mocked(httpFetch).mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.startsWith('/api/orca/order/inputsets/T60001?')) {
+      if (url.startsWith('/api/orca/master/order/inputsets/T60001?')) {
         return new Response(
           JSON.stringify({
             ok: true,
@@ -382,7 +382,7 @@ describe('order send smoke for class 600', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
-      if (url === '/api/orca/order/bundles' && init?.method === 'POST') {
+      if (url === '/api/local/order/bundles' && init?.method === 'POST') {
         return new Response(
           JSON.stringify({
             runId: 'RUN-SAVE-INPUTSET-600',
@@ -391,7 +391,7 @@ describe('order send smoke for class 600', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
-      if (url.startsWith('/api/orca/order/bundles?')) {
+      if (url.startsWith('/api/local/order/bundles?')) {
         return new Response(
           JSON.stringify({
             runId: 'RUN-FETCH-INPUTSET-600',
@@ -419,7 +419,7 @@ describe('order send smoke for class 600', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         );
       }
-      if (url === '/api/orca/chart-support/medical-mod-v2') {
+      if (url === '/api/orca/official/chart-support/medical-mod-v2') {
         return new Response(
           JSON.stringify({
             runId: 'RUN-SEND-INPUTSET-600',

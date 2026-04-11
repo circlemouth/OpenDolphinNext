@@ -49,7 +49,7 @@ describe('fetchOrcaMedicationGet', () => {
     expect(second.status).toBe(0);
     expect(mockHttpFetch).toHaveBeenCalledTimes(1);
     expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/api/orca/chart-support/medication-get',
+      '/api/orca/official/chart-support/medication-get',
       expect.objectContaining({
         method: 'POST',
         notifySessionExpired: false,
@@ -129,7 +129,7 @@ describe('fetchOrcaMedicationGet', () => {
       }),
     ]);
     expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/api/orca/chart-support/medication-get',
+      '/api/orca/official/chart-support/medication-get',
       expect.objectContaining({
         method: 'POST',
         notifySessionExpired: false,

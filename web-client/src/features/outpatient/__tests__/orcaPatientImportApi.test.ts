@@ -51,7 +51,7 @@ describe('importPatientsFromOrca', () => {
     expect(result.errorCode).toBe('authentication_failed');
     expect(result.error).toContain('認証エラー');
     expect(httpFetch).toHaveBeenCalledWith(
-      '/api/orca/patients/import',
+      '/api/orca/official/patients/import',
       expect.objectContaining({
         notifySessionExpired: false,
       }),

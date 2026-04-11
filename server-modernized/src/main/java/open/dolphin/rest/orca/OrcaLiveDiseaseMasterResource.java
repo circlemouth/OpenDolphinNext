@@ -14,7 +14,7 @@ import java.util.Map;
 import open.dolphin.orca.read.OrcaLiveDiseaseMasterReadService;
 import open.orca.rest.ORCAConnection;
 
-@Path("/orca-live/disease-master")
+@Path("/orca/official/disease-master")
 public class OrcaLiveDiseaseMasterResource extends AbstractOrcaRestResource {
 
     @Inject

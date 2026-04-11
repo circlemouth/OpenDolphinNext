@@ -28,7 +28,7 @@ import open.dolphin.security.audit.SessionAuditDispatcher;
 /**
  * ORCA patient get bridge (patientgetv2 JSON contract only).
  */
-@Path("/orca")
+@Path("/orca/official")
 public class OrcaPatientApiResource extends AbstractResource {
 
     static final String RUN_ID_FALLBACK = "fallback"; // deprecated sentinel; dynamic runId now used
@@ -46,7 +46,7 @@ public class OrcaPatientApiResource extends AbstractResource {
             @QueryParam("id") String patientId,
             @QueryParam("class") String classCode,
             @QueryParam("format") String format) {
-        return respondPatientGet(request, patientId, classCode, format, "/api/orca/patientgetv2");
+        return respondPatientGet(request, patientId, classCode, format, "/api/orca/official/patientgetv2");
     }
 
     private Response respondPatientGet(HttpServletRequest request, String patientId, String classCode, String format,

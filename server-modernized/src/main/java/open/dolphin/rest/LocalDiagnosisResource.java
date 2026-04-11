@@ -29,7 +29,7 @@ import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
 
-@Path("/local-summary/diagnoses")
+@Path("/local/diagnoses")
 public class LocalDiagnosisResource extends AbstractResource {
 
     @Inject

@@ -10,7 +10,7 @@ import type { OrcaOutpatientSummary } from '../outpatient/types';
 export type { OrcaOutpatientSummary } from '../outpatient/types';
 
 const LOCAL_SUMMARY_DESCRIPTION = 'charts_local_summary';
-const MEDICAL_SUMMARY_SOURCE_PATH = '/api/local-summary/encounters/{encounterKey}/medical-summary';
+const MEDICAL_SUMMARY_SOURCE_PATH = '/api/local/encounters/{encounterKey}/medical-summary';
 const KEY_UNAVAILABLE_SOURCE_PATH = 'key_unavailable';
 const LOCAL_SUMMARY_ERROR_CODES = new Set([
   'LOCAL_SUMMARY_TARGET_NOT_FOUND',
@@ -131,7 +131,7 @@ export async function fetchChartsMedicalSummary(
   let summary = buildUnavailableMedicalSummary(context, { ...options, encounterKey, preferredSourceOverride: transition });
 
   if (encounterKey) {
-    const endpoint = `/api/local-summary/encounters/${encodeURIComponent(encounterKey)}/medical-summary`;
+    const endpoint = `/api/local/encounters/${encodeURIComponent(encounterKey)}/medical-summary`;
     try {
       const response = await httpFetch(endpoint, { method: 'GET' });
       const parsed = await parseOrcaApiResponse(response, {

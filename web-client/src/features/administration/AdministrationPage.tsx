@@ -282,10 +282,10 @@ const summarizeDeliveryStatus = (status: ReturnType<typeof buildChartsDeliverySt
 const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[] => [
   {
     id: 'medical-sets',
-    label: '/api/orca/medical-sets（診療セット）',
-    hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
+    label: '/api/admin/internal/orca/medical-sets（診療セット）',
+    hint: 'scope=local。Trial 閉鎖のため stub 応答固定（Api_Result=79）',
     stubFixed: true,
-    routeNamespace: 'official',
+    routeNamespace: 'local',
     behavior: 'stub_fixed',
     defaultPayload: {
       requestNumber: '01',
@@ -303,10 +303,10 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   },
   {
     id: 'birth-delivery',
-    label: '/api/orca/birth-delivery（出産育児一時金）',
-    hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
+    label: '/api/admin/internal/orca/birth-delivery（出産育児一時金）',
+    hint: 'scope=local。Trial 閉鎖のため stub 応答固定（Api_Result=79）',
     stubFixed: true,
-    routeNamespace: 'official',
+    routeNamespace: 'local',
     behavior: 'stub_fixed',
     defaultPayload: {
       requestNumber: '01',
@@ -319,7 +319,7 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   {
     id: 'medical-records',
     label: '/api/local/charts/medical-records（院内診療記録取得）',
-    hint: 'official ORCA ではなく院内ローカル保存済みカルテ文書を返します',
+    hint: 'scope=local。official ORCA ではなく院内ローカル保存済みカルテ文書を返します',
     routeNamespace: 'local',
     behavior: 'local_read',
     defaultPayload: {
@@ -336,7 +336,7 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   {
     id: 'patient-mutation',
     label: '/api/local/patients/mutation（院内患者作成/更新）',
-    hint: 'official ORCA 互換ではなく院内ローカル患者テーブル更新 contract です',
+    hint: 'scope=local。official ORCA 互換ではなく院内ローカル患者テーブル更新 contract です',
     routeNamespace: 'local',
     behavior: 'local_write',
     defaultPayload: {
@@ -357,7 +357,7 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   {
     id: 'chart-subjectives',
     label: '/api/local/charts/subjectives（院内主訴登録）',
-    hint: 'official subjectivesv2 ではなく院内カルテへの主観記録保存 contract です',
+    hint: 'scope=local。official ORCA bridge ではなく院内カルテへの主観記録保存 contract です',
     routeNamespace: 'local',
     behavior: 'local_write',
     defaultPayload: {

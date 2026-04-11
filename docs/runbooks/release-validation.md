@@ -19,13 +19,14 @@ cd web-client && node scripts/runtime-ready-smoke.mjs
 
 ## Worker G の post-merge 確認
 ```bash
-rg -n "/api/orca/patient/mutation|medicalmodv23|ORCAへ反映|症状詳記（ORCA）" web-client server-modernized docs tests -S
-rg -n "patientlst3v2|acceptmodv2|manageusersv2|contraindicationcheckv2|medicationgetv2|incomeinfv2|patientmodv2" web-client server-modernized api-contract tests -S
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest test
+cd web-client && node scripts/verify-no-blocked-orca-route-strings.mjs
 ```
 
-- `medicalmodv23` は runtime route / mock route / UI copy に残さない。
-- chart flow の official outbound は `medicalmodv2` と `incomeinfv2` のみ。
-- Reception / Patients / Charts / Admin の UI と server contract が上記 grep で一致していることを確認する。
+- `PublicRouteInventoryContractTest` で official / master / local / admin-internal inventory が current taxonomy と一致することを確認する。
+- `WebXmlEndpointExposureTest` で `/api/*` exposure と `/api/orca/*` taxonomy が崩れていないことを確認する。
+- `verify-no-blocked-orca-route-strings.mjs` で web-client source に taxonomy drift や blocked mock surface が残っていないことを確認する。
+- Reception / Patients / Charts / Admin の UI と server contract が taxonomy contract と一致していることを確認する。
 
 ## 補助コマンド
 ```bash

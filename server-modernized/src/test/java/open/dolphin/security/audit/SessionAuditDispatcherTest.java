@@ -18,7 +18,7 @@ class SessionAuditDispatcherTest {
         AuditTrailService auditTrailService = mock(AuditTrailService.class);
         setField(dispatcher, "auditTrailService", auditTrailService);
 
-        AuditEventEnvelope envelope = AuditEventEnvelope.builder("ORCA_APPOINTMENT_OUTPATIENT", "/api/orca/appointments/list")
+        AuditEventEnvelope envelope = AuditEventEnvelope.builder("ORCA_APPOINTMENT_OUTPATIENT", "/api/orca/official/appointments/list")
                 .actorId("F001:doctor01")
                 .requestId("req-op")
                 .traceId("trace-op")

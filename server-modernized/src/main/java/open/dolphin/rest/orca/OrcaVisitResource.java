@@ -35,7 +35,7 @@ import open.dolphin.session.framework.SessionOperation;
 /**
  * REST wrapper for acceptmodv2 (reception mutations).
  */
-@Path("/orca/visits")
+@Path("/orca/official/visits")
 @SessionOperation
 public class OrcaVisitResource extends AbstractOrcaWrapperResource {
 

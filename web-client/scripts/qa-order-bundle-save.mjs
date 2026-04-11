@@ -174,7 +174,7 @@ const run = async () => {
     await acceptForm.locator('#reception-accept-note').fill(`order-bundle-save ${runId}`);
 
     const acceptResponsePromise = page
-      .waitForResponse((response) => response.url().includes('/orca/visits/mutation'), { timeout: 20000 })
+      .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
       .catch(() => null);
     await page.getByRole('button', { name: '受付送信' }).click();
     await acceptResponsePromise;
@@ -216,7 +216,7 @@ const run = async () => {
     await page.locator('#generalOrder-item-quantity-0').fill(itemQuantity);
 
     const orderResponsePromise = page
-      .waitForResponse((response) => response.url().includes('/orca/order/bundles'), { timeout: 15000 })
+      .waitForResponse((response) => response.url().includes('/api/local/order/bundles'), { timeout: 15000 })
       .catch(() => null);
 
     await page.locator('form.charts-side-panel__form button[type="submit"]').first().click();
@@ -234,7 +234,7 @@ const run = async () => {
     const listHeader = page.locator('.charts-side-panel__list-header span').nth(1);
     summary.listCountText = (await listHeader.textContent().catch(() => null)) ?? null;
 
-    const orderBundlesUrl = `/orca/order/bundles?patientId=${encodeURIComponent(patientId)}&entity=generalOrder`;
+    const orderBundlesUrl = `/api/local/order/bundles?patientId=${encodeURIComponent(patientId)}&entity=generalOrder`;
     const bundlesResponse = await page.request.get(orderBundlesUrl);
     if (bundlesResponse.ok()) {
       const payload = await bundlesResponse.json().catch(() => null);

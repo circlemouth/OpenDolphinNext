@@ -334,7 +334,7 @@ describe('order send smoke', () => {
 
     expect(sendResult.ok).toBe(true);
     expect(httpFetch).toHaveBeenCalledTimes(3);
-    expect(vi.mocked(httpFetch).mock.calls[2]?.[0]).toBe('/api/orca/chart-support/medical-mod-v2');
+    expect(vi.mocked(httpFetch).mock.calls[2]?.[0]).toBe('/api/orca/official/chart-support/medical-mod-v2');
 
     const request = vi.mocked(httpFetch).mock.calls[2]?.[1] as RequestInit | undefined;
     const body = JSON.parse(String(request?.body ?? '{}')) as Record<string, any>;
@@ -1333,7 +1333,7 @@ describe('order send smoke', () => {
     vi.mocked(httpFetch).mockImplementation(async (input, init) => {
       const url = String(input);
       requestUrls.push(url);
-      if (url === '/api/orca/prescription-orders' && init?.method === 'POST') {
+      if (url === '/api/local/prescription-orders' && init?.method === 'POST') {
         return new Response(
           JSON.stringify({
             runId: 'RUN-RX-SAVE',
@@ -1347,13 +1347,13 @@ describe('order send smoke', () => {
           },
         );
       }
-      if (url.startsWith('/api/orca/prescription-orders?')) {
+      if (url.startsWith('/api/local/prescription-orders?')) {
         return new Response(JSON.stringify(prescriptionOrderResponse), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         });
       }
-      if (url.startsWith('/api/orca/order/bundles?')) {
+      if (url.startsWith('/api/local/order/bundles?')) {
         return new Response(
           JSON.stringify({
             runId: 'RUN-BUNDLES',
@@ -1367,7 +1367,7 @@ describe('order send smoke', () => {
           },
         );
       }
-      if (url === '/api/orca/chart-support/medical-mod-v2') {
+      if (url === '/api/orca/official/chart-support/medical-mod-v2') {
         return new Response(
           JSON.stringify({
             runId: 'RUN-SEND-RX',
@@ -1427,7 +1427,7 @@ describe('order send smoke', () => {
     expect(
       requestUrls.some(
         (url) =>
-          url.startsWith('/api/orca/prescription-orders?') &&
+          url.startsWith('/api/local/prescription-orders?') &&
           url.includes('patientId=000001') &&
           url.includes('encounterDate=2026-03-09') &&
           url.includes('encounterId=F001%3AE900'),
@@ -1459,9 +1459,9 @@ describe('order send smoke', () => {
     const fetchedBundles = await fetchMedicalModV2OrderBundles('000001', '2026-03-09', 'F001:E900');
     expect(fetchedBundles.errors).toEqual([]);
     expect(fetchedBundles.bundles.some((bundle) => bundle.entity === 'medOrder')).toBe(true);
-    expect(requestUrls.some((url) => url.includes('/api/orca/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
+    expect(requestUrls.some((url) => url.includes('/api/local/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
     expect(
-      requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?') && url.includes('encounterId=F001%3AE900')).length,
+      requestUrls.filter((url) => url.startsWith('/api/local/prescription-orders?') && url.includes('encounterId=F001%3AE900')).length,
     ).toBeGreaterThanOrEqual(2);
 
     const prepared = prepareMedicalModV2SendData(fetchedBundles.bundles);
@@ -1514,8 +1514,8 @@ describe('order send smoke', () => {
 
     const sendResult = await postOrcaMedicalModV2Xml(payload, { classCode: '01' });
     expect(sendResult.ok).toBe(true);
-    expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toHaveLength(2);
-    expect(requestUrls.filter((url) => url === '/api/orca/prescription-orders')).toHaveLength(2);
+    expect(requestUrls.filter((url) => url.startsWith('/api/local/prescription-orders?'))).toHaveLength(2);
+    expect(requestUrls.filter((url) => url === '/api/local/prescription-orders')).toHaveLength(2);
   });
 
   it('stale selection comment parameters block medicalmodv2 send before payload generation', () => {
@@ -1561,7 +1561,7 @@ describe('order send smoke', () => {
     vi.mocked(httpFetch).mockImplementation(async (input) => {
       const url = String(input);
       requestUrls.push(url);
-      if (url.startsWith('/api/orca/prescription-orders?')) {
+      if (url.startsWith('/api/local/prescription-orders?')) {
         const parsed = new URL(`http://localhost${url}`);
         const encounterId = parsed.searchParams.get('encounterId');
         const drugName = encounterId === 'F001:E901' ? 'Encounter B薬' : 'Encounter A薬';
@@ -1605,7 +1605,7 @@ describe('order send smoke', () => {
           },
         );
       }
-      if (url.startsWith('/api/orca/order/bundles?')) {
+      if (url.startsWith('/api/local/order/bundles?')) {
         return new Response(
           JSON.stringify({
             runId: 'RUN-BUNDLES',
@@ -1624,10 +1624,10 @@ describe('order send smoke', () => {
 
     const fetchedBundles = await fetchMedicalModV2OrderBundles('000001', '2026-03-09', 'F001:E901');
     expect(fetchedBundles.errors).toEqual([]);
-    expect(requestUrls.filter((url) => url.startsWith('/api/orca/prescription-orders?'))).toEqual([
+    expect(requestUrls.filter((url) => url.startsWith('/api/local/prescription-orders?'))).toEqual([
       expect.stringContaining('encounterId=F001%3AE901'),
     ]);
-    expect(requestUrls.some((url) => url.includes('/api/orca/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
+    expect(requestUrls.some((url) => url.includes('/api/local/order/bundles?') && url.includes('entity=medOrder'))).toBe(false);
 
     const prepared = prepareMedicalModV2SendData(fetchedBundles.bundles);
     expect(prepared.medicalInformation).toEqual(

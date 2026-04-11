@@ -34,7 +34,7 @@ describe('orcaOrderInputSetApi', () => {
     expect(result.ok).toBe(true);
     expect(result.items[0]?.setCode).toBe('P01001');
     expect(mockHttpFetch).toHaveBeenCalledWith(
-      '/api/orca/order/inputsets?keyword=%E9%99%8D%E5%9C%A7&entity=medOrder&effective=20260309&page=1&size=20',
+      '/api/orca/master/order/inputsets?keyword=%E9%99%8D%E5%9C%A7&entity=medOrder&effective=20260309&page=1&size=20',
       expect.objectContaining({ notifySessionExpired: false }),
     );
   });

@@ -26,11 +26,15 @@ const authPasswordPlain = resolveQaPasswordPlain();
 const smokeEncounterKey = '1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001';
 const smokeScheduleKey = 'SMOKE-SCHEDULE-20251129-0001';
 const smokePatientDisplayName = process.env.QA_SMOKE_PATIENT_NAME ?? 'スモーク 患者';
-const blockedRoutes = [
-  '/api/orca/medical/outpatient',
-  '/api/orca/local-medical/outpatient',
-  '/api/orca/deptinfo',
-  '/api/operations/readiness',
+const blockedRouteDetectors = [
+  {
+    label: 'invalid-orca-taxonomy',
+    matches: (url) => /\/api\/orca\/(?!official\/|master\/|queue(?:\/|$)|pusheventgetv2(?:\/|$))/.test(url),
+  },
+  {
+    label: 'legacy-operations-readiness',
+    matches: (url) => url.includes('/api/operations/readiness'),
+  },
 ];
 
 const session = buildQaSession({
@@ -85,7 +89,7 @@ const { context, page, sessionMe } = await createAuthenticatedContext(browser, {
 
 const requestLog = [];
 const responseLog = [];
-const blockedRouteHits = Object.fromEntries(blockedRoutes.map((route) => [route, 0]));
+const blockedRouteHits = Object.fromEntries(blockedRouteDetectors.map((detector) => [detector.label, 0]));
 let pauseFinishRequests = 0;
 let billOperationBodies = 0;
 
@@ -94,30 +98,30 @@ context.on('request', (request) => {
   const method = request.method();
   const postData = request.postData() ?? '';
   const isTracked =
-    url.includes('/api/orca/appointments/list') ||
-    url.includes('/api/orca/visits/list') ||
-    url.includes('/api/local-summary/encounters/') ||
+    url.includes('/api/orca/official/appointments/list') ||
+    url.includes('/api/orca/official/visits/list') ||
+    url.includes('/api/local/encounters/') ||
     url.includes('/api/encounters/') ||
-    blockedRoutes.some((route) => url.includes(route));
+    blockedRouteDetectors.some((detector) => detector.matches(url));
   if (!isTracked) return;
   requestLog.push({ method, url, body: summarizeBody(postData) });
   if (url.includes('/api/encounters/') && url.includes('/transitions')) {
     if (/"operation"\s*:\s*"(?:pause|finish)"/i.test(postData)) pauseFinishRequests += 1;
     if (/"operation"\s*:\s*"bill"/i.test(postData)) billOperationBodies += 1;
   }
-  for (const route of blockedRoutes) {
-    if (url.includes(route)) blockedRouteHits[route] += 1;
+  for (const detector of blockedRouteDetectors) {
+    if (detector.matches(url)) blockedRouteHits[detector.label] += 1;
   }
 });
 
 context.on('response', async (response) => {
   const url = response.url();
   const isTracked =
-    url.includes('/api/orca/appointments/list') ||
-    url.includes('/api/orca/visits/list') ||
-    url.includes('/api/local-summary/encounters/') ||
+    url.includes('/api/orca/official/appointments/list') ||
+    url.includes('/api/orca/official/visits/list') ||
+    url.includes('/api/local/encounters/') ||
     url.includes('/api/encounters/') ||
-    blockedRoutes.some((route) => url.includes(route));
+    blockedRouteDetectors.some((detector) => detector.matches(url));
   if (!isTracked) return;
   let body = '';
   try {
@@ -225,7 +229,7 @@ try {
   await page.screenshot({ path: path.join(artifactRoot, 'charts-selected-entry-before-reload.png'), fullPage: true });
 
   await waitFor(
-    () => responseLog.filter((entry) => entry.url.includes('/api/local-summary/encounters/')).length >= 1,
+    () => responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length >= 1,
     30_000,
   );
   await page.waitForTimeout(1000);
@@ -267,7 +271,7 @@ try {
   const transitionResponseCountBeforeStart = responseLog.filter(
     (entry) => entry.url.includes('/api/encounters/') && entry.url.includes('/transitions'),
   ).length;
-  const summaryResponseCountBeforeStart = responseLog.filter((entry) => entry.url.includes('/api/local-summary/encounters/')).length;
+  const summaryResponseCountBeforeStart = responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length;
   const startSelector = await clickFirstVisible(page, [
     '.charts-patient-summary__primary-action--start',
     '#charts-action-start',
@@ -281,7 +285,7 @@ try {
   );
   await page.waitForTimeout(1500);
   await waitFor(
-    () => responseLog.filter((entry) => entry.url.includes('/api/local-summary/encounters/')).length >= summaryResponseCountBeforeStart + 1,
+    () => responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length >= summaryResponseCountBeforeStart + 1,
     30_000,
   );
   await page.waitForTimeout(1000);
@@ -324,14 +328,14 @@ try {
       startSelector,
     },
     traces: {
-      summaryRequests: requestLog.filter((entry) => entry.url.includes('/api/local-summary/encounters/')),
-      summaryResponses: responseLog.filter((entry) => entry.url.includes('/api/local-summary/encounters/')),
+      summaryRequests: requestLog.filter((entry) => entry.url.includes('/api/local/encounters/')),
+      summaryResponses: responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')),
       transitionRequests: requestLog.filter((entry) => entry.url.includes('/api/encounters/') && entry.url.includes('/transitions')),
       transitionResponses: responseLog.filter((entry) => entry.url.includes('/api/encounters/') && entry.url.includes('/transitions')),
-      appointmentsRequests: requestLog.filter((entry) => entry.url.includes('/api/orca/appointments/list')),
-      appointmentsResponses: responseLog.filter((entry) => entry.url.includes('/api/orca/appointments/list')),
-      visitsRequests: requestLog.filter((entry) => entry.url.includes('/api/orca/visits/list')),
-      visitsResponses: responseLog.filter((entry) => entry.url.includes('/api/orca/visits/list')),
+      appointmentsRequests: requestLog.filter((entry) => entry.url.includes('/api/orca/official/appointments/list')),
+      appointmentsResponses: responseLog.filter((entry) => entry.url.includes('/api/orca/official/appointments/list')),
+      visitsRequests: requestLog.filter((entry) => entry.url.includes('/api/orca/official/visits/list')),
+      visitsResponses: responseLog.filter((entry) => entry.url.includes('/api/orca/official/visits/list')),
     },
     counters: {
       pauseFinishRequests,

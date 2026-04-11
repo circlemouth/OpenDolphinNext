@@ -10,7 +10,7 @@
 - runtime smoke の証跡が `web-client/artifacts/webclient/runtime-gate-ready/<RUN_ID>/` にあること。
 
 ## 2. 事前チェック
-- `rg -n "/api/orca/patient/mutation|medicalmodv23|ORCAへ反映|症状詳記（ORCA）" web-client server-modernized docs tests -S` が runtime 上の残骸を返さない。
+- `PublicRouteInventoryContractTest` / `WebXmlEndpointExposureTest` / `verify-no-blocked-orca-route-strings.mjs` が current taxonomy を保持している。
 - `PatientsPage` と chart patient edit が official `patientmodv2` update を使う。
 - `acceptmodv2` の `Api_Result=21/60` が UI / server test で揃っている。
 - `patientlst3v2` request / response が official 契約に沿っている。

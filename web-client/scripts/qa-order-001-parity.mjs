@@ -59,13 +59,13 @@ const jsonOrText = async (response) => {
 
 // NOTE:
 // Playwright's network hooks may miss requests served by ServiceWorker (MSW).
-// To keep evidence stable, we log fetch() calls for /orca/order/bundles in-page via addInitScript.
+// To keep evidence stable, we log fetch() calls for /api/local/order/bundles in-page via addInitScript.
 
 const escapeForMd = (value) => String(value ?? '').replaceAll('`', '\\`');
 
 const toNetworkMemo = (events) => {
   const lines = [];
-  lines.push('# /orca/order/bundles network memo');
+  lines.push('# /api/local/order/bundles network memo');
   lines.push('');
   lines.push(`- RUN_ID: ${runId}`);
   lines.push(`- baseURL: ${baseURL}`);
@@ -152,7 +152,7 @@ const run = async () => {
       window.localStorage.setItem('devUserId', auth.userId);
       window.localStorage.setItem('devClientUuid', auth.clientUuid);
 
-      // Log /orca/order/bundles traffic at fetch() level (works even when MSW intercepts).
+      // Log /api/local/order/bundles traffic at fetch() level (works even when MSW intercepts).
       // eslint-disable-next-line no-underscore-dangle
       window.__QA_ORDER_BUNDLE_LOG__ = [];
       const toStringSafe = (value) => {
@@ -171,7 +171,7 @@ const run = async () => {
           (typeof input === 'string'
             ? 'GET'
             : input?.method ?? 'GET');
-        const shouldLog = typeof url === 'string' && url.includes('/orca/order/bundles');
+        const shouldLog = typeof url === 'string' && url.includes('/api/local/order/bundles');
         const entry = shouldLog
           ? {
               kind: 'request',
@@ -316,7 +316,7 @@ const run = async () => {
       const respPromise = page
         .waitForResponse(
           (response) =>
-            response.url().includes('/orca/order/bundles') && response.request().method() === 'POST',
+            response.url().includes('/api/local/order/bundles') && response.request().method() === 'POST',
           { timeout: 20000 },
         )
         .catch(() => null);
@@ -405,7 +405,7 @@ const run = async () => {
       .catch(() => false);
 
     const medBundlesResp = await page.request.get(
-      `/orca/order/bundles?patientId=${encodeURIComponent(patientId)}&entity=medOrder`,
+      `/api/local/order/bundles?patientId=${encodeURIComponent(patientId)}&entity=medOrder`,
     );
     if (medBundlesResp.ok()) {
       const payload = await medBundlesResp.json().catch(() => null);
@@ -458,7 +458,7 @@ const run = async () => {
         .catch(() => false);
 
       const generalBundlesResp = await page.request.get(
-        `/orca/order/bundles?patientId=${encodeURIComponent(patientId)}&entity=generalOrder`,
+        `/api/local/order/bundles?patientId=${encodeURIComponent(patientId)}&entity=generalOrder`,
       );
       if (generalBundlesResp.ok()) {
         const payload = await generalBundlesResp.json().catch(() => null);
@@ -552,7 +552,7 @@ const run = async () => {
       `- (1) Charts open: OK (charts-page)`,
       `- (2) medOrder add/save: saved=${summary.medOrder.saved} uiListed=${summary.medOrder.uiListed} recordsReturned=${summary.medOrder.recordsReturned ?? 'n/a'}`,
       `- (3) generalOrder add/save: saved=${summary.generalOrder.saved} uiListed=${summary.generalOrder.uiListed} recordsReturned=${summary.generalOrder.recordsReturned ?? 'n/a'}`,
-      `- (4) Persistence: GET /orca/order/bundles recordsReturned captured above (if n/a, rely on UI list evidence)`,
+      `- (4) Persistence: GET /api/local/order/bundles recordsReturned captured above (if n/a, rely on UI list evidence)`,
       `- (5) Send/finish: sendDisabled=${String(summary.actionBar.sendDisabled)} reason=${summary.actionBar.sendDisabledReason ?? 'n/a'} finishDisabled=${String(summary.actionBar.finishDisabled)} reason=${summary.actionBar.finishDisabledReason ?? 'n/a'}`,
       '',
       '## Evidence',

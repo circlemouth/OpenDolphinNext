@@ -263,7 +263,7 @@ export async function fetchPatientMasterSearch(params: PatientMasterSearchParams
   let json: Record<string, unknown> = {};
   let error: string | undefined;
   try {
-    response = await httpFetch('/api/orca/patients/name-search', {
+    response = await httpFetch('/api/orca/official/patients/name-search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -302,7 +302,7 @@ export async function fetchPatientMasterSearch(params: PatientMasterSearchParams
     fallbackUsed: normalizeBoolean(json.fallbackUsed),
     fetchedAt: normalizeApiString(json.fetchedAt),
     recordsReturned: resolvedRecordsReturned,
-    sourcePath: '/api/orca/patients/name-search',
+    sourcePath: '/api/orca/official/patients/name-search',
     status: response?.status,
     error,
     raw: json,

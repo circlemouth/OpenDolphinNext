@@ -22,7 +22,7 @@ import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.OrcaReportRequest;
 import open.dolphin.rest.dto.orca.OrcaReportResponse;
 
-@Path("/orca/reports")
+@Path("/orca/official/reports")
 public class OrcaReportDocumentResource extends AbstractOrcaRestResource {
 
     @Inject

@@ -106,20 +106,20 @@ const isMedicalModV2Url = (url) => {
 };
 
 const isTarget = (url) =>
-  url.includes('/orca/visits/mutation') ||
+  url.includes('/api/orca/official/visits/mutation') ||
   url.includes('/api/orca/queue') ||
   url.includes('/orca/queue') ||
   isMedicalModV2Url(url) ||
   url.includes('/orca21/medicalmodv2/outpatient') ||
-  url.includes('/orca/appointments/list') ||
-  url.includes('/orca/visits/list') ||
+  url.includes('/api/orca/official/appointments/list') ||
+  url.includes('/api/orca/official/visits/list') ||
   // Order master search (materials, drugs, etc).
-  url.includes('/orca/master/generic-class') ||
-  url.includes('/orca/master/etensu') ||
-  url.includes('/orca/master/material') ||
+  url.includes('/api/orca/master/generic-class') ||
+  url.includes('/api/orca/master/etensu') ||
   url.includes('/api/orca/master/material') ||
-  url.includes('/orca/order/bundles') ||
-  url.includes('/orca/claim/outpatient');
+  url.includes('/api/orca/master/material') ||
+  url.includes('/api/local/order/bundles') ||
+  (url.includes('claim/outpatient') && url.includes('/orca/'));
 
 const recordRequest = (request) => {
   const url = request.url();
@@ -317,7 +317,7 @@ const run = async () => {
   const beforeShot = await writeScreenshot(page, '01-reception-before-accept');
 
   const acceptResponsePromise = page
-    .waitForResponse((response) => response.url().includes('/orca/visits/mutation'), { timeout: 20000 })
+    .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
     .catch(() => null);
 
   await page.getByRole('button', { name: '受付送信' }).click();
@@ -433,7 +433,7 @@ const run = async () => {
           .waitForResponse((response) => {
             const url = response.url();
             return (
-              (url.includes('/orca/master/material') || url.includes('/api/orca/master/material')) &&
+              (url.includes('/api/orca/master/material') || url.includes('/api/orca/master/material')) &&
               response.request().method() === 'GET'
             );
           }, { timeout: 15000 })
@@ -495,7 +495,7 @@ const run = async () => {
     }
 
     const orderResponsePromise = page
-      .waitForResponse((response) => response.url().includes('/orca/order/bundles'), { timeout: 15000 })
+      .waitForResponse((response) => response.url().includes('/api/local/order/bundles'), { timeout: 15000 })
       .catch(() => null);
 
     await orderPanel.locator('button[type="submit"]').first().click();

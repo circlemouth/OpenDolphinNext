@@ -210,4 +210,4 @@ export async function fetchOrcaReportPdf(dataId: string): Promise<OrcaReportPdfR
   }
 }
 
-export const resolveOrcaReportEndpoint = (type: OrcaReportType) => `/api/orca/reports/${type}`;
+export const resolveOrcaReportEndpoint = (type: OrcaReportType) => `/api/orca/official/reports/${type}`;

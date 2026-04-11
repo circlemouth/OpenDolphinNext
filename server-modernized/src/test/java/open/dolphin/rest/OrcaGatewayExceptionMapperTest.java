@@ -18,7 +18,7 @@ class OrcaGatewayExceptionMapperTest {
     void mapperReturnsStandardizedErrorEnvelope() throws Exception {
         OrcaGatewayExceptionMapper mapper = new OrcaGatewayExceptionMapper();
         HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getRequestURI()).thenReturn("/api/orca/patient");
+        when(request.getRequestURI()).thenReturn("/api/orca/official/patient");
         when(request.getAttribute(LogFilter.TRACE_ID_ATTRIBUTE)).thenReturn("trace-orca-1");
         when(request.getAttribute(LogFilter.REQUEST_ID_ATTRIBUTE)).thenReturn("req-orca-1");
         when(request.getAttribute(LogFilter.RUN_ID_ATTRIBUTE)).thenReturn("run-orca-1");
@@ -42,7 +42,7 @@ class OrcaGatewayExceptionMapperTest {
     void mapperReturns503ForUnavailableTransport() throws Exception {
         OrcaGatewayExceptionMapper mapper = new OrcaGatewayExceptionMapper();
         HttpServletRequest request = mock(HttpServletRequest.class);
-        when(request.getRequestURI()).thenReturn("/api/orca/patient");
+        when(request.getRequestURI()).thenReturn("/api/orca/official/patient");
 
         Field field = OrcaGatewayExceptionMapper.class.getDeclaredField("request");
         field.setAccessible(true);

@@ -70,7 +70,7 @@ describe('fetchOrderRecommendations', () => {
     expect(result.recordsReturned).toBe(1);
     expect(result.recommendations[0]?.source).toBe('patient');
     expect(result.recommendations[0]?.template.bundleName).toBe('降圧薬セット');
-    expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('/api/orca/order/recommendations?patientId=P-1');
+    expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('/api/local/order/recommendations?patientId=P-1');
     expect(vi.mocked(httpFetch).mock.calls[0]?.[0]).toContain('includeFacility=false');
   });
 

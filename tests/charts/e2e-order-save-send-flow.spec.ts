@@ -113,28 +113,28 @@ test('オーダー入力改修後: カテゴリ限定表示 + 用法プルダウ
         },
       ],
     };
-    await page.route('**/orca/appointments/list/mock**', (route) =>
+    await page.route('**/api/orca/official/appointments/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(appointmentPayload),
       }),
     );
-    await page.route('**/orca/visits/list/mock**', (route) =>
+    await page.route('**/api/orca/official/visits/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(visitPayload),
       }),
     );
-    await page.route('**/orca/appointments/list**', (route) =>
+    await page.route('**/api/orca/official/appointments/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(appointmentPayload),
       }),
     );
-    await page.route('**/orca/visits/list**', (route) =>
+    await page.route('**/api/orca/official/visits/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -269,31 +269,31 @@ test('オーダー入力改修後: カテゴリ限定表示 + 用法プルダウ
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        if (requestUrl.includes('/orca/appointments/list')) {
+        if (requestUrl.includes('/api/orca/official/appointments/list')) {
           return new Response(JSON.stringify(appointmentFixture), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        if (requestUrl.includes('/orca/visits/list')) {
+        if (requestUrl.includes('/api/orca/official/visits/list')) {
           return new Response(JSON.stringify(visitFixture), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        if (requestUrl.includes('/orca/master/drug')) {
+        if (requestUrl.includes('/api/orca/master/drug')) {
           return new Response(JSON.stringify({ items: drugItems, totalCount: drugItems.length }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        if (requestUrl.includes('/orca/master/youhou')) {
+        if (requestUrl.includes('/api/orca/master/youhou')) {
           return new Response(JSON.stringify({ items: usageItems, totalCount: usageItems.length }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           });
         }
-        if (requestUrl.includes('/orca/order/bundles')) {
+        if (requestUrl.includes('/api/local/order/bundles')) {
           if (method === 'POST') {
             const payloadRaw = await resolveBody(input, init);
             let payload: { operations?: Array<Record<string, unknown>> } = {};

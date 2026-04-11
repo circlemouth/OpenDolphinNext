@@ -49,14 +49,14 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
           body: buildIncomeInfoXml(),
         }),
       );
-      await page.route('**/orca/appointments/list', (route) =>
+      await page.route('**/api/orca/official/appointments/list', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
         }),
       );
-      await page.route('**/orca/visits/list', (route) =>
+      await page.route('**/api/orca/official/visits/list', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',

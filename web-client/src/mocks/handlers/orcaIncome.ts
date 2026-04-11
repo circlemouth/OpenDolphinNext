@@ -5,7 +5,7 @@ import { applyFaultDelay, parseFaultSpec } from '../utils/faultInjection';
 const respondEmpty = (status = 200) => HttpResponse.text('', { status });
 
 export const orcaIncomeHandlers = [
-  http.post('/api/orca/chart-support/income-info', async ({ request }) => {
+  http.post('/api/orca/official/chart-support/income-info', async ({ request }) => {
     const fault = parseFaultSpec(request);
     await applyFaultDelay(fault);
     const body = {

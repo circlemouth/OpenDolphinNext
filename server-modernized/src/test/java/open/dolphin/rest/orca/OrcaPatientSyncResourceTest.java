@@ -30,9 +30,7 @@ class OrcaPatientSyncResourceTest {
     void importPatientsUsesRemoteUserFacility() {
         OrcaPatientImportService importService = mock(OrcaPatientImportService.class);
         OrcaPatientSyncRunner syncRunner = mock(OrcaPatientSyncRunner.class);
-        OrcaSyncCursorStore cursorStore = mock(OrcaSyncCursorStore.class);
-        OrcaSyncRunStore runStore = mock(OrcaSyncRunStore.class);
-        OrcaPatientSyncResource resource = new OrcaPatientSyncResource(importService, syncRunner, cursorStore, runStore);
+        OrcaPatientSyncResource resource = new OrcaPatientSyncResource(importService, syncRunner);
 
         PatientImportResponse response = new PatientImportResponse();
         response.setApiResult("00");
@@ -43,7 +41,7 @@ class OrcaPatientSyncResourceTest {
         request.getPatientIds().add("000001");
 
         PatientImportResponse actual = resource.importPatients(
-                createRequest("F001:doctor01", "/api/orca/patients/import", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/patients/import", Map.of()), request);
 
         assertEquals("00", actual.getApiResult());
         verify(importService).importPatients(eq("F001"), any(PatientImportRequest.class), anyString());
@@ -53,38 +51,34 @@ class OrcaPatientSyncResourceTest {
     void importPatientsRejectsMissingFacility() {
         OrcaPatientSyncResource resource = new OrcaPatientSyncResource(
                 mock(OrcaPatientImportService.class),
-                mock(OrcaPatientSyncRunner.class),
-                mock(OrcaSyncCursorStore.class),
-                mock(OrcaSyncRunStore.class));
+                mock(OrcaPatientSyncRunner.class));
 
         PatientImportRequest request = new PatientImportRequest();
         request.getPatientIds().add("000001");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.importPatients(createRequest(null, "/api/orca/patients/import", Map.of()), request));
+                () -> resource.importPatients(createRequest(null, "/api/orca/official/patients/import", Map.of()), request));
         assertEquals(401, ex.getResponse().getStatus());
     }
 
     @Test
     void syncStatusRejectsMissingFacility() {
-        OrcaPatientSyncResource resource = new OrcaPatientSyncResource(
-                mock(OrcaPatientImportService.class),
-                mock(OrcaPatientSyncRunner.class),
-                mock(OrcaSyncCursorStore.class),
-                mock(OrcaSyncRunStore.class));
+        OrcaPatientSyncStatusResource resource = new OrcaPatientSyncStatusResource();
+        injectField(resource, "cursorStore", mock(OrcaSyncCursorStore.class));
+        injectField(resource, "runStore", mock(OrcaSyncRunStore.class));
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.syncStatus(createRequest(null, "/api/orca/patients/sync/status", Map.of())));
+                () -> resource.syncStatus(createRequest(null, "/api/admin/internal/orca/patients/sync/status", Map.of())));
         assertEquals(401, ex.getResponse().getStatus());
     }
 
     @Test
     void syncStatusReturnsStateForExplicitFacility() {
-        OrcaPatientImportService importService = mock(OrcaPatientImportService.class);
-        OrcaPatientSyncRunner syncRunner = mock(OrcaPatientSyncRunner.class);
         OrcaSyncCursorStore cursorStore = mock(OrcaSyncCursorStore.class);
         OrcaSyncRunStore runStore = mock(OrcaSyncRunStore.class);
-        OrcaPatientSyncResource resource = new OrcaPatientSyncResource(importService, syncRunner, cursorStore, runStore);
+        OrcaPatientSyncStatusResource resource = new OrcaPatientSyncStatusResource();
+        injectField(resource, "cursorStore", cursorStore);
+        injectField(resource, "runStore", runStore);
 
         when(cursorStore.load("F001", OrcaPatientSyncPlanner.STREAM_KIND)).thenReturn(
                 new OrcaSyncCursorStore.CursorRow("F001", OrcaPatientSyncPlanner.STREAM_KIND, "date", "2026-03-24", "RUN-1",
@@ -97,11 +91,21 @@ class OrcaPatientSyncResourceTest {
                         2, 2, 2, 0, 0, "completed", null, null));
 
         PatientSyncStatusResponse response = resource.syncStatus(
-                createRequest("F001:doctor01", "/api/orca/patients/sync/status", Map.of()));
+                createRequest("F001:doctor01", "/api/admin/internal/orca/patients/sync/status", Map.of()));
 
         assertEquals("F001", response.getFacilityId());
         assertEquals("2026-03-24", response.getLastSyncDate());
         assertEquals("RUN-1", response.getLastRunId());
+    }
+
+    private void injectField(Object target, String fieldName, Object value) {
+        try {
+            java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
+        } catch (ReflectiveOperationException ex) {
+            throw new AssertionError(ex);
+        }
     }
 
     private HttpServletRequest createRequest(String remoteUser, String uri, Map<String, String> headers) {

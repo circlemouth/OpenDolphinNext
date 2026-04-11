@@ -20,6 +20,7 @@
 - [document-integrity.md](contracts/document-integrity.md)
 - [patient-images.md](contracts/patient-images.md)
 - [orca-master-api.md](contracts/orca-master-api.md)
+- [orca-route-taxonomy.md](contracts/orca-route-taxonomy.md)
 
 ## Architecture
 - [server-modernization-overview.md](architecture/server-modernization-overview.md)

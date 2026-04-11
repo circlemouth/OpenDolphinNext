@@ -85,20 +85,20 @@ const isMswRuntimeEnabled = () => {
 };
 
 const buildAppointmentCandidates = (): Array<{ path: string; source: ResolveMasterSource }> => [
-  { path: '/api/orca/appointments/list', source: 'server' as ResolveMasterSource },
+  { path: '/api/orca/official/appointments/list', source: 'server' as ResolveMasterSource },
 ];
 
 const buildVisitCandidates = (): Array<{ path: string; source: ResolveMasterSource }> => [
-  { path: '/api/orca/visits/list', source: 'server' as ResolveMasterSource },
+  { path: '/api/orca/official/visits/list', source: 'server' as ResolveMasterSource },
 ];
 
 const buildVisitMutationCandidates = (): Array<{ path: string; source: ResolveMasterSource }> => [
-  { path: '/api/orca/visits/mutation', source: 'server' as ResolveMasterSource },
+  { path: '/api/orca/official/visits/mutation', source: 'server' as ResolveMasterSource },
 ];
 
 const preferredSource = (mswEnabled: boolean): ResolveMasterSource | undefined => (mswEnabled ? 'mock' : 'server');
 
-// CLAIM 廃止方針により常時 OFF（/api/orca/claim/outpatient は撤去済み）
+// CLAIM 廃止方針により常時 OFF（旧 claim outpatient surface は撤去済み）
 export const isClaimOutpatientEnabled = () => false;
 
 const CLAIM_OUTPATIENT_DISABLED_PAYLOAD: ClaimOutpatientPayload = {
@@ -539,7 +539,7 @@ export async function mutateVisit(
 }
 
 export async function fetchMedicalInformationOptions(): Promise<MedicalInformationOption[]> {
-  const response = await httpFetch('/api/orca/appointments/medical-information', {
+  const response = await httpFetch('/api/orca/official/appointments/medical-information', {
     method: 'GET',
     notifySessionExpired: false,
   });

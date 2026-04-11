@@ -4,12 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.ws.rs.GET;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class WebXmlEndpointExposureTest {
@@ -30,7 +31,7 @@ class WebXmlEndpointExposureTest {
     void applicationRegistersCurrentResourcesWithoutLegacyEndpoints() {
         Set<String> classNames = new OpenDolphinRestApplication().getClasses().stream()
                 .map(Class::getName)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toCollection(LinkedHashSet::new));
 
         assertThat(classNames)
                 .contains("open.dolphin.rest.KarteDocumentWriteResource")
@@ -44,6 +45,8 @@ class WebXmlEndpointExposureTest {
                 .contains("open.dolphin.rest.PatientModV2OutpatientResource")
                 .contains("open.dolphin.rest.orca.OrcaChartSupportResource")
                 .contains("open.dolphin.rest.orca.OrcaReportDocumentResource")
+                .contains("open.dolphin.rest.orca.OrcaOrderMasterResource")
+                .contains("open.dolphin.rest.orca.OrcaPatientSyncStatusResource")
                 .doesNotContain("open.dolphin.touch.DolphinResourceASP")
                 .doesNotContain("open.dolphin.rest.PatientResource")
                 .doesNotContain("open.dolphin.rest.NLabResource")
@@ -71,6 +74,17 @@ class WebXmlEndpointExposureTest {
                 .doesNotContain("open.orca.rest.OrcaFacilityResource")
                 .doesNotContain("open.orca.rest.OrcaPatientDiseaseResource")
                 .doesNotContain("open.dolphin.rest.OperationsReadinessResource");
+
+        Set<String> routeKeys = RestRouteInventorySupport.routeKeys(RestRouteInventorySupport.discoverRoutes());
+        assertThat(routeKeys)
+                .contains(
+                        "POST /api/orca/official/appointments/list",
+                        "GET /api/orca/master/drug",
+                        "GET /api/local/order/bundles",
+                        "GET /api/admin/internal/orca/patients/sync/status")
+                .allMatch(routeKey -> !routeKey.contains(" /api/orca/")
+                        || routeKey.contains(" /api/orca/official/")
+                        || routeKey.contains(" /api/orca/master/"));
 
         assertThat(OperationsHealthResource.class.getAnnotation(jakarta.ws.rs.Path.class))
                 .isNotNull()

@@ -56,7 +56,7 @@ const networkRecords = [];
 const requestRecords = [];
 
 const isTarget = (url) =>
-  url.includes('/orca/visits/mutation') ||
+  url.includes('/api/orca/official/visits/mutation') ||
   url.includes('/api/orca/queue') ||
   url.includes('/orca/queue');
 
@@ -219,7 +219,7 @@ const run = async () => {
   const beforeShot = await writeScreenshot(page, '01-reception-before-accept');
 
   const acceptResponsePromise = page
-    .waitForResponse((response) => response.url().includes('/orca/visits/mutation'), { timeout: 20000 })
+    .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
     .catch(() => null);
 
   await page.getByRole('button', { name: '受付送信' }).click();

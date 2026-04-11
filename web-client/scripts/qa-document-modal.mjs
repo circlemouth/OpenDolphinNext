@@ -190,7 +190,7 @@ const run = async () => {
     logStep('オーダーを保存して文書項目を作成');
     const orderSaveResponsePromise = page
       .waitForResponse(
-        (response) => response.url().includes('/orca/order/bundles') && response.request().method() !== 'GET',
+        (response) => response.url().includes('/api/local/order/bundles') && response.request().method() !== 'GET',
         { timeout: 20000 },
       )
       .catch(() => null);
@@ -206,7 +206,7 @@ const run = async () => {
     }
     const orderFetchResponse = await page
       .waitForResponse(
-        (response) => response.url().includes('/orca/order/bundles') && response.request().method() === 'GET',
+        (response) => response.url().includes('/api/local/order/bundles') && response.request().method() === 'GET',
         { timeout: 20000 },
       )
       .catch(() => null);

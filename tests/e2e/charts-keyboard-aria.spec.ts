@@ -89,10 +89,10 @@ const stubChartsApi = async (page: Page) => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(adminConfig) }),
   );
 
-  await page.route('**/orca/appointments/list**', (route: Route) =>
+  await page.route('**/api/orca/official/appointments/list**', (route: Route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(appointmentResponse) }),
   );
-  await page.route('**/orca/visits/list**', (route: Route) =>
+  await page.route('**/api/orca/official/visits/list**', (route: Route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(visitResponse) }),
   );
   await page.route('**/orca21/medicalmodv2/outpatient**', (route: Route) =>

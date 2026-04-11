@@ -77,7 +77,7 @@ const resolveHttpFaultStatus = (fault: FaultSpec) => {
 };
 
 export const outpatientHandlers = [
-  http.post('/api/orca/appointments/list', async ({ request }) => {
+  http.post('/api/orca/official/appointments/list', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -112,7 +112,7 @@ export const outpatientHandlers = [
     }
     return respond(buildAppointmentFixture(scenario.flags));
   }),
-  http.post('/api/orca/visits/list', async ({ request }) => {
+  http.post('/api/orca/official/visits/list', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -191,7 +191,7 @@ export const outpatientHandlers = [
     }
     return respond(buildPatientListFixture(scenario.flags, '/api/local/patients/search'));
   }),
-  http.post('/api/orca/patients/import', async ({ request }) => {
+  http.post('/api/orca/official/patients/import', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -269,7 +269,7 @@ export const outpatientHandlers = [
       status: 200,
     });
   }),
-  http.post('/api/orca/patients/batch', async ({ request }) => {
+  http.post('/api/orca/official/patients/batch', async ({ request }) => {
     const scenario = applyRequestScenario(request);
     const raw = (await request.json().catch(() => ({}))) as any;
     const patientIds: string[] = Array.isArray(raw?.patientIds) ? raw.patientIds : [];
@@ -296,7 +296,7 @@ export const outpatientHandlers = [
       status: 200,
     });
   }),
-  http.post('/api/orca/patientmodv2/outpatient/create', async ({ request }) => {
+  http.post('/api/orca/official/patientmodv2/outpatient/create', async ({ request }) => {
     const scenario = applyRequestScenario(request);
     const raw = (await request.json().catch(() => ({}))) as any;
     const patient = raw?.patient ?? {};
@@ -322,7 +322,7 @@ export const outpatientHandlers = [
       status: 200,
     });
   }),
-  http.post('/api/orca/patientmodv2/outpatient/update', async ({ request }) => {
+  http.post('/api/orca/official/patientmodv2/outpatient/update', async ({ request }) => {
     const scenario = applyRequestScenario(request);
     const raw = (await request.json().catch(() => ({}))) as any;
     const patient = raw?.patient ?? {};

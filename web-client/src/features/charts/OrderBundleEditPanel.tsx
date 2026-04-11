@@ -528,7 +528,7 @@ const fetchOrcaContraindicationCheck = async (params: {
       traceId: meta.traceId,
     };
   }
-  const response = await httpFetch('/api/orca/chart-support/contraindication-check', {
+  const response = await httpFetch('/api/orca/official/chart-support/contraindication-check', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     notifySessionExpired: false,

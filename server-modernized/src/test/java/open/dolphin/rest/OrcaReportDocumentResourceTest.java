@@ -36,7 +36,7 @@ class OrcaReportDocumentResourceTest {
 
         when(request.getRemoteUser()).thenReturn("FACILITY:user");
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-REPORT");
-        when(request.getRequestURI()).thenReturn("/openDolphin/api/orca/reports/prescription");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/orca/official/reports/prescription");
     }
 
     @Test

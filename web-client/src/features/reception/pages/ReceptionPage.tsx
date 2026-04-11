@@ -3569,7 +3569,7 @@ export function ReceptionPage({
 
       const fetchVisitContextCodes = async (): Promise<{ departmentCode?: string; physicianCode?: string }> => {
         try {
-          const response = await httpFetch('/api/orca/visits/list', {
+          const response = await httpFetch('/api/orca/official/visits/list', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ visitDate: calculationDate, requestNumber: '01' }),
@@ -4771,7 +4771,7 @@ export function ReceptionPage({
                 <div>
                   <h2>既存患者マスタ検索（name-search）</h2>
                   <p className="reception-master__lead">
-                    /api/orca/patients/name-search で既存患者を照会し、選択した患者IDを受付設定へ反映します。新患登録は Patients で行ってください。
+                    /api/orca/official/patients/name-search で既存患者を照会し、選択した患者IDを受付設定へ反映します。新患登録は Patients で行ってください。
                   </p>
                 </div>
                 <div className="reception-master__meta">

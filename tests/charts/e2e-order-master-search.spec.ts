@@ -65,28 +65,28 @@ test('薬剤/処置マスタ検索→入力が反映される (MSW)', async ({ p
         body: JSON.stringify(buildMedicalSummaryFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/appointments/list/mock**', (route) =>
+    await page.route('**/api/orca/official/appointments/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/visits/list/mock**', (route) =>
+    await page.route('**/api/orca/official/visits/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildVisitListFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/appointments/list**', (route) =>
+    await page.route('**/api/orca/official/appointments/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/visits/list**', (route) =>
+    await page.route('**/api/orca/official/visits/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -107,7 +107,7 @@ test('薬剤/処置マスタ検索→入力が反映される (MSW)', async ({ p
         body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/api/local/patients/search')),
       }),
     );
-    await page.route('**/orca/order/bundles**', async (route) => {
+    await page.route('**/api/local/order/bundles**', async (route) => {
       const method = route.request().method().toUpperCase();
       if (method === 'POST') {
         await route.fulfill({
@@ -133,7 +133,7 @@ test('薬剤/処置マスタ検索→入力が反映される (MSW)', async ({ p
         }),
       });
     });
-    await page.route('**/orca/master/drug**', (route) =>
+    await page.route('**/api/orca/master/drug**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -153,7 +153,7 @@ test('薬剤/処置マスタ検索→入力が反映される (MSW)', async ({ p
         }),
       }),
     );
-    await page.route('**/orca/master/material**', (route) =>
+    await page.route('**/api/orca/master/material**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -222,7 +222,7 @@ test('薬剤/処置マスタ検索→入力が反映される (MSW)', async ({ p
                 ? input.href
                 : String(input);
         const method = resolveMethod(input, init);
-        if (requestUrl.includes('/orca/order/bundles')) {
+        if (requestUrl.includes('/api/local/order/bundles')) {
           if (method === 'POST') {
             return Promise.resolve(
               new Response(
@@ -282,7 +282,7 @@ test('薬剤/処置マスタ検索→入力が反映される (MSW)', async ({ p
       runId: RUN_ID,
       masterMocks: [
         {
-          path: '/orca/master/drug',
+          path: '/api/orca/master/drug',
           items: [
             {
               code: 'A100',
@@ -296,7 +296,7 @@ test('薬剤/処置マスタ検索→入力が反映される (MSW)', async ({ p
           ],
         },
         {
-          path: '/orca/master/material',
+          path: '/api/orca/master/material',
           items: [
             {
               code: 'M001',

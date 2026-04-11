@@ -57,8 +57,8 @@ const runStep = async ({ label, url, expected, action }) => {
 };
 
 const isTarget = (url) =>
-  url.includes('/orca/appointments/list') ||
-  url.includes('/orca/visits/list') ||
+  url.includes('/api/orca/official/appointments/list') ||
+  url.includes('/api/orca/official/visits/list') ||
   url.includes('/orca21/medicalmodv2/outpatient');
 
 const run = async () => {
@@ -84,13 +84,13 @@ const run = async () => {
   await runStep({
     label: 'Reception: 外来リスト取得(ORCA off)',
     url: `${baseURL}/f/${encodeURIComponent(facilityId)}/reception`,
-    expected: 'reception-page が表示され、/orca/appointments/list が 404 にならない',
+    expected: 'reception-page が表示され、/api/orca/official/appointments/list が 404 にならない',
     action: async () => {
       await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
       await page.locator('.reception-page').waitFor({ timeout: 20000 });
       await page.waitForTimeout(2000);
       const shot = await writeScreenshot(page, '01-reception-orca-off');
-      const appointmentResponses = responses.filter((r) => r.url.includes('/orca/appointments/list'));
+      const appointmentResponses = responses.filter((r) => r.url.includes('/api/orca/official/appointments/list'));
       const has404 = appointmentResponses.some((r) => r.status === 404);
       if (has404) throw new Error(`appointments/list returned 404: ${JSON.stringify(appointmentResponses)}`);
       return `url=${page.url()} / ${shot} / appointments=${appointmentResponses.length}`;

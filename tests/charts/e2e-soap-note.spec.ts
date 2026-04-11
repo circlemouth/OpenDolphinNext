@@ -56,28 +56,28 @@ test('SOAP入力の保存/再表示/編集ができる (MSW)', async ({ page }) 
         body: JSON.stringify(buildMedicalSummaryFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/appointments/list/mock**', (route) =>
+    await page.route('**/api/orca/official/appointments/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/visits/list/mock**', (route) =>
+    await page.route('**/api/orca/official/visits/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildVisitListFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/appointments/list**', (route) =>
+    await page.route('**/api/orca/official/appointments/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/visits/list**', (route) =>
+    await page.route('**/api/orca/official/visits/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',

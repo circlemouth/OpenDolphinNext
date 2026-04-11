@@ -26,7 +26,7 @@ export type OrcaClaimSendResult = {
   error?: string;
 };
 
-export const ORCA_MEDICALMODV2_PATH = '/api/orca/chart-support/medical-mod-v2';
+export const ORCA_MEDICALMODV2_PATH = '/api/orca/official/chart-support/medical-mod-v2';
 
 export type MedicalModV2Medication = {
   code: string;

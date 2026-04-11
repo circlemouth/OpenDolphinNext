@@ -75,7 +75,7 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
             return null;
         }
         String uri = request.getRequestURI();
-        if (uri == null || !uri.contains("/api/orca/order/bundles")) {
+        if (uri == null || !uri.contains("/api/local/order/bundles")) {
             return null;
         }
         if (!hasCauseByClassName(exception, "org.hibernate.exception.DataException")

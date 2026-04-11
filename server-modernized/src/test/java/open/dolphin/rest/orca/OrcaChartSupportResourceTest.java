@@ -229,7 +229,7 @@ class OrcaChartSupportResourceTest {
                     String name = method.getName();
                     if ("getRemoteUser".equals(name)) return "F001:doctor01";
                     if ("getRemoteAddr".equals(name)) return "127.0.0.1";
-                    if ("getRequestURI".equals(name)) return "/api/orca/chart-support/medication-get";
+                    if ("getRequestURI".equals(name)) return "/api/orca/official/chart-support/medication-get";
                     if ("getHeader".equals(name) && args != null && args.length == 1) {
                         String header = String.valueOf(args[0]);
                         return switch (header) {

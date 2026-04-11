@@ -61,28 +61,28 @@ test('CHART-010/020: compact flags下でもSOAP/ドラフト保存が可視で�
         body: JSON.stringify(buildMedicalSummaryFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/appointments/list/mock**', (route) =>
+    await page.route('**/api/orca/official/appointments/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/visits/list/mock**', (route) =>
+    await page.route('**/api/orca/official/visits/list/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildVisitListFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/appointments/list**', (route) =>
+    await page.route('**/api/orca/official/appointments/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/visits/list**', (route) =>
+    await page.route('**/api/orca/official/visits/list**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',

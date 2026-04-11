@@ -115,14 +115,14 @@ const seedChartSession = async (page: Parameters<typeof withChartLock>[0]) => {
       body: buildIncomeInfoXml(),
     }),
   );
-  await page.route('**/orca/appointments/list', (route) =>
+  await page.route('**/api/orca/official/appointments/list', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
     }),
   );
-  await page.route('**/orca/visits/list', (route) =>
+  await page.route('**/api/orca/official/visits/list', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',

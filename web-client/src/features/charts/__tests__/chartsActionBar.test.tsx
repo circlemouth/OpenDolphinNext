@@ -120,7 +120,7 @@ describe('ChartsActionBar', () => {
         action: 'ORCA_SEND',
         outcome: 'success',
         details: expect.objectContaining({
-          endpoint: '/api/orca/chart-support/medical-mod-v2',
+          endpoint: '/api/orca/official/chart-support/medical-mod-v2',
           httpStatus: 200,
           apiResult: '00',
           apiResultMessage: 'OK',

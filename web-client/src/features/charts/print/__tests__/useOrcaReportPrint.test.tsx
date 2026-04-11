@@ -11,7 +11,7 @@ vi.mock('../../orcaReportApi', async () => {
     ...actual,
     postOrcaReport: vi.fn(),
     buildOrcaReportRequest: vi.fn().mockReturnValue({ patientId: 'P-1' }),
-    resolveOrcaReportEndpoint: vi.fn().mockReturnValue('/api/orca/reports/prescription'),
+    resolveOrcaReportEndpoint: vi.fn().mockReturnValue('/api/orca/official/reports/prescription'),
   };
 });
 

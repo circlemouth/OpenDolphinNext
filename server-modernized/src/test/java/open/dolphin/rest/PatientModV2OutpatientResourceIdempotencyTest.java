@@ -33,7 +33,7 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
+        when(request.getRequestURI()).thenReturn("/api/orca/official/patientmodv2/outpatient/create");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
         Response response = resource.createPatient(request, createRequest("00001", "山田 太郎", "ヤマダ タロウ"));
@@ -58,7 +58,7 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
+        when(request.getRequestURI()).thenReturn("/api/orca/official/patientmodv2/outpatient/create");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.createPatient(request, createRequest("00001", "山田 花子", "ヤマダ ハナコ")));
@@ -74,7 +74,7 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
+        when(request.getRequestURI()).thenReturn("/api/orca/official/patientmodv2/outpatient/create");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.createPatient(request, createRequest("AB-001", "山田 花子", "ヤマダ ハナコ")));
@@ -90,7 +90,7 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn(null);
-        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
+        when(request.getRequestURI()).thenReturn("/api/orca/official/patientmodv2/outpatient/create");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.createPatient(request, createRequest("00001", "山田 花子", "ヤマダ ハナコ")));

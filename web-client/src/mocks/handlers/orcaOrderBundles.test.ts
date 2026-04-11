@@ -31,11 +31,11 @@ describe('orcaOrderBundleHandlers', () => {
     const upstream = createServer((req, res) => {
       const url = req.url ?? '';
       res.setHeader('Content-Type', 'application/json');
-      if (url.startsWith('/api/orca/order/bundles') && req.method === 'GET') {
+      if (url.startsWith('/api/local/order/bundles') && req.method === 'GET') {
         res.end(JSON.stringify({ source: 'upstream', ok: true }));
         return;
       }
-      if (url.startsWith('/api/orca/order/bundles') && req.method === 'POST') {
+      if (url.startsWith('/api/local/order/bundles') && req.method === 'POST') {
         res.end(JSON.stringify({ source: 'upstream', ok: true }));
         return;
       }
@@ -45,13 +45,13 @@ describe('orcaOrderBundleHandlers', () => {
     const { port } = await listen(upstream);
     try {
       const base = `http://127.0.0.1:${port}`;
-      const getRes = await fetch(`${base}/api/orca/order/bundles?patientId=01415`, {
+      const getRes = await fetch(`${base}/api/local/order/bundles?patientId=01415`, {
         headers: { 'x-datasource-transition': 'server' },
       });
       expect(getRes.ok).toBe(true);
       await expect(getRes.json()).resolves.toMatchObject({ source: 'upstream', ok: true });
 
-      const postRes = await fetch(`${base}/api/orca/order/bundles`, {
+      const postRes = await fetch(`${base}/api/local/order/bundles`, {
         method: 'POST',
         headers: { 'x-datasource-transition': 'server', 'Content-Type': 'application/json' },
         body: JSON.stringify({ patientId: '01415', operations: [{ operation: 'create' }] }),
@@ -64,7 +64,7 @@ describe('orcaOrderBundleHandlers', () => {
   });
 
   it('mocks when x-datasource-transition is not server', async () => {
-    const res = await fetch('http://127.0.0.1/orca/order/bundles?patientId=01415', {
+    const res = await fetch('http://127.0.0.1/api/local/order/bundles?patientId=01415', {
       headers: { 'x-run-id': 'TEST-RUN-ID', 'x-trace-id': 'TEST-TRACE-ID' },
     });
     expect(res.ok).toBe(true);

@@ -2,92 +2,114 @@ package open.dolphin.rest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.HEAD;
-import jakarta.ws.rs.OPTIONS;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 class PublicRouteInventoryContractTest {
 
-    private static final String API_PREFIX = "/api";
-    private static final Pattern PATH_PARAMETER_PATTERN = Pattern.compile("\\{[^}]+\\}");
-    private static final Set<String> BLOCKED_ROUTE_KEYS = Set.of(
-            "POST /api/admin/access/users/{*}/password-reset",
-            "GET /api/pvt/{*}",
-            "POST /api/pvt",
-            "PUT /api/pvt/{*}",
-            "PUT /api/pvt/memo/{*}",
-            "DELETE /api/pvt/{*}",
-            "POST /api/karte/document/pvt/{*}",
-            "POST /api/orca/medical/outpatient",
-            "POST /api/orca/local-medical/outpatient",
-            "GET /api/orca/disease/import/{*}",
-            "GET /api/orca/disease/name/{*}",
-            "GET /api/orca/disease/active/{*}",
-            "GET /api/orca/facilitycode",
-            "GET /api/orca/deptinfo",
-            "GET /api/orca/tensu/shinku/{*}",
-            "GET /api/orca/tensu/name/{*}",
-            "GET /api/orca/tensu/code/{*}",
-            "GET /api/orca/general/{*}",
-            "GET /api/orca/stamp/{*}",
-            "GET /api/operations/readiness",
-            "GET /api/orca/queue",
-            "DELETE /api/orca/queue",
-            "POST /api/orca/pusheventgetv2");
+    private static final Set<String> EXPECTED_OFFICIAL_ROUTE_KEYS = Set.of(
+            "GET /api/orca/official/disease-master/name/{*}",
+            "GET /api/orca/official/appointments/medical-information",
+            "GET /api/orca/official/patientgetv2",
+            "POST /api/orca/official/appointments/list",
+            "POST /api/orca/official/appointments/mutation",
+            "POST /api/orca/official/appointments/patient",
+            "POST /api/orca/official/billing/estimate",
+            "POST /api/orca/official/chart-support/contraindication-check",
+            "POST /api/orca/official/chart-support/income-info",
+            "POST /api/orca/official/chart-support/medical-mod-v2",
+            "POST /api/orca/official/chart-support/medication-get",
+            "POST /api/orca/official/insurance/combinations",
+            "POST /api/orca/official/patientmodv2/outpatient/create",
+            "POST /api/orca/official/patientmodv2/outpatient/update",
+            "POST /api/orca/official/patients/batch",
+            "POST /api/orca/official/patients/former-names",
+            "POST /api/orca/official/patients/id-list",
+            "POST /api/orca/official/patients/import",
+            "POST /api/orca/official/patients/name-search",
+            "POST /api/orca/official/patients/sync/run",
+            "POST /api/orca/official/reports/{*}",
+            "POST /api/orca/official/visits/list",
+            "POST /api/orca/official/visits/mutation");
+
+    private static final Set<String> EXPECTED_MASTER_ROUTE_KEYS = Set.of(
+            "GET /api/orca/master/address",
+            "GET /api/orca/master/bodypart",
+            "GET /api/orca/master/comment",
+            "GET /api/orca/master/drug",
+            "GET /api/orca/master/etensu",
+            "GET /api/orca/master/generic-class",
+            "GET /api/orca/master/generic-price",
+            "GET /api/orca/master/hokenja",
+            "GET /api/orca/master/kensa-sort",
+            "GET /api/orca/master/material",
+            "GET /api/orca/master/order/inputsets",
+            "GET /api/orca/master/order/inputsets/{*}",
+            "GET /api/orca/master/reference/status",
+            "GET /api/orca/master/youhou",
+            "POST /api/orca/master/order/interactions/check");
+
+    private static final Set<String> EXPECTED_LOCAL_ROUTE_KEYS = Set.of(
+            "GET /api/local/diagnoses/{*}",
+            "GET /api/local/encounters/{*}/medical-summary",
+            "GET /api/local/order/bundles",
+            "GET /api/local/order/recommendations",
+            "GET /api/local/prescription-orders",
+            "POST /api/local/charts/medical-records",
+            "POST /api/local/charts/subjectives",
+            "POST /api/local/diagnoses",
+            "POST /api/local/order/bundles",
+            "POST /api/local/patients/mutation",
+            "POST /api/local/patients/search",
+            "POST /api/local/prescription-orders",
+            "POST /api/local/prescription-orders/do-import");
+
+    private static final Set<String> EXPECTED_ADMIN_INTERNAL_ROUTE_KEYS = Set.of(
+            "GET /api/admin/internal/orca/patients/sync/status");
 
     @Test
-    void publicRoutesRemainNormalizedAndExcludeBlockedRoutes() {
-        Set<Class<?>> registeredClasses = new OpenDolphinRestApplication().getClasses();
-        List<RouteDefinition> routes = discoverRoutes(registeredClasses);
-        List<String> routeKeys = routes.stream()
-                .map(RouteDefinition::key)
-                .collect(Collectors.toList());
+    void publicRoutesFollowTaxonomyInventory() {
+        List<RestRouteInventorySupport.RouteDefinition> routes = RestRouteInventorySupport.discoverRoutes();
+        Set<String> routeKeys = RestRouteInventorySupport.routeKeys(routes);
 
-        assertThat(routeKeys).doesNotHaveDuplicates();
-        assertThat(routeKeys).doesNotContainAnyElementsOf(BLOCKED_ROUTE_KEYS);
+        assertThat(routeKeys).hasSize(routes.size());
         assertThat(routes)
                 .filteredOn(route -> route.path().startsWith("/api/orca/"))
                 .filteredOn(route -> route.produces().stream().anyMatch(PublicRouteInventoryContractTest::isTextPlain))
                 .isEmpty();
-        assertThat(routeKeys).doesNotContain("GET /api/operations/readiness");
-        assertThat(routeKeys).doesNotContain(
-                "POST /api/orca/patient/mutation",
-                "POST /api/orca/patients/local-search",
-                "POST /api/orca/chart/subjectives",
-                "POST /api/orca/medical/records");
-        assertThat(routeKeys).contains(
-                "POST /api/orca/patientmodv2/outpatient/create",
-                "POST /api/orca/patientmodv2/outpatient/update",
-                "POST /api/local/patients/mutation",
-                "POST /api/local/patients/search",
-                "POST /api/local/charts/subjectives",
-                "POST /api/local/charts/medical-records");
-        assertThat(routeKeys).contains("GET /api/local-summary/encounters/{*}/medical-summary");
+
+        Set<String> officialRoutes = collectByPrefix(routeKeys, "/api/orca/official/");
+        Set<String> masterRoutes = collectByPrefix(routeKeys, "/api/orca/master/");
+        Set<String> localRoutes = collectByPrefix(routeKeys, "/api/local/");
+        Set<String> adminInternalRoutes = collectByPrefix(routeKeys, "/api/admin/internal/");
+
+        assertThat(officialRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_OFFICIAL_ROUTE_KEYS);
+        assertThat(masterRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_MASTER_ROUTE_KEYS);
+        assertThat(localRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_LOCAL_ROUTE_KEYS);
+        assertThat(adminInternalRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_ADMIN_INTERNAL_ROUTE_KEYS);
+
+        assertThat(routes)
+                .filteredOn(route -> route.path().startsWith("/api/orca/"))
+                .allMatch(route -> route.path().startsWith("/api/orca/official/")
+                        || route.path().startsWith("/api/orca/master/"));
+        assertThat(localRoutes)
+                .allMatch(routeKey -> !isOfficialLike(routeKey));
     }
 
     @Test
-    void applicationDoesNotRegisterBlockedClasses() {
+    void applicationDoesNotRegisterLegacyAliasClasses() {
         Set<String> classNames = new OpenDolphinRestApplication().getClasses().stream()
                 .map(Class::getName)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
+        assertThat(classNames).contains(
+                "open.dolphin.rest.orca.OrcaOrderMasterResource",
+                "open.dolphin.rest.orca.OrcaPatientSyncStatusResource");
         assertThat(classNames).doesNotContain(
                 "open.dolphin.rest.AdminAccessPasswordResetResource",
                 "open.dolphin.rest.PVTResource",
@@ -99,122 +121,22 @@ class PublicRouteInventoryContractTest {
                 "open.orca.rest.OrcaPatientDiseaseResource");
     }
 
-    private static List<RouteDefinition> discoverRoutes(Set<Class<?>> registeredClasses) {
-        return registeredClasses.stream()
-                .filter(PublicRouteInventoryContractTest::hasJaxRsPath)
-                .flatMap(resourceClass -> Arrays.stream(resourceClass.getDeclaredMethods())
-                        .flatMap(method -> toRouteDefinitions(resourceClass, method).stream()))
-                .sorted((left, right) -> left.key().compareTo(right.key()))
-                .collect(Collectors.toCollection(ArrayList::new));
+    private static Set<String> collectByPrefix(Set<String> routeKeys, String prefix) {
+        return routeKeys.stream()
+                .filter(routeKey -> routeKey.contains(" " + prefix))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    private static List<RouteDefinition> toRouteDefinitions(Class<?> resourceClass, Method method) {
-        List<String> httpMethods = httpMethods(method);
-        if (httpMethods.isEmpty()) {
-            return List.of();
-        }
-        String classPath = resolveClassPath(resourceClass);
-        String methodPath = resolveMethodPath(method);
-        String routePath = normalizePath(API_PREFIX + classPath + methodPath);
-        Set<String> produces = resolveProduces(resourceClass, method);
-        return httpMethods.stream()
-                .map(httpMethod -> new RouteDefinition(httpMethod, routePath, produces))
-                .collect(Collectors.toList());
-    }
-
-    private static boolean hasJaxRsPath(Class<?> resourceClass) {
-        return resolveClassPath(resourceClass) != null;
-    }
-
-    private static String resolveClassPath(Class<?> resourceClass) {
-        for (Class<?> current = resourceClass; current != null && current != Object.class; current = current.getSuperclass()) {
-            Path path = current.getDeclaredAnnotation(Path.class);
-            if (path != null) {
-                return normalizeSegment(path.value());
-            }
-        }
-        return null;
-    }
-
-    private static String resolveMethodPath(Method method) {
-        Path path = method.getAnnotation(Path.class);
-        if (path == null) {
-            return "";
-        }
-        return normalizeSegment(path.value());
-    }
-
-    private static Set<String> resolveProduces(Class<?> resourceClass, Method method) {
-        Produces methodProduces = method.getAnnotation(Produces.class);
-        if (methodProduces != null) {
-            return Arrays.stream(methodProduces.value())
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-        }
-        Produces classProduces = findProduces(resourceClass);
-        if (classProduces != null) {
-            return Arrays.stream(classProduces.value())
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-        }
-        return Set.of();
-    }
-
-    private static Produces findProduces(Class<?> resourceClass) {
-        for (Class<?> current = resourceClass; current != null && current != Object.class; current = current.getSuperclass()) {
-            Produces produces = current.getDeclaredAnnotation(Produces.class);
-            if (produces != null) {
-                return produces;
-            }
-        }
-        return null;
-    }
-
-    private static List<String> httpMethods(Method method) {
-        List<String> methods = new ArrayList<>(2);
-        if (method.isAnnotationPresent(GET.class)) {
-            methods.add("GET");
-        }
-        if (method.isAnnotationPresent(POST.class)) {
-            methods.add("POST");
-        }
-        if (method.isAnnotationPresent(PUT.class)) {
-            methods.add("PUT");
-        }
-        if (method.isAnnotationPresent(DELETE.class)) {
-            methods.add("DELETE");
-        }
-        if (method.isAnnotationPresent(HEAD.class)) {
-            methods.add("HEAD");
-        }
-        if (method.isAnnotationPresent(OPTIONS.class)) {
-            methods.add("OPTIONS");
-        }
-        return methods;
-    }
-
-    private static String normalizeSegment(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        String normalized = value.trim().replaceAll("/{2,}", "/");
-        if (!normalized.startsWith("/")) {
-            normalized = "/" + normalized;
-        }
-        return normalized;
-    }
-
-    private static String normalizePath(String path) {
-        String normalized = path == null ? "" : path.trim();
-        normalized = normalized.replaceAll("/{2,}", "/");
-        normalized = PATH_PARAMETER_PATTERN.matcher(normalized).replaceAll("{*}");
-        if (!normalized.startsWith("/")) {
-            normalized = "/" + normalized;
-        }
-        if (normalized.length() > 1 && normalized.endsWith("/")) {
-            normalized = normalized.substring(0, normalized.length() - 1);
-        }
-        return normalized;
+    private static boolean isOfficialLike(String routeKey) {
+        String normalized = routeKey.toLowerCase(Locale.ROOT);
+        return normalized.contains("patientmodv2")
+                || normalized.contains("patientgetv2")
+                || normalized.contains("medical-mod-v2")
+                || normalized.contains("medicalmodv2")
+                || normalized.contains("subjectivesv2")
+                || normalized.contains("manageusersv2")
+                || normalized.contains("incomeinfv2")
+                || normalized.contains("patientlst");
     }
 
     private static boolean isTextPlain(String mediaType) {
@@ -227,11 +149,5 @@ class PublicRouteInventoryContractTest {
             normalized = normalized.substring(0, separator).trim();
         }
         return MediaType.TEXT_PLAIN.equalsIgnoreCase(normalized);
-    }
-
-    private record RouteDefinition(String method, String path, Set<String> produces) {
-        private String key() {
-            return method + " " + path;
-        }
     }
 }

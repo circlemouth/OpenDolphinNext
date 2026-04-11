@@ -440,7 +440,7 @@ export async function fetchOrderBundles(params: FetchOrderBundlesParams): Promis
   const normalizedEntity = normalizeOrderEntityValue(params.entity);
   if (normalizedEntity) query.set('entity', normalizedEntity);
   if (params.from) query.set('from', params.from);
-  const response = await httpFetch(`/api/orca/order/bundles?patientId=${encodeURIComponent(params.patientId)}${query.toString() ? `&${query.toString()}` : ''}`);
+  const response = await httpFetch(`/api/local/order/bundles?patientId=${encodeURIComponent(params.patientId)}${query.toString() ? `&${query.toString()}` : ''}`);
   const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'オーダー情報の取得に失敗しました。' });
   const json = parsed.json ?? {};
   if (parsed.ok && !parsed.json) {
@@ -540,7 +540,7 @@ export async function mutateOrderBundles(params: {
       message: '選択式コメントの itemNumber / branch は未対応のため保存できません。パラメータ不要のコメントのみ選択してください。',
     };
   }
-  const response = await httpFetch('/api/orca/order/bundles', {
+  const response = await httpFetch('/api/local/order/bundles', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

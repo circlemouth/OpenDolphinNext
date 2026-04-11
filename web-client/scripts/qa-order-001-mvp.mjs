@@ -47,10 +47,10 @@ const writeLocatorShot = async (locator, name, opts = {}) => {
 
 // NOTE:
 // Playwright's network hooks may miss requests served by ServiceWorker (MSW).
-// To keep evidence stable, we log fetch() calls for /orca/order/bundles in-page via addInitScript.
+// To keep evidence stable, we log fetch() calls for /api/local/order/bundles in-page via addInitScript.
 const toNetworkMemo = (events) => {
   const lines = [];
-  lines.push('# /orca/order/bundles network memo');
+  lines.push('# /api/local/order/bundles network memo');
   lines.push('');
   lines.push(`- RUN_ID: ${runId}`);
   lines.push(`- baseURL: ${baseURL}`);
@@ -121,7 +121,7 @@ const run = async () => {
       window.localStorage.setItem('devUserId', auth.userId);
       window.localStorage.setItem('devClientUuid', auth.clientUuid);
 
-      // Log /orca/order/bundles traffic at fetch() level (works even when MSW intercepts).
+      // Log /api/local/order/bundles traffic at fetch() level (works even when MSW intercepts).
       window.__QA_ORDER_BUNDLE_LOG__ = [];
       const toStringSafe = (value) => {
         try {
@@ -135,7 +135,7 @@ const run = async () => {
       window.fetch = async (input, init) => {
         const url = typeof input === 'string' ? input : input?.url;
         const method = init?.method ?? (typeof input === 'string' ? 'GET' : input?.method ?? 'GET');
-        const shouldLog = typeof url === 'string' && url.includes('/orca/order/bundles');
+        const shouldLog = typeof url === 'string' && url.includes('/api/local/order/bundles');
         const entry = shouldLog
           ? {
               kind: 'request',
@@ -219,7 +219,7 @@ const run = async () => {
 
     const respPromise = page
       .waitForResponse(
-        (response) => response.url().includes('/orca/order/bundles') && response.request().method() === 'POST',
+        (response) => response.url().includes('/api/local/order/bundles') && response.request().method() === 'POST',
         { timeout: 20000 },
       )
       .catch(() => null);

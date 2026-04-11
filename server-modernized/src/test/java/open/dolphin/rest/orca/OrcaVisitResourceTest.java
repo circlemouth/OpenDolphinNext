@@ -291,7 +291,7 @@ class OrcaVisitResourceTest {
                         case "getRemoteUser":
                             return remoteUser;
                         case "getRequestURI":
-                            return "/api/orca/visits/mutation";
+                            return "/api/orca/official/visits/mutation";
                         case "getRemoteAddr":
                             return "127.0.0.1";
                         case "getHeader":

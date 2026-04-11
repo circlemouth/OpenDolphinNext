@@ -27,7 +27,7 @@ import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import open.dolphin.rest.dto.orca.OrcaEncounterContext;
 
-@Path("/orca/chart-support")
+@Path("/orca/official/chart-support")
 public class OrcaChartSupportResource extends AbstractOrcaRestResource {
 
     @Inject

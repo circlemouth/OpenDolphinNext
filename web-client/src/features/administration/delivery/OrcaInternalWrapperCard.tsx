@@ -100,7 +100,7 @@ export function OrcaInternalWrapperCard({
       <div className="admin-inline-meta">
         <span>HTTP: {result?.status ?? '―'}</span>
         <span>Api_Result: {result?.apiResult ?? '―'}</span>
-        <AdminStatusPill status="idle" value={`namespace: ${routeNamespaceLabel}`} />
+        <AdminStatusPill status="idle" value={`scope: ${routeNamespaceLabel}`} />
         <AdminStatusPill status="idle" value={`behavior: ${behaviorLabel}`} />
         <AdminStatusPill status={result?.stub ? 'warn' : result?.ok ? 'ok' : 'idle'} value={`source: ${stubLabel}`} />
         {currentOption.stubFixed ? <AdminStatusPill status="warn" value="stub固定" /> : null}

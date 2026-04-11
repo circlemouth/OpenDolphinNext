@@ -9,15 +9,12 @@ const scriptDir = path.dirname(scriptPath);
 const projectRootDir = path.resolve(scriptDir, '..');
 const srcDir = path.join(projectRootDir, 'src');
 
-const BLOCKED_SURFACES = [
-  { kind: 'blocked-route', value: '/api/orca/medical/outpatient' },
-  { kind: 'blocked-route', value: '/api/orca/deptinfo' },
-  { kind: 'blocked-route', value: '/api/orca/local-medical/outpatient' },
-  { kind: 'mock-surface', value: '/api/orca/appointments/list/mock' },
-  { kind: 'mock-surface', value: '/api/orca/visits/list/mock' },
-  { kind: 'mock-surface', value: '/api/orca/visits/mutation/mock' },
-  { kind: 'mock-surface', value: '/api/orca/patients/local-search/mock' },
-  { kind: 'mock-surface', value: '/api/orca/patient/mutation/mock' },
+const BLOCKED_SURFACE_PATTERNS = [
+  { kind: 'mock-surface', pattern: /\/api\/orca\/official\/.+\/mock/ },
+  { kind: 'mock-surface', pattern: /\/api\/local\/.+\/mock/ },
+  { kind: 'taxonomy-drift', pattern: /\/api\/orca\/(?!official(?:\/|\b)|master(?:\/|\b)|queue(?:\/|\b)|pusheventgetv2(?:\/|\b))/ },
+  { kind: 'taxonomy-drift', pattern: /\/api\/local-summary\// },
+  { kind: 'taxonomy-drift', pattern: /\/api\/orca-live\// },
 ];
 
 const TEXT_FILE_EXTENSIONS = new Set([
@@ -48,13 +45,13 @@ const walk = (currentDir) => {
     const content = readFileSync(fullPath, 'utf8');
     const lines = content.split(/\r?\n/);
     lines.forEach((line, index) => {
-      BLOCKED_SURFACES.forEach((surface) => {
-        if (!line.includes(surface.value)) return;
+      BLOCKED_SURFACE_PATTERNS.forEach((surface) => {
+        if (!surface.pattern.test(line)) return;
         findings.push({
           filePath: fullPath,
           line: index + 1,
           kind: surface.kind,
-          value: surface.value,
+          value: String(surface.pattern),
         });
       });
     });

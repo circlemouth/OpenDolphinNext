@@ -20,7 +20,7 @@ import open.dolphin.security.audit.SessionAuditDispatcher;
 @ApplicationScoped
 public class DiagnosisAuditRecorder {
 
-    private static final String DEFAULT_RESOURCE = "/api/local-summary/diagnoses";
+    private static final String DEFAULT_RESOURCE = "/api/local/diagnoses";
 
     @Inject
     private SessionAuditDispatcher sessionAuditDispatcher;

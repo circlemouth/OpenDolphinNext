@@ -370,14 +370,14 @@ const createFlagAwareMiddleware = (): NextHandleFunction => (req, res, next) => 
     }
   }
 
-  if (url.pathname.startsWith('/orca/appointments/list/mock')) {
+  if (url.pathname.startsWith('/api/orca/official/appointments/list/mock')) {
     if (shouldUseFlaggedOutpatientMock(req, url)) {
       json(res, 200, buildAppointmentListMock(req));
       return;
     }
   }
 
-  if (url.pathname.startsWith('/orca/visits/list/mock')) {
+  if (url.pathname.startsWith('/api/orca/official/visits/list/mock')) {
     if (shouldUseFlaggedOutpatientMock(req, url)) {
       json(res, 200, buildVisitListMock(req));
       return;

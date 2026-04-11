@@ -47,7 +47,7 @@ class OrcaAppointmentResourceTest {
         request.setAppointmentDate(LocalDate.of(2025, 11, 13));
 
         OrcaAppointmentListResponse response = resource.listAppointments(
-                createRequest("F001:doctor01", "/api/orca/appointments/list", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/appointments/list", Map.of()), request);
         assertEquals("2025-11-13", response.getAppointmentDate());
         assertEquals(1, response.getSlots().size());
         assertEquals("F001:AP-20251113-001", response.getSlots().get(0).getScheduleKey());
@@ -70,7 +70,7 @@ class OrcaAppointmentResourceTest {
         request.setToDate(LocalDate.of(2025, 11, 14));
 
         OrcaAppointmentListResponse response = resource.listAppointments(
-                createRequest("F001:doctor01", "/api/orca/appointments/list", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/appointments/list", Map.of()), request);
         assertEquals("2025-11-13/2025-11-14", response.getAppointmentDate());
         assertEquals(2, response.getSlots().size());
         assertEquals("0000", response.getApiResult());
@@ -90,7 +90,7 @@ class OrcaAppointmentResourceTest {
         request.setToDate(LocalDate.of(2025, 1, 31));
 
         OrcaAppointmentListResponse response = resource.listAppointments(
-                createRequest("F001:doctor01", "/api/orca/appointments/list", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/appointments/list", Map.of()), request);
         assertEquals("2025-01-01/2025-01-31", response.getAppointmentDate());
         assertEquals(31, response.getSlots().size());
     }
@@ -104,7 +104,7 @@ class OrcaAppointmentResourceTest {
         request.setAppointmentDate(LocalDate.of(2025, 11, 13));
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.listAppointments(createRequest(null, "/api/orca/appointments/list", Map.of()), request));
+                () -> resource.listAppointments(createRequest(null, "/api/orca/official/appointments/list", Map.of()), request));
         assertRestError(ex, Response.Status.UNAUTHORIZED.getStatusCode(), "facility_missing");
     }
 
@@ -130,7 +130,7 @@ class OrcaAppointmentResourceTest {
         request.setBaseDate(LocalDate.of(2025, 11, 12));
 
         PatientAppointmentListResponse response = resource.patientAppointments(
-                createRequest("F001:doctor01", "/api/orca/appointments/patient", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/appointments/patient", Map.of()), request);
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals(1, response.getReservations().size());
@@ -169,7 +169,7 @@ class OrcaAppointmentResourceTest {
         request.getItems().add(item);
 
         BillingSimulationResponse response = resource.estimateBilling(
-                createRequest("F001:doctor01", "/api/orca/billing/estimate", Map.of()), request);
+                createRequest("F001:doctor01", "/api/orca/official/billing/estimate", Map.of()), request);
         assertEquals(450, response.getTotalPoint());
         assertEquals(2, response.getBreakdown().size());
         assertNotNull(response.getPatient());
@@ -193,7 +193,7 @@ class OrcaAppointmentResourceTest {
         request.setPatient(patient);
 
         AppointmentMutationResponse response = resource.mutateAppointment(
-                createRequest("F001:doctor01", "/api/orca/appointments/mutation", Map.of("X-Run-Id", "RUN-APPT-001")), request);
+                createRequest("F001:doctor01", "/api/orca/official/appointments/mutation", Map.of("X-Run-Id", "RUN-APPT-001")), request);
         assertEquals("0000", response.getApiResult());
         assertEquals("正常終了", response.getApiResultMessage());
         assertEquals("AP-20251120-001", response.getAppointmentId());
@@ -216,7 +216,7 @@ class OrcaAppointmentResourceTest {
 
         HttpServletRequest servletRequest = createRequest(
                 "F001:doctor01",
-                "/api/orca/appointments/list",
+                "/api/orca/official/appointments/list",
                 Map.of("X-Trace-Id", "trace-appointment", "X-Request-Id", "req-appointment", "X-Run-Id", "RUN-TRACE-001"));
 
         resource.listAppointments(servletRequest, request);

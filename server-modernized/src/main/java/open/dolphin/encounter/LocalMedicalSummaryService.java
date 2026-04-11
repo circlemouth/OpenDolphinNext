@@ -27,7 +27,7 @@ import open.dolphin.session.PatientServiceBean;
 @ApplicationScoped
 public class LocalMedicalSummaryService {
 
-    private static final String LOCAL_SUMMARY_PATH = "/api/local-summary/encounters/{encounterKey}/medical-summary";
+    private static final String LOCAL_SUMMARY_PATH = "/api/local/encounters/{encounterKey}/medical-summary";
 
     @Inject
     private PatientServiceBean patientServiceBean;
