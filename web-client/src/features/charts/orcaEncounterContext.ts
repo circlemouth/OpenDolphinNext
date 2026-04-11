@@ -1,4 +1,5 @@
 import type { ReceptionEntry } from '../outpatient/types';
+import type { OutpatientEncounterContext } from './encounterContext';
 
 export type OrcaEncounterContext = {
   patientId: string;
@@ -35,25 +36,45 @@ const normalizeVisitDate = (value?: string | null): string | undefined => {
 };
 
 export const buildOrcaEncounterContext = (
-  entry?: Pick<
-    ReceptionEntry,
-    | 'patientId'
-    | 'visitDate'
-    | 'departmentCode'
-    | 'physicianCode'
-    | 'insuranceCombinationNumber'
-    | 'voucherNumber'
-    | 'sequentialNumber'
-  > | null,
+  context?:
+    | Partial<OrcaEncounterContext>
+    | Pick<
+        ReceptionEntry,
+        | 'patientId'
+        | 'visitDate'
+        | 'departmentCode'
+        | 'physicianCode'
+        | 'insuranceCombinationNumber'
+        | 'voucherNumber'
+        | 'sequentialNumber'
+      >
+    | null,
 ): Partial<OrcaEncounterContext> => ({
-  patientId: normalizeText(entry?.patientId),
-  visitDate: normalizeVisitDate(entry?.visitDate),
-  departmentCode: normalizeText(entry?.departmentCode),
-  physicianCode: normalizeText(entry?.physicianCode),
-  insuranceCombinationNumber: normalizeText(entry?.insuranceCombinationNumber),
-  voucherNumber: normalizeText(entry?.voucherNumber),
-  sequentialNumber: normalizeText(entry?.sequentialNumber),
+  patientId: normalizeText(context?.patientId),
+  visitDate: normalizeVisitDate(context?.visitDate),
+  departmentCode: normalizeText(context?.departmentCode),
+  physicianCode: normalizeText(context?.physicianCode),
+  insuranceCombinationNumber: normalizeText(context?.insuranceCombinationNumber),
+  voucherNumber: normalizeText(context?.voucherNumber),
+  sequentialNumber: normalizeText(context?.sequentialNumber),
 });
+
+export const buildCanonicalOrcaEncounterContext = ({
+  selectedEntry,
+  encounterContext,
+}: {
+  selectedEntry?: ReceptionEntry | null;
+  encounterContext?: OutpatientEncounterContext | null;
+}): Partial<OrcaEncounterContext> =>
+  buildOrcaEncounterContext({
+    patientId: selectedEntry?.patientId ?? encounterContext?.patientId,
+    visitDate: selectedEntry?.visitDate ?? encounterContext?.visitDate,
+    departmentCode: selectedEntry?.departmentCode,
+    physicianCode: selectedEntry?.physicianCode,
+    insuranceCombinationNumber: selectedEntry?.insuranceCombinationNumber,
+    voucherNumber: selectedEntry?.voucherNumber,
+    sequentialNumber: selectedEntry?.sequentialNumber,
+  });
 
 export const resolveMissingOrcaEncounterContextFields = (
   context?: Partial<OrcaEncounterContext> | null,

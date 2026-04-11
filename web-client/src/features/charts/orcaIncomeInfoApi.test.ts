@@ -12,17 +12,15 @@ describe('orcaIncomeInfoApi', () => {
     vi.mocked(httpFetch).mockReset();
   });
 
-  it('buildIncomeInfoRequest は performDate を最優先し official request 以外を混在させない', () => {
+  it('buildIncomeInfoRequest は official sample に必要な patientId / baseDate のみを返す', () => {
     expect(
       buildIncomeInfoRequest({
         patientId: 'P-1',
-        performDate: '2026-03-09',
-        performMonth: '2026-03',
-        performYear: '2026',
+        baseDate: '2026-03-09',
       }),
     ).toEqual({
       patientId: 'P-1',
-      performDate: '2026-03-09',
+      baseDate: '2026-03-09',
     });
   });
 
@@ -68,14 +66,13 @@ describe('orcaIncomeInfoApi', () => {
 
     const response = await fetchOrcaIncomeInfo({
       patientId: 'P-1',
-      performDate: '2026-03-09',
-      performMonth: '2026-03',
+      baseDate: '2026-03-09',
     });
 
     const requestInit = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit | undefined;
     expect(JSON.parse(String(requestInit?.body))).toEqual({
       patientId: 'P-1',
-      performDate: '2026-03-09',
+      baseDate: '2026-03-09',
     });
     expect(response.entries[0]).toEqual(
       expect.objectContaining({

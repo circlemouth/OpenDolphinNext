@@ -232,10 +232,12 @@ class OrcaTrialIntegrationTest {
 
     private String incomeInfoPayload() {
         String date = LocalDate.now().toString();
-        return "<data><incomeinfreq type=\"record\">"
-                + "<Request_Number type=\"string\">01</Request_Number>"
+        return "<data><incomeinfv2req type=\"record\">"
+                + "<private_objects type=\"record\">"
+                + "<Patient_ID type=\"string\">10000001</Patient_ID>"
                 + "<Base_Date type=\"string\">" + date + "</Base_Date>"
-                + "</incomeinfreq></data>";
+                + "</private_objects>"
+                + "</incomeinfv2req></data>";
     }
 
     private String pushEventPayload() {

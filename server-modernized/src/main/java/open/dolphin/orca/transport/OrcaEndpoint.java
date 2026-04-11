@@ -53,7 +53,7 @@ public enum OrcaEndpoint {
     TEMP_MEDICAL_GET("/api01rv2/tmedicalgetv2", true, false, null,
             "Request_Number"),
     INCOME_INFO("/api01rv2/incomeinfv2", true, false, null,
-            "Request_Number"),
+            "Patient_ID", "Base_Date"),
     SUBJECTIVES_LIST("/api01rv2/subjectiveslstv2", true, false, null,
             "Request_Number"),
     SUBJECTIVES_MOD("/orca25/subjectivesv2", true, true, null,

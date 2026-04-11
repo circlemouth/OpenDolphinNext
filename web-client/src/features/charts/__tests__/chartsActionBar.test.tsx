@@ -97,6 +97,15 @@ describe('ChartsActionBar', () => {
           {...baseProps}
           patientId="P-100"
           visitDate="2026-01-03"
+          orcaEncounterContext={{
+            patientId: 'P-100',
+            visitDate: '2026-01-03',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
           selectedEntry={{
             patientId: 'P-100',
             visitDate: '2026-01-03',
@@ -139,6 +148,15 @@ describe('ChartsActionBar', () => {
           {...baseProps}
           patientId="P-777"
           visitDate="2026-01-08"
+          orcaEncounterContext={{
+            patientId: 'P-777',
+            visitDate: '2026-01-08',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          }}
           selectedEntry={{
             patientId: 'P-777',
             visitDate: '2026-01-08',
@@ -230,8 +248,8 @@ describe('ChartsActionBar', () => {
     const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
     expect(sendButton).toBeDisabled();
     expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
-    expect(screen.getByText(/Physician_Code/)).toBeInTheDocument();
-    expect(screen.getByText(/Insurance_Combination_Number/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Physician_Code/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Insurance_Combination_Number/).length).toBeGreaterThan(0);
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 

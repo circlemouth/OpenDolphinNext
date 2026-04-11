@@ -31,6 +31,7 @@
   - `Api_Result=21` は保険不一致、`Api_Result=60` は受付なしとして表示される。
 - Charts:
   - chart send/finish の official outbound が `medicalmodv2` と `incomeinfv2` に限定される。
+  - `incomeinfv2` request は official sample 準拠の `patientId + baseDate` で送信し、`Request_Number` や独自 root/tag を混在させない。
   - `contraindicationcheckv2` が UI から呼ばれる。
   - `medicationgetv2` は 9 桁コード + 開始日ありの時だけ候補取得し、診療日未解決では fail-close する。
 - Patients:

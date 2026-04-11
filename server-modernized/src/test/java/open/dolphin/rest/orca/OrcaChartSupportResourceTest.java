@@ -181,7 +181,7 @@ class OrcaChartSupportResourceTest {
     }
 
     @Test
-    void incomeInfoUsesOfficialRouteAndPrefersPerformDate() {
+    void incomeInfoUsesOfficialRouteAndOfficialRequestShape() {
         CapturingTransport transport = new CapturingTransport("""
                 <data>
                   <incomeinfores type="record">
@@ -202,17 +202,16 @@ class OrcaChartSupportResourceTest {
 
         ChartSupportIncomeInfoRequest payload = new ChartSupportIncomeInfoRequest();
         payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-22");
-        payload.setPerformMonth("2026-03");
-        payload.setPerformYear("2026");
+        payload.setBaseDate("2026-03-22");
 
         ChartSupportIncomeInfoResponse response = resource.incomeInfo(buildRequest(), payload);
 
         assertEquals(OrcaEndpoint.INCOME_INFO, transport.endpoint());
+        assertTrue(transport.requestXml().contains("<incomeinfv2req type=\"record\">"));
+        assertTrue(transport.requestXml().contains("<private_objects type=\"record\">"));
         assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
-        assertTrue(transport.requestXml().contains("<Perform_Date type=\"string\">2026-03-22</Perform_Date>"));
-        assertTrue(!transport.requestXml().contains("<Perform_Month type=\"string\">2026-03</Perform_Month>"));
-        assertTrue(!transport.requestXml().contains("<Perform_Year type=\"string\">2026</Perform_Year>"));
+        assertTrue(transport.requestXml().contains("<Base_Date type=\"string\">2026-03-22</Base_Date>"));
+        assertTrue(!transport.requestXml().contains("<Request_Number type=\"string\">"));
         assertEquals("0000", response.getApiResult());
         assertEquals(1, response.getEntries().size());
         assertEquals("2026-03-22", response.getEntries().get(0).getPerformDate());

@@ -412,17 +412,12 @@ final class OrcaChartSupportSupport {
     String buildIncomeInfoRequestXml(ChartSupportIncomeInfoRequest payload) {
         StringBuilder builder = new StringBuilder();
         builder.append("<data>");
-        builder.append("<incomeinfreq type=\"record\">");
-        appendTag(builder, "Request_Number", "01");
+        builder.append("<incomeinfv2req type=\"record\">");
+        builder.append("<private_objects type=\"record\">");
         appendTag(builder, "Patient_ID", payload.getPatientId());
-        if (!isBlank(payload.getPerformDate())) {
-            appendTag(builder, "Perform_Date", payload.getPerformDate());
-        } else if (!isBlank(payload.getPerformMonth())) {
-            appendTag(builder, "Perform_Month", payload.getPerformMonth());
-        } else {
-            appendTag(builder, "Perform_Year", payload.getPerformYear());
-        }
-        builder.append("</incomeinfreq>");
+        appendTag(builder, "Base_Date", payload.getBaseDate());
+        builder.append("</private_objects>");
+        builder.append("</incomeinfv2req>");
         builder.append("</data>");
         return builder.toString();
     }

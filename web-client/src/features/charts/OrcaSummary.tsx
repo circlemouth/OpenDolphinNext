@@ -66,9 +66,13 @@ export function OrcaSummary({
   const fallbackFlagMissing = resolvedFlags.fallbackFlagMissing ?? false;
   const [perfMeasured, setPerfMeasured] = useState(false);
   const renderStartedAt = useMemo(() => performance.now(), []);
-  const performDate = useMemo(() => visitDate?.slice(0, 10), [visitDate]);
+  const resolvedPatientId = orcaEncounterContext?.patientId ?? patientId;
+  const performDate = useMemo(
+    () => orcaEncounterContext?.visitDate?.slice(0, 10) ?? visitDate?.slice(0, 10),
+    [orcaEncounterContext?.visitDate, visitDate],
+  );
   const performMonth = useMemo(() => performDate?.slice(0, 7), [performDate]);
-  const hasIncomeRequestContext = Boolean(patientId && performDate);
+  const hasIncomeRequestContext = Boolean(resolvedPatientId && performDate);
   const tonePayload: ChartTonePayload = {
     missingMaster: resolvedMissingMaster ?? false,
     cacheHit: resolvedCacheHit ?? false,
@@ -78,10 +82,10 @@ export function OrcaSummary({
   const transitionCopy = getTransitionCopy(resolvedTransition ?? 'snapshot');
 
   const incomeInfoQuery = useQuery({
-    queryKey: ['orca-income-info', patientId, performDate, performMonth],
+    queryKey: ['orca-income-info', resolvedPatientId, performDate],
     queryFn: () => {
-      if (!patientId || !performDate) throw new Error('patientId and performDate are required');
-      const request = buildIncomeInfoRequest({ patientId, performDate, performMonth });
+      if (!resolvedPatientId || !performDate) throw new Error('patientId and performDate are required');
+      const request = buildIncomeInfoRequest({ patientId: resolvedPatientId, baseDate: performDate });
       return fetchOrcaIncomeInfo(request);
     },
     enabled: false,
@@ -97,14 +101,14 @@ export function OrcaSummary({
     }
     const cache = getOrcaClaimSendEntry(
       { facilityId: session?.facilityId, userId: session?.userId },
-      patientId,
+      resolvedPatientId,
     );
     setLastSendCache(cache);
   }, [
     claimEnabled,
     session?.facilityId,
     session?.userId,
-    patientId,
+    resolvedPatientId,
     summary?.fetchedAt,
     effectiveClaim?.fetchedAt,
     summary?.runId,
@@ -115,10 +119,10 @@ export function OrcaSummary({
     if (typeof window === 'undefined' || !claimEnabled) return undefined;
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ patientId?: string }>).detail;
-      if (detail?.patientId && detail.patientId !== patientId) return;
+      if (detail?.patientId && detail.patientId !== resolvedPatientId) return;
       const cache = getOrcaClaimSendEntry(
         { facilityId: session?.facilityId, userId: session?.userId },
-        patientId,
+        resolvedPatientId,
       );
       setLastSendCache(cache);
     };
@@ -126,7 +130,7 @@ export function OrcaSummary({
     return () => {
       window.removeEventListener('orca-claim-send-cache-update', handler);
     };
-  }, [claimEnabled, patientId, session?.facilityId, session?.userId]);
+  }, [claimEnabled, resolvedPatientId, session?.facilityId, session?.userId]);
 
   const sendWarnings = useMemo(() => {
     const warnings = lastSendCache?.medicalWarnings ?? [];
@@ -139,18 +143,18 @@ export function OrcaSummary({
   const handleWarningFocus = useCallback(
     (warning: OrcaMedicalWarningUi) => {
       if (typeof window === 'undefined') return;
-      if (!patientId) return;
+      if (!resolvedPatientId) return;
       window.dispatchEvent(
         new CustomEvent('orca-medical-warning-focus', {
-          detail: { patientId, warning },
+          detail: { patientId: resolvedPatientId, warning },
         }),
       );
     },
-    [patientId],
+    [resolvedPatientId],
   );
 
   const incomeInfoNotice = useMemo(() => {
-    if (!patientId) {
+    if (!resolvedPatientId) {
       return { tone: 'warning' as const, message: '患者が未選択のため収納情報を取得できません。' };
     }
     if (!performDate) {
@@ -178,7 +182,7 @@ export function OrcaSummary({
       return { tone: 'warning' as const, message: `${apiResultLabel} / 収納情報が見つかりません。` };
     }
     return { tone: 'success' as const, message: `${apiResultLabel} / 収納情報の取得に成功` };
-  }, [incomeInfoQuery.data, incomeInfoQuery.isError, patientId, performDate]);
+  }, [incomeInfoQuery.data, incomeInfoQuery.isError, performDate, resolvedPatientId]);
   const resolvedIncomeTone = incomeInfoNotice?.tone === 'success' ? 'info' : incomeInfoNotice?.tone;
 
   const summaryMessage = useMemo(() => {
@@ -238,21 +242,22 @@ export function OrcaSummary({
     return [...incomeEntries].sort((a, b) => (b.performDate ?? '').localeCompare(a.performDate ?? ''))[0];
   }, [incomeEntries]);
   const incomeStatusLabel = useMemo(() => {
-    if (!patientId) return '患者未選択';
+    if (!resolvedPatientId) return '患者未選択';
     if (!performDate) return '来院日未解決';
     if (incomeEntries.length === 0) return 'データなし';
     return null;
-  }, [incomeEntries.length, patientId, performDate]);
+  }, [incomeEntries.length, performDate, resolvedPatientId]);
   const incomeTotals = useMemo(() => {
     const totals = incomeEntries.reduce(
       (acc, entry) => {
         acc.claim += entry.claimAmount ?? 0;
-        acc.payment += entry.paymentAmount ?? 0;
+        acc.receipt += entry.paymentAmount ?? 0;
         acc.insurance += entry.insuranceAppliedAmount ?? 0;
         acc.selfPay += entry.selfPayAmount ?? 0;
+        acc.mealLiving += entry.mealLivingCopayAmount ?? 0;
         return acc;
       },
-      { claim: 0, payment: 0, insurance: 0, selfPay: 0 },
+      { claim: 0, receipt: 0, insurance: 0, selfPay: 0, mealLiving: 0 },
     );
     return totals;
   }, [incomeEntries]);
@@ -377,7 +382,7 @@ export function OrcaSummary({
   ]);
 
   const handleIncomeRefresh = useCallback(async () => {
-    if (!patientId || !performDate) return;
+    if (!resolvedPatientId || !performDate) return;
     const started = performance.now();
     recordOutpatientFunnel('orca_summary', {
       action: 'income_refresh',
@@ -417,7 +422,7 @@ export function OrcaSummary({
     }
   }, [
     incomeInfoQuery,
-    patientId,
+    resolvedPatientId,
     performDate,
     resolvedCacheHit,
     resolvedFallbackUsed,
@@ -453,13 +458,13 @@ export function OrcaSummary({
   ]);
 
   useEffect(() => {
-    if (!patientId || !incomeInfoQuery.data?.ok) return;
+    if (!resolvedPatientId || !incomeInfoQuery.data?.ok) return;
     const invoiceNumbers = incomeEntries
       .map((entry) => entry.invoiceNumber)
       .filter((value): value is string => Boolean(value));
     saveOrcaIncomeInfoCache(
       {
-        patientId,
+        patientId: resolvedPatientId,
         performMonth,
         invoiceNumbers,
         fetchedAt: new Date().toISOString(),
@@ -473,21 +478,21 @@ export function OrcaSummary({
     incomeInfoQuery.data?.apiResult,
     incomeInfoQuery.data?.apiResultMessage,
     incomeInfoQuery.data?.ok,
-    patientId,
+    resolvedPatientId,
     performMonth,
     session?.facilityId,
     session?.userId,
   ]);
 
   useEffect(() => {
-    if (!patientId || !invoiceNumber || !billingDecision.status) return;
+    if (!resolvedPatientId || !invoiceNumber || !billingDecision.status) return;
     if (incomeRefreshCompletedAtRef.current) return;
     if (billingStatusRef.current === billingDecision.status) return;
     billingStatusRef.current = billingDecision.status;
     logAuditEvent({
       runId: resolvedRunId,
       source: 'charts/orca-summary',
-      patientId,
+      patientId: resolvedPatientId,
       payload: buildBillingStatusUpdateAudit({
         status: billingDecision.status,
         invoiceNumber,
@@ -503,7 +508,7 @@ export function OrcaSummary({
     incomeInfoQuery.data?.apiResultMessage,
     incomeInfoQuery.data?.informationDate,
     invoiceNumber,
-    patientId,
+    resolvedPatientId,
     performMonth,
     resolvedRunId,
   ]);
@@ -528,7 +533,7 @@ export function OrcaSummary({
     logAuditEvent({
       runId: resolvedRunId,
       source: 'charts/orca-summary',
-      patientId,
+      patientId: resolvedPatientId,
       payload: buildBillingStatusUpdateAudit({
         status: displayClaimStatus ?? billingDecision.status,
         invoiceNumber,
@@ -547,7 +552,7 @@ export function OrcaSummary({
     incomeInfoQuery.data?.informationDate,
     incomeInfoQuery.dataUpdatedAt,
     invoiceNumber,
-    patientId,
+    resolvedPatientId,
     performMonth,
     resolvedCacheHit,
     resolvedFallbackUsed,
@@ -812,7 +817,7 @@ export function OrcaSummary({
             type="button"
             onClick={handleIncomeRefresh}
             disabled={!hasIncomeRequestContext || incomeInfoQuery.isFetching}
-            data-disabled-reason={!patientId ? 'no-patient' : !performDate ? 'missing-perform-date' : incomeInfoQuery.isFetching ? 'loading' : undefined}
+            data-disabled-reason={!resolvedPatientId ? 'no-patient' : !performDate ? 'missing-perform-date' : incomeInfoQuery.isFetching ? 'loading' : undefined}
           >
             {incomeInfoQuery.isFetching ? '収納情報確認中…' : '収納情報を確認'}
           </button>
@@ -837,7 +842,7 @@ export function OrcaSummary({
               </strong>
             </div>
             <div>
-              <span className="orca-summary__label">請求</span>
+              <span className="orca-summary__label">請求金額</span>
               <strong>{incomeLatest?.claimAmount !== undefined ? `${incomeLatest.claimAmount.toLocaleString()} 円` : '—'}</strong>
             </div>
           </div>
@@ -851,33 +856,37 @@ export function OrcaSummary({
           </ul>
           <div className="orca-summary__income-summary">
             <div>
-              <span className="orca-summary__label">未収</span>
+              <span className="orca-summary__label">未収金合計</span>
               <strong>
                 {incomeInfoQuery.data?.unpaidMoneyTotal !== undefined ? `${incomeInfoQuery.data.unpaidMoneyTotal.toLocaleString()} 円` : '—'}
               </strong>
             </div>
             <div>
-              <span className="orca-summary__label">請求</span>
+              <span className="orca-summary__label">請求金額</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.claim.toLocaleString()} 円` : '—'}</strong>
             </div>
             <div>
-              <span className="orca-summary__label">入金</span>
-              <strong>{incomeEntries.length > 0 ? `${incomeTotals.payment.toLocaleString()} 円` : '—'}</strong>
+              <span className="orca-summary__label">入金額</span>
+              <strong>{incomeEntries.length > 0 ? `${incomeTotals.receipt.toLocaleString()} 円` : '—'}</strong>
             </div>
             <div>
-              <span className="orca-summary__label">保険適用</span>
+              <span className="orca-summary__label">保険適用金額</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.insurance.toLocaleString()} 円` : '—'}</strong>
             </div>
             <div>
-              <span className="orca-summary__label">自費</span>
+              <span className="orca-summary__label">自費金額</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.selfPay.toLocaleString()} 円` : '—'}</strong>
+            </div>
+            <div>
+              <span className="orca-summary__label">食事・生活療養負担金</span>
+              <strong>{incomeEntries.length > 0 ? `${incomeTotals.mealLiving.toLocaleString()} 円` : '—'}</strong>
             </div>
           </div>
           {incomePreview.length > 0 && (
             <ul>
               {incomePreview.map((entry, index) => (
                 <li key={`${entry.invoiceNumber ?? 'invoice'}-${index}`}>
-                  {entry.performDate ?? '日付不明'} ｜ {entry.departmentName ?? '科未設定'} ｜ 請求: {entry.claimAmount?.toLocaleString() ?? '—'} 円 ｜ 入金:{' '}
+                  {entry.performDate ?? '日付不明'} ｜ {entry.departmentName ?? '科未設定'} ｜ 請求金額: {entry.claimAmount?.toLocaleString() ?? '—'} 円 ｜ 入金額:{' '}
                   {entry.paymentAmount?.toLocaleString() ?? '—'} 円
                 </li>
               ))}
@@ -887,7 +896,7 @@ export function OrcaSummary({
             <ul>
               {incomeInfoQuery.data.unpaidMoneyInformation.slice(0, 3).map((entry, index) => (
                 <li key={`${entry.invoiceNumber ?? 'unpaid'}-${index}`}>
-                  未収: {entry.performDate ?? '日付不明'} ｜ 伝票 {entry.invoiceNumber ?? '—'} ｜ {entry.unpaidMoney?.toLocaleString() ?? '—'} 円
+                  未収金情報: {entry.performDate ?? '日付不明'} ｜ 伝票 {entry.invoiceNumber ?? '—'} ｜ {entry.unpaidMoney?.toLocaleString() ?? '—'} 円
                 </li>
               ))}
             </ul>

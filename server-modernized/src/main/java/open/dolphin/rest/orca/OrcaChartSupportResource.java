@@ -200,9 +200,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
             ChartSupportIncomeInfoRequest payload) {
         requireRemoteUser(request);
         requireFacilityId(request);
-        if (payload == null || isBlank(payload.getPatientId())
-                || (isBlank(payload.getPerformDate()) && isBlank(payload.getPerformMonth()) && isBlank(payload.getPerformYear()))) {
-            throw validationError(request, "payload", "patientId and one of performDate/performMonth/performYear are required");
+        if (payload == null || isBlank(payload.getPatientId()) || isBlank(payload.getBaseDate())) {
+            throw validationError(request, "payload", "patientId and baseDate are required");
         }
 
         String runId = resolveRunId(request);
@@ -219,9 +218,7 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("runId", runId);
         details.put("traceId", traceId);
         details.put("patientId", payload.getPatientId());
-        details.put("performDate", payload.getPerformDate());
-        details.put("performMonth", payload.getPerformMonth());
-        details.put("performYear", payload.getPerformYear());
+        details.put("baseDate", payload.getBaseDate());
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
         recordAudit(request, "ORCA_INCOME_INFO", details,

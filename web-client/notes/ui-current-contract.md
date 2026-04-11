@@ -96,7 +96,8 @@
 - manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / 管理画面 への遷移確認
 - guard minimum:
   - canonical encounter context 不足時は ORCA送信を fail-close
-  - ORCA収納情報は official income semantics (`未収`, `請求`, `入金`, `保険適用`, `自費`) を表示
+  - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
+  - ORCA収納情報は official income semantics (`未収金合計`, `請求金額`, `入金額`, `保険適用金額`, `自費金額`, `食事・生活療養負担金`) を表示
   - ローカル診療サマリと ORCA収納情報の責務を混ぜない
 - unknown: pane geometry、最小 state schema
 
