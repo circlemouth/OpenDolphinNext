@@ -52,7 +52,6 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         String facilityId = requireActorFacility(request);
         String keyword = payload != null ? toString(payload.get("keyword")) : null;
         PatientSearchType searchType = resolveSearchType(payload, keyword);
-        String paymentMode = payload != null ? toString(payload.get("paymentMode")) : null;
 
         List<PatientModel> models = resolvePatients(facilityId, keyword, searchType);
         List<PatientOutpatientResponse.PatientRecord> records = new ArrayList<>();
@@ -102,9 +101,6 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         }
         if (searchType != null) {
             details.put("searchType", searchType.name().toLowerCase());
-        }
-        if (paymentMode != null && !paymentMode.isBlank()) {
-            details.put("paymentMode", paymentMode);
         }
 
         OutpatientFlagResponse.AuditEvent auditEvent = new OutpatientFlagResponse.AuditEvent();

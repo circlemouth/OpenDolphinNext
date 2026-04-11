@@ -590,7 +590,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       if (result.ok) {
         enqueue({
           tone: 'success',
-          message: 'official import 完了後に canonical/local 同期を更新しました',
+          message: 'ORCA既存患者取込が完了し canonical/local 同期を更新しました',
           detail: `患者番号=${patientId}`,
         });
         const refreshed = await refetchPatients();
@@ -602,30 +602,30 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           baselineRef.current = target;
           setSelectionLost(false);
           setEditorMode('update');
-          setSelectionNotice({ tone: 'info', message: `official import 後の患者 ${patientId} を自動選択しました。` });
+          setSelectionNotice({ tone: 'info', message: `ORCA既存患者取込後の患者 ${patientId} を自動選択しました。` });
           setActiveDetailTab('basic');
         } else {
           setSelectionNotice({
             tone: 'warning',
-            message: `official import は完了しましたが、現在の local search 条件では患者番号 ${patientId} が一覧に見つかりません。`,
+            message: `ORCA既存患者取込は完了しましたが、現在の local search 条件では患者番号 ${patientId} が一覧に見つかりません。`,
           });
         }
       } else {
         enqueue({
           tone: 'error',
-          message: 'official import に失敗しました',
+          message: 'ORCA既存患者取込に失敗しました',
           detail: `患者番号=${patientId}`,
         });
         setSelectionNotice({
           tone: 'warning',
-          message: 'official import に失敗しました。患者番号を確認して再実行してください。',
+          message: 'ORCA既存患者取込に失敗しました。患者番号を確認して再実行してください。',
         });
       }
     },
     onError: (_error: unknown, patientId) => {
       enqueue({
         tone: 'error',
-        message: 'official import に失敗しました',
+        message: 'ORCA既存患者取込に失敗しました',
         detail: `患者番号=${patientId}`,
       });
     },
@@ -712,7 +712,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       return {
         title: '入力不備（422）',
         body: '検索条件が不正のため取得できません。',
-        hint: 'キーワード/診療科/担当医/支払区分を見直して再検索してください。',
+        hint: 'local search キーワードを見直して再検索してください。',
         showReception: false,
       };
     }
@@ -728,7 +728,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       return {
         title: '0件（該当なし）',
         body: '検索条件に一致する患者がいません。',
-        hint: '条件を見直すか、未取り込みの場合は ORCA で患者登録後に official import を実行してください。',
+        hint: '条件を見直すか、未取り込みの場合は ORCA で患者登録後に ORCA既存患者取込を実行してください。',
         showReception: true,
       };
     }
@@ -1169,7 +1169,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         runId: result.runId ?? prev.runId,
       }));
       if (result.ok) {
-        const syncedPatientId = result.patient?.patientId ?? result.canonicalPatient?.patientId ?? variables.payload.patient.patientId;
+        const canonicalOrSyncedPatient = result.canonicalPatient ?? result.patient;
+        const syncedPatientId =
+          result.canonicalPatient?.patientId ?? result.patient?.patientId ?? variables.payload.patient.patientId;
         const refreshed = await patientsQuery.refetch();
         const syncedPatient = syncedPatientId
           ? refreshed.data?.patients.find((item) => item.patientId === syncedPatientId)
@@ -1184,14 +1186,22 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             tone: 'info',
             message:
               variables.operation === 'create'
-                ? `official create 完了後に canonical/local 同期済み患者 ${syncedPatientId ?? '—'} を選択しました。`
-                : `official update 完了後に canonical/local 同期済み患者 ${syncedPatientId ?? '—'} を再読込しました。`,
+                ? `新患登録が完了し、canonical/local 同期済み患者 ${syncedPatientId ?? '—'} を選択しました。`
+                : `既存患者更新が完了し、canonical/local 同期済み患者 ${syncedPatientId ?? '—'} を再読込しました。`,
           });
-        } else if (result.patient) {
+        } else if (canonicalOrSyncedPatient) {
           setEditorMode('update');
-          setForm(result.patient);
-          setBaseline(result.patient);
-          baselineRef.current = result.patient;
+          setSelectedId(resolvePatientKey(canonicalOrSyncedPatient));
+          setForm(canonicalOrSyncedPatient);
+          setBaseline(canonicalOrSyncedPatient);
+          baselineRef.current = canonicalOrSyncedPatient;
+          setSelectionNotice({
+            tone: 'warning',
+            message:
+              variables.operation === 'create'
+                ? '新患登録は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。'
+                : '既存患者更新は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。',
+          });
         }
         setValidationErrors([]);
         setLastAttempt(null);
@@ -1866,10 +1876,10 @@ export function PatientsPage({ runId }: PatientsPageProps) {
 
               {/* official import：折りたたみ */}
               <details className="patients-search__advanced">
-                <summary>official import</summary>
-                <section className="patients-search__import" aria-label="official import">
+                <summary>ORCA既存患者取込</summary>
+                <section className="patients-search__import" aria-label="ORCA既存患者取込">
                   <label className="patients-search__field">
-                    <span>ORCA患者番号で official import</span>
+                    <span>ORCA患者番号で ORCA既存患者取込</span>
                     <input
                       id="patients-orca-import-patient-id"
                       name="patientsOrcaImportPatientId"
@@ -1885,7 +1895,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                     onClick={handleImportByPatientId}
                     disabled={importMutation.isPending || !importPatientIdDraft}
                   >
-                    {importMutation.isPending ? 'official 取込中…' : 'official 取込'}
+                    {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
                   </button>
                 </section>
               </details>
@@ -2037,9 +2047,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                       className="ghost"
                       disabled={importMutation.isPending}
                       onClick={handleImportByPatientId}
-                      title="ORCA患者番号（Patient_ID）を指定して取り込みます（ローカルDBへ反映）"
+                      title="ORCA患者番号（Patient_ID）を指定して取り込み、canonical/local 同期を行います"
                     >
-                      {importMutation.isPending ? 'official 取込中…' : 'official 取込'}
+                      {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
                     </button>
                   ) : null}
                   {patientsEmptyState.showReception ? (
@@ -2049,7 +2059,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   ) : null}
                 </div>
                 <span className="patients-page__empty-hint">{patientsEmptyState.hint}</span>
-                <span className="patients-page__empty-hint">ヒント: ID/氏名/カナ・診療科・担当医で絞れます。</span>
+                <span className="patients-page__empty-hint">ヒント: local search は ID/氏名/カナ/電話/郵便番号で絞れます。</span>
               </div>
             ) : null}
 
@@ -2194,11 +2204,11 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           <div className="patients-page__form-header patients-page__sticky-bar">
             <div>
               <p className="patients-page__pill">
-                {editorMode === 'create' ? 'official patientmodv2 create' : 'official patientmodv2 update'}
+                {editorMode === 'create' ? 'official patient create' : 'official patient update'}
               </p>
               <div className="patients-page__form-title">
                 <h3 className="patients-page__section-title">
-                  {editorMode === 'create' ? '患者情報（新規作成）' : '患者情報（更新）'}
+                  {editorMode === 'create' ? '患者情報（新患登録）' : '患者情報（既存患者更新）'}
                 </h3>
               </div>
               <p className="patients-page__sub">
@@ -2221,10 +2231,10 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                   baselineRef.current = null;
                   setValidationErrors([]);
                   setLastAttempt(null);
-                  setSelectionNotice({ tone: 'info', message: 'official create モードへ切り替えました。' });
+                  setSelectionNotice({ tone: 'info', message: '新患登録モードへ切り替えました。' });
                 }}
               >
-                新規作成
+                新患登録
               </button>
               <button
                 type="button"
@@ -2245,12 +2255,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 className="ghost"
                 disabled={!importSelectedPatientId || importMutation.isPending || mutation.isPending}
                 onClick={() => importSelectedPatientId && importMutation.mutate(importSelectedPatientId)}
-                title={importSelectedPatientId ? 'official import 後に canonical/local 同期を再実行します' : 'ORCA患者番号（Patient_ID）が必要です'}
+                title={importSelectedPatientId ? 'ORCA既存患者取込後に canonical/local 同期を再実行します' : 'ORCA患者番号（Patient_ID）が必要です'}
               >
-                {importMutation.isPending ? 'official 取込中…' : 'official 取込'}
+                {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
               </button>
               <button type="submit" disabled={saveDisabled}>
-                {mutation.isPending ? '保存中…' : editorMode === 'create' ? 'official 作成' : 'official 更新'}
+                {mutation.isPending ? '送信中…' : editorMode === 'create' ? '新患登録を実行' : '既存患者更新を実行'}
               </button>
             </div>
           </div>

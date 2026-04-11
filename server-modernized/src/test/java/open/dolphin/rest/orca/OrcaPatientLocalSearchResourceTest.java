@@ -76,6 +76,32 @@ class OrcaPatientLocalSearchResourceTest {
         assertEquals("telephone", response.getAuditEvent().getDetails().get("searchType"));
     }
 
+    @Test
+    void localSearchDoesNotEchoUnsupportedDetailedFilters() throws Exception {
+        CapturingPatientServiceBean service = new CapturingPatientServiceBean();
+        OrcaPatientLocalSearchResource resource = new OrcaPatientLocalSearchResource();
+        injectField(resource, "patientServiceBean", service);
+
+        HttpServletRequest request = createRequest(
+                "F001:doctor01",
+                "/api/local/patients/search",
+                Map.of("X-Trace-Id", "trace-local", "X-Request-Id", "req-local"));
+
+        PatientOutpatientResponse response = resource.postPatients(
+                request,
+                Map.of(
+                        "keyword", "山田",
+                        "paymentMode", "insurance",
+                        "department", "01",
+                        "physician", "doctor01"));
+
+        assertEquals(PatientSearchType.NAME, service.lastSearchType);
+        assertEquals("name", response.getAuditEvent().getDetails().get("searchType"));
+        assertEquals(null, response.getAuditEvent().getDetails().get("paymentMode"));
+        assertEquals(null, response.getAuditEvent().getDetails().get("department"));
+        assertEquals(null, response.getAuditEvent().getDetails().get("physician"));
+    }
+
     private HttpServletRequest createRequest(String remoteUser, String uri, Map<String, String> headers) {
         return (HttpServletRequest) Proxy.newProxyInstance(
                 getClass().getClassLoader(),

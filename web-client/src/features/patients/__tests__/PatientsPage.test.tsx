@@ -565,9 +565,9 @@ describe('PatientsPage official patient flows', () => {
     renderPatientsPage();
     const user = userEvent.setup();
 
-    await user.click(screen.getByRole('button', { name: '新規作成' }));
+    await user.click(screen.getByRole('button', { name: '新患登録' }));
     await user.type(screen.getByPlaceholderText('山田 花子'), '新規患者');
-    await user.click(screen.getByRole('button', { name: 'official 作成' }));
+    await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
       operation: 'create',
@@ -601,7 +601,7 @@ describe('PatientsPage official patient flows', () => {
     const user = userEvent.setup();
 
     await clickPatientRowByName(user, '山田 花子');
-    await user.click(screen.getByRole('button', { name: 'official 更新' }));
+    await user.click(screen.getByRole('button', { name: '既存患者更新を実行' }));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
       operation: 'update',
@@ -618,10 +618,32 @@ describe('PatientsPage official patient flows', () => {
     renderPatientsPage();
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText('ORCA患者番号で official import'), '00001234');
-    await user.click(screen.getAllByRole('button', { name: 'official 取込' })[0]);
+    await user.type(screen.getByLabelText('ORCA患者番号で ORCA既存患者取込'), '00001234');
+    await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込' })[0]);
 
     expect(mockMutationCalls.at(-1)).toBe('00001234');
+  });
+
+  it('create success keeps canonical patient visible when local search list does not include it', async () => {
+    mockMutationResult = {
+      ok: true,
+      canonicalPatient: {
+        patientId: '000099',
+        name: '新規患者',
+        kana: 'シンキ カンジャ',
+        birthDate: '1980-01-01',
+      },
+    };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: '新患登録' }));
+    await user.type(screen.getByPlaceholderText('山田 花子'), '新規患者');
+    await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
+
+    expect(screen.getByText('新患登録は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('000099');
+    expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('新規患者');
   });
 });
 
@@ -944,6 +966,24 @@ describe('PatientsPage search summary', () => {
     expect(networkScope.getByText('不足タグ: Patient_ID')).toBeInTheDocument();
     expect(networkScope.queryByText(/Api_Result_Message:/)).not.toBeInTheDocument();
     expect(networkScope.queryByText('OK')).not.toBeInTheDocument();
+  });
+
+  it('local search 文言は local を明示し未使用詳細条件を案内しない', () => {
+    mockPatients({
+      patients: [],
+      recordsReturned: 0,
+      status: 422,
+      apiResult: 'E90',
+      apiResultMessage: 'validation error',
+    });
+
+    renderPatientsPage();
+
+    expect(screen.getByRole('region', { name: 'local search' })).toHaveTextContent(
+      'local search は氏名・カナ・患者番号・電話・郵便番号のみを使います。未使用の詳細条件はこの画面から外しています。',
+    );
+    expect(screen.getByText('local search キーワードを見直して再検索してください。')).toBeInTheDocument();
+    expect(screen.getByText('ヒント: local search は ID/氏名/カナ/電話/郵便番号で絞れます。')).toBeInTheDocument();
   });
 
   it('API failure 時も raw Api_Result_Message を通信詳細へ表示しない', () => {

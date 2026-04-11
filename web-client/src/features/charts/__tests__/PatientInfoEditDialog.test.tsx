@@ -117,8 +117,8 @@ describe('PatientInfoEditDialog', () => {
     await user.clear(screen.getByLabelText('氏名（必須）'));
     await user.type(screen.getByLabelText('氏名（必須）'), '山田 花子 改');
     await user.click(screen.getByRole('button', { name: '差分確認へ' }));
-    await user.click(screen.getByLabelText('差分を確認しました（保存を実行します）'));
-    await user.click(screen.getByRole('button', { name: '保存' }));
+    await user.click(screen.getByLabelText('差分を確認しました（既存患者更新を実行します）'));
+    await user.click(screen.getByRole('button', { name: '既存患者更新' }));
 
     expect(mockUpdateOfficialPatient).toHaveBeenCalledWith(
       expect.objectContaining({

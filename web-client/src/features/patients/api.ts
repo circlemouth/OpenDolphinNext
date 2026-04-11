@@ -94,6 +94,7 @@ const LOCAL_PATIENT_SEARCH_ENDPOINTS = ['/api/local/patients/search'];
 const OFFICIAL_PATIENT_CREATE_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/create';
 const OFFICIAL_PATIENT_UPDATE_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/update';
 const OFFICIAL_PATIENT_BATCH_ENDPOINT = '/api/orca/official/patients/batch';
+type OfficialPatientMutationOperation = 'create' | 'update';
 
 const normalizeBoolean = (value: unknown) => {
   if (typeof value === 'boolean') return value;
@@ -222,11 +223,26 @@ const tryPostJson = async (path: string, body: Record<string, unknown>) => {
   }
 };
 
-const buildOfficialPatientBody = (payload: OfficialPatientCreatePayload | OfficialPatientUpdatePayload, runId: string) => {
+const resolveOfficialPatientId = (
+  operation: OfficialPatientMutationOperation,
+  patientId: string | undefined,
+) => {
+  const normalized = normalizeApiString(patientId);
+  if (operation === 'create') {
+    return normalized ?? '*';
+  }
+  return normalized;
+};
+
+const buildOfficialPatientBody = (
+  payload: OfficialPatientCreatePayload | OfficialPatientUpdatePayload,
+  runId: string,
+  operation: OfficialPatientMutationOperation,
+) => {
   return stripNullish({
     runId,
     patient: stripNullish({
-      patientId: normalizeApiString(payload.patient.patientId),
+      patientId: resolveOfficialPatientId(operation, payload.patient.patientId),
       wholeName: payload.patient.name?.trim() || undefined,
       wholeNameKana: payload.patient.kana?.trim() || undefined,
       birthDate: payload.patient.birthDate?.trim() || undefined,
@@ -408,7 +424,7 @@ const performOfficialPatientMutation = async (
   const runId = payload.runId ?? getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
 
-  const postResult = await tryPostJson(endpoint, buildOfficialPatientBody(payload, runId));
+  const postResult = await tryPostJson(endpoint, buildOfficialPatientBody(payload, runId, operation));
   const json = asObjectRecord(postResult.json);
   const serverAuditEvent = asObjectRecord(json.auditEvent);
   const traceId = typeof json.traceId === 'string' ? (json.traceId as string) : getObservabilityMeta().traceId;
@@ -425,7 +441,10 @@ const performOfficialPatientMutation = async (
     dataSourceTransition,
     fallbackUsed: normalizeBoolean(json.fallbackUsed),
     auditEvent: Object.keys(serverAuditEvent).length > 0 ? serverAuditEvent : undefined,
-    message: (json.apiResultMessage as string | undefined) ?? (postResult.ok ? '保存しました' : '保存に失敗しました'),
+    message: (json.apiResultMessage as string | undefined)
+      ?? (postResult.ok
+        ? (operation === 'create' ? '新患登録が完了しました。' : '既存患者更新が完了しました。')
+        : (operation === 'create' ? '新患登録に失敗しました。' : '既存患者更新に失敗しました。')),
     patient: json.patient ? mapLocalPatient(json.patient) : undefined,
     status: postResult.status,
     sourcePath: postResult.path,

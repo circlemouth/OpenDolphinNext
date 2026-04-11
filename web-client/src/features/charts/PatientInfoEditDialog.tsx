@@ -194,9 +194,12 @@ export function PatientInfoEditDialog({
     onSuccess: (result) => {
       onSaved?.(result);
       const failureMessage = result.message
-        ? `患者情報の保存に失敗しました。${resolveUserSafeOperationFailure(result.message)}`
-        : '患者情報の保存に失敗しました。状態を確認してからやり直してください。';
-      setNotice({ tone: result.ok ? 'success' : 'error', message: result.ok ? (result.message ?? '保存しました') : failureMessage });
+        ? `患者情報の更新に失敗しました。${resolveUserSafeOperationFailure(result.message)}`
+        : '患者情報の更新に失敗しました。状態を確認してからやり直してください。';
+      setNotice({
+        tone: result.ok ? 'success' : 'error',
+        message: result.ok ? (result.message ?? '既存患者更新が完了しました。') : failureMessage,
+      });
       if (result.ok) {
         recordOutpatientFunnel('charts_patient_edit', {
           runId: result.runId ?? meta.runId,
@@ -226,7 +229,7 @@ export function PatientInfoEditDialog({
     },
     onError: (error: unknown) => {
       const detail = error instanceof Error ? error.message : String(error);
-      const failureMessage = `患者情報の保存に失敗しました。${resolveUserSafeOperationFailure(detail)}`;
+      const failureMessage = `患者情報の更新に失敗しました。${resolveUserSafeOperationFailure(detail)}`;
       setNotice({ tone: 'error', message: failureMessage });
       logAuditEvent({
         runId: meta.runId,
@@ -345,7 +348,7 @@ export function PatientInfoEditDialog({
 
   const onSave = () => {
     if (!canEdit) {
-      setNotice({ tone: 'error', message: '編集ガード中のため保存できません。', detail: editBlockedReasonResolved });
+      setNotice({ tone: 'error', message: '編集ガード中のため既存患者更新を実行できません。', detail: editBlockedReasonResolved });
       return;
     }
     const validation = validate();
@@ -364,7 +367,7 @@ export function PatientInfoEditDialog({
   };
 
   const title = '患者基本情報を更新';
-  const description = '保存前に差分を確認し、official update route で ORCA canonical と local sync を更新します。';
+  const description = '実行前に差分を確認し、official update route で ORCA canonical と local sync を更新します。';
 
   const fieldErrorMap = useMemo(() => {
     const map = new Map<keyof PatientRecord, string>();
@@ -608,7 +611,7 @@ export function PatientInfoEditDialog({
                   checked={confirmChecked}
                   onChange={(e) => setConfirmChecked(e.target.checked)}
                 />
-                <span>差分を確認しました（保存を実行します）</span>
+                <span>差分を確認しました（既存患者更新を実行します）</span>
               </label>
 
               <div className="patient-edit__actions">
@@ -632,7 +635,7 @@ export function PatientInfoEditDialog({
                 </button>
                 <div className="patient-edit__actions-spacer" />
                 <button type="button" className="patients-tab__primary" onClick={onSave} disabled={!canEdit || mutation.isPending}>
-                  {mutation.isPending ? '保存中…' : '保存'}
+                  {mutation.isPending ? '既存患者更新中…' : '既存患者更新'}
                 </button>
               </div>
             </div>

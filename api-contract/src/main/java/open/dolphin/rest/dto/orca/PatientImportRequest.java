@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Request payload for POST /orca/patients/import.
+ * Request payload for POST /api/orca/official/patients/import.
  */
 public class PatientImportRequest {
 
@@ -23,4 +23,3 @@ public class PatientImportRequest {
         this.includeInsurance = includeInsurance;
     }
 }
-

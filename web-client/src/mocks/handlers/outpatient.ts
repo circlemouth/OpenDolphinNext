@@ -300,7 +300,8 @@ export const outpatientHandlers = [
     const scenario = applyRequestScenario(request);
     const raw = (await request.json().catch(() => ({}))) as any;
     const patient = raw?.patient ?? {};
-    const patientId = typeof patient.patientId === 'string' && patient.patientId.trim() ? patient.patientId : '000099';
+    const requestedPatientId = typeof patient.patientId === 'string' ? patient.patientId.trim() : '';
+    const patientId = requestedPatientId && requestedPatientId !== '*' ? requestedPatientId : '000099';
     return respond({
       apiResult: '00',
       apiResultMessage: 'ORCA登録完了',
