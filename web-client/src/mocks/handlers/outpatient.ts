@@ -146,7 +146,7 @@ export const outpatientHandlers = [
     }
     return respond(buildVisitListFixture(scenario.flags));
   }),
-  http.post('/api/orca/patients/local-search', async ({ request }) => {
+  http.post('/api/local/patients/search', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -155,7 +155,7 @@ export const outpatientHandlers = [
     }
     const httpFaultStatus = resolveHttpFaultStatus(fault);
     if (httpFaultStatus) {
-      const base = buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }, '/api/orca/patients/local-search');
+      const base = buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }, '/api/local/patients/search');
       if (httpFaultStatus === 404) {
         return respond({
           ...base,
@@ -169,10 +169,10 @@ export const outpatientHandlers = [
       return respond(base);
     }
     if (fault.tokens.has('timeout')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }, '/api/orca/patients/local-search'));
+      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }, '/api/local/patients/search'));
     }
     if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }, '/api/orca/patients/local-search'));
+      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }, '/api/local/patients/search'));
     }
     if (fault.tokens.has('schema-mismatch')) {
       const mismatch = {
@@ -189,7 +189,7 @@ export const outpatientHandlers = [
       } as any;
       return respond(mismatch);
     }
-    return respond(buildPatientListFixture(scenario.flags, '/api/orca/patients/local-search'));
+    return respond(buildPatientListFixture(scenario.flags, '/api/local/patients/search'));
   }),
   http.post('/api/orca/patients/import', async ({ request }) => {
     const fault = parseFaultSpec(request);
@@ -269,38 +269,68 @@ export const outpatientHandlers = [
       status: 200,
     });
   }),
-  http.post('/api/orca/patient/mutation', async ({ request }) => {
+  http.post('/api/local/patients/mutation', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
     if (hasNetworkFault(fault)) {
       return HttpResponse.error();
     }
+    const raw = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const patient = (raw.patient as Record<string, unknown> | undefined) ?? {};
+    const operation = typeof raw.operation === 'string' ? raw.operation : 'update';
     const httpFaultStatus = resolveHttpFaultStatus(fault);
     if (httpFaultStatus) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: httpFaultStatus }));
+      return respond({
+        apiResult: '99',
+        apiResultMessage: `HTTP fault injected (${httpFaultStatus})`,
+        runId: scenario.flags.runId,
+        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
+        routeNamespace: 'local',
+        status: httpFaultStatus,
+      });
     }
     if (fault.tokens.has('timeout')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 504 }));
+      return respond({
+        apiResult: '99',
+        apiResultMessage: 'timeout',
+        runId: scenario.flags.runId,
+        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
+        routeNamespace: 'local',
+        status: 504,
+      });
     }
     if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
-      return respond(buildPatientListFixture({ ...scenario.flags, status: 500 }));
+      return respond({
+        apiResult: '99',
+        apiResultMessage: 'MSW injected 500 for local patient mutation',
+        runId: scenario.flags.runId,
+        traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
+        routeNamespace: 'local',
+        status: 500,
+      });
     }
     if (fault.tokens.has('schema-mismatch')) {
       const mismatch = {
         runId: scenario.flags.runId,
         traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
-        cacheHit: scenario.flags.cacheHit,
-        missingMaster: scenario.flags.missingMaster,
-        dataSourceTransition: scenario.flags.dataSourceTransition,
-        fallbackUsed: scenario.flags.fallbackUsed,
-        patients: [{ patientId: 1 }],
+        routeNamespace: 'local',
+        patientDbId: 'schema-mismatch',
         apiResult: 'ERROR_SCHEMA_MISMATCH',
-        apiResultMessage: 'MSW injected schema mismatch for patientmodv2/outpatient',
+        apiResultMessage: 'MSW injected schema mismatch for local patient mutation',
         status: 200,
       } as any;
       return respond(mismatch);
     }
-    return respond(buildPatientListFixture(scenario.flags));
+    return respond({
+      apiResult: '00',
+      apiResultMessage: operation === 'create' ? '登録完了' : '更新完了',
+      runId: scenario.flags.runId,
+      traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
+      routeNamespace: 'local',
+      patientDbId: 12,
+      patientId: typeof patient.patientId === 'string' ? patient.patientId : undefined,
+      status: 200,
+    });
   }),
 ];

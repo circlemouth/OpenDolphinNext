@@ -8,6 +8,7 @@ public abstract class OrcaApiResponse {
     private String apiResult;
     private String apiResultMessage;
     private String runId;
+    private String routeNamespace;
     private String traceId;
     private String requestId;
     private String blockerTag;
@@ -41,6 +42,14 @@ public abstract class OrcaApiResponse {
 
     public void setRunId(String runId) {
         this.runId = runId;
+    }
+
+    public String getRouteNamespace() {
+        return routeNamespace;
+    }
+
+    public void setRouteNamespace(String routeNamespace) {
+        this.routeNamespace = routeNamespace;
     }
 
     public String getTraceId() {

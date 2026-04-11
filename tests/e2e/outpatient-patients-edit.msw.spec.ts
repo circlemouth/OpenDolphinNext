@@ -103,18 +103,18 @@ test('Patients 検索→詳細→編集→保存→再表示 (MSW)', async ({ pa
         const request = new Request(input as RequestInfo, init as RequestInit);
         const url = request.url;
 
-        if (url.includes('/orca/patients/local-search')) {
-          const endpoint = url.includes('/mock') ? '/orca/patients/local-search/mock' : '/orca/patients/local-search';
+        if (url.includes('/api/local/patients/search')) {
+          const endpoint = url.includes('/mock') ? '/api/local/patients/search/mock' : '/api/local/patients/search';
           return new Response(JSON.stringify(buildPatientResponse(endpoint)), {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           });
         }
 
-        if (url.includes('/orca12/patientmodv2/outpatient')) {
+        if (url.includes('/api/local/patients/mutation')) {
           const endpoint = url.includes('/mock')
-            ? '/orca12/patientmodv2/outpatient/mock'
-            : '/orca12/patientmodv2/outpatient';
+            ? '/api/local/patients/mutation/mock'
+            : '/api/local/patients/mutation';
           let body: Record<string, any> = {};
           try {
             const text = await request.clone().text();
@@ -140,7 +140,7 @@ test('Patients 検索→詳細→編集→保存→再表示 (MSW)', async ({ pa
               apiResultMessage: '保存しました',
               patient: updated,
               auditEvent: {
-                action: 'PATIENTMODV2_OUTPATIENT_MUTATE',
+                action: 'LOCAL_PATIENT_MUTATION',
                 outcome: 'success',
                 runId: flags.runId,
                 details: {

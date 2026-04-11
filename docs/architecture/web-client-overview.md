@@ -13,6 +13,7 @@
 - `returnTo` は sanitize 済み internal path のみ
 - logout は cleanup 優先で `replace`
 - raw API message や内部詳細は client に露出しない
+- ORCA route taxonomy は `official=/api/orca/official/*`, `master=/api/orca/master/*`, `local=/api/local/*` を前提に扱う
 
 ## 参考となる notes
 - `web-client/notes/auth-check.md`

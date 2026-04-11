@@ -434,13 +434,15 @@ export function buildVisitListFixture(flags: OutpatientFlagSet) {
   };
 }
 
-export function buildPatientListFixture(flags: OutpatientFlagSet, endpoint = '/api/orca/patients/local-search') {
+export function buildPatientListFixture(flags: OutpatientFlagSet, endpoint = '/api/local/patients/search') {
   return {
     patients: OUTPATIENT_PATIENTS,
     runId: flags.runId,
+    routeNamespace: 'local',
+    dataSource: 'local',
     cacheHit: flags.cacheHit,
     missingMaster: flags.missingMaster,
-    dataSourceTransition: flags.dataSourceTransition,
+    dataSourceTransition: flags.dataSourceTransition ?? 'local',
     fallbackUsed: flags.fallbackUsed,
     fetchedAt: new Date().toISOString(),
     recordsReturned: flags.recordsReturned ?? OUTPATIENT_PATIENTS.length,
@@ -451,7 +453,8 @@ export function buildPatientListFixture(flags: OutpatientFlagSet, endpoint = '/a
       recordedAt: new Date().toISOString(),
       details: {
         runId: flags.runId,
-        dataSourceTransition: flags.dataSourceTransition,
+        routeNamespace: 'local',
+        dataSourceTransition: flags.dataSourceTransition ?? 'local',
         cacheHit: flags.cacheHit,
         missingMaster: flags.missingMaster,
         fallbackUsed: flags.fallbackUsed,

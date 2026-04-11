@@ -3,40 +3,13 @@ package open.dolphin.rest.dto.orca;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Response payload for POST /orca/chart/subjectives.
+ * Response payload for POST /api/local/charts/subjectives.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class SubjectiveEntryResponse {
+public class SubjectiveEntryResponse extends OrcaApiResponse {
 
-    private String apiResult;
-    private String apiResultMessage;
-    private String runId;
     private String recordedAt;
     private String messageDetail;
-
-    public String getApiResult() {
-        return apiResult;
-    }
-
-    public void setApiResult(String apiResult) {
-        this.apiResult = apiResult;
-    }
-
-    public String getApiResultMessage() {
-        return apiResultMessage;
-    }
-
-    public void setApiResultMessage(String apiResultMessage) {
-        this.apiResultMessage = apiResultMessage;
-    }
-
-    public String getRunId() {
-        return runId;
-    }
-
-    public void setRunId(String runId) {
-        this.runId = runId;
-    }
 
     public String getRecordedAt() {
         return recordedAt;

@@ -1,4 +1,4 @@
-export type DataSourceTransition = 'mock' | 'snapshot' | 'server' | 'fallback';
+export type DataSourceTransition = 'mock' | 'snapshot' | 'server' | 'fallback' | 'local';
 
 // dataSourceTransition と同じ語彙で master ソースの決定を表現する。
 export type ResolveMasterSource = DataSourceTransition;

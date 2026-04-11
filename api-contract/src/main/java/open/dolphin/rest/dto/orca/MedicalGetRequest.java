@@ -3,7 +3,7 @@ package open.dolphin.rest.dto.orca;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * Request payload for POST /orca/medical/records.
+ * Request payload for POST /api/local/charts/medical-records.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MedicalGetRequest {

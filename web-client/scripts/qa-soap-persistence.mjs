@@ -92,7 +92,7 @@ const respondJson = (route, payload) => {
   });
 };
 
-const SOAP_ENDPOINTS = ['/orca/chart/subjectives', '/orca25/subjectivesv2', '/orca/subjectiveslstv2'];
+const SOAP_ENDPOINTS = ['/api/local/charts/subjectives', '/orca25/subjectivesv2', '/orca/subjectiveslstv2'];
 
 const run = async () => {
   const browser = await chromium.launch({ headless: true });
@@ -182,7 +182,7 @@ const run = async () => {
   const saveButton = soapPanel.getByRole('button', { name: /保存|更新/ });
   const saveButtonDisabled = await saveButton.isDisabled().catch(() => true);
   const serverResponsePromise = page
-    .waitForResponse((response) => response.url().includes('/orca/chart/subjectives'), { timeout: 15000 })
+    .waitForResponse((response) => response.url().includes('/api/local/charts/subjectives'), { timeout: 15000 })
     .catch(() => null);
   if (!saveButtonDisabled) {
     await saveButton.click();

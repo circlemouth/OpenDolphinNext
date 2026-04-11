@@ -840,7 +840,8 @@ describe('PatientsPage search summary', () => {
       apiResult: '00',
       apiResultMessage: 'OK',
       missingTags: ['Patient_ID'],
-      sourcePath: '/api/orca/patients/local-search',
+      dataSourceTransition: 'local',
+      sourcePath: '/api/local/patients/search',
     });
 
     renderPatientsPage();
@@ -855,7 +856,7 @@ describe('PatientsPage search summary', () => {
     expect(networkDetails).not.toBeNull();
     if (!networkDetails) return;
     const networkScope = within(networkDetails);
-    expect(networkScope.getByText('server fetchedAt: 2026-01-29T00:00:00Z')).toBeInTheDocument();
+    expect(networkScope.getByText('local fetchedAt: 2026-01-29T00:00:00Z')).toBeInTheDocument();
     expect(networkScope.getByText('Api_Result: 00')).toBeInTheDocument();
     expect(networkScope.getByText('不足タグ: Patient_ID')).toBeInTheDocument();
     expect(networkScope.queryByText(/Api_Result_Message:/)).not.toBeInTheDocument();

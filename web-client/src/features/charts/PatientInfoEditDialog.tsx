@@ -237,7 +237,7 @@ export function PatientInfoEditDialog({
         fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-          action: 'PATIENTMODV2_OUTPATIENT_SAVE',
+          action: 'LOCAL_PATIENT_MUTATION_SAVE',
           outcome: 'error',
           subject: 'charts',
           details: {
@@ -334,9 +334,9 @@ export function PatientInfoEditDialog({
       cacheHit: meta.cacheHit,
       missingMaster: meta.missingMaster,
       fallbackUsed: meta.fallbackUsed,
-      dataSourceTransition: meta.dataSourceTransition,
-      payload: {
-        action: 'PATIENTMODV2_OUTPATIENT_ROLLBACK',
+        dataSourceTransition: meta.dataSourceTransition,
+        payload: {
+        action: 'LOCAL_PATIENT_MUTATION_ROLLBACK',
         outcome: 'success',
         subject: 'charts',
         details: { section: 'basic', patientId: meta.patientId, receptionId: meta.receptionId, appointmentId: meta.appointmentId },
@@ -365,7 +365,7 @@ export function PatientInfoEditDialog({
   };
 
   const title = '患者基本情報を更新';
-  const description = '保存前に差分を確認し、/api/orca/patient/mutation で更新します。';
+  const description = '保存前に差分を確認し、/api/local/patients/mutation で院内ローカル患者情報を更新します。';
 
   const fieldErrorMap = useMemo(() => {
     const map = new Map<keyof PatientRecord, string>();

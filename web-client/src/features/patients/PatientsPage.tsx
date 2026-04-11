@@ -130,7 +130,7 @@ const buildPatientEditBlockReason = (
   if (kind === 'fallback_used') {
     return `暫定データ表示中のため編集を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`;
   }
-  if (transition && transition !== 'server') {
+  if (transition && transition !== 'server' && transition !== 'local') {
     return '最新データを確認できる画面へ戻ってから編集してください。';
   }
   return '現在の状態では編集できません。';
@@ -153,6 +153,12 @@ const buildPatientsOrcaStatus = (options: {
     return {
       state: '反映停止',
       detail: `暫定データ表示中のため反映を停止中です。${MISSING_MASTER_RECOVERY_NEXT_ACTION}してください。`,
+    };
+  }
+  if (options.dataSourceTransition === 'local') {
+    return {
+      state: '院内ローカル',
+      detail: '院内ローカル患者情報を編集中です。official ORCA 契約ではなく local contract を使います。',
     };
   }
   if ((options.dataSourceTransition ?? 'server') !== 'server') {
@@ -185,6 +191,9 @@ const buildPatientsToneMessage = (payload: ChartTonePayload) => {
   }
   if (payload.cacheHit) {
     return '前回取得した参照情報を表示しています。必要なら再取得してください。';
+  }
+  if (payload.dataSourceTransition === 'local') {
+    return '院内ローカル患者情報を表示中です。official ORCA bridge ではなく local contract を使います。';
   }
   if (payload.dataSourceTransition !== 'server') {
     return '最新データ確認前の参照状態です。必要なら再取得してください。';
@@ -743,7 +752,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const resolvedRecordsReturned = patientsQuery.data?.recordsReturned ?? lastMeta.recordsReturned;
   const resolvedApiResult = patientsQuery.data?.apiResult ?? lastMeta.apiResult;
   const resolvedMissingTags = patientsQuery.data?.missingTags ?? lastMeta.missingTags ?? [];
-  const masterOk = !resolvedMissingMaster && !resolvedFallbackUsed && (resolvedTransition ?? 'server') === 'server';
+  const masterOk = !resolvedMissingMaster
+    && !resolvedFallbackUsed
+    && ((resolvedTransition ?? 'server') === 'server' || resolvedTransition === 'local');
   const importPatientIdDraft = orcaImportPatientId.trim();
   const canImportByPatientId = Boolean(importPatientIdDraft && /^\d{1,16}$/.test(importPatientIdDraft));
   const importSelectedPatientId = useMemo(() => {
@@ -825,7 +836,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       reasons.push(buildPatientEditBlockReason('fallback_used'));
       keys.push('fallback_used');
     }
-    if ((resolvedTransition ?? 'server') !== 'server') {
+    if ((resolvedTransition ?? 'server') !== 'server' && resolvedTransition !== 'local') {
       const transition = resolvedTransition ?? 'unknown';
       reasons.push(buildPatientEditBlockReason('not_server_route', transition));
       keys.push(`data_source_transition:${transition}`);
@@ -1730,7 +1741,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         </div>
         <div className="patients-page__network-meta">
           <span>RUN_ID: {resolvedRunId ?? '―'}</span>
-          <span>server fetchedAt: {resolvedFetchedAt ?? '—'}</span>
+          <span>{resolvedTransition ?? 'server'} fetchedAt: {resolvedFetchedAt ?? '—'}</span>
           <span>Api_Result: {resolvedApiResult ?? '—'}</span>
           <span>不足タグ: {resolvedMissingTags.length ? resolvedMissingTags.join(', ') : 'なし'}</span>
         </div>

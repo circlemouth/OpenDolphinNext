@@ -32,12 +32,14 @@ import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.UserServiceBean;
 
 /**
- * Handles subjective POST requests.
+ * Handles local-only subjective POST requests.
  */
-@Path("/orca/chart")
+@Path("/local/charts")
 public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
 
     private static final int MAX_BODY_LENGTH = 1000;
+    private static final String ROUTE_NAMESPACE = "local";
+    private static final String AUDIT_ACTION = "LOCAL_CHART_SUBJECTIVE_MUTATION";
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -73,6 +75,7 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
         response.setApiResult("00");
         response.setApiResultMessage("処理終了");
         response.setRunId(runId);
+        response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setRecordedAt(Instant.now().toString());
         response.setMessageDetail("主訴を登録しました。");
 
@@ -83,7 +86,7 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
         audit.put("soapCategory", soapCategory);
         audit.put("documentId", documentId);
         markSuccessDetails(audit);
-        recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -158,6 +161,7 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
             audit.put("patientId", patientId);
         }
         audit.put("runId", runId);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
         return audit;
     }
 
@@ -165,14 +169,14 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
         audit.put("validationError", Boolean.TRUE);
         audit.put("field", field);
         markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", message);
-        recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+        recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
         throw validationError(request, field, message);
     }
 
     private void failSubjectiveNotFound(HttpServletRequest request, Map<String, Object> audit, String errorCode,
             Response.Status status, String message) {
         markFailureDetails(audit, status.getStatusCode(), errorCode, message);
-        recordAudit(request, "ORCA_SUBJECTIVES_MUTATION", audit, AuditEventEnvelope.Outcome.FAILURE);
+        recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
         throw restError(request, status, errorCode, message);
     }
 

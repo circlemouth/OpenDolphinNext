@@ -84,21 +84,21 @@ test('SOAP入力の保存/再表示/編集ができる (MSW)', async ({ page }) 
         body: JSON.stringify(buildVisitListFixture(outpatientFlags)),
       }),
     );
-    await page.route('**/orca/patients/local-search/mock**', (route) =>
+    await page.route('**/api/local/patients/search/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/orca/patients/local-search/mock')),
+        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/api/local/patients/search/mock')),
       }),
     );
-    await page.route('**/orca/patients/local-search**', (route) =>
+    await page.route('**/api/local/patients/search**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/orca/patients/local-search')),
+        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/api/local/patients/search')),
       }),
     );
-    await page.route('**/orca/chart/subjectives**', (route) =>
+    await page.route('**/api/local/charts/subjectives**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -151,7 +151,7 @@ test('SOAP入力の保存/再表示/編集ができる (MSW)', async ({ page }) 
             : input instanceof Request
               ? input.url
               : String(input);
-        if (requestUrl.includes('/orca/chart/subjectives')) {
+        if (requestUrl.includes('/api/local/charts/subjectives')) {
           return Promise.resolve(
             new Response(
               JSON.stringify({

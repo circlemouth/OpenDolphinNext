@@ -23,6 +23,7 @@
 - `returnTo` は sanitize 済み internal path のみを扱い、invalid または empty の場合は `/f/:facilityId/reception` に落とします。
 - 患者文脈は privacy-first を前提とし、URL、`localStorage`、`sessionStorage` に残しません。
 - admin の source of truth は `/api/admin/config` です。`/api/admin/delivery` を current contract に戻しません。
+- ORCA taxonomy は `/api/orca/official/*` を official bridge、`/api/orca/master/*` を master-backed read、`/api/local/*` を local-only contract として扱います。
 - security 規範の詳細は [notes/security-spec.md](./notes/security-spec.md) を正本とし、この README へ重複移植しません。
 
 ## Release Gate

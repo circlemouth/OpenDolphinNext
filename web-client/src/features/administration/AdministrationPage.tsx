@@ -59,6 +59,7 @@ import {
   type OrcaInternalWrapperBase,
   type OrcaInternalWrapperEndpoint,
 } from './orcaInternalWrapperApi';
+import { resolveOrcaResultTone } from './orcaApiResultPolicy';
 import type { FeedbackTone } from '../shared/feedbackTone';
 import './administration.css';
 
@@ -306,8 +307,8 @@ const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[]
   },
   {
     id: 'medical-records',
-    label: '/api/orca/medical/records（診療記録取得）',
-    hint: 'feature flag により stub/実データが切り替わります',
+    label: '/api/local/charts/medical-records（院内診療記録取得）',
+    hint: 'official ORCA ではなく院内ローカル保存済みカルテ文書を返します',
     defaultPayload: {
       patientId: '00002',
       fromDate: '',
@@ -321,8 +322,8 @@ const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[]
   },
   {
     id: 'patient-mutation',
-    label: '/api/orca/patient/mutation（患者作成/更新/削除）',
-    hint: 'delete は Trial 閉鎖のため stub 応答',
+    label: '/api/local/patients/mutation（院内患者作成/更新）',
+    hint: 'official ORCA 互換ではなく院内ローカル患者テーブル更新 contract です',
     defaultPayload: {
       operation: 'create',
       patient: {
@@ -340,8 +341,8 @@ const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[]
   },
   {
     id: 'chart-subjectives',
-    label: '/api/orca/chart/subjectives（主訴登録）',
-    hint: 'feature flag により stub/実データが切り替わります',
+    label: '/api/local/charts/subjectives（院内主訴登録）',
+    hint: 'official subjectivesv2 ではなく院内カルテへの主観記録保存 contract です',
     defaultPayload: {
       patientId: '00002',
       performDate: today,
@@ -781,14 +782,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     },
   });
 
-  const internalWrapperStatusTone = (() => {
-    if (internalWrapperMutation.isPending) return 'pending' as const;
-    if (!internalWrapperResult) return 'idle' as const;
-    if (!internalWrapperResult.ok) return 'error' as const;
-    if (internalWrapperResult.stub) return 'warn' as const;
-    if (internalWrapperResult.apiResult && !internalWrapperResult.apiResult.startsWith('00')) return 'warn' as const;
-    return 'ok' as const;
-  })();
+  const internalWrapperStatusTone = resolveOrcaResultTone(internalWrapperResult, internalWrapperMutation.isPending);
   const internalWrapperStatusLabel = resolveStatusLabel(internalWrapperResult ?? null, internalWrapperMutation.isPending);
 
   const queueEntries = useMemo(() => queueQuery.data?.queue ?? [], [queueQuery.data?.queue]);

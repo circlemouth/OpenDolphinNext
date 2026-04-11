@@ -68,6 +68,16 @@ class PublicRouteInventoryContractTest {
                 .filteredOn(route -> route.produces().stream().anyMatch(PublicRouteInventoryContractTest::isTextPlain))
                 .isEmpty();
         assertThat(routeKeys).doesNotContain("GET /api/operations/readiness");
+        assertThat(routeKeys).doesNotContain(
+                "POST /api/orca/patient/mutation",
+                "POST /api/orca/patients/local-search",
+                "POST /api/orca/chart/subjectives",
+                "POST /api/orca/medical/records");
+        assertThat(routeKeys).contains(
+                "POST /api/local/patients/mutation",
+                "POST /api/local/patients/search",
+                "POST /api/local/charts/subjectives",
+                "POST /api/local/charts/medical-records");
         assertThat(routeKeys).contains("GET /api/local-summary/encounters/{*}/medical-summary");
     }
 

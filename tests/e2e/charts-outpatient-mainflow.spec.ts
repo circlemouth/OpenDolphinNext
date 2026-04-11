@@ -265,7 +265,7 @@ async function stubOutpatientApis(page: Page, scenario: Scenario) {
     }),
   );
 
-  await page.route('**/orca/patients/local-search**', (route: Route) =>
+  await page.route('**/api/local/patients/search**', (route: Route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',

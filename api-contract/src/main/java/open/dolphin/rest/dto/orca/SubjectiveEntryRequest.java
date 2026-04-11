@@ -3,7 +3,7 @@ package open.dolphin.rest.dto.orca;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
- * Request payload for POST /orca/chart/subjectives.
+ * Request payload for POST /api/local/charts/subjectives.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class SubjectiveEntryRequest {

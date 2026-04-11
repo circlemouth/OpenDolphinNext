@@ -123,7 +123,7 @@ test.describe('Charts patient sidepane', () => {
         body: JSON.stringify({ ...baseMeta, visitDate: '2025-12-18', visits: [] }),
       }),
     );
-    await page.route('**/orca/patients/local-search**', (route) =>
+    await page.route('**/api/local/patients/search**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -143,7 +143,7 @@ test.describe('Charts patient sidepane', () => {
               memo: '初期メモ',
             },
           ],
-          auditEvent: { action: 'PATIENT_OUTPATIENT_FETCH', details: { runId } },
+          auditEvent: { action: 'LOCAL_PATIENT_SEARCH', details: { runId } },
         }),
       }),
     );

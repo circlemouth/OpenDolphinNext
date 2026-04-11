@@ -32,7 +32,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
         PatientMutationRequest payload = new PatientMutationRequest();
@@ -55,6 +55,7 @@ class OrcaPatientResourceIdempotencyTest {
         assertEquals(Boolean.TRUE, response.getIdempotent());
         assertEquals("existing_patient", response.getIdempotentReason());
         assertEquals(12L, response.getPatientDbId());
+        assertEquals("local", response.getRouteNamespace());
         assertFalse(service.addCalled);
         assertNotNull(response.getRunId());
     }
@@ -71,7 +72,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
 
         PatientMutationRequest payload = new PatientMutationRequest();
         payload.setOperation("create");
@@ -98,7 +99,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
         PatientMutationRequest payload = new PatientMutationRequest();
@@ -114,6 +115,7 @@ class OrcaPatientResourceIdempotencyTest {
         assertEquals("00", response.getApiResult());
         assertEquals("更新完了", response.getApiResultMessage());
         assertEquals(12L, response.getPatientDbId());
+        assertEquals("local", response.getRouteNamespace());
         assertTrue(service.updateCalled);
     }
 
@@ -126,7 +128,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
 
         PatientMutationRequest payload = new PatientMutationRequest();
         payload.setOperation("update");
@@ -149,7 +151,7 @@ class OrcaPatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/orca/patient/mutation");
+        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
 
         PatientMutationRequest payload = new PatientMutationRequest();
         payload.setOperation("delete");

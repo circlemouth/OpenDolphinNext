@@ -55,6 +55,8 @@ public class LogFilter implements Filter {
     private static final String HEALTH_READINESS_PATH = "/api/health/readiness";
     private static final String OPERATIONS_READINESS_PATH = "/api/operations/readiness";
     private static final String API_ROOT = "/api";
+    private static final String ORCA_API_PREFIX = "/api/orca";
+    private static final String LOCAL_API_PREFIX = "/api/local";
     private static final Pattern SAFE_TOKEN = Pattern.compile("^[A-Za-z0-9._-]{1,64}$");
 
     @Inject
@@ -317,7 +319,10 @@ public class LogFilter implements Filter {
         if (uri == null || uri.isBlank()) {
             return false;
         }
-        return uri.contains("/api/orca/") || uri.endsWith("/api/orca");
+        return uri.contains(ORCA_API_PREFIX + "/")
+                || uri.endsWith(ORCA_API_PREFIX)
+                || uri.contains(LOCAL_API_PREFIX + "/")
+                || uri.endsWith(LOCAL_API_PREFIX);
     }
 
     private void logAccessResponse(HttpServletResponse response, BlockWrapper request, String traceId,

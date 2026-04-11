@@ -3,43 +3,16 @@ package open.dolphin.rest.dto.orca;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Response payload for patient mutation wrapper.
+ * Response payload for POST /api/local/patients/mutation.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PatientMutationResponse {
+public class PatientMutationResponse extends OrcaApiResponse {
 
-    private String apiResult;
-    private String apiResultMessage;
-    private String runId;
     private Long patientDbId;
     private String patientId;
     private String warningMessage;
     private Boolean idempotent;
     private String idempotentReason;
-
-    public String getApiResult() {
-        return apiResult;
-    }
-
-    public void setApiResult(String apiResult) {
-        this.apiResult = apiResult;
-    }
-
-    public String getApiResultMessage() {
-        return apiResultMessage;
-    }
-
-    public void setApiResultMessage(String apiResultMessage) {
-        this.apiResultMessage = apiResultMessage;
-    }
-
-    public String getRunId() {
-        return runId;
-    }
-
-    public void setRunId(String runId) {
-        this.runId = runId;
-    }
 
     public Long getPatientDbId() {
         return patientDbId;

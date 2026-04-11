@@ -150,7 +150,7 @@ const registerBaseRoutes = async (
       }),
     }),
   );
-  await page.route('**/orca/patients/local-search**', (route) =>
+  await page.route('**/api/local/patients/search**', (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',

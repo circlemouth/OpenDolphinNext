@@ -31,6 +31,7 @@ export type PatientListResponse = {
   runId?: string;
   traceId?: string;
   requestId?: string;
+  routeNamespace?: 'official' | 'master' | 'local';
   apiResult?: string;
   apiResultMessage?: string;
   missingTags?: string[];
@@ -67,6 +68,7 @@ export type PatientMutationResult = {
   runId?: string;
   traceId?: string;
   requestId?: string;
+  routeNamespace?: 'official' | 'master' | 'local';
   cacheHit?: boolean;
   missingMaster?: boolean;
   dataSourceTransition?: DataSourceTransition;
@@ -79,10 +81,10 @@ export type PatientMutationResult = {
 };
 
 const patientInfoCandidates = [
-  '/api/orca/patients/local-search',
+  '/api/local/patients/search',
 ];
 const patientMutationCandidates = [
-  '/api/orca/patient/mutation',
+  '/api/local/patients/mutation',
 ];
 
 const normalizeBoolean = (value: unknown) => {
@@ -248,6 +250,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
     runId: (json.runId as string | undefined) ?? getObservabilityMeta().runId,
     traceId,
     requestId,
+    routeNamespace: typeof json.routeNamespace === 'string' ? (json.routeNamespace as PatientListResponse['routeNamespace']) : undefined,
     apiResult,
     apiResultMessage,
     missingTags,
@@ -284,7 +287,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
   });
 
   meta.auditEvent = {
-    action: (meta.auditEvent as Record<string, unknown> | undefined)?.action ?? 'PATIENT_OUTPATIENT_FETCH',
+    action: (meta.auditEvent as Record<string, unknown> | undefined)?.action ?? 'LOCAL_PATIENT_SEARCH',
     ...((meta.auditEvent as Record<string, unknown>) ?? {}),
     traceId: meta.traceId,
     details: auditDetails,
@@ -305,7 +308,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
     runId: meta.runId,
     cacheHit: meta.cacheHit ?? false,
     missingMaster: meta.missingMaster ?? false,
-    dataSourceTransition: meta.dataSourceTransition ?? 'server',
+    dataSourceTransition: meta.dataSourceTransition ?? 'local',
     fallbackUsed: meta.fallbackUsed ?? false,
     action: 'patient_fetch',
     outcome: meta.error ? 'error' : 'success',
@@ -359,8 +362,17 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
     actorRole: payload.auditMeta?.actorRole,
   };
   const body = {
-    ...payload.patient,
     operation: payload.operation,
+    patient: stripNullish({
+      patientId: payload.patient.patientId,
+      wholeName: payload.patient.name,
+      wholeNameKana: payload.patient.kana,
+      birthDate: payload.patient.birthDate,
+      sex: payload.patient.sex,
+      telephone: payload.patient.phone,
+      zipCode: payload.patient.zip,
+      addressLine: payload.patient.address,
+    }),
     auditEvent,
     runId,
   };
@@ -377,6 +389,7 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
     runId: (json.runId as string | undefined) ?? runId,
     traceId,
     requestId,
+    routeNamespace: typeof json.routeNamespace === 'string' ? (json.routeNamespace as PatientMutationResult['routeNamespace']) : undefined,
     cacheHit: normalizeBoolean(json.cacheHit),
     missingMaster: normalizeBoolean(json.missingMaster),
     dataSourceTransition,
@@ -414,7 +427,7 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
   }) as Record<string, unknown>;
 
   result.auditEvent = {
-    action: (serverAuditEvent?.action as string | undefined) ?? 'PATIENTMODV2_OUTPATIENT_MUTATE',
+    action: (serverAuditEvent?.action as string | undefined) ?? 'LOCAL_PATIENT_MUTATION',
     outcome: (serverAuditEvent?.outcome as string | undefined) ?? (result.ok ? 'success' : 'error'),
     subject: (serverAuditEvent?.subject as string | undefined) ?? (payload.auditMeta?.source ?? 'patients'),
     runId: (serverAuditEvent?.runId as string | undefined) ?? result.runId,
@@ -435,7 +448,7 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
     runId: result.runId,
     cacheHit: result.cacheHit ?? false,
     missingMaster: result.missingMaster ?? false,
-    dataSourceTransition: result.dataSourceTransition ?? 'server',
+    dataSourceTransition: result.dataSourceTransition ?? 'local',
     fallbackUsed: result.fallbackUsed ?? false,
     action: `patient_save_${payload.operation}`,
     outcome: result.ok ? 'success' : 'error',

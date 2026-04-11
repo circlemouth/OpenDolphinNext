@@ -27,12 +27,13 @@ import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.PatientServiceBean.PatientSearchType;
 
 /**
- * Local-only patient search endpoint served at `/api/orca/patients/local-search`.
+ * Local-only patient search endpoint served at `/api/local/patients/search`.
  */
-@Path("/orca/patients/local-search")
+@Path("/local/patients/search")
 public class OrcaPatientLocalSearchResource extends AbstractResource {
 
-    private static final String DATA_SOURCE = "server";
+    private static final String DATA_SOURCE = "local";
+    private static final String ROUTE_NAMESPACE = "local";
     @Inject
     private PatientServiceBean patientServiceBean;
 
@@ -66,6 +67,7 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         response.setRunId(runId);
         response.setTraceId(traceId);
         response.setRequestId(requestId);
+        response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setDataSource(DATA_SOURCE);
         response.setDataSourceTransition(DATA_SOURCE);
         response.setCacheHit(false);
@@ -82,6 +84,7 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
             details.put("facilityId", facilityId);
         }
         details.put("resource", resourcePath);
+        details.put("routeNamespace", ROUTE_NAMESPACE);
         details.put("runId", runId);
         details.put("dataSource", DATA_SOURCE);
         details.put("dataSourceTransition", DATA_SOURCE);
@@ -146,11 +149,11 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
     }
 
     protected String getDefaultResourcePath() {
-        return "/api/orca/patients/local-search";
+        return "/api/local/patients/search";
     }
 
     protected String getAuditAction() {
-        return "PATIENT_OUTPATIENT_FETCH";
+        return "LOCAL_PATIENT_SEARCH";
     }
 
     protected String getOperationName() {

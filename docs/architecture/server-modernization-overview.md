@@ -23,6 +23,12 @@
 - `reporting`: 帳票、署名、出力形式
 - `server-modernized`: REST resource、認証/認可、ORCA 接続、worker 公開面
 
+## route taxonomy
+- official ORCA bridge は `/api/orca/official/*` を使う
+- master-backed read API は `/api/orca/master/*` を使う
+- local-only wrapper / local projection / local chart mutation は `/api/local/*` を使う
+- `/api/orca/*` に local-only schema を混在させない
+
 ## まず見るもの
 - `docs/contracts/runtime-config.md`
 - `docs/contracts/health-endpoints.md`

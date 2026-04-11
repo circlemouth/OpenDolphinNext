@@ -60,6 +60,7 @@ export type SubjectiveEntryRequest = {
 export type OrcaInternalWrapperBase = {
   ok: boolean;
   status: number;
+  routeNamespace?: 'official' | 'master' | 'local';
   apiResult?: string;
   apiResultMessage?: string;
   messageDetail?: string;
@@ -110,9 +111,9 @@ export type PatientMutationResponse = OrcaInternalWrapperBase & {
 
 const ORCA_MEDICAL_SETS_ENDPOINT = '/api/orca/medical-sets';
 const ORCA_BIRTH_DELIVERY_ENDPOINT = '/api/orca/birth-delivery';
-const ORCA_MEDICAL_RECORDS_ENDPOINT = '/api/orca/medical/records';
-const ORCA_PATIENT_MUTATION_ENDPOINT = '/api/orca/patient/mutation';
-const ORCA_CHART_SUBJECTIVES_ENDPOINT = '/api/orca/chart/subjectives';
+const LOCAL_MEDICAL_RECORDS_ENDPOINT = '/api/local/charts/medical-records';
+const LOCAL_PATIENT_MUTATION_ENDPOINT = '/api/local/patients/mutation';
+const LOCAL_CHART_SUBJECTIVES_ENDPOINT = '/api/local/charts/subjectives';
 
 const normalizeBooleanHeader = (value: string | null) => {
   if (value === null) return undefined;
@@ -191,6 +192,7 @@ const normalizeBase = (json: unknown, headers: Headers, status: number, ok: bool
     getString(body.messageDetail ?? body.Message_Detail ?? body.message ?? body.detail)
     ?? undefined;
   const warningMessage = getString(body.warningMessage ?? body.warning ?? body.Warning_Message);
+  const routeNamespace = getString(body.routeNamespace) as OrcaInternalWrapperBase['routeNamespace'];
   const runId = getString(body.runId) ?? headers.get('x-run-id') ?? getObservabilityMeta().runId;
   const traceId = getString(body.traceId) ?? headers.get('x-trace-id') ?? getObservabilityMeta().traceId;
   const missingMaster =
@@ -209,6 +211,7 @@ const normalizeBase = (json: unknown, headers: Headers, status: number, ok: bool
   return {
     ok,
     status,
+    routeNamespace,
     apiResult,
     apiResultMessage,
     messageDetail,
@@ -385,9 +388,9 @@ export const ORCA_INTERNAL_WRAPPER_ENDPOINTS: ReadonlyArray<{
 }> = [
   { id: 'medical-sets', path: ORCA_MEDICAL_SETS_ENDPOINT, label: 'medical-sets', description: '診療セット登録', stub: false },
   { id: 'birth-delivery', path: ORCA_BIRTH_DELIVERY_ENDPOINT, label: 'birth-delivery', description: '出産内容登録', stub: true },
-  { id: 'medical-records', path: ORCA_MEDICAL_RECORDS_ENDPOINT, label: 'medical-records', description: '診療記録取得', stub: false },
-  { id: 'patient-mutation', path: ORCA_PATIENT_MUTATION_ENDPOINT, label: 'patient-mutation', description: '患者 CRUD', stub: false },
-  { id: 'chart-subjectives', path: ORCA_CHART_SUBJECTIVES_ENDPOINT, label: 'chart-subjectives', description: 'SOAP 主観記録', stub: true },
+  { id: 'medical-records', path: LOCAL_MEDICAL_RECORDS_ENDPOINT, label: 'medical-records', description: '院内診療記録取得', stub: false },
+  { id: 'patient-mutation', path: LOCAL_PATIENT_MUTATION_ENDPOINT, label: 'patient-mutation', description: '院内患者 CRUD', stub: false },
+  { id: 'chart-subjectives', path: LOCAL_CHART_SUBJECTIVES_ENDPOINT, label: 'chart-subjectives', description: '院内 SOAP 主観記録', stub: true },
 ];
 
 export async function postMedicalSets(payload: MedicalSetMutationRequest | Record<string, unknown>) {
@@ -403,9 +406,9 @@ export async function postBirthDelivery(payload: BirthDeliveryRequest | Record<s
 }
 
 export async function postMedicalRecords(payload: MedicalRecordsRequest | Record<string, unknown>) {
-  const { response, json } = await postInternalWrapper(ORCA_MEDICAL_RECORDS_ENDPOINT, payload as Record<string, unknown>);
+  const { response, json } = await postInternalWrapper(LOCAL_MEDICAL_RECORDS_ENDPOINT, payload as Record<string, unknown>);
   const normalized = normalizeMedicalRecords(json, response.headers, response.status, response.ok);
-  return buildResult('medical-records', ORCA_MEDICAL_RECORDS_ENDPOINT, normalized, {
+  return buildResult('medical-records', LOCAL_MEDICAL_RECORDS_ENDPOINT, normalized, {
     patient: normalized.patient,
     records: normalized.records ?? [],
     generatedAt: normalized.generatedAt,
@@ -414,18 +417,18 @@ export async function postMedicalRecords(payload: MedicalRecordsRequest | Record
 }
 
 export async function postPatientMutation(payload: PatientMutationRequest | Record<string, unknown>) {
-  const { response, json } = await postInternalWrapper(ORCA_PATIENT_MUTATION_ENDPOINT, payload as Record<string, unknown>);
+  const { response, json } = await postInternalWrapper(LOCAL_PATIENT_MUTATION_ENDPOINT, payload as Record<string, unknown>);
   const normalized = normalizePatientMutation(json, response.headers, response.status, response.ok);
-  return buildResult('patient-mutation', ORCA_PATIENT_MUTATION_ENDPOINT, normalized, {
+  return buildResult('patient-mutation', LOCAL_PATIENT_MUTATION_ENDPOINT, normalized, {
     patientDbId: normalized.patientDbId,
     patientId: normalized.patientId,
   });
 }
 
 export async function postSubjectiveEntry(payload: SubjectiveEntryRequest | Record<string, unknown>) {
-  const { response, json } = await postInternalWrapper(ORCA_CHART_SUBJECTIVES_ENDPOINT, payload as Record<string, unknown>);
+  const { response, json } = await postInternalWrapper(LOCAL_CHART_SUBJECTIVES_ENDPOINT, payload as Record<string, unknown>);
   const normalized = normalizeSubjectiveEntry(json, response.headers, response.status, response.ok);
-  return buildResult('chart-subjectives', ORCA_CHART_SUBJECTIVES_ENDPOINT, normalized, {
+  return buildResult('chart-subjectives', LOCAL_CHART_SUBJECTIVES_ENDPOINT, normalized, {
     recordedAt: normalized.recordedAt,
   });
 }

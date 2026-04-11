@@ -62,7 +62,7 @@ class OrcaSubjectiveResourceTest extends RuntimeDelegateTestSupport {
                         return "127.0.0.1";
                     }
                     if ("getRequestURI".equals(name)) {
-                        return "/api/orca/chart/subjectives";
+                        return "/api/local/charts/subjectives";
                     }
                     if ("getAttribute".equals(name) && args != null && args.length == 1) {
                         return attributes.get(args[0]);
@@ -112,6 +112,7 @@ class OrcaSubjectiveResourceTest extends RuntimeDelegateTestSupport {
 
         assertNotNull(response);
         assertEquals("00", response.getApiResult());
+        assertEquals("local", response.getRouteNamespace());
         assertEquals(1, fakeKarteServiceBean.getAddDocumentCalls());
 
         DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();

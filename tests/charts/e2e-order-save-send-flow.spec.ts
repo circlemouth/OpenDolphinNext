@@ -141,18 +141,18 @@ test('オーダー入力改修後: カテゴリ限定表示 + 用法プルダウ
         body: JSON.stringify(visitPayload),
       }),
     );
-    await page.route('**/orca/patients/local-search/mock**', (route) =>
+    await page.route('**/api/local/patients/search/mock**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/orca/patients/local-search/mock')),
+        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/api/local/patients/search/mock')),
       }),
     );
-    await page.route('**/orca/patients/local-search**', (route) =>
+    await page.route('**/api/local/patients/search**', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/orca/patients/local-search')),
+        body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/api/local/patients/search')),
       }),
     );
 

@@ -34,7 +34,7 @@ import open.dolphin.session.PatientServiceBean;
 public final class PatientModV2OutpatientResource extends AbstractResource {
 
     private static final String DATA_SOURCE_SERVER = "server";
-    private static final String AUDIT_ACTION = "ORCA_PATIENT_MUTATION";
+    private static final String AUDIT_ACTION = "LOCAL_PATIENT_MUTATION_LEGACY";
 
     @Inject
     private PatientServiceBean patientServiceBean;

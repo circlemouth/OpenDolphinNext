@@ -30,14 +30,16 @@ import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.PatientServiceBean;
 
 /**
- * ORCA medical record wrapper (`/orca/medical`).
+ * Local-only chart medical record wrapper.
  */
-@Path("/orca/medical")
+@Path("/local/charts")
 public class OrcaMedicalResource extends AbstractOrcaRestResource {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             .withLocale(Locale.JAPAN)
             .withZone(ZoneId.systemDefault());
+    private static final String ROUTE_NAMESPACE = "local";
+    private static final String AUDIT_ACTION = "LOCAL_CHART_MEDICAL_RECORDS_READ";
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -46,7 +48,7 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
     private KarteServiceBean karteServiceBean;
 
     @POST
-    @Path("/records")
+    @Path("/medical-records")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public MedicalGetResponse postMedicalRecords(@Context HttpServletRequest request, MedicalGetRequest payload) {
@@ -59,11 +61,12 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
             Map<String, Object> audit = new HashMap<>();
             audit.put("facilityId", facilityId);
             audit.put("runId", runId);
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "patientId");
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
                     "invalid_request", "Patient_ID is required");
-            recordAudit(request, "ORCA_MEDICAL_GET", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "patientId", "Patient_ID is required");
         }
 
@@ -74,11 +77,12 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
             audit.put("facilityId", facilityId);
             audit.put("runId", runId);
             audit.put("patientId", payload.getPatientId());
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "fromDate");
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(),
                     "invalid_request", "fromDate must be before toDate");
-            recordAudit(request, "ORCA_MEDICAL_GET", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "fromDate", "fromDate must be before toDate");
         }
 
@@ -87,7 +91,7 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
             Map<String, Object> audit = buildNotFoundAudit(facilityId, payload.getPatientId());
             markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
                     "patient_not_found", "Patient not found");
-            recordAudit(request, "ORCA_MEDICAL_GET", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "patient_not_found",
                     "Patient not found", audit, null);
         }
@@ -97,7 +101,7 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
             Map<String, Object> audit = buildKarteNotFoundAudit(facilityId, payload.getPatientId());
             markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(),
                     "karte_not_found", "Karte not found");
-            recordAudit(request, "ORCA_MEDICAL_GET", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found", audit, null);
         }
         List<DocInfoModel> docInfos = karteServiceBean.getDocumentList(karte.getId(), fromDate, true);
@@ -109,6 +113,7 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
                 .collect(Collectors.toList());
 
         MedicalGetResponse response = MedicalGetResponse.success(runId);
+        response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setPatient(toPatientSummary(patient));
         response.setRecords(entries);
 
@@ -117,7 +122,8 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
         audit.put("patientId", payload.getPatientId());
         audit.put("runId", runId);
         audit.put("recordsReturned", entries.size());
-        recordAudit(request, "ORCA_MEDICAL_GET", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -159,6 +165,7 @@ public class OrcaMedicalResource extends AbstractOrcaRestResource {
         audit.put("patientId", patientId);
         audit.put("apiResult", "10");
         audit.put("apiResultMessage", "該当データなし");
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
         return audit;
     }
 

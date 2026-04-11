@@ -22,15 +22,16 @@ class OrcaPatientLocalSearchResourceTest {
 
         HttpServletRequest request = createRequest(
                 "F001:doctor01",
-                "/api/orca/patients/local-search",
+                "/api/local/patients/search",
                 Map.of("X-Trace-Id", "trace-local", "X-Request-Id", "req-local"));
 
         PatientOutpatientResponse response = resource.postPatients(request, Map.of("keyword", "test"));
 
         assertEquals("trace-local", response.getTraceId());
         assertEquals("req-local", response.getRequestId());
-        assertEquals("server", response.getDataSource());
-        assertEquals("server", response.getDataSourceTransition());
+        assertEquals("local", response.getRouteNamespace());
+        assertEquals("local", response.getDataSource());
+        assertEquals("local", response.getDataSourceTransition());
         assertNotNull(response.getFetchedAt());
     }
 
@@ -42,7 +43,7 @@ class OrcaPatientLocalSearchResourceTest {
 
         HttpServletRequest request = createRequest(
                 "F001:doctor01",
-                "/api/orca/patients/local-search",
+                "/api/local/patients/search",
                 Map.of("X-Trace-Id", "trace-local", "X-Request-Id", "req-local"));
 
         resource.postPatients(request, Map.of("keyword", "000123"));
@@ -64,7 +65,7 @@ class OrcaPatientLocalSearchResourceTest {
 
         HttpServletRequest request = createRequest(
                 "F001:doctor01",
-                "/api/orca/patients/local-search",
+                "/api/local/patients/search",
                 Map.of("X-Trace-Id", "trace-local", "X-Request-Id", "req-local"));
 
         PatientOutpatientResponse response = resource.postPatients(

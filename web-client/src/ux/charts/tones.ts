@@ -20,6 +20,9 @@ export function computeChartTone({ missingMaster, cacheHit, dataSourceTransition
   if (dataSourceTransition === 'server') {
     return 'warning';
   }
+  if (dataSourceTransition === 'local') {
+    return 'info';
+  }
   return 'info';
 }
 
@@ -48,6 +51,12 @@ const TRANSITION_META: Record<DataSourceTransition, TransitionMeta> = {
     tone: 'warning',
     description: '実 ORCA サーバーから取得中。欠損が解消したら tone=info へ戻ります。',
     reason: 'mock・snapshot→server （本値取得）',
+  },
+  local: {
+    label: 'dataSourceTransition=local',
+    tone: 'info',
+    description: '院内ローカル契約のデータを参照中。official ORCA bridge は使っていません。',
+    reason: 'local contract（院内ローカル保存/参照）',
   },
   fallback: {
     label: 'dataSourceTransition=fallback',

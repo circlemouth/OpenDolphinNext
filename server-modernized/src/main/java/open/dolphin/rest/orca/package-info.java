@@ -1,5 +1,5 @@
 /**
- * Public ORCA HTTP endpoints exposed under `/api/orca/*`.
- * Internal transport/config/sync concerns live under `open.dolphin.orca.*`.
+ * ORCA-adjacent REST resources.
+ * Public official/master routes live under `/api/orca/*`, and local-only wrappers live under `/api/local/*`.
  */
 package open.dolphin.rest.orca;

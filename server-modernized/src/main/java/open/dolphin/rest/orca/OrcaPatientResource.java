@@ -24,10 +24,13 @@ import open.dolphin.rest.dto.orca.PatientMutationResponse;
 import open.dolphin.session.PatientServiceBean;
 
 /**
- * Patient mutation wrapper (`/orca/patient/mutation`).
+ * Local-only patient mutation wrapper.
  */
-@Path("/orca/patient")
+@Path("/local/patients")
 public class OrcaPatientResource extends AbstractOrcaRestResource {
+
+    private static final String ROUTE_NAMESPACE = "local";
+    private static final String AUDIT_ACTION = "LOCAL_PATIENT_MUTATION";
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -87,6 +90,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
             auditDetails.put("operation", operation);
         }
         auditDetails.put("runId", runId);
+        auditDetails.put("routeNamespace", ROUTE_NAMESPACE);
         return auditDetails;
     }
 
@@ -94,6 +98,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
             String facilityId, Map<String, Object> auditDetails) {
         PatientMutationResponse response = new PatientMutationResponse();
         response.setRunId((String) auditDetails.get("runId"));
+        response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setPatientId(payload.getPatient().getPatientId());
 
         PatientModel existing = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
@@ -106,7 +111,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
             response.setApiResult("00");
             response.setApiResultMessage("登録完了");
             response.setPatientDbId(id);
-            recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_ACTION, auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             PatientModel retryExisting = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
@@ -127,7 +132,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
             conflictAudit.put("conflictFields", conflicts);
             markFailureDetails(conflictAudit, Response.Status.CONFLICT.getStatusCode(),
                     "patient_conflict", "Patient already exists with different attributes");
-            recordAudit(request, "ORCA_PATIENT_MUTATION", conflictAudit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_ACTION, conflictAudit, AuditEventEnvelope.Outcome.FAILURE);
             Map<String, Object> errorDetails = new HashMap<>();
             errorDetails.put("patientId", payload.getPatient().getPatientId());
             errorDetails.put("conflictFields", conflicts);
@@ -141,7 +146,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         response.setIdempotentReason(idempotentReason);
         auditDetails.put("idempotent", Boolean.TRUE);
         auditDetails.put("idempotentReason", idempotentReason);
-        recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
+        recordAudit(request, AUDIT_ACTION, auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -152,7 +157,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
             Map<String, Object> missingAudit = new HashMap<>(auditDetails);
             markFailureDetails(missingAudit, Response.Status.NOT_FOUND.getStatusCode(),
                     "patient_not_found", "Patient not found");
-            recordAudit(request, "ORCA_PATIENT_MUTATION", missingAudit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_ACTION, missingAudit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found");
         }
         PatientModel update = toPatientModel(payload.getPatient(), facilityId);
@@ -160,11 +165,12 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         patientServiceBean.update(update);
         PatientMutationResponse response = new PatientMutationResponse();
         response.setRunId((String) auditDetails.get("runId"));
+        response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setPatientId(payload.getPatient().getPatientId());
         response.setApiResult("00");
         response.setApiResultMessage("更新完了");
         response.setPatientDbId(existing.getId());
-        recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
+        recordAudit(request, AUDIT_ACTION, auditDetails, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -174,7 +180,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         unsupportedAudit.put("field", "operation");
         markFailureDetails(unsupportedAudit, Response.Status.BAD_REQUEST.getStatusCode(),
                 "invalid_request", "delete operation is not supported");
-        recordAudit(request, "ORCA_PATIENT_MUTATION", unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
+        recordAudit(request, AUDIT_ACTION, unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
         throw validationError(request, "operation", "delete operation is not supported");
     }
 
@@ -185,7 +191,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         unsupportedAudit.put("field", "operation");
         markFailureDetails(unsupportedAudit, Response.Status.BAD_REQUEST.getStatusCode(),
                 "invalid_request", "Unsupported operation: " + operation);
-        recordAudit(request, "ORCA_PATIENT_MUTATION", unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
+        recordAudit(request, AUDIT_ACTION, unsupportedAudit, AuditEventEnvelope.Outcome.FAILURE);
         throw validationError(request, "operation", "Unsupported operation: " + operation);
     }
 
@@ -195,7 +201,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         auditDetails.put("field", field);
         markFailureDetails(auditDetails, Response.Status.BAD_REQUEST.getStatusCode(),
                 "invalid_request", message);
-        recordAudit(request, "ORCA_PATIENT_MUTATION", auditDetails, AuditEventEnvelope.Outcome.FAILURE);
+        recordAudit(request, AUDIT_ACTION, auditDetails, AuditEventEnvelope.Outcome.FAILURE);
         throw validationError(request, field, message);
     }
 

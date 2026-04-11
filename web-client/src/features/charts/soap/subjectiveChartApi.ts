@@ -24,7 +24,7 @@ export async function postChartSubjectiveEntry(
   payload: ChartSubjectiveEntryRequest,
 ): Promise<ChartSubjectiveEntryResponse> {
   const runId = getObservabilityMeta().runId;
-  const response = await httpFetch('/api/orca/chart/subjectives', {
+  const response = await httpFetch('/api/local/charts/subjectives', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

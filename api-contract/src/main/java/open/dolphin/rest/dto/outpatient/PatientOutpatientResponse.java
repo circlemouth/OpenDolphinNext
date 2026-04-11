@@ -11,6 +11,7 @@ public class PatientOutpatientResponse {
     private String runId;
     private String traceId;
     private String requestId;
+    private String routeNamespace;
     private String dataSource;
     private String dataSourceTransition;
     private boolean cacheHit;
@@ -45,6 +46,14 @@ public class PatientOutpatientResponse {
 
     public void setRequestId(String requestId) {
         this.requestId = requestId;
+    }
+
+    public String getRouteNamespace() {
+        return routeNamespace;
+    }
+
+    public void setRouteNamespace(String routeNamespace) {
+        this.routeNamespace = routeNamespace;
     }
 
     public String getDataSource() {

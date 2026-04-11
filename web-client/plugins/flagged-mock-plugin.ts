@@ -363,7 +363,7 @@ const createFlagAwareMiddleware = (): NextHandleFunction => (req, res, next) => 
     }
   }
 
-  if (url.pathname.startsWith('/orca/patients/local-search/mock')) {
+  if (url.pathname.startsWith('/api/local/patients/search/mock')) {
     if (shouldUseFlaggedOutpatientMock(req, url)) {
       json(res, 200, buildPatientSearchMock(req));
       return;

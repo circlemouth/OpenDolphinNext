@@ -6,14 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Response payload for medical record snapshots.
+ * Response payload for POST /api/local/charts/medical-records.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class MedicalGetResponse {
+public class MedicalGetResponse extends OrcaApiResponse {
 
-    private String apiResult;
-    private String apiResultMessage;
-    private String runId;
     private String generatedAt;
     private PatientSummary patient;
     private List<MedicalRecordEntry> records;
@@ -27,30 +24,6 @@ public class MedicalGetResponse {
         response.setGeneratedAt(Instant.now().toString());
         response.setRecords(new ArrayList<>());
         return response;
-    }
-
-    public String getApiResult() {
-        return apiResult;
-    }
-
-    public void setApiResult(String apiResult) {
-        this.apiResult = apiResult;
-    }
-
-    public String getApiResultMessage() {
-        return apiResultMessage;
-    }
-
-    public void setApiResultMessage(String apiResultMessage) {
-        this.apiResultMessage = apiResultMessage;
-    }
-
-    public String getRunId() {
-        return runId;
-    }
-
-    public void setRunId(String runId) {
-        this.runId = runId;
     }
 
     public String getGeneratedAt() {

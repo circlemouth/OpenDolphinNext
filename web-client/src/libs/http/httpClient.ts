@@ -68,6 +68,7 @@ export function buildHttpHeaders(init?: RequestInit, pathname?: string | null): 
 export type HttpEndpointDefinition = {
   id: string;
   group?: 'outpatient' | 'images';
+  namespace?: 'official' | 'master' | 'local';
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'ANY';
   path: string;
   purpose: string;
@@ -79,6 +80,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
   {
     id: 'appointmentOutpatient',
     group: 'outpatient',
+    namespace: 'official',
     method: 'ANY',
     path: '/api/orca/appointments/*',
     purpose: '予約一覧・患者／請求試算・来院状況を取得して ORCA バナーの `runId`/`dataSource` を連携する。',
@@ -88,6 +90,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
   {
     id: 'diseaseMutation',
     group: 'outpatient',
+    namespace: 'local',
     method: 'ANY',
     path: '/api/local-summary/diagnoses',
     purpose: 'Charts の local diagnosis 編集で facilityId/patientId/karteId スコープの登録・更新・削除を行い、ORCA live 契約と分離する。',
@@ -97,6 +100,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
   {
     id: 'orderBundleMutation',
     group: 'outpatient',
+    namespace: 'local',
     method: 'ANY',
     path: '/api/orca/order/bundles',
     purpose: 'Charts の処方（RP）/オーダー束編集でバンドルを登録・更新・削除し、監査イベントへ反映する。',
@@ -106,19 +110,21 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
   {
     id: 'patientOutpatient',
     group: 'outpatient',
+    namespace: 'local',
     method: 'ANY',
-    path: '/api/orca/patient/mutation',
-    purpose: 'Patients/Administration で患者基本・保険情報を更新し、新規追加・削除・保険変更の `action=ORCA_PATIENT_MUTATION` を生成する。',
-    auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'operation'],
+    path: '/api/local/patients/mutation',
+    purpose: 'Patients/Administration で院内ローカル患者情報を更新し、`action=LOCAL_PATIENT_MUTATION` を生成する。',
+    auditMetadata: ['runId', 'routeNamespace', 'operation', 'patientId'],
     sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md'],
   },
   {
     id: 'patientOutpatientInfo',
     group: 'outpatient',
+    namespace: 'local',
     method: 'ANY',
-    path: '/api/orca/patients/local-search/*',
-    purpose: 'Reception/Patients 用にローカル患者検索を実行し、`missingMaster`/`cacheHit` を含めた `audit` を生成する。',
-    auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'fetchedAt', 'recordsReturned'],
+    path: '/api/local/patients/search',
+    purpose: 'Reception/Patients 用に院内ローカル患者検索を実行し、`routeNamespace=local` と `recordsReturned` を含む監査を生成する。',
+    auditMetadata: ['runId', 'routeNamespace', 'dataSource', 'dataSourceTransition', 'fetchedAt', 'recordsReturned'],
     sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md'],
   },
 ];
