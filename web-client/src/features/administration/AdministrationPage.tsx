@@ -59,6 +59,7 @@ import {
   type OrcaInternalWrapperBase,
   type OrcaInternalWrapperEndpoint,
 } from './orcaInternalWrapperApi';
+import { fetchOrcaCapabilities, type OrcaInternalWrapperCapability } from './orcaCapabilitiesApi';
 import { resolveOrcaResultTone } from './orcaApiResultPolicy';
 import type { FeedbackTone } from '../shared/feedbackTone';
 import './administration.css';
@@ -92,6 +93,8 @@ type OrcaConnectionFormState = {
   serverUrl: string;
   port: string;
   username: string;
+  pushUrl: string;
+  pushTenantId: string;
   password: string;
   passwordConfigured: boolean;
   passwordUpdatedAt?: string;
@@ -126,6 +129,8 @@ type OrcaInternalWrapperOption = {
   label: string;
   hint: string;
   stubFixed?: boolean;
+  routeNamespace?: 'official' | 'master' | 'local';
+  behavior?: string;
   defaultPayload: Record<string, unknown>;
 };
 
@@ -144,6 +149,8 @@ const DEFAULT_ORCA_CONNECTION_FORM: OrcaConnectionFormState = {
   serverUrl: '',
   port: '443',
   username: '',
+  pushUrl: '',
+  pushTenantId: '',
   password: '',
   passwordConfigured: false,
   clientAuthEnabled: false,
@@ -272,12 +279,14 @@ const summarizeDeliveryStatus = (status: ReturnType<typeof buildChartsDeliverySt
   };
 };
 
-const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[] => [
+const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[] => [
   {
     id: 'medical-sets',
     label: '/api/orca/medical-sets（診療セット）',
     hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
     stubFixed: true,
+    routeNamespace: 'official',
+    behavior: 'stub_fixed',
     defaultPayload: {
       requestNumber: '01',
       patientId: '00002',
@@ -297,6 +306,8 @@ const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[]
     label: '/api/orca/birth-delivery（出産育児一時金）',
     hint: 'Trial 閉鎖のため stub 応答固定（Api_Result=79）',
     stubFixed: true,
+    routeNamespace: 'official',
+    behavior: 'stub_fixed',
     defaultPayload: {
       requestNumber: '01',
       patientId: '00002',
@@ -309,6 +320,8 @@ const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[]
     id: 'medical-records',
     label: '/api/local/charts/medical-records（院内診療記録取得）',
     hint: 'official ORCA ではなく院内ローカル保存済みカルテ文書を返します',
+    routeNamespace: 'local',
+    behavior: 'local_read',
     defaultPayload: {
       patientId: '00002',
       fromDate: '',
@@ -324,6 +337,8 @@ const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[]
     id: 'patient-mutation',
     label: '/api/local/patients/mutation（院内患者作成/更新）',
     hint: 'official ORCA 互換ではなく院内ローカル患者テーブル更新 contract です',
+    routeNamespace: 'local',
+    behavior: 'local_write',
     defaultPayload: {
       operation: 'create',
       patient: {
@@ -343,6 +358,8 @@ const buildInternalWrapperOptions = (today: string): OrcaInternalWrapperOption[]
     id: 'chart-subjectives',
     label: '/api/local/charts/subjectives（院内主訴登録）',
     hint: 'official subjectivesv2 ではなく院内カルテへの主観記録保存 contract です',
+    routeNamespace: 'local',
+    behavior: 'local_write',
     defaultPayload: {
       patientId: '00002',
       performDate: today,
@@ -363,7 +380,19 @@ const buildInternalWrapperState = (options: OrcaInternalWrapperOption[]) =>
   }, {} as Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>);
 
 const resolveInternalWrapperOption = (options: OrcaInternalWrapperOption[], endpoint: OrcaInternalWrapperEndpoint) =>
-  options.find((option) => option.id === endpoint) ?? options[0];
+  options.find((option) => option.id === endpoint) ?? options[0] ?? null;
+
+const mergeInternalWrapperOption = (
+  option: OrcaInternalWrapperOption,
+  capability: OrcaInternalWrapperCapability,
+): OrcaInternalWrapperOption => ({
+  ...option,
+  label: capability.label ?? option.label,
+  hint: capability.hint ?? option.hint,
+  routeNamespace: capability.routeNamespace ?? option.routeNamespace,
+  behavior: capability.behavior ?? option.behavior,
+  stubFixed: capability.behavior === 'stub_fixed' ? true : option.stubFixed,
+});
 
 const resolveStatusTone = (result: { ok: boolean } | null, isPending: boolean) => {
   if (isPending) return 'pending' as const;
@@ -389,7 +418,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const guardLogRef = useRef<{ runId?: string; role?: string }>({});
   const forbiddenLogRef = useRef<{ runId?: string; noted?: boolean }>({});
   const today = useMemo(() => formatDateInput(new Date()), []);
-  const internalWrapperOptions = useMemo(() => buildInternalWrapperOptions(today), [today]);
+  const internalWrapperCatalog = useMemo(() => buildInternalWrapperCatalog(today), [today]);
   const normalizedSearchParams = useMemo(() => normalizeAdministrationSearchParams(searchParams), [searchParams]);
   const activeTab = useMemo(() => resolveAdministrationTabFromSearch(normalizedSearchParams), [normalizedSearchParams]);
   const activeDeliverySection = useMemo(
@@ -416,7 +445,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const [orcaInternalWrapperTarget, setOrcaInternalWrapperTarget] = useState<OrcaInternalWrapperEndpoint>('medical-sets');
   const [orcaInternalWrapperState, setOrcaInternalWrapperState] = useState<
     Record<OrcaInternalWrapperEndpoint, OrcaInternalWrapperFormState>
-  >(() => buildInternalWrapperState(internalWrapperOptions));
+  >(() => buildInternalWrapperState(internalWrapperCatalog));
   const [connectivitySummary, setConnectivitySummary] = useState<{
     testedAt: string;
     success: number;
@@ -437,6 +466,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const orcaConnectionQuery = useQuery({
     queryKey: ['admin-orca-connection'],
     queryFn: fetchOrcaConnectionConfig,
+    staleTime: 60_000,
+    enabled: activeTab === 'delivery',
+  });
+  const orcaCapabilitiesQuery = useQuery({
+    queryKey: ['admin-orca-capabilities'],
+    queryFn: fetchOrcaCapabilities,
     staleTime: 60_000,
     enabled: activeTab === 'delivery',
   });
@@ -486,6 +521,18 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const orcaConnectionAccessVerified = activeTab === 'delivery' && orcaConnectionAuthStatus === 200;
   const orcaConnectionAuthBlocked =
     activeTab === 'delivery' && (orcaConnectionAuthStatus === 401 || orcaConnectionAuthStatus === 403);
+  const internalWrapperOptions = useMemo(() => {
+    const capabilityMap = new Map(
+      (orcaCapabilitiesQuery.data?.internalWrappers ?? []).map((capability) => [capability.id, capability]),
+    );
+    return internalWrapperCatalog
+      .map((option) => {
+        const capability = capabilityMap.get(option.id);
+        if (!capability?.available) return null;
+        return mergeInternalWrapperOption(option, capability);
+      })
+      .filter((option): option is OrcaInternalWrapperOption => Boolean(option));
+  }, [internalWrapperCatalog, orcaCapabilitiesQuery.data?.internalWrappers]);
 
   const buildConnectionSnapshot = useCallback(
     (formState: OrcaConnectionFormState): OrcaConnectionFormState => ({
@@ -562,6 +609,14 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const currentInternalWrapper = orcaInternalWrapperState[orcaInternalWrapperTarget];
   const internalWrapperResult = currentInternalWrapper?.result ?? null;
 
+  useEffect(() => {
+    if (internalWrapperOptions.length === 0) return;
+    const hasTarget = internalWrapperOptions.some((option) => option.id === orcaInternalWrapperTarget);
+    if (!hasTarget) {
+      setOrcaInternalWrapperTarget(internalWrapperOptions[0].id);
+    }
+  }, [internalWrapperOptions, orcaInternalWrapperTarget]);
+
   const logGuardEvent = useCallback(
     (action: GuardAction, detail?: string) => {
       logAuditEvent({
@@ -629,11 +684,13 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       return;
     }
     const next = buildConnectionSnapshot({
-      ...orcaConnectionForm,
-      useWeborca: data.useWeborca ?? orcaConnectionForm.useWeborca,
-      serverUrl: data.serverUrl ?? orcaConnectionForm.serverUrl,
-      port: data.port !== undefined ? String(data.port) : orcaConnectionForm.port,
-      username: data.username ?? orcaConnectionForm.username,
+      ...DEFAULT_ORCA_CONNECTION_FORM,
+      useWeborca: data.useWeborca ?? DEFAULT_ORCA_CONNECTION_FORM.useWeborca,
+      serverUrl: data.serverUrl ?? DEFAULT_ORCA_CONNECTION_FORM.serverUrl,
+      port: data.port !== undefined ? String(data.port) : DEFAULT_ORCA_CONNECTION_FORM.port,
+      username: data.username ?? DEFAULT_ORCA_CONNECTION_FORM.username,
+      pushUrl: data.pushUrl ?? DEFAULT_ORCA_CONNECTION_FORM.pushUrl,
+      pushTenantId: data.pushTenantId ?? DEFAULT_ORCA_CONNECTION_FORM.pushTenantId,
       password: '',
       passwordConfigured: Boolean(data.passwordConfigured),
       passwordUpdatedAt: data.passwordUpdatedAt,
@@ -656,7 +713,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     setOrcaConnectionSavedSnapshot(next);
     setOrcaConnectionFieldErrors({});
     setOrcaConnectionFeedback(null);
-  }, [buildConnectionSnapshot, orcaConnectionForm, orcaConnectionQuery.data]);
+  }, [buildConnectionSnapshot, orcaConnectionQuery.data]);
 
   const configMutation = useMutation({
     mutationFn: saveAdminConfig,
@@ -800,7 +857,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       setOrcaConnectionFeedback({
         tone: 'warn',
         message:
-          'WebORCA 接続設定は、管理者アカウントで認証済みのセッションでのみ表示・編集できます。再ログイン後に再取得してください。',
+          'WebORCA 接続設定は、管理画面の接続設定取得権限が確認できたセッションでのみ表示・編集できます。再ログイン後に再取得してください。',
       });
       reportGuardedAction('orca-connection', 'admin authentication required');
       return false;
@@ -840,6 +897,8 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     const serverUrl = orcaConnectionForm.serverUrl.trim();
     const port = Number(orcaConnectionForm.port);
     const username = orcaConnectionForm.username.trim();
+    const pushUrl = orcaConnectionForm.pushUrl.trim();
+    const pushTenantId = orcaConnectionForm.pushTenantId.trim();
     const password = orcaConnectionForm.password.trim();
     const passphrase = orcaConnectionForm.clientCertificatePassphrase.trim();
     const fieldErrors: {
@@ -873,6 +932,8 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       serverUrl,
       port,
       username,
+      pushUrl: pushUrl || undefined,
+      pushTenantId: pushTenantId || undefined,
       password: password || undefined,
       clientAuthEnabled: orcaConnectionForm.clientAuthEnabled,
       clientCertificatePassphrase: passphrase || undefined,
@@ -1023,18 +1084,24 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
           ok: false,
           detail: toErrorMessage(error),
         })),
-      postMedicalRecords(resolveInternalWrapperOption(internalWrapperOptions, 'medical-records').defaultPayload)
-        .then((result) => ({
-          label: 'internal wrapper medical-records',
-          ok: Boolean(result.ok),
-          detail: `HTTP ${result.status} / Api_Result=${result.apiResult ?? '―'} / source=${result.stub ? 'stub' : 'real'}`,
-        }))
-        .catch((error) => ({
-          label: 'internal wrapper medical-records',
-          ok: false,
-          detail: toErrorMessage(error),
-        })),
     ];
+
+    const medicalRecordsOption = internalWrapperOptions.find((option) => option.id === 'medical-records');
+    if (medicalRecordsOption) {
+      checks.push(
+        postMedicalRecords(medicalRecordsOption.defaultPayload)
+          .then((result) => ({
+            label: 'internal wrapper medical-records',
+            ok: Boolean(result.ok),
+            detail: `HTTP ${result.status} / Api_Result=${result.apiResult ?? '―'} / source=${result.stub ? 'stub' : 'real'}`,
+          }))
+          .catch((error) => ({
+            label: 'internal wrapper medical-records',
+            ok: false,
+            detail: toErrorMessage(error),
+          })),
+      );
+    }
 
     if (orcaConnectionAccessVerified) {
       checks.push(
@@ -1113,9 +1180,9 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       ? '接続OK'
       : '接続NG'
     : orcaConnectionAccessVerified
-      ? '認証済み（未テスト）'
+      ? '設定取得可（未テスト）'
       : orcaConnectionAuthBlocked
-        ? '認証要確認'
+        ? '権限要確認'
         : '未確認';
 
   const abnormalSummary = (() => {
@@ -1469,22 +1536,29 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                       ) : null}
                     </section>
                     <div className="administration-grid administration-grid--wide">
-                      <OrcaInternalWrapperCard
-                        isSystemAdmin={isSystemAdmin}
-                        guardDetailsId={guardDetailsId}
-                        options={internalWrapperOptions}
-                        target={orcaInternalWrapperTarget}
-                        currentOption={internalWrapperOption}
-                        currentState={currentInternalWrapper}
-                        result={internalWrapperResult}
-                        statusTone={internalWrapperStatusTone}
-                        statusLabel={internalWrapperStatusLabel}
-                        pending={internalWrapperMutation.isPending}
-                        onTargetChange={setOrcaInternalWrapperTarget}
-                        onPayloadChange={handleInternalWrapperPayloadChange}
-                        onSubmit={handleInternalWrapperSubmit}
-                        onReset={handleInternalWrapperReset}
-                      />
+                      {internalWrapperOption ? (
+                        <OrcaInternalWrapperCard
+                          isSystemAdmin={isSystemAdmin}
+                          guardDetailsId={guardDetailsId}
+                          options={internalWrapperOptions}
+                          target={orcaInternalWrapperTarget}
+                          currentOption={internalWrapperOption}
+                          currentState={currentInternalWrapper}
+                          result={internalWrapperResult}
+                          statusTone={internalWrapperStatusTone}
+                          statusLabel={internalWrapperStatusLabel}
+                          pending={internalWrapperMutation.isPending}
+                          onTargetChange={setOrcaInternalWrapperTarget}
+                          onPayloadChange={handleInternalWrapperPayloadChange}
+                          onSubmit={handleInternalWrapperSubmit}
+                          onReset={handleInternalWrapperReset}
+                        />
+                      ) : (
+                        <section className="administration-card" aria-label="internal wrapper unavailable">
+                          <h2 className="administration-card__title">ORCA内製ラッパー</h2>
+                          <p className="admin-note">この環境で利用可能な internal wrapper はありません。</p>
+                        </section>
+                      )}
                     </div>
                   </>
                 ) : null}

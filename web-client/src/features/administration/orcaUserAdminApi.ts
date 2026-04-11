@@ -63,17 +63,13 @@ export type OrcaUserCreatePayload = {
   staffClass: string;
   fullName: string;
   fullNameKana?: string;
-  staffNumber?: string;
   isAdmin?: boolean;
 };
 
 export type OrcaUserUpdatePayload = {
-  userId?: string;
   password?: string;
-  staffClass?: string;
   fullName?: string;
   fullNameKana?: string;
-  staffNumber?: string;
   isAdmin?: boolean;
 };
 
@@ -433,7 +429,6 @@ export async function createOrcaUser(payload: OrcaUserCreatePayload): Promise<Or
   const staffClass = payload.staffClass.trim();
   const fullName = payload.fullName.trim();
   const fullNameKana = payload.fullNameKana?.trim();
-  const staffNumber = payload.staffNumber?.trim();
   try {
     return await requestMutation(ORCA_USERS_ENDPOINT, {
       method: 'POST',
@@ -443,14 +438,12 @@ export async function createOrcaUser(payload: OrcaUserCreatePayload): Promise<Or
         staffClass,
         fullName,
         fullNameKana: fullNameKana || undefined,
-        staffNumber: staffNumber || undefined,
         isAdmin: payload.isAdmin,
         User_Id: userId,
         Password: password,
         Staff_Class: staffClass,
         WholeName: fullName,
         WholeName_inKana: fullNameKana || undefined,
-        Staff_Number: staffNumber || undefined,
         Admin_Flag: payload.isAdmin,
       }),
     });
@@ -460,29 +453,20 @@ export async function createOrcaUser(payload: OrcaUserCreatePayload): Promise<Or
 }
 
 export async function updateOrcaUser(orcaUserId: string, payload: OrcaUserUpdatePayload): Promise<OrcaAdminMutationResponse> {
-  const nextUserId = payload.userId?.trim();
   const password = payload.password?.trim();
-  const staffClass = payload.staffClass?.trim();
   const fullName = payload.fullName?.trim();
   const fullNameKana = payload.fullNameKana?.trim();
-  const staffNumber = payload.staffNumber?.trim();
   try {
     return await requestMutation(`${ORCA_USERS_ENDPOINT}/${encodeURIComponent(orcaUserId)}`, {
       method: 'PUT',
       body: JSON.stringify({
-        userId: nextUserId || undefined,
         password: password || undefined,
-        staffClass: staffClass || undefined,
         fullName: fullName || undefined,
         fullNameKana: fullNameKana || undefined,
-        staffNumber: staffNumber || undefined,
         isAdmin: payload.isAdmin,
-        User_Id: nextUserId || undefined,
         Password: password || undefined,
-        Staff_Class: staffClass || undefined,
         WholeName: fullName || undefined,
         WholeName_inKana: fullNameKana || undefined,
-        Staff_Number: staffNumber || undefined,
         Admin_Flag: payload.isAdmin,
       }),
     });

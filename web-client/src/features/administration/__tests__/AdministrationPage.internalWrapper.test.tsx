@@ -1,0 +1,182 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
+import { render, screen } from '@testing-library/react';
+
+import { AdministrationPage } from '../AdministrationPage';
+
+const {
+  mockFetchAdminConfig,
+  mockFetchOrcaQueue,
+  mockFetchOrcaConnectionConfig,
+  mockFetchOrcaCapabilities,
+} = vi.hoisted(() => ({
+  mockFetchAdminConfig: vi.fn(),
+  mockFetchOrcaQueue: vi.fn(),
+  mockFetchOrcaConnectionConfig: vi.fn(),
+  mockFetchOrcaCapabilities: vi.fn(),
+}));
+
+vi.mock('../../../AppRouter', () => ({
+  useSession: () => ({ facilityId: 'FAC-TEST', userId: 'admin-user', role: 'system_admin' }),
+}));
+
+vi.mock('../../../libs/ui/appToast', () => ({
+  useAppToast: () => ({ enqueue: vi.fn() }),
+}));
+
+vi.mock('../../../libs/audit/auditLogger', () => ({
+  getAuditEventLog: vi.fn(() => []),
+  logAuditEvent: vi.fn(),
+}));
+
+vi.mock('../../../libs/observability/observability', () => ({
+  resolveAriaLive: vi.fn(() => 'polite'),
+  resolveRunId: vi.fn((runId?: string) => runId ?? 'RUN-FALLBACK'),
+}));
+
+vi.mock('../../../libs/observability/runIdCopy', () => ({
+  copyTextToClipboard: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../libs/auth/roles', () => ({
+  isSystemAdminRole: vi.fn(() => true),
+}));
+
+vi.mock('../../reception/components/ToneBanner', () => ({
+  ToneBanner: () => null,
+}));
+
+vi.mock('../../shared/AuditSummaryInline', () => ({
+  AuditSummaryInline: () => null,
+}));
+
+vi.mock('../../shared/RunIdBadge', () => ({
+  RunIdBadge: () => null,
+}));
+
+vi.mock('../AccessManagementPanel', () => ({
+  AccessManagementPanel: () => null,
+}));
+
+vi.mock('../OrcaUserManagementPanel', () => ({
+  OrcaUserManagementPanel: () => null,
+}));
+
+vi.mock('../MasterUpdatesPanel', () => ({
+  MasterUpdatesPanel: () => null,
+}));
+
+vi.mock('../components/ConfirmDialog', () => ({
+  ConfirmDialog: () => null,
+}));
+
+vi.mock('../api', () => ({
+  discardOrcaQueue: vi.fn().mockResolvedValue({ ok: true }),
+  fetchAdminConfig: mockFetchAdminConfig,
+  fetchOperationsHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', raw: {} }),
+  fetchOperationsReadiness: vi.fn().mockResolvedValue({ ok: true, status: 200, summaryStatus: 'UP', checks: {}, raw: {} }),
+  fetchOrcaQueue: mockFetchOrcaQueue,
+  fetchPvtWorkerHealth: vi.fn().mockResolvedValue({ ok: true, status: 200, workerStatus: 'UP', reasonCodes: [], raw: {} }),
+  retryOrcaQueue: vi.fn().mockResolvedValue({ ok: true }),
+  saveAdminConfig: vi.fn().mockResolvedValue({ ok: true }),
+}));
+
+vi.mock('../orcaConnectionApi', () => ({
+  fetchOrcaConnectionConfig: mockFetchOrcaConnectionConfig,
+  saveOrcaConnectionConfig: vi.fn().mockResolvedValue({ ok: true, status: 200 }),
+  testOrcaConnection: vi.fn().mockResolvedValue({ ok: true, status: 200, orcaHttpStatus: 200, apiResult: '00' }),
+}));
+
+vi.mock('../orcaCapabilitiesApi', () => ({
+  fetchOrcaCapabilities: mockFetchOrcaCapabilities,
+}));
+
+vi.mock('../orcaInternalWrapperApi', () => ({
+  postBirthDelivery: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '79', stub: true }),
+  postMedicalRecords: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
+  postMedicalSets: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '79', stub: true }),
+  postPatientMutation: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
+  postSubjectiveEntry: vi.fn().mockResolvedValue({ ok: true, status: 200, apiResult: '00' }),
+}));
+
+const renderPage = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  });
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/admin',
+        element: (
+          <QueryClientProvider client={queryClient}>
+            <AdministrationPage runId="RUN-DEBUG" role="system_admin" />
+          </QueryClientProvider>
+        ),
+      },
+    ],
+    { initialEntries: ['/admin?section=debug'] },
+  );
+  render(<RouterProvider router={router} />);
+};
+
+beforeEach(() => {
+  mockFetchAdminConfig.mockResolvedValue({
+    runId: 'RUN-CONFIG',
+    status: 200,
+    deliveryMode: 'immediate',
+    deliveredAt: '2026-04-11T00:00:00Z',
+    environment: 'dev',
+    orcaEndpoint: 'https://example.invalid/openDolphin/resources',
+    chartsDisplayEnabled: true,
+    chartsSendEnabled: true,
+    chartsMasterSource: 'auto',
+    verifyAdminDelivery: true,
+  });
+  mockFetchOrcaQueue.mockResolvedValue({ runId: 'RUN-QUEUE', queue: [] });
+  mockFetchOrcaConnectionConfig.mockResolvedValue({
+    ok: true,
+    status: 200,
+    passwordConfigured: true,
+    clientAuthEnabled: false,
+    clientCertificateConfigured: false,
+    clientCertificatePassphraseConfigured: false,
+    caCertificateConfigured: false,
+  });
+});
+
+describe('AdministrationPage internal wrapper section', () => {
+  it('capability が無い wrapper を表示しない', async () => {
+    mockFetchOrcaCapabilities.mockResolvedValue({ ok: true, internalWrappers: [] });
+
+    renderPage();
+
+    expect(await screen.findByText('この環境で利用可能な internal wrapper はありません。')).toBeInTheDocument();
+  });
+
+  it('利用可能な wrapper だけを selector に出す', async () => {
+    mockFetchOrcaCapabilities.mockResolvedValue({
+      ok: true,
+      internalWrappers: [
+        {
+          id: 'medical-records',
+          available: true,
+          label: '/api/local/charts/medical-records（院内診療記録取得）',
+          hint: 'official ORCA ではなく院内ローカル保存済みカルテ文書を返します',
+          routeNamespace: 'local',
+          behavior: 'local_read',
+        },
+      ],
+    });
+
+    renderPage();
+
+    expect(await screen.findByText('利用可能な wrapper だけを表示し、official/local の実際の挙動と stub 状態を分けて表示します。')).toBeInTheDocument();
+    const options = await screen.findAllByRole('option');
+    expect(options).toHaveLength(1);
+    expect(options[0]).toHaveTextContent('/api/local/charts/medical-records');
+  });
+});

@@ -37,6 +37,8 @@ final class MasterUpdatePayloads {
         row.put("lastAutoRunAt", state.lastAutoRunAt);
         row.put("lastPolledAt", state.lastPolledAt);
         row.put("running", MasterUpdateStateSupport.isRunning(state));
+        row.put("officialSource", toOfficialSource(state));
+        row.put("localArtifacts", toLocalArtifactSummary(state));
 
         MasterUpdateStore.DatasetVersion current = state.currentVersion();
         if (current != null) {
@@ -61,6 +63,7 @@ final class MasterUpdatePayloads {
                 row.put("recordCount", version.recordCount);
                 row.put("artifactPath", version.artifactPath);
                 row.put("sourceUrl", version.sourceUrl);
+                row.put("sourceKind", resolveVersionSourceKind(version));
                 row.put("summary", version.summary);
                 row.put("triggerType", version.triggerType);
                 row.put("requestedBy", version.requestedBy);
@@ -74,7 +77,56 @@ final class MasterUpdatePayloads {
             }
         }
         detail.put("versions", versions);
+        detail.put("localArtifacts", toLocalArtifactDetail(state, versions));
         return detail;
+    }
+
+    private static Map<String, Object> toOfficialSource(MasterUpdateStore.DatasetState state) {
+        Map<String, Object> official = new LinkedHashMap<>();
+        official.put("kind", "orca_master_core".equals(state.code) ? "masterlastupdatev3" : "external_source");
+        official.put("label", "orca_master_core".equals(state.code) ? "official masterlastupdatev3" : "official source metadata");
+        official.put("sourceUrl", state.sourceUrl);
+        official.put("updateFrequency", state.updateFrequency);
+        official.put("format", state.format);
+        official.put("usageNotes", state.usageNotes);
+        official.put("lastCheckedAt", state.lastCheckedAt);
+        official.put("lastPolledAt", state.lastPolledAt);
+        official.put("updateDetected", state.updateDetected);
+        official.put("latestRunId", state.latestRunId);
+        official.put("latestJobMessage", state.latestJobMessage);
+        return official;
+    }
+
+    private static Map<String, Object> toLocalArtifactSummary(MasterUpdateStore.DatasetState state) {
+        Map<String, Object> local = new LinkedHashMap<>();
+        local.put("manualUploadAllowed", state.manualUploadAllowed);
+        local.put("currentVersionId", state.currentVersionId);
+        local.put("currentRecordCount", state.currentRecordCount);
+        MasterUpdateStore.DatasetVersion current = state.currentVersion();
+        if (current != null) {
+            local.put("currentCapturedAt", current.capturedAt);
+            local.put("currentHash", current.hash);
+            local.put("currentSummary", current.summary);
+            local.put("currentArtifactPath", current.artifactPath);
+        }
+        local.put("versionCount", state.versions != null ? state.versions.size() : 0);
+        return local;
+    }
+
+    private static Map<String, Object> toLocalArtifactDetail(MasterUpdateStore.DatasetState state, List<Map<String, Object>> versions) {
+        Map<String, Object> local = toLocalArtifactSummary(state);
+        local.put("versions", versions);
+        return local;
+    }
+
+    private static String resolveVersionSourceKind(MasterUpdateStore.DatasetVersion version) {
+        if (version == null) {
+            return null;
+        }
+        if ("UPLOAD".equalsIgnoreCase(version.triggerType)) {
+            return "local_upload";
+        }
+        return "official_fetch";
     }
 
     static Map<String, Object> toScheduleMap(MasterUpdateStore.ScheduleConfig config) {

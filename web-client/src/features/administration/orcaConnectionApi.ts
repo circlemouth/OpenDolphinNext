@@ -10,6 +10,9 @@ export type OrcaConnectionConfigResponse = {
   serverUrl?: string;
   port?: number;
   username?: string;
+  pushUrl?: string;
+  pushTenantId?: string;
+  pushConfigured?: boolean;
   passwordConfigured?: boolean;
   passwordUpdatedAt?: string;
   clientAuthEnabled?: boolean;
@@ -33,6 +36,8 @@ export type OrcaConnectionSaveRequest = {
   serverUrl: string;
   port: number;
   username: string;
+  pushUrl?: string;
+  pushTenantId?: string;
   password?: string;
   clientAuthEnabled: boolean;
   clientCertificatePassphrase?: string;
@@ -88,6 +93,9 @@ const normalizeConfig = (
     serverUrl: getString(body.serverUrl),
     port: getNumber(body.port),
     username: getString(body.username),
+    pushUrl: getString(body.pushUrl),
+    pushTenantId: getString(body.pushTenantId),
+    pushConfigured: getBoolean(body.pushConfigured),
     passwordConfigured: getBoolean(body.passwordConfigured),
     passwordUpdatedAt: getString(body.passwordUpdatedAt),
     clientAuthEnabled: getBoolean(body.clientAuthEnabled),
@@ -157,6 +165,8 @@ export async function saveOrcaConnectionConfig(req: OrcaConnectionSaveRequest): 
     serverUrl: req.serverUrl,
     port: req.port,
     username: req.username,
+    pushUrl: req.pushUrl?.trim() || undefined,
+    pushTenantId: req.pushTenantId?.trim() || undefined,
     clientAuthEnabled: req.clientAuthEnabled,
   };
   const password = req.password?.trim();

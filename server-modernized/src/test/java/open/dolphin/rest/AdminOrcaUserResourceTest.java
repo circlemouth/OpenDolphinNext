@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +18,7 @@ import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
+import org.mockito.ArgumentCaptor;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
@@ -142,6 +145,64 @@ class AdminOrcaUserResourceTest {
         } catch (WebApplicationException ex) {
             assertEquals(400, ex.getResponse().getStatus());
         }
+    }
+
+    @Test
+    void createOrcaUserDoesNotSendUserNumberAndRefetchesUsers() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-CREATE");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
+                .thenReturn(okManageUsersResponse(), okManageUsersResponse());
+
+        Response response = resource.createOrcaUser(
+                request,
+                Map.of(
+                        "userId", "orca_01",
+                        "password", "pass",
+                        "staffClass", "01",
+                        "fullName", "ORCA Taro",
+                        "staffNumber", "999"));
+
+        assertEquals(200, response.getStatus());
+        ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
+        verify(orcaTransport, times(2)).invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), captor.capture());
+        String xml = captor.getAllValues().get(0).getBody();
+        assertNotNull(xml);
+        assertTrue(xml.contains("<Request_Number type=\"string\">02</Request_Number>"));
+        assertTrue(!xml.contains("<User_Number"));
+    }
+
+    @Test
+    void updateOrcaUserSendsOnlyMutableFields() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-UPDATE");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
+                .thenReturn(okManageUsersResponse());
+
+        Response response = resource.updateOrcaUser(
+                request,
+                "orca_01",
+                Map.of(
+                        "fullName", "更新 太郎",
+                        "fullNameKana", "コウシン タロウ",
+                        "password", "next-pass",
+                        "staffClass", "02",
+                        "staffNumber", "200",
+                        "userId", "other_id"));
+
+        assertEquals(200, response.getStatus());
+        ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
+        verify(orcaTransport).invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), captor.capture());
+        String xml = captor.getValue().getBody();
+        assertNotNull(xml);
+        assertTrue(xml.contains("<New_Full_Name type=\"string\">更新 太郎</New_Full_Name>"));
+        assertTrue(xml.contains("<New_Kana_Name type=\"string\">コウシン タロウ</New_Kana_Name>"));
+        assertTrue(xml.contains("<New_User_Password type=\"string\">next-pass</New_User_Password>"));
+        assertTrue(!xml.contains("<New_Group_Number"));
+        assertTrue(!xml.contains("<New_User_Number"));
+        assertTrue(!xml.contains("<New_User_Id"));
     }
 
     private OrcaTransportResult okManageUsersResponse() {

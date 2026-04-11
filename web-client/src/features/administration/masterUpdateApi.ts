@@ -10,6 +10,7 @@ export type MasterUpdateDatasetVersion = {
   recordCount?: number;
   artifactPath?: string;
   sourceUrl?: string;
+  sourceKind?: 'official_fetch' | 'local_upload' | string;
   summary?: string;
   triggerType?: string;
   requestedBy?: string;
@@ -19,6 +20,32 @@ export type MasterUpdateDatasetVersion = {
   changedCount?: number;
   note?: string;
   current?: boolean;
+};
+
+export type MasterUpdateOfficialSource = {
+  kind?: string;
+  label?: string;
+  sourceUrl?: string;
+  updateFrequency?: string;
+  format?: string;
+  usageNotes?: string;
+  lastCheckedAt?: string;
+  lastPolledAt?: string;
+  updateDetected?: boolean;
+  latestRunId?: string;
+  latestJobMessage?: string;
+};
+
+export type MasterUpdateLocalArtifacts = {
+  manualUploadAllowed?: boolean;
+  currentVersionId?: string;
+  currentRecordCount?: number;
+  currentCapturedAt?: string;
+  currentHash?: string;
+  currentSummary?: string;
+  currentArtifactPath?: string;
+  versionCount?: number;
+  versions?: MasterUpdateDatasetVersion[];
 };
 
 export type MasterUpdateDataset = {
@@ -49,6 +76,8 @@ export type MasterUpdateDataset = {
   running?: boolean;
   versionCount?: number;
   versions?: MasterUpdateDatasetVersion[];
+  officialSource?: MasterUpdateOfficialSource;
+  localArtifacts?: MasterUpdateLocalArtifacts;
 };
 
 export type MasterUpdateSchedule = {

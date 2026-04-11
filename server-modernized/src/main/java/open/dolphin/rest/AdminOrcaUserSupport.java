@@ -245,7 +245,6 @@ final class AdminOrcaUserSupport {
                                         String staffClass,
                                         String fullName,
                                         String fullNameKana,
-                                        String staffNumber,
                                         Boolean isAdmin) {
         StringBuilder builder = new StringBuilder();
         builder.append("<data><manageusersreq type=\"record\"><Request_Number type=\"string\">02</Request_Number><User_Information type=\"record\">");
@@ -254,29 +253,22 @@ final class AdminOrcaUserSupport {
         xmlElement(builder, "Group_Number", staffClass);
         xmlElement(builder, "Full_Name", fullName);
         xmlElement(builder, "Kana_Name", fullNameKana);
-        xmlElement(builder, "User_Number", staffNumber);
         xmlElement(builder, "Administrator_Privilege", Boolean.TRUE.equals(isAdmin) ? "1" : "0");
         builder.append("</User_Information></manageusersreq></data>");
         return builder.toString();
     }
 
     static String buildUpdateRequestXml(String currentUserId,
-                                        String newUserId,
                                         String newPassword,
-                                        String newStaffClass,
                                         String newFullName,
                                         String newFullNameKana,
-                                        String newStaffNumber,
                                         Boolean newIsAdmin) {
         StringBuilder builder = new StringBuilder();
         builder.append("<data><manageusersreq type=\"record\"><Request_Number type=\"string\">03</Request_Number><User_Information type=\"record\">");
         xmlElement(builder, "User_Id", currentUserId);
-        xmlElement(builder, "New_User_Id", newUserId);
         xmlElement(builder, "New_User_Password", newPassword);
-        xmlElement(builder, "New_Group_Number", newStaffClass);
         xmlElement(builder, "New_Full_Name", newFullName);
         xmlElement(builder, "New_Kana_Name", newFullNameKana);
-        xmlElement(builder, "New_User_Number", newStaffNumber);
         if (newIsAdmin != null) {
             xmlElement(builder, "New_Administrator_Privilege", Boolean.TRUE.equals(newIsAdmin) ? "1" : "0");
         }

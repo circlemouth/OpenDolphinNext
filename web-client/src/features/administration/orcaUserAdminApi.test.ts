@@ -5,6 +5,7 @@ import {
   fetchOrcaUsers,
   isValidOrcaUserId,
   linkEhrUserToOrca,
+  updateOrcaUser,
 } from './orcaUserAdminApi';
 import { httpFetch } from '../../libs/http/httpClient';
 
@@ -141,5 +142,78 @@ describe('orcaUserAdminApi', () => {
       apiResult: 'E31',
       apiResultMessage: 'already linked',
     });
+  });
+
+  it('作成時に official create request と一致する payload を送る', async () => {
+    mockHttpFetch.mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, user: { userId: 'doctor_01' } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await createOrcaUser({
+      userId: 'doctor_01',
+      password: 'password',
+      staffClass: '01',
+      fullName: '山田 太郎',
+      fullNameKana: 'ヤマダ タロウ',
+      isAdmin: true,
+    });
+
+    const [, init] = mockHttpFetch.mock.calls[0];
+    if (!init) throw new Error('fetch init is undefined');
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      userId: 'doctor_01',
+      password: 'password',
+      staffClass: '01',
+      fullName: '山田 太郎',
+      fullNameKana: 'ヤマダ タロウ',
+      User_Id: 'doctor_01',
+      Password: 'password',
+      Staff_Class: '01',
+      WholeName: '山田 太郎',
+      WholeName_inKana: 'ヤマダ タロウ',
+      Admin_Flag: true,
+    });
+    expect(body).not.toHaveProperty('staffNumber');
+    expect(body).not.toHaveProperty('Staff_Number');
+    expect(body).not.toHaveProperty('User_Number');
+  });
+
+  it('更新時に immutable fields を含めない payload を送る', async () => {
+    mockHttpFetch.mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, user: { userId: 'doctor_01' } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    );
+
+    await updateOrcaUser('doctor_01', {
+      password: 'next-pass',
+      fullName: '更新 太郎',
+      fullNameKana: 'コウシン タロウ',
+      isAdmin: false,
+    });
+
+    const [, init] = mockHttpFetch.mock.calls[0];
+    if (!init) throw new Error('fetch init is undefined');
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    expect(body).toMatchObject({
+      password: 'next-pass',
+      fullName: '更新 太郎',
+      fullNameKana: 'コウシン タロウ',
+      Password: 'next-pass',
+      WholeName: '更新 太郎',
+      WholeName_inKana: 'コウシン タロウ',
+      Admin_Flag: false,
+    });
+    expect(body).not.toHaveProperty('userId');
+    expect(body).not.toHaveProperty('staffClass');
+    expect(body).not.toHaveProperty('staffNumber');
+    expect(body).not.toHaveProperty('User_Id');
+    expect(body).not.toHaveProperty('Staff_Class');
+    expect(body).not.toHaveProperty('Staff_Number');
   });
 });
