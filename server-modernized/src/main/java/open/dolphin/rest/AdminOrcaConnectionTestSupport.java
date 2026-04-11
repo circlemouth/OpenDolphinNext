@@ -15,6 +15,7 @@ import javax.net.ssl.SSLException;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.orca.OrcaGatewayException;
+import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
@@ -87,9 +88,12 @@ final class AdminOrcaConnectionTestSupport {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("runId", runId);
         body.put("facilityId", facilityId);
+        body.put("testedScope", "api_only");
+        body.put("pushTested", Boolean.FALSE);
         if (traceId != null && !traceId.isBlank()) {
             body.put("traceId", traceId);
         }
+        appendPushStatus(body, facilityId);
         return body;
     }
 
@@ -131,6 +135,21 @@ final class AdminOrcaConnectionTestSupport {
         String apiResult = extractFirst(API_RESULT_PATTERN, responseXml);
         String apiMessage = extractFirst(API_MESSAGE_PATTERN, responseXml);
         return new TestInvocationResult(result, apiResult, apiMessage);
+    }
+
+    private void appendPushStatus(Map<String, Object> body, String facilityId) {
+        if (body == null || orcaConnectionConfigStore == null || facilityId == null || facilityId.isBlank()) {
+            return;
+        }
+        OrcaConnectionConfigRecord record = orcaConnectionConfigStore.getSnapshot(facilityId);
+        boolean pushConfigured = record != null
+                && record.getPushUrl() != null
+                && !record.getPushUrl().isBlank();
+        boolean pushTenantConfigured = record != null
+                && record.getPushTenantId() != null
+                && !record.getPushTenantId().isBlank();
+        body.put("pushConfigured", pushConfigured);
+        body.put("pushTenantConfigured", pushTenantConfigured);
     }
 
     private Response buildPolicyFailureResponse(

@@ -70,7 +70,6 @@ export type OrcaUserUpdatePayload = {
   password?: string;
   fullName?: string;
   fullNameKana?: string;
-  isAdmin?: boolean;
 };
 
 export type OrcaUserLinkPayload = {
@@ -463,11 +462,9 @@ export async function updateOrcaUser(orcaUserId: string, payload: OrcaUserUpdate
         password: password || undefined,
         fullName: fullName || undefined,
         fullNameKana: fullNameKana || undefined,
-        isAdmin: payload.isAdmin,
         Password: password || undefined,
         WholeName: fullName || undefined,
         WholeName_inKana: fullNameKana || undefined,
-        Admin_Flag: payload.isAdmin,
       }),
     });
   } catch (error) {

@@ -27,6 +27,12 @@ const formatTimestamp = (iso?: string) => {
   return date.toLocaleString('ja-JP', { hour12: false });
 };
 
+const formatOfficialUpdateDate = (value?: string) => {
+  if (!value) return '―';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return formatTimestamp(value);
+};
+
 const toStatusTone = (status?: string) => {
   if (status === 'normal') return 'ok';
   if (status === 'running') return 'pending';
@@ -190,7 +196,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
               <tr>
                 <th>状態</th>
                 <th>データセット</th>
-                <th>最終更新</th>
+                <th>official最終更新日</th>
                 <th>現行件数</th>
                 <th>更新検知</th>
                 <th>操作</th>
@@ -207,7 +213,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                     <div className="admin-quiet">{dataset.code}</div>
                     <div className="admin-quiet">{resolveOfficialSourceLabel(dataset)}</div>
                   </td>
-                  <td>{formatTimestamp(dataset.officialSource?.lastCheckedAt ?? dataset.lastSuccessfulAt)}</td>
+                  <td>{formatOfficialUpdateDate(dataset.officialSource?.officialLastUpdateDate)}</td>
                   <td>{dataset.currentRecordCount ?? '―'}</td>
                   <td>{dataset.updateDetected ? '更新あり' : '更新なし'}</td>
                   <td className="admin-master__actions">
@@ -256,15 +262,28 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
             </div>
 
             <details className="admin-master__minor">
-              <summary>official 取得状況</summary>
+              <summary>official 最終更新情報</summary>
               <ul className="placeholder-page__list">
                 <li>取得方式: {resolveOfficialSourceLabel(detailDataset)}</li>
+                <li>official最終更新日: {formatOfficialUpdateDate(detailDataset.officialSource?.officialLastUpdateDate)}</li>
+                <li>official取得日時: {formatTimestamp(detailDataset.officialSource?.officialCapturedAt)}</li>
                 <li>取得元URL: {detailDataset.officialSource?.sourceUrl ?? detailDataset.sourceUrl ?? '―'}</li>
                 <li>更新頻度: {detailDataset.officialSource?.updateFrequency ?? detailDataset.updateFrequency ?? '―'}</li>
                 <li>保存形式: {detailDataset.officialSource?.format ?? detailDataset.format ?? '―'}</li>
                 <li>利用注意: {detailDataset.officialSource?.usageNotes ?? detailDataset.usageNotes ?? '―'}</li>
                 <li>最終照会: {formatTimestamp(detailDataset.officialSource?.lastCheckedAt ?? detailDataset.lastCheckedAt)}</li>
                 <li>更新検知: {(detailDataset.officialSource?.updateDetected ?? detailDataset.updateDetected) ? 'あり' : 'なし'}</li>
+              </ul>
+            </details>
+
+            <details className="admin-master__minor">
+              <summary>local artifact 履歴 / rollback</summary>
+              <ul className="placeholder-page__list">
+                <li>現行版ID: {detailDataset.localArtifacts?.currentVersionId ?? detailDataset.currentVersionId ?? '―'}</li>
+                <li>現行取り込み日時: {formatTimestamp(detailDataset.localArtifacts?.currentCapturedAt ?? detailDataset.currentCapturedAt)}</li>
+                <li>現行件数: {detailDataset.localArtifacts?.currentRecordCount ?? detailDataset.currentRecordCount ?? '―'}</li>
+                <li>artifact 保存先: {detailDataset.localArtifacts?.currentArtifactPath ?? '―'}</li>
+                <li>履歴件数: {detailDataset.localArtifacts?.versionCount ?? detailDataset.versionCount ?? 0}</li>
               </ul>
             </details>
 
@@ -308,7 +327,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
               />
             </div>
 
-            <div className="admin-scroll">
+            <div className="admin-scroll" aria-label="local artifact history">
               <table className="admin-table">
                 <thead>
                   <tr>

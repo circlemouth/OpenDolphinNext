@@ -13,6 +13,7 @@ export type OrcaConnectionConfigResponse = {
   pushUrl?: string;
   pushTenantId?: string;
   pushConfigured?: boolean;
+  pushTenantConfigured?: boolean;
   passwordConfigured?: boolean;
   passwordUpdatedAt?: string;
   clientAuthEnabled?: boolean;
@@ -54,6 +55,10 @@ export type OrcaConnectionTestResponse = {
   errorCategory?: string;
   error?: string;
   testedAt?: string;
+  testedScope?: string;
+  pushTested?: boolean;
+  pushConfigured?: boolean;
+  pushTenantConfigured?: boolean;
   runId?: string;
   traceId?: string;
 };
@@ -96,6 +101,7 @@ const normalizeConfig = (
     pushUrl: getString(body.pushUrl),
     pushTenantId: getString(body.pushTenantId),
     pushConfigured: getBoolean(body.pushConfigured),
+    pushTenantConfigured: getBoolean(body.pushTenantConfigured),
     passwordConfigured: getBoolean(body.passwordConfigured),
     passwordUpdatedAt: getString(body.passwordUpdatedAt),
     clientAuthEnabled: getBoolean(body.clientAuthEnabled),
@@ -136,6 +142,10 @@ const normalizeTest = (
     errorCategory: getString(body.errorCategory),
     error: !resolvedOk ? error ?? `HTTP ${status}` : undefined,
     testedAt: getString(body.testedAt),
+    testedScope: getString(body.testedScope),
+    pushTested: getBoolean(body.pushTested),
+    pushConfigured: getBoolean(body.pushConfigured),
+    pushTenantConfigured: getBoolean(body.pushTenantConfigured),
     runId,
     traceId,
   };

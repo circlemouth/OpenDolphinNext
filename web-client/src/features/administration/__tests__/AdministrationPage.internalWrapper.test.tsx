@@ -146,11 +146,32 @@ beforeEach(() => {
     clientCertificatePassphraseConfigured: false,
     caCertificateConfigured: false,
   });
+  mockFetchOrcaCapabilities.mockResolvedValue({
+    ok: true,
+    connection: {
+      available: true,
+      testedScope: 'api_only',
+      pushConfigured: false,
+      pushTenantConfigured: false,
+      pushMode: 'none',
+    },
+    internalWrappers: [],
+  });
 });
 
 describe('AdministrationPage internal wrapper section', () => {
   it('capability が無い wrapper を表示しない', async () => {
-    mockFetchOrcaCapabilities.mockResolvedValue({ ok: true, internalWrappers: [] });
+    mockFetchOrcaCapabilities.mockResolvedValue({
+      ok: true,
+      connection: {
+        available: true,
+        testedScope: 'api_only',
+        pushConfigured: false,
+        pushTenantConfigured: false,
+        pushMode: 'none',
+      },
+      internalWrappers: [],
+    });
 
     renderPage();
 
@@ -174,7 +195,7 @@ describe('AdministrationPage internal wrapper section', () => {
 
     renderPage();
 
-    expect(await screen.findByText('利用可能な wrapper だけを表示し、official/local の実際の挙動と stub 状態を分けて表示します。')).toBeInTheDocument();
+    expect(await screen.findByText('capability で許可された local-only wrapper だけを表示します。official ORCA API 互換の画面ではありません。')).toBeInTheDocument();
     const options = await screen.findAllByRole('option');
     expect(options).toHaveLength(1);
     expect(options[0]).toHaveTextContent('/api/local/charts/medical-records');

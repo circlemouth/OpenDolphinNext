@@ -194,7 +194,6 @@ describe('orcaUserAdminApi', () => {
       password: 'next-pass',
       fullName: '更新 太郎',
       fullNameKana: 'コウシン タロウ',
-      isAdmin: false,
     });
 
     const [, init] = mockHttpFetch.mock.calls[0];
@@ -207,7 +206,6 @@ describe('orcaUserAdminApi', () => {
       Password: 'next-pass',
       WholeName: '更新 太郎',
       WholeName_inKana: 'コウシン タロウ',
-      Admin_Flag: false,
     });
     expect(body).not.toHaveProperty('userId');
     expect(body).not.toHaveProperty('staffClass');
@@ -215,5 +213,6 @@ describe('orcaUserAdminApi', () => {
     expect(body).not.toHaveProperty('User_Id');
     expect(body).not.toHaveProperty('Staff_Class');
     expect(body).not.toHaveProperty('Staff_Number');
+    expect(body).not.toHaveProperty('Admin_Flag');
   });
 });

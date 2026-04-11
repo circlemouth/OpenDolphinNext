@@ -7,8 +7,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class MasterUpdatePayloads {
+
+    private static final Pattern OFFICIAL_LAST_UPDATE_PATTERN =
+            Pattern.compile("(?:Last_Update_Date|Master_Update_Date)=([^\\s/]+)");
 
     private MasterUpdatePayloads() {
     }
@@ -82,6 +87,7 @@ final class MasterUpdatePayloads {
     }
 
     private static Map<String, Object> toOfficialSource(MasterUpdateStore.DatasetState state) {
+        MasterUpdateStore.DatasetVersion referenceVersion = resolveLatestOfficialVersion(state);
         Map<String, Object> official = new LinkedHashMap<>();
         official.put("kind", "orca_master_core".equals(state.code) ? "masterlastupdatev3" : "external_source");
         official.put("label", "orca_master_core".equals(state.code) ? "official masterlastupdatev3" : "official source metadata");
@@ -94,6 +100,9 @@ final class MasterUpdatePayloads {
         official.put("updateDetected", state.updateDetected);
         official.put("latestRunId", state.latestRunId);
         official.put("latestJobMessage", state.latestJobMessage);
+        official.put("officialLastUpdateDate", extractOfficialLastUpdateDate(referenceVersion != null ? referenceVersion.summary : null));
+        official.put("officialCapturedAt", referenceVersion != null ? referenceVersion.capturedAt : null);
+        official.put("officialSummary", referenceVersion != null ? referenceVersion.summary : null);
         return official;
     }
 
@@ -127,6 +136,30 @@ final class MasterUpdatePayloads {
             return "local_upload";
         }
         return "official_fetch";
+    }
+
+    private static MasterUpdateStore.DatasetVersion resolveLatestOfficialVersion(MasterUpdateStore.DatasetState state) {
+        if (state == null || state.versions == null || state.versions.isEmpty()) {
+            return null;
+        }
+        for (MasterUpdateStore.DatasetVersion version : state.versions) {
+            if (!"local_upload".equals(resolveVersionSourceKind(version))) {
+                return version;
+            }
+        }
+        return null;
+    }
+
+    private static String extractOfficialLastUpdateDate(String summary) {
+        if (summary == null || summary.isBlank()) {
+            return null;
+        }
+        Matcher matcher = OFFICIAL_LAST_UPDATE_PATTERN.matcher(summary);
+        if (!matcher.find()) {
+            return null;
+        }
+        String value = matcher.group(1);
+        return value != null && !value.isBlank() ? value.trim() : null;
     }
 
     static Map<String, Object> toScheduleMap(MasterUpdateStore.ScheduleConfig config) {

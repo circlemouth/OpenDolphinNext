@@ -48,6 +48,8 @@ describe('orcaConnectionApi', () => {
           facilityId: '1234',
           port: '8000',
           username: 'trial-user',
+          pushConfigured: true,
+          pushTenantConfigured: true,
         }),
         {
           status: 200,
@@ -63,6 +65,8 @@ describe('orcaConnectionApi', () => {
     expect(result.facilityId).toBe('1234');
     expect(result.port).toBe(8000);
     expect(result.username).toBe('trial-user');
+    expect(result.pushConfigured).toBe(true);
+    expect(result.pushTenantConfigured).toBe(true);
   });
 
   it('設定保存で notifySessionExpired=false を指定する', async () => {
@@ -131,7 +135,7 @@ describe('orcaConnectionApi', () => {
 
   it('接続テストで notifySessionExpired=false を指定する', async () => {
     mockHttpFetch.mockResolvedValue(
-      new Response(JSON.stringify({ ok: false, error: 'unauthorized' }), {
+      new Response(JSON.stringify({ ok: false, error: 'unauthorized', testedScope: 'api_only', pushTested: false }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' },
       }),
@@ -148,6 +152,8 @@ describe('orcaConnectionApi', () => {
     );
     expect(result.status).toBe(401);
     expect(result.ok).toBe(false);
+    expect(result.testedScope).toBe('api_only');
+    expect(result.pushTested).toBe(false);
   });
 
   it('設定保存で pushUrl / pushTenantId を config payload に含める', async () => {

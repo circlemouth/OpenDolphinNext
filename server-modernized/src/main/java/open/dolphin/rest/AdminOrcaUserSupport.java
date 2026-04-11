@@ -261,17 +261,13 @@ final class AdminOrcaUserSupport {
     static String buildUpdateRequestXml(String currentUserId,
                                         String newPassword,
                                         String newFullName,
-                                        String newFullNameKana,
-                                        Boolean newIsAdmin) {
+                                        String newFullNameKana) {
         StringBuilder builder = new StringBuilder();
         builder.append("<data><manageusersreq type=\"record\"><Request_Number type=\"string\">03</Request_Number><User_Information type=\"record\">");
         xmlElement(builder, "User_Id", currentUserId);
         xmlElement(builder, "New_User_Password", newPassword);
         xmlElement(builder, "New_Full_Name", newFullName);
         xmlElement(builder, "New_Kana_Name", newFullNameKana);
-        if (newIsAdmin != null) {
-            xmlElement(builder, "New_Administrator_Privilege", Boolean.TRUE.equals(newIsAdmin) ? "1" : "0");
-        }
         builder.append("</User_Information></manageusersreq></data>");
         return builder.toString();
     }
@@ -326,19 +322,17 @@ final class AdminOrcaUserSupport {
         if (element == null) {
             return null;
         }
-        String userId = firstNonBlank(textOf(element, "New_User_Id"), textOf(element, "User_Id"));
+        String userId = textOf(element, "User_Id");
         if (userId == null) {
             return null;
         }
         return new OrcaUserSnapshot(
                 normalizeToken(userId),
-                normalizeToken(firstNonBlank(textOf(element, "New_Full_Name"), textOf(element, "Full_Name"))),
-                normalizeToken(firstNonBlank(textOf(element, "New_Kana_Name"), textOf(element, "Kana_Name"))),
-                normalizeToken(firstNonBlank(textOf(element, "New_Group_Number"), textOf(element, "Group_Number"))),
-                normalizeToken(firstNonBlank(textOf(element, "New_User_Number"), textOf(element, "User_Number"))),
-                "1".equals(normalizeToken(firstNonBlank(
-                        textOf(element, "New_Administrator_Privilege"),
-                        textOf(element, "Administrator_Privilege")))));
+                normalizeToken(textOf(element, "Full_Name")),
+                normalizeToken(textOf(element, "Kana_Name")),
+                normalizeToken(textOf(element, "Group_Number")),
+                normalizeToken(textOf(element, "User_Number")),
+                "1".equals(normalizeToken(textOf(element, "Administrator_Privilege"))));
     }
 
     private static String textOf(Element parent, String tagName) {
@@ -457,5 +451,23 @@ final class AdminOrcaUserSupport {
         static SyncState completed(int syncedCount) {
             return new SyncState(false, Instant.now().toString(), syncedCount, null);
         }
+    }
+
+    record OrcaUserCreateRequest(
+            String userId,
+            String password,
+            String staffClass,
+            String fullName,
+            String fullNameKana,
+            boolean isAdmin
+    ) {
+    }
+
+    record OrcaUserUpdateRequest(
+            String currentUserId,
+            String password,
+            String fullName,
+            String fullNameKana
+    ) {
     }
 }

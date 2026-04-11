@@ -55,6 +55,8 @@ const dataset = {
     updateFrequency: '15分',
     format: 'XML',
     usageNotes: 'read only',
+    officialLastUpdateDate: '2026-04-11',
+    officialCapturedAt: '2026-04-11T00:10:00Z',
   },
   localArtifacts: {
     manualUploadAllowed: false,
@@ -132,6 +134,9 @@ describe('MasterUpdatesPanel', () => {
     renderPanel();
 
     expect(await screen.findByText('official masterlastupdatev3')).toBeInTheDocument();
+    expect(screen.getByText('official最終更新日')).toBeInTheDocument();
+    expect(screen.getByText('official 最終更新情報')).toBeInTheDocument();
+    expect(screen.getByText('local artifact 履歴 / rollback')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'official再取得' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'local artifact をアップロード' })).toBeInTheDocument();
     expect(screen.getByText('official fetch')).toBeInTheDocument();

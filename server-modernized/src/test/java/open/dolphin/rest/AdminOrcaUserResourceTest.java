@@ -186,7 +186,7 @@ class AdminOrcaUserResourceTest {
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
         when(orcaTransport.invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), any(OrcaTransportRequest.class)))
-                .thenReturn(okManageUsersResponse());
+                .thenReturn(okManageUsersResponse(), okManageUsersResponse());
 
         Response response = resource.updateOrcaUser(
                 request,
@@ -197,12 +197,13 @@ class AdminOrcaUserResourceTest {
                         "password", "next-pass",
                         "staffClass", "02",
                         "staffNumber", "200",
+                        "isAdmin", false,
                         "userId", "other_id"));
 
         assertEquals(200, response.getStatus());
         ArgumentCaptor<OrcaTransportRequest> captor = ArgumentCaptor.forClass(OrcaTransportRequest.class);
-        verify(orcaTransport).invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), captor.capture());
-        String xml = captor.getValue().getBody();
+        verify(orcaTransport, times(2)).invoke(anyString(), eq(OrcaEndpoint.MANAGE_USERS), captor.capture());
+        String xml = captor.getAllValues().get(0).getBody();
         assertNotNull(xml);
         assertTrue(xml.contains("<New_Full_Name type=\"string\">更新 太郎</New_Full_Name>"));
         assertTrue(xml.contains("<New_Kana_Name type=\"string\">コウシン タロウ</New_Kana_Name>"));
@@ -210,6 +211,7 @@ class AdminOrcaUserResourceTest {
         assertTrue(!xml.contains("<New_Group_Number"));
         assertTrue(!xml.contains("<New_User_Number"));
         assertTrue(!xml.contains("<New_User_Id"));
+        assertTrue(!xml.contains("<New_Administrator_Privilege"));
     }
 
     @Test
