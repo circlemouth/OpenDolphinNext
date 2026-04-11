@@ -18,14 +18,15 @@ export type OrcaStaticOrderInteractionResult = {
   traceId?: string;
 };
 
+export type OrcaMasterStaticOrderInteractionResult = OrcaStaticOrderInteractionResult;
 export type OrcaOrderInteractionResult = OrcaStaticOrderInteractionResult;
 
 const sanitizeCodes = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
-export async function checkOrcaStaticOrderInteractions(params: {
+export async function checkOrcaMasterStaticOrderInteractions(params: {
   codes: string[];
   existingCodes?: string[];
-}): Promise<OrcaStaticOrderInteractionResult> {
+}): Promise<OrcaMasterStaticOrderInteractionResult> {
   const meta = ensureObservabilityMeta();
   const response = await httpFetch('/api/orca/master/order/interactions/check', {
     method: 'POST',
@@ -36,7 +37,9 @@ export async function checkOrcaStaticOrderInteractions(params: {
       existingCodes: sanitizeCodes(params.existingCodes ?? []),
     }),
   });
-  const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'マスタ相互作用チェックに失敗しました。' });
+  const parsed = await parseOrcaApiResponse(response, {
+    fallbackMessage: 'マスタ参照の静的相互作用チェックに失敗しました。',
+  });
   const json = parsed.json ?? {};
   const traceId =
     (typeof json.traceId === 'string' ? json.traceId : undefined) ??
@@ -74,4 +77,5 @@ export async function checkOrcaStaticOrderInteractions(params: {
   };
 }
 
-export const checkOrcaOrderInteractions = checkOrcaStaticOrderInteractions;
+export const checkOrcaStaticOrderInteractions = checkOrcaMasterStaticOrderInteractions;
+export const checkOrcaOrderInteractions = checkOrcaMasterStaticOrderInteractions;

@@ -783,5 +783,6 @@ describe('SoapNotePanel right dock drawer', () => {
     );
 
     expect(screen.getByText('症状詳記（ローカル）')).toBeInTheDocument();
+    expect(screen.queryByText('症状詳記（ORCA）')).not.toBeInTheDocument();
   });
 });

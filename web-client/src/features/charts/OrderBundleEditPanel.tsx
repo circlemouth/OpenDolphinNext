@@ -510,7 +510,7 @@ const fetchOrcaContraindicationCheck = async (params: {
       apiOk: false,
       results: [],
       symptomInfo: [],
-      message: 'patientId が未解決のため禁忌チェックを実行できません。',
+      message: 'patientId が未解決のため患者別 ORCA 禁忌チェックを実行できません。',
       runId: meta.runId,
       traceId: meta.traceId,
     };
@@ -540,7 +540,9 @@ const fetchOrcaContraindicationCheck = async (params: {
       medications: params.medications ?? [],
     }),
   });
-  const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '禁忌チェックに失敗しました。' });
+  const parsed = await parseOrcaApiResponse(response, {
+    fallbackMessage: '患者別 ORCA 禁忌チェックに失敗しました。',
+  });
   const json = (parsed.json ?? {}) as Record<string, unknown>;
   const traceId =
     (typeof json.traceId === 'string' ? json.traceId : undefined) ??
@@ -2929,7 +2931,7 @@ export function OrderBundleEditPanel({
         medications,
       });
       if (!result.ok || (result.apiOk === false && !result.results.length && !result.symptomInfo.length)) {
-        const message = result.apiResultMessage ?? result.message ?? '禁忌チェックに失敗しました。';
+        const message = result.apiResultMessage ?? result.message ?? '患者別 ORCA 禁忌チェックに失敗しました。';
         setContraNotice({
           tone: 'error',
           message,
@@ -2943,7 +2945,7 @@ export function OrderBundleEditPanel({
       if (!hasWarning) {
         return true;
       }
-      const summary = result.apiResultMessage ?? '禁忌チェックで警告が検出されました。';
+      const summary = result.apiResultMessage ?? '患者別 ORCA 禁忌チェックで警告が検出されました。';
       setContraNotice({
         tone: 'warning',
         message: summary,
@@ -2961,7 +2963,7 @@ export function OrderBundleEditPanel({
         contraConfirmResolveRef.current = resolve;
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : '禁忌チェックに失敗しました。';
+      const message = error instanceof Error ? error.message : '患者別 ORCA 禁忌チェックに失敗しました。';
       setContraNotice({
         tone: 'error',
         message,
@@ -3679,7 +3681,7 @@ export function OrderBundleEditPanel({
     >
       <FocusTrapDialog
         open={contraConfirmOpen}
-        title="禁忌チェックの警告"
+        title="患者別 ORCA 禁忌チェックの警告"
         description={contraConfirmPayload?.summary}
         role="alertdialog"
         onClose={() => closeContraConfirm(false)}
@@ -3687,7 +3689,7 @@ export function OrderBundleEditPanel({
       >
         <div className="charts-side-panel__confirm">
           <p className="charts-side-panel__message">
-            禁忌チェックで警告が検出されました。確認のうえ、保存を続行するか編集に戻って修正してください。
+            患者別 ORCA 禁忌チェックで警告が検出されました。確認のうえ、保存を続行するか編集に戻って修正してください。
           </p>
           {contraConfirmPayload?.apiResult ? (
             <p className="charts-side-panel__help">
@@ -3702,7 +3704,11 @@ export function OrderBundleEditPanel({
               ))}
             </ul>
           ) : null}
-          <div className="charts-side-panel__actions charts-side-panel__actions--dialog" role="group" aria-label="禁忌チェックの確認">
+          <div
+            className="charts-side-panel__actions charts-side-panel__actions--dialog"
+            role="group"
+            aria-label="患者別 ORCA 禁忌チェックの確認"
+          >
             <button type="button" className="charts-side-panel__action" onClick={() => closeContraConfirm(false)}>
               編集に戻る
             </button>
@@ -3823,7 +3829,7 @@ export function OrderBundleEditPanel({
               onClick={() => void runContraindicationCheck(form)}
               disabled={isContraChecking}
             >
-              {isContraChecking ? '再実行中…' : '禁忌チェックを再実行'}
+              {isContraChecking ? '再実行中…' : '患者別 ORCA 禁忌チェックを再実行'}
             </button>
           ) : null}
         </div>

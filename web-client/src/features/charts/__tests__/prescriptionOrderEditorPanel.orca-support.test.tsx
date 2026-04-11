@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { PrescriptionOrderEditorPanel } from '../PrescriptionOrderEditorPanel';
 import { fetchOrcaGenericPrice } from '../orcaGenericPriceApi';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
-import { checkOrcaStaticOrderInteractions } from '../orcaOrderInteractionApi';
+import { checkOrcaMasterStaticOrderInteractions } from '../orcaOrderInteractionApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 import { fetchPrescriptionOrder, savePrescriptionOrder } from '../prescriptionOrderApi';
 
@@ -30,7 +30,7 @@ vi.mock('../orcaOrderInputSetApi', () => ({
 }));
 
 vi.mock('../orcaOrderInteractionApi', () => ({
-  checkOrcaStaticOrderInteractions: vi.fn(),
+  checkOrcaMasterStaticOrderInteractions: vi.fn(),
 }));
 
 vi.mock('../prescriptionOrderApi', async () => {
@@ -505,7 +505,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
   it('マスタ相互作用ありでは確認 dialog を出し、続行時だけ保存する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
-    vi.mocked(checkOrcaStaticOrderInteractions).mockResolvedValue({
+    vi.mocked(checkOrcaMasterStaticOrderInteractions).mockResolvedValue({
       ok: true,
       status: 200,
       totalCount: 1,
@@ -534,9 +534,9 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() => {
-      expect(checkOrcaStaticOrderInteractions).toHaveBeenCalledWith({ codes: ['620000001', '620000003'] });
+      expect(checkOrcaMasterStaticOrderInteractions).toHaveBeenCalledWith({ codes: ['620000001', '620000003'] });
     });
-    expect(await screen.findByText('マスタ相互作用チェックの警告')).toBeInTheDocument();
+    expect(await screen.findByText('マスタ参照の静的相互作用チェック')).toBeInTheDocument();
     expect(savePrescriptionOrder).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: '編集に戻る' }));
@@ -553,7 +553,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
   it('マスタ相互作用 API エラー時は warning 後に保存を継続する', async () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
-    vi.mocked(checkOrcaStaticOrderInteractions).mockRejectedValue(new Error('interaction failed'));
+    vi.mocked(checkOrcaMasterStaticOrderInteractions).mockRejectedValue(new Error('interaction failed'));
 
     renderPanel({
       bundlesOverride: [
@@ -578,7 +578,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     await waitFor(() => {
       expect(savePrescriptionOrder).toHaveBeenCalledTimes(1);
     });
-    expect(checkOrcaStaticOrderInteractions).toHaveBeenCalledWith(
+    expect(checkOrcaMasterStaticOrderInteractions).toHaveBeenCalledWith(
       expect.objectContaining({ codes: ['620000001', '620000003'] }),
     );
   });

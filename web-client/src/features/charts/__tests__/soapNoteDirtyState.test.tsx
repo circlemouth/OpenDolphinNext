@@ -22,7 +22,7 @@ const renderWithQueryClient = (ui: ReactNode) => {
 };
 
 describe('SoapNotePanel dirty state', () => {
-  it('SOAPサーバ保存失敗時は dirty が残る', async () => {
+  it('SOAPローカルカルテ保存失敗時は dirty が残る', async () => {
     vi.mocked(postChartSubjectiveEntry).mockResolvedValue({
       ok: false,
       status: 500,
@@ -51,7 +51,7 @@ describe('SoapNotePanel dirty state', () => {
     await user.click(screen.getByRole('button', { name: '保存' }));
 
     await waitFor(() => expect(postChartSubjectiveEntry).toHaveBeenCalled());
-    expect(screen.getByText(/SOAPサーバ保存に失敗しました/)).toBeInTheDocument();
+    expect(screen.getByText(/SOAPローカルカルテ保存に失敗しました/)).toBeInTheDocument();
     expect(onDraftDirtyChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
         dirty: true,
@@ -60,4 +60,3 @@ describe('SoapNotePanel dirty state', () => {
     );
   });
 });
-

@@ -8,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 import { PrescriptionOrderEditorPanel } from '../PrescriptionOrderEditorPanel';
 import { fetchOrcaGenericPrice } from '../orcaGenericPriceApi';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
-import { checkOrcaOrderInteractions } from '../orcaOrderInteractionApi';
+import { checkOrcaMasterStaticOrderInteractions } from '../orcaOrderInteractionApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 import { savePrescriptionOrder } from '../prescriptionOrderApi';
 
@@ -30,7 +30,7 @@ vi.mock('../orcaOrderInputSetApi', () => ({
 }));
 
 vi.mock('../orcaOrderInteractionApi', () => ({
-  checkOrcaOrderInteractions: vi.fn(),
+  checkOrcaMasterStaticOrderInteractions: vi.fn(),
 }));
 
 vi.mock('../prescriptionOrderApi', async () => {
@@ -81,7 +81,7 @@ describe('PrescriptionOrderEditorPanel local-only usage contract', () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaGenericPrice).mockResolvedValue({ ok: false, status: 404 });
-    vi.mocked(checkOrcaOrderInteractions).mockResolvedValue({ ok: true, status: 200, totalCount: 0, pairs: [] });
+    vi.mocked(checkOrcaMasterStaticOrderInteractions).mockResolvedValue({ ok: true, status: 200, totalCount: 0, pairs: [] });
     vi.mocked(fetchOrcaOrderInputSets).mockResolvedValue({
       ok: true,
       status: 200,
@@ -142,7 +142,7 @@ describe('PrescriptionOrderEditorPanel local-only usage contract', () => {
     const user = userEvent.setup();
     vi.mocked(fetchOrderMasterSearch).mockResolvedValue({ ok: true, items: [], totalCount: 0 });
     vi.mocked(fetchOrcaGenericPrice).mockResolvedValue({ ok: false, status: 404 });
-    vi.mocked(checkOrcaOrderInteractions).mockResolvedValue({ ok: true, status: 200, totalCount: 0, pairs: [] });
+    vi.mocked(checkOrcaMasterStaticOrderInteractions).mockResolvedValue({ ok: true, status: 200, totalCount: 0, pairs: [] });
 
     renderPanel([
       {

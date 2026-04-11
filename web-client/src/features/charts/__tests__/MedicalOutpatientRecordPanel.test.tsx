@@ -61,11 +61,12 @@ describe('MedicalOutpatientRecordPanel', () => {
     expect(screen.getByText('アムロジピン')).toBeInTheDocument();
   });
 
-  it('ローカル医療サマリとして描画する', () => {
+  it('ローカル診療サマリとして描画する', () => {
     render(<MedicalOutpatientRecordPanel selectedPatientId="00001" summary={undefined} />);
 
-    expect(screen.getByText('ローカル医療サマリ')).toBeInTheDocument();
-    expect(screen.getByText('ローカル医療サマリを取得中です。')).toBeInTheDocument();
+    expect(screen.getByText('ローカル診療サマリ')).toBeInTheDocument();
+    expect(screen.getByText('ローカル診療サマリを取得中です。')).toBeInTheDocument();
+    expect(screen.queryByText('ORCA診療サマリ')).not.toBeInTheDocument();
   });
 
   it('200 MISSING では empty state を描画する', () => {
@@ -82,7 +83,7 @@ describe('MedicalOutpatientRecordPanel', () => {
       />,
     );
 
-    expect(screen.getByText(/表示対象のローカル医療サマリが見つかりません/)).toBeInTheDocument();
+    expect(screen.getByText(/表示対象のローカル診療サマリが見つかりません/)).toBeInTheDocument();
   });
 
   it('200 PARTIAL では一部欠落を表示する', () => {
@@ -136,9 +137,9 @@ describe('MedicalOutpatientRecordPanel', () => {
     expect(screen.getAllByText(new RegExp(`HTTP ${httpStatus}`)).length).toBeGreaterThan(0);
     expect(
       screen.getByText(
-        httpStatus === 404 ? /ローカル医療サマリが見つかりませんでした/ : /ローカル医療サマリの取得に失敗しました/,
+        httpStatus === 404 ? /ローカル診療サマリが見つかりませんでした/ : /ローカル診療サマリの取得に失敗しました/,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('ローカル医療サマリの操作')).toBeInTheDocument();
+    expect(screen.getByLabelText('ローカル診療サマリの操作')).toBeInTheDocument();
   });
 });

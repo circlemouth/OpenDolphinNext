@@ -11,6 +11,8 @@ export type MedicalOutpatientRecordPanelProps = {
   selectedPatientId?: string;
 };
 
+const LOCAL_SUMMARY_LABEL = 'ローカル診療サマリ';
+
 const formatSectionMeta = (section: MedicalSectionState): string => {
   const count = section.recordsReturned ?? (section.items.length > 0 ? section.items.length : undefined);
   const suffix = count !== undefined ? ` (${count}件)` : '';
@@ -33,9 +35,9 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
     return (
       <section className="medical-record" aria-live={infoLive} data-test-id="medical-record-panel">
         <header className="medical-record__header">
-          <strong>ローカル医療サマリ</strong>
+          <strong>{LOCAL_SUMMARY_LABEL}</strong>
         </header>
-        <p className="medical-record__empty">ローカル医療サマリを取得中です。</p>
+        <p className="medical-record__empty">{LOCAL_SUMMARY_LABEL}を取得中です。</p>
       </section>
     );
   }
@@ -58,19 +60,19 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
           data-run-id={resolvedRunId}
         >
           <header className="medical-record__header">
-            <strong>ローカル医療サマリ</strong>
+            <strong>{LOCAL_SUMMARY_LABEL}</strong>
             <span className="medical-record__meta">
               outcome: {summary.outcome ?? 'ERROR'} / recordsReturned: {summary.recordsReturned ?? '—'} / {httpLabel}
             </span>
           </header>
           <ApiFailureBanner
-            subject="ローカル医療サマリ"
+            subject={LOCAL_SUMMARY_LABEL}
             destination="local-summary"
             runId={summary.runId}
             traceId={summary.traceId}
             apiResult={summary.apiResult}
             apiResultMessage={summary.apiResultMessage}
-            nextAction="ローカル医療サマリを再取得"
+            nextAction={`${LOCAL_SUMMARY_LABEL}を再取得`}
             {...errorContext}
           />
         </section>
@@ -79,11 +81,11 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
     return (
       <section className="medical-record" aria-live={infoLive} data-test-id="medical-record-panel">
         <header className="medical-record__header">
-          <strong>ローカル医療サマリ</strong>
+          <strong>{LOCAL_SUMMARY_LABEL}</strong>
           <span className="medical-record__meta">recordsReturned: {summary.recordsReturned ?? '—'}</span>
         </header>
         <p className="medical-record__empty">
-          表示対象のローカル医療サマリが見つかりません（patientId={selectedPatientId ?? '未選択'}）。
+          表示対象の{LOCAL_SUMMARY_LABEL}が見つかりません（patientId={selectedPatientId ?? '未選択'}）。
         </p>
       </section>
     );
@@ -96,7 +98,7 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
     <section className="medical-record" aria-live={ariaLive} data-test-id="medical-record-panel" data-run-id={resolvedRunId}>
       <header className="medical-record__header">
         <div className="medical-record__title">
-          <strong>ローカル医療サマリ</strong>
+          <strong>{LOCAL_SUMMARY_LABEL}</strong>
           <span className="medical-record__meta">
             {record.patientName ?? '氏名未設定'}
             {record.patientId ? `（${record.patientId}）` : ''}
@@ -109,7 +111,7 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
             label="outcome"
             value={toOutcomeLabel(record.outcome)}
             tone={toOutcomeTone(record.outcome)}
-            description="ローカル医療サマリの取得結果（セクション集計）"
+            description={`${LOCAL_SUMMARY_LABEL}の取得結果（セクション集計）`}
             ariaLive="off"
             runId={summary.runId}
           />
@@ -117,7 +119,7 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
             label="recordsReturned"
             value={String(summary.recordsReturned ?? record.recordsReturned ?? '—')}
             tone={summary.recordsReturned && summary.recordsReturned > 0 ? 'info' : 'warning'}
-            description="ローカル医療サマリ（visit/encounter）件数"
+            description={`${LOCAL_SUMMARY_LABEL}（visit/encounter）件数`}
             ariaLive="off"
             runId={summary.runId}
           />

@@ -18,6 +18,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - master-backed read は `/api/orca/master/*` へ寄せ、official bridge と混在させない。
 - official 風の名称 (`patientmodv2`, `patientgetv2`, `medicalmodv2`, `subjectivesv2`) を local path / local metadata に残さない。
 - admin 向け internal wrapper の label は `/api/admin/internal/*` を表示し、official surface と誤認させない。
+- UI copy でも、`contraindicationcheckv2` の patient-aware official check と `/api/orca/master/order/interactions/check` の master-based static check を混同させない。
+- `/api/local/charts/subjectives`, `/api/local/encounters/{encounterKey}/medical-summary`, `/api/local/patients/mutation` は local-only surface として表示し、official ORCA write のような名称を付けない。
 - 旧 public path の alias / shim は作らない。
 
 ## Current Route Map

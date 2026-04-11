@@ -1074,7 +1074,7 @@ export function SoapNotePanel({
       onAppendHistory?.(entries);
       onAuditLogged?.();
       setPendingTemplate({});
-      const detail = '患者未選択のためサーバ保存を実行できません。患者選択後に再確認してください。';
+      const detail = '患者未選択のためローカルカルテ反映を実行できません。患者選択後に再確認してください。';
       const message = `${entries.length} セクションをローカル保存しました。${detail}`;
       setFeedback(message);
       setSyncState({
@@ -1104,7 +1104,7 @@ export function SoapNotePanel({
       onAppendHistory?.(entries);
       onAuditLogged?.();
       setPendingTemplate({});
-      const message = `SOAP保存完了（ローカル保存のみ: ${entries.length} セクション）`;
+      const message = `SOAP保存完了（ローカル下書きのみ: ${entries.length} セクション）`;
       setFeedback(message);
       setSyncState({
         localSaved: true,
@@ -1137,7 +1137,7 @@ export function SoapNotePanel({
       const failures = results.filter((result) => !result.ok || (result.apiResult && result.apiResult !== '00'));
       if (failures.length > 0) {
         const detail = failures[0]?.apiResultMessage ?? failures[0]?.apiResult ?? 'unknown';
-        const message = `SOAPサーバ保存に失敗しました: ${detail}（再試行してください）`;
+        const message = `SOAPローカルカルテ保存に失敗しました: ${detail}（再試行してください）`;
         setFeedback(message);
         setSyncState({
           localSaved: false,
@@ -1160,7 +1160,7 @@ export function SoapNotePanel({
       onAppendHistory?.(entries);
       onAuditLogged?.();
       setPendingTemplate({});
-      const message = `SOAP保存完了（ローカル+サーバ ${results.length} 件）`;
+      const message = `SOAP保存完了（ローカル下書き + ローカルカルテ ${results.length} 件）`;
       setFeedback(message);
       setSyncState({
         localSaved: true,
@@ -1180,7 +1180,7 @@ export function SoapNotePanel({
       return { ok: true, message, serverSynced: true, localSaved: true };
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      const message = `SOAPサーバ保存に失敗しました: ${detail}（再試行してください）`;
+      const message = `SOAPローカルカルテ保存に失敗しました: ${detail}（再試行してください）`;
       setFeedback(message);
       setSyncState({
         localSaved: false,
@@ -1504,7 +1504,7 @@ export function SoapNotePanel({
                     : syncState.serverSynced
                       ? '保存済'
                       : syncState.localSaved
-                        ? 'ローカル保存済 / サーバ未反映'
+                        ? 'ローカル下書き保存済 / カルテ未反映'
                         : '未保存'}
               </span>
             </div>
