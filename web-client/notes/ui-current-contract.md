@@ -100,9 +100,15 @@
 - `returnTo` は safe な候補だけを direct return に使い、fallback は `from=reception` なら reception、それ以外は charts です。
 - `patients:returnTo` の sessionStorage seam は current repo に reader / writer を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
 - 通常 UI の監査表示は summary を正とし、raw endpoint dump は default から外します。
+- Patients 一覧検索は local search と明示し、氏名・カナ・患者番号・電話・郵便番号の local 条件だけを current UI に残します。
+- 患者基本情報の official create/update/import は単一路線に混ぜず、`create` / `update` / `import` を別導線として扱います。
+- official create/update/import 成功後は canonical source を再取得し、その canonical record で local sync を確定します。
+- chart の患者基本情報編集 dialog も Patients と同じ official update route を使います。
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
+- code-confirm: `PatientsPage` の local search 明示、official create/update/import の分岐、成功後 canonical re-fetch/local sync
+- code-confirm: `PatientInfoEditDialog` の official update route 呼び出し
 - manual: reception / charts 由来の再入場と patient 未選択開始
 
 ## Mobile Images Surface

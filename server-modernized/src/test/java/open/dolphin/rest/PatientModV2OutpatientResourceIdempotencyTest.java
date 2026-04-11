@@ -11,10 +11,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
+import open.dolphin.rest.dto.orca.OfficialPatientCreateRequest;
+import open.dolphin.rest.dto.orca.OfficialPatientMutationResponse;
+import open.dolphin.rest.dto.orca.OfficialPatientPayload;
 import open.dolphin.session.PatientServiceBean;
 import org.junit.jupiter.api.Test;
 
@@ -32,29 +33,17 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
+        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("operation", "create");
-        payload.put("patientId", "00001");
-        payload.put("name", "山田 太郎");
-        payload.put("kana", "ヤマダ タロウ");
-        payload.put("birthDate", "1980-01-01");
-        payload.put("sex", "1");
-        payload.put("phone", "0311112222");
-        payload.put("zip", "100-0001");
-        payload.put("address", "東京都千代田区");
-
-        Response response = resource.mutatePatient(request, payload);
+        Response response = resource.createPatient(request, createRequest("00001", "山田 太郎", "ヤマダ タロウ"));
         assertEquals(200, response.getStatus());
-        @SuppressWarnings("unchecked")
-        Map<String, Object> body = (Map<String, Object>) response.getEntity();
-        assertEquals(Boolean.TRUE, body.get("idempotent"));
-        assertEquals("existing_patient", body.get("idempotentReason"));
-        assertEquals(99L, body.get("patientDbId"));
+        OfficialPatientMutationResponse body = (OfficialPatientMutationResponse) response.getEntity();
+        assertEquals(Boolean.TRUE, body.getIdempotent());
+        assertEquals("existing_patient", body.getIdempotentReason());
+        assertEquals(99L, body.getPatientDbId());
         assertFalse(service.addCalled);
-        assertNotNull(body.get("runId"));
+        assertNotNull(body.getRunId());
     }
 
     @Test
@@ -69,15 +58,10 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
-
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("operation", "create");
-        payload.put("patientId", "00001");
-        payload.put("name", "山田 花子");
+        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.mutatePatient(request, payload));
+                () -> resource.createPatient(request, createRequest("00001", "山田 花子", "ヤマダ ハナコ")));
         assertEquals(409, ex.getResponse().getStatus());
         assertFalse(service.addCalled);
     }
@@ -90,15 +74,10 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
-        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
-
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("operation", "create");
-        payload.put("patientId", "AB-001");
-        payload.put("name", "山田 花子");
+        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.mutatePatient(request, payload));
+                () -> resource.createPatient(request, createRequest("AB-001", "山田 花子", "ヤマダ ハナコ")));
         assertEquals(400, ex.getResponse().getStatus());
         assertFalse(service.addCalled);
     }
@@ -111,17 +90,28 @@ class PatientModV2OutpatientResourceIdempotencyTest {
 
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRemoteUser()).thenReturn(null);
-        when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
-
-        Map<String, Object> payload = new HashMap<>();
-        payload.put("operation", "create");
-        payload.put("patientId", "00001");
-        payload.put("name", "山田 花子");
+        when(request.getRequestURI()).thenReturn("/api/orca/patientmodv2/outpatient/create");
 
         WebApplicationException ex = assertThrows(WebApplicationException.class,
-                () -> resource.mutatePatient(request, payload));
+                () -> resource.createPatient(request, createRequest("00001", "山田 花子", "ヤマダ ハナコ")));
         assertEquals(401, ex.getResponse().getStatus());
         assertFalse(service.addCalled);
+    }
+
+    private static OfficialPatientCreateRequest createRequest(String patientId, String wholeName, String wholeNameKana) {
+        OfficialPatientPayload patient = new OfficialPatientPayload();
+        patient.setPatientId(patientId);
+        patient.setWholeName(wholeName);
+        patient.setWholeNameKana(wholeNameKana);
+        patient.setBirthDate("1980-01-01");
+        patient.setSex("1");
+        patient.setTelephone("0311112222");
+        patient.setZipCode("100-0001");
+        patient.setAddressLine("東京都千代田区");
+
+        OfficialPatientCreateRequest request = new OfficialPatientCreateRequest();
+        request.setPatient(patient);
+        return request;
     }
 
     private static PatientModel buildPatient(String facilityId, String patientId, String name, String kana) {

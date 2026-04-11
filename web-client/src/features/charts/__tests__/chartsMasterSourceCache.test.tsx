@@ -151,7 +151,7 @@ vi.mock('../letterApi', () => ({
 }));
 
 vi.mock('../../patients/api', () => ({
-  fetchPatients: vi.fn(async () => ({ patients: [] })),
+  searchLocalPatients: vi.fn(async () => ({ patients: [] })),
 }));
 
 vi.mock('../karteExtrasApi', () => ({

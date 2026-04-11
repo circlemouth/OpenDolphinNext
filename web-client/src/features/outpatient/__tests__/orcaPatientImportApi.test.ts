@@ -10,12 +10,23 @@ vi.mock('../../../libs/observability/observability', () => ({
   updateObservabilityMeta: vi.fn(),
 }));
 
+const mockRefetchOfficialCanonicalPatients = vi.fn();
+
+vi.mock('../../patients/api', () => ({
+  refetchOfficialCanonicalPatients: (...args: unknown[]) => mockRefetchOfficialCanonicalPatients(...args),
+}));
+
 import { httpFetch } from '../../../libs/http/httpClient';
 import { importPatientsFromOrca } from '../orcaPatientImportApi';
 
 describe('importPatientsFromOrca', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRefetchOfficialCanonicalPatients.mockResolvedValue({
+      ok: true,
+      patients: [{ patientId: '000001', name: '山田 太郎' }],
+      status: 200,
+    });
   });
 
   it('surfaces auth failure reason on 401 and suppresses session-expiry propagation', async () => {
@@ -72,5 +83,30 @@ describe('importPatientsFromOrca', () => {
     expect(result.status).toBe(0);
     expect(result.errorKind).toBe('http');
     expect(result.error).toContain('network down');
+  });
+
+  it('re-fetches canonical patient after successful import', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          runId: 'RUN-OK',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await importPatientsFromOrca({ patientIds: ['000001'], runId: 'RUN-CALL' });
+
+    expect(result.ok).toBe(true);
+    expect(mockRefetchOfficialCanonicalPatients).toHaveBeenCalledWith({
+      patientIds: ['000001'],
+      runId: 'RUN-OK',
+    });
+    expect(result.canonicalPatients).toEqual([{ patientId: '000001', name: '山田 太郎' }]);
   });
 });

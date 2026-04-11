@@ -49,6 +49,7 @@ cd web-client && node scripts/runtime-ready-smoke.mjs
 - 認証と session 失効は server 側で統一し、権限変更や認証状態変更後は古い session を残さない。
 - 受付からカルテへ渡すキーは `scheduleKey` / `encounterKey` を正本とし、client 推測値や旧受付 ID を route authority にしない。
 - ORCA 接続は施設別設定と allowlist で解決し、任意 URL 接続や implicit fallback を許容しない。
+- official patient mutation は create / update / import を別 route / 別 DTO で分離し、create は `patientmodv2 class=01`、update は `patientmodv2 class=02`、import は `patientlst2v2` / `patientgetv2` 系の canonical re-fetch + local sync を前提にする。
 - 添付、患者画像、文書整合性は server 生成メタデータと fail-closed 検証を前提に扱う。
 - health / readiness / reporting は匿名公開時に最小情報だけ返し、内部詳細は構造化ログで扱う。
 

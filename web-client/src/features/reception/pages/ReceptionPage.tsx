@@ -74,7 +74,7 @@ import {
 } from '../exceptionLogic';
 import { loadOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
 import { postMedicalRecords, type MedicalRecordEntry } from '../../administration/orcaInternalWrapperApi';
-import { fetchPatients, type PatientListResponse, type PatientRecord } from '../../patients/api';
+import { searchLocalPatients, type PatientListResponse, type PatientRecord } from '../../patients/api';
 import {
   loadOutpatientSavedViews,
   removeOutpatientSavedView,
@@ -1216,7 +1216,7 @@ export function ReceptionPage({
     mutationFn: (params) => mutateVisit(params),
   });
   const patientSearchMutation = useMutation<PatientListResponse, Error, { keyword: string }>({
-    mutationFn: (params) => fetchPatients({ keyword: params.keyword }),
+    mutationFn: (params) => searchLocalPatients({ keyword: params.keyword }),
     onSuccess: (result) => {
       const normalizeToken = (value: string) => value.replace(/\s+/g, '').trim();
       const filters = patientSearchFilterRef.current;

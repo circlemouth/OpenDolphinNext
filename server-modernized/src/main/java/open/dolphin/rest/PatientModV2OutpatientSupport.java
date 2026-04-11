@@ -4,7 +4,6 @@ import jakarta.ws.rs.core.Response;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -13,6 +12,11 @@ import java.util.regex.Pattern;
 import open.dolphin.infomodel.ModelUtils;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
+import open.dolphin.rest.dto.orca.OfficialPatientAuditMeta;
+import open.dolphin.rest.dto.orca.OfficialPatientCreateRequest;
+import open.dolphin.rest.dto.orca.OfficialPatientPayload;
+import open.dolphin.rest.dto.orca.OfficialPatientUpdateRequest;
+import open.dolphin.rest.dto.outpatient.PatientOutpatientResponse;
 
 final class PatientModV2OutpatientSupport {
 
@@ -21,17 +25,31 @@ final class PatientModV2OutpatientSupport {
     private PatientModV2OutpatientSupport() {
     }
 
-    static PatientPatch toPatientPatch(Map<String, Object> payload) {
+    static PatientPatch toCreatePatch(OfficialPatientCreateRequest request) {
+        return toPatientPatch(request != null ? request.getPatient() : null, true,
+                request != null ? request.getAuditMeta() : null);
+    }
+
+    static PatientPatch toUpdatePatch(OfficialPatientUpdateRequest request) {
+        return toPatientPatch(request != null ? request.getPatient() : null, false,
+                request != null ? request.getAuditMeta() : null);
+    }
+
+    private static PatientPatch toPatientPatch(OfficialPatientPayload payload,
+            boolean allowAutoAssignPatientId,
+            OfficialPatientAuditMeta auditMeta) {
         PatientPatch patch = new PatientPatch();
-        patch.patientId = requireNumericId(getText(payload, "patientId", "Patient_ID"), "patientId");
-        patch.name = getText(payload, "name", "wholeName", "Patient_Name");
-        patch.kana = getText(payload, "kana", "wholeNameKana", "Patient_Kana");
-        patch.birthDate = getText(payload, "birthDate", "Patient_BirthDate");
-        patch.sex = getText(payload, "sex", "Patient_Sex");
-        patch.phone = getText(payload, "phone", "telephone", "tel", "PhoneNumber");
-        patch.zip = getText(payload, "zip", "zipCode", "postal");
-        patch.address = getText(payload, "address", "addressLine");
-        patch.changedKeys = extractChangedKeys(payload);
+        patch.patientId = allowAutoAssignPatientId
+                ? normalizeCreatePatientId(payload != null ? payload.getPatientId() : null)
+                : requireNumericId(payload != null ? payload.getPatientId() : null, "patientId");
+        patch.name = payload != null ? payload.getWholeName() : null;
+        patch.kana = payload != null ? payload.getWholeNameKana() : null;
+        patch.birthDate = payload != null ? payload.getBirthDate() : null;
+        patch.sex = payload != null ? payload.getSex() : null;
+        patch.phone = payload != null ? payload.getTelephone() : null;
+        patch.zip = payload != null ? payload.getZipCode() : null;
+        patch.address = payload != null ? payload.getAddressLine() : null;
+        patch.changedKeys = extractChangedKeys(auditMeta);
         return patch;
     }
 
@@ -121,24 +139,24 @@ final class PatientModV2OutpatientSupport {
         return equalsIfProvided(patch.zip, existingZip) && equalsIfProvided(patch.address, existingAddress);
     }
 
-    static Map<String, Object> toPatientRecord(PatientModel model) {
-        Map<String, Object> record = new LinkedHashMap<>();
-        record.put("patientId", model.getPatientId());
-        record.put("name", model.getFullName());
-        record.put("kana", model.getKanaName());
-        record.put("birthDate", ModelUtils.formatDate(model.getBirthday()));
-        record.put("sex", model.getGender());
-        record.put("phone", firstNonBlank(model.getTelephone(), model.getMobilePhone()));
+    static PatientOutpatientResponse.PatientRecord toPatientRecord(PatientModel model) {
+        PatientOutpatientResponse.PatientRecord record = new PatientOutpatientResponse.PatientRecord();
+        record.setPatientId(model.getPatientId());
+        record.setName(model.getFullName());
+        record.setKana(model.getKanaName());
+        record.setBirthDate(ModelUtils.formatDate(model.getBirthday()));
+        record.setSex(model.getGender());
+        record.setPhone(firstNonBlank(model.getTelephone(), model.getMobilePhone()));
         SimpleAddressModel address = model.getAddress();
         if (address != null) {
-            record.put("zip", address.getZipCode());
-            record.put("address", address.getAddress());
+            record.setZip(address.getZipCode());
+            record.setAddress(address.getAddress());
         } else {
-            record.put("zip", null);
-            record.put("address", null);
+            record.setZip(null);
+            record.setAddress(null);
         }
-        record.put("insurance", null);
-        record.put("memo", model.getMemo());
+        record.setInsurance(null);
+        record.setMemo(model.getMemo());
         return record;
     }
 
@@ -154,6 +172,9 @@ final class PatientModV2OutpatientSupport {
             String phone2) {
         if (patientId == null || patientId.isBlank()) {
             throw new IllegalArgumentException("patientId is required");
+        }
+        if (!"*".equals(patientId) && !patientId.matches("\\d+")) {
+            throw new IllegalArgumentException("patientId must be numeric or *");
         }
         if (wholeName == null || wholeName.isBlank()) {
             throw new IllegalArgumentException("wholeName is required");
@@ -207,15 +228,6 @@ final class PatientModV2OutpatientSupport {
         }
         String value = matcher.group(1);
         return value != null ? value.trim() : null;
-    }
-
-    static String getNonBlankText(Map<String, Object> payload, String key) {
-        String value = getText(payload, key);
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
     }
 
     static String safeTrim(String value) {
@@ -313,6 +325,7 @@ final class PatientModV2OutpatientSupport {
         int httpStatus;
         String apiResult;
         String apiResultMessage;
+        String patientId;
     }
 
     static final class OrcaUpdateExecution {
@@ -329,38 +342,49 @@ final class PatientModV2OutpatientSupport {
         String apiResult;
         String apiResultMessage;
         PatientModel patient;
+        Boolean idempotent;
+        String idempotentReason;
     }
 
-    private static Set<String> extractChangedKeys(Map<String, Object> payload) {
-        if (payload == null) {
-            return Set.of();
+    static void applyAuditMeta(Map<String, Object> details, OfficialPatientAuditMeta auditMeta) {
+        if (details == null || auditMeta == null) {
+            return;
         }
-        Object audit = payload.get("auditEvent");
-        if (!(audit instanceof Map<?, ?> auditMap)) {
-            return Set.of();
+        if (auditMeta.getSource() != null && !auditMeta.getSource().isBlank()) {
+            details.put("source", auditMeta.getSource().trim());
         }
-        Object raw = auditMap.get("changedKeys");
-        if (raw == null) {
+        if (auditMeta.getSection() != null && !auditMeta.getSection().isBlank()) {
+            details.put("section", auditMeta.getSection().trim());
+        }
+        if (!auditMeta.getChangedKeys().isEmpty()) {
+            details.put("changedKeys", new LinkedHashSet<>(auditMeta.getChangedKeys()));
+        }
+        if (auditMeta.getReceptionId() != null && !auditMeta.getReceptionId().isBlank()) {
+            details.put("receptionId", auditMeta.getReceptionId().trim());
+        }
+        if (auditMeta.getAppointmentId() != null && !auditMeta.getAppointmentId().isBlank()) {
+            details.put("appointmentId", auditMeta.getAppointmentId().trim());
+        }
+        if (auditMeta.getVisitDate() != null && !auditMeta.getVisitDate().isBlank()) {
+            details.put("visitDate", auditMeta.getVisitDate().trim());
+        }
+        if (auditMeta.getActorRole() != null && !auditMeta.getActorRole().isBlank()) {
+            details.put("actorRole", auditMeta.getActorRole().trim());
+        }
+    }
+
+    private static Set<String> extractChangedKeys(OfficialPatientAuditMeta auditMeta) {
+        if (auditMeta == null || auditMeta.getChangedKeys().isEmpty()) {
             return Set.of();
         }
         LinkedHashSet<String> keys = new LinkedHashSet<>();
-        if (raw instanceof String text) {
-            for (String part : text.split(",")) {
-                String normalized = part != null ? part.trim() : "";
-                if (!normalized.isEmpty()) {
-                    keys.add(normalized);
-                }
+        for (String entry : auditMeta.getChangedKeys()) {
+            if (entry == null) {
+                continue;
             }
-            return keys;
-        }
-        if (raw instanceof List<?> list) {
-            for (Object entry : list) {
-                if (entry instanceof String text) {
-                    String normalized = text.trim();
-                    if (!normalized.isEmpty()) {
-                        keys.add(normalized);
-                    }
-                }
+            String normalized = entry.trim();
+            if (!normalized.isEmpty()) {
+                keys.add(normalized);
             }
         }
         return keys;
@@ -400,17 +424,19 @@ final class PatientModV2OutpatientSupport {
         return trimmed;
     }
 
-    private static String getText(Map<String, Object> payload, String... keys) {
-        if (payload == null || keys == null) {
-            return null;
+    private static String normalizeCreatePatientId(String value) {
+        String trimmed = safeTrimKeepEmpty(value);
+        if (trimmed == null || trimmed.isBlank()) {
+            return "*";
         }
-        for (String key : keys) {
-            Object value = payload.get(key);
-            if (value instanceof String text) {
-                return text;
-            }
+        if ("*".equals(trimmed)) {
+            return "*";
         }
-        return null;
+        if (!trimmed.matches("\\d+")) {
+            throw AbstractResource.restError(null, Response.Status.BAD_REQUEST, "invalid_request",
+                    "patientId must be numeric or *");
+        }
+        return trimmed;
     }
 
     private static String firstNonBlank(String... values) {

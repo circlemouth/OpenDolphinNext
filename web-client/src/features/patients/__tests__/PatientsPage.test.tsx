@@ -41,6 +41,7 @@ let mockMutationResult: any = null;
 let mockMutationError: any = null;
 let mockMutationPending = false;
 let mockMutationCallCount = 0;
+let mockMutationCalls: any[] = [];
 let mockSearchParams = new URLSearchParams();
 let mockLocationSearch = '';
 let mockLocationState: unknown = null;
@@ -101,28 +102,30 @@ vi.mock('@tanstack/react-query', () => ({
     data: mockQueryData,
     isError: false,
     error: null,
-    refetch: vi.fn(),
+    refetch: vi.fn(async () => ({ data: mockQueryData })),
     isFetching: false,
   }),
   useMutation: (options?: { onSuccess?: (data: any) => void; onError?: (error: any) => void }) => ({
-    mutate: vi.fn(() => {
+    mutate: vi.fn((variables?: any) => {
       mockMutationCallCount += 1;
+      mockMutationCalls.push(variables);
       if (mockMutationError && options?.onError) {
         options.onError(mockMutationError);
         return;
       }
       if (mockMutationResult && options?.onSuccess) {
-        options.onSuccess(mockMutationResult);
+        (options.onSuccess as any)(mockMutationResult, variables);
       }
     }),
-    mutateAsync: vi.fn(async () => {
+    mutateAsync: vi.fn(async (variables?: any) => {
       mockMutationCallCount += 1;
+      mockMutationCalls.push(variables);
       if (mockMutationError && options?.onError) {
         options.onError(mockMutationError);
         throw mockMutationError;
       }
       if (mockMutationResult && options?.onSuccess) {
-        options.onSuccess(mockMutationResult);
+        (options.onSuccess as any)(mockMutationResult, variables);
         return mockMutationResult;
       }
       return { ok: true };
@@ -230,6 +233,7 @@ beforeEach(() => {
   mockMutationError = null;
   mockMutationPending = false;
   mockMutationCallCount = 0;
+  mockMutationCalls = [];
   clearChartsEncounterContext();
   setRouterSearch('');
   mockLocationState = null;
@@ -539,6 +543,85 @@ describe('PatientsPage initial selection', () => {
     expect(await screen.findByText(/指定患者が見つかりません/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '患者未選択' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /山田 花子/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+});
+
+describe('PatientsPage official patient flows', () => {
+  beforeEach(() => {
+    clearAuditEventLog();
+    localStorage.clear();
+    sessionStorage.clear();
+    mockPatients();
+  });
+
+  it('create flow uses separate official create mutation', async () => {
+    mockMutationResult = {
+      ok: true,
+      patient: {
+        patientId: '000099',
+        name: '新規患者',
+      },
+    };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: '新規作成' }));
+    await user.type(screen.getByPlaceholderText('山田 花子'), '新規患者');
+    await user.click(screen.getByRole('button', { name: 'official 作成' }));
+
+    expect(mockMutationCalls.at(-1)).toMatchObject({
+      operation: 'create',
+      payload: {
+        patient: {
+          name: '新規患者',
+        },
+      },
+    });
+  });
+
+  it('update flow uses separate official update mutation', async () => {
+    mockPatients({
+      patients: [
+        {
+          patientId: '000001',
+          name: '山田 花子',
+          kana: 'ヤマダ ハナコ',
+          birthDate: '1980-01-01',
+        },
+      ],
+    });
+    mockMutationResult = {
+      ok: true,
+      patient: {
+        patientId: '000001',
+        name: '山田 花子',
+      },
+    };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await clickPatientRowByName(user, '山田 花子');
+    await user.click(screen.getByRole('button', { name: 'official 更新' }));
+
+    expect(mockMutationCalls.at(-1)).toMatchObject({
+      operation: 'update',
+      payload: {
+        patient: {
+          patientId: '000001',
+        },
+      },
+    });
+  });
+
+  it('import flow remains separate from create/update mutations', async () => {
+    mockMutationResult = { ok: true };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.type(screen.getByLabelText('ORCA患者番号で official import'), '00001234');
+    await user.click(screen.getAllByRole('button', { name: 'official 取込' })[0]);
+
+    expect(mockMutationCalls.at(-1)).toBe('00001234');
   });
 });
 

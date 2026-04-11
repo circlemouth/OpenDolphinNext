@@ -2,12 +2,14 @@ import { httpFetch } from '../../libs/http/httpClient';
 import { generateRunId, getObservabilityMeta, updateObservabilityMeta } from '../../libs/observability/observability';
 import type { OrcaResponseErrorKind, ParsedOrcaApiResponse } from '../shared/orcaApiResponse';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
+import { refetchOfficialCanonicalPatients, type PatientRecord } from '../patients/api';
 
 export type OrcaPatientImportResult = {
   ok: boolean;
   runId: string;
   status: number;
   payload?: any;
+  canonicalPatients?: PatientRecord[];
   error?: string;
   errorCode?: string;
   errorKind?: OrcaResponseErrorKind;
@@ -98,5 +100,16 @@ export async function importPatientsFromOrca(params: {
     };
   }
 
-  return { ok: true, runId: resolvedRunId, status: parsed.status, payload: parsed.json };
+  const canonicalRefetch = await refetchOfficialCanonicalPatients({
+    patientIds: params.patientIds,
+    runId: resolvedRunId,
+  });
+
+  return {
+    ok: true,
+    runId: resolvedRunId,
+    status: parsed.status,
+    payload: parsed.json,
+    canonicalPatients: canonicalRefetch.patients,
+  };
 }

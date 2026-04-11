@@ -18,12 +18,31 @@ export type PatientRecord = {
   lastVisit?: string;
 };
 
-export type PatientSearchParams = {
+export type LocalPatientSearchParams = {
   keyword?: string;
   searchType?: 'name' | 'kana' | 'patient-id' | 'telephone' | 'zipcode';
-  departmentCode?: string;
-  physicianCode?: string;
-  paymentMode?: 'all' | 'insurance' | 'self';
+};
+
+type PatientAuditMeta = {
+  source?: 'patients' | 'charts';
+  section?: 'basic' | 'insurance';
+  changedKeys?: string[];
+  receptionId?: string;
+  appointmentId?: string;
+  visitDate?: string;
+  actorRole?: string;
+};
+
+export type OfficialPatientCreatePayload = {
+  patient: PatientRecord;
+  runId?: string;
+  auditMeta?: PatientAuditMeta;
+};
+
+export type OfficialPatientUpdatePayload = {
+  patient: PatientRecord;
+  runId?: string;
+  auditMeta?: PatientAuditMeta;
 };
 
 export type PatientListResponse = {
@@ -48,21 +67,6 @@ export type PatientListResponse = {
   raw?: unknown;
 };
 
-export type PatientMutationPayload = {
-  patient: PatientRecord;
-  operation: 'create' | 'update' | 'delete';
-  runId?: string;
-  auditMeta?: {
-    source?: 'patients' | 'charts';
-    section?: 'basic' | 'insurance';
-    changedKeys?: string[];
-    receptionId?: string;
-    appointmentId?: string;
-    visitDate?: string;
-    actorRole?: string;
-  };
-};
-
 export type PatientMutationResult = {
   ok: boolean;
   runId?: string;
@@ -78,14 +82,18 @@ export type PatientMutationResult = {
   patient?: PatientRecord;
   status?: number;
   sourcePath?: string;
+  canonicalPatient?: PatientRecord;
+  canonicalRefetch?: {
+    source: 'patientlst2v2';
+    ok: boolean;
+    status?: number;
+  };
 };
 
-const patientInfoCandidates = [
-  '/api/local/patients/search',
-];
-const patientMutationCandidates = [
-  '/api/local/patients/mutation',
-];
+const LOCAL_PATIENT_SEARCH_ENDPOINTS = ['/api/local/patients/search'];
+const OFFICIAL_PATIENT_CREATE_ENDPOINT = '/api/orca/patientmodv2/outpatient/create';
+const OFFICIAL_PATIENT_UPDATE_ENDPOINT = '/api/orca/patientmodv2/outpatient/update';
+const OFFICIAL_PATIENT_BATCH_ENDPOINT = '/api/orca/patients/batch';
 
 const normalizeBoolean = (value: unknown) => {
   if (typeof value === 'boolean') return value;
@@ -96,17 +104,17 @@ const normalizeBoolean = (value: unknown) => {
 const normalizeApiString = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
 
 const extractApiResult = (json: Record<string, unknown>): string | undefined => {
-  return normalizeApiString(json.apiResult ?? (json as Record<string, unknown>)['Api_Result']);
+  return normalizeApiString(json.apiResult);
 };
 
 const extractApiResultMessage = (json: Record<string, unknown>): string | undefined => {
-  return normalizeApiString(json.apiResultMessage ?? (json as Record<string, unknown>)['Api_Result_Message']);
+  return normalizeApiString(json.apiResultMessage);
 };
 
 const buildMissingTags = (apiResult?: string, apiResultMessage?: string) => {
   const missing: string[] = [];
-  if (!apiResult) missing.push('Api_Result');
-  if (!apiResultMessage) missing.push('Api_Result_Message');
+  if (!apiResult) missing.push('apiResult');
+  if (!apiResultMessage) missing.push('apiResultMessage');
   return missing;
 };
 
@@ -116,7 +124,7 @@ const normalizeDataSourceTransition = (value: unknown): DataSourceTransition | u
 
 const inferPatientSearchType = (
   keyword?: string,
-): PatientSearchParams['searchType'] | undefined => {
+): LocalPatientSearchParams['searchType'] | undefined => {
   const normalized = keyword?.trim();
   if (!normalized) return undefined;
   if (/^\d{7}$/.test(normalized)) return 'zipcode';
@@ -130,28 +138,36 @@ const stripNullish = <T extends Record<string, unknown>>(value: T): T => {
   return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== null && entry !== undefined)) as T;
 };
 
-const parsePatients = (json: any): PatientRecord[] => {
-  const list: any[] = Array.isArray(json?.patients)
-    ? json.patients
-    : Array.isArray(json?.patientInformation)
-      ? json.patientInformation
-      : [];
+const asObjectRecord = (value: unknown): Record<string, unknown> => {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+};
 
-  const mapOne = (raw: any): PatientRecord => ({
-    patientId: raw.patientId ?? raw.Patient_ID ?? raw.patient_id ?? raw.id,
-    name: raw.name ?? raw.Patient_Name ?? raw.wholeName,
-    kana: raw.kana ?? raw.Patient_Kana ?? raw.wholeNameKana,
-    birthDate: raw.birthDate ?? raw.Patient_BirthDate ?? raw.birth,
-    sex: raw.sex ?? raw.Patient_Sex ?? raw.gender,
-    phone: raw.phone ?? raw.PhoneNumber ?? raw.tel,
-    zip: raw.zip ?? raw.postal,
-    address: raw.address,
-    insurance: raw.insurance ?? raw.insuranceCombinationNumber ?? raw.payCategory,
-    memo: raw.memo ?? raw.note ?? raw.comment ?? raw.Patient_Memo ?? raw.patientMemo ?? raw.memoText,
-    lastVisit: raw.lastVisit ?? raw.visitDate ?? raw.last_visit,
-  });
+const mapLocalPatient = (raw: any): PatientRecord => ({
+  patientId: normalizeApiString(raw?.patientId),
+  name: normalizeApiString(raw?.name),
+  kana: normalizeApiString(raw?.kana),
+  birthDate: normalizeApiString(raw?.birthDate),
+  sex: normalizeApiString(raw?.sex),
+  phone: normalizeApiString(raw?.phone),
+  zip: normalizeApiString(raw?.zip),
+  address: normalizeApiString(raw?.address),
+  insurance: normalizeApiString(raw?.insurance),
+  memo: normalizeApiString(raw?.memo),
+  lastVisit: normalizeApiString(raw?.lastVisit),
+});
 
-  return list.map(mapOne).filter((patient) => Object.keys(patient).length > 0);
+const mapCanonicalPatient = (raw: any): PatientRecord => {
+  const summary = raw?.summary ?? {};
+  return {
+    patientId: normalizeApiString(summary?.patientId),
+    name: normalizeApiString(summary?.wholeName),
+    kana: normalizeApiString(summary?.wholeNameKana),
+    birthDate: normalizeApiString(summary?.birthDate),
+    sex: normalizeApiString(summary?.sex) === '1' ? 'M' : normalizeApiString(summary?.sex) === '2' ? 'F' : normalizeApiString(summary?.sex),
+    phone: normalizeApiString(raw?.phoneNumber1 ?? raw?.phoneNumber2),
+    zip: normalizeApiString(raw?.zipCode),
+    address: normalizeApiString(raw?.address),
+  };
 };
 
 type FetchAttempt =
@@ -191,42 +207,83 @@ const tryFetchJson = async (paths: string[], body: Record<string, unknown>): Pro
   return lastFailure;
 };
 
-const tryPostJson = async (paths: string[], body: Record<string, unknown>) => {
-  let lastFailure: { json?: Record<string, unknown>; status?: number; path?: string } | undefined;
-  for (const path of paths) {
-    try {
-      const response = await httpFetch(path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-      if (response.ok) {
-        return { ok: true, json, status: response.status, path };
-      }
-      lastFailure = { json, status: response.status, path };
-    } catch (error) {
-      console.warn('[patients] post failed for', path, error);
-    }
+const tryPostJson = async (path: string, body: Record<string, unknown>) => {
+  try {
+    const response = await httpFetch(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    return { ok: response.ok, json, status: response.status, path };
+  } catch (error) {
+    console.warn('[patients] post failed for', path, error);
+    return { ok: false, json: {}, status: undefined, path };
   }
-  return { ok: false, json: lastFailure?.json ?? {}, status: lastFailure?.status, path: lastFailure?.path };
 };
 
-export async function fetchPatients(params: PatientSearchParams): Promise<PatientListResponse> {
+const buildOfficialPatientBody = (payload: OfficialPatientCreatePayload | OfficialPatientUpdatePayload, runId: string) => {
+  return stripNullish({
+    runId,
+    patient: stripNullish({
+      patientId: normalizeApiString(payload.patient.patientId),
+      wholeName: payload.patient.name?.trim() || undefined,
+      wholeNameKana: payload.patient.kana?.trim() || undefined,
+      birthDate: payload.patient.birthDate?.trim() || undefined,
+      sex: payload.patient.sex?.trim() || undefined,
+      telephone: payload.patient.phone?.trim() || undefined,
+      zipCode: payload.patient.zip?.trim() || undefined,
+      addressLine: payload.patient.address?.trim() || undefined,
+    }),
+    auditMeta: payload.auditMeta
+      ? stripNullish({
+          source: payload.auditMeta.source,
+          section: payload.auditMeta.section,
+          changedKeys: payload.auditMeta.changedKeys,
+          receptionId: payload.auditMeta.receptionId,
+          appointmentId: payload.auditMeta.appointmentId,
+          visitDate: payload.auditMeta.visitDate,
+          actorRole: payload.auditMeta.actorRole,
+        })
+      : undefined,
+  });
+};
+
+export async function refetchOfficialCanonicalPatients(params: {
+  patientIds: string[];
+  runId?: string;
+}): Promise<{ ok: boolean; patients: PatientRecord[]; status?: number }> {
+  const patientIds = params.patientIds.map((value) => value.trim()).filter(Boolean);
+  if (patientIds.length === 0) {
+    return { ok: false, patients: [], status: 0 };
+  }
+  const runId = params.runId ?? getObservabilityMeta().runId ?? generateRunId();
+  updateObservabilityMeta({ runId });
+  const result = await tryPostJson(OFFICIAL_PATIENT_BATCH_ENDPOINT, {
+    patientIds,
+    includeInsurance: false,
+  });
+  const json = asObjectRecord(result.json);
+  const list = Array.isArray(json.patients) ? (json.patients as any[]) : [];
+  return {
+    ok: result.ok,
+    patients: list.map(mapCanonicalPatient).filter((patient) => Object.values(patient).some(Boolean)),
+    status: result.status,
+  };
+}
+
+export async function searchLocalPatients(params: LocalPatientSearchParams): Promise<PatientListResponse> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   const searchType = params.searchType ?? inferPatientSearchType(params.keyword);
   const payload: Record<string, unknown> = {
     keyword: params.keyword,
     searchType,
-    departmentCode: params.departmentCode,
-    physicianCode: params.physicianCode,
-    paymentMode: params.paymentMode,
     runId,
   };
   Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key]);
   updateObservabilityMeta({ runId });
 
-  const result = await tryFetchJson(patientInfoCandidates, payload);
+  const result = await tryFetchJson(LOCAL_PATIENT_SEARCH_ENDPOINTS, payload);
   const json = (result?.data as Record<string, unknown>) ?? {};
   const traceId = typeof json.traceId === 'string' ? (json.traceId as string) : getObservabilityMeta().traceId;
   const requestId = typeof json.requestId === 'string' ? (json.requestId as string) : undefined;
@@ -234,10 +291,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
   const apiResultMessage = extractApiResultMessage(json);
   const missingTags = buildMissingTags(apiResult, apiResultMessage);
   const dataSourceTransition = normalizeDataSourceTransition(json.dataSourceTransition);
-  const patients = parsePatients(json);
-  // P0: Never show sample patient records on a production-reachable screen.
-  // When the API returns an empty list (200 + no error), use a proper empty state in the UI instead.
-  const resolvedPatients = patients;
+  const patients = Array.isArray(json.patients) ? (json.patients as any[]).map(mapLocalPatient) : [];
   const recordsReturned =
     typeof json.recordsReturned === 'number'
       ? (json.recordsReturned as number)
@@ -246,7 +300,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
         : undefined;
 
   const meta: PatientListResponse = {
-    patients: resolvedPatients,
+    patients,
     runId: (json.runId as string | undefined) ?? getObservabilityMeta().runId,
     traceId,
     requestId,
@@ -310,7 +364,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
     missingMaster: meta.missingMaster ?? false,
     dataSourceTransition: meta.dataSourceTransition ?? 'local',
     fallbackUsed: meta.fallbackUsed ?? false,
-    action: 'patient_fetch',
+    action: 'patient_search',
     outcome: meta.error ? 'error' : 'success',
     note: meta.error ?? meta.sourcePath,
     reason: meta.error ?? undefined,
@@ -318,7 +372,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
 
   logAuditEvent({
     runId: meta.runId,
-    source: 'patient-fetch',
+    source: 'patient-local-search',
     cacheHit: meta.cacheHit,
     missingMaster: meta.missingMaster,
     dataSourceTransition: meta.dataSourceTransition,
@@ -327,7 +381,7 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
   });
 
   logUiState({
-    action: 'patient_fetch',
+    action: 'patient_search',
     screen: 'patients',
     runId: meta.runId,
     cacheHit: meta.cacheHit,
@@ -346,41 +400,17 @@ export async function fetchPatients(params: PatientSearchParams): Promise<Patien
   return meta;
 }
 
-export async function savePatient(payload: PatientMutationPayload): Promise<PatientMutationResult> {
+const performOfficialPatientMutation = async (
+  endpoint: string,
+  payload: OfficialPatientCreatePayload | OfficialPatientUpdatePayload,
+  operation: 'create' | 'update',
+): Promise<PatientMutationResult> => {
   const runId = payload.runId ?? getObservabilityMeta().runId ?? generateRunId();
-  const auditEvent = {
-    operation: payload.operation,
-    runId,
-    patientId: payload.patient.patientId,
-    timestamp: new Date().toISOString(),
-    source: payload.auditMeta?.source ?? 'patients',
-    section: payload.auditMeta?.section,
-    changedKeys: payload.auditMeta?.changedKeys,
-    receptionId: payload.auditMeta?.receptionId,
-    appointmentId: payload.auditMeta?.appointmentId,
-    visitDate: payload.auditMeta?.visitDate,
-    actorRole: payload.auditMeta?.actorRole,
-  };
-  const body = {
-    operation: payload.operation,
-    patient: stripNullish({
-      patientId: payload.patient.patientId,
-      wholeName: payload.patient.name,
-      wholeNameKana: payload.patient.kana,
-      birthDate: payload.patient.birthDate,
-      sex: payload.patient.sex,
-      telephone: payload.patient.phone,
-      zipCode: payload.patient.zip,
-      addressLine: payload.patient.address,
-    }),
-    auditEvent,
-    runId,
-  };
   updateObservabilityMeta({ runId });
 
-  const postResult = await tryPostJson(patientMutationCandidates, body);
-  const json = postResult.json ?? {};
-  const serverAuditEvent = (json.auditEvent as Record<string, unknown> | undefined) ?? undefined;
+  const postResult = await tryPostJson(endpoint, buildOfficialPatientBody(payload, runId));
+  const json = asObjectRecord(postResult.json);
+  const serverAuditEvent = asObjectRecord(json.auditEvent);
   const traceId = typeof json.traceId === 'string' ? (json.traceId as string) : getObservabilityMeta().traceId;
   const requestId = typeof json.requestId === 'string' ? (json.requestId as string) : undefined;
   const dataSourceTransition = normalizeDataSourceTransition(json.dataSourceTransition);
@@ -394,12 +424,26 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
     missingMaster: normalizeBoolean(json.missingMaster),
     dataSourceTransition,
     fallbackUsed: normalizeBoolean(json.fallbackUsed),
-    auditEvent: serverAuditEvent,
+    auditEvent: Object.keys(serverAuditEvent).length > 0 ? serverAuditEvent : undefined,
     message: (json.apiResultMessage as string | undefined) ?? (postResult.ok ? '保存しました' : '保存に失敗しました'),
-    patient: json.patient as PatientRecord | undefined,
+    patient: json.patient ? mapLocalPatient(json.patient) : undefined,
     status: postResult.status,
     sourcePath: postResult.path,
   };
+
+  const patientIdForCanonical = result.patient?.patientId ?? payload.patient.patientId;
+  if (result.ok && patientIdForCanonical) {
+    const canonicalRefetch = await refetchOfficialCanonicalPatients({
+      patientIds: [patientIdForCanonical],
+      runId: result.runId,
+    });
+    result.canonicalPatient = canonicalRefetch.patients[0];
+    result.canonicalRefetch = {
+      source: 'patientlst2v2',
+      ok: canonicalRefetch.ok,
+      status: canonicalRefetch.status,
+    };
+  }
 
   const serverDetails =
     serverAuditEvent && typeof serverAuditEvent.details === 'object' && serverAuditEvent.details !== null
@@ -408,11 +452,11 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
 
   const normalizedDetails = stripNullish({
     ...serverDetails,
-    operation: payload.operation,
+    operation,
     source: payload.auditMeta?.source ?? 'patients',
     section: payload.auditMeta?.section,
     changedKeys: payload.auditMeta?.changedKeys,
-    patientId: payload.patient.patientId,
+    patientId: result.patient?.patientId ?? payload.patient.patientId,
     receptionId: payload.auditMeta?.receptionId,
     appointmentId: payload.auditMeta?.appointmentId,
     visitDate: payload.auditMeta?.visitDate,
@@ -424,10 +468,12 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
     dataSourceTransition: result.dataSourceTransition,
     outcome: result.ok ? 'success' : 'error',
     message: result.message,
+    canonicalRefetchSource: result.canonicalRefetch?.source,
+    canonicalRefetchStatus: result.canonicalRefetch?.status,
   }) as Record<string, unknown>;
 
   result.auditEvent = {
-    action: (serverAuditEvent?.action as string | undefined) ?? 'LOCAL_PATIENT_MUTATION',
+    action: (serverAuditEvent?.action as string | undefined) ?? `OFFICIAL_PATIENT_${operation.toUpperCase()}`,
     outcome: (serverAuditEvent?.outcome as string | undefined) ?? (result.ok ? 'success' : 'error'),
     subject: (serverAuditEvent?.subject as string | undefined) ?? (payload.auditMeta?.source ?? 'patients'),
     runId: (serverAuditEvent?.runId as string | undefined) ?? result.runId,
@@ -448,9 +494,9 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
     runId: result.runId,
     cacheHit: result.cacheHit ?? false,
     missingMaster: result.missingMaster ?? false,
-    dataSourceTransition: result.dataSourceTransition ?? 'local',
+    dataSourceTransition: result.dataSourceTransition ?? 'server',
     fallbackUsed: result.fallbackUsed ?? false,
-    action: `patient_save_${payload.operation}`,
+    action: `official_patient_${operation}`,
     outcome: result.ok ? 'success' : 'error',
     note: result.ok ? (result.sourcePath ?? '') : `${result.sourcePath ?? ''} status=${result.status ?? 'unknown'}`,
     reason: result.ok ? undefined : result.message ?? result.sourcePath,
@@ -469,7 +515,7 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
   logUiState({
     action: 'patient_save',
     screen: payload.auditMeta?.source ?? 'patients',
-    controlId: `patient_save_${payload.operation}`,
+    controlId: `official_patient_${operation}`,
     runId: result.runId,
     cacheHit: result.cacheHit,
     missingMaster: result.missingMaster,
@@ -479,4 +525,12 @@ export async function savePatient(payload: PatientMutationPayload): Promise<Pati
   });
 
   return result;
+};
+
+export async function createOfficialPatient(payload: OfficialPatientCreatePayload): Promise<PatientMutationResult> {
+  return performOfficialPatientMutation(OFFICIAL_PATIENT_CREATE_ENDPOINT, payload, 'create');
+}
+
+export async function updateOfficialPatient(payload: OfficialPatientUpdatePayload): Promise<PatientMutationResult> {
+  return performOfficialPatientMutation(OFFICIAL_PATIENT_UPDATE_ENDPOINT, payload, 'update');
 }
