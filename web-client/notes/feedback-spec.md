@@ -19,6 +19,8 @@
 - それ以外は canonical copy に寄せます。
 - client に内部詳細や安全性未確認の文字列を露出しません。
 - `PatientsPage` の edit/audit summary、`ChartsActionBar` の action/result feedback、`ReceptionPage` の accept/cancel/claim-send result は canonical copy を current contract とします。
+- `ReceptionPage` の ORCA official response では、safe な `Api_Result_Message` がある場合にそれを最優先表示し、client 側の補助文言で上書きしません。
+- `ReceptionPage` の accept/cancel result は `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして扱い、`Api_Result_Message` が空の時だけ安全な fallback copy を補います。
 - `PatientsPage` と `AdministrationPage` の通常 surface では `endpoint`, `Api_Result_Message`, `Error.message` のような raw detail を default 表示しません。
 - `PatientsPage` の保存履歴で `traceId` / `requestId` / internal status を出す場合は、default 表示ではなく support disclosure に隔離します。
 - safe support ID として `RUN_ID` / `traceId` を出すことがあります。

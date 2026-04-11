@@ -2,11 +2,11 @@ import type { QueryFunctionContext } from '@tanstack/react-query';
 
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { readMockRuntimeState, resolveMockGateDecision } from '../../libs/devtools/mockGate';
+import { httpFetch } from '../../libs/http/httpClient';
 import { updateObservabilityMeta } from '../../libs/observability/observability';
 import type { DataSourceTransition, ResolveMasterSource } from '../../libs/observability/types';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import { fetchWithResolver } from '../outpatient/fetchWithResolver';
-import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
 import { attachAppointmentMeta, mergeOutpatientMeta, parseAppointmentEntries } from '../outpatient/transformers';
 import type {
   AppointmentPayload,
@@ -73,6 +73,11 @@ export type VisitMutationPayload = OutpatientMeta & {
   apiResultMessage?: string;
 };
 
+export type MedicalInformationOption = {
+  code: string;
+  name: string;
+};
+
 const isMswRuntimeEnabled = () => {
   const gate = resolveMockGateDecision();
   if (!gate.allowed) return false;
@@ -93,27 +98,6 @@ const buildVisitMutationCandidates = (): Array<{ path: string; source: ResolveMa
 
 const preferredSource = (mswEnabled: boolean): ResolveMasterSource | undefined => (mswEnabled ? 'mock' : 'server');
 
-const isTruthy = (value?: string) => {
-  if (!value) return false;
-  const normalized = value.trim().toLowerCase();
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
-};
-const orcaModeRaw = import.meta.env.VITE_ORCA_MODE ?? '';
-const orcaMode = orcaModeRaw.trim().toLowerCase();
-const orcaEndpoint = (import.meta.env as Record<string, string | undefined>).VITE_ORCA_ENDPOINT ?? '';
-const devProxyTarget = import.meta.env.VITE_DEV_PROXY_TARGET ?? '';
-const isWebOrcaMode = orcaMode === 'weborca' || orcaMode === 'cloud';
-const isWebOrcaHost = [devProxyTarget, orcaEndpoint].some((value) =>
-  /weborca|orca\.med\.or\.jp|orcamo\.jp/i.test(value),
-);
-// WebORCA/Trial では Acceptance_Push を送らない（env/host/mode で判定）
-const acceptancePushDisabledByEnv = isTruthy(
-  import.meta.env.VITE_DISABLE_ACCEPTANCE_PUSH ??
-    (import.meta.env as Record<string, string | undefined>).VITE_SUPPRESS_ACCEPTANCE_PUSH,
-);
-export const shouldSuppressAcceptancePush = acceptancePushDisabledByEnv || isWebOrcaMode || isWebOrcaHost;
-export const resolveAcceptancePush = (value?: string) =>
-  shouldSuppressAcceptancePush ? undefined : value;
 // CLAIM 廃止方針により常時 OFF（/api/orca/claim/outpatient は撤去済み）
 export const isClaimOutpatientEnabled = () => false;
 
@@ -132,21 +116,6 @@ const normalizeOptionalString = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
-};
-
-const normalizePhysicianCode = (value: string | undefined): string | undefined => {
-  const trimmed = normalizeOptionalString(value);
-  if (!trimmed) return undefined;
-
-  const leadingNumeric = trimmed.match(/^(\d{4,5})(?:\s|$)/)?.[1];
-  if (!leadingNumeric) {
-    return trimmed;
-  }
-  if (leadingNumeric.length === 4) {
-    // ORCA Trial: 職員コード(0001等)を physician Code(10001等)へ補正して送信する。
-    return `1${leadingNumeric}`;
-  }
-  return leadingNumeric;
 };
 
 export async function fetchAppointmentOutpatients(
@@ -188,6 +157,7 @@ export async function fetchAppointmentOutpatients(
         body: {
           visitDate: params.date,
           requestNumber: '01',
+          departmentCode: params.departmentCode,
         },
         queryContext,
         preferredSource: preferred,
@@ -408,8 +378,6 @@ export async function mutateVisit(
   options: { preferredSourceOverride?: ResolveMasterSource } = {},
 ): Promise<VisitMutationPayload> {
   const mswEnabled = isMswRuntimeEnabled();
-  const acceptancePush = resolveAcceptancePush(params.acceptancePush);
-  const normalizedPhysicianCode = normalizePhysicianCode(params.physicianCode);
   const insurances =
     params.paymentMode === 'self'
       ? [
@@ -423,10 +391,10 @@ export async function mutateVisit(
     patientId: params.patientId,
     acceptanceDate: params.acceptanceDate,
     acceptanceTime: params.acceptanceTime,
-    acceptancePush,
+    acceptancePush: params.acceptancePush,
     acceptanceId: params.acceptanceId,
     departmentCode: params.departmentCode,
-    physicianCode: normalizedPhysicianCode,
+    physicianCode: params.physicianCode,
     medicalInformation: params.medicalInformation,
     insurances,
   };
@@ -462,17 +430,25 @@ export async function mutateVisit(
   const fallbackAcceptanceDate = normalizeOptionalString(params.acceptanceDate);
   const fallbackAcceptanceTime = normalizeOptionalString(params.acceptanceTime);
   const fallbackDepartmentCode = normalizeOptionalString(params.departmentCode);
-  const fallbackPhysicianCode = normalizedPhysicianCode;
+  const fallbackPhysicianCode = normalizeOptionalString(params.physicianCode);
   const fallbackMedicalInformation =
     typeof params.medicalInformation === 'string' ? params.medicalInformation : undefined;
+  const apiResult = normalizeOptionalString(
+    (raw as any).apiResult ?? (raw as any).Api_Result ?? (raw as any).result ?? (raw as any).Result,
+  );
+  const apiResultMessage = normalizeOptionalString(
+    (raw as any).apiResultMessage ??
+      (raw as any).Api_Result_Message ??
+      (raw as any).message ??
+      (raw as any).Result_Message,
+  );
+  const hasNoAcceptance = apiResult === '60';
+  const hasInsuranceMismatch = apiResult === '21';
 
   const payload: VisitMutationPayload = {
     ...meta,
     requestNumber: params.requestNumber,
-    acceptanceId:
-      (raw as any).apiResult === '21'
-        ? undefined
-        : normalizeOptionalString(acceptanceIdRaw),
+    acceptanceId: hasInsuranceMismatch || hasNoAcceptance ? undefined : normalizeOptionalString(acceptanceIdRaw),
     acceptanceDate: normalizeOptionalString(acceptanceDateRaw) ?? fallbackAcceptanceDate,
     acceptanceTime: normalizeOptionalString(acceptanceTimeRaw) ?? fallbackAcceptanceTime,
     departmentCode: normalizeOptionalString(departmentCodeRaw) ?? fallbackDepartmentCode,
@@ -489,14 +465,8 @@ export async function mutateVisit(
     appointmentDate: (raw as any).appointmentDate ?? (raw as any).Appointment_Date ?? (raw as any).appointment_date,
     visitNumber: (raw as any).visitNumber ?? (raw as any).Visit_Number ?? (raw as any).visit_number,
     warnings: extractWarnings(raw),
-    apiResult:
-      (raw as any).apiResult ?? (raw as any).Api_Result ?? (raw as any).result ?? (raw as any).Result ?? undefined,
-    apiResultMessage:
-      (raw as any).apiResultMessage ??
-      (raw as any).Api_Result_Message ??
-      (raw as any).message ??
-      (raw as any).Result_Message ??
-      ((raw as any).apiResult === '21' ? '受付なし' : undefined),
+    apiResult,
+    apiResultMessage: apiResultMessage ?? (hasInsuranceMismatch ? '保険不一致' : hasNoAcceptance ? '受付なし' : undefined),
     patient,
   };
 
@@ -529,7 +499,7 @@ export async function mutateVisit(
       acceptanceDate: payload.acceptanceDate,
       acceptanceTime: payload.acceptanceTime,
       paymentMode: params.paymentMode,
-      acceptancePush,
+      acceptancePush: params.acceptancePush,
       warnings: payload.warnings,
       traceId: payload.traceId,
     },
@@ -549,24 +519,11 @@ export async function mutateVisit(
       acceptanceDate: payload.acceptanceDate,
       acceptanceTime: payload.acceptanceTime,
       paymentMode: params.paymentMode,
-      acceptancePush,
+      acceptancePush: params.acceptancePush,
       warnings: payload.warnings,
       traceId: payload.traceId,
     },
   });
-
-  // 受付登録直後に Patients/Charts 側で「見つからない」状況を減らすため、
-  // ORCA の患者番号（Patient_ID）をキーにローカルDBへ取り込みを試みる。
-  if (result.ok && params.requestNumber !== '02') {
-    const pid = payload.patient?.patientId ?? params.patientId;
-    if (pid && /^\d+$/.test(pid)) {
-      try {
-        await importPatientsFromOrca({ patientIds: [pid], runId: payload.runId });
-      } catch (error) {
-        console.warn('[reception] patient import failed', error);
-      }
-    }
-  }
 
   updateObservabilityMeta({
     runId: payload.runId,
@@ -579,6 +536,27 @@ export async function mutateVisit(
   });
 
   return payload;
+}
+
+export async function fetchMedicalInformationOptions(): Promise<MedicalInformationOption[]> {
+  const response = await httpFetch('/api/orca/appointments/medical-information', {
+    method: 'GET',
+    notifySessionExpired: false,
+  });
+  const body = (await response.json().catch(() => ({}))) as {
+    items?: Array<{ code?: unknown; name?: unknown }>;
+  };
+  const items = Array.isArray(body.items) ? body.items : [];
+  return items
+    .map((item) => ({
+      code: normalizeOptionalString(item.code) ?? '',
+      name: normalizeOptionalString(item.name) ?? '',
+    }))
+    .filter((item) => item.code.length > 0)
+    .map((item) => ({
+      code: item.code,
+      name: item.name || item.code,
+    }));
 }
 
 export async function fetchClaimFlags(

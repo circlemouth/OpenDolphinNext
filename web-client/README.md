@@ -24,6 +24,8 @@
 - 患者文脈は privacy-first を前提とし、URL、`localStorage`、`sessionStorage` に残しません。
 - `PatientsPage` の一覧検索は local-only search として明示し、official ORCA create/update/import とは分離します。
 - 患者の official create/update/import は別 route / 別 DTO / 別関数で扱い、成功後は canonical re-fetch を行って local sync を確定させます。
+- Reception は既存患者の受付導線に限定し、新患登録導線は `PatientsPage` に分離します。
+- Reception の ORCA 検索条件は official `patientlst3v2` 形状を優先し、client 側の補完や独自 search mode を current contract に戻しません。
 - admin の source of truth は `/api/admin/config` です。`/api/admin/delivery` を current contract に戻しません。
 - ORCA taxonomy は `/api/orca/official/*` を official bridge、`/api/orca/master/*` を master-backed read、`/api/local/*` を local-only contract として扱います。
 - security 規範の詳細は [notes/security-spec.md](./notes/security-spec.md) を正本とし、この README へ重複移植しません。

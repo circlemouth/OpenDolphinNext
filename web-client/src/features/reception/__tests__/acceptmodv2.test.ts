@@ -11,10 +11,6 @@ vi.mock('../../outpatient/fetchWithResolver', () => ({
   fetchWithResolver: vi.fn(),
 }));
 
-vi.mock('../../outpatient/orcaPatientImportApi', () => ({
-  importPatientsFromOrca: vi.fn().mockResolvedValue(undefined),
-}));
-
 vi.mock('../../../libs/telemetry/telemetryClient', () => ({
   recordOutpatientFunnel,
 }));
@@ -73,7 +69,7 @@ describe('acceptmodv2 mutateVisit', () => {
     );
   });
 
-  it('保険モードでは insurances を送らず、職員コードは physician Code(100xx)へ正規化する', async () => {
+  it('保険モードでは insurances を送らず、Acceptance_Push と physicianCode をそのまま送る', async () => {
     mockFetch.mockResolvedValue({
       raw: { apiResult: '00', apiResultMessage: 'OK', patient: { patientId: '000001' } },
       meta: { httpStatus: 200, dataSourceTransition: 'mock' },
@@ -92,7 +88,8 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(mockFetch).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
-          physicianCode: '10001',
+          acceptancePush: '1',
+          physicianCode: '0001',
           insurances: undefined,
         }),
       }),
@@ -123,9 +120,9 @@ describe('acceptmodv2 mutateVisit', () => {
     );
   });
 
-  it('Api_Result=21 の場合は警告トーン扱いで acceptanceId を持たない', async () => {
+  it('Api_Result=21 は保険不一致として扱い、Api_Result_Message を優先する', async () => {
     mockFetch.mockResolvedValue({
-      raw: { apiResult: '21', apiResultMessage: '受付なし' },
+      raw: { apiResult: '21', apiResultMessage: '保険の組み合わせが一致しません' },
       meta: { httpStatus: 200, dataSourceTransition: 'mock' },
       ok: true,
     });
@@ -140,6 +137,28 @@ describe('acceptmodv2 mutateVisit', () => {
 
     expect(result.acceptanceId).toBeUndefined();
     expect(result.apiResult).toBe('21');
+    expect(result.apiResultMessage).toBe('保険の組み合わせが一致しません');
+  });
+
+  it('Api_Result=60 は受付なしとして扱い、acceptanceId を持たない', async () => {
+    mockFetch.mockResolvedValue({
+      raw: { apiResult: '60', apiResultMessage: '受付は存在しません' },
+      meta: { httpStatus: 200, dataSourceTransition: 'mock' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '000060',
+      requestNumber: '02',
+      acceptanceDate: '2026-01-20',
+      acceptancePush: '1',
+      acceptanceId: 'A-060',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.acceptanceId).toBeUndefined();
+    expect(result.apiResult).toBe('60');
+    expect(result.apiResultMessage).toBe('受付は存在しません');
   });
 
   it('実環境相当の空文字応答でも patientId を維持する', async () => {

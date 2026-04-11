@@ -7,8 +7,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.rest.dto.orca.AbstractPatientListResponse;
 import open.dolphin.rest.dto.orca.AppointmentMutationResponse;
@@ -21,6 +23,8 @@ import open.dolphin.rest.dto.orca.InsuranceCombinationResponse;
 import open.dolphin.rest.dto.orca.OrcaApiResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse.AppointmentSlot;
+import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
+import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse.MedicalInformationOption;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse.PatientAppointment;
 import open.dolphin.rest.dto.orca.PatientBatchResponse;
@@ -186,11 +190,20 @@ public class OrcaXmlMapper {
     }
 
     public PatientSearchResponse toPatientSearch(String xml, String searchTerm) {
-        JsonNode body = read(xml).path("patientlst2res");
+        JsonNode body = read(xml).path("patientlst3res");
         PatientSearchResponse response = new PatientSearchResponse();
         populateCommon(body, response);
         populatePatientList(body, response);
         response.setSearchTerm(searchTerm);
+        return response;
+    }
+
+    public OrcaMedicalInformationListResponse toMedicalInformationList(String xml) {
+        JsonNode body = read(xml).path("system01lstv2res");
+        OrcaMedicalInformationListResponse response = new OrcaMedicalInformationListResponse();
+        populateCommon(body, response);
+        response.setRequestNumber(textValue(body, "Request_Number"));
+        collectMedicalInformationOptions(body, response.getItems(), new LinkedHashSet<>());
         return response;
     }
 
@@ -340,6 +353,46 @@ public class OrcaXmlMapper {
             info.setCertificateIssuedDate(textValue(entryNode, "Certificate_IssuedDate"));
             info.setCertificateExpiredDate(textValue(entryNode, "Certificate_ExpiredDate"));
             target.add(info);
+        }
+    }
+
+    private void collectMedicalInformationOptions(
+            JsonNode node,
+            java.util.List<MedicalInformationOption> target,
+            Set<String> seenCodes) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return;
+        }
+        if (node.isArray()) {
+            for (JsonNode child : node) {
+                collectMedicalInformationOptions(child, target, seenCodes);
+            }
+            return;
+        }
+        if (!node.isObject()) {
+            return;
+        }
+        String code = firstNonBlankText(
+                textValue(node, "Medical_Information_Code"),
+                textValue(node, "Medical_Information"),
+                textValue(node, "Information_Code"),
+                textValue(node, "System_Code"),
+                textValue(node, "Code"));
+        String name = firstNonBlankText(
+                textValue(node, "Medical_Information_Name"),
+                textValue(node, "Information_Name"),
+                textValue(node, "System_Name"),
+                textValue(node, "Kanji_Name"),
+                textValue(node, "Name"));
+        if (code != null && !code.isBlank() && seenCodes.add(code)) {
+            MedicalInformationOption option = new MedicalInformationOption();
+            option.setCode(code);
+            option.setName(name != null && !name.isBlank() ? name : code);
+            target.add(option);
+        }
+        Iterator<JsonNode> children = node.elements();
+        while (children.hasNext()) {
+            collectMedicalInformationOptions(children.next(), target, seenCodes);
         }
     }
 
