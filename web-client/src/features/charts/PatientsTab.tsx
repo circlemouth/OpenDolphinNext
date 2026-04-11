@@ -1977,7 +1977,7 @@ export function PatientsTab({
                   })}
                 </div>
                 <small className="patients-tab__detail-guard">
-                  変更前は直近取得値、変更後は現在の表示（メモはローカル編集）です。基本/保険は Charts（差分確認）または Patients で保存できます。
+                  変更前は直近取得値、変更後は現在の表示です。メモはローカル編集のみで、患者基本情報の保存は Charts の差分確認から official 更新を実行します。
                 </small>
               </div>
             </>

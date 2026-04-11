@@ -40,6 +40,56 @@ export type OrcaMedicationGetResult = {
   traceId?: string;
 };
 
+const parseMedicationSelection = (selection: Record<string, unknown>): OrcaMedicationGetSelection => ({
+  commentCode: typeof selection.commentCode === 'string' ? selection.commentCode : undefined,
+  commentName: typeof selection.commentName === 'string' ? selection.commentName : undefined,
+  category: typeof selection.category === 'string' ? selection.category : undefined,
+  conditionCategory: typeof selection.conditionCategory === 'string' ? selection.conditionCategory : undefined,
+  notUseComment: typeof selection.notUseComment === 'string' ? selection.notUseComment : undefined,
+  processCategory: typeof selection.processCategory === 'string' ? selection.processCategory : undefined,
+  selectionGrepName: typeof selection.selectionGrepName === 'string' ? selection.selectionGrepName : undefined,
+  itemNumber: typeof selection.itemNumber === 'string' ? selection.itemNumber : undefined,
+  itemNumberBranch: typeof selection.itemNumberBranch === 'string' ? selection.itemNumberBranch : undefined,
+});
+
+const parseMedicationInfo = (medicationSource: unknown) =>
+  medicationSource && typeof medicationSource === 'object'
+    ? {
+        medicationCode:
+          typeof (medicationSource as Record<string, unknown>).medicationCode === 'string'
+            ? ((medicationSource as Record<string, unknown>).medicationCode as string)
+            : undefined,
+        medicationName:
+          typeof (medicationSource as Record<string, unknown>).medicationName === 'string'
+            ? ((medicationSource as Record<string, unknown>).medicationName as string)
+            : undefined,
+        medicationNameKana:
+          typeof (medicationSource as Record<string, unknown>).medicationNameKana === 'string'
+            ? ((medicationSource as Record<string, unknown>).medicationNameKana as string)
+            : undefined,
+        unitCode:
+          typeof (medicationSource as Record<string, unknown>).unitCode === 'string'
+            ? ((medicationSource as Record<string, unknown>).unitCode as string)
+            : undefined,
+        unitName:
+          typeof (medicationSource as Record<string, unknown>).unitName === 'string'
+            ? ((medicationSource as Record<string, unknown>).unitName as string)
+            : undefined,
+        startDate:
+          typeof (medicationSource as Record<string, unknown>).startDate === 'string'
+            ? ((medicationSource as Record<string, unknown>).startDate as string)
+            : undefined,
+        endDate:
+          typeof (medicationSource as Record<string, unknown>).endDate === 'string'
+            ? ((medicationSource as Record<string, unknown>).endDate as string)
+            : undefined,
+        requestCode:
+          typeof (medicationSource as Record<string, unknown>).requestCode === 'string'
+            ? ((medicationSource as Record<string, unknown>).requestCode as string)
+            : undefined,
+      }
+    : undefined;
+
 const normalizeBaseDate = (value?: string) => {
   if (!value) return null;
   const digits = value.replace(/[^0-9]/g, '');
@@ -100,57 +150,9 @@ export async function fetchOrcaMedicationGet(params: {
     response.headers.get('x-trace-id') ??
     undefined;
   const selections = Array.isArray(json.selections)
-    ? (json.selections as Array<Record<string, unknown>>).map((selection) => ({
-      commentCode: typeof selection.commentCode === 'string' ? selection.commentCode : undefined,
-      commentName: typeof selection.commentName === 'string' ? selection.commentName : undefined,
-      category: typeof selection.category === 'string' ? selection.category : undefined,
-      conditionCategory: typeof selection.conditionCategory === 'string' ? selection.conditionCategory : undefined,
-      notUseComment: typeof selection.notUseComment === 'string' ? selection.notUseComment : undefined,
-      processCategory: typeof selection.processCategory === 'string' ? selection.processCategory : undefined,
-      selectionGrepName:
-        typeof selection.selectionGrepName === 'string' ? selection.selectionGrepName : undefined,
-      itemNumber: typeof selection.itemNumber === 'string' ? selection.itemNumber : undefined,
-      itemNumberBranch: typeof selection.itemNumberBranch === 'string' ? selection.itemNumberBranch : undefined,
-    }))
+    ? (json.selections as Array<Record<string, unknown>>).map(parseMedicationSelection)
     : [];
-  const medicationSource = json.medication;
-  const medication =
-    medicationSource && typeof medicationSource === 'object'
-      ? {
-          medicationCode:
-            typeof (medicationSource as Record<string, unknown>).medicationCode === 'string'
-              ? ((medicationSource as Record<string, unknown>).medicationCode as string)
-              : undefined,
-          medicationName:
-            typeof (medicationSource as Record<string, unknown>).medicationName === 'string'
-              ? ((medicationSource as Record<string, unknown>).medicationName as string)
-              : undefined,
-          medicationNameKana:
-            typeof (medicationSource as Record<string, unknown>).medicationNameKana === 'string'
-              ? ((medicationSource as Record<string, unknown>).medicationNameKana as string)
-              : undefined,
-          unitCode:
-            typeof (medicationSource as Record<string, unknown>).unitCode === 'string'
-              ? ((medicationSource as Record<string, unknown>).unitCode as string)
-              : undefined,
-          unitName:
-            typeof (medicationSource as Record<string, unknown>).unitName === 'string'
-              ? ((medicationSource as Record<string, unknown>).unitName as string)
-              : undefined,
-          startDate:
-            typeof (medicationSource as Record<string, unknown>).startDate === 'string'
-              ? ((medicationSource as Record<string, unknown>).startDate as string)
-              : undefined,
-          endDate:
-            typeof (medicationSource as Record<string, unknown>).endDate === 'string'
-              ? ((medicationSource as Record<string, unknown>).endDate as string)
-              : undefined,
-          requestCode:
-            typeof (medicationSource as Record<string, unknown>).requestCode === 'string'
-              ? ((medicationSource as Record<string, unknown>).requestCode as string)
-              : undefined,
-        }
-      : undefined;
+  const medication = parseMedicationInfo(json.medication);
   return {
     ok: parsed.ok,
     apiOk: typeof json.apiOk === 'boolean' ? (json.apiOk as boolean) : undefined,

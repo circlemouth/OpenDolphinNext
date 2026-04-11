@@ -136,7 +136,7 @@ export async function fetchChartsMedicalSummary(
       const response = await httpFetch(endpoint, { method: 'GET' });
       const parsed = await parseOrcaApiResponse(response, {
         notFoundCodes: LOCAL_SUMMARY_ERROR_CODES,
-        fallbackMessage: 'ローカル医療サマリの取得に失敗しました。',
+        fallbackMessage: 'ローカル診療サマリの取得に失敗しました。',
       });
       if (parsed.ok) {
         const body = parsed.json as LocalMedicalSummarySuccess | null;

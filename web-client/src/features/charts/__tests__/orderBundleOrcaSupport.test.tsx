@@ -225,7 +225,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
     ).toBeInTheDocument();
   });
 
-  it('保存時に official contraindication route を呼び、警告で確認ダイアログを開く', async () => {
+  it('保存時に official contraindication route を呼び、患者別 ORCA 禁忌チェックとして確認ダイアログを開く', async () => {
     const user = userEvent.setup();
     const expectedPerformMonth = new Date().toISOString().slice(0, 7);
     mockHttpFetch.mockResolvedValueOnce(
@@ -321,7 +321,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
       }),
     );
 
-    expect(await screen.findByRole('alertdialog', { name: '禁忌チェックの警告' })).toBeInTheDocument();
+    expect(await screen.findByRole('alertdialog', { name: '患者別 ORCA 禁忌チェックの警告' })).toBeInTheDocument();
     expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: '今回だけ無視して保存' }));

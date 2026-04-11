@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { httpFetch } from '../../libs/http/httpClient';
-import { checkOrcaOrderInteractions } from './orcaOrderInteractionApi';
+import { checkOrcaMasterStaticOrderInteractions, checkOrcaOrderInteractions } from './orcaOrderInteractionApi';
 
 vi.mock('../../libs/http/httpClient', () => ({
   httpFetch: vi.fn(),
@@ -30,7 +30,7 @@ describe('checkOrcaOrderInteractions', () => {
       ),
     );
 
-    const result = await checkOrcaOrderInteractions({
+    const result = await checkOrcaMasterStaticOrderInteractions({
       codes: ['620000001', '620000001', '620000002'],
       existingCodes: ['620000003', '620000003', ' '],
     });
@@ -49,10 +49,14 @@ describe('checkOrcaOrderInteractions', () => {
       }),
     );
 
-    const result = await checkOrcaOrderInteractions({ codes: ['620000001', '620000002'] });
+    const result = await checkOrcaMasterStaticOrderInteractions({ codes: ['620000001', '620000002'] });
 
     expect(result.ok).toBe(false);
     expect(result.status).toBe(503);
     expect(result.pairs).toEqual([]);
+  });
+
+  it('backward-compatible alias は master static 実装を指す', () => {
+    expect(checkOrcaOrderInteractions).toBe(checkOrcaMasterStaticOrderInteractions);
   });
 });

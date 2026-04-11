@@ -18,7 +18,7 @@ describe('fetchOrcaMedicationGet', () => {
     mockHttpFetch.mockReset();
   });
 
-  it('requestNumber 01 は英数字コードを許可し、02 は 9 桁制約を維持する', async () => {
+  it('Request_Number=01 は入力コードを受け付ける', async () => {
     mockHttpFetch.mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -38,15 +38,7 @@ describe('fetchOrcaMedicationGet', () => {
       requestCode: 'ABC123',
       baseDate: '2026-03-09',
     });
-    const second = await fetchOrcaMedicationGet({
-      requestNumber: '02',
-      requestCode: 'ABC123',
-      baseDate: '2026-03-09',
-    });
-
     expect(first.ok).toBe(true);
-    expect(second.ok).toBe(false);
-    expect(second.status).toBe(0);
     expect(mockHttpFetch).toHaveBeenCalledTimes(1);
     expect(mockHttpFetch).toHaveBeenCalledWith(
       '/api/orca/official/chart-support/medication-get',
@@ -62,7 +54,20 @@ describe('fetchOrcaMedicationGet', () => {
     );
   });
 
-  it('medicationgetv2 response を official field つきで正規化する', async () => {
+  it('Request_Number=02 は 9 桁診療行為コードを要求する', async () => {
+    const result = await fetchOrcaMedicationGet({
+      requestNumber: '02',
+      requestCode: 'ABC123',
+      baseDate: '2026-03-09',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(0);
+    expect(result.message).toBe('診療行為コードは9桁数字で指定してください。');
+    expect(mockHttpFetch).not.toHaveBeenCalled();
+  });
+
+  it('medicationgetv2 response の extra field を parser で落とさない', async () => {
     mockHttpFetch.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
@@ -120,6 +125,7 @@ describe('fetchOrcaMedicationGet', () => {
     expect(result.selections).toEqual([
       expect.objectContaining({
         commentCode: '850100106',
+        category: 'C002',
         conditionCategory: '1',
         notUseComment: '非算定理由',
         processCategory: 'P1',

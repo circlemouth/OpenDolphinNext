@@ -130,6 +130,8 @@
 - 患者基本情報の official create/update/import は単一路線に混ぜず、`create` / `update` / `import` を別導線として扱います。
 - official create/update/import 成功後は canonical source を再取得し、その canonical record で local sync を確定します。
 - chart の患者基本情報編集 dialog も Patients と同じ official update route を使います。
+- chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
+- SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
