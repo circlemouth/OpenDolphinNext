@@ -5,7 +5,6 @@ import { useSearchParams } from 'react-router-dom';
 
 import { getAuditEventLog, logAuditEvent, logUiState } from '../../../libs/audit/auditLogger';
 import { resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
-import { httpFetch } from '../../../libs/http/httpClient';
 import type { DataSourceTransition } from '../../../libs/observability/types';
 import { FocusTrapDialog } from '../../../components/modals/FocusTrapDialog';
 import { OrderConsole } from '../components/OrderConsole';
@@ -106,6 +105,7 @@ import {
   fetchMedicalModV2OrderBundles,
   prepareMedicalModV2SendData,
 } from '../../charts/orderRpNormalization';
+import { resolveAcceptmodFallbackMessage } from '../acceptmodv2Result';
 
 type SortKey = 'time' | 'acceptance' | 'reservation' | 'name' | 'department';
 type StatusListLayout = 'table' | 'cards';
@@ -655,8 +655,8 @@ export function ReceptionPage({
   patientId,
   receptionId,
   destination = 'ORCA queue',
-  title = '受付',
-  description = '受付一覧の確認、例外対応、当日受付、カルテ起動を行う画面。',
+  title = '既存患者受付',
+  description = '既存患者の受付一覧確認、当日受付、会計送信、カルテ起動を行う画面。',
 }: ReceptionPageProps) {
   const session = useSession();
   const queryClient = useQueryClient();
@@ -869,113 +869,6 @@ export function ReceptionPage({
     if (isStatusListLayout(fromQuery)) return fromQuery;
     return loadStatusListLayout();
   });
-
-  const resolvePatientIdFromRaw = useCallback(
-    (name?: string, kana?: string): string | undefined => {
-      const raw = masterSearchMeta?.raw;
-      if (!raw) return undefined;
-      const stack: Array<{ node: unknown; depth: number }> = [{ node: raw, depth: 0 }];
-      const visited = new Set<unknown>();
-      while (stack.length) {
-        const current = stack.pop();
-        if (!current) continue;
-        const { node, depth } = current;
-        if (visited.has(node) || depth > 6) continue;
-        visited.add(node);
-        if (Array.isArray(node)) {
-          for (const entry of node) {
-            if (entry && typeof entry === 'object') stack.push({ node: entry, depth: depth + 1 });
-          }
-          continue;
-        }
-        if (node && typeof node === 'object') {
-          const record = node as Record<string, unknown>;
-          const candidateId =
-            (record.patientId as string | undefined) ??
-            (record.Patient_ID as string | undefined) ??
-            (record.PatientId as string | undefined) ??
-            (record.PatientID as string | undefined) ??
-            (record.Patient_No as string | undefined) ??
-            (record.Patient_Number as string | undefined) ??
-            (record.patientNo as string | undefined) ??
-            (record.patientNumber as string | undefined);
-          const candidateName =
-            (record.wholeName as string | undefined) ??
-            (record.WholeName as string | undefined) ??
-            (record.Patient_Name as string | undefined) ??
-            (record.name as string | undefined);
-          const candidateKana =
-            (record.wholeNameKana as string | undefined) ??
-            (record.WholeName_inKana as string | undefined) ??
-            (record.Patient_Kana as string | undefined) ??
-            (record.kana as string | undefined);
-          if (candidateId) {
-            const nameMatch = name ? candidateName === name : true;
-            const kanaMatch = kana ? candidateKana === kana : true;
-            if (nameMatch && kanaMatch) return candidateId;
-          }
-          for (const entry of Object.values(record)) {
-            if (entry && typeof entry === 'object') stack.push({ node: entry, depth: depth + 1 });
-          }
-        }
-      }
-      return undefined;
-    },
-    [masterSearchMeta?.raw],
-  );
-
-  const resolvePatientIdFromSearchRaw = useCallback(
-    (raw: Record<string, unknown> | undefined, name?: string, kana?: string): string | undefined => {
-      if (!raw) return undefined;
-      const stack: Array<{ node: unknown; depth: number }> = [{ node: raw, depth: 0 }];
-      const visited = new Set<unknown>();
-      while (stack.length) {
-        const current = stack.pop();
-        if (!current) continue;
-        const { node, depth } = current;
-        if (visited.has(node) || depth > 6) continue;
-        visited.add(node);
-        if (Array.isArray(node)) {
-          for (const entry of node) {
-            if (entry && typeof entry === 'object') stack.push({ node: entry, depth: depth + 1 });
-          }
-          continue;
-        }
-        if (node && typeof node === 'object') {
-          const record = node as Record<string, unknown>;
-          const candidateId =
-            (record.patientId as string | undefined) ??
-            (record.Patient_ID as string | undefined) ??
-            (record.PatientId as string | undefined) ??
-            (record.PatientID as string | undefined) ??
-            (record.Patient_No as string | undefined) ??
-            (record.Patient_Number as string | undefined) ??
-            (record.patientNo as string | undefined) ??
-            (record.patientNumber as string | undefined);
-          const candidateName =
-            (record.wholeName as string | undefined) ??
-            (record.WholeName as string | undefined) ??
-            (record.Patient_Name as string | undefined) ??
-            (record.name as string | undefined);
-          const candidateKana =
-            (record.wholeNameKana as string | undefined) ??
-            (record.WholeName_inKana as string | undefined) ??
-            (record.Patient_Kana as string | undefined) ??
-            (record.kana as string | undefined);
-          if (candidateId) {
-            const nameMatch = name ? candidateName === name : true;
-            const kanaMatch = kana ? candidateKana === kana : true;
-            if (nameMatch && kanaMatch) return candidateId;
-          }
-          for (const entry of Object.values(record)) {
-            if (entry && typeof entry === 'object') stack.push({ node: entry, depth: depth + 1 });
-          }
-        }
-      }
-      return undefined;
-    },
-    [],
-  );
 
   const claimQueryKey = ['outpatient-claim-flags'];
   const claimQuery = useQuery({
@@ -1263,12 +1156,7 @@ export function ReceptionPage({
   const masterSearchMutation = useMutation<PatientMasterSearchResponse, Error, Parameters<typeof fetchPatientMasterSearch>[0]>({
     mutationFn: (params) => fetchPatientMasterSearch(params),
     onSuccess: (result) => {
-      const normalizedPatients = result.patients.map((patient) => {
-        if (patient.patientId) return patient;
-        const recoveredId = resolvePatientIdFromSearchRaw(result.raw, patient.name, patient.kana);
-        return recoveredId ? { ...patient, patientId: recoveredId } : patient;
-      });
-      setMasterSearchResults(normalizedPatients);
+      setMasterSearchResults(result.patients);
       setMasterSearchMeta(result);
       setMasterSearchNotice({
         tone: result.ok ? 'info' : 'warning',
@@ -1449,7 +1337,7 @@ export function ReceptionPage({
   const metaCacheHit = mergedMeta.cacheHit ?? false;
 
   useEffect(() => {
-    document.title = `受付 | 施設ID=${session.facilityId ?? 'unknown'}`;
+    document.title = `既存患者受付 | 施設ID=${session.facilityId ?? 'unknown'}`;
   }, [session.facilityId]);
 
   useEffect(() => {
@@ -2607,6 +2495,14 @@ export function ReceptionPage({
       if (!resolvedVisitKind) errors.visitKind = '来院区分を選択してください';
       if (!resolvedDepartmentCode) errors.department = '診療科を選択してください';
       if (!resolvedPhysicianCode) errors.physician = '担当医を選択してください';
+      if (!selectedDate) {
+        setAcceptResult({
+          tone: 'error',
+          message: '受付日が未確定です',
+          detail: '日付を選択してから再実行してください。',
+        });
+        return;
+      }
       const hasErrors = Object.keys(errors).length > 0;
       if (hasErrors) {
         setAcceptErrors(errors);
@@ -2620,7 +2516,7 @@ export function ReceptionPage({
       const params: VisitMutationParams = {
         patientId: trimmedPatientId || '',
         requestNumber: '01',
-        acceptanceDate: selectedDate || todayString(),
+        acceptanceDate: selectedDate,
         acceptanceTime: formatLocalHms(now),
         acceptancePush: resolvedVisitKind,
         medicalInformation: resolvedMedicalInformation,
@@ -2638,8 +2534,6 @@ export function ReceptionPage({
         setAcceptDurationMs(durationMs);
         const apiResult = normalizeApiResult(payload.apiResult);
         const isSuccess = isApiResultOk(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
-        const isInsuranceMismatch = apiResult === '21';
-        const isNoAcceptance = apiResult === '60';
         const isAlreadyAccepted = apiResult === '16';
 
         if (isSuccess) {
@@ -2657,16 +2551,15 @@ export function ReceptionPage({
           : ACCEPT_WARNING_RESULTS.has(apiResult)
             ? 'warning'
             : 'error';
+        const fallbackMessage = resolveAcceptmodFallbackMessage(apiResult);
         const message = isSuccess
           ? '受付登録が完了しました'
           : payload.apiResultMessage
             ? payload.apiResultMessage
           : isAlreadyAccepted
             ? '診療科・保険組合せで既に受付済みです'
-          : isInsuranceMismatch
-            ? '保険不一致'
-          : isNoAcceptance
-            ? '受付なし'
+          : fallbackMessage
+            ? fallbackMessage
             : '受付処理でエラーが返却されました';
 
         setAcceptResult({
@@ -2769,11 +2662,20 @@ export function ReceptionPage({
       const patientId = entry.patientId?.trim() ?? '';
       const acceptanceId = entry.receptionId?.trim() ?? '';
       if (!patientId || !acceptanceId) return;
+      if (!selectedDate) {
+        setAcceptResult({
+          tone: 'error',
+          message: '受付日が未確定です',
+          detail: '日付を選択してから再実行してください。',
+          runId: mergedMeta.runId,
+        });
+        return;
+      }
       const now = new Date();
       const params: VisitMutationParams = {
         patientId,
         requestNumber: '02',
-        acceptanceDate: selectedDate || todayString(),
+        acceptanceDate: selectedDate,
         acceptanceTime: formatLocalHms(now),
         acceptancePush: '1',
         acceptanceId,
@@ -2794,14 +2696,13 @@ export function ReceptionPage({
         }
         const toneResult: 'info' | 'warning' | 'error' =
           isSuccess ? 'info' : ACCEPT_WARNING_RESULTS.has(apiResult) ? 'warning' : 'error';
+        const fallbackMessage = resolveAcceptmodFallbackMessage(apiResult);
         const message = isSuccess
           ? '受付取消が完了しました'
           : payload.apiResultMessage
             ? payload.apiResultMessage
-          : apiResult === '21'
-            ? '保険不一致'
-          : apiResult === '60'
-            ? '受付なし'
+          : fallbackMessage
+            ? fallbackMessage
             : '受付取消でエラーが返却されました';
         setAcceptResult({
           tone: toneResult,
@@ -3142,7 +3043,6 @@ export function ReceptionPage({
       setMasterSearchNotice(null);
       setMasterSearchError(null);
       const trimmedName = masterSearchFilters.name.trim();
-      const trimmedKana = masterSearchFilters.kana.trim();
       if (masterSearchFilters.birthEndDate && !masterSearchFilters.birthStartDate) {
         setMasterSearchError('生年月日（終了）を指定する場合は開始日も入力してください。');
         return;
@@ -3155,14 +3055,14 @@ export function ReceptionPage({
           return;
         }
       }
-      if (!trimmedName && !trimmedKana) {
-        setMasterSearchError('氏名またはカナを入力してください。');
+      if (!trimmedName) {
+        setMasterSearchError('氏名（WholeName）は必須です。');
         return;
       }
       setMasterSearchError(null);
       await masterSearchMutation.mutateAsync({
         name: trimmedName || undefined,
-        kana: trimmedKana || undefined,
+        kana: masterSearchFilters.kana.trim() || undefined,
         birthStartDate: masterSearchFilters.birthStartDate || undefined,
         birthEndDate: masterSearchFilters.birthEndDate || undefined,
         sex: masterSearchFilters.sex || undefined,
@@ -3175,7 +3075,7 @@ export function ReceptionPage({
   const handleSelectMasterPatient = useCallback(
     (patient: PatientMasterRecord) => {
       setMasterSelected(patient);
-      const resolvedPatientId = patient.patientId ?? resolvePatientIdFromRaw(patient.name, patient.kana);
+      const resolvedPatientId = patient.patientId?.trim() ?? '';
       if (resolvedPatientId) {
         setAcceptPatientId(resolvedPatientId);
         lastAcceptAutoFill.current = {
@@ -3196,13 +3096,13 @@ export function ReceptionPage({
         screen: 'reception',
         runId: mergedMeta.runId ?? flags.runId,
         details: {
-          patientId: patient.patientId,
+          patientId: resolvedPatientId || undefined,
           name: patient.name,
           kana: patient.kana,
         },
       });
     },
-    [acceptPaymentMode, acceptVisitKind, flags.runId, mergedMeta.runId, resolvePatientIdFromRaw],
+    [acceptPaymentMode, acceptVisitKind, flags.runId, mergedMeta.runId],
   );
 
   useEffect(() => {
@@ -3557,7 +3457,7 @@ export function ReceptionPage({
       }
 
       const baseRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
-      const calculationDate = normalizeVisitDate(entry.visitDate) ?? normalizeVisitDate(selectedDate) ?? todayString();
+      const calculationDate = normalizeVisitDate(entry.visitDate) ?? normalizeVisitDate(selectedDate);
       if (!calculationDate) {
         enqueue({
           tone: 'warning',
@@ -3567,62 +3467,17 @@ export function ReceptionPage({
         return;
       }
 
-      const fetchVisitContextCodes = async (): Promise<{ departmentCode?: string; physicianCode?: string }> => {
-        try {
-          const response = await httpFetch('/api/orca/official/visits/list', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ visitDate: calculationDate, requestNumber: '01' }),
-          });
-          if (!response.ok) return {};
-          const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-          const visits = Array.isArray(payload.visits) ? payload.visits : [];
-          const matched = visits.find((candidate) => {
-            if (!candidate || typeof candidate !== 'object') return false;
-            const rawCandidateId =
-              (candidate as { patientId?: string }).patientId ??
-              ((candidate as { patient?: { patientId?: string } }).patient?.patientId ?? undefined);
-            return typeof rawCandidateId === 'string' && rawCandidateId.trim() === patientId;
-          });
-          if (!matched || typeof matched !== 'object') return {};
-          const rawDepartment =
-            (matched as { departmentCode?: unknown }).departmentCode ??
-            (matched as { Department_Code?: unknown }).Department_Code ??
-            (matched as { department?: unknown }).department;
-          const rawPhysician =
-            (matched as { physicianCode?: unknown }).physicianCode ??
-            (matched as { Physician_Code?: unknown }).Physician_Code ??
-            (matched as { physician?: unknown }).physician;
-          const departmentCode = resolveDepartmentCode(typeof rawDepartment === 'string' ? rawDepartment : undefined);
-          const physicianCode = resolvePhysicianCodeSelection(
-            typeof rawPhysician === 'string' ? rawPhysician : undefined,
-            physicianNameMap,
-          );
-          return { departmentCode, physicianCode };
-        } catch {
-          return {};
-        }
-      };
-
       setClaimSendingPatientId(patientId);
       const startedAt = performance.now();
       try {
-        let departmentCode =
-          resolveDepartmentCode(entry.department) ??
-          (entry.department ? departmentCodeMap.get(entry.department) : undefined);
-        let physicianCode = resolvePhysicianCodeSelection(entry.physician, physicianNameMap);
-
-        if (!departmentCode) {
-          const resolvedCodes = await fetchVisitContextCodes();
-          departmentCode = resolvedCodes.departmentCode;
-          physicianCode = physicianCode ?? resolvedCodes.physicianCode;
-        }
+        const departmentCode = entry.departmentCode?.trim() || undefined;
+        const physicianCode = entry.physicianCode?.trim() || undefined;
 
         if (!departmentCode) {
           enqueue({
             tone: 'warning',
             message: '診療科コードが不明のため会計送信できません。',
-            detail: `department=${entry.department ?? '—'} / visitDate=${calculationDate}`,
+            detail: `visitDate=${calculationDate} / patientId=${patientId}`,
           });
           logAuditEvent({
             runId: baseRunId,
@@ -3633,8 +3488,8 @@ export function ReceptionPage({
               result: 'blocked',
               blockedReasons: ['missing_department_code'],
               visitDate: calculationDate,
-              department: entry.department,
-              physician: entry.physician,
+              departmentCode: entry.departmentCode,
+              physicianCode: entry.physicianCode,
             },
           });
           return;
@@ -4010,23 +3865,7 @@ export function ReceptionPage({
       setSelectionNotice(null);
       setSelectionLost(false);
       if (entry.source === 'unknown') {
-        let resolvedPatientId = entry.patientId;
-        if (!resolvedPatientId && entry.id.startsWith('master-')) {
-          const rawIndex = entry.id.replace('master-', '');
-          const index = Number(rawIndex);
-          if (Number.isFinite(index)) {
-            resolvedPatientId = masterSearchResults[index]?.patientId;
-          }
-        }
-        if (!resolvedPatientId) {
-          const matched = masterSearchResults.find(
-            (patient) =>
-              patient.patientId &&
-              patient.name === entry.name &&
-              patient.kana === entry.kana,
-          );
-          resolvedPatientId = matched?.patientId;
-        }
+        const resolvedPatientId = entry.patientId?.trim() ?? '';
         if (resolvedPatientId) {
           setAcceptPatientId(resolvedPatientId);
           lastAcceptAutoFill.current = { ...lastAcceptAutoFill.current, patientId: resolvedPatientId };
@@ -4040,7 +3879,7 @@ export function ReceptionPage({
         }
       }
     },
-    [acceptPaymentMode, acceptVisitKind, acceptWorkflowModalOpen, masterSearchResults],
+    [acceptPaymentMode, acceptVisitKind, acceptWorkflowModalOpen],
   );
 
   const renderAcceptDetailPanel = (placement: 'sidepane' | 'modal') => (
@@ -4866,7 +4705,7 @@ export function ReceptionPage({
                 </div>
                 <div className="reception-master__actions">
                   <div className="reception-master__hints" aria-live={infoLive}>
-                    <span>氏名またはカナは必須です。</span>
+                    <span>氏名（WholeName）は必須です。カナは画面内確認用で、official payload には送信しません。</span>
                     <span>区分は任意です。指定した場合のみ official payload に送信します。</span>
                     {masterSearchError ? <span className="reception-master__error">{masterSearchError}</span> : null}
                   </div>

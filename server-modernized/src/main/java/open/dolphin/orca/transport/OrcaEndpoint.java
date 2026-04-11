@@ -20,7 +20,7 @@ public enum OrcaEndpoint {
     PATIENT_BATCH("/api01rv2/patientlst2v2", true, true, null,
             "Patient_ID_Information"),
     PATIENT_NAME_SEARCH("/api01rv2/patientlst3v2", true, true, null,
-            "WholeName/WholeName_inKana"),
+            "WholeName"),
     INSURANCE_COMBINATION("/api01rv2/patientlst6v2", true, false, null,
             "Patient_ID"),
     FORMER_NAME_HISTORY("/api01rv2/patientlst8v2", true, false, null,

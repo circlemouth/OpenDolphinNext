@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
+import { resolveAcceptmodFallbackMessage } from '../../features/reception/acceptmodv2Result';
 import { applyFaultDelay, parseFaultSpec } from '../utils/faultInjection';
 
 const buildResponse = (body: Record<string, unknown>, status = 200, runId?: string, traceId?: string) =>
@@ -27,7 +28,8 @@ const buildPayload = async (request: Request) => {
   const traceId = headers.get('x-trace-id') ?? `trace-${now.getTime()}`;
   const scenario = headers.get('x-msw-scenario') ?? url.searchParams.get('scenario') ?? undefined;
 
-  const shouldWarn = fault.tokens.has('api-21') || patientId === '00021';
+  const shouldInsuranceMismatch = fault.tokens.has('api-21') || patientId === '00021';
+  const shouldNoAcceptance = fault.tokens.has('api-60') || patientId === '00060';
   const shouldError = fault.tokens.has('api-error');
   const http500 = fault.tokens.has('http-500') || fault.tokens.has('500');
   const realNoEcho = fault.tokens.has('real-no-echo') || scenario === 'real-no-echo';
@@ -42,23 +44,23 @@ const buildPayload = async (request: Request) => {
   ];
   const override = apiOverrides.find((entry) => fault.tokens.has(entry.token) || scenario === entry.token);
 
-  const apiResult = override?.apiResult ?? (shouldError ? 'E99' : shouldWarn ? '21' : '00');
+  const apiResult = override?.apiResult ?? (shouldError ? 'E99' : shouldInsuranceMismatch ? '21' : shouldNoAcceptance ? '60' : '00');
   const apiResultMessage =
     override?.apiResultMessage ??
-    (shouldError ? 'mocked error' : shouldWarn ? '受付が存在しません (Api_Result=21)' : '正常終了');
+    (shouldError ? 'mocked error' : resolveAcceptmodFallbackMessage(apiResult) ?? '正常終了');
 
   const shouldEchoEmpty = realNoEcho || Boolean(override && override.apiResult !== '00');
   const acceptanceId =
-    apiResult === '21'
+    apiResult === '21' || apiResult === '60'
       ? undefined
       : shouldEchoEmpty
         ? ''
         : (body.acceptanceId as string | undefined) ?? `A-${patientId}-MSW`;
 
-  const acceptanceDate = apiResult === '21' ? undefined : shouldEchoEmpty ? '' : body.acceptanceDate ?? toDate(now);
-  const acceptanceTime = apiResult === '21' ? undefined : shouldEchoEmpty ? '' : body.acceptanceTime ?? toTime(now);
-  const departmentCode = apiResult === '21' ? undefined : shouldEchoEmpty ? '' : body.departmentCode ?? '01';
-  const physicianCode = apiResult === '21' ? undefined : shouldEchoEmpty ? '' : body.physicianCode ?? '1001';
+  const acceptanceDate = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.acceptanceDate ?? toDate(now);
+  const acceptanceTime = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.acceptanceTime ?? toTime(now);
+  const departmentCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.departmentCode ?? '01';
+  const physicianCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.physicianCode ?? '1001';
 
   const patientPayload = shouldEchoEmpty
     ? {
@@ -94,7 +96,7 @@ const buildPayload = async (request: Request) => {
     medicalInformation: body.medicalInformation ?? '外来受付',
     requestNumber,
     patient: patientPayload,
-    warnings: shouldWarn ? ['受付が見つかりません'] : [],
+    warnings: apiResult === '21' || apiResult === '60' ? [apiResultMessage] : [],
   };
 
   if (http500) {
@@ -104,5 +106,5 @@ const buildPayload = async (request: Request) => {
 };
 
 export const orcaReceptionHandlers = [
-  http.post('/api/orca/official/visits/mutation', async ({ request }) => buildPayload(request)),
+  http.post(/\/api\/orca\/official\/visits\/mutation$/, async ({ request }) => buildPayload(request)),
 ];

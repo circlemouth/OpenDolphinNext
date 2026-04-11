@@ -140,6 +140,31 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(result.apiResultMessage).toBe('保険の組み合わせが一致しません');
   });
 
+  it('Api_Result=21 で Api_Result_Message が空なら保険不一致 fallback を使い、受付コンテキストを捏造しない', async () => {
+    mockFetch.mockResolvedValue({
+      raw: { apiResult: '21', apiResultMessage: '' },
+      meta: { httpStatus: 200, dataSourceTransition: 'mock' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '000021',
+      requestNumber: '01',
+      acceptanceDate: '2026-01-20',
+      acceptanceTime: '09:00:00',
+      departmentCode: '01',
+      physicianCode: '1001',
+      acceptancePush: '1',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.apiResultMessage).toBe('保険不一致');
+    expect(result.acceptanceId).toBeUndefined();
+    expect(result.acceptanceDate).toBeUndefined();
+    expect(result.departmentCode).toBeUndefined();
+    expect(result.physicianCode).toBeUndefined();
+  });
+
   it('Api_Result=60 は受付なしとして扱い、acceptanceId を持たない', async () => {
     mockFetch.mockResolvedValue({
       raw: { apiResult: '60', apiResultMessage: '受付は存在しません' },
@@ -159,6 +184,32 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(result.acceptanceId).toBeUndefined();
     expect(result.apiResult).toBe('60');
     expect(result.apiResultMessage).toBe('受付は存在しません');
+  });
+
+  it('Api_Result=60 で Api_Result_Message が空なら受付なし fallback を使い、受付コンテキストを捏造しない', async () => {
+    mockFetch.mockResolvedValue({
+      raw: { apiResult: '60', apiResultMessage: '' },
+      meta: { httpStatus: 200, dataSourceTransition: 'mock' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '000060',
+      requestNumber: '02',
+      acceptanceDate: '2026-01-20',
+      acceptanceTime: '09:00:00',
+      departmentCode: '01',
+      physicianCode: '1001',
+      acceptancePush: '1',
+      acceptanceId: 'A-060',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.apiResultMessage).toBe('受付なし');
+    expect(result.acceptanceId).toBeUndefined();
+    expect(result.acceptanceDate).toBeUndefined();
+    expect(result.departmentCode).toBeUndefined();
+    expect(result.physicianCode).toBeUndefined();
   });
 
   it('実環境相当の空文字応答でも patientId を維持する', async () => {

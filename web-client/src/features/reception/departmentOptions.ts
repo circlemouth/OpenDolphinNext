@@ -66,10 +66,6 @@ export const buildDepartmentOptions = ({
     appendDepartmentOption(byCode, selectedOption[0], selectedOption[1]);
   }
 
-  if (byCode.size === 0) {
-    byCode.set('01', '01');
-  }
-
   return Array.from(byCode.entries())
     .sort(([aCode, aName], [bCode, bName]) => `${aCode} ${aName}`.localeCompare(`${bCode} ${bName}`, 'ja'))
     .slice(0, 200);
