@@ -11,6 +11,7 @@ public class VisitPatientListRequest {
     private LocalDate fromDate;
     private LocalDate toDate;
     private String requestNumber;
+    private String departmentCode;
 
     public LocalDate getVisitDate() {
         return visitDate;
@@ -42,5 +43,13 @@ public class VisitPatientListRequest {
 
     public void setRequestNumber(String requestNumber) {
         this.requestNumber = requestNumber;
+    }
+
+    public String getDepartmentCode() {
+        return departmentCode;
+    }
+
+    public void setDepartmentCode(String departmentCode) {
+        this.departmentCode = departmentCode;
     }
 }

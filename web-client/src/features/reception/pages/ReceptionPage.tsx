@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { getAuditEventLog, logAuditEvent, logUiState } from '../../../libs/audit/auditLogger';
 import { resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
-import { buildHttpHeaders, httpFetch } from '../../../libs/http/httpClient';
+import { httpFetch } from '../../../libs/http/httpClient';
 import type { DataSourceTransition } from '../../../libs/observability/types';
 import { FocusTrapDialog } from '../../../components/modals/FocusTrapDialog';
 import { OrderConsole } from '../components/OrderConsole';
@@ -16,9 +16,10 @@ import {
   buildVisitEntryFromMutation,
   fetchAppointmentOutpatients,
   fetchClaimFlags,
+  fetchMedicalInformationOptions,
   isClaimOutpatientEnabled,
   mutateVisit,
-  resolveAcceptancePush,
+  type MedicalInformationOption,
   type AppointmentPayload,
   type ReceptionEntry,
   type ReceptionStatus,
@@ -223,7 +224,7 @@ const RECEPTION_REALTIME_STATUS_TONE: Record<
 };
 
 const ACCEPT_SUCCESS_RESULTS = new Set(['00', '0000', 'K3']);
-const ACCEPT_WARNING_RESULTS = new Set(['16', '21']);
+const ACCEPT_WARNING_RESULTS = new Set(['16', '21', '60']);
 const RECEPTION_SUPPORT_GUIDE = '必要に応じて RUN_ID コピーで実行IDを共有してください。';
 
 const buildReceptionAcceptResultDetail = () => '結果を確認し、必要なら一覧を再取得してください。';
@@ -237,20 +238,18 @@ const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error')
   }
   return RECEPTION_SUPPORT_GUIDE;
 };
-const DEFAULT_PHYSICIAN_CODES = ['10001', '10003', '10005', '10006', '10010'] as const;
 
 const normalizeApiResult = (value?: string) => (value ?? '').trim().toUpperCase();
 
-const normalizePhysicianCode = (value?: string) => {
+const extractPhysicianCode = (value?: string) => {
   const trimmed = value?.trim();
   if (!trimmed) return undefined;
   const code = trimmed.match(/^(\d{4,5})(?:\s|$)/)?.[1];
   if (!code) return undefined;
-  if (code.length === 4) return `1${code}`;
   return code;
 };
 
-const normalizePhysicianLabel = (value?: string) => {
+const extractPhysicianLabel = (value?: string) => {
   const trimmed = value?.trim();
   if (!trimmed) return undefined;
   const withoutCode = trimmed.replace(/^\d{4,5}\s*/, '').trim();
@@ -275,6 +274,18 @@ const normalizeDepartmentCode = (value?: string) => {
   const code = resolveDepartmentCode(value);
   if (!code) return undefined;
   return DEPARTMENT_CODE_RE.test(code) ? code : undefined;
+};
+
+const resolvePhysicianCodeSelection = (value?: string, nameMap?: PhysicianNameMap) => {
+  const direct = value?.trim();
+  if (!direct) return undefined;
+  if (/^\d{4,5}$/.test(direct)) return direct;
+  const extracted = extractPhysicianCode(direct);
+  if (extracted) return extracted;
+  for (const [code, label] of Object.entries(nameMap ?? {})) {
+    if (label === direct) return code;
+  }
+  return undefined;
 };
 
 const isApiResultOk = (apiResult?: string) => Boolean(apiResult && /^0+$/.test(apiResult));
@@ -777,7 +788,7 @@ export function ReceptionPage({
   const [patientSearchPatientId, setPatientSearchPatientId] = useState(() => patientId ?? '');
   const [acceptPaymentMode, setAcceptPaymentMode] = useState<'insurance' | 'self' | ''>('');
   const [acceptVisitKind, setAcceptVisitKind] = useState('');
-  const [acceptNote, setAcceptNote] = useState('');
+  const [acceptMedicalInformationCode, setAcceptMedicalInformationCode] = useState('');
   const [acceptDurationMs, setAcceptDurationMs] = useState<number | null>(null);
   const [masterSearchFilters, setMasterSearchFilters] = useState({
     name: '',
@@ -785,7 +796,7 @@ export function ReceptionPage({
     birthStartDate: '',
     birthEndDate: '',
     sex: '',
-    inOut: '2',
+    inOut: '',
   });
   const [masterSearchResults, setMasterSearchResults] = useState<PatientMasterRecord[]>([]);
   const [masterSearchMeta, setMasterSearchMeta] = useState<PatientMasterSearchResponse | null>(null);
@@ -828,7 +839,6 @@ export function ReceptionPage({
   }>({});
   const [acceptDepartmentSelection, setAcceptDepartmentSelection] = useState('');
   const [acceptPhysicianSelection, setAcceptPhysicianSelection] = useState('');
-  const [orcaPhysicianNameMap] = useState<PhysicianNameMap>({});
   const [acceptResult, setAcceptResult] = useState<{
     tone: 'success' | 'warning' | 'error' | 'info';
     message: string;
@@ -842,11 +852,6 @@ export function ReceptionPage({
     source: 'selection' | 'card' | 'table';
     reason: string;
   } | null>(null);
-  const [xhrDebugState, setXhrDebugState] = useState<{
-    lastAttemptAt?: string;
-    status?: number | null;
-    error?: string | null;
-  }>({});
   const [retryingPatientId, setRetryingPatientId] = useState<string | null>(null);
   const [claimSendingPatientId, setClaimSendingPatientId] = useState<string | null>(null);
   const [dailyStateRevision, setDailyStateRevision] = useState(0);
@@ -1258,26 +1263,20 @@ export function ReceptionPage({
   const masterSearchMutation = useMutation<PatientMasterSearchResponse, Error, Parameters<typeof fetchPatientMasterSearch>[0]>({
     mutationFn: (params) => fetchPatientMasterSearch(params),
     onSuccess: (result) => {
-      const apiResult = result.apiResult ?? result.raw?.Api_Result ?? result.raw?.apiResult;
       const normalizedPatients = result.patients.map((patient) => {
         if (patient.patientId) return patient;
         const recoveredId = resolvePatientIdFromSearchRaw(result.raw, patient.name, patient.kana);
         return recoveredId ? { ...patient, patientId: recoveredId } : patient;
       });
-      const isInOutMissing = apiResult === '91';
       setMasterSearchResults(normalizedPatients);
       setMasterSearchMeta(result);
       setMasterSearchNotice({
-        tone: result.ok && !isInOutMissing ? 'info' : 'warning',
-        message: isInOutMissing
-          ? '処理区分が未設定のため患者マスタ検索ができませんでした。区分（入院/外来）を選択して再検索してください。'
-          : result.ok
-            ? '患者マスタ検索が完了しました。'
-            : '患者マスタ検索で警告が返却されました。',
+        tone: result.ok ? 'info' : 'warning',
+        message: result.ok ? '患者マスタ検索が完了しました。' : '患者マスタ検索で警告が返却されました。',
         detail: result.apiResultMessage ?? result.error,
       });
       setMasterSelected(null);
-      setMasterSearchError(isInOutMissing ? '区分（入院/外来）を選択して再検索してください。' : null);
+      setMasterSearchError(null);
     },
     onError: (error) => {
       const detail = error instanceof Error ? error.message : String(error);
@@ -1697,6 +1696,34 @@ export function ReceptionPage({
     collect(rawRecord.visits);
     return map;
   }, [appointmentQuery.data?.raw]);
+  const physicianNameMap = useMemo(() => {
+    const raw = appointmentQuery.data?.raw as Record<string, unknown> | undefined;
+    const map: PhysicianNameMap = {};
+    if (!raw) return map;
+    const collect = (items?: unknown) => {
+      if (!Array.isArray(items)) return;
+      items.forEach((item) => {
+        if (!item || typeof item !== 'object') return;
+        const record = item as Record<string, unknown>;
+        const code =
+          (record.physicianCode as string | undefined) ??
+          (record.Physician_Code as string | undefined) ??
+          (record.physician_code as string | undefined);
+        const name =
+          (record.physicianName as string | undefined) ??
+          (record.Physician_WholeName as string | undefined) ??
+          (record.physician_name as string | undefined);
+        if (code && name) {
+          map[code] = name;
+        }
+      });
+    };
+    const rawRecord = raw as Record<string, unknown>;
+    collect(rawRecord.slots);
+    collect(rawRecord.reservations);
+    collect(rawRecord.visits);
+    return map;
+  }, [appointmentQuery.data?.raw]);
   const uniqueDepartments = useMemo(
     () => Array.from(new Set(visibleAppointmentEntries.map((entry) => entry.department).filter(Boolean))) as string[],
     [visibleAppointmentEntries],
@@ -1704,6 +1731,18 @@ export function ReceptionPage({
   const uniquePhysicians = useMemo(
     () => Array.from(new Set(visibleAppointmentEntries.map((entry) => entry.physician).filter(Boolean))) as string[],
     [visibleAppointmentEntries],
+  );
+  const medicalInformationOptionsQuery = useQuery({
+    queryKey: ['orca-medical-information-options'],
+    queryFn: fetchMedicalInformationOptions,
+    staleTime: 300_000,
+  });
+  const medicalInformationOptions = useMemo(
+    () =>
+      (medicalInformationOptionsQuery.data ?? []).filter(
+        (option): option is MedicalInformationOption => Boolean(option?.code?.trim()),
+      ),
+    [medicalInformationOptionsQuery.data],
   );
   const departmentOptions = useMemo(() => {
     return buildDepartmentOptions({
@@ -2045,10 +2084,10 @@ export function ReceptionPage({
         ? sortedEntries.find((entry) => entryKey(entry) === selectedEntryKey)
         : undefined;
     const register = (candidate?: string) => {
-      const code = normalizePhysicianCode(candidate);
+      const code = resolvePhysicianCodeSelection(candidate, physicianNameMap);
       if (!code) return;
       merged.add(code);
-      const label = normalizePhysicianLabel(candidate);
+      const label = extractPhysicianLabel(candidate);
       if (label && !labels.has(code)) {
         labels.set(code, label);
       }
@@ -2057,23 +2096,20 @@ export function ReceptionPage({
     register(selected?.physician);
     register(physicianFilter);
     register(acceptPhysicianSelection);
-    if (merged.size === 0) {
-      DEFAULT_PHYSICIAN_CODES.forEach((code) => merged.add(code));
-    }
     return Array.from(merged)
       .sort((a, b) => {
-        const leftLabel = labels.get(a) ?? orcaPhysicianNameMap[a] ?? a;
-        const rightLabel = labels.get(b) ?? orcaPhysicianNameMap[b] ?? b;
+        const leftLabel = labels.get(a) ?? physicianNameMap[a] ?? a;
+        const rightLabel = labels.get(b) ?? physicianNameMap[b] ?? b;
         const byLabel = leftLabel.localeCompare(rightLabel, 'ja');
         if (byLabel !== 0) return byLabel;
         return a.localeCompare(b, 'ja');
       })
       .slice(0, 200)
-      .map((code, index) => ({
+      .map((code) => ({
         code,
-        label: labels.get(code) ?? orcaPhysicianNameMap[code] ?? `担当医候補${index + 1}`,
+        label: labels.get(code) ?? physicianNameMap[code] ?? code,
       }));
-  }, [uniquePhysicians, physicianFilter, selectedEntryKey, sortedEntries, acceptPhysicianSelection, orcaPhysicianNameMap]);
+  }, [uniquePhysicians, physicianFilter, selectedEntryKey, sortedEntries, acceptPhysicianSelection, physicianNameMap]);
 
   const selectedEntry = useMemo(() => {
     if (!selectedEntryKey) return undefined;
@@ -2119,7 +2155,7 @@ export function ReceptionPage({
       const nextDepartmentCode =
         normalizeDepartmentCode(entry.department) ??
         (entry.department ? normalizeDepartmentCode(departmentCodeMap.get(entry.department)) : undefined);
-      const nextPhysicianCode = normalizePhysicianCode(entry.physician);
+      const nextPhysicianCode = resolvePhysicianCodeSelection(entry.physician, physicianNameMap);
       const nextVisitKind = acceptVisitKind.trim() ? acceptVisitKind : '1';
       const shouldUpdate = (current: string, next: string, last?: string) =>
         Boolean(next) && (options?.force || !current.trim() || (last && current === last));
@@ -2155,7 +2191,7 @@ export function ReceptionPage({
         setAcceptDepartmentSelection(nextDepartmentSelection);
         updated = true;
       }
-      const currentPhysicianCode = normalizePhysicianCode(acceptPhysicianSelection) ?? '';
+      const currentPhysicianCode = resolvePhysicianCodeSelection(acceptPhysicianSelection, physicianNameMap) ?? '';
       const nextPhysicianSelection = nextPhysicianCode ?? '';
       if (currentPhysicianCode !== nextPhysicianSelection) {
         setAcceptPhysicianSelection(nextPhysicianSelection);
@@ -2187,6 +2223,7 @@ export function ReceptionPage({
       acceptPhysicianSelection,
       acceptVisitKind,
       departmentCodeMap,
+      physicianNameMap,
     ],
   );
 
@@ -2195,7 +2232,7 @@ export function ReceptionPage({
     const departmentCode =
       normalizeDepartmentCode(selectedEntry.department) ??
       (selectedEntry.department ? normalizeDepartmentCode(departmentCodeMap.get(selectedEntry.department)) : '');
-    const physicianCode = normalizePhysicianCode(selectedEntry.physician) ?? '';
+    const physicianCode = resolvePhysicianCodeSelection(selectedEntry.physician, physicianNameMap) ?? '';
     return JSON.stringify({
       key: entryKey(selectedEntry),
       patientId: selectedEntry.patientId ?? '',
@@ -2203,7 +2240,7 @@ export function ReceptionPage({
       departmentCode: departmentCode ?? '',
       physicianCode,
     });
-  }, [departmentCodeMap, selectedEntry]);
+  }, [departmentCodeMap, physicianNameMap, selectedEntry]);
 
   useEffect(() => {
     if (!selectedEntry || !acceptAutoFillSignature) return;
@@ -2450,22 +2487,11 @@ export function ReceptionPage({
   const { tone, message: toneMessage, transitionMeta } = toneDetails;
   const masterSource = toMasterSource(tonePayload.dataSourceTransition);
   const isAcceptSubmitting = visitMutation.isPending;
-  const resolveMedicalInformation = useCallback((raw: string) => {
-    const trimmed = raw.trim();
-    if (!trimmed) return '01';
-    if (/^\d+$/.test(trimmed)) return trimmed;
-    if (trimmed === '外来受付') return '01';
-    return '01';
-  }, []);
-  const buildAuthJsonHeaders = useCallback(
-    (method: string, pathname: string) =>
-      buildHttpHeaders({ method, headers: { 'Content-Type': 'application/json' } }, pathname),
-    [],
-  );
   const resolvedDepartmentCode =
     normalizeDepartmentCode(acceptDepartmentSelection) ??
     (DEPARTMENT_CODE_RE.test(departmentFilter.trim()) ? departmentFilter.trim() : '');
-  const resolvedPhysicianCode = normalizePhysicianCode(acceptPhysicianSelection) ?? '';
+  const resolvedPhysicianCode = resolvePhysicianCodeSelection(acceptPhysicianSelection, physicianNameMap) ?? '';
+  const resolvedMedicalInformation = acceptMedicalInformationCode.trim() || undefined;
   const resolveAcceptTarget = useCallback((): AcceptTarget => {
     const resolveFromVisibleEntries = (targetPatientId: string) =>
       visibleAppointmentEntries.find((entry) => entry.patientId?.trim() === targetPatientId);
@@ -2541,59 +2567,6 @@ export function ReceptionPage({
       sex: '',
     };
   }, [acceptPatientId, masterSelected, patientSearchSelected, selectedEntry, visibleAppointmentEntries]);
-  const sendDirectAcceptMinimalForced = useCallback(() => {
-    // 強制送信ボタン専用の直送経路。削除予定。
-    const now = new Date();
-    const acceptancePush = resolveAcceptancePush('1');
-    const resolvedMedicalInformation = resolveMedicalInformation(acceptNote);
-    const patientId = resolveAcceptTarget().patientId;
-    const payload = {
-      requestNumber: '01',
-      patientId,
-      acceptanceDate: selectedDate || todayString(),
-      acceptanceTime: formatLocalHms(now),
-      acceptancePush,
-      medicalInformation: resolvedMedicalInformation,
-      departmentCode: resolvedDepartmentCode || undefined,
-      physicianCode: resolvedPhysicianCode || undefined,
-      insurances:
-        acceptPaymentMode === 'self'
-          ? [
-              {
-                insuranceProviderClass: '9',
-              },
-            ]
-          : undefined,
-    };
-    // XHR送信可否/ステータスの可視化用。
-    setXhrDebugState({ lastAttemptAt: now.toISOString(), status: null, error: null });
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/orca/visits/mutation', true);
-    xhr.withCredentials = true;
-    const headers = buildAuthJsonHeaders('POST', '/api/orca/visits/mutation');
-    Object.entries(headers).forEach(([key, value]) => {
-      xhr.setRequestHeader(key, value);
-    });
-    xhr.onload = () => {
-      setXhrDebugState({ lastAttemptAt: now.toISOString(), status: xhr.status, error: null });
-    };
-    xhr.onerror = () => {
-      setXhrDebugState({
-        lastAttemptAt: now.toISOString(),
-        status: xhr.status || null,
-        error: 'XHR送信でエラーが発生しました。',
-      });
-    };
-    xhr.send(JSON.stringify(payload));
-  }, [
-    acceptNote,
-    acceptPaymentMode,
-    resolveAcceptTarget,
-    resolvedDepartmentCode,
-    resolvedPhysicianCode,
-    resolveMedicalInformation,
-    selectedDate,
-  ]);
 
   const handleAcceptRegister = useCallback(
     async (event?: MouseEvent<HTMLButtonElement>) => {
@@ -2615,14 +2588,12 @@ export function ReceptionPage({
       const mismatchNotConfirmed = Boolean(manualMismatchKey && manualAcceptConfirmedKey !== manualMismatchKey);
       const resolvedPaymentMode = acceptPaymentMode || 'insurance';
       const resolvedVisitKind = acceptVisitKind.trim() || '1';
-      const acceptancePush = resolveAcceptancePush(resolvedVisitKind);
       if (!acceptPaymentMode) {
         setAcceptPaymentMode(resolvedPaymentMode);
       }
       if (!acceptVisitKind.trim()) {
         setAcceptVisitKind(resolvedVisitKind);
       }
-      const resolvedMedicalInformation = resolveMedicalInformation(acceptNote);
       const errors: typeof acceptErrors = {};
       if (!selectedPatientId) {
         errors.patientId = '患者検索結果から患者を選択してください。';
@@ -2651,7 +2622,7 @@ export function ReceptionPage({
         requestNumber: '01',
         acceptanceDate: selectedDate || todayString(),
         acceptanceTime: formatLocalHms(now),
-        acceptancePush,
+        acceptancePush: resolvedVisitKind,
         medicalInformation: resolvedMedicalInformation,
         paymentMode: resolvedPaymentMode || undefined,
         departmentCode: resolvedDepartmentCode || undefined,
@@ -2667,7 +2638,8 @@ export function ReceptionPage({
         setAcceptDurationMs(durationMs);
         const apiResult = normalizeApiResult(payload.apiResult);
         const isSuccess = isApiResultOk(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
-        const isNoAcceptance = apiResult === '21';
+        const isInsuranceMismatch = apiResult === '21';
+        const isNoAcceptance = apiResult === '60';
         const isAlreadyAccepted = apiResult === '16';
 
         if (isSuccess) {
@@ -2687,10 +2659,14 @@ export function ReceptionPage({
             : 'error';
         const message = isSuccess
           ? '受付登録が完了しました'
+          : payload.apiResultMessage
+            ? payload.apiResultMessage
           : isAlreadyAccepted
             ? '診療科・保険組合せで既に受付済みです'
+          : isInsuranceMismatch
+            ? '保険不一致'
           : isNoAcceptance
-            ? 'ORCA から「受付なし」が返却されました'
+            ? '受付なし'
             : '受付処理でエラーが返却されました';
 
         setAcceptResult({
@@ -2740,7 +2716,7 @@ export function ReceptionPage({
       }
     },
     [
-      acceptNote,
+      acceptMedicalInformationCode,
       acceptPatientId,
       acceptPaymentMode,
       acceptVisitKind,
@@ -2749,12 +2725,12 @@ export function ReceptionPage({
       manualAcceptConfirmedKey,
       mergedMeta.runId,
       resolveAcceptTarget,
-      resolveMedicalInformation,
       refetchAppointment,
       refetchClaim,
       resolvedDepartmentCode,
       resolvedPhysicianCode,
       selectedDate,
+      physicianNameMap,
       patientSearchSelected?.patientId,
       visitMutation,
     ],
@@ -2799,7 +2775,7 @@ export function ReceptionPage({
         requestNumber: '02',
         acceptanceDate: selectedDate || todayString(),
         acceptanceTime: formatLocalHms(now),
-        acceptancePush: resolveAcceptancePush('1'),
+        acceptancePush: '1',
         acceptanceId,
       };
       const started = performance.now();
@@ -2809,7 +2785,6 @@ export function ReceptionPage({
         setAcceptDurationMs(durationMs);
         const apiResult = normalizeApiResult(payload.apiResult);
         const isSuccess = isApiResultOk(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
-        const isNoAcceptance = apiResult === '21';
         if (isSuccess) {
           applyMutationResultToList(payload, params);
           void refetchAppointment();
@@ -2821,8 +2796,12 @@ export function ReceptionPage({
           isSuccess ? 'info' : ACCEPT_WARNING_RESULTS.has(apiResult) ? 'warning' : 'error';
         const message = isSuccess
           ? '受付取消が完了しました'
-          : isNoAcceptance
-            ? 'ORCA から「受付なし」が返却されました'
+          : payload.apiResultMessage
+            ? payload.apiResultMessage
+          : apiResult === '21'
+            ? '保険不一致'
+          : apiResult === '60'
+            ? '受付なし'
             : '受付取消でエラーが返却されました';
         setAcceptResult({
           tone: toneResult,
@@ -3178,10 +3157,6 @@ export function ReceptionPage({
       }
       if (!trimmedName && !trimmedKana) {
         setMasterSearchError('氏名またはカナを入力してください。');
-        return;
-      }
-      if (!masterSearchFilters.inOut) {
-        setMasterSearchError('処理区分（入院/外来）を選択してください。');
         return;
       }
       setMasterSearchError(null);
@@ -3619,7 +3594,10 @@ export function ReceptionPage({
             (matched as { Physician_Code?: unknown }).Physician_Code ??
             (matched as { physician?: unknown }).physician;
           const departmentCode = resolveDepartmentCode(typeof rawDepartment === 'string' ? rawDepartment : undefined);
-          const physicianCode = normalizePhysicianCode(typeof rawPhysician === 'string' ? rawPhysician : undefined);
+          const physicianCode = resolvePhysicianCodeSelection(
+            typeof rawPhysician === 'string' ? rawPhysician : undefined,
+            physicianNameMap,
+          );
           return { departmentCode, physicianCode };
         } catch {
           return {};
@@ -3632,7 +3610,7 @@ export function ReceptionPage({
         let departmentCode =
           resolveDepartmentCode(entry.department) ??
           (entry.department ? departmentCodeMap.get(entry.department) : undefined);
-        let physicianCode = normalizePhysicianCode(entry.physician);
+        let physicianCode = resolvePhysicianCodeSelection(entry.physician, physicianNameMap);
 
         if (!departmentCode) {
           const resolvedCodes = await fetchVisitContextCodes();
@@ -3866,6 +3844,7 @@ export function ReceptionPage({
       mergedMeta.missingMaster,
       mergedMeta.runId,
       orcaQueueQuery,
+      physicianNameMap,
       refetchAppointment,
       selectedDate,
       storageScope,
@@ -4246,55 +4225,40 @@ export function ReceptionPage({
 
           <div className="reception-accept__row">
             <label className="reception-accept__field">
-              <span>メモ/診療内容</span>
-              <input
-                id="reception-accept-note"
-                name="receptionAcceptNote"
-                type="text"
-                value={acceptNote}
-                onChange={(event) => setAcceptNote(event.target.value)}
-                placeholder="外来受付メモ（省略可）"
-              />
+              <span>診療内容コード</span>
+              <select
+                id="reception-accept-medical-information"
+                name="receptionAcceptMedicalInformation"
+                data-testid="accept-medical-information-select"
+                value={acceptMedicalInformationCode}
+                onChange={(event) => setAcceptMedicalInformationCode(event.target.value)}
+              >
+                <option value="">未選択（送信しない）</option>
+                {medicalInformationOptions.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.name} ({option.code})
+                  </option>
+                ))}
+              </select>
+              <small className="reception-accept__optional">
+                既存患者の受付に必要な場合のみ送信します。未選択なら `Medical_Information` は送信しません。
+              </small>
             </label>
           </div>
 
           <div className="reception-accept__actions">
             <div className="reception-accept__hints" aria-live={infoLive}>
               <span>受付内容を確認して「受付する」を押してください。</span>
+              <span>この画面は既存患者の受付専用です。新患登録は Patients で行ってください。</span>
               {debugUiEnabled ? (
                 <>
-                  <span>Api_Result=00/K3: 左の一覧へ即時反映 / Api_Result=16/21: 警告表示</span>
+                  <span>Api_Result=00/K3: 左の一覧へ即時反映 / Api_Result=16/21/60: 警告表示</span>
                   <span>runId/traceId は監査ログ（action=reception_accept）とコンソールに残します</span>
                 </>
               ) : null}
             </div>
-            {debugUiEnabled ? (
-              <div className="reception-accept__buttons">
-                <button
-                  type="button"
-                  className="reception-search__button ghost"
-                  onClick={sendDirectAcceptMinimalForced}
-                  data-test-id="accept-submit-forced"
-                >
-                  送信(強制)
-                </button>
-              </div>
-            ) : null}
           </div>
         </div>
-
-      {debugUiEnabled ? (
-        <div className="reception-accept__result" role="status" aria-live={infoLive}>
-          <div className="reception-accept__result-header">
-            <h3>XHR送信デバッグ（暫定）</h3>
-          </div>
-          <div className="reception-accept__result-meta" data-test-id="accept-xhr-debug">
-            <span>lastAttemptAt: {xhrDebugState.lastAttemptAt ?? '—'}</span>
-            <span>status: {xhrDebugState.status ?? '—'}</span>
-            <span>error: {xhrDebugState.error ?? '—'}</span>
-          </div>
-        </div>
-      ) : null}
 
       {acceptResult ? (
         <div className="reception-accept__result" role="status" aria-live={infoLive}>
@@ -4579,7 +4543,7 @@ export function ReceptionPage({
                 aria-expanded={acceptWorkflowModalOpen}
                 data-test-id="reception-open-accept-workflow"
               >
-                当日受付/患者検索
+                既存患者受付/患者検索
               </button>
               <button
                 type="button"
@@ -4797,12 +4761,12 @@ export function ReceptionPage({
         <section className="reception-layout" id="reception-results" tabIndex={-1}>
           <div className="reception-layout__main">
             {debugUiEnabled ? (
-            <section className="reception-master" aria-label="患者マスタ検索" data-run-id={resolvedRunId}>
+            <section className="reception-master" aria-label="既存患者マスタ検索" data-run-id={resolvedRunId}>
               <header className="reception-master__header">
                 <div>
-                  <h2>患者マスタ検索（name-search）</h2>
+                  <h2>既存患者マスタ検索（name-search）</h2>
                   <p className="reception-master__lead">
-                    /api/orca/patients/name-search で患者マスタを検索し、選択した患者IDを受付登録へ反映します。
+                    /api/orca/patients/name-search で既存患者を照会し、選択した患者IDを受付設定へ反映します。新患登録は Patients で行ってください。
                   </p>
                 </div>
                 <div className="reception-master__meta">
@@ -4881,7 +4845,7 @@ export function ReceptionPage({
                   </label>
                   <label className="reception-master__field">
                     <span>
-                      区分<span className="reception-master__required">必須</span>
+                      区分
                     </span>
                     <select
                       id="reception-master-inout"
@@ -4889,7 +4853,7 @@ export function ReceptionPage({
                       value={masterSearchFilters.inOut}
                       onChange={(event) => setMasterSearchFilters((prev) => ({ ...prev, inOut: event.target.value }))}
                     >
-                      <option value="">選択してください</option>
+                      <option value="">未指定</option>
                       <option value="2">外来(2)</option>
                       <option value="1">入院(1)</option>
                     </select>
@@ -4898,7 +4862,7 @@ export function ReceptionPage({
                 <div className="reception-master__actions">
                   <div className="reception-master__hints" aria-live={infoLive}>
                     <span>氏名またはカナは必須です。</span>
-                    <span>処理区分（入院/外来）も必須です。</span>
+                    <span>区分は任意です。指定した場合のみ official payload に送信します。</span>
                     {masterSearchError ? <span className="reception-master__error">{masterSearchError}</span> : null}
                   </div>
                   <div className="reception-master__buttons">
@@ -4916,7 +4880,7 @@ export function ReceptionPage({
                         }, 0);
                       }}
                     >
-                      受付登録へ
+                      既存患者受付へ
                     </button>
                     <button
                       type="button"
@@ -4928,7 +4892,7 @@ export function ReceptionPage({
                           birthStartDate: '',
                           birthEndDate: '',
                           sex: '',
-                          inOut: '2',
+                          inOut: '',
                         });
                         setMasterSearchResults([]);
                         setMasterSearchMeta(null);
@@ -5722,14 +5686,14 @@ export function ReceptionPage({
           <section
             className="reception-accept-workflow-modal"
             role="region"
-            aria-label="当日受付/患者検索"
+            aria-label="既存患者受付/患者検索"
             data-test-id="reception-accept-workflow-modal"
             data-run-id={resolvedRunId}
           >
             <header className="reception-accept-workflow-modal__header">
               <div className="reception-accept-workflow-modal__heading">
-                <h2>当日受付/患者検索</h2>
-                <p>患者検索（AND）→ 選択 → 受付登録。</p>
+                <h2>既存患者受付/患者検索</h2>
+                <p>既存患者を検索して選択し、当日受付を登録します。新患登録は Patients で行ってください。</p>
               </div>
               <button
                 type="button"

@@ -7,7 +7,6 @@ public class PatientNameSearchRequest {
 
     private String name;
     private String kana;
-    private String fuzzyMode;
     private java.time.LocalDate birthStartDate;
     private java.time.LocalDate birthEndDate;
     private String sex;
@@ -27,14 +26,6 @@ public class PatientNameSearchRequest {
 
     public void setKana(String kana) {
         this.kana = kana;
-    }
-
-    public String getFuzzyMode() {
-        return fuzzyMode;
-    }
-
-    public void setFuzzyMode(String fuzzyMode) {
-        this.fuzzyMode = fuzzyMode;
     }
 
     public java.time.LocalDate getBirthStartDate() {

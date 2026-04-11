@@ -179,6 +179,11 @@ final class OrcaLiveGatewaySupport {
         if (!range.to().equals(range.from())) {
             builder.append("<Visit_Date_End type=\"string\">").append(range.to()).append("</Visit_Date_End>");
         }
+        if (request.getDepartmentCode() != null && !request.getDepartmentCode().isBlank()) {
+            builder.append("<Department_Code type=\"string\">")
+                    .append(request.getDepartmentCode().trim())
+                    .append("</Department_Code>");
+        }
         builder.append("</visitptlstreq>");
         builder.append("</data>");
         return builder.toString();
@@ -317,16 +322,41 @@ final class OrcaLiveGatewaySupport {
     }
 
     String buildPatientSearchPayload(PatientNameSearchRequest request) {
+        String wholeName = firstNonBlankText(
+                request.getName() != null ? request.getName().trim() : null,
+                request.getKana() != null ? request.getKana().trim() : null);
+        if (wholeName == null || wholeName.isBlank()) {
+            throw new OrcaGatewayException("name or kana is required");
+        }
         StringBuilder builder = new StringBuilder();
-        builder.append(buildOrcaMeta(OrcaEndpoint.PATIENT_NAME_SEARCH, null));
-        builder.append("<data><patientnameSearch>");
-        if (request.getName() != null) {
-            builder.append("<WholeName>").append(request.getName()).append("</WholeName>");
+        builder.append(buildOrcaMeta(OrcaEndpoint.PATIENT_NAME_SEARCH, "01"));
+        builder.append("<data><patientlst3req>");
+        builder.append("<WholeName>").append(wholeName).append("</WholeName>");
+        if (request.getKana() != null && !request.getKana().isBlank()) {
+            builder.append("<WholeName_inKana>").append(request.getKana().trim()).append("</WholeName_inKana>");
         }
-        if (request.getKana() != null) {
-            builder.append("<WholeName_inKana>").append(request.getKana()).append("</WholeName_inKana>");
+        if (request.getBirthStartDate() != null) {
+            builder.append("<Birth_StartDate>").append(request.getBirthStartDate()).append("</Birth_StartDate>");
         }
-        builder.append("</patientnameSearch></data>");
+        if (request.getBirthEndDate() != null) {
+            builder.append("<Birth_EndDate>").append(request.getBirthEndDate()).append("</Birth_EndDate>");
+        }
+        if (request.getSex() != null && !request.getSex().isBlank()) {
+            builder.append("<Sex>").append(request.getSex().trim()).append("</Sex>");
+        }
+        if (request.getInOut() != null && !request.getInOut().isBlank()) {
+            builder.append("<InOut>").append(request.getInOut().trim()).append("</InOut>");
+        }
+        builder.append("</patientlst3req></data>");
+        return builder.toString();
+    }
+
+    String buildMedicalInformationOptionsPayload() {
+        StringBuilder builder = new StringBuilder();
+        builder.append(buildOrcaMeta(OrcaEndpoint.SYSTEM_MANAGEMENT_LIST, "06"));
+        builder.append("<data><system01lstv2req type=\"record\">");
+        builder.append("<Request_Number type=\"string\">06</Request_Number>");
+        builder.append("</system01lstv2req></data>");
         return builder.toString();
     }
 
@@ -369,6 +399,15 @@ final class OrcaLiveGatewaySupport {
 
     void appendXml2Tag(StringBuilder builder, String tag, String value) {
         mutationSupport.appendXml2Tag(builder, tag, value);
+    }
+
+    private String firstNonBlankText(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 
     record DateRange(LocalDate from, LocalDate to) {}

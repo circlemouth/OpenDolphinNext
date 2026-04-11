@@ -35,11 +35,14 @@ let mockClaimData = createBaseClaimData();
 let mockAppointmentData = createBaseAppointmentData();
 let mockMutationResult: any = null;
 let mockMutationQueue: any[] = [];
+let mockMutationCalls: unknown[] = [];
 let mockMutationPending = false;
 let mockClaimSendCache: Record<string, { invoiceNumber?: string; dataId?: string; sendStatus?: 'success' | 'error' }> =
   {};
+let mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
 let mockSearchParams = new URLSearchParams();
 let mockLocationState: Record<string, unknown> | undefined;
+let mockSessionRole = 'staff';
 const mockInvalidateQueries = vi.fn(async () => undefined);
 const mockEnqueue = vi.fn();
 
@@ -137,7 +140,7 @@ vi.mock('../../../libs/ui/appToast', () => ({
 }));
 
 vi.mock('../../../AppRouter', () => ({
-  useSession: () => ({ facilityId: 'FAC-TEST', userId: 'user01' }),
+  useSession: () => ({ facilityId: 'FAC-TEST', userId: 'user01', role: mockSessionRole }),
 }));
 
 vi.mock('../../../libs/audit/auditLogger', () => ({
@@ -261,6 +264,17 @@ vi.mock('@tanstack/react-query', () => ({
         refetch: vi.fn(),
       };
     }
+    if (key === 'orca-medical-information-options') {
+      return {
+        data: mockMedicalInformationOptions,
+        dataUpdatedAt: 0,
+        isError: false,
+        error: null,
+        isFetching: false,
+        isLoading: false,
+        refetch: vi.fn(),
+      };
+    }
     return {
       data: undefined,
       dataUpdatedAt: 0,
@@ -277,6 +291,7 @@ vi.mock('@tanstack/react-query', () => ({
   }) => ({
     mutate: vi.fn(),
     mutateAsync: vi.fn(async (variables?: unknown) => {
+      mockMutationCalls.push(variables);
       const nextResult = mockMutationQueue.length > 0 ? mockMutationQueue.shift() : (mockMutationResult ?? {});
       if (nextResult instanceof Error) {
         options?.onError?.(nextResult, variables, undefined);
@@ -361,8 +376,8 @@ const getToolbar = () => {
 
 const openAcceptWorkflowModal = async (user: ReturnType<typeof userEvent.setup>) => {
   const toolbar = getToolbar();
-  await user.click(within(toolbar).getByRole('button', { name: '当日受付/患者検索' }));
-  return (await screen.findByRole('region', { name: '当日受付/患者検索' })) as HTMLElement;
+  await user.click(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' }));
+  return (await screen.findByRole('region', { name: '既存患者受付/患者検索' })) as HTMLElement;
 };
 
 const getAcceptRegisterPanel = (workflowModal: HTMLElement) =>
@@ -386,10 +401,13 @@ beforeEach(() => {
   mockAppointmentData = createBaseAppointmentData();
   mockMutationResult = null;
   mockMutationQueue = [];
+  mockMutationCalls = [];
   mockMutationPending = false;
   mockClaimSendCache = {};
+  mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
   mockSearchParams = new URLSearchParams();
   mockLocationState = undefined;
+  mockSessionRole = 'staff';
   mockInvalidateQueries.mockClear();
   mockEnqueue.mockReset();
   localStorage.clear();
@@ -475,7 +493,7 @@ describe('ReceptionPage accept UX', () => {
         name: '田中一郎',
         appointmentTime: '09:00',
         department: '内科',
-        physician: '担当医A',
+        physician: '10001 担当医A',
         status: '予約',
         insurance: '保険',
         source: 'reservations',
@@ -530,7 +548,7 @@ describe('ReceptionPage accept UX', () => {
         name: '必須入力患者',
         appointmentTime: '09:30',
         department: '内科',
-        physician: '担当医A',
+        physician: '10001 担当医A',
         status: '予約',
         insurance: '保険',
         source: 'reservations',
@@ -663,7 +681,20 @@ describe('ReceptionPage accept UX', () => {
   });
 
   it('shows Api_Result and duration in the result area after submit', async () => {
-    mockAppointmentData.entries = [];
+    mockAppointmentData.entries = [
+      {
+        id: 'row-result-1',
+        patientId: '555',
+        appointmentId: 'A-555',
+        name: '送信患者',
+        appointmentTime: '09:10',
+        department: '内科',
+        physician: '10001 Dr. Test',
+        status: '予約',
+        insurance: '保険',
+        source: 'reservations',
+      },
+    ];
     mockMutationQueue.push(
       {
         patients: [
@@ -732,6 +763,163 @@ describe('ReceptionPage accept UX', () => {
     expect(resultScope.queryByText(/Api_Result:/)).toBeNull();
     expect(resultScope.queryByText(/所要時間:/)).toBeNull();
   });
+
+  it('sends Medical_Information only when selected', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-3',
+        patientId: 'P-012',
+        appointmentId: 'A-012',
+        name: '診療内容患者',
+        appointmentTime: '09:45',
+        department: '内科',
+        physician: '10001 担当医A',
+        status: '予約',
+        insurance: '保険',
+        source: 'reservations',
+      },
+    ];
+    mockMedicalInformationOptions = [
+      { code: '01', name: '外来' },
+      { code: '02', name: '再診' },
+    ];
+    mockMutationQueue.push(
+      {
+        patients: [
+          {
+            patientId: 'P-012',
+            name: '診療内容患者',
+            insurance: '保険',
+          },
+        ],
+        recordsReturned: 1,
+        runId: 'RUN-SEARCH-MEDICAL',
+      },
+      {
+        runId: 'RUN-VISIT-MEDICAL',
+        traceId: 'TRACE-VISIT-MEDICAL',
+        apiResult: '00',
+        apiResultMessage: 'OK',
+        requestNumber: '01',
+        acceptanceId: 'R-012',
+        patient: { patientId: 'P-012', name: '診療内容患者' },
+      },
+    );
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    await user.click(within(resultPanel).getAllByRole('listitem')[0]);
+
+    const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/診療内容コード/), '02');
+    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+
+    expect(mockMutationCalls.at(-1)).toMatchObject({
+      requestNumber: '01',
+      patientId: 'P-012',
+      medicalInformation: '02',
+    });
+  });
+
+  it('omits Medical_Information when left unselected', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-4',
+        patientId: 'P-013',
+        appointmentId: 'A-013',
+        name: '未選択患者',
+        appointmentTime: '10:15',
+        department: '内科',
+        physician: '10001 担当医A',
+        status: '予約',
+        insurance: '保険',
+        source: 'reservations',
+      },
+    ];
+    mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
+    mockMutationQueue.push(
+      {
+        patients: [
+          {
+            patientId: 'P-013',
+            name: '未選択患者',
+            insurance: '保険',
+          },
+        ],
+        recordsReturned: 1,
+        runId: 'RUN-SEARCH-MEDICAL-EMPTY',
+      },
+      {
+        runId: 'RUN-VISIT-MEDICAL-EMPTY',
+        traceId: 'TRACE-VISIT-MEDICAL-EMPTY',
+        apiResult: '00',
+        apiResultMessage: 'OK',
+        requestNumber: '01',
+        acceptanceId: 'R-013',
+        patient: { patientId: 'P-013', name: '未選択患者' },
+      },
+    );
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    await user.click(within(resultPanel).getAllByRole('listitem')[0]);
+
+    const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+
+    expect(mockMutationCalls.at(-1)).toMatchObject({
+      requestNumber: '01',
+      patientId: 'P-013',
+    });
+    expect((mockMutationCalls.at(-1) as { medicalInformation?: unknown }).medicalInformation).toBeUndefined();
+  });
+});
+
+describe('ReceptionPage official master search', () => {
+  it('allows master search without inOut selection and omits inOut from the official request', async () => {
+    mockSessionRole = 'system_admin';
+    mockMutationQueue.push({
+      ok: true,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      patients: [
+        {
+          patientId: 'P-200',
+          name: '既存患者',
+          kana: 'キソンカンジャ',
+        },
+      ],
+      recordsReturned: 1,
+      runId: 'RUN-MASTER-SEARCH',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const masterSearch = screen.getByRole('region', { name: '既存患者マスタ検索' });
+    await user.type(within(masterSearch).getByLabelText('氏名'), '既存患者');
+    await user.click(within(masterSearch).getByRole('button', { name: '患者検索' }));
+
+    expect(screen.queryByText('処理区分（入院/外来）を選択してください。')).toBeNull();
+    expect(mockMutationCalls[0]).toMatchObject({
+      name: '既存患者',
+    });
+    expect((mockMutationCalls[0] as { inOut?: unknown }).inOut).toBeUndefined();
+  });
 });
 
 describe('ReceptionPage toolbar and tabs', () => {
@@ -740,7 +928,7 @@ describe('ReceptionPage toolbar and tabs', () => {
 
     const toolbar = getToolbar();
     expect(toolbar).toBeInTheDocument();
-    expect(within(toolbar).getByRole('button', { name: '当日受付/患者検索' })).toBeInTheDocument();
+    expect(within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
     expect(within(toolbar).getByRole('button', { name: /日次状態/ })).toBeInTheDocument();
     expect(document.querySelector('.reception-page__floating-actions')).toBeNull();
   });
@@ -821,7 +1009,7 @@ describe('ReceptionPage list and side pane guidance', () => {
         kana: 'シュウヤク',
         appointmentTime: '11:30',
         department: '内科',
-        physician: 'Dr. Test',
+        physician: '10001 Dr. Test',
         status: '会計待ち',
         insurance: '保険',
         source: 'visits',
@@ -984,7 +1172,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     renderReceptionPage();
 
     const toolbar = getToolbar();
-    const acceptButton = within(toolbar).getByRole('button', { name: '当日受付/患者検索' });
+    const acceptButton = within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' });
 
     const workflowModal = await openAcceptWorkflowModal(user);
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
@@ -1001,7 +1189,7 @@ describe('ReceptionPage list and side pane guidance', () => {
     await user.click(acceptButton);
 
     await waitFor(() => {
-      expect(screen.queryByRole('region', { name: '当日受付/患者検索' })).toBeNull();
+      expect(screen.queryByRole('region', { name: '既存患者受付/患者検索' })).toBeNull();
     });
     expect(acceptButton).toHaveAttribute('aria-expanded', 'false');
   });
@@ -1050,26 +1238,26 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(within(workflowModal).queryByRole('button', { name: '展開' })).toBeNull();
     const closeButton = within(workflowModal).getByRole('button', { name: '閉じる' });
     await user.click(closeButton);
-    expect(screen.queryByRole('region', { name: '当日受付/患者検索' })).toBeNull();
+    expect(screen.queryByRole('region', { name: '既存患者受付/患者検索' })).toBeNull();
   });
 
   it('keeps accept workflow and daily calendar mutually exclusive', async () => {
     const user = userEvent.setup();
     renderReceptionPage();
     const toolbar = getToolbar();
-    const acceptButton = within(toolbar).getByRole('button', { name: '当日受付/患者検索' });
+    const acceptButton = within(toolbar).getByRole('button', { name: '既存患者受付/患者検索' });
     const dailyStatusButton = within(toolbar).getByRole('button', { name: /日次状態/ });
 
     await user.click(acceptButton);
-    expect(await screen.findByRole('region', { name: '当日受付/患者検索' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
 
     await user.click(dailyStatusButton);
     expect(await screen.findByRole('group', { name: '日次状態カレンダー' })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: '当日受付/患者検索' })).toBeNull();
+    expect(screen.queryByRole('region', { name: '既存患者受付/患者検索' })).toBeNull();
     expect(dailyStatusButton).toHaveAttribute('aria-expanded', 'true');
 
     await user.click(acceptButton);
-    expect(await screen.findByRole('region', { name: '当日受付/患者検索' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: '日次状態カレンダー' })).toBeNull();
     expect(dailyStatusButton).toHaveAttribute('aria-expanded', 'false');
   });
@@ -1079,10 +1267,10 @@ describe('ReceptionPage list and side pane guidance', () => {
     renderReceptionPage();
 
     await openAcceptWorkflowModal(user);
-    expect(screen.getByRole('region', { name: '当日受付/患者検索' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: '既存患者受付/患者検索' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await waitFor(() => {
-      expect(screen.queryByRole('region', { name: '当日受付/患者検索' })).toBeNull();
+      expect(screen.queryByRole('region', { name: '既存患者受付/患者検索' })).toBeNull();
     });
   });
 });

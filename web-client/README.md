@@ -22,6 +22,8 @@
 - 認証は `/login` から始まる 1 段階目ログインを基本とし、必要時のみ factor2(TOTP) を要求します。
 - `returnTo` は sanitize 済み internal path のみを扱い、invalid または empty の場合は `/f/:facilityId/reception` に落とします。
 - 患者文脈は privacy-first を前提とし、URL、`localStorage`、`sessionStorage` に残しません。
+- Reception は既存患者の受付導線に限定し、新患登録導線は `PatientsPage` に分離します。
+- Reception の ORCA 検索条件は official `patientlst3v2` 形状を優先し、client 側の補完や独自 search mode を current contract に戻しません。
 - admin の source of truth は `/api/admin/config` です。`/api/admin/delivery` を current contract に戻しません。
 - ORCA taxonomy は `/api/orca/official/*` を official bridge、`/api/orca/master/*` を master-backed read、`/api/local/*` を local-only contract として扱います。
 - security 規範の詳細は [notes/security-spec.md](./notes/security-spec.md) を正本とし、この README へ重複移植しません。

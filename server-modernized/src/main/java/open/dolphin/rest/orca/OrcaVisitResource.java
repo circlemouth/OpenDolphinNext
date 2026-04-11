@@ -106,7 +106,6 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                     "requestNumber is required");
         }
         validateVisitMutationRequest(request, body);
-        applyPushDefaults(body);
         String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", OPERATION_VISIT_MUTATION);
@@ -351,25 +350,10 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         }
     }
 
-    private void applyPushDefaults(VisitMutationRequest body) {
-        if (body == null) {
-            return;
-        }
-        if (isPushReceptionEnabled() && (body.getAcceptancePush() == null || body.getAcceptancePush().isBlank())) {
-            body.setAcceptancePush("Yes");
-        }
-    }
-
     private boolean isPushReceptionLive() {
         ServerConfigurationResolver resolver = configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
         var settings = resolver.orcaPush();
         return settings.enabled() && !settings.shadowMode() && settings.receptionEnabled();
-    }
-
-    private boolean isPushReceptionEnabled() {
-        ServerConfigurationResolver resolver = configurationResolver != null ? configurationResolver : new ServerConfigurationResolver();
-        var settings = resolver.orcaPush();
-        return settings.enabled() && settings.receptionEnabled();
     }
 
     private void rejectVisitMutationRequest(HttpServletRequest request, VisitMutationRequest body, String message) {

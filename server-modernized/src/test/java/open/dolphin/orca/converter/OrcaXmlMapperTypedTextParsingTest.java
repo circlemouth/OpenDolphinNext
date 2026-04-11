@@ -3,6 +3,7 @@ package open.dolphin.orca.converter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListResponse;
 import org.junit.jupiter.api.Test;
@@ -98,5 +99,38 @@ class OrcaXmlMapperTypedTextParsingTest {
         assertEquals("10005", response.getPhysicianCode());
         assertEquals("00001", response.getPatient().getPatientId());
         assertEquals("1", response.getVisitNumber());
+    }
+
+    @Test
+    void parsesMedicalInformationOptionsFromSystemManagementResponse() {
+        String xml = """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <xmlio2>
+                  <system01lstv2res>
+                    <Api_Result type="string">00</Api_Result>
+                    <Api_Result_Message type="string">OK</Api_Result_Message>
+                    <Request_Number type="string">06</Request_Number>
+                    <System_Info type="array">
+                      <System_Info_child type="record">
+                        <Medical_Information_Code type="string">01</Medical_Information_Code>
+                        <Medical_Information_Name type="string">外来</Medical_Information_Name>
+                      </System_Info_child>
+                      <System_Info_child type="record">
+                        <Medical_Information_Code type="string">02</Medical_Information_Code>
+                        <Medical_Information_Name type="string">再診</Medical_Information_Name>
+                      </System_Info_child>
+                    </System_Info>
+                  </system01lstv2res>
+                </xmlio2>
+                """;
+
+        OrcaXmlMapper mapper = new OrcaXmlMapper();
+        OrcaMedicalInformationListResponse response = mapper.toMedicalInformationList(xml);
+
+        assertNotNull(response);
+        assertEquals("06", response.getRequestNumber());
+        assertEquals(2, response.getItems().size());
+        assertEquals("01", response.getItems().get(0).getCode());
+        assertEquals("外来", response.getItems().get(0).getName());
     }
 }

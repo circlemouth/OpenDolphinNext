@@ -3,23 +3,67 @@ package open.dolphin.orca.service;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
+import open.dolphin.rest.dto.orca.PatientNameSearchRequest;
+import open.dolphin.rest.dto.orca.VisitPatientListRequest;
 import org.junit.jupiter.api.Test;
-import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
 
 class OrcaLiveGatewaySupportTest {
 
+    private final OrcaLiveGatewaySupport support = new OrcaLiveGatewaySupport();
+
     @Test
-    void insuranceCombinationPayloadUsesBaseDateContract() {
-        OrcaLiveGatewaySupport support = new OrcaLiveGatewaySupport();
-        InsuranceCombinationRequest request = new InsuranceCombinationRequest();
-        request.setPatientId("000019");
-        request.setBaseDate(LocalDate.of(2025, 3, 21).toString());
-        request.setRangeStart("2025-03-01");
-        request.setRangeEnd("2025-03-31");
+    void buildPatientSearchPayloadUsesOfficialPatientlst3Shape() {
+        PatientNameSearchRequest request = new PatientNameSearchRequest();
+        request.setName("山田 太郎");
+        request.setKana("ヤマダ タロウ");
+        request.setBirthStartDate(LocalDate.of(1980, 1, 1));
+        request.setBirthEndDate(LocalDate.of(1980, 12, 31));
+        request.setSex("1");
+        request.setInOut("2");
 
-        String payload = support.buildInsuranceCombinationPayload(request);
+        String xml = support.buildPatientSearchPayload(request);
 
-        assertTrue(payload.contains("<Perform_Date>2025-03-21</Perform_Date>"));
-        assertTrue(payload.contains("<Patient_ID>000019</Patient_ID>"));
+        assertTrue(xml.contains("query=class=01"));
+        assertTrue(xml.contains("<patientlst3req>"));
+        assertTrue(xml.contains("<WholeName>山田 太郎</WholeName>"));
+        assertTrue(xml.contains("<WholeName_inKana>ヤマダ タロウ</WholeName_inKana>"));
+        assertTrue(xml.contains("<Birth_StartDate>1980-01-01</Birth_StartDate>"));
+        assertTrue(xml.contains("<Birth_EndDate>1980-12-31</Birth_EndDate>"));
+        assertTrue(xml.contains("<Sex>1</Sex>"));
+        assertTrue(xml.contains("<InOut>2</InOut>"));
+    }
+
+    @Test
+    void buildPatientSearchPayloadFallsBackWholeNameToKanaWhenNameMissing() {
+        PatientNameSearchRequest request = new PatientNameSearchRequest();
+        request.setKana("ヤマダ タロウ");
+
+        String xml = support.buildPatientSearchPayload(request);
+
+        assertTrue(xml.contains("<WholeName>ヤマダ タロウ</WholeName>"));
+    }
+
+    @Test
+    void buildVisitListPayloadIncludesDepartmentCodeWhenSelected() {
+        VisitPatientListRequest request = new VisitPatientListRequest();
+        request.setRequestNumber("01");
+        request.setVisitDate(LocalDate.of(2026, 4, 11));
+        request.setDepartmentCode("11");
+
+        String xml = support.buildVisitListPayload(
+                request,
+                new OrcaLiveGatewaySupport.DateRange(LocalDate.of(2026, 4, 11), LocalDate.of(2026, 4, 11)));
+
+        assertTrue(xml.contains("<visitptlstreq type=\"record\">"));
+        assertTrue(xml.contains("<Department_Code type=\"string\">11</Department_Code>"));
+    }
+
+    @Test
+    void buildMedicalInformationOptionsPayloadUsesSystem01Class06() {
+        String xml = support.buildMedicalInformationOptionsPayload();
+
+        assertTrue(xml.contains("query=class=06"));
+        assertTrue(xml.contains("<system01lstv2req type=\"record\">"));
+        assertTrue(xml.contains("<Request_Number type=\"string\">06</Request_Number>"));
     }
 }

@@ -3,6 +3,7 @@ package open.dolphin.rest.orca;
 import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -26,6 +27,7 @@ import open.dolphin.rest.dto.orca.BillingSimulationRequest;
 import open.dolphin.rest.dto.orca.BillingSimulationResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
+import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.session.framework.SessionOperation;
@@ -41,6 +43,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
     private static final String OPERATION_PATIENT_APPOINTMENTS = "patient_appointments";
     private static final String OPERATION_BILLING_ESTIMATE = "billing_estimate";
     private static final String OPERATION_APPOINTMENT_MUTATION = "appointment_mutation";
+    private static final String OPERATION_MEDICAL_INFORMATION_OPTIONS = "medical_information_options";
     private static final ZoneId TOKYO_ZONE = ZoneId.of("Asia/Tokyo");
     private static final DateTimeFormatter ORCA_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm").withZone(TOKYO_ZONE);
 
@@ -108,6 +111,28 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.appointment.error", ex.getMessage());
+            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            throw ex;
+        }
+    }
+
+    @GET
+    @Path("/appointments/medical-information")
+    @Produces(MediaType.APPLICATION_JSON)
+    public OrcaMedicalInformationListResponse medicalInformationOptions(@Context HttpServletRequest request) {
+        String facilityId = requireFacilityId(request);
+        Map<String, Object> details = newAuditDetails(request);
+        details.put("operation", OPERATION_MEDICAL_INFORMATION_OPTIONS);
+        try {
+            OrcaMedicalInformationListResponse response = wrapperService.getMedicalInformationOptions(facilityId);
+            applyResponseAuditDetails(response, details);
+            applyResponseMetadata(response, details);
+            markSuccessDetails(details);
+            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.SUCCESS);
+            return response;
+        } catch (RuntimeException ex) {
+            markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
+                    "orca.medical_information.error", ex.getMessage());
             recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }

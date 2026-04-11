@@ -26,6 +26,7 @@ import open.dolphin.rest.dto.orca.InsuranceCombinationResponse;
 import open.dolphin.rest.dto.orca.OrcaApiResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
+import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.rest.dto.orca.PatientBatchRequest;
@@ -224,6 +225,21 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         return response;
     }
 
+    public OrcaMedicalInformationListResponse getMedicalInformationOptions(String facilityId) {
+        facilityId = requireText(facilityId, "facilityId");
+        String payload = buildMedicalInformationOptionsPayload();
+        OrcaTransportResult result =
+                transport.invoke(facilityId, OrcaEndpoint.SYSTEM_MANAGEMENT_LIST, OrcaTransportRequest.post(payload));
+        String xml = result != null ? result.getBody() : null;
+        OrcaMedicalInformationListResponse response = mapResponse(xml, mapper::toMedicalInformationList);
+        if (response == null) {
+            response = new OrcaMedicalInformationListResponse();
+        }
+        response.setRecordsReturned(response.getItems().size());
+        enrich(response, result);
+        return response;
+    }
+
     public InsuranceCombinationResponse getInsuranceCombinations(String facilityId, InsuranceCombinationRequest request) {
         facilityId = requireText(facilityId, "facilityId");
         ensureNotNull(request, "insurance combination request");
@@ -307,6 +323,7 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
     private String buildPatientIdListPayload(PatientIdListRequest request) { return support.buildPatientIdListPayload(request); }
     private String buildPatientBatchPayload(PatientBatchRequest request) { return support.buildPatientBatchPayload(request); }
     private String buildPatientSearchPayload(PatientNameSearchRequest request) { return support.buildPatientSearchPayload(request); }
+    private String buildMedicalInformationOptionsPayload() { return support.buildMedicalInformationOptionsPayload(); }
     private String buildInsuranceCombinationPayload(InsuranceCombinationRequest request) { return support.buildInsuranceCombinationPayload(request); }
     private String buildFormerNameHistoryPayload(FormerNameHistoryRequest request) { return support.buildFormerNameHistoryPayload(request); }
     private String buildAppointmentMutationPayload(AppointmentMutationRequest request) { return support.buildAppointmentMutationPayload(request); }
