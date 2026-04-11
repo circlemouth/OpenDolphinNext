@@ -6,6 +6,10 @@ export type OrcaMedicationGetSelection = {
   commentCode?: string;
   commentName?: string;
   category?: string;
+  conditionCategory?: string;
+  notUseComment?: string;
+  processCategory?: string;
+  selectionGrepName?: string;
   itemNumber?: string;
   itemNumberBranch?: string;
 };
@@ -21,10 +25,16 @@ export type OrcaMedicationGetResult = {
     medicationCode?: string;
     medicationName?: string;
     medicationNameKana?: string;
+    unitCode?: string;
+    unitName?: string;
     startDate?: string;
     endDate?: string;
     requestCode?: string;
   };
+  informationDate?: string;
+  informationTime?: string;
+  reskey?: string;
+  baseDate?: string;
   message?: string;
   runId?: string;
   traceId?: string;
@@ -38,18 +48,27 @@ const normalizeYmd = (value?: string) => {
   return digits.length === 8 ? digits : todayYmd();
 };
 
+const normalizeRequestCode = (value: string) => value.trim();
+
+const isValidRequestCode = (requestNumber: '01' | '02', requestCode: string) =>
+  requestNumber === '01' ? /^[A-Za-z0-9]+$/.test(requestCode) : /^\d{9}$/.test(requestCode);
+
 export async function fetchOrcaMedicationGet(params: {
   requestCode: string;
   baseDate?: string;
   requestNumber?: '01' | '02';
 }): Promise<OrcaMedicationGetResult> {
-  const requestCode = params.requestCode.trim();
-  if (!/^\d{9}$/.test(requestCode)) {
+  const requestNumber = params.requestNumber ?? '02';
+  const requestCode = normalizeRequestCode(params.requestCode);
+  if (!isValidRequestCode(requestNumber, requestCode)) {
     return {
       ok: false,
       status: 0,
       selections: [],
-      message: '診療行為コードは9桁数字で指定してください。',
+      message:
+        requestNumber === '01'
+          ? 'Request_Number=01 の requestCode は英数字で指定してください。'
+          : '診療行為コードは9桁数字で指定してください。',
     };
   }
   const meta = ensureObservabilityMeta();
@@ -58,7 +77,7 @@ export async function fetchOrcaMedicationGet(params: {
     headers: { 'Content-Type': 'application/json' },
     notifySessionExpired: false,
     body: JSON.stringify({
-      requestNumber: params.requestNumber ?? '02',
+      requestNumber,
       requestCode,
       baseDate: normalizeYmd(params.baseDate),
     }),
@@ -71,12 +90,17 @@ export async function fetchOrcaMedicationGet(params: {
     undefined;
   const selections = Array.isArray(json.selections)
     ? (json.selections as Array<Record<string, unknown>>).map((selection) => ({
-        commentCode: typeof selection.commentCode === 'string' ? selection.commentCode : undefined,
-        commentName: typeof selection.commentName === 'string' ? selection.commentName : undefined,
-        category: typeof selection.category === 'string' ? selection.category : undefined,
-        itemNumber: typeof selection.itemNumber === 'string' ? selection.itemNumber : undefined,
-        itemNumberBranch: typeof selection.itemNumberBranch === 'string' ? selection.itemNumberBranch : undefined,
-      }))
+      commentCode: typeof selection.commentCode === 'string' ? selection.commentCode : undefined,
+      commentName: typeof selection.commentName === 'string' ? selection.commentName : undefined,
+      category: typeof selection.category === 'string' ? selection.category : undefined,
+      conditionCategory: typeof selection.conditionCategory === 'string' ? selection.conditionCategory : undefined,
+      notUseComment: typeof selection.notUseComment === 'string' ? selection.notUseComment : undefined,
+      processCategory: typeof selection.processCategory === 'string' ? selection.processCategory : undefined,
+      selectionGrepName:
+        typeof selection.selectionGrepName === 'string' ? selection.selectionGrepName : undefined,
+      itemNumber: typeof selection.itemNumber === 'string' ? selection.itemNumber : undefined,
+      itemNumberBranch: typeof selection.itemNumberBranch === 'string' ? selection.itemNumberBranch : undefined,
+    }))
     : [];
   const medicationSource = json.medication;
   const medication =
@@ -93,6 +117,14 @@ export async function fetchOrcaMedicationGet(params: {
           medicationNameKana:
             typeof (medicationSource as Record<string, unknown>).medicationNameKana === 'string'
               ? ((medicationSource as Record<string, unknown>).medicationNameKana as string)
+              : undefined,
+          unitCode:
+            typeof (medicationSource as Record<string, unknown>).unitCode === 'string'
+              ? ((medicationSource as Record<string, unknown>).unitCode as string)
+              : undefined,
+          unitName:
+            typeof (medicationSource as Record<string, unknown>).unitName === 'string'
+              ? ((medicationSource as Record<string, unknown>).unitName as string)
               : undefined,
           startDate:
             typeof (medicationSource as Record<string, unknown>).startDate === 'string'
@@ -116,6 +148,10 @@ export async function fetchOrcaMedicationGet(params: {
     apiResultMessage: typeof json.apiResultMessage === 'string' ? (json.apiResultMessage as string) : undefined,
     selections,
     medication,
+    informationDate: typeof json.informationDate === 'string' ? (json.informationDate as string) : undefined,
+    informationTime: typeof json.informationTime === 'string' ? (json.informationTime as string) : undefined,
+    reskey: typeof json.reskey === 'string' ? (json.reskey as string) : undefined,
+    baseDate: typeof json.baseDate === 'string' ? (json.baseDate as string) : undefined,
     message: parsed.message,
     runId: parsed.runId ?? meta.runId,
     traceId,

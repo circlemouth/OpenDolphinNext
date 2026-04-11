@@ -1828,7 +1828,7 @@ export function SoapNotePanel({
                   setSubjectivesOpen(event.currentTarget.open);
                 }}
               >
-                <summary className="soap-note__subjectives-summary">症状詳記（ORCA）</summary>
+                <summary className="soap-note__subjectives-summary">症状詳記（ローカル）</summary>
                 {subjectivesOpen ? (
                   <div className="soap-note__subjectives-content">
                     <SubjectivesPanel

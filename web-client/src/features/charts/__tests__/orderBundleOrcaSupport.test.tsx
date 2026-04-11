@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
@@ -8,6 +8,7 @@ import { OrderBundleEditPanel } from '../OrderBundleEditPanel';
 import { fetchOrcaOrderInputSetDetail, fetchOrcaOrderInputSets } from '../orcaOrderInputSetApi';
 import { mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
+import { httpFetch } from '../../../libs/http/httpClient';
 
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
@@ -30,6 +31,10 @@ vi.mock('../orderBundleApi', async () => {
     mutateOrderBundles: vi.fn().mockResolvedValue({ ok: true, runId: 'RUN-ORDER-ORCA-TEST' }),
   };
 });
+
+vi.mock('../../../libs/http/httpClient', () => ({
+  httpFetch: vi.fn(),
+}));
 
 const baseProps = {
   patientId: 'P-ORDER-001',
@@ -111,9 +116,31 @@ const renderPanel = (props?: Partial<typeof baseProps>) => {
   );
 };
 
+const mockHttpFetch = vi.mocked(httpFetch);
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  mockHttpFetch.mockReset();
+  mockHttpFetch.mockImplementation(
+    async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          apiOk: true,
+          apiResult: '0000',
+          apiResultMessage: 'OK',
+          selections: [],
+          medication: {},
+          results: [],
+          symptomInfo: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+  );
 });
 
 describe('OrderBundleEditPanel ORCA support', () => {
@@ -196,6 +223,110 @@ describe('OrderBundleEditPanel ORCA support', () => {
         '投与指示は院内ローカル保存です。最近使った投与指示を含めて、admin/adminCode/adminMemo は ORCA送信では保持しません。',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('保存時に official contraindication route を呼び、警告で確認ダイアログを開く', async () => {
+    const user = userEvent.setup();
+    const expectedPerformMonth = new Date().toISOString().slice(0, 7);
+    mockHttpFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          apiOk: true,
+          apiResult: '0000',
+          apiResultMessage: 'OK',
+          selections: [],
+          medication: {},
+          results: [],
+          symptomInfo: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    mockHttpFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          apiOk: true,
+          apiResult: '0000',
+          apiResultMessage: '警告あり',
+          results: [
+            {
+              medicationCode: '620000010',
+              medicationName: '注射薬A',
+              medicalResult: '1',
+              medicalResultMessage: '注意が必要です',
+              warnings: [
+                {
+                  contraCode: 'C001',
+                  contraName: '禁忌薬A',
+                  interactCode: 'I001',
+                  administerDate: '2026-03-09',
+                  contextClass: 'before',
+                },
+              ],
+            },
+          ],
+          symptomInfo: [{ code: 'S001', content: '症状', detail: '詳細' }],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+    vi.mocked(fetchOrderMasterSearch).mockImplementation(async (params) => {
+      if (typeof params?.keyword === 'string' && params.keyword.includes('注射薬A')) {
+        return {
+          ok: true,
+          items: [
+            {
+              type: params.type ?? 'drug',
+              code: '620000010',
+              name: '注射薬A',
+              unit: 'ampoule',
+              note: '',
+            },
+          ],
+          totalCount: 1,
+        } as any;
+      }
+      return { ok: true, items: [], totalCount: 0 } as any;
+    });
+
+    renderPanel(injectionProps);
+
+    const [firstMainInput] = screen.getAllByPlaceholderText('注射薬剤または手技名');
+    await user.type(firstMainInput, '注射薬A');
+    await waitFor(() =>
+      expect(vi.mocked(fetchOrderMasterSearch)).toHaveBeenCalledWith(
+        expect.objectContaining({ keyword: '注射薬A' }),
+      ),
+    );
+    await user.tab();
+    await waitFor(() => expect(screen.getByDisplayValue('注射薬A')).toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: '保存して追加する' }));
+
+    expect(mockHttpFetch).toHaveBeenNthCalledWith(
+      2,
+      '/api/orca/chart-support/contraindication-check',
+      expect.objectContaining({
+        method: 'POST',
+        notifySessionExpired: false,
+        body: JSON.stringify({
+          patientId: 'P-ORDER-001',
+          performMonth: expectedPerformMonth,
+          requestNumber: '01',
+          checkTerm: '1',
+          medications: [{ medicationCode: '620000010', medicationName: '注射薬A' }],
+        }),
+      }),
+    );
+
+    expect(await screen.findByRole('alertdialog', { name: '禁忌チェックの警告' })).toBeInTheDocument();
+    expect(vi.mocked(mutateOrderBundles)).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: '今回だけ無視して保存' }));
+
+    await waitFor(() => expect(vi.mocked(mutateOrderBundles)).toHaveBeenCalled());
   });
 
   it('treatmentOrder は bundleName/admin/memo の local-only 契約を明示する', () => {

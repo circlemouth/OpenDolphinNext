@@ -43,7 +43,7 @@ import {
   type OrcaOrderInputSetDetailResult,
   type OrcaOrderInputSetSummary,
 } from './orcaOrderInputSetApi';
-import { checkOrcaOrderInteractions } from './orcaOrderInteractionApi';
+import { checkOrcaStaticOrderInteractions } from './orcaOrderInteractionApi';
 
 export type PrescriptionSearchMethod = 'prefix' | 'partial';
 export type PrescriptionSearchScope = 'outside_adopted' | 'in_hospital_adopted' | 'inside_adopted';
@@ -1108,9 +1108,9 @@ export function PrescriptionOrderEditorPanel({
         return;
       }
       try {
-        const result = await checkOrcaOrderInteractions({ codes });
+        const result = await checkOrcaStaticOrderInteractions({ codes });
         if (!result.ok) {
-          setNotice({ tone: 'warning', message: result.message ?? '相互作用チェックに失敗したため、そのまま保存します。' });
+          setNotice({ tone: 'warning', message: result.message ?? 'マスタ相互作用チェックに失敗したため、そのまま保存します。' });
           mutation.mutate({ action, order });
           return;
         }
@@ -1123,7 +1123,7 @@ export function PrescriptionOrderEditorPanel({
       } catch (error) {
         setNotice({
           tone: 'warning',
-          message: error instanceof Error ? error.message : '相互作用チェックに失敗したため、そのまま保存します。',
+          message: error instanceof Error ? error.message : 'マスタ相互作用チェックに失敗したため、そのまま保存します。',
         });
       }
       mutation.mutate({ action, order });
@@ -1164,8 +1164,8 @@ export function PrescriptionOrderEditorPanel({
     <section className="charts-side-panel__section" data-order-entity="medOrder" data-test-id="medOrder-prescription-editor-v2">
       <FocusTrapDialog
         open={interactionConfirmOpen}
-        title="相互作用チェックの警告"
-        description="保存前に相互作用の可能性が検出されました。"
+        title="マスタ相互作用チェックの警告"
+        description="保存前にマスタ由来の相互作用候補が検出されました。"
         role="alertdialog"
         onClose={closeInteractionConfirm}
         testId="prescription-interaction-confirm"
@@ -1175,14 +1175,14 @@ export function PrescriptionOrderEditorPanel({
             <ul className="charts-side-panel__confirm-list">
               {interactionPairs.map((pair, index) => (
                 <li key={`${pair.code1}-${pair.code2}-${index}`}>
-                  {pair.code1} / {pair.code2} / {pair.interactionName ?? pair.message ?? '相互作用あり'}
+                  {pair.code1} / {pair.code2} / {pair.interactionName ?? pair.message ?? 'マスタ相互作用あり'}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="charts-side-panel__message">相互作用候補の詳細は取得できませんでした。</p>
+            <p className="charts-side-panel__message">マスタ相互作用候補の詳細は取得できませんでした。</p>
           )}
-          <div className="charts-side-panel__actions charts-side-panel__actions--dialog" role="group" aria-label="相互作用チェックの確認">
+          <div className="charts-side-panel__actions charts-side-panel__actions--dialog" role="group" aria-label="マスタ相互作用チェックの確認">
             <button type="button" className="charts-side-panel__action" onClick={closeInteractionConfirm}>
               編集に戻る
             </button>

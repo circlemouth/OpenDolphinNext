@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
+import { httpFetch } from '../../libs/http/httpClient';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
-import { resolveAriaLive } from '../../libs/observability/observability';
+import { ensureObservabilityMeta, resolveAriaLive } from '../../libs/observability/observability';
 import { useOptionalSession } from '../../AppRouter';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import {
@@ -86,6 +87,7 @@ import {
   isOrcaEntityClassAllowed,
   supportsOrcaBodyPartField,
 } from './orcaMedicalClassCatalog';
+import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 
 export type OrderBundleEditPanelMeta = {
   runId?: string;
@@ -201,6 +203,42 @@ type SelectionCommentCandidate = {
   category?: string;
   itemNumber?: string;
   itemNumberBranch?: string;
+};
+
+type ContraindicationCheckMedication = {
+  medicationCode: string;
+  medicationName?: string;
+};
+
+type ContraindicationCheckResult = {
+  ok: boolean;
+  apiOk?: boolean;
+  status: number;
+  apiResult?: string;
+  apiResultMessage?: string;
+  informationDate?: string;
+  informationTime?: string;
+  results: Array<{
+    medicationCode?: string;
+    medicationName?: string;
+    medicalResult?: string;
+    medicalResultMessage?: string;
+    warnings: Array<{
+      contraCode?: string;
+      contraName?: string;
+      interactCode?: string;
+      administerDate?: string;
+      contextClass?: string;
+    }>;
+  }>;
+  symptomInfo: Array<{
+    code?: string;
+    content?: string;
+    detail?: string;
+  }>;
+  message?: string;
+  runId?: string;
+  traceId?: string;
 };
 
 type BundleValidationRule = {
@@ -417,6 +455,109 @@ const hasUnsupportedCommentSelectionParameter = (item?: {
 const normalizeChargeMasterCategory = (category?: string | null) => {
   const trimmed = category?.trim();
   return trimmed && /^\d{3}$/.test(trimmed) ? trimmed : undefined;
+};
+
+const normalizePerformMonth = (value?: string) => {
+  if (!value) return new Date().toISOString().slice(0, 7);
+  const digits = value.replace(/[^0-9]/g, '');
+  if (digits.length >= 6) {
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}`;
+  }
+  const trimmed = value.trim();
+  return /^\d{4}-\d{2}$/.test(trimmed) ? trimmed : new Date().toISOString().slice(0, 7);
+};
+
+const buildContraindicationDetails = (result: ContraindicationCheckResult) => {
+  const details: string[] = [];
+  result.results.forEach((item) => {
+    const header = [item.medicationCode, item.medicationName].filter(Boolean).join(' ');
+    const resultLine = [item.medicalResult, item.medicalResultMessage].filter(Boolean).join(' / ');
+    const line = [header, resultLine].filter(Boolean).join(' - ');
+    if (line) details.push(line);
+    item.warnings.forEach((warning) => {
+      const warningLine = [
+        warning.contraCode,
+        warning.contraName,
+        warning.interactCode,
+        warning.administerDate,
+        warning.contextClass,
+      ]
+        .filter(Boolean)
+        .join(' / ');
+      if (warningLine) details.push(warningLine);
+    });
+  });
+  result.symptomInfo.forEach((item) => {
+    const line = [item.code, item.content, item.detail].filter(Boolean).join(' / ');
+    if (line) details.push(line);
+  });
+  return details;
+};
+
+const fetchOrcaContraindicationCheck = async (params: {
+  patientId: string;
+  performMonth: string;
+  medications?: ContraindicationCheckMedication[];
+  requestNumber?: '01' | '02';
+  checkTerm?: string;
+}): Promise<ContraindicationCheckResult> => {
+  const meta = ensureObservabilityMeta();
+  const response = await httpFetch('/api/orca/chart-support/contraindication-check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    notifySessionExpired: false,
+    body: JSON.stringify({
+      patientId: params.patientId,
+      performMonth: normalizePerformMonth(params.performMonth),
+      requestNumber: params.requestNumber ?? '01',
+      checkTerm: params.checkTerm ?? '1',
+      medications: params.medications ?? [],
+    }),
+  });
+  const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '禁忌チェックに失敗しました。' });
+  const json = (parsed.json ?? {}) as Record<string, unknown>;
+  const traceId =
+    (typeof json.traceId === 'string' ? json.traceId : undefined) ??
+    response.headers.get('x-trace-id') ??
+    undefined;
+  const results = Array.isArray(json.results)
+    ? (json.results as Array<Record<string, unknown>>).map((item) => ({
+        medicationCode: typeof item.medicationCode === 'string' ? item.medicationCode : undefined,
+        medicationName: typeof item.medicationName === 'string' ? item.medicationName : undefined,
+        medicalResult: typeof item.medicalResult === 'string' ? item.medicalResult : undefined,
+        medicalResultMessage: typeof item.medicalResultMessage === 'string' ? item.medicalResultMessage : undefined,
+        warnings: Array.isArray(item.warnings)
+          ? (item.warnings as Array<Record<string, unknown>>).map((warning) => ({
+              contraCode: typeof warning.contraCode === 'string' ? warning.contraCode : undefined,
+              contraName: typeof warning.contraName === 'string' ? warning.contraName : undefined,
+              interactCode: typeof warning.interactCode === 'string' ? warning.interactCode : undefined,
+              administerDate: typeof warning.administerDate === 'string' ? warning.administerDate : undefined,
+              contextClass: typeof warning.contextClass === 'string' ? warning.contextClass : undefined,
+            }))
+          : [],
+      }))
+    : [];
+  const symptomInfo = Array.isArray(json.symptomInfo)
+    ? (json.symptomInfo as Array<Record<string, unknown>>).map((item) => ({
+        code: typeof item.code === 'string' ? item.code : undefined,
+        content: typeof item.content === 'string' ? item.content : undefined,
+        detail: typeof item.detail === 'string' ? item.detail : undefined,
+      }))
+    : [];
+  return {
+    ok: parsed.ok,
+    apiOk: typeof json.apiOk === 'boolean' ? (json.apiOk as boolean) : undefined,
+    status: parsed.status,
+    apiResult: typeof json.apiResult === 'string' ? (json.apiResult as string) : undefined,
+    apiResultMessage: typeof json.apiResultMessage === 'string' ? (json.apiResultMessage as string) : undefined,
+    informationDate: typeof json.informationDate === 'string' ? (json.informationDate as string) : undefined,
+    informationTime: typeof json.informationTime === 'string' ? (json.informationTime as string) : undefined,
+    results,
+    symptomInfo,
+    message: parsed.message,
+    runId: parsed.runId ?? meta.runId,
+    traceId,
+  };
 };
 
 const hasUnsupportedSelectionCommentParameterInItem = (item?: OrderBundleItem | null) => {
@@ -1345,7 +1486,7 @@ export function OrderBundleEditPanel({
   const contraConfirmResolveRef = useRef<((value: boolean) => void) | null>(null);
   const [contraConfirmOpen, setContraConfirmOpen] = useState(false);
   const [clearRowsDialogOpen, setClearRowsDialogOpen] = useState(false);
-  const [contraConfirmPayload] = useState<{
+  const [contraConfirmPayload, setContraConfirmPayload] = useState<{
     summary: string;
     details: string[];
     apiResult?: string;
@@ -1359,6 +1500,7 @@ export function OrderBundleEditPanel({
     setNotice(null);
     setContraNotice(null);
     setContraDetails([]);
+    setContraConfirmPayload(null);
     setBodyPartKeyword('');
     setValidationIssues([]);
     setCommentDraft({
@@ -2653,9 +2795,11 @@ export function OrderBundleEditPanel({
       if (request.kind === 'edit') {
         setForm(toFormState(request.bundle, today));
         setSelectedUsageMasterMeta(null);
+        setContraConfirmPayload(null);
       } else if (request.kind === 'copy') {
         setForm(toFormStateFromHistoryCopy(request.bundle, today));
         setSelectedUsageMasterMeta(null);
+        setContraConfirmPayload(null);
       }
       onRequestConsumed?.(request.requestId);
       return;
@@ -2671,6 +2815,7 @@ export function OrderBundleEditPanel({
         setNotice(null);
         setContraNotice(null);
         setContraDetails([]);
+        setContraConfirmPayload(null);
         setBodyPartKeyword('');
         break;
       }
@@ -2680,6 +2825,7 @@ export function OrderBundleEditPanel({
       }
       case 'recommendation': {
         applyRecommendation(request.candidate);
+        setContraConfirmPayload(null);
         break;
       }
       default: {
@@ -2729,17 +2875,76 @@ export function OrderBundleEditPanel({
 
   const closeContraConfirm = useCallback((result: boolean) => {
     setContraConfirmOpen(false);
+    setIsContraChecking(false);
     const resolve = contraConfirmResolveRef.current;
     contraConfirmResolveRef.current = null;
+    setContraConfirmPayload(null);
     resolve?.(result);
   }, []);
 
   const runContraindicationCheck = async (bundleForm: BundleFormState) => {
-    void bundleForm;
-    setIsContraChecking(false);
+    setIsContraChecking(true);
     setContraNotice(null);
     setContraDetails([]);
-    return true;
+    setContraConfirmPayload(null);
+    try {
+      const medications = collectBundleItems(bundleForm)
+        .filter((item) => item.rowRole === 'main')
+        .map((item) => ({
+          medicationCode: item.code?.trim() ?? '',
+          medicationName: item.name?.trim() || undefined,
+        }))
+        .filter((item) => item.medicationCode && isDrugMedicationCode(item.medicationCode));
+      const result = await fetchOrcaContraindicationCheck({
+        patientId,
+        performMonth: bundleForm.startDate,
+        requestNumber: '01',
+        checkTerm: '1',
+        medications,
+      });
+      if (!result.ok || (result.apiOk === false && !result.results.length && !result.symptomInfo.length)) {
+        const message = result.apiResultMessage ?? result.message ?? '禁忌チェックに失敗しました。';
+        setContraNotice({
+          tone: 'error',
+          message,
+          detail: result.apiResult ? `Api_Result: ${result.apiResult}` : undefined,
+        });
+        setContraDetails(buildContraindicationDetails(result));
+        return false;
+      }
+      const details = buildContraindicationDetails(result);
+      const hasWarning = result.results.length > 0 || result.symptomInfo.length > 0;
+      if (!hasWarning) {
+        return true;
+      }
+      const summary = result.apiResultMessage ?? '禁忌チェックで警告が検出されました。';
+      setContraNotice({
+        tone: 'warning',
+        message: summary,
+        detail: result.apiResult ? `Api_Result: ${result.apiResult}` : undefined,
+      });
+      setContraDetails(details);
+      setContraConfirmPayload({
+        summary,
+        details,
+        apiResult: result.apiResult,
+        apiMessage: result.apiResultMessage,
+      });
+      setContraConfirmOpen(true);
+      return await new Promise<boolean>((resolve) => {
+        contraConfirmResolveRef.current = resolve;
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '禁忌チェックに失敗しました。';
+      setContraNotice({
+        tone: 'error',
+        message,
+      });
+      setContraDetails([]);
+      return false;
+    } finally {
+      setIsContraChecking(false);
+    }
   };
 
   const mutation = useMutation({

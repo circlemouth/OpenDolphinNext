@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildUnavailableMedicalSummary, fetchChartsMedicalSummary } from '../api';
 
 const BLOCKED_MEDICAL_ROUTE = ['/api', 'orca', 'medical', 'outpatient'].join('/');
-const { httpFetch } = vi.hoisted(() => ({
+const { httpFetch, logUiState } = vi.hoisted(() => ({
   httpFetch: vi.fn(),
+  logUiState: vi.fn(),
 }));
 
 vi.mock('../../../libs/http/httpClient', () => ({
@@ -13,7 +14,7 @@ vi.mock('../../../libs/http/httpClient', () => ({
 
 vi.mock('../../../libs/audit/auditLogger', () => ({
   logAuditEvent: vi.fn(),
-  logUiState: vi.fn(),
+  logUiState,
 }));
 
 vi.mock('../../../libs/telemetry/telemetryClient', () => ({
@@ -83,6 +84,13 @@ describe('charts medical summary api', () => {
     expect(summary.recordsReturned).toBe(1);
     expect(summary.outcome).toBe('SUCCESS');
     expect(summary.requestId).toBe('req-1');
+    expect(logUiState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          description: 'charts_local_summary',
+        }),
+      }),
+    );
     expect(summary.payload).toEqual(
       expect.objectContaining({
         outpatientList: expect.arrayContaining([

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoRequest;
 import open.dolphin.rest.dto.orca.ChartSupportIncomeInfoResponse;
@@ -286,7 +287,28 @@ class OrcaChartSupportSupportTest {
     }
 
     @Test
-    void parseMedicationGetResponseReadsSelectionMetadata() {
+    void buildContraindicationCheckRequestXmlUsesOfficialDefaults() {
+        ChartSupportContraindicationCheckRequest payload = new ChartSupportContraindicationCheckRequest();
+        payload.setPatientId("12345");
+        payload.setPerformMonth("2026-03");
+
+        ChartSupportContraindicationCheckRequest.Medication medication = new ChartSupportContraindicationCheckRequest.Medication();
+        medication.setMedicationCode("114030710");
+        medication.setMedicationName("在宅時医学総合管理料");
+        payload.setMedications(List.of(medication));
+
+        String xml = support.buildContraindicationCheckRequestXml(payload);
+
+        assertTrue(xml.contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(xml.contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
+        assertTrue(xml.contains("<Perform_Month type=\"string\">2026-03</Perform_Month>"));
+        assertTrue(xml.contains("<Check_Term type=\"string\">1</Check_Term>"));
+        assertTrue(xml.contains("<Medication_Code type=\"string\">114030710</Medication_Code>"));
+        assertTrue(xml.contains("<Medication_Name type=\"string\">在宅時医学総合管理料</Medication_Name>"));
+    }
+
+    @Test
+    void parseMedicationGetResponseReadsSelectionMetadataAndOfficialFields() {
         String xml = """
                 <data>
                   <medicationgetres type="record">
@@ -294,12 +316,15 @@ class OrcaChartSupportSupportTest {
                     <Information_Time type="string">08:01:00</Information_Time>
                     <Api_Result type="string">000</Api_Result>
                     <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                    <Reskey type="string">Patient Info</Reskey>
                     <Request_Code type="string">114030710</Request_Code>
                     <Base_Date type="string">2026-03-22</Base_Date>
                     <Medication_Information type="record">
                       <Medication_Code type="string">114030710</Medication_Code>
                       <Medication_Name type="string">在宅時医学総合管理料</Medication_Name>
                       <Medication_Name_inKana type="string">ザイタクジイガクソウゴウカンリリョウ</Medication_Name_inKana>
+                      <Unit_Code type="string">123</Unit_Code>
+                      <Unit_Name type="string">件</Unit_Name>
                       <StartDate type="string">2024-06-01</StartDate>
                       <EndDate type="string">9999-12-31</EndDate>
                     </Medication_Information>
@@ -310,6 +335,10 @@ class OrcaChartSupportSupportTest {
                         <Item_Number type="string">0166</Item_Number>
                         <Item_Number_Branch type="string">01</Item_Number_Branch>
                         <Category type="string">C002</Category>
+                        <Condition_Category type="string">01</Condition_Category>
+                        <Not_Use_Comment type="string">0</Not_Use_Comment>
+                        <Process_Category type="string">4</Process_Category>
+                        <Selection_Grep_Name type="string">在宅時医学総合管理料</Selection_Grep_Name>
                       </Selection_Expression_Information_child>
                     </Selection_Expression_Information>
                   </medicationgetres>
@@ -325,11 +354,19 @@ class OrcaChartSupportSupportTest {
         assertNotNull(response.getMedication());
         assertEquals("114030710", response.getMedication().getMedicationCode());
         assertEquals("114030710", response.getMedication().getRequestCode());
+        assertEquals("Patient Info", response.getReskey());
+        assertEquals("2026-03-22", response.getBaseDate());
+        assertEquals("123", response.getMedication().getUnitCode());
+        assertEquals("件", response.getMedication().getUnitName());
         assertEquals(1, response.getSelections().size());
         assertEquals("850100106", response.getSelections().get(0).getCommentCode());
         assertEquals("0166", response.getSelections().get(0).getItemNumber());
         assertEquals("01", response.getSelections().get(0).getItemNumberBranch());
         assertEquals("C002", response.getSelections().get(0).getCategory());
+        assertEquals("01", response.getSelections().get(0).getConditionCategory());
+        assertEquals("0", response.getSelections().get(0).getNotUseComment());
+        assertEquals("4", response.getSelections().get(0).getProcessCategory());
+        assertEquals("在宅時医学総合管理料", response.getSelections().get(0).getSelectionGrepName());
     }
 
     @Test

@@ -14,6 +14,8 @@ public class ChartSupportMedicationGetResponse {
     private String apiResultMessage;
     private String informationDate;
     private String informationTime;
+    private String reskey;
+    private String baseDate;
     private Medication medication;
     private List<Selection> selections = new ArrayList<>();
     private String runId;
@@ -76,6 +78,22 @@ public class ChartSupportMedicationGetResponse {
         this.informationTime = informationTime;
     }
 
+    public String getReskey() {
+        return reskey;
+    }
+
+    public void setReskey(String reskey) {
+        this.reskey = reskey;
+    }
+
+    public String getBaseDate() {
+        return baseDate;
+    }
+
+    public void setBaseDate(String baseDate) {
+        this.baseDate = baseDate;
+    }
+
     public Medication getMedication() {
         return medication;
     }
@@ -121,6 +139,8 @@ public class ChartSupportMedicationGetResponse {
         private String medicationCode;
         private String medicationName;
         private String medicationNameKana;
+        private String unitCode;
+        private String unitName;
         private String startDate;
         private String endDate;
         private String requestCode;
@@ -147,6 +167,22 @@ public class ChartSupportMedicationGetResponse {
 
         public void setMedicationNameKana(String medicationNameKana) {
             this.medicationNameKana = medicationNameKana;
+        }
+
+        public String getUnitCode() {
+            return unitCode;
+        }
+
+        public void setUnitCode(String unitCode) {
+            this.unitCode = unitCode;
+        }
+
+        public String getUnitName() {
+            return unitName;
+        }
+
+        public void setUnitName(String unitName) {
+            this.unitName = unitName;
         }
 
         public String getStartDate() {
@@ -179,6 +215,10 @@ public class ChartSupportMedicationGetResponse {
         private String commentCode;
         private String commentName;
         private String category;
+        private String conditionCategory;
+        private String notUseComment;
+        private String processCategory;
+        private String selectionGrepName;
         private String itemNumber;
         private String itemNumberBranch;
 
@@ -204,6 +244,38 @@ public class ChartSupportMedicationGetResponse {
 
         public void setCategory(String category) {
             this.category = category;
+        }
+
+        public String getConditionCategory() {
+            return conditionCategory;
+        }
+
+        public void setConditionCategory(String conditionCategory) {
+            this.conditionCategory = conditionCategory;
+        }
+
+        public String getNotUseComment() {
+            return notUseComment;
+        }
+
+        public void setNotUseComment(String notUseComment) {
+            this.notUseComment = notUseComment;
+        }
+
+        public String getProcessCategory() {
+            return processCategory;
+        }
+
+        public void setProcessCategory(String processCategory) {
+            this.processCategory = processCategory;
+        }
+
+        public String getSelectionGrepName() {
+            return selectionGrepName;
+        }
+
+        public void setSelectionGrepName(String selectionGrepName) {
+            this.selectionGrepName = selectionGrepName;
         }
 
         public String getItemNumber() {

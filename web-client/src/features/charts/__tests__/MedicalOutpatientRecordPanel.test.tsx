@@ -3,6 +3,18 @@ import { render, screen } from '@testing-library/react';
 
 import { MedicalOutpatientRecordPanel } from '../MedicalOutpatientRecordPanel';
 
+vi.mock('../shared/ApiFailureBanner', () => ({
+  ApiFailureBanner: ({
+    subject,
+    destination,
+    nextAction,
+  }: {
+    subject: string;
+    destination: string;
+    nextAction: string;
+  }) => <div>{`${subject} / ${destination} / ${nextAction}`}</div>,
+}));
+
 vi.mock('../../reception/components/ToneBanner', () => ({
   ToneBanner: ({ message }: { message: string }) => <div>{message}</div>,
 }));
@@ -49,6 +61,13 @@ describe('MedicalOutpatientRecordPanel', () => {
     expect(screen.getByText('アムロジピン')).toBeInTheDocument();
   });
 
+  it('ローカル医療サマリとして描画する', () => {
+    render(<MedicalOutpatientRecordPanel selectedPatientId="00001" summary={undefined} />);
+
+    expect(screen.getByText('ローカル医療サマリ')).toBeInTheDocument();
+    expect(screen.getByText('ローカル医療サマリを取得中です。')).toBeInTheDocument();
+  });
+
   it('200 MISSING では empty state を描画する', () => {
     render(
       <MedicalOutpatientRecordPanel
@@ -63,7 +82,7 @@ describe('MedicalOutpatientRecordPanel', () => {
       />,
     );
 
-    expect(screen.getByText(/表示対象の医療記録が見つかりません/)).toBeInTheDocument();
+    expect(screen.getByText(/表示対象のローカル医療サマリが見つかりません/)).toBeInTheDocument();
   });
 
   it('200 PARTIAL では一部欠落を表示する', () => {
@@ -115,5 +134,11 @@ describe('MedicalOutpatientRecordPanel', () => {
     );
 
     expect(screen.getAllByText(new RegExp(`HTTP ${httpStatus}`)).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        httpStatus === 404 ? /ローカル医療サマリが見つかりませんでした/ : /ローカル医療サマリの取得に失敗しました/,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('ローカル医療サマリの操作')).toBeInTheDocument();
   });
 });

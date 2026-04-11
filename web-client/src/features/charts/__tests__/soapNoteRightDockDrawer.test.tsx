@@ -765,4 +765,23 @@ describe('SoapNotePanel right dock drawer', () => {
     });
     expect(drawer.getAttribute('data-open')).toBe('true');
   });
+
+  it('症状詳記セクションはローカル表記のみを使う', () => {
+    renderWithQueryClient(
+      <SoapNotePanel
+        history={[]}
+        meta={{
+          runId: 'RUN-SOAP-NAMING',
+          patientId: 'P-001',
+          appointmentId: 'APT-001',
+          receptionId: 'RCP-001',
+          visitDate: '2026-02-26',
+        }}
+        author={{ role: 'doctor', displayName: 'Dr. Dock', userId: 'doctor01' }}
+        orderBundles={[]}
+      />,
+    );
+
+    expect(screen.getByText('症状詳記（ローカル）')).toBeInTheDocument();
+  });
 });

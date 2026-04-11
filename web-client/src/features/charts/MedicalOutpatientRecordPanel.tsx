@@ -33,9 +33,9 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
     return (
       <section className="medical-record" aria-live={infoLive} data-test-id="medical-record-panel">
         <header className="medical-record__header">
-          <strong>医療記録</strong>
+          <strong>ローカル医療サマリ</strong>
         </header>
-        <p className="medical-record__empty">外来医療記録を取得中です。</p>
+        <p className="medical-record__empty">ローカル医療サマリを取得中です。</p>
       </section>
     );
   }
@@ -58,19 +58,19 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
           data-run-id={resolvedRunId}
         >
           <header className="medical-record__header">
-            <strong>医療記録</strong>
+            <strong>ローカル医療サマリ</strong>
             <span className="medical-record__meta">
               outcome: {summary.outcome ?? 'ERROR'} / recordsReturned: {summary.recordsReturned ?? '—'} / {httpLabel}
             </span>
           </header>
           <ApiFailureBanner
-            subject="外来医療記録"
-            destination="OrcaSummary"
+            subject="ローカル医療サマリ"
+            destination="local-summary"
             runId={summary.runId}
             traceId={summary.traceId}
             apiResult={summary.apiResult}
             apiResultMessage={summary.apiResultMessage}
-            nextAction="OrcaSummary で再取得"
+            nextAction="ローカル医療サマリを再取得"
             {...errorContext}
           />
         </section>
@@ -79,11 +79,11 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
     return (
       <section className="medical-record" aria-live={infoLive} data-test-id="medical-record-panel">
         <header className="medical-record__header">
-          <strong>医療記録</strong>
+          <strong>ローカル医療サマリ</strong>
           <span className="medical-record__meta">recordsReturned: {summary.recordsReturned ?? '—'}</span>
         </header>
         <p className="medical-record__empty">
-          表示対象の医療記録が見つかりません（patientId={selectedPatientId ?? '未選択'}）。
+          表示対象のローカル医療サマリが見つかりません（patientId={selectedPatientId ?? '未選択'}）。
         </p>
       </section>
     );
@@ -96,7 +96,7 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
     <section className="medical-record" aria-live={ariaLive} data-test-id="medical-record-panel" data-run-id={resolvedRunId}>
       <header className="medical-record__header">
         <div className="medical-record__title">
-          <strong>医療記録</strong>
+          <strong>ローカル医療サマリ</strong>
           <span className="medical-record__meta">
             {record.patientName ?? '氏名未設定'}
             {record.patientId ? `（${record.patientId}）` : ''}
@@ -109,7 +109,7 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
             label="outcome"
             value={toOutcomeLabel(record.outcome)}
             tone={toOutcomeTone(record.outcome)}
-            description="外来医療記録の取得結果（セクション集計）"
+            description="ローカル医療サマリの取得結果（セクション集計）"
             ariaLive="off"
             runId={summary.runId}
           />
@@ -117,7 +117,7 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
             label="recordsReturned"
             value={String(summary.recordsReturned ?? record.recordsReturned ?? '—')}
             tone={summary.recordsReturned && summary.recordsReturned > 0 ? 'info' : 'warning'}
-            description="医療記録（visit/encounter）件数"
+            description="ローカル医療サマリ（visit/encounter）件数"
             ariaLive="off"
             runId={summary.runId}
           />

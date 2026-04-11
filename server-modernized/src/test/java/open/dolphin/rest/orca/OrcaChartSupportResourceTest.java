@@ -14,6 +14,8 @@ import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransport;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.orca.transport.OrcaTransportResult;
+import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckRequest;
+import open.dolphin.rest.dto.orca.ChartSupportContraindicationCheckResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetRequest;
 import open.dolphin.rest.dto.orca.ChartSupportMedicationGetResponse;
 import org.junit.jupiter.api.Test;
@@ -60,6 +62,67 @@ class OrcaChartSupportResourceTest {
         assertEquals("requestCode must be a 9-digit medical code for requestNumber 02", body.get("message"));
     }
 
+    @Test
+    void medicationGetAllowsRequestNumber01WithInputCode() {
+        CapturingTransport transport = new CapturingTransport("""
+                <data>
+                  <medicationgetres type="record">
+                    <Information_Date type="string">2026-03-22</Information_Date>
+                    <Information_Time type="string">08:01:00</Information_Time>
+                    <Api_Result type="string">000</Api_Result>
+                    <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                    <Request_Code type="string">Y00001</Request_Code>
+                    <Base_Date type="string">2026-03-22</Base_Date>
+                  </medicationgetres>
+                </data>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+
+        HttpServletRequest request = buildRequest();
+        ChartSupportMedicationGetRequest payload = new ChartSupportMedicationGetRequest();
+        payload.setRequestNumber("01");
+        payload.setRequestCode("Y00001");
+        payload.setBaseDate("2026-03-22");
+
+        ChartSupportMedicationGetResponse response = resource.medicationGet(request, payload);
+
+        assertNotNull(response);
+        assertEquals("01", transport.requestNumber());
+        assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(transport.requestXml().contains("<Request_Code type=\"string\">Y00001</Request_Code>"));
+    }
+
+    @Test
+    void contraindicationCheckInvokesOfficialRouteWithDefaultRequestNumberAndCheckTerm() {
+        CapturingTransport transport = new CapturingTransport("""
+                <data>
+                  <contraindicationcheckres type="record">
+                    <Information_Date type="string">2026-03-22</Information_Date>
+                    <Information_Time type="string">08:02:00</Information_Time>
+                    <Api_Result type="string">000</Api_Result>
+                    <Api_Result_Message type="string">処理終了</Api_Result_Message>
+                  </contraindicationcheckres>
+                </data>
+                """);
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", transport);
+
+        HttpServletRequest request = buildRequest();
+        ChartSupportContraindicationCheckRequest payload = new ChartSupportContraindicationCheckRequest();
+        payload.setPatientId("12345");
+        payload.setPerformMonth("2026-03");
+
+        ChartSupportContraindicationCheckResponse response = resource.contraindicationCheck(request, payload);
+
+        assertNotNull(response);
+        assertEquals(OrcaEndpoint.CONTRAINDICATION_CHECK, transport.endpoint());
+        assertTrue(transport.requestXml().contains("<Request_Number type=\"string\">01</Request_Number>"));
+        assertTrue(transport.requestXml().contains("<Check_Term type=\"string\">1</Check_Term>"));
+        assertTrue(transport.requestXml().contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
+        assertTrue(transport.requestXml().contains("<Perform_Month type=\"string\">2026-03</Perform_Month>"));
+    }
+
     private static HttpServletRequest buildRequest() {
         return (HttpServletRequest) Proxy.newProxyInstance(
                 OrcaChartSupportResourceTest.class.getClassLoader(),
@@ -85,12 +148,11 @@ class OrcaChartSupportResourceTest {
     private static final class CapturingTransport implements OrcaTransport {
         private String requestXml;
         private String requestNumber;
+        private final String responseXml;
+        private OrcaEndpoint endpoint;
 
-        @Override
-        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
-            requestXml = request.getBody();
-            requestNumber = extractTag(requestXml, "Request_Number");
-            String responseXml = """
+        CapturingTransport() {
+            this("""
                     <data>
                       <medicationgetres type="record">
                         <Information_Date type="string">2026-03-22</Information_Date>
@@ -101,7 +163,18 @@ class OrcaChartSupportResourceTest {
                         <Base_Date type="string">2026-03-22</Base_Date>
                       </medicationgetres>
                     </data>
-                    """;
+                    """);
+        }
+
+        CapturingTransport(String responseXml) {
+            this.responseXml = responseXml;
+        }
+
+        @Override
+        public OrcaTransportResult invoke(String facilityId, OrcaEndpoint endpoint, OrcaTransportRequest request) {
+            this.endpoint = endpoint;
+            requestXml = request.getBody();
+            requestNumber = extractTag(requestXml, "Request_Number");
             return OrcaTransportResult.fallback(responseXml, "application/xml");
         }
 
@@ -111,6 +184,10 @@ class OrcaChartSupportResourceTest {
 
         String requestNumber() {
             return requestNumber;
+        }
+
+        OrcaEndpoint endpoint() {
+            return endpoint;
         }
 
         private static String extractTag(String xml, String tagName) {

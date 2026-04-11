@@ -187,16 +187,22 @@ final class OrcaChartSupportSupport {
             response.setApiResultMessage(readFirst(document, "Api_Result_Message"));
             response.setInformationDate(readFirst(document, "Information_Date"));
             response.setInformationTime(readFirst(document, "Information_Time"));
+            response.setReskey(readFirst(document, "Reskey"));
+            response.setBaseDate(readFirst(document, "Base_Date"));
 
             ChartSupportMedicationGetResponse.Medication medication = new ChartSupportMedicationGetResponse.Medication();
             medication.setMedicationCode(readFirst(document, "Medication_Code"));
             medication.setMedicationName(readFirst(document, "Medication_Name"));
             medication.setMedicationNameKana(readFirst(document, "Medication_Name_inKana"));
+            medication.setUnitCode(readFirst(document, "Unit_Code"));
+            medication.setUnitName(readFirst(document, "Unit_Name"));
             medication.setStartDate(readFirst(document, "StartDate"));
             medication.setEndDate(readFirst(document, "EndDate"));
             medication.setRequestCode(readFirst(document, "Request_Code"));
             if (!isBlank(medication.getMedicationCode()) || !isBlank(medication.getMedicationName())
                     || !isBlank(medication.getMedicationNameKana())
+                    || !isBlank(medication.getUnitCode())
+                    || !isBlank(medication.getUnitName())
                     || !isBlank(medication.getRequestCode())
                     || !isBlank(medication.getStartDate())
                     || !isBlank(medication.getEndDate())) {
@@ -209,10 +215,18 @@ final class OrcaChartSupportSupport {
                 selection.setCommentCode(readFirst(element, "Comment_Code"));
                 selection.setCommentName(readFirst(element, "Comment_Name"));
                 selection.setCategory(readFirst(element, "Category"));
+                selection.setConditionCategory(readFirst(element, "Condition_Category"));
+                selection.setNotUseComment(readFirst(element, "Not_Use_Comment"));
+                selection.setProcessCategory(readFirst(element, "Process_Category"));
+                selection.setSelectionGrepName(readFirst(element, "Selection_Grep_Name"));
                 selection.setItemNumber(readFirst(element, "Item_Number"));
                 selection.setItemNumberBranch(readFirst(element, "Item_Number_Branch"));
                 if (!isBlank(selection.getCommentCode()) || !isBlank(selection.getCommentName())
                         || !isBlank(selection.getCategory())
+                        || !isBlank(selection.getConditionCategory())
+                        || !isBlank(selection.getNotUseComment())
+                        || !isBlank(selection.getProcessCategory())
+                        || !isBlank(selection.getSelectionGrepName())
                         || !isBlank(selection.getItemNumber())
                         || !isBlank(selection.getItemNumberBranch())) {
                     selections.add(selection);

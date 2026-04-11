@@ -2,7 +2,7 @@ import { httpFetch } from '../../libs/http/httpClient';
 import { ensureObservabilityMeta } from '../../libs/observability/observability';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 
-export type OrcaOrderInteractionResult = {
+export type OrcaStaticOrderInteractionResult = {
   ok: boolean;
   status: number;
   totalCount: number;
@@ -18,12 +18,14 @@ export type OrcaOrderInteractionResult = {
   traceId?: string;
 };
 
+export type OrcaOrderInteractionResult = OrcaStaticOrderInteractionResult;
+
 const sanitizeCodes = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
-export async function checkOrcaOrderInteractions(params: {
+export async function checkOrcaStaticOrderInteractions(params: {
   codes: string[];
   existingCodes?: string[];
-}): Promise<OrcaOrderInteractionResult> {
+}): Promise<OrcaStaticOrderInteractionResult> {
   const meta = ensureObservabilityMeta();
   const response = await httpFetch('/api/orca/order/interactions/check', {
     method: 'POST',
@@ -34,7 +36,7 @@ export async function checkOrcaOrderInteractions(params: {
       existingCodes: sanitizeCodes(params.existingCodes ?? []),
     }),
   });
-  const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '相互作用チェックに失敗しました。' });
+  const parsed = await parseOrcaApiResponse(response, { fallbackMessage: 'マスタ相互作用チェックに失敗しました。' });
   const json = parsed.json ?? {};
   const traceId =
     (typeof json.traceId === 'string' ? json.traceId : undefined) ??
@@ -71,3 +73,5 @@ export async function checkOrcaOrderInteractions(params: {
     traceId,
   };
 }
+
+export const checkOrcaOrderInteractions = checkOrcaStaticOrderInteractions;
