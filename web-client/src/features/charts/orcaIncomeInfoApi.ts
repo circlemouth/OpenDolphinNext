@@ -27,9 +27,7 @@ export type UnpaidMoneyEntry = {
 
 export type IncomeInfoRequest = {
   patientId: string;
-  performDate?: string;
-  performMonth?: string;
-  performYear?: string;
+  baseDate: string;
 };
 
 export type IncomeInfoResponse = {
@@ -94,21 +92,10 @@ const normalizeUnpaidMoneyEntry = (value: unknown): UnpaidMoneyEntry | null => {
 };
 
 export const buildIncomeInfoRequest = (params: IncomeInfoRequest): IncomeInfoRequest => {
-  const request: IncomeInfoRequest = {
+  return {
     patientId: params.patientId,
+    baseDate: params.baseDate,
   };
-  if (params.performDate) {
-    request.performDate = params.performDate;
-    return request;
-  }
-  if (params.performMonth) {
-    request.performMonth = params.performMonth;
-    return request;
-  }
-  if (params.performYear) {
-    request.performYear = params.performYear;
-  }
-  return request;
 };
 
 export async function fetchOrcaIncomeInfo(request: IncomeInfoRequest): Promise<IncomeInfoResponse> {

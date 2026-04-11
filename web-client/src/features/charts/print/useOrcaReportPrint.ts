@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { logUiState } from '../../../libs/audit/auditLogger';
 import { resolveAuditActor } from '../../../libs/auth/storedAuth';
 import type { DataSourceTransition } from '../authService';
-import type { ReceptionEntry } from '../../reception/api';
 import type { OrcaClaimSendCacheEntry } from '../orcaClaimSendCache';
 import { recordChartsAuditEvent } from '../audit';
 import { buildIncomeInfoRequest, fetchOrcaIncomeInfo, type IncomeInfoEntry } from '../orcaIncomeInfoApi';
@@ -14,6 +13,7 @@ import {
   resolveOrcaReportEndpoint,
   type OrcaReportType,
 } from '../orcaReportApi';
+import type { OrcaEncounterContext } from '../orcaEncounterContext';
 import type { ReportPrintPreviewState } from './printPreviewStorage';
 
 export type PrintDestination = 'outpatient' | OrcaReportType;
@@ -36,10 +36,8 @@ type ReportTouchedState = {
 
 type ReportPrintParams = {
   dialogOpen: boolean;
-  patientId?: string;
   appointmentId?: string;
-  visitDate?: string;
-  selectedEntry?: ReceptionEntry;
+  orcaEncounterContext?: Partial<OrcaEncounterContext>;
   orcaSendEntry?: OrcaClaimSendCacheEntry | null;
   runId: string;
   cacheHit: boolean;
@@ -87,10 +85,8 @@ const isApiResultOk = (apiResult?: string) => Boolean(apiResult && /^0+$/.test(a
 
 export function useOrcaReportPrint({
   dialogOpen,
-  patientId,
   appointmentId,
-  visitDate,
-  selectedEntry,
+  orcaEncounterContext,
   orcaSendEntry,
   runId,
   cacheHit,
@@ -118,10 +114,15 @@ export function useOrcaReportPrint({
   const [reportIncomeStatus, setReportIncomeStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [reportIncomeError, setReportIncomeError] = useState<string | null>(null);
 
-  const resolvedVisitDate = useMemo(() => visitDate ?? selectedEntry?.visitDate, [selectedEntry?.visitDate, visitDate]);
+  const resolvedPatientId = orcaEncounterContext?.patientId?.trim() || undefined;
+  const resolvedVisitDate = useMemo(
+    () => normalizeVisitDate(orcaEncounterContext?.visitDate),
+    [orcaEncounterContext?.visitDate],
+  );
+  const resolvedDepartmentCode = orcaEncounterContext?.departmentCode?.trim() || undefined;
+  const resolvedInsuranceCombinationNumber = orcaEncounterContext?.insuranceCombinationNumber?.trim() || undefined;
   const defaultPerformMonth = useMemo(() => {
-    const base = normalizeVisitDate(resolvedVisitDate ?? new Date().toISOString());
-    return base ? base.slice(0, 7) : new Date().toISOString().slice(0, 7);
+    return resolvedVisitDate ? resolvedVisitDate.slice(0, 7) : '';
   }, [resolvedVisitDate]);
 
   const resolvedReportType = printDestination === 'outpatient' ? reportForm.type : printDestination;
@@ -139,7 +140,8 @@ export function useOrcaReportPrint({
   const reportFieldErrors = useMemo(() => {
     if (printDestination === 'outpatient') return [] as string[];
     const errors: string[] = [];
-    if (!patientId) errors.push('患者IDが未確定です。');
+    if (!resolvedPatientId) errors.push('患者IDが未確定です。');
+    if (!resolvedVisitDate) errors.push('来院日（Perform_Date）が未確定です。');
     if (reportNeedsInvoice && !reportForm.invoiceNumber.trim()) {
       errors.push('伝票番号（Invoice_Number）が必要です。');
     }
@@ -151,7 +153,7 @@ export function useOrcaReportPrint({
       errors.push('対象月（Perform_Month）が必要です。');
     }
     return errors;
-  }, [patientId, printDestination, reportForm, reportNeedsInvoice, reportNeedsPerformMonth, resolvedReportType]);
+  }, [printDestination, reportForm, reportNeedsInvoice, reportNeedsPerformMonth, resolvedPatientId, resolvedReportType, resolvedVisitDate]);
 
   const reportReady = reportFieldErrors.length === 0;
 
@@ -175,12 +177,6 @@ export function useOrcaReportPrint({
   );
   const reportIncomeLatest = useMemo(() => pickLatestIncomeEntry(reportIncomeEntries), [reportIncomeEntries]);
 
-  const resolveDepartmentCode = (department?: string) => {
-    if (!department) return undefined;
-    const match = department.match(/\b(\d{2})\b/);
-    return match?.[1];
-  };
-
   useEffect(() => {
     reportTouchedRef.current = {
       invoiceNumber: false,
@@ -195,15 +191,20 @@ export function useOrcaReportPrint({
       insuranceCombinationNumber: '',
       performMonth: '',
     }));
-  }, [patientId]);
+  }, [resolvedPatientId]);
 
   useEffect(() => {
-    if (!dialogOpen || !patientId) return;
+    if (!dialogOpen) return;
+    if (!resolvedPatientId || !resolvedVisitDate) {
+      setReportIncomeEntries([]);
+      setReportIncomeStatus('idle');
+      setReportIncomeError(null);
+      return;
+    }
     let cancelled = false;
-    const performMonth = reportForm.performMonth || defaultPerformMonth;
     setReportIncomeStatus('loading');
     setReportIncomeError(null);
-    const request = buildIncomeInfoRequest({ patientId, performMonth });
+    const request = buildIncomeInfoRequest({ patientId: resolvedPatientId, baseDate: resolvedVisitDate });
     fetchOrcaIncomeInfo(request)
       .then((result) => {
         if (cancelled) return;
@@ -225,29 +226,38 @@ export function useOrcaReportPrint({
     return () => {
       cancelled = true;
     };
-  }, [defaultPerformMonth, dialogOpen, patientId, reportForm.performMonth]);
+  }, [dialogOpen, resolvedPatientId, resolvedVisitDate]);
 
   useEffect(() => {
     const latestIncome = pickLatestIncomeEntry(reportIncomeEntries);
-    const departmentCode = resolveDepartmentCode(selectedEntry?.department);
     setReportForm((prev) => {
       const next = { ...prev };
       if (!reportTouchedRef.current.invoiceNumber) {
         const invoiceNumber = lastSendInvoiceNumber ?? latestIncome?.invoiceNumber;
         if (invoiceNumber) next.invoiceNumber = invoiceNumber;
       }
-      if (!reportTouchedRef.current.insuranceCombinationNumber && latestIncome?.insuranceCombinationNumber) {
-        next.insuranceCombinationNumber = latestIncome.insuranceCombinationNumber;
+      if (!reportTouchedRef.current.insuranceCombinationNumber) {
+        const insuranceCombinationNumber =
+          resolvedInsuranceCombinationNumber ?? latestIncome?.insuranceCombinationNumber;
+        if (insuranceCombinationNumber) {
+          next.insuranceCombinationNumber = insuranceCombinationNumber;
+        }
       }
-      if (!reportTouchedRef.current.departmentCode && departmentCode) {
-        next.departmentCode = departmentCode;
+      if (!reportTouchedRef.current.departmentCode && resolvedDepartmentCode) {
+        next.departmentCode = resolvedDepartmentCode;
       }
-      if (!reportTouchedRef.current.performMonth && !prev.performMonth) {
+      if (!reportTouchedRef.current.performMonth && !prev.performMonth && defaultPerformMonth) {
         next.performMonth = defaultPerformMonth;
       }
       return next;
     });
-  }, [defaultPerformMonth, lastSendInvoiceNumber, reportIncomeEntries, selectedEntry?.department]);
+  }, [
+    defaultPerformMonth,
+    lastSendInvoiceNumber,
+    reportIncomeEntries,
+    resolvedDepartmentCode,
+    resolvedInsuranceCombinationNumber,
+  ]);
 
   const setPrintDestination = (value: PrintDestination) => {
     setPrintDestinationState(value);
@@ -265,7 +275,7 @@ export function useOrcaReportPrint({
   };
 
   const requestReportPreview = async (): Promise<ReportPreviewResult> => {
-    if (!patientId) {
+    if (!resolvedPatientId) {
       return { ok: false, error: '患者IDが未確定のため帳票出力を開始できません。' };
     }
     if (!reportReady) {
@@ -274,7 +284,7 @@ export function useOrcaReportPrint({
 
     const { actor, facilityId } = resolveAuditActor();
     const requestPayload = buildOrcaReportRequest(resolvedReportType, {
-      patientId,
+      patientId: resolvedPatientId,
       invoiceNumber: reportForm.invoiceNumber || undefined,
       outsideClass: reportForm.outsideClass,
       departmentCode: reportForm.departmentCode || undefined,
@@ -289,7 +299,7 @@ export function useOrcaReportPrint({
       subject: 'orca-report-request',
       note: `report=${resolvedReportType}`,
       actor,
-      patientId,
+      patientId: resolvedPatientId,
       appointmentId,
       runId,
       cacheHit,
@@ -321,7 +331,7 @@ export function useOrcaReportPrint({
         operationPhase: 'do',
         reportType: resolvedReportType,
         endpoint,
-        patientId,
+        patientId: resolvedPatientId,
         appointmentId,
         traceId,
       },
@@ -357,7 +367,7 @@ export function useOrcaReportPrint({
         reportType: resolvedReportType,
         reportLabel: ORCA_REPORT_LABELS[resolvedReportType],
         dataId: result.dataId,
-        patientId,
+        patientId: resolvedPatientId,
         appointmentId,
         invoiceNumber: reportForm.invoiceNumber || undefined,
         departmentCode: reportForm.departmentCode || undefined,
@@ -381,7 +391,7 @@ export function useOrcaReportPrint({
         subject: 'orca-report-preview',
         note: `Data_Id=${result.dataId}`,
         actor,
-        patientId,
+        patientId: resolvedPatientId,
         appointmentId,
         runId: responseRunId,
         cacheHit,
@@ -407,7 +417,7 @@ export function useOrcaReportPrint({
           subject: 'orca-report-preview',
           note: `Data_Id=${result.dataId}`,
           actor,
-          patientId,
+          patientId: resolvedPatientId,
           appointmentId,
           runId: responseRunId,
           cacheHit,
@@ -452,7 +462,7 @@ export function useOrcaReportPrint({
         subject: 'orca-report-preview',
         note: detail,
         error: detail,
-        patientId,
+        patientId: resolvedPatientId,
         appointmentId,
         runId,
         cacheHit,
@@ -479,7 +489,7 @@ export function useOrcaReportPrint({
           note: detail,
           error: detail,
           actor,
-          patientId,
+          patientId: resolvedPatientId,
           appointmentId,
           runId,
           cacheHit,

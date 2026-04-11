@@ -662,6 +662,8 @@ class OrcaChartSupportSupportTest {
         assertEquals(300.0, response.getUnpaidMoneyTotal(), 0.0001);
         assertTrue(Boolean.TRUE.equals(response.getUnpaidMoneyInformationOverflow()));
         assertEquals(1, response.getUnpaidMoneyInformation().size());
+        assertEquals("INV-1", response.getUnpaidMoneyInformation().get(0).getInvoiceNumber());
+        assertEquals(300.0, response.getUnpaidMoneyInformation().get(0).getUnpaidMoney(), 0.0001);
         assertEquals(1, response.getEntries().size());
         ChartSupportIncomeInfoResponse.Entry entry = response.getEntries().get(0);
         assertEquals(100.5, entry.getAcMoney(), 0.0001);
@@ -674,18 +676,19 @@ class OrcaChartSupportSupportTest {
     }
 
     @Test
-    void buildIncomeInfoRequestXmlPrefersPerformDateOverMonthAndYear() {
+    void buildIncomeInfoRequestXmlUsesOfficialSampleShape() {
         ChartSupportIncomeInfoRequest payload = new ChartSupportIncomeInfoRequest();
         payload.setPatientId("12345");
-        payload.setPerformDate("2026-03-09");
-        payload.setPerformMonth("2026-03");
-        payload.setPerformYear("2026");
+        payload.setBaseDate("2026-03-09");
 
         String xml = support.buildIncomeInfoRequestXml(payload);
 
-        assertTrue(xml.contains("<Perform_Date type=\"string\">2026-03-09</Perform_Date>"));
-        assertFalse(xml.contains("<Perform_Month type=\"string\">2026-03</Perform_Month>"));
-        assertFalse(xml.contains("<Perform_Year type=\"string\">2026</Perform_Year>"));
+        assertTrue(xml.contains("<incomeinfv2req type=\"record\">"));
+        assertTrue(xml.contains("<private_objects type=\"record\">"));
+        assertTrue(xml.contains("<Patient_ID type=\"string\">12345</Patient_ID>"));
+        assertTrue(xml.contains("<Base_Date type=\"string\">2026-03-09</Base_Date>"));
+        assertFalse(xml.contains("<Request_Number type=\"string\">"));
+        assertFalse(xml.contains("<Perform_Date type=\"string\">"));
     }
 
     private static void assertNoMedicationUnitTags(String xml) {

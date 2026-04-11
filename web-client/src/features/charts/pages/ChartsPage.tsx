@@ -74,7 +74,7 @@ import {
   storeChartsEncounterContext,
   type OutpatientEncounterContext,
 } from '../encounterContext';
-import { buildOrcaEncounterContext } from '../orcaEncounterContext';
+import { buildCanonicalOrcaEncounterContext } from '../orcaEncounterContext';
 import {
   buildChartsApprovalStorageKey,
   clearChartsApprovalRecord,
@@ -2179,13 +2179,16 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
   const actionVisitDate = useMemo(
     () =>
       normalizeVisitDate(selectedEntry?.visitDate) ??
-      normalizeVisitDate(encounterContext.visitDate) ??
-      today,
-    [encounterContext.visitDate, selectedEntry?.visitDate, today],
+      normalizeVisitDate(encounterContext.visitDate),
+    [encounterContext.visitDate, selectedEntry?.visitDate],
   );
   const actionOrcaEncounterContext = useMemo(
-    () => buildOrcaEncounterContext(selectedEntry),
-    [selectedEntry],
+    () =>
+      buildCanonicalOrcaEncounterContext({
+        selectedEntry,
+        encounterContext,
+      }),
+    [encounterContext, selectedEntry],
   );
 
   const patientFallbackQuery = useQuery({
@@ -2218,6 +2221,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     queryKey: ['charts-rp-history', karteId, actionVisitDate],
     queryFn: () => {
       if (!karteId) throw new Error('karteId is missing');
+      if (!actionVisitDate) throw new Error('visitDate is missing');
       return fetchRpHistory({
         karteId,
         fromDate: '2000-01-01',
@@ -2225,7 +2229,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         lastOnly: true,
       });
     },
-    enabled: hasEncounterHandoffKey && Boolean(karteId),
+    enabled: hasEncounterHandoffKey && Boolean(karteId && actionVisitDate),
     staleTime: 60_000,
   });
 
@@ -2233,6 +2237,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     queryKey: ['charts-order-bundles', patientId, actionVisitDate],
     queryFn: async () => {
       if (!patientId) return { ok: false as const, bundles: [] as OrderBundle[], message: 'patientId is missing' };
+      if (!actionVisitDate) return { ok: false as const, bundles: [] as OrderBundle[], message: 'visitDate is missing' };
       try {
         return await fetchOrderBundlesWithPatientImportRecovery({ patientId, from: actionVisitDate });
       } catch (err) {
@@ -2240,7 +2245,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         return { ok: false as const, bundles: [] as OrderBundle[], message };
       }
     },
-    enabled: hasEncounterHandoffKey && Boolean(patientId),
+    enabled: hasEncounterHandoffKey && Boolean(patientId && actionVisitDate),
     staleTime: 30_000,
     retry: false,
   });
@@ -2248,6 +2253,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     queryKey: ['charts-prescription-bundles', patientId, actionVisitDate, encounterContext.encounterKey ?? 'none'],
     queryFn: async () => {
       if (!patientId) return { ok: false as const, bundles: [] as OrderBundle[], message: 'patientId is missing' };
+      if (!actionVisitDate) return { ok: false as const, bundles: [] as OrderBundle[], message: 'visitDate is missing' };
       try {
         return await fetchPrescriptionOrderBundlesWithPatientImportRecovery({
           patientId,
@@ -2262,6 +2268,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     enabled:
       hasEncounterHandoffKey &&
       Boolean(patientId) &&
+      Boolean(actionVisitDate) &&
       orderBundleSummaryQuery.isSuccess &&
       orderBundleSummaryQuery.data?.ok === true,
     staleTime: 30_000,
@@ -2638,6 +2645,10 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     const patientName = (patientDisplay.name ?? '').trim();
     if (!patientId) {
       setOrderSetName('');
+      return;
+    }
+    if (!actionVisitDate) {
+      setOrderSetName('来院日未解決 セット');
       return;
     }
     const suffix = patientName ? ` ${patientName}` : '';
@@ -3420,6 +3431,9 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     mutationFn: async () => {
       if (!patientId) {
         throw new Error('患者未選択のためオーダーセットを保存できません。');
+      }
+      if (!actionVisitDate) {
+        throw new Error('来院日未解決のためオーダーセットを保存できません。');
       }
       const resolvedName = orderSetName.trim() || `${actionVisitDate} セット`;
       const diseaseResult = await fetchDiseases({
@@ -5189,7 +5203,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                                 />
                               </div>
                               <p className="charts-side-panel__help">
-                                対象: 病名 / オーダー（{actionVisitDate}）
+                                対象: 病名 / オーダー（{actionVisitDate ?? '来院日未解決'}）
                               </p>
                               <div className="charts-side-panel__actions">
                                 <button

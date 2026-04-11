@@ -16,7 +16,7 @@ vi.mock('../../orcaReportApi', async () => {
 });
 
 vi.mock('../../orcaIncomeInfoApi', () => ({
-  buildIncomeInfoRequest: vi.fn().mockReturnValue({ patientId: 'P-1' }),
+  buildIncomeInfoRequest: vi.fn().mockReturnValue({ patientId: 'P-1', baseDate: '2026-01-22' }),
   fetchOrcaIncomeInfo: vi.fn().mockResolvedValue({ ok: true, status: 200, entries: [] }),
 }));
 
@@ -37,9 +37,13 @@ describe('useOrcaReportPrint', () => {
     const { result } = renderHook(() =>
       useOrcaReportPrint({
         dialogOpen: true,
-        patientId: 'P-1',
         appointmentId: 'A-1',
-        visitDate: '2026-01-22',
+        orcaEncounterContext: {
+          patientId: 'P-1',
+          visitDate: '2026-01-22',
+          departmentCode: '01',
+          insuranceCombinationNumber: '0001',
+        },
         runId: 'RUN-PRINT',
         cacheHit: false,
         missingMaster: false,
@@ -76,9 +80,13 @@ describe('useOrcaReportPrint', () => {
     const { result } = renderHook(() =>
       useOrcaReportPrint({
         dialogOpen: true,
-        patientId: 'P-1',
         appointmentId: 'A-1',
-        visitDate: '2026-01-22',
+        orcaEncounterContext: {
+          patientId: 'P-1',
+          visitDate: '2026-01-22',
+          departmentCode: '01',
+          insuranceCombinationNumber: '0001',
+        },
         runId: 'RUN-PRINT',
         cacheHit: false,
         missingMaster: false,
@@ -119,5 +127,38 @@ describe('useOrcaReportPrint', () => {
         }),
       }),
     );
+  });
+
+  it('visitDate 未確定時は report preview を fail-close する', async () => {
+    const { result } = renderHook(() =>
+      useOrcaReportPrint({
+        dialogOpen: true,
+        appointmentId: 'A-1',
+        orcaEncounterContext: {
+          patientId: 'P-1',
+          departmentCode: '01',
+          insuranceCombinationNumber: '0001',
+        },
+        runId: 'RUN-PRINT',
+        cacheHit: false,
+        missingMaster: false,
+        fallbackUsed: false,
+        dataSourceTransition: 'server',
+      }),
+    );
+
+    act(() => {
+      result.current.setPrintDestination('karteno1');
+    });
+
+    let response: any = null;
+    await act(async () => {
+      response = await (result.current.requestReportPreview as any)();
+    });
+
+    expect(response?.ok).toBe(false);
+    if (response && !response.ok) {
+      expect(response.error).toContain('Perform_Date');
+    }
   });
 });

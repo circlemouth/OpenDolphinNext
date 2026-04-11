@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
 import { ChartsActionBar } from '../ChartsActionBar';
-import { postOrcaMedicalModV2Xml } from '../orcaClaimApi';
+import { ORCA_MEDICALMODV2_PATH, postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles } from '../orderBundleApi';
 import { getOrcaClaimSendEntry } from '../orcaClaimSendCache';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
@@ -132,19 +132,31 @@ const defaultSelectedEntry: ReceptionEntry = {
 };
 
 const renderActionBar = (selectedEntry?: Partial<ReceptionEntry>) =>
-  render(
-    <MemoryRouter>
-      <ChartsActionBar
-        {...({
-          ...baseProps,
-          patientId: '000001',
-          encounterId: 'F001:E100',
-          visitDate: '2026-01-20',
-          selectedEntry: selectedEntry ? { ...defaultSelectedEntry, ...selectedEntry } : defaultSelectedEntry,
-        } as any)}
-      />
-    </MemoryRouter>,
-  );
+  {
+    const mergedSelectedEntry = selectedEntry ? { ...defaultSelectedEntry, ...selectedEntry } : defaultSelectedEntry;
+    return render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...({
+            ...baseProps,
+            patientId: '000001',
+            encounterId: 'F001:E100',
+            visitDate: '2026-01-20',
+            orcaEncounterContext: {
+              patientId: mergedSelectedEntry.patientId,
+              visitDate: mergedSelectedEntry.visitDate,
+              departmentCode: mergedSelectedEntry.departmentCode,
+              physicianCode: mergedSelectedEntry.physicianCode,
+              insuranceCombinationNumber: mergedSelectedEntry.insuranceCombinationNumber,
+              voucherNumber: mergedSelectedEntry.voucherNumber,
+              sequentialNumber: mergedSelectedEntry.sequentialNumber,
+            },
+            selectedEntry: mergedSelectedEntry,
+          } as any)}
+        />
+      </MemoryRouter>,
+    );
+  };
 
 describe('ChartsActionBar ORCA send', () => {
   beforeEach(() => {
@@ -211,8 +223,14 @@ describe('ChartsActionBar ORCA send', () => {
     const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
     expect(sendButton).toBeDisabled();
     expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
-    expect(screen.getByText(/Physician_Code/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Physician_Code/).length).toBeGreaterThan(0);
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
+  it('chart flow regression: legacy medicalmod route を current route に戻さない', async () => {
+    const legacyMedicalModRoute = ['medicalmod', 'v23'].join('');
+    expect(ORCA_MEDICALMODV2_PATH).toBe('/api/orca/official/chart-support/medical-mod-v2');
+    expect(ORCA_MEDICALMODV2_PATH).not.toContain(legacyMedicalModRoute);
   });
 
   it('blocks invalid treatment codes', async () => {

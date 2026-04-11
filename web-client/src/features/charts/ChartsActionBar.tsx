@@ -37,8 +37,8 @@ import {
   prepareMedicalModV2SendData,
 } from './orderRpNormalization';
 import {
-  buildOrcaEncounterContext,
   formatMissingOrcaEncounterContextLabels,
+  hasCompleteOrcaEncounterContext,
   resolveMissingOrcaEncounterContextFields,
   type OrcaEncounterContext,
 } from './orcaEncounterContext';
@@ -316,31 +316,12 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const isServerRoute = dataSourceTransition === 'server';
   const headerMetaCollapsed = compactHeader && isHeaderCollapsed;
   const resolvedVisitDate = useMemo(
-    () => visitDate ?? selectedEntry?.visitDate,
-    [selectedEntry?.visitDate, visitDate],
+    () => orcaEncounterContext?.visitDate ?? visitDate ?? selectedEntry?.visitDate,
+    [orcaEncounterContext?.visitDate, selectedEntry?.visitDate, visitDate],
   );
   const resolvedOrcaEncounterContext = useMemo(
-    () =>
-      buildOrcaEncounterContext({
-        patientId: resolvedPatientId,
-        visitDate: resolvedVisitDate,
-        departmentCode: selectedEntry?.departmentCode,
-        physicianCode: selectedEntry?.physicianCode,
-        insuranceCombinationNumber: selectedEntry?.insuranceCombinationNumber,
-        voucherNumber: selectedEntry?.voucherNumber,
-        sequentialNumber: selectedEntry?.sequentialNumber,
-        ...orcaEncounterContext,
-      }),
-    [
-      orcaEncounterContext,
-      resolvedPatientId,
-      resolvedVisitDate,
-      selectedEntry?.departmentCode,
-      selectedEntry?.insuranceCombinationNumber,
-      selectedEntry?.physicianCode,
-      selectedEntry?.sequentialNumber,
-      selectedEntry?.voucherNumber,
-    ],
+    () => orcaEncounterContext ?? {},
+    [orcaEncounterContext],
   );
   const missingOrcaEncounterContextFields = useMemo(
     () => resolveMissingOrcaEncounterContextFields(resolvedOrcaEncounterContext),
@@ -349,10 +330,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const orcaSendEntry = getOrcaClaimSendEntry(storageScope, resolvedPatientId);
   const reportPrint = useOrcaReportPrint({
     dialogOpen: printDialogOpen,
-    patientId: resolvedPatientId,
     appointmentId: resolvedAppointmentId,
-    visitDate: resolvedVisitDate,
-    selectedEntry,
+    orcaEncounterContext: resolvedOrcaEncounterContext,
     orcaSendEntry,
     runId,
     cacheHit,
@@ -720,6 +699,16 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       });
     }
 
+    if (missingOrcaEncounterContextFields.length > 0) {
+      const missingLabels = formatMissingOrcaEncounterContextLabels(missingOrcaEncounterContextFields);
+      reasons.push({
+        key: 'missing_encounter_context',
+        summary: '来院文脈不足: 正式出力条件を満たさず印刷不可',
+        detail: `${missingLabels.join(', ')} が不足しているため印刷できません。`,
+        next: ['受付一覧を再取得', '対象来院を開き直して文脈を再同期'],
+      });
+    }
+
     if (missingMaster) {
       reasons.push({
         key: 'missing_master',
@@ -763,6 +752,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     readOnlyReason,
     selectedEntry,
     uiLocked,
+    missingOrcaEncounterContextFields,
   ]);
 
   const printDisabled = printPrecheckReasons.length > 0;
@@ -1437,8 +1427,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             return;
           }
 
+          if (!hasCompleteOrcaEncounterContext(resolvedOrcaEncounterContext)) {
+            throw new Error('ORCA encounter context is incomplete');
+          }
           const requestXml = buildMedicalModV2RequestXml({
-            encounterContext: resolvedOrcaEncounterContext as OrcaEncounterContext,
+            encounterContext: resolvedOrcaEncounterContext,
             medicalInformation: preparedSendData.medicalInformation,
           });
           const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01', signal });

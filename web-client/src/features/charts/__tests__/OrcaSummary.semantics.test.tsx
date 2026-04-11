@@ -126,11 +126,12 @@ describe('OrcaSummary semantics', () => {
     expect(screen.getByText('ORCA収納情報')).toBeInTheDocument();
     expect(screen.getByText('対象日: 2026-03-09')).toBeInTheDocument();
     expect(screen.getByText(/保険組合せ: 0001/)).toBeInTheDocument();
-    expect(screen.getByText('未収')).toBeInTheDocument();
-    expect(screen.getByText('保険適用')).toBeInTheDocument();
-    expect(screen.getByText('自費')).toBeInTheDocument();
-    expect(screen.getByText(/2026-03-09 ｜ 内科 ｜ 請求: 1,200 円 ｜ 入金:/)).toBeInTheDocument();
-    expect(screen.getByText(/未収: 2026-03-09 ｜ 伝票 INV-1 ｜ 500 円/)).toBeInTheDocument();
+    expect(screen.getByText('未収金合計')).toBeInTheDocument();
+    expect(screen.getByText('保険適用金額')).toBeInTheDocument();
+    expect(screen.getByText('自費金額')).toBeInTheDocument();
+    expect(screen.getByText('食事・生活療養負担金')).toBeInTheDocument();
+    expect(screen.getByText(/2026-03-09 ｜ 内科 ｜ 請求金額: 1,200 円 ｜ 入金額:/)).toBeInTheDocument();
+    expect(screen.getByText(/未収金情報: 2026-03-09 ｜ 伝票 INV-1 ｜ 500 円/)).toBeInTheDocument();
     expect(screen.queryByText('請求サマリ')).not.toBeInTheDocument();
   });
 });
