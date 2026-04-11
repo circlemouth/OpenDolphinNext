@@ -27,15 +27,78 @@ record PatientModV2OutpatientOrcaCoordinator(
         OrcaLiveGateway orcaWrapperService,
         OrcaPatientSyncService orcaPatientSyncService) {
 
+    private static final String ORCA_PATIENTMOD_CREATE_CLASS = "01";
     private static final String ORCA_PATIENTMOD_CLASS = "02";
     private static final int ORCA_UPDATE_MAX_RETRY = 1;
+
+    PatientModV2OutpatientSupport.OrcaMutationResult createOrcaAndSyncLocal(
+            String facilityId,
+            PatientModV2OutpatientSupport.PatientPatch patch,
+            String runId,
+            Map<String, Object> details) {
+        ensurePatientService();
+
+        String requestedPatientId = patch.patientId != null && !patch.patientId.isBlank() ? patch.patientId : "*";
+        if (!"*".equals(requestedPatientId)) {
+            PatientModel existing = patientServiceBean().getPatientById(facilityId, requestedPatientId);
+            if (existing != null) {
+                if (!PatientModV2OutpatientSupport.matchesLocalPatient(existing, patch)) {
+                    throw AbstractResource.restError(null, Response.Status.CONFLICT, "patient_exists",
+                            "患者が既に存在します。患者IDと内容を確認してください。");
+                }
+                PatientModV2OutpatientSupport.OrcaMutationResult result = new PatientModV2OutpatientSupport.OrcaMutationResult();
+                result.apiResult = "00";
+                result.apiResultMessage = "既存患者のためスキップしました";
+                result.patient = existing;
+                result.idempotent = true;
+                result.idempotentReason = "existing_patient";
+                return result;
+            }
+        }
+
+        ensureOrcaSyncDependencies();
+        PatientModV2OutpatientSupport.OrcaApiResult created = postPatientMod(
+                facilityId,
+                PatientModV2OutpatientSupport.buildPatientModPayload(
+                        "1",
+                        requestedPatientId,
+                        requireText(patch.name, "name"),
+                        requireText(patch.kana, "kana"),
+                        requireText(patch.birthDate, "birthDate"),
+                        requireSex(patch.sex),
+                        patch.zip,
+                        patch.address,
+                        patch.phone,
+                        null),
+                ORCA_PATIENTMOD_CREATE_CLASS);
+        if (!created.success) {
+            throw AbstractResource.restError(null, Response.Status.BAD_GATEWAY, "orca_patient_create_failed",
+                    created.apiResultMessage != null ? created.apiResultMessage : "ORCA patient create failed");
+        }
+
+        String resolvedPatientId = created.patientId != null && !created.patientId.isBlank()
+                ? created.patientId
+                : requestedPatientId;
+        if (resolvedPatientId == null || resolvedPatientId.isBlank() || "*".equals(resolvedPatientId)) {
+            throw new OrcaGatewayException("ORCA create response did not include a patientId");
+        }
+
+        details.put("requestedPatientId", requestedPatientId);
+        details.put("resolvedPatientId", resolvedPatientId);
+        PatientModel synced = importFromOrcaAndFetchLocal(facilityId, resolvedPatientId, runId, details);
+        PatientModV2OutpatientSupport.OrcaMutationResult result = new PatientModV2OutpatientSupport.OrcaMutationResult();
+        result.apiResult = created.apiResult;
+        result.apiResultMessage = created.apiResultMessage != null ? created.apiResultMessage : "ORCA登録完了";
+        result.patient = synced;
+        return result;
+    }
 
     PatientModV2OutpatientSupport.OrcaMutationResult updateOrcaAndSyncLocal(
             String facilityId,
             PatientModV2OutpatientSupport.PatientPatch patch,
             String runId,
             Map<String, Object> details) {
-        ensureDependencies();
+        ensureAllDependencies();
         PatientModV2OutpatientSupport.OrcaPatientBaseline baseline = fetchOrcaPatientBaseline(facilityId, patch.patientId);
         Set<String> changeSet = PatientModV2OutpatientSupport.resolveChangeSet(patch, baseline);
         details.put("editableKeys", List.copyOf(PatientModV2OutpatientSupport.EDITABLE_KEYS));
@@ -89,7 +152,7 @@ record PatientModV2OutpatientOrcaCoordinator(
     }
 
     PatientModel importFromOrcaAndFetchLocal(String facilityId, String patientId, String runId, Map<String, Object> details) {
-        ensureDependencies();
+        ensureAllDependencies();
         PatientImportRequest request = new PatientImportRequest();
         request.getPatientIds().add(patientId);
         request.setIncludeInsurance(false);
@@ -151,7 +214,7 @@ record PatientModV2OutpatientOrcaCoordinator(
                     desired.zipCode,
                     desired.address,
                     desired.phone1,
-                    baseline.phone2));
+                    baseline.phone2), ORCA_PATIENTMOD_CLASS);
             if (!last.success) {
                 return new PatientModV2OutpatientSupport.OrcaUpdateExecution(false, last);
             }
@@ -169,7 +232,7 @@ record PatientModV2OutpatientOrcaCoordinator(
                     desired.zipCode,
                     desired.address,
                     desired.phone1,
-                    baseline.phone2));
+                    baseline.phone2), ORCA_PATIENTMOD_CLASS);
             if (!last.success) {
                 return new PatientModV2OutpatientSupport.OrcaUpdateExecution(false, last);
             }
@@ -235,17 +298,20 @@ record PatientModV2OutpatientOrcaCoordinator(
         return baseline;
     }
 
-    private PatientModV2OutpatientSupport.OrcaApiResult postPatientMod(String facilityId, String payloadWithoutMeta) {
+    private PatientModV2OutpatientSupport.OrcaApiResult postPatientMod(String facilityId,
+            String payloadWithoutMeta,
+            String classCode) {
         if (orcaTransport() == null) {
             throw new IllegalStateException("OrcaTransport is not available");
         }
-        String payload = OrcaApiProxySupport.applyQueryMeta(payloadWithoutMeta, OrcaEndpoint.PATIENT_MOD, ORCA_PATIENTMOD_CLASS);
+        String payload = OrcaApiProxySupport.applyQueryMeta(payloadWithoutMeta, OrcaEndpoint.PATIENT_MOD, classCode);
         OrcaTransportResult result = orcaTransport().invoke(facilityId, OrcaEndpoint.PATIENT_MOD, OrcaTransportRequest.post(payload));
         PatientModV2OutpatientSupport.OrcaApiResult parsed = new PatientModV2OutpatientSupport.OrcaApiResult();
         parsed.httpStatus = result != null ? result.getStatus() : 0;
         String body = result != null ? result.getBody() : null;
         parsed.apiResult = PatientModV2OutpatientSupport.extractTagValue(body, "Api_Result");
         parsed.apiResultMessage = PatientModV2OutpatientSupport.extractTagValue(body, "Api_Result_Message");
+        parsed.patientId = PatientModV2OutpatientSupport.extractTagValue(body, "Patient_ID");
         parsed.success = OrcaApiProxySupport.isApiResultSuccess(parsed.apiResult);
         if (parsed.apiResultMessage == null || parsed.apiResultMessage.isBlank()) {
             parsed.apiResultMessage = parsed.success ? "OK" : "ORCA error";
@@ -253,12 +319,37 @@ record PatientModV2OutpatientOrcaCoordinator(
         return parsed;
     }
 
-    private void ensureDependencies() {
+    private void ensurePatientService() {
         if (patientServiceBean() == null) {
             throw new IllegalStateException("PatientServiceBean is not available");
         }
+    }
+
+    private void ensureOrcaSyncDependencies() {
         if (orcaPatientSyncService() == null) {
             throw new IllegalStateException("OrcaPatientSyncService is not available");
         }
+    }
+
+    private void ensureAllDependencies() {
+        ensurePatientService();
+        ensureOrcaSyncDependencies();
+    }
+
+    private String requireText(String value, String label) {
+        String trimmed = PatientModV2OutpatientSupport.safeTrim(value);
+        if (trimmed == null || trimmed.isBlank()) {
+            throw AbstractResource.restError(null, Response.Status.BAD_REQUEST, "invalid_request", label + " is required");
+        }
+        return trimmed;
+    }
+
+    private String requireSex(String value) {
+        String normalized = PatientModV2OutpatientSupport.normalizeOrcaSexCode(value);
+        if (!"1".equals(normalized) && !"2".equals(normalized)) {
+            throw AbstractResource.restError(null, Response.Status.BAD_REQUEST, "invalid_request",
+                    "sex must be M/F (or ORCA 1/2)");
+        }
+        return normalized;
     }
 }

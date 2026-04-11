@@ -32,7 +32,7 @@ import { type KarteImageListItem } from '../../images/api';
 import type { ChartImageAttachment } from '../documentImageAttach';
 import { receptionStyles } from '../../reception/styles';
 import { fetchAppointmentOutpatients, fetchClaimFlags, type AppointmentPayload, type ReceptionEntry } from '../../reception/api';
-import { fetchPatients, type PatientRecord } from '../../patients/api';
+import { searchLocalPatients, type PatientRecord } from '../../patients/api';
 import { getAuditEventLog, logAuditEvent, logUiState, type AuditEventRecord } from '../../../libs/audit/auditLogger';
 import { buildUnavailableMedicalSummary, fetchChartsMedicalSummary } from '../api';
 import { openChartEncounter } from '../encounterTransitionApi';
@@ -2192,7 +2192,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     queryKey: ['charts-patient-fallback', patientId],
     queryFn: async () => {
       if (!patientId) return null;
-      const result = await fetchPatients({ keyword: patientId });
+      const result = await searchLocalPatients({ keyword: patientId });
       const exact = result.patients.find((p) => (p.patientId ?? '').trim() === patientId);
       return exact ?? result.patients[0] ?? null;
     },

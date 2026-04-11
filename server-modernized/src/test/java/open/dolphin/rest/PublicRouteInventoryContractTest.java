@@ -34,7 +34,6 @@ class PublicRouteInventoryContractTest {
             "PUT /api/pvt/{*}",
             "PUT /api/pvt/memo/{*}",
             "DELETE /api/pvt/{*}",
-            "POST /api/orca/patientmodv2/outpatient",
             "POST /api/karte/document/pvt/{*}",
             "POST /api/orca/medical/outpatient",
             "POST /api/orca/local-medical/outpatient",
@@ -74,6 +73,8 @@ class PublicRouteInventoryContractTest {
                 "POST /api/orca/chart/subjectives",
                 "POST /api/orca/medical/records");
         assertThat(routeKeys).contains(
+                "POST /api/orca/patientmodv2/outpatient/create",
+                "POST /api/orca/patientmodv2/outpatient/update",
                 "POST /api/local/patients/mutation",
                 "POST /api/local/patients/search",
                 "POST /api/local/charts/subjectives",
@@ -90,7 +91,6 @@ class PublicRouteInventoryContractTest {
         assertThat(classNames).doesNotContain(
                 "open.dolphin.rest.AdminAccessPasswordResetResource",
                 "open.dolphin.rest.PVTResource",
-                "open.dolphin.rest.PatientModV2OutpatientResource",
                 "open.dolphin.rest.orca.OrcaMedicalOutpatientResource",
                 "open.dolphin.rest.orca.OrcaDiseaseResource",
                 "open.dolphin.rest.orca.OrcaLocalMedicalOutpatientResource",

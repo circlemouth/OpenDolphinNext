@@ -269,6 +269,84 @@ export const outpatientHandlers = [
       status: 200,
     });
   }),
+  http.post('/api/orca/patients/batch', async ({ request }) => {
+    const scenario = applyRequestScenario(request);
+    const raw = (await request.json().catch(() => ({}))) as any;
+    const patientIds: string[] = Array.isArray(raw?.patientIds) ? raw.patientIds : [];
+    return respond({
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      runId: scenario.flags.runId,
+      traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
+      routeNamespace: 'official',
+      targetPatientCount: patientIds.length,
+      noTargetPatientCount: 0,
+      patients: patientIds.map((patientId) => ({
+        summary: {
+          patientId,
+          wholeName: `患者 ${patientId}`,
+          wholeNameKana: `カンジャ ${patientId}`,
+          birthDate: '1980-01-01',
+          sex: '1',
+        },
+        zipCode: '100-0001',
+        address: '東京都千代田区',
+        phoneNumber1: '0311112222',
+      })),
+      status: 200,
+    });
+  }),
+  http.post('/api/orca/patientmodv2/outpatient/create', async ({ request }) => {
+    const scenario = applyRequestScenario(request);
+    const raw = (await request.json().catch(() => ({}))) as any;
+    const patient = raw?.patient ?? {};
+    const patientId = typeof patient.patientId === 'string' && patient.patientId.trim() ? patient.patientId : '000099';
+    return respond({
+      apiResult: '00',
+      apiResultMessage: 'ORCA登録完了',
+      runId: scenario.flags.runId,
+      traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
+      routeNamespace: 'official',
+      patientDbId: 12,
+      patientId,
+      patient: {
+        patientId,
+        name: patient.wholeName ?? '患者 000099',
+        kana: patient.wholeNameKana ?? 'カンジャ 000099',
+        birthDate: patient.birthDate ?? '1980-01-01',
+        sex: patient.sex ?? 'M',
+        phone: patient.telephone ?? '0311112222',
+        zip: patient.zipCode ?? '100-0001',
+        address: patient.addressLine ?? '東京都千代田区',
+      },
+      status: 200,
+    });
+  }),
+  http.post('/api/orca/patientmodv2/outpatient/update', async ({ request }) => {
+    const scenario = applyRequestScenario(request);
+    const raw = (await request.json().catch(() => ({}))) as any;
+    const patient = raw?.patient ?? {};
+    return respond({
+      apiResult: '00',
+      apiResultMessage: 'ORCA更新完了',
+      runId: scenario.flags.runId,
+      traceId: scenario.flags.traceId ?? `trace-${scenario.flags.runId}`,
+      routeNamespace: 'official',
+      patientDbId: 12,
+      patientId: patient.patientId,
+      patient: {
+        patientId: patient.patientId,
+        name: patient.wholeName ?? '患者 000001',
+        kana: patient.wholeNameKana ?? 'カンジャ 000001',
+        birthDate: patient.birthDate ?? '1980-01-01',
+        sex: patient.sex ?? 'M',
+        phone: patient.telephone ?? '0311112222',
+        zip: patient.zipCode ?? '100-0001',
+        address: patient.addressLine ?? '東京都千代田区',
+      },
+      status: 200,
+    });
+  }),
   http.post('/api/local/patients/mutation', async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);

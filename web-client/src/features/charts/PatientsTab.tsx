@@ -20,7 +20,7 @@ import {
 } from './encounterContext';
 import { useSession } from '../../AppRouter';
 import { useAppNavigation } from '../../routes/useAppNavigation';
-import { fetchPatients, type PatientRecord } from '../patients/api';
+import { searchLocalPatients, type PatientRecord } from '../patients/api';
 import { OrcaHokenjaReferenceDialog } from './OrcaHokenjaReferenceDialog';
 import { PatientInfoEditDialog } from './PatientInfoEditDialog';
 
@@ -432,7 +432,7 @@ export function PatientsTab({
     queryKey: ['charts-patient-sidepane-baseline', selectedPatientId],
     queryFn: async () => {
       if (!selectedPatientId) return null;
-      const result = await fetchPatients({ keyword: selectedPatientId });
+      const result = await searchLocalPatients({ keyword: selectedPatientId });
       const exact = result.patients.find((p) => p.patientId === selectedPatientId);
       return exact ?? result.patients[0] ?? null;
     },

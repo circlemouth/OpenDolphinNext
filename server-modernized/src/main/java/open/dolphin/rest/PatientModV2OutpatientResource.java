@@ -9,32 +9,37 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import open.dolphin.audit.AuditEventEnvelope;
-import open.dolphin.infomodel.PatientModel;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
 import open.dolphin.orca.transport.OrcaTransport;
+import open.dolphin.rest.dto.orca.OfficialPatientCreateRequest;
+import open.dolphin.rest.dto.orca.OfficialPatientMutationResponse;
+import open.dolphin.rest.dto.orca.OfficialPatientUpdateRequest;
+import open.dolphin.rest.dto.outpatient.OutpatientFlagResponse;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.PatientServiceBean;
 
 /**
- * Web client endpoint for /api/orca/patientmodv2/outpatient.
+ * Web client endpoint for official ORCA patient create/update.
  *
- * <p>Updates are reflected to ORCA (patientmodv2 class=02) and then re-imported (ORCA -> local)
+ * <p>Create/update are reflected to ORCA (patientmodv2 class=01/class=02) and then re-imported (ORCA -> local)
  * so the local patient table stays consistent with ORCA.</p>
  */
 @Path("/orca/patientmodv2/outpatient")
 public final class PatientModV2OutpatientResource extends AbstractResource {
 
     private static final String DATA_SOURCE_SERVER = "server";
-    private static final String AUDIT_ACTION = "LOCAL_PATIENT_MUTATION_LEGACY";
+    private static final String ROUTE_NAMESPACE = "official";
+    private static final String CREATE_RESOURCE_PATH = "/api/orca/patientmodv2/outpatient/create";
+    private static final String UPDATE_RESOURCE_PATH = "/api/orca/patientmodv2/outpatient/update";
+    private static final String CREATE_AUDIT_ACTION = "OFFICIAL_PATIENT_CREATE";
+    private static final String UPDATE_AUDIT_ACTION = "OFFICIAL_PATIENT_UPDATE";
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -68,16 +73,26 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
     }
 
     @POST
+    @Path("/create")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response mutatePatient(@Context HttpServletRequest request, Map<String, Object> payload) {
-        return handleMutation(request, payload, DATA_SOURCE_SERVER, false);
+    public Response createPatient(@Context HttpServletRequest request, OfficialPatientCreateRequest body) {
+        return handleCreate(request, body);
     }
 
-    private Response handleMutation(HttpServletRequest request,
-            Map<String, Object> payload,
-            String dataSource,
-            boolean fallbackUsed) {
+    @POST
+    @Path("/update")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updatePatient(@Context HttpServletRequest request, OfficialPatientUpdateRequest body) {
+        return handleUpdate(request, body);
+    }
+
+    Response mutatePatient(HttpServletRequest request, Map<String, Object> payload) {
+        throw new UnsupportedOperationException("legacy multiplexed patient mutation route is removed");
+    }
+
+    private Response handleCreate(HttpServletRequest request, OfficialPatientCreateRequest body) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
         String traceId = resolveTraceId(request);
         String requestId = resolveRequestId(request, traceId);
@@ -85,122 +100,56 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
         if (facilityId == null || facilityId.isBlank()) {
             throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
         }
+        PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toCreatePatch(body);
+        OfficialPatientMutationResponse response = createBaseResponse(runId, traceId, requestId);
+        Map<String, Object> details = createAuditDetails(request, "create", patch, runId, facilityId, response.getFetchedAt());
+        PatientModV2OutpatientSupport.applyAuditMeta(details, body != null ? body.getAuditMeta() : null);
 
-        String operation = PatientModV2OutpatientSupport.getNonBlankText(payload, "operation");
-        if (operation == null) {
-            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "operation is required");
+        try {
+            PatientModV2OutpatientSupport.OrcaMutationResult result =
+                    orcaCoordinator().createOrcaAndSyncLocal(facilityId, patch, runId, details);
+            populateSuccessResponse(response, result, details, traceId, requestId, CREATE_AUDIT_ACTION);
+            dispatchAuditEvent(request, details, CREATE_AUDIT_ACTION, AuditEventEnvelope.Outcome.SUCCESS);
+            Response.ResponseBuilder builder = Response.status(Response.Status.OK).entity(response);
+            applyObservabilityHeaders(builder, runId, traceId, requestId, DATA_SOURCE_SERVER, false);
+            return builder.build();
+        } catch (RuntimeException ex) {
+            details.put("errorMessage", ex.getMessage());
+            dispatchAuditEvent(request, details, CREATE_AUDIT_ACTION, AuditEventEnvelope.Outcome.FAILURE);
+            throw ex;
         }
+    }
 
-        PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toPatientPatch(payload);
-        if (patch.patientId == null || patch.patientId.isBlank()) {
+    private Response handleUpdate(HttpServletRequest request, OfficialPatientUpdateRequest body) {
+        String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
+        String traceId = resolveTraceId(request);
+        String requestId = resolveRequestId(request, traceId);
+        String facilityId = requireFacilityId(request);
+        if (facilityId == null || facilityId.isBlank()) {
+            throw restError(request, Response.Status.UNAUTHORIZED, "facility_missing", "Facility is required");
+        }
+        PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toUpdatePatch(body);
+        if (patch.patientId == null || patch.patientId.isBlank() || "*".equals(patch.patientId)) {
             throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "patientId is required");
         }
 
-        Map<String, Object> response = createBaseResponse(runId, traceId, requestId, dataSource, fallbackUsed, facilityId);
-        Map<String, Object> details = createAuditDetails(request, operation, patch, runId, dataSource, fallbackUsed, facilityId,
-                response.get("fetchedAt"));
-
-        boolean success = false;
-        Response.Status status = Response.Status.OK;
-        String apiResult = "00";
-        String apiResultMessage = "OK";
-        PatientModel syncedPatient = null;
+        OfficialPatientMutationResponse response = createBaseResponse(runId, traceId, requestId);
+        Map<String, Object> details = createAuditDetails(request, "update", patch, runId, facilityId, response.getFetchedAt());
+        PatientModV2OutpatientSupport.applyAuditMeta(details, body != null ? body.getAuditMeta() : null);
 
         try {
-            MutationOutcome outcome = executeOperation(request, operation, facilityId, patch, runId, response, details);
-            success = outcome.success();
-            status = outcome.status();
-            apiResult = outcome.apiResult();
-            apiResultMessage = outcome.apiResultMessage();
-            syncedPatient = outcome.patient();
+            PatientModV2OutpatientSupport.OrcaMutationResult result =
+                    orcaCoordinator().updateOrcaAndSyncLocal(facilityId, patch, runId, details);
+            populateSuccessResponse(response, result, details, traceId, requestId, UPDATE_AUDIT_ACTION);
+            dispatchAuditEvent(request, details, UPDATE_AUDIT_ACTION, AuditEventEnvelope.Outcome.SUCCESS);
+            Response.ResponseBuilder builder = Response.status(Response.Status.OK).entity(response);
+            applyObservabilityHeaders(builder, runId, traceId, requestId, DATA_SOURCE_SERVER, false);
+            return builder.build();
         } catch (RuntimeException ex) {
             details.put("errorMessage", ex.getMessage());
-            dispatchAuditEvent(request, details, AUDIT_ACTION, AuditEventEnvelope.Outcome.FAILURE);
+            dispatchAuditEvent(request, details, UPDATE_AUDIT_ACTION, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
-
-        response.put("apiResult", apiResult);
-        response.put("apiResultMessage", apiResultMessage);
-        response.put("operation", operation);
-        response.put("status", status.getStatusCode());
-        response.put("patientDbId", syncedPatient != null ? syncedPatient.getId() : null);
-        response.put("patient", syncedPatient != null
-                ? PatientModV2OutpatientSupport.toPatientRecord(syncedPatient)
-                : patch.toResponse());
-        response.put("auditEvent", createAuditEvent(details, traceId, requestId, success));
-
-        dispatchAuditEvent(request, details, AUDIT_ACTION,
-                success ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
-
-        Response.ResponseBuilder builder = Response.status(status).entity(response);
-        applyObservabilityHeaders(builder, runId, traceId, requestId, dataSource, fallbackUsed);
-        return builder.build();
-    }
-
-    private MutationOutcome executeOperation(HttpServletRequest request,
-            String operation,
-            String facilityId,
-            PatientModV2OutpatientSupport.PatientPatch patch,
-            String runId,
-            Map<String, Object> response,
-            Map<String, Object> details) {
-        switch (operation.toLowerCase(Locale.ROOT)) {
-            case "create" -> {
-                return handleCreate(request, facilityId, patch, runId, response, details);
-            }
-            case "update" -> {
-                return handleUpdate(facilityId, patch, runId, details);
-            }
-            case "delete" -> {
-                return new MutationOutcome(
-                        false,
-                        Response.Status.FORBIDDEN,
-                        "79",
-                        "患者削除は電子カルテ側から実行できません（ORCA側で操作してください）",
-                        null);
-            }
-            default -> throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
-                    "Unsupported operation: " + operation);
-        }
-    }
-
-    private MutationOutcome handleCreate(HttpServletRequest request,
-            String facilityId,
-            PatientModV2OutpatientSupport.PatientPatch patch,
-            String runId,
-            Map<String, Object> response,
-            Map<String, Object> details) {
-        if (patientServiceBean == null) {
-            throw new IllegalStateException("PatientServiceBean is not available");
-        }
-        PatientModel existing = patientServiceBean.getPatientById(facilityId, patch.patientId);
-        if (existing != null) {
-            if (!PatientModV2OutpatientSupport.matchesLocalPatient(existing, patch)) {
-                details.put("idempotent", Boolean.FALSE);
-                details.put("idempotentReason", "existing_patient_conflict");
-                details.put("localPatientDbId", existing.getId());
-                details.put("localPatientSnapshot", PatientModV2OutpatientSupport.toPatientRecord(existing));
-                throw restError(request, Response.Status.CONFLICT, "patient_exists",
-                        "患者が既に存在します。患者IDと内容を確認してください。");
-            }
-            response.put("idempotent", Boolean.TRUE);
-            response.put("idempotentReason", "existing_patient");
-            details.put("idempotent", Boolean.TRUE);
-            details.put("idempotentReason", "existing_patient");
-            return new MutationOutcome(true, Response.Status.OK, "00", "既存患者のためスキップしました", existing);
-        }
-
-        PatientModel imported = orcaCoordinator().importFromOrcaAndFetchLocal(facilityId, patch.patientId, runId, details);
-        return new MutationOutcome(true, Response.Status.OK, "00", "ORCAから取り込みました", imported);
-    }
-
-    private MutationOutcome handleUpdate(String facilityId,
-            PatientModV2OutpatientSupport.PatientPatch patch,
-            String runId,
-            Map<String, Object> details) {
-        PatientModV2OutpatientSupport.OrcaMutationResult result =
-                orcaCoordinator().updateOrcaAndSyncLocal(facilityId, patch, runId, details);
-        return new MutationOutcome(true, Response.Status.OK, result.apiResult, result.apiResultMessage, result.patient);
     }
 
     private PatientModV2OutpatientOrcaCoordinator orcaCoordinator() {
@@ -211,23 +160,18 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
                 orcaPatientSyncService);
     }
 
-    private Map<String, Object> createBaseResponse(String runId,
-            String traceId,
-            String requestId,
-            String dataSource,
-            boolean fallbackUsed,
-            String facilityId) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("runId", runId);
-        response.put("traceId", traceId);
-        response.put("requestId", requestId);
-        response.put("dataSource", dataSource);
-        response.put("dataSourceTransition", dataSource);
-        response.put("cacheHit", Boolean.FALSE);
-        response.put("missingMaster", Boolean.FALSE);
-        response.put("fallbackUsed", fallbackUsed);
-        response.put("fetchedAt", Instant.now().toString());
-        response.put("facilityId", facilityId);
+    private OfficialPatientMutationResponse createBaseResponse(String runId, String traceId, String requestId) {
+        OfficialPatientMutationResponse response = new OfficialPatientMutationResponse();
+        response.setRunId(runId);
+        response.setTraceId(traceId);
+        response.setRequestId(requestId);
+        response.setRouteNamespace(ROUTE_NAMESPACE);
+        response.setDataSource(DATA_SOURCE_SERVER);
+        response.setDataSourceTransition(DATA_SOURCE_SERVER);
+        response.setCacheHit(false);
+        response.setMissingMaster(false);
+        response.setFallbackUsed(false);
+        response.setFetchedAt(java.time.Instant.now().toString());
         return response;
     }
 
@@ -235,20 +179,20 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
             String operation,
             PatientModV2OutpatientSupport.PatientPatch patch,
             String runId,
-            String dataSource,
-            boolean fallbackUsed,
             String facilityId,
-            Object fetchedAt) {
+            String fetchedAt) {
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("resource", request != null ? request.getRequestURI() : "/api/orca/patientmodv2/outpatient");
+        details.put("resource", request != null ? request.getRequestURI()
+                : ("create".equals(operation) ? CREATE_RESOURCE_PATH : UPDATE_RESOURCE_PATH));
         details.put("operation", operation);
         details.put("patientId", patch.patientId);
         details.put("runId", runId);
-        details.put("dataSource", dataSource);
-        details.put("dataSourceTransition", dataSource);
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        details.put("dataSource", DATA_SOURCE_SERVER);
+        details.put("dataSourceTransition", DATA_SOURCE_SERVER);
         details.put("cacheHit", Boolean.FALSE);
         details.put("missingMaster", Boolean.FALSE);
-        details.put("fallbackUsed", fallbackUsed);
+        details.put("fallbackUsed", Boolean.FALSE);
         details.put("fetchedAt", fetchedAt);
         details.put("facilityId", facilityId);
         if (patch.changedKeys != null && !patch.changedKeys.isEmpty()) {
@@ -257,14 +201,33 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
         return details;
     }
 
-    private Map<String, Object> createAuditEvent(Map<String, Object> details, String traceId, String requestId, boolean success) {
-        Map<String, Object> auditEvent = new LinkedHashMap<>();
-        auditEvent.put("action", AUDIT_ACTION);
-        auditEvent.put("resource", details.get("resource"));
-        auditEvent.put("outcome", success ? "SUCCESS" : "FAILURE");
-        auditEvent.put("details", details);
-        auditEvent.put("traceId", traceId);
-        auditEvent.put("requestId", requestId);
+    private void populateSuccessResponse(OfficialPatientMutationResponse response,
+            PatientModV2OutpatientSupport.OrcaMutationResult result,
+            Map<String, Object> details,
+            String traceId,
+            String requestId,
+            String action) {
+        response.setApiResult(result.apiResult != null ? result.apiResult : "00");
+        response.setApiResultMessage(result.apiResultMessage != null ? result.apiResultMessage : "OK");
+        response.setPatientDbId(result.patient != null ? result.patient.getId() : null);
+        response.setPatientId(result.patient != null ? result.patient.getPatientId() : details.get("patientId").toString());
+        response.setPatient(result.patient != null ? PatientModV2OutpatientSupport.toPatientRecord(result.patient) : null);
+        response.setIdempotent(result.idempotent);
+        response.setIdempotentReason(result.idempotentReason);
+        response.setAuditEvent(createAuditEvent(action, details, traceId, requestId));
+    }
+
+    private OutpatientFlagResponse.AuditEvent createAuditEvent(String action,
+            Map<String, Object> details,
+            String traceId,
+            String requestId) {
+        OutpatientFlagResponse.AuditEvent auditEvent = new OutpatientFlagResponse.AuditEvent();
+        auditEvent.setAction(action);
+        auditEvent.setResource(String.valueOf(details.get("resource")));
+        auditEvent.setOutcome("SUCCESS");
+        auditEvent.setDetails(details);
+        auditEvent.setTraceId(traceId);
+        auditEvent.setRequestId(requestId);
         return auditEvent;
     }
 
@@ -342,11 +305,4 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
         builder.header("x-fallback-used", String.valueOf(fallbackUsed));
     }
 
-    private record MutationOutcome(
-            boolean success,
-            Response.Status status,
-            String apiResult,
-            String apiResultMessage,
-            PatientModel patient) {
-    }
 }

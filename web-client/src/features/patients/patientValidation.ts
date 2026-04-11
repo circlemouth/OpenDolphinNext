@@ -56,7 +56,7 @@ export function validatePatientMutation(params: {
     return errors;
   }
 
-  if (!patientId) {
+  if (operation === 'update' && !patientId) {
     errors.push({ field: 'patientId', message: '患者ID（ORCA患者番号）は必須です。', kind: 'missing' });
   }
 

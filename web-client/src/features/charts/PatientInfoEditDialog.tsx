@@ -6,7 +6,7 @@ import { logUiState, logAuditEvent } from '../../libs/audit/auditLogger';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import { resolveAriaLive } from '../../libs/observability/observability';
 import type { DataSourceTransition } from '../../libs/observability/types';
-import { savePatient, type PatientRecord, type PatientMutationResult } from '../patients/api';
+import { updateOfficialPatient, type PatientRecord, type PatientMutationResult } from '../patients/api';
 import { fetchOrcaAddress } from '../patients/orcaAddressApi';
 import { PatientFormErrorAlert } from '../patients/PatientFormErrorAlert';
 import { diffPatientKeys, PATIENT_FIELD_LABEL, pickPatientSection } from '../patients/patientDiff';
@@ -177,9 +177,8 @@ export function PatientInfoEditDialog({
 
   const mutation = useMutation({
     mutationFn: async (params: { patient: PatientRecord; operation: PatientOperation; changedKeys: (keyof PatientRecord)[] }) => {
-      return savePatient({
+      return updateOfficialPatient({
         patient: params.patient,
-        operation: params.operation,
         runId: meta.runId,
         auditMeta: {
           source: 'charts',
@@ -237,7 +236,7 @@ export function PatientInfoEditDialog({
         fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-          action: 'LOCAL_PATIENT_MUTATION_SAVE',
+          action: 'OFFICIAL_PATIENT_UPDATE',
           outcome: 'error',
           subject: 'charts',
           details: {
@@ -255,7 +254,7 @@ export function PatientInfoEditDialog({
   });
 
   const canEdit = editAllowedResolved && masterOk;
-  const operation: PatientOperation = draft.patientId ? 'update' : 'create';
+  const operation: PatientOperation = 'update';
 
   const handleOrcaAddressLookup = async () => {
     const zip = normalizeZipDigits(draft.zip);
@@ -336,7 +335,7 @@ export function PatientInfoEditDialog({
       fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-        action: 'LOCAL_PATIENT_MUTATION_ROLLBACK',
+        action: 'OFFICIAL_PATIENT_UPDATE_ROLLBACK',
         outcome: 'success',
         subject: 'charts',
         details: { section: 'basic', patientId: meta.patientId, receptionId: meta.receptionId, appointmentId: meta.appointmentId },
@@ -365,7 +364,7 @@ export function PatientInfoEditDialog({
   };
 
   const title = '患者基本情報を更新';
-  const description = '保存前に差分を確認し、/api/local/patients/mutation で院内ローカル患者情報を更新します。';
+  const description = '保存前に差分を確認し、official update route で ORCA canonical と local sync を更新します。';
 
   const fieldErrorMap = useMemo(() => {
     const map = new Map<keyof PatientRecord, string>();

@@ -3,6 +3,7 @@ package open.dolphin.rest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -19,7 +20,13 @@ import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.sync.OrcaPatientSyncService;
+import open.dolphin.orca.transport.OrcaTransportRequest;
+import open.dolphin.orca.transport.OrcaTransportResult;
 import open.dolphin.orca.transport.OrcaTransport;
+import open.dolphin.rest.dto.orca.OfficialPatientAuditMeta;
+import open.dolphin.rest.dto.orca.OfficialPatientCreateRequest;
+import open.dolphin.rest.dto.orca.OfficialPatientPayload;
+import open.dolphin.rest.dto.orca.OfficialPatientUpdateRequest;
 import open.dolphin.rest.dto.orca.PatientBatchResponse;
 import open.dolphin.rest.dto.orca.PatientDetail;
 import open.dolphin.rest.dto.orca.PatientImportResponse;
@@ -30,21 +37,24 @@ import org.junit.jupiter.api.Test;
 class PatientModV2OutpatientSupportTest {
 
     @Test
-    void toPatientPatchReadsLegacyAliasesAndChangedKeys() {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("Patient_ID", "00001");
-        payload.put("Patient_Name", "山田 太郎");
-        payload.put("Patient_Kana", "ヤマダ タロウ");
-        payload.put("Patient_BirthDate", "1980-01-01");
-        payload.put("Patient_Sex", "1");
-        payload.put("telephone", "0311112222");
-        payload.put("postal", "100-0001");
-        payload.put("addressLine", "東京都千代田区");
-        payload.put("auditEvent", Map.of("changedKeys", List.of("name", "zip")));
+    void toCreatePatchDefaultsPatientIdToAutoAssignAndReadsChangedKeys() {
+        OfficialPatientPayload patient = new OfficialPatientPayload();
+        patient.setWholeName("山田 太郎");
+        patient.setWholeNameKana("ヤマダ タロウ");
+        patient.setBirthDate("1980-01-01");
+        patient.setSex("1");
+        patient.setTelephone("0311112222");
+        patient.setZipCode("100-0001");
+        patient.setAddressLine("東京都千代田区");
+        OfficialPatientAuditMeta auditMeta = new OfficialPatientAuditMeta();
+        auditMeta.getChangedKeys().addAll(List.of("name", "zip"));
+        OfficialPatientCreateRequest request = new OfficialPatientCreateRequest();
+        request.setPatient(patient);
+        request.setAuditMeta(auditMeta);
 
-        PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toPatientPatch(payload);
+        PatientModV2OutpatientSupport.PatientPatch patch = PatientModV2OutpatientSupport.toCreatePatch(request);
 
-        assertEquals("00001", patch.patientId);
+        assertEquals("*", patch.patientId);
         assertEquals("山田 太郎", patch.name);
         assertEquals("ヤマダ タロウ", patch.kana);
         assertEquals("1980-01-01", patch.birthDate);
@@ -53,6 +63,19 @@ class PatientModV2OutpatientSupportTest {
         assertEquals("100-0001", patch.zip);
         assertEquals("東京都千代田区", patch.address);
         assertEquals(Set.of("name", "zip"), patch.changedKeys);
+    }
+
+    @Test
+    void toUpdatePatchRejectsAutoAssignedPatientId() {
+        OfficialPatientPayload patient = new OfficialPatientPayload();
+        patient.setPatientId("*");
+        OfficialPatientUpdateRequest request = new OfficialPatientUpdateRequest();
+        request.setPatient(patient);
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> PatientModV2OutpatientSupport.toUpdatePatch(request));
+
+        assertEquals(400, ex.getResponse().getStatus());
     }
 
     @Test
@@ -126,6 +149,94 @@ class PatientModV2OutpatientSupportTest {
         assertEquals(List.of(), details.get("appliedKeys"));
         assertEquals(1, details.get("importFetchedCount"));
         verifyNoInteractions(orcaTransport);
+    }
+
+    @Test
+    void createOrcaAndSyncLocalUsesClass01() {
+        PatientServiceBean patientServiceBean = mock(PatientServiceBean.class);
+        OrcaTransport orcaTransport = mock(OrcaTransport.class);
+        OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
+        OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
+        PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
+                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService);
+
+        PatientImportResponse importResponse = new PatientImportResponse();
+        importResponse.setApiResult("00");
+        importResponse.setFetchedCount(1);
+        PatientModel synced = buildPatient("facility", "00099");
+
+        when(orcaTransport.invoke(anyString(), any(), any())).thenAnswer(invocation -> {
+            OrcaTransportRequest request = invocation.getArgument(2);
+            assertTrue(request.getBody().contains("query=class=01"));
+            return new OrcaTransportResult(null, "POST", 200,
+                    "<xmlio2><patientmodres><Api_Result>00</Api_Result><Api_Result_Message>OK</Api_Result_Message><Patient_ID>00099</Patient_ID></patientmodres></xmlio2>",
+                    "application/xml", Map.of());
+        });
+        when(orcaPatientSyncService.importPatients(any(), any(), any())).thenReturn(importResponse);
+        when(patientServiceBean.getPatientById("facility", "00099")).thenReturn(synced);
+
+        PatientModV2OutpatientSupport.PatientPatch patch = new PatientModV2OutpatientSupport.PatientPatch();
+        patch.patientId = "*";
+        patch.name = "山田 太郎";
+        patch.kana = "ヤマダ タロウ";
+        patch.birthDate = "1980-01-01";
+        patch.sex = "M";
+
+        PatientModV2OutpatientSupport.OrcaMutationResult result =
+                coordinator.createOrcaAndSyncLocal("facility", patch, "20260321T221345Z", new LinkedHashMap<>());
+
+        assertEquals("00099", result.patient.getPatientId());
+    }
+
+    @Test
+    void updateOrcaAndSyncLocalUsesClass02() {
+        PatientServiceBean patientServiceBean = mock(PatientServiceBean.class);
+        OrcaTransport orcaTransport = mock(OrcaTransport.class);
+        OrcaLiveGateway orcaWrapperService = mock(OrcaLiveGateway.class);
+        OrcaPatientSyncService orcaPatientSyncService = mock(OrcaPatientSyncService.class);
+        PatientModV2OutpatientOrcaCoordinator coordinator = new PatientModV2OutpatientOrcaCoordinator(
+                patientServiceBean, orcaTransport, orcaWrapperService, orcaPatientSyncService);
+
+        PatientBatchResponse batchResponse = new PatientBatchResponse();
+        batchResponse.setApiResult("00");
+        PatientSummary summary = new PatientSummary();
+        summary.setPatientId("00001");
+        summary.setWholeName("山田 太郎");
+        summary.setWholeNameKana("ヤマダ タロウ");
+        summary.setBirthDate("1980-01-01");
+        summary.setSex("1");
+        PatientDetail detail = new PatientDetail();
+        detail.setSummary(summary);
+        batchResponse.getPatients().add(detail);
+
+        PatientImportResponse importResponse = new PatientImportResponse();
+        importResponse.setApiResult("00");
+        importResponse.setFetchedCount(1);
+        PatientModel synced = buildPatient("facility", "00001");
+
+        when(orcaWrapperService.getPatientBatch(anyString(), any())).thenReturn(batchResponse);
+        when(orcaTransport.invoke(anyString(), any(), any())).thenAnswer(invocation -> {
+            OrcaTransportRequest request = invocation.getArgument(2);
+            assertTrue(request.getBody().contains("query=class=02"));
+            return new OrcaTransportResult(null, "POST", 200,
+                    "<xmlio2><patientmodres><Api_Result>00</Api_Result><Api_Result_Message>OK</Api_Result_Message></patientmodres></xmlio2>",
+                    "application/xml", Map.of());
+        });
+        when(orcaPatientSyncService.importPatients(any(), any(), any())).thenReturn(importResponse);
+        when(patientServiceBean.getPatientById("facility", "00001")).thenReturn(synced);
+
+        PatientModV2OutpatientSupport.PatientPatch patch = new PatientModV2OutpatientSupport.PatientPatch();
+        patch.patientId = "00001";
+        patch.name = "山田 次郎";
+        patch.kana = "ヤマダ タロウ";
+        patch.birthDate = "1980-01-01";
+        patch.sex = "M";
+        patch.changedKeys = Set.of("name");
+
+        PatientModV2OutpatientSupport.OrcaMutationResult result =
+                coordinator.updateOrcaAndSyncLocal("facility", patch, "20260321T221345Z", new LinkedHashMap<>());
+
+        assertEquals("00001", result.patient.getPatientId());
     }
 
     private static PatientModel buildPatient(String facilityId, String patientId) {
