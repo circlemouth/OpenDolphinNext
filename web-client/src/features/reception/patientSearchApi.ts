@@ -61,6 +61,8 @@ const normalizeDataSourceTransition = (value: unknown): DataSourceTransition | u
   return typeof value === 'string' ? (value as DataSourceTransition) : undefined;
 };
 
+const normalizeCompactToken = (value?: string) => value?.replace(/\s+/g, '').trim() ?? '';
+
 const resolveNameSearchBody = (json: Record<string, unknown>): Record<string, unknown> => {
   const candidates = [
     json.patientlst3res,
@@ -249,9 +251,13 @@ const parsePatientDetail = (raw: Record<string, unknown>): PatientMasterRecord =
 export async function fetchPatientMasterSearch(params: PatientMasterSearchParams): Promise<PatientMasterSearchResponse> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
+  const wholeName = params.name?.trim() ?? '';
+  if (!wholeName) {
+    throw new Error('氏名（WholeName）は必須です。');
+  }
+  const kanaFilter = params.kana?.trim() || undefined;
   const payload: Record<string, unknown> = {
-    name: params.name?.trim() || undefined,
-    kana: params.kana?.trim() || undefined,
+    name: wholeName,
     birthStartDate: params.birthStartDate || undefined,
     birthEndDate: params.birthEndDate || undefined,
     sex: params.sex?.trim() || undefined,
@@ -278,7 +284,12 @@ export async function fetchPatientMasterSearch(params: PatientMasterSearchParams
   const apiResult = normalizeApiString(body.apiResult ?? (body as Record<string, unknown>)['Api_Result']);
   const apiResultMessage = normalizeApiString(body.apiResultMessage ?? (body as Record<string, unknown>)['Api_Result_Message']);
   const patientsRaw = resolvePatientsRaw(body);
-  const patients = patientsRaw.map(parsePatientDetail);
+  const patients = patientsRaw
+    .map(parsePatientDetail)
+    .filter((patient) => {
+      if (!kanaFilter) return true;
+      return normalizeCompactToken(patient.kana).includes(normalizeCompactToken(kanaFilter));
+    });
   const computedRecordsReturned =
     typeof body.recordsReturned === 'number'
       ? (body.recordsReturned as number)
@@ -334,7 +345,7 @@ export async function fetchPatientMasterSearch(params: PatientMasterSearchParams
         apiResultMessage: meta.apiResultMessage,
         status: meta.status,
         name: payload.name,
-        kana: payload.kana,
+        kanaFilterLocal: kanaFilter,
         birthStartDate: payload.birthStartDate,
         birthEndDate: payload.birthEndDate,
         sex: payload.sex,

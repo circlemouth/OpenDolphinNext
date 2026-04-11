@@ -103,16 +103,20 @@
 ## Reception Surface
 ### Current Fact
 - Reception は既存患者の受付導線です。新患登録や患者作成は current surface に含めません。
-- 既存患者検索は official `patientlst3v2` 条件を使用し、`WholeName` を必須として `Birth_StartDate` / `Birth_EndDate` / `Sex` / `InOut` は選択時のみ送信します。
+- 既存患者検索は official `patientlst3v2` 条件を使用し、`?class=01` + `<patientlst3req type="record">` で `WholeName` を必須として送信します。
+- `WholeName_inKana` や client 独自 search mode は official payload に流しません。`Birth_StartDate` / `Birth_EndDate` / `Sex` / `InOut` だけを選択時に送信します。
 - `InOut` 未選択はエラーではなく「未送信」を意味します。
 - 受付登録時の `Medical_Information` は UI 選択時のみ送信し、未選択なら送信しません。
 - 担当医コード、`Acceptance_Push`、診療内容コードは client 側で補完・正規化・抑止せず、選択値または未送信をそのまま official bridge に渡します。
+- 会計送信や受付後続で使う visit context は `departmentCode` / `physicianCode` / `visitDate` の canonical 値だけを使い、display string 再解析・patientId first-match・`today` fallback を current contract に戻しません。
 
 ### Verification
 - test: reception accept/cancel の `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして統一
 - test: patient search request が official `patientlst3v2` 形状であること
 - test: visit list request が `Department_Code` を送ること
 - test: `Medical_Information` 未選択時に送信しないこと
+- test: `WholeName` 未入力では official patient search を送らず、`InOut` 未選択時は official payload から省くこと
+- test: claim-send / visit context で patientId first-match / display string reparsing / `today` fallback を使わないこと
 - manual: Reception 画面文言が既存患者受付限定で、新患は Patients へ誘導すること
 
 ## Patients Surface

@@ -69,7 +69,7 @@ class OrcaPatientBatchResourceTest {
     }
 
     @Test
-    void patientSearchRequiresNameOrKana() {
+    void patientSearchRequiresWholeName() {
         OrcaPatientBatchResource resource = new OrcaPatientBatchResource();
         resource.setWrapperService(createService());
         PatientNameSearchRequest request = new PatientNameSearchRequest();

@@ -58,7 +58,7 @@ class OrcaXmlMapperPatientDetailParsingTest {
         String xml = """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <xmlio2>
-                  <patientlst2res>
+                  <patientlst3res>
                     <Api_Result>0000</Api_Result>
                     <Api_Result_Message>正常終了</Api_Result_Message>
                     <Target_Patient_Count>1</Target_Patient_Count>
@@ -70,7 +70,7 @@ class OrcaXmlMapperPatientDetailParsingTest {
                       <BirthDate>1975-04-01</BirthDate>
                       <Sex>1</Sex>
                     </Patient_Information>
-                  </patientlst2res>
+                  </patientlst3res>
                 </xmlio2>
                 """;
 

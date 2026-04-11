@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw';
 
 import {
   buildAppointmentFixture,
+  buildOfficialPatientNameSearchFixture,
   buildPatientListFixture,
   buildVisitListFixture,
   getOutpatientScenario,
@@ -77,7 +78,7 @@ const resolveHttpFaultStatus = (fault: FaultSpec) => {
 };
 
 export const outpatientHandlers = [
-  http.post('/api/orca/official/appointments/list', async ({ request }) => {
+  http.post(/\/api\/orca\/official\/appointments\/list$/, async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -112,7 +113,7 @@ export const outpatientHandlers = [
     }
     return respond(buildAppointmentFixture(scenario.flags));
   }),
-  http.post('/api/orca/official/visits/list', async ({ request }) => {
+  http.post(/\/api\/orca\/official\/visits\/list$/, async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -146,7 +147,29 @@ export const outpatientHandlers = [
     }
     return respond(buildVisitListFixture(scenario.flags));
   }),
-  http.post('/api/local/patients/search', async ({ request }) => {
+  http.post(/\/api\/orca\/official\/patients\/name-search$/, async ({ request }) => {
+    const fault = parseFaultSpec(request);
+    const scenario = applyRequestScenario(request);
+    await applyFaultDelay(fault);
+    if (hasNetworkFault(fault)) {
+      return HttpResponse.error();
+    }
+    const httpFaultStatus = resolveHttpFaultStatus(fault);
+    if (httpFaultStatus) {
+      return respond({
+        ...buildOfficialPatientNameSearchFixture({ ...scenario.flags, status: httpFaultStatus, recordsReturned: 0 }),
+        status: httpFaultStatus,
+      } as any);
+    }
+    if (fault.tokens.has('timeout')) {
+      return respond(buildOfficialPatientNameSearchFixture({ ...scenario.flags, status: 504, recordsReturned: 0 }));
+    }
+    if (fault.tokens.has('http-500') || fault.tokens.has('500')) {
+      return respond(buildOfficialPatientNameSearchFixture({ ...scenario.flags, status: 500, recordsReturned: 0 }));
+    }
+    return respond(buildOfficialPatientNameSearchFixture(scenario.flags));
+  }),
+  http.post(/\/api\/local\/patients\/search$/, async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);
@@ -191,7 +214,7 @@ export const outpatientHandlers = [
     }
     return respond(buildPatientListFixture(scenario.flags, '/api/local/patients/search'));
   }),
-  http.post('/api/orca/official/patients/import', async ({ request }) => {
+  http.post(/\/api\/orca\/official\/patients\/import$/, async ({ request }) => {
     const fault = parseFaultSpec(request);
     const scenario = applyRequestScenario(request);
     await applyFaultDelay(fault);

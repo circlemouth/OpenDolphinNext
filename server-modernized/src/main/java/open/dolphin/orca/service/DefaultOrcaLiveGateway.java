@@ -216,7 +216,7 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         String payload = buildPatientSearchPayload(request);
         OrcaTransportResult result = transport.invoke(facilityId, OrcaEndpoint.PATIENT_NAME_SEARCH, OrcaTransportRequest.post(payload));
         String xml = result != null ? result.getBody() : null;
-        String searchTerm = request.getName() != null ? request.getName() : request.getKana();
+        String searchTerm = request.getName();
         PatientSearchResponse response = mapResponse(xml, v -> mapper.toPatientSearch(v, searchTerm));
         if (response == null) {
             response = new PatientSearchResponse();

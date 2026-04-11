@@ -322,19 +322,14 @@ final class OrcaLiveGatewaySupport {
     }
 
     String buildPatientSearchPayload(PatientNameSearchRequest request) {
-        String wholeName = firstNonBlankText(
-                request.getName() != null ? request.getName().trim() : null,
-                request.getKana() != null ? request.getKana().trim() : null);
+        String wholeName = request.getName() != null ? request.getName().trim() : null;
         if (wholeName == null || wholeName.isBlank()) {
-            throw new OrcaGatewayException("name or kana is required");
+            throw new OrcaGatewayException("name is required");
         }
         StringBuilder builder = new StringBuilder();
         builder.append(buildOrcaMeta(OrcaEndpoint.PATIENT_NAME_SEARCH, "01"));
-        builder.append("<data><patientlst3req>");
+        builder.append("<data><patientlst3req type=\"record\">");
         builder.append("<WholeName>").append(wholeName).append("</WholeName>");
-        if (request.getKana() != null && !request.getKana().isBlank()) {
-            builder.append("<WholeName_inKana>").append(request.getKana().trim()).append("</WholeName_inKana>");
-        }
         if (request.getBirthStartDate() != null) {
             builder.append("<Birth_StartDate>").append(request.getBirthStartDate()).append("</Birth_StartDate>");
         }
@@ -399,15 +394,6 @@ final class OrcaLiveGatewaySupport {
 
     void appendXml2Tag(StringBuilder builder, String tag, String value) {
         mutationSupport.appendXml2Tag(builder, tag, value);
-    }
-
-    private String firstNonBlankText(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return null;
     }
 
     record DateRange(LocalDate from, LocalDate to) {}

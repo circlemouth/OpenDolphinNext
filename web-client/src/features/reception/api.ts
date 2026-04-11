@@ -6,6 +6,11 @@ import { httpFetch } from '../../libs/http/httpClient';
 import { updateObservabilityMeta } from '../../libs/observability/observability';
 import type { DataSourceTransition, ResolveMasterSource } from '../../libs/observability/types';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
+import {
+  isAcceptmodInsuranceMismatch,
+  isAcceptmodNoAcceptance,
+  resolveAcceptmodFallbackMessage,
+} from './acceptmodv2Result';
 import { fetchWithResolver } from '../outpatient/fetchWithResolver';
 import { attachAppointmentMeta, mergeOutpatientMeta, parseAppointmentEntries } from '../outpatient/transformers';
 import type {
@@ -356,6 +361,8 @@ export const buildVisitEntryFromMutation = (
     scheduleKey: payload.scheduleKey,
     encounterKey: payload.encounterKey,
     patientId: patientId ?? undefined,
+    departmentCode: payload.departmentCode,
+    physicianCode: payload.physicianCode,
     name: payload.patient?.name,
     kana: payload.patient?.kana,
     birthDate: payload.patient?.birthDate,
@@ -442,18 +449,19 @@ export async function mutateVisit(
       (raw as any).message ??
       (raw as any).Result_Message,
   );
-  const hasNoAcceptance = apiResult === '60';
-  const hasInsuranceMismatch = apiResult === '21';
+  const hasInsuranceMismatch = isAcceptmodInsuranceMismatch(apiResult);
+  const hasNoAcceptance = isAcceptmodNoAcceptance(apiResult);
+  const shouldUseRequestFallback = !hasInsuranceMismatch && !hasNoAcceptance;
 
   const payload: VisitMutationPayload = {
     ...meta,
     requestNumber: params.requestNumber,
     acceptanceId: hasInsuranceMismatch || hasNoAcceptance ? undefined : normalizeOptionalString(acceptanceIdRaw),
-    acceptanceDate: normalizeOptionalString(acceptanceDateRaw) ?? fallbackAcceptanceDate,
-    acceptanceTime: normalizeOptionalString(acceptanceTimeRaw) ?? fallbackAcceptanceTime,
-    departmentCode: normalizeOptionalString(departmentCodeRaw) ?? fallbackDepartmentCode,
+    acceptanceDate: normalizeOptionalString(acceptanceDateRaw) ?? (shouldUseRequestFallback ? fallbackAcceptanceDate : undefined),
+    acceptanceTime: normalizeOptionalString(acceptanceTimeRaw) ?? (shouldUseRequestFallback ? fallbackAcceptanceTime : undefined),
+    departmentCode: normalizeOptionalString(departmentCodeRaw) ?? (shouldUseRequestFallback ? fallbackDepartmentCode : undefined),
     departmentName: normalizeOptionalString(departmentNameRaw),
-    physicianCode: normalizeOptionalString(physicianCodeRaw) ?? fallbackPhysicianCode,
+    physicianCode: normalizeOptionalString(physicianCodeRaw) ?? (shouldUseRequestFallback ? fallbackPhysicianCode : undefined),
     physicianName: normalizeOptionalString(physicianNameRaw),
     scheduleKey: normalizeOptionalString(scheduleKeyRaw),
     encounterKey: normalizeOptionalString(encounterKeyRaw),
@@ -461,12 +469,12 @@ export async function mutateVisit(
       (raw as any).medicalInformation ??
       (raw as any).Medical_Information ??
       (raw as any).medical_information ??
-      fallbackMedicalInformation,
+      (shouldUseRequestFallback ? fallbackMedicalInformation : undefined),
     appointmentDate: (raw as any).appointmentDate ?? (raw as any).Appointment_Date ?? (raw as any).appointment_date,
     visitNumber: (raw as any).visitNumber ?? (raw as any).Visit_Number ?? (raw as any).visit_number,
     warnings: extractWarnings(raw),
     apiResult,
-    apiResultMessage: apiResultMessage ?? (hasInsuranceMismatch ? '保険不一致' : hasNoAcceptance ? '受付なし' : undefined),
+    apiResultMessage: apiResultMessage ?? resolveAcceptmodFallbackMessage(apiResult),
     patient,
   };
 

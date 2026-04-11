@@ -1,6 +1,7 @@
 package open.dolphin.orca.service;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
 import open.dolphin.rest.dto.orca.PatientNameSearchRequest;
@@ -24,9 +25,9 @@ class OrcaLiveGatewaySupportTest {
         String xml = support.buildPatientSearchPayload(request);
 
         assertTrue(xml.contains("query=class=01"));
-        assertTrue(xml.contains("<patientlst3req>"));
+        assertTrue(xml.contains("<patientlst3req type=\"record\">"));
         assertTrue(xml.contains("<WholeName>山田 太郎</WholeName>"));
-        assertTrue(xml.contains("<WholeName_inKana>ヤマダ タロウ</WholeName_inKana>"));
+        assertTrue(!xml.contains("<WholeName_inKana>"));
         assertTrue(xml.contains("<Birth_StartDate>1980-01-01</Birth_StartDate>"));
         assertTrue(xml.contains("<Birth_EndDate>1980-12-31</Birth_EndDate>"));
         assertTrue(xml.contains("<Sex>1</Sex>"));
@@ -34,13 +35,11 @@ class OrcaLiveGatewaySupportTest {
     }
 
     @Test
-    void buildPatientSearchPayloadFallsBackWholeNameToKanaWhenNameMissing() {
+    void buildPatientSearchPayloadRejectsMissingWholeName() {
         PatientNameSearchRequest request = new PatientNameSearchRequest();
         request.setKana("ヤマダ タロウ");
 
-        String xml = support.buildPatientSearchPayload(request);
-
-        assertTrue(xml.contains("<WholeName>ヤマダ タロウ</WholeName>"));
+        assertThrows(RuntimeException.class, () -> support.buildPatientSearchPayload(request));
     }
 
     @Test

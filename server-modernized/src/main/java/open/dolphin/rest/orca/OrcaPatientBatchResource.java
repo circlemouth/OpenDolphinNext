@@ -131,15 +131,14 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
     @Produces(MediaType.APPLICATION_JSON)
     public PatientSearchResponse patientSearch(@Context HttpServletRequest request,
             PatientNameSearchRequest body) {
-        if (body == null || ((body.getName() == null || body.getName().isBlank())
-                && (body.getKana() == null || body.getKana().isBlank()))) {
+        if (body == null || body.getName() == null || body.getName().isBlank()) {
             Map<String, Object> details = newAuditDetails(request);
             details.put("operation", "patientNameSearch");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
-                    "orca.patient.search.invalid", "name or kana is required");
+                    "orca.patient.search.invalid", "name is required");
             recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.search.invalid",
-                    "name or kana is required");
+                    "name is required");
         }
         if (body.getBirthEndDate() != null && body.getBirthStartDate() == null) {
             Map<String, Object> details = newAuditDetails(request);
@@ -163,17 +162,10 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
         String facilityId = requireFacilityId(request);
         Map<String, Object> details = newAuditDetails(request);
         details.put("operation", "patientNameSearch");
-        if (body.getName() != null && !body.getName().isBlank()) {
-            details.put("namePresent", true);
-            details.put("nameLength", body.getName().trim().length());
-        } else {
-            details.put("namePresent", false);
-        }
+        details.put("namePresent", true);
+        details.put("nameLength", body.getName().trim().length());
         if (body.getKana() != null && !body.getKana().isBlank()) {
             details.put("kanaPresent", true);
-            details.put("kanaLength", body.getKana().trim().length());
-        } else {
-            details.put("kanaPresent", false);
         }
         if (body.getBirthStartDate() != null) {
             putAuditDetail(details, "birthStartDate", body.getBirthStartDate());

@@ -360,13 +360,13 @@ describe('buildDepartmentOptions', () => {
     ]);
   });
 
-  it('source が空でも 01 fallback を維持する', () => {
+  it('source が空なら偽の診療科コードを生成しない', () => {
     const options = buildDepartmentOptions({
       departmentCodeMap: new Map(),
       visibleDepartments: [],
     });
 
-    expect(options).toEqual([['01', '01']]);
+    expect(options).toEqual([]);
   });
 });
 
@@ -410,6 +410,7 @@ beforeEach(() => {
   mockSessionRole = 'staff';
   mockInvalidateQueries.mockClear();
   mockEnqueue.mockReset();
+  vi.mocked(postOrcaMedicalModV2Xml).mockClear();
   localStorage.clear();
 });
 
@@ -427,7 +428,7 @@ describe('ReceptionPage accept UX', () => {
         receptionId: 'R-001',
         name: '山田太郎',
         appointmentTime: '09:00',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -438,7 +439,7 @@ describe('ReceptionPage accept UX', () => {
         receptionId: 'R-002',
         name: '佐藤花子',
         appointmentTime: '10:00',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '自費',
         source: 'visits',
@@ -492,7 +493,7 @@ describe('ReceptionPage accept UX', () => {
         appointmentId: 'A-010',
         name: '田中一郎',
         appointmentTime: '09:00',
-        department: '内科',
+        department: '01 内科',
         physician: '10001 担当医A',
         status: '予約',
         insurance: '保険',
@@ -547,7 +548,7 @@ describe('ReceptionPage accept UX', () => {
         appointmentId: 'A-011',
         name: '必須入力患者',
         appointmentTime: '09:30',
-        department: '内科',
+        department: '01 内科',
         physician: '10001 担当医A',
         status: '予約',
         insurance: '保険',
@@ -603,7 +604,7 @@ describe('ReceptionPage accept UX', () => {
         appointmentId: 'A-100',
         name: '受付IDなし患者',
         appointmentTime: '09:00',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -614,7 +615,7 @@ describe('ReceptionPage accept UX', () => {
         receptionId: 'R-200',
         name: '取消可能患者',
         appointmentTime: '10:00',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -643,7 +644,7 @@ describe('ReceptionPage accept UX', () => {
         birthDate: '1970-01-01',
         sex: 'M',
         appointmentTime: '09:40',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -688,7 +689,7 @@ describe('ReceptionPage accept UX', () => {
         appointmentId: 'A-555',
         name: '送信患者',
         appointmentTime: '09:10',
-        department: '内科',
+        department: '01 内科',
         physician: '10001 Dr. Test',
         status: '予約',
         insurance: '保険',
@@ -772,7 +773,7 @@ describe('ReceptionPage accept UX', () => {
         appointmentId: 'A-012',
         name: '診療内容患者',
         appointmentTime: '09:45',
-        department: '内科',
+        department: '01 内科',
         physician: '10001 担当医A',
         status: '予約',
         insurance: '保険',
@@ -836,7 +837,7 @@ describe('ReceptionPage accept UX', () => {
         appointmentId: 'A-013',
         name: '未選択患者',
         appointmentTime: '10:15',
-        department: '内科',
+        department: '01 内科',
         physician: '10001 担当医A',
         status: '予約',
         insurance: '保険',
@@ -890,6 +891,18 @@ describe('ReceptionPage accept UX', () => {
 });
 
 describe('ReceptionPage official master search', () => {
+  it('requires WholeName before calling the official patient search', async () => {
+    mockSessionRole = 'system_admin';
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const masterSearch = screen.getByRole('region', { name: '既存患者マスタ検索' });
+    await user.click(within(masterSearch).getByRole('button', { name: '患者検索' }));
+
+    expect(await within(masterSearch).findByText('氏名（WholeName）は必須です。')).toBeInTheDocument();
+    expect(mockMutationCalls).toHaveLength(0);
+  });
+
   it('allows master search without inOut selection and omits inOut from the official request', async () => {
     mockSessionRole = 'system_admin';
     mockMutationQueue.push({
@@ -964,7 +977,7 @@ describe('ReceptionPage list and side pane guidance', () => {
         receptionId: 'R-001',
         name: '山田太郎',
         appointmentTime: '09:00',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -975,7 +988,7 @@ describe('ReceptionPage list and side pane guidance', () => {
         receptionId: 'R-002',
         name: '佐藤花子',
         appointmentTime: '10:00',
-        department: '外科',
+        department: '02 外科',
         status: '診療中',
         insurance: '自費',
         source: 'visits',
@@ -1008,7 +1021,7 @@ describe('ReceptionPage list and side pane guidance', () => {
         name: '集約患者',
         kana: 'シュウヤク',
         appointmentTime: '11:30',
-        department: '内科',
+        department: '01 内科',
         physician: '10001 Dr. Test',
         status: '会計待ち',
         insurance: '保険',
@@ -1312,7 +1325,7 @@ describe('ReceptionPage status/date/card action UX', () => {
         receptionId: 'R-301',
         name: 'カード患者',
         appointmentTime: '09:30',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -1337,7 +1350,7 @@ describe('ReceptionPage status/date/card action UX', () => {
         receptionId: 'R-401',
         name: '受付患者',
         appointmentTime: '08:30',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -1348,7 +1361,7 @@ describe('ReceptionPage status/date/card action UX', () => {
         receptionId: 'R-402',
         name: '診察後患者',
         appointmentTime: '10:15',
-        department: '外科',
+        department: '02 外科',
         status: '会計待ち',
         insurance: '保険',
         source: 'visits',
@@ -1371,7 +1384,7 @@ describe('ReceptionPage status/date/card action UX', () => {
         receptionId: 'R-403',
         name: '会計患者',
         appointmentTime: '10:00',
-        department: '内科',
+        department: '01 内科',
         status: '会計待ち',
         insurance: '保険',
         source: 'visits',
@@ -1382,7 +1395,7 @@ describe('ReceptionPage status/date/card action UX', () => {
         appointmentId: 'A-404',
         name: '予約患者',
         appointmentTime: '11:00',
-        department: '外科',
+        department: '02 外科',
         status: '予約',
         insurance: '保険',
         source: 'reservations',
@@ -1405,7 +1418,7 @@ describe('ReceptionPage status/date/card action UX', () => {
         receptionId: 'R-900',
         name: '重複患者',
         appointmentTime: '09:00',
-        department: '内科',
+        department: '01 内科',
         status: '受付中',
         insurance: '保険',
         source: 'visits',
@@ -1416,7 +1429,7 @@ describe('ReceptionPage status/date/card action UX', () => {
         appointmentId: 'A-901',
         name: '重複患者',
         appointmentTime: '10:00',
-        department: '外科',
+        department: '02 外科',
         status: '予約',
         insurance: '保険',
         source: 'reservations',
@@ -1438,7 +1451,7 @@ describe('ReceptionPage status/date/card action UX', () => {
     renderReceptionPage();
 
     const toolbar = getToolbar();
-    await user.selectOptions(within(toolbar).getByLabelText('診療科'), '外科');
+    await user.selectOptions(within(toolbar).getByLabelText('診療科'), '02 外科');
 
     const workflowModal = await openAcceptWorkflowModal(user);
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
@@ -1459,6 +1472,8 @@ describe('ReceptionPage status/date/card action UX', () => {
         id: 'row-claim-1',
         patientId: 'P-501',
         receptionId: 'R-501',
+        departmentCode: '01',
+        physicianCode: '10001',
         name: '診察終了患者',
         appointmentTime: '11:00',
         department: '01 内科',
@@ -1490,6 +1505,41 @@ describe('ReceptionPage status/date/card action UX', () => {
     const completedList = screen.getByRole('region', { name: '受付一覧' });
     const completedRow = await within(completedList).findByRole('row', { name: /診察終了患者/ });
     expect(completedRow).toBeInTheDocument();
+  });
+
+  it('blocks 会計送信 when canonical visit context codes are missing instead of reparsing display strings', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-claim-2',
+        patientId: 'P-502',
+        receptionId: 'R-502',
+        name: '文脈不足患者',
+        appointmentTime: '11:30',
+        department: '01 内科',
+        physician: '10001 主治医',
+        status: '会計待ち',
+        insurance: '保険',
+        source: 'visits',
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    await user.click(screen.getByRole('tab', { name: /会計待ち/ }));
+    const listRegion = screen.getByRole('region', { name: '受付一覧' });
+    const row = within(listRegion).getByRole('row', { name: /文脈不足患者/ });
+    await user.click(within(row).getByRole('button', { name: '会計送信' }));
+
+    await waitFor(() =>
+      expect(mockEnqueue).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tone: 'warning',
+          message: '診療科コードが不明のため会計送信できません。',
+        }),
+      ),
+    );
+    expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
   });
 });
 

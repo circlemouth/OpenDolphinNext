@@ -40,6 +40,8 @@ export const OUTPATIENT_RECEPTION_ENTRIES: ReceptionEntry[] = [
     id: 'MSW-01415-APPT',
     appointmentId: 'APT-1415',
     patientId: '01415',
+    departmentCode: '01',
+    physicianCode: '0001',
     name: '通し検証 太郎',
     kana: 'トオシケンショウ タロウ',
     birthDate: '1980-01-15',
@@ -57,6 +59,8 @@ export const OUTPATIENT_RECEPTION_ENTRIES: ReceptionEntry[] = [
     appointmentId: 'APT-1415-V',
     receptionId: 'RCPT-1415',
     patientId: '01415',
+    departmentCode: '01',
+    physicianCode: '0001',
     name: '通し検証 太郎',
     kana: 'トオシケンショウ タロウ',
     birthDate: '1980-01-15',
@@ -73,6 +77,8 @@ export const OUTPATIENT_RECEPTION_ENTRIES: ReceptionEntry[] = [
     id: 'SAMPLE-01',
     appointmentId: 'APT-2401',
     patientId: '000001',
+    departmentCode: '01',
+    physicianCode: '10001',
     name: '山田 花子',
     kana: 'ヤマダ ハナコ',
     birthDate: '1985-04-12',
@@ -90,6 +96,8 @@ export const OUTPATIENT_RECEPTION_ENTRIES: ReceptionEntry[] = [
     appointmentId: 'APT-2402',
     receptionId: 'RCPT-2402',
     patientId: '000002',
+    departmentCode: '02',
+    physicianCode: '10002',
     name: '佐藤 太郎',
     kana: 'サトウ タロウ',
     birthDate: '1978-11-30',
@@ -106,6 +114,8 @@ export const OUTPATIENT_RECEPTION_ENTRIES: ReceptionEntry[] = [
     id: 'SAMPLE-03',
     appointmentId: 'APT-2403',
     patientId: '000003',
+    departmentCode: '03',
+    physicianCode: '10003',
     name: '高橋 光',
     kana: 'タカハシ ヒカリ',
     birthDate: '1992-02-01',
@@ -355,7 +365,9 @@ export function buildAppointmentFixture(flags: OutpatientFlagSet) {
   const slots = OUTPATIENT_RECEPTION_ENTRIES.filter((entry) => entry.source === 'slots').map((entry) => ({
     appointmentId: entry.appointmentId,
     appointmentTime: entry.appointmentTime?.replace(':', ''),
+    departmentCode: entry.departmentCode,
     departmentName: entry.department,
+    physicianCode: entry.physicianCode,
     physicianName: entry.physician,
     patient: {
       patientId: entry.patientId,
@@ -373,7 +385,9 @@ export function buildAppointmentFixture(flags: OutpatientFlagSet) {
       appointmentDate: new Date().toISOString().slice(0, 10),
       appointmentTime: (entry.appointmentTime ?? '').replace(':', ''),
       visitInformation: entry.note,
+      departmentCode: entry.departmentCode,
       departmentName: entry.department,
+      physicianCode: entry.physicianCode,
       physicianName: entry.physician,
     }),
   );
@@ -403,7 +417,9 @@ export function buildVisitListFixture(flags: OutpatientFlagSet) {
     voucherNumber: entry.receptionId ?? entry.id,
     sequentialNumber: entry.appointmentId,
     updateTime: entry.appointmentTime?.replace(':', ''),
+    departmentCode: entry.departmentCode,
     departmentName: entry.department,
+    physicianCode: entry.physicianCode,
     physicianName: entry.physician,
     patient: {
       patientId: entry.patientId,
@@ -431,6 +447,33 @@ export function buildVisitListFixture(flags: OutpatientFlagSet) {
     recordsReturned,
     apiResult,
     apiResultMessage,
+  };
+}
+
+export function buildOfficialPatientNameSearchFixture(flags: OutpatientFlagSet) {
+  return {
+    patientlst3res: {
+      apiResult: flags.apiResult ?? '00',
+      apiResultMessage: flags.apiResultMessage ?? '処理終了',
+      targetPatientCount: flags.recordsReturned ?? OUTPATIENT_PATIENTS.length,
+      noTargetPatientCount: 0,
+      patients: OUTPATIENT_PATIENTS.map((patient) => ({
+        patientId: patient.patientId,
+        wholeName: patient.name,
+        wholeNameKana: patient.kana,
+        birthDate: patient.birthDate,
+        sex: patient.sex,
+      })),
+    },
+    runId: flags.runId,
+    traceId: flags.traceId ?? `trace-${flags.runId}`,
+    cacheHit: flags.cacheHit,
+    missingMaster: flags.missingMaster,
+    dataSourceTransition: flags.dataSourceTransition,
+    fallbackUsed: flags.fallbackUsed,
+    fetchedAt: new Date().toISOString(),
+    recordsReturned: flags.recordsReturned ?? OUTPATIENT_PATIENTS.length,
+    status: flags.status ?? 200,
   };
 }
 
