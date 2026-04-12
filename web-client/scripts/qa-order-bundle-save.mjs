@@ -162,21 +162,33 @@ const run = async () => {
       })
       .catch(() => false);
     await page.locator('.reception-page').waitFor({ timeout: 20000 });
-    const acceptForm = page.locator('[data-test-id="reception-accept-form"]');
-    await acceptForm.waitFor({ timeout: 20000 });
+    const openWorkflowButton = page.getByRole('button', { name: '既存患者受付/患者検索' });
+    await openWorkflowButton.waitFor({ timeout: 20000 });
+    await openWorkflowButton.click();
+    const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
+    await workflowModal.waitFor({ timeout: 20000 });
+    const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
+    await patientSearchForm.waitFor({ timeout: 20000 });
     await writeScreenshot(page, '00-reception-open');
 
-    await acceptForm.locator('#reception-accept-patient-id').fill(patientId);
+    await patientSearchForm.locator('#reception-patient-search-patient-id').fill(patientId);
+    await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
+    const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
+    await resultListItem.waitFor({ timeout: 20000 });
+    await resultListItem.click();
+
+    const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
+    await acceptForm.waitFor({ timeout: 20000 });
     await selectOptionFallback(acceptForm.locator('#reception-accept-department'), departmentCode);
     await acceptForm.locator('#reception-accept-payment-mode').selectOption(paymentMode);
     await selectOptionFallback(acceptForm.locator('#reception-accept-physician'), physicianCode);
     await selectOptionFallback(acceptForm.locator('#reception-accept-visit-kind'), visitKind);
-    await acceptForm.locator('#reception-accept-note').fill(`order-bundle-save ${runId}`);
+    await selectOptionFallback(acceptForm.locator('#reception-accept-medical-information'), '');
 
     const acceptResponsePromise = page
       .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
       .catch(() => null);
-    await page.getByRole('button', { name: '受付送信' }).click();
+    await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
     await acceptResponsePromise;
     await page.waitForTimeout(2000);
     await writeScreenshot(page, '00-reception-after-accept');

@@ -1,6 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright';
+import {
+  buildQaSession,
+  createAuthenticatedContext,
+  resolveQaFacilityId,
+  resolveQaPasswordPlain,
+  resolveQaUserId,
+} from './qa-lib/session-auth.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
@@ -20,9 +27,7 @@ if (recordHar) {
   fs.mkdirSync(harDir, { recursive: true });
 }
 
-const facilityPath = path.resolve(process.cwd(), '..', 'facility.json');
-const facilityJson = JSON.parse(fs.readFileSync(facilityPath, 'utf-8'));
-const facilityId = String(facilityJson.facilityId ?? '0001');
+const facilityId = resolveQaFacilityId();
 
 const sessionRole = process.env.QA_ROLE ?? 'admin';
 const sessionRoles = process.env.QA_ROLES
@@ -30,25 +35,17 @@ const sessionRoles = process.env.QA_ROLES
   : [sessionRole];
 const scenarioLabel = process.env.QA_SCENARIO ?? sessionRole;
 
-const authUserId = 'doctor1';
-const authPasswordPlain = 'doctor2025';
+const authUserId = resolveQaUserId();
+const authPasswordPlain = resolveQaPasswordPlain();
 
 const patientId = process.env.QA_PATIENT_ID ?? '01414';
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
-const medicalInformation = process.env.QA_MEDICAL_INFORMATION ?? '01';
+const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
 
-const session = {
-  facilityId,
-  userId: authUserId,
-  displayName: `QA ${scenarioLabel}`,
-  clientUuid: `qa-${runId}`,
-  runId,
-  role: sessionRole,
-  roles: sessionRoles,
-};
+const session = buildQaSession({ facilityId, userId: authUserId, runId, scenarioLabel, sessionRole, sessionRoles });
 
 const consoleMessages = [];
 const pageErrors = [];
@@ -76,36 +73,6 @@ const writeScreenshot = async (page, name) => {
   const filePath = path.join(screenshotDir, fileName);
   await page.screenshot({ path: filePath, fullPage: true });
   return `screenshots/${fileName}`;
-};
-
-const createSessionContext = async (browser) => {
-  const ctx = await browser.newContext({
-    ignoreHTTPSErrors: true,
-    baseURL,
-    recordHar: recordHar ? { path: harPath, content: 'embed' } : undefined,
-  });
-  await ctx.addInitScript(
-    ([key, value, auth]) => {
-      window.sessionStorage.setItem(key, value);
-      window.sessionStorage.setItem('devFacilityId', auth.facilityId);
-      window.sessionStorage.setItem('devUserId', auth.userId);
-      window.sessionStorage.setItem('devClientUuid', auth.clientUuid);
-      window.localStorage.setItem('devFacilityId', auth.facilityId);
-      window.localStorage.setItem('devUserId', auth.userId);
-      window.localStorage.setItem('devClientUuid', auth.clientUuid);
-    },
-    [
-      'opendolphin:web-client:auth',
-      JSON.stringify(session),
-      {
-        facilityId,
-        userId: authUserId,
-        passwordPlain: authPasswordPlain,
-        clientUuid: session.clientUuid,
-      },
-    ],
-  );
-  return ctx;
 };
 
 const collectResponse = async (response) => {
@@ -173,8 +140,14 @@ const selectOptionFallback = async (selectLocator, desiredValue) => {
 
 const run = async () => {
   const browser = await chromium.launch({ headless: true });
-  const context = await createSessionContext(browser);
-  const page = await context.newPage();
+  const { context, page, sessionMe } = await createAuthenticatedContext(browser, {
+    baseURL,
+    facilityId,
+    userId: authUserId,
+    password: authPasswordPlain,
+    session,
+    recordHar: recordHar ? { path: harPath, content: 'embed' } : undefined,
+  });
 
   page.on('console', (msg) => {
     const type = msg.type();
@@ -188,19 +161,40 @@ const run = async () => {
 
   await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
   await page.locator('.reception-page').waitFor({ timeout: 20000 });
-  const acceptForm = page.locator('[data-test-id="reception-accept-form"]');
+  const openWorkflowButton = page.getByRole('button', { name: '既存患者受付/患者検索' });
+  await openWorkflowButton.waitFor({ timeout: 20000 });
+  await openWorkflowButton.click();
+
+  const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
+  await workflowModal.waitFor({ timeout: 20000 });
+  const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
+  await patientSearchForm.waitFor({ timeout: 20000 });
+
+  await page
+    .waitForFunction(() => {
+      const select = document.querySelector('#reception-accept-department');
+      return select && select.querySelectorAll('option').length >= 1;
+    }, { timeout: 20000 })
+    .catch(() => null);
+  await page
+    .waitForFunction(() => {
+      const select = document.querySelector('#reception-accept-physician');
+      return select && select.querySelectorAll('option').length >= 1;
+    }, { timeout: 20000 })
+    .catch(() => null);
+
+  await patientSearchForm.locator('#reception-patient-search-patient-id').fill(patientId);
+  await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
+  const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
+  await resultListItem.waitFor({ timeout: 20000 }).catch(() => {
+    throw new Error(
+      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; set QA_PATIENT_ID to an ORCA-searchable patient in the current environment`,
+    );
+  });
+  await resultListItem.click();
+
+  const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
   await acceptForm.waitFor({ timeout: 20000 });
-
-  await page.waitForFunction(() => {
-    const select = document.querySelector('#reception-accept-department');
-    return select && select.querySelectorAll('option').length >= 1;
-  });
-  await page.waitForFunction(() => {
-    const select = document.querySelector('#reception-accept-physician');
-    return select && select.querySelectorAll('option').length >= 1;
-  });
-
-  await acceptForm.locator('#reception-accept-patient-id').fill(patientId);
   const departmentSelection = await selectOptionFallback(
     acceptForm.locator('#reception-accept-department'),
     departmentCode,
@@ -214,7 +208,10 @@ const run = async () => {
     acceptForm.locator('#reception-accept-visit-kind'),
     visitKind,
   );
-  await acceptForm.locator('#reception-accept-note').fill(medicalInformation);
+  const medicalInformationSelection = await selectOptionFallback(
+    acceptForm.locator('#reception-accept-medical-information'),
+    medicalInformation,
+  );
 
   const beforeShot = await writeScreenshot(page, '01-reception-before-accept');
 
@@ -222,7 +219,7 @@ const run = async () => {
     .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
     .catch(() => null);
 
-  await page.getByRole('button', { name: '受付送信' }).click();
+  await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
 
   await acceptResponsePromise;
 
@@ -244,16 +241,21 @@ const run = async () => {
     baseURL,
     facilityId,
     sessionRole,
+    login: {
+      sessionMeStatus: sessionMe.status,
+      sessionMeBody: sessionMe.body,
+    },
     patientId,
     departmentCode,
     physicianCode,
     paymentMode,
     visitKind,
-    medicalInformation,
+    medicalInformation: medicalInformation || undefined,
     selection: {
       department: departmentSelection,
       physician: physicianSelection,
       visitKind: visitKindSelection,
+      medicalInformation: medicalInformationSelection,
     },
     acceptResult: {
       toneText,
@@ -271,7 +273,7 @@ const run = async () => {
   fs.writeFileSync(path.join(artifactRoot, 'accept-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
 
   const log =
-    `# Reception 受付送信（acceptmodv2）\n\n` +
+    `# Reception 既存患者受付（acceptmodv2）\n\n` +
     `- RUN_ID: ${summary.runId}\n` +
     `- 実施日時: ${summary.executedAt}\n` +
     `- Base URL: ${summary.baseURL}\n` +

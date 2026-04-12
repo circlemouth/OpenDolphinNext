@@ -58,7 +58,7 @@ const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
-const medicalInformation = process.env.QA_MEDICAL_INFORMATION ?? '01';
+const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
 
 // Target order entity (procedure/treatment by default).
 const orderEntity = process.env.QA_ORDER_ENTITY ?? 'treatmentOrder';
@@ -276,8 +276,16 @@ const run = async () => {
   logStep(`outpatient scenario server-handoff=${String(scenarioApplied)}`);
   await page.locator('.reception-page').waitFor({ timeout: 20000 });
   logStep('reception page ready');
-  const acceptForm = page.locator('[data-test-id="reception-accept-form"]');
-  await acceptForm.waitFor({ timeout: 20000 });
+  const openWorkflowButton = page.getByRole('button', { name: '既存患者受付/患者検索' });
+  await openWorkflowButton.waitFor({ timeout: 20000 });
+  await openWorkflowButton.click();
+  logStep('opened reception workflow modal');
+
+  const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
+  await workflowModal.waitFor({ timeout: 20000 });
+  const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
+  await patientSearchForm.waitFor({ timeout: 20000 });
+  logStep('patient search form ready');
   logStep('accept form ready');
 
   await page
@@ -293,8 +301,22 @@ const run = async () => {
     }, { timeout: 20000 })
     .catch(() => null);
 
-  await acceptForm.locator('#reception-accept-patient-id').fill(patientId);
-  logStep('filled patient id');
+  await patientSearchForm.locator('#reception-patient-search-patient-id').fill(patientId);
+  logStep('filled patient search id');
+  await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
+  logStep('submitted patient search');
+  const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
+  await resultListItem.waitFor({ timeout: 20000 }).catch(() => {
+    throw new Error(
+      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; set QA_PATIENT_ID to an ORCA-searchable patient in the current environment`,
+    );
+  });
+  await resultListItem.click();
+  logStep('selected patient search result');
+
+  const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
+  await acceptForm.waitFor({ timeout: 20000 });
+  logStep('accept detail ready');
   const departmentSelection = await selectOptionFallback(
     acceptForm.locator('#reception-accept-department'),
     departmentCode,
@@ -311,8 +333,11 @@ const run = async () => {
     visitKind,
   );
   logStep(`visit kind selected=${visitKindSelection.resolved}`);
-  await acceptForm.locator('#reception-accept-note').fill(medicalInformation);
-  logStep('filled note');
+  const medicalInformationSelection = await selectOptionFallback(
+    acceptForm.locator('#reception-accept-medical-information'),
+    medicalInformation,
+  );
+  logStep(`medical information selected=${medicalInformationSelection.resolved || 'unselected'}`);
 
   const beforeShot = await writeScreenshot(page, '01-reception-before-accept');
 
@@ -320,7 +345,7 @@ const run = async () => {
     .waitForResponse((response) => response.url().includes('/api/orca/official/visits/mutation'), { timeout: 20000 })
     .catch(() => null);
 
-  await page.getByRole('button', { name: '受付送信' }).click();
+  await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
   logStep('clicked reception send');
   await acceptResponsePromise;
   await page.waitForTimeout(2000);
@@ -689,11 +714,12 @@ const run = async () => {
     physicianCode,
     paymentMode,
     visitKind,
-    medicalInformation,
+    medicalInformation: medicalInformation || undefined,
     selection: {
       department: departmentSelection,
       physician: physicianSelection,
       visitKind: visitKindSelection,
+      medicalInformation: medicalInformationSelection,
     },
     acceptResult: {
       toneText,

@@ -78,3 +78,5 @@
 - 接続/認証の切替を行う場合は `ORCA_TARGET_ENV` と環境変数セットを必ず記録する。
 - 例外的な手順が必要な場合は `docs/managerdocs/06_open_unknowns_and_evidence_gaps.md` と合わせて判断する。
 - Trial で接続確認しただけでは cutover 完了扱いにしない。release 判定は runtime smoke / grep / UI semantics / rollback 準備まで揃えて行う。
+- ORCA是正の受入れは remediation pair release 前提で行う。`web-client` と `server-modernized` の片側だけを current taxonomy へ進めた状態は certification 対象外とする。
+- certification 中も official/master/local の境界を崩さない。`official=/api/orca/official/*`、`master=/api/orca/master/*`、`local=/api/local/*` から外れる path を使った疎通確認は証跡に採用しない。

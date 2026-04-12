@@ -17,6 +17,70 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis ver
 cd web-client && node scripts/runtime-ready-smoke.mjs
 ```
 
+## ORCA是正 最終受入れの実行順
+1. route taxonomy / wording drift を grep で確認する。
+```bash
+rg -n "/api/orca/official/|/api/orca/master/|/api/local/" web-client server-modernized docs
+rg -n "症状詳記（ORCA）|ORCAへ反映|今すぐ同期|認証済み|一括疎通（グループ）" web-client docs
+rg -n "medicalInformation \\?\\? '01'|medicalInformation \\|\\| '01'" web-client/scripts
+rg -n "medicalmodv23" web-client server-modernized docs
+```
+期待結果:
+- taxonomy grep は current route と docs 正本だけを返し、legacy alias や blocked route を返さない。
+- wording grep は deny/assertion test 以外に stale wording を返さない。
+- `medicalInformation ?? '01'` / `medicalInformation || '01'` は 0 hit。
+- `medicalmodv23` は 0 hit。
+
+2. server contract / inventory / exposure tests を current taxonomy で実行する。
+```bash
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest,AdminOrcaUserResourceTest,AdminOrcaUserLinkResourceTest,OrcaAppointmentResourceTest,OrcaChartSupportResourceTest,OrcaChartSupportSupportTest,OrcaLiveGatewaySupportTest \
+  test
+```
+期待結果:
+- `PublicRouteInventoryContractTest` が `official=/api/orca/official/*`、`master=/api/orca/master/*`、`local=/api/local/*`、`admin-internal=/api/admin/internal/*` の inventory を固定できる。
+- `WebXmlEndpointExposureTest` が `/api/*` 以外の public exposure を拒否し、`/api/orca/*` 直下を official/master のみに制限できる。
+- `patientlst3v2` / `visitptlstv2` / `manageusersv2` / `contraindicationcheckv2` / `medicationgetv2` / `incomeinfv2` の XML 契約が current shape に一致する。
+
+3. web-client targeted UI / semantics tests を current wording で実行する。
+```bash
+cd web-client && npm test -- --run \
+  src/features/reception/__tests__/ReceptionPage.test.tsx \
+  src/features/charts/__tests__/PatientInfoEditDialog.test.tsx \
+  src/features/charts/__tests__/OrcaSummary.semantics.test.tsx \
+  src/features/charts/__tests__/SoapNotePanel.test.tsx \
+  src/features/charts/__tests__/chartsActionBar.test.tsx \
+  src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx \
+  src/features/administration/__tests__/AdministrationPage.connection.test.tsx \
+  src/features/administration/__tests__/AdministrationPage.internalWrapper.test.tsx \
+  src/features/patients/__tests__/PatientsPage.test.tsx
+```
+期待結果:
+- Patients / Reception / Charts / Admin の wording が current contract と一致する。
+- `Medical_Information` 未選択時は送信しない。
+- `症状詳記（院内ローカル）`、official/local 境界、disabled reason が current UI copy と一致する。
+
+4. web-client gate と full CI を実行する。
+```bash
+cd web-client && npm run verify:web-guard
+cd web-client && npm run ci
+```
+期待結果:
+- blocked route string / legacy auth drift / public secret の再混入がない。
+- typecheck / test / build まで成功する。
+
+5. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
+```bash
+cd web-client && node scripts/runtime-ready-smoke.mjs
+QA_PATIENT_ID=<ORCA searchable patientId> cd web-client && node scripts/qa-acceptmodv2-weborca.mjs
+QA_PATIENT_ID=<ORCA searchable patientId> cd web-client && node scripts/qa-fullflow-weborca.mjs
+```
+期待結果:
+- web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
+- `runtime-ready-smoke` は local smoke seed `0000001` を使うが、`qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は official patient search で返る患者を必要とする。受入れでは `QA_PATIENT_ID` に current ORCA 環境で検索可能な患者IDを渡す。
+- `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `Medical_Information` を送らず、指定時だけ current select option を送る。
+- artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。
+
 ## Worker G の post-merge 確認
 ```bash
 mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=PublicRouteInventoryContractTest,WebXmlEndpointExposureTest test
@@ -27,6 +91,7 @@ cd web-client && node scripts/verify-no-blocked-orca-route-strings.mjs
 - `WebXmlEndpointExposureTest` で `/api/*` exposure と `/api/orca/*` taxonomy が崩れていないことを確認する。
 - `verify-no-blocked-orca-route-strings.mjs` で web-client source に taxonomy drift や blocked mock surface が残っていないことを確認する。
 - Reception / Patients / Charts / Admin の UI と server contract が taxonomy contract と一致していることを確認する。
+- web-client と server-modernized を別々の remediation wave で混在 deploy しない。pair release で同時に切り替える。
 
 ## 補助コマンド
 ```bash
@@ -44,6 +109,8 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `npm run ci` が成功する。
 - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` が成功する。
 - `runtime-ready-smoke` が成功する。
+- `qa-acceptmodv2-weborca.mjs` と `qa-fullflow-weborca.mjs` が current 受付導線で完走し、`Medical_Information` 未選択時は未送信の証跡を残す。
+- patient search が 0 件なら、script は `QA_PATIENT_ID` の不足/不一致を明示したエラーで停止する。
 - direct runtime lookup grep は `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` 1 件だけを返す。
 - `dolphin.facilityId` grep は 0 件。
 

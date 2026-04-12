@@ -48,6 +48,10 @@ const buildPayload = async (request: Request) => {
   const apiResultMessage =
     override?.apiResultMessage ??
     (shouldError ? 'mocked error' : resolveAcceptmodFallbackMessage(apiResult) ?? '正常終了');
+  const requestedMedicalInformation =
+    typeof body.medicalInformation === 'string' && body.medicalInformation.trim().length > 0
+      ? body.medicalInformation.trim()
+      : undefined;
 
   const shouldEchoEmpty = realNoEcho || Boolean(override && override.apiResult !== '00');
   const acceptanceId =
@@ -61,6 +65,8 @@ const buildPayload = async (request: Request) => {
   const acceptanceTime = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.acceptanceTime ?? toTime(now);
   const departmentCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.departmentCode ?? '01';
   const physicianCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.physicianCode ?? '1001';
+  const medicalInformation =
+    apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : requestedMedicalInformation;
 
   const patientPayload = shouldEchoEmpty
     ? {
@@ -93,7 +99,7 @@ const buildPayload = async (request: Request) => {
     acceptanceTime,
     departmentCode,
     physicianCode,
-    medicalInformation: body.medicalInformation ?? '外来受付',
+    medicalInformation,
     requestNumber,
     patient: patientPayload,
     warnings: apiResult === '21' || apiResult === '60' ? [apiResultMessage] : [],

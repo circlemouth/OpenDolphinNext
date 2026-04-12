@@ -45,6 +45,29 @@ describe('reception mocks', () => {
     expect(missingJson).not.toHaveProperty('acceptanceId');
   });
 
+  it('acceptmodv2 mock keeps Medical_Information aligned with current runtime semantics', async () => {
+    const selectedRes = await fetch('http://127.0.0.1/api/orca/official/visits/mutation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: '00001', requestNumber: '01', medicalInformation: '02' }),
+    });
+    expect(selectedRes.ok).toBe(true);
+    const selectedJson = (await selectedRes.json()) as Record<string, unknown>;
+    expect(selectedJson).toMatchObject({
+      apiResult: '00',
+      medicalInformation: '02',
+    });
+
+    const unselectedRes = await fetch('http://127.0.0.1/api/orca/official/visits/mutation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patientId: '00002', requestNumber: '01' }),
+    });
+    expect(unselectedRes.ok).toBe(true);
+    const unselectedJson = (await unselectedRes.json()) as Record<string, unknown>;
+    expect(unselectedJson).not.toHaveProperty('medicalInformation');
+  });
+
   it('official patient name-search mock exposes patientlst3res with patientId-bearing records', async () => {
     const response = await fetch('http://127.0.0.1/api/orca/official/patients/name-search', {
       method: 'POST',
