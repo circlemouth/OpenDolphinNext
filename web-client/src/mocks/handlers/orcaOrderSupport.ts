@@ -182,7 +182,7 @@ const sanitizeCodes = (values: unknown) =>
   );
 
 export const orcaOrderSupportHandlers = [
-  http.get(/\/orca\/order\/inputsets(?:\?.*)?$/, ({ request }) => {
+  http.get(/\/api\/orca\/master\/order\/inputsets(?:\?.*)?$/, ({ request }) => {
     if (shouldBypass(request)) {
       return passthrough();
     }
@@ -212,7 +212,7 @@ export const orcaOrderSupportHandlers = [
       { headers: { 'x-run-id': runId, 'x-trace-id': traceId } },
     );
   }),
-  http.get(/\/orca\/order\/inputsets\/([^/?#]+)(?:\?.*)?$/, ({ request }) => {
+  http.get(/\/api\/orca\/master\/order\/inputsets\/([^/?#]+)(?:\?.*)?$/, ({ request }) => {
     if (shouldBypass(request)) {
       return passthrough();
     }
@@ -248,7 +248,7 @@ export const orcaOrderSupportHandlers = [
       { headers: { 'x-run-id': runId, 'x-trace-id': traceId } },
     );
   }),
-  http.post(/\/orca\/order\/interactions\/check(?:\?.*)?$/, async ({ request }) => {
+  http.post(/\/api\/orca\/master\/order\/interactions\/check(?:\?.*)?$/, async ({ request }) => {
     if (shouldBypass(request)) {
       return passthrough();
     }

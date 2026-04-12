@@ -45,7 +45,6 @@
 - `web-client/notes/`
 - `docs/web-client/architecture/`
 - `docs/web-client/ux/`
-- [docs/web-client/ux/dads-ui-design-absolute-rules.md](web-client/ux/dads-ui-design-absolute-rules.md)
 - [server-modernized/reporting/README.md](../server-modernized/reporting/README.md)
 - [server-modernized/tools/flyway/README.md](../server-modernized/tools/flyway/README.md)
 - [ops/README.md](../ops/README.md)

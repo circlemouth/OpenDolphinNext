@@ -39,7 +39,7 @@ const resolvePatientId = (request: Request) => {
 };
 
 export const orcaDiseaseHandlers = [
-  http.get(/\/orca\/disease\/name\/[^/]+\/$/, ({ request }) => {
+  http.get(/\/api\/orca\/official\/disease-master\/name\/[^/]+\/$/, ({ request }) => {
     const { runId, traceId } = resolveAuditHeaders(request);
     return respond(
       {
@@ -50,7 +50,7 @@ export const orcaDiseaseHandlers = [
       200,
     );
   }),
-  http.get(/\/orca\/disease\/import\/[^/?]+$/, ({ request }) => {
+  http.get(/\/api\/local\/diagnoses\/[^/?]+(?:\?.*)?$/, ({ request }) => {
     const { runId, traceId } = resolveAuditHeaders(request);
     const patientId = resolvePatientId(request);
     const url = new URL(request.url);

@@ -399,15 +399,14 @@ const handleGenericPriceRequest = (request: Request) => {
 };
 
 export const orcaMasterHandlers = [
-  http.get(/\/orca\/tensu\/etensu/, ({ request }) => (shouldBypass(request) ? passthrough() : handleEtensuRequest(request))),
-  http.get(/\/orca\/master\/etensu/, ({ request }) => (shouldBypass(request) ? passthrough() : handleEtensuRequest(request))),
-  http.get(/\/orca\/master\/address/, ({ request }) => (shouldBypass(request) ? passthrough() : handleAddressRequest(request))),
-  http.get(/\/orca\/master\/hokenja/, ({ request }) => (shouldBypass(request) ? passthrough() : handleHokenjaRequest(request))),
-  http.get(/\/orca\/master\/generic-price/, ({ request }) => (shouldBypass(request) ? passthrough() : handleGenericPriceRequest(request))),
-  http.get(/\/orca\/master\/bodypart/, ({ request }) => (shouldBypass(request) ? passthrough() : handleBodypartRequest(request))),
-  http.get(/\/orca\/master\/comment/, ({ request }) => (shouldBypass(request) ? passthrough() : handleCommentRequest(request))),
-  http.get(/\/orca\/master\/generic-class/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, GENERIC_CLASS_ITEMS))),
-  http.get(/\/orca\/master\/material/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, MATERIAL_ITEMS))),
-  http.get(/\/orca\/master\/youhou/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, YOUHOU_ITEMS))),
-  http.get(/\/orca\/master\/kensa-sort/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, KENSA_SORT_ITEMS))),
+  http.get(/\/api\/orca\/master\/etensu(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleEtensuRequest(request))),
+  http.get(/\/api\/orca\/master\/address(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleAddressRequest(request))),
+  http.get(/\/api\/orca\/master\/hokenja(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleHokenjaRequest(request))),
+  http.get(/\/api\/orca\/master\/generic-price(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleGenericPriceRequest(request))),
+  http.get(/\/api\/orca\/master\/bodypart(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleBodypartRequest(request))),
+  http.get(/\/api\/orca\/master\/comment(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleCommentRequest(request))),
+  http.get(/\/api\/orca\/master\/generic-class(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, GENERIC_CLASS_ITEMS))),
+  http.get(/\/api\/orca\/master\/material(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, MATERIAL_ITEMS))),
+  http.get(/\/api\/orca\/master\/youhou(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, YOUHOU_ITEMS))),
+  http.get(/\/api\/orca\/master\/kensa-sort(?:\?.*)?$/, ({ request }) => (shouldBypass(request) ? passthrough() : handleDrugMasterRequest(request, KENSA_SORT_ITEMS))),
 ];

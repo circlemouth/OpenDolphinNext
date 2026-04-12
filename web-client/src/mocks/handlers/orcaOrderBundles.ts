@@ -49,7 +49,7 @@ const resolveOperationBuckets = (operations: any[]) => {
 };
 
 export const orcaOrderBundleHandlers = [
-  http.get(/\/orca\/order\/bundles/, ({ request }) => {
+  http.get(/\/api\/local\/order\/bundles(?:\?.*)?$/, ({ request }) => {
     if (shouldBypass(request)) {
       return passthrough();
     }
@@ -81,7 +81,7 @@ export const orcaOrderBundleHandlers = [
       200,
     );
   }),
-  http.post(/\/orca\/order\/bundles/, async ({ request }) => {
+  http.post(/\/api\/local\/order\/bundles$/, async ({ request }) => {
     if (shouldBypass(request)) {
       return passthrough();
     }
