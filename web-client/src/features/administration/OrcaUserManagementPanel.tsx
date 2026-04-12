@@ -571,7 +571,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
             onClick={handleSyncRefetch}
             disabled={usersQuery.isFetching}
           >
-            再取得
+            画面を再読込
           </button>
           {syncMutation.isPending ? (
             <span className="admin-inline-progress" role="status" aria-live={resolveAriaLive('info')}>
@@ -590,8 +590,8 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
             type="text"
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
-            placeholder="例: doctor01 / 山田 / ヤマダ"
           />
+          <p className="admin-quiet">例: doctor01 / 山田 / ヤマダ</p>
         </div>
         <div className="admin-form__field" style={{ minWidth: 180 }}>
           <label htmlFor="orca-user-staff-class">職員区分</label>
@@ -756,6 +756,9 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
 
       <section className="admin-form" aria-label="ORCAユーザ作成">
         <h3 className="administration-card__title">ORCAユーザ作成</h3>
+        <p className="admin-note">
+          official create request では ORCA User_Id / 初期パスワード / 職員区分 / 氏名 / カナ / 管理者権限のみ送信し、職員番号は送信しません。
+        </p>
         <div className="admin-form__toggles">
           <div className="admin-form__field">
             <label htmlFor="orca-create-user-id">ORCA User_Id</label>
@@ -764,12 +767,11 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
               type="text"
               value={createDraft.userId}
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, userId: event.target.value }))}
-              placeholder="例: doctor_01"
             />
             {createDraft.userId.trim() && !isValidOrcaUserId(createDraft.userId) ? (
               <p className="admin-error">半角英数字とアンダーバーのみ使用できます。</p>
             ) : (
-              <p className="admin-quiet">許可文字: 半角英数字 + _</p>
+              <p className="admin-quiet">例: doctor_01 / 許可文字: 半角英数字 + _</p>
             )}
           </div>
           <div className="admin-form__field">
@@ -779,8 +781,8 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
               type="password"
               value={createDraft.password}
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, password: event.target.value }))}
-              placeholder="初期パスワード"
             />
+            <p className="admin-quiet">作成時のみ送信します。再表示はしません。</p>
           </div>
           <div className="admin-form__field">
             <label htmlFor="orca-create-staff-class">職員区分</label>
@@ -789,8 +791,8 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
               type="text"
               value={createDraft.staffClass}
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, staffClass: event.target.value }))}
-              placeholder="例: doctor / nurse / 01"
             />
+            <p className="admin-quiet">例: doctor / nurse / 01</p>
           </div>
           <div className="admin-form__field">
             <label htmlFor="orca-create-full-name">氏名</label>
@@ -799,8 +801,8 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
               type="text"
               value={createDraft.fullName}
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, fullName: event.target.value }))}
-              placeholder="例: 山田 太郎"
             />
+            <p className="admin-quiet">例: 山田 太郎</p>
           </div>
           <div className="admin-form__field">
             <label htmlFor="orca-create-full-name-kana">カナ（任意）</label>
@@ -809,19 +811,17 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
               type="text"
               value={createDraft.fullNameKana}
               onChange={(event) => setCreateDraft((prev) => ({ ...prev, fullNameKana: event.target.value }))}
-              placeholder="例: ヤマダ タロウ"
             />
+            <p className="admin-quiet">例: ヤマダ タロウ</p>
           </div>
           <div className="admin-form__field">
-            <label htmlFor="orca-create-staff-number">職員番号</label>
+            <label htmlFor="orca-create-staff-number">職員番号（ORCA採番）</label>
             <input
               id="orca-create-staff-number"
               type="text"
-              value=""
-              disabled
+              value="作成後の再取得で表示"
               readOnly
               aria-readonly="true"
-              placeholder="作成後の再取得で ORCA 採番値を反映"
             />
             <p className="admin-quiet">official create request では指定せず、作成後の再取得で採番済み値を反映します。</p>
           </div>
@@ -870,8 +870,11 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
       >
         {editTarget && editDraft ? (
           <form className="admin-form" onSubmit={(event) => event.preventDefault()}>
+            <p className="admin-note">
+              更新できるのは氏名 / カナ / パスワードのみです。ORCA User_Id / 職員区分 / 職員番号 / 管理者権限は official update request で変更しません。
+            </p>
             <div className="admin-form__field">
-              <label htmlFor="orca-edit-user-id">ORCA User_Id</label>
+              <label htmlFor="orca-edit-user-id">ORCA User_Id（更新不可）</label>
               <input
                 id="orca-edit-user-id"
                 type="text"
@@ -879,7 +882,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
                 readOnly
                 aria-readonly="true"
               />
-              <p className="admin-quiet">official update request では変更しません。</p>
+              <p className="admin-quiet">official update request では User_Id を固定し、New_User_Number や New_User_Id を送信しません。</p>
             </div>
             <div className="admin-form__field">
               <label htmlFor="orca-edit-full-name">氏名</label>
@@ -911,7 +914,7 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
               />
             </div>
             <div className="admin-form__field">
-              <label htmlFor="orca-edit-staff-class">職員区分</label>
+              <label htmlFor="orca-edit-staff-class">職員区分（更新不可）</label>
               <input
                 id="orca-edit-staff-class"
                 type="text"
@@ -919,10 +922,10 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
                 readOnly
                 aria-readonly="true"
               />
-              <p className="admin-quiet">職員区分は読み取り専用です。</p>
+              <p className="admin-quiet">職員区分は create 時の値を表示しています。official update request では New_Group_Number を送信しません。</p>
             </div>
             <div className="admin-form__field">
-              <label htmlFor="orca-edit-staff-number">職員番号</label>
+              <label htmlFor="orca-edit-staff-number">職員番号（更新不可）</label>
               <input
                 id="orca-edit-staff-number"
                 type="text"
@@ -930,23 +933,21 @@ export function OrcaUserManagementPanel({ runId, role }: OrcaUserManagementPanel
                 readOnly
                 aria-readonly="true"
               />
-              <p className="admin-quiet">職員番号は ORCA 採番値のため更新しません。</p>
+              <p className="admin-quiet">職員番号は ORCA 採番値のため表示専用です。official update request では送信しません。</p>
             </div>
-            <div className="admin-toggle">
-              <div className="admin-toggle__label">
-                <span>管理者権限</span>
-                <span className="admin-toggle__hint">create 時のみ指定可能</span>
-              </div>
+            <div className="admin-form__field">
+              <label htmlFor="orca-edit-admin-status">管理者権限（更新不可）</label>
               <input
-                type="checkbox"
-                checked={editDraft.isAdmin}
-                disabled
+                id="orca-edit-admin-status"
+                type="text"
+                value={editDraft.isAdmin ? 'あり' : 'なし'}
                 readOnly
                 aria-readonly="true"
-                aria-label="ORCA管理者権限（読み取り専用）"
               />
+              <p className="admin-quiet">
+                create 時の設定値を表示しています。official update request では New_Administrator_Privilege を送信しません。
+              </p>
             </div>
-            <p className="admin-quiet">ORCA側管理者権限は official update request では変更しません。</p>
 
             <div className="admin-actions">
               <button

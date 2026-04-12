@@ -134,19 +134,22 @@ describe('MasterUpdatesPanel', () => {
     renderPanel();
 
     expect(await screen.findByText('official masterlastupdatev3')).toBeInTheDocument();
+    expect(
+      screen.getByText('official 最終更新情報の確認と、取り込んだ local artifact の管理を分けて表示します。official 取得を実行すると、結果は local artifact 履歴へ追加されます。'),
+    ).toBeInTheDocument();
     expect(screen.getByText('official最終更新日')).toBeInTheDocument();
     expect(screen.getByText('official 最終更新情報')).toBeInTheDocument();
     expect(screen.getByText('local artifact 履歴 / rollback')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'official再取得' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: 'official取得を実行' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: 'local artifact をアップロード' })).toBeInTheDocument();
     expect(screen.getByText('official fetch')).toBeInTheDocument();
   });
 
-  it('official再取得ボタンが run request を呼ぶ', async () => {
+  it('official取得ボタンが run request を呼ぶ', async () => {
     const user = userEvent.setup();
     renderPanel();
 
-    await user.click((await screen.findAllByRole('button', { name: 'official再取得' }))[0]);
+    await user.click((await screen.findAllByRole('button', { name: 'official取得を実行' }))[0]);
 
     await waitFor(() => {
       expect(mockRunMasterUpdateDataset).toHaveBeenCalledWith('orca_master_core', false);

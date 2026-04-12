@@ -33,6 +33,8 @@ type ConnectionFieldErrors = {
   serverUrl?: string;
   port?: string;
   username?: string;
+  pushUrl?: string;
+  pushTenantId?: string;
   password?: string;
   clientCertificate?: string;
   clientCertificatePassphrase?: string;
@@ -214,7 +216,6 @@ export function WebOrcaConnectionCard({
                 readOnly={disabledByRole}
                 aria-readonly={disabledByRole}
                 aria-describedby={disabledByRole ? guardDetailsId : undefined}
-                placeholder={form.passwordConfigured ? '（設定済み。変更時のみ入力）' : ''}
               />
               <div className="admin-inline-meta">
                 <AdminStatusPill status={form.passwordConfigured ? 'ok' : 'idle'} value={form.passwordConfigured ? '設定済み' : '未設定'} />
@@ -229,7 +230,12 @@ export function WebOrcaConnectionCard({
               <AdminStatusPill status={pushConfigured ? 'ok' : 'idle'} value={`保存済みPush設定: ${pushModeLabel}`} />
               <AdminStatusPill status="idle" value={`接続テスト範囲: ${testedScopeLabel}`} />
             </div>
-            <AdminField label="Push URL" htmlFor="orca-connection-push-url" hint="例: wss://push.example.orca/ws">
+            <AdminField
+              label="Push URL"
+              htmlFor="orca-connection-push-url"
+              error={fieldErrors.pushUrl}
+              hint="例: wss://push.example.orca/ws。ws:// または wss:// の絶対 URL のみ保存します。"
+            >
               <input
                 id="orca-connection-push-url"
                 type="url"
@@ -243,7 +249,8 @@ export function WebOrcaConnectionCard({
             <AdminField
               label="Push tenant ID"
               htmlFor="orca-connection-push-tenant-id"
-              hint="Push 利用時のみ指定します。"
+              error={fieldErrors.pushTenantId}
+              hint="Push URL を保存する場合のみ指定します。Push tenant ID 単独では保存できません。"
             >
               <input
                 id="orca-connection-push-tenant-id"
@@ -305,6 +312,7 @@ export function WebOrcaConnectionCard({
               label="証明書パスフレーズ"
               htmlFor="orca-connection-client-passphrase"
               error={fieldErrors.clientCertificatePassphrase}
+              hint="設定済み値は再表示しません。変更時のみ入力してください。mTLS を OFF にしている間は編集できません。"
             >
               <input
                 id="orca-connection-client-passphrase"
@@ -314,7 +322,6 @@ export function WebOrcaConnectionCard({
                 readOnly={disabledByRole || !form.clientAuthEnabled}
                 aria-readonly={disabledByRole || !form.clientAuthEnabled}
                 aria-describedby={disabledByRole ? guardDetailsId : undefined}
-                placeholder={form.clientCertificatePassphraseConfigured ? '（設定済み。変更時のみ入力）' : ''}
               />
               <div className="admin-inline-meta">
                 <AdminStatusPill

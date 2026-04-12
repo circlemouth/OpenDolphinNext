@@ -732,7 +732,10 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     mutationFn: saveOrcaConnectionConfig,
     onSuccess: (data) => {
       if (!data.ok) {
-        setOrcaConnectionFeedback({ tone: 'error', message: 'WebORCA 接続設定の保存に失敗しました。設定内容を確認してください。' });
+        setOrcaConnectionFeedback({
+          tone: 'error',
+          message: data.error ?? 'WebORCA 接続設定の保存に失敗しました。設定内容を確認してください。',
+        });
         return;
       }
       setOrcaConnectionFeedback({ tone: 'success', message: 'WebORCA 接続設定を保存しました。' });
@@ -905,6 +908,8 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       serverUrl?: string;
       port?: string;
       username?: string;
+      pushUrl?: string;
+      pushTenantId?: string;
       password?: string;
       clientCertificate?: string;
       clientCertificatePassphrase?: string;
@@ -913,6 +918,19 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     if (!serverUrl) fieldErrors.serverUrl = 'サーバURLは必須です。';
     if (!Number.isFinite(port) || port <= 0 || port > 65535) fieldErrors.port = 'ポートは 1〜65535 で入力してください。';
     if (!username) fieldErrors.username = 'ユーザー名は必須です。';
+    if (pushUrl) {
+      try {
+        const parsed = new URL(pushUrl);
+        if (parsed.protocol !== 'ws:' && parsed.protocol !== 'wss:') {
+          fieldErrors.pushUrl = 'Push URL は ws:// または wss:// の絶対 URL で入力してください。';
+        }
+      } catch {
+        fieldErrors.pushUrl = 'Push URL は ws:// または wss:// の絶対 URL で入力してください。';
+      }
+    }
+    if (pushTenantId && !pushUrl) {
+      fieldErrors.pushTenantId = 'Push tenant ID は Push URL を設定した場合のみ保存できます。';
+    }
     if (!orcaConnectionForm.passwordConfigured && !password) fieldErrors.password = 'パスワードまたは API キーは必須です。';
     if (orcaConnectionForm.clientAuthEnabled) {
       const hasP12 = orcaConnectionForm.clientCertificateConfigured || Boolean(orcaConnectionForm.clientCertificateFile);
@@ -1509,9 +1527,16 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
 
                 {activeDeliverySection === 'debug' ? (
                   <>
-                    <section className="administration-card" aria-label="診断一括疎通">
-                      <h2 className="administration-card__title">診断/デバッグ</h2>
-                      <p className="admin-note">このセクションは運用設定から隔離されています。診断用途のみで使用してください。</p>
+                    <section className="administration-card" aria-label="診断チェック">
+                      <h2 className="administration-card__title">診断チェック</h2>
+                      <p className="admin-note">
+                        このセクションは運用設定から隔離されています。表示中の個別チェックだけを実行し、official / local の境界を混ぜた「一括疎通」には見せません。
+                      </p>
+                      <ul className="placeholder-page__list">
+                        <li>operations readiness を再照会します。</li>
+                        <li>capability がある場合のみ local `medical-records` wrapper を確認します。</li>
+                        <li>管理画面権限が確認できた場合のみ WebORCA 接続テストを追加します。</li>
+                      </ul>
                       <div className="admin-actions">
                         <button
                           type="button"
@@ -1519,11 +1544,12 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                           onClick={handleRunConnectivityGroup}
                           disabled={!isSystemAdmin}
                         >
-                          一括疎通（グループ）
+                          この画面の診断チェックを実行
                         </button>
                       </div>
                       {connectivitySummary ? (
                         <div className="admin-result admin-result--stack">
+                          <div>実行結果</div>
                           <div>testedAt: {formatTimestamp(connectivitySummary.testedAt)}</div>
                           <div>
                             success: {connectivitySummary.success} / failure: {connectivitySummary.failure}

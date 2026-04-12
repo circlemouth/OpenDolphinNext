@@ -29,7 +29,10 @@
 - 管理画面では **「管理画面権限確認」** と **「ORCA 接続テスト成功」** を別ステータスとして表示します。管理画面が開けても ORCA 接続成功を意味しません。
 - `接続テスト` は **保存済み設定に対する WebORCA API 到達確認のみ**です。`pushUrl` / `pushTenantId` の保存有無は表示しますが、push WebSocket の疎通はこのテスト対象外です。
 - `pushUrl` は `ws://` または `wss://` のみ許可し、`pushTenantId` は `pushUrl` がある場合だけ保存します。
+- ORCA ユーザ管理では、`manageusersv2` create は `User_Number` を送らず、update は `氏名 / カナ / パスワード` だけを送ります。`User_Id` / `職員区分` / `職員番号` / `管理者権限` は更新画面で表示専用です。
 - administration の internal wrapper は **capability-driven な local-only contract** です。official ORCA bridge と同じものとして扱わず、院内ローカル処理や stub 応答を明示表示します。
+- administration の診断チェックは readiness / capability 付き local wrapper / 権限確認済み時の WebORCA 接続テストだけを実行します。official/local を混ぜた「一括疎通」ボタンとして扱いません。
+- master updates では **official 最終更新情報** と **local artifact の upload / rollback / history** を分けて表示します。official 取得の結果は local artifact 履歴へ追加されます。
 
 ## 4. 接続先テンプレート（Trial 以外は `<MASKED>`）
 | 環境 | ベースURL | 認証方式 | 備考 |
@@ -61,6 +64,7 @@
 - 管理画面権限: `/api/admin/orca/connection` が 200 を返すこと。これは **設定取得権限確認** です。
 - ORCA 接続テスト: `/api/admin/orca/connection/test` が `ok=true` を返すこと。これは **API 到達確認** です。
 - Push 設定: `pushUrl` / `pushTenantId` の保存済み状態を確認すること。**接続テストだけでは push 有効性は確認できません。**
+- Push 入力: `pushTenantId` 単独は保存できません。UI でも `Push URL` がない場合は入力エラーとして扱います。
 - capability 表示: `internal wrapper` は local-only、`connection` は `testedScope=api_only` を前提に読むこと。
 
 ## 7. ログ/証跡ポリシー

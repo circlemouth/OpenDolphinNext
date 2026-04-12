@@ -104,20 +104,26 @@ describe('OrcaUserManagementPanel', () => {
     await user.click(screen.getByRole('button', { name: '更新' }));
 
     await waitFor(() => {
-      expect(screen.getAllByLabelText('ORCA User_Id').at(-1)).toHaveValue('doctor_01');
+      expect(screen.getByLabelText('ORCA User_Id（更新不可）')).toHaveValue('doctor_01');
     });
-    expect(screen.getAllByLabelText('ORCA User_Id').at(-1)).toHaveAttribute('readonly');
-    expect(screen.getAllByLabelText('職員区分').at(-1)).toHaveAttribute('readonly');
-    expect(screen.getAllByLabelText('職員番号').at(-1)).toHaveAttribute('readonly');
-    expect(screen.getByText('official update request では変更しません。')).toBeInTheDocument();
-    expect(screen.getByLabelText('ORCA管理者権限（読み取り専用）')).toBeDisabled();
-    expect(screen.getByText('ORCA側管理者権限は official update request では変更しません。')).toBeInTheDocument();
+    expect(screen.getByLabelText('ORCA User_Id（更新不可）')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('職員区分（更新不可）')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('職員番号（更新不可）')).toHaveAttribute('readonly');
+    expect(
+      screen.getByText('更新できるのは氏名 / カナ / パスワードのみです。ORCA User_Id / 職員区分 / 職員番号 / 管理者権限は official update request で変更しません。'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('official update request では User_Id を固定し、New_User_Number や New_User_Id を送信しません。')).toBeInTheDocument();
+    expect(screen.getByLabelText('管理者権限（更新不可）')).toHaveValue('あり');
+    expect(
+      screen.getByText('create 時の設定値を表示しています。official update request では New_Administrator_Privilege を送信しません。'),
+    ).toBeInTheDocument();
   });
 
-  it('作成フォームで職員番号入力を無効化する', async () => {
+  it('作成フォームで職員番号を表示専用にし、official create wording を表示する', async () => {
     renderPanel();
 
-    expect((await screen.findAllByLabelText('職員番号'))[0]).toBeDisabled();
+    expect(await screen.findByText('official create request では ORCA User_Id / 初期パスワード / 職員区分 / 氏名 / カナ / 管理者権限のみ送信し、職員番号は送信しません。')).toBeInTheDocument();
+    expect(screen.getByLabelText('職員番号（ORCA採番）')).toHaveAttribute('readonly');
     expect(screen.getByText('official create request では指定せず、作成後の再取得で採番済み値を反映します。')).toBeInTheDocument();
   });
 });
