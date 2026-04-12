@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  * Request payload for POST /api/local/patients/mutation.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class PatientMutationRequest {
+public class LocalPatientMutationRequest {
 
     private String operation; // create|update|delete
     private PatientPayload patient;

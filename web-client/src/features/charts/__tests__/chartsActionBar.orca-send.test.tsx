@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
 import { ChartsActionBar } from '../ChartsActionBar';
-import { ORCA_MEDICALMODV2_PATH, postOrcaMedicalModV2Xml } from '../orcaClaimApi';
+import { ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH, postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles } from '../orderBundleApi';
 import { getOrcaClaimSendEntry } from '../orcaClaimSendCache';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
@@ -229,8 +229,8 @@ describe('ChartsActionBar ORCA send', () => {
 
   it('chart flow regression: legacy medicalmod route を current route に戻さない', async () => {
     const legacyMedicalModRoute = ['medicalmod', 'v23'].join('');
-    expect(ORCA_MEDICALMODV2_PATH).toBe('/api/orca/official/chart-support/medical-mod-v2');
-    expect(ORCA_MEDICALMODV2_PATH).not.toContain(legacyMedicalModRoute);
+    expect(ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH).toBe('/api/orca/official/chart-support/medical-mod-v2');
+    expect(ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH).not.toContain(legacyMedicalModRoute);
   });
 
   it('blocks invalid treatment codes', async () => {

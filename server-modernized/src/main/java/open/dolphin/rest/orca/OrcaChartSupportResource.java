@@ -29,6 +29,11 @@ import open.dolphin.rest.dto.orca.OrcaEncounterContext;
 
 @Path("/orca/official/chart-support")
 public class OrcaChartSupportResource extends AbstractOrcaRestResource {
+    private static final String ROUTE_NAMESPACE = "official";
+    private static final String AUDIT_MEDICAL_MOD_ACTION = "ORCA_OFFICIAL_MEDICAL_MOD_V2";
+    private static final String AUDIT_MEDICATION_GET_ACTION = "ORCA_OFFICIAL_MEDICATION_GET";
+    private static final String AUDIT_CONTRAINDICATION_CHECK_ACTION = "ORCA_OFFICIAL_CONTRAINDICATION_CHECK";
+    private static final String AUDIT_INCOME_INFO_ACTION = "ORCA_OFFICIAL_INCOME_INFO";
 
     @Inject
     private OrcaTransport orcaTransport;
@@ -100,7 +105,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("medicalUidPresent", !isBlank(payload.getMedicalUid()));
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
-        recordAudit(request, "ORCA_MEDICAL_MOD_V2", details,
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_MEDICAL_MOD_ACTION, details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
     }
@@ -149,7 +155,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("baseDatePresent", !isBlank(payload.getBaseDate()));
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
-        recordAudit(request, "ORCA_MEDICATION_GET", details,
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_MEDICATION_GET_ACTION, details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
     }
@@ -186,7 +193,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("requestNumber", payload.getRequestNumber());
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
-        recordAudit(request, "ORCA_CONTRAINDICATION_CHECK", details,
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_CONTRAINDICATION_CHECK_ACTION, details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
     }
@@ -221,7 +229,8 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         details.put("baseDate", payload.getBaseDate());
         details.put("apiResult", response.getApiResult());
         details.put("httpStatus", response.getStatus());
-        recordAudit(request, "ORCA_INCOME_INFO", details,
+        details.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_INCOME_INFO_ACTION, details,
                 response.isOk() ? AuditEventEnvelope.Outcome.SUCCESS : AuditEventEnvelope.Outcome.FAILURE);
         return response;
     }

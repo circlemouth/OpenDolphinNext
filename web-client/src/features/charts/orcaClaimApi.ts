@@ -26,7 +26,7 @@ export type OrcaClaimSendResult = {
   error?: string;
 };
 
-export const ORCA_MEDICALMODV2_PATH = '/api/orca/official/chart-support/medical-mod-v2';
+export const ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH = '/api/orca/official/chart-support/medical-mod-v2';
 
 export type MedicalModV2Medication = {
   code: string;
@@ -93,7 +93,7 @@ export async function postOrcaMedicalModV2Xml(
       error: message,
     };
   }
-  const response = await httpFetch(ORCA_MEDICALMODV2_PATH, {
+  const response = await httpFetch(ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

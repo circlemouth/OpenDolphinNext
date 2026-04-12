@@ -43,6 +43,10 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaPrescriptionOrderResource.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    private static final String ROUTE_NAMESPACE = "local";
+    private static final String AUDIT_FETCH_ACTION = "LOCAL_PRESCRIPTION_ORDER_FETCH";
+    private static final String AUDIT_SAVE_ACTION = "LOCAL_PRESCRIPTION_ORDER_SAVE";
+    private static final String AUDIT_DO_IMPORT_ACTION = "LOCAL_PRESCRIPTION_DO_IMPORT";
     @Inject
     private PatientServiceBean patientServiceBean;
 
@@ -61,14 +65,14 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         String facilityId = requireFacilityId(request);
         if (!hasText(patientId)) {
             recordValidationFailure(request, facilityId, null, runId, "patientId", "patientId is required",
-                    "ORCA_PRESCRIPTION_ORDER_FETCH");
+                    AUDIT_FETCH_ACTION);
             throw validationError(request, "patientId", "patientId is required");
         }
 
         String normalizedPatientId = patientId.trim();
-        ensurePatientExists(request, facilityId, normalizedPatientId, runId, "ORCA_PRESCRIPTION_ORDER_FETCH");
+        ensurePatientExists(request, facilityId, normalizedPatientId, runId, AUDIT_FETCH_ACTION);
         LocalDate resolvedEncounterDate = parseOptionalDate(request, "encounterDate", encounterDate,
-                facilityId, normalizedPatientId, runId, "ORCA_PRESCRIPTION_ORDER_FETCH");
+                facilityId, normalizedPatientId, runId, AUDIT_FETCH_ACTION);
         String resolvedEncounterId = trimToNull(encounterId);
 
         Optional<PrescriptionOrderRepository.StoredPrescriptionOrder> stored =
@@ -87,7 +91,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
             response.setOrder(null);
         } else {
             PrescriptionOrder order = decodeOrderOrThrow(request, stored.get(), facilityId, normalizedPatientId,
-                    runId, "ORCA_PRESCRIPTION_ORDER_FETCH");
+                    runId, AUDIT_FETCH_ACTION);
             response.setApiResult("00");
             response.setApiResultMessage("処理終了");
             response.setFound(true);
@@ -107,7 +111,8 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         audit.put("encounterDate", response.getEncounterDate());
         audit.put("found", response.isFound());
         audit.put("runId", runId);
-        recordAudit(request, "ORCA_PRESCRIPTION_ORDER_FETCH", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_FETCH_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -124,30 +129,30 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
 
         if (payload == null) {
             recordValidationFailure(request, facilityId, null, runId, "payload", "payload is required",
-                    "ORCA_PRESCRIPTION_ORDER_SAVE");
+                    AUDIT_SAVE_ACTION);
             throw validationError(request, "payload", "payload is required");
         }
         if (!hasText(payload.getPatientId())) {
             recordValidationFailure(request, facilityId, null, runId, "patientId", "patientId is required",
-                    "ORCA_PRESCRIPTION_ORDER_SAVE");
+                    AUDIT_SAVE_ACTION);
             throw validationError(request, "patientId", "patientId is required");
         }
 
         String patientId = payload.getPatientId().trim();
-        ensurePatientExists(request, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
+        ensurePatientExists(request, facilityId, patientId, runId, AUDIT_SAVE_ACTION);
         LocalDate encounterDate = parseOptionalDate(request, "encounterDate", payload.getEncounterDate(),
-                facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
+                facilityId, patientId, runId, AUDIT_SAVE_ACTION);
         LocalDate performDate = parseOptionalDate(request, "performDate", payload.getPerformDate(),
-                facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
+                facilityId, patientId, runId, AUDIT_SAVE_ACTION);
 
         PrescriptionOrder normalized = copyOrder(payload);
         normalized.setPatientId(patientId);
         normalized.setEncounterId(trimToNull(normalized.getEncounterId()));
         normalized.setEncounterDate(encounterDate != null ? encounterDate.toString() : null);
         normalized.setPerformDate(performDate != null ? performDate.toString() : null);
-        validateClaimCommentCodes(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
+        validateClaimCommentCodes(request, normalized, facilityId, patientId, runId, AUDIT_SAVE_ACTION);
 
-        String json = writeJsonOrThrow(request, normalized, facilityId, patientId, runId, "ORCA_PRESCRIPTION_ORDER_SAVE");
+        String json = writeJsonOrThrow(request, normalized, facilityId, patientId, runId, AUDIT_SAVE_ACTION);
         Instant now = Instant.now();
         long orderId = prescriptionOrderRepository.save(
                 facilityId,
@@ -176,7 +181,8 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         audit.put("encounterDate", normalized.getEncounterDate());
         audit.put("orderId", orderId);
         audit.put("runId", runId);
-        recordAudit(request, "ORCA_PRESCRIPTION_ORDER_SAVE", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_SAVE_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -207,25 +213,25 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
             String facilityId) {
         if (payload == null) {
             recordValidationFailure(request, facilityId, null, runId, "payload", "payload is required",
-                    "ORCA_PRESCRIPTION_DO_IMPORT");
+                    AUDIT_DO_IMPORT_ACTION);
             throw validationError(request, "payload", "payload is required");
         }
         if (!hasText(payload.getPatientId())) {
             recordValidationFailure(request, facilityId, null, runId, "patientId", "patientId is required",
-                    "ORCA_PRESCRIPTION_DO_IMPORT");
+                    AUDIT_DO_IMPORT_ACTION);
             throw validationError(request, "patientId", "patientId is required");
         }
         if (payload.getDoOrder() == null) {
             recordValidationFailure(request, facilityId, payload.getPatientId(), runId, "doOrder", "doOrder is required",
-                    "ORCA_PRESCRIPTION_DO_IMPORT");
+                    AUDIT_DO_IMPORT_ACTION);
             throw validationError(request, "doOrder", "doOrder is required");
         }
         String patientId = payload.getPatientId().trim();
-        ensurePatientExists(request, facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+        ensurePatientExists(request, facilityId, patientId, runId, AUDIT_DO_IMPORT_ACTION);
         LocalDate targetEncounterDate = parseOptionalDate(request, "encounterDate", payload.getEncounterDate(),
-                facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+                facilityId, patientId, runId, AUDIT_DO_IMPORT_ACTION);
         String targetEncounterId = trimToNull(payload.getEncounterId());
-        validateClaimCommentCodes(request, payload.getDoOrder(), facilityId, patientId, runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+        validateClaimCommentCodes(request, payload.getDoOrder(), facilityId, patientId, runId, AUDIT_DO_IMPORT_ACTION);
         return new DoImportContext(patientId, targetEncounterId, targetEncounterDate);
     }
 
@@ -239,7 +245,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                         facilityId, context.patientId(), context.targetEncounterId(), context.targetEncounterDate());
         return stored
                 .map(row -> decodeOrderOrThrow(
-                        request, row, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT"))
+                        request, row, facilityId, context.patientId(), runId, AUDIT_DO_IMPORT_ACTION))
                 .orElseGet(PrescriptionOrder::new);
     }
 
@@ -266,15 +272,15 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
                 OBJECT_MAPPER);
 
         LocalDate mergedEncounterDate = parseOptionalDate(request, "encounterDate", merged.getEncounterDate(),
-                facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+                facilityId, context.patientId(), runId, AUDIT_DO_IMPORT_ACTION);
         LocalDate performDate = parseOptionalDate(request, "performDate", merged.getPerformDate(),
-                facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+                facilityId, context.patientId(), runId, AUDIT_DO_IMPORT_ACTION);
 
         merged.setEncounterDate(mergedEncounterDate != null ? mergedEncounterDate.toString() : null);
         merged.setPerformDate(performDate != null ? performDate.toString() : null);
-        validateClaimCommentCodes(request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+        validateClaimCommentCodes(request, merged, facilityId, context.patientId(), runId, AUDIT_DO_IMPORT_ACTION);
         String json = writeJsonOrThrow(
-                request, merged, facilityId, context.patientId(), runId, "ORCA_PRESCRIPTION_DO_IMPORT");
+                request, merged, facilityId, context.patientId(), runId, AUDIT_DO_IMPORT_ACTION);
         return new DoImportResult(merged, mergedEncounterDate, performDate, now, warnings, json);
     }
 
@@ -327,7 +333,8 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         audit.put("orderId", orderId);
         audit.put("warnings", response.getWarnings().size());
         audit.put("runId", runId);
-        recordAudit(request, "ORCA_PRESCRIPTION_DO_IMPORT", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_DO_IMPORT_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
     }
 
     private PrescriptionOrder decodeOrderOrThrow(HttpServletRequest request,
@@ -344,6 +351,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
             details.put("patientId", patientId);
             details.put("runId", runId);
             details.put("orderId", stored.id());
+            details.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "prescription_order_decode_error", "Failed to decode prescription order payload");
             recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
@@ -371,6 +379,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
             details.put("facilityId", facilityId);
             details.put("patientId", patientId);
             details.put("runId", runId);
+            details.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "prescription_order_encode_error", "Failed to encode prescription order payload");
             recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
@@ -397,6 +406,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         details.put("facilityId", facilityId);
         details.put("patientId", patientId);
         details.put("runId", runId);
+        details.put("routeNamespace", ROUTE_NAMESPACE);
         markFailureDetails(details, Response.Status.NOT_FOUND.getStatusCode(), "patient_not_found", "Patient not found");
         recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
         throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found", details, null);
@@ -415,6 +425,7 @@ public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
         details.put("runId", runId);
         details.put("field", field);
         details.put("validationError", Boolean.TRUE);
+        details.put("routeNamespace", ROUTE_NAMESPACE);
         markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", message);
         recordAudit(request, action, details, AuditEventEnvelope.Outcome.FAILURE);
     }

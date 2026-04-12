@@ -33,7 +33,7 @@ export type MedicalRecordsRequest = {
   includeVisitStatus?: boolean;
 };
 
-export type PatientMutationRequest = {
+export type LocalPatientMutationRequest = {
   operation?: 'create' | 'update' | 'delete' | string;
   patient?: {
     id?: number;
@@ -104,13 +104,13 @@ export type SubjectiveEntryResponse = OrcaInternalWrapperBase & {
   recordedAt?: string;
 };
 
-export type PatientMutationResponse = OrcaInternalWrapperBase & {
+export type LocalPatientMutationResponse = OrcaInternalWrapperBase & {
   patientDbId?: number;
   patientId?: string;
 };
 
-const ORCA_MEDICAL_SETS_ENDPOINT = '/api/admin/internal/orca/medical-sets';
-const ORCA_BIRTH_DELIVERY_ENDPOINT = '/api/admin/internal/orca/birth-delivery';
+const ADMIN_INTERNAL_MEDICAL_SETS_ENDPOINT = '/api/admin/internal/orca/medical-sets';
+const ADMIN_INTERNAL_BIRTH_DELIVERY_ENDPOINT = '/api/admin/internal/orca/birth-delivery';
 const LOCAL_MEDICAL_RECORDS_ENDPOINT = '/api/local/charts/medical-records';
 const LOCAL_PATIENT_MUTATION_ENDPOINT = '/api/local/patients/mutation';
 const LOCAL_CHART_SUBJECTIVES_ENDPOINT = '/api/local/charts/subjectives';
@@ -292,7 +292,7 @@ const normalizePatientMutation = (
   headers: Headers,
   status: number,
   ok: boolean,
-): PatientMutationResponse => {
+): LocalPatientMutationResponse => {
   const base = normalizeBase(json, headers, status, ok);
   const body = base.raw;
   return {
@@ -386,23 +386,23 @@ export const ORCA_INTERNAL_WRAPPER_ENDPOINTS: ReadonlyArray<{
   description: string;
   stub?: boolean;
 }> = [
-  { id: 'medical-sets', path: ORCA_MEDICAL_SETS_ENDPOINT, label: 'medical-sets', description: 'scope=local admin internal 診療セット登録', stub: false },
-  { id: 'birth-delivery', path: ORCA_BIRTH_DELIVERY_ENDPOINT, label: 'birth-delivery', description: 'scope=local admin internal 出産内容登録', stub: true },
+  { id: 'medical-sets', path: ADMIN_INTERNAL_MEDICAL_SETS_ENDPOINT, label: 'medical-sets', description: 'scope=local admin-internal 診療セット登録（stub 固定）', stub: true },
+  { id: 'birth-delivery', path: ADMIN_INTERNAL_BIRTH_DELIVERY_ENDPOINT, label: 'birth-delivery', description: 'scope=local admin-internal 出産内容登録（stub 固定）', stub: true },
   { id: 'medical-records', path: LOCAL_MEDICAL_RECORDS_ENDPOINT, label: 'medical-records', description: 'scope=local 院内診療記録取得', stub: false },
-  { id: 'patient-mutation', path: LOCAL_PATIENT_MUTATION_ENDPOINT, label: 'patient-mutation', description: 'scope=local 院内患者 CRUD', stub: false },
-  { id: 'chart-subjectives', path: LOCAL_CHART_SUBJECTIVES_ENDPOINT, label: 'chart-subjectives', description: 'scope=local 院内 SOAP 主観記録', stub: true },
+  { id: 'patient-mutation', path: LOCAL_PATIENT_MUTATION_ENDPOINT, label: 'patient-mutation', description: 'scope=local 院内患者作成/更新', stub: false },
+  { id: 'chart-subjectives', path: LOCAL_CHART_SUBJECTIVES_ENDPOINT, label: 'chart-subjectives', description: 'scope=local 院内主訴記録', stub: false },
 ];
 
 export async function postMedicalSets(payload: MedicalSetMutationRequest | Record<string, unknown>) {
-  const { response, json } = await postInternalWrapper(ORCA_MEDICAL_SETS_ENDPOINT, payload as Record<string, unknown>);
+  const { response, json } = await postInternalWrapper(ADMIN_INTERNAL_MEDICAL_SETS_ENDPOINT, payload as Record<string, unknown>);
   const base = normalizeBase(json, response.headers, response.status, response.ok);
-  return buildResult('medical-sets', ORCA_MEDICAL_SETS_ENDPOINT, base);
+  return buildResult('medical-sets', ADMIN_INTERNAL_MEDICAL_SETS_ENDPOINT, base);
 }
 
 export async function postBirthDelivery(payload: BirthDeliveryRequest | Record<string, unknown>) {
-  const { response, json } = await postInternalWrapper(ORCA_BIRTH_DELIVERY_ENDPOINT, payload as Record<string, unknown>);
+  const { response, json } = await postInternalWrapper(ADMIN_INTERNAL_BIRTH_DELIVERY_ENDPOINT, payload as Record<string, unknown>);
   const base = normalizeBase(json, response.headers, response.status, response.ok);
-  return buildResult('birth-delivery', ORCA_BIRTH_DELIVERY_ENDPOINT, base);
+  return buildResult('birth-delivery', ADMIN_INTERNAL_BIRTH_DELIVERY_ENDPOINT, base);
 }
 
 export async function postMedicalRecords(payload: MedicalRecordsRequest | Record<string, unknown>) {
@@ -416,7 +416,7 @@ export async function postMedicalRecords(payload: MedicalRecordsRequest | Record
   });
 }
 
-export async function postPatientMutation(payload: PatientMutationRequest | Record<string, unknown>) {
+export async function postPatientMutation(payload: LocalPatientMutationRequest | Record<string, unknown>) {
   const { response, json } = await postInternalWrapper(LOCAL_PATIENT_MUTATION_ENDPOINT, payload as Record<string, unknown>);
   const normalized = normalizePatientMutation(json, response.headers, response.status, response.ok);
   return buildResult('patient-mutation', LOCAL_PATIENT_MUTATION_ENDPOINT, normalized, {

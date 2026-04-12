@@ -13,8 +13,8 @@ import jakarta.ws.rs.WebApplicationException;
 import java.time.LocalDate;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
-import open.dolphin.rest.dto.orca.PatientMutationRequest;
-import open.dolphin.rest.dto.orca.PatientMutationResponse;
+import open.dolphin.rest.dto.orca.LocalPatientMutationRequest;
+import open.dolphin.rest.dto.orca.LocalPatientMutationResponse;
 import open.dolphin.session.PatientServiceBean;
 import org.junit.jupiter.api.Test;
 
@@ -35,9 +35,9 @@ class OrcaPatientResourceIdempotencyTest {
         when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
-        PatientMutationRequest payload = new PatientMutationRequest();
+        LocalPatientMutationRequest payload = new LocalPatientMutationRequest();
         payload.setOperation("create");
-        PatientMutationRequest.PatientPayload patient = new PatientMutationRequest.PatientPayload();
+        LocalPatientMutationRequest.PatientPayload patient = new LocalPatientMutationRequest.PatientPayload();
         patient.setPatientId("00001");
         patient.setWholeName("山田 太郎");
         patient.setWholeNameKana("ヤマダ タロウ");
@@ -48,7 +48,7 @@ class OrcaPatientResourceIdempotencyTest {
         patient.setAddressLine("東京都千代田区");
         payload.setPatient(patient);
 
-        PatientMutationResponse response = resource.mutatePatient(request, payload);
+        LocalPatientMutationResponse response = resource.mutatePatient(request, payload);
 
         assertEquals("00", response.getApiResult());
         assertEquals("登録済み", response.getApiResultMessage());
@@ -74,9 +74,9 @@ class OrcaPatientResourceIdempotencyTest {
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
         when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
 
-        PatientMutationRequest payload = new PatientMutationRequest();
+        LocalPatientMutationRequest payload = new LocalPatientMutationRequest();
         payload.setOperation("create");
-        PatientMutationRequest.PatientPayload patient = new PatientMutationRequest.PatientPayload();
+        LocalPatientMutationRequest.PatientPayload patient = new LocalPatientMutationRequest.PatientPayload();
         patient.setPatientId("00001");
         patient.setWholeName("山田 花子");
         payload.setPatient(patient);
@@ -102,15 +102,15 @@ class OrcaPatientResourceIdempotencyTest {
         when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
         when(request.getHeader("X-Run-Id")).thenReturn("20260125T112249Z");
 
-        PatientMutationRequest payload = new PatientMutationRequest();
+        LocalPatientMutationRequest payload = new LocalPatientMutationRequest();
         payload.setOperation("update");
-        PatientMutationRequest.PatientPayload patient = new PatientMutationRequest.PatientPayload();
+        LocalPatientMutationRequest.PatientPayload patient = new LocalPatientMutationRequest.PatientPayload();
         patient.setPatientId("00001");
         patient.setWholeName("山田 太郎");
         patient.setWholeNameKana("ヤマダ タロウ");
         payload.setPatient(patient);
 
-        PatientMutationResponse response = resource.mutatePatient(request, payload);
+        LocalPatientMutationResponse response = resource.mutatePatient(request, payload);
 
         assertEquals("00", response.getApiResult());
         assertEquals("更新完了", response.getApiResultMessage());
@@ -130,9 +130,9 @@ class OrcaPatientResourceIdempotencyTest {
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
         when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
 
-        PatientMutationRequest payload = new PatientMutationRequest();
+        LocalPatientMutationRequest payload = new LocalPatientMutationRequest();
         payload.setOperation("update");
-        PatientMutationRequest.PatientPayload patient = new PatientMutationRequest.PatientPayload();
+        LocalPatientMutationRequest.PatientPayload patient = new LocalPatientMutationRequest.PatientPayload();
         patient.setPatientId("00001");
         payload.setPatient(patient);
 
@@ -153,9 +153,9 @@ class OrcaPatientResourceIdempotencyTest {
         when(request.getRemoteUser()).thenReturn("facility:doctor1");
         when(request.getRequestURI()).thenReturn("/api/local/patients/mutation");
 
-        PatientMutationRequest payload = new PatientMutationRequest();
+        LocalPatientMutationRequest payload = new LocalPatientMutationRequest();
         payload.setOperation("delete");
-        PatientMutationRequest.PatientPayload patient = new PatientMutationRequest.PatientPayload();
+        LocalPatientMutationRequest.PatientPayload patient = new LocalPatientMutationRequest.PatientPayload();
         patient.setPatientId("00001");
         payload.setPatient(patient);
 

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * Response payload for POST /api/local/patients/mutation.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PatientMutationResponse extends OrcaApiResponse {
+public class LocalPatientMutationResponse extends OrcaApiResponse {
 
     private Long patientDbId;
     private String patientId;

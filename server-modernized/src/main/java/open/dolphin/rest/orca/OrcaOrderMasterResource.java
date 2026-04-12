@@ -34,6 +34,10 @@ import org.slf4j.LoggerFactory;
 public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaOrderMasterResource.class);
+    private static final String ROUTE_NAMESPACE = "master";
+    private static final String AUDIT_INPUTSET_LIST_ACTION = "ORCA_MASTER_ORDER_INPUTSET_LIST";
+    private static final String AUDIT_INPUTSET_DETAIL_ACTION = "ORCA_MASTER_ORDER_INPUTSET_DETAIL";
+    private static final String AUDIT_INTERACTION_CHECK_ACTION = "ORCA_MASTER_ORDER_INTERACTION_CHECK";
     private static final String BODY_PART_CODE_PREFIX = "002";
     private static final int DEFAULT_INPUT_SET_SIZE = 20;
     private static final int MAX_INPUT_SET_SIZE = 100;
@@ -69,8 +73,9 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "entity");
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", "entity is invalid");
-            recordAudit(request, "ORCA_ORDER_INPUTSET_LIST", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_INPUTSET_LIST_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "entity", "entity is invalid");
         }
 
@@ -92,7 +97,8 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
         audit.put("page", resolvedPage);
         audit.put("size", resolvedSize);
         audit.put("totalCount", response.getTotalCount());
-        recordAudit(request, "ORCA_ORDER_INPUTSET_LIST", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_INPUTSET_LIST_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -116,8 +122,9 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "setCode");
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", "setCode is required");
-            recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_INPUTSET_DETAIL_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "setCode", "setCode is required");
         }
         String normalizedEntity = OrcaOrderBundleRequestSupport.normalizeEntityQuery(entity);
@@ -128,8 +135,9 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "entity");
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", "entity is invalid");
-            recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_INPUTSET_DETAIL_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "entity", "entity is invalid");
         }
         String normalizedEffective = OrcaOrderBundleRequestSupport.normalizeOrcaDateOrToday(effective);
@@ -140,8 +148,9 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("setCode", normalizedSetCode);
             audit.put("effective", normalizedEffective);
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(), "inputset_not_found", "Input set not found");
-            recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_INPUTSET_DETAIL_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "inputset_not_found", "Input set not found");
         }
         bundle.setEntity(OrcaOrderBundle600SubtypeSupport.resolveInputSetEntity(
@@ -154,8 +163,9 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("setCode", normalizedSetCode);
             audit.put("effective", normalizedEffective);
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(), "inputset_not_found", "Input set not found");
-            recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_INPUTSET_DETAIL_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "inputset_not_found", "Input set not found");
         }
         bundle.setSubtype(OrcaOrderBundle600SubtypeSupport.resolveSubtype(
@@ -170,8 +180,9 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("setCode", normalizedSetCode);
             audit.put("entity", normalizedEntity);
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(), "inputset_not_found", "Input set not found");
-            recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_INPUTSET_DETAIL_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "inputset_not_found", "Input set not found");
         }
 
@@ -188,7 +199,8 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
         audit.put("entity", bundle.getEntity());
         audit.put("effective", normalizedEffective);
         audit.put("itemCount", bundle.getItems().size());
-        recordAudit(request, "ORCA_ORDER_INPUTSET_DETAIL", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_INPUTSET_DETAIL_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -211,8 +223,9 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "codes");
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", "codes is required");
-            recordAudit(request, "ORCA_ORDER_INTERACTION_CHECK", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_INTERACTION_CHECK_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "codes", "codes is required");
         }
 
@@ -228,7 +241,8 @@ public class OrcaOrderMasterResource extends AbstractOrcaRestResource {
         audit.put("codes", codes.size());
         audit.put("existingCodes", existingCodes.size());
         audit.put("totalCount", response.getTotalCount());
-        recordAudit(request, "ORCA_ORDER_INTERACTION_CHECK", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_INTERACTION_CHECK_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 

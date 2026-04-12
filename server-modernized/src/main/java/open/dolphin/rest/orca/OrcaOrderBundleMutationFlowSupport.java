@@ -176,8 +176,10 @@ final class OrcaOrderBundleMutationFlowSupport {
         audit.put("facilityId", facilityId);
         audit.put("patientId", patientId);
         audit.put("runId", runId);
+        audit.put("routeNamespace", OrcaOrderBundleResource.ROUTE_NAMESPACE);
         resource.markFailureDetails(audit, 404, errorCode, message);
-        resource.recordAudit(request, "ORCA_ORDER_BUNDLE_MUTATION", audit, open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
+        resource.recordAudit(request, OrcaOrderBundleResource.AUDIT_MUTATION_ACTION, audit,
+                open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
         return resource.restError(request, jakarta.ws.rs.core.Response.Status.NOT_FOUND, errorCode, message);
     }
 

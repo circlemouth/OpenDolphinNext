@@ -97,7 +97,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("patientId", body.get("field"));
         assertEquals("patientId is required", body.get("message"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("ORCA_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 
@@ -117,7 +117,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("entity", body.get("field"));
         assertEquals("entity is invalid", body.get("message"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("ORCA_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 
@@ -147,7 +147,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("out", entry.getTemplate().getPrescriptionLocation());
         assertEquals("regular", entry.getTemplate().getPrescriptionTiming());
         assertNotNull(auditDispatcher.payload);
-        assertEquals("ORCA_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.SUCCESS, auditDispatcher.outcome);
     }
 
@@ -234,7 +234,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("startDate", body.get("field"));
         assertEquals("startDate must be yyyy-MM-dd", body.get("message"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("ORCA_ORDER_BUNDLE_MUTATION", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_ORDER_BUNDLE_MUTATION", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 

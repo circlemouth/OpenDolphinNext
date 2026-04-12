@@ -18,9 +18,9 @@ import java.util.Optional;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SimpleAddressModel;
-import open.dolphin.rest.dto.orca.PatientMutationRequest;
-import open.dolphin.rest.dto.orca.PatientMutationRequest.PatientPayload;
-import open.dolphin.rest.dto.orca.PatientMutationResponse;
+import open.dolphin.rest.dto.orca.LocalPatientMutationRequest;
+import open.dolphin.rest.dto.orca.LocalPatientMutationRequest.PatientPayload;
+import open.dolphin.rest.dto.orca.LocalPatientMutationResponse;
 import open.dolphin.session.PatientServiceBean;
 
 /**
@@ -43,8 +43,8 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
     @Path("/mutation")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public PatientMutationResponse mutatePatient(@Context HttpServletRequest request,
-            PatientMutationRequest payload) {
+    public LocalPatientMutationResponse mutatePatient(@Context HttpServletRequest request,
+            LocalPatientMutationRequest payload) {
         requireRemoteUser(request);
         String facilityId = requireFacilityId(request);
         String runId = resolveRunId(request);
@@ -60,7 +60,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         };
     }
 
-    private String requireMutationOperation(HttpServletRequest request, PatientMutationRequest payload,
+    private String requireMutationOperation(HttpServletRequest request, LocalPatientMutationRequest payload,
             String facilityId, String runId) {
         if (payload == null || payload.getOperation() == null) {
             Map<String, Object> auditDetails = buildPatientMutationAudit(facilityId, null, null, runId);
@@ -69,7 +69,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         return payload.getOperation().trim();
     }
 
-    private String requireMutationPatientId(HttpServletRequest request, PatientMutationRequest payload,
+    private String requireMutationPatientId(HttpServletRequest request, LocalPatientMutationRequest payload,
             String facilityId, String operation, String runId) {
         if (payload.getPatient() == null || payload.getPatient().getPatientId() == null
                 || payload.getPatient().getPatientId().isBlank()) {
@@ -94,9 +94,9 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         return auditDetails;
     }
 
-    private PatientMutationResponse createPatient(HttpServletRequest request, PatientMutationRequest payload,
+    private LocalPatientMutationResponse createPatient(HttpServletRequest request, LocalPatientMutationRequest payload,
             String facilityId, Map<String, Object> auditDetails) {
-        PatientMutationResponse response = new PatientMutationResponse();
+        LocalPatientMutationResponse response = new LocalPatientMutationResponse();
         response.setRunId((String) auditDetails.get("runId"));
         response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setPatientId(payload.getPatient().getPatientId());
@@ -123,8 +123,8 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         }
     }
 
-    private PatientMutationResponse resolveExistingPatientCreate(HttpServletRequest request, PatientMutationRequest payload,
-            Map<String, Object> auditDetails, PatientModel existing, PatientMutationResponse response,
+    private LocalPatientMutationResponse resolveExistingPatientCreate(HttpServletRequest request, LocalPatientMutationRequest payload,
+            Map<String, Object> auditDetails, PatientModel existing, LocalPatientMutationResponse response,
             String idempotentReason) {
         List<String> conflicts = resolveConflicts(existing, payload.getPatient());
         if (!conflicts.isEmpty()) {
@@ -150,7 +150,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         return response;
     }
 
-    private PatientMutationResponse updatePatient(HttpServletRequest request, PatientMutationRequest payload,
+    private LocalPatientMutationResponse updatePatient(HttpServletRequest request, LocalPatientMutationRequest payload,
             String facilityId, Map<String, Object> auditDetails) {
         PatientModel existing = patientServiceBean.getPatientById(facilityId, payload.getPatient().getPatientId());
         if (existing == null) {
@@ -163,7 +163,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         PatientModel update = toPatientModel(payload.getPatient(), facilityId);
         update.setId(existing.getId());
         patientServiceBean.update(update);
-        PatientMutationResponse response = new PatientMutationResponse();
+        LocalPatientMutationResponse response = new LocalPatientMutationResponse();
         response.setRunId((String) auditDetails.get("runId"));
         response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setPatientId(payload.getPatient().getPatientId());
@@ -174,7 +174,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         return response;
     }
 
-    private PatientMutationResponse rejectDeleteOperation(HttpServletRequest request, Map<String, Object> auditDetails) {
+    private LocalPatientMutationResponse rejectDeleteOperation(HttpServletRequest request, Map<String, Object> auditDetails) {
         Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);
         unsupportedAudit.put("validationError", Boolean.TRUE);
         unsupportedAudit.put("field", "operation");
@@ -184,7 +184,7 @@ public class OrcaPatientResource extends AbstractOrcaRestResource {
         throw validationError(request, "operation", "delete operation is not supported");
     }
 
-    private PatientMutationResponse rejectUnsupportedOperation(HttpServletRequest request, String operation,
+    private LocalPatientMutationResponse rejectUnsupportedOperation(HttpServletRequest request, String operation,
             Map<String, Object> auditDetails) {
         Map<String, Object> unsupportedAudit = new HashMap<>(auditDetails);
         unsupportedAudit.put("validationError", Boolean.TRUE);

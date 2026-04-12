@@ -45,6 +45,10 @@ import org.slf4j.LoggerFactory;
 public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaOrderBundleResource.class);
+    static final String ROUTE_NAMESPACE = "local";
+    static final String AUDIT_FETCH_ACTION = "LOCAL_ORDER_BUNDLE_FETCH";
+    static final String AUDIT_RECOMMENDATION_ACTION = "LOCAL_ORDER_RECOMMENDATION_FETCH";
+    static final String AUDIT_MUTATION_ACTION = "LOCAL_ORDER_BUNDLE_MUTATION";
     private static final String ORDER_BUNDLE_UNAVAILABLE = "order_bundle_unavailable";
     private static final String ORDER_BUNDLE_ERROR_MESSAGE = "Failed to mutate order bundle";
     public static final String ORDER_BUNDLE_CONTEXT_KEY = "orcaOrderBundleContext";
@@ -84,8 +88,9 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             audit.put("runId", runId);
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "patientId");
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", "patientId is required");
-            recordAudit(request, "ORCA_ORDER_BUNDLE_FETCH", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_FETCH_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "patientId", "patientId is required");
         }
         if (entity != null && !entity.isBlank() && !OrcaOrderBundleRequestSupport.isValidEntity(entity)) {
@@ -96,8 +101,9 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             audit.put("validationError", Boolean.TRUE);
             audit.put("field", "entity");
             audit.put("entity", entity);
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", "entity is invalid");
-            recordAudit(request, "ORCA_ORDER_BUNDLE_FETCH", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_FETCH_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw validationError(request, "entity", "entity is invalid");
         }
 
@@ -107,8 +113,9 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             audit.put("facilityId", facilityId);
             audit.put("patientId", patientId);
             audit.put("runId", runId);
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(), "patient_not_found", "Patient not found");
-            recordAudit(request, "ORCA_ORDER_BUNDLE_FETCH", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_FETCH_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "patient_not_found", "Patient not found");
         }
 
@@ -118,8 +125,9 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
             audit.put("facilityId", facilityId);
             audit.put("patientId", patientId);
             audit.put("runId", runId);
+            audit.put("routeNamespace", ROUTE_NAMESPACE);
             markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(), "karte_not_found", "Karte not found");
-            recordAudit(request, "ORCA_ORDER_BUNDLE_FETCH", audit, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_FETCH_ACTION, audit, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.NOT_FOUND, "karte_not_found", "Karte not found");
         }
 
@@ -138,7 +146,8 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
         audit.put("entity", normalizedEntity);
         audit.put("runId", runId);
         audit.put("recordsReturned", bundles.size());
-        recordAudit(request, "ORCA_ORDER_BUNDLE_FETCH", audit, AuditEventEnvelope.Outcome.SUCCESS);
+        audit.put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_FETCH_ACTION, audit, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 
@@ -175,7 +184,8 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
                 facilityId,
                 runId,
                 this::decodeBundle);
-        recordAudit(request, "ORCA_ORDER_RECOMMENDATION_FETCH", result.audit(), AuditEventEnvelope.Outcome.SUCCESS);
+        result.audit().put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_RECOMMENDATION_ACTION, result.audit(), AuditEventEnvelope.Outcome.SUCCESS);
         return result.response();
     }
 
@@ -198,7 +208,8 @@ public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
                 userServiceBean,
                 facilityId,
                 runId);
-        recordAudit(request, "ORCA_ORDER_BUNDLE_MUTATION", result.audit(), AuditEventEnvelope.Outcome.SUCCESS);
+        result.audit().put("routeNamespace", ROUTE_NAMESPACE);
+        recordAudit(request, AUDIT_MUTATION_ACTION, result.audit(), AuditEventEnvelope.Outcome.SUCCESS);
         return result.response();
     }
 

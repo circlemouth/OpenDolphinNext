@@ -37,7 +37,9 @@ final class OrcaOrderBundleMutationAuditSupport {
                 Response.Status.SERVICE_UNAVAILABLE.getStatusCode(),
                 "order_bundle_unavailable",
                 "Failed to mutate order bundle");
-        resource.recordAudit(request, "ORCA_ORDER_BUNDLE_MUTATION", details, open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
+        details.put("routeNamespace", OrcaOrderBundleResource.ROUTE_NAMESPACE);
+        resource.recordAudit(request, OrcaOrderBundleResource.AUDIT_MUTATION_ACTION, details,
+                open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
         logger.warn("Order bundle mutation failed (patientId={}, karteId={}, documentId={}, operation={}, runId={})",
                 patientId, karteId, documentId, operation, runId, ex);
         return resource.restError(
@@ -104,7 +106,9 @@ final class OrcaOrderBundleMutationAuditSupport {
             audit.put("operation", operation);
         }
         resource.markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", message);
-        resource.recordAudit(request, "ORCA_ORDER_BUNDLE_MUTATION", audit, open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
+        audit.put("routeNamespace", OrcaOrderBundleResource.ROUTE_NAMESPACE);
+        resource.recordAudit(request, OrcaOrderBundleResource.AUDIT_MUTATION_ACTION, audit,
+                open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
         return resource.validationError(request, field, message);
     }
 }

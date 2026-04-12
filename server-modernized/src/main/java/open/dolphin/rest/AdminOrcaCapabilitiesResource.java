@@ -45,7 +45,7 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
                         "local",
                         "stub_fixed",
                         true,
-                        "official surface ではなく admin internal wrapper 表示です。Trial 環境では stub 応答固定（Api_Result=79）"
+                        "official surface ではなく admin-internal wrapper 表示です。Trial 環境では stub 応答固定（Api_Result=79）"
                 ),
                 capability(
                         "birth-delivery",
@@ -53,7 +53,7 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
                         "local",
                         "stub_fixed",
                         true,
-                        "official surface ではなく admin internal wrapper 表示です。Trial 環境では stub 応答固定（Api_Result=79）"
+                        "official surface ではなく admin-internal wrapper 表示です。Trial 環境では stub 応答固定（Api_Result=79）"
                 ),
                 capability(
                         "medical-records",
@@ -69,7 +69,7 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
                         "local",
                         "local_write",
                         true,
-                        "official ORCA 互換ではなく院内ローカル患者テーブル更新 contract です"
+                        "official ORCA 互換ではなく院内ローカル患者テーブルの作成/更新 contract です。delete は未対応です"
                 ),
                 capability(
                         "chart-subjectives",
@@ -77,7 +77,7 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
                         "local",
                         "local_write",
                         true,
-                        "official ORCA bridge ではなく院内カルテへの主観記録保存 contract です"
+                        "official ORCA bridge ではなく院内カルテへの主訴記録保存 contract です"
                 )
         ));
         return Response.ok(body).header("x-run-id", runId).build();

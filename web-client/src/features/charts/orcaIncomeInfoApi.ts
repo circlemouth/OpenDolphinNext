@@ -47,7 +47,7 @@ export type IncomeInfoResponse = {
   error?: string;
 };
 
-const ORCA_INCOME_INFO_PATH = '/api/orca/official/chart-support/income-info';
+const ORCA_OFFICIAL_INCOME_INFO_PATH = '/api/orca/official/chart-support/income-info';
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
@@ -101,7 +101,7 @@ export const buildIncomeInfoRequest = (params: IncomeInfoRequest): IncomeInfoReq
 export async function fetchOrcaIncomeInfo(request: IncomeInfoRequest): Promise<IncomeInfoResponse> {
   const runId = getObservabilityMeta().runId;
   const payload = buildIncomeInfoRequest(request);
-  const response = await httpFetch(ORCA_INCOME_INFO_PATH, {
+  const response = await httpFetch(ORCA_OFFICIAL_INCOME_INFO_PATH, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

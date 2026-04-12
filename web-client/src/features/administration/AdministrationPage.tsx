@@ -283,7 +283,7 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   {
     id: 'medical-sets',
     label: '/api/admin/internal/orca/medical-sets（診療セット）',
-    hint: 'scope=local。Trial 閉鎖のため stub 応答固定（Api_Result=79）',
+    hint: 'scope=local / admin-internal。Trial 閉鎖のため stub 応答固定（Api_Result=79）',
     stubFixed: true,
     routeNamespace: 'local',
     behavior: 'stub_fixed',
@@ -304,7 +304,7 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   {
     id: 'birth-delivery',
     label: '/api/admin/internal/orca/birth-delivery（出産育児一時金）',
-    hint: 'scope=local。Trial 閉鎖のため stub 応答固定（Api_Result=79）',
+    hint: 'scope=local / admin-internal。Trial 閉鎖のため stub 応答固定（Api_Result=79）',
     stubFixed: true,
     routeNamespace: 'local',
     behavior: 'stub_fixed',
@@ -336,7 +336,7 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   {
     id: 'patient-mutation',
     label: '/api/local/patients/mutation（院内患者作成/更新）',
-    hint: 'scope=local。official ORCA 互換ではなく院内ローカル患者テーブル更新 contract です',
+    hint: 'scope=local。official ORCA 互換ではなく院内ローカル患者テーブルの作成/更新 contract です。delete は未対応です',
     routeNamespace: 'local',
     behavior: 'local_write',
     defaultPayload: {
@@ -357,7 +357,7 @@ const buildInternalWrapperCatalog = (today: string): OrcaInternalWrapperOption[]
   {
     id: 'chart-subjectives',
     label: '/api/local/charts/subjectives（院内主訴登録）',
-    hint: 'scope=local。official ORCA bridge ではなく院内カルテへの主観記録保存 contract です',
+    hint: 'scope=local。official ORCA bridge ではなく院内カルテへの主訴記録保存 contract です',
     routeNamespace: 'local',
     behavior: 'local_write',
     defaultPayload: {
