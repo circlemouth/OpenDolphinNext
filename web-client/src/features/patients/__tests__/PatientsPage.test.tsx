@@ -254,6 +254,12 @@ const renderPatientsPage = () => {
   screen.getByRole('list', { name: '患者一覧' });
 };
 
+const getInputById = (id: string) => {
+  const element = document.getElementById(id);
+  expect(element).not.toBeNull();
+  return element as HTMLInputElement;
+};
+
 const setRouterSearch = (search: string) => {
   mockLocationSearch = search;
   mockSearchParams = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
@@ -566,7 +572,7 @@ describe('PatientsPage official patient flows', () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole('button', { name: '新患登録' }));
-    await user.type(screen.getByPlaceholderText('山田 花子'), '新規患者');
+    await user.type(getInputById('patients-form-name'), '新規患者');
     await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
 
     expect(mockMutationCalls.at(-1)).toMatchObject({
@@ -618,7 +624,8 @@ describe('PatientsPage official patient flows', () => {
     renderPatientsPage();
     const user = userEvent.setup();
 
-    await user.type(screen.getByLabelText('ORCA患者番号で ORCA既存患者取込'), '00001234');
+    await user.click(screen.getByText('ORCA既存患者取込', { selector: 'summary' }));
+    await user.type(getInputById('patients-orca-import-patient-id'), '00001234');
     await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込' })[0]);
 
     expect(mockMutationCalls.at(-1)).toBe('00001234');
@@ -638,7 +645,7 @@ describe('PatientsPage official patient flows', () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByRole('button', { name: '新患登録' }));
-    await user.type(screen.getByPlaceholderText('山田 花子'), '新規患者');
+    await user.type(getInputById('patients-form-name'), '新規患者');
     await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
 
     expect(screen.getByText('新患登録は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。')).toBeInTheDocument();
@@ -756,7 +763,7 @@ describe('PatientsPage switch guard', () => {
     await clickPatientRowByName(user, '山田 花子');
 
     await user.click(screen.getByRole('tab', { name: '基本情報' }));
-    const nameInput = screen.getByLabelText(/氏名/);
+    const nameInput = getInputById('patients-form-name');
     await user.clear(nameInput);
     await user.type(nameInput, '山田 花子A');
 
@@ -786,7 +793,7 @@ describe('PatientsPage switch guard', () => {
     await clickPatientRowByName(user, '山田 花子');
 
     await user.click(screen.getByRole('tab', { name: '基本情報' }));
-    const nameInput = screen.getByLabelText(/氏名/);
+    const nameInput = getInputById('patients-form-name');
     await user.type(nameInput, 'A');
 
     const target = screen.getByText('佐藤 次郎').closest('button');
@@ -982,6 +989,7 @@ describe('PatientsPage search summary', () => {
     expect(screen.getByRole('region', { name: 'local search' })).toHaveTextContent(
       'local search は氏名・カナ・患者番号・電話・郵便番号のみを使います。未使用の詳細条件はこの画面から外しています。',
     );
+    expect(screen.getByText('氏名、カナ、患者番号、電話、郵便番号のいずれかを入力してください。')).toBeInTheDocument();
     expect(screen.getByText('local search キーワードを見直して再検索してください。')).toBeInTheDocument();
     expect(screen.getByText('ヒント: local search は ID/氏名/カナ/電話/郵便番号で絞れます。')).toBeInTheDocument();
   });

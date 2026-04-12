@@ -128,6 +128,7 @@
 - `patients:returnTo` の sessionStorage seam は current repo に reader / writer を持たず、戻り導線は `useAppNavigation().safeReturnToCandidate` を正とします。
 - 通常 UI の監査表示は summary を正とし、raw endpoint dump は default から外します。
 - Patients 一覧検索は local search と明示し、氏名・カナ・患者番号・電話・郵便番号の local 条件だけを current UI に残します。
+- local search の `searchType` は client/server で同じ判定に揃え、明示指定が無い場合も `name` / `kana` / `patient-id` / `telephone` / `zipcode` のどれかへ解決します。
 - 患者基本情報の official create/update/import は単一路線に混ぜず、`create` / `update` / `import` を別導線として扱います。
 - official create/update/import 成功後は canonical source を再取得し、その canonical record で local sync を確定します。
 - chart の患者基本情報編集 dialog も Patients と同じ official update route を使います。

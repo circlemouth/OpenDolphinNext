@@ -55,6 +55,21 @@ const normalizeDraftValue = (value: unknown) => (value === undefined || value ==
 const isSameDraft = (left: PatientRecord | null | undefined, right: PatientRecord | null | undefined) =>
   DRAFT_COMPARE_KEYS.every((key) => normalizeDraftValue(left?.[key]) === normalizeDraftValue(right?.[key]));
 const normalizeZipDigits = (value?: string | null) => (value ?? '').replace(/\D+/g, '');
+const buildAddressLookupDisabledReason = (step: 'edit' | 'review', canEdit: boolean, pending: boolean, zip: string) => {
+  if (step !== 'edit') {
+    return '住所補完は編集ステップでのみ実行できます。';
+  }
+  if (!canEdit) {
+    return '編集ガード中のため住所補完を停止しています。';
+  }
+  if (pending) {
+    return '住所補完中です。完了を待ってから再試行してください。';
+  }
+  if (normalizeZipDigits(zip).length !== 7) {
+    return '住所補完には7桁の郵便番号が必要です。';
+  }
+  return undefined;
+};
 const todayCompact = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -258,6 +273,7 @@ export function PatientInfoEditDialog({
 
   const canEdit = editAllowedResolved && masterOk;
   const operation: PatientOperation = 'update';
+  const addressLookupDisabledReason = buildAddressLookupDisabledReason(step, canEdit, orcaAddressPending, draft.zip ?? '');
 
   const handleOrcaAddressLookup = async () => {
     const zip = normalizeZipDigits(draft.zip);
@@ -474,9 +490,11 @@ export function PatientInfoEditDialog({
                         value={draft.kana ?? ''}
                         onChange={(event) => setDraft((prev) => ({ ...prev, kana: event.target.value }))}
                         aria-invalid={fieldErrorMap.has('kana')}
-                        aria-describedby={fieldErrorMap.has('kana') ? 'patient-edit-error-kana' : undefined}
-                        placeholder="ヤマダ ハナコ"
+                        aria-describedby={fieldErrorMap.has('kana') ? 'patient-edit-error-kana' : 'patient-edit-help-kana'}
                       />
+                      <small id="patient-edit-help-kana" className="patient-edit__field-help">
+                        全角カタカナ（長音・空白可）で入力してください。
+                      </small>
                       {fieldErrorMap.has('kana') ? (
                         <small id="patient-edit-error-kana" className="patient-edit__field-error" role="alert">
                           {fieldErrorMap.get('kana')}
@@ -492,8 +510,11 @@ export function PatientInfoEditDialog({
                         value={draft.birthDate ?? ''}
                         onChange={(event) => setDraft((prev) => ({ ...prev, birthDate: event.target.value }))}
                         aria-invalid={fieldErrorMap.has('birthDate')}
-                        aria-describedby={fieldErrorMap.has('birthDate') ? 'patient-edit-error-birthDate' : undefined}
+                        aria-describedby={fieldErrorMap.has('birthDate') ? 'patient-edit-error-birthDate' : 'patient-edit-help-birthDate'}
                       />
+                      <small id="patient-edit-help-birthDate" className="patient-edit__field-help">
+                        YYYY-MM-DD 形式で入力してください。
+                      </small>
                       {fieldErrorMap.has('birthDate') ? (
                         <small id="patient-edit-error-birthDate" className="patient-edit__field-error" role="alert">
                           {fieldErrorMap.get('birthDate')}
@@ -528,9 +549,11 @@ export function PatientInfoEditDialog({
                         value={draft.phone ?? ''}
                         onChange={(event) => setDraft((prev) => ({ ...prev, phone: event.target.value }))}
                         aria-invalid={fieldErrorMap.has('phone')}
-                        aria-describedby={fieldErrorMap.has('phone') ? 'patient-edit-error-phone' : undefined}
-                        placeholder="03-1234-5678"
+                        aria-describedby={fieldErrorMap.has('phone') ? 'patient-edit-error-phone' : 'patient-edit-help-phone'}
                       />
+                      <small id="patient-edit-help-phone" className="patient-edit__field-help">
+                        数字、括弧、ハイフン、空白のみを入力してください。
+                      </small>
                       {fieldErrorMap.has('phone') ? (
                         <small id="patient-edit-error-phone" className="patient-edit__field-error" role="alert">
                           {fieldErrorMap.get('phone')}
@@ -545,8 +568,7 @@ export function PatientInfoEditDialog({
                         value={draft.zip ?? ''}
                         onChange={(event) => setDraft((prev) => ({ ...prev, zip: event.target.value }))}
                         aria-invalid={fieldErrorMap.has('zip')}
-                        aria-describedby={fieldErrorMap.has('zip') ? 'patient-edit-error-zip' : undefined}
-                        placeholder="123-4567"
+                        aria-describedby={fieldErrorMap.has('zip') ? 'patient-edit-error-zip' : 'patient-edit-help-zip'}
                       />
                       <button
                         type="button"
@@ -556,6 +578,12 @@ export function PatientInfoEditDialog({
                       >
                         {orcaAddressPending ? '住所補完中…' : '住所補完'}
                       </button>
+                      <small id="patient-edit-help-zip" className="patient-edit__field-help">
+                        郵便番号は123-4567形式です。住所補完には7桁が必要です。
+                      </small>
+                      {addressLookupDisabledReason ? (
+                        <small className="patient-edit__field-help">{addressLookupDisabledReason}</small>
+                      ) : null}
                       {fieldErrorMap.has('zip') ? (
                         <small id="patient-edit-error-zip" className="patient-edit__field-error" role="alert">
                           {fieldErrorMap.get('zip')}
@@ -569,8 +597,11 @@ export function PatientInfoEditDialog({
                         id="patient-edit-address"
                         value={draft.address ?? ''}
                         onChange={(event) => setDraft((prev) => ({ ...prev, address: event.target.value }))}
-                        placeholder="東京都…"
+                        aria-describedby="patient-edit-help-address"
                       />
+                      <small id="patient-edit-help-address" className="patient-edit__field-help">
+                        住所補完後に不足分だけを追記してください。
+                      </small>
                     </label>
                   </>
               </div>

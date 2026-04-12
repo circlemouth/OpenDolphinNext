@@ -187,6 +187,12 @@ public class OrcaPatientLocalSearchResource extends AbstractResource {
         if (keyword == null || keyword.isBlank()) {
             return null;
         }
+        if (keyword.matches("\\d{7}")) {
+            return PatientSearchType.ZIPCODE;
+        }
+        if (keyword.matches("\\d[\\d-]{8,}")) {
+            return PatientSearchType.TELEPHONE;
+        }
         if (keyword.matches("\\d+")) {
             return PatientSearchType.PATIENT_ID;
         }

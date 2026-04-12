@@ -49,6 +49,12 @@ class OrcaPatientLocalSearchResourceTest {
         resource.postPatients(request, Map.of("keyword", "000123"));
         assertEquals(PatientSearchType.PATIENT_ID, service.lastSearchType);
 
+        resource.postPatients(request, Map.of("keyword", "1000001"));
+        assertEquals(PatientSearchType.ZIPCODE, service.lastSearchType);
+
+        resource.postPatients(request, Map.of("keyword", "090-1234-5678"));
+        assertEquals(PatientSearchType.TELEPHONE, service.lastSearchType);
+
         resource.postPatients(request, Map.of("keyword", "やまだ"));
         assertEquals(PatientSearchType.KANA, service.lastSearchType);
 

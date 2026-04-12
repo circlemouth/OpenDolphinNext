@@ -257,6 +257,29 @@ const normalizeAuditValue = (value: unknown): string => {
   return String(value).normalize('NFKC').toLowerCase();
 };
 
+const buildImportDisabledReason = (pending: boolean, patientId: string) => {
+  if (pending) {
+    return '取込中は再実行できません。完了メッセージを待ってから再試行してください。';
+  }
+  if (!patientId.trim()) {
+    return 'ORCA患者番号（数字のみ）を入力すると取込を実行できます。';
+  }
+  return undefined;
+};
+
+const buildAddressLookupDisabledReason = (blocking: boolean, zip: string, pending: boolean) => {
+  if (blocking) {
+    return '編集ブロック中のため住所補完を停止しています。ブロック理由を解消してから再試行してください。';
+  }
+  if (pending) {
+    return '住所補完中です。完了を待ってから再試行してください。';
+  }
+  if (normalizeZipCode(zip).length !== 7) {
+    return '住所補完には7桁の郵便番号が必要です。';
+  }
+  return undefined;
+};
+
 const clampSidebarWidth = (value: number) => Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, value));
 
 const resolveUnlinkedState = (patient?: PatientRecord | null) => {
@@ -874,6 +897,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
     }
   }, [blocking, enqueue, form.zip, orcaAddressPending, today]);
   const canLookupAddress = normalizeZipCode(form.zip).length === 7 && !blocking && !orcaAddressPending;
+  const importDisabledReason = buildImportDisabledReason(importMutation.isPending, importPatientIdDraft);
+  const selectedImportDisabledReason = buildImportDisabledReason(importMutation.isPending, importSelectedPatientId ?? '');
+  const addressLookupDisabledReason = buildAddressLookupDisabledReason(blocking, form.zip ?? '', orcaAddressPending);
   const missingMasterFlag = resolvedMissingMaster;
   const fallbackUsedFlag = resolvedFallbackUsed;
   const fieldErrorMap = useMemo(() => {
@@ -1843,9 +1869,12 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                     type="search"
                     value={draftFilters.keyword}
                     onChange={(event) => onFilterChange('keyword', event.target.value)}
-                    placeholder="氏名 / カナ / ID"
+                    aria-describedby="patients-filter-keyword-help"
                     aria-label="local search キーワード"
                   />
+                  <small id="patients-filter-keyword-help" className="patients-page__field-help">
+                    氏名、カナ、患者番号、電話、郵便番号のいずれかを入力してください。
+                  </small>
                 </label>
 
                 <div className="patients-search__primary-actions">
@@ -1885,18 +1914,27 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                       name="patientsOrcaImportPatientId"
                       value={orcaImportPatientId}
                       onChange={(event) => setOrcaImportPatientId(event.target.value)}
-                      placeholder="数字のみ（例: 00001234）"
                       inputMode="numeric"
+                      aria-describedby="patients-orca-import-help"
                     />
+                    <small id="patients-orca-import-help" className="patients-page__field-help">
+                      数字のみで入力してください（例: 00001234）。
+                    </small>
                   </label>
                   <button
                     type="button"
                     className="patients-search__button primary"
                     onClick={handleImportByPatientId}
                     disabled={importMutation.isPending || !importPatientIdDraft}
+                    aria-describedby={importDisabledReason ? 'patients-orca-import-disabled-reason' : undefined}
                   >
                     {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
                   </button>
+                  {importDisabledReason ? (
+                    <small id="patients-orca-import-disabled-reason" className="patients-page__field-help">
+                      {importDisabledReason}
+                    </small>
+                  ) : null}
                 </section>
               </details>
 
@@ -1964,8 +2002,11 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                         name="patientsSavedViewName"
                         value={savedViewName}
                         onChange={(event) => setSavedViewName(event.target.value)}
-                        placeholder="例: 内科/午前/保険"
+                        aria-describedby="patients-saved-view-name-help"
                       />
+                      <small id="patients-saved-view-name-help" className="patients-page__field-help">
+                        例: 内科/午前/保険。共有しやすい短い名前を付けてください。
+                      </small>
                     </label>
 
                     <button type="button" className="patients-search__button primary" onClick={handleSaveView}>
@@ -2048,6 +2089,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                       disabled={importMutation.isPending}
                       onClick={handleImportByPatientId}
                       title="ORCA患者番号（Patient_ID）を指定して取り込み、canonical/local 同期を行います"
+                      aria-describedby={selectedImportDisabledReason ? 'patients-empty-import-disabled-reason' : undefined}
                     >
                       {importMutation.isPending ? 'ORCA既存患者取込中…' : 'ORCA既存患者取込'}
                     </button>
@@ -2060,6 +2102,11 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 </div>
                 <span className="patients-page__empty-hint">{patientsEmptyState.hint}</span>
                 <span className="patients-page__empty-hint">ヒント: local search は ID/氏名/カナ/電話/郵便番号で絞れます。</span>
+                {selectedImportDisabledReason ? (
+                  <span id="patients-empty-import-disabled-reason" className="patients-page__empty-hint">
+                    {selectedImportDisabledReason}
+                  </span>
+                ) : null}
               </div>
             ) : null}
 
@@ -2336,7 +2383,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 id="patients-form-patientId"
                 value={form.patientId ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, patientId: event.target.value }))}
-                placeholder={editorMode === 'create' ? '空欄で * 自動採番' : 'ORCA患者番号（Patient_ID）'}
                 inputMode="numeric"
                 aria-invalid={fieldErrorMap.has('patientId')}
                 aria-describedby={buildAriaDescribedBy(
@@ -2362,7 +2408,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 required
                 value={form.name ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                placeholder="山田 花子"
                 aria-invalid={fieldErrorMap.has('name')}
                 aria-describedby={buildAriaDescribedBy(
                   'patients-form-help-name',
@@ -2385,7 +2430,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 id="patients-form-kana"
                 value={form.kana ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, kana: event.target.value }))}
-                placeholder="ヤマダ ハナコ"
                 aria-invalid={fieldErrorMap.has('kana')}
                 aria-describedby={buildAriaDescribedBy(
                   'patients-form-help-kana',
@@ -2457,7 +2501,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 id="patients-form-phone"
                 value={form.phone ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
-                placeholder="03-1234-5678"
                 inputMode="tel"
                 aria-invalid={fieldErrorMap.has('phone')}
                 aria-describedby={buildAriaDescribedBy(
@@ -2486,7 +2529,6 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 id="patients-form-zip"
                 value={form.zip ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, zip: event.target.value }))}
-                placeholder="1000001"
                 inputMode="numeric"
                 aria-invalid={fieldErrorMap.has('zip')}
                 aria-describedby={buildAriaDescribedBy(
@@ -2498,6 +2540,9 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               <small id="patients-form-help-zip" className="patients-page__field-help">
                 123-4567 形式（ハイフンは任意）。
               </small>
+              {addressLookupDisabledReason ? (
+                <small className="patients-page__field-help">{addressLookupDisabledReason}</small>
+              ) : null}
               {fieldErrorMap.has('zip') ? (
                 <small id="patients-form-error-zip" className="patients-page__field-error" role="alert">
                   {fieldErrorMap.get('zip')?.message}
@@ -2510,19 +2555,25 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 id="patients-form-address"
                 value={form.address ?? ''}
                 onChange={(event) => setForm((prev) => ({ ...prev, address: event.target.value }))}
-                placeholder="東京都千代田区..."
                 disabled={blocking}
+                aria-describedby="patients-form-help-address"
               />
+              <small id="patients-form-help-address" className="patients-page__field-help">
+                住所補完後に不足分だけを追記してください（例: 東京都千代田区千代田1-1）。
+              </small>
             </label>
             <label>
               <span>保険/自費</span>
               <input
                 id="patients-form-insurance"
                 value={form.insurance ?? ''}
-                placeholder="社保12 / 自費など"
                 readOnly
                 disabled={blocking}
+                aria-describedby="patients-form-help-insurance"
               />
+              <small id="patients-form-help-insurance" className="patients-page__field-help">
+                この画面では表示のみです。official patient create/update には含めません。
+              </small>
             </label>
             <label className="span-2">
               <span>メモ</span>
@@ -2530,10 +2581,13 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 id="patients-form-memo"
                 rows={3}
                 value={form.memo ?? ''}
-                placeholder="アレルギー、受診メモなど"
                 readOnly
                 disabled={blocking}
+                aria-describedby="patients-form-help-memo"
               />
+              <small id="patients-form-help-memo" className="patients-page__field-help">
+                院内ローカルの補助表示です。official patient create/update には含めません。
+              </small>
             </label>
           </fieldset>
 
