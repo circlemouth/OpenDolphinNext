@@ -933,6 +933,43 @@ describe('ReceptionPage official master search', () => {
     });
     expect((mockMutationCalls[0] as { inOut?: unknown }).inOut).toBeUndefined();
   });
+
+  it('sends official sex code and inOut when selected in master search', async () => {
+    mockSessionRole = 'system_admin';
+    mockMutationQueue.push({
+      ok: true,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      patients: [
+        {
+          patientId: 'P-201',
+          name: '既存患者2',
+          kana: 'キソンカンジャツー',
+        },
+      ],
+      recordsReturned: 1,
+      runId: 'RUN-MASTER-SEARCH-SEX',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const masterSearch = screen.getByRole('region', { name: '既存患者マスタ検索' });
+    expect(within(masterSearch).getByText('性別は official code を送信します。男性=1、女性=2 です。')).toBeInTheDocument();
+    expect(
+      within(masterSearch).getByText('区分は任意です。指定した場合のみ official payload に送信します。外来=2、入院=1 です。'),
+    ).toBeInTheDocument();
+    await user.type(within(masterSearch).getByLabelText('氏名'), '既存患者2');
+    await user.selectOptions(within(masterSearch).getByLabelText('性別'), '2');
+    await user.selectOptions(within(masterSearch).getByLabelText('区分'), '2');
+    await user.click(within(masterSearch).getByRole('button', { name: '患者検索' }));
+
+    expect(mockMutationCalls[0]).toMatchObject({
+      name: '既存患者2',
+      sex: '2',
+      inOut: '2',
+    });
+  });
 });
 
 describe('ReceptionPage toolbar and tabs', () => {
