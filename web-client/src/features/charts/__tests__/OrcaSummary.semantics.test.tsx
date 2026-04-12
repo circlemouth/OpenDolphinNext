@@ -123,13 +123,17 @@ describe('OrcaSummary semantics', () => {
     );
 
     expect(screen.getByText('ローカル診療サマリ')).toBeInTheDocument();
+    expect(screen.getByText('院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。')).toBeInTheDocument();
     expect(screen.getByText('ORCA収納情報')).toBeInTheDocument();
+    expect(screen.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。')).toBeInTheDocument();
     expect(screen.getByText('対象日: 2026-03-09')).toBeInTheDocument();
     expect(screen.getByText(/保険組合せ: 0001/)).toBeInTheDocument();
-    expect(screen.getByText('未収金合計')).toBeInTheDocument();
-    expect(screen.getByText('保険適用金額')).toBeInTheDocument();
-    expect(screen.getByText('自費金額')).toBeInTheDocument();
-    expect(screen.getByText('食事・生活療養負担金')).toBeInTheDocument();
+    expect(screen.getByText('未収金合計 (Unpaid_Money_Total)')).toBeInTheDocument();
+    expect(screen.getByText('請求金額 (Ac_Money)')).toBeInTheDocument();
+    expect(screen.getByText('入金額 (Ic_Money)')).toBeInTheDocument();
+    expect(screen.getByText('保険適用金額 (Ai_Money)')).toBeInTheDocument();
+    expect(screen.getByText('自費金額 (Oe_Money)')).toBeInTheDocument();
+    expect(screen.getByText('食事・生活療養負担金 (Ml_Smoney)')).toBeInTheDocument();
     expect(screen.getByText(/2026-03-09 ｜ 内科 ｜ 請求金額: 1,200 円 ｜ 入金額:/)).toBeInTheDocument();
     expect(screen.getByText(/未収金情報: 2026-03-09 ｜ 伝票 INV-1 ｜ 500 円/)).toBeInTheDocument();
     expect(screen.queryByText('請求サマリ')).not.toBeInTheDocument();
