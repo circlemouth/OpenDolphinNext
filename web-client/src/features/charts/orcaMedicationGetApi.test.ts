@@ -88,6 +88,9 @@ describe('fetchOrcaMedicationGet', () => {
             startDate: '2026-03-09',
             endDate: '2026-03-31',
             requestCode: '114030710',
+            extraFields: {
+              Selection_Prompt: '算定日を選択',
+            },
           },
           selections: [
             {
@@ -100,6 +103,9 @@ describe('fetchOrcaMedicationGet', () => {
               selectionGrepName: '在医総管',
               itemNumber: '0166',
               itemNumberBranch: '01',
+              extraFields: {
+                Selection_Prompt: '算定日を選択',
+              },
             },
           ],
         }),
@@ -120,6 +126,9 @@ describe('fetchOrcaMedicationGet', () => {
         medicationNameKana: 'ザイイソウカン',
         unitCode: '01',
         unitName: '回',
+        extraFields: {
+          Selection_Prompt: '算定日を選択',
+        },
       }),
     );
     expect(result.selections).toEqual([
@@ -132,6 +141,9 @@ describe('fetchOrcaMedicationGet', () => {
         selectionGrepName: '在医総管',
         itemNumber: '0166',
         itemNumberBranch: '01',
+        extraFields: {
+          Selection_Prompt: '算定日を選択',
+        },
       }),
     ]);
     expect(mockHttpFetch).toHaveBeenCalledWith(

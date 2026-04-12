@@ -27,7 +27,7 @@ import open.dolphin.session.PatientServiceBean;
  * Local-only patient mutation wrapper.
  */
 @Path("/local/patients")
-public class OrcaPatientResource extends AbstractOrcaRestResource {
+public class LocalPatientMutationResource extends AbstractOrcaRestResource {
 
     private static final String ROUTE_NAMESPACE = "local";
     private static final String AUDIT_ACTION = "LOCAL_PATIENT_MUTATION";

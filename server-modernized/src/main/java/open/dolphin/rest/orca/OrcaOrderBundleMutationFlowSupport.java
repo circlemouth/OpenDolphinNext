@@ -102,7 +102,7 @@ final class OrcaOrderBundleMutationFlowSupport {
             throw notFoundFailure(resource, request, facilityId, payload.getPatientId(), runId, "patient_not_found", "Patient not found");
         }
         orderBundleContext.put("patientId", payload.getPatientId());
-        request.setAttribute(OrcaOrderBundleResource.ORDER_BUNDLE_CONTEXT_KEY, orderBundleContext);
+        request.setAttribute(LocalOrderBundleResource.ORDER_BUNDLE_CONTEXT_KEY, orderBundleContext);
         KarteBean karte = karteServiceBean.getKarte(facilityId, payload.getPatientId(), null);
         if (karte == null) {
             throw notFoundFailure(resource, request, facilityId, payload.getPatientId(), runId, "karte_not_found", "Karte not found");
@@ -176,9 +176,9 @@ final class OrcaOrderBundleMutationFlowSupport {
         audit.put("facilityId", facilityId);
         audit.put("patientId", patientId);
         audit.put("runId", runId);
-        audit.put("routeNamespace", OrcaOrderBundleResource.ROUTE_NAMESPACE);
+        audit.put("routeNamespace", LocalOrderBundleResource.ROUTE_NAMESPACE);
         resource.markFailureDetails(audit, 404, errorCode, message);
-        resource.recordAudit(request, OrcaOrderBundleResource.AUDIT_MUTATION_ACTION, audit,
+        resource.recordAudit(request, LocalOrderBundleResource.AUDIT_MUTATION_ACTION, audit,
                 open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
         return resource.restError(request, jakarta.ws.rs.core.Response.Status.NOT_FOUND, errorCode, message);
     }

@@ -33,7 +33,7 @@ import open.dolphin.session.PatientServiceBean;
  * Local-only chart medical record wrapper.
  */
 @Path("/local/charts")
-public class OrcaMedicalResource extends AbstractOrcaRestResource {
+public class LocalChartMedicalResource extends AbstractOrcaRestResource {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             .withLocale(Locale.JAPAN)

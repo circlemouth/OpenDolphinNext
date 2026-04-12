@@ -14,11 +14,11 @@ import open.dolphin.session.PatientServiceBean;
 import open.dolphin.session.PatientServiceBean.PatientSearchType;
 import org.junit.jupiter.api.Test;
 
-class OrcaPatientLocalSearchResourceTest {
+class LocalPatientSearchResourceTest {
 
     @Test
     void localSearchProvidesRequestMetadata() {
-        OrcaPatientLocalSearchResource resource = new OrcaPatientLocalSearchResource();
+        LocalPatientSearchResource resource = new LocalPatientSearchResource();
 
         HttpServletRequest request = createRequest(
                 "F001:doctor01",
@@ -38,7 +38,7 @@ class OrcaPatientLocalSearchResourceTest {
     @Test
     void localSearchResolvesSearchTypeFromKeyword() throws Exception {
         CapturingPatientServiceBean service = new CapturingPatientServiceBean();
-        OrcaPatientLocalSearchResource resource = new OrcaPatientLocalSearchResource();
+        LocalPatientSearchResource resource = new LocalPatientSearchResource();
         injectField(resource, "patientServiceBean", service);
 
         HttpServletRequest request = createRequest(
@@ -60,7 +60,7 @@ class OrcaPatientLocalSearchResourceTest {
     @Test
     void localSearchHonorsExplicitSearchType() throws Exception {
         CapturingPatientServiceBean service = new CapturingPatientServiceBean();
-        OrcaPatientLocalSearchResource resource = new OrcaPatientLocalSearchResource();
+        LocalPatientSearchResource resource = new LocalPatientSearchResource();
         injectField(resource, "patientServiceBean", service);
 
         HttpServletRequest request = createRequest(
@@ -79,7 +79,7 @@ class OrcaPatientLocalSearchResourceTest {
     @Test
     void localSearchDoesNotEchoUnsupportedDetailedFilters() throws Exception {
         CapturingPatientServiceBean service = new CapturingPatientServiceBean();
-        OrcaPatientLocalSearchResource resource = new OrcaPatientLocalSearchResource();
+        LocalPatientSearchResource resource = new LocalPatientSearchResource();
         injectField(resource, "patientServiceBean", service);
 
         HttpServletRequest request = createRequest(

@@ -12,6 +12,7 @@ export type OrcaMedicationGetSelection = {
   selectionGrepName?: string;
   itemNumber?: string;
   itemNumberBranch?: string;
+  extraFields?: Record<string, string>;
 };
 
 export type OrcaMedicationGetResult = {
@@ -30,6 +31,7 @@ export type OrcaMedicationGetResult = {
     startDate?: string;
     endDate?: string;
     requestCode?: string;
+    extraFields?: Record<string, string>;
   };
   informationDate?: string;
   informationTime?: string;
@@ -50,6 +52,14 @@ const parseMedicationSelection = (selection: Record<string, unknown>): OrcaMedic
   selectionGrepName: typeof selection.selectionGrepName === 'string' ? selection.selectionGrepName : undefined,
   itemNumber: typeof selection.itemNumber === 'string' ? selection.itemNumber : undefined,
   itemNumberBranch: typeof selection.itemNumberBranch === 'string' ? selection.itemNumberBranch : undefined,
+  extraFields:
+    selection.extraFields && typeof selection.extraFields === 'object' && !Array.isArray(selection.extraFields)
+      ? Object.fromEntries(
+          Object.entries(selection.extraFields as Record<string, unknown>).filter(
+            (entry): entry is [string, string] => typeof entry[1] === 'string',
+          ),
+        )
+      : undefined,
 });
 
 const parseMedicationInfo = (medicationSource: unknown) =>
@@ -86,6 +96,16 @@ const parseMedicationInfo = (medicationSource: unknown) =>
         requestCode:
           typeof (medicationSource as Record<string, unknown>).requestCode === 'string'
             ? ((medicationSource as Record<string, unknown>).requestCode as string)
+            : undefined,
+        extraFields:
+          (medicationSource as Record<string, unknown>).extraFields &&
+          typeof (medicationSource as Record<string, unknown>).extraFields === 'object' &&
+          !Array.isArray((medicationSource as Record<string, unknown>).extraFields)
+            ? Object.fromEntries(
+                Object.entries((medicationSource as Record<string, unknown>).extraFields as Record<string, unknown>).filter(
+                  (entry): entry is [string, string] => typeof entry[1] === 'string',
+                ),
+              )
             : undefined,
       }
     : undefined;

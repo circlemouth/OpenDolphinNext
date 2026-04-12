@@ -129,12 +129,22 @@ public class OrcaChartSupportResource extends AbstractOrcaRestResource {
         if (!"01".equals(requestNumber) && !"02".equals(requestNumber)) {
             throw validationError(request, "payload.requestNumber", "requestNumber must be 01 or 02");
         }
+        if ("01".equals(requestNumber) && !payload.getRequestCode().trim().matches("[A-Za-z0-9]+")) {
+            throw validationError(request, "payload.requestCode", "requestCode must be an alphanumeric input code for requestNumber 01");
+        }
         if ("02".equals(requestNumber) && !payload.getRequestCode().trim().matches("\\d{9}")) {
             throw validationError(request, "payload.requestCode", "requestCode must be a 9-digit medical code for requestNumber 02");
+        }
+        if (isBlank(payload.getBaseDate())) {
+            throw validationError(request, "payload.baseDate", "baseDate is required");
+        }
+        if (!payload.getBaseDate().trim().matches("\\d{8}|\\d{4}-\\d{2}-\\d{2}")) {
+            throw validationError(request, "payload.baseDate", "baseDate must be yyyy-MM-dd or yyyymmdd");
         }
         if (!isBlank(payload.getBaseDate())) {
             payload.setBaseDate(payload.getBaseDate().trim());
         }
+        payload.setRequestCode(payload.getRequestCode().trim());
         payload.setRequestNumber(requestNumber);
 
         String runId = resolveRunId(request);

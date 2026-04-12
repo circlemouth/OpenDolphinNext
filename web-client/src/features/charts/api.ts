@@ -9,7 +9,7 @@ import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 import type { OrcaOutpatientSummary } from '../outpatient/types';
 export type { OrcaOutpatientSummary } from '../outpatient/types';
 
-const LOCAL_SUMMARY_DESCRIPTION = 'charts_local_summary';
+const LOCAL_SUMMARY_DESCRIPTION = 'charts_inhouse_local_summary';
 const MEDICAL_SUMMARY_SOURCE_PATH = '/api/local/encounters/{encounterKey}/medical-summary';
 const KEY_UNAVAILABLE_SOURCE_PATH = 'key_unavailable';
 const LOCAL_SUMMARY_ERROR_CODES = new Set([
@@ -99,7 +99,7 @@ const buildRenderableErrorSummary = (
   summary.httpStatus = status;
   summary.outcome = 'ERROR';
   summary.sourcePath = MEDICAL_SUMMARY_SOURCE_PATH;
-  summary.note = message ?? code ?? 'local summary fetch failed';
+  summary.note = message ?? code ?? 'in-house local summary fetch failed';
   summary.apiResult = code;
   summary.apiResultMessage = message;
   summary.auditEvent = {
@@ -116,7 +116,7 @@ export function buildUnavailableMedicalSummary(
   const transition = options.preferredSourceOverride ?? preferredSource() ?? 'snapshot';
   const summary = buildBaseSummary(ensureObservabilityMeta(), transition);
   summary.sourcePath = options.encounterKey ? MEDICAL_SUMMARY_SOURCE_PATH : KEY_UNAVAILABLE_SOURCE_PATH;
-  summary.note = options.encounterKey ? 'local summary unavailable' : 'encounterKey unavailable';
+  summary.note = options.encounterKey ? 'in-house local summary unavailable' : 'encounterKey unavailable';
   summary.resolveMasterSource = resolvedDataSource(transition, options.preferredSourceOverride);
   return summary;
 }
@@ -136,7 +136,7 @@ export async function fetchChartsMedicalSummary(
       const response = await httpFetch(endpoint, { method: 'GET' });
       const parsed = await parseOrcaApiResponse(response, {
         notFoundCodes: LOCAL_SUMMARY_ERROR_CODES,
-        fallbackMessage: 'ローカル診療サマリの取得に失敗しました。',
+        fallbackMessage: '院内ローカル診療サマリの取得に失敗しました。',
       });
       if (parsed.ok) {
         const body = parsed.json as LocalMedicalSummarySuccess | null;

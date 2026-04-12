@@ -39,9 +39,9 @@ import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
+class LocalOrderBundleResource600Test extends RuntimeDelegateTestSupport {
 
-    private OrcaOrderBundleResource resource;
+    private LocalOrderBundleResource resource;
     private RecordingSessionAuditDispatcher auditDispatcher;
     private BasicKarteServiceBean karteServiceBean;
     private HttpServletRequest servletRequest;
@@ -50,7 +50,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     void setUp() throws Exception {
         auditDispatcher = new RecordingSessionAuditDispatcher();
         karteServiceBean = new BasicKarteServiceBean(List.of());
-        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+        resource = buildResource(new LocalOrderBundleResource(), karteServiceBean);
         servletRequest = buildServletRequest();
     }
 
@@ -408,7 +408,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
                 "culture",
                 "160000010",
                 "culture-main")));
-        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+        resource = buildResource(new LocalOrderBundleResource(), karteServiceBean);
 
         OrderBundleFetchResponse response = resource.getBundles(
                 servletRequest,
@@ -429,7 +429,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     @Test
     void postBundlesPersistsBacteriaSubtypeAndFetchReturnsIt() throws Exception {
         karteServiceBean = new BasicKarteServiceBean(List.of());
-        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+        resource = buildResource(new LocalOrderBundleResource(), karteServiceBean);
 
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
@@ -509,7 +509,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     @Test
     void postBundlesPersistsPhysiologyOrderLocalOnlyFieldsAndFetchReturnsIt() throws Exception {
         karteServiceBean = new BasicKarteServiceBean(List.of());
-        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+        resource = buildResource(new LocalOrderBundleResource(), karteServiceBean);
 
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
@@ -559,7 +559,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
     @Test
     void postBundlesPersistsTestOrderLocalOnlyFieldsAndMultipleCommentRows() throws Exception {
         karteServiceBean = new BasicKarteServiceBean(List.of());
-        resource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+        resource = buildResource(new LocalOrderBundleResource(), karteServiceBean);
 
         OrderBundleMutationRequest payload = new OrderBundleMutationRequest();
         payload.setPatientId("00001");
@@ -684,7 +684,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
                 return buildDetailedInputSetBundle();
             }
         });
-        OrcaOrderBundleResource roundTripResource = buildResource(new OrcaOrderBundleResource(), karteServiceBean);
+        LocalOrderBundleResource roundTripResource = buildResource(new LocalOrderBundleResource(), karteServiceBean);
 
         OrcaOrderInputSetDetailResponse detail = inputSetDetailResource.getInputSetDetail(
                 servletRequest, "S60010", "20260309", IInfoModel.ENTITY_LABO_TEST, null);
@@ -714,7 +714,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         op.setAdminMemo(detail.getBundle().getAdminMemo());
         op.setMemo(detail.getBundle().getMemo());
         op.setStartDate(detail.getBundle().getStarted());
-        op.setItems(detail.getBundle().getItems().stream().map(OrcaOrderBundleResource600Test::toMutationItem).toList());
+        op.setItems(detail.getBundle().getItems().stream().map(LocalOrderBundleResource600Test::toMutationItem).toList());
         payload.setOperations(List.of(op));
 
         OrderBundleMutationResponse mutationResponse = roundTripResource.postBundles(servletRequest, payload);
@@ -743,7 +743,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
         assertEquals("comment memo", entry.getCommentItems().get(0).getMemo());
     }
 
-    private OrcaOrderBundleResource buildResource(OrcaOrderBundleResource target, KarteServiceBean karte) throws Exception {
+    private LocalOrderBundleResource buildResource(LocalOrderBundleResource target, KarteServiceBean karte) throws Exception {
         injectField(target, "sessionAuditDispatcher", auditDispatcher);
         injectField(target, "patientServiceBean", new FakePatientServiceBean());
         injectField(target, "karteServiceBean", karte);
@@ -862,7 +862,7 @@ class OrcaOrderBundleResource600Test extends RuntimeDelegateTestSupport {
 
     private static HttpServletRequest buildServletRequest() {
         return (HttpServletRequest) Proxy.newProxyInstance(
-                OrcaOrderBundleResource600Test.class.getClassLoader(),
+                LocalOrderBundleResource600Test.class.getClassLoader(),
                 new Class[]{HttpServletRequest.class},
                 (proxy, method, args) -> {
                     String name = method.getName();

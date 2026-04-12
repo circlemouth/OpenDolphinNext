@@ -98,7 +98,7 @@
   - canonical encounter context 不足時は ORCA送信を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
   - ORCA収納情報は official income semantics (`未収金合計`, `請求金額`, `入金額`, `保険適用金額`, `自費金額`, `食事・生活療養負担金`) を表示
-  - ローカル診療サマリと ORCA収納情報の責務を混ぜない
+  - 院内ローカル診療サマリと ORCA収納情報の責務を混ぜない
 - unknown: pane geometry、最小 state schema
 
 ## Reception Surface
@@ -133,6 +133,7 @@
 - chart の患者基本情報編集 dialog も Patients と同じ official update route を使います。
 - chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
 - SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
+- local-only wording は `症状詳記（院内ローカル）`、`院内ローカル診療サマリ`、`院内メモはローカル編集のみ` に寄せ、official write surface と見分けられる状態を current contract とします。
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA

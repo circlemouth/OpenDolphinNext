@@ -39,16 +39,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Order bundle (prescription/order) wrappers for Charts edit panels.
+ * Local-only order bundle (prescription/order) wrappers for Charts edit panels.
  */
 @Path("/local/order")
-public class OrcaOrderBundleResource extends AbstractOrcaRestResource {
+public class LocalOrderBundleResource extends AbstractOrcaRestResource {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OrcaOrderBundleResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LocalOrderBundleResource.class);
     static final String ROUTE_NAMESPACE = "local";
-    static final String AUDIT_FETCH_ACTION = "LOCAL_ORDER_BUNDLE_FETCH";
-    static final String AUDIT_RECOMMENDATION_ACTION = "LOCAL_ORDER_RECOMMENDATION_FETCH";
-    static final String AUDIT_MUTATION_ACTION = "LOCAL_ORDER_BUNDLE_MUTATION";
+    static final String AUDIT_FETCH_ACTION = "LOCAL_CHART_ORDER_BUNDLE_FETCH";
+    static final String AUDIT_RECOMMENDATION_ACTION = "LOCAL_CHART_ORDER_RECOMMENDATION_FETCH";
+    static final String AUDIT_MUTATION_ACTION = "LOCAL_CHART_ORDER_BUNDLE_MUTATION";
     private static final String ORDER_BUNDLE_UNAVAILABLE = "order_bundle_unavailable";
     private static final String ORDER_BUNDLE_ERROR_MESSAGE = "Failed to mutate order bundle";
     public static final String ORDER_BUNDLE_CONTEXT_KEY = "orcaOrderBundleContext";

@@ -766,7 +766,7 @@ describe('SoapNotePanel right dock drawer', () => {
     expect(drawer.getAttribute('data-open')).toBe('true');
   });
 
-  it('症状詳記セクションはローカル表記のみを使う', () => {
+  it('症状詳記セクションは院内ローカル表記のみを使う', () => {
     renderWithQueryClient(
       <SoapNotePanel
         history={[]}
@@ -782,7 +782,7 @@ describe('SoapNotePanel right dock drawer', () => {
       />,
     );
 
-    expect(screen.getByText('症状詳記（ローカル）')).toBeInTheDocument();
+    expect(screen.getByText('症状詳記（院内ローカル）')).toBeInTheDocument();
     expect(screen.queryByText('症状詳記（ORCA）')).not.toBeInTheDocument();
   });
 });

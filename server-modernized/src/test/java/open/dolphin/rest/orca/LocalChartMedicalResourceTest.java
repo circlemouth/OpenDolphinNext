@@ -24,14 +24,14 @@ import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class OrcaMedicalResourceTest extends RuntimeDelegateTestSupport {
+class LocalChartMedicalResourceTest extends RuntimeDelegateTestSupport {
 
-    private OrcaMedicalResource resource;
+    private LocalChartMedicalResource resource;
     private HttpServletRequest servletRequest;
 
     @BeforeEach
     void setUp() throws Exception {
-        resource = new OrcaMedicalResource();
+        resource = new LocalChartMedicalResource();
         injectField(resource, "sessionAuditDispatcher", new RecordingSessionAuditDispatcher());
         injectField(resource, "patientServiceBean", new FakePatientServiceBean());
         injectField(resource, "karteServiceBean", new NullKarteServiceBean());
@@ -76,7 +76,7 @@ class OrcaMedicalResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void returns404WhenPatientMissing() throws Exception {
-        resource = new OrcaMedicalResource();
+        resource = new LocalChartMedicalResource();
         injectField(resource, "sessionAuditDispatcher", new RecordingSessionAuditDispatcher());
         injectField(resource, "patientServiceBean", new MissingPatientServiceBean());
         injectField(resource, "karteServiceBean", new NullKarteServiceBean());
@@ -119,7 +119,7 @@ class OrcaMedicalResourceTest extends RuntimeDelegateTestSupport {
 
     @Test
     void dateFormatterIsThreadSafe() throws Exception {
-        var method = OrcaMedicalResource.class.getDeclaredMethod("formatDate", Date.class);
+        var method = LocalChartMedicalResource.class.getDeclaredMethod("formatDate", Date.class);
         method.setAccessible(true);
         Date target = new Date(1735603200000L); // 2024-12-31T00:00:00Z
 

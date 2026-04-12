@@ -45,16 +45,16 @@ import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
+class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
 
-    private OrcaOrderBundleResource resource;
+    private LocalOrderBundleResource resource;
     private RecordingSessionAuditDispatcher auditDispatcher;
     private FakeKarteServiceBean fakeKarteServiceBean;
     private HttpServletRequest servletRequest;
 
     @BeforeEach
     void setUp() throws Exception {
-        resource = new OrcaOrderBundleResource();
+        resource = new LocalOrderBundleResource();
         auditDispatcher = new RecordingSessionAuditDispatcher();
         injectField(resource, "sessionAuditDispatcher", auditDispatcher);
         injectField(resource, "patientServiceBean", new FakePatientServiceBean());
@@ -97,7 +97,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("patientId", body.get("field"));
         assertEquals("patientId is required", body.get("message"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("LOCAL_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_CHART_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 
@@ -117,7 +117,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("entity", body.get("field"));
         assertEquals("entity is invalid", body.get("message"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("LOCAL_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_CHART_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 
@@ -147,7 +147,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("out", entry.getTemplate().getPrescriptionLocation());
         assertEquals("regular", entry.getTemplate().getPrescriptionTiming());
         assertNotNull(auditDispatcher.payload);
-        assertEquals("LOCAL_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_CHART_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.SUCCESS, auditDispatcher.outcome);
     }
 
@@ -234,7 +234,7 @@ class OrcaOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("startDate", body.get("field"));
         assertEquals("startDate must be yyyy-MM-dd", body.get("message"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("LOCAL_ORDER_BUNDLE_MUTATION", auditDispatcher.payload.getAction());
+        assertEquals("LOCAL_CHART_ORDER_BUNDLE_MUTATION", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 

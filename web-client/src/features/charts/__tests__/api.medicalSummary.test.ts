@@ -87,7 +87,7 @@ describe('charts medical summary api', () => {
     expect(logUiState).toHaveBeenCalledWith(
       expect.objectContaining({
         details: expect.objectContaining({
-          description: 'charts_local_summary',
+          description: 'charts_inhouse_local_summary',
         }),
       }),
     );

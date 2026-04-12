@@ -76,23 +76,23 @@ final class OrcaOrderBundleRecommendationFlowSupport {
             Integer scanLimit,
             String from) {
         if (patientId == null || patientId.isBlank()) {
-            throw orderBundleValidationFailure(resource, request, OrcaOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
+            throw orderBundleValidationFailure(resource, request, LocalOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
                     facilityId, null, runId, "patientId", "patientId is required");
         }
         String resolvedEntity = OrcaOrderBundleRequestSupport.normalizeEntityQuery(entity);
         if (OrcaOrderBundleRequestSupport.isInvalidEntityQuery(entity)
                 || (resolvedEntity != null && !OrcaOrderBundleRequestSupport.isValidEntity(resolvedEntity))) {
-            throw orderBundleValidationFailure(resource, request, OrcaOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
+            throw orderBundleValidationFailure(resource, request, LocalOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
                     facilityId, patientId, runId, "entity", "entity is invalid");
         }
         PatientModel patient = patientServiceBean.getPatientById(facilityId, patientId);
         if (patient == null) {
-            throw orderBundleNotFoundFailure(resource, request, OrcaOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
+            throw orderBundleNotFoundFailure(resource, request, LocalOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
                     facilityId, patientId, runId, "patient_not_found", "Patient not found");
         }
         KarteBean karte = karteServiceBean.getKarte(facilityId, patientId, null);
         if (karte == null) {
-            throw orderBundleNotFoundFailure(resource, request, OrcaOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
+            throw orderBundleNotFoundFailure(resource, request, LocalOrderBundleResource.AUDIT_RECOMMENDATION_ACTION,
                     facilityId, patientId, runId, "karte_not_found", "Karte not found");
         }
         boolean includeFacilityRows = includeFacility == null || includeFacility;
@@ -211,7 +211,7 @@ final class OrcaOrderBundleRecommendationFlowSupport {
         audit.put("facilityScanned", data.facilityScanned());
         audit.put("recordsScanned", data.scanned());
         audit.put("recordsReturned", data.recommendations().size());
-        audit.put("routeNamespace", OrcaOrderBundleResource.ROUTE_NAMESPACE);
+        audit.put("routeNamespace", LocalOrderBundleResource.ROUTE_NAMESPACE);
         return audit;
     }
 
@@ -232,7 +232,7 @@ final class OrcaOrderBundleRecommendationFlowSupport {
         audit.put("runId", runId);
         audit.put("validationError", Boolean.TRUE);
         audit.put("field", field);
-        audit.put("routeNamespace", OrcaOrderBundleResource.ROUTE_NAMESPACE);
+        audit.put("routeNamespace", LocalOrderBundleResource.ROUTE_NAMESPACE);
         resource.markFailureDetails(audit, Response.Status.BAD_REQUEST.getStatusCode(), "invalid_request", message);
         resource.recordAudit(request, action, audit, open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
         return resource.validationError(request, field, message);
@@ -251,7 +251,7 @@ final class OrcaOrderBundleRecommendationFlowSupport {
         audit.put("facilityId", facilityId);
         audit.put("patientId", patientId);
         audit.put("runId", runId);
-        audit.put("routeNamespace", OrcaOrderBundleResource.ROUTE_NAMESPACE);
+        audit.put("routeNamespace", LocalOrderBundleResource.ROUTE_NAMESPACE);
         resource.markFailureDetails(audit, Response.Status.NOT_FOUND.getStatusCode(), errorCode, message);
         resource.recordAudit(request, action, audit, open.dolphin.audit.AuditEventEnvelope.Outcome.FAILURE);
         return resource.restError(request, Response.Status.NOT_FOUND, errorCode, message);

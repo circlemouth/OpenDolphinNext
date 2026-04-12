@@ -327,6 +327,7 @@ class OrcaChartSupportSupportTest {
                       <Unit_Name type="string">件</Unit_Name>
                       <StartDate type="string">2024-06-01</StartDate>
                       <EndDate type="string">9999-12-31</EndDate>
+                      <Selection_Prompt type="string">算定日を選択</Selection_Prompt>
                     </Medication_Information>
                     <Selection_Expression_Information type="array">
                       <Selection_Expression_Information_child type="record">
@@ -339,6 +340,7 @@ class OrcaChartSupportSupportTest {
                         <Not_Use_Comment type="string">0</Not_Use_Comment>
                         <Process_Category type="string">4</Process_Category>
                         <Selection_Grep_Name type="string">在宅時医学総合管理料</Selection_Grep_Name>
+                        <Selection_Prompt type="string">算定日を選択</Selection_Prompt>
                       </Selection_Expression_Information_child>
                     </Selection_Expression_Information>
                   </medicationgetres>
@@ -358,6 +360,7 @@ class OrcaChartSupportSupportTest {
         assertEquals("2026-03-22", response.getBaseDate());
         assertEquals("123", response.getMedication().getUnitCode());
         assertEquals("件", response.getMedication().getUnitName());
+        assertEquals("算定日を選択", response.getMedication().getExtraFields().get("Selection_Prompt"));
         assertEquals(1, response.getSelections().size());
         assertEquals("850100106", response.getSelections().get(0).getCommentCode());
         assertEquals("0166", response.getSelections().get(0).getItemNumber());
@@ -367,6 +370,7 @@ class OrcaChartSupportSupportTest {
         assertEquals("0", response.getSelections().get(0).getNotUseComment());
         assertEquals("4", response.getSelections().get(0).getProcessCategory());
         assertEquals("在宅時医学総合管理料", response.getSelections().get(0).getSelectionGrepName());
+        assertEquals("算定日を選択", response.getSelections().get(0).getExtraFields().get("Selection_Prompt"));
     }
 
     @Test

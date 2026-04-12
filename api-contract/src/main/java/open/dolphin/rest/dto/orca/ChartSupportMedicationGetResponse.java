@@ -3,6 +3,7 @@ package open.dolphin.rest.dto.orca;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ChartSupportMedicationGetResponse {
@@ -144,6 +145,7 @@ public class ChartSupportMedicationGetResponse {
         private String startDate;
         private String endDate;
         private String requestCode;
+        private Map<String, String> extraFields;
 
         public String getMedicationCode() {
             return medicationCode;
@@ -208,6 +210,14 @@ public class ChartSupportMedicationGetResponse {
         public void setRequestCode(String requestCode) {
             this.requestCode = requestCode;
         }
+
+        public Map<String, String> getExtraFields() {
+            return extraFields;
+        }
+
+        public void setExtraFields(Map<String, String> extraFields) {
+            this.extraFields = extraFields;
+        }
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -221,6 +231,7 @@ public class ChartSupportMedicationGetResponse {
         private String selectionGrepName;
         private String itemNumber;
         private String itemNumberBranch;
+        private Map<String, String> extraFields;
 
         public String getCommentCode() {
             return commentCode;
@@ -292,6 +303,14 @@ public class ChartSupportMedicationGetResponse {
 
         public void setItemNumberBranch(String itemNumberBranch) {
             this.itemNumberBranch = itemNumberBranch;
+        }
+
+        public Map<String, String> getExtraFields() {
+            return extraFields;
+        }
+
+        public void setExtraFields(Map<String, String> extraFields) {
+            this.extraFields = extraFields;
         }
     }
 }

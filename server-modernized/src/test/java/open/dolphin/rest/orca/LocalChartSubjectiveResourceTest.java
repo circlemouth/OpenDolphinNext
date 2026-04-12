@@ -31,16 +31,16 @@ import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class OrcaSubjectiveResourceTest extends RuntimeDelegateTestSupport {
+class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
 
-    private OrcaSubjectiveResource resource;
+    private LocalChartSubjectiveResource resource;
     private FakePatientServiceBean fakePatientServiceBean;
     private FakeKarteServiceBean fakeKarteServiceBean;
     private HttpServletRequest servletRequest;
 
     @BeforeEach
     void setUp() throws Exception {
-        resource = new OrcaSubjectiveResource();
+        resource = new LocalChartSubjectiveResource();
         fakePatientServiceBean = new FakePatientServiceBean();
         fakeKarteServiceBean = new FakeKarteServiceBean();
 
