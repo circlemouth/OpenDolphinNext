@@ -718,10 +718,11 @@ export function OrcaSummary({
               <strong>ローカル診療サマリ</strong>
               <span className="orca-summary__card-meta">status: {displayClaimStatus ?? '—'}</span>
             </header>
+            <p className="orca-summary__help">院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。</p>
             <ul>
-              <li>総額: {claimTotal > 0 ? `${claimTotal.toLocaleString()} 円` : '—'}</li>
-              <li>請求件数: {claimBundles.length} 件</li>
-              <li>ステータス: {effectiveClaim?.claimStatusText ?? '—'}</li>
+              <li>ローカル見込み総額: {claimTotal > 0 ? `${claimTotal.toLocaleString()} 円` : '—'}</li>
+              <li>ローカル請求件数: {claimBundles.length} 件</li>
+              <li>院内ステータス: {effectiveClaim?.claimStatusText ?? '—'}</li>
               <li>recordsReturned: {effectiveClaim?.recordsReturned ?? summary?.recordsReturned ?? '—'}</li>
               {invoiceIdentifier && <li>{invoiceIdentifier}</li>}
               {claimDataIdIdentifier && <li>{claimDataIdIdentifier}</li>}
@@ -830,6 +831,7 @@ export function OrcaSummary({
               ariaLive={resolveAriaLive(resolvedIncomeTone ?? 'info')}
             />
           ) : null}
+          <p className="orca-summary__help">official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。</p>
           <div className="orca-summary__income-highlight">
             <div>
               <span className="orca-summary__label">直近請求</span>
@@ -856,29 +858,29 @@ export function OrcaSummary({
           </ul>
           <div className="orca-summary__income-summary">
             <div>
-              <span className="orca-summary__label">未収金合計</span>
+              <span className="orca-summary__label">未収金合計 (Unpaid_Money_Total)</span>
               <strong>
                 {incomeInfoQuery.data?.unpaidMoneyTotal !== undefined ? `${incomeInfoQuery.data.unpaidMoneyTotal.toLocaleString()} 円` : '—'}
               </strong>
             </div>
             <div>
-              <span className="orca-summary__label">請求金額</span>
+              <span className="orca-summary__label">請求金額 (Ac_Money)</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.claim.toLocaleString()} 円` : '—'}</strong>
             </div>
             <div>
-              <span className="orca-summary__label">入金額</span>
+              <span className="orca-summary__label">入金額 (Ic_Money)</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.receipt.toLocaleString()} 円` : '—'}</strong>
             </div>
             <div>
-              <span className="orca-summary__label">保険適用金額</span>
+              <span className="orca-summary__label">保険適用金額 (Ai_Money)</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.insurance.toLocaleString()} 円` : '—'}</strong>
             </div>
             <div>
-              <span className="orca-summary__label">自費金額</span>
+              <span className="orca-summary__label">自費金額 (Oe_Money)</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.selfPay.toLocaleString()} 円` : '—'}</strong>
             </div>
             <div>
-              <span className="orca-summary__label">食事・生活療養負担金</span>
+              <span className="orca-summary__label">食事・生活療養負担金 (Ml_Smoney)</span>
               <strong>{incomeEntries.length > 0 ? `${incomeTotals.mealLiving.toLocaleString()} 円` : '—'}</strong>
             </div>
           </div>

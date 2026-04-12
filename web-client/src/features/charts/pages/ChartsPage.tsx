@@ -75,6 +75,7 @@ import {
   type OutpatientEncounterContext,
 } from '../encounterContext';
 import { buildCanonicalOrcaEncounterContext } from '../orcaEncounterContext';
+import { resolveClaimQueueEntryForEncounter, resolveOrcaQueueEntryForEncounter } from '../orcaQueueSelection';
 import {
   buildChartsApprovalStorageKey,
   clearChartsApprovalRecord,
@@ -1935,16 +1936,13 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
 
   const selectedQueueEntry = useMemo(() => {
     const entries = (claimQuery.data as ClaimOutpatientPayload | undefined)?.queueEntries ?? [];
-    if (!encounterContext.patientId) return entries[0];
-    return entries.find((entry) => entry.patientId === encounterContext.patientId) ?? entries[0];
-  }, [claimQuery.data, encounterContext.patientId]);
+    return resolveClaimQueueEntryForEncounter(entries, encounterContext);
+  }, [claimQuery.data, encounterContext]);
 
   const selectedOrcaQueueEntry = useMemo(() => {
-    const patientId = encounterContext.patientId;
-    if (!patientId) return undefined;
     const entries = orcaQueueQuery.data?.queue ?? [];
-    return entries.find((entry) => entry.patientId === patientId);
-  }, [encounterContext.patientId, orcaQueueQuery.data?.queue]);
+    return resolveOrcaQueueEntryForEncounter(entries, encounterContext);
+  }, [encounterContext, orcaQueueQuery.data?.queue]);
 
   const selectedOrcaSendStatus = useMemo(() => resolveOrcaSendStatus(selectedOrcaQueueEntry), [selectedOrcaQueueEntry]);
 
