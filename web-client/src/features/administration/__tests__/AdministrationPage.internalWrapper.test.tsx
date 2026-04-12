@@ -160,6 +160,17 @@ beforeEach(() => {
 });
 
 describe('AdministrationPage internal wrapper section', () => {
+  it('debug section で actual behavior を診断チェックとして表示し、旧 wording を残さない', async () => {
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: '診断チェック' })).toBeInTheDocument();
+    expect(
+      screen.getByText('このセクションは運用設定から隔離されています。表示中の個別チェックだけを実行し、official / local の境界を混ぜた「一括疎通」には見せません。'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'この画面の診断チェックを実行' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '一括疎通（グループ）' })).not.toBeInTheDocument();
+  });
+
   it('capability が無い wrapper を表示しない', async () => {
     mockFetchOrcaCapabilities.mockResolvedValue({
       ok: true,

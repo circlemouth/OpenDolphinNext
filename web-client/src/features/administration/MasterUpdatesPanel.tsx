@@ -189,6 +189,9 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
       <section className="administration-card" aria-label="マスタ更新ダッシュボード">
         <h2 className="administration-card__title">マスタ更新ダッシュボード</h2>
         <p className="admin-quiet">RUN_ID: {runId}</p>
+        <p className="admin-note">
+          official 最終更新情報の確認と、取り込んだ local artifact の管理を分けて表示します。official 取得を実行すると、結果は local artifact 履歴へ追加されます。
+        </p>
 
         <div className="admin-scroll">
           <table className="admin-table">
@@ -230,7 +233,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                       disabled={!isSystemAdmin || dataset.running || runMutation.isPending}
                       onClick={() => runMutation.mutate({ code: dataset.code, force: false })}
                     >
-                      official再取得
+                      official取得を実行
                     </button>
                   </td>
                 </tr>
@@ -294,7 +297,7 @@ export function MasterUpdatesPanel({ runId, role }: MasterUpdatesPanelProps) {
                 disabled={!isSystemAdmin || detailDataset.running || runMutation.isPending}
                 onClick={() => runMutation.mutate({ code: detailDataset.code, force: true })}
               >
-                official再取得
+                official取得を実行
               </button>
               <button
                 type="button"

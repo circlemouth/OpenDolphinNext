@@ -39,6 +39,9 @@
   - chart patient edit が Patients と同じ official update route を使う。
 - Admin:
   - `manageusersv2` list / create / update / delete が current XML 契約どおり送信される。
+  - ORCA ユーザ更新画面で `User_Id` / `職員区分` / `職員番号` / `管理者権限` が更新不可として表示され、UI 文言が XML 契約と矛盾しない。
+  - 接続設定では「管理画面権限確認」と「ORCA 接続テスト成功」が分離表示され、`pushTenantId` 単独保存が UI / server の両方で拒否される。
+  - 診断セクションに official/local 境界を曖昧にする「一括疎通（グループ）」表現が残っていない。
 
 ## 5. 成功判定
 - 上記コマンドと smoke が成功し、artifact が同じ RUN_ID に束ねられている。

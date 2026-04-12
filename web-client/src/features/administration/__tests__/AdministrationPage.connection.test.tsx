@@ -128,6 +128,11 @@ const renderPage = () => {
 };
 
 beforeEach(() => {
+  mockFetchAdminConfig.mockReset();
+  mockFetchOrcaQueue.mockReset();
+  mockFetchOrcaConnectionConfig.mockReset();
+  mockSaveOrcaConnectionConfig.mockReset();
+  mockFetchOrcaCapabilities.mockReset();
   mockFetchAdminConfig.mockResolvedValue({
     runId: 'RUN-CONFIG',
     status: 200,
@@ -224,5 +229,34 @@ describe('AdministrationPage connection section', () => {
         }),
       );
     });
+  });
+
+  it('pushTenantId 単独では保存させない', async () => {
+    const user = userEvent.setup();
+    mockFetchOrcaConnectionConfig.mockResolvedValue({
+      ok: true,
+      status: 200,
+      useWeborca: true,
+      serverUrl: 'https://weborca.example.invalid',
+      port: 443,
+      username: 'orca-admin',
+      pushUrl: '',
+      pushTenantId: '',
+      passwordConfigured: true,
+      clientAuthEnabled: false,
+      clientCertificateConfigured: false,
+      clientCertificatePassphraseConfigured: false,
+      caCertificateConfigured: false,
+    });
+
+    renderPage();
+
+    const pushTenantId = await screen.findByLabelText('Push tenant ID');
+    await user.type(pushTenantId, 'tenant-only');
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(mockSaveOrcaConnectionConfig).not.toHaveBeenCalled();
+    expect(screen.getByText('Push tenant ID は Push URL を設定した場合のみ保存できます。')).toBeInTheDocument();
+    expect(screen.getByText('入力エラーを修正してください。')).toBeInTheDocument();
   });
 });
