@@ -227,16 +227,7 @@ const ACCEPT_SUCCESS_RESULTS = new Set(['00', '0000', 'K3']);
 const ACCEPT_WARNING_RESULTS = new Set(['16', '21', '60']);
 const RECEPTION_SUPPORT_GUIDE = '必要に応じて RUN_ID コピーで実行IDを共有してください。';
 
-const buildReceptionAcceptResultDetail = (apiResult?: string) => {
-  switch (normalizeApiResult(apiResult)) {
-    case '21':
-      return '保険組合せを見直してください。必要なら Patients で患者の保険情報を確認し、受付一覧を再取得してください。';
-    case '60':
-      return '対象受付が ORCA に見つかりません。受付一覧を再取得し、取消対象の受付IDを確認してください。';
-    default:
-      return '結果を確認し、必要なら受付一覧を再取得してください。';
-  }
-};
+const buildReceptionAcceptResultDetail = () => '結果を確認し、必要なら一覧を再取得してください。';
 
 const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error') => {
   if (outcome === 'success') {
@@ -2574,7 +2565,7 @@ export function ReceptionPage({
         setAcceptResult({
           tone: toneResult,
           message,
-          detail: buildReceptionAcceptResultDetail(apiResult),
+          detail: buildReceptionAcceptResultDetail(),
           runId: payload.runId ?? mergedMeta.runId,
           apiResult: payload.apiResult,
         });
@@ -2716,14 +2707,14 @@ export function ReceptionPage({
         setAcceptResult({
           tone: toneResult,
           message,
-          detail: buildReceptionAcceptResultDetail(apiResult),
+          detail: buildReceptionAcceptResultDetail(),
           runId: payload.runId ?? mergedMeta.runId,
           apiResult: payload.apiResult,
         });
         enqueue({
           tone: toneResult === 'info' ? 'info' : toneResult,
           message,
-          detail: buildReceptionAcceptResultDetail(apiResult),
+          detail: buildReceptionAcceptResultDetail(),
         });
         logUiState({
           action: 'cancel',
@@ -4691,8 +4682,9 @@ export function ReceptionPage({
                       onChange={(event) => setMasterSearchFilters((prev) => ({ ...prev, sex: event.target.value }))}
                     >
                       <option value="">指定なし</option>
-                      <option value="1">男性(1)</option>
-                      <option value="2">女性(2)</option>
+                      <option value="M">男性</option>
+                      <option value="F">女性</option>
+                      <option value="O">その他</option>
                     </select>
                   </label>
                   <label className="reception-master__field">
@@ -4714,8 +4706,7 @@ export function ReceptionPage({
                 <div className="reception-master__actions">
                   <div className="reception-master__hints" aria-live={infoLive}>
                     <span>氏名（WholeName）は必須です。カナは画面内確認用で、official payload には送信しません。</span>
-                    <span>性別は official code を送信します。男性=1、女性=2 です。</span>
-                    <span>区分は任意です。指定した場合のみ official payload に送信します。外来=2、入院=1 です。</span>
+                    <span>区分は任意です。指定した場合のみ official payload に送信します。</span>
                     {masterSearchError ? <span className="reception-master__error">{masterSearchError}</span> : null}
                   </div>
                   <div className="reception-master__buttons">
