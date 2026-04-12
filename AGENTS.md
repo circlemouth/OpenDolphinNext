@@ -123,7 +123,7 @@
   - 正本索引は `docs/README.md`。
   - manager handoff / release 判定は `docs/managerdocs/README.md`。
   - web current contract は `web-client/README.md` と `web-client/notes/`。
-  - web-client の UI 構築ルールは `docs/web-client/ux/dads-app-ui-design-rules-20260411.md` を参照し、`docs/web-client/ux/web-client-ui-guideline.md` と合わせて設計判断に使う。
+  - web-client の UI 構築ルールは `docs/web-client/ux/dads_app_ui_design_rules_20260411.md` を参照し、`docs/web-client/ux/web-client-ui-guideline.md` と合わせて設計判断に使う。
   - server / release gate は `docs/architecture/server-modernization-overview.md` と `docs/runbooks/release-validation.md`。
 - **現行ハブ**: `docs/README.md` / `docs/managerdocs/README.md` / `web-client/README.md` を入口とする。
 - **文字コード**: 日本語を含むファイルは **UTF-8 (BOMなし)** で保存。
@@ -153,7 +153,7 @@
 ## 7. ワーキングフロー (作業手順)
 1. **理解**:
    - 指示内容と `docs/README.md`、`docs/managerdocs/README.md`、`web-client/README.md` を確認する。
-   - web-client の UI 構築ルールとして `docs/web-client/ux/dads-app-ui-design-rules-20260411.md` を確認する。
+   - web-client の UI 構築ルールとして `docs/web-client/ux/dads_app_ui_design_rules_20260411.md` を確認する。
    - server 側の current contract / release gate は `docs/architecture/server-modernization-overview.md` と `docs/runbooks/release-validation.md` を確認する。
    - 対象変更の **資産・信頼境界・攻撃面** を把握する。
 2. **脅威モデリング**:
