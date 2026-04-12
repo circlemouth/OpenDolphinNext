@@ -86,7 +86,7 @@
 ### Guard Matrix Minimum
 - 未認証で非 login route に入った場合は `/login` へ `replace` し、`state.from` に現在地を保持します。
 - facility-scoped route で session 不在の場合は、facility-scoped path を `state.from` に積んだうえで `/login` へ `replace` します。
-- 認証済みで login route にいる場合は、facility-scoped かつ safe な `state.from` を優先し、無効または欠落時は `/f/:facilityId/reception` へ `replace` します。
+- session がある状態で login route にいる場合は、facility-scoped かつ safe な `state.from` を優先し、無効または欠落時は `/f/:facilityId/reception` へ `replace` します。
 - logout は cleanup 後に `/f/:facilityId/login?reason=logout` へ `replace` し、login surface で info copy を表示します。
 - `timeout / unauthorized / forbidden` は facility が分かる時は `/f/:facilityId/login`、不明時は `/login` へ `replace` し、login surface で理由を分けて表示します。
 - `AdministrationGate` の権限不足は `/login` へ戻さず、facility-scoped denial surface と `受付` CTA を表示します。

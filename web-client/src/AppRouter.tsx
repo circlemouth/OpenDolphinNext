@@ -843,8 +843,11 @@ function AdministrationGate({ session }: { session: Session }) {
       <div className="status-message is-error" role="status">
         <p>管理画面はシステム管理者のみ利用できます。</p>
         <p>必要権限: システム管理者</p>
-        <p>サポート共有用 RUN_ID: {session.runId || '未取得'}</p>
         <p>権限付与が必要な場合はシステム管理者へ依頼してください。</p>
+        <details>
+          <summary>補助情報を表示</summary>
+          <p>RUN_ID: {session.runId || '未取得'}</p>
+        </details>
       </div>
       <div className="login-form__actions" style={{ marginTop: '1rem' }}>
         <button type="button" onClick={() => navigate(buildFacilityPath(session.facilityId, '/reception'), { replace: true })}>
@@ -888,8 +891,13 @@ function FacilityMismatchNotice({
         <p>
           要求された施設: {describeFacilityId(requestedFacilityId)} / 現在の施設: {describeFacilityId(session.facilityId)}
         </p>
-        <p>現在のログイン: ユーザー={session.userId} / role={session.role} / RUN_ID={session.runId}</p>
         <p>施設/ユーザー切替は上部の「施設/ユーザー切替」からログアウト後に実施してください。</p>
+        <details>
+          <summary>補助情報を表示</summary>
+          <p>ユーザー: {session.userId}</p>
+          <p>権限: {session.role}</p>
+          <p>RUN_ID: {session.runId || '未取得'}</p>
+        </details>
       </div>
       <div className="login-form__actions" style={{ marginTop: '1rem' }}>
         <button type="button" onClick={() => navigate(buildFacilityPath(session.facilityId, '/reception'), { replace: true })}>
@@ -988,13 +996,18 @@ function DebugOutpatientMockGate({ session }: { session: Session }) {
   if (!isAllowed) {
     return (
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
-        <div className="status-message is-error" role="status">
-          <p>権限がないためデバッグ画面へのアクセスを拒否しました。</p>
-          <p>必要権限: システム管理者 / 現在: {session.role}</p>
-          <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
-          {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
-          <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
-        </div>
+      <div className="status-message is-error" role="status">
+        <p>権限がないためデバッグ画面へのアクセスを拒否しました。</p>
+        <p>必要権限: システム管理者</p>
+        <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
+        {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
+        <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
+        <details>
+          <summary>補助情報を表示</summary>
+          <p>現在の権限: {session.role}</p>
+          <p>RUN_ID: {session.runId || '未取得'}</p>
+        </details>
+      </div>
         <div className="login-form__actions" style={{ marginTop: '1rem' }}>
           <button
             type="button"
@@ -1059,13 +1072,18 @@ function DebugMobilePatientPickerGate({ session }: { session: Session }) {
   if (!isAllowed) {
     return (
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
-        <div className="status-message is-error" role="status">
-          <p>権限がないためデバッグ画面へのアクセスを拒否しました。</p>
-          <p>必要権限: システム管理者 / 現在: {session.role}</p>
-          <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
-          {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
-          <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
-        </div>
+      <div className="status-message is-error" role="status">
+        <p>権限がないためデバッグ画面へのアクセスを拒否しました。</p>
+        <p>必要権限: システム管理者</p>
+        <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
+        {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
+        <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
+        <details>
+          <summary>補助情報を表示</summary>
+          <p>現在の権限: {session.role}</p>
+          <p>RUN_ID: {session.runId || '未取得'}</p>
+        </details>
+      </div>
         <div className="login-form__actions" style={{ marginTop: '1rem' }}>
           <button
             type="button"
@@ -1128,13 +1146,18 @@ function DebugHubGate({ session }: { session: Session }) {
   if (!isAllowed) {
     return (
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
-        <div className="status-message is-error" role="status">
-          <p>権限がないためデバッグ導線へのアクセスを拒否しました。</p>
-          <p>必要権限: システム管理者 / 現在: {session.role}</p>
-          <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
-          {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
-          <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
-        </div>
+      <div className="status-message is-error" role="status">
+        <p>権限がないためデバッグ導線へのアクセスを拒否しました。</p>
+        <p>必要権限: システム管理者</p>
+        <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
+        {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
+        <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
+        <details>
+          <summary>補助情報を表示</summary>
+          <p>現在の権限: {session.role}</p>
+          <p>RUN_ID: {session.runId || '未取得'}</p>
+        </details>
+      </div>
         <div className="login-form__actions" style={{ marginTop: '1rem' }}>
           <button
             type="button"
@@ -1197,13 +1220,18 @@ function DebugOrcaApiGate({ session }: { session: Session }) {
   if (!isAllowed) {
     return (
       <div style={{ maxWidth: '620px', margin: '2rem auto' }}>
-        <div className="status-message is-error" role="status">
-          <p>権限がないため ORCA API コンソールへのアクセスを拒否しました。</p>
-          <p>必要権限: システム管理者 / 現在: {session.role}</p>
-          <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
-          {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
-          <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
-        </div>
+      <div className="status-message is-error" role="status">
+        <p>権限がないため ORCA API コンソールへのアクセスを拒否しました。</p>
+        <p>必要権限: システム管理者</p>
+        <p>ENV: VITE_ENABLE_DEBUG_PAGES={envFlagValue}</p>
+        {!hasEnvAccess ? <p>環境フラグが OFF のため表示されません。</p> : null}
+        <p>ログイン中: 施設ID={describeFacilityId(session.facilityId)} / ユーザー={session.userId}</p>
+        <details>
+          <summary>補助情報を表示</summary>
+          <p>現在の権限: {session.role}</p>
+          <p>RUN_ID: {session.runId || '未取得'}</p>
+        </details>
+      </div>
         <div className="login-form__actions" style={{ marginTop: '1rem' }}>
           <button
             type="button"
@@ -1572,9 +1600,9 @@ function AppLayout({ onLogout }: { onLogout: () => void }) {
             <span className="app-shell__pill app-shell__pill--fixed">
               ユーザー: {session.displayName ?? session.commonName ?? session.userId}
             </span>
-            <span className="app-shell__pill app-shell__pill--fixed" data-tooltip="認可ロール">
-              role: {session.role}
-            </span>
+          <span className="app-shell__pill app-shell__pill--fixed" data-tooltip="補助情報: 認可ロール">
+            権限: {session.role}
+          </span>
             <button
               type="button"
               className="app-shell__debug-copy"

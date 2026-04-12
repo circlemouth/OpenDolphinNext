@@ -1735,7 +1735,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           <p className="patients-page__kicker">患者管理 検索・管理</p>
           <h1>患者管理</h1>
           <p className="patients-page__hint" role="status" aria-live={infoLive}>
-            患者一覧から対象を選択し、右ペインのタブで目的別に操作してください。患者保存は「基本情報」タブのみです。
+            患者一覧から対象を選択し、右ペインのタブで目的別に操作してください。患者基本情報の official ORCA 更新は「基本情報」タブのみです。
           </p>
         </div>
         <div className="patients-page__ops-metrics" role="status" aria-live={infoLive}>
@@ -2204,7 +2204,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           <div className="patients-page__form-header patients-page__sticky-bar">
             <div>
               <p className="patients-page__pill">
-                {editorMode === 'create' ? 'official patient create' : 'official patient update'}
+                {editorMode === 'create' ? 'official ORCA create' : 'official ORCA update'}
               </p>
               <div className="patients-page__form-title">
                 <h3 className="patients-page__section-title">
@@ -2213,8 +2213,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
               </div>
               <p className="patients-page__sub">
                 {editorMode === 'create'
-                  ? 'official create は patientmodv2 class=01 を使い、成功後に canonical re-fetch と local sync を行います。患者番号は空欄時に * 自動採番を既定にします。'
-                  : 'official update は patientmodv2 class=02 を使い、成功後に canonical re-fetch と local sync を行います。'}
+                  ? 'official ORCA create は patientmodv2 class=01 を使い、成功後に canonical re-fetch と local sync を行います。患者番号は空欄時に * 自動採番を既定にします。'
+                  : 'official ORCA update は patientmodv2 class=02 を使い、成功後に canonical re-fetch と local sync を行います。'}
               </p>
               {blocking ? <p className="patients-page__block-summary">編集ブロック中（詳細は下部）</p> : null}
             </div>
@@ -2322,7 +2322,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 </ul>
               </div>
               <small>
-                現在の ORCA 状態: {currentOrcaStatus.state}（{currentOrcaStatus.detail}）
+                現在の official ORCA 更新状態: {currentOrcaStatus.state}（{currentOrcaStatus.detail}）
               </small>
             </div>
           )}
@@ -2710,7 +2710,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 {lastSaveResult?.message ? <small>{lastSaveResult.ok ? '保存処理は完了しました。' : '保存に失敗しました。時間をおいて再試行してください。'}</small> : null}
               </div>
               <div className="patients-page__audit-card">
-                <span>ORCA反映</span>
+                <span>official ORCA 更新</span>
                 <strong>{lastSaveOrcaStatus.state}</strong>
                 <small>{lastSaveOrcaStatus.detail}</small>
               </div>
@@ -2720,7 +2720,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 <small>患者画面から ORCA 原本/保険/メモの XML 補助 UI を撤去しました。</small>
               </div>
               <div className="patients-page__audit-card">
-                <span>現在の反映可否</span>
+                <span>現在の official ORCA 更新可否</span>
                 <strong>{currentOrcaStatus.state}</strong>
                 <small>{currentOrcaStatus.detail}</small>
               </div>

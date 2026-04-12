@@ -32,7 +32,7 @@
 - manual: `/login` 起点の 1 段階目ログインと factor2 要求有無の確認
 - guard minimum:
   - 未認証の非 login route は `/login` へ `replace`
-  - 認証済み login route は safe な `from` 優先、無効時は reception fallback
+  - session がある状態で login route に入った場合は safe な `from` を優先し、無効時は reception fallback
   - `timeout / unauthorized / forbidden / logout` は login surface で理由を分ける
   - factor2 `cancel / session expired / session missing` は route 遷移せず credentials step に戻る
   - factor2 `429` は current step を維持して待機文言に寄せる

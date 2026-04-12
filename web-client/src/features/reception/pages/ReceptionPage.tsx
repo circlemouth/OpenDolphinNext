@@ -5137,12 +5137,12 @@ export function ReceptionPage({
                                     </span>
                                   </div>
                                   <div className="reception-card__meta">
-                                    {entry.receptionId ? (
+                                    {debugUiEnabled && entry.receptionId ? (
                                       <span>
                                         受付ID: <code>{entry.receptionId}</code>
                                       </span>
                                     ) : null}
-                                    {entry.appointmentId ? (
+                                    {debugUiEnabled && entry.appointmentId ? (
                                       <span>
                                         予約ID: <code>{entry.appointmentId}</code>
                                       </span>

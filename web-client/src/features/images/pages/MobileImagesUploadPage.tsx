@@ -231,7 +231,13 @@ export function MobileImagesUploadPage() {
     [location.search],
   );
   const resolvedPatientId = patientIdParam ?? statePatientId ?? deepLinkPatientId;
-  const resolvedPatientSourceLabel = patientIdParam ? 'URL 由来' : statePatientId ? '遷移文脈' : deepLinkPatientId ? '一時文脈' : '未確定';
+  const resolvedPatientSourceLabel = patientIdParam
+    ? '入口 query patientId'
+    : statePatientId
+      ? '遷移文脈'
+      : deepLinkPatientId
+        ? '一時文脈'
+        : '未確定';
   const fallbackUrl = useMemo(() => {
     const facilityId = session?.facilityId;
     if (appNav.fromCandidate === 'reception') return buildFacilityPath(facilityId, '/reception');
@@ -432,7 +438,7 @@ export function MobileImagesUploadPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
           <div style={{ display: 'grid', gap: '0.15rem' }}>
             <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>
-              Clinical mobile intake
+              patient-specific upload / reference
             </p>
             <h1 style={{ margin: 0, fontSize: '1.35rem', letterSpacing: '-0.02em', color: ui.text }}>画像アップロード</h1>
           </div>
@@ -474,13 +480,13 @@ export function MobileImagesUploadPage() {
 
         <div data-test-id="mobile-images-patient-identity">
           <PatientIdentityBar
-            eyebrow="Clinical mobile images"
+            eyebrow="患者画像アップロード / 参照"
             patientId={patientId}
             patientName={patientId ? undefined : '患者未確定'}
             note="画面内で患者を選び直せます。URL 由来の patientId は画面遷移後に保持しません。"
             chips={
               <>
-                <StatusPill tone="neutral" size="xs">入力源: {resolvedPatientSourceLabel}</StatusPill>
+                <StatusPill tone="neutral" size="xs">患者文脈: {resolvedPatientSourceLabel}</StatusPill>
                 <StatusPill tone={patientId ? 'info' : 'warning'} size="xs">
                   {patientId ? '文脈あり' : '文脈待ち'}
                 </StatusPill>

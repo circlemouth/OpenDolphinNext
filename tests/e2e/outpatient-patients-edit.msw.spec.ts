@@ -244,7 +244,7 @@ test('Patients 検索→詳細→編集→保存→再表示 (MSW)', async ({ pa
 
   await page.locator('.patients-page__form').screenshot({ path: path.join(artifactDir, 'patients-edit-input.png') });
 
-  await page.locator('.patients-page__form').getByRole('button', { name: /保存/ }).click();
+  await page.locator('.patients-page__form').getByRole('button', { name: '既存患者更新を実行' }).click();
 
   await expect(page.locator('.patients-page__toast')).toContainText('保存しました');
   const payloadLog = await page.evaluate(() => (window as any).__PATIENTS_EDIT_LAST_PAYLOAD__);
