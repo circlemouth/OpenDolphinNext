@@ -715,7 +715,7 @@ export function OrcaSummary({
         {claimEnabled && (
           <div className="orca-summary__card">
             <header>
-              <strong>ローカル診療サマリ</strong>
+              <strong>院内ローカル診療サマリ</strong>
               <span className="orca-summary__card-meta">status: {displayClaimStatus ?? '—'}</span>
             </header>
             <p className="orca-summary__help">院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。</p>

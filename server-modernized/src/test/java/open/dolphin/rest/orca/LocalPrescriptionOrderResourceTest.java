@@ -32,17 +32,17 @@ import open.dolphin.testsupport.RuntimeDelegateTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-class OrcaPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
+class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
 
-    private OrcaPrescriptionOrderResource resource;
+    private LocalPrescriptionOrderResource resource;
     private FakePrescriptionOrderRepository fakeRepository;
     private HttpServletRequest servletRequest;
 
     @BeforeEach
     void setUp() throws Exception {
-        resource = new OrcaPrescriptionOrderResource();
+        resource = new LocalPrescriptionOrderResource();
         fakeRepository = new FakePrescriptionOrderRepository();
 
         injectField(resource, "sessionAuditDispatcher", new RecordingSessionAuditDispatcher());

@@ -45,12 +45,12 @@ public final class OpenDolphinRestApplication extends Application {
                 open.dolphin.rest.LogoutResource.class,
                 open.dolphin.rest.ChartEventStreamResource.class,
                 // Local-only routes live under /api/local/*.
-                open.dolphin.rest.orca.OrcaMedicalResource.class,
-                open.dolphin.rest.orca.OrcaPatientLocalSearchResource.class,
-                open.dolphin.rest.orca.OrcaPatientResource.class,
-                open.dolphin.rest.orca.OrcaSubjectiveResource.class,
-                open.dolphin.rest.orca.OrcaOrderBundleResource.class,
-                open.dolphin.rest.orca.OrcaPrescriptionOrderResource.class,
+                open.dolphin.rest.orca.LocalChartMedicalResource.class,
+                open.dolphin.rest.orca.LocalPatientSearchResource.class,
+                open.dolphin.rest.orca.LocalPatientMutationResource.class,
+                open.dolphin.rest.orca.LocalChartSubjectiveResource.class,
+                open.dolphin.rest.orca.LocalOrderBundleResource.class,
+                open.dolphin.rest.orca.LocalPrescriptionOrderResource.class,
                 // Official routes live under /api/orca/official/* and master-backed reads live under /api/orca/master/*.
                 open.dolphin.rest.orca.OrcaLiveDiseaseMasterResource.class,
                 open.dolphin.rest.orca.OrcaReportDocumentResource.class,

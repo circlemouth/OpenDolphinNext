@@ -2,7 +2,9 @@ package open.dolphin.rest.orca;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -17,6 +19,7 @@ import open.dolphin.rest.dto.orca.ChartSupportMedicalModResponse;
 import open.dolphin.rest.dto.orca.ChartSupportMedicalModV2Request;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
@@ -190,6 +193,7 @@ final class OrcaChartSupportSupport {
             response.setReskey(readFirst(document, "Reskey"));
             response.setBaseDate(readFirst(document, "Base_Date"));
 
+            Element medicationElement = firstElement(document.getDocumentElement(), "Medication_Information");
             ChartSupportMedicationGetResponse.Medication medication = new ChartSupportMedicationGetResponse.Medication();
             medication.setMedicationCode(readFirst(document, "Medication_Code"));
             medication.setMedicationName(readFirst(document, "Medication_Name"));
@@ -199,6 +203,18 @@ final class OrcaChartSupportSupport {
             medication.setStartDate(readFirst(document, "StartDate"));
             medication.setEndDate(readFirst(document, "EndDate"));
             medication.setRequestCode(readFirst(document, "Request_Code"));
+            Map<String, String> medicationExtraFields = collectDirectChildText(
+                    medicationElement,
+                    "Medication_Code",
+                    "Medication_Name",
+                    "Medication_Name_inKana",
+                    "Unit_Code",
+                    "Unit_Name",
+                    "StartDate",
+                    "EndDate");
+            if (!medicationExtraFields.isEmpty()) {
+                medication.setExtraFields(medicationExtraFields);
+            }
             if (!isBlank(medication.getMedicationCode()) || !isBlank(medication.getMedicationName())
                     || !isBlank(medication.getMedicationNameKana())
                     || !isBlank(medication.getUnitCode())
@@ -221,6 +237,20 @@ final class OrcaChartSupportSupport {
                 selection.setSelectionGrepName(readFirst(element, "Selection_Grep_Name"));
                 selection.setItemNumber(readFirst(element, "Item_Number"));
                 selection.setItemNumberBranch(readFirst(element, "Item_Number_Branch"));
+                Map<String, String> selectionExtraFields = collectDirectChildText(
+                        element,
+                        "Comment_Code",
+                        "Comment_Name",
+                        "Category",
+                        "Condition_Category",
+                        "Not_Use_Comment",
+                        "Process_Category",
+                        "Selection_Grep_Name",
+                        "Item_Number",
+                        "Item_Number_Branch");
+                if (!selectionExtraFields.isEmpty()) {
+                    selection.setExtraFields(selectionExtraFields);
+                }
                 if (!isBlank(selection.getCommentCode()) || !isBlank(selection.getCommentName())
                         || !isBlank(selection.getCategory())
                         || !isBlank(selection.getConditionCategory())
@@ -560,6 +590,25 @@ final class OrcaChartSupportSupport {
             return null;
         }
         return nodes.item(0) instanceof Element element ? element : null;
+    }
+
+    private Map<String, String> collectDirectChildText(Element parent, String... excludedTagNames) {
+        if (parent == null) {
+            return Map.of();
+        }
+        java.util.Set<String> excluded = java.util.Set.of(excludedTagNames);
+        Map<String, String> values = new LinkedHashMap<>();
+        Node child = parent.getFirstChild();
+        while (child != null) {
+            if (child instanceof Element element && !excluded.contains(element.getTagName())) {
+                String text = element.getTextContent();
+                if (text != null && !text.isBlank()) {
+                    values.put(element.getTagName(), text.trim());
+                }
+            }
+            child = child.getNextSibling();
+        }
+        return values;
     }
 
     private void appendTag(StringBuilder builder, String tagName, String value) {

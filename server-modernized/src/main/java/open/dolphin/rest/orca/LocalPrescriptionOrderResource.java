@@ -39,14 +39,14 @@ import org.slf4j.LoggerFactory;
 
 @Path("/local/prescription-orders")
 @Produces(MediaType.APPLICATION_JSON)
-public class OrcaPrescriptionOrderResource extends AbstractOrcaRestResource {
+public class LocalPrescriptionOrderResource extends AbstractOrcaRestResource {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OrcaPrescriptionOrderResource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(LocalPrescriptionOrderResource.class);
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
     private static final String ROUTE_NAMESPACE = "local";
-    private static final String AUDIT_FETCH_ACTION = "LOCAL_PRESCRIPTION_ORDER_FETCH";
-    private static final String AUDIT_SAVE_ACTION = "LOCAL_PRESCRIPTION_ORDER_SAVE";
-    private static final String AUDIT_DO_IMPORT_ACTION = "LOCAL_PRESCRIPTION_DO_IMPORT";
+    private static final String AUDIT_FETCH_ACTION = "LOCAL_CHART_PRESCRIPTION_ORDER_FETCH";
+    private static final String AUDIT_SAVE_ACTION = "LOCAL_CHART_PRESCRIPTION_ORDER_SAVE";
+    private static final String AUDIT_DO_IMPORT_ACTION = "LOCAL_CHART_PRESCRIPTION_DO_IMPORT";
     @Inject
     private PatientServiceBean patientServiceBean;
 

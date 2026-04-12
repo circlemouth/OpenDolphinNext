@@ -35,11 +35,11 @@ import open.dolphin.session.UserServiceBean;
  * Handles local-only subjective POST requests.
  */
 @Path("/local/charts")
-public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
+public class LocalChartSubjectiveResource extends AbstractOrcaRestResource {
 
     private static final int MAX_BODY_LENGTH = 1000;
     private static final String ROUTE_NAMESPACE = "local";
-    private static final String AUDIT_ACTION = "LOCAL_CHART_SUBJECTIVE_MUTATION";
+    private static final String AUDIT_ACTION = "LOCAL_CHART_SUBJECTIVES_MUTATION";
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -77,7 +77,7 @@ public class OrcaSubjectiveResource extends AbstractOrcaRestResource {
         response.setRunId(runId);
         response.setRouteNamespace(ROUTE_NAMESPACE);
         response.setRecordedAt(Instant.now().toString());
-        response.setMessageDetail("主訴を登録しました。");
+        response.setMessageDetail("院内ローカル SOAP 記載を登録しました。");
 
         Map<String, Object> audit = new HashMap<>();
         audit.put("facilityId", facilityId);

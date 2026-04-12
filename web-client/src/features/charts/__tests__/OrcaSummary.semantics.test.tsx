@@ -63,7 +63,7 @@ vi.mock('../../../libs/audit/auditLogger', () => ({
 }));
 
 describe('OrcaSummary semantics', () => {
-  it('ORCA収納情報とローカル診療サマリの責務を分離し official ラベルを表示する', () => {
+  it('ORCA収納情報と院内ローカル診療サマリの責務を分離し official ラベルを表示する', () => {
     useQueryMock.mockReturnValue({
       data: {
         ok: true,
@@ -122,7 +122,7 @@ describe('OrcaSummary semantics', () => {
       />,
     );
 
-    expect(screen.getByText('ローカル診療サマリ')).toBeInTheDocument();
+    expect(screen.getByText('院内ローカル診療サマリ')).toBeInTheDocument();
     expect(screen.getByText('院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。')).toBeInTheDocument();
     expect(screen.getByText('ORCA収納情報')).toBeInTheDocument();
     expect(screen.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。')).toBeInTheDocument();

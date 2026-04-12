@@ -21,7 +21,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.orca.OrcaGatewayException;
-import open.dolphin.rest.orca.OrcaOrderBundleResource;
+import open.dolphin.rest.orca.LocalOrderBundleResource;
 import open.dolphin.session.framework.SessionServiceException;
 
 @Provider
@@ -84,7 +84,7 @@ public class RestExceptionMapper implements ExceptionMapper<Throwable> {
             return null;
         }
         Map<String, Object> details = new HashMap<>();
-        Object context = request.getAttribute(OrcaOrderBundleResource.ORDER_BUNDLE_CONTEXT_KEY);
+        Object context = request.getAttribute(LocalOrderBundleResource.ORDER_BUNDLE_CONTEXT_KEY);
         if (context instanceof Map<?, ?> ctx) {
             for (Map.Entry<?, ?> entry : ctx.entrySet()) {
                 if (entry.getKey() instanceof String key) {

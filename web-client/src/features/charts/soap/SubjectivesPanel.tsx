@@ -13,7 +13,7 @@ export function SubjectivesPanel({ readOnly = false, readOnlyReason, runId }: Su
   return (
     <ToneBanner
       tone={readOnly ? 'warning' : 'info'}
-      message={readOnlyReason ?? '症状詳記セクションは廃止しました。SOAP 入力は通常のカルテ導線で扱います。'}
+      message={readOnlyReason ?? '症状詳記の専用入力は廃止しました。必要な補足は院内ローカル SOAP 入力で扱います。'}
       runId={runId}
       showMeta={false}
     />

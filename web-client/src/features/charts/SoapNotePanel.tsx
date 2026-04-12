@@ -1074,8 +1074,8 @@ export function SoapNotePanel({
       onAppendHistory?.(entries);
       onAuditLogged?.();
       setPendingTemplate({});
-      const detail = '患者未選択のためローカルカルテ反映を実行できません。患者選択後に再確認してください。';
-      const message = `${entries.length} セクションをローカル保存しました。${detail}`;
+      const detail = '患者未選択のため院内ローカル SOAP 保存をカルテへ確定できません。患者選択後に再確認してください。';
+      const message = `${entries.length} セクションを院内ローカル保存しました。${detail}`;
       setFeedback(message);
       setSyncState({
         localSaved: true,
@@ -1828,7 +1828,7 @@ export function SoapNotePanel({
                   setSubjectivesOpen(event.currentTarget.open);
                 }}
               >
-                <summary className="soap-note__subjectives-summary">症状詳記（ローカル）</summary>
+                <summary className="soap-note__subjectives-summary">症状詳記（院内ローカル）</summary>
                 {subjectivesOpen ? (
                   <div className="soap-note__subjectives-content">
                     <SubjectivesPanel

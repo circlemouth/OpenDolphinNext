@@ -18,7 +18,7 @@ import open.dolphin.rest.dto.orca.LocalPatientMutationResponse;
 import open.dolphin.session.PatientServiceBean;
 import org.junit.jupiter.api.Test;
 
-class OrcaPatientResourceIdempotencyTest {
+class LocalPatientMutationResourceIdempotencyTest {
 
     @Test
     void createReturnsIdempotentWhenExistingMatches() {
@@ -27,7 +27,7 @@ class OrcaPatientResourceIdempotencyTest {
         existing.setId(12L);
         service.existing = existing;
 
-        OrcaPatientResource resource = new OrcaPatientResource();
+        LocalPatientMutationResource resource = new LocalPatientMutationResource();
         resource.setPatientServiceBean(service);
 
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -67,7 +67,7 @@ class OrcaPatientResourceIdempotencyTest {
         existing.setId(12L);
         service.existing = existing;
 
-        OrcaPatientResource resource = new OrcaPatientResource();
+        LocalPatientMutationResource resource = new LocalPatientMutationResource();
         resource.setPatientServiceBean(service);
 
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -94,7 +94,7 @@ class OrcaPatientResourceIdempotencyTest {
         existing.setId(12L);
         service.existing = existing;
 
-        OrcaPatientResource resource = new OrcaPatientResource();
+        LocalPatientMutationResource resource = new LocalPatientMutationResource();
         resource.setPatientServiceBean(service);
 
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -123,7 +123,7 @@ class OrcaPatientResourceIdempotencyTest {
     void updateReturnsNotFoundWhenPatientMissing() {
         StubPatientService service = new StubPatientService();
 
-        OrcaPatientResource resource = new OrcaPatientResource();
+        LocalPatientMutationResource resource = new LocalPatientMutationResource();
         resource.setPatientServiceBean(service);
 
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -146,7 +146,7 @@ class OrcaPatientResourceIdempotencyTest {
     void deleteReturnsExplicitUnsupportedError() {
         StubPatientService service = new StubPatientService();
 
-        OrcaPatientResource resource = new OrcaPatientResource();
+        LocalPatientMutationResource resource = new LocalPatientMutationResource();
         resource.setPatientServiceBean(service);
 
         HttpServletRequest request = mock(HttpServletRequest.class);

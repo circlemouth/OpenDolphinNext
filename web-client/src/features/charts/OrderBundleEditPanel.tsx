@@ -2930,6 +2930,28 @@ export function OrderBundleEditPanel({
         checkTerm: '1',
         medications,
       });
+      logAuditEvent({
+        runId: result.runId ?? meta.runId,
+        cacheHit: meta.cacheHit,
+        missingMaster: meta.missingMaster,
+        fallbackUsed: meta.fallbackUsed,
+        dataSourceTransition: meta.dataSourceTransition,
+        payload: {
+          action: 'ORCA_OFFICIAL_CONTRAINDICATION_CHECK',
+          outcome: result.ok ? (result.results.length > 0 || result.symptomInfo.length > 0 ? 'warning' : 'success') : 'error',
+          subject: 'charts',
+          details: {
+            ...auditMetaDetails,
+            patientId,
+            performMonth: normalizePerformMonth(bundleForm.startDate) ?? bundleForm.startDate,
+            requestNumber: '01',
+            checkTerm: '1',
+            apiResult: result.apiResult,
+            apiResultMessage: result.apiResultMessage,
+            httpStatus: result.status,
+          },
+        },
+      });
       if (!result.ok || (result.apiOk === false && !result.results.length && !result.symptomInfo.length)) {
         const message = result.apiResultMessage ?? result.message ?? '患者別 ORCA 禁忌チェックに失敗しました。';
         setContraNotice({
@@ -3690,6 +3712,9 @@ export function OrderBundleEditPanel({
         <div className="charts-side-panel__confirm">
           <p className="charts-side-panel__message">
             患者別 ORCA 禁忌チェックで警告が検出されました。確認のうえ、保存を続行するか編集に戻って修正してください。
+          </p>
+          <p className="charts-side-panel__help">
+            この確認は official patient-aware contraindicationcheckv2 です。ORCA マスタ参照の静的相互作用チェックとは別です。
           </p>
           {contraConfirmPayload?.apiResult ? (
             <p className="charts-side-panel__help">

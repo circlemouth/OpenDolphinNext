@@ -11,7 +11,7 @@ export type MedicalOutpatientRecordPanelProps = {
   selectedPatientId?: string;
 };
 
-const LOCAL_SUMMARY_LABEL = 'ローカル診療サマリ';
+const LOCAL_SUMMARY_LABEL = '院内ローカル診療サマリ';
 
 const formatSectionMeta = (section: MedicalSectionState): string => {
   const count = section.recordsReturned ?? (section.items.length > 0 ? section.items.length : undefined);

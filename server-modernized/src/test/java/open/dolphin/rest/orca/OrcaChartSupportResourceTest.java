@@ -66,6 +66,48 @@ class OrcaChartSupportResourceTest {
     }
 
     @Test
+    void medicationGetRejectsNonAlphanumericRequestCodeForInputLookup() {
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", new CapturingTransport());
+
+        HttpServletRequest request = buildRequest();
+        ChartSupportMedicationGetRequest payload = new ChartSupportMedicationGetRequest();
+        payload.setRequestNumber("01");
+        payload.setRequestCode("A-100");
+        payload.setBaseDate("2026-03-22");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.medicationGet(request, payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("payload.requestCode", body.get("field"));
+        assertEquals("requestCode must be an alphanumeric input code for requestNumber 01", body.get("message"));
+    }
+
+    @Test
+    void medicationGetRejectsMissingBaseDate() {
+        OrcaChartSupportResource resource = new OrcaChartSupportResource();
+        injectField(resource, "orcaTransport", new CapturingTransport());
+
+        HttpServletRequest request = buildRequest();
+        ChartSupportMedicationGetRequest payload = new ChartSupportMedicationGetRequest();
+        payload.setRequestCode("114030710");
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> resource.medicationGet(request, payload));
+
+        assertEquals(400, exception.getResponse().getStatus());
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) exception.getResponse().getEntity();
+        assertEquals("payload.baseDate", body.get("field"));
+        assertEquals("baseDate is required", body.get("message"));
+    }
+
+    @Test
     void medicationGetAllowsRequestNumber01WithInputCode() {
         CapturingTransport transport = new CapturingTransport("""
                 <data>
