@@ -13,6 +13,7 @@
 - 患者文脈の current contract: [notes/patient-context-contract.md](./notes/patient-context-contract.md)
 - フィードバック表示の current contract: [notes/feedback-spec.md](./notes/feedback-spec.md)
 - UI 棚卸しと verification 境界: [notes/ui-current-contract.md](./notes/ui-current-contract.md)
+- UI デザインの current policy: [../docs/web-client/ux/dads-ui-design-absolute-rules.md](../docs/web-client/ux/dads-ui-design-absolute-rules.md)
 - ORCAオーダー是正の canonical/local-only 契約: [notes/orca-order-remediation-20260403.md](./notes/orca-order-remediation-20260403.md)
 - ORCAオーダー残タスクの cleanup 契約: [notes/orca-order-contract-cleanup-20260404.md](./notes/orca-order-contract-cleanup-20260404.md)
 - release gate の current contract: [notes/release-gate.md](./notes/release-gate.md)
@@ -29,6 +30,7 @@
 - admin の source of truth は `/api/admin/config` です。`/api/admin/delivery` を current contract に戻しません。
 - ORCA taxonomy は `/api/orca/official/*` を official bridge、`/api/orca/master/*` を master-backed read、`/api/local/*` を local-only contract として扱います。
 - security 規範の詳細は [notes/security-spec.md](./notes/security-spec.md) を正本とし、この README へ重複移植しません。
+- UI デザイン規範の詳細は [../docs/web-client/ux/dads-ui-design-absolute-rules.md](../docs/web-client/ux/dads-ui-design-absolute-rules.md) を正本とし、既存画面より current policy を優先します。
 
 ## Release Gate
 - repo-local の merge ready 判定と、release 前 mandatory gate は分けて扱います。

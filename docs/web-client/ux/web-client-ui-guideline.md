@@ -1,11 +1,17 @@
 # Webクライアント UIガイドライン v0.1
 
 - Status: reference-only
-- Canonical source: `docs/managerdocs/04_ui_improvement_program.md`, `web-client/notes/ui-current-contract.md`
+- Canonical source: `docs/web-client/ux/dads-ui-design-absolute-rules.md`, `docs/managerdocs/04_ui_improvement_program.md`, `web-client/notes/ui-current-contract.md`
 - 更新日: 2026-02-26
 - RUN_ID: `20260226T102426Z`
 - ステータス: Draft（運用開始）
 - 適用対象: Webクライアント全体（トップバー、ナビ、一覧、フォーム、モーダル、通知、グラフ）
+
+## 読み方
+
+この文書は implementation guide です。current policy は `docs/web-client/ux/dads-ui-design-absolute-rules.md` を正本とし、既存実装やこの文書の具体例よりも優先します。
+
+既存画面の値や例が current policy と矛盾する場合は、その値を踏襲せず、正本へ合わせて是正します。
 
 ## 目的と適用範囲
 
