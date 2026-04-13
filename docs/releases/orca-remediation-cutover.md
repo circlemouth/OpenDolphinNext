@@ -27,9 +27,10 @@
 3. `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
 4. `cd web-client && node scripts/runtime-ready-smoke.mjs`
 5. `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh`
-6. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。固定 seed を前提にせず、実行直前に current facility の local search と active entry 状態を確認する。patient search 0 件、重複受付、active entry 非一意のいずれかが見つかったら `test-data-blocker` として停止し、summary / network / console / page-errors を残す。
-7. 同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs` を実行する。
-8. reception / charts / patients / admin の手動 smoke を実行する。
+6. `curl -sk https://127.0.0.1:8443/openDolphin/api/orca/official/appointments/medical-information` で `system01lstv2 Request_Number=06` 相当の direct probe を先に取り、同じ `RUN_ID` 配下へ evidence 化する。
+7. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。固定 seed を前提にせず、実行直前に current facility の local search と active entry 状態を確認する。patient search 0 件、重複受付、active entry 非一意のいずれかが見つかったら `test-data-blocker` として停止し、summary / network / console / page-errors を残す。
+8. 同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs` を実行する。
+9. reception / charts / patients / admin の手動 smoke を実行する。
 
 ## 4. Smoke 観点
 - Reception:
@@ -54,10 +55,11 @@
 ## 5. Smoke artifact
 - `qa-acceptmodv2-weborca.mjs` は current 受付導線のスクリーンショット、network、summary を残す。
 - `qa-fullflow-weborca.mjs` は reception -> charts -> claim/income/support の一連の network とスクリーンショットを残す。
+- `appointments/medical-information` の direct probe を同じ `RUN_ID` の network evidence に残し、`system01lstv2` 側の成功/失敗を smoke 本体と分離して再読できるようにする。
 - patient search が 0 件なら `QA_PATIENT_ID` の不足/不一致として扱い、local seed 不一致のまま「UI 不具合」と誤判定しない。
 - `QA_MEDICAL_INFORMATION` を指定しない run を 1 本含め、未選択時に `Medical_Information` が未送信であることを証跡化する。
 - `Acceptance_Push` suppress が必要な環境では server runtime config で明示し、client 側の補完/抑止に戻さない。
-- ORCA send に到達した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。未到達 run は `summary.json` の blocker classification と `steps.log` / `network/*.json` で停止理由を third party が追えることを条件とする。
+- ORCA send に到達した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。未到達 run は `summary.json` の blocker classification と `steps.log` / `network/*.json` で停止理由を third party が追えることを条件とする。official `Voucher_Number` / `Sequential_Number` が不足した場合は fail-close のまま `official-visit-row-blocker` として残す。
 
 ## 6. 成功判定
 - 上記コマンドと smoke が成功し、artifact が同じ RUN_ID に束ねられている。

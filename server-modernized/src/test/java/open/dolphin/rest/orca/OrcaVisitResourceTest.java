@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -15,13 +16,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Proxy;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import open.dolphin.encounter.EncounterProjectionRepository;
+import open.dolphin.encounter.ProjectionPatientSummaryRepository;
 import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.service.DefaultOrcaLiveGateway;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
+import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
@@ -56,6 +63,64 @@ class OrcaVisitResourceTest {
         assertGeneratedRunId(response.getRunId());
         assertEquals(1, response.getRecordsReturned());
         assertEquals("server", response.getDataSourceTransition());
+    }
+
+    @Test
+    void visitListProjectedFallbackDoesNotSynthesizeVoucherOrSequential() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitPatientListResponse stub = new VisitPatientListResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        stub.setVisitDate("2026-04-13");
+        when(wrapperService.getVisitList(anyString(), any(VisitPatientListRequest.class))).thenReturn(stub);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        when(encounterProjectionRepository.findByFacilityAndAcceptanceRange(anyString(), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(new EncounterProjectionRepository.EncounterRow(
+                        "F001:E100",
+                        "F001",
+                        "000001",
+                        10L,
+                        "F001:S100",
+                        "ACCEPT-100",
+                        Instant.parse("2026-04-13T00:00:00Z"),
+                        "checked_in",
+                        null,
+                        null,
+                        null,
+                        "doctor01",
+                        null,
+                        null,
+                        null,
+                        1L,
+                        Instant.parse("2026-04-13T00:00:01Z"))));
+
+        ProjectionPatientSummaryRepository projectionPatientSummaryRepository = mock(ProjectionPatientSummaryRepository.class);
+        PatientSummary patient = new PatientSummary();
+        patient.setPatientId("000001");
+        patient.setWholeName("患者一郎");
+        when(projectionPatientSummaryRepository.findByFacilityAndPatientId("F001", "000001")).thenReturn(patient);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+        resource.projectionPatientSummaryRepository = projectionPatientSummaryRepository;
+
+        VisitPatientListRequest request = new VisitPatientListRequest();
+        request.setRequestNumber("01");
+        request.setVisitDate(LocalDate.of(2026, 4, 13));
+
+        VisitPatientListResponse response = resource.visitList(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals(1, response.getVisits().size());
+        VisitPatientListResponse.VisitEntry merged = response.getVisits().get(0);
+        assertEquals("F001:S100", merged.getScheduleKey());
+        assertEquals("F001:E100", merged.getEncounterKey());
+        assertNull(merged.getVoucherNumber());
+        assertNull(merged.getSequentialNumber());
+        assertEquals("000001", merged.getPatient().getPatientId());
+        assertTrue(response.isFallbackUsed());
+        assertEquals(1, response.getRecordsReturned());
     }
 
     @Test

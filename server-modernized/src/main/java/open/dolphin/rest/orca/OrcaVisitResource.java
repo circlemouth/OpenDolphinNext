@@ -467,8 +467,6 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             VisitPatientListResponse.VisitEntry visit = new VisitPatientListResponse.VisitEntry();
             visit.setScheduleKey(row.scheduleKey());
             visit.setEncounterKey(row.encounterKey());
-            visit.setVoucherNumber(row.orcaAcceptanceId());
-            visit.setSequentialNumber(row.scheduleKey() != null ? row.scheduleKey() : row.orcaAcceptanceId());
             visit.setUpdateDate(fromDate.toString());
             visit.setUpdateTime(ORCA_TIME_FORMAT.format(row.acceptanceDatetime()));
             visit.setPatient(projectionPatientSummaryRepository != null

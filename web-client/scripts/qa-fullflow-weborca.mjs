@@ -4,7 +4,6 @@ import { chromium } from 'playwright';
 import {
   buildQaSession,
   createAuthenticatedContext,
-  resolveQaArtifactRoot,
   resolveQaFacilityId,
   resolveQaPasswordPlain,
   resolveQaUserId,
@@ -16,7 +15,7 @@ const traceId = process.env.TRACE_ID ?? `trace-${runId}`;
 const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://127.0.0.1:5173';
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
-  resolveQaArtifactRoot('webclient', 'e2e', runId, 'fullflow');
+  path.resolve(process.cwd(), '..', 'artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'fullflow');
 const screenshotDir = path.join(artifactRoot, 'screenshots');
 const networkDir = path.join(artifactRoot, 'network');
 const harDir = path.join(artifactRoot, 'har');
@@ -92,6 +91,7 @@ const consoleMessages = [];
 const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
+const MEDICAL_INFORMATION_PROBE_PATH = '/api/orca/official/appointments/medical-information';
 
 const redactHeaders = (headers) => {
   const out = { ...(headers ?? {}) };
@@ -117,6 +117,7 @@ const isMedicalModV2Url = (url) => {
 };
 
 const isTarget = (url) =>
+  url.includes(MEDICAL_INFORMATION_PROBE_PATH) ||
   url.includes('/api/orca/official/visits/mutation') ||
   url.includes('/api/orca/queue') ||
   url.includes('/orca/queue') ||
@@ -200,6 +201,64 @@ const collectResponse = async (response) => {
     },
   };
   networkRecords.push(record);
+};
+
+const probeMedicalInformationOptions = async (context) => {
+  const url = new URL(MEDICAL_INFORMATION_PROBE_PATH, baseURL).toString();
+  logStep(`medical information probe start url=${url}`);
+  requestRecords.push({
+    url,
+    method: 'GET',
+    headers: {},
+    postData: '',
+  });
+  try {
+    const response = await context.request.get(url);
+    const body = await response.text().catch(() => '');
+    networkRecords.push({
+      url,
+      status: response.status(),
+      statusText: response.statusText(),
+      request: {
+        method: 'GET',
+        headers: {},
+        postData: '',
+      },
+      response: {
+        headers: redactHeaders(response.headers()),
+        body,
+      },
+    });
+    logStep(`medical information probe status=${response.status()}`);
+    return {
+      status: response.status(),
+      ok: response.ok(),
+      url,
+    };
+  } catch (error) {
+    const message = String(error);
+    networkRecords.push({
+      url,
+      status: 0,
+      statusText: 'probe-error',
+      request: {
+        method: 'GET',
+        headers: {},
+        postData: '',
+      },
+      response: {
+        headers: {},
+        body: message,
+      },
+    });
+    logStep(`medical information probe error=${message}`);
+    return {
+      status: 0,
+      ok: false,
+      url,
+      error: message,
+    };
+  }
 };
 
 const setTextInputValue = async (locator, value) => {
@@ -296,7 +355,9 @@ const buildSummaryMarkdown = (summary) =>
   `- Facility ID: ${summary.facilityId}\n` +
   `- Patient ID: ${summary.patientId}\n` +
   `- Reception Row: ${summary.receptionRowStatus ?? 'unknown'}\n` +
+  `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
   `- Charts Handoff: ${summary.chartsHandoff?.status ?? 'unknown'}\n` +
+  `- Visit Row Readiness: ${summary.visitRowReadiness ?? 'unknown'}\n` +
   `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +
   `- ORCA Send: ${summary.sendResult?.status ?? 'unknown'}\n` +
   `- Blocker: ${summary.blockerClassification}\n` +
@@ -328,6 +389,8 @@ const run = async () => {
   });
   activeContext = context;
   activePage = page;
+
+  const medicalInformationProbe = await probeMedicalInformationOptions(context);
 
   page.on('console', (msg) => {
     const type = msg.type();
@@ -733,6 +796,12 @@ const run = async () => {
   const sendGuard = page.locator('#charts-actions-send-guard');
   const sendGuardText = (await sendGuard.textContent().catch(() => '')) ?? '';
   const guardSummaryText = (await page.locator('.charts-actions__guard-summary').textContent().catch(() => '')) ?? '';
+  const visitRowReadiness =
+    sendDisabled && /(Voucher_Number|Sequential_Number)/.test(`${sendGuardText} ${sendDisabledReason ?? ''}`)
+      ? 'missing_official_visit_identifiers'
+      : sendDisabled
+        ? 'blocked_for_other_reason'
+        : 'ready';
   logStep(`orca send precheck disabled=${String(sendDisabled)} reason=${sendDisabledReason ?? '—'}`);
   if (sendGuardText.trim()) logStep(`orca send guard=${sendGuardText.replaceAll('\n', ' ').trim()}`);
   if (guardSummaryText.trim()) logStep(`orca send guardSummary=${guardSummaryText.replaceAll('\n', ' ').trim()}`);
@@ -858,6 +927,7 @@ const run = async () => {
     paymentMode,
     visitKind,
     medicalInformation: medicalInformation || undefined,
+    medicalInformationProbe,
     selection: {
       department: departmentSelection,
       physician: physicianSelection,
@@ -873,6 +943,7 @@ const run = async () => {
     },
     receptionRowStatus,
     chartsHandoff,
+    visitRowReadiness,
     charts: {
       chartsRunId,
       chartsTraceId,
@@ -908,6 +979,8 @@ const run = async () => {
     blockerClassification:
       sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
         ? 'none'
+        : visitRowReadiness === 'missing_official_visit_identifiers'
+          ? 'official-visit-row-blocker'
         : networkRecords.some((record) => record.status >= 500)
           ? 'environment-blocker'
           : pageErrors.length > 0
@@ -960,8 +1033,10 @@ run().catch(async (error) => {
       physicianCode,
       paymentMode,
       visitKind,
+      medicalInformationProbe: undefined,
       receptionRowStatus: 'unknown',
       chartsHandoff: { status: 'error' },
+      visitRowReadiness: 'unknown',
       orderResult: { status: 'not-run' },
       sendResult: {
         status: 'error',

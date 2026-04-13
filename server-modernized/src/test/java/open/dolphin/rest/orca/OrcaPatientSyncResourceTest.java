@@ -1,6 +1,7 @@
 package open.dolphin.rest.orca;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -11,9 +12,11 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import java.lang.reflect.Proxy;
 import java.time.Instant;
 import java.util.Map;
+import open.dolphin.orca.OrcaGatewayException;
 import open.dolphin.orca.sync.OrcaPatientImportService;
 import open.dolphin.orca.sync.OrcaPatientSyncPlanner;
 import open.dolphin.orca.sync.OrcaPatientSyncRunner;
@@ -59,6 +62,46 @@ class OrcaPatientSyncResourceTest {
         WebApplicationException ex = assertThrows(WebApplicationException.class,
                 () -> resource.importPatients(createRequest(null, "/api/orca/official/patients/import", Map.of()), request));
         assertEquals(401, ex.getResponse().getStatus());
+    }
+
+    @Test
+    void importPatientsMapsLocalSyncFailureToServiceUnavailable() {
+        OrcaPatientImportService importService = mock(OrcaPatientImportService.class);
+        OrcaPatientSyncResource resource = new OrcaPatientSyncResource(importService, mock(OrcaPatientSyncRunner.class));
+
+        PatientImportRequest request = new PatientImportRequest();
+        request.getPatientIds().add("01423");
+        when(importService.importPatients(eq("F001"), any(PatientImportRequest.class), anyString()))
+                .thenThrow(new jakarta.persistence.PersistenceException("duplicate key value violates unique constraint"));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.importPatients(
+                        createRequest("F001:doctor01", "/api/orca/official/patients/import", Map.of()), request));
+
+        assertEquals(503, ex.getResponse().getStatus());
+        Map<?, ?> body = assertInstanceOf(Map.class, ex.getResponse().getEntity());
+        assertEquals("orca.patient.import.local_sync_unavailable", body.get("code"));
+        assertEquals("患者取り込みのローカル同期に失敗しました。ローカル患者テーブルの整合性を確認してください。", body.get("message"));
+    }
+
+    @Test
+    void importPatientsMapsGatewayFailureWithoutGenericSessionMessage() {
+        OrcaPatientImportService importService = mock(OrcaPatientImportService.class);
+        OrcaPatientSyncResource resource = new OrcaPatientSyncResource(importService, mock(OrcaPatientSyncRunner.class));
+
+        PatientImportRequest request = new PatientImportRequest();
+        request.getPatientIds().add("01423");
+        when(importService.importPatients(eq("F001"), any(PatientImportRequest.class), anyString()))
+                .thenThrow(new OrcaGatewayException("ORCA settings are not available"));
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.importPatients(
+                        createRequest("F001:doctor01", "/api/orca/official/patients/import", Map.of()), request));
+
+        assertEquals(Response.Status.SERVICE_UNAVAILABLE.getStatusCode(), ex.getResponse().getStatus());
+        Map<?, ?> body = assertInstanceOf(Map.class, ex.getResponse().getEntity());
+        assertEquals("orca.patient.import.gateway", body.get("code"));
+        assertEquals("ORCA settings are not available", body.get("message"));
     }
 
     @Test

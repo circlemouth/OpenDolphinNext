@@ -30,6 +30,8 @@ class PatientServiceBeanSyncPatientUpsertTest {
             "from PatientModel p where p.facilityId = :fid and p.patientId in (:ids)";
     private static final String QUERY_KARTE_BY_PATIENT_IDS =
             "from KarteBean k where k.patient.id in (:patientIds)";
+    private static final String QUERY_SYNC_PATIENT_MAX_ID = "select coalesce(max(id), 0) from d_patient";
+    private static final String QUERY_HIBERNATE_SEQUENCE_VALUE = "select last_value from opendolphin.hibernate_sequence";
 
     private PatientServiceBean service;
     private EntityManager em;
@@ -53,6 +55,8 @@ class PatientServiceBeanSyncPatientUpsertTest {
         TypedQuery<PatientModel> patientsQuery = mock(TypedQuery.class);
         @SuppressWarnings("unchecked")
         TypedQuery<KarteBean> karteQuery = mock(TypedQuery.class);
+        Query maxIdQuery = mock(Query.class);
+        Query sequenceQuery = mock(Query.class);
         Query nativeQuery = mock(Query.class);
 
         PatientModel incomingExisting = buildPatient("P001", "既存 患者");
@@ -71,7 +75,12 @@ class PatientServiceBeanSyncPatientUpsertTest {
         when(existingIdsQuery.setParameter("ids", List.of("P001", "P002"))).thenReturn(existingIdsQuery);
         when(existingIdsQuery.getResultList()).thenReturn(List.of("P001"));
 
-        when(em.createNativeQuery(argThat(sql -> sql.contains("insert into d_patient")
+        when(em.createNativeQuery(QUERY_SYNC_PATIENT_MAX_ID)).thenReturn(maxIdQuery);
+        when(maxIdQuery.getSingleResult()).thenReturn(102L);
+        when(em.createNativeQuery(QUERY_HIBERNATE_SEQUENCE_VALUE)).thenReturn(sequenceQuery);
+        when(sequenceQuery.getSingleResult()).thenReturn(200L);
+        when(em.createNativeQuery(argThat(sql -> sql != null
+                && sql.contains("insert into d_patient")
                 && sql.contains("on conflict (facilityid, patientid) do update set")))).thenReturn(nativeQuery);
         when(nativeQuery.setParameter(anyInt(), any())).thenReturn(nativeQuery);
         when(nativeQuery.executeUpdate()).thenReturn(2);
@@ -96,6 +105,61 @@ class PatientServiceBeanSyncPatientUpsertTest {
         ArgumentCaptor<KarteBean> karteCaptor = ArgumentCaptor.forClass(KarteBean.class);
         verify(em).persist(karteCaptor.capture());
         assertThat(karteCaptor.getValue().getPatientModel()).isSameAs(managedNew);
+    }
+
+    @Test
+    void upsertPatientsForSync_alignsHibernateSequenceWhenPatientTableIsAhead() {
+        @SuppressWarnings("unchecked")
+        TypedQuery<String> existingIdsQuery = mock(TypedQuery.class);
+        @SuppressWarnings("unchecked")
+        TypedQuery<PatientModel> patientsQuery = mock(TypedQuery.class);
+        @SuppressWarnings("unchecked")
+        TypedQuery<KarteBean> karteQuery = mock(TypedQuery.class);
+        Query maxIdQuery = mock(Query.class);
+        Query sequenceQuery = mock(Query.class);
+        Query setSequenceQuery = mock(Query.class);
+        Query nativeQuery = mock(Query.class);
+
+        PatientModel incoming = buildPatient("P002", "新規 患者");
+        PatientModel managed = buildPatient("P002", "新規 患者");
+        managed.setId(102L);
+
+        when(em.createQuery(QUERY_PATIENT_IDS_BY_FACILITY_AND_IDS, String.class)).thenReturn(existingIdsQuery);
+        when(existingIdsQuery.setParameter("fid", "F001")).thenReturn(existingIdsQuery);
+        when(existingIdsQuery.setParameter("ids", List.of("P002"))).thenReturn(existingIdsQuery);
+        when(existingIdsQuery.getResultList()).thenReturn(List.of());
+
+        when(em.createNativeQuery(QUERY_SYNC_PATIENT_MAX_ID)).thenReturn(maxIdQuery);
+        when(maxIdQuery.getSingleResult()).thenReturn(102L);
+        when(em.createNativeQuery(QUERY_HIBERNATE_SEQUENCE_VALUE)).thenReturn(sequenceQuery);
+        when(sequenceQuery.getSingleResult()).thenReturn(90L);
+        when(em.createNativeQuery(argThat(sql -> sql != null
+                && sql.contains("select setval('opendolphin.hibernate_sequence'"))))
+                .thenReturn(setSequenceQuery);
+        when(setSequenceQuery.setParameter("nextValue", 102L)).thenReturn(setSequenceQuery);
+        when(setSequenceQuery.getSingleResult()).thenReturn(102L);
+
+        when(em.createNativeQuery(argThat(sql -> sql != null
+                && sql.contains("insert into d_patient")
+                && sql.contains("on conflict (facilityid, patientid) do update set")))).thenReturn(nativeQuery);
+        when(nativeQuery.setParameter(anyInt(), any())).thenReturn(nativeQuery);
+        when(nativeQuery.executeUpdate()).thenReturn(1);
+
+        when(em.createQuery(QUERY_PATIENTS_BY_FACILITY_AND_IDS, PatientModel.class)).thenReturn(patientsQuery);
+        when(patientsQuery.setParameter("fid", "F001")).thenReturn(patientsQuery);
+        when(patientsQuery.setParameter("ids", List.of("P002"))).thenReturn(patientsQuery);
+        when(patientsQuery.getResultList()).thenReturn(List.of(managed));
+
+        when(em.createQuery(QUERY_KARTE_BY_PATIENT_IDS, KarteBean.class)).thenReturn(karteQuery);
+        when(karteQuery.setParameter("patientIds", List.of(102L))).thenReturn(karteQuery);
+        when(karteQuery.getResultList()).thenReturn(List.of());
+
+        PatientServiceBean.SyncPatientUpsertResult result = service.upsertPatientsForSync("F001", List.of(incoming));
+
+        assertThat(result.createdCount()).isEqualTo(1);
+        assertThat(result.updatedCount()).isEqualTo(0);
+        verify(setSequenceQuery).setParameter("nextValue", 102L);
+        verify(nativeQuery).executeUpdate();
     }
 
     private static PatientModel buildPatient(String patientId, String fullName) {

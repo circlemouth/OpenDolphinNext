@@ -47,6 +47,10 @@ final class PatientServiceBeanSupport {
             "from KarteBean k where k.patient.id in (:patientIds)";
     private static final String QUERY_INSURANCE_BY_PATIENT_PK = "from HealthInsuranceModel h where h.patient.id=:pk";
     private static final String QUERY_KARTE_BY_PATIENT_PK = "from KarteBean k where k.patient.id = :patientPk";
+    private static final String QUERY_SYNC_PATIENT_MAX_ID = "select coalesce(max(id), 0) from d_patient";
+    private static final String QUERY_HIBERNATE_SEQUENCE_VALUE = "select last_value from opendolphin.hibernate_sequence";
+    private static final String QUERY_HIBERNATE_SEQUENCE_SET =
+            "select setval('opendolphin.hibernate_sequence', :nextValue, true)";
 
     private static final String PK = "pk";
     private static final String FID = "fid";
@@ -120,6 +124,7 @@ final class PatientServiceBeanSupport {
                 .setParameter(FID, fid)
                 .setParameter("ids", patientIds)
                 .getResultList());
+        alignSyncPatientSequence(em);
         executeSyncPatientUpsert(em, normalizedPatients);
         List<PatientModel> affectedPatients = em.createQuery(
                         QUERY_PATIENTS_BY_FACILITY_AND_IDS, PatientModel.class)
@@ -138,6 +143,22 @@ final class PatientServiceBeanSupport {
             }
         }
         return new PatientServiceBean.SyncPatientUpsertResult(created, updated);
+    }
+
+    void alignSyncPatientSequence(EntityManager em) {
+        Number maxIdValue = (Number) em.createNativeQuery(QUERY_SYNC_PATIENT_MAX_ID).getSingleResult();
+        Number sequenceValue = (Number) em.createNativeQuery(QUERY_HIBERNATE_SEQUENCE_VALUE).getSingleResult();
+        long maxId = maxIdValue != null ? maxIdValue.longValue() : 0L;
+        long currentSequence = sequenceValue != null ? sequenceValue.longValue() : 0L;
+        if (currentSequence >= maxId) {
+            return;
+        }
+        em.createNativeQuery(QUERY_HIBERNATE_SEQUENCE_SET)
+                .setParameter("nextValue", maxId)
+                .getSingleResult();
+        LOGGER.log(Level.WARNING,
+                "Aligned opendolphin.hibernate_sequence before patient sync upsert (from={0}, to={1})",
+                new Object[]{currentSequence, maxId});
     }
 
     int updateForFacility(EntityManager em, String fid, PatientModel patient, java.util.function.Function<PatientModel, Integer> pvtUpdater) {

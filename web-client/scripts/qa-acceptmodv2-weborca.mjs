@@ -14,7 +14,7 @@ const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').repla
 const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://127.0.0.1:5173';
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
-  path.resolve(process.cwd(), '..', 'artifacts', 'webclient', 'e2e', runId, 'reception-send');
+  path.resolve(process.cwd(), '..', 'artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'acceptmodv2');
 const screenshotDir = path.join(artifactRoot, 'screenshots');
 const networkDir = path.join(artifactRoot, 'network');
 const harDir = path.join(artifactRoot, 'har');
@@ -73,8 +73,26 @@ const consoleMessages = [];
 const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
+const MEDICAL_INFORMATION_PROBE_PATH = '/api/orca/official/appointments/medical-information';
+
+const redactHeaders = (headers) => {
+  const out = { ...(headers ?? {}) };
+  for (const key of Object.keys(out)) {
+    if (
+      /^authorization$/i.test(key) ||
+      /^cookie$/i.test(key) ||
+      /^set-cookie$/i.test(key) ||
+      /^username$/i.test(key) ||
+      /^password$/i.test(key)
+    ) {
+      out[key] = '<<redacted>>';
+    }
+  }
+  return out;
+};
 
 const isTarget = (url) =>
+  url.includes(MEDICAL_INFORMATION_PROBE_PATH) ||
   url.includes('/api/orca/official/visits/mutation') ||
   url.includes('/api/orca/queue') ||
   url.includes('/orca/queue');
@@ -85,7 +103,7 @@ const recordRequest = (request) => {
   requestRecords.push({
     url,
     method: request.method(),
-    headers: request.headers(),
+    headers: redactHeaders(request.headers()),
     postData: request.postData() ?? '',
   });
 };
@@ -130,15 +148,74 @@ const collectResponse = async (response) => {
     statusText: response.statusText(),
     request: {
       method: request.method(),
-      headers: request.headers(),
+      headers: redactHeaders(request.headers()),
       postData: request.postData() ?? '',
     },
     response: {
-      headers: response.headers(),
+      headers: redactHeaders(response.headers()),
       body: responseText,
     },
   };
   networkRecords.push(record);
+};
+
+const probeMedicalInformationOptions = async (context) => {
+  const url = new URL(MEDICAL_INFORMATION_PROBE_PATH, baseURL).toString();
+  logStep(`medical information probe start url=${url}`);
+  requestRecords.push({
+    url,
+    method: 'GET',
+    headers: {},
+    postData: '',
+  });
+  try {
+    const response = await context.request.get(url);
+    const body = await response.text().catch(() => '');
+    const record = {
+      url,
+      status: response.status(),
+      statusText: response.statusText(),
+      request: {
+        method: 'GET',
+        headers: {},
+        postData: '',
+      },
+      response: {
+        headers: redactHeaders(response.headers()),
+        body,
+      },
+    };
+    networkRecords.push(record);
+    logStep(`medical information probe status=${response.status()}`);
+    return {
+      status: response.status(),
+      ok: response.ok(),
+      url,
+    };
+  } catch (error) {
+    const message = String(error);
+    networkRecords.push({
+      url,
+      status: 0,
+      statusText: 'probe-error',
+      request: {
+        method: 'GET',
+        headers: {},
+        postData: '',
+      },
+      response: {
+        headers: {},
+        body: message,
+      },
+    });
+    logStep(`medical information probe error=${message}`);
+    return {
+      status: 0,
+      ok: false,
+      url,
+      error: message,
+    };
+  }
 };
 
 const setTextInputValue = async (locator, value) => {
@@ -224,6 +301,7 @@ const buildMarkdownSummary = (summary) =>
   `- 担当医: ${summary.selection?.physician?.resolved || summary.physicianCode}\n` +
   `- 保険/自費: ${summary.paymentMode}\n` +
   `- 来院区分: ${summary.visitKind}\n` +
+  `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
   `- Blocker: ${summary.blockerClassification}\n` +
   (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
   `\n## 送信結果\n\n` +
@@ -255,6 +333,8 @@ const run = async () => {
   });
   activeContext = context;
   activePage = page;
+
+  const medicalInformationProbe = await probeMedicalInformationOptions(context);
 
   page.on('console', (msg) => {
     const type = msg.type();
@@ -374,6 +454,7 @@ const run = async () => {
       medicalInformation: medicalInformationSelection,
       patientSearchInputMethod,
     },
+    medicalInformationProbe,
     acceptResult: {
       toneText,
       apiResultText,
@@ -383,7 +464,11 @@ const run = async () => {
     harPath: recordHar ? harPath : undefined,
     consoleMessages,
     pageErrors,
-    blockerClassification: pageErrors.length > 0 ? 'repo-defect' : 'none',
+    blockerClassification: networkRecords.some((record) => record.status >= 500)
+      ? 'environment-blocker'
+      : pageErrors.length > 0
+        ? 'repo-defect'
+        : 'none',
   };
 
   persistArtifacts(summary);
@@ -417,6 +502,7 @@ run().catch(async (error) => {
       physicianCode,
       paymentMode,
       visitKind,
+      medicalInformationProbe: undefined,
       selection: {},
       acceptResult: {},
       harPath: recordHar ? harPath : undefined,

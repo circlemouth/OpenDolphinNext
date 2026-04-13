@@ -227,6 +227,22 @@ describe('ChartsActionBar ORCA send', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
+  it('blocks chart send when visitptlstv2 identifiers are missing even if canonical handoff keys exist', async () => {
+    renderActionBar({
+      scheduleKey: 'F001:S100',
+      encounterKey: 'F001:E100',
+      voucherNumber: undefined,
+      sequentialNumber: undefined,
+    });
+
+    const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
+    expect(sendButton).toBeDisabled();
+    expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
+    expect(screen.getAllByText(/Voucher_Number/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sequential_Number/).length).toBeGreaterThan(0);
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
   it('chart flow regression: legacy medicalmod route を current route に戻さない', async () => {
     const legacyMedicalModRoute = ['medicalmod', 'v23'].join('');
     expect(ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH).toBe('/api/orca/official/chart-support/medical-mod-v2');

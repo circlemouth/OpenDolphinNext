@@ -89,18 +89,20 @@ cd web-client && npm run ci
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
 ```bash
 cd web-client && node scripts/runtime-ready-smoke.mjs
+curl -sk https://127.0.0.1:8443/openDolphin/api/orca/official/appointments/medical-information
 cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs
 cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs
 ```
 期待結果:
 - web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
 - `runtime-ready-smoke` は local smoke seed `0000001` を使う。
+- `appointments/medical-information` の direct probe で `system01lstv2 Request_Number=06` 相当の応答可否を smoke 前に evidence 化する。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` の patient picker は current reception workflow に合わせて `/api/local/patients/search` を使う。固定 seed を正本とみなさず、実行直前に current facility で local search 可能かつ単一 active entry を作れる患者IDを確認して `QA_PATIENT_ID` に渡す。
 - `artifacts/orca-remediation/closeout/20260413T104000Z/` の closeout evidence では `01415` と `00005` が `apiResult=16` の重複受付、`01425` / `01423` / `01053` / `00511` / `00013` / `00012` は local search 0 件でした。固定 patientId 前提で success を主張しないこと。
 - patient search が 0 件、または accept 後に canonical handoff 用の active entry を一意に解決できない場合は `test-data-blocker` として停止し、summary / network / console / page-errors を保存する。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `Medical_Information` を送らず、指定時だけ current select option を送る。
 - WebORCA Trial で `Acceptance_Push` workaround が必要な環境では、client 側ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を明示する。`setup-modernized-env.sh` の dev 起動はこの flag を既定で有効化する。
-- artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。
+- artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。official `Voucher_Number` / `Sequential_Number` が不足する場合は fail-close のまま `official-visit-row-blocker` として summary / steps / network へ残す。
 
 ## Worker G の post-merge 確認
 ```bash
@@ -140,6 +142,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - runtime smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/runtime-ready/`。
 - accept smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/acceptmodv2/`。
 - fullflow smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/fullflow/`。
+- 最低限 `git/git-head-current.txt`、`git/git-branch-current.txt`、`reports/final-report.md`、`qa/acceptmodv2/accept-summary.json`、`qa/fullflow/summary.json`、`qa/fullflow/steps.log`、`qa/fullflow/network/network.json`、`qa/fullflow/network/requests.json`、`qa/fullflow/console.json`、`qa/fullflow/page-errors.json` を同一 RUN_ID へ揃える。
 - ORCA 接続確認を別途行った場合は `artifacts/orca-connectivity/<RUN_ID>/` を併記し、closeout report から相互参照できるようにする。
 - Worker G の smoke memo / diff / grep 結果は release 判定に使う artifact 配下へまとめ、cutover 記録と分離しない。
 
