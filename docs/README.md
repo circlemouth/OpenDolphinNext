@@ -31,6 +31,7 @@
 - [orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
 - [orca-order-alignment/closure packet](implementation/orca-order-alignment/orca_order_alignment_closure_packet_20260408.md)
 - [orca-order-alignment/codex packet 20260413](implementation/orca-order-alignment/opendolphin_orca_codex_packet_20260413/README.md)
+- [orca-order-alignment/closeout packet r2 20260413](implementation/orca-order-alignment/opendolphin_orca_closeout_packet_r2_20260413/README.md)
 
 ## Live Runbooks
 - [release-validation.md](runbooks/release-validation.md)
