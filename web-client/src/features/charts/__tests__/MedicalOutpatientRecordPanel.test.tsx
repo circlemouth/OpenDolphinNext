@@ -25,7 +25,7 @@ vi.mock('../../../libs/ui/appToast', () => ({
 
 describe('MedicalOutpatientRecordPanel', () => {
   it('200 SUCCESS を描画する', () => {
-    render(
+    const { container } = render(
       <MedicalOutpatientRecordPanel
         selectedPatientId="00001"
         summary={{
@@ -59,12 +59,14 @@ describe('MedicalOutpatientRecordPanel', () => {
     expect(screen.getByText('テスト患者（00001） / 内科 / 主治医')).toBeInTheDocument();
     expect(screen.getByText('高血圧症（I10）')).toBeInTheDocument();
     expect(screen.getByText('アムロジピン')).toBeInTheDocument();
+    expect(screen.getByText('診断')).toBeInTheDocument();
+    expect(container.querySelector('details')).toBeNull();
   });
 
   it('院内ローカル診療サマリとして描画する', () => {
     render(<MedicalOutpatientRecordPanel selectedPatientId="00001" summary={undefined} />);
 
-    expect(screen.getByText('院内ローカル診療サマリ詳細')).toBeInTheDocument();
+    expect(screen.getByText('院内ローカル診療サマリ')).toBeInTheDocument();
     expect(screen.getByText('院内ローカル診療サマリを取得中です。')).toBeInTheDocument();
     expect(screen.getByText('院内カルテ文脈から再構成したローカル集計です。ORCA収納情報や ORCA公式記録とは別に確認してください。')).toBeInTheDocument();
     expect(screen.queryByText('ORCA診療サマリ')).not.toBeInTheDocument();

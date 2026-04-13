@@ -253,6 +253,28 @@ describe('ChartsActionBar', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
+  it('送信/印刷ガードは折りたたまず visible note で表示する', () => {
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-202"
+          visitDate="2026-01-04"
+          selectedEntry={{ patientId: 'P-202', visitDate: '2026-01-04', departmentCode: '01' } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    const sendGuard = document.getElementById('charts-actions-send-guard');
+    const printGuard = document.getElementById('charts-actions-print-guard');
+    expect(sendGuard).not.toBeNull();
+    expect(printGuard).not.toBeNull();
+    expect(sendGuard?.querySelector('details')).toBeNull();
+    expect(printGuard?.querySelector('details')).toBeNull();
+    expect(sendGuard).toHaveTextContent('送信不可');
+    expect(printGuard).toHaveTextContent('印刷不可');
+  });
+
   it('診察開始は afterStart 成功後のみ success toast を出す', async () => {
     const user = userEvent.setup();
     const onAfterStart = vi.fn().mockResolvedValue({

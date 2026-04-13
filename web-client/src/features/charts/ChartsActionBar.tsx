@@ -176,6 +176,21 @@ const summarizeGuardReasons = (reasons: GuardReason[]) => {
   };
 };
 
+const renderGuardNote = (id: string, title: string, reasons: GuardReason[]) => (
+  <div id={id} className="charts-actions__guard" role="note" aria-live="off">
+    <strong className="charts-actions__guard-title">
+      {title}（{reasons.length}件）
+    </strong>
+    <ul className="charts-actions__guard-list">
+      {reasons.map((reason) => (
+        <li key={reason.key}>
+          {reason.summary}: {reason.detail}（次にやること: {reason.next.join(' / ')}）
+        </li>
+      ))}
+    </ul>
+  </div>
+);
+
 export interface ChartsActionBarProps {
   runId: string;
   traceId?: string;
@@ -2798,33 +2813,11 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       </details>
 
       {!isRunning && sendPrecheckReasons.length > 0 && (
-        <div id="charts-actions-send-guard" className="charts-actions__guard" role="note" aria-live="off">
-          <details>
-            <summary>送信不可（{sendPrecheckReasons.length}件）</summary>
-            <ul>
-              {sendPrecheckReasons.map((reason) => (
-                <li key={reason.key}>
-                  {reason.summary}: {reason.detail}（次にやること: {reason.next.join(' / ')}）
-                </li>
-              ))}
-            </ul>
-          </details>
-        </div>
+        renderGuardNote('charts-actions-send-guard', '送信不可', sendPrecheckReasons)
       )}
 
       {!isRunning && printPrecheckReasons.length > 0 && (
-        <div id="charts-actions-print-guard" className="charts-actions__guard" role="note" aria-live="off">
-          <details>
-            <summary>印刷不可（{printPrecheckReasons.length}件）</summary>
-            <ul>
-              {printPrecheckReasons.map((reason) => (
-                <li key={reason.key}>
-                  {reason.summary}: {reason.detail}（次にやること: {reason.next.join(' / ')}）
-                </li>
-              ))}
-            </ul>
-          </details>
-        </div>
+        renderGuardNote('charts-actions-print-guard', '印刷不可', printPrecheckReasons)
       )}
 
       {isRunning && (

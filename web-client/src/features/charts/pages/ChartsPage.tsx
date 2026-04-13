@@ -3099,7 +3099,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       if (hasEncounterContext(encounterContext)) {
         setContextAlert({
           tone: 'warning',
-          message: 'scheduleKey / encounterKey が未設定のためカルテを開けません。',
+          message: '受付から渡された scheduleKey / encounterKey が不足しているため、対象来院を特定できません。',
         });
       }
       return;
@@ -3108,7 +3108,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     if (!chosen) {
       setContextAlert({
         tone: 'warning',
-        message: `指定された scheduleKey / encounterKey が見つかりません（scheduleKey=${encounterContext.scheduleKey ?? '―'} encounterKey=${encounterContext.encounterKey ?? '―'}）。`,
+        message: `指定された scheduleKey / encounterKey に一致する来院が見つかりません（scheduleKey=${encounterContext.scheduleKey ?? '―'} encounterKey=${encounterContext.encounterKey ?? '―'}）。`,
       });
       return;
     }

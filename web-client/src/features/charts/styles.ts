@@ -5162,20 +5162,16 @@ export const chartsStyles = css`
     border: 1px solid rgba(251, 146, 60, 0.5);
     background: rgba(255, 247, 237, 0.88);
     border-radius: var(--charts-radius-sm);
-    padding: var(--charts-space-xs) var(--charts-space-sm);
+    padding: var(--charts-space-sm);
   }
 
-  .charts-actions__guard summary {
-    cursor: pointer;
-    list-style: none;
+  .charts-actions__guard-title {
+    display: block;
+    margin-bottom: var(--charts-space-xs);
   }
 
-  .charts-actions__guard summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .charts-actions__guard ul {
-    margin: var(--charts-space-xs) 0 0;
+  .charts-actions__guard-list {
+    margin: 0;
     padding-left: 1rem;
     display: grid;
     gap: 2px;
@@ -9201,11 +9197,11 @@ export const chartsStyles = css`
     justify-content: space-between;
     gap: var(--charts-space-sm);
     align-items: baseline;
-    cursor: pointer;
     background: #f8fafc;
   }
 
   .medical-record__section-title {
+    margin: 0;
     font-weight: 800;
     color: #0f172a;
   }

@@ -173,7 +173,7 @@ vi.mock('../OrcaSummary', () => ({
 vi.mock('../MedicalOutpatientRecordPanel', () => ({
   MedicalOutpatientRecordPanel: () => (
     <section>
-      <strong>院内ローカル診療サマリ詳細</strong>
+      <strong>院内ローカル診療サマリ</strong>
     </section>
   ),
 }));
@@ -231,7 +231,7 @@ describe('ChartsPage local summary semantics', () => {
     );
 
     expect(await screen.findByText('ORCA収納情報')).toBeInTheDocument();
-    expect(await screen.findByText('院内ローカル診療サマリ詳細')).toBeInTheDocument();
+    expect(await screen.findByText('院内ローカル診療サマリ')).toBeInTheDocument();
     expect(screen.queryByText('ORCA 記録（要約）')).not.toBeInTheDocument();
 
     await waitFor(() => {
