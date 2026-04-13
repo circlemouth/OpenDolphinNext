@@ -20,7 +20,7 @@ vi.mock('../../../libs/observability/observability', () => ({
 }));
 
 import { httpFetch } from '../../../libs/http/httpClient';
-import { createOfficialPatient, updateOfficialPatient } from '../api';
+import { createOfficialPatient, searchLocalPatients, updateOfficialPatient } from '../api';
 
 const buildCanonicalBatchResponse = (patientId: string, name: string) =>
   new Response(
@@ -162,5 +162,65 @@ describe('patients api official mutation', () => {
       name: '既存患者 改',
     });
     expect(result.canonicalRefetch?.ok).toBe(true);
+  });
+
+  it('local search keeps /api/local boundary and infers searchType on the client', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-SEARCH',
+          traceId: 'TRACE-SEARCH',
+          routeNamespace: 'local',
+          dataSourceTransition: 'local',
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          recordsReturned: 1,
+          fetchedAt: '2026-04-13T05:15:00Z',
+          patients: [
+            {
+              patientId: '000001',
+              name: '山田 太郎',
+              kana: 'ヤマダ タロウ',
+            },
+          ],
+          auditEvent: {
+            action: 'LOCAL_PATIENT_SEARCH',
+            details: {
+              sourcePath: '/api/local/patients/search',
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await searchLocalPatients({
+      keyword: '031-1111-2222',
+    });
+
+    expect(httpFetch).toHaveBeenNthCalledWith(
+      1,
+      '/api/local/patients/search',
+      expect.objectContaining({
+        method: 'POST',
+        body: expect.any(String),
+      }),
+    );
+    const searchInit = vi.mocked(httpFetch).mock.calls[0]?.[1] as RequestInit | undefined;
+    const searchBody = JSON.parse(String(searchInit?.body));
+    expect(searchBody).toMatchObject({
+      keyword: '031-1111-2222',
+      searchType: 'telephone',
+      runId: 'RUN-META',
+    });
+    expect(result.routeNamespace).toBe('local');
+    expect(result.sourcePath).toBe('/api/local/patients/search');
+    expect(result.patients[0]).toMatchObject({
+      patientId: '000001',
+      name: '山田 太郎',
+    });
   });
 });

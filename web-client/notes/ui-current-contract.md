@@ -139,7 +139,7 @@
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
 - code-confirm: `PatientsPage` の local search 明示、official create/update/import の分岐、成功後 canonical re-fetch/local sync
-- code-confirm: `PatientInfoEditDialog` の official update route 呼び出し
+- code-confirm: `PatientInfoEditDialog` の official update route 呼び出しと、成功後 callback による canonical/local sync refresh
 - manual: reception / charts 由来の再入場と patient 未選択開始
 
 ## Mobile Images Surface

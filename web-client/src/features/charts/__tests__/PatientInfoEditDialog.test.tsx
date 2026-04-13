@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { PatientInfoEditDialog } from '../PatientInfoEditDialog';
@@ -8,9 +8,19 @@ const mockFetchOrcaAddress = vi.fn();
 const mockUpdateOfficialPatient = vi.fn();
 
 vi.mock('@tanstack/react-query', () => ({
-  useMutation: (options?: { mutationFn?: (variables: any) => Promise<any> }) => ({
+  useMutation: (options?: {
+    mutationFn?: (variables: any) => Promise<any>;
+    onSuccess?: (data: any, variables: any) => void;
+    onError?: (error: unknown) => void;
+  }) => ({
     mutate: vi.fn((variables?: any) => {
-      void options?.mutationFn?.(variables);
+      void options?.mutationFn?.(variables)
+        ?.then((result) => {
+          options?.onSuccess?.(result, variables);
+        })
+        .catch((error) => {
+          options?.onError?.(error);
+        });
     }),
     isPending: false,
   }),
@@ -95,8 +105,16 @@ describe('PatientInfoEditDialog', () => {
     expect(screen.queryByText(/connection refused/i)).not.toBeInTheDocument();
   });
 
-  it('保存時は official update route を呼び出す', async () => {
+  it('保存時は official update route を呼び出し、成功後に canonical/local sync 更新 callback を進める', async () => {
     const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onSaved = vi.fn();
+    const onRefetchBaseline = vi.fn();
+    mockUpdateOfficialPatient.mockResolvedValue({
+      ok: true,
+      patient: { patientId: '000001', name: '山田 花子 改' },
+      canonicalRefetch: { source: 'patientlst2v2', ok: true, status: 200 },
+    });
 
     render(
       <PatientInfoEditDialog
@@ -110,7 +128,9 @@ describe('PatientInfoEditDialog', () => {
         fallback={null}
         editAllowed
         meta={{ runId: 'RUN-TEST', dataSourceTransition: 'server' }}
-        onClose={vi.fn()}
+        onClose={onClose}
+        onSaved={onSaved}
+        onRefetchBaseline={onRefetchBaseline}
       />,
     );
 
@@ -120,13 +140,33 @@ describe('PatientInfoEditDialog', () => {
     await user.click(screen.getByLabelText('差分を確認しました（既存患者更新を実行します）'));
     await user.click(screen.getByRole('button', { name: '既存患者更新' }));
 
-    expect(mockUpdateOfficialPatient).toHaveBeenCalledWith(
-      expect.objectContaining({
-        patient: expect.objectContaining({
-          patientId: '000001',
-          name: '山田 花子 改',
+    await waitFor(() => {
+      expect(mockUpdateOfficialPatient).toHaveBeenCalledWith(
+        expect.objectContaining({
+          patient: expect.objectContaining({
+            patientId: '000001',
+            name: '山田 花子 改',
+          }),
+          auditMeta: expect.objectContaining({
+            source: 'charts',
+            section: 'basic',
+          }),
         }),
-      }),
-    );
+      );
+    });
+    await waitFor(() => {
+      expect(onSaved).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ok: true,
+          canonicalRefetch: expect.objectContaining({
+            source: 'patientlst2v2',
+            ok: true,
+            status: 200,
+          }),
+        }),
+      );
+    });
+    expect(onRefetchBaseline).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

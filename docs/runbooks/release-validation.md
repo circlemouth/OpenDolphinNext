@@ -42,7 +42,24 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSp
 - `WebXmlEndpointExposureTest` が `/api/*` 以外の public exposure を拒否し、`/api/orca/*` 直下を official/master のみに制限できる。
 - `patientlst3v2` / `visitptlstv2` / `manageusersv2` / `contraindicationcheckv2` / `medicationgetv2` / `incomeinfv2` の XML 契約が current shape に一致する。
 
-3. web-client targeted UI / semantics tests を current wording で実行する。
+3. patients official/local 境界の focused regression を実行する。
+```bash
+mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dtest=PatientModV2OutpatientSupportTest,PatientModV2OutpatientResourceIdempotencyTest \
+  test
+cd web-client && npm test -- --run \
+  src/features/patients/__tests__/api.test.ts \
+  src/features/patients/__tests__/PatientsPage.test.tsx \
+  src/features/outpatient/__tests__/orcaPatientImportApi.test.ts \
+  src/features/charts/__tests__/PatientInfoEditDialog.test.tsx
+```
+期待結果:
+- local search は `/api/local/patients/search` だけを使い、official create/update/import と導線を混在させない。
+- `PatientsPage` は create/update/import を別 mutation として扱い、成功後 canonical re-fetch/local sync の UI 証跡を残す。
+- `PatientInfoEditDialog` は official update route を使い、成功後 callback で canonical/local sync refresh を進める。
+- server-side patientmodv2 tests は class=01 create、class=02 update、変更なし時の ORCA 再取込を固定する。
+
+4. web-client targeted UI / semantics tests を current wording で実行する。
 ```bash
 cd web-client && npm test -- --run \
   src/features/reception/__tests__/ReceptionPage.test.tsx \
@@ -60,7 +77,7 @@ cd web-client && npm test -- --run \
 - `Medical_Information` 未選択時は送信しない。
 - `症状詳記（院内ローカル）`、official/local 境界、disabled reason が current UI copy と一致する。
 
-4. web-client gate と full CI を実行する。
+5. web-client gate と full CI を実行する。
 ```bash
 cd web-client && npm run verify:web-guard
 cd web-client && npm run ci
@@ -69,7 +86,7 @@ cd web-client && npm run ci
 - blocked route string / legacy auth drift / public secret の再混入がない。
 - typecheck / test / build まで成功する。
 
-5. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
+6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
 ```bash
 cd web-client && node scripts/runtime-ready-smoke.mjs
 QA_PATIENT_ID=<ORCA searchable patientId> cd web-client && node scripts/qa-acceptmodv2-weborca.mjs
