@@ -52,6 +52,8 @@ class OrcaXmlMapperTypedTextParsingTest {
         assertEquals(1, response.getVisits().size());
         assertEquals("11", response.getVisits().get(0).getDepartmentCode());
         assertEquals("10005", response.getVisits().get(0).getPhysicianCode());
+        assertEquals("V-1001", response.getVisits().get(0).getVoucherNumber());
+        assertEquals("S-1001", response.getVisits().get(0).getSequentialNumber());
         assertEquals("0005", response.getVisits().get(0).getInsuranceCombinationNumber());
         assertEquals("00001", response.getVisits().get(0).getPatient().getPatientId());
     }

@@ -361,6 +361,7 @@ const buildSummaryMarkdown = (summary) =>
   `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +
   `- ORCA Send: ${summary.sendResult?.status ?? 'unknown'}\n` +
   `- Blocker: ${summary.blockerClassification}\n` +
+  (summary.blockerReason ? `- Blocker Reason: ${summary.blockerReason}\n` : '') +
   (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
   `\n## Evidence\n\n` +
   `- Summary JSON: summary.json\n` +
@@ -586,25 +587,13 @@ const run = async () => {
   await page.locator('.charts-page').waitFor({ timeout: 20000 });
   logStep('charts page ready');
   logStep(`charts url=${page.url()}`);
-  const encounterContextDump = await page
-    .evaluate(() => {
-      const matches = [];
-      try {
-        for (let i = 0; i < window.sessionStorage.length; i += 1) {
-          const key = window.sessionStorage.key(i);
-          if (!key) continue;
-          if (!key.startsWith('opendolphin:web-client:charts:encounter-context:v2:')) continue;
-          matches.push({ key, value: window.sessionStorage.getItem(key) });
-        }
-      } catch {}
-      return matches.slice(0, 3);
-    })
-    .catch(() => []);
-  const hasEncounterHandoff = Array.isArray(encounterContextDump) && encounterContextDump.length > 0;
-  if (Array.isArray(encounterContextDump) && encounterContextDump.length > 0) {
-    logStep(`charts encounterContext keys=${encounterContextDump.map((m) => m.key).join(',')}`);
-  } else {
-    logStep('charts encounterContext keys=none');
+  const chartsUrl = new URL(page.url());
+  const leakedQueryKeys = ['patientId', 'appointmentId', 'receptionId', 'visitDate'].filter((key) =>
+    chartsUrl.searchParams.has(key),
+  );
+  logStep(`charts query leakedKeys=${leakedQueryKeys.join(',') || 'none'}`);
+  if (leakedQueryKeys.length > 0) {
+    throw new Error(`charts URL leaked scrubbed encounter params: ${leakedQueryKeys.join(', ')}`);
   }
   await Promise.race([
     setObservabilityMeta(page),
@@ -619,17 +608,13 @@ const run = async () => {
   const chartsShot = await writeScreenshot(page, '04-charts-open');
 
   let orderResult = { status: 'skipped', detail: 'not attempted' };
-  if (!hasEncounterHandoff) {
-    orderResult = { status: 'skipped', detail: 'missing encounter handoff context' };
-    logStep('order skipped=missing encounter handoff context');
-  } else {
-    try {
-      await page.keyboard.press('Control+Shift+U');
-      const orderShortcut = orderEntity === 'treatmentOrder' ? 'Control+Shift+5' : 'Control+Shift+3';
-      await page.keyboard.press(orderShortcut);
-      const orderPanel = page.locator(`[data-test-id="${orderEntity}-edit-panel"]`);
-      await orderPanel.waitFor({ timeout: 10000 });
-      logStep('order panel ready');
+  try {
+    await page.keyboard.press('Control+Shift+U');
+    const orderShortcut = orderEntity === 'treatmentOrder' ? 'Control+Shift+5' : 'Control+Shift+3';
+    await page.keyboard.press(orderShortcut);
+    const orderPanel = page.locator(`[data-test-id="${orderEntity}-edit-panel"]`);
+    await orderPanel.waitFor({ timeout: 10000 });
+    logStep('order panel ready');
 
     await orderPanel.locator(`#${orderEntity}-bundle-name`).fill(orderBundleName);
     if (masterKeyword) {
@@ -738,10 +723,9 @@ const run = async () => {
     await page.waitForTimeout(1500);
     await writeScreenshot(page, '05-order-edit');
     await page.keyboard.press('Escape');
-    } catch (error) {
-      orderResult = { status: 'error', detail: String(error) };
-      logStep(`order error=${String(error)}`);
-    }
+  } catch (error) {
+    orderResult = { status: 'error', detail: String(error) };
+    logStep(`order error=${String(error)}`);
   }
 
   const finishButton = page.getByRole('button', { name: '診療終了' });
@@ -797,7 +781,7 @@ const run = async () => {
   const sendGuardText = (await sendGuard.textContent().catch(() => '')) ?? '';
   const guardSummaryText = (await page.locator('.charts-actions__guard-summary').textContent().catch(() => '')) ?? '';
   const visitRowReadiness =
-    sendDisabled && /(Voucher_Number|Sequential_Number)/.test(`${sendGuardText} ${sendDisabledReason ?? ''}`)
+    sendDisabled && /(Insurance_Combination_Number|Voucher_Number|Sequential_Number)/.test(`${sendGuardText} ${sendDisabledReason ?? ''}`)
       ? 'missing_official_visit_identifiers'
       : sendDisabled
         ? 'blocked_for_other_reason'
@@ -914,6 +898,21 @@ const run = async () => {
   await safeClose(() => context.close());
   await safeClose(() => browser.close());
 
+  const blockerReason =
+    sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
+      ? undefined
+      : leakedQueryKeys.length > 0
+        ? `privacy_contract_violation:${leakedQueryKeys.join(',')}`
+        : visitRowReadiness === 'missing_official_visit_identifiers'
+          ? 'visit_row_official_identifiers_missing'
+          : networkRecords.some((record) => record.status >= 500)
+            ? 'upstream_or_environment_failure'
+            : pageErrors.length > 0
+              ? 'repo_runtime_error'
+              : sendDisabled
+                ? 'send_guard_blocked'
+                : 'unknown';
+
   const summary = {
     runId,
     traceId,
@@ -976,9 +975,12 @@ const run = async () => {
       afterReception: afterShot,
       charts: chartsShot,
     },
+    blockerReason,
     blockerClassification:
       sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
         ? 'none'
+        : leakedQueryKeys.length > 0
+          ? 'repo-defect'
         : visitRowReadiness === 'missing_official_visit_identifiers'
           ? 'official-visit-row-blocker'
         : networkRecords.some((record) => record.status >= 500)
@@ -1020,6 +1022,7 @@ run().catch(async (error) => {
     : pageErrors.length > 0
       ? 'repo-defect'
       : 'test-data-blocker';
+  const blockerReason = pageErrors.length > 0 ? 'repo_runtime_error' : 'fatal_before_send';
   const summary =
     lastSummary ?? {
       runId,
@@ -1050,6 +1053,7 @@ run().catch(async (error) => {
       },
       consoleMessages,
       pageErrors,
+      blockerReason,
       blockerClassification,
       fatalError: String(error),
       evidencePaths: {

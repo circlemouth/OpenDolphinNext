@@ -13,6 +13,7 @@ import {
   storeChartsEncounterContext,
   normalizeRunId,
 } from '../encounterContext';
+import { buildCanonicalOrcaEncounterContext } from '../orcaEncounterContext';
 
 describe('charts encounterContext', () => {
   beforeEach(() => {
@@ -174,5 +175,38 @@ describe('charts encounterContext', () => {
 
     expect(loadChartsEncounterContext()).toBeNull();
     expect(sessionStorage.getItem('opendolphin:web-client:charts:encounter-context:v1')).toBeNull();
+  });
+
+  it('buildCanonicalOrcaEncounterContext は handoff key から official visit identifiers を補完しない', () => {
+    expect(
+      buildCanonicalOrcaEncounterContext({
+        selectedEntry: {
+          id: 'visit-1',
+          patientId: 'P-100',
+          visitDate: '2026-04-13',
+          departmentCode: '01',
+          physicianCode: '10001',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          status: '受付中',
+          source: 'visits',
+        },
+        encounterContext: {
+          patientId: 'P-100',
+          visitDate: '2026-04-13',
+          scheduleKey: 'F001:S100',
+          encounterKey: 'F001:E100',
+          receptionId: 'A-100',
+        },
+      }),
+    ).toEqual({
+      patientId: 'P-100',
+      visitDate: '2026-04-13',
+      departmentCode: '01',
+      physicianCode: '10001',
+      insuranceCombinationNumber: undefined,
+      voucherNumber: undefined,
+      sequentialNumber: undefined,
+    });
   });
 });

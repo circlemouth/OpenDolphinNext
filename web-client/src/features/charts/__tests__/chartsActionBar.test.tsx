@@ -253,6 +253,42 @@ describe('ChartsActionBar', () => {
     expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
   });
 
+  it('official visit row 実値が不足している場合は Voucher/Sequential を補完せず fail-close する', async () => {
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          patientId="P-202"
+          visitDate="2026-01-04"
+          orcaEncounterContext={{
+            patientId: 'P-202',
+            visitDate: '2026-01-04',
+            departmentCode: '01',
+            physicianCode: '10001',
+          }}
+          selectedEntry={{
+            patientId: 'P-202',
+            visitDate: '2026-01-04',
+            scheduleKey: 'F001:S202',
+            encounterKey: 'F001:E202',
+            departmentCode: '01',
+            physicianCode: '10001',
+            status: '受付中',
+            source: 'visits',
+          } as any}
+        />
+      </MemoryRouter>,
+    );
+
+    const sendButton = screen.getByRole('button', { name: 'ORCA 送信' });
+    expect(sendButton).toBeDisabled();
+    expect(sendButton).toHaveAttribute('data-disabled-reason', expect.stringContaining('missing_encounter_context'));
+    expect(screen.getAllByText(/Insurance_Combination_Number/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Voucher_Number/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sequential_Number/).length).toBeGreaterThan(0);
+    expect(postOrcaMedicalModV2Xml).not.toHaveBeenCalled();
+  });
+
   it('送信/印刷ガードは折りたたまず visible note で表示する', () => {
     render(
       <MemoryRouter>
