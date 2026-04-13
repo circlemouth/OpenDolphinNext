@@ -11,7 +11,7 @@ import {
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
-const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
+const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://127.0.0.1:5173';
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
   path.resolve(process.cwd(), '..', 'artifacts', 'webclient', 'e2e', runId, 'reception-send');
@@ -21,9 +21,14 @@ const harDir = path.join(artifactRoot, 'har');
 const recordHar = process.env.QA_RECORD_HAR === '1';
 const harPath = path.join(harDir, 'network.har');
 const stepLogPath = path.join(artifactRoot, 'steps.log');
+const summaryJsonPath = path.join(artifactRoot, 'accept-summary.json');
+const summaryMdPath = path.join(artifactRoot, 'accept-summary.md');
+const consoleJsonPath = path.join(artifactRoot, 'console.json');
+const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
 
 fs.mkdirSync(screenshotDir, { recursive: true });
 fs.mkdirSync(networkDir, { recursive: true });
+fs.mkdirSync(artifactRoot, { recursive: true });
 if (recordHar) {
   fs.mkdirSync(harDir, { recursive: true });
 }
@@ -51,12 +56,16 @@ const scenarioLabel = process.env.QA_SCENARIO ?? sessionRole;
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
 
-const patientId = process.env.QA_PATIENT_ID ?? '01415';
+const patientId = process.env.QA_PATIENT_ID?.trim() ?? '';
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
 const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
+
+if (!patientId) {
+  throw new Error('QA_PATIENT_ID is required; pass a current local-searchable patient id for the target facility.');
+}
 
 const session = buildQaSession({ facilityId, userId: authUserId, runId, scenarioLabel, sessionRole, sessionRoles });
 
@@ -82,6 +91,7 @@ const recordRequest = (request) => {
 };
 
 const writeScreenshot = async (page, name) => {
+  if (!page || page.isClosed()) return null;
   const fileName = `${name}.png`;
   const filePath = path.join(screenshotDir, fileName);
   await page.screenshot({ path: filePath, fullPage: true });
@@ -188,8 +198,53 @@ const selectOptionFallback = async (selectLocator, desiredValue) => {
   return { desired: desiredValue, resolved, options };
 };
 
+let activeBrowser = null;
+let activeContext = null;
+let activePage = null;
+let lastSummary = null;
+
+const persistArtifacts = (summary) => {
+  lastSummary = summary;
+  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
+  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
+  fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
+  fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
+  fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
+};
+
+const buildMarkdownSummary = (summary) =>
+  `# Reception 既存患者受付（acceptmodv2）\n\n` +
+  `- RUN_ID: ${summary.runId}\n` +
+  `- 実施日時: ${summary.executedAt}\n` +
+  `- Base URL: ${summary.baseURL}\n` +
+  `- Facility ID: ${summary.facilityId}\n` +
+  `- Session Role: ${summary.sessionRole}\n` +
+  `- 患者ID: ${summary.patientId}\n` +
+  `- 診療科: ${summary.selection?.department?.resolved || summary.departmentCode}\n` +
+  `- 担当医: ${summary.selection?.physician?.resolved || summary.physicianCode}\n` +
+  `- 保険/自費: ${summary.paymentMode}\n` +
+  `- 来院区分: ${summary.visitKind}\n` +
+  `- Blocker: ${summary.blockerClassification}\n` +
+  (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
+  `\n## 送信結果\n\n` +
+  `- Tone: ${summary.acceptResult?.toneText ?? '—'}\n` +
+  `- ${summary.acceptResult?.apiResultText ?? '—'}\n` +
+  `- ${summary.acceptResult?.durationText ?? '—'}\n` +
+  `- XHR Debug: ${summary.acceptResult?.xhrDebugText ?? '—'}\n` +
+  `\n## Evidence\n\n` +
+  `- Network: network/network.json\n` +
+  `- Requests: network/requests.json\n` +
+  `- Console: console.json\n` +
+  `- Page errors: page-errors.json\n` +
+  `- Steps: steps.log\n` +
+  `\n## HAR\n\n` +
+  `${recordHar ? `- ${harPath}\n` : '- なし\n'}` +
+  `\n## Rerun\n\n` +
+  `- QA_BASE_URL=${baseURL} RUN_ID=${summary.runId} QA_PATIENT_ID=${summary.patientId} node scripts/qa-acceptmodv2-weborca.mjs\n`;
+
 const run = async () => {
   const browser = await chromium.launch({ headless: true });
+  activeBrowser = browser;
   const { context, page, sessionMe } = await createAuthenticatedContext(browser, {
     baseURL,
     facilityId,
@@ -198,6 +253,8 @@ const run = async () => {
     session,
     recordHar: recordHar ? { path: harPath, content: 'embed' } : undefined,
   });
+  activeContext = context;
+  activePage = page;
 
   page.on('console', (msg) => {
     const type = msg.type();
@@ -326,53 +383,55 @@ const run = async () => {
     harPath: recordHar ? harPath : undefined,
     consoleMessages,
     pageErrors,
+    blockerClassification: pageErrors.length > 0 ? 'repo-defect' : 'none',
   };
 
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
-  fs.writeFileSync(path.join(artifactRoot, 'accept-summary.json'), JSON.stringify(summary, null, 2), 'utf8');
-
-  const log =
-    `# Reception 既存患者受付（acceptmodv2）\n\n` +
-    `- RUN_ID: ${summary.runId}\n` +
-    `- 実施日時: ${summary.executedAt}\n` +
-    `- Base URL: ${summary.baseURL}\n` +
-    `- Facility ID: ${summary.facilityId}\n` +
-    `- Session Role: ${summary.sessionRole}\n` +
-    `- 患者ID: ${summary.patientId}\n` +
-    `- 診療科: ${summary.selection.department.resolved || departmentCode}\n` +
-    `- 担当医: ${summary.selection.physician.resolved || physicianCode}\n` +
-    `- 保険/自費: ${summary.paymentMode}\n` +
-    `- 来院区分: ${summary.visitKind}\n` +
-    `- Before: ${beforeShot}\n` +
-    `- After: ${afterShot}\n\n` +
-    `## 送信結果\n\n` +
-    `- Tone: ${summary.acceptResult.toneText}\n` +
-    `- ${summary.acceptResult.apiResultText}\n` +
-    `- ${summary.acceptResult.durationText}\n` +
-    `- XHR Debug: ${summary.acceptResult.xhrDebugText}\n\n` +
-    `## Network\n\n` +
-    networkRecords.map((record) => `- ${record.status} ${record.url}`).join('\n') +
-    `\n\n` +
-    `## HAR\n\n` +
-    `${recordHar ? `- ${harPath}` : '- なし'}\n\n` +
-    `## Console Warnings/Errors\n\n` +
-    (consoleMessages.length
-      ? consoleMessages.map((entry) => `- [${entry.type}] ${entry.text}`).join('\n')
-      : '- なし') +
-    `\n\n` +
-    `## Page Errors\n\n` +
-    (pageErrors.length ? pageErrors.map((entry) => `- ${entry}`).join('\n') : '- なし') +
-    `\n`;
-
-  fs.writeFileSync(path.join(artifactRoot, 'accept-summary.md'), log, 'utf8');
+  persistArtifacts(summary);
+  fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
   await safeClose(() => context.close());
   await safeClose(() => browser.close());
+  activeContext = null;
+  activeBrowser = null;
+  activePage = null;
 
   console.log(`Artifacts written to ${artifactRoot}`);
 };
 
-run().catch((error) => {
+run().catch(async (error) => {
+  logStep(`fatal error=${String(error)}`);
+  const failureShot = await writeScreenshot(activePage, '99-failure').catch(() => null);
+  const blockerClassification = networkRecords.some((record) => record.status >= 500)
+    ? 'environment-blocker'
+    : pageErrors.length > 0
+      ? 'repo-defect'
+      : 'test-data-blocker';
+  const summary =
+    lastSummary ?? {
+      runId,
+      executedAt: new Date().toISOString(),
+      baseURL,
+      facilityId,
+      sessionRole,
+      patientId,
+      departmentCode,
+      physicianCode,
+      paymentMode,
+      visitKind,
+      selection: {},
+      acceptResult: {},
+      harPath: recordHar ? harPath : undefined,
+      consoleMessages,
+      pageErrors,
+      fatalError: String(error),
+      blockerClassification,
+      screenshots: {
+        failure: failureShot,
+      },
+    };
+  persistArtifacts(summary);
+  fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
+  await safeClose(() => activeContext?.close?.());
+  await safeClose(() => activeBrowser?.close?.());
   console.error(error);
   process.exit(1);
 });

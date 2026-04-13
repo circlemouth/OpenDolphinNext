@@ -13,20 +13,27 @@ import {
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
 const traceId = process.env.TRACE_ID ?? `trace-${runId}`;
-const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:5173';
+const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://127.0.0.1:5173';
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
   resolveQaArtifactRoot('webclient', 'e2e', runId, 'fullflow');
 const screenshotDir = path.join(artifactRoot, 'screenshots');
 const networkDir = path.join(artifactRoot, 'network');
 const harDir = path.join(artifactRoot, 'har');
+const requestXmlDir = path.join(artifactRoot, 'request-xml');
 const recordHar = process.env.QA_RECORD_HAR === '1';
 const harPath = path.join(harDir, 'network.har');
 const stepLogPath = path.join(artifactRoot, 'steps.log');
+const summaryJsonPath = path.join(artifactRoot, 'summary.json');
+const summaryMdPath = path.join(artifactRoot, 'summary.md');
+const consoleJsonPath = path.join(artifactRoot, 'console.json');
+const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
+const medicalmodv2XmlPath = path.join(requestXmlDir, 'medicalmodv2.xml');
 
 fs.mkdirSync(screenshotDir, { recursive: true });
 fs.mkdirSync(networkDir, { recursive: true });
 fs.mkdirSync(artifactRoot, { recursive: true });
+fs.mkdirSync(requestXmlDir, { recursive: true });
 if (recordHar) {
   fs.mkdirSync(harDir, { recursive: true });
 }
@@ -53,7 +60,7 @@ const scenarioLabel = process.env.QA_SCENARIO ?? sessionRole;
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
 
-const patientId = process.env.QA_PATIENT_ID ?? '01415';
+const patientId = process.env.QA_PATIENT_ID?.trim() ?? '';
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
@@ -74,6 +81,10 @@ const materialUnit = process.env.QA_MATERIAL_UNIT ?? '';
 
 const expectedMedicationCode = process.env.QA_EXPECT_MEDICATION_CODE ?? '';
 const expectedMedicationNumber = process.env.QA_EXPECT_MEDICATION_NUMBER ?? '';
+
+if (!patientId) {
+  throw new Error('QA_PATIENT_ID is required; pass a current local-searchable patient id with a unique active entry.');
+}
 
 const session = buildQaSession({ facilityId, userId: authUserId, runId, scenarioLabel, sessionRole, sessionRoles });
 
@@ -133,6 +144,7 @@ const recordRequest = (request) => {
 };
 
 const writeScreenshot = async (page, name, options = {}) => {
+  if (!page || page.isClosed()) return null;
   const fileName = `${name}.png`;
   const filePath = path.join(screenshotDir, fileName);
   const fullPage = options.fullPage ?? true;
@@ -257,8 +269,54 @@ const setObservabilityMeta = async (page) => {
   );
 };
 
+let activeBrowser = null;
+let activeContext = null;
+let activePage = null;
+let lastMedicalmodv2RequestXml = '';
+let lastSummary = null;
+
+const persistArtifacts = (summary) => {
+  lastSummary = summary;
+  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2));
+  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2));
+  fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2));
+  fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2));
+  if (lastMedicalmodv2RequestXml) {
+    fs.writeFileSync(medicalmodv2XmlPath, lastMedicalmodv2RequestXml, 'utf8');
+  }
+  fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2));
+};
+
+const buildSummaryMarkdown = (summary) =>
+  `# WebORCA Full Flow\n\n` +
+  `- RUN_ID: ${summary.runId}\n` +
+  `- TRACE_ID: ${summary.traceId}\n` +
+  `- 実施日時: ${summary.executedAt}\n` +
+  `- Base URL: ${summary.baseURL}\n` +
+  `- Facility ID: ${summary.facilityId}\n` +
+  `- Patient ID: ${summary.patientId}\n` +
+  `- Reception Row: ${summary.receptionRowStatus ?? 'unknown'}\n` +
+  `- Charts Handoff: ${summary.chartsHandoff?.status ?? 'unknown'}\n` +
+  `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +
+  `- ORCA Send: ${summary.sendResult?.status ?? 'unknown'}\n` +
+  `- Blocker: ${summary.blockerClassification}\n` +
+  (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
+  `\n## Evidence\n\n` +
+  `- Summary JSON: summary.json\n` +
+  `- Steps: steps.log\n` +
+  `- Network: network/network.json\n` +
+  `- Requests: network/requests.json\n` +
+  `- Console: console.json\n` +
+  `- Page errors: page-errors.json\n` +
+  `- Request XML: request-xml/medicalmodv2.xml\n` +
+  `- Screenshots: screenshots/\n` +
+  `${recordHar ? '- HAR: har/network.har\n' : ''}` +
+  `\n## Rerun\n\n` +
+  `- QA_BASE_URL=${baseURL} RUN_ID=${summary.runId} TRACE_ID=${summary.traceId} QA_PATIENT_ID=${summary.patientId} node scripts/qa-fullflow-weborca.mjs\n`;
+
 const run = async () => {
   const browser = await chromium.launch({ headless: true });
+  activeBrowser = browser;
   const { context, page } = await createAuthenticatedContext(browser, {
     baseURL,
     facilityId,
@@ -268,6 +326,8 @@ const run = async () => {
     serviceWorkers: 'allow',
     recordHar: recordHar ? { path: harPath, content: 'embed' } : undefined,
   });
+  activeContext = context;
+  activePage = page;
 
   page.on('console', (msg) => {
     const type = msg.type();
@@ -727,6 +787,7 @@ const run = async () => {
   const medicalmodv2RequestXml =
     (sendRequest && isMedicalModV2Url(sendRequest.url()) ? sendRequest.postData() : null) ??
     (fallbackMedicalModRecord?.request?.postData ? String(fallbackMedicalModRecord.request.postData) : '');
+  lastMedicalmodv2RequestXml = medicalmodv2RequestXml;
 
   const validation = (() => {
     const xml = medicalmodv2RequestXml ?? '';
@@ -832,6 +893,7 @@ const run = async () => {
       buttonAttrs: sendButtonAttrs ?? undefined,
       requestUrl: sendRequest?.url() ?? undefined,
       requestBodyBytes: sendRequest?.postData()?.length ?? undefined,
+      requestXmlPath: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
       validation,
     },
     billingResult,
@@ -841,55 +903,96 @@ const run = async () => {
     screenshots: {
       beforeReception: beforeShot,
       afterReception: afterShot,
+      charts: chartsShot,
+    },
+    blockerClassification:
+      sendResponse && sendResponse.status() >= 200 && sendResponse.status() < 300
+        ? 'none'
+        : networkRecords.some((record) => record.status >= 500)
+          ? 'environment-blocker'
+          : pageErrors.length > 0
+            ? 'repo-defect'
+            : sendDisabled
+              ? 'test-data-blocker'
+              : 'repo-defect',
+    evidencePaths: {
+      summaryJson: 'summary.json',
+      summaryMd: 'summary.md',
+      stepsLog: 'steps.log',
+      network: 'network/network.json',
+      requests: 'network/requests.json',
+      console: 'console.json',
+      pageErrors: 'page-errors.json',
+      requestXml: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
+      screenshots: 'screenshots',
+      har: recordHar ? 'har/network.har' : undefined,
     },
   };
 
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2));
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2));
+  persistArtifacts(summary);
+  fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(summary));
 
-  const log = `# WebORCA Full Flow (Reception -> Charts -> Order -> Finish -> ORCA Send)\n\n` +
-    `- RUN_ID: ${summary.runId}\n` +
-    `- TRACE_ID: ${summary.traceId}\n` +
-    `- 実施日時: ${summary.executedAt}\n` +
-    `- Base URL: ${summary.baseURL}\n` +
-    `- Facility ID: ${summary.facilityId}\n` +
-    `- Patient ID: ${summary.patientId}\n` +
-    `- Department Code: ${summary.departmentCode}\n` +
-    `- Physician Code: ${summary.physicianCode}\n` +
-    `- Payment Mode: ${summary.paymentMode}\n` +
-    `- Visit Kind: ${summary.visitKind}\n` +
-    `- Reception Result: ${summary.acceptResult.toneText}\n` +
-    `- Reception Row: ${summary.receptionRowStatus}\n` +
-    `- Charts Handoff: ${summary.chartsHandoff.status} (scheduleKey=${summary.chartsHandoff.scheduleKey ?? '—'}, encounterKey=${summary.chartsHandoff.encounterKey ?? '—'})\n` +
-    `- Charts runId: ${summary.charts.chartsRunId ?? 'n/a'}\n` +
-    `- Charts traceId: ${summary.charts.chartsTraceId ?? 'n/a'}\n` +
-    `- Order Result: ${summary.orderResult.status} (${summary.orderResult.detail})\n` +
-    `- Finish Toast: ${summary.finishToastText}\n` +
-    `- ORCA Send: ${summary.sendResult.status} ${summary.sendResult.url}\n` +
-    `- ORCA Send Disabled: ${summary.sendResult.disabled ? 'true' : 'false'}${summary.sendResult.disabledReason ? ` (${summary.sendResult.disabledReason})` : ''}\n` +
-    `- ORCA Send Guard: ${summary.sendResult.guard ?? '—'}\n` +
-    `- ORCA Send Guard Summary: ${summary.sendResult.guardSummary ?? '—'}\n` +
-    `- ORCA Send Dialog: ${summary.sendResult.dialog ?? 'n/a'}\n` +
-    `- ORCA Send Toast: ${summary.sendResult.toast}\n` +
-    `- Billing: ${summary.billingResult.status} (${summary.billingResult.detail})\n` +
-    `\n## Screenshots\n` +
-    `- ${summary.screenshots.beforeReception}\n` +
-    `- ${summary.screenshots.afterReception}\n` +
-    `- ${summary.charts.chartsShot}\n` +
-    (summary.sendResult.dialogShot ? `- ${summary.sendResult.dialogShot}\n` : '') +
-    `\n## Notes\n` +
-    `- Network/requests: ${networkDir}\n` +
-    `- Console errors: ${consoleMessages.length}\n` +
-    `- Page errors: ${pageErrors.length}\n`;
-
-  fs.writeFileSync(path.join(artifactRoot, 'fullflow-summary.md'), log);
-  fs.writeFileSync(path.join(artifactRoot, 'fullflow-summary.json'), JSON.stringify(summary, null, 2));
-
-  console.log(`QA log written: ${path.join(artifactRoot, 'fullflow-summary.md')}`);
+  console.log(`QA log written: ${summaryMdPath}`);
   console.log(`Screenshots: ${screenshotDir}`);
+  activeContext = null;
+  activeBrowser = null;
+  activePage = null;
 };
 
-run().catch((error) => {
+run().catch(async (error) => {
+  logStep(`fatal error=${String(error)}`);
+  const failureShot = await writeScreenshot(activePage, '99-failure').catch(() => null);
+  const blockerClassification = networkRecords.some((record) => record.status >= 500)
+    ? 'environment-blocker'
+    : pageErrors.length > 0
+      ? 'repo-defect'
+      : 'test-data-blocker';
+  const summary =
+    lastSummary ?? {
+      runId,
+      traceId,
+      executedAt: new Date().toISOString(),
+      baseURL,
+      facilityId,
+      sessionRole,
+      patientId,
+      departmentCode,
+      physicianCode,
+      paymentMode,
+      visitKind,
+      receptionRowStatus: 'unknown',
+      chartsHandoff: { status: 'error' },
+      orderResult: { status: 'not-run' },
+      sendResult: {
+        status: 'error',
+        validation: lastMedicalmodv2RequestXml
+          ? { ok: true, requestXmlBytes: lastMedicalmodv2RequestXml.length }
+          : { ok: false, reason: 'no_request_xml' },
+        requestXmlPath: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
+      },
+      screenshots: {
+        failure: failureShot,
+      },
+      consoleMessages,
+      pageErrors,
+      blockerClassification,
+      fatalError: String(error),
+      evidencePaths: {
+        summaryJson: 'summary.json',
+        summaryMd: 'summary.md',
+        stepsLog: 'steps.log',
+        network: 'network/network.json',
+        requests: 'network/requests.json',
+        console: 'console.json',
+        pageErrors: 'page-errors.json',
+        requestXml: lastMedicalmodv2RequestXml ? 'request-xml/medicalmodv2.xml' : undefined,
+        screenshots: 'screenshots',
+      },
+    };
+  persistArtifacts(summary);
+  fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(summary));
+  await safeClose(() => activeContext?.close?.());
+  await safeClose(() => activeBrowser?.close?.());
   console.error(error);
   process.exit(1);
 });

@@ -1,0 +1,22 @@
+[
+  {
+    "url": "https://localhost:5173/api/orca/official/visits/mutation",
+    "method": "POST",
+    "headers": {
+      "x-run-id": "20260413T104000Z",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "x-csrf-token": "NhB656KbdR7LOTRccLEs6GyYqnpO7FvmqTNMLZXDAHE",
+      "referer": "",
+      "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+      "x-missing-master": "false",
+      "sec-ch-ua-mobile": "?0",
+      "x-trace-id": "c0e5f69e-2738-48d2-9a4f-c338a9f02ebb",
+      "x-cache-hit": "false",
+      "x-fallback-used": "false",
+      "x-datasource-transition": "local",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+      "content-type": "application/json"
+    },
+    "postData": "{\"requestNumber\":\"01\",\"patientId\":\"01415\",\"acceptanceDate\":\"2026-04-13\",\"acceptanceTime\":\"20:10:55\",\"acceptancePush\":\"1\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\"}"
+  }
+]

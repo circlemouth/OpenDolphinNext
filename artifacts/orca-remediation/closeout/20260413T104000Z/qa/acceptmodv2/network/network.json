@@ -1,0 +1,46 @@
+[
+  {
+    "url": "https://localhost:5173/api/orca/official/visits/mutation",
+    "status": 200,
+    "statusText": "OK",
+    "request": {
+      "method": "POST",
+      "headers": {
+        "x-run-id": "20260413T104000Z",
+        "sec-ch-ua-platform": "\"macOS\"",
+        "x-csrf-token": "NhB656KbdR7LOTRccLEs6GyYqnpO7FvmqTNMLZXDAHE",
+        "referer": "",
+        "sec-ch-ua": "\"Not:A-Brand\";v=\"99\", \"HeadlessChrome\";v=\"145\", \"Chromium\";v=\"145\"",
+        "x-missing-master": "false",
+        "sec-ch-ua-mobile": "?0",
+        "x-trace-id": "c0e5f69e-2738-48d2-9a4f-c338a9f02ebb",
+        "x-cache-hit": "false",
+        "x-fallback-used": "false",
+        "x-datasource-transition": "local",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.7632.6 Safari/537.36",
+        "content-type": "application/json"
+      },
+      "postData": "{\"requestNumber\":\"01\",\"patientId\":\"01415\",\"acceptanceDate\":\"2026-04-13\",\"acceptanceTime\":\"20:10:55\",\"acceptancePush\":\"1\",\"departmentCode\":\"01\",\"physicianCode\":\"10001\"}"
+    },
+    "response": {
+      "headers": {
+        "strict-transport-security": "max-age=63072000; includeSubDomains",
+        "x-run-id": "20260413T104000Z",
+        "x-request-id": "c0e5f69e-2738-48d2-9a4f-c338a9f02ebb",
+        "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+        "connection": "close",
+        "referrer-policy": "same-origin",
+        "x-trace-id": "c0e5f69e-2738-48d2-9a4f-c338a9f02ebb",
+        "x-content-type-options": "nosniff",
+        "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+        "access-control-allow-origin": "https://localhost:5173",
+        "content-length": "741",
+        "date": "Mon, 13 Apr 2026 11:10:56 GMT",
+        "content-type": "application/json",
+        "vary": "Origin",
+        "x-frame-options": "DENY"
+      },
+      "body": "{\"apiResult\":\"16\",\"apiResultMessage\":\"診療科・保険組合せで受付登録済みです。二重登録疑い\",\"runId\":\"20260413T104000Z\",\"traceId\":\"c0e5f69e-2738-48d2-9a4f-c338a9f02ebb\",\"requestId\":\"c0e5f69e-2738-48d2-9a4f-c338a9f02ebb\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-13T11:10:55.967331003Z\",\"resKey\":\"Acceptance_Info\",\"acceptanceDate\":\"2026-04-13\",\"acceptanceTime\":\"20:10:55\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"patient\":{\"patientId\":\"01415\",\"wholeName\":\"テスト　菜帆\",\"wholeNameKana\":\"テスト　ナホ\",\"birthDate\":\"2008-04-20\",\"sex\":\"2\"},\"warnings\":[]}"
+    }
+  }
+]

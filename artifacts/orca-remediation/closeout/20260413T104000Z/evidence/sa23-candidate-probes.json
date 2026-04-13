@@ -1,0 +1,123 @@
+{
+  "executedAt": "2026-04-13T11:26:04.828Z",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "searchResults": [
+    {
+      "patientId": "01415",
+      "status": 200,
+      "recordsReturned": 1,
+      "patients": [
+        {
+          "patientId": "01415",
+          "name": "通し検証 太郎"
+        }
+      ]
+    },
+    {
+      "patientId": "00005",
+      "status": 200,
+      "recordsReturned": 1,
+      "patients": [
+        {
+          "patientId": "00005",
+          "name": "通し検証 五郎"
+        }
+      ]
+    },
+    {
+      "patientId": "01425",
+      "status": 200,
+      "recordsReturned": 0,
+      "patients": []
+    },
+    {
+      "patientId": "01423",
+      "status": 200,
+      "recordsReturned": 0,
+      "patients": []
+    },
+    {
+      "patientId": "01053",
+      "status": 200,
+      "recordsReturned": 0,
+      "patients": []
+    },
+    {
+      "patientId": "00511",
+      "status": 200,
+      "recordsReturned": 0,
+      "patients": []
+    },
+    {
+      "patientId": "00013",
+      "status": 200,
+      "recordsReturned": 0,
+      "patients": []
+    },
+    {
+      "patientId": "00012",
+      "status": 200,
+      "recordsReturned": 0,
+      "patients": []
+    }
+  ],
+  "mutateResults": [
+    {
+      "patientId": "00005",
+      "status": 200,
+      "apiResult": "16",
+      "apiResultMessage": "診療科・保険組合せで受付登録済みです。二重登録疑い",
+      "patient": {
+        "patientId": "00005",
+        "wholeName": "事例　五",
+        "wholeNameKana": "ジレイ　ゴ",
+        "birthDate": "1955-06-15",
+        "sex": "1"
+      }
+    },
+    {
+      "patientId": "01415",
+      "status": 200,
+      "apiResult": "16",
+      "apiResultMessage": "診療科・保険組合せで受付登録済みです。二重登録疑い",
+      "patient": {
+        "patientId": "01415",
+        "wholeName": "テスト　菜帆",
+        "wholeNameKana": "テスト　ナホ",
+        "birthDate": "2008-04-20",
+        "sex": "2"
+      }
+    },
+    {
+      "patientId": "01425",
+      "status": 200,
+      "apiResult": "10",
+      "apiResultMessage": "患者番号に該当する患者が存在しません",
+      "patient": {
+        "patientId": "01425"
+      }
+    },
+    {
+      "patientId": "01053",
+      "status": 200,
+      "apiResult": "10",
+      "apiResultMessage": "患者番号に該当する患者が存在しません",
+      "patient": {
+        "patientId": "01053"
+      }
+    },
+    {
+      "patientId": "01423",
+      "status": 200,
+      "apiResult": "16",
+      "apiResultMessage": "診療科・保険組合せで受付登録済みです。二重登録疑い",
+      "patient": {
+        "patientId": "01423",
+        "wholeName": "池袋　次郎",
+        "wholeNameKana": "イケブクロ　ジロウ",
+        "birthDate": "1942-08-06",
+        "sex": "1"
+      }
+    }
+  ]
+}

@@ -165,20 +165,30 @@ export const createAuthenticatedContext = async (
     ...(recordHar ? { recordHar } : {}),
   });
   await context.addInitScript(({ token, storedSession }) => {
-    const apply = () => {
+    const ensureCsrfMeta = () => {
       let meta = document.querySelector("meta[name='csrf-token']");
-      if (!meta) {
-        meta = document.createElement('meta');
-        meta.setAttribute('name', 'csrf-token');
-        document.head.appendChild(meta);
-      }
-      meta.setAttribute('content', token);
+      if (meta) return meta;
+      const parent = document.head ?? document.documentElement;
+      if (!parent) return null;
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'csrf-token');
+      parent.appendChild(meta);
+      return meta;
+    };
+    const apply = () => {
       const serialized = JSON.stringify(storedSession);
+      const meta = ensureCsrfMeta();
+      if (meta) {
+        meta.setAttribute('content', token);
+      }
       window.sessionStorage.setItem('opendolphin:web-client:auth', serialized);
       window.localStorage.setItem('opendolphin:web-client:auth', serialized);
     };
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', apply, { once: true });
+      return;
+    }
     apply();
-    document.addEventListener('DOMContentLoaded', apply);
   }, { token: csrfToken, storedSession: session });
   await context.addCookies([
     {

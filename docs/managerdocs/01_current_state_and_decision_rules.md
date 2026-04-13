@@ -132,8 +132,9 @@ mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=OrcaPatientSyn
 WEB_CLIENT_MODE=npm ./setup-modernized-env.sh
 ```
 
-runtime smoke artifact の既知出力先:
-- `web-client/artifacts/webclient/runtime-gate-ready/<RUN_ID>`
+runtime / closeout artifact の既知出力先:
+- `artifacts/orca-remediation/closeout/<RUN_ID>/`
+- runtime smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/runtime-ready/`
 
 ---
 

@@ -1,0 +1,31 @@
+{
+  "runId": "20260413T104000Z",
+  "executedAt": "2026-04-13T11:37:57.427Z",
+  "baseURL": "https://127.0.0.1:5173",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "sessionRole": "admin",
+  "patientId": "01415",
+  "departmentCode": "01",
+  "physicianCode": "10001",
+  "paymentMode": "insurance",
+  "visitKind": "1",
+  "selection": {},
+  "acceptResult": {},
+  "consoleMessages": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+      "location": {
+        "url": "https://127.0.0.1:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      }
+    }
+  ],
+  "pageErrors": [],
+  "fatalError": "Error: locator.waitFor: Target page, context or browser has been closed",
+  "blockerClassification": "test-data-blocker",
+  "screenshots": {
+    "failure": null
+  }
+}

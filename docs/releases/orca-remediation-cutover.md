@@ -6,8 +6,9 @@
 ## 1. 前提
 - `master` に Worker G の最終修正が入っていること。
 - `docs/runbooks/release-validation.md` の必須コマンドが成功していること。
-- ORCA 接続確認の証跡が `artifacts/orca-connectivity/<RUN_ID>/` にあること。
-- runtime smoke の証跡が `web-client/artifacts/webclient/runtime-gate-ready/<RUN_ID>/` にあること。
+- closeout 判定に使う証跡が `artifacts/orca-remediation/closeout/<RUN_ID>/` にまとまっていること。
+- ORCA 接続確認を別 run で取った場合は `artifacts/orca-connectivity/<RUN_ID>/` を closeout report から参照できること。
+- runtime smoke / accept / fullflow の summary, network, console, page-errors が closeout bundle 配下にあること。
 - route taxonomy の前提は `official=/api/orca/official/*`、`master=/api/orca/master/*`、`local=/api/local/*`、`admin-internal=/api/admin/internal/*` で固定し、official/master/local を混在 deploy しないこと。
 - cutover は `web-client` と `server-modernized` の remediation pair release を前提とする。片側だけ先に切り替える運用は current contract 外とする。
 
@@ -26,7 +27,7 @@
 3. `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
 4. `cd web-client && node scripts/runtime-ready-smoke.mjs`
 5. `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh`
-6. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。`setup-modernized-env.sh` の dev 起動は `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を既定で入れ、既定 seed では `QA_PATIENT_ID=01415` を使う。
+6. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。固定 seed を前提にせず、実行直前に current facility の local search と active entry 状態を確認する。patient search 0 件、重複受付、active entry 非一意のいずれかが見つかったら `test-data-blocker` として停止し、summary / network / console / page-errors を残す。
 7. 同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs` を実行する。
 8. reception / charts / patients / admin の手動 smoke を実行する。
 
@@ -56,6 +57,7 @@
 - patient search が 0 件なら `QA_PATIENT_ID` の不足/不一致として扱い、local seed 不一致のまま「UI 不具合」と誤判定しない。
 - `QA_MEDICAL_INFORMATION` を指定しない run を 1 本含め、未選択時に `Medical_Information` が未送信であることを証跡化する。
 - `Acceptance_Push` suppress が必要な環境では server runtime config で明示し、client 側の補完/抑止に戻さない。
+- ORCA send に到達した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。未到達 run は `summary.json` の blocker classification と `steps.log` / `network/*.json` で停止理由を third party が追えることを条件とする。
 
 ## 6. 成功判定
 - 上記コマンドと smoke が成功し、artifact が同じ RUN_ID に束ねられている。
