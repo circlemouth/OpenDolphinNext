@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmlio2>
+<patientlst2res type="record">
+<Information_Date type="string">2026-04-14</Information_Date>
+<Information_Time type="string">07:36:20</Information_Time>
+<Api_Result type="string">00</Api_Result>
+<Api_Result_Message type="string">処理終了</Api_Result_Message>
+<Reskey type="string">Patient Info</Reskey>
+<Target_Patient_Count type="string">001</Target_Patient_Count>
+<No_Target_Patient_Count type="string">000</No_Target_Patient_Count>
+<Patient_Information type="array">
+<Patient_Information_child type="record">
+<Patient_ID type="string">01423</Patient_ID>
+<WholeName type="string">池袋　次郎</WholeName>
+<WholeName_inKana type="string">イケブクロ　ジロウ</WholeName_inKana>
+<BirthDate type="string">1942-08-06</BirthDate>
+<Sex type="string">1</Sex>
+<HealthInsurance_Information type="array">
+<HealthInsurance_Information_child type="record">
+<InsuranceProvider_Class type="string">039</InsuranceProvider_Class>
+<InsuranceProvider_WholeName type="string">後期高齢者</InsuranceProvider_WholeName>
+<InsuranceProvider_Number type="string">39012026</InsuranceProvider_Number>
+<HealthInsuredPerson_Number type="string">０１２３４５６７</HealthInsuredPerson_Number>
+<HealthInsuredPerson_Assistance type="string">1</HealthInsuredPerson_Assistance>
+<RelationToInsuredPerson type="string">1</RelationToInsuredPerson>
+<HealthInsuredPerson_WholeName type="string">池袋　次郎</HealthInsuredPerson_WholeName>
+<Certificate_StartDate type="string">2026-04-14</Certificate_StartDate>
+<Certificate_ExpiredDate type="string">2026-07-31</Certificate_ExpiredDate>
+</HealthInsurance_Information_child>
+</HealthInsurance_Information>
+</Patient_Information_child>
+</Patient_Information>
+</patientlst2res>
+</xmlio2>

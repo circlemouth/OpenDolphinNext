@@ -1,0 +1,1 @@
+<!-- orca-meta: path=/api01rv2/patientlst2v2 method=POST query=class=01 --><data><patientlst2req type="record"><Patient_ID_Information type="array"><Patient_ID_Information_child type="record"><Patient_ID type="string">01423</Patient_ID></Patient_ID_Information_child></Patient_ID_Information></patientlst2req></data>

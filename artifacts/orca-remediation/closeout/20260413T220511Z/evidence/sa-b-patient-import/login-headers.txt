@@ -1,0 +1,18 @@
+HTTP/1.1 200 OK
+Expires: 0
+Cache-Control: private, no-store, max-age=0, must-revalidate
+Set-Cookie: JSESSIONID=voJWItNZoHo275ruqpm_ePug9I83_wYGA1AROfSk.056e4a27cf28; path=/openDolphin; secure; HttpOnly; SameSite=Lax
+Pragma: no-cache
+X-Request-Id: f3c5442e-8bf1-43c1-ae23-d46dd79b2c7c
+X-Frame-Options: DENY
+Referrer-Policy: same-origin
+Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'
+X-Trace-Id: f3c5442e-8bf1-43c1-ae23-d46dd79b2c7c
+Date: Mon, 13 Apr 2026 22:52:04 GMT
+Connection: keep-alive
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+X-Content-Type-Options: nosniff
+Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+Content-Type: application/json
+Content-Length: 263
+

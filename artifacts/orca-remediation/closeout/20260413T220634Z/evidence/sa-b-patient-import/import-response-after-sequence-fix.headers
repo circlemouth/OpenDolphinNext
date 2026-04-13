@@ -1,0 +1,15 @@
+HTTP/1.1 200 OK
+X-Request-Id: sa-b-import-01423-post-setval-222407
+X-Frame-Options: DENY
+Referrer-Policy: same-origin
+Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'
+X-Trace-Id: sa-b-import-01423-post-setval-222407
+Date: Mon, 13 Apr 2026 22:24:08 GMT
+Connection: keep-alive
+X-Run-Id: 20260413T220634Z
+Strict-Transport-Security: max-age=63072000; includeSubDomains
+X-Content-Type-Options: nosniff
+Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()
+Content-Type: application/json
+Content-Length: 464
+
