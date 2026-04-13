@@ -17,6 +17,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - official transport を呼ばない local wrapper / local read model / local persistence を `/api/orca/*` に置かない。
 - master-backed read は `/api/orca/master/*` へ寄せ、official bridge と混在させない。
 - audit action も taxonomy に合わせ、official は `ORCA_OFFICIAL_*`、master は `ORCA_MASTER_*`、local は `LOCAL_*` を使う。
+- audit details には route taxonomy に一致する `scope=official|master|local|admin-internal` を入れ、action だけに依存せず追跡できるようにする。
 - official patient 系 audit action は `ORCA_OFFICIAL_CREATE_PATIENT` / `ORCA_OFFICIAL_UPDATE_PATIENT` / `ORCA_OFFICIAL_GET_PATIENT` / `ORCA_OFFICIAL_SYNC_PATIENTS` に固定し、旧 patient-first naming や `ORCA_PATIENT_GET` を残さない。
 - official 風の名称 (`patientmodv2`, `patientgetv2`, `medicalmodv2`, `subjectivesv2`) を local path / local metadata に残さない。
 - admin 向け internal wrapper の label は `/api/admin/internal/*` を表示し、official surface と誤認させない。
@@ -104,5 +105,6 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 
 - `PublicRouteInventoryContractTest` は taxonomy 別 inventory を固定し、official/master/local/admin-internal の逸脱を検知する。
 - `WebXmlEndpointExposureTest` は `/api/*` の単一 public entrypoint に加え、route prefix が taxonomy に収まることを検証する。
+- ORCA `Api_Result` の success/warn/error tone policy は `web-client/src/libs/orca/orcaApiResultPolicy.ts` を正本とし、feature ローカル実装を増やさない。
 - `web-client/src/libs/http/httpClient.ts` と administration wrapper metadata は `scope=official|master|local` を明示し、実 path と一致させる。
 - repo grep で旧 path を runtime 参照として残さない。

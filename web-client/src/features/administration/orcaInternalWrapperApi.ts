@@ -1,4 +1,5 @@
 import { httpFetch } from '../../libs/http/httpClient';
+import { isOrcaStubResult, normalizeOrcaApiResult } from '../../libs/orca/orcaApiResultPolicy';
 import { generateRunId, getObservabilityMeta, updateObservabilityMeta } from '../../libs/observability/observability';
 import type { DataSourceTransition } from '../../libs/observability/types';
 
@@ -132,9 +133,11 @@ const normalizeBoolean = (value: unknown) => {
 
 const getString = (value: unknown) => (typeof value === 'string' ? value : undefined);
 const normalizeApiResultValue = (value: unknown) => {
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
-  return undefined;
+  const normalized =
+    typeof value === 'string' || (typeof value === 'number' && Number.isFinite(value))
+      ? normalizeOrcaApiResult(value)
+      : '';
+  return normalized || undefined;
 };
 const normalizeApiResultMessage = (value: unknown) => {
   if (typeof value === 'string') return value;
@@ -200,7 +203,7 @@ const normalizeBase = (json: unknown, headers: Headers, status: number, ok: bool
   const fallbackUsed =
     normalizeBoolean(body.fallbackUsed ?? body.fallback_used) ?? normalizeBooleanHeader(headers.get('x-fallback-used'));
   const errorMessage = !ok ? `HTTP ${status}` : undefined;
-  const stub = apiResult ? apiResult.startsWith('79') : undefined;
+  const stub = apiResult ? isOrcaStubResult(apiResult) : undefined;
 
   if (runId) {
     updateObservability({ runId, traceId, missingMaster, fallbackUsed });

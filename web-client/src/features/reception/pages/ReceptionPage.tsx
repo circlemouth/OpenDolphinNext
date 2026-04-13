@@ -6,6 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { getAuditEventLog, logAuditEvent, logUiState } from '../../../libs/audit/auditLogger';
 import { resolveAriaLive, resolveRunId } from '../../../libs/observability/observability';
 import type { DataSourceTransition } from '../../../libs/observability/types';
+import { isOrcaSuccessResult, normalizeOrcaApiResult } from '../../../libs/orca/orcaApiResultPolicy';
 import { FocusTrapDialog } from '../../../components/modals/FocusTrapDialog';
 import { OrderConsole } from '../components/OrderConsole';
 import { ReceptionAuditPanel } from '../components/ReceptionAuditPanel';
@@ -55,6 +56,7 @@ import {
   buildChartsUrl,
   hasHandoffEncounterKey,
   normalizeVisitDate,
+  type OutpatientEncounterContext,
   type ReceptionCarryoverParams,
 } from '../../charts/encounterContext';
 import { useSession } from '../../../AppRouter';
@@ -72,6 +74,15 @@ import {
   buildQueuePhaseSummary,
   resolveExceptionDecision,
 } from '../exceptionLogic';
+import {
+  buildPendingAcceptHandoff,
+  buildReceptionEncounterFromEntry,
+  resolveAcceptMutationHandoff,
+  resolvePatientChartsHandoff,
+  resolvePendingAcceptHandoffFromEntries,
+  type PendingReceptionHandoff,
+  type ResolvedReceptionHandoff,
+} from '../receptionHandoff';
 import { loadOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
 import { postMedicalRecords, type MedicalRecordEntry } from '../../administration/orcaInternalWrapperApi';
 import { searchLocalPatients, type PatientListResponse, type PatientRecord } from '../../patients/api';
@@ -239,8 +250,6 @@ const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error')
   return RECEPTION_SUPPORT_GUIDE;
 };
 
-const normalizeApiResult = (value?: string) => (value ?? '').trim().toUpperCase();
-
 type PhysicianNameMap = Record<string, string>;
 
 const normalizeCanonicalCode = (value?: string) => {
@@ -260,7 +269,6 @@ const resolveEntryDisplayLabel = (code: string, value?: string) => {
   return code;
 };
 
-const isApiResultOk = (apiResult?: string) => Boolean(apiResult && /^0+$/.test(apiResult));
 const isIdempotentDuplicate = (apiResult?: string, apiResultMessage?: string) =>
   apiResult === '80' && Boolean(apiResultMessage && /既に同日の診療データが登録されています/.test(apiResultMessage));
 
@@ -830,6 +838,8 @@ export function ReceptionPage({
   const [openCardActionMenuKey, setOpenCardActionMenuKey] = useState<string | null>(null);
   const [receptionRealtimeStatus, setReceptionRealtimeStatus] =
     useState<ReceptionRealtimeConnectionStatus>('connecting');
+  const [acceptedChartsHandoff, setAcceptedChartsHandoff] = useState<ResolvedReceptionHandoff | null>(null);
+  const [pendingAcceptedChartsHandoff, setPendingAcceptedChartsHandoff] = useState<PendingReceptionHandoff | null>(null);
   const selectedDateRef = useRef(selectedDate);
   const storageScopeRef = useRef(storageScope);
 
@@ -1146,6 +1156,8 @@ export function ReceptionPage({
 
   const applyMutationResultToList = useCallback(
     (payload: VisitMutationPayload, params: VisitMutationParams) => {
+      let nextEntriesSnapshot: ReceptionEntry[] = [];
+      let createdEntryKey: string | null = null;
       queryClient.setQueryData<AppointmentPayload>(appointmentQueryKey, (previous) => {
         const base: AppointmentPayload =
           previous ??
@@ -1176,7 +1188,11 @@ export function ReceptionPage({
           };
         }
         const nextEntry = buildVisitEntryFromMutation(payload, { paymentMode: params.paymentMode });
-        if (!nextEntry) return base;
+        if (!nextEntry) {
+          nextEntriesSnapshot = baseEntries;
+          return base;
+        }
+        createdEntryKey = entryKey(nextEntry);
         const deduped = baseEntries.filter((entry) => {
           if (entry.encounterKey && nextEntry.encounterKey && entry.encounterKey === nextEntry.encounterKey) return false;
           if (entry.scheduleKey && nextEntry.scheduleKey && entry.scheduleKey === nextEntry.scheduleKey) return false;
@@ -1185,6 +1201,7 @@ export function ReceptionPage({
           return true;
         });
         const nextEntries = [nextEntry, ...deduped];
+        nextEntriesSnapshot = nextEntries;
         return {
           ...base,
           entries: nextEntries,
@@ -1193,9 +1210,27 @@ export function ReceptionPage({
           apiResultMessage: payload.apiResultMessage ?? base.apiResultMessage,
         };
       });
-      const createdEntry = buildVisitEntryFromMutation(payload, { paymentMode: params.paymentMode });
-      if (createdEntry?.id) {
-        setSelectedEntryKey(entryKey(createdEntry));
+      if (params.requestNumber === '02') {
+        setAcceptedChartsHandoff((previous) =>
+          previous?.encounter.patientId === (payload.patient?.patientId ?? params.patientId) ? null : previous,
+        );
+        setPendingAcceptedChartsHandoff((previous) =>
+          previous?.patientId === (payload.patient?.patientId ?? params.patientId) ? null : previous,
+        );
+      } else {
+        const mutationHandoff = resolveAcceptMutationHandoff(payload, params);
+        if (mutationHandoff) {
+          setAcceptedChartsHandoff(mutationHandoff);
+          setPendingAcceptedChartsHandoff(null);
+        } else {
+          const pendingHandoff = buildPendingAcceptHandoff(payload, params);
+          const refreshedEntryHandoff = resolvePendingAcceptHandoffFromEntries(nextEntriesSnapshot, pendingHandoff);
+          setAcceptedChartsHandoff(refreshedEntryHandoff);
+          setPendingAcceptedChartsHandoff(refreshedEntryHandoff ? null : pendingHandoff);
+        }
+      }
+      if (createdEntryKey) {
+        setSelectedEntryKey(createdEntryKey);
       }
     },
     [appointmentQueryKey, queryClient],
@@ -1618,6 +1653,13 @@ export function ReceptionPage({
     [departmentFilter, keyword, paymentMode, physicianFilter, visibleAppointmentEntries],
   );
   const sortedEntries = useMemo(() => sortEntries(filteredEntries, sortKey), [filteredEntries, sortKey]);
+  useEffect(() => {
+    if (!pendingAcceptedChartsHandoff) return;
+    const resolved = resolvePendingAcceptHandoffFromEntries(visibleAppointmentEntries, pendingAcceptedChartsHandoff);
+    if (!resolved) return;
+    setAcceptedChartsHandoff(resolved);
+    setPendingAcceptedChartsHandoff(null);
+  }, [pendingAcceptedChartsHandoff, visibleAppointmentEntries]);
   const patientSearchTotalPages = useMemo(() => {
     const pages = Math.ceil(patientSearchResults.length / PATIENT_SEARCH_PAGE_SIZE);
     return Math.max(1, pages);
@@ -1831,6 +1873,116 @@ export function ReceptionPage({
     [flags.runId, initialRunId, mergedMeta.runId, receptionCarryover, session.facilityId],
   );
 
+  const openChartsWithEncounter = useCallback(
+    (
+      encounter: OutpatientEncounterContext,
+      source: 'list_action' | 'row_double_click' | 'patient_search',
+      entry?: Pick<ReceptionEntry, 'patientId' | 'appointmentId' | 'receptionId' | 'scheduleKey' | 'encounterKey' | 'visitDate'>,
+    ) => {
+      const guardRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
+      const normalizedEncounter = buildReceptionEncounterFromEntry({
+        patientId: encounter.patientId ?? entry?.patientId,
+        appointmentId: encounter.appointmentId ?? entry?.appointmentId,
+        receptionId: encounter.receptionId ?? entry?.receptionId,
+        scheduleKey: encounter.scheduleKey ?? entry?.scheduleKey,
+        encounterKey: encounter.encounterKey ?? entry?.encounterKey,
+        visitDate: encounter.visitDate ?? entry?.visitDate,
+      });
+      const controlId =
+        source === 'row_double_click'
+          ? 'open-charts-double-click'
+          : source === 'patient_search'
+            ? 'open-charts-patient-search'
+            : 'open-charts';
+      if (!hasHandoffEncounterKey(normalizedEncounter)) {
+        enqueue({
+          id: `reception-open-charts-blocked-${
+            normalizedEncounter.encounterKey ??
+            normalizedEncounter.scheduleKey ??
+            normalizedEncounter.receptionId ??
+            normalizedEncounter.patientId ??
+            'unknown'
+          }`,
+          tone: 'warning',
+          message: 'カルテを開くための canonical key が未設定です。',
+          detail: 'scheduleKey / encounterKey のある受付情報を使用してください。',
+        });
+        logAuditEvent({
+          runId: guardRunId,
+          source: 'reception/open-charts',
+          cacheHit: mergedMeta.cacheHit,
+          missingMaster: mergedMeta.missingMaster,
+          dataSourceTransition: mergedMeta.dataSourceTransition,
+          appointmentId: normalizedEncounter.appointmentId,
+          payload: {
+            action: 'RECEPTION_OPEN_CHARTS',
+            outcome: 'blocked',
+            details: {
+              controlId,
+              appointmentId: normalizedEncounter.appointmentId,
+              receptionId: normalizedEncounter.receptionId,
+              blockedReasons: ['missing_schedule_key', 'missing_encounter_key'],
+            },
+          },
+        });
+        logUiState({
+          action: 'navigate',
+          screen: 'reception/list',
+          controlId,
+          runId: guardRunId,
+          details: {
+            blockedReason: 'missing_schedule_key',
+            blockedReasons: ['missing_schedule_key', 'missing_encounter_key'],
+            appointmentId: normalizedEncounter.appointmentId,
+            receptionId: normalizedEncounter.receptionId,
+          },
+        });
+        return;
+      }
+      if (guardRunId) {
+        bumpRunId(guardRunId);
+      }
+      appNav.openCharts({
+        encounter: normalizedEncounter,
+        carryover: receptionCarryover,
+        runId: guardRunId,
+        navigate: {
+          state: {
+            runId: guardRunId,
+            patientId: normalizedEncounter.patientId,
+            appointmentId: normalizedEncounter.appointmentId,
+            receptionId: normalizedEncounter.receptionId,
+            scheduleKey: normalizedEncounter.scheduleKey,
+            encounterKey: normalizedEncounter.encounterKey,
+            visitDate: normalizedEncounter.visitDate,
+          },
+        },
+      });
+      logUiState({
+        action: 'navigate',
+        screen: 'reception/list',
+        controlId,
+        runId: guardRunId,
+        dataSourceTransition: mergedMeta.dataSourceTransition,
+        cacheHit: mergedMeta.cacheHit,
+        missingMaster: mergedMeta.missingMaster,
+        patientId: normalizedEncounter.patientId,
+      });
+    },
+    [
+      appNav,
+      bumpRunId,
+      enqueue,
+      flags.runId,
+      initialRunId,
+      mergedMeta.cacheHit,
+      mergedMeta.dataSourceTransition,
+      mergedMeta.missingMaster,
+      mergedMeta.runId,
+      receptionCarryover,
+    ],
+  );
+
   const exceptionItems = useMemo(() => {
     const nowMs = Date.now();
     const baseRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
@@ -1977,6 +2129,19 @@ export function ReceptionPage({
     if (!selectedEntryKey) return undefined;
     return sortedEntries.find((entry) => entryKey(entry) === selectedEntryKey);
   }, [selectedEntryKey, sortedEntries]);
+
+  useEffect(() => {
+    if (!acceptedChartsHandoff) return;
+    const handoffEncounterKey = acceptedChartsHandoff.encounter.encounterKey;
+    const handoffScheduleKey = acceptedChartsHandoff.encounter.scheduleKey;
+    const matched = sortedEntries.find((entry) => {
+      if (handoffEncounterKey && entry.encounterKey === handoffEncounterKey) return true;
+      if (handoffScheduleKey && entry.scheduleKey === handoffScheduleKey) return true;
+      return false;
+    });
+    if (!matched) return;
+    setSelectedEntryKey((previous) => (previous === entryKey(matched) ? previous : entryKey(matched)));
+  }, [acceptedChartsHandoff, sortedEntries]);
 
   const recordsModalPatientId = recordsModalPatient?.patientId?.trim() ?? '';
   const recordsModalPatientLabel = recordsModalPatient?.name?.trim() || recordsModalPatientId || '—';
@@ -2498,8 +2663,8 @@ export function ReceptionPage({
         const payload = await (visitMutation.mutateAsync ? visitMutation.mutateAsync(params) : mutateVisit(params));
         const durationMs = Math.round(performance.now() - started);
         setAcceptDurationMs(durationMs);
-        const apiResult = normalizeApiResult(payload.apiResult);
-        const isSuccess = isApiResultOk(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
+        const apiResult = normalizeOrcaApiResult(payload.apiResult);
+        const isSuccess = isOrcaSuccessResult(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
         const isAlreadyAccepted = apiResult === '16';
 
         if (isSuccess) {
@@ -2651,8 +2816,8 @@ export function ReceptionPage({
         const payload = await (visitMutation.mutateAsync ? visitMutation.mutateAsync(params) : mutateVisit(params));
         const durationMs = Math.round(performance.now() - started);
         setAcceptDurationMs(durationMs);
-        const apiResult = normalizeApiResult(payload.apiResult);
-        const isSuccess = isApiResultOk(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
+        const apiResult = normalizeOrcaApiResult(payload.apiResult);
+        const isSuccess = isOrcaSuccessResult(apiResult) || ACCEPT_SUCCESS_RESULTS.has(apiResult);
         if (isSuccess) {
           applyMutationResultToList(payload, params);
           void refetchAppointment();
@@ -2807,12 +2972,21 @@ export function ReceptionPage({
     setPatientSearchPage(1);
     setPatientSearchError(null);
     patientSearchFilterRef.current = null;
+    setAcceptedChartsHandoff(null);
+    setPendingAcceptedChartsHandoff(null);
   }, []);
 
   const handleSelectPatientSearchResult = useCallback(
     (patient: PatientRecord) => {
+      const nextPatientId = patient.patientId?.trim() ?? '';
+      if (acceptedChartsHandoff?.encounter.patientId && acceptedChartsHandoff.encounter.patientId !== nextPatientId) {
+        setAcceptedChartsHandoff(null);
+      }
+      if (pendingAcceptedChartsHandoff?.patientId && pendingAcceptedChartsHandoff.patientId !== nextPatientId) {
+        setPendingAcceptedChartsHandoff(null);
+      }
       setPatientSearchSelected(patient);
-      const resolvedPatientId = patient.patientId?.trim() ?? '';
+      const resolvedPatientId = nextPatientId;
       if (resolvedPatientId) {
         setAcceptPatientId(resolvedPatientId);
         setPatientSearchPatientId(resolvedPatientId);
@@ -2853,7 +3027,15 @@ export function ReceptionPage({
         },
       });
     },
-    [acceptPaymentMode, acceptVisitKind, flags.runId, mergedMeta.runId, sortedEntries],
+    [
+      acceptPaymentMode,
+      acceptVisitKind,
+      acceptedChartsHandoff?.encounter.patientId,
+      flags.runId,
+      mergedMeta.runId,
+      pendingAcceptedChartsHandoff?.patientId,
+      sortedEntries,
+    ],
   );
 
   const acceptTarget = useMemo(() => resolveAcceptTarget(), [resolveAcceptTarget]);
@@ -3256,55 +3438,9 @@ export function ReceptionPage({
 
   const handleRowDoubleClick = useCallback(
     (entry: ReceptionEntry) => {
-      const nextRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
-      if (nextRunId) {
-        bumpRunId(nextRunId);
-      }
-      logUiState({
-        action: 'navigate',
-        screen: 'reception/list',
-        controlId: entry.id,
-        runId: nextRunId,
-        dataSourceTransition: mergedMeta.dataSourceTransition,
-        cacheHit: mergedMeta.cacheHit,
-        missingMaster: mergedMeta.missingMaster,
-        patientId: entry.patientId,
-      });
-      appNav.openCharts({
-        encounter: {
-          patientId: entry.patientId,
-          appointmentId: entry.appointmentId,
-          receptionId: entry.receptionId,
-          scheduleKey: entry.scheduleKey,
-          encounterKey: entry.encounterKey,
-          visitDate: entry.visitDate,
-        },
-        carryover: receptionCarryover,
-        runId: nextRunId,
-        navigate: {
-          state: {
-            runId: nextRunId,
-            patientId: entry.patientId,
-            appointmentId: entry.appointmentId,
-            receptionId: entry.receptionId,
-            scheduleKey: entry.scheduleKey,
-            encounterKey: entry.encounterKey,
-            visitDate: entry.visitDate,
-          },
-        },
-      });
+      openChartsWithEncounter(buildReceptionEncounterFromEntry(entry), 'row_double_click', entry);
     },
-    [
-      appNav,
-      bumpRunId,
-      flags.runId,
-      initialRunId,
-      mergedMeta.cacheHit,
-      mergedMeta.dataSourceTransition,
-      mergedMeta.missingMaster,
-      mergedMeta.runId,
-      receptionCarryover,
-    ],
+    [openChartsWithEncounter],
   );
 
   const handleRetryQueue = useCallback(
@@ -3526,7 +3662,7 @@ export function ReceptionPage({
         });
         const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01' });
         const idempotentDuplicate = isIdempotentDuplicate(result.apiResult, result.apiResultMessage);
-        const apiResultOk = isApiResultOk(result.apiResult) || idempotentDuplicate;
+        const apiResultOk = isOrcaSuccessResult(result.apiResult) || idempotentDuplicate;
         const hasMissingTags = Boolean(result.missingTags?.length);
         const allowMissingTags = idempotentDuplicate;
         const outcome =
@@ -3675,94 +3811,9 @@ export function ReceptionPage({
 
   const handleOpenCharts = useCallback(
     (entry: ReceptionEntry, _urlOverride?: string) => {
-      const guardRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
-      const scheduleKey = entry.scheduleKey?.trim() || undefined;
-      const encounterKey = entry.encounterKey?.trim() || undefined;
-      if (!scheduleKey && !encounterKey) {
-        enqueue({
-          id: `reception-open-charts-blocked-${entryKey(entry)}`,
-          tone: 'warning',
-          message: 'カルテを開くための canonical key が未設定です。',
-          detail: 'scheduleKey / encounterKey のある受付情報を使用してください。',
-        });
-        logAuditEvent({
-          runId: guardRunId,
-          source: 'reception/open-charts',
-          cacheHit: mergedMeta.cacheHit,
-          missingMaster: mergedMeta.missingMaster,
-          dataSourceTransition: mergedMeta.dataSourceTransition,
-          appointmentId: entry.appointmentId,
-          payload: {
-            action: 'RECEPTION_OPEN_CHARTS',
-            outcome: 'blocked',
-            details: {
-              entryKey: entryKey(entry),
-              appointmentId: entry.appointmentId,
-              receptionId: entry.receptionId,
-              blockedReasons: ['missing_schedule_key', 'missing_encounter_key'],
-            },
-          },
-        });
-        logUiState({
-          action: 'navigate',
-          screen: 'reception/list',
-          controlId: 'open-charts',
-          runId: guardRunId,
-          details: {
-            blockedReason: 'missing_schedule_key',
-            blockedReasons: ['missing_schedule_key', 'missing_encounter_key'],
-            entryKey: entryKey(entry),
-          },
-        });
-        return;
-      }
-      const nextRunId = guardRunId;
-      if (nextRunId) bumpRunId(nextRunId);
-      appNav.openCharts({
-        encounter: {
-          patientId: entry.patientId,
-          appointmentId: entry.appointmentId,
-          receptionId: entry.receptionId,
-          scheduleKey,
-          encounterKey,
-          visitDate: entry.visitDate,
-        },
-        carryover: receptionCarryover,
-        runId: nextRunId,
-        navigate: {
-          state: {
-            runId: nextRunId,
-            patientId: entry.patientId,
-            appointmentId: entry.appointmentId,
-            receptionId: entry.receptionId,
-            scheduleKey,
-            encounterKey,
-            visitDate: entry.visitDate,
-          },
-        },
-      });
-      logUiState({
-        action: 'navigate',
-        screen: 'reception/list',
-        controlId: 'open-charts',
-        runId: nextRunId,
-        dataSourceTransition: mergedMeta.dataSourceTransition,
-        cacheHit: mergedMeta.cacheHit,
-        missingMaster: mergedMeta.missingMaster,
-        patientId: entry.patientId,
-      });
+      openChartsWithEncounter(buildReceptionEncounterFromEntry(entry), 'list_action', entry);
     },
-    [
-      appNav,
-      bumpRunId,
-      flags.runId,
-      initialRunId,
-      mergedMeta.cacheHit,
-      mergedMeta.dataSourceTransition,
-      mergedMeta.missingMaster,
-      mergedMeta.runId,
-      receptionCarryover,
-    ],
+    [openChartsWithEncounter],
   );
 
   const handleSelectEntry = useCallback(
@@ -4931,7 +4982,7 @@ export function ReceptionPage({
                                     handleOpenCharts(entry);
                                   }}
                                   disabled={!canOpenCharts}
-                                  title={canOpenCharts ? 'カルテを開く' : '患者IDが未登録のためカルテを開けません'}
+                                  title={canOpenCharts ? 'カルテを開く' : 'canonical key がないためカルテを開けません'}
                                 >
                                   カルテ
                                 </button>
@@ -5360,7 +5411,7 @@ export function ReceptionPage({
                                       handleOpenCharts(entry);
                                     }}
                                     disabled={!canOpenCharts}
-                                    title={canOpenCharts ? 'カルテを開く' : '患者IDが未登録のためカルテを開けません'}
+                                    title={canOpenCharts ? 'カルテを開く' : 'canonical key がないためカルテを開けません'}
                                   >
                                     カルテ
                                   </button>
@@ -5664,11 +5715,23 @@ export function ReceptionPage({
                                 (Boolean(resolvedPatientId) &&
                                   Boolean(patientSearchSelected?.patientId) &&
                                   resolvedPatientId === patientSearchSelected?.patientId);
-                              const matchedEntry = resolvedPatientId
-                                ? sortedEntries.find((entry) => entry.patientId === resolvedPatientId)
-                                : undefined;
-                              const matchedTodayEntry = matchedEntry && matchedEntry.status !== '予約' ? matchedEntry : undefined;
-                              const canOpenCharts = Boolean(matchedTodayEntry && hasHandoffEncounterKey(matchedTodayEntry));
+                              const chartsHandoffCandidate = resolvePatientChartsHandoff({
+                                patientId: resolvedPatientId,
+                                acceptedHandoff:
+                                  acceptedChartsHandoff?.encounter.patientId === resolvedPatientId ? acceptedChartsHandoff : null,
+                                entries: sortedEntries,
+                              });
+                              const canOpenCharts = chartsHandoffCandidate.kind === 'ready';
+                              const patientSearchOpenChartsTitle =
+                                chartsHandoffCandidate.kind === 'ready'
+                                  ? chartsHandoffCandidate.source === 'accepted'
+                                    ? '直前に確立した canonical handoff でカルテを開く'
+                                    : '当日の受付から一意に解決した canonical handoff でカルテを開く'
+                                  : chartsHandoffCandidate.reason === 'ambiguous_active_entries'
+                                    ? '同一患者の active entry が複数あるためカルテを開けません'
+                                    : chartsHandoffCandidate.reason === 'missing_handoff_key'
+                                      ? '当日の受付に canonical key がないためカルテを開けません'
+                                      : '当日の active entry がないためカルテを開けません';
                               return (
                                 <div
                                   key={key}
@@ -5714,30 +5777,42 @@ export function ReceptionPage({
                                       <button
                                         type="button"
                                         className="reception-search__button primary"
+                                        data-test-id="reception-patient-search-open-charts"
+                                        data-schedule-key={
+                                          chartsHandoffCandidate.kind === 'ready'
+                                            ? chartsHandoffCandidate.encounter.scheduleKey ?? ''
+                                            : ''
+                                        }
+                                        data-encounter-key={
+                                          chartsHandoffCandidate.kind === 'ready'
+                                            ? chartsHandoffCandidate.encounter.encounterKey ?? ''
+                                            : ''
+                                        }
                                         onClick={(event) => {
                                           event.stopPropagation();
                                           if (!resolvedPatientId) return;
-                                          if (matchedTodayEntry && hasHandoffEncounterKey(matchedTodayEntry)) {
-                                            handleOpenCharts(matchedTodayEntry);
+                                          if (chartsHandoffCandidate.kind === 'ready') {
+                                            openChartsWithEncounter(
+                                              chartsHandoffCandidate.encounter,
+                                              'patient_search',
+                                              buildReceptionEncounterFromEntry(chartsHandoffCandidate.encounter),
+                                            );
                                             return;
                                           }
                                           enqueue({
                                             tone: 'warning',
                                             message: 'カルテを開くための canonical key が見つかりません。',
-                                            detail: '当日の受付/予約から key を受け取れる患者のみカルテを開けます。',
+                                            detail:
+                                              chartsHandoffCandidate.reason === 'ambiguous_active_entries'
+                                                ? '同一患者の active entry が複数あるため、対象の受付を 1 件に絞ってください。'
+                                                : '当日の受付から canonical key を受け取れる患者のみカルテを開けます。',
                                           });
                                         }}
                                         onKeyDown={(event) => {
                                           event.stopPropagation();
                                         }}
                                         disabled={!canOpenCharts}
-                                        title={
-                                          canOpenCharts
-                                            ? '当日のカルテを開く'
-                                            : matchedTodayEntry
-                                              ? '当日の受付に canonical key がないためカルテを開けません'
-                                              : '直近来院日の受付に canonical key がないためカルテを開けません'
-                                        }
+                                        title={patientSearchOpenChartsTitle}
                                       >
                                         カルテを開く
                                       </button>

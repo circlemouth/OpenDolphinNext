@@ -419,12 +419,45 @@ const run = async () => {
   await writeScreenshot(page, '03-reception-list');
   logStep(`reception row status=${receptionRowStatus}`);
 
-  if (receptionRowStatus === 'found') {
-    await receptionRow.dblclick();
+  const patientSearchOpenChartsButton = workflowModal.locator('[data-test-id="reception-patient-search-open-charts"]').first();
+  let chartsHandoff = {
+    status: 'pending',
+    scheduleKey: null,
+    encounterKey: null,
+    title: null,
+  };
+  try {
+    await patientSearchOpenChartsButton.waitFor({ timeout: 10000 });
+    await page.waitForFunction(() => {
+      const button = document.querySelector('[data-test-id="reception-patient-search-open-charts"]');
+      if (!(button instanceof HTMLButtonElement)) return false;
+      const hasCanonicalKey = Boolean(button.dataset.scheduleKey || button.dataset.encounterKey);
+      return !button.disabled && hasCanonicalKey;
+    }, { timeout: 20000 });
+    chartsHandoff = await patientSearchOpenChartsButton.evaluate((button) => ({
+      status: button.disabled ? 'disabled' : 'ready',
+      scheduleKey: button.getAttribute('data-schedule-key'),
+      encounterKey: button.getAttribute('data-encounter-key'),
+      title: button.getAttribute('title'),
+    }));
+    logStep(
+      `charts handoff status=${chartsHandoff.status} scheduleKey=${chartsHandoff.scheduleKey ?? '—'} encounterKey=${
+        chartsHandoff.encounterKey ?? '—'
+      }`,
+    );
+    await patientSearchOpenChartsButton.click();
     await page.waitForURL('**/charts**');
-  } else {
-    await page.goto(`/f/${encodeURIComponent(facilityId)}/charts?patientId=${encodeURIComponent(patientId)}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForURL('**/charts**');
+  } catch (error) {
+    const buttonState = await patientSearchOpenChartsButton
+      .evaluate((button) => ({
+        disabled: button.disabled,
+        scheduleKey: button.getAttribute('data-schedule-key'),
+        encounterKey: button.getAttribute('data-encounter-key'),
+        title: button.getAttribute('title'),
+      }))
+      .catch(() => null);
+    logStep(`charts handoff error=${String(error)} state=${JSON.stringify(buttonState)}`);
+    throw new Error(`canonical charts handoff did not become available after accept: ${String(error)}`);
   }
   logStep('navigated to charts');
   await page.locator('.charts-page').waitFor({ timeout: 20000 });
@@ -778,6 +811,7 @@ const run = async () => {
       xhrDebugText,
     },
     receptionRowStatus,
+    chartsHandoff,
     charts: {
       chartsRunId,
       chartsTraceId,
@@ -826,6 +860,7 @@ const run = async () => {
     `- Visit Kind: ${summary.visitKind}\n` +
     `- Reception Result: ${summary.acceptResult.toneText}\n` +
     `- Reception Row: ${summary.receptionRowStatus}\n` +
+    `- Charts Handoff: ${summary.chartsHandoff.status} (scheduleKey=${summary.chartsHandoff.scheduleKey ?? '—'}, encounterKey=${summary.chartsHandoff.encounterKey ?? '—'})\n` +
     `- Charts runId: ${summary.charts.chartsRunId ?? 'n/a'}\n` +
     `- Charts traceId: ${summary.charts.chartsTraceId ?? 'n/a'}\n` +
     `- Order Result: ${summary.orderResult.status} (${summary.orderResult.detail})\n` +

@@ -45,6 +45,7 @@ let mockLocationState: Record<string, unknown> | undefined;
 let mockSessionRole = 'staff';
 const mockInvalidateQueries = vi.fn(async () => undefined);
 const mockEnqueue = vi.fn();
+const mockOpenCharts = vi.fn();
 
 const mockAuthFlags = {
   runId: 'RUN-AUTH',
@@ -88,7 +89,7 @@ vi.mock('../../../routes/useAppNavigation', () => ({
     encounter: {},
     openReception: vi.fn(),
     openPatients: vi.fn(),
-    openCharts: vi.fn(),
+    openCharts: mockOpenCharts,
     openOrderSets: vi.fn(),
     openPrintOutpatient: vi.fn(),
     openPrintDocument: vi.fn(),
@@ -413,6 +414,7 @@ beforeEach(() => {
   mockSessionRole = 'staff';
   mockInvalidateQueries.mockClear();
   mockEnqueue.mockReset();
+  mockOpenCharts.mockReset();
   vi.mocked(postOrcaMedicalModV2Xml).mockClear();
   localStorage.clear();
 });
@@ -947,6 +949,81 @@ describe('ReceptionPage accept UX', () => {
     expect(physicianSelect.options).toHaveLength(1);
     expect(registerButton).toBeDisabled();
     expect(mockMutationCalls).toHaveLength(1);
+  });
+
+  it('accept success 後は patient search 側の canonical handoff で charts を開ける', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-handoff-seed',
+        patientId: 'P-015',
+        appointmentId: 'A-015',
+        departmentCode: '01',
+        physicianCode: '10001',
+        name: '受診導線患者',
+        appointmentTime: '11:00',
+        department: '01 内科',
+        physician: '10001 担当医A',
+        status: '予約',
+        insurance: '保険',
+        source: 'reservations',
+      },
+    ];
+    mockMutationQueue.push(
+      {
+        patients: [{ patientId: 'P-015', name: '受診導線患者', insurance: '保険' }],
+        recordsReturned: 1,
+        runId: 'RUN-SEARCH-HANDOFF',
+      },
+      {
+        runId: 'RUN-VISIT-HANDOFF',
+        traceId: 'TRACE-VISIT-HANDOFF',
+        apiResult: '00',
+        apiResultMessage: 'OK',
+        acceptanceId: 'R-015',
+        acceptanceDate: '2026-01-29',
+        acceptanceTime: '11:05:00',
+        scheduleKey: 'F001:S150',
+        encounterKey: 'F001:E150',
+        patient: { patientId: 'P-015', name: '受診導線患者' },
+      },
+    );
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
+
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    const selectedItem = within(resultPanel).getAllByRole('listitem')[0];
+    await user.click(selectedItem);
+
+    const chartsButton = within(selectedItem).getByRole('button', { name: 'カルテを開く' });
+    expect(chartsButton).toBeDisabled();
+
+    const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    await user.selectOptions(within(acceptPanel).getByLabelText(/診療科/), '01');
+    await user.selectOptions(within(acceptPanel).getByLabelText(/担当医/), '10001');
+    await user.click(within(acceptPanel).getByRole('button', { name: '受付する' }));
+
+    await waitFor(() => expect(chartsButton).toBeEnabled());
+    expect(chartsButton).toHaveAttribute('data-schedule-key', 'F001:S150');
+    expect(chartsButton).toHaveAttribute('data-encounter-key', 'F001:E150');
+
+    await user.click(chartsButton);
+
+    expect(mockOpenCharts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        encounter: expect.objectContaining({
+          patientId: 'P-015',
+          receptionId: 'R-015',
+          scheduleKey: 'F001:S150',
+          encounterKey: 'F001:E150',
+          visitDate: '2026-01-29',
+        }),
+      }),
+    );
   });
 });
 
@@ -1600,6 +1677,38 @@ describe('ReceptionPage status/date/card action UX', () => {
       ),
     );
     expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
+  });
+
+  it('row double click は canonical key が無い場合に charts navigation を block する', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-open-blocked',
+        patientId: 'P-700',
+        receptionId: 'R-700',
+        name: 'ダブルクリック患者',
+        appointmentTime: '09:30',
+        department: '01 内科',
+        physician: '10001 主治医',
+        status: '受付中',
+        insurance: '保険',
+        source: 'visits',
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const listRegion = screen.getByRole('region', { name: '受付一覧' });
+    const row = within(listRegion).getByRole('row', { name: /ダブルクリック患者/ });
+    await user.dblClick(row);
+
+    expect(mockOpenCharts).not.toHaveBeenCalled();
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tone: 'warning',
+        message: 'カルテを開くための canonical key が未設定です。',
+      }),
+    );
   });
 });
 

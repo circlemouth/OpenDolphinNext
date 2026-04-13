@@ -7,6 +7,7 @@ import { isSystemAdminRole } from '../../libs/auth/roles';
 import { resolveAriaLive, resolveRunId } from '../../libs/observability/observability';
 import { copyTextToClipboard } from '../../libs/observability/runIdCopy';
 import { useAppToast } from '../../libs/ui/appToast';
+import { resolveOrcaResultTone } from '../../libs/orca/orcaApiResultPolicy';
 import { useSession } from '../../AppRouter';
 import { ToneBanner } from '../reception/components/ToneBanner';
 import { AuditSummaryInline } from '../shared/AuditSummaryInline';
@@ -60,7 +61,6 @@ import {
   type OrcaInternalWrapperEndpoint,
 } from './orcaInternalWrapperApi';
 import { fetchOrcaCapabilities, type OrcaInternalWrapperCapability } from './orcaCapabilitiesApi';
-import { resolveOrcaResultTone } from './orcaApiResultPolicy';
 import type { FeedbackTone } from '../shared/feedbackTone';
 import './administration.css';
 

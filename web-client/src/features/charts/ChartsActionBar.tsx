@@ -4,6 +4,7 @@ import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import { logAuditEvent, logUiState } from '../../libs/audit/auditLogger';
 import { isSystemAdminRole } from '../../libs/auth/roles';
 import { resolveAuditActor } from '../../libs/auth/storedAuth';
+import { isOrcaSuccessResult } from '../../libs/orca/orcaApiResultPolicy';
 import { getObservabilityMeta, resolveAriaLive } from '../../libs/observability/observability';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import { ToneBanner, type BannerTone } from '../reception/components/ToneBanner';
@@ -381,7 +382,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     return value.length >= 10 ? value.slice(0, 10) : value;
   };
 
-  const isApiResultOk = (apiResult?: string) => Boolean(apiResult && /^0+$/.test(apiResult));
   const isIdempotentDuplicate = (apiResult?: string, apiResultMessage?: string) =>
     apiResult === '80' && Boolean(apiResultMessage && /既に同日の診療データが登録されています/.test(apiResultMessage));
 
@@ -1452,7 +1452,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01', signal });
           const idempotentDuplicate = isIdempotentDuplicate(result.apiResult, result.apiResultMessage);
           const transportOk = result.ok;
-          const apiOk = (result.apiOk ?? isApiResultOk(result.apiResult)) || idempotentDuplicate;
+          const apiOk = (result.apiOk ?? isOrcaSuccessResult(result.apiResult)) || idempotentDuplicate;
           const hasMissingTags = Boolean(result.missingTags?.length);
           const allowMissingTags = idempotentDuplicate;
           const outcome = transportOk && apiOk && (!hasMissingTags || allowMissingTags) ? 'success' : transportOk ? 'warning' : 'error';

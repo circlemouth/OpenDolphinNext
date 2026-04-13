@@ -98,6 +98,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("patientId is required", body.get("message"));
         assertNotNull(auditDispatcher.payload);
         assertEquals("LOCAL_CHART_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("local", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 
@@ -118,6 +119,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("entity is invalid", body.get("message"));
         assertNotNull(auditDispatcher.payload);
         assertEquals("LOCAL_CHART_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("local", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 
@@ -148,6 +150,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("regular", entry.getTemplate().getPrescriptionTiming());
         assertNotNull(auditDispatcher.payload);
         assertEquals("LOCAL_CHART_ORDER_RECOMMENDATION_FETCH", auditDispatcher.payload.getAction());
+        assertEquals("local", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals(AuditEventEnvelope.Outcome.SUCCESS, auditDispatcher.outcome);
     }
 
@@ -235,6 +238,7 @@ class LocalOrderBundleResourceTest extends RuntimeDelegateTestSupport {
         assertEquals("startDate must be yyyy-MM-dd", body.get("message"));
         assertNotNull(auditDispatcher.payload);
         assertEquals("LOCAL_CHART_ORDER_BUNDLE_MUTATION", auditDispatcher.payload.getAction());
+        assertEquals("local", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
     }
 

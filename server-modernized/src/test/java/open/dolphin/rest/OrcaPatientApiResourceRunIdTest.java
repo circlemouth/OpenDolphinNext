@@ -66,6 +66,7 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
 
         assertNotNull(auditDispatcher.payload);
         assertEquals("run-patient", auditDispatcher.payload.getDetails().get("runId"));
+        assertEquals("official", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals("00001", auditDispatcher.payload.getPatientId());
         assertEquals("req-patient", auditDispatcher.payload.getRequestId());
         assertEquals(AuditEventEnvelope.Outcome.SUCCESS, auditDispatcher.outcome);
@@ -82,6 +83,7 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
         assertEquals("/api/orca/official/patientgetv2", auditDispatcher.payload.getResource());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
         assertEquals("failed", auditDispatcher.payload.getDetails().get("status"));
+        assertEquals("official", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals(400, auditDispatcher.payload.getDetails().get("httpStatus"));
         assertEquals("orca.patientget.error", auditDispatcher.payload.getDetails().get("errorCode"));
     }
@@ -96,6 +98,7 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
         assertEquals("ORCA_OFFICIAL_GET_PATIENT", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
         assertEquals("failed", auditDispatcher.payload.getDetails().get("status"));
+        assertEquals("official", auditDispatcher.payload.getDetails().get("scope"));
         assertEquals(400, auditDispatcher.payload.getDetails().get("httpStatus"));
         assertEquals("orca.patientget.error", auditDispatcher.payload.getDetails().get("errorCode"));
     }

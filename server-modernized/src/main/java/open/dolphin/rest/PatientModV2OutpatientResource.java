@@ -187,6 +187,11 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
         details.put("operation", operation);
         details.put("patientId", patch.patientId);
         details.put("runId", runId);
+        String scope = AbstractOrcaRestResource.resolveAuditScope(
+                request != null ? request.getRequestURI() : ("create".equals(operation) ? CREATE_RESOURCE_PATH : UPDATE_RESOURCE_PATH));
+        if (scope != null && !scope.isBlank()) {
+            details.put("scope", scope);
+        }
         details.put("routeNamespace", ROUTE_NAMESPACE);
         details.put("dataSource", DATA_SOURCE_SERVER);
         details.put("dataSourceTransition", DATA_SOURCE_SERVER);

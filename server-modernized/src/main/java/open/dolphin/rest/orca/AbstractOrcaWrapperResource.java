@@ -22,6 +22,8 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
     private static final String TRACE_HEADER = "X-Request-Id";
     protected Map<String, Object> newAuditDetails(HttpServletRequest request) {
         Map<String, Object> details = new LinkedHashMap<>();
+        String resourcePath = request != null ? request.getRequestURI() : null;
+        String scope = resolveAuditScope(resourcePath);
         details.put("runId", resolveRunId(request));
         details.put("dataSource", DATA_SOURCE_SERVER);
         details.put("dataSourceTransition", DATA_SOURCE_SERVER);
@@ -29,6 +31,9 @@ public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResour
         details.put("missingMaster", false);
         details.put("fallbackUsed", false);
         details.put("fetchedAt", Instant.now().toString());
+        if (scope != null && !scope.isBlank()) {
+            details.put("scope", scope);
+        }
 
         String facilityId = actorFacilityId(request);
         if (facilityId != null && !facilityId.isBlank()) {

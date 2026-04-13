@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import org.junit.jupiter.api.Test;
 
 class PublicRouteInventoryContractTest {
@@ -138,6 +139,14 @@ class PublicRouteInventoryContractTest {
         assertThat(readStringConstant(open.dolphin.rest.orca.AbstractOrcaWrapperResource.class,
                 "AUDIT_SYNC_PATIENTS_ACTION"))
                 .isEqualTo("ORCA_OFFICIAL_SYNC_PATIENTS");
+        assertThat(AbstractOrcaRestResource.resolveAuditScope("/api/orca/official/patientgetv2"))
+                .isEqualTo("official");
+        assertThat(AbstractOrcaRestResource.resolveAuditScope("/api/orca/master/order/inputsets"))
+                .isEqualTo("master");
+        assertThat(AbstractOrcaRestResource.resolveAuditScope("/api/local/order/recommendations"))
+                .isEqualTo("local");
+        assertThat(AbstractOrcaRestResource.resolveAuditScope("/api/admin/internal/orca/patients/sync/status"))
+                .isEqualTo("admin-internal");
     }
 
     private static Set<String> collectByPrefix(Set<String> routeKeys, String prefix) {

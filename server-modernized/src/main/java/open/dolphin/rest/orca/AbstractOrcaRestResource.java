@@ -99,13 +99,24 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
             return;
         }
         Map<String, Object> enriched = details != null ? new HashMap<>(details) : new HashMap<>();
+        String resourcePath = extractDetailText(enriched, "resource");
+        if (resourcePath == null || resourcePath.isBlank()) {
+            resourcePath = request != null ? request.getRequestURI() : null;
+        }
+        String scope = extractDetailText(enriched, "scope");
+        if ((scope == null || scope.isBlank()) && resourcePath != null && !resourcePath.isBlank()) {
+            scope = resolveAuditScope(resourcePath);
+            if (scope != null && !scope.isBlank()) {
+                enriched.put("scope", scope);
+            }
+        }
         String facilityId = resolveAuditFacilityId(request);
         if (facilityId != null && !facilityId.isBlank()) {
             enriched.putIfAbsent("facilityId", facilityId);
         }
         AuditEventPayload payload = new AuditEventPayload();
         payload.setAction(action);
-        payload.setResource(request != null ? request.getRequestURI() : "/orca");
+        payload.setResource(resourcePath != null && !resourcePath.isBlank() ? resourcePath : "/orca");
         payload.setActorId(request != null ? request.getRemoteUser() : null);
         payload.setIpAddress(resolveClientIp(request));
         payload.setUserAgent(request != null ? request.getHeader("User-Agent") : null);
@@ -138,6 +149,29 @@ public abstract class AbstractOrcaRestResource extends AbstractResource {
         String errorCode = extractDetailText(enriched, "errorCode");
         String errorMessage = extractDetailText(enriched, "errorMessage");
         sessionAuditDispatcher.record(payload, outcome, errorCode, errorMessage);
+    }
+
+    public static String resolveAuditScope(String resourcePath) {
+        if (resourcePath == null) {
+            return null;
+        }
+        String normalized = resourcePath.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (normalized.startsWith("/api/orca/official/")) {
+            return "official";
+        }
+        if (normalized.startsWith("/api/orca/master/")) {
+            return "master";
+        }
+        if (normalized.startsWith("/api/local/")) {
+            return "local";
+        }
+        if (normalized.startsWith("/api/admin/internal/")) {
+            return "admin-internal";
+        }
+        return null;
     }
 
     private String resolveAuditFacilityId(HttpServletRequest request) {

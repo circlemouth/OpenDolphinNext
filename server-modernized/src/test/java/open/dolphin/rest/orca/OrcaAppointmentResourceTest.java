@@ -227,6 +227,7 @@ class OrcaAppointmentResourceTest {
         assertNotNull(dispatcher.payload.getDetails());
         assertEquals("trace-appointment", dispatcher.payload.getDetails().get("traceId"));
         assertEquals("RUN-TRACE-001", dispatcher.payload.getDetails().get("runId"));
+        assertEquals("official", dispatcher.payload.getDetails().get("scope"));
     }
 
     private HttpServletRequest createRequest(String remoteUser, String uri, Map<String, String> headers) {

@@ -104,6 +104,10 @@ public class OrcaPatientApiResource extends AbstractResource {
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("runId", runId);
         details.put("resource", resourcePath);
+        String scope = AbstractOrcaRestResource.resolveAuditScope(resourcePath);
+        if (scope != null && !scope.isBlank()) {
+            details.put("scope", scope);
+        }
         String remoteUser = request != null ? request.getRemoteUser() : null;
         String facilityId = getRemoteFacility(remoteUser);
         if (facilityId != null && !facilityId.isBlank()) {

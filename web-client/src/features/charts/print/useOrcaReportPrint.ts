@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { logUiState } from '../../../libs/audit/auditLogger';
 import { resolveAuditActor } from '../../../libs/auth/storedAuth';
+import { isOrcaSuccessResult } from '../../../libs/orca/orcaApiResultPolicy';
 import type { DataSourceTransition } from '../authService';
 import type { OrcaClaimSendCacheEntry } from '../orcaClaimSendCache';
 import { recordChartsAuditEvent } from '../audit';
@@ -80,8 +81,6 @@ const pickLatestIncomeEntry = (entries: IncomeInfoEntry[]) => {
     return toTimestamp(entry.performDate) >= toTimestamp(latest.performDate) ? entry : latest;
   }, entries[0]);
 };
-
-const isApiResultOk = (apiResult?: string) => Boolean(apiResult && /^0+$/.test(apiResult));
 
 export function useOrcaReportPrint({
   dialogOpen,
@@ -341,7 +340,7 @@ export function useOrcaReportPrint({
     try {
       const result = await postOrcaReport(resolvedReportType, requestPayload);
       lastResponse = result;
-      const apiResultOk = isApiResultOk(result.apiResult);
+      const apiResultOk = isOrcaSuccessResult(result.apiResult);
       const responseRunId = result.runId ?? runId;
       const responseTraceId = result.traceId ?? traceId;
       if (!result.ok || !apiResultOk || !result.dataId) {
