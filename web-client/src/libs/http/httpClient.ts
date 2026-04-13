@@ -85,7 +85,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/official/appointments/*',
     purpose: 'scope=official。予約一覧・患者／請求試算・来院状況を取得して ORCA バナーの `runId`/`dataSource` を連携する。',
     auditMetadata: ['runId', 'dataSource', 'cacheHit', 'missingMaster', 'fallbackUsed', 'dataSourceTransition', 'fetchedAt'],
-    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md'],
+    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md', 'docs/contracts/orca-route-taxonomy.md'],
   },
   {
     id: 'diseaseMutation',
@@ -95,7 +95,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local/diagnoses',
     purpose: 'scope=local。Charts の local diagnosis 編集で facilityId/patientId/karteId スコープの登録・更新・削除を行い、ORCA live 契約と分離する。',
     auditMetadata: ['runId', 'operation', 'patientId', 'karteId'],
-    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/managerdocs/04_ui_improvement_program.md'],
+    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/managerdocs/04_ui_improvement_program.md', 'docs/contracts/orca-route-taxonomy.md'],
   },
   {
     id: 'orderMasterRead',
@@ -115,7 +115,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local/order/bundles',
     purpose: 'scope=local。Charts の処方（RP）/オーダー束編集でバンドルを登録・更新・削除し、監査イベントへ反映する。',
     auditMetadata: ['runId', 'operation', 'patientId', 'entity'],
-    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/managerdocs/04_ui_improvement_program.md'],
+    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/managerdocs/04_ui_improvement_program.md', 'docs/contracts/orca-route-taxonomy.md'],
   },
   {
     id: 'officialPatientCreate',
@@ -125,7 +125,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/official/patientmodv2/outpatient/create',
     purpose: 'scope=official。Patients で official patientmodv2 class=01 create を実行し、成功後に canonical/local sync を確定する。',
     auditMetadata: ['runId', 'routeNamespace', 'operation', 'patientId'],
-    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md'],
+    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-route-taxonomy.md'],
   },
   {
     id: 'officialPatientUpdate',
@@ -135,7 +135,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/orca/official/patientmodv2/outpatient/update',
     purpose: 'scope=official。Patients/Charts で official patientmodv2 class=02 update を実行し、成功後に canonical/local sync を確定する。',
     auditMetadata: ['runId', 'routeNamespace', 'operation', 'patientId'],
-    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md'],
+    sourceDocs: ['docs/architecture/web-client-overview.md', 'docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-route-taxonomy.md'],
   },
   {
     id: 'patientOutpatientInfo',
@@ -145,7 +145,7 @@ export const OUTPATIENT_API_ENDPOINTS: readonly HttpEndpointDefinition[] = [
     path: '/api/local/patients/search',
     purpose: 'scope=local。Reception/Patients 用に院内ローカル患者検索を実行し、`routeNamespace=local` と `recordsReturned` を含む監査を生成する。',
     auditMetadata: ['runId', 'routeNamespace', 'dataSource', 'dataSourceTransition', 'fetchedAt', 'recordsReturned'],
-    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md'],
+    sourceDocs: ['docs/architecture/server-modernization-overview.md', 'docs/contracts/orca-master-api.md', 'docs/contracts/orca-route-taxonomy.md'],
   },
 ];
 

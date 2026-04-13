@@ -91,9 +91,9 @@ export type PatientMutationResult = {
 };
 
 const LOCAL_PATIENT_SEARCH_ENDPOINTS = ['/api/local/patients/search'];
-const OFFICIAL_PATIENT_CREATE_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/create';
-const OFFICIAL_PATIENT_UPDATE_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/update';
-const OFFICIAL_PATIENT_BATCH_ENDPOINT = '/api/orca/official/patients/batch';
+const PATIENT_CREATE_OFFICIAL_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/create';
+const PATIENT_UPDATE_OFFICIAL_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/update';
+const PATIENT_BATCH_OFFICIAL_ENDPOINT = '/api/orca/official/patients/batch';
 type OfficialPatientMutationOperation = 'create' | 'update';
 
 const normalizeBoolean = (value: unknown) => {
@@ -275,7 +275,7 @@ export async function refetchOfficialCanonicalPatients(params: {
   }
   const runId = params.runId ?? getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
-  const result = await tryPostJson(OFFICIAL_PATIENT_BATCH_ENDPOINT, {
+  const result = await tryPostJson(PATIENT_BATCH_OFFICIAL_ENDPOINT, {
     patientIds,
     includeInsurance: false,
   });
@@ -492,7 +492,7 @@ const performOfficialPatientMutation = async (
   }) as Record<string, unknown>;
 
   result.auditEvent = {
-    action: (serverAuditEvent?.action as string | undefined) ?? `OFFICIAL_PATIENT_${operation.toUpperCase()}`,
+    action: (serverAuditEvent?.action as string | undefined) ?? `ORCA_OFFICIAL_${operation.toUpperCase()}_PATIENT`,
     outcome: (serverAuditEvent?.outcome as string | undefined) ?? (result.ok ? 'success' : 'error'),
     subject: (serverAuditEvent?.subject as string | undefined) ?? (payload.auditMeta?.source ?? 'patients'),
     runId: (serverAuditEvent?.runId as string | undefined) ?? result.runId,
@@ -547,9 +547,9 @@ const performOfficialPatientMutation = async (
 };
 
 export async function createOfficialPatient(payload: OfficialPatientCreatePayload): Promise<PatientMutationResult> {
-  return performOfficialPatientMutation(OFFICIAL_PATIENT_CREATE_ENDPOINT, payload, 'create');
+  return performOfficialPatientMutation(PATIENT_CREATE_OFFICIAL_ENDPOINT, payload, 'create');
 }
 
 export async function updateOfficialPatient(payload: OfficialPatientUpdatePayload): Promise<PatientMutationResult> {
-  return performOfficialPatientMutation(OFFICIAL_PATIENT_UPDATE_ENDPOINT, payload, 'update');
+  return performOfficialPatientMutation(PATIENT_UPDATE_OFFICIAL_ENDPOINT, payload, 'update');
 }

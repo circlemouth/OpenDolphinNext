@@ -91,6 +91,8 @@
 - ORCA proxy 応答ヘッダ転送の任意設定
   - `orca.proxy.forward.x-orca-headers` / `ORCA_PROXY_FORWARD_X_ORCA_HEADERS` は `true|false`。未設定時は `false`。
   - `orca.proxy.forward.api-result-message-header` / `ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER` は `true|false`。未設定時は `false`。
+  - `orca.acceptmod.suppress-acceptance-push` / `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH` は `true|false`。未設定時は `false`。
+    - WebORCA 環境固有の workaround が必要な場合のみ明示的に `true` を入れ、client 側で `Acceptance_Push` を補完・抑止しない。
 - ORCA Push runtime 設定
   - `orca.push.enabled` / `ORCA_PUSH_ENABLED` は `true|false`。未設定時は `false`。
   - `orca.push.shadow-mode` / `ORCA_PUSH_SHADOW_MODE` は `true|false`。未設定時は `true`。

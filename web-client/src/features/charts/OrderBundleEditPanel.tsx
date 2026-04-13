@@ -2910,7 +2910,7 @@ export function OrderBundleEditPanel({
     resolve?.(result);
   }, []);
 
-  const runContraindicationCheck = async (bundleForm: BundleFormState) => {
+  const runOfficialContraindicationCheck = async (bundleForm: BundleFormState) => {
     setIsContraChecking(true);
     setContraNotice(null);
     setContraDetails([]);
@@ -3570,7 +3570,7 @@ export function OrderBundleEditPanel({
       });
       return;
     }
-    const canContinue = await runContraindicationCheck(normalizedForm);
+    const canContinue = await runOfficialContraindicationCheck(normalizedForm);
     if (!canContinue) return;
     setValidationIssues([]);
     mutation.mutate({ form: normalizedForm, action });
@@ -3851,7 +3851,7 @@ export function OrderBundleEditPanel({
             <button
               type="button"
               className="charts-side-panel__notice-action charts-side-panel__notice-action--retry"
-              onClick={() => void runContraindicationCheck(form)}
+              onClick={() => void runOfficialContraindicationCheck(form)}
               disabled={isContraChecking}
             >
               {isContraChecking ? '再実行中…' : '患者別 ORCA 禁忌チェックを再実行'}
@@ -4631,7 +4631,7 @@ export function OrderBundleEditPanel({
           {itemPredictiveQuery.data?.ok && isItemCodeSearch && correctionMeta ? (
             <div className="charts-side-panel__correction">
               <div className="charts-side-panel__correction-header">
-                <strong>コード補正候補（medicationgetv2）</strong>
+                <strong>コード補正候補（official medicationgetv2）</strong>
                 <span>
                   Api_Result: {correctionMeta.apiResult ?? '—'} / 有効期限: {correctionMeta.validTo ?? '—'}
                 </span>
@@ -5001,7 +5001,7 @@ export function OrderBundleEditPanel({
             {supportsCommentCodes && selectionCommentCandidates.length > 0 && (
             <div className="charts-side-panel__correction">
               <div className="charts-side-panel__correction-header">
-                <strong>選択式コメント候補（medicationgetv2）</strong>
+                <strong>選択式コメント候補（official medicationgetv2）</strong>
                 <span>{selectionCommentCandidates.length}件</span>
               </div>
               <div className="charts-side-panel__search-table">

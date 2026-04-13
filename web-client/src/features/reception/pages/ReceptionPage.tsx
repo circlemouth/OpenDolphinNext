@@ -241,51 +241,23 @@ const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error')
 
 const normalizeApiResult = (value?: string) => (value ?? '').trim().toUpperCase();
 
-const extractPhysicianCode = (value?: string) => {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  const code = trimmed.match(/^(\d{4,5})(?:\s|$)/)?.[1];
-  if (!code) return undefined;
-  return code;
-};
-
-const extractPhysicianLabel = (value?: string) => {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  const withoutCode = trimmed.replace(/^\d{4,5}\s*/, '').trim();
-  if (withoutCode && withoutCode !== trimmed) return withoutCode;
-  if (/^\d{4,5}$/.test(trimmed)) return undefined;
-  return trimmed;
-};
-
 type PhysicianNameMap = Record<string, string>;
 
-const resolveDepartmentCode = (department?: string) => {
-  if (!department) return undefined;
-  const trimmed = department.trim();
-  if (!trimmed) return undefined;
-  const leading = trimmed.match(/^(\d{2})(?:\D|$)/)?.[1];
-  if (leading) return leading;
-  const match = trimmed.match(/\b(\d{2})\b/);
-  return match?.[1];
-};
-const DEPARTMENT_CODE_RE = /^\d{2}$/;
-const normalizeDepartmentCode = (value?: string) => {
-  const code = resolveDepartmentCode(value);
-  if (!code) return undefined;
-  return DEPARTMENT_CODE_RE.test(code) ? code : undefined;
+const normalizeCanonicalCode = (value?: string) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 };
 
-const resolvePhysicianCodeSelection = (value?: string, nameMap?: PhysicianNameMap) => {
-  const direct = value?.trim();
-  if (!direct) return undefined;
-  if (/^\d{4,5}$/.test(direct)) return direct;
-  const extracted = extractPhysicianCode(direct);
-  if (extracted) return extracted;
-  for (const [code, label] of Object.entries(nameMap ?? {})) {
-    if (label === direct) return code;
-  }
-  return undefined;
+const resolveReceptionEntryDepartmentCode = (entry?: Pick<ReceptionEntry, 'departmentCode'>) =>
+  normalizeCanonicalCode(entry?.departmentCode);
+
+const resolveReceptionEntryPhysicianCode = (entry?: Pick<ReceptionEntry, 'physicianCode'>) =>
+  normalizeCanonicalCode(entry?.physicianCode);
+
+const resolveEntryDisplayLabel = (code: string, value?: string) => {
+  const trimmed = value?.trim();
+  if (trimmed && trimmed !== code) return trimmed;
+  return code;
 };
 
 const isApiResultOk = (apiResult?: string) => Boolean(apiResult && /^0+$/.test(apiResult));
@@ -1558,7 +1530,7 @@ export function ReceptionPage({
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [acceptWorkflowModalOpen]);
-  const departmentCodeMap = useMemo(() => {
+  const departmentLabelMap = useMemo(() => {
     const raw = appointmentQuery.data?.raw as Record<string, unknown> | undefined;
     const map = new Map<string, string>();
     if (!raw) return map;
@@ -1575,7 +1547,9 @@ export function ReceptionPage({
           (record.departmentCode as string | undefined) ??
           (record.Department_Code as string | undefined) ??
           (record.department_code as string | undefined);
-        if (name && code) map.set(name, code);
+        const normalizedCode = code?.trim();
+        if (!normalizedCode) return;
+        map.set(normalizedCode, resolveEntryDisplayLabel(normalizedCode, name));
       });
     };
     const rawRecord = raw as Record<string, unknown>;
@@ -1634,10 +1608,11 @@ export function ReceptionPage({
   );
   const departmentOptions = useMemo(() => {
     return buildDepartmentOptions({
-      departmentCodeMap,
-      visibleDepartments: uniqueDepartments,
+      departmentLabels: departmentLabelMap,
+      visibleEntries: visibleAppointmentEntries,
+      selectedDepartmentCode: acceptDepartmentSelection,
     });
-  }, [departmentCodeMap, uniqueDepartments]);
+  }, [acceptDepartmentSelection, departmentLabelMap, visibleAppointmentEntries]);
   const filteredEntries = useMemo(
     () => filterEntries(visibleAppointmentEntries, keyword, departmentFilter, physicianFilter, paymentMode),
     [departmentFilter, keyword, paymentMode, physicianFilter, visibleAppointmentEntries],
@@ -1965,39 +1940,38 @@ export function ReceptionPage({
   ]);
 
   const physicianOptions = useMemo(() => {
-    const merged = new Set<string>();
-    const labels = new Map<string, string>();
+    const options = new Map<string, string>();
     const selected =
       selectedEntryKey && sortedEntries.length > 0
         ? sortedEntries.find((entry) => entryKey(entry) === selectedEntryKey)
         : undefined;
-    const register = (candidate?: string) => {
-      const code = resolvePhysicianCodeSelection(candidate, physicianNameMap);
-      if (!code) return;
-      merged.add(code);
-      const label = extractPhysicianLabel(candidate);
-      if (label && !labels.has(code)) {
-        labels.set(code, label);
-      }
+    const registerEntry = (entry?: ReceptionEntry) => {
+      const code = resolveReceptionEntryPhysicianCode(entry);
+      if (!code || options.has(code)) return;
+      const mappedLabel = physicianNameMap[code]?.trim();
+      options.set(code, mappedLabel && mappedLabel !== code ? mappedLabel : resolveEntryDisplayLabel(code, entry?.physician));
     };
-    uniquePhysicians.forEach((physician) => register(physician));
-    register(selected?.physician);
-    register(physicianFilter);
-    register(acceptPhysicianSelection);
-    return Array.from(merged)
+    visibleAppointmentEntries.forEach((entry) => registerEntry(entry));
+    registerEntry(selected);
+    const selectedCode = normalizeCanonicalCode(acceptPhysicianSelection);
+    if (selectedCode && !options.has(selectedCode)) {
+      const mappedLabel = physicianNameMap[selectedCode]?.trim();
+      options.set(selectedCode, mappedLabel && mappedLabel !== selectedCode ? mappedLabel : selectedCode);
+    }
+    return Array.from(options.entries())
       .sort((a, b) => {
-        const leftLabel = labels.get(a) ?? physicianNameMap[a] ?? a;
-        const rightLabel = labels.get(b) ?? physicianNameMap[b] ?? b;
+        const [leftCode, leftLabel] = a;
+        const [rightCode, rightLabel] = b;
         const byLabel = leftLabel.localeCompare(rightLabel, 'ja');
         if (byLabel !== 0) return byLabel;
-        return a.localeCompare(b, 'ja');
+        return leftCode.localeCompare(rightCode, 'ja');
       })
       .slice(0, 200)
-      .map((code) => ({
+      .map(([code, label]) => ({
         code,
-        label: labels.get(code) ?? physicianNameMap[code] ?? code,
+        label,
       }));
-  }, [uniquePhysicians, physicianFilter, selectedEntryKey, sortedEntries, acceptPhysicianSelection, physicianNameMap]);
+  }, [acceptPhysicianSelection, physicianNameMap, selectedEntryKey, sortedEntries, visibleAppointmentEntries]);
 
   const selectedEntry = useMemo(() => {
     if (!selectedEntryKey) return undefined;
@@ -2040,10 +2014,8 @@ export function ReceptionPage({
       if (!entry) return;
       const nextPatientId = entry.patientId?.trim() ?? '';
       const nextPaymentMode = resolvePaymentMode(entry.insurance ?? undefined);
-      const nextDepartmentCode =
-        normalizeDepartmentCode(entry.department) ??
-        (entry.department ? normalizeDepartmentCode(departmentCodeMap.get(entry.department)) : undefined);
-      const nextPhysicianCode = resolvePhysicianCodeSelection(entry.physician, physicianNameMap);
+      const nextDepartmentCode = resolveReceptionEntryDepartmentCode(entry);
+      const nextPhysicianCode = resolveReceptionEntryPhysicianCode(entry);
       const nextVisitKind = acceptVisitKind.trim() ? acceptVisitKind : '1';
       const shouldUpdate = (current: string, next: string, last?: string) =>
         Boolean(next) && (options?.force || !current.trim() || (last && current === last));
@@ -2073,13 +2045,13 @@ export function ReceptionPage({
         setAcceptVisitKind(nextVisitKind);
         updated = true;
       }
-      const currentDepartmentCode = normalizeDepartmentCode(acceptDepartmentSelection) ?? '';
+      const currentDepartmentCode = normalizeCanonicalCode(acceptDepartmentSelection) ?? '';
       const nextDepartmentSelection = nextDepartmentCode ?? '';
       if (currentDepartmentCode !== nextDepartmentSelection) {
         setAcceptDepartmentSelection(nextDepartmentSelection);
         updated = true;
       }
-      const currentPhysicianCode = resolvePhysicianCodeSelection(acceptPhysicianSelection, physicianNameMap) ?? '';
+      const currentPhysicianCode = normalizeCanonicalCode(acceptPhysicianSelection) ?? '';
       const nextPhysicianSelection = nextPhysicianCode ?? '';
       if (currentPhysicianCode !== nextPhysicianSelection) {
         setAcceptPhysicianSelection(nextPhysicianSelection);
@@ -2110,17 +2082,13 @@ export function ReceptionPage({
       acceptPaymentMode,
       acceptPhysicianSelection,
       acceptVisitKind,
-      departmentCodeMap,
-      physicianNameMap,
     ],
   );
 
   const acceptAutoFillSignature = useMemo(() => {
     if (!selectedEntry) return null;
-    const departmentCode =
-      normalizeDepartmentCode(selectedEntry.department) ??
-      (selectedEntry.department ? normalizeDepartmentCode(departmentCodeMap.get(selectedEntry.department)) : '');
-    const physicianCode = resolvePhysicianCodeSelection(selectedEntry.physician, physicianNameMap) ?? '';
+    const departmentCode = resolveReceptionEntryDepartmentCode(selectedEntry) ?? '';
+    const physicianCode = resolveReceptionEntryPhysicianCode(selectedEntry) ?? '';
     return JSON.stringify({
       key: entryKey(selectedEntry),
       patientId: selectedEntry.patientId ?? '',
@@ -2128,7 +2096,7 @@ export function ReceptionPage({
       departmentCode: departmentCode ?? '',
       physicianCode,
     });
-  }, [departmentCodeMap, physicianNameMap, selectedEntry]);
+  }, [selectedEntry]);
 
   useEffect(() => {
     if (!selectedEntry || !acceptAutoFillSignature) return;
@@ -2375,10 +2343,8 @@ export function ReceptionPage({
   const { tone, message: toneMessage, transitionMeta } = toneDetails;
   const masterSource = toMasterSource(tonePayload.dataSourceTransition);
   const isAcceptSubmitting = visitMutation.isPending;
-  const resolvedDepartmentCode =
-    normalizeDepartmentCode(acceptDepartmentSelection) ??
-    (DEPARTMENT_CODE_RE.test(departmentFilter.trim()) ? departmentFilter.trim() : '');
-  const resolvedPhysicianCode = resolvePhysicianCodeSelection(acceptPhysicianSelection, physicianNameMap) ?? '';
+  const resolvedDepartmentCode = normalizeCanonicalCode(acceptDepartmentSelection) ?? '';
+  const resolvedPhysicianCode = normalizeCanonicalCode(acceptPhysicianSelection) ?? '';
   const resolvedMedicalInformation = acceptMedicalInformationCode.trim() || undefined;
   const resolveAcceptTarget = useCallback((): AcceptTarget => {
     const resolveFromVisibleEntries = (targetPatientId: string) =>
@@ -2961,9 +2927,7 @@ export function ReceptionPage({
     const matches = visibleAppointmentEntries.filter((entry) => entry.patientId?.trim() === acceptTargetPatientId);
     const inScope = (entry: ReceptionEntry) => {
       if (!resolvedDepartmentCode) return true;
-      const entryDepartmentCode =
-        normalizeDepartmentCode(entry.department) ??
-        (entry.department ? normalizeDepartmentCode(departmentCodeMap.get(entry.department)) : undefined);
+      const entryDepartmentCode = resolveReceptionEntryDepartmentCode(entry);
       if (!entryDepartmentCode) return true;
       return entryDepartmentCode === resolvedDepartmentCode;
     };
@@ -2978,7 +2942,6 @@ export function ReceptionPage({
     return { disabled: false, label: '受付する', reason: undefined };
   }, [
     acceptTargetPatientId,
-    departmentCodeMap,
     acceptPaymentMode,
     isManualMismatchConfirmed,
     isManualPatientMismatch,
@@ -3695,7 +3658,6 @@ export function ReceptionPage({
       }
     },
     [
-      departmentCodeMap,
       enqueue,
       flags.runId,
       initialRunId,

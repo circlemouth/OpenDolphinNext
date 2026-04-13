@@ -3,6 +3,7 @@ package open.dolphin.rest;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import jakarta.ws.rs.core.MediaType;
+import java.lang.reflect.Field;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -121,6 +122,24 @@ class PublicRouteInventoryContractTest {
                 "open.orca.rest.OrcaPatientDiseaseResource");
     }
 
+    @Test
+    void routeSharedAuditActionsFollowTaxonomyPrefixes() throws Exception {
+        assertThat(readStringConstant(PatientModV2OutpatientResource.class, "CREATE_AUDIT_ACTION"))
+                .startsWith("ORCA_OFFICIAL_")
+                .doesNotContain("OFFICIAL" + "_PATIENT_");
+        assertThat(readStringConstant(PatientModV2OutpatientResource.class, "UPDATE_AUDIT_ACTION"))
+                .startsWith("ORCA_OFFICIAL_")
+                .doesNotContain("OFFICIAL" + "_PATIENT_");
+        assertThat(readStringConstant(OrcaPatientApiResource.class, "AUDIT_ACTION"))
+                .isEqualTo("ORCA_OFFICIAL_GET_PATIENT");
+        assertThat(readStringConstant(open.dolphin.rest.orca.AbstractOrcaWrapperResource.class,
+                "AUDIT_APPOINTMENT_OUTPATIENT_ACTION"))
+                .isEqualTo("ORCA_OFFICIAL_APPOINTMENT_OUTPATIENT");
+        assertThat(readStringConstant(open.dolphin.rest.orca.AbstractOrcaWrapperResource.class,
+                "AUDIT_SYNC_PATIENTS_ACTION"))
+                .isEqualTo("ORCA_OFFICIAL_SYNC_PATIENTS");
+    }
+
     private static Set<String> collectByPrefix(Set<String> routeKeys, String prefix) {
         return routeKeys.stream()
                 .filter(routeKey -> routeKey.contains(" " + prefix))
@@ -149,5 +168,11 @@ class PublicRouteInventoryContractTest {
             normalized = normalized.substring(0, separator).trim();
         }
         return MediaType.TEXT_PLAIN.equalsIgnoreCase(normalized);
+    }
+
+    private static String readStringConstant(Class<?> type, String fieldName) throws Exception {
+        Field field = type.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return (String) field.get(null);
     }
 }

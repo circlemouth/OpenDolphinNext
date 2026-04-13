@@ -52,7 +52,7 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientImport");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.import.invalid", "patientIds must contain at least one entry");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.import.invalid",
                     "patientIds must contain at least one entry");
         }
@@ -66,12 +66,12 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
             PatientImportResponse response = importService.importPatients(facilityId, body, runId);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.BAD_GATEWAY.getStatusCode(),
                     "orca.patient.import.error", ex.getMessage());
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -86,7 +86,7 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientSyncRun");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.sync.invalid", "startDate is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.sync.invalid",
                     "startDate is required");
         }
@@ -95,7 +95,7 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientSyncRun");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.sync.invalid", "endDate must be on or after startDate");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.sync.invalid",
                     "endDate must be on or after startDate");
         }
@@ -113,12 +113,12 @@ public class OrcaPatientSyncResource extends AbstractOrcaWrapperResource {
             PatientImportResponse response = syncRunner.run(facilityId, body, "api", runId);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.BAD_GATEWAY.getStatusCode(),
                     "orca.patient.sync.error", ex.getMessage());
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }

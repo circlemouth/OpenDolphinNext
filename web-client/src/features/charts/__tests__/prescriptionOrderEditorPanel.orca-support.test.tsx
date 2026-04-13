@@ -536,7 +536,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     await waitFor(() => {
       expect(checkOrcaMasterStaticOrderInteractions).toHaveBeenCalledWith({ codes: ['620000001', '620000003'] });
     });
-    expect(await screen.findByText('マスタ参照の静的相互作用チェック')).toBeInTheDocument();
+    expect(await screen.findByText('ORCA master 参照の静的相互作用チェック')).toBeInTheDocument();
     expect(savePrescriptionOrder).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: '編集に戻る' }));

@@ -20,12 +20,25 @@ const networkDir = path.join(artifactRoot, 'network');
 const harDir = path.join(artifactRoot, 'har');
 const recordHar = process.env.QA_RECORD_HAR === '1';
 const harPath = path.join(harDir, 'network.har');
+const stepLogPath = path.join(artifactRoot, 'steps.log');
 
 fs.mkdirSync(screenshotDir, { recursive: true });
 fs.mkdirSync(networkDir, { recursive: true });
 if (recordHar) {
   fs.mkdirSync(harDir, { recursive: true });
 }
+
+const logStep = (label) => {
+  const entry = `[${new Date().toISOString()}] ${label}\n`;
+  fs.appendFileSync(stepLogPath, entry);
+};
+const safeClose = async (closer) => {
+  try {
+    await closer();
+  } catch {
+    // Playwright transport may already be gone after artifacts are written.
+  }
+};
 
 const facilityId = resolveQaFacilityId();
 
@@ -38,7 +51,7 @@ const scenarioLabel = process.env.QA_SCENARIO ?? sessionRole;
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
 
-const patientId = process.env.QA_PATIENT_ID ?? '01414';
+const patientId = process.env.QA_PATIENT_ID ?? '01415';
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
@@ -75,6 +88,22 @@ const writeScreenshot = async (page, name) => {
   return `screenshots/${fileName}`;
 };
 
+const safeText = async (locator, timeout = 5000) => {
+  try {
+    return (await locator.textContent({ timeout })) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+const safeInnerText = async (locator, timeout = 5000) => {
+  try {
+    return await locator.innerText({ timeout });
+  } catch {
+    return '';
+  }
+};
+
 const collectResponse = async (response) => {
   const url = response.url();
   if (!isTarget(url)) return;
@@ -100,6 +129,27 @@ const collectResponse = async (response) => {
     },
   };
   networkRecords.push(record);
+};
+
+const setTextInputValue = async (locator, value) => {
+  await locator.waitFor({ state: 'visible', timeout: 10000 });
+  try {
+    await locator.fill(value, { timeout: 5000 });
+    return 'fill';
+  } catch {
+    await locator.evaluate((el, nextValue) => {
+      const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (setter) {
+        setter.call(el, nextValue);
+      } else {
+        el.value = nextValue;
+      }
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, value);
+    return 'dom-event-fallback';
+  }
 };
 
 const ensureOption = async (selectLocator, desiredValue) => {
@@ -160,15 +210,18 @@ const run = async () => {
   page.on('request', recordRequest);
 
   await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
+  logStep('goto reception');
   await page.locator('.reception-page').waitFor({ timeout: 20000 });
   const openWorkflowButton = page.getByRole('button', { name: '既存患者受付/患者検索' });
   await openWorkflowButton.waitFor({ timeout: 20000 });
   await openWorkflowButton.click();
+  logStep('opened workflow modal');
 
   const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
   await workflowModal.waitFor({ timeout: 20000 });
   const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
   await patientSearchForm.waitFor({ timeout: 20000 });
+  logStep('patient search form ready');
 
   await page
     .waitForFunction(() => {
@@ -183,8 +236,13 @@ const run = async () => {
     }, { timeout: 20000 })
     .catch(() => null);
 
-  await patientSearchForm.locator('#reception-patient-search-patient-id').fill(patientId);
+  const patientSearchInputMethod = await setTextInputValue(
+    patientSearchForm.locator('#reception-patient-search-patient-id'),
+    patientId,
+  );
+  logStep(`filled patient search id method=${patientSearchInputMethod}`);
   await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
+  logStep('submitted patient search');
   const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
   await resultListItem.waitFor({ timeout: 20000 }).catch(() => {
     throw new Error(
@@ -192,9 +250,11 @@ const run = async () => {
     );
   });
   await resultListItem.click();
+  logStep('selected patient result');
 
   const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
   await acceptForm.waitFor({ timeout: 20000 });
+  logStep('accept form ready');
   const departmentSelection = await selectOptionFallback(
     acceptForm.locator('#reception-accept-department'),
     departmentCode,
@@ -220,20 +280,19 @@ const run = async () => {
     .catch(() => null);
 
   await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
+  logStep('clicked accept register');
 
   await acceptResponsePromise;
+  logStep('accept response observed');
 
   await page.waitForTimeout(2000);
 
   const afterShot = await writeScreenshot(page, '02-reception-after-accept');
   const toneBanner = page.locator('.reception-accept .tone-banner');
-  const toneText = (await toneBanner.first().textContent()) ?? '';
-  const apiResultText = await page.locator('[data-test-id="accept-api-result"]').innerText();
-  const durationText = await page.locator('[data-test-id="accept-duration-ms"]').innerText();
-  const xhrDebugText = await page.locator('[data-test-id="accept-xhr-debug"]').innerText();
-
-  await context.close();
-  await browser.close();
+  const toneText = await safeText(toneBanner.first());
+  const apiResultText = await safeInnerText(page.locator('[data-test-id="accept-api-result"]'), 3000);
+  const durationText = await safeInnerText(page.locator('[data-test-id="accept-duration-ms"]'), 3000);
+  const xhrDebugText = await safeInnerText(page.locator('[data-test-id="accept-xhr-debug"]'), 3000);
 
   const summary = {
     runId,
@@ -256,6 +315,7 @@ const run = async () => {
       physician: physicianSelection,
       visitKind: visitKindSelection,
       medicalInformation: medicalInformationSelection,
+      patientSearchInputMethod,
     },
     acceptResult: {
       toneText,
@@ -306,6 +366,8 @@ const run = async () => {
     `\n`;
 
   fs.writeFileSync(path.join(artifactRoot, 'accept-summary.md'), log, 'utf8');
+  await safeClose(() => context.close());
+  await safeClose(() => browser.close());
 
   console.log(`Artifacts written to ${artifactRoot}`);
 };

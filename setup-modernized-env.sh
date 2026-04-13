@@ -444,11 +444,13 @@ read_orca_info() {
   fi
 
   resolve_proxy_auth_env
+  ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH="${ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH:-true}"
 
   log "ORCA_CONFIG target_env=${ORCA_TARGET_ENV:-unset} base_url=${ORCA_BASE_URL} mode=${ORCA_MODE} path_prefix=${ORCA_API_PATH_PREFIX:-auto}"
   log "ORCA_CONFIG source host=${ORCA_API_HOST_SOURCE} port=${ORCA_API_PORT_SOURCE} scheme=${ORCA_API_SCHEME_SOURCE} base_url=${ORCA_BASE_URL_SOURCE} mode=${ORCA_MODE_SOURCE}"
   log "ORCA_CONFIG port policy=block_8000 allow_8000=${allow_port_8000_normalized} fallback=${fallback_port} replaced=${port_replaced} original_port=${port_original} original_source=${port_source_original}"
   log "ORCA_CONFIG auth server_basic=$(mask_state "${ORCA_API_USER:-}" "${ORCA_API_PASSWORD:-}") web_proxy_basic=$(mask_state "${ORCA_PROXY_BASIC_USER:-}" "${ORCA_PROXY_BASIC_PASSWORD:-}") web_proxy_cert=$(mask_state "${ORCA_PROXY_CERT_PATH:-}" "${ORCA_PROXY_CERT_PASS:-}")"
+  log "ORCA_CONFIG acceptmod_suppress_acceptance_push=${ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH}"
   log "ORCA_CONFIG note multi-facility: ORCA_* is startup default (_default); register per-facility ORCA settings after boot when using multiple facilities."
 
   if [[ "$ORCA_TARGET_ENV" =~ ^(preprod|prod)$ ]]; then
@@ -519,6 +521,7 @@ services:
       ORCA_API_WEBORCA: ${ORCA_API_WEBORCA:-}
       ORCA_API_RETRY_MAX: ${ORCA_API_RETRY_MAX:-}
       ORCA_API_RETRY_BACKOFF_MS: ${ORCA_API_RETRY_BACKOFF_MS:-}
+      ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH: ${ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH:-true}
       ORCA_DB_HOST: ${ORCA_DB_HOST}
       ORCA_DB_PORT: ${ORCA_DB_PORT}
       ORCA_DB_NAME: ${ORCA_DB_NAME}
@@ -1212,7 +1215,6 @@ start_web_client_npm() {
   local dev_orca_mode="${ORCA_MODE:-}"
   local dev_orca_path_prefix
   dev_orca_path_prefix="$(resolve_web_client_orca_path_prefix "$dev_proxy_target")"
-  local dev_suppress_acceptance_push="${VITE_SUPPRESS_ACCEPTANCE_PUSH:-1}"
   local dev_orca_basic_user="${ORCA_PROXY_BASIC_USER:-${ORCA_BASIC_USER:-${ORCA_API_USER:-${ORCA_TRIAL_USER:-}}}}"
   local dev_orca_basic_password="${ORCA_PROXY_BASIC_PASSWORD:-${ORCA_BASIC_PASSWORD:-${ORCA_API_PASSWORD:-${ORCA_TRIAL_PASS:-}}}}"
   local base_path="$VITE_BASE_PATH_NORMALIZED"
@@ -1235,7 +1237,6 @@ VITE_ORCA_MASTER_USER=$dev_orca_master_user
 VITE_ORCA_MASTER_PASSWORD=$dev_orca_master_password
 VITE_ORCA_MODE=$dev_orca_mode
 VITE_ORCA_API_PATH_PREFIX=$dev_orca_path_prefix
-VITE_SUPPRESS_ACCEPTANCE_PUSH=$dev_suppress_acceptance_push
 VITE_BASE_PATH=$base_path
 EOF
   mkdir -p "$(dirname "$WEB_CLIENT_ENV_LOCAL")"
@@ -1255,7 +1256,6 @@ EOF
     VITE_ORCA_MASTER_PASSWORD="$dev_orca_master_password" \
     VITE_ORCA_MODE="$dev_orca_mode" \
     VITE_ORCA_API_PATH_PREFIX="$dev_orca_path_prefix" \
-    VITE_SUPPRESS_ACCEPTANCE_PUSH="$dev_suppress_acceptance_push" \
     VITE_API_BASE_URL="$dev_api_base_url" \
     VITE_BASE_PATH="$base_path" \
     ORCA_BASIC_USER="$dev_orca_basic_user" \

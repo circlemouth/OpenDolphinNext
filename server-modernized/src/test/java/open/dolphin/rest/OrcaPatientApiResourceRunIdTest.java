@@ -78,7 +78,7 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
 
         assertTrue(exception.getMessage().contains("id is required"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("ORCA_PATIENT_GET", auditDispatcher.payload.getAction());
+        assertEquals("ORCA_OFFICIAL_GET_PATIENT", auditDispatcher.payload.getAction());
         assertEquals("/api/orca/official/patientgetv2", auditDispatcher.payload.getResource());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
         assertEquals("failed", auditDispatcher.payload.getDetails().get("status"));
@@ -93,7 +93,7 @@ class OrcaPatientApiResourceRunIdTest extends RuntimeDelegateTestSupport {
 
         assertTrue(exception.getMessage().contains("format must be json"));
         assertNotNull(auditDispatcher.payload);
-        assertEquals("ORCA_PATIENT_GET", auditDispatcher.payload.getAction());
+        assertEquals("ORCA_OFFICIAL_GET_PATIENT", auditDispatcher.payload.getAction());
         assertEquals(AuditEventEnvelope.Outcome.FAILURE, auditDispatcher.outcome);
         assertEquals("failed", auditDispatcher.payload.getDetails().get("status"));
         assertEquals(400, auditDispatcher.payload.getDetails().get("httpStatus"));

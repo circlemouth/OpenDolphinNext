@@ -242,7 +242,7 @@ describe('PrescriptionOrderEditorPanel ORCA support', () => {
     ]);
 
     await user.click(screen.getByRole('button', { name: '保存' }));
-    expect(await screen.findByText('マスタ参照の静的相互作用チェック')).toBeInTheDocument();
+    expect(await screen.findByText('ORCA master 参照の静的相互作用チェック')).toBeInTheDocument();
     expect(screen.getByText(/620000001 \/ 620000002 \/ 併用注意/)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '編集に戻る' }));

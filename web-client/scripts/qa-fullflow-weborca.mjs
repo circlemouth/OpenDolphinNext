@@ -53,7 +53,7 @@ const scenarioLabel = process.env.QA_SCENARIO ?? sessionRole;
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
 
-const patientId = process.env.QA_PATIENT_ID ?? '01416';
+const patientId = process.env.QA_PATIENT_ID ?? '01415';
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
@@ -132,16 +132,32 @@ const recordRequest = (request) => {
   });
 };
 
-const writeScreenshot = async (page, name) => {
+const writeScreenshot = async (page, name, options = {}) => {
   const fileName = `${name}.png`;
   const filePath = path.join(screenshotDir, fileName);
-  await page.screenshot({ path: filePath, fullPage: true });
+  const fullPage = options.fullPage ?? true;
+  try {
+    await page.screenshot({ path: filePath, fullPage, timeout: 10000 });
+  } catch (error) {
+    if (!fullPage) {
+      throw error;
+    }
+    await page.screenshot({ path: filePath, fullPage: false, timeout: 10000 });
+  }
   return `screenshots/${fileName}`;
 };
 
 const safeText = async (locator, timeout = 5000) => {
   try {
     return (await locator.textContent({ timeout })) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+const safeInnerText = async (locator, timeout = 5000) => {
+  try {
+    return await locator.innerText({ timeout });
   } catch {
     return '';
   }
@@ -172,6 +188,27 @@ const collectResponse = async (response) => {
     },
   };
   networkRecords.push(record);
+};
+
+const setTextInputValue = async (locator, value) => {
+  await locator.waitFor({ state: 'visible', timeout: 10000 });
+  try {
+    await locator.fill(value, { timeout: 5000 });
+    return 'fill';
+  } catch {
+    await locator.evaluate((el, nextValue) => {
+      const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+      if (setter) {
+        setter.call(el, nextValue);
+      } else {
+        el.value = nextValue;
+      }
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, value);
+    return 'dom-event-fallback';
+  }
 };
 
 const ensureOption = async (selectLocator, desiredValue) => {
@@ -301,8 +338,11 @@ const run = async () => {
     }, { timeout: 20000 })
     .catch(() => null);
 
-  await patientSearchForm.locator('#reception-patient-search-patient-id').fill(patientId);
-  logStep('filled patient search id');
+  const patientSearchInputMethod = await setTextInputValue(
+    patientSearchForm.locator('#reception-patient-search-patient-id'),
+    patientId,
+  );
+  logStep(`filled patient search id method=${patientSearchInputMethod}`);
   await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
   logStep('submitted patient search');
   const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
@@ -348,14 +388,15 @@ const run = async () => {
   await workflowModal.locator('[data-test-id="reception-accept-register"]').click();
   logStep('clicked reception send');
   await acceptResponsePromise;
+  logStep('accept response observed');
   await page.waitForTimeout(2000);
 
   const afterShot = await writeScreenshot(page, '02-reception-after-accept');
   const toneBanner = page.locator('.reception-accept .tone-banner');
   const toneText = await safeText(toneBanner.first());
-  const apiResultText = await page.locator('[data-test-id="accept-api-result"]').innerText().catch(() => '');
-  const durationText = await page.locator('[data-test-id="accept-duration-ms"]').innerText().catch(() => '');
-  const xhrDebugText = await page.locator('[data-test-id="accept-xhr-debug"]').innerText().catch(() => '');
+  const apiResultText = await safeInnerText(page.locator('[data-test-id="accept-api-result"]'), 3000);
+  const durationText = await safeInnerText(page.locator('[data-test-id="accept-duration-ms"]'), 3000);
+  const xhrDebugText = await safeInnerText(page.locator('[data-test-id="accept-xhr-debug"]'), 3000);
 
   let receptionRowStatus = 'found';
   const receptionRow = page.locator('.reception-table tbody tr', { hasText: patientId }).first();
@@ -364,7 +405,9 @@ const run = async () => {
     await receptionRow.waitFor({ timeout: 15000 });
   } catch {
     if (await retryButton.isVisible().catch(() => false)) {
-      await retryButton.click();
+      await retryButton.click({ force: true }).catch((error) => {
+        logStep(`retry click error=${String(error)}`);
+      });
     }
     try {
       await receptionRow.waitFor({ timeout: 15000 });
@@ -401,6 +444,7 @@ const run = async () => {
       return matches.slice(0, 3);
     })
     .catch(() => []);
+  const hasEncounterHandoff = Array.isArray(encounterContextDump) && encounterContextDump.length > 0;
   if (Array.isArray(encounterContextDump) && encounterContextDump.length > 0) {
     logStep(`charts encounterContext keys=${encounterContextDump.map((m) => m.key).join(',')}`);
   } else {
@@ -413,19 +457,23 @@ const run = async () => {
   logStep('observability meta updated');
 
   const chartsMeta = page.locator('[data-test-id="charts-topbar-meta"]');
-  const chartsRunId = await chartsMeta.getAttribute('data-run-id');
-  const chartsTraceId = await chartsMeta.getAttribute('data-trace-id');
+  const chartsRunId = await chartsMeta.getAttribute('data-run-id', { timeout: 5000 }).catch(() => null);
+  const chartsTraceId = await chartsMeta.getAttribute('data-trace-id', { timeout: 5000 }).catch(() => null);
 
   const chartsShot = await writeScreenshot(page, '04-charts-open');
 
   let orderResult = { status: 'skipped', detail: 'not attempted' };
-  try {
-    await page.keyboard.press('Control+Shift+U');
-    const orderShortcut = orderEntity === 'treatmentOrder' ? 'Control+Shift+5' : 'Control+Shift+3';
-    await page.keyboard.press(orderShortcut);
-    const orderPanel = page.locator(`[data-test-id="${orderEntity}-edit-panel"]`);
-    await orderPanel.waitFor({ timeout: 10000 });
-    logStep('order panel ready');
+  if (!hasEncounterHandoff) {
+    orderResult = { status: 'skipped', detail: 'missing encounter handoff context' };
+    logStep('order skipped=missing encounter handoff context');
+  } else {
+    try {
+      await page.keyboard.press('Control+Shift+U');
+      const orderShortcut = orderEntity === 'treatmentOrder' ? 'Control+Shift+5' : 'Control+Shift+3';
+      await page.keyboard.press(orderShortcut);
+      const orderPanel = page.locator(`[data-test-id="${orderEntity}-edit-panel"]`);
+      await orderPanel.waitFor({ timeout: 10000 });
+      logStep('order panel ready');
 
     await orderPanel.locator(`#${orderEntity}-bundle-name`).fill(orderBundleName);
     if (masterKeyword) {
@@ -534,9 +582,10 @@ const run = async () => {
     await page.waitForTimeout(1500);
     await writeScreenshot(page, '05-order-edit');
     await page.keyboard.press('Escape');
-  } catch (error) {
-    orderResult = { status: 'error', detail: String(error) };
-    logStep(`order error=${String(error)}`);
+    } catch (error) {
+      orderResult = { status: 'error', detail: String(error) };
+      logStep(`order error=${String(error)}`);
+    }
   }
 
   const finishButton = page.getByRole('button', { name: '診療終了' });
@@ -720,6 +769,7 @@ const run = async () => {
       physician: physicianSelection,
       visitKind: visitKindSelection,
       medicalInformation: medicalInformationSelection,
+      patientSearchInputMethod,
     },
     acceptResult: {
       toneText,

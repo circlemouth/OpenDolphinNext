@@ -92,6 +92,8 @@ public class ServerConfigurationResolver {
     public static final String KEY_ORCA_PROXY_FORWARD_X_ORCA_HEADERS = "orca.proxy.forward.x-orca-headers";
     public static final String KEY_ORCA_PROXY_FORWARD_API_RESULT_MESSAGE_HEADER =
             "orca.proxy.forward.api-result-message-header";
+    public static final String KEY_ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH =
+            "orca.acceptmod.suppress-acceptance-push";
     public static final String KEY_ORCA_PUSH_ENABLED = "orca.push.enabled";
     public static final String KEY_ORCA_PUSH_SHADOW_MODE = "orca.push.shadow-mode";
     public static final String KEY_ORCA_PUSH_RECEPTION_ENABLED = "orca.push.reception.enabled";
@@ -304,6 +306,10 @@ public class ServerConfigurationResolver {
                 optionalInteger(KEY_ORCA_PUSH_RECOVERY_OVERLAP_MINUTES).orElse(null),
                 optionalInteger(KEY_ORCA_PUSH_DEDUP_RETENTION_DAYS).orElse(null)
         );
+    }
+
+    public boolean orcaAcceptmodSuppressAcceptancePush() {
+        return optionalBoolean(KEY_ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH).orElse(false);
     }
 
     public ServerRuntimeConfiguration.MasterUpdateSchedulerSettings masterUpdateScheduler() {

@@ -89,13 +89,16 @@ cd web-client && npm run ci
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
 ```bash
 cd web-client && node scripts/runtime-ready-smoke.mjs
-QA_PATIENT_ID=<ORCA searchable patientId> cd web-client && node scripts/qa-acceptmodv2-weborca.mjs
-QA_PATIENT_ID=<ORCA searchable patientId> cd web-client && node scripts/qa-fullflow-weborca.mjs
+cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs
+cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs
 ```
 期待結果:
 - web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
-- `runtime-ready-smoke` は local smoke seed `0000001` を使うが、`qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は official patient search で返る患者を必要とする。受入れでは `QA_PATIENT_ID` に current ORCA 環境で検索可能な患者IDを渡す。
+- `runtime-ready-smoke` は local smoke seed `0000001` を使う。
+- `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` の patient picker は current reception workflow に合わせて `/api/local/patients/search` を使う。`setup-modernized-env.sh` の既定 seed では `QA_PATIENT_ID=01415` を使う。
+- 別 seed を使う場合は、`QA_PATIENT_ID` に current local patient search で返る患者IDを渡す。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `Medical_Information` を送らず、指定時だけ current select option を送る。
+- WebORCA Trial で `Acceptance_Push` workaround が必要な環境では、client 側ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を明示する。`setup-modernized-env.sh` の dev 起動はこの flag を既定で有効化する。
 - artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。
 
 ## Worker G の post-merge 確認
@@ -133,6 +136,8 @@ rg 'dolphin\\.facilityId' server-modernized -n
 
 ## 証跡保存先
 - runtime smoke の既知出力先は `web-client/artifacts/webclient/runtime-gate-ready/<RUN_ID>`。
+- accept smoke の既知出力先は `artifacts/webclient/e2e/<RUN_ID>/reception-send`。
+- fullflow smoke の既知出力先は `web-client/artifacts/webclient/e2e/<RUN_ID>/fullflow`。
 - ORCA 接続確認の既知出力先は `artifacts/orca-connectivity/<RUN_ID>/`。
 - Worker G の smoke memo / diff / grep 結果は release 判定に使う artifact 配下へまとめ、cutover 記録と分離しない。
 

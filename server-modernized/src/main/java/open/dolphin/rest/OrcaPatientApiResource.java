@@ -32,6 +32,7 @@ import open.dolphin.security.audit.SessionAuditDispatcher;
 public class OrcaPatientApiResource extends AbstractResource {
 
     static final String RUN_ID_FALLBACK = "fallback"; // deprecated sentinel; dynamic runId now used
+    private static final String AUDIT_ACTION = "ORCA_OFFICIAL_GET_PATIENT";
 
     @Inject
     OrcaTransport orcaTransport;
@@ -80,7 +81,7 @@ public class OrcaPatientApiResource extends AbstractResource {
                     OrcaEndpoint.PATIENT_GET,
                     OrcaTransportRequest.get(query));
             markSuccess(details);
-            recordAudit(request, resourcePath, "ORCA_PATIENT_GET", details, AuditEventEnvelope.Outcome.SUCCESS, null, null);
+            recordAudit(request, resourcePath, AUDIT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS, null, null);
             return OrcaApiProxySupport.buildProxyResponse(result, runId);
         } catch (RuntimeException ex) {
             String errorCode = "orca.patientget.error";
@@ -89,7 +90,7 @@ public class OrcaPatientApiResource extends AbstractResource {
                     ? Response.Status.BAD_REQUEST.getStatusCode()
                     : Response.Status.BAD_GATEWAY.getStatusCode();
             markFailure(details, status, errorCode, errorMessage);
-            recordAudit(request, resourcePath, "ORCA_PATIENT_GET", details, AuditEventEnvelope.Outcome.FAILURE,
+            recordAudit(request, resourcePath, AUDIT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE,
                     errorCode, errorMessage);
             throw ex;
         }

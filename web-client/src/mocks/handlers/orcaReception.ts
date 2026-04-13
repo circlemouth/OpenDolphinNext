@@ -52,6 +52,14 @@ const buildPayload = async (request: Request) => {
     typeof body.medicalInformation === 'string' && body.medicalInformation.trim().length > 0
       ? body.medicalInformation.trim()
       : undefined;
+  const requestedDepartmentCode =
+    typeof body.departmentCode === 'string' && body.departmentCode.trim().length > 0
+      ? body.departmentCode.trim()
+      : undefined;
+  const requestedPhysicianCode =
+    typeof body.physicianCode === 'string' && body.physicianCode.trim().length > 0
+      ? body.physicianCode.trim()
+      : undefined;
 
   const shouldEchoEmpty = realNoEcho || Boolean(override && override.apiResult !== '00');
   const acceptanceId =
@@ -63,8 +71,8 @@ const buildPayload = async (request: Request) => {
 
   const acceptanceDate = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.acceptanceDate ?? toDate(now);
   const acceptanceTime = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.acceptanceTime ?? toTime(now);
-  const departmentCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.departmentCode ?? '01';
-  const physicianCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : body.physicianCode ?? '1001';
+  const departmentCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : requestedDepartmentCode;
+  const physicianCode = apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : requestedPhysicianCode;
   const medicalInformation =
     apiResult === '21' || apiResult === '60' ? undefined : shouldEchoEmpty ? '' : requestedMedicalInformation;
 

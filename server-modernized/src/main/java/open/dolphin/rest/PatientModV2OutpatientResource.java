@@ -38,8 +38,8 @@ public final class PatientModV2OutpatientResource extends AbstractResource {
     private static final String ROUTE_NAMESPACE = "official";
     private static final String CREATE_RESOURCE_PATH = "/api/orca/official/patientmodv2/outpatient/create";
     private static final String UPDATE_RESOURCE_PATH = "/api/orca/official/patientmodv2/outpatient/update";
-    private static final String CREATE_AUDIT_ACTION = "OFFICIAL_PATIENT_CREATE";
-    private static final String UPDATE_AUDIT_ACTION = "OFFICIAL_PATIENT_UPDATE";
+    private static final String CREATE_AUDIT_ACTION = "ORCA_OFFICIAL_CREATE_PATIENT";
+    private static final String UPDATE_AUDIT_ACTION = "ORCA_OFFICIAL_UPDATE_PATIENT";
 
     @Inject
     private PatientServiceBean patientServiceBean;

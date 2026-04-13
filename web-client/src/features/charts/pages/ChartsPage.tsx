@@ -4998,14 +4998,14 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                   />
 
                   {showDebugUi ? (
-                    <>
-                      <details className="charts-card charts-fold">
-                        <summary className="charts-fold__summary">ORCA 記録（要約）</summary>
-                        <div className="charts-fold__content">
-                          <MedicalOutpatientRecordPanel summary={medicalSummaryPanelSummary} selectedPatientId={encounterContext.patientId} />
-                        </div>
-                      </details>
-                    </>
+                    <div
+                      className="charts-card"
+                      id="charts-local-summary"
+                      tabIndex={-1}
+                      data-focus-anchor="true"
+                    >
+                      <MedicalOutpatientRecordPanel summary={medicalSummaryPanelSummary} selectedPatientId={encounterContext.patientId} />
+                    </div>
                   ) : null}
 
                   {showDebugUi ? (

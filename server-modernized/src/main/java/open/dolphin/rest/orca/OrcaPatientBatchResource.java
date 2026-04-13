@@ -52,7 +52,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientIdList");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.id.invalid", "startDate is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.id.invalid",
                     "startDate is required");
         }
@@ -61,7 +61,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientIdList");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.id.invalid", "endDate must be on or after startDate");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.id.invalid",
                     "endDate must be on or after startDate");
         }
@@ -82,12 +82,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             PatientIdListResponse response = wrapperService.getPatientIdList(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.patient.id.error", ex.getMessage());
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -103,7 +103,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientBatch");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.batch.invalid", "patientIds must contain at least one entry");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.batch.invalid",
                     "patientIds must contain at least one entry");
         }
@@ -115,12 +115,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             PatientBatchResponse response = wrapperService.getPatientBatch(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.patient.batch.error", ex.getMessage());
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -136,7 +136,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientNameSearch");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.search.invalid", "name is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.search.invalid",
                     "name is required");
         }
@@ -145,7 +145,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientNameSearch");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.search.invalid", "birthStartDate is required when birthEndDate is provided");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.search.invalid",
                     "birthStartDate is required when birthEndDate is provided");
         }
@@ -155,7 +155,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "patientNameSearch");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.search.invalid", "birthEndDate must be after birthStartDate");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.search.invalid",
                     "birthEndDate must be after birthStartDate");
         }
@@ -183,12 +183,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             PatientSearchResponse response = wrapperService.searchPatients(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.patient.search.error", ex.getMessage());
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -204,7 +204,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "insuranceCombinations");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.insurance.invalid", "patientId is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.insurance.invalid",
                     "patientId is required");
         }
@@ -215,7 +215,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "insuranceCombinations");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.insurance.invalid", "rangeEnd must be on or after rangeStart");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.insurance.invalid",
                     "rangeEnd must be on or after rangeStart");
         }
@@ -241,12 +241,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             InsuranceCombinationResponse response = wrapperService.getInsuranceCombinations(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.patient.insurance.error", ex.getMessage());
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -262,7 +262,7 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             details.put("operation", "formerNames");
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.patient.former-name.invalid", "patientId is required");
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.patient.former-name.invalid",
                     "patientId is required");
         }
@@ -274,12 +274,12 @@ public class OrcaPatientBatchResource extends AbstractOrcaWrapperResource {
             FormerNameHistoryResponse response = wrapperService.getFormerNames(facilityId, body);
             applyResponseAuditDetails(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.patient.former-name.error", ex.getMessage());
-            recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }

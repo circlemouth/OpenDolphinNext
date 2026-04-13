@@ -72,7 +72,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("operation", OPERATION_APPOINTMENT_LIST);
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.invalid", "appointmentDate or fromDate/toDate is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.invalid",
                     "appointmentDate or fromDate/toDate is required");
         }
@@ -85,7 +85,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.range.tooWide",
                     "appointmentDate range too wide; up to " + OrcaLiveGateway.MAX_APPOINTMENT_RANGE_DAYS + " days are allowed");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.range.tooWide",
                     "appointmentDate range too wide; up to " + OrcaLiveGateway.MAX_APPOINTMENT_RANGE_DAYS + " days are allowed");
         }
@@ -106,12 +106,12 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.appointment.error", ex.getMessage());
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -128,12 +128,12 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.medical_information.error", ex.getMessage());
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -149,7 +149,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("operation", OPERATION_PATIENT_APPOINTMENTS);
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.patient.invalid", "patientId is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.patient.invalid",
                     "patientId is required");
         }
@@ -163,12 +163,12 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.appointment.patient.error", ex.getMessage());
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -184,7 +184,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("operation", OPERATION_BILLING_ESTIMATE);
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.billing.invalid", "patientId is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.billing.invalid",
                     "patientId is required");
         }
@@ -194,7 +194,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("patientId", body.getPatientId());
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.billing.invalid", "At least one billing item is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.billing.invalid",
                     "At least one billing item is required");
         }
@@ -208,12 +208,12 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             markSuccessDetails(details);
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.billing.error", ex.getMessage());
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }
@@ -229,7 +229,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("operation", OPERATION_APPOINTMENT_MUTATION);
             markFailureDetails(details, Response.Status.UNAUTHORIZED.getStatusCode(),
                     "remote_user_missing", "Authenticated user is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.UNAUTHORIZED, "remote_user_missing",
                     "Authenticated user is required");
         }
@@ -238,7 +238,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("operation", OPERATION_APPOINTMENT_MUTATION);
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.mutation.invalid", "Request payload is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.mutation.invalid",
                     "Request payload is required");
         }
@@ -248,7 +248,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("patientId", body.getPatient() != null ? body.getPatient().getPatientId() : null);
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.mutation.invalid", "requestNumber is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.mutation.invalid",
                     "requestNumber is required");
         }
@@ -258,7 +258,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("operation", OPERATION_APPOINTMENT_MUTATION);
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.mutation.invalid", "patient.patientId is required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.mutation.invalid",
                     "patient.patientId is required");
         }
@@ -269,7 +269,7 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
             details.put("patientId", body.getPatient().getPatientId());
             markFailureDetails(details, Response.Status.BAD_REQUEST.getStatusCode(),
                     "orca.appointment.mutation.invalid", "appointmentDate and appointmentTime are required");
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw restError(request, Response.Status.BAD_REQUEST, "orca.appointment.mutation.invalid",
                     "appointmentDate and appointmentTime are required");
         }
@@ -289,12 +289,12 @@ public class OrcaAppointmentResource extends AbstractOrcaWrapperResource {
                 details.put("appointmentId", response.getAppointmentId());
             }
             markSuccessDetails(details);
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.SUCCESS);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
             return response;
         } catch (RuntimeException ex) {
             markFailureDetails(details, Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
                     "orca.appointment.mutation.error", ex.getMessage());
-            recordAudit(request, ACTION_APPOINTMENT_OUTPATIENT, details, AuditEventEnvelope.Outcome.FAILURE);
+            recordAudit(request, AUDIT_APPOINTMENT_OUTPATIENT_ACTION, details, AuditEventEnvelope.Outcome.FAILURE);
             throw ex;
         }
     }

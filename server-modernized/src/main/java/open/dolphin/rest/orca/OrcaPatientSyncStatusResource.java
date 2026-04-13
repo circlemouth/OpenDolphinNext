@@ -62,7 +62,7 @@ public class OrcaPatientSyncStatusResource extends AbstractOrcaWrapperResource {
         response.setApiResultMessage("OK");
         applyResponseMetadata(response, details);
         markSuccessDetails(details);
-        recordAudit(request, ACTION_PATIENT_SYNC, details, AuditEventEnvelope.Outcome.SUCCESS);
+        recordAudit(request, AUDIT_SYNC_PATIENTS_ACTION, details, AuditEventEnvelope.Outcome.SUCCESS);
         return response;
     }
 }

@@ -75,6 +75,7 @@
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
 - `OrcaSummary` は Charts 内部の補助 panel です。
 - `DocumentTimeline` と `MedicalOutpatientRecordPanel` は `showDebugUi` 有効時のみ表示される debug-only surface です。
+- `MedicalOutpatientRecordPanel` は debug-only でも `院内ローカル診療サマリ詳細` の visible card として表示し、`ORCA収納情報` と混同する official 風 label や disclosure にはしません。
 
 ### Required State
 - 患者文脈は `location.state` と揮発メモリのみで扱います。
@@ -104,19 +105,20 @@
 ## Reception Surface
 ### Current Fact
 - Reception は既存患者の受付導線です。新患登録や患者作成は current surface に含めません。
-- 既存患者検索は official `patientlst3v2` 条件を使用し、`?class=01` + `<patientlst3req type="record">` で `WholeName` を必須として送信します。
-- `WholeName_inKana` や client 独自 search mode は official payload に流しません。`Birth_StartDate` / `Birth_EndDate` / `Sex` / `InOut` だけを選択時に送信します。
+- `既存患者受付/患者検索` モーダルの患者 picker は `/api/local/patients/search` を使います。patientId / 氏名 / カナのローカル条件で絞り込み、official `patientlst3v2` はこの導線では使いません。
+- official `patientlst3v2` + `WholeName` 必須の name-search は別の master search 導線の契約であり、accept workflow の患者 picker に混在させません。
 - `InOut` 未選択はエラーではなく「未送信」を意味します。
 - 受付登録時の `Medical_Information` は UI 選択時のみ送信し、未選択なら送信しません。
 - 担当医コード、`Acceptance_Push`、診療内容コードは client 側で補完・正規化・抑止せず、選択値または未送信をそのまま official bridge に渡します。
+- ただし一部 WebORCA 環境で `Acceptance_Push` suppress が必要な場合は、client ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` で明示します。default は off です。
 - 会計送信や受付後続で使う visit context は `departmentCode` / `physicianCode` / `visitDate` の canonical 値だけを使い、display string 再解析・patientId first-match・`today` fallback を current contract に戻しません。
 
 ### Verification
 - test: reception accept/cancel の `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして統一
-- test: patient search request が official `patientlst3v2` 形状であること
+- test: accept workflow の patient search request が `/api/local/patients/search` を使い、current local search 条件に一致すること
 - test: visit list request が `Department_Code` を送ること
 - test: `Medical_Information` 未選択時に送信しないこと
-- test: `WholeName` 未入力では official patient search を送らず、`InOut` 未選択時は official payload から省くこと
+- test: master search 導線では `WholeName` 未入力で official patient search を送らず、`InOut` 未選択時は official payload から省くこと
 - test: claim-send / visit context で patientId first-match / display string reparsing / `today` fallback を使わないこと
 - manual: Reception 画面文言が既存患者受付限定で、新患は Patients へ誘導すること
 

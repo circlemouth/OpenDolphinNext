@@ -335,11 +335,11 @@ const renderReceptionPage = () => {
 describe('buildDepartmentOptions', () => {
   it('appointment raw 由来の code/name から診療科候補を構成する', () => {
     const options = buildDepartmentOptions({
-      departmentCodeMap: new Map([
-        ['内科', '01'],
-        ['外科', '02'],
+      departmentLabels: new Map([
+        ['01', '内科'],
+        ['02', '外科'],
       ]),
-      visibleDepartments: [],
+      visibleEntries: [],
     });
 
     expect(options).toEqual([
@@ -348,10 +348,13 @@ describe('buildDepartmentOptions', () => {
     ]);
   });
 
-  it('visible entry の coded department 文字列から code/name を補完する', () => {
+  it('visible entry の canonical departmentCode を使って候補を構成する', () => {
     const options = buildDepartmentOptions({
-      departmentCodeMap: new Map(),
-      visibleDepartments: ['01 内科', '02 外科'],
+      departmentLabels: new Map(),
+      visibleEntries: [
+        { departmentCode: '01', department: '内科' },
+        { departmentCode: '02', department: '外科' },
+      ],
     });
 
     expect(options).toEqual([
@@ -360,10 +363,10 @@ describe('buildDepartmentOptions', () => {
     ]);
   });
 
-  it('source が空なら偽の診療科コードを生成しない', () => {
+  it('display string しか無い場合は偽の診療科コードを生成しない', () => {
     const options = buildDepartmentOptions({
-      departmentCodeMap: new Map(),
-      visibleDepartments: [],
+      departmentLabels: new Map(),
+      visibleEntries: [{ department: '01 内科' }],
     });
 
     expect(options).toEqual([]);
@@ -491,6 +494,8 @@ describe('ReceptionPage accept UX', () => {
         id: 'row-1',
         patientId: 'P-010',
         appointmentId: 'A-010',
+        departmentCode: '01',
+        physicianCode: '10001',
         name: '田中一郎',
         appointmentTime: '09:00',
         department: '01 内科',
@@ -546,6 +551,8 @@ describe('ReceptionPage accept UX', () => {
         id: 'row-2',
         patientId: 'P-011',
         appointmentId: 'A-011',
+        departmentCode: '01',
+        physicianCode: '10001',
         name: '必須入力患者',
         appointmentTime: '09:30',
         department: '01 内科',
@@ -687,6 +694,8 @@ describe('ReceptionPage accept UX', () => {
         id: 'row-result-1',
         patientId: '555',
         appointmentId: 'A-555',
+        departmentCode: '01',
+        physicianCode: '10001',
         name: '送信患者',
         appointmentTime: '09:10',
         department: '01 内科',
@@ -771,6 +780,8 @@ describe('ReceptionPage accept UX', () => {
         id: 'row-3',
         patientId: 'P-012',
         appointmentId: 'A-012',
+        departmentCode: '01',
+        physicianCode: '10001',
         name: '診療内容患者',
         appointmentTime: '09:45',
         department: '01 内科',
@@ -835,6 +846,8 @@ describe('ReceptionPage accept UX', () => {
         id: 'row-4',
         patientId: 'P-013',
         appointmentId: 'A-013',
+        departmentCode: '01',
+        physicianCode: '10001',
         name: '未選択患者',
         appointmentTime: '10:15',
         department: '01 内科',
@@ -887,6 +900,53 @@ describe('ReceptionPage accept UX', () => {
       patientId: 'P-013',
     });
     expect((mockMutationCalls.at(-1) as { medicalInformation?: unknown }).medicalInformation).toBeUndefined();
+  });
+
+  it('does not synthesize department/physician codes from display strings during accept workflow', async () => {
+    mockAppointmentData.entries = [
+      {
+        id: 'row-display-only',
+        patientId: 'P-014',
+        appointmentId: 'A-014',
+        name: '表示文字列患者',
+        appointmentTime: '10:45',
+        department: '01 内科',
+        physician: '10001 担当医A',
+        status: '予約',
+        insurance: '保険',
+        source: 'reservations',
+      },
+    ];
+    mockMutationQueue.push({
+      patients: [
+        {
+          patientId: 'P-014',
+          name: '表示文字列患者',
+          insurance: '保険',
+        },
+      ],
+      recordsReturned: 1,
+      runId: 'RUN-SEARCH-DISPLAY-ONLY',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    await user.click(within(patientSearch).getByRole('button', { name: '検索' }));
+    const resultPanel = within(workflowModal).getByRole('region', { name: '患者検索結果モーダル' });
+    await user.click(within(resultPanel).getAllByRole('listitem')[0]);
+
+    const acceptPanel = getAcceptRegisterPanel(workflowModal);
+    const departmentSelect = within(acceptPanel).getByLabelText(/診療科/) as HTMLSelectElement;
+    const physicianSelect = within(acceptPanel).getByLabelText(/担当医/) as HTMLSelectElement;
+    const registerButton = within(acceptPanel).getByRole('button', { name: '受付する' });
+
+    expect(departmentSelect.options).toHaveLength(1);
+    expect(physicianSelect.options).toHaveLength(1);
+    expect(registerButton).toBeDisabled();
+    expect(mockMutationCalls).toHaveLength(1);
   });
 });
 

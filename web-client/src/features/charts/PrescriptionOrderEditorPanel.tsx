@@ -1112,7 +1112,7 @@ export function PrescriptionOrderEditorPanel({
         if (!result.ok) {
           setNotice({
             tone: 'warning',
-            message: result.message ?? 'マスタ参照の静的相互作用チェックに失敗したため、そのまま保存します。',
+            message: result.message ?? 'ORCA master 参照の静的相互作用チェックに失敗したため、そのまま保存します。',
           });
           mutation.mutate({ action, order });
           return;
@@ -1129,7 +1129,7 @@ export function PrescriptionOrderEditorPanel({
           message:
             error instanceof Error
               ? error.message
-              : 'マスタ参照の静的相互作用チェックに失敗したため、そのまま保存します。',
+              : 'ORCA master 参照の静的相互作用チェックに失敗したため、そのまま保存します。',
         });
       }
       mutation.mutate({ action, order });
@@ -1170,8 +1170,8 @@ export function PrescriptionOrderEditorPanel({
     <section className="charts-side-panel__section" data-order-entity="medOrder" data-test-id="medOrder-prescription-editor-v2">
       <FocusTrapDialog
         open={interactionConfirmOpen}
-        title="マスタ参照の静的相互作用チェック"
-        description="保存前に ORCA マスタ由来の静的な相互作用候補が検出されました。患者別の禁忌チェックとは別です。"
+        title="ORCA master 参照の静的相互作用チェック"
+        description="保存前に ORCA master 由来の静的な相互作用候補が検出されました。official patient-aware contraindicationcheckv2 とは別の確認です。"
         role="alertdialog"
         onClose={closeInteractionConfirm}
         testId="prescription-interaction-confirm"
@@ -1181,17 +1181,17 @@ export function PrescriptionOrderEditorPanel({
             <ul className="charts-side-panel__confirm-list">
               {interactionPairs.map((pair, index) => (
                 <li key={`${pair.code1}-${pair.code2}-${index}`}>
-                  {pair.code1} / {pair.code2} / {pair.interactionName ?? pair.message ?? '静的相互作用あり'}
+                  {pair.code1} / {pair.code2} / {pair.interactionName ?? pair.message ?? 'master 静的相互作用あり'}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="charts-side-panel__message">静的相互作用候補の詳細は取得できませんでした。</p>
+            <p className="charts-side-panel__message">ORCA master 静的相互作用候補の詳細は取得できませんでした。</p>
           )}
           <div
             className="charts-side-panel__actions charts-side-panel__actions--dialog"
             role="group"
-            aria-label="マスタ参照の静的相互作用チェックの確認"
+            aria-label="ORCA master 参照の静的相互作用チェックの確認"
           >
             <button type="button" className="charts-side-panel__action" onClick={closeInteractionConfirm}>
               編集に戻る

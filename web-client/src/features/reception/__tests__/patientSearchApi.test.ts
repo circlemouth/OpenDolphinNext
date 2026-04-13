@@ -29,7 +29,7 @@ describe('fetchPatientMasterSearch', () => {
     expect(httpFetch).not.toHaveBeenCalled();
   });
 
-  it('posts only official fields and omits inOut when unselected', async () => {
+  it('posts only official patientlst3 fields and omits kana when filtering locally', async () => {
     httpFetch.mockResolvedValue({
       ok: true,
       status: 200,
@@ -47,7 +47,10 @@ describe('fetchPatientMasterSearch', () => {
     const response = await fetchPatientMasterSearch({
       name: '山田 太郎',
       kana: 'ヤマダ タロウ',
+      birthStartDate: '1980-01-01',
+      birthEndDate: '1980-12-31',
       sex: '1',
+      inOut: '2',
     });
 
     expect(response.patients[0]).toMatchObject({
@@ -61,7 +64,10 @@ describe('fetchPatientMasterSearch', () => {
         method: 'POST',
         body: JSON.stringify({
           name: '山田 太郎',
+          birthStartDate: '1980-01-01',
+          birthEndDate: '1980-12-31',
           sex: '1',
+          inOut: '2',
         }),
       }),
     );

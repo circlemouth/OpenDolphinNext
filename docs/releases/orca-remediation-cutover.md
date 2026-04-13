@@ -1,6 +1,6 @@
 # ORCA Remediation Cutover
 
-最終更新: 2026-04-12  
+最終更新: 2026-04-13  
 用途: Worker G の post-merge verification 後に、ORCA remediation 一式を本番相当へ切り替えるための cutover / rollback 正本
 
 ## 1. 前提
@@ -26,13 +26,13 @@
 3. `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify`
 4. `cd web-client && node scripts/runtime-ready-smoke.mjs`
 5. `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh`
-6. ORCA Trial または承認済み接続先で、`QA_PATIENT_ID` に current ORCA 環境で patient search 可能な患者IDを渡して `node scripts/qa-acceptmodv2-weborca.mjs` を実行する。
-7. 同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `node scripts/qa-fullflow-weborca.mjs` を実行する。
+6. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。`setup-modernized-env.sh` の dev 起動は `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を既定で入れ、既定 seed では `QA_PATIENT_ID=01415` を使う。
+7. 同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs` を実行する。
 8. reception / charts / patients / admin の手動 smoke を実行する。
 
 ## 4. Smoke 観点
 - Reception:
-  - 既存患者検索が official `patientlst3v2` 条件で通る。
+  - 既存患者検索が current reception workflow どおり `/api/local/patients/search` で通る。
   - `既存患者受付/患者検索` モーダルから患者検索結果を選択し、`受付する` が current 導線で機能する。
   - `Api_Result=21` は保険不一致、`Api_Result=60` は受付なしとして表示される。
   - `Medical_Information` は UI 選択時のみ送信し、未選択なら送信しない。
@@ -53,8 +53,9 @@
 ## 5. Smoke artifact
 - `qa-acceptmodv2-weborca.mjs` は current 受付導線のスクリーンショット、network、summary を残す。
 - `qa-fullflow-weborca.mjs` は reception -> charts -> claim/income/support の一連の network とスクリーンショットを残す。
-- patient search が 0 件なら `QA_PATIENT_ID` の不足/不一致として扱い、trial/local seed 不一致のまま「UI 不具合」と誤判定しない。
+- patient search が 0 件なら `QA_PATIENT_ID` の不足/不一致として扱い、local seed 不一致のまま「UI 不具合」と誤判定しない。
 - `QA_MEDICAL_INFORMATION` を指定しない run を 1 本含め、未選択時に `Medical_Information` が未送信であることを証跡化する。
+- `Acceptance_Push` suppress が必要な環境では server runtime config で明示し、client 側の補完/抑止に戻さない。
 
 ## 6. 成功判定
 - 上記コマンドと smoke が成功し、artifact が同じ RUN_ID に束ねられている。

@@ -2,7 +2,7 @@ import { httpFetch } from '../../libs/http/httpClient';
 import { ensureObservabilityMeta } from '../../libs/observability/observability';
 import { parseOrcaApiResponse } from '../shared/orcaApiResponse';
 
-export type OrcaStaticOrderInteractionResult = {
+export type OrcaMasterStaticOrderInteractionResult = {
   ok: boolean;
   status: number;
   totalCount: number;
@@ -17,9 +17,6 @@ export type OrcaStaticOrderInteractionResult = {
   runId?: string;
   traceId?: string;
 };
-
-export type OrcaMasterStaticOrderInteractionResult = OrcaStaticOrderInteractionResult;
-export type OrcaOrderInteractionResult = OrcaStaticOrderInteractionResult;
 
 const sanitizeCodes = (values: string[]) => Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
@@ -76,6 +73,3 @@ export async function checkOrcaMasterStaticOrderInteractions(params: {
     traceId,
   };
 }
-
-export const checkOrcaStaticOrderInteractions = checkOrcaMasterStaticOrderInteractions;
-export const checkOrcaOrderInteractions = checkOrcaMasterStaticOrderInteractions;

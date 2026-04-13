@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -25,6 +26,7 @@ import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
 import open.dolphin.rest.dto.orca.VisitPatientListResponse;
+import open.dolphin.runtime.config.ServerConfigurationResolver;
 import org.junit.jupiter.api.Test;
 
 class OrcaVisitResourceTest {
@@ -191,6 +193,31 @@ class OrcaVisitResourceTest {
 
         assertEquals("0000", response.getApiResult());
         verify(wrapperService).mutateVisit("F001", request);
+    }
+
+    @Test
+    void visitMutationSuppressesAcceptancePushOnlyWhenExplicitlyConfigured() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("0000");
+        stub.setApiResultMessage("OK");
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.setConfigurationResolverForTest(new ServerConfigurationResolver(Map.of(
+                ServerConfigurationResolver.KEY_ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH, "true")));
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("01");
+        request.setPatientId("000001");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+        request.setAcceptancePush("1");
+
+        resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
+
+        verify(wrapperService).mutateVisit(anyString(), argThat(candidate -> candidate.getAcceptancePush() == null));
     }
 
     @Test

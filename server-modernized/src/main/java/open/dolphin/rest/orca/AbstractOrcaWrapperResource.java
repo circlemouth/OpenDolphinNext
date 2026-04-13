@@ -16,8 +16,8 @@ import open.dolphin.rest.orca.AbstractOrcaRestResource;
  */
 public abstract class AbstractOrcaWrapperResource extends AbstractOrcaRestResource {
 
-    protected static final String ACTION_APPOINTMENT_OUTPATIENT = "ORCA_APPOINTMENT_OUTPATIENT";
-    protected static final String ACTION_PATIENT_SYNC = "ORCA_PATIENT_SYNC";
+    protected static final String AUDIT_APPOINTMENT_OUTPATIENT_ACTION = "ORCA_OFFICIAL_APPOINTMENT_OUTPATIENT";
+    protected static final String AUDIT_SYNC_PATIENTS_ACTION = "ORCA_OFFICIAL_SYNC_PATIENTS";
     private static final String DATA_SOURCE_SERVER = "server";
     private static final String TRACE_HEADER = "X-Request-Id";
     protected Map<String, Object> newAuditDetails(HttpServletRequest request) {

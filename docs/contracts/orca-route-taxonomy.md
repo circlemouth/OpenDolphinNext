@@ -17,6 +17,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - official transport を呼ばない local wrapper / local read model / local persistence を `/api/orca/*` に置かない。
 - master-backed read は `/api/orca/master/*` へ寄せ、official bridge と混在させない。
 - audit action も taxonomy に合わせ、official は `ORCA_OFFICIAL_*`、master は `ORCA_MASTER_*`、local は `LOCAL_*` を使う。
+- official patient 系 audit action は `ORCA_OFFICIAL_CREATE_PATIENT` / `ORCA_OFFICIAL_UPDATE_PATIENT` / `ORCA_OFFICIAL_GET_PATIENT` / `ORCA_OFFICIAL_SYNC_PATIENTS` に固定し、旧 patient-first naming や `ORCA_PATIENT_GET` を残さない。
 - official 風の名称 (`patientmodv2`, `patientgetv2`, `medicalmodv2`, `subjectivesv2`) を local path / local metadata に残さない。
 - admin 向け internal wrapper の label は `/api/admin/internal/*` を表示し、official surface と誤認させない。
 - UI copy でも、`contraindicationcheckv2` の patient-aware official check と `/api/orca/master/order/interactions/check` の master-based static check を混同させない。

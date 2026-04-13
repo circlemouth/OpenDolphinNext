@@ -2,6 +2,7 @@ package open.dolphin.orca.service;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.time.LocalDate;
 import open.dolphin.rest.dto.orca.PatientNameSearchRequest;
@@ -40,6 +41,21 @@ class OrcaLiveGatewaySupportTest {
         request.setKana("ヤマダ タロウ");
 
         assertThrows(RuntimeException.class, () -> support.buildPatientSearchPayload(request));
+    }
+
+    @Test
+    void buildPatientSearchPayloadOmitsOptionalFieldsWhenUnselected() {
+        PatientNameSearchRequest request = new PatientNameSearchRequest();
+        request.setName("山田 太郎");
+
+        String xml = support.buildPatientSearchPayload(request);
+
+        assertTrue(xml.contains("<patientlst3req type=\"record\">"));
+        assertTrue(xml.contains("<WholeName>山田 太郎</WholeName>"));
+        assertFalse(xml.contains("<Birth_StartDate>"));
+        assertFalse(xml.contains("<Birth_EndDate>"));
+        assertFalse(xml.contains("<Sex>"));
+        assertFalse(xml.contains("<InOut>"));
     }
 
     @Test

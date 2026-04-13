@@ -11,7 +11,9 @@ export type MedicalOutpatientRecordPanelProps = {
   selectedPatientId?: string;
 };
 
-const LOCAL_SUMMARY_LABEL = '院内ローカル診療サマリ';
+const LOCAL_SUMMARY_LABEL = '院内ローカル診療サマリ詳細';
+const LOCAL_SUMMARY_BASE_LABEL = '院内ローカル診療サマリ';
+const LOCAL_SUMMARY_HELP = '院内カルテ文脈から再構成したローカル集計です。ORCA収納情報や ORCA公式記録とは別に確認してください。';
 
 const formatSectionMeta = (section: MedicalSectionState): string => {
   const count = section.recordsReturned ?? (section.items.length > 0 ? section.items.length : undefined);
@@ -37,7 +39,8 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
         <header className="medical-record__header">
           <strong>{LOCAL_SUMMARY_LABEL}</strong>
         </header>
-        <p className="medical-record__empty">{LOCAL_SUMMARY_LABEL}を取得中です。</p>
+        <p className="medical-record__empty">{LOCAL_SUMMARY_BASE_LABEL}を取得中です。</p>
+        <p className="medical-record__section-empty">{LOCAL_SUMMARY_HELP}</p>
       </section>
     );
   }
@@ -65,14 +68,15 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
               outcome: {summary.outcome ?? 'ERROR'} / recordsReturned: {summary.recordsReturned ?? '—'} / {httpLabel}
             </span>
           </header>
+          <p className="medical-record__section-empty">{LOCAL_SUMMARY_HELP}</p>
           <ApiFailureBanner
-            subject={LOCAL_SUMMARY_LABEL}
+            subject={LOCAL_SUMMARY_BASE_LABEL}
             destination="local-summary"
             runId={summary.runId}
             traceId={summary.traceId}
             apiResult={summary.apiResult}
             apiResultMessage={summary.apiResultMessage}
-            nextAction={`${LOCAL_SUMMARY_LABEL}を再取得`}
+            nextAction={`${LOCAL_SUMMARY_BASE_LABEL}を再取得`}
             {...errorContext}
           />
         </section>
@@ -84,8 +88,9 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
           <strong>{LOCAL_SUMMARY_LABEL}</strong>
           <span className="medical-record__meta">recordsReturned: {summary.recordsReturned ?? '—'}</span>
         </header>
+        <p className="medical-record__section-empty">{LOCAL_SUMMARY_HELP}</p>
         <p className="medical-record__empty">
-          表示対象の{LOCAL_SUMMARY_LABEL}が見つかりません（patientId={selectedPatientId ?? '未選択'}）。
+          表示対象の{LOCAL_SUMMARY_BASE_LABEL}が見つかりません（patientId={selectedPatientId ?? '未選択'}）。
         </p>
       </section>
     );
@@ -135,6 +140,7 @@ export function MedicalOutpatientRecordPanel({ summary, selectedPatientId }: Med
           )}
         </div>
       </header>
+      <p className="medical-record__section-empty">{LOCAL_SUMMARY_HELP}</p>
 
       <div className="medical-record__sections">
         {record.sections.map((section) => (

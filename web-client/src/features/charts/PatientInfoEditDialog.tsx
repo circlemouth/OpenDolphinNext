@@ -254,7 +254,7 @@ export function PatientInfoEditDialog({
         fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-          action: 'OFFICIAL_PATIENT_UPDATE',
+          action: 'ORCA_OFFICIAL_UPDATE_PATIENT',
           outcome: 'error',
           subject: 'charts',
           details: {
@@ -354,7 +354,7 @@ export function PatientInfoEditDialog({
       fallbackUsed: meta.fallbackUsed,
         dataSourceTransition: meta.dataSourceTransition,
         payload: {
-        action: 'OFFICIAL_PATIENT_UPDATE_ROLLBACK',
+        action: 'ORCA_OFFICIAL_ROLLBACK_PATIENT_UPDATE',
         outcome: 'success',
         subject: 'charts',
         details: { section: 'basic', patientId: meta.patientId, receptionId: meta.receptionId, appointmentId: meta.appointmentId },

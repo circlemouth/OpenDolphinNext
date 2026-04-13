@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { httpFetch } from '../../libs/http/httpClient';
-import { checkOrcaMasterStaticOrderInteractions, checkOrcaOrderInteractions } from './orcaOrderInteractionApi';
+import { checkOrcaMasterStaticOrderInteractions } from './orcaOrderInteractionApi';
 
 vi.mock('../../libs/http/httpClient', () => ({
   httpFetch: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('../../libs/observability/observability', () => ({
 
 const mockHttpFetch = vi.mocked(httpFetch);
 
-describe('checkOrcaOrderInteractions', () => {
+describe('checkOrcaMasterStaticOrderInteractions', () => {
   beforeEach(() => {
     mockHttpFetch.mockReset();
   });
@@ -54,9 +54,5 @@ describe('checkOrcaOrderInteractions', () => {
     expect(result.ok).toBe(false);
     expect(result.status).toBe(503);
     expect(result.pairs).toEqual([]);
-  });
-
-  it('backward-compatible alias は master static 実装を指す', () => {
-    expect(checkOrcaOrderInteractions).toBe(checkOrcaMasterStaticOrderInteractions);
   });
 });

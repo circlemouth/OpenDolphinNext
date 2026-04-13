@@ -163,7 +163,9 @@ export async function fetchOrcaMedicationGet(params: {
       baseDate,
     }),
   });
-  const parsed = await parseOrcaApiResponse(response, { fallbackMessage: '選択式コメント候補の取得に失敗しました。' });
+  const parsed = await parseOrcaApiResponse(response, {
+    fallbackMessage: 'official medicationgetv2 の候補取得に失敗しました。',
+  });
   const json = (parsed.json ?? {}) as Record<string, unknown>;
   const traceId =
     (typeof json.traceId === 'string' ? json.traceId : undefined) ??
