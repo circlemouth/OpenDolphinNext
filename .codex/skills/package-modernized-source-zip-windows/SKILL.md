@@ -1,70 +1,50 @@
 ---
 name: package-modernized-source-zip-windows
-description: Create source-only zip archives for OpenDolphinNext on Windows using PowerShell, excluding build artifacts, caches, node_modules, target, dist, and other generated files.
+description: Create the reviewer package zip for OpenDolphin_WebClient using tracked source/config/docs only, excluding legacy client sources and generated outputs.
 ---
 
-# OpenDolphinNext Source Archive for Windows
+# Reviewer Package Bundle
 
-Use this skill when you need to package the modernized repository contents on a Windows machine.
+Use this skill when you need a **軽量な外部レビュー用 zip** for this repository.
 
 ## What this skill produces
 
-- `artifacts/source-archives/server-modernized-source-<timestamp>.zip`
-- `artifacts/source-archives/web-client-source-<timestamp>.zip`
-
-Each archive should contain the source tree for one project only.
-Generated output, caches, and dependency directories must be excluded.
+- one zip file: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
+- `REVIEW_PACKAGE_MANIFEST.txt` inside the zip
+- tracked repo files only, with legacy and generated paths excluded
 
 ## Run script
 
 From the repository root, run:
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\package-source-zip.ps1
+```bash
+./scripts/create-review-package.sh
 ```
 
-Optional parameters:
+Optional:
 
-- `-Target` to package from a different repository root or subdirectory
-- `-OutputDir .\artifacts\source-archives` to change the output location
-- `-Projects @("server-modernized","web-client")` to override the packaged targets
+- `--run-id 20260414T080812Z`
+- `--out-dir ./artifacts/review-bundles`
 
 ## Exclusion policy
 
-The packaging script must exclude:
+The packaging script excludes tracked files under:
 
-- `.git/`
-- `node_modules/`
-- `target/`
-- `dist/`
-- `build/`
-- `out/`
+- `client/`
 - `artifacts/`
-- `.cache/`
-- `.vite/`
-- `.parcel-cache/`
-- `.turbo/`
-- `.nyc_output/`
-- `.env.local`
-- `.env.*.local`
-- `*.log`
-- `*.tsbuildinfo`
-- `*.zip`
+- `web-client/artifacts/`
+- `node_modules/`, `dist/`, `target/`, `build/`, `out/`
+- `tmp/`, `output/`, `coverage/`, `test-results/`
+- cache directories such as `.cache/`, `.vite/`, `.parcel-cache/`, `.turbo/`, `.nyc_output/`
+- `.DS_Store`, `Thumbs.db`, `*.log`, `*.tsbuildinfo`
 
 ## Verification
 
-The archive creation script validates its output contents.
-It must fail if excluded paths or files are present in the generated zip.
-
-If you need a manual check on Windows, inspect the archive with PowerShell:
-
-```powershell
-Expand-Archive -LiteralPath .\artifacts\source-archives\some-archive.zip -DestinationPath $env:TEMP\archive-check
-```
-
-Then confirm that generated output directories and dependency caches are absent.
+- the script prints file count, size, and sha256
+- `zipinfo -1` must not show `client/`, `artifacts/`, or generated directories
+- the package must fail if no tracked files remain after exclusions
 
 ## Notes
 
-- This Windows skill is the repository-local counterpart to the existing source archive workflow.
-- The packaging logic uses PowerShell and .NET zip APIs, so no macOS-specific tooling is required.
+- This skill is the repository-local counterpart to the reviewer package workflow.
+- Keep the bundle source-only and review-oriented; do not include build outputs, caches, or legacy client sources.
