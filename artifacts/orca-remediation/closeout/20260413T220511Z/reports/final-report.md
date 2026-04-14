@@ -1,8 +1,8 @@
 # ORCA Closeout Recovery Final Report
 
 - RUN_ID: `20260413T220511Z`
-- Accepted Branch: `codex/orca-closeout-recovery-20260413T220511Z`
-- Accepted HEAD: `0b0c7184eda898098cedccaced3ccb72c4a56b8b`
+- Accepted Branch: `master`
+- Accepted HEAD: `559ed22e4ac4f90148f2d7c2710cc77ce21ffb1c`
 - Excluded Bundle: `20260413T104000Z`
 - Accepted Bundle: `artifacts/orca-remediation/closeout/20260413T220511Z/`
 
