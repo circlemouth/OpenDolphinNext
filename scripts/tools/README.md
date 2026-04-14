@@ -4,6 +4,19 @@
 - 状態: 廃止。logs-only archive は reviewer submission packet の正本ではない。
 - 挙動: 実行すると fail し、新しい packet tool へ誘導する。
 
+## create-review-package.sh
+- 目的: このリポジトリをレビュワー提出向けに 1 本の軽量 zip にまとめる。
+- 出力: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
+- 方針:
+  - git tracked files のみを対象にする
+  - `client/` と `artifacts/` を完全除外する
+  - `node_modules/`, `dist/`, `target/`, `build/`, `out/`, `tmp/`, `output/`, `coverage/`, `test-results/` を除外する
+  - `REVIEW_PACKAGE_MANIFEST.txt` を zip 直下へ含める
+- 使い方:
+  - `./scripts/create-review-package.sh`
+  - `./scripts/create-review-package.sh --run-id 20260414T080812Z`
+  - `./scripts/create-review-package.sh --run-id 20260414T080812Z --out-dir ./artifacts/review-bundles`
+
 ## create-reviewer-submission-packet.sh
 - 目的: accepted ref / accepted HEAD / RUN_ID を固定した reviewer submission packet を生成する。
 - 出力: `submission-packet-<RUN_ID>/` と `submission-packet-<RUN_ID>.zip`。

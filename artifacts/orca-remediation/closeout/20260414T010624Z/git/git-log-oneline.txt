@@ -1,0 +1,6 @@
+cd50269d3 chore(orca): freeze final packet head
+7a466146a fix(orca): finalize closeout recovery evidence flow
+22160af5b Update ORCA closeout report for master branch
+559ed22e4 Clarify waiting rule for subagent completion
+0b0c7184e test(orca): lock fail-close source-of-truth
+114c29f1c fix(orca): close remaining closeout blockers

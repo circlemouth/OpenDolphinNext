@@ -1,31 +1,31 @@
 ---
 name: review-log-inclusive-bundle
-description: Create a comprehensive review zip for OpenDolphin_WebClient that excludes historical development docs and generated outputs while keeping review-relevant logs.
+description: Create a reviewer package zip for OpenDolphin_WebClient using tracked source/config/docs only, excluding artifacts, the legacy client, and generated outputs.
 ---
 
-# Review Log Inclusive Bundle
+# Reviewer Package Bundle
 
-Use this skill when someone asks for a **網羅的レビュー向け zip** for this repository and wants:
+Use this skill when someone asks for a **レビュワー提出向けの軽量 zip** for this repository and wants:
 
 - current source/config files
 - current contract and code-adjacent docs
-- review-relevant logs
-- no historical development docs
+- no `artifacts/`
+- no legacy Swing client sources
 - no generated build outputs
 
 ## What this skill should produce
 
-- one zip file: `artifacts/review-bundles/OpenDolphin_WebClient-review-<RUN_ID>.zip`
-- `REVIEW_BUNDLE_MANIFEST.txt` inside the zip
-- tracked repo files except excluded historical docs and generated outputs
-- log files from `artifacts/`, `tmp/`, `.playwright-cli/` when their full path matches `*.log` or `*log*.txt`
+- one zip file: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
+- `REVIEW_PACKAGE_MANIFEST.txt` inside the zip
+- tracked repo files except excluded legacy/generated paths
+- no artifact or log re-inclusion step
 
 ## Run script
 
 From repository root:
 
 ```bash
-./scripts/create-review-archive.sh
+./scripts/create-review-package.sh
 ```
 
 Optional:
@@ -37,25 +37,21 @@ Optional:
 
 The script excludes the following from tracked files before bundling:
 
-- `docs/working-notes/`
-- `docs/implementation/`
-- `docs/managerdocs/`
-- `docs/web-client/product-improvement/`
-- `managerdocs_seed_bundle/`
-- `node_modules/`, `dist/`, `target/`, `coverage/`, `test-results/`
-- `artifacts/`, `tmp/`, `.playwright-cli/` as general content
+- `client/`
+- `artifacts/`
+- `node_modules/`, `dist/`, `target/`, `build/`, `out/`
+- `tmp/`, `output/`, `coverage/`, `test-results/`
+- cache directories such as `.cache/`, `.vite/`, `.parcel-cache/`, `.turbo/`, `.nyc_output/`
 - `__MACOSX/`, `.DS_Store`, `Thumbs.db`
-
-Logs are then added back only from the curated log roots.
 
 ## Expected verification
 
-- the script prints file count, log count, size, and sha256
-- `zipinfo -1` should not show excluded historical doc paths
-- `zipinfo -1` under `artifacts/`, `tmp/`, `.playwright-cli/` should contain only log-like filenames
+- the script prints file count, size, and sha256
+- `zipinfo -1` should not show `client/` or `artifacts/`
+- generated directories such as `node_modules/`, `dist/`, `target/`, `build/` must be absent
 
 ## Failure handling
 
 - if `zip` or `zipinfo` is missing, fail immediately
-- if forbidden historical docs or generated outputs appear in the archive, fail
-- if non-log entries from `artifacts/`, `tmp/`, `.playwright-cli/` appear in the archive, fail
+- if no tracked files remain after exclusions, fail
+- if excluded paths appear in the archive, fail

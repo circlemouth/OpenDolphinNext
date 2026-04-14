@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "ok": true,
+  "bodyText": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260414T010624Z\",\"traceId\":\"sa20-medical-info-012602\",\"requestId\":\"sa20-medical-info-012602\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":8,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-14T01:26:04.528555423Z\",\"items\":[{\"code\":\"01\",\"name\":\"診察\"},{\"code\":\"02\",\"name\":\"薬のみ\"},{\"code\":\"03\",\"name\":\"注射のみ\"},{\"code\":\"04\",\"name\":\"検査のみ\"},{\"code\":\"05\",\"name\":\"リハビリテーション\"},{\"code\":\"06\",\"name\":\"健康診断\"},{\"code\":\"07\",\"name\":\"予防注射\"},{\"code\":\"99\",\"name\":\"該当なし\"}]}",
+  "headers": {
+    "connection": "close",
+    "content-length": "636",
+    "content-security-policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; worker-src 'self' blob:; form-action 'self'; frame-src 'none'; manifest-src 'self'",
+    "content-type": "application/json",
+    "date": "Tue, 14 Apr 2026 01:26:04 GMT",
+    "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+    "referrer-policy": "same-origin",
+    "strict-transport-security": "max-age=63072000; includeSubDomains",
+    "vary": "Origin",
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "x-request-id": "sa20-medical-info-012602",
+    "x-run-id": "20260414T010624Z",
+    "x-trace-id": "sa20-medical-info-012602"
+  },
+  "url": "https://127.0.0.1:5173/api/orca/official/appointments/medical-information"
+}

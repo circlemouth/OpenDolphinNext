@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmlio2>
+<medicalinfres type="record">
+<Information_Date type="string">2026-04-14</Information_Date>
+<Information_Time type="string">10:19:14</Information_Time>
+<Api_Result type="string">00</Api_Result>
+<Api_Result_Message type="string">処理終了</Api_Result_Message>
+<Reskey type="string">Patient Info</Reskey>
+<Base_Date type="string">2026-04-14</Base_Date>
+<Medicalinf_Information type="array">
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">01</Medical_Information>
+<Medical_Information_Name type="string">診察</Medical_Information_Name>
+<Medical_Information_Name2 type="string">診察１</Medical_Information_Name2>
+</Medicalinf_Information_child>
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">02</Medical_Information>
+<Medical_Information_Name type="string">薬のみ</Medical_Information_Name>
+<Medical_Information_Name2 type="string">診察２</Medical_Information_Name2>
+</Medicalinf_Information_child>
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">03</Medical_Information>
+<Medical_Information_Name type="string">注射のみ</Medical_Information_Name>
+<Medical_Information_Name2 type="string">診察３</Medical_Information_Name2>
+</Medicalinf_Information_child>
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">04</Medical_Information>
+<Medical_Information_Name type="string">検査のみ</Medical_Information_Name>
+<Medical_Information_Name2 type="string">検査</Medical_Information_Name2>
+</Medicalinf_Information_child>
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">05</Medical_Information>
+<Medical_Information_Name type="string">リハビリテーション</Medical_Information_Name>
+<Medical_Information_Name2 type="string">リハビリ</Medical_Information_Name2>
+</Medicalinf_Information_child>
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">06</Medical_Information>
+<Medical_Information_Name type="string">健康診断</Medical_Information_Name>
+<Medical_Information_Name2 type="string">健康診断</Medical_Information_Name2>
+</Medicalinf_Information_child>
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">07</Medical_Information>
+<Medical_Information_Name type="string">予防注射</Medical_Information_Name>
+<Medical_Information_Name2 type="string">予防注射</Medical_Information_Name2>
+</Medicalinf_Information_child>
+<Medicalinf_Information_child type="record">
+<Medical_Information type="string">99</Medical_Information>
+<Medical_Information_Name type="string">該当なし</Medical_Information_Name>
+<Medical_Information_Name2 type="string">（該当なし）</Medical_Information_Name2>
+</Medicalinf_Information_child>
+</Medicalinf_Information>
+</medicalinfres>
+</xmlio2>

@@ -1,0 +1,35 @@
+{
+  "runId": "20260414T010624Z",
+  "traceId": "trace-20260414T010624Z",
+  "blockerClassification": "test-data-blocker",
+  "blockerReason": "fatal_before_send",
+  "chartsHandoff": {
+    "status": "error"
+  },
+  "visitRowReadiness": "unknown",
+  "sendResult": {
+    "status": "error",
+    "validation": {
+      "ok": false,
+      "reason": "no_request_xml"
+    }
+  },
+  "orderResult": {
+    "status": "not-run"
+  },
+  "handoffStatePath": "handoff-state.json",
+  "selectedVisitRowPath": "selected-visit-row.json",
+  "evidencePaths": {
+    "summaryJson": "summary.json",
+    "summaryMd": "summary.md",
+    "blockerSummary": "blocker-summary.json",
+    "handoffState": "handoff-state.json",
+    "selectedVisitRow": "selected-visit-row.json",
+    "stepsLog": "steps.log",
+    "network": "network/network.json",
+    "requests": "network/requests.json",
+    "console": "console.json",
+    "pageErrors": "page-errors.json",
+    "screenshots": "screenshots"
+  }
+}

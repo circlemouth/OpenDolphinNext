@@ -1,0 +1,37 @@
+{
+  "runId": "20260414T010624Z",
+  "traceId": "sa21-import-01423-012446",
+  "classification": "success",
+  "importRoute": {
+    "status": 200,
+    "apiResult": "00",
+    "apiResultMessage": "OK",
+    "fetchedCount": 1,
+    "createdCount": 0,
+    "updatedCount": 1,
+    "skippedCount": 0,
+    "errors": []
+  },
+  "canonicalRefetch": {
+    "status": 200,
+    "patientIds": [
+      "01423"
+    ]
+  },
+  "localSearch": {
+    "status": 200,
+    "recordsReturned": 1,
+    "patientIds": [
+      "01423"
+    ]
+  },
+  "evidenceFiles": {
+    "rawUpstreamRequest": "raw-upstream-request.xml",
+    "rawUpstreamResponse": "raw-upstream-response.xml",
+    "serverStacktrace": "server-stacktrace.log",
+    "auditLog": "audit.log",
+    "importResponse": "import-response.json",
+    "canonicalRefetchResponse": "canonical-refetch-response.json",
+    "localSearchResponse": "local-search-response.json"
+  }
+}
