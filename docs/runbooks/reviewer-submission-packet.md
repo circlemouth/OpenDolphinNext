@@ -11,6 +11,13 @@ reviewer 提出物を logs-only archive ではなく、同一 `RUN_ID` / 同一 
 
 既定の出力先は `artifacts/reviewer-submission-packets/`。必要なら `--output <DIR>` を付ける。
 
+## Canonical Flow
+- canonical: `docs/runbooks/reviewer-submission-packet.md` + `scripts/create-reviewer-submission-packet.sh` + `scripts/validate-reviewer-submission-packet.sh` + `tests/review-packet/`
+- support: `scripts/create-review-package.sh` + `tests/review-package/` + `artifacts/review-bundles/`
+- deprecated: `scripts/create-review-archive.sh`
+
+この runbook でいう reviewer 提出物は常に `reviewer submission packet` を指す。`review package` は軽量 source bundle の補助用途としてのみ扱う。
+
 ## 必須オプション
 
 - `--run-id`: closeout evidence の `RUN_ID`

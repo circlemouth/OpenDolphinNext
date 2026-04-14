@@ -18,7 +18,8 @@ RUN_ID=20251124T181500Z VITE_DEV_PROXY_TARGET=http://100.102.17.40:8000 \
 ```
 
 ## 期待成果物・保存先
-- HAR / コンソール / 監査メタ抽出: `artifacts/api-stability/<RUN_ID>/e2e/orca-master/` に `har/`, `console/`, `audit/` を作成して保存する。
+- CI 実行時: `.github/workflows/e2e.yml` は `PLAYWRIGHT_ARTIFACT_DIR=artifacts/validation/e2e/<RUN_ID>` を設定し、その配下へ HAR / screenshots / videos / `test-results` を保存する。
+- ローカル既定: `tests/playwright/fixtures.ts` は `PLAYWRIGHT_ARTIFACT_DIR` 未指定時に `artifacts/webclient/e2e/<RUN_ID>/<msw-on|msw-off>/` を使う。
 - fault 名はテスト側の scenario id をそのままファイル名に含める（例: `db-down-20251124T181500Z-har.har`）。
 
 ## メモ

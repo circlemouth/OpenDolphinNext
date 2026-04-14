@@ -1,0 +1,8 @@
+docs/implementation/orca-order-alignment/orca_order_alignment_authoritative_spec_packet_20260407.md
+docs/implementation/orca-order-alignment/orca_order_alignment_authoritative_tables_20260407.json
+docs/implementation/orca-order-alignment/orca_order_alignment_execution_plan_checklist_self_contained_20260407.md
+docs/archive/orca-order-alignment/orca_remaining_tasks_checklist_20260410.md
+docs/archive/orca-order-alignment/opendolphin_orca_codex_packet_20260413/
+docs/archive/orca-order-alignment/opendolphin_orca_closeout_packet_r2_20260413/
+docs/archive/orca-order-alignment/opendolphin_orca_recovery_packet_r3_20260413/
+docs/reference/orca-order-alignment/opendolphin_orca_review_research_prompts_20260413/

@@ -8,6 +8,17 @@
 - [web-client/README.md](web-client/README.md): web-client module entry
 - [docs/runbooks/release-validation.md](docs/runbooks/release-validation.md): live validation gate
 
+## Build / CI Entry
+- [package.json](package.json): root Node / Playwright scripts
+- [pom.server-modernized.xml](pom.server-modernized.xml): server-modernized build entry
+- [pom.xml](pom.xml): Maven aggregator entry
+- [docs/README.md](docs/README.md): doc-side boundary summary
+
+## Ops Entry
+- [ops/README.md](ops/README.md): ops harness の入口
+- [setup-modernized-env.sh](setup-modernized-env.sh), [setup-modernized-env.ps1](setup-modernized-env.ps1): 開発環境起動の主入口
+- `docker-compose*.yml`: compose-based local stack entry
+
 ## Repository Map
 | Path | Role |
 | --- | --- |

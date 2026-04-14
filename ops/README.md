@@ -6,7 +6,7 @@
 - `legacy-server/` … 旧 Java EE サーバー (WildFly 10) 用の Dockerfile / Compose。`docker compose -f ops/legacy-server/docker-compose.yml up -d` で `db` と `server` を起動する。
 - `modernized-server/` … モダナイズ版サーバー (WildFly 33) 用の Dockerfile / Compose。`docker compose -f ops/modernized-server/docker-compose.yml up -d` で単独検証が可能。
 - `shared/` … `custom.properties`・`bootstrap.sh`・Maven `settings.xml` など両サーバーで共通利用するファイル。
-- `tests/api-smoke-test/` … 旧/新サーバーを比較するスモークテスト資産と、CI 用 Compose 定義 (`docker-compose.yml`)。
+- `tests/api-smoke-test/` … 旧/新サーバーを比較する manual スモークテスト資産。`docker-compose.yml` は手元検証用であり、現行 CI entry ではない。
 
 旧来の `docker/server*` や `server-modernized/tools/api-smoke-test` に存在していたファイルは上記へ移動済み。現行の全体導線は `docs/README.md` と `docs/runbooks/release-validation.md` を参照してください。
 

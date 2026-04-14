@@ -1,10 +1,11 @@
 # scripts/tools
 
 ## create-review-archive.sh
-- 状態: 廃止。logs-only archive は reviewer submission packet の正本ではない。
+- 状態: deprecated。logs-only archive は reviewer submission packet の正本ではない。
 - 挙動: 実行すると fail し、新しい packet tool へ誘導する。
 
 ## create-review-package.sh
+- 位置づけ: support。canonical reviewer flow ではなく、tracked source を軽量 zip 化する補助用途。
 - 目的: このリポジトリをレビュワー提出向けに 1 本の軽量 zip にまとめる。
 - 出力: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
 - 方針:
@@ -18,6 +19,7 @@
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z --out-dir ./artifacts/review-bundles`
 
 ## create-reviewer-submission-packet.sh
+- 位置づけ: canonical。reviewer 提出の現行正本フロー。
 - 目的: accepted ref / accepted HEAD / RUN_ID を固定した reviewer submission packet を生成する。
 - 出力: `submission-packet-<RUN_ID>/` と `submission-packet-<RUN_ID>.zip`。
 - レイアウト:
@@ -30,6 +32,7 @@
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --dry-run`
 
 ## validate-reviewer-submission-packet.sh
+- 位置づけ: canonical support。reviewer submission packet の検証ステップ。
 - 目的: 生成済み packet の required file、HEAD 一致、review-checkout clean、絶対パス混入なしを再検証する。
 - 使い方:
   - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
@@ -42,3 +45,8 @@
   - リポジトリルートで `node scripts/tools/orca-artifacts-namer.js` を実行すると、デフォルトで `artifacts/orca-connectivity/` を走査する。
   - 任意のパスを渡す場合は `node scripts/tools/orca-artifacts-namer.js <path/to/scan>`。
 - 終了コード: 命名がすべて規約通りであれば 0。規約違反があると違反一覧と推奨名を表示して 1 を返す。実行エラー時も 1。
+
+## Naming Rule
+- 現行正本名は `reviewer submission packet`。
+- `review package` は support bundle。
+- `review archive` は deprecated。

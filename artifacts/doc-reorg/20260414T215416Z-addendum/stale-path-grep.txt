@@ -1,0 +1,1 @@
+docs/reference/repository-history/README.md:13:- 旧 `src/discovery/` 配下の doc-only asset を、repo taxonomy に合わせて集約しています。
