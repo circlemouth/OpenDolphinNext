@@ -18,6 +18,23 @@
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z`
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z --out-dir ./artifacts/review-bundles`
 
+## create-review-package-curated.sh
+- 位置づけ: support。50MB 制約つきの curated review bundle。
+- 目的: current docs / workflow docs / current source / selected doc-reorg reports を含めつつ、legacy tree と大きい非必須 binary を落としてレビュー zip を 50MB 以内に収める。
+- 出力: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-curated-<RUN_ID>.zip`
+- 方針:
+  - current docs と active workflow docs を含める
+  - `artifacts/doc-reorg/` の text/log reports を再同梱する
+  - `client/`, `server/`, `ext_lib/`, `docker/orca/jma-receipt-docker/` を除外する
+  - `docs/archive/` はデフォルトで除外し、必要時だけ `--include-archive-docs` で含める
+  - `ops/assets/fonts/NotoSansCJKjp-Regular.otf` など大きい review-irrelevant binary を除外する
+  - zip size が `--size-limit-mb` を超えたら fail する
+- 使い方:
+  - `./scripts/create-review-package-curated.sh`
+  - `./scripts/create-review-package-curated.sh --run-id 20260415T010203Z`
+  - `./scripts/create-review-package-curated.sh --run-id 20260415T010203Z --size-limit-mb 50`
+  - `./scripts/create-review-package-curated.sh --run-id 20260415T010203Z --include-archive-docs`
+
 ## create-reviewer-submission-packet.sh
 - 位置づけ: canonical。reviewer 提出の現行正本フロー。
 - 目的: accepted ref / accepted HEAD / RUN_ID を固定した reviewer submission packet を生成する。
