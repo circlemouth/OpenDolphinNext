@@ -203,7 +203,7 @@ public class OrcaXmlMapper {
     }
 
     public OrcaMedicalInformationListResponse toMedicalInformationList(String xml) {
-        JsonNode body = read(xml).path("system01lstv2res");
+        JsonNode body = resolveMedicalInformationBody(read(xml));
         OrcaMedicalInformationListResponse response = new OrcaMedicalInformationListResponse();
         populateCommon(body, response);
         response.setRequestNumber(textValue(body, "Request_Number"));
@@ -297,6 +297,17 @@ public class OrcaXmlMapper {
         return a + b;
     }
 
+    private JsonNode resolveMedicalInformationBody(JsonNode root) {
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            return root;
+        }
+        JsonNode medicalinfres = root.path("medicalinfres");
+        if (!medicalinfres.isMissingNode() && !medicalinfres.isNull()) {
+            return medicalinfres;
+        }
+        return root.path("system01lstv2res");
+    }
+
     private void populateCommon(JsonNode body, OrcaApiResponse response) {
         if (body == null || body.isMissingNode()) {
             throw new OrcaGatewayException("ORCA payload is missing expected body");
@@ -384,6 +395,7 @@ public class OrcaXmlMapper {
                 textValue(node, "Code"));
         String name = firstNonBlankText(
                 textValue(node, "Medical_Information_Name"),
+                textValue(node, "Medical_Information_Name2"),
                 textValue(node, "Information_Name"),
                 textValue(node, "System_Name"),
                 textValue(node, "Kanji_Name"),

@@ -95,14 +95,27 @@ cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-full
 ```
 期待結果:
 - web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
-- `runtime-ready-smoke` は local smoke seed `0000001` を使う。
+- `runtime-ready-smoke` は current local smoke seed を前提に動作する。smoke seed 不一致で受付行が現れない場合は repo defect と決め打ちせず、`tests/runtime-ready-smoke.log` を保存して `test-data-blocker` または `environment-blocker` として切り分ける。
 - `appointments/medical-information` の direct probe で `system01lstv2 Request_Number=06` 相当の応答可否を smoke 前に evidence 化する。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` の patient picker は current reception workflow に合わせて `/api/local/patients/search` を使う。固定 seed を正本とみなさず、実行直前に current facility で local search 可能かつ単一 active entry を作れる患者IDを確認して `QA_PATIENT_ID` に渡す。
-- `artifacts/orca-remediation/closeout/20260413T104000Z/` の closeout evidence では `01415` と `00005` が `apiResult=16` の重複受付、`01425` / `01423` / `01053` / `00511` / `00013` / `00012` は local search 0 件でした。固定 patientId 前提で success を主張しないこと。
+- 旧 closeout evidence の patientId や old RUN_ID を受入れ候補へ流用しない。current RUN_ID の rerun で local search 可否と active entry 解決性を取り直すこと。
 - patient search が 0 件、または accept 後に canonical handoff 用の active entry を一意に解決できない場合は `test-data-blocker` として停止し、summary / network / console / page-errors を保存する。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `Medical_Information` を送らず、指定時だけ current select option を送る。
 - WebORCA Trial で `Acceptance_Push` workaround が必要な環境では、client 側ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を明示する。`setup-modernized-env.sh` の dev 起動はこの flag を既定で有効化する。
-- artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。official `Voucher_Number` / `Sequential_Number` が不足する場合は fail-close のまま `official-visit-row-blocker` として summary / steps / network へ残す。
+- artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。official `Voucher_Number` / `Sequential_Number` が不足する場合は fail-close のまま `official-visit-row-blocker` または `test-data-blocker` として summary / steps / network へ残す。
+- fullflow が send 到達を示した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。send 未到達 run では XML 不在を許容する代わりに、`summary.json`、`blocker-summary.json`、`handoff-state.json`、`selected-visit-row.json` で停止理由を third party が再読できることを必須とする。
+
+7. current RUN_ID の closeout report を仕上げ、reviewer submission packet を生成・検証する。
+```bash
+./scripts/create-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
+./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
+```
+期待結果:
+- `artifacts/orca-remediation/closeout/<RUN_ID>/reports/final-report.md`、`command-log.md`、`blocker-classification.md` が存在する。
+- packet は `submission-packet-<RUN_ID>/README_REVIEW.md`、`manifest.json`、`review-checkout/.git/HEAD`、`closeout-packet/` を含む。
+- `review-checkout/HEAD`、`closeout-packet/git/git-head-current.txt`、`manifest.json.acceptedHead` が一致する。
+- packet 内テキストに絶対ローカルパスが残らない。
+- `scripts/create-review-archive.sh` は reviewer 提出用の正本ではなく、受入れ手順に含めない。
 
 ## Worker G の post-merge 確認
 ```bash
@@ -175,19 +188,11 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - [ ] `persistence.xml` の entity 明示列挙と `@Entity` 実装が一致する。
 
 ## Review / Archive
-- archive は repo root から作成する。
-- 第一候補は `git archive` を使う。
-- 手動 zip を作る場合も、`target/` / `*.war` / `__MACOSX` / `.DS_Store` / `Thumbs.db` を含めない。
-- archive 生成後に `zipinfo -1` で禁止パターンを再検査する。
-
-```bash
-git archive --format=zip --output /tmp/OpenDolphinNext-clean.zip HEAD
-```
-
-```bash
-zipinfo -1 /tmp/OpenDolphinNext-clean.zip | \
-  rg '(^|/)target(/|$)|\.war$|(^|/)__MACOSX(/|$)|(^|/)\.DS_Store$|(^|/)Thumbs\.db$' && exit 1 || true
-```
+- reviewer 提出物は `git archive` ではなく reviewer submission packet を正本とする。
+- packet 生成は repo root から実行し、`review-checkout/` と `closeout-packet/` を分離同梱する。
+- `closeout-packet/` の required file が欠けていたら fail する。欠落を別 zip や old RUN_ID で補わない。
+- packet 生成後は `./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>` を必ず通す。
+- reviewer が辿る path は packet-relative に統一し、絶対ローカルパスを残さない。
 
 ## 補足
 - `check-no-generated-artifacts.sh` は tracked / untracked の両方を検査する。

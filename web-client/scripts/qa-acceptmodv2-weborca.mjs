@@ -280,6 +280,52 @@ let activeContext = null;
 let activePage = null;
 let lastSummary = null;
 
+const SUCCESS_ACCEPT_RESULTS = new Set(['00', 'K3']);
+
+const parseMutationResponse = () => {
+  const mutationRecord = [...networkRecords]
+    .reverse()
+    .find((record) => record.url.includes('/api/orca/official/visits/mutation'));
+  if (!mutationRecord) {
+    return null;
+  }
+  try {
+    const body = JSON.parse(mutationRecord.response?.body ?? '{}');
+    return {
+      status: mutationRecord.status,
+      apiResult: body.apiResult ?? '',
+      apiResultMessage: body.apiResultMessage ?? '',
+      acceptanceId: body.acceptanceId ?? '',
+      encounterKey: body.encounterKey ?? '',
+      scheduleKey: body.scheduleKey ?? '',
+      responsePath: 'network/network.json',
+    };
+  } catch {
+    return {
+      status: mutationRecord.status,
+      apiResult: '',
+      apiResultMessage: '',
+      acceptanceId: '',
+      encounterKey: '',
+      scheduleKey: '',
+      responsePath: 'network/network.json',
+    };
+  }
+};
+
+const classifyAcceptBlocker = (mutationResponse) => {
+  if (networkRecords.some((record) => record.status >= 500)) {
+    return 'environment-blocker';
+  }
+  if (pageErrors.length > 0) {
+    return 'repo-defect';
+  }
+  if (mutationResponse?.apiResult && !SUCCESS_ACCEPT_RESULTS.has(mutationResponse.apiResult)) {
+    return 'test-data-blocker';
+  }
+  return 'none';
+};
+
 const persistArtifacts = (summary) => {
   lastSummary = summary;
   fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
@@ -306,6 +352,11 @@ const buildMarkdownSummary = (summary) =>
   (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
   `\n## 送信結果\n\n` +
   `- Tone: ${summary.acceptResult?.toneText ?? '—'}\n` +
+  `- API Result Code: ${summary.acceptResponse?.apiResult || '—'}\n` +
+  `- API Result Message: ${summary.acceptResponse?.apiResultMessage || '—'}\n` +
+  `- Acceptance ID: ${summary.acceptResponse?.acceptanceId || '—'}\n` +
+  `- Encounter Key: ${summary.acceptResponse?.encounterKey || '—'}\n` +
+  `- Schedule Key: ${summary.acceptResponse?.scheduleKey || '—'}\n` +
   `- ${summary.acceptResult?.apiResultText ?? '—'}\n` +
   `- ${summary.acceptResult?.durationText ?? '—'}\n` +
   `- XHR Debug: ${summary.acceptResult?.xhrDebugText ?? '—'}\n` +
@@ -430,6 +481,7 @@ const run = async () => {
   const apiResultText = await safeInnerText(page.locator('[data-test-id="accept-api-result"]'), 3000);
   const durationText = await safeInnerText(page.locator('[data-test-id="accept-duration-ms"]'), 3000);
   const xhrDebugText = await safeInnerText(page.locator('[data-test-id="accept-xhr-debug"]'), 3000);
+  const acceptResponse = parseMutationResponse();
 
   const summary = {
     runId,
@@ -461,14 +513,11 @@ const run = async () => {
       durationText,
       xhrDebugText,
     },
+    acceptResponse,
     harPath: recordHar ? harPath : undefined,
     consoleMessages,
     pageErrors,
-    blockerClassification: networkRecords.some((record) => record.status >= 500)
-      ? 'environment-blocker'
-      : pageErrors.length > 0
-        ? 'repo-defect'
-        : 'none',
+    blockerClassification: classifyAcceptBlocker(acceptResponse),
   };
 
   persistArtifacts(summary);
@@ -489,7 +538,7 @@ run().catch(async (error) => {
     ? 'environment-blocker'
     : pageErrors.length > 0
       ? 'repo-defect'
-      : 'test-data-blocker';
+      : classifyAcceptBlocker(parseMutationResponse()) || 'test-data-blocker';
   const summary =
     lastSummary ?? {
       runId,
@@ -505,6 +554,7 @@ run().catch(async (error) => {
       medicalInformationProbe: undefined,
       selection: {},
       acceptResult: {},
+      acceptResponse: parseMutationResponse(),
       harPath: recordHar ? harPath : undefined,
       consoleMessages,
       pageErrors,

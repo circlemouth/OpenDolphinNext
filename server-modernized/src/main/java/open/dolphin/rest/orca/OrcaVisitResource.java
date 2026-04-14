@@ -9,9 +9,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -30,6 +34,7 @@ import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
 import open.dolphin.rest.dto.orca.VisitPatientListResponse;
+import open.dolphin.session.KarteServiceBean;
 import open.dolphin.session.framework.SessionOperation;
 
 /**
@@ -52,6 +57,8 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
     EncounterProjectionRepository encounterProjectionRepository;
     @Inject
     ProjectionPatientSummaryRepository projectionPatientSummaryRepository;
+    @Inject
+    KarteServiceBean karteServiceBean;
 
     public OrcaVisitResource() {
     }
@@ -117,6 +124,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         try {
             VisitMutationResponse response = wrapperService.mutateVisit(facilityId, body);
             enrichVisitMutationKeys(facilityId, response);
+            persistEncounterProjectionIfNeeded(request, facilityId, body, response, details);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
             if (response.getAcceptanceId() != null && !response.getAcceptanceId().isBlank()) {
@@ -243,7 +251,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         if ("00".equals(normalizedRequestNumber)) {
             return;
         }
-        if (!OrcaApiProxySupport.isApiResultSuccess(response.getApiResult())) {
+        if (!hasCanonicalAcceptance(response)) {
             return;
         }
         if (facilityId == null || facilityId.isBlank()) {
@@ -266,6 +274,65 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         }
     }
 
+    private void persistEncounterProjectionIfNeeded(HttpServletRequest request,
+            String facilityId,
+            VisitMutationRequest body,
+            VisitMutationResponse response,
+            Map<String, Object> details) {
+        if (response == null || encounterProjectionRepository == null || body == null) {
+            return;
+        }
+        if (!"01".equals(normalizeRequestNumber(body.getRequestNumber()))) {
+            return;
+        }
+        if (!hasCanonicalAcceptance(response)) {
+            return;
+        }
+        String patientId = resolvePatientId(body, response);
+        if (patientId == null || patientId.isBlank()) {
+            return;
+        }
+        Instant acceptanceDatetime = resolveAcceptanceInstant(response.getAcceptanceDate(), response.getAcceptanceTime(),
+                body.getAcceptanceDate(), body.getAcceptanceTime());
+        if (acceptanceDatetime == null) {
+            return;
+        }
+        Long karteId = resolveKarteId(facilityId, patientId);
+        String encounterKey = response.getEncounterKey();
+        if (encounterKey == null || encounterKey.isBlank()) {
+            encounterKey = CanonicalEncounterKeys.optionalEncounterKey(facilityId, response.getAcceptanceId());
+        }
+        if (encounterKey == null || encounterKey.isBlank()) {
+            return;
+        }
+        String ownerUserId = request != null ? request.getRemoteUser() : null;
+        encounterProjectionRepository.upsertCheckedIn(new EncounterProjectionRepository.EncounterUpsertCommand(
+                encounterKey,
+                facilityId,
+                patientId,
+                karteId,
+                response.getScheduleKey(),
+                response.getAcceptanceId(),
+                acceptanceDatetime,
+                "checked_in",
+                null,
+                null,
+                null,
+                ownerUserId,
+                null,
+                "{}",
+                null,
+                1L,
+                Instant.now()));
+        if (details != null) {
+            details.put("encounterProjectionPersisted", true);
+            details.put("encounterKey", encounterKey);
+            if (karteId != null) {
+                details.put("karteId", karteId);
+            }
+        }
+    }
+
     private String resolvePatientId(VisitMutationRequest body, VisitMutationResponse response) {
         if (body.getPatientId() != null && !body.getPatientId().isBlank()) {
             return body.getPatientId().trim();
@@ -274,6 +341,77 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
                 && response.getPatient().getPatientId() != null
                 && !response.getPatient().getPatientId().isBlank()) {
             return response.getPatient().getPatientId().trim();
+        }
+        return null;
+    }
+
+    private boolean hasCanonicalAcceptance(VisitMutationResponse response) {
+        if (response == null) {
+            return false;
+        }
+        String acceptanceId = response.getAcceptanceId();
+        if (acceptanceId == null || acceptanceId.isBlank()) {
+            return false;
+        }
+        String encounterKey = response.getEncounterKey();
+        return encounterKey != null && !encounterKey.isBlank();
+    }
+
+    private Long resolveKarteId(String facilityId, String patientId) {
+        if (karteServiceBean == null || facilityId == null || facilityId.isBlank() || patientId == null || patientId.isBlank()) {
+            return null;
+        }
+        try {
+            var karte = karteServiceBean.getKarte(facilityId, patientId, null);
+            if (karte == null || karte.getId() <= 0) {
+                return null;
+            }
+            return karte.getId();
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.FINE, "Failed to resolve karte for encounter projection", ex);
+            return null;
+        }
+    }
+
+    private Instant resolveAcceptanceInstant(String responseDate, String responseTime, String requestDate, String requestTime) {
+        String date = normalizeEventDate(responseDate);
+        if (date == null) {
+            date = normalizeEventDate(requestDate);
+        }
+        LocalTime time = parseAcceptanceTime(responseTime);
+        if (time == null) {
+            time = parseAcceptanceTime(requestTime);
+        }
+        if (date == null || time == null) {
+            return null;
+        }
+        try {
+            return LocalDateTime.of(LocalDate.parse(date), time).atZone(TOKYO_ZONE).toInstant();
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
+    private LocalTime parseAcceptanceTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        try {
+            if (trimmed.matches("\\d{2}:\\d{2}:\\d{2}")) {
+                return LocalTime.parse(trimmed, DateTimeFormatter.ofPattern("HH:mm:ss"));
+            }
+            if (trimmed.matches("\\d{2}:\\d{2}")) {
+                return LocalTime.parse(trimmed, DateTimeFormatter.ofPattern("HH:mm"));
+            }
+            if (trimmed.matches("\\d{6}")) {
+                return LocalTime.parse(trimmed, DateTimeFormatter.ofPattern("HHmmss"));
+            }
+            if (trimmed.matches("\\d{4}")) {
+                return LocalTime.parse(trimmed, DateTimeFormatter.ofPattern("HHmm"));
+            }
+        } catch (DateTimeParseException ex) {
+            return null;
         }
         return null;
     }

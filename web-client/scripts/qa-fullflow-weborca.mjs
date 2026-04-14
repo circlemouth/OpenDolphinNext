@@ -25,6 +25,9 @@ const harPath = path.join(harDir, 'network.har');
 const stepLogPath = path.join(artifactRoot, 'steps.log');
 const summaryJsonPath = path.join(artifactRoot, 'summary.json');
 const summaryMdPath = path.join(artifactRoot, 'summary.md');
+const blockerSummaryJsonPath = path.join(artifactRoot, 'blocker-summary.json');
+const handoffStateJsonPath = path.join(artifactRoot, 'handoff-state.json');
+const selectedVisitRowJsonPath = path.join(artifactRoot, 'selected-visit-row.json');
 const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
 const medicalmodv2XmlPath = path.join(requestXmlDir, 'medicalmodv2.xml');
@@ -333,6 +336,61 @@ let activeContext = null;
 let activePage = null;
 let lastMedicalmodv2RequestXml = '';
 let lastSummary = null;
+let lastHandoffState = { status: 'not-started' };
+let lastSelectedVisitRow = null;
+
+const readSelectedVisitRow = async (page) =>
+  await page
+    .evaluate(() => {
+      const normalize = (value) => {
+        if (typeof value !== 'string') return null;
+        const trimmed = value.replace(/\s+/g, ' ').trim();
+        return trimmed || null;
+      };
+      const row = document.querySelector('.patients-tab__row--selected');
+      if (!(row instanceof HTMLElement)) {
+        return null;
+      }
+      return {
+        name: normalize(row.querySelector('.patients-tab__row-name')?.textContent),
+        patientId: normalize(row.querySelector('.patients-tab__row-patientid')?.textContent),
+        timeLabel: normalize(row.querySelector('.patients-tab__row-time-label')?.textContent),
+        timeValue: normalize(row.querySelector('.patients-tab__row-time-value')?.textContent),
+        statusPills: Array.from(row.querySelectorAll('.patients-tab__row-pill'))
+          .map((node) => normalize(node.textContent))
+          .filter(Boolean),
+        subitems: Array.from(row.querySelectorAll('.patients-tab__row-subitem'))
+          .map((node) => normalize(node.textContent))
+          .filter(Boolean),
+        memo: normalize(row.querySelector('.patients-tab__row-memo')?.textContent),
+      };
+    })
+    .catch(() => null);
+
+const buildBlockerSummary = (summary) => ({
+  runId: summary.runId,
+  traceId: summary.traceId,
+  blockerClassification: summary.blockerClassification,
+  blockerReason: summary.blockerReason,
+  medicalInformationProbe: summary.medicalInformationProbe,
+  chartsHandoff: summary.chartsHandoff,
+  visitRowReadiness: summary.visitRowReadiness,
+  sendResult: {
+    status: summary.sendResult?.status,
+    disabled: summary.sendResult?.disabled,
+    disabledReason: summary.sendResult?.disabledReason,
+    guard: summary.sendResult?.guard,
+    guardSummary: summary.sendResult?.guardSummary,
+    dialog: summary.sendResult?.dialog,
+    requestXmlPath: summary.sendResult?.requestXmlPath,
+    validation: summary.sendResult?.validation,
+  },
+  orderResult: summary.orderResult,
+  billingResult: summary.billingResult,
+  handoffStatePath: 'handoff-state.json',
+  selectedVisitRowPath: 'selected-visit-row.json',
+  evidencePaths: summary.evidencePaths,
+});
 
 const persistArtifacts = (summary) => {
   lastSummary = summary;
@@ -344,6 +402,9 @@ const persistArtifacts = (summary) => {
     fs.writeFileSync(medicalmodv2XmlPath, lastMedicalmodv2RequestXml, 'utf8');
   }
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2));
+  fs.writeFileSync(blockerSummaryJsonPath, JSON.stringify(buildBlockerSummary(summary), null, 2));
+  fs.writeFileSync(handoffStateJsonPath, JSON.stringify(lastHandoffState, null, 2));
+  fs.writeFileSync(selectedVisitRowJsonPath, JSON.stringify(lastSelectedVisitRow, null, 2));
 };
 
 const buildSummaryMarkdown = (summary) =>
@@ -365,6 +426,9 @@ const buildSummaryMarkdown = (summary) =>
   (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
   `\n## Evidence\n\n` +
   `- Summary JSON: summary.json\n` +
+  `- Blocker Summary: blocker-summary.json\n` +
+  `- Handoff State: handoff-state.json\n` +
+  `- Selected Visit Row: selected-visit-row.json\n` +
   `- Steps: steps.log\n` +
   `- Network: network/network.json\n` +
   `- Requests: network/requests.json\n` +
@@ -564,6 +628,11 @@ const run = async () => {
       encounterKey: button.getAttribute('data-encounter-key'),
       title: button.getAttribute('title'),
     }));
+    lastHandoffState = {
+      status: 'ready',
+      source: 'patient-search-open-charts',
+      ...chartsHandoff,
+    };
     logStep(
       `charts handoff status=${chartsHandoff.status} scheduleKey=${chartsHandoff.scheduleKey ?? '—'} encounterKey=${
         chartsHandoff.encounterKey ?? '—'
@@ -580,6 +649,12 @@ const run = async () => {
         title: button.getAttribute('title'),
       }))
       .catch(() => null);
+    lastHandoffState = {
+      status: 'error',
+      source: 'patient-search-open-charts',
+      error: String(error),
+      buttonState,
+    };
     logStep(`charts handoff error=${String(error)} state=${JSON.stringify(buttonState)}`);
     throw new Error(`canonical charts handoff did not become available after accept: ${String(error)}`);
   }
@@ -595,6 +670,14 @@ const run = async () => {
   if (leakedQueryKeys.length > 0) {
     throw new Error(`charts URL leaked scrubbed encounter params: ${leakedQueryKeys.join(', ')}`);
   }
+  lastSelectedVisitRow = await readSelectedVisitRow(page);
+  lastHandoffState = {
+    ...lastHandoffState,
+    status: 'navigated',
+    chartsUrl: page.url(),
+    leakedQueryKeys,
+    selectedVisitRowPresent: Boolean(lastSelectedVisitRow),
+  };
   await Promise.race([
     setObservabilityMeta(page),
     new Promise((resolve) => setTimeout(resolve, 5000)),
@@ -993,6 +1076,9 @@ const run = async () => {
     evidencePaths: {
       summaryJson: 'summary.json',
       summaryMd: 'summary.md',
+      blockerSummary: 'blocker-summary.json',
+      handoffState: 'handoff-state.json',
+      selectedVisitRow: 'selected-visit-row.json',
       stepsLog: 'steps.log',
       network: 'network/network.json',
       requests: 'network/requests.json',
@@ -1059,6 +1145,9 @@ run().catch(async (error) => {
       evidencePaths: {
         summaryJson: 'summary.json',
         summaryMd: 'summary.md',
+        blockerSummary: 'blocker-summary.json',
+        handoffState: 'handoff-state.json',
+        selectedVisitRow: 'selected-visit-row.json',
         stepsLog: 'steps.log',
         network: 'network/network.json',
         requests: 'network/requests.json',

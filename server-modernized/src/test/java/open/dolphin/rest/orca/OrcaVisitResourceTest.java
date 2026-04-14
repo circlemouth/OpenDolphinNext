@@ -27,6 +27,7 @@ import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.service.DefaultOrcaLiveGateway;
 import open.dolphin.orca.service.OrcaLiveGateway;
 import open.dolphin.orca.transport.StubOrcaTransport;
+import open.dolphin.rest.ReceptionRealtimeSseSupport;
 import open.dolphin.rest.dto.orca.PatientSummary;
 import open.dolphin.rest.dto.orca.VisitMutationRequest;
 import open.dolphin.rest.dto.orca.VisitMutationResponse;
@@ -282,6 +283,47 @@ class OrcaVisitResourceTest {
         resource.mutateVisit(createRequest("F001:doctor01", Map.of()), request);
 
         verify(wrapperService).mutateVisit(anyString(), argThat(candidate -> candidate.getAcceptancePush() == null));
+    }
+
+    @Test
+    void visitMutationProjectsAndPublishesWarnSuccessAcceptance() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitMutationResponse stub = new VisitMutationResponse();
+        stub.setApiResult("K3");
+        stub.setApiResultMessage("受付登録終了");
+        stub.setAcceptanceId("A-100");
+        stub.setAcceptanceDate("2025-11-16");
+        stub.setAcceptanceTime("09:00:00");
+        PatientSummary patient = new PatientSummary();
+        patient.setPatientId("000001");
+        stub.setPatient(patient);
+        when(wrapperService.mutateVisit(anyString(), any(VisitMutationRequest.class))).thenReturn(stub);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        ReceptionRealtimeSseSupport realtimeSseSupport = mock(ReceptionRealtimeSseSupport.class);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+        resource.setReceptionRealtimeSseSupportForTest(realtimeSseSupport);
+
+        VisitMutationRequest request = new VisitMutationRequest();
+        request.setRequestNumber("01");
+        request.setPatientId("000001");
+        request.setAcceptanceDate("2025-11-16");
+        request.setAcceptanceTime("09:00:00");
+
+        VisitMutationResponse response = resource.mutateVisit(
+                createRequest("F001:doctor01", Map.of("X-Run-Id", "RUN-VISIT-K3")), request);
+
+        assertEquals("F001:A-100", response.getEncounterKey());
+        verify(encounterProjectionRepository).upsertCheckedIn(argThat(command ->
+                "F001:A-100".equals(command.encounterKey())
+                        && "F001".equals(command.facilityId())
+                        && "000001".equals(command.patientId())
+                        && "A-100".equals(command.orcaAcceptanceId())
+                        && "checked_in".equals(command.businessState())));
+        verify(realtimeSseSupport).publishReceptionUpdate("F001", "2025-11-16", "000001", "01", "RUN-VISIT-K3");
     }
 
     @Test

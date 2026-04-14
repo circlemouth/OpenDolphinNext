@@ -1,13 +1,26 @@
 # scripts/tools
 
 ## create-review-archive.sh
-- 目的: このリポジトリの網羅的レビュー向け zip を生成する。現行コード/設定/正本 docs は残し、`docs/working-notes/`、`docs/web-client/product-improvement/`、`managerdocs_seed_bundle/` などの過去開発資料と、`node_modules` / `dist` / `target` などの生成物は除外する。
-- ログ方針: `artifacts/`、`tmp/`、`.playwright-cli/` 配下で、フルパスが `*.log` または `*log*.txt` に該当するファイルだけを再取り込みし、レビュー補助ログとして zip に含める。
+- 状態: 廃止。logs-only archive は reviewer submission packet の正本ではない。
+- 挙動: 実行すると fail し、新しい packet tool へ誘導する。
+
+## create-reviewer-submission-packet.sh
+- 目的: accepted ref / accepted HEAD / RUN_ID を固定した reviewer submission packet を生成する。
+- 出力: `submission-packet-<RUN_ID>/` と `submission-packet-<RUN_ID>.zip`。
+- レイアウト:
+  - `review-checkout/`: `.git` と `origin/master` を持つ clean checkout
+  - `closeout-packet/`: 同一 RUN_ID / 同一 HEAD の closeout evidence
+  - `manifest.json`, `manifest.sha256`, `README_REVIEW.md`
 - 使い方:
-  - リポジトリルートで `./scripts/create-review-archive.sh` を実行する。
-  - RUN_ID を固定したい場合は `./scripts/create-review-archive.sh --run-id 20260409T232604Z`。
-  - 出力先を変えたい場合は `./scripts/create-review-archive.sh --out-dir ./artifacts/review-bundles`。
-- 出力: 既定では `artifacts/review-bundles/OpenDolphin_WebClient-review-<RUN_ID>.zip` を作成し、件数・ログ件数・sha256 を表示する。
+  - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
+  - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
+  - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --dry-run`
+
+## validate-reviewer-submission-packet.sh
+- 目的: 生成済み packet の required file、HEAD 一致、review-checkout clean、絶対パス混入なしを再検証する。
+- 使い方:
+  - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
+  - `./scripts/validate-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
 
 ## orca-artifacts-namer.js
 - 目的: `artifacts/orca-connectivity/` 以下の Evidence ディレクトリ名が UTC タイムスタンプ (`YYYYMMDDThhmmssZ`) に統一されているかを自動検証し、命名揺れがある場合は推奨名を提案する。
