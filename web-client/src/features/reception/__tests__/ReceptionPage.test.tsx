@@ -6,7 +6,7 @@ import userEvent from '@testing-library/user-event';
 import { ReceptionPage } from '../pages/ReceptionPage';
 import { buildDepartmentOptions } from '../departmentOptions';
 import type { AppointmentPayload, ClaimOutpatientPayload, ReceptionEntry } from '../../outpatient/types';
-import { postOrcaMedicalModV2Xml } from '../../charts/orcaClaimApi';
+import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from '../../charts/orcaClaimApi';
 
 const createBaseClaimData = (): ClaimOutpatientPayload => ({
   runId: 'RUN-CLAIM',
@@ -170,7 +170,7 @@ vi.mock('../../charts/orcaClaimSendCache', () => ({
 }));
 
 vi.mock('../../charts/orcaClaimApi', () => ({
-  buildMedicalModV2RequestXml: vi.fn().mockReturnValue('<data></data>'),
+  buildMedicalModV2RequestXml: vi.fn((payload: unknown) => payload),
   postOrcaMedicalModV2Xml: vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
@@ -333,6 +333,26 @@ const renderReceptionPage = () => {
   screen.getByRole('heading', { name: '診察待ち' });
 };
 
+const createBillingEntry = (overrides: Partial<ReceptionEntry> = {}): ReceptionEntry => ({
+  id: 'row-claim',
+  patientId: 'P-501',
+  receptionId: 'R-501',
+  visitDate: '2026-01-29',
+  departmentCode: '01',
+  physicianCode: '10001',
+  insuranceCombinationNumber: '0001',
+  voucherNumber: '1234',
+  sequentialNumber: '1',
+  name: '診察終了患者',
+  appointmentTime: '11:00',
+  department: '01 内科',
+  physician: '10001 主治医',
+  status: '会計待ち',
+  insurance: '保険',
+  source: 'visits',
+  ...overrides,
+});
+
 describe('buildDepartmentOptions', () => {
   it('appointment raw 由来の code/name から診療科候補を構成する', () => {
     const options = buildDepartmentOptions({
@@ -415,6 +435,7 @@ beforeEach(() => {
   mockInvalidateQueries.mockClear();
   mockEnqueue.mockReset();
   mockOpenCharts.mockReset();
+  vi.mocked(buildMedicalModV2RequestXml).mockClear();
   vi.mocked(postOrcaMedicalModV2Xml).mockClear();
   localStorage.clear();
 });
@@ -1604,22 +1625,9 @@ describe('ReceptionPage status/date/card action UX', () => {
   });
 
   it('shows 会計送信 button on 会計待ち rows and moves them to 会計済 on success', async () => {
-    mockAppointmentData.entries = [
-      {
-        id: 'row-claim-1',
-        patientId: 'P-501',
-        receptionId: 'R-501',
-        departmentCode: '01',
-        physicianCode: '10001',
-        name: '診察終了患者',
-        appointmentTime: '11:00',
-        department: '01 内科',
-        physician: '10001 主治医',
-        status: '会計待ち',
-        insurance: '保険',
-        source: 'visits',
-      },
-    ];
+    mockAppointmentData.entries = [createBillingEntry()];
+    mockSearchParams = new URLSearchParams('date=2026-01-29');
+    mockLocationState = { visitDate: '2026-01-29' };
 
     const user = userEvent.setup();
     renderReceptionPage();
@@ -1630,6 +1638,33 @@ describe('ReceptionPage status/date/card action UX', () => {
     await user.click(within(row).getByRole('button', { name: '会計送信' }));
 
     await waitFor(() => expect(vi.mocked(postOrcaMedicalModV2Xml)).toHaveBeenCalled());
+    expect(vi.mocked(buildMedicalModV2RequestXml)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        encounterContext: {
+          patientId: 'P-501',
+          visitDate: '2026-01-29',
+          departmentCode: '01',
+          physicianCode: '10001',
+          insuranceCombinationNumber: '0001',
+          voucherNumber: '1234',
+          sequentialNumber: '1',
+        },
+      }),
+    );
+    expect(vi.mocked(postOrcaMedicalModV2Xml)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        encounterContext: {
+          patientId: 'P-501',
+          visitDate: '2026-01-29',
+          departmentCode: '01',
+          physicianCode: '10001',
+          insuranceCombinationNumber: '0001',
+          voucherNumber: '1234',
+          sequentialNumber: '1',
+        },
+      }),
+      { classCode: '01' },
+    );
     expect(mockEnqueue).toHaveBeenCalledWith(
       expect.objectContaining({
         tone: 'success',
@@ -1644,38 +1679,58 @@ describe('ReceptionPage status/date/card action UX', () => {
     expect(completedRow).toBeInTheDocument();
   });
 
-  it('blocks 会計送信 when canonical visit context codes are missing instead of reparsing display strings', async () => {
-    mockAppointmentData.entries = [
-      {
-        id: 'row-claim-2',
-        patientId: 'P-502',
-        receptionId: 'R-502',
-        name: '文脈不足患者',
-        appointmentTime: '11:30',
-        department: '01 内科',
-        physician: '10001 主治医',
-        status: '会計待ち',
-        insurance: '保険',
-        source: 'visits',
-      },
-    ];
+  it.each([
+    {
+      title: 'fallbackUsed=true では会計送信を fail-close する',
+      claimFallbackUsed: true,
+      entry: createBillingEntry({ name: 'fallback患者' }),
+      reason: /fallbackUsed=true です。受付一覧を再取得し、official visit row の canonical field が揃うと送信できます。/,
+    },
+    {
+      title: 'physicianCode 欠落では会計送信を fail-close する',
+      entry: createBillingEntry({ name: '担当医不足患者', physicianCode: undefined }),
+      reason: /Physician_Code が不足しています。受付一覧を再取得し、official visit row の canonical field が揃うと送信できます。/,
+    },
+    {
+      title: 'insuranceCombinationNumber 欠落では会計送信を fail-close する',
+      entry: createBillingEntry({ name: '保険組合せ不足患者', insuranceCombinationNumber: undefined }),
+      reason: /Insurance_Combination_Number が不足しています。受付一覧を再取得し、official visit row の canonical field が揃うと送信できます。/,
+    },
+    {
+      title: 'voucherNumber 欠落では会計送信を fail-close する',
+      entry: createBillingEntry({ name: '伝票番号不足患者', voucherNumber: undefined }),
+      reason: /Voucher_Number が不足しています。受付一覧を再取得し、official visit row の canonical field が揃うと送信できます。/,
+    },
+    {
+      title: 'sequentialNumber 欠落では会計送信を fail-close する',
+      entry: createBillingEntry({ name: '受付連番不足患者', sequentialNumber: undefined }),
+      reason: /Sequential_Number が不足しています。受付一覧を再取得し、official visit row の canonical field が揃うと送信できます。/,
+    },
+    {
+      title: 'visitDate 欠落では selectedDate があっても会計送信を fail-close する',
+      searchParams: new URLSearchParams('date=2026-02-03'),
+      locationState: { visitDate: '2026-02-03' },
+      entry: createBillingEntry({ name: '診療日不足患者', visitDate: undefined }),
+      reason: /Perform_Date が不足しています。受付一覧を再取得し、official visit row の canonical field が揃うと送信できます。/,
+    },
+  ])('$title', async ({ claimFallbackUsed, entry, locationState, reason, searchParams }) => {
+    mockClaimData.fallbackUsed = false;
+    mockAppointmentData.fallbackUsed = claimFallbackUsed ?? false;
+    mockAppointmentData.entries = [entry];
+    mockLocationState = locationState;
+    mockSearchParams = searchParams ?? new URLSearchParams();
 
     const user = userEvent.setup();
     renderReceptionPage();
 
     await user.click(screen.getByRole('tab', { name: /会計待ち/ }));
     const listRegion = screen.getByRole('region', { name: '受付一覧' });
-    const row = within(listRegion).getByRole('row', { name: /文脈不足患者/ });
-    await user.click(within(row).getByRole('button', { name: '会計送信' }));
+    const row = within(listRegion).getByRole('row', { name: new RegExp(entry.name ?? '') });
+    const sendButton = within(row).getByRole('button', { name: '会計送信' });
 
-    await waitFor(() =>
-      expect(mockEnqueue).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tone: 'warning',
-          message: '診療科コードが不明のため会計送信できません。',
-        }),
-      ),
-    );
+    expect(sendButton).toBeDisabled();
+    expect(within(row).getByText(reason)).toBeInTheDocument();
+    expect(vi.mocked(buildMedicalModV2RequestXml)).not.toHaveBeenCalled();
     expect(vi.mocked(postOrcaMedicalModV2Xml)).not.toHaveBeenCalled();
   });
 

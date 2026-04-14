@@ -1,11 +1,14 @@
 # Webクライアント UIガイドライン v0.1
 
 - Status: reference-only
+- Base reference: [docs/web-client/ux/dads_app_ui_design_rules_20260411.md](./dads_app_ui_design_rules_20260411.md)
 - Canonical source: `docs/managerdocs/04_ui_improvement_program.md`, `web-client/notes/ui-current-contract.md`
 - 更新日: 2026-02-26
 - RUN_ID: `20260226T102426Z`
 - ステータス: Draft（運用開始）
 - 適用対象: Webクライアント全体（トップバー、ナビ、一覧、フォーム、モーダル、通知、グラフ）
+
+この文書は DADS の代替ではなく、project-local adaptation のための reference です。DADS 本文の焼き直しは行わず、この repo 固有で追加した運用ルールだけを扱います。
 
 ## 目的と適用範囲
 

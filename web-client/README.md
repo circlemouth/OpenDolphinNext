@@ -1,37 +1,32 @@
 # OpenDolphin Web Client
 
-この README は `web-client` の入口要約です。current contract の正本は `notes/` 配下に分離します。
+この README は `web-client/` の module entry です。current contract の正本は `notes/` に分離し、UI の enduring reference は `docs/web-client/` 側へ寄せます。
 
-## Scope
-- `web-client` の current repo 上の docs-freeze 済み契約を参照するための入口です。
-- 将来計画、実装予定、repo 外設定値、UI 詳細の推測はこの README に持ち込みません。
-- release-ready と merge-ready は同義ではありません。
+## Current Contracts
+- [notes/README.md](./notes/README.md)
+- [notes/auth-check.md](./notes/auth-check.md)
+- [notes/auth-transition.md](./notes/auth-transition.md)
+- [notes/patient-context-contract.md](./notes/patient-context-contract.md)
+- [notes/feedback-spec.md](./notes/feedback-spec.md)
+- [notes/ui-current-contract.md](./notes/ui-current-contract.md)
+- [notes/orca-order-remediation-20260403.md](./notes/orca-order-remediation-20260403.md)
+- [notes/orca-order-contract-cleanup-20260404.md](./notes/orca-order-contract-cleanup-20260404.md)
+- [notes/release-gate.md](./notes/release-gate.md)
+- [notes/security-spec.md](./notes/security-spec.md)
 
-## Source of Truth
-- 認証と主要画面の簡易確認: [notes/auth-check.md](./notes/auth-check.md)
-- 認証遷移の current contract: [notes/auth-transition.md](./notes/auth-transition.md)
-- 患者文脈の current contract: [notes/patient-context-contract.md](./notes/patient-context-contract.md)
-- フィードバック表示の current contract: [notes/feedback-spec.md](./notes/feedback-spec.md)
-- UI 棚卸しと verification 境界: [notes/ui-current-contract.md](./notes/ui-current-contract.md)
-- ORCAオーダー是正の canonical/local-only 契約: [notes/orca-order-remediation-20260403.md](./notes/orca-order-remediation-20260403.md)
-- ORCAオーダー残タスクの cleanup 契約: [notes/orca-order-contract-cleanup-20260404.md](./notes/orca-order-contract-cleanup-20260404.md)
-- release gate の current contract: [notes/release-gate.md](./notes/release-gate.md)
-- security の正本: [notes/security-spec.md](./notes/security-spec.md)
+## Enduring UI / Architecture References
+- [../docs/web-client/ux/dads_app_ui_design_rules_20260411.md](../docs/web-client/ux/dads_app_ui_design_rules_20260411.md)
+- [../docs/web-client/ux/web-client-ui-guideline.md](../docs/web-client/ux/web-client-ui-guideline.md)
+- [../docs/web-client/architecture/document-embedded-attachment-policy.md](../docs/web-client/architecture/document-embedded-attachment-policy.md)
+- [../docs/web-client/architecture/web-client-screen-structure-decisions-20260106.md](../docs/web-client/architecture/web-client-screen-structure-decisions-20260106.md)
+
+## Release / Validation
+- [notes/release-gate.md](./notes/release-gate.md)
+- [../docs/runbooks/release-validation.md](../docs/runbooks/release-validation.md)
 
 ## Current Summary
-- 認証は `/login` から始まる 1 段階目ログインを基本とし、必要時のみ factor2(TOTP) を要求します。
-- `returnTo` は sanitize 済み internal path のみを扱い、invalid または empty の場合は `/f/:facilityId/reception` に落とします。
-- 患者文脈は privacy-first を前提とし、URL、`localStorage`、`sessionStorage` に残しません。
-- `PatientsPage` の一覧検索は local-only search として明示し、official ORCA create/update/import とは分離します。
-- 患者の official create/update/import は別 route / 別 DTO / 別関数で扱い、成功後は canonical re-fetch を行って local sync を確定させます。
-- Reception は既存患者の受付導線に限定し、新患登録導線は `PatientsPage` に分離します。
-- Reception の ORCA 検索条件は official `patientlst3v2` 形状を優先し、client 側の補完や独自 search mode を current contract に戻しません。
-- admin の source of truth は `/api/admin/config` です。`/api/admin/delivery` を current contract に戻しません。
-- ORCA taxonomy は `/api/orca/official/*` を official bridge、`/api/orca/master/*` を master-backed read、`/api/local/*` を local-only contract として扱います。
-- security 規範の詳細は [notes/security-spec.md](./notes/security-spec.md) を正本とし、この README へ重複移植しません。
-
-## Release Gate
-- repo-local の merge ready 判定と、release 前 mandatory gate は分けて扱います。
-- release 前 mandatory gate の正本と、repo-local / repo-external の境界は [notes/release-gate.md](./notes/release-gate.md) を参照してください。
-- `runtime-ready-smoke.mjs` は release 前 mandatory です。
-- 毎 PR required かどうかは current repo の docs 証拠だけでは `unknown` です。
+- 認証は `/login` 起点
+- `returnTo` は sanitize 済み internal path のみを扱う
+- 患者文脈は URL / browser storage に残さない
+- ORCA route taxonomy は `official=/api/orca/official/*`, `master=/api/orca/master/*`, `local=/api/local/*`
+- security 規範の詳細は `notes/security-spec.md` を正本とする

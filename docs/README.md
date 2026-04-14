@@ -1,74 +1,62 @@
 # Docs
 
-`docs/` は現行運用で使う最小の正本セットだけを置きます。歴史的な計画書、phase 文書、prompt pack、証跡 dump は current source of truth にしません。
+`docs/` は enduring な current docs の正本入口です。`docs/README.md` を全体索引とし、current / workflow / reference / archive / ops-verification / evidence をここで分離します。
 
-## まず読む
+## Current / Enduring Docs
 - [managerdocs/README.md](managerdocs/README.md)
 - [contracts/](contracts/)
-- [architecture/server-modernization-overview.md](architecture/server-modernization-overview.md)
-- [architecture/web-client-overview.md](architecture/web-client-overview.md)
-- [runbooks/release-validation.md](runbooks/release-validation.md)
+- [architecture/](architecture/)
+- [architecture/repository-doc-taxonomy.md](architecture/repository-doc-taxonomy.md)
+- [runbooks/](runbooks/)
+- [operations/](operations/)
+- [releases/](releases/)
+- [web-client/architecture/](web-client/architecture/)
+- [web-client/ux/](web-client/ux/)
+- [../web-client/README.md](../web-client/README.md)
+- [../web-client/notes/README.md](../web-client/notes/README.md)
 
-## Manager 向け正本
-- [managerdocs/README.md](managerdocs/README.md)
-- `docs/managerdocs/` は manager handoff、release readiness、repo-external sign-off、UI improvement program の正本です。
+## Workflow Docs
+- [implementation/README.md](implementation/README.md)
+- [implementation/orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
+- current workflow の実行正本は [runbooks/release-validation.md](runbooks/release-validation.md)、[runbooks/reviewer-submission-packet.md](runbooks/reviewer-submission-packet.md)、[releases/orca-remediation-cutover.md](releases/orca-remediation-cutover.md) です。
+- `docs/implementation/` には workstream index だけを置き、dated packet / prompt / closeout / review template を current 導線に混ぜません。
 
-## Current Contracts
-- [runtime-config.md](contracts/runtime-config.md)
-- [health-endpoints.md](contracts/health-endpoints.md)
-- [orca-connection.md](contracts/orca-connection.md)
-- [document-integrity.md](contracts/document-integrity.md)
-- [patient-images.md](contracts/patient-images.md)
-- [orca-master-api.md](contracts/orca-master-api.md)
-- [orca-route-taxonomy.md](contracts/orca-route-taxonomy.md)
+## Reference
+- [reference/README.md](reference/README.md)
+- [reference/orca-order-alignment/README.md](reference/orca-order-alignment/README.md)
+- [reference/repository-history/README.md](reference/repository-history/README.md)
+- DADS は [web-client/ux/dads_app_ui_design_rules_20260411.md](web-client/ux/dads_app_ui_design_rules_20260411.md) を enduring reference とし、別文書へ焼き直しません。
 
-## Architecture
-- [server-modernization-overview.md](architecture/server-modernization-overview.md)
-- [web-client-overview.md](architecture/web-client-overview.md)
-- [server-internal-modernization-adr.md](architecture/server-internal-modernization-adr.md)
+## Archive
+- [archive/README.md](archive/README.md)
+- [archive/orca-order-alignment/README.md](archive/orca-order-alignment/README.md)
+- archive は履歴保持のために残す領域です。current contract や workflow の実行入口にはしません。
 
-## Implementation
-- [orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
-- [orca-order-alignment/closure packet](implementation/orca-order-alignment/orca_order_alignment_closure_packet_20260408.md)
-- [orca-order-alignment/codex packet 20260413](implementation/orca-order-alignment/opendolphin_orca_codex_packet_20260413/README.md)
-- [orca-order-alignment/closeout packet r2 20260413](implementation/orca-order-alignment/opendolphin_orca_closeout_packet_r2_20260413/README.md)
-- [orca-order-alignment/recovery packet r3 20260413](implementation/orca-order-alignment/opendolphin_orca_recovery_packet_r3_20260413/README.md)
-- [orca-order-alignment/review research prompts 20260413](implementation/orca-order-alignment/opendolphin_orca_review_research_prompts_20260413/README.md)
+## Ops / Verification Boundary
+- [../ops/README.md](../ops/README.md): 環境起動と manual / ops harness
+- [../tests/e2e/README.md](../tests/e2e/README.md): 自動テスト本体の説明
+- [../scripts/tools/README.md](../scripts/tools/README.md): thin runner / packaging tool reference
+- [../.github/workflows/](../.github/workflows/): 実際の CI entry
+- [../artifacts/README.md](../artifacts/README.md): evidence / generated outputs
 
-## Live Runbooks
-- [release-validation.md](runbooks/release-validation.md)
+CI の正本は `.github/workflows/` の実ジョブです。`runtime-ready-smoke`、ORCA live QA、`ops/tests/api-smoke-test`、reviewer submission packet 生成は manual gate として扱います。
 
-## Operations
-- [ORCA_CERTIFICATION_ONLY.md](operations/ORCA_CERTIFICATION_ONLY.md)
+## Source Of Truth Map
+- repo / docs index: この `docs/README.md`
+- manager current state: `docs/managerdocs/`
+- runtime contracts: `docs/contracts/`
+- architecture summary: `docs/architecture/`
+- live runbooks: `docs/runbooks/`
+- operations runbook: `docs/operations/`
+- release / cutover: `docs/releases/`
+- web-client current contract: `web-client/README.md` と `web-client/notes/`
+- UI / UX basis: `docs/web-client/ux/` と `docs/web-client/architecture/`
+- evidence: `artifacts/`
 
-## Releases
-- [orca-remediation-cutover.md](releases/orca-remediation-cutover.md)
-
-## Code-Adjacent Docs
-- [web-client/README.md](../web-client/README.md)
-- `web-client/notes/`
-- `docs/web-client/architecture/`
-- `docs/web-client/ux/`
-- [server-modernized/reporting/README.md](../server-modernized/reporting/README.md)
-- [server-modernized/tools/flyway/README.md](../server-modernized/tools/flyway/README.md)
-- [ops/README.md](../ops/README.md)
-- [ops/db/local-baseline/README.md](../ops/db/local-baseline/README.md)
-- [ops/modernized-server/checks/README.md](../ops/modernized-server/checks/README.md)
-- [tests/e2e/README.md](../tests/e2e/README.md)
-- [tests/e2e/orca-master.scenarios.md](../tests/e2e/orca-master.scenarios.md)
-- [tests/playwright/utils/fixtures/README.md](../tests/playwright/utils/fixtures/README.md)
-- [scripts/tools/README.md](../scripts/tools/README.md)
-- [.devcontainer/README.md](../.devcontainer/README.md)
-
-## Operating Rule
-- docs は delete by default、keep by exception とする。
-- code changes と related docs updates は同じ変更で揃える。
-- repo に証拠がなければ unknown と扱う。
-- dated plan、prompt pack、working note、seed bundle は current contract の正本として残さない。
-
-## Add / Delete Rule
-- 新しい docs を追加してよいのは、current contract、manager handoff、live runbook、enduring architecture summary、code-adjacent README のいずれかに直接該当する場合だけです。
-- dated note、phase plan、prompt pack、worker report、verification evidence dump は原則 `docs/` に残しません。
-- 既存 docs と役割が重なる場合は新規追加より統合を優先し、正本を 1 本に絞ります。
-- reference-only 文書を残す場合は、canonical source を冒頭に明記し、managerdocs / contracts / web-client notes と競合させません。
-- repo 内参照が消えており、現行運用の判断・実行に不要な docs は削除を優先します。
+## Rules
+- current contract は `docs/contracts/`、`docs/managerdocs/`、`web-client/notes/` に絞る。
+- workflow 実行手順は `docs/runbooks/` と `docs/releases/` に寄せる。
+- background reference は `docs/reference/` へ置く。
+- dated packet / prompt / handoff / closeout / review docs は `docs/archive/` へ移す。
+- evidence や generated output は `artifacts/` に置き、source of truth に昇格させない。
+- 重複した source of truth を増やさず、既存の正本へリンクで寄せる。

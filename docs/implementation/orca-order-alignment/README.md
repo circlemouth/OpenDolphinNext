@@ -1,17 +1,26 @@
 # ORCA Order Alignment
 
-This directory contains the current development documents for the ORCA order alignment workstream.
+`docs/implementation/orca-order-alignment/` は ORCA order alignment workstream の current index です。ここ自体は current contract の正本ではなく、現行の workflow 入口だけを案内します。
 
-## Documents
-- [Authoritative Spec Packet](orca_order_alignment_authoritative_spec_packet_20260407.md)
-- [Authoritative Tables](orca_order_alignment_authoritative_tables_20260407.json)
-- [Execution Plan Checklist](orca_order_alignment_execution_plan_checklist_self_contained_20260407.md)
-- [Closure Packet](orca_order_alignment_closure_packet_20260408.md)
-- [Codex Packet 20260413](opendolphin_orca_codex_packet_20260413/README.md)
-- [Closeout Packet R2 20260413](opendolphin_orca_closeout_packet_r2_20260413/README.md)
-- [Recovery Packet R3 20260413](opendolphin_orca_recovery_packet_r3_20260413/README.md)
-- [Review Research Prompts 20260413](opendolphin_orca_review_research_prompts_20260413/README.md)
+## Current Workflow Entry
+- [release-validation.md](../../runbooks/release-validation.md)
+- [reviewer-submission-packet.md](../../runbooks/reviewer-submission-packet.md)
+- [orca-remediation-cutover.md](../../releases/orca-remediation-cutover.md)
+- [ORCA_CERTIFICATION_ONLY.md](../../operations/ORCA_CERTIFICATION_ONLY.md)
 
-## Notes
-- Keep this directory as the single entry point for the workstream.
-- Update `docs/README.md` when adding related development documents here.
+## Current Contract References
+- [orca-route-taxonomy.md](../../contracts/orca-route-taxonomy.md)
+- [orca-master-api.md](../../contracts/orca-master-api.md)
+- [web-client/notes/ui-current-contract.md](../../../web-client/notes/ui-current-contract.md)
+- [web-client/notes/orca-order-remediation-20260403.md](../../../web-client/notes/orca-order-remediation-20260403.md)
+- [web-client/notes/orca-order-contract-cleanup-20260404.md](../../../web-client/notes/orca-order-contract-cleanup-20260404.md)
+- [web-client/notes/orca-charge-canonicalization-20260404.md](../../../web-client/notes/orca-charge-canonicalization-20260404.md)
+
+## Reference / Archive
+- [reference/orca-order-alignment](../../reference/orca-order-alignment/README.md)
+- [archive/orca-order-alignment](../../archive/orca-order-alignment/README.md)
+
+## Boundary
+- current workflow の判断・実行は runbooks / releases を正本にする
+- dated packet / prompt / closeout / recovery / review docs は archive で保持する
+- authoritative spec / tables のような背景資料は reference に分離し、current entry に混在させない

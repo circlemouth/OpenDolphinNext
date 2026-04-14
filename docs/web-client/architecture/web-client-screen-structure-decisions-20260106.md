@@ -7,8 +7,10 @@ Canonical source: `docs/managerdocs/03_web_current_contract_summary.md`, `web-cl
 Web クライアントの本番ナビ/ルーティング/ガードの確定内容を整理し、実装・UX・運用ドキュメントの基準点を明確化する。
 
 ## 参照
-- `docs/managerdocs/03_web_current_contract_summary.md`
-- `src/webclient_screen_structure_plan/design/30_本番ナビ/ルーティング最終設計.md`
+- [docs/managerdocs/03_web_current_contract_summary.md](../../managerdocs/03_web_current_contract_summary.md)
+- [web-client/notes/ui-current-contract.md](../../../web-client/notes/ui-current-contract.md)
+- [docs/web-client/ux/dads_app_ui_design_rules_20260411.md](../ux/dads_app_ui_design_rules_20260411.md)
+- [docs/web-client/ux/web-client-ui-guideline.md](../ux/web-client-ui-guideline.md)
 
 ## 1. 本番ナビ（順序・名称・遷移）
 本番ナビは **受付 → カルテ → 患者 → 管理** の順で固定し、英語/検証向け表記を本番表示から除外する。

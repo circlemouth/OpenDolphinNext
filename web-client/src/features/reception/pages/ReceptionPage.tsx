@@ -110,6 +110,13 @@ import {
 import { useAppToast } from '../../../libs/ui/appToast';
 import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from '../../charts/orcaClaimApi';
 import { saveOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
+import {
+  buildOrcaEncounterContext,
+  formatMissingOrcaEncounterContextLabels,
+  hasCompleteOrcaEncounterContext,
+  resolveMissingOrcaEncounterContextFields,
+  type OrcaEncounterContext,
+} from '../../charts/orcaEncounterContext';
 import { ORCA_SEND_ORDER_ENTITIES } from '../../charts/orderCategoryRegistry';
 import {
   buildMedicalModV2BlockNotice,
@@ -252,6 +259,21 @@ const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error')
 
 type PhysicianNameMap = Record<string, string>;
 
+type BillingSendGuard =
+  | {
+      canSend: true;
+      encounterContext: OrcaEncounterContext;
+      title: string;
+    }
+  | {
+      canSend: false;
+      blockedReasons: string[];
+      detail: string;
+      message: string;
+      title: string;
+      visibleReason: string;
+    };
+
 const normalizeCanonicalCode = (value?: string) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
@@ -262,6 +284,57 @@ const resolveReceptionEntryDepartmentCode = (entry?: Pick<ReceptionEntry, 'depar
 
 const resolveReceptionEntryPhysicianCode = (entry?: Pick<ReceptionEntry, 'physicianCode'>) =>
   normalizeCanonicalCode(entry?.physicianCode);
+
+const BILLING_SEND_ENABLE_GUIDE = '受付一覧を再取得し、official visit row の canonical field が揃うと送信できます。';
+
+const resolveBillingSendGuard = ({
+  entry,
+  fallbackUsed,
+}: {
+  entry: Pick<
+    ReceptionEntry,
+    | 'patientId'
+    | 'visitDate'
+    | 'departmentCode'
+    | 'physicianCode'
+    | 'insuranceCombinationNumber'
+    | 'voucherNumber'
+    | 'sequentialNumber'
+  >;
+  fallbackUsed?: boolean;
+}): BillingSendGuard => {
+  if (fallbackUsed) {
+    return {
+      canSend: false,
+      blockedReasons: ['fallback_used'],
+      detail: `fallbackUsed=true。${BILLING_SEND_ENABLE_GUIDE}`,
+      message: 'フォールバック経路のため会計送信できません。',
+      title: 'fallbackUsed=true のため会計送信できません',
+      visibleReason: `会計送信不可: fallbackUsed=true です。${BILLING_SEND_ENABLE_GUIDE}`,
+    };
+  }
+
+  const encounterContext = buildOrcaEncounterContext(entry);
+  if (hasCompleteOrcaEncounterContext(encounterContext)) {
+    return {
+      canSend: true,
+      encounterContext,
+      title: 'ORCAへ会計送信します',
+    };
+  }
+
+  const missingFields = resolveMissingOrcaEncounterContextFields(encounterContext);
+  const missingLabels = formatMissingOrcaEncounterContextLabels(missingFields);
+  const missingLabelText = missingLabels.join(', ');
+  return {
+    canSend: false,
+    blockedReasons: missingFields.map((field) => `missing_${field}`),
+    detail: `${missingLabelText} が不足しています。${BILLING_SEND_ENABLE_GUIDE}`,
+    message: 'canonical encounter context が不足しているため会計送信できません。',
+    title: `${missingLabelText} が不足しているため会計送信できません`,
+    visibleReason: `会計送信不可: ${missingLabelText} が不足しています。${BILLING_SEND_ENABLE_GUIDE}`,
+  };
+};
 
 const resolveEntryDisplayLabel = (code: string, value?: string) => {
   const trimmed = value?.trim();
@@ -3545,55 +3618,41 @@ export function ReceptionPage({
 
   const handleSendBilling = useCallback(
     async (entry: ReceptionEntry) => {
-      const patientId = entry.patientId?.trim() || '';
-      if (!patientId) {
+      const sendGuard = resolveBillingSendGuard({
+        entry,
+        fallbackUsed: mergedMeta.fallbackUsed,
+      });
+      if (!sendGuard.canSend) {
         enqueue({
           tone: 'warning',
-          message: '患者IDが未登録のため会計送信できません。',
-          detail: '患者IDを確認してください。',
+          message: sendGuard.message,
+          detail: sendGuard.detail,
+        });
+        logAuditEvent({
+          runId: mergedMeta.runId ?? initialRunId ?? flags.runId,
+          source: 'reception/claim-send',
+          patientId: entry.patientId?.trim() || undefined,
+          payload: {
+            action: 'RECEPTION_CLAIM_SEND',
+            result: 'blocked',
+            blockedReasons: sendGuard.blockedReasons,
+            visitDate: entry.visitDate,
+            departmentCode: entry.departmentCode,
+            physicianCode: entry.physicianCode,
+            insuranceCombinationNumber: entry.insuranceCombinationNumber,
+            voucherNumber: entry.voucherNumber,
+            sequentialNumber: entry.sequentialNumber,
+            fallbackUsed: mergedMeta.fallbackUsed ?? false,
+          },
         });
         return;
       }
 
+      const { patientId, visitDate: calculationDate, departmentCode, physicianCode } = sendGuard.encounterContext;
       const baseRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
-      const calculationDate = normalizeVisitDate(entry.visitDate) ?? normalizeVisitDate(selectedDate);
-      if (!calculationDate) {
-        enqueue({
-          tone: 'warning',
-          message: '日付が未確定のため会計送信できません。',
-          detail: `selectedDate=${selectedDate || '—'} / entry.visitDate=${entry.visitDate || '—'}`,
-        });
-        return;
-      }
-
       setClaimSendingPatientId(patientId);
       const startedAt = performance.now();
       try {
-        const departmentCode = entry.departmentCode?.trim() || undefined;
-        const physicianCode = entry.physicianCode?.trim() || undefined;
-
-        if (!departmentCode) {
-          enqueue({
-            tone: 'warning',
-            message: '診療科コードが不明のため会計送信できません。',
-            detail: `visitDate=${calculationDate} / patientId=${patientId}`,
-          });
-          logAuditEvent({
-            runId: baseRunId,
-            source: 'reception/claim-send',
-            patientId,
-            payload: {
-              action: 'RECEPTION_CLAIM_SEND',
-              result: 'blocked',
-              blockedReasons: ['missing_department_code'],
-              visitDate: calculationDate,
-              departmentCode: entry.departmentCode,
-              physicianCode: entry.physicianCode,
-            },
-          });
-          return;
-        }
-
         const orderBundleResult = await fetchMedicalModV2OrderBundles(patientId, calculationDate);
         if (orderBundleResult.errors.length > 0) {
           const failedEntitiesPreview = orderBundleResult.errors.slice(0, 6).join(' / ');
@@ -3649,15 +3708,7 @@ export function ReceptionPage({
           return;
         }
         const requestXml = buildMedicalModV2RequestXml({
-          encounterContext: {
-            patientId,
-            visitDate: calculationDate,
-            departmentCode,
-            physicianCode: physicianCode ?? '',
-            insuranceCombinationNumber: '',
-            voucherNumber: '',
-            sequentialNumber: '',
-          },
+          encounterContext: sendGuard.encounterContext,
           medicalInformation: preparedSendData.medicalInformation,
         });
         const result = await postOrcaMedicalModV2Xml(requestXml, { classCode: '01' });
@@ -3703,6 +3754,9 @@ export function ReceptionPage({
             visitDate: calculationDate,
             departmentCode,
             physicianCode,
+            insuranceCombinationNumber: sendGuard.encounterContext.insuranceCombinationNumber,
+            voucherNumber: sendGuard.encounterContext.voucherNumber,
+            sequentialNumber: sendGuard.encounterContext.sequentialNumber,
             httpStatus: result.status,
             apiResult: result.apiResult,
             apiResultMessage: result.apiResultMessage,
@@ -3727,6 +3781,9 @@ export function ReceptionPage({
             visitDate: calculationDate,
             departmentCode,
             physicianCode,
+            insuranceCombinationNumber: sendGuard.encounterContext.insuranceCombinationNumber,
+            voucherNumber: sendGuard.encounterContext.voucherNumber,
+            sequentialNumber: sendGuard.encounterContext.sequentialNumber,
             httpStatus: result.status,
             apiResult: result.apiResult,
             apiResultMessage: result.apiResultMessage,
@@ -3799,12 +3856,11 @@ export function ReceptionPage({
       initialRunId,
       mergedMeta.cacheHit,
       mergedMeta.dataSourceTransition,
+      mergedMeta.fallbackUsed,
       mergedMeta.missingMaster,
       mergedMeta.runId,
       orcaQueueQuery,
-      physicianNameMap,
       refetchAppointment,
-      selectedDate,
       storageScope,
     ],
   );
@@ -4898,6 +4954,18 @@ export function ReceptionPage({
                             `${entry.patientId ?? 'unknown'}-${entry.appointmentTime ?? entry.department ?? 'card'}`;
                           const cardActionMenuKey = `${status}:${rowKey}`;
                           const cardActionMenuOpen = openCardActionMenuKey === cardActionMenuKey;
+                          const billingSendGuard =
+                            status === '会計待ち'
+                              ? resolveBillingSendGuard({
+                                  entry,
+                                  fallbackUsed: mergedMeta.fallbackUsed,
+                                })
+                              : null;
+                          const billingSendBlockedReason =
+                            billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.visibleReason : null;
+                          const billingSendBlockedTitle =
+                            billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.title : 'ORCAへ会計送信します';
+                          const billingSendInProgress = claimSendingPatientId === entry.patientId;
                           const activeQueue = orcaQueueStatus;
                           const queueDetailVisible =
                             Boolean(activeQueue.detail) && (activeQueue.tone === 'warning' || activeQueue.tone === 'error');
@@ -4986,115 +5054,114 @@ export function ReceptionPage({
                                 >
                                   カルテ
                                 </button>
-                                <div
-                                  className={`reception-card__menu${cardActionMenuOpen ? ' is-open' : ''}`}
-                                  data-card-actions-menu-root="true"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                  }}
-                                  onKeyDown={(event) => {
-                                    event.stopPropagation();
-                                  }}
-                                >
-                                  <button
-                                    type="button"
-                                    className="reception-card__action reception-card__action--menu-trigger"
-                                    aria-label="カード操作を開く"
-                                    aria-haspopup="menu"
-                                    aria-expanded={cardActionMenuOpen}
+                                <div>
+                                  <div
+                                    className={`reception-card__menu${cardActionMenuOpen ? ' is-open' : ''}`}
+                                    data-card-actions-menu-root="true"
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      setOpenCardActionMenuKey((prev) => (prev === cardActionMenuKey ? null : cardActionMenuKey));
+                                    }}
+                                    onKeyDown={(event) => {
+                                      event.stopPropagation();
                                     }}
                                   >
-                                    その他
-                                  </button>
-                                  {cardActionMenuOpen ? (
-                                    <div className="reception-card__submenu" role="menu" aria-label="カード追加操作">
-                                      {status === '会計待ち' ? (
+                                    <button
+                                      type="button"
+                                      className="reception-card__action reception-card__action--menu-trigger"
+                                      aria-label="カード操作を開く"
+                                      aria-haspopup="menu"
+                                      aria-expanded={cardActionMenuOpen}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        setOpenCardActionMenuKey((prev) => (prev === cardActionMenuKey ? null : cardActionMenuKey));
+                                      }}
+                                    >
+                                      その他
+                                    </button>
+                                    {cardActionMenuOpen ? (
+                                      <div className="reception-card__submenu" role="menu" aria-label="カード追加操作">
+                                        {status === '会計待ち' ? (
+                                          <button
+                                            type="button"
+                                            className="reception-card__submenu-item primary"
+                                            role="menuitem"
+                                            aria-label="会計送信（カード）"
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              setOpenCardActionMenuKey(null);
+                                              void handleSendBilling(entry);
+                                            }}
+                                            disabled={billingSendInProgress || billingSendGuard?.canSend === false}
+                                            title={billingSendInProgress ? '送信中です' : billingSendBlockedTitle}
+                                          >
+                                            {billingSendInProgress ? '送信中…' : '会計送信'}
+                                          </button>
+                                        ) : null}
+                                        {isReceptionStatusMvpPhase2 && mvpDecision?.canRetry ? (
+                                          <button
+                                            type="button"
+                                            className="reception-card__submenu-item warning"
+                                            role="menuitem"
+                                            data-test-id="reception-status-mvp-retry"
+                                            onClick={(event) => {
+                                              event.stopPropagation();
+                                              setOpenCardActionMenuKey(null);
+                                              void handleRetryQueue(entry);
+                                            }}
+                                            title={mvpDecision.retryTitle ?? 'ORCA再送を要求します'}
+                                          >
+                                            再送
+                                          </button>
+                                        ) : null}
                                         <button
                                           type="button"
-                                          className="reception-card__submenu-item primary"
+                                          className="reception-card__submenu-item"
                                           role="menuitem"
-                                          aria-label="会計送信（カード）"
+                                          aria-label="過去カルテ（カード）"
                                           onClick={(event) => {
                                             event.stopPropagation();
                                             setOpenCardActionMenuKey(null);
-                                            void handleSendBilling(entry);
+                                            openMedicalRecordsModal({ patientId: entry.patientId, name: entry.name }, 'selection');
                                           }}
-                                          disabled={!entry.patientId || claimSendingPatientId === entry.patientId}
+                                          disabled={!entry.patientId}
                                           title={
-                                            !entry.patientId
-                                              ? '患者IDが未登録のため会計送信できません'
-                                              : claimSendingPatientId === entry.patientId
-                                                ? '送信中です'
-                                                : 'ORCAへ会計送信します'
+                                            entry.patientId
+                                              ? '過去カルテをモーダルで確認'
+                                              : '患者IDが未登録のため過去カルテを表示できません'
                                           }
                                         >
-                                          {claimSendingPatientId === entry.patientId ? '送信中…' : '会計送信'}
+                                          過去カルテ
                                         </button>
-                                      ) : null}
-                                      {isReceptionStatusMvpPhase2 && mvpDecision?.canRetry ? (
                                         <button
                                           type="button"
-                                          className="reception-card__submenu-item warning"
+                                          className="reception-card__submenu-item danger"
                                           role="menuitem"
-                                          data-test-id="reception-status-mvp-retry"
+                                          aria-label="受付取消（カード）"
                                           onClick={(event) => {
                                             event.stopPropagation();
                                             setOpenCardActionMenuKey(null);
-                                            void handleRetryQueue(entry);
+                                            requestCancelEntry(entry, 'card');
                                           }}
-                                          title={mvpDecision.retryTitle ?? 'ORCA再送を要求します'}
+                                          disabled={isAcceptSubmitting || !entry.patientId || !entry.receptionId || status === '予約'}
+                                          title={
+                                            isAcceptSubmitting
+                                              ? '送信中です'
+                                              : !entry.patientId
+                                                ? '患者IDが未登録のため取消できません'
+                                                : status === '予約'
+                                                  ? '予約は受付取消できません'
+                                                  : entry.receptionId
+                                                    ? '受付取消'
+                                                    : '受付IDが未登録のため取消できません'
+                                          }
                                         >
-                                          再送
+                                          受付取消
                                         </button>
-                                      ) : null}
-                                      <button
-                                        type="button"
-                                        className="reception-card__submenu-item"
-                                        role="menuitem"
-                                        aria-label="過去カルテ（カード）"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          setOpenCardActionMenuKey(null);
-                                          openMedicalRecordsModal({ patientId: entry.patientId, name: entry.name }, 'selection');
-                                        }}
-                                        disabled={!entry.patientId}
-                                        title={
-                                          entry.patientId
-                                            ? '過去カルテをモーダルで確認'
-                                            : '患者IDが未登録のため過去カルテを表示できません'
-                                        }
-                                      >
-                                        過去カルテ
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="reception-card__submenu-item danger"
-                                        role="menuitem"
-                                        aria-label="受付取消（カード）"
-                                        onClick={(event) => {
-                                          event.stopPropagation();
-                                          setOpenCardActionMenuKey(null);
-                                          requestCancelEntry(entry, 'card');
-                                        }}
-                                        disabled={isAcceptSubmitting || !entry.patientId || !entry.receptionId || status === '予約'}
-                                        title={
-                                          isAcceptSubmitting
-                                            ? '送信中です'
-                                            : !entry.patientId
-                                              ? '患者IDが未登録のため取消できません'
-                                              : status === '予約'
-                                                ? '予約は受付取消できません'
-                                                : entry.receptionId
-                                                  ? '受付取消'
-                                                  : '受付IDが未登録のため取消できません'
-                                        }
-                                      >
-                                        受付取消
-                                      </button>
-                                    </div>
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  {billingSendBlockedReason ? (
+                                    <small className="reception-table__sub">{billingSendBlockedReason}</small>
                                   ) : null}
                                 </div>
                               </div>
@@ -5284,6 +5351,18 @@ export function ReceptionPage({
                               `${entry.patientId ?? 'unknown'}-${entry.appointmentTime ?? entry.department ?? 'row'}`;
                             const tableActionMenuKey = `table:${activeStatusTab}:${rowKey}`;
                             const tableActionMenuOpen = openCardActionMenuKey === tableActionMenuKey;
+                            const billingSendGuard =
+                              activeStatusTab === '会計待ち'
+                                ? resolveBillingSendGuard({
+                                    entry,
+                                    fallbackUsed: mergedMeta.fallbackUsed,
+                                  })
+                                : null;
+                            const billingSendBlockedReason =
+                              billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.visibleReason : null;
+                            const billingSendBlockedTitle =
+                              billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.title : 'ORCAへ会計送信します';
+                            const billingSendInProgress = claimSendingPatientId === entry.patientId;
                             return (
                               <tr
                                 key={rowKey}
@@ -5381,25 +5460,24 @@ export function ReceptionPage({
                                 </td>
                                 <td className="reception-table__action">
                                   {activeStatusTab === '会計待ち' ? (
-                                    <button
-                                      type="button"
-                                      className="reception-card__action reception-card__action--primary"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        setOpenCardActionMenuKey(null);
-                                        void handleSendBilling(entry);
-                                      }}
-                                      disabled={!entry.patientId || claimSendingPatientId === entry.patientId}
-                                      title={
-                                        !entry.patientId
-                                          ? '患者IDが未登録のため会計送信できません'
-                                          : claimSendingPatientId === entry.patientId
-                                            ? '送信中です'
-                                            : 'ORCAへ会計送信します'
-                                      }
-                                    >
-                                      {claimSendingPatientId === entry.patientId ? '会計送信中…' : '会計送信'}
-                                    </button>
+                                    <div>
+                                      <button
+                                        type="button"
+                                        className="reception-card__action reception-card__action--primary"
+                                        onClick={(event) => {
+                                          event.stopPropagation();
+                                          setOpenCardActionMenuKey(null);
+                                          void handleSendBilling(entry);
+                                        }}
+                                        disabled={billingSendInProgress || billingSendGuard?.canSend === false}
+                                        title={billingSendInProgress ? '送信中です' : billingSendBlockedTitle}
+                                      >
+                                        {billingSendInProgress ? '会計送信中…' : '会計送信'}
+                                      </button>
+                                      {billingSendBlockedReason ? (
+                                        <small className="reception-table__sub">{billingSendBlockedReason}</small>
+                                      ) : null}
+                                    </div>
                                   ) : null}
                                   <button
                                     type="button"

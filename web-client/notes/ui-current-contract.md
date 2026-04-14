@@ -176,7 +176,8 @@
 - `NavigationGuardProvider` の `screenKey` 粒度を超える task-level coverage
 
 ## References
-- [README.md](../README.md)
+- [notes/README.md](./README.md)
+- [web-client/README.md](../README.md)
 - [auth-check.md](./auth-check.md)
 - [auth-transition.md](./auth-transition.md)
 - [patient-context-contract.md](./patient-context-contract.md)
@@ -184,3 +185,7 @@
 - [release-gate.md](./release-gate.md)
 - [security-spec.md](./security-spec.md)
 - [docs/managerdocs/03_web_current_contract_summary.md](../../docs/managerdocs/03_web_current_contract_summary.md)
+- [docs/web-client/ux/dads_app_ui_design_rules_20260411.md](../../docs/web-client/ux/dads_app_ui_design_rules_20260411.md)
+- [docs/web-client/ux/web-client-ui-guideline.md](../../docs/web-client/ux/web-client-ui-guideline.md)
+- [docs/web-client/architecture/document-embedded-attachment-policy.md](../../docs/web-client/architecture/document-embedded-attachment-policy.md)
+- [docs/web-client/architecture/web-client-screen-structure-decisions-20260106.md](../../docs/web-client/architecture/web-client-screen-structure-decisions-20260106.md)
