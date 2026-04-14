@@ -1,7 +1,7 @@
 # ORCA 接続情報（Certification Only / 非Legacy）
 
-- RUN_ID: 20260411T224524Z
-- 更新日: 2026-04-12
+- RUN_ID: certification 実行ごとに採番し、`artifacts/orca-remediation/closeout/<RUN_ID>/git/run-id.txt` を正本にする
+- 更新日: 2026-04-14
 - 目的: ORCA 実環境/検証環境の接続先・認証方式と、管理画面で見える current behavior を **非Legacy の正本**として管理する。
 
 > ⚠️ 重要: 接続情報・資格情報は機微情報のため、このリポジトリには **原則として具体値を記載しない**。
@@ -72,6 +72,8 @@
 - 機微情報は `<MASKED>` で保存し、必要であれば別途共有する。
 - 実環境接続を行った場合は `artifacts/orca-connectivity/<RUN_ID>/` に証跡を残す。
 - release cutover で使う接続確認は `docs/releases/orca-remediation-cutover.md` の事前チェック / smoke と同じ RUN_ID に束ねる。
+- `appointments/medical-information` などの runtime blocker は、direct upstream probe、app route probe、server-side transport log を current `RUN_ID` で採ってから classification する。direct probe 前に external blocker と断定しない。
+- reviewer 提出用の正本は logs-only archive ではなく reviewer submission packet とし、`review-checkout/` と `closeout-packet/` の同梱検証を通す。
 
 ## 8. 注意事項
 - ORCA 本番への直接接続は承認必須。
@@ -80,3 +82,4 @@
 - Trial で接続確認しただけでは cutover 完了扱いにしない。release 判定は runtime smoke / grep / UI semantics / rollback 準備まで揃えて行う。
 - ORCA是正の受入れは remediation pair release 前提で行う。`web-client` と `server-modernized` の片側だけを current taxonomy へ進めた状態は certification 対象外とする。
 - certification 中も official/master/local の境界を崩さない。`official=/api/orca/official/*`、`master=/api/orca/master/*`、`local=/api/local/*` から外れる path を使った疎通確認は証跡に採用しない。
+- live ORCA send 成功がない run では live pass と書かない。`medicalmodv2.xml` は send 到達 run だけ必須であり、未到達 run は blocker classification と steps/network evidence を正本にする。

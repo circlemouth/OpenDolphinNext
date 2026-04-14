@@ -25,6 +25,7 @@ import open.dolphin.rest.dto.orca.BillingSimulationRequest.BillingItem;
 import open.dolphin.rest.dto.orca.BillingSimulationResponse;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListRequest;
 import open.dolphin.rest.dto.orca.OrcaAppointmentListResponse;
+import open.dolphin.rest.dto.orca.OrcaMedicalInformationListResponse;
 import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientAppointmentListResponse;
 import open.dolphin.rest.dto.orca.PatientSummary;
@@ -136,6 +137,22 @@ class OrcaAppointmentResourceTest {
         assertEquals(1, response.getReservations().size());
         assertEquals("F001:AP-20251113-001", response.getReservations().get(0).getScheduleKey());
         assertEquals("000001", response.getPatient().getPatientId());
+        assertGeneratedRunId(response.getRunId());
+    }
+
+    @Test
+    void medicalInformationOptionsReturnsStubPayload() {
+        OrcaAppointmentResource resource = new OrcaAppointmentResource();
+        resource.setWrapperService(createService());
+
+        OrcaMedicalInformationListResponse response = resource.medicalInformationOptions(
+                createRequest("F001:doctor01", "/api/orca/official/appointments/medical-information", Map.of()));
+
+        assertEquals("00", response.getApiResult());
+        assertEquals("OK", response.getApiResultMessage());
+        assertEquals(2, response.getItems().size());
+        assertEquals("01", response.getItems().get(0).getCode());
+        assertEquals("診察", response.getItems().get(0).getName());
         assertGeneratedRunId(response.getRunId());
     }
 

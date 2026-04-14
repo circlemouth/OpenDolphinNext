@@ -1,8 +1,16 @@
 <data>
-  <system01lstv2res type="record">
+  <medicalinfres type="record">
     <Api_Result type="string">00</Api_Result>
     <Api_Result_Message type="string">OK</Api_Result_Message>
-    <Request_Number type="string">02</Request_Number>
-    <System_Info type="record"/>
-  </system01lstv2res>
+    <Medicalinf_Information type="array">
+      <Medicalinf_Information_child type="record">
+        <Medical_Information type="string">01</Medical_Information>
+        <Medical_Information_Name type="string">診察</Medical_Information_Name>
+      </Medicalinf_Information_child>
+      <Medicalinf_Information_child type="record">
+        <Medical_Information type="string">99</Medical_Information>
+        <Medical_Information_Name type="string">該当なし</Medical_Information_Name>
+      </Medicalinf_Information_child>
+    </Medicalinf_Information>
+  </medicalinfres>
 </data>

@@ -1,6 +1,6 @@
 # ORCA Remediation Cutover
 
-最終更新: 2026-04-13  
+最終更新: 2026-04-14  
 用途: Worker G の post-merge verification 後に、ORCA remediation 一式を本番相当へ切り替えるための cutover / rollback 正本
 
 ## 1. 前提
@@ -31,6 +31,12 @@
 7. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。固定 seed を前提にせず、実行直前に current facility の local search と active entry 状態を確認する。patient search 0 件、重複受付、active entry 非一意のいずれかが見つかったら `test-data-blocker` として停止し、summary / network / console / page-errors を残す。
 8. 同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs` を実行する。
 9. reception / charts / patients / admin の手動 smoke を実行する。
+10. current `RUN_ID` の closeout report を完成させ、reviewer submission packet を生成・検証する。
+```bash
+./scripts/create-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
+./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
+```
+- accepted branch が evidence freeze 後に進んでいた場合は、両コマンドへ `--accepted-head <ACCEPTED_HEAD>` を追加して packet provenance を固定する。
 
 ## 4. Smoke 観点
 - Reception:
@@ -57,12 +63,16 @@
 - `qa-fullflow-weborca.mjs` は reception -> charts -> claim/income/support の一連の network とスクリーンショットを残す。
 - `appointments/medical-information` の direct probe を同じ `RUN_ID` の network evidence に残し、`system01lstv2` 側の成功/失敗を smoke 本体と分離して再読できるようにする。
 - patient search が 0 件なら `QA_PATIENT_ID` の不足/不一致として扱い、local seed 不一致のまま「UI 不具合」と誤判定しない。
+- `runtime-ready-smoke` が smoke seed 不一致で失敗した場合は、`tests/runtime-ready-smoke.log` を current `RUN_ID` へ保存し、`test-data-blocker` または `environment-blocker` として分類する。repo defect と断定したまま cutover 判断を進めない。
 - `QA_MEDICAL_INFORMATION` を指定しない run を 1 本含め、未選択時に `Medical_Information` が未送信であることを証跡化する。
 - `Acceptance_Push` suppress が必要な環境では server runtime config で明示し、client 側の補完/抑止に戻さない。
 - ORCA send に到達した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。未到達 run は `summary.json` の blocker classification と `steps.log` / `network/*.json` で停止理由を third party が追えることを条件とする。official `Voucher_Number` / `Sequential_Number` が不足した場合は fail-close のまま `official-visit-row-blocker` として残す。
+- reviewer submission packet では `review-checkout/` と `closeout-packet/` を分離し、`manifest.json`、`manifest.sha256`、`README_REVIEW.md` を同梱する。absolute local path を含む report / manifest / evidence は受入れ不可とする。
+- accepted branch drift が起きても、packet の accepted HEAD は current closeout evidence の `git/git-head-current.txt` と一致させる。
 
 ## 6. 成功判定
 - 上記コマンドと smoke が成功し、artifact が同じ RUN_ID に束ねられている。
+- reviewer submission packet の create / validate が成功している。
 - route / DTO / docs / tests のどれにも旧 route / 旧 schema / 旧文言が残っていない。
 - release owner が GO 判定できるだけの証跡が揃っている。
 
