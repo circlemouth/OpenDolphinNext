@@ -25,6 +25,8 @@ class OrcaVisitResourceRealtimeTest {
         response.setApiResult("0000");
         response.setApiResultMessage("OK");
         response.setRunId("RUN-REALTIME-001");
+        response.setAcceptanceId("A20260219001");
+        response.setEncounterKey("F001:A20260219001");
         wrapperService.response = response;
 
         RecordingRealtimeSupport realtime = new RecordingRealtimeSupport();
@@ -56,6 +58,8 @@ class OrcaVisitResourceRealtimeTest {
         VisitMutationResponse response = new VisitMutationResponse();
         response.setApiResult("0000");
         response.setApiResultMessage("OK");
+        response.setAcceptanceId("A20260219002");
+        response.setEncounterKey("F001:A20260219002");
         wrapperService.response = response;
 
         RecordingRealtimeSupport realtime = new RecordingRealtimeSupport();
@@ -81,6 +85,8 @@ class OrcaVisitResourceRealtimeTest {
         VisitMutationResponse response = new VisitMutationResponse();
         response.setApiResult("0000");
         response.setApiResultMessage("OK");
+        response.setAcceptanceId("A20260219003");
+        response.setEncounterKey("F001:A20260219003");
         wrapperService.response = response;
 
         RecordingRealtimeSupport realtime = new RecordingRealtimeSupport();

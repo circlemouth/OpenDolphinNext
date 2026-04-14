@@ -19,13 +19,17 @@ reviewer 提出物を logs-only archive ではなく、同一 `RUN_ID` / 同一 
 ## サポートオプション
 
 - `--output`: packet 出力先ディレクトリ
+- `--accepted-head`: accepted branch/ref が evidence freeze 後に進んだ場合に、packet を固定したい commit
 - `--dry-run`: 入力検証と出力予定パスの表示だけを行い、書き込みしない
 - `--validate-only`: 既に生成済み packet を再検証する
+
+`--accepted-head` は通常不要だが、`git/accepted-branch.txt` の branch 名は固定しつつ、`git/git-head-current.txt` の accepted HEAD を明示したい場合に使う。
 
 ## 入力契約
 
 - closeout evidence は `artifacts/orca-remediation/closeout/<RUN_ID>/` に揃っていること
 - `git/run-id.txt`、`git/accepted-branch.txt`、`git/git-head-current.txt` が現在の `RUN_ID` / accepted ref / accepted HEAD と一致すること
+- accepted branch/ref が既に別 commit を指している場合でも、`--accepted-head` を使って current accepted HEAD を固定できること
 - `reports/final-report.md`、`reports/command-log.md`、`reports/blocker-classification.md` が存在すること
 - `qa/acceptmodv2/`、`qa/fullflow/`、`evidence/patients-import/`、`evidence/medical-information-probe/`、`evidence/runtime-blockers/` の required file が欠けていないこと
 - `qa/fullflow/summary.json` が send 到達を示す場合、`qa/fullflow/request-xml/medicalmodv2.xml` が存在すること

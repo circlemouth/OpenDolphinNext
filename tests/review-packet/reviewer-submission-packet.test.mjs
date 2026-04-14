@@ -257,3 +257,59 @@ test('creates a clean review-checkout and validates the packet layout', () => {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
 });
+
+test('freezes packet generation to --accepted-head even if the branch advances', () => {
+  const { sandbox, repoDir, acceptedHead, mergeBase } = setupRepo();
+  try {
+    populateCloseout(repoDir, acceptedHead, mergeBase);
+    writeText(path.join(repoDir, 'src/post-accepted.txt'), 'branch advanced\n');
+    run('git', ['add', '.'], repoDir);
+    run('git', ['commit', '-m', 'advance accepted ref'], repoDir);
+
+    const outputDir = path.join(repoDir, 'out');
+    run(
+      process.execPath,
+      [
+        SCRIPT_PATH,
+        '--run-id',
+        RUN_ID,
+        '--accepted-ref',
+        ACCEPTED_REF,
+        '--accepted-head',
+        acceptedHead,
+        '--output',
+        'out',
+      ],
+      repoDir,
+      { REVIEWER_PACKET_REPO_ROOT: repoDir },
+    );
+    run(
+      process.execPath,
+      [
+        SCRIPT_PATH,
+        '--validate-only',
+        '--run-id',
+        RUN_ID,
+        '--accepted-ref',
+        ACCEPTED_REF,
+        '--accepted-head',
+        acceptedHead,
+        '--output',
+        'out',
+      ],
+      repoDir,
+      { REVIEWER_PACKET_REPO_ROOT: repoDir },
+    );
+
+    const packetDir = path.join(outputDir, `submission-packet-${RUN_ID}`);
+    const reviewCheckout = path.join(packetDir, 'review-checkout');
+    const manifest = JSON.parse(fs.readFileSync(path.join(packetDir, 'manifest.json'), 'utf8'));
+    const checkoutHead = run('git', ['rev-parse', 'HEAD'], reviewCheckout).trim();
+
+    assert.equal(manifest.acceptedHead, acceptedHead);
+    assert.equal(checkoutHead, acceptedHead);
+    assert.equal(fs.existsSync(path.join(reviewCheckout, 'src/post-accepted.txt')), false);
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});

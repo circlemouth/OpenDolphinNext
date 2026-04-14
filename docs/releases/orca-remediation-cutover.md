@@ -36,6 +36,7 @@
 ./scripts/create-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
 ./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
 ```
+- accepted branch が evidence freeze 後に進んでいた場合は、両コマンドへ `--accepted-head <ACCEPTED_HEAD>` を追加して packet provenance を固定する。
 
 ## 4. Smoke 観点
 - Reception:
@@ -67,6 +68,7 @@
 - `Acceptance_Push` suppress が必要な環境では server runtime config で明示し、client 側の補完/抑止に戻さない。
 - ORCA send に到達した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。未到達 run は `summary.json` の blocker classification と `steps.log` / `network/*.json` で停止理由を third party が追えることを条件とする。official `Voucher_Number` / `Sequential_Number` が不足した場合は fail-close のまま `official-visit-row-blocker` として残す。
 - reviewer submission packet では `review-checkout/` と `closeout-packet/` を分離し、`manifest.json`、`manifest.sha256`、`README_REVIEW.md` を同梱する。absolute local path を含む report / manifest / evidence は受入れ不可とする。
+- accepted branch drift が起きても、packet の accepted HEAD は current closeout evidence の `git/git-head-current.txt` と一致させる。
 
 ## 6. 成功判定
 - 上記コマンドと smoke が成功し、artifact が同じ RUN_ID に束ねられている。

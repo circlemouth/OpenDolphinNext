@@ -128,12 +128,13 @@ const FORBIDDEN_TOP_LEVEL_DIR_NAMES = new Set([
 
 function usage() {
   console.log(`Usage:
-  node scripts/reviewer-submission-packet.mjs --run-id RUN_ID --accepted-ref REF [--output DIR] [--dry-run]
-  node scripts/reviewer-submission-packet.mjs --validate-only --run-id RUN_ID --accepted-ref REF [--output DIR]
+  node scripts/reviewer-submission-packet.mjs --run-id RUN_ID --accepted-ref REF [--accepted-head COMMIT] [--output DIR] [--dry-run]
+  node scripts/reviewer-submission-packet.mjs --validate-only --run-id RUN_ID --accepted-ref REF [--accepted-head COMMIT] [--output DIR]
 
 Options:
   --run-id         Required. Closeout RUN_ID (YYYYMMDDTHHMMSSZ)
   --accepted-ref   Required. Accepted branch/ref to lock as source of truth
+  --accepted-head  Optional. Freeze the accepted commit when the branch/ref has advanced
   --output         Output directory (default: artifacts/reviewer-submission-packets)
   --dry-run        Validate inputs and print the intended packet paths without writing
   --validate-only  Validate an already-generated packet in --output
@@ -159,6 +160,9 @@ function parseArgs(argv) {
         break;
       case '--accepted-ref':
         options.acceptedRef = argv[++index];
+        break;
+      case '--accepted-head':
+        options.acceptedHead = argv[++index];
         break;
       case '--output':
         options.output = argv[++index];
@@ -194,6 +198,7 @@ function execCommand(command, args, cwd, extraEnv = {}) {
     encoding: 'utf8',
     env: { ...process.env, ...extraEnv },
     stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 64 * 1024 * 1024,
   });
 }
 
@@ -202,6 +207,7 @@ function runCommand(command, args, cwd) {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    maxBuffer: 64 * 1024 * 1024,
   });
   if (result.status !== 0) {
     const stderr = result.stderr?.trim() || `${command} failed`;
@@ -349,11 +355,42 @@ function listSparseCheckoutDirs(repoRoot) {
     .sort();
 }
 
+function listTrackedForbiddenDirs(repoRoot, acceptedHead) {
+  const trackedFiles = execCommand('git', ['ls-tree', '-r', '--name-only', acceptedHead], repoRoot)
+    .split('\n')
+    .filter(Boolean);
+  const forbiddenDirs = new Set();
+  for (const trackedFile of trackedFiles) {
+    const segments = trackedFile.split('/');
+    let currentPath = '';
+    for (let index = 0; index < segments.length - 1; index += 1) {
+      currentPath = currentPath ? `${currentPath}/${segments[index]}` : segments[index];
+      if (FORBIDDEN_TOP_LEVEL_DIR_NAMES.has(segments[index])) {
+        forbiddenDirs.add(currentPath);
+      }
+    }
+  }
+  return [...forbiddenDirs].sort();
+}
+
+function buildSparseCheckoutPatterns(repoRoot, acceptedHead) {
+  const patterns = ['/*', '!/*/'];
+  for (const dirName of listSparseCheckoutDirs(repoRoot)) {
+    patterns.push(`/${dirName}/`);
+    patterns.push(`/${dirName}/**`);
+  }
+  for (const forbiddenDir of listTrackedForbiddenDirs(repoRoot, acceptedHead)) {
+    patterns.push(`!/${forbiddenDir}/`);
+    patterns.push(`!/${forbiddenDir}/**`);
+  }
+  return `${patterns.join('\n')}\n`;
+}
+
 function createReviewCheckout(repoRoot, acceptedRef, acceptedHead, sourceOriginMasterHead, targetDir) {
   runCommand('git', ['clone', '--quiet', '--no-hardlinks', repoRoot, targetDir], repoRoot);
-  const sparseCheckoutDirs = listSparseCheckoutDirs(repoRoot);
-  runCommand('git', ['sparse-checkout', 'init', '--cone'], targetDir);
-  runCommand('git', ['sparse-checkout', 'set', '--', ...sparseCheckoutDirs], targetDir);
+  runCommand('git', ['sparse-checkout', 'init', '--no-cone'], targetDir);
+  writeText(path.join(targetDir, '.git/info/sparse-checkout'), buildSparseCheckoutPatterns(repoRoot, acceptedHead));
+  runCommand('git', ['read-tree', '-mu', 'HEAD'], targetDir);
   const sourceOriginUrl = execCommand('git', ['remote', 'get-url', 'origin'], repoRoot).trim();
   const sanitizedOriginUrl = sanitizeOriginUrl(sourceOriginUrl);
   if (sourceOriginUrl) {
@@ -455,7 +492,7 @@ function zipPathFor(outputDir, runId) {
   return path.join(outputDir, `submission-packet-${runId}.zip`);
 }
 
-function validateSourceInputs(repoRoot, runId, acceptedRef) {
+function validateSourceInputs(repoRoot, runId, acceptedRef, acceptedHeadOverride) {
   if (!isRunId(runId)) {
     fail(`Invalid RUN_ID: ${runId}`);
   }
@@ -463,7 +500,9 @@ function validateSourceInputs(repoRoot, runId, acceptedRef) {
     fail('--accepted-ref is required');
   }
 
-  const acceptedHead = execCommand('git', ['rev-parse', `${acceptedRef}^{commit}`], repoRoot).trim();
+  const acceptedHead = acceptedHeadOverride
+    ? execCommand('git', ['rev-parse', `${acceptedHeadOverride}^{commit}`], repoRoot).trim()
+    : execCommand('git', ['rev-parse', `${acceptedRef}^{commit}`], repoRoot).trim();
   const sourceOriginMasterHead = execCommand('git', ['rev-parse', 'origin/master^{commit}'], repoRoot).trim();
   const mergeBaseOriginMaster = execCommand('git', ['merge-base', acceptedHead, 'origin/master'], repoRoot).trim();
   const closeoutRoot = path.join(repoRoot, 'artifacts', 'orca-remediation', 'closeout', runId);
@@ -639,8 +678,13 @@ function validatePacket(outputDir, runId, acceptedRef, acceptedHead) {
   }
 }
 
-function createPacket(repoRoot, runId, acceptedRef, outputDir) {
-  const { acceptedHead, closeoutRoot, mergeBaseOriginMaster, sourceOriginMasterHead } = validateSourceInputs(repoRoot, runId, acceptedRef);
+function createPacket(repoRoot, runId, acceptedRef, acceptedHeadOverride, outputDir) {
+  const {
+    acceptedHead,
+    closeoutRoot,
+    mergeBaseOriginMaster,
+    sourceOriginMasterHead,
+  } = validateSourceInputs(repoRoot, runId, acceptedRef, acceptedHeadOverride);
   const packetDir = packetDirFor(outputDir, runId);
   const zipPath = zipPathFor(outputDir, runId);
 
@@ -719,13 +763,15 @@ function main() {
   const outputDir = path.resolve(repoRoot, options.output);
 
   if (options.validateOnly) {
-    const acceptedHead = execCommand('git', ['rev-parse', `${options.acceptedRef}^{commit}`], repoRoot).trim();
+    const acceptedHead = options.acceptedHead
+      ? execCommand('git', ['rev-parse', `${options.acceptedHead}^{commit}`], repoRoot).trim()
+      : execCommand('git', ['rev-parse', `${options.acceptedRef}^{commit}`], repoRoot).trim();
     validatePacket(outputDir, options.runId, options.acceptedRef, acceptedHead);
     console.log(`VALID packet=${packetDirFor(outputDir, options.runId)}`);
     return;
   }
 
-  const { acceptedHead } = validateSourceInputs(repoRoot, options.runId, options.acceptedRef);
+  const { acceptedHead } = validateSourceInputs(repoRoot, options.runId, options.acceptedRef, options.acceptedHead);
 
   if (options.dryRun) {
     console.log(
@@ -744,7 +790,7 @@ function main() {
     return;
   }
 
-  const result = createPacket(repoRoot, options.runId, options.acceptedRef, outputDir);
+  const result = createPacket(repoRoot, options.runId, options.acceptedRef, options.acceptedHead, outputDir);
   console.log(`CREATED packet=${result.packetDir}`);
   console.log(`CREATED zip=${result.zipPath}`);
   console.log(`ACCEPTED_HEAD ${result.acceptedHead}`);

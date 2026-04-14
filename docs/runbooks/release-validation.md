@@ -116,6 +116,7 @@ cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-full
 - `review-checkout/HEAD`、`closeout-packet/git/git-head-current.txt`、`manifest.json.acceptedHead` が一致する。
 - packet 内テキストに絶対ローカルパスが残らない。
 - `scripts/create-review-archive.sh` は reviewer 提出用の正本ではなく、受入れ手順に含めない。
+- evidence freeze 後に accepted branch が別 commit を指した場合は、`--accepted-head <ACCEPTED_HEAD>` を付けて packet HEAD を固定する。
 
 ## Worker G の post-merge 確認
 ```bash
@@ -191,7 +192,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - reviewer 提出物は `git archive` ではなく reviewer submission packet を正本とする。
 - packet 生成は repo root から実行し、`review-checkout/` と `closeout-packet/` を分離同梱する。
 - `closeout-packet/` の required file が欠けていたら fail する。欠落を別 zip や old RUN_ID で補わない。
-- packet 生成後は `./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>` を必ず通す。
+- packet 生成後は `./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>` を必ず通す。branch drift がある場合は create/validate の両方へ `--accepted-head <ACCEPTED_HEAD>` を付ける。
 - reviewer が辿る path は packet-relative に統一し、絶対ローカルパスを残さない。
 
 ## 補足
