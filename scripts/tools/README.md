@@ -25,6 +25,7 @@
 - 方針:
   - current docs と active workflow docs を含める
   - `artifacts/doc-reorg/` の text/log reports を再同梱する
+  - reviewer 指定の archive / repository-history 資料は個別 allowlist で常時含める
   - `client/`, `server/`, `ext_lib/`, `docker/orca/jma-receipt-docker/` を除外する
   - `docs/archive/` はデフォルトで除外し、必要時だけ `--include-archive-docs` で含める
   - `ops/assets/fonts/NotoSansCJKjp-Regular.otf` など大きい review-irrelevant binary を除外する

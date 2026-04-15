@@ -101,6 +101,9 @@ should_include_tracked() {
   local path="$1"
 
   case "$path" in
+    docs/archive/README.md|docs/archive/orca-order-alignment/README.md|artifacts/README.md|docs/reference/repository-history/minagawa署名git履歴調査_20260310.md|docs/reference/repository-history/LICENSE_git履歴調査_20260310.md|docs/reference/repository-history/ライセンス_コード著者アカウント同一性時系列調査_20260313.md|docs/reference/repository-history/OpenDolphin-Lab-A4.pdf)
+      return 0
+      ;;
     client/*|server/*|ext_lib/*|docker/orca/jma-receipt-docker/*)
       return 1
       ;;
@@ -115,9 +118,6 @@ should_include_tracked() {
       ;;
     docs/archive/*)
       [[ "$INCLUDE_ARCHIVE_DOCS" -eq 1 ]] || return 1
-      ;;
-    docs/reference/repository-history/OpenDolphin-Lab-A4.pdf)
-      return 1
       ;;
     ops/assets/fonts/NotoSansCJKjp-Regular.otf)
       return 1
@@ -172,11 +172,11 @@ PACKAGE_FILE="$OUT_DIR/${PACKAGE_PREFIX}-${RUN_ID}.zip"
 
 : > "$RAW_FILE_LIST"
 
-while IFS= read -r tracked_path; do
+while IFS= read -r -d '' tracked_path; do
   if should_include_tracked "$tracked_path"; then
     printf '%s\n' "$tracked_path" >> "$RAW_FILE_LIST"
   fi
-done < <(git ls-files)
+done < <(git -c core.quotePath=false ls-files -z)
 
 add_extra_tree ".codex/skills"
 add_extra_tree "artifacts/doc-reorg"
@@ -215,10 +215,11 @@ size_limit_mb=${SIZE_LIMIT_MB}
 include_archive_docs=${INCLUDE_ARCHIVE_DOCS}
 included_roots=README.md,AGENTS.md,.github/,docs/,web-client/,server-modernized/,domain/,api-contract/,persistence/,reporting/,ops/,tests/,scripts/,.codex/skills/
 included_extra_roots=artifacts/doc-reorg/,.codex/skills/
+included_reviewer_requested_files=docs/archive/README.md,docs/archive/orca-order-alignment/README.md,artifacts/README.md,docs/reference/repository-history/minagawa署名git履歴調査_20260310.md,docs/reference/repository-history/LICENSE_git履歴調査_20260310.md,docs/reference/repository-history/ライセンス_コード著者アカウント同一性時系列調査_20260313.md,docs/reference/repository-history/OpenDolphin-Lab-A4.pdf
 review_targets=server-modernized,web-client
 review_entry_docs=docs/README.md,docs/architecture/server-modernization-overview.md,docs/runbooks/release-validation.md,web-client/README.md,web-client/notes/ui-current-contract.md
 excluded_roots=client/,server/,ext_lib/,docker/orca/jma-receipt-docker/,artifacts/except-doc-reorg/
-excluded_large_assets=ops/assets/fonts/NotoSansCJKjp-Regular.otf,docs/reference/repository-history/OpenDolphin-Lab-A4.pdf
+excluded_large_assets=ops/assets/fonts/NotoSansCJKjp-Regular.otf
 excluded_generated=node_modules/,dist/,target/,build/,out/,coverage/,test-results/,tmp/,output/,cache-dirs
 uncompressed_bytes=${TOTAL_UNCOMPRESSED_BYTES}
 top_10_largest_files=${TOP_10}
@@ -232,7 +233,7 @@ zip -q "$PACKAGE_FILE" "$MANIFEST_FILE" -j
 BAD_PATHS="$(
   {
     zipinfo -1 "$PACKAGE_FILE" | grep -E '^(client/|server/|ext_lib/|docker/orca/jma-receipt-docker/|web-client/artifacts/|tmp/|output/|artifacts/review-bundles/|artifacts/reviewer-submission-packets/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|.*/coverage/|.*/test-results/|.*\.zip$)' || true
-    zipinfo -1 "$PACKAGE_FILE" | grep '^artifacts/' | grep -v '^artifacts/doc-reorg/' || true
+    zipinfo -1 "$PACKAGE_FILE" | grep '^artifacts/' | grep -v '^artifacts/doc-reorg/' | grep -v '^artifacts/README.md$' || true
   } | sed '/^$/d'
 )"
 if [[ -n "$BAD_PATHS" ]]; then
@@ -245,7 +246,14 @@ for required_path in \
   README.md \
   docs/README.md \
   docs/architecture/server-modernization-overview.md \
+  docs/archive/README.md \
+  docs/archive/orca-order-alignment/README.md \
   docs/implementation/README.md \
+  docs/reference/repository-history/minagawa署名git履歴調査_20260310.md \
+  docs/reference/repository-history/LICENSE_git履歴調査_20260310.md \
+  docs/reference/repository-history/ライセンス_コード著者アカウント同一性時系列調査_20260313.md \
+  docs/reference/repository-history/OpenDolphin-Lab-A4.pdf \
+  artifacts/README.md \
   docs/runbooks/release-validation.md \
   docs/runbooks/reviewer-submission-packet.md \
   web-client/README.md \
@@ -255,7 +263,7 @@ for required_path in \
   scripts/create-review-package-curated.sh \
   .codex/skills/review-curated-50mb-bundle/SKILL.md
 do
-  if [[ -f "$required_path" ]] && ! zipinfo -1 "$PACKAGE_FILE" | grep -Fx "$required_path" >/dev/null; then
+  if [[ -f "$required_path" ]] && ! grep -Fx "$required_path" "$FILE_LIST" >/dev/null; then
     echo "Required curated review file missing from package: $required_path" >&2
     exit 1
   fi
@@ -265,7 +273,7 @@ LATEST_FINAL_REPORT="$(find artifacts/doc-reorg -maxdepth 2 -type f -name 'final
 LATEST_ADDENDUM_REPORT="$(find artifacts/doc-reorg -maxdepth 2 -type f -name 'addendum-report.md' 2>/dev/null | LC_ALL=C sort | tail -n 1 || true)"
 
 for optional_review_report in "$LATEST_FINAL_REPORT" "$LATEST_ADDENDUM_REPORT"; do
-  if [[ -n "$optional_review_report" ]] && ! zipinfo -1 "$PACKAGE_FILE" | grep -Fx "$optional_review_report" >/dev/null; then
+  if [[ -n "$optional_review_report" ]] && ! grep -Fx "$optional_review_report" "$FILE_LIST" >/dev/null; then
     echo "Expected doc-reorg review report missing from package: $optional_review_report" >&2
     exit 1
   fi

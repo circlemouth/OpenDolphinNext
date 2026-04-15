@@ -46,6 +46,14 @@ Common options:
   - nested zip artifacts
   - large review-irrelevant binary assets such as `ops/assets/fonts/NotoSansCJKjp-Regular.otf`
   - `docs/archive/` unless explicitly requested
+- always include reviewer-requested exceptions:
+  - `docs/archive/README.md`
+  - `docs/archive/orca-order-alignment/README.md`
+  - `artifacts/README.md`
+  - `docs/reference/repository-history/minagawa署名git履歴調査_20260310.md`
+  - `docs/reference/repository-history/LICENSE_git履歴調査_20260310.md`
+  - `docs/reference/repository-history/ライセンス_コード著者アカウント同一性時系列調査_20260313.md`
+  - `docs/reference/repository-history/OpenDolphin-Lab-A4.pdf`
 
 ## Required checks
 
@@ -53,9 +61,16 @@ Common options:
 - `zipinfo -1` must include:
   - `docs/README.md`
   - `docs/architecture/server-modernization-overview.md`
+  - `docs/archive/README.md`
+  - `docs/archive/orca-order-alignment/README.md`
   - `docs/runbooks/reviewer-submission-packet.md`
+  - `artifacts/README.md`
   - `web-client/README.md`
   - `web-client/notes/ui-current-contract.md`
+  - `docs/reference/repository-history/minagawa署名git履歴調査_20260310.md`
+  - `docs/reference/repository-history/LICENSE_git履歴調査_20260310.md`
+  - `docs/reference/repository-history/ライセンス_コード著者アカウント同一性時系列調査_20260313.md`
+  - `docs/reference/repository-history/OpenDolphin-Lab-A4.pdf`
   - `.github/workflows/web-client-test-shards.yml`
   - `.github/workflows/server-modernized-static-analysis-gate.yml`
   - latest `artifacts/doc-reorg/*/final-report.md` if present
