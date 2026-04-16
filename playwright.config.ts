@@ -22,6 +22,7 @@ const receptionStatusMvp = process.env.VITE_RECEPTION_STATUS_MVP ?? '2';
 const webServerCommand = `cd web-client && VITE_DEV_USE_HTTPS=${useHttps ? '1' : '0'} VITE_DISABLE_PROXY=1 VITE_ENABLE_MSW=${enableMsw} VITE_DISABLE_MSW=${disableMsw ? '1' : '0'} VITE_ENABLE_DEBUG_UI=${enableDebugUi} VITE_RECEPTION_STATUS_MVP=${receptionStatusMvp} VITE_PATIENT_IMAGES_MVP=${patientImagesMvp ? '1' : '0'} npm run dev -- --host --port 4173 --clearScreen false`;
 
 export default defineConfig({
+  testIgnore: ['**/wt/**', '**/artifacts/**', '**/test-results/**'],
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? `${protocol}://localhost:4173`,
     ignoreHTTPSErrors: true,
