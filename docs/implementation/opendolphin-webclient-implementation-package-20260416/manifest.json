@@ -1,0 +1,45 @@
+{
+  "package_name": "OpenDolphin WebClient implementation package",
+  "version": "2026-04-16.2",
+  "planning_only": true,
+  "source_inputs": [
+    "OpenDolphin_WebClient-review-package-curated-20260415T122629Z.zip",
+    "opendolphin_webclient_kirin_recovery_plan_20260416.zip",
+    "貼り付けたマークダウン（1）.md",
+    "貼り付けたマークダウン（2）.md",
+    "貼り付けられたテキスト（3 点）.txt",
+    "貼り付けたマークダウン（4）.md",
+    "貼り付けられたテキスト（5 点）.txt",
+    "貼り付けられたテキスト（6 点）.txt",
+    "貼り付けたマークダウン（7）.md",
+    "貼り付けたマークダウン（8）.md",
+    "貼り付けたマークダウン（9）.md",
+    "dads_app_ui_design_rules_20260411.md"
+  ],
+  "included_files": [
+    "00_master_summary.md",
+    "01_final_fixed_decisions.md",
+    "02_phase_and_workstream_plan.md",
+    "03_repo_touchpoint_plan.md",
+    "04_file_by_file_implementation_plan.md",
+    "05_screen_state_copy_spec.md",
+    "06_api_contract_and_boundary_plan.md",
+    "07_test_and_release_gate_plan.md",
+    "08_open_gates_and_risk_register.md",
+    "09_codex_main_agent_prompt.md",
+    "10_codex_subagent_prompts.md",
+    "11_merge_order_and_pr_split.md",
+    "12_implementation_task_register.csv",
+    "13_open_gates.csv",
+    "14_test_matrix.csv",
+    "15_reviewer_integration_matrix.md",
+    "README.md",
+    "manifest.json"
+  ],
+  "generation_assumptions": [
+    "repo truth priority: source / tests / docs / notes / route / DTO / QA script > recovery plan > reviewer payload > package text",
+    "unknown items remain gates with fail-close fallback",
+    "no external websites, no guessed routes, no guessed schemas, no TODO/shim/format-only changes",
+    "fixed invariants: 3-pane responsibilities, patient context non-persistent, finish/send split, right-rail chooser-only, sent!=paid, no generic bottom navigation, important info not hidden in disclosure, one screen one primary"
+  ]
+}

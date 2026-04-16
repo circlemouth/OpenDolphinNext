@@ -21,6 +21,7 @@
 - [implementation/orca-order-alignment/orca_order_alignment_authoritative_spec_packet_20260407.md](implementation/orca-order-alignment/orca_order_alignment_authoritative_spec_packet_20260407.md)
 - [implementation/orca-order-alignment/orca_order_alignment_authoritative_tables_20260407.json](implementation/orca-order-alignment/orca_order_alignment_authoritative_tables_20260407.json)
 - [implementation/orca-order-alignment/orca_order_alignment_execution_plan_checklist_self_contained_20260407.md](implementation/orca-order-alignment/orca_order_alignment_execution_plan_checklist_self_contained_20260407.md)
+- [implementation/opendolphin-webclient-implementation-package-20260416/README.md](implementation/opendolphin-webclient-implementation-package-20260416/README.md)
 - current workflow の実行正本は [runbooks/release-validation.md](runbooks/release-validation.md)、[runbooks/reviewer-submission-packet.md](runbooks/reviewer-submission-packet.md)、[releases/orca-remediation-cutover.md](releases/orca-remediation-cutover.md) です。
 - `docs/implementation/` には workstream index と active workflow background を置き、dated packet / closeout / recovery を current 導線に混ぜません。
 

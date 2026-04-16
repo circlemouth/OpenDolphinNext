@@ -4,6 +4,7 @@
 
 ## Current Workstreams
 - [ORCA order alignment](orca-order-alignment/README.md)
+- [OpenDolphin WebClient implementation package 2026-04-16](opendolphin-webclient-implementation-package-20260416/README.md)
 
 ## Rules
 - 契約の正本は `docs/contracts/` と `web-client/notes/` に置く
