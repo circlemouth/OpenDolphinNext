@@ -151,7 +151,6 @@ vi.mock('../api', () => ({
     chartsDisplayEnabled: true,
     chartsSendEnabled: true,
     chartsMasterSource: 'auto',
-    verifyAdminDelivery: true,
   }),
 }));
 
@@ -211,15 +210,10 @@ beforeEach(() => {
     runId: 'RUN-CONFIG',
     source: 'live',
     status: 200,
-    deliveryMode: 'immediate',
     deliveryVersion: '1',
     deliveryEtag: 'etag-1',
     deliveredAt: '2026-02-21T00:00:00Z',
-    verifyAdminDelivery: true,
-    note: '',
     deliveryId: 'DELIVERY-1',
-    environment: 'dev',
-    orcaEndpoint: 'https://example.invalid/openDolphin/resources',
     chartsDisplayEnabled: true,
     chartsSendEnabled: true,
     chartsMasterSource: 'auto',
@@ -227,7 +221,6 @@ beforeEach(() => {
   mockFetchOrcaQueue.mockResolvedValue({
     runId: 'RUN-QUEUE',
     source: 'live',
-    verifyAdminDelivery: true,
     queue: [],
   });
   mockFetchOrcaConnectionConfig.mockResolvedValue({

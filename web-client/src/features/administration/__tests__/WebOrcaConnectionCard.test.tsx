@@ -40,9 +40,7 @@ describe('WebOrcaConnectionCard', () => {
         connectionCapability={{
           available: true,
           testedScope: 'api_only',
-          pushConfigured: true,
-          pushTenantConfigured: true,
-          pushMode: 'push_url_and_tenant',
+          hint: '接続テストは WebORCA API の到達確認のみで、push WebSocket の接続確認は行いません。',
         }}
         dirty={false}
         statusTone="ok"
@@ -63,6 +61,8 @@ describe('WebOrcaConnectionCard', () => {
 
     expect(screen.getByText('管理画面権限: 確認済み')).toBeInTheDocument();
     expect(screen.getByText('ORCA接続テスト: 接続OK')).toBeInTheDocument();
+    expect(screen.getByText('testedScope: API到達のみ')).toBeInTheDocument();
+    expect(screen.getByText('Push保存状態: Push URL + tenant ID 設定済み')).toBeInTheDocument();
     expect(screen.getByText('Push URL を保存する場合のみ指定します。Push tenant ID 単独では保存できません。')).toBeInTheDocument();
     expect(screen.getByText('設定済み値は再表示しません。変更時のみ入力してください。mTLS を OFF にしている間は編集できません。')).toBeInTheDocument();
     expect(screen.getByLabelText('パスワード / APIキー')).not.toHaveAttribute('placeholder');
@@ -80,9 +80,6 @@ describe('WebOrcaConnectionCard', () => {
         connectionCapability={{
           available: true,
           testedScope: 'api_only',
-          pushConfigured: false,
-          pushTenantConfigured: false,
-          pushMode: 'none',
         }}
         dirty={false}
         statusTone="idle"

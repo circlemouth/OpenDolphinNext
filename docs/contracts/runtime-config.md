@@ -8,6 +8,7 @@
 - 旧 property / 旧 env / 補完用 fallback は削除する。
 - typed config を正本とし、契約はこの文書・`ServerConfigurationResolver`・`config/server-modernized.env.sample` の 3 点で一致させる。
 - 取得失敗時は default で誤魔化さず、起動時 validation で fail-fast する。
+- runtime-owned flag を `/api/admin/config` へ複製しない。admin UI は runtime setting の owner ではない。
 
 ## 正本
 - コード正本: `src/main/java/open/dolphin/runtime/config/ServerConfigurationResolver.java`
@@ -21,6 +22,7 @@
 - [x] `RuntimeConfigurationSupport` は I/O を持たない pure utility のみ残し、設定解決責務は持たせない。
 - [x] 旧 `dolphin.facilityId` は production tree から除去し、`opendolphin.facility-id` 以外の facility fallback を許容しない。
 - [x] 新しい設定キーを追加した場合、同 PR で本ファイルと sample env を更新する。
+- [x] admin setting inventory では `orca.mode`、`orca.acceptmod.suppress-acceptance-push`、optional module visibility owner のような runtime-owned 項目を `unknown` または runtime-owned として扱い、toggle を client 側へ出さない。
 
 ## 名前付けルール
 - dot notation を内部契約とする。

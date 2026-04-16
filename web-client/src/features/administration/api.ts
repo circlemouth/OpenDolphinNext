@@ -7,8 +7,6 @@ export { discardOrcaQueue, fetchOrcaQueue, retryOrcaQueue } from '../outpatient/
 export type ChartsMasterSourcePolicy = 'auto' | 'server' | 'mock' | 'snapshot' | 'fallback';
 
 export type AdminConfigPayload = {
-  orcaEndpoint: string;
-  verifyAdminDelivery: boolean;
   chartsDisplayEnabled: boolean;
   chartsSendEnabled: boolean;
   chartsMasterSource: ChartsMasterSourcePolicy;
@@ -161,8 +159,6 @@ const normalizeConfig = (json: unknown, headers: Headers, status?: number): Admi
   const charts = asRecord(body.charts);
 
   const payload: AdminConfigResponse = {
-    orcaEndpoint: getString(body.orcaEndpoint) ?? getString(body.endpoint),
-    verifyAdminDelivery: getBoolean(body.verifyAdminDelivery) ?? normalizeBooleanHeader(verifyHeader),
     chartsDisplayEnabled: getBoolean(body.chartsDisplayEnabled) ?? getBoolean(charts.displayEnabled),
     chartsSendEnabled: getBoolean(body.chartsSendEnabled) ?? getBoolean(charts.sendEnabled),
     chartsMasterSource:

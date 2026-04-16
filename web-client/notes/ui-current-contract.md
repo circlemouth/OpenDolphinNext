@@ -174,14 +174,17 @@
 ## Admin Surface
 ### Current Fact
 - admin current contract の source of truth は `/api/admin/config` です。
+- `/api/admin/config` の正本範囲は charts delivery only です。
 - `/api/admin/delivery` を第 2 正本として復活させません。
 - top-level navigation は `delivery`, `orca-users`, `master-updates` の 3 本で、tab pattern ではなく plain navigation / `aria-current` を使います。
 - `delivery` 配下は `dashboard`, `connection`, `config`, `queue`, `operations`, `debug` の section sub-navigation を持ちます。
 - sub-navigation は `設定 / 状態確認 / 調査` に regroup します。
 - authz の canonical layer は `AdministrationGate` の route-level guard です。
 - `connection` は接続テストの実行面、`operations` は状態参照面です。
-- `config` の診断用トグルは既定で閉じ、通常運用導線より一段下げて扱います。
-- `AdminDeliveryStatusCard` は配信メタデータ card として `deliveryId / version / etag / deliveredAt / verified` を表示します。
+- `config` section は charts delivery toggle だけを表示し、diagnostic / correction / runtime-owned setting を混ぜません。
+- `AdminDeliveryStatusCard` は配信メタデータ card として `deliveryId / version / etag / deliveredAt` を表示します。
+- `connection` section は施設別 ORCA 接続設定 only、`testedScope` は capability note、runtime-owned setting は docs note を正本とします。
+- UG-14 未解決項目や optional module visibility owner 不明項目は UI に toggle を出さず、feature-off / fail-close で扱います。
 
 ## Explicit Unknown
 - pane geometry

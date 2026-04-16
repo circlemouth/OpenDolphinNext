@@ -11,9 +11,6 @@ import jakarta.ws.rs.core.Response;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import open.dolphin.infomodel.IInfoModel;
-import open.dolphin.orca.config.OrcaConnectionConfigRecord;
-import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.session.UserServiceBean;
 
@@ -23,21 +20,17 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
     @Inject
     private UserServiceBean userServiceBean;
 
-    @Inject
-    private OrcaConnectionConfigStore orcaConnectionConfigStore;
-
     @GET
     @Path("/capabilities")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getCapabilities(@Context HttpServletRequest request) {
         String runId = AbstractOrcaRestResource.resolveRunIdValue(request);
-        String actor = requireAdminActor(request, runId);
-        String facilityId = resolveActorFacilityId(actor);
+        requireAdminActor(request, runId);
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("runId", runId);
         body.put("ok", true);
-        body.put("connection", connectionCapability(facilityId));
+        body.put("connection", connectionCapability());
         body.put("internalWrappers", List.of(
                 capability(
                         "medical-sets",
@@ -83,23 +76,10 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
         return Response.ok(body).header("x-run-id", runId).build();
     }
 
-    private Map<String, Object> connectionCapability(String facilityId) {
-        OrcaConnectionConfigRecord record = orcaConnectionConfigStore != null && facilityId != null && !facilityId.isBlank()
-                ? orcaConnectionConfigStore.getSnapshot(facilityId)
-                : null;
-        boolean pushConfigured = record != null && record.getPushUrl() != null && !record.getPushUrl().isBlank();
-        boolean pushTenantConfigured = record != null && record.getPushTenantId() != null && !record.getPushTenantId().isBlank();
-
+    private Map<String, Object> connectionCapability() {
         Map<String, Object> item = new LinkedHashMap<>();
         item.put("available", Boolean.TRUE);
         item.put("testedScope", "api_only");
-        item.put("pushConfigured", pushConfigured);
-        item.put("pushTenantConfigured", pushTenantConfigured);
-        item.put(
-                "pushMode",
-                pushConfigured
-                        ? (pushTenantConfigured ? "push_url_and_tenant" : "push_url_only")
-                        : "none");
         item.put(
                 "hint",
                 "接続テストは WebORCA API の到達確認のみで、push WebSocket の接続確認は行いません。");
@@ -131,17 +111,5 @@ public class AdminOrcaCapabilitiesResource extends AbstractResource {
             throw restError(request, Response.Status.FORBIDDEN, "forbidden", "管理者権限が必要です。");
         }
         return actor;
-    }
-
-    private String resolveActorFacilityId(String actor) {
-        if (actor == null || actor.isBlank()) {
-            return null;
-        }
-        int idx = actor.indexOf(IInfoModel.COMPOSITE_KEY_MAKER);
-        if (idx <= 0) {
-            return null;
-        }
-        String facilityId = actor.substring(0, idx).trim();
-        return facilityId.isEmpty() ? null : facilityId;
     }
 }

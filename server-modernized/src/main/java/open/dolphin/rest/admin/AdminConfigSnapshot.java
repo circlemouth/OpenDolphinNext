@@ -5,8 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AdminConfigSnapshot {
 
-    private String orcaEndpoint;
-    private Boolean verifyAdminDelivery;
     private Boolean chartsDisplayEnabled;
     private Boolean chartsSendEnabled;
     private String chartsMasterSource;
@@ -14,16 +12,10 @@ public class AdminConfigSnapshot {
     private String deliveryVersion;
     private String deliveryEtag;
     private String deliveredAt;
-    private String note;
-    private String environment;
-    private String deliveryMode;
     private String source;
-    private Boolean verified;
 
     public AdminConfigSnapshot copy() {
         AdminConfigSnapshot copy = new AdminConfigSnapshot();
-        copy.orcaEndpoint = orcaEndpoint;
-        copy.verifyAdminDelivery = verifyAdminDelivery;
         copy.chartsDisplayEnabled = chartsDisplayEnabled;
         copy.chartsSendEnabled = chartsSendEnabled;
         copy.chartsMasterSource = chartsMasterSource;
@@ -31,28 +23,8 @@ public class AdminConfigSnapshot {
         copy.deliveryVersion = deliveryVersion;
         copy.deliveryEtag = deliveryEtag;
         copy.deliveredAt = deliveredAt;
-        copy.note = note;
-        copy.environment = environment;
-        copy.deliveryMode = deliveryMode;
         copy.source = source;
-        copy.verified = verified;
         return copy;
-    }
-
-    public String getOrcaEndpoint() {
-        return orcaEndpoint;
-    }
-
-    public void setOrcaEndpoint(String orcaEndpoint) {
-        this.orcaEndpoint = orcaEndpoint;
-    }
-
-    public Boolean getVerifyAdminDelivery() {
-        return verifyAdminDelivery;
-    }
-
-    public void setVerifyAdminDelivery(Boolean verifyAdminDelivery) {
-        this.verifyAdminDelivery = verifyAdminDelivery;
     }
 
     public Boolean getChartsDisplayEnabled() {
@@ -111,43 +83,11 @@ public class AdminConfigSnapshot {
         this.deliveredAt = deliveredAt;
     }
 
-    public String getNote() {
-        return note;
-    }
-
-    public void setNote(String note) {
-        this.note = note;
-    }
-
-    public String getEnvironment() {
-        return environment;
-    }
-
-    public void setEnvironment(String environment) {
-        this.environment = environment;
-    }
-
-    public String getDeliveryMode() {
-        return deliveryMode;
-    }
-
-    public void setDeliveryMode(String deliveryMode) {
-        this.deliveryMode = deliveryMode;
-    }
-
     public String getSource() {
         return source;
     }
 
     public void setSource(String source) {
         this.source = source;
-    }
-
-    public Boolean getVerified() {
-        return verified;
-    }
-
-    public void setVerified(Boolean verified) {
-        this.verified = verified;
     }
 }

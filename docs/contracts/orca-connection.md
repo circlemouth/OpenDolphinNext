@@ -8,6 +8,7 @@
 - 施設未解決時の「最後に保存したレコード」 fallback を禁止する。
 - ORCA 資格情報の暗号鍵は 2FA 用鍵と分離する。
 - ログ / 監査 / readiness で接続先詳細を出さない。
+- `testedScope` や optional module visibility はこの契約に含めない。connection API は施設別接続設定だけを返す。
 
 ## 保存モデル
 - 設定ファイルまたは永続化モデルは次の論理構造を持つ。
@@ -59,6 +60,8 @@
   - credentialConfigured
   - clientAuthEnabled
   - caConfigured
+  - pushConfigured
+  - pushTenantConfigured
   - version
 - 記録してはいけないもの
   - baseUrl

@@ -12,9 +12,6 @@ export type OrcaInternalWrapperCapability = {
 export type OrcaConnectionCapability = {
   available: boolean;
   testedScope?: string;
-  pushConfigured?: boolean;
-  pushTenantConfigured?: boolean;
-  pushMode?: 'none' | 'push_url_only' | 'push_url_and_tenant' | string;
   hint?: string;
 };
 
@@ -36,9 +33,6 @@ const normalizeConnectionCapability = (value: unknown): OrcaConnectionCapability
   return {
     available: getBoolean(record.available) ?? false,
     testedScope: getString(record.testedScope),
-    pushConfigured: getBoolean(record.pushConfigured),
-    pushTenantConfigured: getBoolean(record.pushTenantConfigured),
-    pushMode: getString(record.pushMode) as OrcaConnectionCapability['pushMode'] | undefined,
     hint: getString(record.hint),
   };
 };

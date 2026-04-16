@@ -6,10 +6,8 @@ import { DirtyStateBar } from '../components/DirtyStateBar';
 type AdminDeliveryConfigCardProps = {
   form: AdminConfigPayload;
   isSystemAdmin: boolean;
-  showAdminDebugToggles: boolean;
   dirty: boolean;
   updatedAt?: string;
-  note?: string;
   guardDetailsId?: string;
   saving: boolean;
   refetching: boolean;
@@ -22,10 +20,8 @@ type AdminDeliveryConfigCardProps = {
 export function AdminDeliveryConfigCard({
   form,
   isSystemAdmin,
-  showAdminDebugToggles,
   dirty,
   updatedAt,
-  note,
   guardDetailsId,
   saving,
   refetching,
@@ -40,24 +36,10 @@ export function AdminDeliveryConfigCard({
     <AdminCard
       id="admin-delivery-config"
       title="配信設定"
-      description="運用設定を優先表示し、診断用トグルは必要なときだけ開いて確認します。"
+      description="この section が正本なのは charts delivery のみです。接続設定・runtime-owned・未証明 setting はここへ混ぜません。"
     >
       <DirtyStateBar dirty={dirty} updatedAt={updatedAt} />
-      <AdminField
-        label="orcaEndpoint（配信先 URL）"
-        htmlFor="orca-endpoint"
-        hint="WebORCA接続設定は接続試験・認証管理、orcaEndpoint は配信時のクライアント利用先です。用途が異なります。"
-      >
-        <input
-          id="orca-endpoint"
-          type="text"
-          value={form.orcaEndpoint}
-          onChange={(event) => onFieldChange('orcaEndpoint', event.target.value)}
-          readOnly={readOnly}
-          aria-readonly={readOnly}
-          aria-describedby={readOnly ? guardDetailsId : undefined}
-        />
-      </AdminField>
+      <p className="admin-note">未証明の facility setting や optional module visibility は UI に toggle を出さず、feature-off / fail-close を維持します。</p>
 
       <div className="admin-group">
         <h3 className="admin-group__title">運用トグル</h3>
@@ -107,30 +89,7 @@ export function AdminDeliveryConfigCard({
           </select>
         </AdminField>
       </div>
-
-      <details className="admin-dev-flags">
-        <summary>診断用の開発トグル（既定では閉じています）</summary>
-        {showAdminDebugToggles ? (
-          <div className="admin-form__toggles">
-            <div className="admin-toggle">
-              <div className="admin-toggle__label">
-                <span>配信検証フラグ</span>
-                <span className="admin-toggle__hint">x-admin-delivery-verification</span>
-              </div>
-              <input
-                id="admin-verify-delivery"
-                type="checkbox"
-                checked={form.verifyAdminDelivery}
-                onChange={(event) => onFieldChange('verifyAdminDelivery', event.target.checked)}
-                disabled={readOnly}
-                aria-describedby={readOnly ? guardDetailsId : undefined}
-              />
-            </div>
-          </div>
-        ) : (
-          <p className="admin-quiet">この環境では診断用トグルを非表示にしています（必要時は診断/デバッグセクションを使用します）。</p>
-        )}
-      </details>
+      <p className="admin-quiet">診断や connection/testedScope の確認は、config ではなく connection / debug セクションで扱います。</p>
 
       <div className="admin-actions">
         <button type="button" className="admin-button admin-button--primary" onClick={onSaveRequest} disabled={saving || readOnly}>
@@ -140,7 +99,6 @@ export function AdminDeliveryConfigCard({
           再取得
         </button>
       </div>
-      {note ? <p className="admin-note">{note}</p> : null}
     </AdminCard>
   );
 }

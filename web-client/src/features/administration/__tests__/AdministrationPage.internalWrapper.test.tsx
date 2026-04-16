@@ -127,14 +127,10 @@ beforeEach(() => {
   mockFetchAdminConfig.mockResolvedValue({
     runId: 'RUN-CONFIG',
     status: 200,
-    deliveryMode: 'immediate',
     deliveredAt: '2026-04-11T00:00:00Z',
-    environment: 'dev',
-    orcaEndpoint: 'https://example.invalid/openDolphin/resources',
     chartsDisplayEnabled: true,
     chartsSendEnabled: true,
     chartsMasterSource: 'auto',
-    verifyAdminDelivery: true,
   });
   mockFetchOrcaQueue.mockResolvedValue({ runId: 'RUN-QUEUE', queue: [] });
   mockFetchOrcaConnectionConfig.mockResolvedValue({

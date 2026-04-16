@@ -43,12 +43,12 @@ class AdminConfigResourceTest {
     }
 
     @Test
-    void putConfigRejectsInvalidEndpoint() {
+    void putConfigRejectsUnsupportedKey() {
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
 
         try {
-            resource.putConfig(request, Map.of("orcaEndpoint", "notaurl"));
+            resource.putConfig(request, Map.of("orcaEndpoint", "https://example.invalid"));
             fail("Expected WebApplicationException");
         } catch (WebApplicationException ex) {
             assertEquals(400, ex.getResponse().getStatus());
@@ -62,16 +62,15 @@ class AdminConfigResourceTest {
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
 
         AdminConfigSnapshot updated = new AdminConfigSnapshot();
-        updated.setOrcaEndpoint("https://weborca-trial.orca.med.or.jp");
-        updated.setDeliveryMode("manual");
+        updated.setChartsDisplayEnabled(Boolean.TRUE);
+        updated.setChartsSendEnabled(Boolean.FALSE);
         updated.setChartsMasterSource("auto");
-        updated.setVerifyAdminDelivery(Boolean.TRUE);
         when(adminConfigStore.updateFromPayload(any(AdminConfigSnapshot.class), eq("RUN-ADMIN-CONFIG")))
                 .thenReturn(updated);
 
         Response response = resource.putConfig(request, Map.of(
-                "orcaEndpoint", "https://weborca-trial.orca.med.or.jp",
-                "deliveryMode", "manual",
+                "chartsDisplayEnabled", true,
+                "chartsSendEnabled", false,
                 "chartsMasterSource", "auto"
         ));
 
@@ -80,7 +79,9 @@ class AdminConfigResourceTest {
         Map<String, Object> body = (Map<String, Object>) response.getEntity();
         assertNotNull(body);
         assertEquals("RUN-ADMIN-CONFIG", body.get("runId"));
-        assertEquals("https://weborca-trial.orca.med.or.jp", body.get("orcaEndpoint"));
+        assertEquals(Boolean.TRUE, body.get("chartsDisplayEnabled"));
+        assertEquals(Boolean.FALSE, body.get("chartsSendEnabled"));
+        assertEquals("auto", body.get("chartsMasterSource"));
         verify(adminConfigStore).updateFromPayload(any(AdminConfigSnapshot.class), eq("RUN-ADMIN-CONFIG"));
     }
 

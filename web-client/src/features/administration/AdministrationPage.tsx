@@ -134,11 +134,7 @@ type OrcaInternalWrapperOption = {
   defaultPayload: Record<string, unknown>;
 };
 
-const DEFAULT_ORCA_ENDPOINT =
-  (import.meta.env as Record<string, string | undefined>).VITE_ORCA_ENDPOINT ?? 'https://localhost:9080/openDolphin/resources';
 const DEFAULT_FORM: AdminConfigPayload = {
-  orcaEndpoint: DEFAULT_ORCA_ENDPOINT,
-  verifyAdminDelivery: false,
   chartsDisplayEnabled: true,
   chartsSendEnabled: true,
   chartsMasterSource: 'auto',
@@ -456,7 +452,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const queryClient = useQueryClient();
   const guardDetailsId = 'admin-guard-details';
   const actorId = `${session.facilityId}:${session.userId}`;
-  const showAdminDebugToggles = import.meta.env.VITE_ENABLE_ADMIN_DEBUG === '1' && isSystemAdmin;
 
   const configQuery = useQuery({
     queryKey: ['admin-config'],
@@ -508,7 +503,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
       (import.meta.env as Record<string, string | undefined>).VITE_DEPLOY_ENV ??
       (import.meta.env.MODE === 'development' ? 'dev' : import.meta.env.MODE),
   );
-  const environmentLabel = normalizeEnvironmentLabel(configQuery.data?.environment) ?? envFallback ?? 'unknown';
+  const environmentLabel = envFallback ?? 'unknown';
   const warningThresholdMinutes = Math.round(ORCA_QUEUE_STALL_THRESHOLD_MS / 60000);
   const rawConfig = configQuery.data;
   const latestAuditEvent = useMemo(() => {
@@ -553,8 +548,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const configDirty = useMemo(() => {
     if (!rawConfig) return false;
     return (
-      rawConfig.orcaEndpoint !== form.orcaEndpoint ||
-      rawConfig.verifyAdminDelivery !== form.verifyAdminDelivery ||
       rawConfig.chartsDisplayEnabled !== form.chartsDisplayEnabled ||
       rawConfig.chartsSendEnabled !== form.chartsSendEnabled ||
       rawConfig.chartsMasterSource !== form.chartsMasterSource
@@ -564,13 +557,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
   const configDiffRows = useMemo(
     () =>
       [
-        { key: 'orcaEndpoint', label: 'orcaEndpoint', before: rawConfig?.orcaEndpoint, after: form.orcaEndpoint },
-        {
-          key: 'verifyAdminDelivery',
-          label: 'verifyAdminDelivery',
-          before: rawConfig?.verifyAdminDelivery,
-          after: form.verifyAdminDelivery,
-        },
         {
           key: 'chartsDisplayEnabled',
           label: 'chartsDisplayEnabled',
@@ -668,8 +654,6 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     if (!data) return;
     setForm((prev) => ({
       ...prev,
-      orcaEndpoint: data.orcaEndpoint || prev.orcaEndpoint,
-      verifyAdminDelivery: data.verifyAdminDelivery ?? prev.verifyAdminDelivery,
       chartsDisplayEnabled: data.chartsDisplayEnabled ?? prev.chartsDisplayEnabled,
       chartsSendEnabled: data.chartsSendEnabled ?? prev.chartsSendEnabled,
       chartsMasterSource: data.chartsMasterSource ?? prev.chartsMasterSource,
@@ -1166,7 +1150,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
     });
   }, [actorId, isForbidden, resolvedRunId, role]);
 
-  const deliveryMode = configQuery.data?.deliveryMode ?? rawConfig?.deliveryMode;
+  const deliveryScopeLabel = 'charts delivery only';
   const effectiveDeliveryEtag = configQuery.data?.deliveryEtag ?? configQuery.data?.deliveryVersion;
   const deliveryStatus = buildChartsDeliveryStatus(rawConfig, rawConfig);
   const deliverySummary = summarizeDeliveryStatus(deliveryStatus);
@@ -1235,7 +1219,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
           `queue警告: pending ${queueSummary.pending} / failed ${queueSummary.failed} / 遅延 ${queueSummary.delayed}`,
           `運用状態: ${abnormalSummary}`,
           `環境: ${environmentLabel}`,
-          '単一路線: config only',
+          `正本: ${deliveryScopeLabel}`,
         ]
       : activeTab === 'master-updates'
         ? [`環境: ${environmentLabel}`, `RUN_ID: ${resolvedRunId ?? '―'}`, '配信設定の正本: /api/admin/config']
@@ -1424,7 +1408,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                 {activeDeliverySection === 'dashboard' ? (
                   <DeliveryDashboard
                     deliverySummary={deliverySummary.summary}
-                    deliveryMode={deliveryMode}
+                    deliveryMode={deliveryScopeLabel}
                     lastDeliveredAt={formatTimestampWithAgo(lastDeliveredAt)}
                     webOrcaConnection={webOrcaConnectionLabel}
                     queueSummary={queueSummary}
@@ -1470,10 +1454,8 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                     <AdminDeliveryConfigCard
                       form={form}
                       isSystemAdmin={isSystemAdmin}
-                      showAdminDebugToggles={showAdminDebugToggles}
                       dirty={configDirty}
                       updatedAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
-                      note={configQuery.data?.note}
                       guardDetailsId={guardDetailsId}
                       saving={configMutation.isPending}
                       refetching={configQuery.isFetching}
@@ -1487,9 +1469,7 @@ export function AdministrationPage({ runId, role }: AdministrationPageProps) {
                       deliveryVersion={configQuery.data?.deliveryVersion}
                       deliveryEtag={effectiveDeliveryEtag}
                       deliveredAt={configQuery.data?.deliveredAt ?? rawConfig?.deliveredAt}
-                      environmentLabel={environmentLabel}
-                      deliveryMode={deliveryMode}
-                      verified={configQuery.data?.verified}
+                      scopeLabel={deliveryScopeLabel}
                       onCopy={handleCopyValue}
                     />
                   </div>

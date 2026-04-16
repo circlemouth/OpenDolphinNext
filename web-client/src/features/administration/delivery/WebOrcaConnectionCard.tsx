@@ -111,15 +111,21 @@ export function WebOrcaConnectionCard({
   const disabledByRole = !isSystemAdmin;
   const accessStatusLabel = accessVerified ? '確認済み' : authBlocked ? '権限要確認' : '未確認';
   const accessStatusTone = accessVerified ? 'ok' : authBlocked ? 'error' : 'idle';
-  const pushConfigured = connectionCapability?.pushConfigured ?? Boolean(form.pushUrl.trim());
-  const pushTenantConfigured = connectionCapability?.pushTenantConfigured ?? Boolean(form.pushTenantId.trim());
+  const pushConfigured = Boolean(form.pushUrl.trim());
+  const pushTenantConfigured = Boolean(form.pushTenantId.trim());
   const pushModeLabel = pushConfigured ? (pushTenantConfigured ? 'Push URL + tenant ID 設定済み' : 'Push URL のみ設定済み') : '未設定';
-  const testedScopeLabel = connectionCapability?.testedScope === 'api_only' ? 'API到達のみ' : '保存済み設定';
+  const testedScopeLabel =
+    connectionCapability?.testedScope === 'api_only'
+      ? 'API到達のみ'
+      : connectionCapability?.testedScope
+        ? connectionCapability.testedScope
+        : '未証明（このテストでは未検証）';
+  const testedScopeTone = connectionCapability?.testedScope === 'api_only' ? 'warn' : connectionCapability?.testedScope ? 'ok' : 'idle';
 
   return (
     <AdminCard
       title="WebORCA接続設定"
-      description="管理画面権限、接続先設定、ORCA接続テストを分離して扱い、local admin 権限と ORCA 到達確認を混同しません。"
+      description="この section が正本なのは施設別 ORCA 接続のみです。管理画面権限、保存済み接続設定、testedScope を分離して扱います。"
       status={<AdminStatusPill status={statusTone} value={`接続テスト: ${statusLabel}`} />}
     >
       {accessVerified ? (
@@ -127,9 +133,11 @@ export function WebOrcaConnectionCard({
           <div className="admin-inline-meta">
             <AdminStatusPill status={accessStatusTone} value={`管理画面権限: ${accessStatusLabel}`} />
             <AdminStatusPill status={statusTone} value={`ORCA接続テスト: ${statusLabel}`} />
+            <AdminStatusPill status={testedScopeTone} value={`testedScope: ${testedScopeLabel}`} />
+            <AdminStatusPill status={pushConfigured ? 'ok' : 'idle'} value={`Push保存状態: ${pushModeLabel}`} />
           </div>
           <p className="admin-note">
-            接続テストは保存済み設定で実行されます。未保存の変更（ドラフト）は反映されません。管理画面が表示できても ORCA 接続成功とは限りません。
+            接続テストは保存済み設定で実行されます。未保存の変更（ドラフト）は反映されません。管理画面が表示できても ORCA 接続成功とは限らず、testedScope が未証明の項目はここで success 扱いしません。
           </p>
           <DirtyStateBar dirty={dirty} updatedAt={form.updatedAt} />
 
@@ -228,8 +236,9 @@ export function WebOrcaConnectionCard({
             <h3 className="admin-group__title">Push 連携（任意）</h3>
             <div className="admin-inline-meta">
               <AdminStatusPill status={pushConfigured ? 'ok' : 'idle'} value={`保存済みPush設定: ${pushModeLabel}`} />
-              <AdminStatusPill status="idle" value={`接続テスト範囲: ${testedScopeLabel}`} />
+              <AdminStatusPill status={testedScopeTone} value={`接続テスト範囲: ${testedScopeLabel}`} />
             </div>
+            {connectionCapability?.hint ? <p className="admin-quiet">{connectionCapability.hint}</p> : null}
             <AdminField
               label="Push URL"
               htmlFor="orca-connection-push-url"
@@ -368,7 +377,7 @@ export function WebOrcaConnectionCard({
               <div>HTTP: {testSummary.orcaHttpStatus ?? '―'}</div>
               <div>Api_Result: {testSummary.apiResult ?? '―'}</div>
               <div>testedAt: {formatTimestamp(testSummary.testedAt)}</div>
-              <div>テスト範囲: {testSummary.testedScope === 'api_only' ? 'WebORCA API 到達確認のみ' : '保存済み接続設定'}</div>
+              <div>テスト範囲: {testSummary.testedScope === 'api_only' ? 'WebORCA API 到達確認のみ' : '未証明（このテストでは未検証）'}</div>
               <div>Push WebSocket: {testSummary.pushTested ? '検証済み' : 'このテストでは未検証'}</div>
               {!testSummary.ok ? <div>失敗理由の詳細は通常表示に出さず、RUN_ID と traceId で確認します。</div> : null}
             </div>

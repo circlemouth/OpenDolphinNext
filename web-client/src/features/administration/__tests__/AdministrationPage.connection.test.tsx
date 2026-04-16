@@ -136,14 +136,10 @@ beforeEach(() => {
   mockFetchAdminConfig.mockResolvedValue({
     runId: 'RUN-CONFIG',
     status: 200,
-    deliveryMode: 'immediate',
     deliveredAt: '2026-04-11T00:00:00Z',
-    environment: 'dev',
-    orcaEndpoint: 'https://example.invalid/openDolphin/resources',
     chartsDisplayEnabled: true,
     chartsSendEnabled: true,
     chartsMasterSource: 'auto',
-    verifyAdminDelivery: true,
   });
   mockFetchOrcaQueue.mockResolvedValue({ runId: 'RUN-QUEUE', queue: [] });
   mockFetchOrcaCapabilities.mockResolvedValue({
@@ -213,6 +209,8 @@ describe('AdministrationPage connection section', () => {
     expect(pushTenantId).toHaveValue('tenant-old');
     expect(screen.getByText('保存済みPush設定: Push URL + tenant ID 設定済み')).toBeInTheDocument();
     expect(screen.getByText('接続テスト範囲: API到達のみ')).toBeInTheDocument();
+    expect(screen.getByText('この section が正本なのは施設別 ORCA 接続のみです。管理画面権限、保存済み接続設定、testedScope を分離して扱います。')).toBeInTheDocument();
+    expect(screen.getByText('testedScope: API到達のみ')).toBeInTheDocument();
 
     await user.clear(pushUrl);
     await user.type(pushUrl, 'wss://push.new.invalid/ws');

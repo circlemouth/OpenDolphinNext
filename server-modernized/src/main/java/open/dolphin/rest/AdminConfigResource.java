@@ -11,12 +11,13 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.net.URI;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
 import open.dolphin.rest.admin.AdminConfigSnapshot;
 import open.dolphin.rest.admin.AdminConfigStore;
@@ -28,6 +29,16 @@ import open.dolphin.session.UserServiceBean;
 
 @Path("/admin")
 public class AdminConfigResource extends AbstractResource {
+
+    private static final Set<String> ALLOWED_ROOT_KEYS = Set.of(
+            "chartsDisplayEnabled",
+            "chartsSendEnabled",
+            "chartsMasterSource",
+            "charts");
+    private static final Set<String> ALLOWED_CHART_KEYS = Set.of(
+            "displayEnabled",
+            "sendEnabled",
+            "masterSource");
 
     @Inject
     private AdminConfigStore adminConfigStore;
@@ -77,7 +88,6 @@ public class AdminConfigResource extends AbstractResource {
             AdminConfigSnapshot incoming = toSnapshot(payload);
             AdminConfigSnapshot updated = adminConfigStore.updateFromPayload(incoming, runId);
             details.put("status", "success");
-            details.put("deliveryMode", updated.getDeliveryMode());
             details.put("chartsMasterSource", updated.getChartsMasterSource());
             recordAudit(request, "ADMIN_CONFIG_UPDATE", "/api/admin/config", details, AuditEventEnvelope.Outcome.SUCCESS, null, null);
             return buildResponse(updated, runId);
@@ -167,9 +177,10 @@ public class AdminConfigResource extends AbstractResource {
         if (payload == null || payload.isEmpty()) {
             throw new IllegalArgumentException("設定内容が空です。");
         }
-        String endpoint = getString(payload, "orcaEndpoint", "endpoint");
-        if (endpoint != null) {
-            validateEndpoint(endpoint);
+        Set<String> unsupportedRootKeys = new LinkedHashSet<>(payload.keySet());
+        unsupportedRootKeys.removeAll(ALLOWED_ROOT_KEYS);
+        if (!unsupportedRootKeys.isEmpty()) {
+            throw new IllegalArgumentException("charts delivery 以外の設定キーは受け付けません: " + String.join(", ", unsupportedRootKeys));
         }
         String chartsMasterSource = getString(payload, "chartsMasterSource");
         if (chartsMasterSource != null) {
@@ -178,38 +189,19 @@ public class AdminConfigResource extends AbstractResource {
                 throw new IllegalArgumentException("chartsMasterSource は auto/server/mock/snapshot/fallback のいずれかを指定してください。");
             }
         }
-        String deliveryMode = getString(payload, "deliveryMode", "deliveryState", "deliveryStatus");
-        if (deliveryMode != null) {
-            String normalized = deliveryMode.trim().toLowerCase(Locale.ROOT);
-            if (!List.of("manual", "auto").contains(normalized)) {
-                throw new IllegalArgumentException("deliveryMode は manual/auto のいずれかを指定してください。");
-            }
-        }
-        String environment = getString(payload, "environment", "env", "stage");
-        if (environment != null && environment.trim().length() > 32) {
-            throw new IllegalArgumentException("environment は32文字以内で指定してください。");
-        }
-        String note = getString(payload, "note");
-        if (note != null && note.length() > 2000) {
-            throw new IllegalArgumentException("note が長すぎます。2000文字以内で指定してください。");
-        }
-    }
 
-    private void validateEndpoint(String endpoint) {
-        try {
-            URI uri = URI.create(endpoint.trim());
-            String scheme = uri.getScheme();
-            if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
-                throw new IllegalArgumentException("orcaEndpoint は http/https URL を指定してください。");
+        Object charts = payload.get("charts");
+        if (charts instanceof Map<?, ?> rawCharts) {
+            Set<String> unsupportedChartKeys = new LinkedHashSet<>();
+            for (Object key : rawCharts.keySet()) {
+                String textKey = key instanceof String ? (String) key : String.valueOf(key);
+                if (!ALLOWED_CHART_KEYS.contains(textKey)) {
+                    unsupportedChartKeys.add(textKey);
+                }
             }
-            if (uri.getHost() == null || uri.getHost().isBlank()) {
-                throw new IllegalArgumentException("orcaEndpoint のホスト名が不正です。");
+            if (!unsupportedChartKeys.isEmpty()) {
+                throw new IllegalArgumentException("charts 配下の未対応キーがあります: " + String.join(", ", unsupportedChartKeys));
             }
-        } catch (IllegalArgumentException ex) {
-            if (ex.getMessage() != null && ex.getMessage().contains("orcaEndpoint")) {
-                throw ex;
-            }
-            throw new IllegalArgumentException("orcaEndpoint が不正です。", ex);
         }
     }
 
@@ -232,14 +224,6 @@ public class AdminConfigResource extends AbstractResource {
         Map<String, Object> body = toResponse(snapshot, runId);
         Response.ResponseBuilder builder = Response.ok(body);
         builder.header("x-run-id", runId);
-        builder.header("x-admin-delivery-verification", Boolean.TRUE.equals(snapshot.getVerified()) ? "enabled" : "disabled");
-        if (snapshot.getEnvironment() != null) {
-            builder.header("x-environment", snapshot.getEnvironment());
-        }
-        if (snapshot.getDeliveryMode() != null) {
-            builder.header("x-delivery-mode", snapshot.getDeliveryMode());
-            builder.header("x-admin-delivery-mode", snapshot.getDeliveryMode());
-        }
         if (snapshot.getDeliveryEtag() != null && !snapshot.getDeliveryEtag().isBlank()) {
             builder.header("etag", snapshot.getDeliveryEtag());
             builder.header("x-delivery-etag", snapshot.getDeliveryEtag());
@@ -250,8 +234,6 @@ public class AdminConfigResource extends AbstractResource {
     private Map<String, Object> toResponse(AdminConfigSnapshot snapshot, String runId) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("runId", runId);
-        body.put("orcaEndpoint", snapshot.getOrcaEndpoint());
-        body.put("verifyAdminDelivery", snapshot.getVerifyAdminDelivery());
         body.put("chartsDisplayEnabled", snapshot.getChartsDisplayEnabled());
         body.put("chartsSendEnabled", snapshot.getChartsSendEnabled());
         body.put("chartsMasterSource", snapshot.getChartsMasterSource());
@@ -264,11 +246,7 @@ public class AdminConfigResource extends AbstractResource {
         body.put("deliveryVersion", snapshot.getDeliveryVersion());
         body.put("deliveryEtag", snapshot.getDeliveryEtag());
         body.put("deliveredAt", snapshot.getDeliveredAt());
-        body.put("note", snapshot.getNote());
-        body.put("environment", snapshot.getEnvironment());
-        body.put("deliveryMode", snapshot.getDeliveryMode());
         body.put("source", snapshot.getSource());
-        body.put("verified", snapshot.getVerified());
         return body;
     }
 
@@ -277,14 +255,9 @@ public class AdminConfigResource extends AbstractResource {
         if (payload == null) {
             return snapshot;
         }
-        snapshot.setOrcaEndpoint(getString(payload, "orcaEndpoint", "endpoint"));
-        snapshot.setVerifyAdminDelivery(parseBoolean(payload.get("verifyAdminDelivery")).orElse(null));
         snapshot.setChartsDisplayEnabled(parseBoolean(payload.get("chartsDisplayEnabled")).orElse(null));
         snapshot.setChartsSendEnabled(parseBoolean(payload.get("chartsSendEnabled")).orElse(null));
         snapshot.setChartsMasterSource(getString(payload, "chartsMasterSource"));
-        snapshot.setNote(getString(payload, "note"));
-        snapshot.setEnvironment(getString(payload, "environment", "env", "stage"));
-        snapshot.setDeliveryMode(getString(payload, "deliveryMode", "deliveryState", "deliveryStatus"));
 
         Object charts = payload.get("charts");
         if (charts instanceof Map<?, ?> map) {
