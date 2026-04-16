@@ -37,6 +37,8 @@ test('文書履歴をコピーして編集フォームへ再適用できる', as
               id: 1,
               patientId: '000001',
               letterType: 'client',
+              consultantHospital: '東京クリニック',
+              consultantDoctor: '山田太郎',
               title: '標準紹介状',
               recorded: '2026-01-21T00:00:00Z',
               letterItems: [
@@ -61,6 +63,8 @@ test('文書履歴をコピーして編集フォームへ再適用できる', as
           id: 1,
           patientId: '000001',
           letterType: 'client',
+          consultantHospital: '東京クリニック',
+          consultantDoctor: '山田太郎',
           title: '標準紹介状',
           recorded: '2026-01-21T00:00:00Z',
           letterItems: [
