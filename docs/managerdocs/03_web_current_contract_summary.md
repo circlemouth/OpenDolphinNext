@@ -179,12 +179,14 @@ Charts handoff では `scheduleKey` または `encounterKey` が必要
 
 ## 5-3. Charts surface
 - normal runtime の中心 surface は `SoapNotePanel`
+- `ChartsPatientSummaryBar` は encounter context band、`ChartsActionBar` は page CTA owner
 - `PastHubPanel` は historical reference の補助 surface
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助で、独立 route はない
 - `OrcaSummary` は補助 panel
 - `DocumentTimeline` と `MedicalOutpatientRecordPanel` は debug-only surface
 - deep link query は scrub
 - reload 復元なし
+- minimal encounter context を再解決できない場合、Charts は editor fail-close + `受付へ戻る` の named recovery を出し、`閉じる` を return 代替に使わない
 
 ### manager メモ
 DocumentTimeline を通常の主画面として設計し直さないこと。  

@@ -1066,14 +1066,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     [forceClosePatientTab, forceSelectPatientTab],
   );
 
-  const requestReload = useCallback(() => {
-    if (draftState.dirty) {
-      setReloadGuardOpen(true);
-      return;
-    }
-    onRequestHardReload();
-  }, [draftState.dirty, onRequestHardReload]);
-
   const handleCancelReloadGuard = useCallback(() => {
     setReloadGuardOpen(false);
   }, []);
@@ -2826,6 +2818,26 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     scope: storageScope,
   });
   tabLockReadOnlyRef.current = tabLock.isReadOnly;
+  const encounterResolutionSettled = !appointmentQuery.isLoading && !appointmentQuery.isFetching;
+  const encounterFailCloseReason = useMemo(() => {
+    if (draftState.dirty || lockState.locked || tabLock.isReadOnly) return null;
+    if (hasEncounterContext(encounterContext) && !hasEncounterHandoffKey) {
+      return '来院文脈が不足しているため、カルテ操作を停止しました。受付へ戻って対象来院を選び直してください。';
+    }
+    if (hasEncounterHandoffKey && encounterResolutionSettled && !selectedEntry) {
+      return '対象来院を再解決できないため、カルテ操作を停止しました。受付へ戻って対象来院を開き直してください。';
+    }
+    return null;
+  }, [
+    draftState.dirty,
+    encounterContext,
+    encounterResolutionSettled,
+    hasEncounterHandoffKey,
+    lockState.locked,
+    selectedEntry,
+    tabLock.isReadOnly,
+  ]);
+  const encounterFailClosed = encounterFailCloseReason !== null;
 
   const sidePanelMeta = useMemo(
     () => ({
@@ -2840,11 +2852,16 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       receptionId: encounterContext.receptionId,
       visitDate: encounterContext.visitDate,
       actorRole: session.role,
-      readOnly: lockState.locked || tabLock.isReadOnly || approvalLocked,
-      readOnlyReason: approvalLocked ? approvalReason : lockState.reason ?? tabLock.readOnlyReason,
+      readOnly: lockState.locked || tabLock.isReadOnly || approvalLocked || encounterFailClosed,
+      readOnlyReason:
+        approvalLocked
+          ? approvalReason
+          : lockState.reason ?? tabLock.readOnlyReason ?? encounterFailCloseReason ?? undefined,
     }),
     [
       approvalLocked,
+      encounterFailCloseReason,
+      encounterFailClosed,
       approvalReason,
       encounterContext.appointmentId,
       encounterContext.encounterKey,
@@ -3099,7 +3116,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       if (hasEncounterContext(encounterContext)) {
         setContextAlert({
           tone: 'warning',
-          message: '受付から渡された scheduleKey / encounterKey が不足しているため、対象来院を特定できません。',
+          message: '来院文脈が不足しているため、この画面ではカルテ操作を再開できません。受付へ戻って対象来院を選び直してください。',
         });
       }
       return;
@@ -3108,7 +3125,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
     if (!chosen) {
       setContextAlert({
         tone: 'warning',
-        message: `指定された scheduleKey / encounterKey に一致する来院が見つかりません（scheduleKey=${encounterContext.scheduleKey ?? '―'} encounterKey=${encounterContext.encounterKey ?? '―'}）。`,
+        message: '対象来院を再解決できないため、この画面ではカルテ操作を再開できません。受付へ戻って対象来院を開き直してください。',
       });
       return;
     }
@@ -4600,6 +4617,21 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
           runId={flags.runId}
         />
       ) : null}
+      {encounterFailClosed ? (
+        <section className="charts-card charts-context-recovery" aria-label="カルテ文脈の再取得">
+          <div className="charts-context-recovery__body">
+            <div>
+              <h2>来院文脈を再取得してください</h2>
+              <p>{encounterFailCloseReason}</p>
+            </div>
+            <div className="charts-context-recovery__actions">
+              <button type="button" className="charts-actions__button charts-actions__button--ghost" onClick={handleOpenReception}>
+                受付へ戻る
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
       {orcaRecoveryAlert ? (
         <ToneBanner
           tone={orcaRecoveryAlert.tone}
@@ -4690,26 +4722,17 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                     <ChartsPatientSummaryBar
                       patientDisplay={patientDisplay}
                       patientId={patientId}
+                      visitDate={actionVisitDate}
+                      encounterStatus={selectedEntry?.status}
+                      receptionId={receptionId}
+                      appointmentId={appointmentId}
+                      department={selectedEntry?.department}
+                      physician={selectedEntry?.physician}
                       runId={resolvedRunId ?? flags.runId}
                       missingMaster={resolvedMissingMaster}
                       fallbackUsed={resolvedFallbackUsed}
                       cacheHit={resolvedCacheHit}
                       dataSourceTransition={resolvedTransition}
-                      onStartEncounter={() => {
-                        void chartsActionBarRef.current?.start();
-                      }}
-                      onFinishEncounter={() => {
-                        void chartsActionBarRef.current?.finish();
-                      }}
-                      onPauseEncounter={() => {
-                        void chartsActionBarRef.current?.pause();
-                      }}
-                      onCloseChart={() => {
-                        if (!activePatientTabKey) return;
-                        requestClosePatientTab(activePatientTabKey);
-                      }}
-                      onReloadChart={requestReload}
-                      encounterActionDisabled={!activePatientTabKey || lockState.locked || tabLock.isReadOnly || approvalLocked}
                       inlineActionBar={
                         <ChartsActionBar
                           ref={chartsActionBarRef}
@@ -4721,7 +4744,6 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           selectedEntry={selectedEntry}
                           sendEnabled={sendAllowedByDelivery}
                           compactHeader
-                          defaultCollapsed
                           embedded
                           sendDisabledReason={sendDisabledReason}
                           patientId={patientId}
@@ -4747,7 +4769,16 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                             expiresAt: tabLock.expiresAt,
                             lockStatus: tabLock.status,
                           }}
+                          uiLockReason={encounterFailCloseReason}
                           onReloadLatest={handleRefreshSummary}
+                          onReturnToReception={handleOpenReception}
+                          onCloseChartTab={
+                            activePatientTabKey
+                              ? () => {
+                                  requestClosePatientTab(activePatientTabKey);
+                                }
+                              : undefined
+                          }
                           onDiscardChanges={() => {
                             setDraftState((prev) => ({ ...prev, dirty: false, dirtySources: [] }));
                             recordChartsAuditEvent({

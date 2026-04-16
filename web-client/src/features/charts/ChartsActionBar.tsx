@@ -232,6 +232,8 @@ export interface ChartsActionBarProps {
   };
   uiLockReason?: string | null;
   onReloadLatest?: () => void | Promise<void>;
+  onReturnToReception?: () => void;
+  onCloseChartTab?: () => void;
   onDiscardChanges?: () => void;
   onForceTakeover?: () => void;
   onAfterSend?: () => void | Promise<void>;
@@ -281,6 +283,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   editLock,
   uiLockReason,
   onReloadLatest,
+  onReturnToReception,
+  onCloseChartTab,
   onDiscardChanges,
   onForceTakeover,
   onAfterSend,
@@ -2223,7 +2227,7 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     setForceTakeoverDialogStep('confirm');
   };
 
-  const showDraftAction = !embedded;
+  const showDraftAction = true;
   const draftSaveButton = !showDraftAction
     ? null
     : (
@@ -2241,6 +2245,44 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           ドラフト保存
         </button>
       );
+  const printActionButton = (
+    <button
+      type="button"
+      id="charts-action-print"
+      className="charts-actions__button charts-actions__button--print"
+      disabled={printDisabled}
+      aria-disabled={printDisabled}
+      onClick={openPrintDialog}
+      aria-describedby={!isRunning && printPrecheckReasons.length > 0 ? 'charts-actions-print-guard' : undefined}
+      data-disabled-reason={printDisabled ? printPrecheckReasons.map((reason) => reason.key).join(',') : undefined}
+      title={printDisabled ? `印刷不可: ${printPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
+      aria-keyshortcuts="Alt+I"
+    >
+      印刷/エクスポート
+    </button>
+  );
+  const returnToReceptionButton = onReturnToReception ? (
+    <button
+      type="button"
+      className="charts-actions__button charts-actions__button--ghost"
+      onClick={onReturnToReception}
+      disabled={isRunning}
+      data-disabled-reason={isRunning ? 'running' : undefined}
+    >
+      受付へ戻る
+    </button>
+  ) : null;
+  const closeTabButton = onCloseChartTab ? (
+    <button
+      type="button"
+      className="charts-actions__button charts-actions__button--ghost"
+      onClick={onCloseChartTab}
+      disabled={isRunning}
+      data-disabled-reason={isRunning ? 'running' : undefined}
+    >
+      タブを閉じる
+    </button>
+  ) : null;
 
   return (
     <section
@@ -2266,7 +2308,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           </p>
           {compactHeader ? (
             <div className="charts-actions__quick-controls" role="group" aria-label="Charts クイック操作">
-              {showDraftAction && isHeaderCollapsed ? draftSaveButton : null}
               <button
                 type="button"
                 className="charts-actions__toggle"
@@ -2357,19 +2398,20 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
       </header>
 
       <div id="charts-actionbar-details" hidden={compactHeader && isHeaderCollapsed}>
-      {guardSummaries.length > 0 ? (
-        <div className="charts-actions__guard-summary" role="status" aria-live="polite">
-          <strong>ガード理由（短文）</strong>
-          <ul>
-            {guardSummaries.map((item) => (
-              <li key={item.key}>
-                {item.action}: {item.summary}
-                {item.nextAction ? ` / 次: ${item.nextAction}` : ''}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+        {guardSummaries.length > 0 ? (
+          <div className="charts-actions__guard-summary" role="status" aria-live="polite">
+            <strong>ガード理由（短文）</strong>
+            <ul>
+              {guardSummaries.map((item) => (
+                <li key={item.key}>
+                  {item.action}: {item.summary}
+                  {item.nextAction ? ` / 次: ${item.nextAction}` : ''}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
 
       <FocusTrapDialog
         open={confirmAction === 'send'}
@@ -2772,45 +2814,47 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             {primaryAction === 'sending' ? '送信中…' : 'ORCA 送信'}
           </button>
         </div>
-      </div>
-      <details className="charts-actions__more">
-        <summary className="charts-actions__more-summary">その他</summary>
-        <div className="charts-actions__more-actions" role="group" aria-label="補助操作">
-          {showDraftAction && (compactHeader && isHeaderCollapsed ? null : draftSaveButton)}
-          <button
-            type="button"
-            id="charts-action-print"
-            className="charts-actions__button charts-actions__button--print"
-            disabled={printDisabled}
-            aria-disabled={printDisabled}
-            onClick={openPrintDialog}
-            aria-describedby={!isRunning && printPrecheckReasons.length > 0 ? 'charts-actions-print-guard' : undefined}
-            data-disabled-reason={printDisabled ? printPrecheckReasons.map((reason) => reason.key).join(',') : undefined}
-            title={printDisabled ? `印刷不可: ${printPrecheckReasons.map((reason) => reason.summary).join(' / ')}` : undefined}
-            aria-keyshortcuts="Alt+I"
-          >
-            印刷/エクスポート
-          </button>
-          <button
-            type="button"
-            className="charts-actions__button charts-actions__button--cancel"
-            disabled={otherBlocked}
-            data-disabled-reason={otherBlocked ? (isLocked ? 'locked' : undefined) : undefined}
-            title={otherBlocked ? statusLine : undefined}
-            onClick={() => handleAction('cancel')}
-          >
-            キャンセル
-          </button>
-          <button
-            type="button"
-            className="charts-actions__button charts-actions__button--unlock"
-            disabled={isRunning || !isLocked || approvalLocked}
-            onClick={handleUnlock}
-          >
-            ロック解除
-          </button>
+        <div className="charts-actions__group" data-group="support" role="group" aria-label="補助操作">
+          {returnToReceptionButton}
+          {draftSaveButton}
+          {printActionButton}
         </div>
-      </details>
+      </div>
+      {(!embedded || closeTabButton || !otherBlocked || isLocked) ? (
+        <details className="charts-actions__more">
+          <summary className="charts-actions__more-summary">その他</summary>
+          <div className="charts-actions__more-actions" role="group" aria-label="追加操作">
+            <button
+              type="button"
+              className="charts-actions__button charts-actions__button--reload"
+              onClick={handleReloadLatest}
+              disabled={isRunning}
+              data-disabled-reason={isRunning ? 'running' : undefined}
+            >
+              最新を再読込
+            </button>
+            {closeTabButton}
+            <button
+              type="button"
+              className="charts-actions__button charts-actions__button--cancel"
+              disabled={otherBlocked}
+              data-disabled-reason={otherBlocked ? (isLocked ? 'locked' : undefined) : undefined}
+              title={otherBlocked ? statusLine : undefined}
+              onClick={() => handleAction('cancel')}
+            >
+              キャンセル
+            </button>
+            <button
+              type="button"
+              className="charts-actions__button charts-actions__button--unlock"
+              disabled={isRunning || !isLocked || approvalLocked}
+              onClick={handleUnlock}
+            >
+              ロック解除
+            </button>
+          </div>
+        </details>
+      ) : null}
 
       {!isRunning && sendPrecheckReasons.length > 0 && (
         renderGuardNote('charts-actions-send-guard', '送信不可', sendPrecheckReasons)
@@ -2843,7 +2887,6 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
           </button>
         </div>
       )}
-      </div>
     </section>
   );
 });

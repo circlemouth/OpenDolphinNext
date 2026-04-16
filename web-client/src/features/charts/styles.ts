@@ -171,6 +171,37 @@ export const chartsStyles = css`
     align-items: center;
   }
 
+  .charts-context-recovery {
+    border-color: rgba(245, 158, 11, 0.32);
+    background: linear-gradient(180deg, rgba(255, 251, 235, 0.96), rgba(255, 255, 255, 0.98));
+  }
+
+  .charts-context-recovery__body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--charts-space-md);
+    flex-wrap: wrap;
+  }
+
+  .charts-context-recovery h2 {
+    margin: 0 0 0.3rem;
+    font-size: 1rem;
+    color: #92400e;
+  }
+
+  .charts-context-recovery p {
+    margin: 0;
+    color: #78350f;
+    line-height: 1.55;
+  }
+
+  .charts-context-recovery__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--charts-space-xs);
+  }
+
   .charts-page__pill {
     font-size: 0.85rem;
   }
@@ -929,6 +960,36 @@ export const chartsStyles = css`
     gap: var(--charts-space-xs);
   }
 
+  .charts-patient-summary__encounter-band {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(164px, 1fr));
+    gap: var(--charts-space-xs);
+  }
+
+  .charts-patient-summary__encounter-item {
+    display: grid;
+    gap: 2px;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid rgba(37, 99, 235, 0.16);
+    border-radius: var(--ui-radius-md);
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.88), rgba(248, 250, 252, 0.96));
+  }
+
+  .charts-patient-summary__encounter-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1d4ed8;
+  }
+
+  .charts-patient-summary__encounter-value {
+    color: #0f172a;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
   .charts-patient-summary__fact-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
@@ -1022,55 +1083,6 @@ export const chartsStyles = css`
     min-height: 1.7rem;
   }
 
-  .charts-patient-summary__primary-actions {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: var(--charts-space-xs);
-    justify-content: flex-end;
-  }
-
-  .charts-patient-summary__primary-action {
-    width: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--ui-radius-md);
-    border: 1px solid rgba(148, 163, 184, 0.26);
-    padding: 0.55rem 0.8rem;
-    min-height: 2.5rem;
-    font-size: 0.78rem;
-    font-weight: 800;
-    line-height: 1.2;
-    cursor: pointer;
-    white-space: nowrap;
-    background: var(--ui-surface);
-  }
-
-  .charts-patient-summary__primary-action:disabled {
-    opacity: 0.58;
-    cursor: not-allowed;
-  }
-
-  .charts-patient-summary__primary-action--start {
-    border-color: rgba(37, 99, 235, 0.28);
-    background: rgba(219, 234, 254, 0.82);
-    color: #1d4ed8;
-  }
-
-  .charts-patient-summary__primary-action--start:hover {
-    background: rgba(191, 219, 254, 0.9);
-  }
-
-  .charts-patient-summary__primary-action--close {
-    border-color: rgba(148, 163, 184, 0.26);
-    background: rgba(248, 250, 252, 0.96);
-    color: #334155;
-  }
-
-  .charts-patient-summary__primary-action--close:hover {
-    background: #f1f5f9;
-  }
-
   .charts-patient-summary__inline-actionbar {
     border-top: 1px solid var(--ui-border-subtle);
     padding-top: var(--charts-space-xs);
@@ -1142,14 +1154,7 @@ export const chartsStyles = css`
   }
 
   @media (max-width: 720px) {
-    .charts-patient-summary__primary-actions {
-      justify-content: flex-start;
-    }
-
-    .charts-patient-summary__primary-action {
-      flex: 1 1 8rem;
-    }
-
+    .charts-patient-summary__encounter-band,
     .charts-patient-summary__fact-grid {
       grid-template-columns: 1fr;
     }

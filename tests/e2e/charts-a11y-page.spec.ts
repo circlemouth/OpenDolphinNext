@@ -6,9 +6,9 @@ import { AxeBuilder } from '@axe-core/playwright';
 import { test, expect } from '../playwright/fixtures';
 import { baseUrl, runId } from './helpers/orcaMaster';
 
-test.use({ ignoreHTTPSErrors: true });
-
 test.describe('@a11y Charts page axe scan', () => {
+  test.use({ ignoreHTTPSErrors: true });
+
   test('charts page has no axe violations and primary buttons follow visual order', async ({ context }) => {
     const page = await context.newPage();
     const mockResponse = {

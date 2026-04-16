@@ -536,7 +536,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
 
     renderChartsPage();
 
-    await screen.findByRole('button', { name: '診察終了（上部モック）' });
+    await screen.findByRole('button', { name: '診察終了（モック）' });
     expect(document.querySelector('[data-test-id="charts-patient-tabs"]')).toBeNull();
     expect(document.querySelector('.charts-patient-tabs__dirty-dot')).toBeNull();
   });
@@ -548,7 +548,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
     renderChartsPage();
 
     const user = userEvent.setup();
-    await user.click(await screen.findByRole('button', { name: '診察終了（上部モック）' }));
+    await user.click(await screen.findByRole('button', { name: '診察終了（モック）' }));
 
     const dialog = screen.getByRole('alertdialog', { name: '診察終了の確認' });
     expect(dialog).toBeInTheDocument();
@@ -570,7 +570,7 @@ describe('ChartsPage patient tab dirty indicator', () => {
 
     const user = userEvent.setup();
     await user.keyboard('{Shift>}{Enter}{/Shift}');
-    await user.click(await screen.findByRole('button', { name: '診察終了（上部モック）' }));
+    await user.click(await screen.findByRole('button', { name: '診察終了（モック）' }));
 
     await waitFor(() => {
       expect(screen.queryByRole('alertdialog', { name: '診察終了の確認' })).toBeNull();

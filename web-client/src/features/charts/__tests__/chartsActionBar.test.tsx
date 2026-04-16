@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -480,5 +480,32 @@ describe('ChartsActionBar', () => {
 
     expect(screen.getByRole('button', { name: '診察終了' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'ORCA 送信' })).toBeDisabled();
+  });
+
+  it('保存・印刷・受付へ戻るは disclosure 外の補助操作として常時表示する', () => {
+    const onReturnToReception = vi.fn();
+    const onCloseChartTab = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...baseProps}
+          embedded
+          compactHeader
+          patientId="P-600"
+          visitDate="2026-01-10"
+          selectedEntry={{ patientId: 'P-600', appointmentId: 'APT-6', visitDate: '2026-01-10', status: '診療中' } as any}
+          onReturnToReception={onReturnToReception}
+          onCloseChartTab={onCloseChartTab}
+        />
+      </MemoryRouter>,
+    );
+
+    const supportGroup = screen.getByRole('group', { name: '補助操作' });
+    expect(within(supportGroup).getByRole('button', { name: '受付へ戻る' })).toBeInTheDocument();
+    expect(within(supportGroup).getByRole('button', { name: 'ドラフト保存' })).toBeInTheDocument();
+    expect(within(supportGroup).getByRole('button', { name: '印刷/エクスポート' })).toBeInTheDocument();
+    expect(screen.getByText('その他')).toBeInTheDocument();
+    expect(screen.queryByText('補助操作', { selector: 'summary' })).toBeNull();
   });
 });

@@ -5,8 +5,6 @@ import { test, expect } from '../playwright/fixtures';
 import { baseUrl, runId } from './helpers/orcaMaster';
 import type { Page, Route } from '@playwright/test';
 
-test.use({ ignoreHTTPSErrors: true });
-
 const stubChartsApi = async (page: Page) => {
   const adminConfig = {
     runId,
@@ -101,6 +99,8 @@ const stubChartsApi = async (page: Page) => {
 };
 
 test.describe('@a11y Charts keyboard + aria', () => {
+  test.use({ ignoreHTTPSErrors: true });
+
   test('Alt+P で患者検索へ移動し Esc で戻る', async ({ context }) => {
     const page = await context.newPage();
     await stubChartsApi(page);

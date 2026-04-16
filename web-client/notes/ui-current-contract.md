@@ -71,6 +71,8 @@
 ## Charts Surface
 ### Current Fact
 - normal runtime の中心 surface は `SoapNotePanel` です。
+- `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。
+- page CTA の owner は `ChartsActionBar` で、`ORCA送信` の primary と `ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
 - `OrcaSummary` は Charts 内部の補助 panel です。
@@ -82,6 +84,7 @@
 - workspace patient tab は同一 SPA セッション内だけで保持し、reload/new tab 復元は行いません。
 - deep link query は処理後に scrub します。
 - reload 跨ぎの文脈復元は行いません。
+- minimal encounter context を再解決できないときは editor を fail-close し、generic な `閉じる` ではなく `受付へ戻る` を named recovery CTA として出します。
 - active patient の workspace tab switch/close は、未保存入力がある場合に save/discard/cancel guard を通します。
 - ORCA 送信ボタンは canonical encounter context (`patientId`, `visitDate`, `departmentCode`, `physicianCode`, `insuranceCombinationNumber`, `voucherNumber`, `sequentialNumber`) が揃わない限り enable しません。
 - `visitDate` の `today` fallback や display string parsing は ORCA 送信文脈に使いません。

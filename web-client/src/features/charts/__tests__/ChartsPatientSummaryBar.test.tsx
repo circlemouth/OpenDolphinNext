@@ -15,6 +15,12 @@ const baseProps = {
     note: '転倒歴あり。採血時は左腕を優先。',
   },
   patientId: '000001',
+  visitDate: '2026-04-17',
+  encounterStatus: '診療中',
+  receptionId: 'R-001',
+  appointmentId: 'A-001',
+  department: '内科',
+  physician: '医師A',
   runId: 'RUN-CHARTS',
 };
 
@@ -30,13 +36,16 @@ describe('ChartsPatientSummaryBar', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: '診察開始' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '更新' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '閉じる' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '診察開始' })).toBeNull();
     expect(screen.queryByRole('heading', { name: '患者メモ' })).toBeNull();
     expect(screen.queryByText('患者メモなし')).toBeNull();
     const identityBar = screen.getByRole('region', { name: '患者識別帯' });
     expect(identityBar).toHaveTextContent('1980-05-20');
+    expect(identityBar).toHaveTextContent('2026-04-17');
+    expect(identityBar).toHaveTextContent('R-001');
+    expect(identityBar).toHaveTextContent('A-001');
+    expect(identityBar).toHaveTextContent('診療中');
+    expect(identityBar).toHaveTextContent('内科 / 医師A');
     expect(identityBar).toHaveTextContent('〒100-0001');
     expect(identityBar).toHaveTextContent('東京都千代田区千代田1-1');
   });
