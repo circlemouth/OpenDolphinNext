@@ -8,6 +8,7 @@
 - [notes/auth-transition.md](./notes/auth-transition.md)
 - [notes/patient-context-contract.md](./notes/patient-context-contract.md)
 - [notes/feedback-spec.md](./notes/feedback-spec.md)
+- [notes/disease-insurance-orca-contract.md](./notes/disease-insurance-orca-contract.md)
 - [notes/ui-current-contract.md](./notes/ui-current-contract.md)
 - [notes/orca-order-remediation-20260403.md](./notes/orca-order-remediation-20260403.md)
 - [notes/orca-order-contract-cleanup-20260404.md](./notes/orca-order-contract-cleanup-20260404.md)

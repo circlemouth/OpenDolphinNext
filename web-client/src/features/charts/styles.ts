@@ -4007,6 +4007,11 @@ export const chartsStyles = css`
     color: inherit;
   }
 
+  .charts-diagnosis__notes {
+    display: grid;
+    gap: var(--charts-space-xs);
+  }
+
   .charts-side-panel__items.charts-diagnosis__items {
     gap: var(--charts-space-xs);
   }

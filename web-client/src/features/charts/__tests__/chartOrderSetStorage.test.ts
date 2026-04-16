@@ -43,7 +43,14 @@ describe('chartOrderSetStorage', () => {
 
     const detail = getChartOrderSet({ facilityId: 'facility-A', userId: 'doctor-1', id: saved.id });
     expect(detail).not.toBeNull();
-    expect(detail?.snapshot.diagnoses[0]).toEqual({ diagnosisName: '高血圧症', diagnosisCode: 'I10' });
+    expect(detail?.snapshot.diagnoses[0]).toEqual({
+      diagnosisName: '高血圧症',
+      diagnosisCode: 'I10',
+      layer: 'candidate',
+      readOnly: true,
+      candidateOnly: true,
+      note: '候補です。オーダーセット適用時も保険病名へ自動登録しません。',
+    });
     expect(detail?.snapshot.orderBundles[0]).toEqual(
       expect.objectContaining({
         entity: 'medOrder',
@@ -148,7 +155,14 @@ describe('chartOrderSetStorage', () => {
     expect(snapshot).not.toHaveProperty('imageAttachments');
 
     const diagnoses = Array.isArray(snapshot.diagnoses) ? (snapshot.diagnoses as Array<Record<string, unknown>>) : [];
-    expect(diagnoses[0]).toEqual({ diagnosisName: '高血圧症', diagnosisCode: 'I10' });
+    expect(diagnoses[0]).toEqual({
+      diagnosisName: '高血圧症',
+      diagnosisCode: 'I10',
+      layer: 'candidate',
+      readOnly: true,
+      candidateOnly: true,
+      note: '候補です。オーダーセット適用時も保険病名へ自動登録しません。',
+    });
     expect(diagnoses[0]).not.toHaveProperty('departmentCode');
     expect(diagnoses[0]).not.toHaveProperty('diagnosisId');
 
@@ -212,7 +226,16 @@ describe('chartOrderSetStorage', () => {
 
     const migrated = listChartOrderSets('facility-A', 'doctor-1');
     expect(migrated).toHaveLength(1);
-    expect(migrated[0].snapshot.diagnoses).toEqual([{ diagnosisName: '高血圧症', diagnosisCode: 'I10' }]);
+    expect(migrated[0].snapshot.diagnoses).toEqual([
+      {
+        diagnosisName: '高血圧症',
+        diagnosisCode: 'I10',
+        layer: 'candidate',
+        readOnly: true,
+        candidateOnly: true,
+        note: '候補です。オーダーセット適用時も保険病名へ自動登録しません。',
+      },
+    ]);
     expect(migrated[0].snapshot.orderBundles).toHaveLength(1);
     expect(migrated[0].snapshot.orderBundles[0]).not.toHaveProperty('documentId');
     const migratedSnapshotTyped = migrated[0].snapshot as unknown as Record<string, unknown>;

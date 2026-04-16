@@ -53,6 +53,11 @@ public class DiseaseProjectionService {
         entry.setOutcome(model.getDiagnosisOutcomeModel() != null ? model.getDiagnosisOutcomeModel().getOutcome() : null);
         entry.setCategory(model.getCategory());
         entry.setSuspectedFlag(model.getCategoryDesc());
+        entry.setLayer("orca-mirror");
+        entry.setSyncState("manual-resolution");
+        entry.setReadOnly(Boolean.TRUE);
+        entry.setCandidateOnly(Boolean.FALSE);
+        entry.setNote("保険病名の確認が必要です");
         return entry;
     }
 

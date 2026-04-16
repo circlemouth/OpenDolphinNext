@@ -44,6 +44,53 @@ describe('diseaseApi', () => {
     expect(result.routeMismatch).toBe(true);
   });
 
+  it('normalizes disease layer metadata from API response', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          runId: 'RUN-DISEASE',
+          patientId: '000001',
+          diseases: [
+            {
+              diagnosisName: '高血圧症',
+              diagnosisCode: 'I10',
+              layer: 'orca-mirror',
+              syncState: 'manual-resolution',
+              readOnly: true,
+            },
+            {
+              diagnosisName: '脂質異常症',
+              diagnosisCode: 'E78.5',
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchDiseases({ patientId: '000001' });
+
+    expect(result.diseases).toEqual([
+      expect.objectContaining({
+        diagnosisName: '高血圧症',
+        layer: 'orca-mirror',
+        syncState: 'manual-resolution',
+        readOnly: true,
+        candidateOnly: false,
+      }),
+      expect.objectContaining({
+        diagnosisName: '脂質異常症',
+        layer: 'insurance-local',
+        syncState: 'none',
+        readOnly: false,
+        candidateOnly: false,
+      }),
+    ]);
+  });
+
   it('retries once after patient import on recoverable 404', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(

@@ -1,9 +1,13 @@
 import { buildScopedStorageKey } from '../../libs/session/storageScope';
 
-import type { DiseaseEntry } from './diseaseApi';
+import { ORDER_SET_CANDIDATE_NOTE, type DiseaseEntry } from './diseaseApi';
 import type { OrderBundle, OrderBundleItem } from './orderBundleApi';
 
-export type ChartOrderSetDiagnosis = Pick<DiseaseEntry, 'diagnosisName' | 'diagnosisCode'>;
+export type ChartOrderSetDiagnosis = Pick<DiseaseEntry, 'diagnosisName' | 'diagnosisCode' | 'note'> & {
+  layer: 'candidate';
+  readOnly: true;
+  candidateOnly: true;
+};
 
 export type ChartOrderSetBundle = Pick<OrderBundle, 'entity' | 'bundleName' | 'classCode' | 'className'> & {
   items: OrderBundleItem[];
@@ -82,15 +86,20 @@ const sanitizeDisease = (entry: Partial<DiseaseEntry> | null | undefined): Chart
   return {
     diagnosisName,
     diagnosisCode,
+    layer: 'candidate',
+    readOnly: true,
+    candidateOnly: true,
+    note: ORDER_SET_CANDIDATE_NOTE,
   };
 };
+
+export const toChartOrderSetDiagnoses = (entries: Array<Partial<DiseaseEntry> | null | undefined>): ChartOrderSetDiagnosis[] =>
+  entries.map((entry) => sanitizeDisease(entry ?? {})).filter((entry): entry is ChartOrderSetDiagnosis => entry !== null);
 
 const sanitizeSnapshot = (
   snapshot: Partial<ChartOrderSetTemplateSnapshot> | null | undefined,
 ): ChartOrderSetTemplateSnapshot => ({
-  diagnoses: (Array.isArray(snapshot?.diagnoses) ? snapshot.diagnoses : [])
-    .map((item) => sanitizeDisease(item ?? {}))
-    .filter((item): item is ChartOrderSetDiagnosis => item !== null),
+  diagnoses: toChartOrderSetDiagnoses(Array.isArray(snapshot?.diagnoses) ? snapshot.diagnoses : []),
   orderBundles: (Array.isArray(snapshot?.orderBundles) ? snapshot.orderBundles : [])
     .map((item) => sanitizeOrderBundle(item ?? {}))
     .filter((item): item is ChartOrderSetBundle => item !== null),

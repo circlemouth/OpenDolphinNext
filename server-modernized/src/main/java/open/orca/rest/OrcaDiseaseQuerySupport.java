@@ -168,7 +168,7 @@ final class OrcaDiseaseQuerySupport {
             ord.setEndDate(dateFormatter.format(rs.getString(6)));
             ord.setDiagnosis(rs.getString(7));
             ord.setDepartment(rs.getString(8));
-            ord.setStatus("ORCA");
+            ord.setStatus("ORCA_MIRROR");
             collection.add(ord);
         }
         return collection;

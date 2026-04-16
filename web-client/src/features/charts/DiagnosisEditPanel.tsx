@@ -6,11 +6,18 @@ import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import { resolveAriaLive } from '../../libs/observability/observability';
 import { FocusTrapDialog } from '../../components/modals/FocusTrapDialog';
 import {
+  DISEASE_CANDIDATE_CONFIRM_NOTE,
+  DISEASE_CLINICAL_UNAVAILABLE_NOTE,
+  DISEASE_CONFLICT_NOTE,
+  DISEASE_MANUAL_RESOLUTION_NOTE,
+  DISEASE_MIRROR_UNAVAILABLE_NOTE,
+  DISEASE_SYNC_CANDIDATES_NOTE,
   fetchDiseases,
   mutateDiseases,
   resolveDiseaseCodeFromOrcaMaster,
   searchDiseaseMasterCandidates,
   type DiseaseEntry,
+  type DiseaseLayer,
   type DiseaseMasterCandidate,
 } from './diseaseApi';
 import type { DataSourceTransition } from './authService';
@@ -93,6 +100,12 @@ const toFormState = (entry: DiseaseEntry, today: string): DiagnosisFormState => 
   isMain: entry.category?.includes('主') ?? false,
   isSuspected: entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false,
 });
+
+const resolveDiseaseLayer = (entry: DiseaseEntry): DiseaseLayer => entry.layer ?? 'insurance-local';
+const isMainDisease = (entry: DiseaseEntry) => entry.category?.includes('主') ?? false;
+const isSuspectedDisease = (entry: DiseaseEntry) => entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false;
+const buildEntryKey = (entry: DiseaseEntry) =>
+  `${resolveDiseaseLayer(entry)}:${entry.diagnosisId ?? `${entry.diagnosisName ?? 'unknown'}-${entry.startDate ?? 'na'}`}`;
 
 export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps) {
   const queryClient = useQueryClient();
@@ -459,8 +472,35 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
   });
 
   const list = useMemo(() => diagnosisQuery.data?.diseases ?? [], [diagnosisQuery.data?.diseases]);
-  const activeList = useMemo(() => list.filter((entry) => !entry.endDate), [list]);
-  const endedList = useMemo(() => list.filter((entry) => Boolean(entry.endDate)), [list]);
+  const insuranceList = useMemo(
+    () => list.filter((entry) => resolveDiseaseLayer(entry) === 'insurance-local'),
+    [list],
+  );
+  const mirrorList = useMemo(() => list.filter((entry) => resolveDiseaseLayer(entry) === 'orca-mirror'), [list]);
+  const activeList = useMemo(() => insuranceList.filter((entry) => !entry.endDate), [insuranceList]);
+  const endedList = useMemo(() => insuranceList.filter((entry) => Boolean(entry.endDate)), [insuranceList]);
+  const panelNotes = useMemo(() => {
+    const notes = new Map<string, { tone: 'info' | 'error'; message: string }>();
+    const addNote = (message: string, tone: 'info' | 'error' = 'info') => {
+      if (!notes.has(message)) {
+        notes.set(message, { tone, message });
+      }
+    };
+    if (quickCandidateOptions.length > 0 || insuranceList.some((entry) => entry.syncState === 'candidate')) {
+      addNote(DISEASE_SYNC_CANDIDATES_NOTE);
+    }
+    if (insuranceList.some((entry) => entry.syncState === 'conflict' || entry.syncState === 'stale')) {
+      addNote(DISEASE_CONFLICT_NOTE, 'error');
+    }
+    addNote(DISEASE_MANUAL_RESOLUTION_NOTE);
+    addNote(DISEASE_CLINICAL_UNAVAILABLE_NOTE);
+    for (const entry of list) {
+      if (entry.note?.trim()) {
+        addNote(entry.note.trim(), entry.syncState === 'conflict' || entry.syncState === 'stale' ? 'error' : 'info');
+      }
+    }
+    return [...notes.values()];
+  }, [insuranceList, list, quickCandidateOptions.length]);
 
   if (!patientId) {
     return <p className="charts-side-panel__empty">患者IDが未選択のため病名編集を開始できません。</p>;
@@ -504,7 +544,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
       <header className="charts-side-panel__section-header">
         <div>
           <strong>保険病名</strong>
-          <p className="charts-diagnosis__lead">上段で病名一覧を確認し、下段のクイック追加から最小入力で登録します。</p>
+          <p className="charts-diagnosis__lead">保険病名だけが編集可能です。ORCA mirror は参照専用、候補は明示確認でのみ反映します。</p>
         </div>
         <div className="charts-diagnosis__header-actions" role="group" aria-label="病名操作">
           <button type="button" className="charts-side-panel__ghost" onClick={openCreate} disabled={isBlocked}>
@@ -525,24 +565,33 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
           ) : null}
         </div>
       )}
+      {panelNotes.length > 0 ? (
+        <div className="charts-diagnosis__notes" aria-live={resolveAriaLive('info')}>
+          {panelNotes.map((note) => (
+            <div key={note.message} className={`charts-side-panel__notice charts-side-panel__notice--${note.tone}`}>
+              {note.message}
+            </div>
+          ))}
+        </div>
+      ) : null}
       {notice && <div className={`charts-side-panel__notice charts-side-panel__notice--${notice.tone}`}>{notice.message}</div>}
 
       <div className="charts-side-panel__list charts-diagnosis__list-scroll" aria-live={resolveAriaLive('info')}>
         <div className="charts-side-panel__list-header">
-          <span>登録済み病名</span>
-          <span>{diagnosisQuery.isFetching ? '更新中' : `${list.length}件`}</span>
+          <span>保険病名</span>
+          <span>{diagnosisQuery.isFetching ? '更新中' : `${insuranceList.length}件`}</span>
         </div>
         {diagnosisQuery.isError && (
           <p className="charts-side-panel__empty">病名の取得に失敗しました。</p>
         )}
-        {list.length === 0 && !diagnosisQuery.isFetching && (
-          <p className="charts-side-panel__empty">病名が未登録です。</p>
+        {insuranceList.length === 0 && !diagnosisQuery.isFetching && (
+          <p className="charts-side-panel__empty">保険病名が未登録です。</p>
         )}
-        {list.length > 0 && (
+        {insuranceList.length > 0 && (
           <>
-            <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="登録済み病名（活動中）">
+            <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="保険病名（活動中）">
               {activeList.map((entry) => (
-                <li key={entry.diagnosisId ?? `${entry.diagnosisName}-${entry.startDate}`} className="charts-diagnosis__item">
+                <li key={buildEntryKey(entry)} className="charts-diagnosis__item">
                   <div className="charts-diagnosis__item-main">
                     <div className="charts-diagnosis__title">
                       <strong className="charts-diagnosis__name">{entry.diagnosisName ?? '名称未設定'}</strong>
@@ -550,7 +599,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                     </div>
                     <div className="charts-diagnosis__meta">
                       <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
-                        {(entry.category?.includes('主') ?? false) ? (
+                        {isMainDisease(entry) ? (
                           <span className="charts-diagnosis__badge charts-diagnosis__badge--main" role="listitem">
                             主
                           </span>
@@ -559,7 +608,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                             副
                           </span>
                         )}
-                        {(entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false) ? (
+                        {isSuspectedDisease(entry) ? (
                           <span className="charts-diagnosis__badge charts-diagnosis__badge--suspected" role="listitem">
                             疑い
                           </span>
@@ -578,12 +627,16 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                             </span>
                           </span>
                         </div>
-                      </div>
+                  </div>
                   <div className="charts-side-panel__item-actions charts-diagnosis__item-actions" role="group" aria-label="病名操作">
-                    <button type="button" onClick={() => openEdit(entry)} disabled={isBlocked}>
+                    <button type="button" onClick={() => openEdit(entry)} disabled={isBlocked || entry.readOnly}>
                       編集
                     </button>
-                    <button type="button" onClick={() => deleteMutation.mutate(entry)} disabled={deleteMutation.isPending || isBlocked}>
+                    <button
+                      type="button"
+                      onClick={() => deleteMutation.mutate(entry)}
+                      disabled={deleteMutation.isPending || isBlocked || entry.readOnly}
+                    >
                       削除
                     </button>
                   </div>
@@ -593,9 +646,9 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             {endedList.length > 0 ? (
               <details className="charts-diagnosis__ended">
                 <summary className="charts-diagnosis__ended-summary">転帰あり（{endedList.length}件）</summary>
-                <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="登録済み病名（転帰あり）">
+                <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="保険病名（転帰あり）">
                   {endedList.map((entry) => (
-                    <li key={entry.diagnosisId ?? `${entry.diagnosisName}-${entry.startDate}`} className="charts-diagnosis__item">
+                    <li key={buildEntryKey(entry)} className="charts-diagnosis__item">
                       <div className="charts-diagnosis__item-main">
                         <div className="charts-diagnosis__title">
                           <strong className="charts-diagnosis__name">{entry.diagnosisName ?? '名称未設定'}</strong>
@@ -603,7 +656,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                         </div>
                         <div className="charts-diagnosis__meta">
                           <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
-                            {(entry.category?.includes('主') ?? false) ? (
+                            {isMainDisease(entry) ? (
                               <span className="charts-diagnosis__badge charts-diagnosis__badge--main" role="listitem">
                                 主
                               </span>
@@ -612,7 +665,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                                 副
                               </span>
                             )}
-                            {(entry.suspectedFlag?.includes('疑い') ?? entry.category?.includes('疑い') ?? false) ? (
+                            {isSuspectedDisease(entry) ? (
                               <span className="charts-diagnosis__badge charts-diagnosis__badge--suspected" role="listitem">
                                 疑い
                               </span>
@@ -633,10 +686,14 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
                         </div>
                       </div>
                       <div className="charts-side-panel__item-actions charts-diagnosis__item-actions" role="group" aria-label="病名操作">
-                        <button type="button" onClick={() => openEdit(entry)} disabled={isBlocked}>
+                        <button type="button" onClick={() => openEdit(entry)} disabled={isBlocked || entry.readOnly}>
                           編集
                         </button>
-                        <button type="button" onClick={() => deleteMutation.mutate(entry)} disabled={deleteMutation.isPending || isBlocked}>
+                        <button
+                          type="button"
+                          onClick={() => deleteMutation.mutate(entry)}
+                          disabled={deleteMutation.isPending || isBlocked || entry.readOnly}
+                        >
                           削除
                         </button>
                       </div>
@@ -649,10 +706,45 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
         )}
       </div>
 
-      <section className="charts-diagnosis__quick-add" aria-label="病名クイック追加">
+      <section className="charts-diagnosis__quick-add" aria-label="ORCA mirror">
         <div className="charts-side-panel__subheader">
-          <strong>クイック追加</strong>
-          <span className="charts-side-panel__help">最小入力で病名を追加できます。</span>
+          <strong>ORCA mirror</strong>
+          <span className="charts-side-panel__help">参照専用。保険病名へ自動反映しません。</span>
+        </div>
+        {mirrorList.length === 0 ? (
+          <p className="charts-side-panel__empty">{DISEASE_MIRROR_UNAVAILABLE_NOTE}</p>
+        ) : (
+          <ul className="charts-side-panel__items charts-diagnosis__items" aria-label="ORCA mirror">
+            {mirrorList.map((entry) => (
+              <li key={buildEntryKey(entry)} className="charts-diagnosis__item">
+                <div className="charts-diagnosis__item-main">
+                  <div className="charts-diagnosis__title">
+                    <strong className="charts-diagnosis__name">{entry.diagnosisName ?? '名称未設定'}</strong>
+                    {entry.diagnosisCode ? <span className="charts-diagnosis__code">({entry.diagnosisCode})</span> : null}
+                  </div>
+                  <div className="charts-diagnosis__meta">
+                    <span className="charts-diagnosis__badges" role="list" aria-label="病名属性">
+                      <span className="charts-diagnosis__badge charts-diagnosis__badge--sub" role="listitem">
+                        参照専用
+                      </span>
+                    </span>
+                    <span className="charts-diagnosis__dates">
+                      <span>開始:{entry.startDate ? entry.startDate : '—'}</span>
+                      <span>転帰:{entry.outcome ? entry.outcome : '—'}</span>
+                      <span>終了:{entry.endDate ? entry.endDate : '—'}</span>
+                    </span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="charts-diagnosis__quick-add" aria-label="候補">
+        <div className="charts-side-panel__subheader">
+          <strong>候補</strong>
+          <span className="charts-side-panel__help">{DISEASE_CANDIDATE_CONFIRM_NOTE}</span>
         </div>
         <div className="charts-diagnosis__quick-grid">
           <div className="charts-side-panel__field">
@@ -673,10 +765,10 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
             <select
               id="diagnosis-quick-candidate"
               value={quickCandidateSelection}
-              onChange={(event) => applyQuickCandidate(event.target.value)}
-              disabled={isBlocked || mutation.isPending || quickCandidateOptions.length === 0}
-            >
-              <option value="">{quickCandidateOptions.length > 0 ? '候補を選択して反映' : '候補なし'}</option>
+            onChange={(event) => applyQuickCandidate(event.target.value)}
+            disabled={isBlocked || mutation.isPending || quickCandidateOptions.length === 0}
+          >
+              <option value="">{quickCandidateOptions.length > 0 ? '候補を選択して入力へ反映' : '候補なし'}</option>
               {quickCandidateOptions.map((option) => (
                 <option key={option.key} value={option.key}>
                   {option.label}
@@ -764,7 +856,7 @@ export function DiagnosisEditPanel({ patientId, meta }: DiagnosisEditPanelProps)
               });
             }}
           >
-            クイック追加
+            保険病名に追加
           </button>
         </div>
       </section>

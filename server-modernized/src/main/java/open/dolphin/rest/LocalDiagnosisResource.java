@@ -75,6 +75,10 @@ public class LocalDiagnosisResource extends AbstractResource {
             item.put("outcome", diagnosis.getOutcome());
             item.put("category", diagnosis.getCategory());
             item.put("suspectedFlag", diagnosis.getCategoryDesc());
+            item.put("layer", "insurance-local");
+            item.put("syncState", "none");
+            item.put("readOnly", Boolean.FALSE);
+            item.put("candidateOnly", Boolean.FALSE);
             items.add(item);
         }
         Map<String, Object> response = new LinkedHashMap<>();
@@ -105,6 +109,7 @@ public class LocalDiagnosisResource extends AbstractResource {
         List<Long> removes = new ArrayList<>();
         for (Map<String, Object> operation : operations) {
             String op = requireText(operation, "operation").toLowerCase(Locale.ROOT);
+            validateInsuranceLocalOperation(operation, request);
             Long diagnosisId = requireLong(operation, "diagnosisId");
             if ("create".equals(op)) {
                 adds.add(toDiagnosis(operation, karte, user, null));
@@ -212,6 +217,17 @@ public class LocalDiagnosisResource extends AbstractResource {
         String targetFacility = diagnosisId != null ? karteServiceBean.findFacilityIdByDiagnosisId(diagnosisId) : null;
         if (targetFacility == null || actorFacility == null || !actorFacility.equals(targetFacility.trim())) {
             throw restError(request, Response.Status.FORBIDDEN, "forbidden", "Access denied");
+        }
+    }
+
+    private void validateInsuranceLocalOperation(Map<String, Object> operation, HttpServletRequest request) {
+        String layer = optionalText(operation, "layer");
+        if (layer != null && !"insurance-local".equalsIgnoreCase(layer)) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "only insurance-local authoring is allowed");
+        }
+        Object candidateOnly = operation != null ? operation.get("candidateOnly") : null;
+        if (Boolean.TRUE.equals(candidateOnly) || "true".equalsIgnoreCase(String.valueOf(candidateOnly))) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "candidate disease cannot be authored directly");
         }
     }
 }

@@ -61,6 +61,8 @@ describe('OrderSetEditorPage', () => {
       </MemoryRouter>,
     );
 
+    expect(screen.getByText('候補病名 (0件)')).toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: /セットA/ }));
     await user.type(screen.getByLabelText('セット名称'), ' 変更');
 

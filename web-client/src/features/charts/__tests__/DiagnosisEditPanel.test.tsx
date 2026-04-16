@@ -59,7 +59,25 @@ beforeEach(() => {
     ok: true,
     patientId: 'P-TEST-001',
     karteId: 1001,
-    diseases: [],
+    diseases: [
+      {
+        diagnosisId: 1,
+        diagnosisName: '脂質異常症',
+        diagnosisCode: 'E78.5',
+        startDate: '2026-04-01',
+        layer: 'insurance-local',
+      },
+      {
+        diagnosisId: 2,
+        diagnosisName: '高血圧症',
+        diagnosisCode: 'I10',
+        startDate: '2026-04-02',
+        layer: 'orca-mirror',
+        readOnly: true,
+        syncState: 'conflict',
+        note: 'ORCA側と差分があります',
+      },
+    ],
   });
   vi.mocked(mutateDiseases).mockResolvedValue({
     ok: true,
@@ -85,6 +103,14 @@ describe('DiagnosisEditPanel quick add candidates', () => {
 
     renderPanel();
 
+    expect(await screen.findAllByText('保険病名')).not.toHaveLength(0);
+    expect(screen.getByText('ORCA mirror')).toBeInTheDocument();
+    expect(screen.getByText('候補')).toBeInTheDocument();
+    expect(await screen.findByText('保険病名の確認が必要です')).toBeInTheDocument();
+    expect(screen.getByText('clinical source が未実装のため、この画面では保険病名だけを扱います。')).toBeInTheDocument();
+    expect(await screen.findByText('ORCA側と差分があります')).toBeInTheDocument();
+    expect(await screen.findByText('高血圧症')).toBeInTheDocument();
+
     const nameInput = screen.getByLabelText('病名 *');
     await user.type(nameInput, '高血');
 
@@ -105,8 +131,9 @@ describe('DiagnosisEditPanel quick add candidates', () => {
 
     expect((screen.getByLabelText('病名 *') as HTMLInputElement).value).toBe('高血圧症');
     expect((screen.getByLabelText('コード') as HTMLInputElement).value).toBe('I10');
+    expect(screen.getByText('同期候補があります')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'クイック追加' }));
+    await user.click(screen.getByRole('button', { name: '保険病名に追加' }));
 
     await waitFor(() => {
         expect(mutateDiseases).toHaveBeenCalledWith(

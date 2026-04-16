@@ -14,10 +14,10 @@ import { PatientsTab } from '../PatientsTab';
 import { TelemetryFunnelPanel } from '../TelemetryFunnelPanel';
 import { ChartsActionBar, type ChartsActionBarHandle } from '../ChartsActionBar';
 import { ChartsPatientSummaryBar } from '../ChartsPatientSummaryBar';
-	import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
-	import { DocumentCreatePanel } from '../DocumentCreatePanel';
-	import { PastHubPanel } from '../PastHubPanel';
-	import { PatientSummaryPanel } from '../PatientSummaryPanel';
+import { DiagnosisEditPanel } from '../DiagnosisEditPanel';
+import { DocumentCreatePanel } from '../DocumentCreatePanel';
+import { PastHubPanel } from '../PastHubPanel';
+import { PatientSummaryPanel } from '../PatientSummaryPanel';
 import { StampLibraryPanel } from '../StampLibraryPanel';
 import { normalizeAuditEventLog, normalizeAuditEventPayload, recordChartsAuditEvent } from '../audit';
 import { SoapNotePanel, type SoapOrderDockState } from '../SoapNotePanel';
@@ -39,7 +39,12 @@ import { openChartEncounter } from '../encounterTransitionApi';
 import { fetchKarteIdByPatientId, type LetterModulePayload } from '../letterApi';
 import { fetchOrderBundlesWithPatientImportRecovery, mutateOrderBundles, type OrderBundle } from '../orderBundleApi';
 import { fetchPrescriptionOrderBundlesWithPatientImportRecovery, mutatePrescriptionOrderBundles } from '../prescriptionOrderApi';
-import { fetchDiseases, fetchDiseasesWithPatientImportRecovery, mutateDiseases, type DiseaseImportResponse } from '../diseaseApi';
+import {
+  DISEASE_MANUAL_RESOLUTION_NOTE,
+  fetchDiseases,
+  fetchDiseasesWithPatientImportRecovery,
+  type DiseaseImportResponse,
+} from '../diseaseApi';
 import { useAdminBroadcast } from '../../../libs/admin/useAdminBroadcast';
 import { AdminBroadcastBanner } from '../../shared/AdminBroadcastBanner';
 import { RunIdBadge } from '../../shared/RunIdBadge';
@@ -93,6 +98,7 @@ import type { DraftDirtySource } from '../draftSources';
 import {
   listChartOrderSets,
   saveChartOrderSet,
+  toChartOrderSetDiagnoses,
   type ChartOrderSetEntry,
   type ChartOrderSetTemplateSnapshot,
 } from '../chartOrderSetStorage';
@@ -3457,7 +3463,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         to: actionVisitDate,
       });
       const snapshot: ChartOrderSetTemplateSnapshot = {
-        diagnoses: diseaseResult.diseases ?? [],
+        diagnoses: toChartOrderSetDiagnoses(diseaseResult.diseases ?? []),
         orderBundles: todayOrderBundlesForSet,
       };
       const hasPayload = snapshot.diagnoses.length > 0 || snapshot.orderBundles.length > 0;
@@ -3484,7 +3490,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       const warning = !result.diseaseOk ? '（病名取得で一部失敗あり）' : '';
       setOrderSetNotice({
         tone: 'success',
-        message: `オーダーセットを保存しました${warning}。病名${snapshot.diagnoses.length}件 / オーダー${snapshot.orderBundles.length}件`,
+        message: `オーダーセットを保存しました${warning}。候補病名${snapshot.diagnoses.length}件 / オーダー${snapshot.orderBundles.length}件`,
       });
     },
     onError: (error) => {
@@ -3543,37 +3549,20 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
         }
       }
 
-      const diseaseOperations = snapshot.diagnoses
-        .filter((disease) => disease.diagnosisName?.trim())
-        .map((disease) => ({
-          operation: 'create' as const,
-          diagnosisName: disease.diagnosisName,
-          diagnosisCode: disease.diagnosisCode,
-        }));
-
-      if (diseaseOperations.length > 0) {
-        const diseaseResult = await mutateDiseases({
-          patientId,
-          karteId: karteId!,
-          operations: diseaseOperations,
-        });
-        if (!diseaseResult.ok) {
-          throw new Error(diseaseResult.message ?? '病名登録に失敗しました。');
-        }
-      }
-
       return {
         orderCount: orderOperations.length,
-        diseaseCount: diseaseOperations.length,
+        diseaseCandidateCount: snapshot.diagnoses.filter((disease) => disease.diagnosisName?.trim()).length,
       };
     },
-    onSuccess: ({ orderCount, diseaseCount }) => {
+    onSuccess: ({ orderCount, diseaseCandidateCount }) => {
       queryClient.invalidateQueries({ queryKey: ['charts-order-bundles'] });
       queryClient.invalidateQueries({ queryKey: ['charts-prescription-bundles'] });
-      queryClient.invalidateQueries({ queryKey: ['charts-diagnosis'] });
       setOrderSetNotice({
-        tone: 'success',
-        message: `オーダーセットを適用しました。病名${diseaseCount}件 / オーダー${orderCount}件`,
+        tone: diseaseCandidateCount > 0 ? 'info' : 'success',
+        message:
+          diseaseCandidateCount > 0
+            ? `オーダーセットを適用しました。候補病名${diseaseCandidateCount}件は自動登録していません。${DISEASE_MANUAL_RESOLUTION_NOTE}`
+            : `オーダーセットを適用しました。オーダー${orderCount}件`,
       });
     },
     onError: (error) => {
@@ -5260,14 +5249,14 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                                   <option value="">選択してください</option>
                                   {orderSetEntries.map((entry) => (
                                     <option key={entry.id} value={entry.id}>
-                                      {entry.name} / 病名{entry.snapshot.diagnoses.length}件 / オーダー{entry.snapshot.orderBundles.length}件
+                                      {entry.name} / 候補病名{entry.snapshot.diagnoses.length}件 / オーダー{entry.snapshot.orderBundles.length}件
                                     </option>
                                   ))}
                                 </select>
                               </div>
                               {selectedOrderSet ? (
                                 <p className="charts-side-panel__help">
-                                  内容: 病名{selectedOrderSet.snapshot.diagnoses.length}件 / オーダー{selectedOrderSet.snapshot.orderBundles.length}件
+                                  内容: 候補病名{selectedOrderSet.snapshot.diagnoses.length}件 / オーダー{selectedOrderSet.snapshot.orderBundles.length}件
                                 </p>
                               ) : null}
                               <div className="charts-side-panel__actions">

@@ -37,6 +37,9 @@ public class OrcaLiveDiseaseMasterReadService {
                     entry.put("code", resultSet.getString(1));
                     entry.put("name", resultSet.getString(2));
                     entry.put("disUseDate", resultSet.getString(3));
+                    entry.put("layer", "candidate");
+                    entry.put("readOnly", Boolean.TRUE);
+                    entry.put("candidateOnly", Boolean.TRUE);
                     entries.add(entry);
                 }
             }

@@ -119,6 +119,10 @@ public class DiseaseImportResponse {
         private String category;
         private String suspectedFlag;
         private String note;
+        private String layer;
+        private String syncState;
+        private Boolean readOnly;
+        private Boolean candidateOnly;
 
         public Long getDiagnosisId() {
             return diagnosisId;
@@ -206,6 +210,38 @@ public class DiseaseImportResponse {
 
         public void setNote(String note) {
             this.note = note;
+        }
+
+        public String getLayer() {
+            return layer;
+        }
+
+        public void setLayer(String layer) {
+            this.layer = layer;
+        }
+
+        public String getSyncState() {
+            return syncState;
+        }
+
+        public void setSyncState(String syncState) {
+            this.syncState = syncState;
+        }
+
+        public Boolean getReadOnly() {
+            return readOnly;
+        }
+
+        public void setReadOnly(Boolean readOnly) {
+            this.readOnly = readOnly;
+        }
+
+        public Boolean getCandidateOnly() {
+            return candidateOnly;
+        }
+
+        public void setCandidateOnly(Boolean candidateOnly) {
+            this.candidateOnly = candidateOnly;
         }
     }
 }

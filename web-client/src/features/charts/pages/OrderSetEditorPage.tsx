@@ -239,7 +239,7 @@ export function OrderSetEditorPage() {
             </div>
             <div>
               <dt>未保存対象</dt>
-              <dd>名称 / 病名 / オーダー</dd>
+              <dd>名称 / 候補病名 / オーダー</dd>
             </div>
             <div>
               <dt>影響範囲</dt>
@@ -276,7 +276,7 @@ export function OrderSetEditorPage() {
             </div>
             <div>
               <dt>内容</dt>
-              <dd>病名 {selectedSet?.snapshot.diagnoses.length ?? 0}件 / オーダー {selectedSet?.snapshot.orderBundles.length ?? 0}件</dd>
+              <dd>候補病名 {selectedSet?.snapshot.diagnoses.length ?? 0}件 / オーダー {selectedSet?.snapshot.orderBundles.length ?? 0}件</dd>
             </div>
             <div>
               <dt>影響範囲</dt>
@@ -314,7 +314,7 @@ export function OrderSetEditorPage() {
                 }}
               >
                 <strong style={{ display: 'block' }}>{item.name}</strong>
-                <small>病名 {item.snapshot.diagnoses.length}件 / オーダー {item.snapshot.orderBundles.length}件</small>
+                <small>候補病名 {item.snapshot.diagnoses.length}件 / オーダー {item.snapshot.orderBundles.length}件</small>
               </button>
             ))}
           </div>
@@ -333,13 +333,14 @@ export function OrderSetEditorPage() {
               </div>
 
               <details open style={{ marginTop: '1rem' }}>
-                <summary>病名 ({snapshot.diagnoses.length}件)</summary>
-                {snapshot.diagnoses.length === 0 ? <p>病名データはありません。</p> : null}
+                <summary>候補病名 ({snapshot.diagnoses.length}件)</summary>
+                {snapshot.diagnoses.length === 0 ? <p>候補病名データはありません。</p> : null}
                 <ul>
                   {snapshot.diagnoses.map((item, index) => (
                     <li key={`${item.diagnosisCode ?? 'd'}-${index}`}>
                       {item.diagnosisName ?? '名称未設定'}
                       {item.diagnosisCode ? ` (${item.diagnosisCode})` : ''}
+                      <small style={{ marginLeft: '0.5rem', color: '#555' }}>候補のみ。保険病名へ自動登録しません。</small>
                       <button
                         type="button"
                         onClick={() =>

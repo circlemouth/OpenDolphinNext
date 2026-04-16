@@ -35,6 +35,9 @@ public class OrcaLiveDiseaseMasterResource extends AbstractOrcaRestResource {
         List<Map<String, Object>> list = new OrcaLiveDiseaseMasterReadService(orcaConnection)
                 .queryEntries(term, referenceDate, partial);
         Map<String, Object> response = new LinkedHashMap<>();
+        response.put("layer", "candidate");
+        response.put("readOnly", Boolean.TRUE);
+        response.put("candidateOnly", Boolean.TRUE);
         response.put("list", list);
         return response;
     }

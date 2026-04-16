@@ -151,11 +151,13 @@
 - chart support では、patient-aware な official `contraindicationcheckv2` と、ORCA master を使う static interaction check を UI copy で明確に分離します。
 - SOAP 補助入力、chart summary、Patients の diff/review は local-only surface として表示し、official ORCA write と誤認させる copy を残しません。
 - local-only wording は `症状詳記（院内ローカル）`、`院内ローカル診療サマリ`、`院内メモはローカル編集のみ` に寄せ、official write surface と見分けられる状態を current contract とします。
+- Disease は single list truth に戻さず、`保険病名` / `ORCA mirror` / `候補` を visible unit で分離します。manual-resolution note は default visible とし、mirror unavailable 時も fake list を出しません。
 
 ### Verification
 - code-confirm: `PatientsPage` の初期選択、warning copy、fallback CTA
 - code-confirm: `PatientsPage` の local search 明示、official create/update/import の分岐、成功後 canonical re-fetch/local sync
 - code-confirm: `PatientInfoEditDialog` の official update route 呼び出しと、成功後 callback による canonical/local sync refresh
+- code-confirm: `DiagnosisEditPanel` の `保険病名` / `ORCA mirror` / `候補` 分離、candidate-not-truth、manual-resolution default visible
 - manual: reception / charts 由来の再入場と patient 未選択開始
 
 ## Mobile Images Surface
@@ -192,6 +194,7 @@
 - [auth-check.md](./auth-check.md)
 - [auth-transition.md](./auth-transition.md)
 - [patient-context-contract.md](./patient-context-contract.md)
+- [disease-insurance-orca-contract.md](./disease-insurance-orca-contract.md)
 - [feedback-spec.md](./feedback-spec.md)
 - [release-gate.md](./release-gate.md)
 - [security-spec.md](./security-spec.md)

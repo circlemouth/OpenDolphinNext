@@ -13,6 +13,7 @@
 - [patient-context-contract.md](patient-context-contract.md)
 
 ## ORCA / Domain-Specific Contract
+- [disease-insurance-orca-contract.md](disease-insurance-orca-contract.md)
 - [orca-order-remediation-20260403.md](orca-order-remediation-20260403.md)
 - [orca-order-contract-cleanup-20260404.md](orca-order-contract-cleanup-20260404.md)
 - [orca-charge-canonicalization-20260404.md](orca-charge-canonicalization-20260404.md)

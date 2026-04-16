@@ -38,6 +38,9 @@ class OrcaLiveDiseaseMasterReadServiceTest {
         assertEquals("D001", rows.get(0).get("code"));
         assertEquals("感冒", rows.get(0).get("name"));
         assertEquals("99999999", rows.get(0).get("disUseDate"));
+        assertEquals("candidate", rows.get(0).get("layer"));
+        assertEquals(true, rows.get(0).get("readOnly"));
+        assertEquals(true, rows.get(0).get("candidateOnly"));
     }
 
     @Test

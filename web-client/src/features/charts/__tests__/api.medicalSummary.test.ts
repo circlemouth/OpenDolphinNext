@@ -162,6 +162,8 @@ describe('charts medical summary api', () => {
     const summary = buildUnavailableMedicalSummary(undefined, { encounterKey: 'F001:E100' });
 
     expect(summary.sourcePath).toBe('/api/local/encounters/{encounterKey}/medical-summary');
+    expect(summary.note).toBe('in-house local summary unavailable');
     expect(JSON.stringify(summary)).not.toContain(BLOCKED_MEDICAL_ROUTE);
+    expect(JSON.stringify(summary)).not.toContain('ORCA mirror');
   });
 });

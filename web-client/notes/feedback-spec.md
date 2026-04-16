@@ -26,6 +26,7 @@
 - `ReceptionPage` の `再計待` 補足は correction note として独立表示し、generic memo と混在させません。
 - `PatientsPage` と `AdministrationPage` の通常 surface では `endpoint`, `Api_Result_Message`, `Error.message` のような raw detail を default 表示しません。
 - `PatientsPage` の保存履歴で `traceId` / `requestId` / internal status を出す場合は、default 表示ではなく support disclosure に隔離します。
+- `DiagnosisEditPanel` の disease conflict/sync/manual-resolution note は canonical copy を使い、candidate や mirror の raw payload を通常面へ露出しません。
 - safe support ID として `RUN_ID` / `traceId` を出すことがあります。
 - current runtime の active surface 全体が app-wide に統一済みとは断定せず、residual inventory は working note で追跡します。
 

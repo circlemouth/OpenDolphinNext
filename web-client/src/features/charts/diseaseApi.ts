@@ -16,7 +16,30 @@ export type DiseaseEntry = {
   outcome?: string;
   category?: string;
   suspectedFlag?: string;
+  layer?: DiseaseLayer;
+  syncState?: DiseaseSyncState;
+  readOnly?: boolean;
+  candidateOnly?: boolean;
+  note?: string;
 };
+
+export type DiseaseLayer = 'insurance-local' | 'orca-mirror' | 'candidate';
+export type DiseaseSyncState =
+  | 'none'
+  | 'candidate'
+  | 'conflict'
+  | 'manual-resolution'
+  | 'stale'
+  | 'mirror-unavailable'
+  | 'clinical-unavailable';
+
+export const DISEASE_SYNC_CANDIDATES_NOTE = '同期候補があります';
+export const DISEASE_CONFLICT_NOTE = 'ORCA側と差分があります';
+export const DISEASE_MANUAL_RESOLUTION_NOTE = '保険病名の確認が必要です';
+export const DISEASE_MIRROR_UNAVAILABLE_NOTE = 'ORCA mirror を取得できないため、同期状態は未確認です。';
+export const DISEASE_CLINICAL_UNAVAILABLE_NOTE = 'clinical source が未実装のため、この画面では保険病名だけを扱います。';
+export const DISEASE_CANDIDATE_CONFIRM_NOTE = '候補は自動反映されません。内容を確認してから保険病名に追加してください。';
+export const ORDER_SET_CANDIDATE_NOTE = '候補です。オーダーセット適用時も保険病名へ自動登録しません。';
 
 export type DiseaseImportResponse = {
   ok?: boolean;
@@ -108,6 +131,41 @@ const ORCA_DISEASE_CODE_REGEX = /^[0-9]{7}$/;
 
 const normalizeTerm = (value?: string | null) => (value ?? '').trim();
 const normalizeNameKey = (value?: string | null) => normalizeTerm(value).replaceAll(' ', '').replaceAll('　', '');
+
+const normalizeDiseaseLayer = (value?: string | null): DiseaseLayer => {
+  const normalized = normalizeTerm(value);
+  if (normalized === 'orca-mirror' || normalized === 'candidate') {
+    return normalized;
+  }
+  return 'insurance-local';
+};
+
+const normalizeDiseaseSyncState = (value?: string | null): DiseaseSyncState => {
+  const normalized = normalizeTerm(value);
+  switch (normalized) {
+    case 'candidate':
+    case 'conflict':
+    case 'manual-resolution':
+    case 'stale':
+    case 'mirror-unavailable':
+    case 'clinical-unavailable':
+      return normalized;
+    default:
+      return 'none';
+  }
+};
+
+const normalizeDiseaseEntry = (entry: DiseaseEntry): DiseaseEntry => {
+  const layer = normalizeDiseaseLayer(entry.layer);
+  return {
+    ...entry,
+    layer,
+    syncState: normalizeDiseaseSyncState(entry.syncState),
+    readOnly: typeof entry.readOnly === 'boolean' ? entry.readOnly : layer === 'orca-mirror',
+    candidateOnly: typeof entry.candidateOnly === 'boolean' ? entry.candidateOnly : layer === 'candidate',
+    note: normalizeTerm(entry.note) || undefined,
+  };
+};
 
 const normalizeMasterReferenceDate = (referenceDate?: string) => {
   const normalized = (referenceDate ?? '').replaceAll('-', '').trim();
@@ -439,7 +497,7 @@ export async function fetchDiseases(params: FetchDiseasesParams): Promise<Diseas
     errorKind: parsed.ok ? undefined : parsed.errorKind,
     routeMismatch: parsed.ok ? false : parsed.routeMismatch,
     runId: json.runId ?? parsed.runId ?? runId,
-    diseases: Array.isArray(json.diseases) ? json.diseases : [],
+    diseases: Array.isArray(json.diseases) ? json.diseases.map((entry) => normalizeDiseaseEntry(entry)) : [],
   };
 }
 

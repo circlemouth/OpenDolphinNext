@@ -48,6 +48,8 @@ class LocalDiagnosisResourceTest {
         List<Map<String, Object>> diseases = (List<Map<String, Object>>) response.get("diseases");
         assertEquals(1, diseases.size());
         assertEquals(55L, diseases.get(0).get("diagnosisId"));
+        assertEquals("insurance-local", diseases.get(0).get("layer"));
+        assertEquals(false, diseases.get(0).get("readOnly"));
     }
 
     @Test
@@ -71,6 +73,22 @@ class LocalDiagnosisResourceTest {
                                 "operation", "create",
                                 "diagnosisName", "感冒",
                                 "startDate", "2026-03-25")))));
+        assertEquals(400, exception.getResponse().getStatus());
+    }
+
+    @Test
+    void mutateDiagnosesRejectsMirrorLayerAuthoring() {
+        WebApplicationException exception = assertThrows(WebApplicationException.class, () -> resource.mutateDiagnoses(
+                request,
+                Map.of(
+                        "patientId", "00001",
+                        "karteId", 1001L,
+                        "operations", List.of(Map.of(
+                                "operation", "update",
+                                "diagnosisId", 55L,
+                                "diagnosisName", "感冒",
+                                "startDate", "2026-03-25",
+                                "layer", "orca-mirror")))));
         assertEquals(400, exception.getResponse().getStatus());
     }
 
