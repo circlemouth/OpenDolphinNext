@@ -155,6 +155,36 @@ test('オーダー入力改修後: カテゴリ限定表示 + 用法プルダウ
         body: JSON.stringify(buildPatientListFixture(outpatientFlags, '/api/local/patients/search')),
       }),
     );
+    await page.route('**/api/session/me', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          facilityId,
+          userId,
+          displayName: e2eAuthSession.userProfile.displayName,
+          clientUuid: e2eAuthSession.credentials.clientUuid,
+          runId: RUN_ID,
+          roles: e2eAuthSession.userProfile.roles,
+        }),
+      }),
+    );
+    await page.route('**/api/session/login', async (route) => {
+      const bodyText = route.request().postData() ?? '{}';
+      const body = JSON.parse(bodyText) as { facilityId?: string; userId?: string; clientUuid?: string };
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          facilityId: body.facilityId ?? facilityId,
+          userId: body.userId ?? userId,
+          displayName: e2eAuthSession.userProfile.displayName,
+          clientUuid: body.clientUuid ?? e2eAuthSession.credentials.clientUuid,
+          runId: RUN_ID,
+          roles: e2eAuthSession.userProfile.roles,
+        }),
+      });
+    });
 
     await page.addInitScript((runId) => {
       const raw = window.sessionStorage.getItem('opendolphin:web-client:auth');
@@ -378,8 +408,45 @@ test('オーダー入力改修後: カテゴリ限定表示 + 用法プルダウ
       medicalSummaryFixture: medicalSummaryPayload,
     });
 
+    await page.goto(baseUrl);
+    await page.evaluate(
+      ({ facilityId, userId, clientUuid, runId, roles, displayName }) => {
+        window.sessionStorage.setItem(
+          'opendolphin:web-client:auth',
+          JSON.stringify({
+            facilityId,
+            userId,
+            role: Array.isArray(roles) && roles.length > 0 ? String(roles[0]) : 'admin',
+            runId,
+            clientUuid,
+            displayName,
+          }),
+        );
+      },
+      {
+        facilityId,
+        userId,
+        clientUuid: e2eAuthSession.credentials.clientUuid,
+        runId: RUN_ID,
+        roles: e2eAuthSession.userProfile.roles,
+        displayName: e2eAuthSession.userProfile.displayName,
+      },
+    );
+
     await page.goto(`${baseUrl}/f/${facilityId}/charts?patientId=000001&appointmentId=APT-2401&visitDate=2026-02-04&msw=1`);
-    await expect(page.locator('.charts-page')).toBeVisible({ timeout: 20_000 });
+    const chartsPage = page.locator('.charts-page');
+    const loginHeading = page.getByRole('heading', { name: 'OpenDolphin Web ログイン' });
+    const loginVisible = await loginHeading
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (loginVisible) {
+      await page.getByLabel('施設ID').fill(facilityId);
+      await page.getByLabel('ユーザーID').fill(userId);
+      await page.getByLabel('パスワード').fill('e2e-password');
+      await page.getByRole('button', { name: 'ログイン' }).click();
+    }
+    await expect(chartsPage).toBeVisible({ timeout: 20_000 });
 
     const orderPane = page.locator('#charts-order-pane');
     await expect(orderPane).toBeVisible({ timeout: 20_000 });

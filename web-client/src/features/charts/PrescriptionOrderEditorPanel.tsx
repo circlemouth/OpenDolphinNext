@@ -522,6 +522,13 @@ export function PrescriptionOrderEditorPanel({
       return;
     }
 
+    if (request.kind === 'input-set') {
+      void applyInputSet(request.candidate);
+      setValidationIssues([]);
+      onRequestConsumed?.(request.requestId);
+      return;
+    }
+
     if (request.kind === 'recommendation') {
       setOrder((prev) => ({
         ...prev,
@@ -532,11 +539,13 @@ export function PrescriptionOrderEditorPanel({
       setNotice({ tone: 'info', message: '推薦候補を追加しました。' });
       setValidationIssues([]);
       onRequestConsumed?.(request.requestId);
+      return;
     }
   }, [isPreviewMode, onRequestConsumed, patientId, request, today]);
 
   const selectedRp = order.rps[selectedRpIndex] ?? null;
   const selectedDrug = selectedRp?.drugs[selectedDrugIndex] ?? null;
+  const showInputSetChooser = variant === 'utility';
 
   const rpRequired = useMemo(() => mergeRpRequired(order), [order]);
   useEffect(() => {
@@ -1399,7 +1408,8 @@ export function PrescriptionOrderEditorPanel({
               ) : null}
             </div>
 
-            <div className="charts-side-panel__subsection charts-side-panel__subsection--search">
+            {showInputSetChooser ? (
+              <div className="charts-side-panel__subsection charts-side-panel__subsection--search">
               <div className="charts-side-panel__subheader">
                 <strong>ORCA入力セット</strong>
                 <span className="charts-side-panel__search-count">{inputSetItems.length}件</span>
@@ -1445,7 +1455,8 @@ export function PrescriptionOrderEditorPanel({
                   ))}
                 </div>
               ) : null}
-            </div>
+              </div>
+            ) : null}
           </aside>
 
           <div className="charts-side-panel__workspace-right">

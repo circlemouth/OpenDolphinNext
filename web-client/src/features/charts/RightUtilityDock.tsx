@@ -12,7 +12,7 @@ type RightUtilityDockProps = {
 export function RightUtilityDock({ activeTool, onSelectTool }: RightUtilityDockProps) {
   return (
     <aside className="soap-note__right-dock" aria-label="右ドック">
-      <p className="soap-note__right-dock-label">補助</p>
+      <p className="soap-note__right-dock-label">候補</p>
       <div className="soap-note__right-dock-scroll">
         {RIGHT_UTILITY_TOOLS.map((item) => {
           const isActive = item.tool === activeTool;
@@ -24,8 +24,8 @@ export function RightUtilityDock({ activeTool, onSelectTool }: RightUtilityDockP
               data-tool={item.tool}
               data-active={isActive ? 'true' : 'false'}
               aria-pressed={isActive}
-              aria-label={`${resolveRightUtilityToolLabel(item.tool)}を開く`}
-              title={`${resolveRightUtilityToolLabel(item.tool)}を開く`}
+              aria-label={`${resolveRightUtilityToolLabel(item.tool)}候補を開く`}
+              title={`${resolveRightUtilityToolLabel(item.tool)}候補を開く`}
               onClick={() => onSelectTool(item.tool)}
             >
               <span className="soap-note__right-dock-button-text">{item.label}</span>

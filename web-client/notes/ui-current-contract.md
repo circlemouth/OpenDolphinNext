@@ -74,6 +74,8 @@
 - `ChartsPatientSummaryBar` は患者文脈を常時見せる encounter context band として扱います。
 - page CTA の owner は `ChartsActionBar` で、`ORCA送信` の primary と `ドラフト保存` / `印刷/エクスポート` / `受付へ戻る` の visible secondary を disclosure 外に置きます。
 - `PastHubPanel` は左列の historical reference / Do 補助 surface であり、comparison 専用主面ではありません。
+- runtime right rail は `処方 / 注射 / 処置 / 検査 / 算定` の order-facing chooser-only surface です。`document` / `ORCA` / embedded editor は right rail に含めません。
+- オーダー truth editor、`文書を編集` entry、`OrcaSummary` は center primary 側に置き、right rail は chooser source と handoff だけを担います。
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
 - `OrcaSummary` は Charts 内部の補助 panel です。
 - `DocumentTimeline` と `MedicalOutpatientRecordPanel` は `showDebugUi` 有効時のみ表示される debug-only surface です。
@@ -99,6 +101,7 @@
 - runtime smoke は主要 route / guard の確認根拠であり、debug-only surface の常時表示までは断定しません。
 - manual: SoapNotePanel 中心の通常導線、Patients / Mobile Images / 管理画面 への遷移確認
 - guard minimum:
+  - right rail は chooser-only を維持し、`document` / `ORCA` tool や embedded editor を再混入させない
   - canonical encounter context 不足時は ORCA送信を fail-close
   - canonical encounter context 不足時は report print / incomeinfv2 取得も fail-close
   - ORCA収納情報は official income semantics (`未収金合計`, `請求金額`, `入金額`, `保険適用金額`, `自費金額`, `食事・生活療養負担金`) を表示

@@ -1,4 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  cloneElement,
+  isValidElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 
 import type { DataSourceTransition } from './authService';
 import { recordChartsAuditEvent } from './audit';
@@ -21,8 +32,13 @@ import { postChartSubjectiveEntry, type ChartSubjectiveEntryRequest } from './so
 import { RevisionHistoryDrawer } from './revisions/RevisionHistoryDrawer';
 import type { RpHistoryEntry } from './karteExtrasApi';
 import type { OrderBundle } from './orderBundleApi';
-import type { OrderBundleEditPanelRequest, OrderBundleEditingContext } from './OrderBundleEditPanel';
+import {
+  OrderBundleEditPanel,
+  type OrderBundleEditPanelRequest,
+  type OrderBundleEditingContext,
+} from './OrderBundleEditPanel';
 import { OrderSummaryPane } from './OrderSummaryPane';
+import { PrescriptionOrderEditorPanel } from './PrescriptionOrderEditorPanel';
 import { RightUtilityDrawer, type RightUtilityTool } from './RightUtilityDrawer';
 import { RightUtilityDock } from './RightUtilityDock';
 import { resolveLatestBundle } from './orderDetailDisplayViewModel';
@@ -30,6 +46,7 @@ import {
   ORDER_GROUP_REGISTRY,
   resolveCanonicalOrderEntity,
   resolveOrderEntity,
+  resolveOrderEntityEditorMeta,
   resolveOrderEntityLabel,
   resolveOrderGroupKeyByEntity,
   type OrderEntity,
@@ -159,9 +176,20 @@ const EMPTY_ORDER_BUNDLE_EDITING_CONTEXT: OrderBundleEditingContext = {
   rpRequiredMissing: [],
 };
 
-const isOrderTool = (tool: RightUtilityTool): tool is OrderGroupKey => tool !== 'document' && tool !== 'orca';
-
 const resolveGroupSpec = (groupKey: OrderGroupKey) => ORDER_GROUP_REGISTRY.find((spec) => spec.key === groupKey) ?? null;
+
+const cloneDocumentPanelNode = (
+  node: ReactNode,
+  historyCopyRequest?: { requestId: string; letterId: number } | null,
+  onHistoryCopyConsumed?: (requestId: string) => void,
+): ReactNode => {
+  if (!isValidElement(node)) return node;
+  const panel = node as ReactElement<Record<string, unknown>>;
+  return cloneElement(panel, {
+    historyCopyRequest,
+    onHistoryCopyConsumed,
+  });
+};
 
 const normalizeBundleEntity = (bundle: OrderBundle, fallback: OrderEntity): OrderEntity => {
   const raw = bundle.entity?.trim() ?? '';
@@ -411,6 +439,7 @@ export function SoapNotePanel({
   const [activeTool, setActiveTool] = useState<RightUtilityTool>('prescription');
   const [activeOrderEntity, setActiveOrderEntity] = useState<OrderEntity | null>(null);
   const [activeOrderRequest, setActiveOrderRequest] = useState<OrderBundleEditPanelRequest | null>(null);
+  const [activeCenterPanel, setActiveCenterPanel] = useState<'order' | 'document' | null>(null);
   const [activeOrderContext, setActiveOrderContext] = useState<OrderBundleEditingContext>(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
   const [activeOrderSource, setActiveOrderSource] = useState<SoapOrderDockState['source']>(null);
   const [pendingDocumentHistoryCopyRequest, setPendingDocumentHistoryCopyRequest] = useState<{
@@ -479,50 +508,22 @@ export function SoapNotePanel({
       const nextEntity = latestBundle
         ? normalizeBundleEntity(latestBundle, groupSpec.defaultEntity)
         : groupSpec.defaultEntity;
-      const nextRequest: OrderBundleEditPanelRequest = latestBundle
-        ? { requestId: buildDrawerRequestId(), kind: 'edit', bundle: latestBundle }
-        : { requestId: buildDrawerRequestId(), kind: 'new' };
       setActiveTool(groupKey);
       setDrawerOpen(true);
       setActiveOrderEntity(nextEntity);
-      setActiveOrderRequest(nextRequest);
-      setActiveOrderSource(source);
+      setActiveOrderRequest(null);
+      setActiveOrderSource(source ?? null);
       setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+      setActiveCenterPanel(null);
     },
-    [buildDrawerRequestId, orderBundlesByGroup],
+    [orderBundlesByGroup],
   );
-
-  const openDocumentTool = useCallback(() => {
-    setActiveTool('document');
-    setDrawerOpen(true);
-    setActiveOrderEntity(null);
-    setActiveOrderRequest(null);
-    setActiveOrderSource(null);
-    setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
-  }, []);
-
-  const openOrcaTool = useCallback(() => {
-    setActiveTool('orca');
-    setDrawerOpen(true);
-    setActiveOrderEntity(null);
-    setActiveOrderRequest(null);
-    setActiveOrderSource(null);
-    setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
-  }, []);
 
   const selectUtilityTool = useCallback(
     (tool: RightUtilityTool, source: SoapOrderDockState['source']) => {
-      if (tool === 'document') {
-        openDocumentTool();
-        return;
-      }
-      if (tool === 'orca') {
-        openOrcaTool();
-        return;
-      }
       openOrderCategoryFromTool(tool, source);
     },
-    [openDocumentTool, openOrcaTool, openOrderCategoryFromTool],
+    [openOrderCategoryFromTool],
   );
 
   const handleDockToolSelect = useCallback(
@@ -560,8 +561,23 @@ export function SoapNotePanel({
       setActiveOrderRequest({ requestId: buildDrawerRequestId(), kind: 'edit', bundle: payload.bundle });
       setActiveOrderSource('right-panel');
       setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+      setActiveCenterPanel('order');
     },
     [buildDrawerRequestId],
+  );
+
+  const handleDrawerOrderRequest = useCallback(
+    (entity: OrderEntity, request: OrderBundleEditPanelRequest) => {
+      const groupKey = resolveOrderGroupKeyByEntity(entity);
+      if (!groupKey) return;
+      setActiveTool(groupKey);
+      setActiveOrderEntity(entity);
+      setActiveOrderRequest(request);
+      setActiveOrderSource('right-panel');
+      setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+      setActiveCenterPanel('order');
+    },
+    [],
   );
 
   const handleDrawerClose = useCallback(() => {
@@ -578,38 +594,12 @@ export function SoapNotePanel({
 
   const handleDrawerOrderEntitySwitch = useCallback(
     (entity: OrderEntity) => {
-      if (!isOrderTool(activeTool)) return;
-      const groupSpec = resolveGroupSpec(activeTool);
-      if (!groupSpec) return;
-      const matchedBundles = (orderBundlesByGroup.get(activeTool) ?? []).filter((bundle) =>
-        isBundleMatchedToEntity(bundle, entity, groupSpec.defaultEntity),
-      );
-      const latestBundle = resolveLatestBundle(matchedBundles);
       setActiveOrderEntity(entity);
-      setActiveOrderRequest(
-        latestBundle
-          ? { requestId: buildDrawerRequestId(), kind: 'edit', bundle: latestBundle }
-          : { requestId: buildDrawerRequestId(), kind: 'new' },
-      );
-      setActiveOrderSource((prev) => prev ?? 'right-panel');
-      setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+      setActiveOrderRequest(null);
+      setActiveCenterPanel(null);
     },
-    [activeTool, buildDrawerRequestId, orderBundlesByGroup],
+    [],
   );
-
-  const handleDrawerOrderBundleSelect = useCallback((entity: OrderEntity, bundle: OrderBundle) => {
-    setActiveOrderEntity(entity);
-    setActiveOrderRequest({ requestId: buildDrawerRequestId(), kind: 'edit', bundle });
-    setActiveOrderSource((prev) => prev ?? 'right-panel');
-    setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
-  }, [buildDrawerRequestId]);
-
-  const handleDrawerOrderBundleCreate = useCallback((entity: OrderEntity) => {
-    setActiveOrderEntity(entity);
-    setActiveOrderRequest({ requestId: buildDrawerRequestId(), kind: 'new' });
-    setActiveOrderSource((prev) => prev ?? 'right-panel');
-    setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
-  }, [buildDrawerRequestId]);
 
   const handleDrawerOrderRequestConsumed = useCallback(
     (requestId: string) => {
@@ -652,6 +642,7 @@ export function SoapNotePanel({
         );
         setActiveOrderSource('bottom-floating');
         setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+        setActiveCenterPanel('order');
       }
     }
     onOrderDockOpenConsumed?.(orderDockOpenRequest.requestId);
@@ -677,27 +668,28 @@ export function SoapNotePanel({
     });
     setActiveOrderSource('bottom-floating');
     setActiveOrderContext(EMPTY_ORDER_BUNDLE_EDITING_CONTEXT);
+    setActiveCenterPanel('order');
   }, [onOrderHistoryCopyConsumed, orderHistoryCopyRequest]);
 
   useEffect(() => {
     if (!documentDockOpenRequest) return;
     if (documentDockOpenRequest.requestId === lastDocumentDockOpenRequestIdRef.current) return;
     lastDocumentDockOpenRequestIdRef.current = documentDockOpenRequest.requestId;
-    openDocumentTool();
+    setActiveCenterPanel('document');
     onDocumentDockOpenConsumed?.(documentDockOpenRequest.requestId);
-  }, [documentDockOpenRequest, onDocumentDockOpenConsumed, openDocumentTool]);
+  }, [documentDockOpenRequest, onDocumentDockOpenConsumed]);
 
   useEffect(() => {
     if (!documentHistoryCopyRequest) return;
     if (documentHistoryCopyRequest.requestId === lastDocumentHistoryCopyRequestIdRef.current) return;
     lastDocumentHistoryCopyRequestIdRef.current = documentHistoryCopyRequest.requestId;
     setPendingDocumentHistoryCopyRequest(documentHistoryCopyRequest);
-    openDocumentTool();
-  }, [documentHistoryCopyRequest, openDocumentTool]);
+    setActiveCenterPanel('document');
+  }, [documentHistoryCopyRequest]);
 
   useEffect(() => {
-    const targetCategory = isOrderTool(activeTool) ? activeTool : null;
-    const hasEditing = Boolean(drawerOpen && targetCategory && activeOrderEntity);
+    const targetCategory = activeOrderEntity ? resolveOrderGroupKeyByEntity(activeOrderEntity) ?? activeTool : null;
+    const hasEditing = activeCenterPanel === 'order' && Boolean(targetCategory && activeOrderEntity);
     const count = targetCategory
       ? orderBundlesByGroup.get(targetCategory)?.length ?? 0
       : totalOrderBundleCount;
@@ -721,6 +713,14 @@ export function SoapNotePanel({
     orderBundlesByGroup,
     totalOrderBundleCount,
   ]);
+
+  const handleOpenDocumentPanel = useCallback(() => {
+    setActiveCenterPanel('document');
+  }, []);
+
+  const handleCloseCenterPanel = useCallback(() => {
+    setActiveCenterPanel(null);
+  }, []);
 
   const historySignature = useMemo(
     () => history.map((entry) => entry.id ?? entry.authoredAt ?? '').join('|'),
@@ -1455,16 +1455,9 @@ export function SoapNotePanel({
     prescriptionBundlesError,
     activeOrderEntity,
     activeOrderRequest,
-    onOrderRequestConsumed: handleDrawerOrderRequestConsumed,
-    onOrderEditingContextChange: setActiveOrderContext,
     onOrderEntitySwitch: handleDrawerOrderEntitySwitch,
-    onOrderBundleSelect: handleDrawerOrderBundleSelect,
-    onOrderBundleCreate: handleDrawerOrderBundleCreate,
+    onOrderRequest: handleDrawerOrderRequest,
     onClose: handleDrawerClose,
-    documentPanel,
-    orcaPanel,
-    documentHistoryCopyRequest: pendingDocumentHistoryCopyRequest,
-    onDocumentHistoryCopyConsumed: handleDocumentHistoryCopyConsumed,
     mode: effectiveMode,
     minimized: effectiveMinimized,
     width: rightDrawerWidth,
@@ -1473,6 +1466,57 @@ export function SoapNotePanel({
     onWidthChange: handleDrawerWidthChange,
     onToolSelect: handleDrawerToolSelect,
   };
+
+  const centerDocumentPanel = useMemo(
+    () => cloneDocumentPanelNode(documentPanel, pendingDocumentHistoryCopyRequest, handleDocumentHistoryCopyConsumed),
+    [documentPanel, handleDocumentHistoryCopyConsumed, pendingDocumentHistoryCopyRequest],
+  );
+
+  const centerOrderPanel = useMemo(() => {
+    if (!activeOrderEntity || activeCenterPanel !== 'order') return null;
+    const entityMeta = resolveOrderEntityEditorMeta(activeOrderEntity);
+    const activeGroup = resolveOrderGroupKeyByEntity(activeOrderEntity);
+    if (!entityMeta || !activeGroup) return null;
+    if (activeGroup === 'prescription') {
+      return (
+        <PrescriptionOrderEditorPanel
+          patientId={meta.patientId}
+          meta={orderEditorMeta}
+          variant="embedded"
+          request={activeOrderRequest}
+          onRequestConsumed={handleDrawerOrderRequestConsumed}
+          onEditingContextChange={setActiveOrderContext}
+          onClose={handleCloseCenterPanel}
+          active
+        />
+      );
+    }
+    return (
+      <OrderBundleEditPanel
+        patientId={meta.patientId}
+        entity={activeOrderEntity}
+        title={entityMeta.title}
+        bundleLabel={entityMeta.bundleLabel}
+        itemQuantityLabel={entityMeta.itemQuantityLabel}
+        meta={orderEditorMeta}
+        variant="embedded"
+        bundlesOverride={activeGroup ? orderBundlesByGroup.get(activeGroup) ?? [] : []}
+        request={activeOrderRequest}
+        onRequestConsumed={handleDrawerOrderRequestConsumed}
+        onEditingContextChange={setActiveOrderContext}
+        onClose={handleCloseCenterPanel}
+      />
+    );
+  }, [
+    activeCenterPanel,
+    activeOrderEntity,
+    activeOrderRequest,
+    handleCloseCenterPanel,
+    handleDrawerOrderRequestConsumed,
+    meta.patientId,
+    orderBundlesByGroup,
+    orderEditorMeta,
+  ]);
 
   return (
     <section
@@ -1851,7 +1895,14 @@ export function SoapNotePanel({
           orderBundlesError={resolvedOrderBundlesError}
           prescriptionBundles={prescriptionBundles}
           onBundleSelect={handleOrderSummaryBundleSelect}
-          onDocumentSelect={openDocumentTool}
+          onDocumentSelect={handleOpenDocumentPanel}
+          activeOrderPanel={centerOrderPanel}
+          activeOrderTitle={activeOrderEntity ? `${resolveOrderEntityLabel(activeOrderEntity)}入力` : undefined}
+          onActiveOrderClose={handleCloseCenterPanel}
+          documentPanel={centerDocumentPanel}
+          documentPanelVisible={activeCenterPanel === 'document'}
+          onDocumentClose={handleCloseCenterPanel}
+          orcaPanel={orcaPanel}
         />
         <div className="soap-note__right-dock-area">
           <RightUtilityDock activeTool={activeTool} onSelectTool={handleDockToolSelect} />

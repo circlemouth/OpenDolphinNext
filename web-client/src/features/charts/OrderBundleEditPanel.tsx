@@ -109,7 +109,9 @@ export type OrderBundleEditPanelRequest =
   | { requestId: string; kind: 'new' }
   | { requestId: string; kind: 'edit'; bundle: OrderBundle }
   | { requestId: string; kind: 'copy'; bundle: OrderBundle }
-  | { requestId: string; kind: 'recommendation'; candidate: OrderRecommendationCandidate };
+  | { requestId: string; kind: 'recommendation'; candidate: OrderRecommendationCandidate }
+  | { requestId: string; kind: 'orca-set'; candidate: OrcaOrderInputSetSummary }
+  | { requestId: string; kind: 'input-set'; candidate: OrcaOrderInputSetSummary };
 
 export type OrderBundleEditPanelProps = {
   patientId?: string;
@@ -1866,6 +1868,7 @@ export function OrderBundleEditPanel({
   );
   const showRecommendationSidebar = variant === 'utility';
   const showBundleList = variant === 'utility';
+  const showOrcaSetChooser = variant === 'utility';
 
   const queryKey = ['charts-order-bundles', patientId, entity];
   const canQueryBundles = Boolean(patientId) && !bundlesOverride;
@@ -2854,6 +2857,14 @@ export function OrderBundleEditPanel({
       case 'recommendation': {
         applyRecommendation(request.candidate);
         setContraConfirmPayload(null);
+        break;
+      }
+      case 'orca-set': {
+        void handleOrcaSetApply(request.candidate);
+        setContraConfirmPayload(null);
+        break;
+      }
+      case 'input-set': {
         break;
       }
       default: {
@@ -4014,7 +4025,7 @@ export function OrderBundleEditPanel({
             ) : null}
           </div>
         )}
-        {!isMedOrder && (
+        {!isMedOrder && showOrcaSetChooser ? (
           <div className="charts-side-panel__subsection charts-side-panel__meta-section">
             <div className="charts-side-panel__subheader">
               <strong>ORCA診療セット</strong>
@@ -4069,7 +4080,7 @@ export function OrderBundleEditPanel({
               </div>
             ) : null}
           </div>
-        )}
+        ) : null}
         {isMedOrder && (
           <div className="charts-side-panel__field-row charts-side-panel__meta-section charts-side-panel__meta-section--rx-class">
             <div className="charts-side-panel__field">

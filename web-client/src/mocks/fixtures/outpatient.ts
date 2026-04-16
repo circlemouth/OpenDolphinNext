@@ -450,6 +450,101 @@ export function buildVisitListFixture(flags: OutpatientFlagSet) {
   };
 }
 
+export function buildMedicalSummaryFixture(flags: OutpatientFlagSet) {
+  const records = OUTPATIENT_RECEPTION_ENTRIES.map((entry) => ({
+    encounterKey: entry.encounterKey ?? `${entry.patientId ?? 'unknown'}:${entry.appointmentId ?? entry.id}`,
+    scheduleKey: entry.scheduleKey ?? entry.appointmentId ?? entry.id,
+    appointmentId: entry.appointmentId,
+    voucherNumber: entry.voucherNumber ?? entry.receptionId,
+    patientId: entry.patientId,
+    patient: {
+      patientId: entry.patientId,
+      wholeName: entry.name,
+      wholeNameKana: entry.kana,
+      birthDate: entry.birthDate,
+      sex: entry.sex,
+    },
+    department: entry.department,
+    physician: entry.physician,
+    recordsReturned: 3,
+    outcome: 'SUCCESS',
+    sections: {
+      diagnosis: {
+        outcome: 'SUCCESS',
+        recordsReturned: 1,
+        items: [
+          {
+            code: 'I10',
+            name: '本態性高血圧症',
+            status: '継続',
+            date: '2026-02-04',
+          },
+        ],
+      },
+      prescription: {
+        outcome: 'SUCCESS',
+        recordsReturned: 1,
+        items: [
+          {
+            name: 'アムロジピン錠 5mg',
+            dose: '1錠',
+            frequency: '1日1回 朝食後',
+            days: '7日',
+            date: '2026-02-04',
+          },
+        ],
+      },
+      lab: {
+        outcome: 'SUCCESS',
+        recordsReturned: 1,
+        items: [
+          {
+            name: 'HbA1c',
+            value: '6.2',
+            unit: '%',
+            date: '2026-01-20',
+          },
+        ],
+      },
+      procedure: {
+        outcome: 'MISSING',
+        recordsReturned: 0,
+        items: [],
+      },
+      memo: {
+        outcome: 'SUCCESS',
+        recordsReturned: 1,
+        items: [
+          {
+            text: entry.note ?? '経過観察',
+            date: '2026-02-04',
+          },
+        ],
+      },
+    },
+  }));
+  const isEmpty = flags.recordsReturned === 0;
+  const outpatientList = isEmpty ? [] : records;
+  const recordsReturned = flags.recordsReturned ?? outpatientList.length;
+  return {
+    runId: flags.runId,
+    traceId: flags.traceId ?? `trace-${flags.runId}`,
+    requestId: `req-${flags.runId}`,
+    cacheHit: flags.cacheHit,
+    missingMaster: flags.missingMaster,
+    dataSourceTransition: flags.dataSourceTransition,
+    fallbackUsed: flags.fallbackUsed,
+    fetchedAt: new Date().toISOString(),
+    recordsReturned,
+    outcome: recordsReturned > 0 ? 'SUCCESS' : 'MISSING',
+    sourcePath: '/api/local/encounters/{encounterKey}/medical-summary',
+    payload: {
+      outpatientList,
+    },
+    outpatientList,
+  };
+}
+
 export function buildOfficialPatientNameSearchFixture(flags: OutpatientFlagSet) {
   return {
     patientlst3res: {

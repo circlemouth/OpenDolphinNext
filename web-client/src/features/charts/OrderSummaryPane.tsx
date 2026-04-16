@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
 
 import type { OrderBundle } from './orderBundleApi';
 import {
@@ -19,6 +19,13 @@ type OrderSummaryPaneProps = {
   orderBundlesError?: string;
   onBundleSelect?: (payload: { group: OrderGroupKey; entity: OrderEntity; bundle: OrderBundle }) => void;
   onDocumentSelect?: () => void;
+  activeOrderPanel?: ReactNode;
+  activeOrderTitle?: string;
+  onActiveOrderClose?: () => void;
+  documentPanel?: ReactNode;
+  documentPanelVisible?: boolean;
+  onDocumentClose?: () => void;
+  orcaPanel?: ReactNode;
 };
 
 const renderCardBody = (row: OrderDetailDisplayViewModel) => {
@@ -61,6 +68,13 @@ export function OrderSummaryPane({
   orderBundlesError,
   onBundleSelect,
   onDocumentSelect,
+  activeOrderPanel,
+  activeOrderTitle,
+  onActiveOrderClose,
+  documentPanel,
+  documentPanelVisible = false,
+  onDocumentClose,
+  orcaPanel,
 }: OrderSummaryPaneProps) {
   const groupedBundles = useMemo<OrderDetailDisplayCategoryViewModel[]>(
     () => buildOrderDetailDisplayCategories({ orderBundles, prescriptionBundles }),
@@ -142,6 +156,44 @@ export function OrderSummaryPane({
             );
           })}
         </div>
+      ) : null}
+
+      {activeOrderPanel ? (
+        <section className="soap-note__order-group" data-group="active-order-editor">
+          <header className="soap-note__order-group-header">
+            <strong>{activeOrderTitle ?? 'オーダー編集'}</strong>
+            {onActiveOrderClose ? (
+              <button type="button" className="order-dock__bundle-action" onClick={onActiveOrderClose}>
+                閉じる
+              </button>
+            ) : null}
+          </header>
+          {activeOrderPanel}
+        </section>
+      ) : null}
+
+      {documentPanelVisible && documentPanel ? (
+        <section className="soap-note__order-group" data-group="active-document-editor">
+          <header className="soap-note__order-group-header">
+            <strong>文書編集</strong>
+            {onDocumentClose ? (
+              <button type="button" className="order-dock__bundle-action" onClick={onDocumentClose}>
+                閉じる
+              </button>
+            ) : null}
+          </header>
+          {documentPanel}
+        </section>
+      ) : null}
+
+      {orcaPanel ? (
+        <section className="soap-note__order-group" data-group="orca-support">
+          <header className="soap-note__order-group-header">
+            <strong>ORCA確認</strong>
+            <span className="soap-note__order-group-meta">runtime support</span>
+          </header>
+          {orcaPanel}
+        </section>
       ) : null}
     </aside>
   );

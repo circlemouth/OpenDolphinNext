@@ -1,40 +1,35 @@
-import {
-  cloneElement,
-  isValidElement,
-  useEffect,
-  useMemo,
-  useRef,
-  type CSSProperties,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 
-import {
-  OrderBundleEditPanel,
-  type OrderBundleEditPanelMeta,
-  type OrderBundleEditPanelRequest,
-  type OrderBundleEditingContext,
-} from './OrderBundleEditPanel';
-import { PrescriptionOrderEditorPanel } from './PrescriptionOrderEditorPanel';
 import type { OrderBundle } from './orderBundleApi';
 import {
   ORDER_GROUP_REGISTRY,
   resolveCanonicalOrderEntity,
-  resolveOrderEntity,
-  resolveOrderEntityEditorMeta,
   resolveOrderEntityLabel,
   resolveOrderGroupKeyByEntity,
   type OrderEntity,
-  type OrderGroupKey,
 } from './orderCategoryRegistry';
 import {
   buildOrderDetailDisplayRowsForGroup,
   resolveLatestBundle,
   sortBundlesByLatestRule,
 } from './orderDetailDisplayViewModel';
+import type { OrderBundleEditPanelMeta, OrderBundleEditPanelRequest } from './OrderBundleEditPanel';
+import {
+  filterInputSetItemsForEntity,
+  resolveOrderChooserCtaLabel,
+  resolveOrderChooserSources,
+  splitRecommendationCandidates,
+} from './orderChooserSources';
+import {
+  fetchOrcaOrderInputSets,
+  type OrcaOrderInputSetSummary,
+} from './orcaOrderInputSetApi';
+import {
+  fetchOrderRecommendations,
+  type OrderRecommendationCandidate,
+} from './orderRecommendationApi';
 import { resolveUserSafeFetchFailure } from './userSafeErrorCopy';
 import {
   RIGHT_UTILITY_TOOLS,
@@ -64,28 +59,15 @@ type RightUtilityDrawerProps = {
   prescriptionBundlesError?: string;
   activeOrderEntity?: OrderEntity | null;
   activeOrderRequest?: OrderBundleEditPanelRequest | null;
-  onOrderRequestConsumed?: (requestId: string) => void;
-  onOrderEditingContextChange?: (context: OrderBundleEditingContext) => void;
   onOrderEntitySwitch?: (entity: OrderEntity) => void;
-  onOrderBundleSelect?: (entity: OrderEntity, bundle: OrderBundle) => void;
-  onOrderBundleCreate?: (entity: OrderEntity) => void;
+  onOrderRequest?: (entity: OrderEntity, request: OrderBundleEditPanelRequest) => void;
   onClose: () => void;
-  documentPanel?: ReactNode;
-  orcaPanel?: ReactNode;
-  documentHistoryCopyRequest?: { requestId: string; letterId: number } | null;
-  onDocumentHistoryCopyConsumed?: (requestId: string) => void;
-};
-
-const resolveGroupByTool = (tool: RightUtilityTool) => {
-  if (tool === 'document' || tool === 'orca') return null;
-  return ORDER_GROUP_REGISTRY.find((spec) => spec.key === tool) ?? null;
 };
 
 const normalizeBundleEntity = (bundle: OrderBundle, fallback: OrderEntity): OrderEntity => {
   const raw = bundle.entity?.trim() ?? '';
-  const resolved = resolveCanonicalOrderEntity(raw) ?? resolveOrderEntity(raw);
-  if (resolved) return resolved;
-  return fallback;
+  const resolved = resolveCanonicalOrderEntity(raw) ?? raw;
+  return resolveCanonicalOrderEntity(resolved) ?? (resolved as OrderEntity) ?? fallback;
 };
 
 const belongsToSelectionEntity = (bundleEntity: OrderEntity, selectedEntity: OrderEntity) => {
@@ -94,19 +76,13 @@ const belongsToSelectionEntity = (bundleEntity: OrderEntity, selectedEntity: Ord
   return normalizedBundleEntity === normalizedSelectedEntity;
 };
 
-const isOrderTool = (tool: RightUtilityTool): tool is OrderGroupKey => tool !== 'document' && tool !== 'orca';
-
 const resolveNextTabEntity = <T extends string>(key: string, entities: readonly T[], selected: T): T | null => {
   const selectedIndex = entities.indexOf(selected);
   if (selectedIndex < 0 || entities.length === 0) return null;
   if (key === 'Home') return entities[0] ?? null;
   if (key === 'End') return entities[entities.length - 1] ?? null;
-  if (key === 'ArrowRight' || key === 'ArrowDown') {
-    return entities[(selectedIndex + 1) % entities.length] ?? null;
-  }
-  if (key === 'ArrowLeft' || key === 'ArrowUp') {
-    return entities[(selectedIndex - 1 + entities.length) % entities.length] ?? null;
-  }
+  if (key === 'ArrowRight' || key === 'ArrowDown') return entities[(selectedIndex + 1) % entities.length] ?? null;
+  if (key === 'ArrowLeft' || key === 'ArrowUp') return entities[(selectedIndex - 1 + entities.length) % entities.length] ?? null;
   return null;
 };
 
@@ -119,7 +95,6 @@ const focusDrawerSubtypeTab = (container: HTMLDivElement, entity: OrderEntity) =
 const MAX_PREVIEW_ITEMS = 3;
 const MIN_DRAWER_WIDTH = 560;
 const MAX_DRAWER_RIGHT_GUTTER = 80;
-const SPLIT_LAYOUT_MIN_WIDTH = 860;
 const MINIMIZED_HANDLE_WIDTH = 56;
 const RESIZE_HIT_WIDTH = 40;
 
@@ -130,17 +105,23 @@ const clampDrawerWidth = (width: number) => {
   return Math.max(MIN_DRAWER_WIDTH, Math.min(Math.round(width), max));
 };
 
-const cloneDocumentPanelNode = (
-  node: ReactNode,
-  historyCopyRequest?: { requestId: string; letterId: number } | null,
-  onHistoryCopyConsumed?: (requestId: string) => void,
-): ReactNode => {
-  if (!isValidElement(node)) return node;
-  const panel = node as ReactElement<Record<string, unknown>>;
-  return cloneElement(panel, {
-    historyCopyRequest,
-    onHistoryCopyConsumed,
-  });
+const subtractDays = (value: string | undefined, days: number) => {
+  const base = value ? new Date(`${value.slice(0, 10)}T00:00:00.000Z`) : new Date();
+  if (Number.isNaN(base.getTime())) return undefined;
+  base.setUTCDate(base.getUTCDate() - days);
+  return base.toISOString().slice(0, 10);
+};
+
+const buildChooserRequestId = (prefix: string) =>
+  `right-chooser-${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const resolveChooserTitle = (tool: RightUtilityTool, selectedEntity: OrderEntity | null) => {
+  if (!selectedEntity) return `${resolveRightUtilityToolLabel(tool)}候補`;
+  const group = resolveOrderGroupKeyByEntity(selectedEntity);
+  if (!group || group === 'prescription' || group === 'injection') {
+    return `${resolveRightUtilityToolLabel(tool)}候補`;
+  }
+  return `${resolveRightUtilityToolLabel(tool)}候補 / ${resolveOrderEntityLabel(selectedEntity)}`;
 };
 
 export { resolveLatestBundle, sortBundlesByLatestRule };
@@ -165,20 +146,15 @@ export function RightUtilityDrawer({
   prescriptionBundlesError,
   activeOrderEntity,
   activeOrderRequest,
-  onOrderRequestConsumed,
-  onOrderEditingContextChange,
   onOrderEntitySwitch,
-  onOrderBundleSelect,
-  onOrderBundleCreate,
+  onOrderRequest,
   onClose,
-  documentPanel,
-  orcaPanel,
-  documentHistoryCopyRequest,
-  onDocumentHistoryCopyConsumed,
 }: RightUtilityDrawerProps) {
   const drawerRef = useRef<HTMLElement | null>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const peekCleanupRef = useRef<(() => void) | null>(null);
+  const [inputSetKeyword, setInputSetKeyword] = useState('');
+  const [submittedInputSetKeyword, setSubmittedInputSetKeyword] = useState('');
 
   useEffect(() => {
     if (!open) return undefined;
@@ -201,40 +177,37 @@ export function RightUtilityDrawer({
     drawer.setAttribute('inert', '');
   }, [open]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       resizeCleanupRef.current?.();
       resizeCleanupRef.current = null;
       peekCleanupRef.current?.();
       peekCleanupRef.current = null;
-    };
-  }, []);
+    },
+    [],
+  );
 
-  const groupSpec = useMemo(() => resolveGroupByTool(activeTool), [activeTool]);
-  const isOrderPanel = isOrderTool(activeTool) && Boolean(groupSpec);
-
+  const groupSpec = useMemo(() => ORDER_GROUP_REGISTRY.find((spec) => spec.key === activeTool) ?? null, [activeTool]);
   const groupBundles = useMemo(() => {
     if (!groupSpec) return [];
-    if (groupSpec.key === 'prescription' && prescriptionBundles) {
-      return prescriptionBundles;
-    }
-    return (orderBundles ?? []).filter((bundle) => {
-      const raw = bundle.entity?.trim() ?? '';
-      const groupKey = resolveOrderGroupKeyByEntity(raw);
-      return groupKey === groupSpec.key;
-    });
+    if (groupSpec.key === 'prescription' && prescriptionBundles) return prescriptionBundles;
+    return (orderBundles ?? []).filter((bundle) => resolveOrderGroupKeyByEntity(bundle.entity?.trim() ?? '') === groupSpec.key);
   }, [groupSpec, orderBundles, prescriptionBundles]);
 
   const sortedGroupBundles = useMemo(() => sortBundlesByLatestRule(groupBundles), [groupBundles]);
-
   const selectedEntity = useMemo<OrderEntity | null>(() => {
     if (!groupSpec) return null;
     if (activeOrderEntity && groupSpec.entities.includes(activeOrderEntity)) return activeOrderEntity;
     return groupSpec.defaultEntity;
   }, [activeOrderEntity, groupSpec]);
 
+  useEffect(() => {
+    setInputSetKeyword('');
+    setSubmittedInputSetKeyword('');
+  }, [selectedEntity]);
+
   const bundlesBySelectedEntity = useMemo(() => {
-    if (!selectedEntity || !groupSpec) return [];
+    if (!groupSpec || !selectedEntity) return [];
     return sortedGroupBundles.filter((bundle) => {
       const entity = normalizeBundleEntity(bundle, groupSpec.defaultEntity);
       return belongsToSelectionEntity(entity, selectedEntity);
@@ -250,49 +223,56 @@ export function RightUtilityDrawer({
     });
   }, [bundlesBySelectedEntity, groupSpec, selectedEntity]);
 
-  const selectedEntityMeta = useMemo(
-    () => (selectedEntity ? resolveOrderEntityEditorMeta(selectedEntity) : null),
-    [selectedEntity],
+  const recommendationFrom = useMemo(() => subtractDays(meta.visitDate, 365), [meta.visitDate]);
+  const recommendationQuery = useQuery({
+    queryKey: ['right-utility-drawer-recommendations', patientId, selectedEntity, recommendationFrom],
+    queryFn: async () =>
+      fetchOrderRecommendations({
+        patientId: patientId!,
+        entity: selectedEntity ?? undefined,
+        from: recommendationFrom,
+        includeFacility: true,
+        patientLimit: 4,
+        facilityLimit: 4,
+        scanLimit: 200,
+      }),
+    enabled: open && Boolean(patientId && selectedEntity),
+    staleTime: 30_000,
+  });
+
+  const recommendationCandidates = useMemo(
+    () => splitRecommendationCandidates(recommendationQuery.data?.recommendations ?? []),
+    [recommendationQuery.data?.recommendations],
   );
 
-  const documentPanelNode = useMemo(() => {
-    if (!documentPanel) {
-      return <p className="order-dock__empty">文書パネルが未接続です。</p>;
-    }
-    return cloneDocumentPanelNode(documentPanel, documentHistoryCopyRequest, onDocumentHistoryCopyConsumed);
-  }, [documentHistoryCopyRequest, documentPanel, onDocumentHistoryCopyConsumed]);
-  const orcaPanelNode = useMemo(() => {
-    if (!orcaPanel) {
-      return <p className="order-dock__empty">ORCAパネルが未接続です。</p>;
-    }
-    return orcaPanel;
-  }, [orcaPanel]);
+  const inputSetQuery = useQuery({
+    queryKey: ['right-utility-drawer-input-sets', submittedInputSetKeyword, selectedEntity, meta.visitDate],
+    queryFn: async () =>
+      fetchOrcaOrderInputSets({
+        keyword: submittedInputSetKeyword,
+        entity: selectedEntity ?? undefined,
+        effective: meta.visitDate,
+        size: 8,
+      }),
+    enabled: open && Boolean(selectedEntity && submittedInputSetKeyword.trim()),
+    staleTime: 30_000,
+  });
 
-  const isDocumentPanelActive = activeTool === 'document';
-  const isOrcaPanelActive = activeTool === 'orca';
-  const activeOrderPanelContext = useMemo(() => {
-    if (!isOrderPanel || !groupSpec || !selectedEntity || !selectedEntityMeta) return null;
-    return {
-      groupSpec,
-      selectedEntity,
-      selectedEntityMeta,
-    };
-  }, [groupSpec, isOrderPanel, selectedEntity, selectedEntityMeta]);
-  const isDocumentPanelVisible = open && isDocumentPanelActive;
-  const isOrcaPanelVisible = open && isOrcaPanelActive;
-  const isOrderPanelVisible = open && Boolean(activeOrderPanelContext);
-  const isPrescriptionPanel =
-    Boolean(activeOrderPanelContext) && activeOrderPanelContext?.groupSpec.key === 'prescription';
-  const resolvedPanelBundles =
-    isPrescriptionPanel && prescriptionBundles ? prescriptionBundles : bundlesBySelectedEntity;
-  const resolvedPanelLoading = isPrescriptionPanel ? prescriptionBundlesLoading : orderBundlesLoading;
-  const resolvedPanelError = isPrescriptionPanel ? prescriptionBundlesError ?? orderBundlesError : orderBundlesError;
+  const inputSetItems = useMemo(
+    () => filterInputSetItemsForEntity(inputSetQuery.data?.items ?? [], selectedEntity ?? 'medOrder'),
+    [inputSetQuery.data?.items, selectedEntity],
+  );
+
+  const resolvedPanelLoading = groupSpec?.key === 'prescription' ? prescriptionBundlesLoading : orderBundlesLoading;
+  const resolvedPanelError =
+    groupSpec?.key === 'prescription'
+      ? prescriptionBundlesError ?? orderBundlesError
+      : orderBundlesError;
   const activeEditBundle =
     activeOrderRequest && (activeOrderRequest.kind === 'edit' || activeOrderRequest.kind === 'copy')
       ? activeOrderRequest.bundle
       : null;
   const resolvedDrawerWidth = clampDrawerWidth(width);
-  const orderLayout = !minimized && resolvedDrawerWidth >= SPLIT_LAYOUT_MIN_WIDTH ? 'split' : 'stack';
   const visibleDrawerWidth = minimized ? MINIMIZED_HANDLE_WIDTH : resolvedDrawerWidth;
   const drawerInlineStyle = useMemo(
     () =>
@@ -303,38 +283,30 @@ export function RightUtilityDrawer({
       }) as CSSProperties,
     [visibleDrawerWidth],
   );
-  const activeToolTitle = activeTool === 'document' ? '文書' : activeTool === 'orca' ? 'ORCA' : groupSpec?.label ?? 'オーダー';
+  const activeToolTitle = resolveChooserTitle(activeTool, selectedEntity);
 
   const handleResizePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0 || typeof window === 'undefined') return;
     event.preventDefault();
-
     resizeCleanupRef.current?.();
-
     const pointerId = event.pointerId;
     const updateWidth = (clientX: number) => {
       onWidthChange?.(clampDrawerWidth(window.innerWidth - clientX));
     };
-
     const cleanup = () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerEnd);
       window.removeEventListener('pointercancel', handlePointerEnd);
-      if (resizeCleanupRef.current === cleanup) {
-        resizeCleanupRef.current = null;
-      }
+      if (resizeCleanupRef.current === cleanup) resizeCleanupRef.current = null;
     };
-
     const handlePointerMove = (pointerEvent: PointerEvent) => {
       if (pointerEvent.pointerId !== pointerId) return;
       updateWidth(pointerEvent.clientX);
     };
-
     const handlePointerEnd = (pointerEvent: PointerEvent) => {
       if (pointerEvent.pointerId !== pointerId) return;
       cleanup();
     };
-
     resizeCleanupRef.current = cleanup;
     updateWidth(event.clientX);
     window.addEventListener('pointermove', handlePointerMove);
@@ -345,32 +317,61 @@ export function RightUtilityDrawer({
   const handlePeekPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0 || !onPeekChange || typeof window === 'undefined') return;
     event.preventDefault();
-
     peekCleanupRef.current?.();
     onPeekChange(true);
-
     const cleanup = () => {
       window.removeEventListener('pointerup', handlePointerEnd);
       window.removeEventListener('pointercancel', handlePointerEnd);
       window.removeEventListener('blur', handleWindowBlur);
-      if (peekCleanupRef.current === cleanup) {
-        peekCleanupRef.current = null;
-      }
+      if (peekCleanupRef.current === cleanup) peekCleanupRef.current = null;
       onPeekChange(false);
     };
-
     const handlePointerEnd = (pointerEvent: PointerEvent) => {
       if (pointerEvent.pointerId !== event.pointerId) return;
       cleanup();
     };
-
     const handleWindowBlur = () => cleanup();
-
     peekCleanupRef.current = cleanup;
     window.addEventListener('pointerup', handlePointerEnd);
     window.addEventListener('pointercancel', handlePointerEnd);
     window.addEventListener('blur', handleWindowBlur);
   };
+
+  const handleOpenExistingBundle = (entity: OrderEntity, bundle: OrderBundle) => {
+    onOrderRequest?.(entity, {
+      requestId: buildChooserRequestId('edit'),
+      kind: 'edit',
+      bundle,
+    });
+  };
+
+  const handleApplyRecommendation = (entity: OrderEntity, candidate: OrderRecommendationCandidate) => {
+    onOrderRequest?.(entity, {
+      requestId: buildChooserRequestId('recommendation'),
+      kind: 'recommendation',
+      candidate,
+    });
+  };
+
+  const handleApplyInputSet = (entity: OrderEntity, item: OrcaOrderInputSetSummary) => {
+    const groupKey = resolveOrderGroupKeyByEntity(entity);
+    if (!groupKey) return;
+    onOrderRequest?.(entity, {
+      requestId: buildChooserRequestId(groupKey === 'prescription' ? 'input-set' : 'orca-set'),
+      kind: groupKey === 'prescription' ? 'input-set' : 'orca-set',
+      candidate: item,
+    });
+  };
+
+  const handleCreateNew = () => {
+    if (!selectedEntity) return;
+    onOrderRequest?.(selectedEntity, {
+      requestId: buildChooserRequestId('new'),
+      kind: 'new',
+    });
+  };
+
+  const renderEmptyState = (message: string) => <p className="order-dock__empty">{message}</p>;
 
   const drawerNode = (
     <aside
@@ -380,7 +381,7 @@ export function RightUtilityDrawer({
       data-tool={activeTool}
       data-mode={mode}
       data-minimized={minimized ? 'true' : 'false'}
-      data-order-layout={orderLayout}
+      data-order-layout="stack"
       aria-hidden={!open}
       aria-label="右ユーティリティドロワー"
       style={drawerInlineStyle}
@@ -400,7 +401,6 @@ export function RightUtilityDrawer({
         onPointerDown={handleResizePointerDown}
         aria-label="右ドロワー幅を調整"
       />
-
       {!minimized ? (
         <>
           <header className="soap-note__right-drawer-header">
@@ -433,11 +433,7 @@ export function RightUtilityDrawer({
             </div>
           </header>
 
-          <div
-            className="soap-note__right-drawer-tool-tabs soap-note__right-drawer-category-tabs"
-            role="tablist"
-            aria-label="右ユーティリティカテゴリ"
-          >
+          <div className="soap-note__right-drawer-tool-tabs soap-note__right-drawer-category-tabs" role="tablist" aria-label="右ユーティリティカテゴリ">
             {RIGHT_UTILITY_TOOLS.map((item) => {
               const isActive = item.tool === activeTool;
               return (
@@ -450,7 +446,7 @@ export function RightUtilityDrawer({
                   data-active={isActive ? 'true' : 'false'}
                   aria-selected={isActive}
                   tabIndex={isActive ? 0 : -1}
-                  aria-label={`${resolveRightUtilityToolLabel(item.tool)}タブへ切替`}
+                  aria-label={`${resolveRightUtilityToolLabel(item.tool)}候補タブへ切替`}
                   onClick={() => onToolSelect?.(item.tool)}
                 >
                   {item.label}
@@ -460,42 +456,11 @@ export function RightUtilityDrawer({
           </div>
 
           <div className="soap-note__right-drawer-content">
-            {isDocumentPanelActive ? (
-              <section
-                key="drawer-document-panel"
-                className="soap-note__right-drawer-panel soap-note__right-drawer-panel--document"
-                data-active={isDocumentPanelVisible ? 'true' : 'false'}
-                aria-hidden={isDocumentPanelVisible ? 'false' : 'true'}
-              >
-                <div className="soap-note__right-drawer-switch">{documentPanelNode}</div>
-              </section>
-            ) : null}
-            {isOrcaPanelActive ? (
-              <section
-                key="drawer-orca-panel"
-                className="soap-note__right-drawer-panel soap-note__right-drawer-panel--document"
-                data-active={isOrcaPanelVisible ? 'true' : 'false'}
-                aria-hidden={isOrcaPanelVisible ? 'false' : 'true'}
-              >
-                <div className="soap-note__right-drawer-switch">{orcaPanelNode}</div>
-              </section>
-            ) : null}
-            {activeOrderPanelContext ? (
-              <section
-                key={`drawer-order-panel-${activeTool}-${activeOrderPanelContext.selectedEntity}`}
-                className="soap-note__right-drawer-panel soap-note__right-drawer-panel--order"
-                data-active={isOrderPanelVisible ? 'true' : 'false'}
-                aria-hidden={isOrderPanelVisible ? 'false' : 'true'}
-              >
-                <div className="soap-note__right-drawer-switch soap-note__right-drawer-order-layout">
-                  <div className="soap-note__right-drawer-order-editor">
-                {activeOrderPanelContext.groupSpec.entities.length > 1 ? (
-                  <div
-                    className="order-dock__subtype-tabs"
-                    role="tablist"
-                    aria-label={`${activeOrderPanelContext.groupSpec.label}サブカテゴリ`}
-                  >
-                    {activeOrderPanelContext.groupSpec.entities.map((entity) => {
+            <section className="soap-note__right-drawer-panel soap-note__right-drawer-panel--order" data-active={open ? 'true' : 'false'} aria-hidden={open ? 'false' : 'true'}>
+              <div className="soap-note__right-drawer-switch soap-note__right-drawer-order-layout">
+                {groupSpec && selectedEntity && groupSpec.entities.length > 1 ? (
+                  <div className="order-dock__subtype-tabs" role="tablist" aria-label={`${groupSpec.label}サブカテゴリ`}>
+                    {groupSpec.entities.map((entity) => {
                       const isActive = selectedEntity === entity;
                       return (
                         <button
@@ -503,24 +468,17 @@ export function RightUtilityDrawer({
                           type="button"
                           className="order-dock__subtype-tab"
                           role="tab"
-                          aria-controls="soap-note-right-drawer-order-preview"
                           data-drawer-subtype-entity={entity}
                           data-active={isActive ? 'true' : 'false'}
                           aria-selected={isActive}
                           tabIndex={isActive ? 0 : -1}
                           onKeyDown={(event: ReactKeyboardEvent<HTMLButtonElement>) => {
-                            const next = resolveNextTabEntity(
-                              event.key,
-                              activeOrderPanelContext.groupSpec.entities,
-                              activeOrderPanelContext.selectedEntity,
-                            );
+                            const next = resolveNextTabEntity(event.key, groupSpec.entities, selectedEntity);
                             if (!next) return;
                             event.preventDefault();
                             onOrderEntitySwitch?.(next);
                             const tabList = event.currentTarget.closest('[role="tablist"]');
-                            if (tabList instanceof HTMLDivElement) {
-                              focusDrawerSubtypeTab(tabList, next);
-                            }
+                            if (tabList instanceof HTMLDivElement) focusDrawerSubtypeTab(tabList, next);
                           }}
                           onClick={() => onOrderEntitySwitch?.(entity)}
                         >
@@ -531,139 +489,216 @@ export function RightUtilityDrawer({
                   </div>
                 ) : null}
 
-                {!patientId ? (
-                  <p className="order-dock__empty">患者IDが未選択のためオーダー編集を開始できません。</p>
-                ) : isPrescriptionPanel ? (
-                  <>
-                    {resolvedPanelLoading ? <p className="order-dock__empty">処方情報を取得しています...</p> : null}
-                    {resolvedPanelError ? <p className="order-dock__empty">{resolveUserSafeFetchFailure('処方情報', resolvedPanelError)}</p> : null}
-                    <PrescriptionOrderEditorPanel
-                      patientId={patientId}
-                      meta={meta}
-                      variant="embedded"
-                      request={activeOrderRequest}
-                      onRequestConsumed={onOrderRequestConsumed}
-                      onEditingContextChange={onOrderEditingContextChange}
-                      onClose={onClose}
-                      active={open && activeTool === 'prescription'}
-                    />
-                  </>
-                ) : (
-                  <OrderBundleEditPanel
-                    patientId={patientId}
-                    entity={activeOrderPanelContext.selectedEntity}
-                    title={activeOrderPanelContext.selectedEntityMeta.title}
-                    bundleLabel={activeOrderPanelContext.selectedEntityMeta.bundleLabel}
-                    itemQuantityLabel={activeOrderPanelContext.selectedEntityMeta.itemQuantityLabel}
-                    meta={meta}
-                    variant="embedded"
-                    bundlesOverride={resolvedPanelBundles}
-                    request={activeOrderRequest}
-                    onRequestConsumed={onOrderRequestConsumed}
-                    onEditingContextChange={onOrderEditingContextChange}
-                    onClose={onClose}
-                  />
-                )}
-              </div>
-
-                  <section
-                    id="soap-note-right-drawer-order-preview"
-                    className="soap-note__right-drawer-order-preview"
-                    role="tabpanel"
-                    aria-label={`${activeOrderPanelContext.groupSpec.label}既存一覧`}
-                  >
-                    <div className="soap-note__right-drawer-order-preview-header">
-                      <strong>既存オーダー</strong>
-                      <button
-                        type="button"
-                        className="order-dock__bundle-action"
-                        onClick={() => onOrderBundleCreate?.(activeOrderPanelContext.selectedEntity)}
-                      >
-                        新規
-                      </button>
-                    </div>
-
-                {resolvedPanelLoading ? <p className="order-dock__empty">読み込み中...</p> : null}
-                {resolvedPanelError ? <p className="order-dock__empty">取得失敗: {resolvedPanelError}</p> : null}
-                {!resolvedPanelLoading && !resolvedPanelError && existingOrderRows.length === 0 ? (
-                  <p className="order-dock__empty">このサブカテゴリの既存オーダーはありません。</p>
-                ) : null}
-                {!resolvedPanelLoading && !resolvedPanelError ? (
-                  <div className="soap-note__right-drawer-order-preview-list order-dock__bundle-list" role="list">
-                    {existingOrderRows.map((row) => {
-                      const isActive = Boolean(
-                        activeEditBundle &&
-                          activeEditBundle.documentId === row.bundle.documentId &&
-                          activeEditBundle.moduleId === row.bundle.moduleId,
-                      );
-                      return (
-                        <article
-                          key={`drawer-bundle-${row.id}`}
-                          role="listitem"
-                          className="soap-note__right-drawer-order-preview-item"
-                          data-active={isActive ? 'true' : 'false'}
-                        >
-                          <header className="soap-note__right-drawer-order-preview-item-header">
-                            <div>
-                              <p className="soap-note__summary-meta">{row.operatorLine}</p>
-                              <strong>{row.bundleLabel}</strong>
-                            </div>
-                            <button
-                              type="button"
-                              className="order-dock__bundle-action"
-                              onClick={() => onOrderBundleSelect?.(row.entity, row.bundle)}
-                              aria-label={`${row.bundleLabel}を編集`}
-                            >
-                              このセットを編集
-                            </button>
-                          </header>
-                          <div className="soap-note__right-drawer-order-preview-item-body">
-                            {row.title ? (
-                              <p className="soap-note__right-drawer-order-preview-item-title">{row.title}</p>
-                            ) : null}
-                            {row.items.length > 0 ? (
-                              <ul className="soap-note__right-drawer-order-preview-item-list" aria-label="既存セット内容">
-                                {row.items.slice(0, MAX_PREVIEW_ITEMS).map((item, index) => (
-                                  <li key={`${row.id}-preview-item-${index}`} className="soap-note__right-drawer-order-preview-item-line">
-                                    <span className="soap-note__right-drawer-order-preview-item-primary">{item.primary}</span>
-                                    {item.genericNote ? (
-                                      <span className="soap-note__right-drawer-order-preview-item-note">{item.genericNote}</span>
+                {resolveOrderChooserSources(activeTool).map((source) => {
+                  if (!selectedEntity || !groupSpec) return null;
+                  if (source.key === 'existing') {
+                    return (
+                      <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
+                        <div className="soap-note__right-drawer-order-preview-header">
+                          <strong>{source.label}</strong>
+                          <button type="button" className="order-dock__bundle-action" onClick={handleCreateNew}>
+                            {resolveOrderChooserCtaLabel('create')}
+                          </button>
+                        </div>
+                        {source.note ? <p className="order-dock__empty">{source.note}</p> : null}
+                        {resolvedPanelLoading ? renderEmptyState('候補を取得しています...') : null}
+                        {resolvedPanelError ? renderEmptyState(resolveUserSafeFetchFailure('候補', resolvedPanelError)) : null}
+                        {!resolvedPanelLoading && !resolvedPanelError && existingOrderRows.length === 0 ? renderEmptyState('このカテゴリの候補はありません。') : null}
+                        {!resolvedPanelLoading && !resolvedPanelError && existingOrderRows.length > 0 ? (
+                          <div className="soap-note__right-drawer-order-preview-list order-dock__bundle-list" role="list">
+                            {existingOrderRows.map((row) => {
+                              const isActive = Boolean(
+                                activeEditBundle &&
+                                  activeEditBundle.documentId === row.bundle.documentId &&
+                                  activeEditBundle.moduleId === row.bundle.moduleId,
+                              );
+                              return (
+                                <article
+                                  key={`drawer-existing-${row.id}`}
+                                  role="listitem"
+                                  className="soap-note__right-drawer-order-preview-item"
+                                  data-active={isActive ? 'true' : 'false'}
+                                >
+                                  <header className="soap-note__right-drawer-order-preview-item-header">
+                                    <div>
+                                      <p className="soap-note__summary-meta">{row.operatorLine}</p>
+                                      <strong>{row.bundleLabel}</strong>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      className="order-dock__bundle-action"
+                                      onClick={() => handleOpenExistingBundle(row.entity, row.bundle)}
+                                      aria-label={`${row.bundleLabel}を編集面で開く`}
+                                    >
+                                      {resolveOrderChooserCtaLabel('edit')}
+                                    </button>
+                                  </header>
+                                  <div className="soap-note__right-drawer-order-preview-item-body">
+                                    {row.title ? <p className="soap-note__right-drawer-order-preview-item-title">{row.title}</p> : null}
+                                    {row.items.length > 0 ? (
+                                      <ul className="soap-note__right-drawer-order-preview-item-list" aria-label="既存セット内容">
+                                        {row.items.slice(0, MAX_PREVIEW_ITEMS).map((item, index) => (
+                                          <li key={`${row.id}-existing-item-${index}`} className="soap-note__right-drawer-order-preview-item-line">
+                                            <span className="soap-note__right-drawer-order-preview-item-primary">{item.primary}</span>
+                                            {item.genericNote ? (
+                                              <span className="soap-note__right-drawer-order-preview-item-note">{item.genericNote}</span>
+                                            ) : null}
+                                            {item.secondary.map((detail, detailIndex) => (
+                                              <span key={`${row.id}-existing-item-${index}-detail-${detailIndex}`} className="soap-note__right-drawer-order-preview-item-secondary">
+                                                {detail}
+                                              </span>
+                                            ))}
+                                          </li>
+                                        ))}
+                                      </ul>
                                     ) : null}
-                                    {item.secondary.slice(0, 2).map((secondary, secondaryIndex) => (
-                                      <span
-                                        key={`${row.id}-preview-item-${index}-secondary-${secondaryIndex}`}
-                                        className="soap-note__right-drawer-order-preview-item-secondary"
-                                      >
-                                        {secondary}
-                                      </span>
+                                    {row.items.length > MAX_PREVIEW_ITEMS ? (
+                                      <p className="soap-note__right-drawer-order-preview-item-more">他{row.items.length - MAX_PREVIEW_ITEMS}件</p>
+                                    ) : null}
+                                    {row.detailLines.map((detail, index) => (
+                                      <p key={`${row.id}-detail-${index}`} className="soap-note__right-drawer-order-preview-item-detail">
+                                        {detail}
+                                      </p>
                                     ))}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : null}
-                            {row.items.length > MAX_PREVIEW_ITEMS ? (
-                              <p className="soap-note__right-drawer-order-preview-item-more">他{row.items.length - MAX_PREVIEW_ITEMS}件</p>
-                            ) : null}
-                            {row.detailLines.slice(0, 2).map((detail, index) => (
-                              <p key={`${row.id}-preview-detail-${index}`} className="soap-note__right-drawer-order-preview-item-detail">
-                                {detail}
-                              </p>
-                            ))}
-                            {row.warnings.slice(0, 1).map((warning, index) => (
-                              <p key={`${row.id}-preview-warning-${index}`} className="soap-note__right-drawer-order-preview-item-warning">
-                                {warning}
-                              </p>
+                                    {row.warnings.map((warning, index) => (
+                                      <p key={`${row.id}-warning-${index}`} className="soap-note__right-drawer-order-preview-item-warning">
+                                        {warning}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+                      </section>
+                    );
+                  }
+
+                  if (source.key === 'patient' || source.key === 'facility') {
+                    const candidates = source.key === 'patient' ? recommendationCandidates.patient : recommendationCandidates.facility;
+                    return (
+                      <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
+                        <div className="soap-note__right-drawer-order-preview-header">
+                          <strong>{source.label}</strong>
+                        </div>
+                        {source.note ? <p className="order-dock__empty">{source.note}</p> : null}
+                        {recommendationQuery.isFetching ? renderEmptyState('候補を取得しています...') : null}
+                        {recommendationQuery.data && !recommendationQuery.data.ok ? renderEmptyState('候補取得に失敗しました。再試行してください。') : null}
+                        {!recommendationQuery.isFetching && (!recommendationQuery.data || recommendationQuery.data.ok) && candidates.length === 0
+                          ? renderEmptyState('このカテゴリの候補はありません。')
+                          : null}
+                        {candidates.length > 0 ? (
+                          <div className="soap-note__right-drawer-order-preview-list" role="list">
+                            {candidates.map((candidate) => (
+                              <article key={`${source.key}-${candidate.key}`} role="listitem" className="soap-note__right-drawer-order-preview-item">
+                                <header className="soap-note__right-drawer-order-preview-item-header">
+                                  <div>
+                                    <p className="soap-note__summary-meta">回数: {candidate.count} / 最終: {candidate.lastUsedAt}</p>
+                                    <strong>{candidate.template.bundleName || '名称未設定'}</strong>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="order-dock__bundle-action"
+                                    onClick={() => handleApplyRecommendation(selectedEntity, candidate)}
+                                  >
+                                    {resolveOrderChooserCtaLabel('apply')}
+                                  </button>
+                                </header>
+                                <div className="soap-note__right-drawer-order-preview-item-body">
+                                  {candidate.template.admin ? (
+                                    <p className="soap-note__right-drawer-order-preview-item-detail">用法: {candidate.template.admin}</p>
+                                  ) : null}
+                                  {candidate.template.bundleNumber ? (
+                                    <p className="soap-note__right-drawer-order-preview-item-detail">回数/日数: {candidate.template.bundleNumber}</p>
+                                  ) : null}
+                                </div>
+                              </article>
                             ))}
                           </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                ) : null}
-                  </section>
-                </div>
-              </section>
-            ) : null}
+                        ) : null}
+                      </section>
+                    );
+                  }
+
+                  if (source.key === 'orca-input-set' || source.key === 'orca-set') {
+                    const isSearching = inputSetQuery.isFetching;
+                    return (
+                      <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
+                        <div className="soap-note__right-drawer-order-preview-header">
+                          <strong>{source.label}</strong>
+                        </div>
+                        {source.note ? <p className="order-dock__empty">{source.note}</p> : null}
+                        <div className="charts-side-panel__field">
+                          <label htmlFor="right-drawer-orca-set-keyword">keyword</label>
+                          <input
+                            id="right-drawer-orca-set-keyword"
+                            value={inputSetKeyword}
+                            onChange={(event) => setInputSetKeyword(event.target.value)}
+                            placeholder={source.key === 'orca-input-set' ? '入力セット名またはコード' : '診療セット名またはコード'}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="order-dock__bundle-action"
+                          onClick={() => setSubmittedInputSetKeyword(inputSetKeyword.trim())}
+                          disabled={!inputSetKeyword.trim() || isSearching}
+                        >
+                          {isSearching ? '検索中…' : '検索'}
+                        </button>
+                        {submittedInputSetKeyword.trim() && inputSetQuery.data && !inputSetQuery.data.ok
+                          ? renderEmptyState('候補取得に失敗しました。再試行してください。')
+                          : null}
+                        {submittedInputSetKeyword.trim() && !isSearching && inputSetQuery.data?.ok && inputSetItems.length === 0
+                          ? renderEmptyState('このカテゴリの候補はありません。')
+                          : null}
+                        {inputSetItems.length > 0 ? (
+                          <div className="soap-note__right-drawer-order-preview-list" role="list">
+                            {inputSetItems.map((item) => (
+                              <article key={`${source.key}-${item.setCode ?? item.name}`} role="listitem" className="soap-note__right-drawer-order-preview-item">
+                                <header className="soap-note__right-drawer-order-preview-item-header">
+                                  <div>
+                                    <p className="soap-note__summary-meta">{item.setCode ?? 'setCode不明'}</p>
+                                    <strong>{item.name ?? '名称未設定'}</strong>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="order-dock__bundle-action"
+                                    onClick={() => handleApplyInputSet(selectedEntity, item)}
+                                  >
+                                    {resolveOrderChooserCtaLabel('apply')}
+                                  </button>
+                                </header>
+                                <div className="soap-note__right-drawer-order-preview-item-body">
+                                  {item.itemCount ? (
+                                    <p className="soap-note__right-drawer-order-preview-item-detail">項目数: {item.itemCount}</p>
+                                  ) : null}
+                                  {item.classCode ? (
+                                    <p className="soap-note__right-drawer-order-preview-item-detail">classCode: {item.classCode}</p>
+                                  ) : null}
+                                </div>
+                              </article>
+                            ))}
+                          </div>
+                        ) : null}
+                      </section>
+                    );
+                  }
+
+                  return (
+                    <section key={source.key} className="soap-note__right-drawer-order-preview" aria-label={source.label}>
+                      <div className="soap-note__right-drawer-order-preview-header">
+                        <strong>{source.label}</strong>
+                      </div>
+                      <p className="order-dock__empty">新規入力からこのカテゴリの編集面を開きます。</p>
+                      <button type="button" className="order-dock__bundle-action" onClick={handleCreateNew} disabled={!selectedEntity}>
+                        {resolveOrderChooserCtaLabel('create')}
+                      </button>
+                    </section>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         </>
       ) : null}
