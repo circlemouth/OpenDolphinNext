@@ -1,87 +1,84 @@
 import { test, expect } from '../playwright/fixtures';
-import type { Page } from '@playwright/test';
 
-import { e2eAuthSession, profile, seedAuthSession } from '../e2e/helpers/orcaMaster';
+import { e2eAuthSession, seedAuthSession } from '../e2e/helpers/orcaMaster';
 
-const ensureMswControlled = async (page: Page) => {
-  const registrationFound = await page
-    .waitForFunction(() => navigator.serviceWorker.getRegistrations().then((regs) => regs.length > 0), null, {
-      timeout: 10_000,
-    })
-    .then(() => true)
-    .catch(() => false);
-
-  if (!registrationFound) {
-    // MSW が登録されない場合は、そのまま終了して後続のエラーで検知する。
-    return;
-  }
-
-  try {
-    await page.waitForFunction(() => navigator.serviceWorker?.controller !== null, null, { timeout: 5_000 });
-    return;
-  } catch {
-    // First load may not be controlled; reload once to attach the MSW service worker.
-  }
-  await page.reload();
-  await page.waitForFunction(() => navigator.serviceWorker?.controller !== null, null, { timeout: 10_000 });
-};
-
-const expandReceptionSections = async (page: Page) => {
-  const toggles = page.locator(
-    '#reception-results button.reception-board__toggle, #reception-results button.reception-section__toggle',
-  );
-  const count = await toggles.count();
-  for (let index = 0; index < count; index += 1) {
-    const toggle = toggles.nth(index);
-    if (!(await toggle.isVisible().catch(() => false))) continue;
-    const label = (await toggle.innerText()).trim();
-    if (label.includes('開く')) {
-      await toggle.click();
-    }
-  }
-};
+const fulfillJson = (route: any, body: unknown) =>
+  route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 
 test.describe('REC-001 Reception status MVP', () => {
-  test.skip(profile !== 'msw', 'MSW プロファイル専用（Stage 接続禁止）');
-
-  test('shows normalized status + next action and exposes retry guidance via feature flag', async ({ page }) => {
+  test('shows workflow badge and keeps transmission signal separate from workflow', async ({ page }) => {
     await seedAuthSession(page);
 
-    // Enable MSW fault injection via header-flags mechanism (requires msw=1 and debug UI enabled in env).
-    await page.addInitScript(() => {
-      window.localStorage.setItem('mswFault', 'queue-stall');
-    });
+    await page.route('**/api/user/**', async (route) =>
+      fulfillJson(route, {
+        facilityId: e2eAuthSession.credentials.facilityId,
+        userId: e2eAuthSession.credentials.userId,
+        displayName: 'E2E Admin',
+      }),
+    );
+    await page.route('**/api/orca/official/appointments/medical-information', async (route) =>
+      fulfillJson(route, {
+        options: [
+          { code: '01', name: '外来受付' },
+          { code: '02', name: '健診' },
+        ],
+      }),
+    );
+    await page.route('**/api/chart-events', async (route) =>
+      route.fulfill({ status: 200, contentType: 'text/event-stream', body: '' }),
+    );
+    await page.route('**/api/realtime/reception', async (route) =>
+      route.fulfill({ status: 200, contentType: 'text/event-stream', body: '' }),
+    );
+    await page.route('**/api/orca/official/appointments/list**', async (route) =>
+      fulfillJson(route, {
+        appointmentDate: '2026-01-20',
+        apiResult: '00',
+        recordsReturned: 1,
+        slots: [],
+        reservations: [],
+      }),
+    );
+    await page.route('**/api/orca/official/visits/list**', async (route) =>
+      fulfillJson(route, {
+        visitDate: '2026-01-20',
+        apiResult: '00',
+        recordsReturned: 1,
+        visits: [
+          {
+            sequentialNumber: 'SEQ-0002',
+            acceptanceId: 'R-0002',
+            receptionId: 'R-0002',
+            patient: {
+              patientId: '000002',
+              wholeName: 'MVP 患者',
+              wholeNameKana: 'エムブイピー カンジャ',
+              birthDate: '1990-01-01',
+              sex: 'F',
+            },
+            appointmentTime: '09:00:00',
+            visitDate: '2026-01-20',
+            departmentCode: '01',
+            departmentName: '内科',
+            physicianCode: '1001',
+            physicianName: 'テスト医師',
+            visitInformation: '01',
+            status: '受付中',
+            insuranceCombinationNumber: 'HKN-0002',
+            voucherNumber: 'V-0002',
+          },
+        ],
+      }),
+    );
 
-    const facilityId = e2eAuthSession.credentials.facilityId;
-    await page.goto(`/f/${facilityId}/reception?msw=1`);
-    await ensureMswControlled(page);
-    const controllerUrl = await page.evaluate(() => navigator.serviceWorker?.controller?.scriptURL ?? '');
-    expect(controllerUrl).toContain('mockServiceWorker');
-    await expect(page.getByRole('heading', { name: 'Reception 受付一覧と更新状況' })).toBeVisible();
-    await expandReceptionSections(page);
+    const facilityId = encodeURIComponent(e2eAuthSession.credentials.facilityId);
+    await page.goto(`/f/${facilityId}/reception?date=2026-01-20`);
+    await expect(page.getByRole('heading', { name: '受付' })).toBeVisible();
+    await page.getByRole('button', { name: 'カード' }).click();
 
-    // Feature flag path should expose the MVP UI elements.
-    let entry = page
-      .locator(
-        '[data-test-id="reception-entry-card"][data-patient-id="000002"], [data-test-id="reception-entry-row"][data-patient-id="000002"]',
-      )
-      .first();
-    const hasRetryButton = async () => (await entry.locator('[data-test-id="reception-status-mvp-retry"]').count()) > 0;
-    if ((await entry.count()) === 0 || !(await hasRetryButton())) {
-      entry = page
-        .locator('[data-test-id="reception-entry-card"], [data-test-id="reception-entry-row"]', {
-          has: page.locator('[data-test-id="reception-status-mvp-retry"]'),
-        })
-        .first();
-    }
+    const entry = page.locator('[data-test-id="reception-entry-card"][data-patient-id="000002"]').first();
     await expect(entry).toBeVisible({ timeout: 20_000 });
-
-    // Patient 000002 is included in MSW outpatient fixture; with queue-stall it should be "pending stalled" and retryable.
-    const retryButton = entry.locator('[data-test-id="reception-status-mvp-retry"]').first();
-    await expect(retryButton).toBeVisible();
-
-    // Sanity: the retry button triggers retryOrcaQueue without crashing.
-    await retryButton.click();
-    await expect(page.getByText('ORCA再送を要求しました')).toBeVisible();
+    await expect(entry).toHaveAttribute('data-reception-status', '受付中');
+    await expect(entry).not.toContainText('会計済');
   });
 });

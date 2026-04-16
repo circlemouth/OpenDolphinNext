@@ -137,7 +137,62 @@ describe('receptionDailyState', () => {
       incomingEntries: [],
       scope,
     });
-    expect(resolved.entries[0]?.status).toBe('診療中');
+    expect(resolved.entries[0]?.workflowStatus).toBe('診療中');
+  });
+
+  it('applies workflow override by row-local key and does not bleed to another row of the same patient', () => {
+    const date = '2026-02-11';
+    resolveReceptionEntriesForDate({
+      date,
+      incomingEntries: [
+        buildEntry({ id: 'row-1', receptionId: 'R-001', patientId: 'P-001', status: '受付中' }),
+        buildEntry({ id: 'row-2', receptionId: 'R-002', patientId: 'P-001', status: '受付中', appointmentTime: '10:00' }),
+      ],
+      scope,
+    });
+
+    upsertReceptionStatusOverride({
+      date,
+      patientId: 'P-001',
+      status: '診療中',
+      source: 'charts_open',
+      scope,
+      fallbackEntry: buildEntry({ id: 'row-1', receptionId: 'R-001', patientId: 'P-001' }),
+    });
+
+    const resolved = resolveReceptionEntriesForDate({
+      date,
+      incomingEntries: [],
+      scope,
+    });
+    expect(resolved.entries.find((entry) => entry.receptionId === 'R-001')?.workflowStatus).toBe('診療中');
+    expect(resolved.entries.find((entry) => entry.receptionId === 'R-002')?.workflowStatus).toBeUndefined();
+  });
+
+  it('demotes paid rows to 再計待 on charts_start and preserves the safe reason', () => {
+    const date = '2026-02-11';
+    resolveReceptionEntriesForDate({
+      date,
+      incomingEntries: [buildEntry({ receptionId: 'R-001', status: '会計済み' })],
+      scope,
+    });
+
+    upsertReceptionStatusOverride({
+      date,
+      patientId: 'P-001',
+      status: '診療中',
+      source: 'charts_start',
+      scope,
+      fallbackEntry: buildEntry({ receptionId: 'R-001', patientId: 'P-001', status: '会計済み' }),
+    });
+
+    const resolved = resolveReceptionEntriesForDate({
+      date,
+      incomingEntries: [],
+      scope,
+    });
+    expect(resolved.entries[0]?.workflowStatus).toBe('再計待');
+    expect(resolved.entries[0]?.workflowReason).toBe('会計済み後に変更があったため再会計が必要です。');
   });
 
   it('returns snapshot dates in descending order', () => {

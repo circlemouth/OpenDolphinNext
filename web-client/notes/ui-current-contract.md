@@ -114,6 +114,9 @@
 - 会計送信や受付後続で使う visit context は `departmentCode` / `physicianCode` / `visitDate` の canonical 値だけを使い、display string 再解析・patientId first-match・`today` fallback を current contract に戻しません。
 - accept 成功後に charts を開く handoff は、mutation response の `scheduleKey` / `encounterKey` を優先し、未返却時だけ同一受付を指す refreshed entry で補完します。`patientId` 単独一致では handoff を解決しません。
 - patient search 結果から charts を開く導線は、直前 accept で確立した canonical handoff か、当日の active entry を一意に解決できる場合に限って有効化します。複数 active entry がある場合は fail-close します。
+- 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
+- `再計待` は会計済み後の編集を示す workflow state です。補足文は correction note として扱い、generic memo と混在させません。
+- row-local key (`encounterKey` / `scheduleKey` / `receptionId` / `appointmentId`) を一意に解決できない場合、受付一覧に positive な `送信済` 表示を重ねません。
 
 ### Verification
 - test: reception accept/cancel の `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして統一
@@ -123,6 +126,8 @@
 - test: master search 導線では `WholeName` 未入力で official patient search を送らず、`InOut` 未選択時は official payload から省くこと
 - test: claim-send / visit context で patientId first-match / display string reparsing / `today` fallback を使わないこと
 - test: accept 成功後の charts handoff は `scheduleKey` / `encounterKey` を持つ canonical context だけで成立し、mutation response または refreshed entry のどちらでも同じ contract を使うこと
+- test: 会計送信成功が workflow `会計済み` を直ちに意味せず、`送信済` は transmission signal として別表示されること
+- test: 会計済み後の編集は `再計待` へ移り、correction note を generic memo と分離して表示すること
 - manual: Reception 画面文言が既存患者受付限定で、新患は Patients へ誘導すること
 
 ## Patients Surface

@@ -166,7 +166,22 @@ vi.mock('../../charts/orcaClaimSendCache', () => ({
   loadOrcaClaimSendCache: () => mockClaimSendCache,
   saveOrcaClaimSendCache: (entry: { patientId: string }) => {
     mockClaimSendCache = { ...mockClaimSendCache, [entry.patientId]: entry as any };
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('orca-claim-send-cache-update', { detail: { patientId: entry.patientId } }));
+    }
   },
+  findOrcaClaimSendEntryForContext: (
+    store: Record<string, { patientId?: string; appointmentId?: string; receptionId?: string; scheduleKey?: string; encounterKey?: string }>,
+    context: { patientId?: string; appointmentId?: string; receptionId?: string; scheduleKey?: string; encounterKey?: string },
+  ) =>
+    Object.values(store).find((entry) => {
+      if (!context.patientId || entry.patientId !== context.patientId) return false;
+      if (context.encounterKey) return entry.encounterKey === context.encounterKey;
+      if (context.scheduleKey) return entry.scheduleKey === context.scheduleKey;
+      if (context.receptionId) return entry.receptionId === context.receptionId;
+      if (context.appointmentId) return entry.appointmentId === context.appointmentId;
+      return true;
+    }) ?? null,
 }));
 
 vi.mock('../../charts/orcaClaimApi', () => ({
@@ -1624,7 +1639,7 @@ describe('ReceptionPage status/date/card action UX', () => {
     });
   });
 
-  it('shows 会計送信 button on 会計待ち rows and moves them to 会計済 on success', async () => {
+  it('shows 会計送信 button on 会計待ち rows and keeps workflow separate from 送信済 on success', async () => {
     mockAppointmentData.entries = [createBillingEntry()];
     mockSearchParams = new URLSearchParams('date=2026-01-29');
     mockLocationState = { visitDate: '2026-01-29' };
@@ -1669,14 +1684,13 @@ describe('ReceptionPage status/date/card action UX', () => {
       expect.objectContaining({
         tone: 'success',
         message: '会計送信を完了',
-        detail: '一覧更新後に会計済みへの反映を確認してください。',
+        detail: '会計送信を完了。会計済みは収納確認後に反映します。',
       }),
     );
-
-    await user.click(screen.getByRole('tab', { name: /会計済/ }));
-    const completedList = screen.getByRole('region', { name: '受付一覧' });
-    const completedRow = await within(completedList).findByRole('row', { name: /診察終了患者/ });
-    expect(completedRow).toBeInTheDocument();
+    const billingList = screen.getByRole('region', { name: '受付一覧' });
+    const billingRow = await within(billingList).findByRole('row', { name: /診察終了患者/ });
+    expect(within(billingRow).getByText('送信済')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /会計済/ })).toBeInTheDocument();
   });
 
   it.each([

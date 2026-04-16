@@ -99,7 +99,39 @@ export async function recordPerfLog(page: Page, label: string) {
 }
 
 export async function seedAuthSession(page: Page) {
+  await page.route('**/api/session/me', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        facilityId: e2eAuthSession.userProfile.facilityId,
+        userId: e2eAuthSession.userProfile.userId,
+        displayName: e2eAuthSession.userProfile.displayName,
+        roles: e2eAuthSession.userProfile.roles,
+        clientUuid: e2eAuthSession.credentials.clientUuid,
+        runId,
+      }),
+    });
+  });
   await page.addInitScript(([storageKey, session]) => {
+    const ensureCsrfMeta = () => {
+      const existing = document.querySelector("meta[name='csrf-token']");
+      if (existing instanceof HTMLMetaElement) {
+        existing.content = 'e2e-csrf-token';
+        return;
+      }
+      if (!document.head) return;
+      const meta = document.createElement('meta');
+      meta.name = 'csrf-token';
+      meta.content = 'e2e-csrf-token';
+      document.head.appendChild(meta);
+    };
+    ensureCsrfMeta();
+    document.addEventListener('DOMContentLoaded', ensureCsrfMeta, { once: true });
     window.sessionStorage.setItem(storageKey, JSON.stringify(session));
     // Web クライアント本体が参照するシンプルな認証スナップショットも併存させる
     window.sessionStorage.setItem(
@@ -110,6 +142,21 @@ export async function seedAuthSession(page: Page) {
         role: 'admin',
         runId: session.userProfile?.runId ?? (session as any).runId ?? 'RUN-E2E',
         clientUuid: session.credentials.clientUuid,
+        displayName: session.userProfile?.displayName,
+      }),
+    );
+    window.sessionStorage.setItem(
+      'opendolphin:web-client:auth-flags',
+      JSON.stringify({
+        sessionKey: `${session.credentials.facilityId}:${session.credentials.userId}`,
+        flags: {
+          runId: session.userProfile?.runId ?? (session as any).runId ?? 'RUN-E2E',
+          cacheHit: false,
+          missingMaster: false,
+          dataSourceTransition: 'server',
+          fallbackUsed: false,
+        },
+        updatedAt: new Date().toISOString(),
       }),
     );
     if (!(window as unknown as { $RefreshReg$?: unknown }).$RefreshReg$) {

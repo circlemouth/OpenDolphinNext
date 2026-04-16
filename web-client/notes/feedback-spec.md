@@ -22,6 +22,8 @@
 - `ReceptionPage` の ORCA official response では、safe な `Api_Result_Message` がある場合にそれを最優先表示し、client 側の補助文言で上書きしません。
 - `ReceptionPage` の accept/cancel result は `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして扱い、`Api_Result_Message` が空の時だけ安全な fallback copy を補います。
 - `ReceptionPage` の accept/cancel result では `Api_Result=21/60` のとき受付日時・診療科・担当医などの成功コンテキストを client 側で捏造しません。
+- `ReceptionPage` の claim-send success は transmission 完了だけを伝え、収納確認前に `会計済み` を示す copy へ寄せません。
+- `ReceptionPage` の `再計待` 補足は correction note として独立表示し、generic memo と混在させません。
 - `PatientsPage` と `AdministrationPage` の通常 surface では `endpoint`, `Api_Result_Message`, `Error.message` のような raw detail を default 表示しません。
 - `PatientsPage` の保存履歴で `traceId` / `requestId` / internal status を出す場合は、default 表示ではなく support disclosure に隔離します。
 - safe support ID として `RUN_ID` / `traceId` を出すことがあります。

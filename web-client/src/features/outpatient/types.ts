@@ -1,6 +1,9 @@
 import type { DataSourceTransition, ResolveMasterSource } from '../../libs/observability/types';
 
 export type ReceptionStatus = '受付中' | '診療中' | '会計待ち' | '会計済み' | '予約';
+export type ReceptionWorkflowStatus = ReceptionStatus | '再計待';
+export type ReceptionTransmissionStatus = '未送信' | '送信済' | '再送待ち' | '保留' | '失敗' | '応答済' | '未確認';
+export type ReceptionCorrectionKind = '要確認' | '要再計';
 
 export type ReceptionEntry = {
   id: string;
@@ -25,10 +28,25 @@ export type ReceptionEntry = {
   acceptanceTime?: string;
   visitDate?: string;
   status: ReceptionStatus;
+  workflowStatus?: ReceptionWorkflowStatus;
+  workflowReason?: string;
   insurance?: string;
   note?: string;
   source: 'slots' | 'reservations' | 'visits' | 'unknown';
 };
+
+const normalizeRowKeyPart = (value?: string) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+export const getReceptionRowLocalKey = (
+  entry?: Pick<ReceptionEntry, 'scheduleKey' | 'encounterKey' | 'receptionId' | 'appointmentId'> | null,
+) =>
+  normalizeRowKeyPart(entry?.encounterKey) ??
+  normalizeRowKeyPart(entry?.scheduleKey) ??
+  normalizeRowKeyPart(entry?.receptionId) ??
+  normalizeRowKeyPart(entry?.appointmentId);
 
 export type OutpatientMeta = {
   runId?: string;

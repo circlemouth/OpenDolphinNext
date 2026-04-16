@@ -35,6 +35,8 @@
     - query `patientId` は入口専用で、sensitive route 到達後に scrub されます。
   - 受付:
     - `visitDate` は handoff 時に正規化して carry することがありますが、単独では権威入力にしません。
+    - charts handoff や row overlay の確定には `scheduleKey` / `encounterKey` を優先し、無い場合も `receptionId` / `appointmentId` を含む row-local key が一意な時だけ補助的に使います。
+    - `patientId` 単独では handoff も transmission overlay も確定しません。
 
 ## App-Wide Navigation / Handoff Minimum
 - app-wide に docs 化してよい handoff key は `from` と sanitize 済み `returnTo` です。
