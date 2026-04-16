@@ -42,6 +42,7 @@ public class AttachmentStorageManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(AttachmentStorageManager.class);
     private static final int STREAM_BUFFER_SIZE = 8192;
     private static final String STORAGE_PROVIDER_S3 = "s3";
+    public static final String LINK_RELATION_REFERENCE_ONLY = "attachment_reference";
 
     @Inject
     AttachmentStorageConfigLoader configLoader;
@@ -208,6 +209,9 @@ public class AttachmentStorageManager {
         if (attachment == null) {
             return;
         }
+        if (!isExternalAssetDeletionAllowed(attachment)) {
+            return;
+        }
         requireS3Mode();
         resolveLocation(attachment).ifPresent(location -> {
             try {
@@ -221,6 +225,9 @@ public class AttachmentStorageManager {
 
     public void scheduleDeleteExternalAssetAfterCommit(AttachmentModel attachment) {
         if (attachment == null || (!hasText(attachment.getUri()) && !hasText(attachment.getStorageBucket()))) {
+            return;
+        }
+        if (!isExternalAssetDeletionAllowed(attachment)) {
             return;
         }
         requireS3Mode();
@@ -349,6 +356,10 @@ public class AttachmentStorageManager {
             return bytes == null;
         }
         return true;
+    }
+
+    private boolean isExternalAssetDeletionAllowed(AttachmentModel attachment) {
+        return attachment == null || !LINK_RELATION_REFERENCE_ONLY.equals(attachment.getLinkRelation());
     }
 
     private void ensureDigest(AttachmentModel attachment, byte[] bytes) {

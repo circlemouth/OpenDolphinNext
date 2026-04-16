@@ -185,6 +185,16 @@ class DocumentIntegrityServiceTest {
         assertThat(invokeCanonicalBytes(service, left)).isEqualTo(invokeCanonicalBytes(service, right));
     }
 
+    @Test
+    void canonicalBytes_includeAttachmentReferenceBoundary() throws Exception {
+        DocumentModel direct = buildDocument(false);
+        DocumentModel reference = buildDocument(false);
+        reference.getAttachment().get(0).setLinkId(901L);
+        reference.getAttachment().get(0).setLinkRelation("attachment_reference");
+
+        assertThat(invokeCanonicalBytes(service, direct)).isNotEqualTo(invokeCanonicalBytes(service, reference));
+    }
+
     private DocumentIntegrityConfig configFor(String mode, Path keyringPath) {
         return new DocumentIntegrityConfig(TestServerConfigurationResolvers.resolver(
                 MODE_KEY, mode,

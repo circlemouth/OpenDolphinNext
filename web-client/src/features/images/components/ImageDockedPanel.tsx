@@ -556,6 +556,14 @@ export function ImageDockedPanel({
           <ul className="charts-image-panel__grid" data-test-id="image-thumbnail-list">
             {listItems.map((item: KarteImageListItem) => {
               const safeThumbnailUrl = safeSameOriginHttpUrl(item.thumbnailUrl);
+              const documentAttachBlockedReason = !patientId
+                ? '患者が未選択のため、文書には添付できません。'
+                : imagesFeatureDisabled
+                  ? FEATURE_DISABLED_MESSAGE
+                  : typeof item.contentSize === 'number' && item.contentSize > IMAGE_ATTACHMENT_MAX_SIZE_BYTES
+                    ? '患者画像としては保存済みですが、文書には添付できません。'
+                    : undefined;
+              const canAttachToDocument = !documentAttachBlockedReason && typeof onToggleDocumentAttachment === 'function';
               return (
                 <li key={item.id} className="charts-image-panel__card">
                   <div className="charts-image-panel__thumb">
@@ -571,6 +579,9 @@ export function ImageDockedPanel({
                     <strong>{item.title ?? item.fileName ?? '画像'}</strong>
                     <span>{formatBytes(item.contentSize)}</span>
                     <span>{formatRecordedAt(item.recordedAt)}</span>
+                    {documentAttachBlockedReason ? (
+                      <span className="charts-image-panel__card-note">{documentAttachBlockedReason}</span>
+                    ) : null}
                   </div>
                   <div className="charts-image-panel__card-actions">
                     <button
@@ -584,7 +595,7 @@ export function ImageDockedPanel({
                         });
                       }}
                       data-active={selectedIdSet.has(item.id) ? 'true' : 'false'}
-                      disabled={!patientId}
+                      disabled={!canAttachToDocument}
                       data-test-id="image-attach-document"
                     >
                       {selectedIdSet.has(item.id) ? '文書添付を解除' : '文書に添付'}

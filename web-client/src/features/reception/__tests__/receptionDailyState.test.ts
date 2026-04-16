@@ -113,21 +113,21 @@ describe('receptionDailyState', () => {
     const date = '2026-02-11';
     resolveReceptionEntriesForDate({
       date,
-      incomingEntries: [buildEntry({ status: '受付中' })],
+      incomingEntries: [buildEntry({ status: '会計待ち' })],
       scope,
     });
 
     upsertReceptionStatusOverride({
       date,
-      patientId: 'P-001',
-      status: '診療中',
+      rowKey: 'reception:R-001',
+      status: '再計待',
       source: 'charts_open',
       scope,
     });
     upsertReceptionStatusOverride({
       date,
-      patientId: 'P-001',
-      status: '受付中',
+      rowKey: 'reception:R-001',
+      status: '会計待ち',
       source: 'manual',
       scope,
     });
@@ -137,62 +137,7 @@ describe('receptionDailyState', () => {
       incomingEntries: [],
       scope,
     });
-    expect(resolved.entries[0]?.workflowStatus).toBe('診療中');
-  });
-
-  it('applies workflow override by row-local key and does not bleed to another row of the same patient', () => {
-    const date = '2026-02-11';
-    resolveReceptionEntriesForDate({
-      date,
-      incomingEntries: [
-        buildEntry({ id: 'row-1', receptionId: 'R-001', patientId: 'P-001', status: '受付中' }),
-        buildEntry({ id: 'row-2', receptionId: 'R-002', patientId: 'P-001', status: '受付中', appointmentTime: '10:00' }),
-      ],
-      scope,
-    });
-
-    upsertReceptionStatusOverride({
-      date,
-      patientId: 'P-001',
-      status: '診療中',
-      source: 'charts_open',
-      scope,
-      fallbackEntry: buildEntry({ id: 'row-1', receptionId: 'R-001', patientId: 'P-001' }),
-    });
-
-    const resolved = resolveReceptionEntriesForDate({
-      date,
-      incomingEntries: [],
-      scope,
-    });
-    expect(resolved.entries.find((entry) => entry.receptionId === 'R-001')?.workflowStatus).toBe('診療中');
-    expect(resolved.entries.find((entry) => entry.receptionId === 'R-002')?.workflowStatus).toBeUndefined();
-  });
-
-  it('demotes paid rows to 再計待 on charts_start and preserves the safe reason', () => {
-    const date = '2026-02-11';
-    resolveReceptionEntriesForDate({
-      date,
-      incomingEntries: [buildEntry({ receptionId: 'R-001', status: '会計済み' })],
-      scope,
-    });
-
-    upsertReceptionStatusOverride({
-      date,
-      patientId: 'P-001',
-      status: '診療中',
-      source: 'charts_start',
-      scope,
-      fallbackEntry: buildEntry({ receptionId: 'R-001', patientId: 'P-001', status: '会計済み' }),
-    });
-
-    const resolved = resolveReceptionEntriesForDate({
-      date,
-      incomingEntries: [],
-      scope,
-    });
-    expect(resolved.entries[0]?.workflowStatus).toBe('再計待');
-    expect(resolved.entries[0]?.workflowReason).toBe('会計済み後に変更があったため再会計が必要です。');
+    expect(resolved.entries[0]?.status).toBe('再計待');
   });
 
   it('returns snapshot dates in descending order', () => {
@@ -219,8 +164,8 @@ describe('receptionDailyState', () => {
     });
     upsertReceptionStatusOverride({
       date,
-      patientId: 'P-001',
-      status: '診療中',
+      rowKey: 'reception:R-001',
+      status: '再計待',
       source: 'manual',
       scope,
     });
@@ -237,6 +182,36 @@ describe('receptionDailyState', () => {
       scope,
     });
     expect(resolved.entries[0]?.status).toBe('受付中');
+  });
+
+  it('applies override only to the matching row when the same patient has multiple receptions', () => {
+    const date = '2026-02-11';
+    resolveReceptionEntriesForDate({
+      date,
+      incomingEntries: [
+        buildEntry({ id: 'row-a', receptionId: 'R-100', patientId: 'P-100', appointmentTime: '09:00', status: '会計待ち' }),
+        buildEntry({ id: 'row-b', receptionId: 'R-101', patientId: 'P-100', appointmentTime: '11:00', status: '会計待ち' }),
+      ],
+      scope,
+    });
+
+    upsertReceptionStatusOverride({
+      date,
+      rowKey: 'reception:R-101',
+      patientId: 'P-100',
+      status: '再計待',
+      source: 'manual',
+      scope,
+    });
+
+    const resolved = resolveReceptionEntriesForDate({
+      date,
+      incomingEntries: [],
+      scope,
+    });
+
+    expect(resolved.entries.find((entry) => entry.receptionId === 'R-100')?.status).toBe('会計待ち');
+    expect(resolved.entries.find((entry) => entry.receptionId === 'R-101')?.status).toBe('再計待');
   });
 
   it('legacy storage snapshot は cleanup するが復元しない', () => {

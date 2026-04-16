@@ -5,7 +5,7 @@ import { e2eAuthSession, profile, seedAuthSession } from '../e2e/helpers/orcaMas
 const fulfillJson = (route: any, body: unknown) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 
-const RUN_ID = '20260417T120000Z';
+const RUN_ID = '20260417T121000Z';
 const VISIT_DATE = '2026-04-17';
 const FACILITY_ID = encodeURIComponent(e2eAuthSession.credentials.facilityId);
 const CACHE_STORAGE_KEY = `charts:orca-claim-send:${e2eAuthSession.credentials.facilityId}:${e2eAuthSession.credentials.userId}`;
@@ -18,8 +18,8 @@ const visitEntry = {
   encounterKey: 'ENC-2402',
   patient: {
     patientId: '000002',
-    wholeName: 'MVP 患者',
-    wholeNameKana: 'エムブイピー カンジャ',
+    wholeName: '再計待 患者',
+    wholeNameKana: 'サイケイマチ カンジャ',
     birthDate: '1990-01-01',
     sex: 'F',
   },
@@ -86,10 +86,10 @@ const stubReceptionApis = async (page: import('@playwright/test').Page) => {
   );
 };
 
-test.describe('REC-001 Reception status MVP', () => {
+test.describe('Reception billing correction note', () => {
   test.skip(profile !== 'msw', 'MSW プロファイル専用（Stage 接続禁止）');
 
-  test('keeps workflow in 会計待ち when only send success is cached', async ({ page }) => {
+  test('keeps rebill note visible and projects the row into 再計待', async ({ page }) => {
     await seedAuthSession(page);
     await stubReceptionApis(page);
     await page.addInitScript(([cacheKey]) => {
@@ -103,6 +103,8 @@ test.describe('REC-001 Reception status MVP', () => {
             scheduleKey: 'SCH-2402',
             encounterKey: 'ENC-2402',
             sendStatus: 'success',
+            correctionKind: 'rebill',
+            correctionReason: '会計済み後に変更があったため再会計が必要です。',
             savedAt: '2026-04-17T00:00:00.000Z',
           },
         }),
@@ -112,13 +114,11 @@ test.describe('REC-001 Reception status MVP', () => {
     await page.goto(`/f/${FACILITY_ID}/reception?date=${VISIT_DATE}`);
     await expect(page.getByRole('heading', { name: '受付' })).toBeVisible();
 
-    await page.getByRole('tab', { name: /会計待ち/ }).click();
+    await page.getByRole('tab', { name: /再計待/ }).click();
     const row = page.locator('[data-test-id="reception-entry-row"][data-patient-id="000002"]').first();
     await expect(row).toBeVisible({ timeout: 20_000 });
-    await expect(row).toHaveAttribute('data-reception-status', '会計待ち');
+    await expect(row).toHaveAttribute('data-reception-status', '再計待');
     await expect(row.getByText(/送信:\s*送信済/)).toBeVisible();
-
-    await page.getByRole('tab', { name: /会計済/ }).click();
-    await expect(page.locator('[data-test-id="reception-entry-row"][data-patient-id="000002"]')).toHaveCount(0);
+    await expect(row.getByText('再計待: 会計済み後に変更があったため再会計が必要です。')).toBeVisible();
   });
 });

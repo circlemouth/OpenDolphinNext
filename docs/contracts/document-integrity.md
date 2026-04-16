@@ -52,6 +52,7 @@
 - hash / seal / algorithm / version の不一致は fixed reasonCode を返す。
 - `mode=enforce` の場合のみ 409 を返す。
 - `mode=permissive` は監査記録のみで読み取り自体は継続する。
+- attachment canonicalization には `linkId` / `linkRelation` も含め、asset owner と reference row を同一視しない。
 
 ## reasonCode 一覧
 - `integrity_record_missing`

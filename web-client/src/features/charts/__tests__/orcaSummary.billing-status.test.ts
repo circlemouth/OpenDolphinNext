@@ -4,6 +4,7 @@ import {
   buildBillingStatusUpdateAudit,
   buildQueueEntryFromSendCache,
   buildSendClaimBundle,
+  resolveBillingStatusDecision,
   resolveBillingStatusFromInvoice,
   resolveBillingStatusUpdateDurationMs,
 } from '../orcaBillingStatus';
@@ -43,10 +44,16 @@ describe('resolveBillingStatusFromInvoice', () => {
 });
 
 describe('buildSendClaimBundle', () => {
-  it('送信結果から請求バンドルを組み立てる', () => {
+  it('収納確認済みなら会計済みとして請求バンドルを組み立てる', () => {
     const bundle = buildSendClaimBundle(buildSendCache(), new Set(['INV-1']));
     expect(bundle.invoiceNumber).toBe('INV-1');
     expect(bundle.claimStatus).toBe('会計済み');
+  });
+
+  it('送信成功だけでは会計済みにしない', () => {
+    const bundle = buildSendClaimBundle(buildSendCache());
+    expect(bundle.claimStatus).toBe('会計待ち');
+    expect(bundle.claimStatusText).toBe('会計待ち+送信済');
   });
 });
 
@@ -60,6 +67,38 @@ describe('buildQueueEntryFromSendCache', () => {
     const queue = buildQueueEntryFromSendCache(buildSendCache({ sendStatus: 'error', invoiceNumber: 'INV-2' }), new Set());
     expect(queue.phase).toBe('failed');
   });
+
+  it('paid source 未確定なら sent を維持する', () => {
+    const queue = buildQueueEntryFromSendCache(buildSendCache());
+    expect(queue.phase).toBe('sent');
+  });
+});
+
+describe('resolveBillingStatusDecision', () => {
+  it('UG-01: paid source 未確定なら会計待ち+送信済にする', () => {
+    const decision = resolveBillingStatusDecision({
+      invoiceNumber: 'INV-1',
+      sendStatus: 'success',
+      paidInvoiceNumbers: undefined,
+    });
+    expect(decision.status).toBe('会計待ち');
+    expect(decision.statusText).toBe('会計待ち+送信済');
+    expect(decision.confirmationSource).toBe('unresolved');
+    expect(decision.settingNote).toContain('収納情報の確認前');
+  });
+
+  it('UG-12: correction required は note のみで workflow state に昇格しない', () => {
+    const decision = resolveBillingStatusDecision({
+      invoiceNumber: 'INV-1',
+      sendStatus: 'success',
+      paidInvoiceNumbers: new Set(),
+      correctionRequired: true,
+    });
+    expect(decision.status).toBe('会計待ち');
+    expect(decision.statusText).toBe('会計待ち+送信済');
+    expect(decision.correctionState).toBe('required');
+    expect(decision.correctionNote).toContain('補正が必要');
+  });
 });
 
 describe('resolveBillingStatusUpdateDurationMs', () => {
@@ -70,7 +109,16 @@ describe('resolveBillingStatusUpdateDurationMs', () => {
 
   it('監査ペイロードに durationMs が記録される', () => {
     const duration = resolveBillingStatusUpdateDurationMs(100, 250);
-    const payload = buildBillingStatusUpdateAudit({ status: '会計済み', invoiceNumber: 'INV-1', durationMs: duration });
+    const payload = buildBillingStatusUpdateAudit({
+      status: '会計済み',
+      statusText: '会計済み',
+      invoiceNumber: 'INV-1',
+      durationMs: duration,
+      transmissionSource: 'medical-mod-v2',
+      confirmationSource: 'income-info',
+      correctionState: 'none',
+    });
     expect(payload.durationMs).toBe(duration);
+    expect(payload.confirmationSource).toBe('income-info');
   });
 });

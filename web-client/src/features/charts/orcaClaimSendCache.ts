@@ -1,25 +1,6 @@
 type StorageScope = { facilityId?: string | null; userId?: string | null };
 const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 
-type OrcaClaimSendContext = {
-  patientId?: string | null;
-  appointmentId?: string | null;
-  receptionId?: string | null;
-  scheduleKey?: string | null;
-  encounterKey?: string | null;
-};
-
-const normalizeOptionalString = (value?: string | null) => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-};
-
-const buildRowLocalKey = (context?: OrcaClaimSendContext | null) =>
-  normalizeOptionalString(context?.encounterKey) ??
-  normalizeOptionalString(context?.scheduleKey) ??
-  normalizeOptionalString(context?.receptionId) ??
-  normalizeOptionalString(context?.appointmentId);
-
 export type OrcaMedicalWarningUi = {
   medicalWarning?: string;
   message?: string;
@@ -41,12 +22,12 @@ export type OrcaMedicalWarningUi = {
 };
 
 export type OrcaClaimSendCacheEntry = {
+  cacheKey?: string;
   patientId?: string;
   appointmentId?: string;
   receptionId?: string;
   scheduleKey?: string;
   encounterKey?: string;
-  rowLocalKey?: string;
   performDate?: string;
   // NOTE: invoiceNumber/medicalWarnings は PHI になり得るため永続化しない（メモリのみ）。
   invoiceNumber?: string;
@@ -56,6 +37,8 @@ export type OrcaClaimSendCacheEntry = {
   apiResult?: string;
   sendStatus?: 'success' | 'error';
   errorMessage?: string;
+  correctionKind?: 'confirm' | 'rebill';
+  correctionReason?: string;
   medicalWarnings?: OrcaMedicalWarningUi[];
   savedAt: string;
 };
@@ -76,15 +59,30 @@ const buildKey = (scope: StorageScope) => {
   return `charts:orca-claim-send:${facility}:${user}`;
 };
 
-const buildStoreKey = (value: OrcaClaimSendCacheInput | OrcaClaimSendCacheEntry) =>
-  normalizeOptionalString(value.rowLocalKey) ??
-  buildRowLocalKey(value) ??
-  normalizeOptionalString(value.patientId);
-
-const buildVolatileKey = (scope: StorageScope, value: OrcaClaimSendCacheInput | OrcaClaimSendCacheEntry) => {
-  const storeKey = buildStoreKey(value);
-  return storeKey ? `${buildKey(scope)}:${storeKey}` : null;
+const normalizeOptionalString = (value: unknown) => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
 };
+
+export const resolveOrcaClaimSendMatchKey = (
+  value?: Pick<OrcaClaimSendCacheEntry, 'encounterKey' | 'scheduleKey' | 'receptionId' | 'appointmentId'> | null,
+) => {
+  const encounterKey = normalizeOptionalString(value?.encounterKey);
+  if (encounterKey) return `encounter:${encounterKey}`;
+  const scheduleKey = normalizeOptionalString(value?.scheduleKey);
+  if (scheduleKey) return `schedule:${scheduleKey}`;
+  const receptionId = normalizeOptionalString(value?.receptionId);
+  if (receptionId) return `reception:${receptionId}`;
+  const appointmentId = normalizeOptionalString(value?.appointmentId);
+  if (appointmentId) return `appointment:${appointmentId}`;
+  return undefined;
+};
+
+const resolveStoreKey = (value: OrcaClaimSendCacheInput) =>
+  resolveOrcaClaimSendMatchKey(value) ?? (normalizeOptionalString(value.patientId) ? `patient:${normalizeOptionalString(value.patientId)}` : undefined);
+
+const buildVolatileKey = (scope: StorageScope, cacheKey: string) => `${buildKey(scope)}:${cacheKey}`;
 
 const resolveScope = (scope: StorageScope): StorageScope => {
   if (scope.facilityId && scope.userId) return scope;
@@ -106,40 +104,41 @@ export function saveOrcaClaimSendCache(value: OrcaClaimSendCacheInput, scope: St
   if (typeof sessionStorage === 'undefined') return;
   if (!value.patientId) return;
   const resolvedScope = resolveScope(scope);
+  const cacheKey = resolveStoreKey(value);
+  if (!cacheKey) return;
   const key = buildKey(resolvedScope);
   const savedAt = new Date().toISOString();
-  const rowLocalKey = buildStoreKey(value);
   const volatilePayload: OrcaClaimSendCacheEntry = {
     ...value,
-    rowLocalKey,
+    cacheKey,
     savedAt,
   };
-  const volatileKey = buildVolatileKey(resolvedScope, volatilePayload);
-  if (volatileKey) {
-    volatileClaimSendCache.set(volatileKey, volatilePayload);
-  }
+  volatileClaimSendCache.set(buildVolatileKey(resolvedScope, cacheKey), volatilePayload);
   const payload: OrcaClaimSendCacheEntry = {
+    cacheKey,
     patientId: value.patientId,
     appointmentId: value.appointmentId,
     receptionId: value.receptionId,
     scheduleKey: value.scheduleKey,
     encounterKey: value.encounterKey,
-    rowLocalKey,
     performDate: value.performDate,
     runId: value.runId,
     traceId: value.traceId,
     apiResult: value.apiResult,
     sendStatus: value.sendStatus,
     errorMessage: value.errorMessage,
+    correctionKind: value.correctionKind,
+    correctionReason: value.correctionReason,
     medicalWarnings: value.medicalWarnings,
     savedAt,
   };
   const store = loadOrcaClaimSendCache(resolvedScope) ?? {};
-  if (!rowLocalKey) return;
-  store[rowLocalKey] = payload;
+  store[cacheKey] = payload;
   sessionStorage.setItem(key, JSON.stringify(store));
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('orca-claim-send-cache-update', { detail: { patientId: value.patientId } }));
+    window.dispatchEvent(
+      new CustomEvent('orca-claim-send-cache-update', { detail: { patientId: value.patientId, cacheKey } }),
+    );
   }
 }
 
@@ -152,69 +151,38 @@ const isExpired = (savedAt?: string) => {
 
 const normalizeEntry = (entry: Partial<OrcaClaimSendCacheEntry> | null | undefined): OrcaClaimSendCacheEntry | null => {
   if (!entry) return null;
-  const patientId = typeof entry.patientId === 'string' ? entry.patientId.trim() : '';
+  const patientId = normalizeOptionalString(entry.patientId);
   if (!patientId) return null;
   const savedAt = typeof entry.savedAt === 'string' ? entry.savedAt : undefined;
   if (isExpired(savedAt)) return null;
   const resolvedSavedAt = savedAt ?? new Date().toISOString();
-  const appointmentId = typeof entry.appointmentId === 'string' ? entry.appointmentId : undefined;
-  const receptionId = typeof entry.receptionId === 'string' ? entry.receptionId : undefined;
-  const scheduleKey = typeof entry.scheduleKey === 'string' ? entry.scheduleKey : undefined;
-  const encounterKey = typeof entry.encounterKey === 'string' ? entry.encounterKey : undefined;
-  const rowLocalKey =
-    typeof entry.rowLocalKey === 'string' ? entry.rowLocalKey : buildRowLocalKey({ appointmentId, receptionId, scheduleKey, encounterKey });
+  const appointmentId = normalizeOptionalString(entry.appointmentId);
+  const receptionId = normalizeOptionalString(entry.receptionId);
+  const scheduleKey = normalizeOptionalString(entry.scheduleKey);
+  const encounterKey = normalizeOptionalString(entry.encounterKey);
+  const cacheKey =
+    normalizeOptionalString(entry.cacheKey) ??
+    resolveOrcaClaimSendMatchKey({ appointmentId, receptionId, scheduleKey, encounterKey }) ??
+    `patient:${patientId}`;
   return {
+    cacheKey,
     patientId,
     appointmentId,
     receptionId,
     scheduleKey,
     encounterKey,
-    rowLocalKey,
     performDate: typeof entry.performDate === 'string' ? entry.performDate : undefined,
     runId: typeof entry.runId === 'string' ? entry.runId : undefined,
     traceId: typeof entry.traceId === 'string' ? entry.traceId : undefined,
     apiResult: typeof entry.apiResult === 'string' ? entry.apiResult : undefined,
     sendStatus: entry.sendStatus === 'success' || entry.sendStatus === 'error' ? entry.sendStatus : undefined,
     errorMessage: typeof entry.errorMessage === 'string' ? entry.errorMessage : undefined,
+    correctionKind: entry.correctionKind === 'confirm' || entry.correctionKind === 'rebill' ? entry.correctionKind : undefined,
+    correctionReason: typeof entry.correctionReason === 'string' ? entry.correctionReason : undefined,
     medicalWarnings: Array.isArray(entry.medicalWarnings) ? entry.medicalWarnings : undefined,
     savedAt: resolvedSavedAt,
   };
 };
-
-const resolveMatchingEntries = (
-  store: OrcaClaimSendCacheStore | null | undefined,
-  context?: OrcaClaimSendContext | null,
-): OrcaClaimSendCacheEntry[] => {
-  const patientId = normalizeOptionalString(context?.patientId);
-  if (!patientId || !store) return [];
-  const rowLocalKey = buildRowLocalKey(context);
-  return Object.values(store)
-    .filter((entry) => entry.patientId === patientId)
-    .filter((entry) => {
-      if (rowLocalKey) {
-        if (entry.rowLocalKey) return entry.rowLocalKey === rowLocalKey;
-        if (context?.encounterKey && entry.encounterKey === normalizeOptionalString(context.encounterKey)) return true;
-        if (context?.scheduleKey && entry.scheduleKey === normalizeOptionalString(context.scheduleKey)) return true;
-        if (context?.receptionId && entry.receptionId === normalizeOptionalString(context.receptionId)) return true;
-        if (context?.appointmentId && entry.appointmentId === normalizeOptionalString(context.appointmentId)) return true;
-        return false;
-      }
-      return true;
-    })
-    .sort((left, right) => Date.parse(right.savedAt) - Date.parse(left.savedAt));
-};
-
-export function findOrcaClaimSendEntryForContext(
-  store: OrcaClaimSendCacheStore | null | undefined,
-  context?: OrcaClaimSendContext | null,
-) {
-  const matches = resolveMatchingEntries(store, context);
-  const rowLocalKey = buildRowLocalKey(context);
-  if (rowLocalKey) {
-    return matches.length === 1 ? matches[0] : null;
-  }
-  return matches.length === 1 ? matches[0] : null;
-}
 
 export function loadOrcaClaimSendCache(scope: StorageScope): OrcaClaimSendCacheStore | null {
   if (typeof sessionStorage === 'undefined') return null;
@@ -235,33 +203,36 @@ export function loadOrcaClaimSendCache(scope: StorageScope): OrcaClaimSendCacheS
     if ('savedAt' in parsed || 'patientId' in parsed) {
       const single = normalizeEntry(parsed as OrcaClaimSendCacheEntry);
       if (single) {
-        const storeKey = buildStoreKey(single);
-        if (!storeKey) {
+        const cacheKey = single.cacheKey;
+        if (!cacheKey) {
           sessionStorage.removeItem(key);
           return null;
         }
-        normalizedStore[storeKey] = single;
+        normalizedStore[cacheKey] = single;
         changed = true;
       } else {
         sessionStorage.removeItem(key);
         return null;
       }
     } else {
-      Object.entries(parsed as OrcaClaimSendCacheStore).forEach(([storeKey, entry]) => {
+      Object.entries(parsed as OrcaClaimSendCacheStore).forEach(([patientId, entry]) => {
         const normalized = normalizeEntry({
           ...(entry ?? {}),
-          rowLocalKey: typeof entry?.rowLocalKey === 'string' ? entry.rowLocalKey : storeKey,
-          patientId: typeof entry?.patientId === 'string' ? entry.patientId : undefined,
+          patientId: normalizeOptionalString(entry?.patientId) ?? patientId,
         });
         if (!normalized) {
           changed = true;
           return;
         }
-        const normalizedStoreKey = buildStoreKey(normalized);
-        if (!normalizedStoreKey || normalizedStoreKey !== storeKey) {
+        if (normalized.cacheKey !== patientId) {
           changed = true;
         }
-        normalizedStore[normalizedStoreKey ?? storeKey] = normalized;
+        const normalizedCacheKey = normalized.cacheKey;
+        if (!normalizedCacheKey) {
+          changed = true;
+          return;
+        }
+        normalizedStore[normalizedCacheKey] = normalized;
       });
     }
 
@@ -288,18 +259,36 @@ export function loadOrcaClaimSendCache(scope: StorageScope): OrcaClaimSendCacheS
 export function getOrcaClaimSendEntry(scope: StorageScope, patientId?: string | null) {
   if (!patientId) return null;
   const resolvedScope = resolveScope(scope);
-  const store = loadOrcaClaimSendCache(resolvedScope);
-  const context = { patientId };
-  const volatileMatches = Array.from(volatileClaimSendCache.entries())
-    .filter(([key, entry]) => key.startsWith(`${buildKey(resolvedScope)}:`) && entry.patientId === patientId)
-    .sort((left, right) => Date.parse(right[1].savedAt) - Date.parse(left[1].savedAt));
-  for (const [volatileKey, volatile] of volatileMatches) {
-    if (!isExpired(volatile.savedAt)) {
-      const candidate = findOrcaClaimSendEntryForContext({ [volatileKey]: volatile }, context);
-      if (candidate) return candidate;
-      break;
-    }
+  const normalizedPatientId = patientId.trim();
+  const volatileEntries = Array.from(volatileClaimSendCache.entries())
+    .filter(([key, entry]) => key.startsWith(`${buildKey(resolvedScope)}:`) && entry.patientId === normalizedPatientId)
+    .sort(([, left], [, right]) => Date.parse(right.savedAt) - Date.parse(left.savedAt));
+  for (const [volatileKey, volatile] of volatileEntries) {
+    if (!isExpired(volatile.savedAt)) return volatile;
     volatileClaimSendCache.delete(volatileKey);
   }
-  return findOrcaClaimSendEntryForContext(store, context);
+  const store = loadOrcaClaimSendCache(resolvedScope);
+  if (!store) return null;
+  const matches = Object.values(store)
+    .filter((entry) => entry.patientId === normalizedPatientId)
+    .sort((left, right) => Date.parse(right.savedAt) - Date.parse(left.savedAt));
+  return matches[0] ?? null;
+}
+
+export function findOrcaClaimSendEntryForMatch(
+  store: OrcaClaimSendCacheStore | null | undefined,
+  match: Pick<OrcaClaimSendCacheEntry, 'patientId' | 'appointmentId' | 'receptionId' | 'scheduleKey' | 'encounterKey'>,
+  options?: { allowPatientFallback?: boolean },
+) {
+  if (!store) return null;
+  const entries = Object.values(store).sort((left, right) => Date.parse(right.savedAt) - Date.parse(left.savedAt));
+  const matchKey = resolveOrcaClaimSendMatchKey(match);
+  if (matchKey) {
+    return entries.find((entry) => entry.cacheKey === matchKey) ?? null;
+  }
+  if (!options?.allowPatientFallback) return null;
+  const patientId = normalizeOptionalString(match.patientId);
+  if (!patientId) return null;
+  const patientMatches = entries.filter((entry) => entry.patientId === patientId);
+  return patientMatches.length === 1 ? patientMatches[0] ?? null : null;
 }

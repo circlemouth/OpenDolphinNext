@@ -1,6 +1,7 @@
 package open.dolphin.rest;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
+import jakarta.persistence.PersistenceContext;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
@@ -18,6 +22,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -28,19 +33,32 @@ import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.ModuleModel;
 import open.dolphin.infomodel.SchemaModel;
 import open.dolphin.infomodel.StringList;
+import open.dolphin.infomodel.UserModel;
 import open.dolphin.rest.support.LegacyJsonSupport;
 import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.AuditTrailService;
 import open.dolphin.session.KarteServiceBean;
+import open.dolphin.session.PatientImageServiceBean;
 import open.dolphin.session.UserServiceBean;
 import open.dolphin.session.framework.SessionTraceContext;
 import open.dolphin.session.framework.SessionTraceManager;
+import open.dolphin.storage.attachment.AttachmentStorageManager;
 
 @Path("/karte")
 public class KarteDocumentWriteResource extends AbstractResource {
 
     private static final Logger LOGGER = Logger.getLogger(KarteDocumentWriteResource.class.getName());
+    private static final String ERROR_CODE_ATTACHMENT_REFERENCE_UNSUPPORTED = "attachment_reference_unsupported";
+    private static final String ERROR_CODE_ATTACHMENT_REFERENCE_NOT_FOUND = "attachment_reference_not_found";
+    private static final String ERROR_CODE_ATTACHMENT_REFERENCE_SCOPE_MISMATCH = "attachment_reference_scope_mismatch";
+    private static final String ERROR_CODE_ATTACHMENT_REFERENCE_CONTRACT = "attachment_reference_contract_violation";
+    private static final String QUERY_ATTACHMENT_REFERENCE_SOURCE =
+            "select a from AttachmentModel a "
+                    + "join fetch a.karte k "
+                    + "join fetch k.patient p "
+                    + "left join fetch a.creator "
+                    + "where a.id=:id";
 
     @Inject
     private KarteServiceBean karteServiceBean;
@@ -57,6 +75,9 @@ public class KarteDocumentWriteResource extends AbstractResource {
     @Inject
     private ObjectMapper objectMapper;
 
+    @PersistenceContext
+    private EntityManager em;
+
     @Context
     private HttpServletRequest httpServletRequest;
 
@@ -66,6 +87,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String postDocument(String json) throws IOException {
         DocumentModel document = readJson(json, DocumentModel.class);
+        normalizeAttachmentReferencePayload(document, null);
         ensureDocumentPayloadFacility(document, null);
         populateDocumentRelations(document);
 
@@ -82,6 +104,7 @@ public class KarteDocumentWriteResource extends AbstractResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String putDocument(String json) throws IOException {
         DocumentModel document = readJson(json, DocumentModel.class);
+        normalizeAttachmentReferencePayload(document, null);
         ensureDocumentPayloadFacility(document, null);
         populateDocumentRelations(document);
 
@@ -229,6 +252,251 @@ public class KarteDocumentWriteResource extends AbstractResource {
                 attachmentModel.setDocumentModel(document);
             }
         }
+    }
+
+    private void normalizeAttachmentReferencePayload(DocumentModel document, HttpServletRequest request) {
+        if (document == null) {
+            return;
+        }
+        List<AttachmentModel> attachments = document.getAttachment();
+        if (attachments == null || attachments.isEmpty()) {
+            return;
+        }
+        List<AttachmentModel> resolvedAttachments = new ArrayList<>(attachments.size());
+        boolean usedResolvedReference = false;
+        String authoritativePatientId = null;
+        long authoritativeKarteId = 0L;
+        HttpServletRequest effectiveRequest = resolveRequest(request);
+        String actorFacility = requireActorFacilityId(effectiveRequest);
+        UserModel actor = resolveActorUser(effectiveRequest);
+        for (AttachmentModel attachment : attachments) {
+            if (attachment == null) {
+                continue;
+            }
+            if (isResolvedAttachmentPayload(attachment)) {
+                resolvedAttachments.add(attachment);
+                continue;
+            }
+            if (attachment.getId() <= 0L) {
+                throw attachmentReferenceError(
+                        effectiveRequest,
+                        Response.Status.BAD_REQUEST,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_UNSUPPORTED,
+                        "Attachment reference payload is unsupported without an attachment id.",
+                        Map.of("attachmentId", attachment.getId()));
+            }
+            AttachmentModel source = resolveAttachmentReferenceSource(attachment.getId(), effectiveRequest, actorFacility);
+            if (!PatientImageServiceBean.LINK_RELATION_PATIENT_IMAGE_PHASEA.equals(source.getLinkRelation())) {
+                throw attachmentReferenceError(
+                        effectiveRequest,
+                        Response.Status.CONFLICT,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_UNSUPPORTED,
+                        "Attachment reference payload only supports patient image assets.",
+                        Map.of("attachmentId", attachment.getId(), "linkRelation", source.getLinkRelation()));
+            }
+            if (source.getKarteBean() == null || source.getKarteBean().getPatientModel() == null) {
+                throw attachmentReferenceError(
+                        effectiveRequest,
+                        Response.Status.CONFLICT,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_CONTRACT,
+                        "Attachment reference source is missing patient scope.",
+                        Map.of("attachmentId", attachment.getId()));
+            }
+            String sourcePatientId = source.getKarteBean().getPatientModel().getPatientId();
+            long sourceKarteId = source.getKarteBean().getId();
+            if (sourcePatientId == null || sourcePatientId.isBlank() || sourceKarteId <= 0L) {
+                throw attachmentReferenceError(
+                        effectiveRequest,
+                        Response.Status.CONFLICT,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_CONTRACT,
+                        "Attachment reference source is missing authoritative identifiers.",
+                        Map.of("attachmentId", attachment.getId(), "karteId", sourceKarteId, "patientId", sourcePatientId));
+            }
+            if (authoritativePatientId == null) {
+                authoritativePatientId = sourcePatientId;
+                authoritativeKarteId = sourceKarteId;
+            } else if (!authoritativePatientId.equals(sourcePatientId) || authoritativeKarteId != sourceKarteId) {
+                throw attachmentReferenceError(
+                        effectiveRequest,
+                        Response.Status.CONFLICT,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_SCOPE_MISMATCH,
+                        "Attachment references must belong to the same patient chart.",
+                        Map.of(
+                                "attachmentId", attachment.getId(),
+                                "sourcePatientId", sourcePatientId,
+                                "authoritativePatientId", authoritativePatientId,
+                                "sourceKarteId", sourceKarteId,
+                                "authoritativeKarteId", authoritativeKarteId));
+            }
+            resolvedAttachments.add(cloneAttachmentReference(source, attachment.getId(), actor));
+            usedResolvedReference = true;
+        }
+        if (usedResolvedReference) {
+            document.setAttachment(resolvedAttachments);
+            applyReferenceDocumentDefaults(document, actor, authoritativeKarteId, authoritativePatientId);
+        }
+    }
+
+    private boolean isResolvedAttachmentPayload(AttachmentModel attachment) {
+        return attachment != null
+                && attachment.getId() <= 0L
+                && hasText(attachment.getUri())
+                && hasText(attachment.getDigest());
+    }
+
+    private AttachmentModel resolveAttachmentReferenceSource(long attachmentId,
+                                                            HttpServletRequest request,
+                                                            String actorFacility) {
+        ensureAttachmentFacilityAccess(attachmentId, request);
+        try {
+            AttachmentModel source = em.createQuery(QUERY_ATTACHMENT_REFERENCE_SOURCE, AttachmentModel.class)
+                    .setParameter("id", attachmentId)
+                    .getSingleResult();
+            if (source == null) {
+                throw attachmentReferenceError(
+                        request,
+                        Response.Status.NOT_FOUND,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_NOT_FOUND,
+                        "Attachment reference source was not found.",
+                        Map.of("attachmentId", attachmentId));
+            }
+            String sourceFacility = source.getKarteBean() != null
+                    && source.getKarteBean().getPatientModel() != null
+                    ? source.getKarteBean().getPatientModel().getFacilityId()
+                    : null;
+            if (sourceFacility == null || sourceFacility.isBlank() || !actorFacility.equals(sourceFacility.trim())) {
+                throw attachmentReferenceError(
+                        request,
+                        Response.Status.FORBIDDEN,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_SCOPE_MISMATCH,
+                        "Attachment reference source is outside the current facility.",
+                        Map.of("attachmentId", attachmentId, "actorFacilityId", actorFacility, "sourceFacilityId", sourceFacility));
+            }
+            if (!hasText(source.getUri()) || !hasText(source.getDigest())) {
+                throw attachmentReferenceError(
+                        request,
+                        Response.Status.CONFLICT,
+                        ERROR_CODE_ATTACHMENT_REFERENCE_CONTRACT,
+                        "Attachment reference source is missing object metadata.",
+                        Map.of("attachmentId", attachmentId));
+            }
+            return source;
+        } catch (NoResultException ex) {
+            throw attachmentReferenceError(
+                    request,
+                    Response.Status.NOT_FOUND,
+                    ERROR_CODE_ATTACHMENT_REFERENCE_NOT_FOUND,
+                    "Attachment reference source was not found.",
+                    Map.of("attachmentId", attachmentId));
+        }
+    }
+
+    private AttachmentModel cloneAttachmentReference(AttachmentModel source, long sourceAttachmentId, UserModel actor) {
+        AttachmentModel reference = new AttachmentModel();
+        reference.setFileName(source.getFileName());
+        reference.setContentType(source.getContentType());
+        reference.setContentSize(source.getContentSize());
+        reference.setLastModified(source.getLastModified());
+        reference.setDigest(source.getDigest());
+        reference.setTitle(source.getTitle());
+        reference.setUri(source.getUri());
+        reference.setStorageProvider(source.getStorageProvider());
+        reference.setStorageBucket(source.getStorageBucket());
+        reference.setStorageKey(source.getStorageKey());
+        reference.setStorageVersionId(source.getStorageVersionId());
+        reference.setStorageEtag(source.getStorageEtag());
+        reference.setExtension(source.getExtension());
+        reference.setMemo(source.getMemo());
+        reference.setLinkId(sourceAttachmentId);
+        reference.setLinkRelation(AttachmentStorageManager.LINK_RELATION_REFERENCE_ONLY);
+        reference.setStatus(source.getStatus());
+        reference.setStarted(source.getStarted());
+        reference.setConfirmed(source.getConfirmed());
+        reference.setRecorded(source.getRecorded());
+        reference.setEnded(null);
+        reference.setKarteBean(source.getKarteBean());
+        reference.setUserModel(actor != null ? actor : source.getUserModel());
+        reference.setContentBytes(null);
+        return reference;
+    }
+
+    private void applyReferenceDocumentDefaults(DocumentModel document,
+                                               UserModel actor,
+                                               long authoritativeKarteId,
+                                               String authoritativePatientId) {
+        if (document.getKarteBean() == null || document.getKarteBean().getId() <= 0L) {
+            document.setKarteBean(new open.dolphin.infomodel.KarteBean());
+        }
+        document.getKarteBean().setId(authoritativeKarteId);
+        if (document.getDocInfoModel() == null) {
+            document.setDocInfoModel(new open.dolphin.infomodel.DocInfoModel());
+        }
+        if (!hasText(document.getDocInfoModel().getDocId())) {
+            document.getDocInfoModel().setDocId(UUID.randomUUID().toString().replace("-", ""));
+        }
+        if (!hasText(document.getDocInfoModel().getTitle())) {
+            document.getDocInfoModel().setTitle("文書画像参照");
+        }
+        if (!hasText(document.getDocInfoModel().getPurpose())) {
+            document.getDocInfoModel().setPurpose(IInfoModel.PURPOSE_RECORD);
+        }
+        if (!hasText(document.getStatus())) {
+            document.setStatus(IInfoModel.STATUS_TMP);
+        }
+        if (document.getStarted() == null || document.getConfirmed() == null || document.getRecorded() == null) {
+            java.util.Date now = new java.util.Date();
+            if (document.getStarted() == null) {
+                document.setStarted(now);
+            }
+            if (document.getConfirmed() == null) {
+                document.setConfirmed(now);
+            }
+            if (document.getRecorded() == null) {
+                document.setRecorded(now);
+            }
+        }
+        if (actor != null) {
+            document.setUserModel(actor);
+        }
+        document.getDocInfoModel().setStatus(document.getStatus());
+        if (authoritativePatientId != null && !authoritativePatientId.isBlank()) {
+            document.getDocInfoModel().setPatientId(authoritativePatientId);
+        }
+    }
+
+    private void ensureAttachmentFacilityAccess(long attachmentId, HttpServletRequest request) {
+        if (attachmentId <= 0L) {
+            return;
+        }
+        HttpServletRequest effectiveRequest = resolveRequest(request);
+        String actorFacility = requireActorFacilityId(effectiveRequest);
+        String targetFacility = karteServiceBean.findFacilityIdByAttachmentId(attachmentId);
+        ensureFacilityMatch(actorFacility, targetFacility, "attachmentId", attachmentId, effectiveRequest);
+    }
+
+    private UserModel resolveActorUser(HttpServletRequest request) {
+        String remoteUser = request != null ? request.getRemoteUser() : null;
+        if (remoteUser == null || remoteUser.isBlank() || userServiceBean == null) {
+            return null;
+        }
+        try {
+            return userServiceBean.getUser(remoteUser);
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.FINE, "Failed to resolve actor user for attachment reference payload", ex);
+            return null;
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private WebApplicationException attachmentReferenceError(HttpServletRequest request,
+                                                             Response.Status status,
+                                                             String errorCode,
+                                                             String message,
+                                                             Map<String, Object> details) {
+        return AbstractResource.restError(request, status, errorCode, message, details, null);
     }
 
     private void recordDocumentDeletionAudit(long documentPk,

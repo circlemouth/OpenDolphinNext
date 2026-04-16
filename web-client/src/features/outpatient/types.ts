@@ -1,9 +1,21 @@
 import type { DataSourceTransition, ResolveMasterSource } from '../../libs/observability/types';
 
-export type ReceptionStatus = '受付中' | '診療中' | '会計待ち' | '会計済み' | '予約';
-export type ReceptionWorkflowStatus = ReceptionStatus | '再計待';
-export type ReceptionTransmissionStatus = '未送信' | '送信済' | '再送待ち' | '保留' | '失敗' | '応答済' | '未確認';
-export type ReceptionCorrectionKind = '要確認' | '要再計';
+export type ReceptionStatus = '受付中' | '診療中' | '会計待ち' | '再計待' | '会計済み' | '予約';
+
+export type BillingTransmissionSignal = '未送信' | '送信済' | '再送待ち' | '保留' | '失敗' | '応答済';
+
+export type BillingCorrectionSignalKind = '要確認' | '要再計';
+
+export type BillingCorrectionSignal = {
+  kind: BillingCorrectionSignalKind;
+  reason: string;
+};
+
+export type ReceptionBillingProjection = {
+  workflow: Extract<ReceptionStatus, '会計待ち' | '再計待' | '会計済み'>;
+  transmission: BillingTransmissionSignal;
+  correction?: BillingCorrectionSignal;
+};
 
 export type ReceptionEntry = {
   id: string;
@@ -28,25 +40,11 @@ export type ReceptionEntry = {
   acceptanceTime?: string;
   visitDate?: string;
   status: ReceptionStatus;
-  workflowStatus?: ReceptionWorkflowStatus;
-  workflowReason?: string;
   insurance?: string;
   note?: string;
+  billingProjection?: ReceptionBillingProjection;
   source: 'slots' | 'reservations' | 'visits' | 'unknown';
 };
-
-const normalizeRowKeyPart = (value?: string) => {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-};
-
-export const getReceptionRowLocalKey = (
-  entry?: Pick<ReceptionEntry, 'scheduleKey' | 'encounterKey' | 'receptionId' | 'appointmentId'> | null,
-) =>
-  normalizeRowKeyPart(entry?.encounterKey) ??
-  normalizeRowKeyPart(entry?.scheduleKey) ??
-  normalizeRowKeyPart(entry?.receptionId) ??
-  normalizeRowKeyPart(entry?.appointmentId);
 
 export type OutpatientMeta = {
   runId?: string;
@@ -115,7 +113,7 @@ export type ClaimBundleItem = {
   amount?: number;
 };
 
-export type ClaimBundleStatus = '会計待ち' | '会計済み' | '診療中' | '受付中' | '予約';
+export type ClaimBundleStatus = '会計待ち' | '再計待' | '会計済み' | '診療中' | '受付中' | '予約';
 
 export type ClaimBundle = {
   bundleNumber?: string;

@@ -15,6 +15,7 @@ process.env.RUN_ID ??= RUN_ID;
 
 test.use({
   ignoreHTTPSErrors: true,
+  serviceWorkers: 'block',
   extraHTTPHeaders: {
     'x-msw-missing-master': '0',
     'x-msw-transition': 'server',
@@ -23,6 +24,26 @@ test.use({
     'x-msw-run-id': RUN_ID,
   },
 });
+
+const seedChartsNavigationState = async (
+  page: Parameters<typeof test>[0]['page'],
+  params: { patientId: string; appointmentId: string; receptionId: string; scheduleKey: string; encounterKey: string; visitDate: string; runId: string },
+) => {
+  await page.addInitScript((state) => {
+    const current = window.history.state ?? {};
+    window.history.replaceState(
+      {
+        ...current,
+        usr: {
+          ...(typeof current === 'object' && current ? (current as { usr?: Record<string, unknown> }).usr : {}),
+          ...state,
+        },
+      },
+      '',
+      window.location.href,
+    );
+  }, params);
+};
 
 test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済みを表示する (MSW)', async ({ page }) => {
   const artifactDir =
@@ -53,14 +74,76 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(buildAppointmentFixture(outpatientFlags)),
+          body: JSON.stringify({
+            ...buildAppointmentFixture(outpatientFlags),
+            appointmentDate: '2026-01-21',
+            slots: [
+              {
+                appointmentId: 'APT-2401',
+                appointmentTime: '0910',
+                departmentName: '01 内科',
+                departmentCode: '01',
+                physicianName: '藤井',
+                physicianCode: '10001',
+                scheduleKey: 'F001:S2401',
+                encounterKey: 'F001:E2401',
+                patient: {
+                  patientId: '000001',
+                  wholeName: '山田 花子',
+                  wholeNameKana: 'ヤマダ ハナコ',
+                  birthDate: '1985-04-12',
+                  sex: 'F',
+                },
+              },
+            ],
+            reservations: [],
+            visits: [],
+          }),
+        }),
+      );
+      await page.route('**/api/session/me', (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            facilityId,
+            userId,
+            clientUuid: 'e2e-playwright',
+            runId: outpatientFlags.runId,
+            roles: ['admin'],
+            displayName: 'Playwright Doctor',
+          }),
         }),
       );
       await page.route('**/api/orca/official/visits/list', (route) =>
         route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(buildVisitListFixture(outpatientFlags)),
+          body: JSON.stringify({
+            ...buildVisitListFixture(outpatientFlags),
+            visitDate: '2026-01-21',
+            visits: [
+              {
+                receptionId: 'RCPT-2401',
+                sequentialNumber: 'APT-2401',
+                scheduleKey: 'F001:S2401',
+                encounterKey: 'F001:E2401',
+                acceptanceTime: '0910',
+                departmentCode: '01',
+                departmentName: '01 内科',
+                physicianCode: '10001',
+                physicianName: '藤井',
+                visitInformation: '受付',
+                patient: {
+                  patientId: '000001',
+                  wholeName: '山田 花子',
+                  wholeNameKana: 'ヤマダ ハナコ',
+                  birthDate: '1985-04-12',
+                  sex: 'F',
+                },
+              },
+            ],
+          }),
         }),
       );
     await page.addInitScript(
@@ -104,11 +187,24 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
       },
     );
 
-    await page.goto(`${baseUrl}/f/${facilityId}/charts?patientId=000001&visitDate=2026-01-21&msw=1`);
+    await seedChartsNavigationState(page, {
+      patientId: '000001',
+      appointmentId: 'APT-2401',
+      receptionId: 'RCPT-2401',
+      scheduleKey: 'F001:S2401',
+      encounterKey: 'F001:E2401',
+      visitDate: '2026-01-21',
+      runId: outpatientFlags.runId,
+    });
+    await page.goto(`${baseUrl}/f/${facilityId}/charts?msw=1`);
     await expect(page.locator('.charts-page')).toBeVisible({ timeout: 20_000 });
 
     const summary = page.locator('[data-test-id=\"orca-summary\"]');
     await expect(summary).toBeVisible({ timeout: 20_000 });
+    const detailsToggle = summary.getByText('詳細を表示').first();
+    if (await detailsToggle.isVisible().catch(() => false)) {
+      await detailsToggle.click();
+    }
 
     const refreshButton = summary.getByRole('button', { name: '収納情報を確認' });
     await expect(refreshButton).toBeEnabled({ timeout: 20_000 });

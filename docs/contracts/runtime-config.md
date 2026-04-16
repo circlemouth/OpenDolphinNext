@@ -164,6 +164,7 @@
   - `attachment.storage.s3.multipart-threshold-mb`
 - `attachment.storage.s3.endpoint` と `attachment.storage.s3.force-path-style` で MinIO を含む S3 互換 endpoint へ接続できること。
 - 保存メタ情報は server 側で生成し、object storage provider / bucket / key / version / ETag を DB へ保持する。
+- attachment reference row は object metadata を共有しても asset owner ではない。reference remove で object delete を起こさないこと。
 
 ### 7. Patient Images
 - `patient-images.enabled` = `true|false`

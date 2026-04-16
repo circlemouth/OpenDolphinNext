@@ -122,7 +122,7 @@ describe('OrcaSummary semantics', () => {
       />,
     );
 
-    expect(screen.getByText('院内ローカル診療サマリ')).toBeInTheDocument();
+    expect(screen.getByText('Workflow / 院内ローカル診療サマリ')).toBeInTheDocument();
     expect(screen.getByText('院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。')).toBeInTheDocument();
     expect(screen.getByText('ORCA収納情報')).toBeInTheDocument();
     expect(screen.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。')).toBeInTheDocument();

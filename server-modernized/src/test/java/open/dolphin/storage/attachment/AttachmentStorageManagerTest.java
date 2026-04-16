@@ -208,6 +208,22 @@ class AttachmentStorageManagerTest {
         verify(objectStorageClient).deleteObject(any());
     }
 
+    @Test
+    void scheduleDeleteExternalAssetAfterCommit_skipsReferenceOnlyAttachment() throws Exception {
+        TransactionSynchronizationRegistry registry = mock(TransactionSynchronizationRegistry.class);
+        when(registry.getTransactionStatus()).thenReturn(Status.STATUS_ACTIVE);
+        setField(manager, "registry", registry);
+        AttachmentModel attachment = buildAttachment("report.txt", null);
+        attachment.setStorageBucket("test-bucket");
+        attachment.setStorageKey("attachments/doc-20/att-10-report.txt");
+        attachment.setLinkRelation(AttachmentStorageManager.LINK_RELATION_REFERENCE_ONLY);
+
+        manager.scheduleDeleteExternalAssetAfterCommit(attachment);
+
+        verify(objectStorageClient, never()).deleteObject(any());
+        verify(registry, never()).registerInterposedSynchronization(any());
+    }
+
     private static AttachmentModel buildAttachment(String fileName, byte[] bytes) {
         AttachmentModel attachment = new AttachmentModel();
         attachment.setId(10L);

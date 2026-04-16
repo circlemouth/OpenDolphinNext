@@ -108,8 +108,8 @@ export async function seedAuthSession(page: Page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        facilityId: e2eAuthSession.userProfile.facilityId,
-        userId: e2eAuthSession.userProfile.userId,
+        facilityId: e2eAuthSession.credentials.facilityId,
+        userId: e2eAuthSession.credentials.userId,
         displayName: e2eAuthSession.userProfile.displayName,
         roles: e2eAuthSession.userProfile.roles,
         clientUuid: e2eAuthSession.credentials.clientUuid,
@@ -159,6 +159,11 @@ export async function seedAuthSession(page: Page) {
         updatedAt: new Date().toISOString(),
       }),
     );
+    window.localStorage.setItem('devFacilityId', session.credentials.facilityId);
+    window.localStorage.setItem('devUserId', session.credentials.userId);
+    window.localStorage.setItem('devPasswordMd5', session.credentials.passwordMd5);
+    window.localStorage.setItem('devClientUuid', session.credentials.clientUuid);
+    window.localStorage.setItem('devRole', 'admin');
     if (!(window as unknown as { $RefreshReg$?: unknown }).$RefreshReg$) {
       (window as unknown & { $RefreshReg$?: () => void }).$RefreshReg$ = () => {};
     }

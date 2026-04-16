@@ -23,7 +23,6 @@ import {
 import {
   clearDocumentOutputResult,
   loadDocumentOutputResult,
-  saveDocumentPrintPreview,
   type DocumentOutputResult,
   type DocumentOutputMode,
 } from './print/documentPrintPreviewStorage';
@@ -171,12 +170,18 @@ const HANDLE_CLASS_CERTIFICATE = 'open.dolphin.letter.MedicalCertificateViewer';
 const LETTER_TYPE_REFERRAL = 'client';
 const LETTER_TYPE_REPLY = 'consultant';
 const LETTER_TYPE_CERTIFICATE = 'medicalCertificate';
+const ATTACHMENT_REFERENCE_EDIT_BLOCK_MESSAGE =
+  '画像参照付き文書は現契約では安全に再編集できません。新規作成で画像を選び直してください。';
+const ATTACHMENT_REFERENCE_EDIT_BLOCK_REASON = 'attachment_reference_rehydrate_unsupported';
 
 const DOCUMENT_TYPES: { type: DocumentType; label: string; hint: string }[] = [
   { type: 'referral', label: DOCUMENT_TYPE_LABELS.referral, hint: '宛先・目的・診断名を入力して保存します。' },
   { type: 'certificate', label: DOCUMENT_TYPE_LABELS.certificate, hint: '提出先と診断内容を記録します。' },
   { type: 'reply', label: DOCUMENT_TYPE_LABELS.reply, hint: '紹介元への返信内容を簡潔にまとめます。' },
 ];
+
+const hasAttachmentReferences = (doc?: Pick<SavedDocument, 'attachmentIds'> | null) =>
+  Array.isArray(doc?.attachmentIds) && doc.attachmentIds.length > 0;
 
 const buildEmptyForms = (today: string): DocumentFormState => ({
   referral: {
@@ -962,6 +967,43 @@ export function DocumentCreatePanel({
     );
   }, []);
 
+  const handleAttachmentReferenceEditBlocked = useCallback(
+    (doc: SavedDocument, source: 'history_copy' | 'history_edit') => {
+      setNotice({ tone: 'error', message: ATTACHMENT_REFERENCE_EDIT_BLOCK_MESSAGE });
+      recordChartsAuditEvent({
+        action: source === 'history_copy' ? 'document_template_reuse' : 'CHARTS_DOCUMENT_CREATE',
+        outcome: 'blocked',
+        subject: 'charts-document-history',
+        runId: resolvedRunId,
+        cacheHit: meta.cacheHit,
+        missingMaster: meta.missingMaster,
+        fallbackUsed: meta.fallbackUsed,
+        dataSourceTransition: meta.dataSourceTransition,
+        patientId,
+        appointmentId: meta.appointmentId,
+        details: {
+          operationPhase: 'do',
+          documentId: doc.id,
+          documentType: doc.type,
+          documentTitle: doc.title,
+          documentIssuedAt: doc.issuedAt,
+          templateId: doc.templateId,
+          inputSource: source,
+          blockedReasons: [ATTACHMENT_REFERENCE_EDIT_BLOCK_REASON],
+        },
+      });
+    },
+    [
+      meta.appointmentId,
+      meta.cacheHit,
+      meta.dataSourceTransition,
+      meta.fallbackUsed,
+      meta.missingMaster,
+      patientId,
+      resolvedRunId,
+    ],
+  );
+
   const ensureDocumentDetail = useCallback(
     async (doc: SavedDocument) => {
       if (doc.detailLoaded || !doc.letterId) return doc;
@@ -1004,6 +1046,10 @@ export function DocumentCreatePanel({
         });
         return;
       }
+      if (hasAttachmentReferences(doc)) {
+        handleAttachmentReferenceEditBlocked(doc, 'history_copy');
+        return;
+      }
       const resolvedDoc = await ensureDocumentDetail(doc);
       setActiveType(resolvedDoc.type);
       setForms((prev) => ({
@@ -1041,6 +1087,7 @@ export function DocumentCreatePanel({
     },
     [
       ensureDocumentDetail,
+      handleAttachmentReferenceEditBlocked,
       meta.appointmentId,
       meta.cacheHit,
       meta.dataSourceTransition,
@@ -1074,6 +1121,10 @@ export function DocumentCreatePanel({
         setNotice({ tone: 'error', message: '患者が一致しないため文書を編集できません。' });
         return;
       }
+      if (hasAttachmentReferences(doc)) {
+        handleAttachmentReferenceEditBlocked(doc, 'history_edit');
+        return;
+      }
       const resolvedDoc = await ensureDocumentDetail(doc);
       if (!resolvedDoc.letterId) {
         setNotice({ tone: 'error', message: '文書IDが取得できないため編集を開始できません。' });
@@ -1092,7 +1143,7 @@ export function DocumentCreatePanel({
       setDraftDirty(false);
       setNotice({ tone: 'info', message: '文書を編集モードで読み込みました。' });
     },
-    [ensureDocumentDetail, patientId],
+    [ensureDocumentDetail, handleAttachmentReferenceEditBlocked, patientId],
   );
 
   const handleDeleteDocument = useCallback(
@@ -1397,7 +1448,7 @@ export function DocumentCreatePanel({
     setNotice({
       tone: 'success',
       message: hasAttachments
-        ? `文書を${editingDoc ? '更新' : '保存'}しました。添付 ${attachmentsForDocument.length} 件を送信しました。`
+        ? `文書を${editingDoc ? '更新' : '保存'}しました。画像参照 ${attachmentsForDocument.length} 件を関連付けました。`
         : `文書を${editingDoc ? '更新' : '保存'}しました。テンプレ/印刷導線を利用できます。`,
     });
     setSaveRetryable(false);
@@ -1646,7 +1697,6 @@ export function DocumentCreatePanel({
     const returnTo = appNav.currentUrl;
     const navigatedState = { ...previewState, from: 'charts', returnTo };
     appNav.openPrintDocument({ state: navigatedState });
-    saveDocumentPrintPreview(navigatedState, storageScope);
   };
 
   useEffect(() => {
@@ -1732,8 +1782,8 @@ export function DocumentCreatePanel({
       <FocusTrapDialog
         open={Boolean(deleteTargetDoc)}
         role="alertdialog"
-        title="文書を削除しますか？"
-        description="削除対象と影響範囲を確認して実行してください。"
+        title="文書履歴参照を削除しますか？"
+        description="odletter の履歴参照だけを削除します。患者画像実体は削除しません。"
         onClose={() => setDeleteTargetDoc(null)}
         testId="document-delete-dialog"
       >
@@ -1749,7 +1799,7 @@ export function DocumentCreatePanel({
             </div>
             <div>
               <dt>影響範囲</dt>
-              <dd>保存済み文書履歴から削除され、元に戻せません。</dd>
+              <dd>odletter の履歴から削除します。患者画像実体は削除しません。</dd>
             </div>
           </dl>
           <div className="charts-tab-guard__actions" role="group" aria-label="文書削除操作">
@@ -1757,7 +1807,7 @@ export function DocumentCreatePanel({
               キャンセル
             </button>
             <button type="button" className="charts-tab-guard__danger" onClick={() => void handleConfirmDeleteDocument()}>
-              削除する
+              履歴参照を削除する
             </button>
           </div>
         </section>
@@ -2307,7 +2357,7 @@ export function DocumentCreatePanel({
                       </div>
                       <div className="charts-document-list__meta">
                         <small>
-                          発行日: {doc.issuedAt} / テンプレ: {doc.templateLabel} / 添付: {doc.attachmentIds?.length ?? 0} /
+                          発行日: {doc.issuedAt} / テンプレ: {doc.templateLabel} / 画像参照: {doc.attachmentIds?.length ?? 0} /
                           保存: {new Date(doc.savedAt).toLocaleString()}
                         </small>
                         <span className={`charts-document-list__status charts-document-list__status--${auditOutcome}`}>
@@ -2318,19 +2368,19 @@ export function DocumentCreatePanel({
                         <button
                           type="button"
                           onClick={() => handleReuseDocument(doc)}
-                          disabled={doc.patientId !== patientId}
+                          disabled={doc.patientId !== patientId || hasAttachmentReferences(doc)}
                         >
                           コピーして編集
                         </button>
                         <button
                           type="button"
                           onClick={() => handleEditDocument(doc)}
-                          disabled={doc.patientId !== patientId}
+                          disabled={doc.patientId !== patientId || hasAttachmentReferences(doc)}
                         >
                           編集
                         </button>
                         <button type="button" onClick={() => handleDeleteDocument(doc)}>
-                          削除
+                          文書履歴参照を削除
                         </button>
                       </div>
                       <div className="charts-document-list__actions" role="group" aria-label="文書出力操作">
@@ -2347,6 +2397,9 @@ export function DocumentCreatePanel({
                       {guards.length > 0 && <div className="charts-document-list__guard">出力停止: {guards[0]?.summary}</div>}
                       {doc.patientId !== patientId && (
                         <div className="charts-document-list__guard">患者が異なるためコピー編集はできません。</div>
+                      )}
+                      {hasAttachmentReferences(doc) && (
+                        <div className="charts-document-list__guard">{ATTACHMENT_REFERENCE_EDIT_BLOCK_MESSAGE}</div>
                       )}
                       {auditOutcome === 'failed' && (
                         <div className="charts-document-list__recovery" role="group" aria-label="出力失敗時の復旧導線">

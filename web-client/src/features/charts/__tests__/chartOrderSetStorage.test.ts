@@ -23,7 +23,15 @@ describe('chartOrderSetStorage', () => {
       userId: 'doctor-1',
       name: '定期フォローセット',
       snapshot: {
-        diagnoses: [{ diagnosisName: '高血圧症', diagnosisCode: 'I10' }],
+        diagnoses: [
+          {
+            diagnosisName: '高血圧症',
+            diagnosisCode: 'I10',
+            layer: 'candidate',
+            readOnly: true,
+            candidateOnly: true,
+          },
+        ],
         orderBundles: [
           {
             entity: 'medOrder',

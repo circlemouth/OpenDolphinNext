@@ -392,9 +392,10 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const sendQueueLabel = useMemo(() => {
     const phase = queueEntry?.phase;
     if (!phase) return undefined;
-    if (phase === 'ack') return '成功';
-    if (phase === 'failed') return '失敗';
-    if (phase === 'retry' || phase === 'sent') return '処理中';
+    if (phase === 'ack') return '会計済み確認';
+    if (phase === 'failed') return '送信失敗';
+    if (phase === 'retry') return '再送待ち';
+    if (phase === 'sent') return '送信済み';
     if (phase === 'hold') return '待ち（保留）';
     return '待ち';
   }, [queueEntry?.phase]);

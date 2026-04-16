@@ -11,6 +11,7 @@ const disableMsw = process.env.VITE_DISABLE_MSW === '1' || process.env.PLAYWRIGH
 const useHttps = process.env.VITE_DEV_USE_HTTPS === '1';
 const protocol = useHttps ? 'https' : 'http';
 const patientImagesMvp = process.env.VITE_PATIENT_IMAGES_MVP === '1';
+const patientImagesMobileUi = process.env.VITE_PATIENT_IMAGES_MOBILE_UI === '1';
 // MSW は「明示的に ON であること」を gate にしているため、E2E では既定で有効化する。
 // 既存の制御フラグで無効化したい場合は PLAYWRIGHT_DISABLE_MSW=1 または VITE_DISABLE_MSW=1 を使う。
 const enableMsw = process.env.VITE_ENABLE_MSW ?? '1';
@@ -19,7 +20,7 @@ const enableMsw = process.env.VITE_ENABLE_MSW ?? '1';
 const enableDebugUi = process.env.VITE_ENABLE_DEBUG_UI ?? '1';
 // Reception status MVP: tests/reception/e2e-rec-001-status-mvp.spec.ts を安定して検証するため既定で phase2 を有効にする。
 const receptionStatusMvp = process.env.VITE_RECEPTION_STATUS_MVP ?? '2';
-const webServerCommand = `cd web-client && VITE_DEV_USE_HTTPS=${useHttps ? '1' : '0'} VITE_DISABLE_PROXY=1 VITE_ENABLE_MSW=${enableMsw} VITE_DISABLE_MSW=${disableMsw ? '1' : '0'} VITE_ENABLE_DEBUG_UI=${enableDebugUi} VITE_RECEPTION_STATUS_MVP=${receptionStatusMvp} VITE_PATIENT_IMAGES_MVP=${patientImagesMvp ? '1' : '0'} npm run dev -- --host --port 4173 --clearScreen false`;
+const webServerCommand = `cd web-client && VITE_DEV_USE_HTTPS=${useHttps ? '1' : '0'} VITE_DISABLE_PROXY=1 VITE_ENABLE_MSW=${enableMsw} VITE_DISABLE_MSW=${disableMsw ? '1' : '0'} VITE_ENABLE_DEBUG_UI=${enableDebugUi} VITE_RECEPTION_STATUS_MVP=${receptionStatusMvp} VITE_PATIENT_IMAGES_MVP=${patientImagesMvp ? '1' : '0'} VITE_PATIENT_IMAGES_MOBILE_UI=${patientImagesMobileUi ? '1' : '0'} npm run dev -- --host --port 4173 --clearScreen false`;
 
 export default defineConfig({
   testIgnore: ['**/wt/**', '**/artifacts/**', '**/test-results/**'],

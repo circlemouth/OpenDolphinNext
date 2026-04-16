@@ -22,6 +22,7 @@ import {
   type MedicalInformationOption,
   type AppointmentPayload,
   type ReceptionEntry,
+  type ReceptionStatus,
   type VisitMutationParams,
   type VisitMutationPayload,
 } from '../api';
@@ -63,13 +64,11 @@ import { isSystemAdminRole } from '../../../libs/auth/roles';
 import { buildFacilityPath } from '../../../routes/facilityRoutes';
 import { applyExternalParams, isSafeReturnTo, pickExternalParams } from '../../../routes/appNavigation';
 import { useAppNavigation } from '../../../routes/useAppNavigation';
-import {
-  getReceptionRowLocalKey,
-  type ClaimBundle,
-  type ClaimQueueEntry,
-  type ClaimQueuePhase,
-  type ReceptionTransmissionStatus,
-  type ReceptionWorkflowStatus,
+import type { ClaimBundle, ClaimQueueEntry, ClaimQueuePhase } from '../../outpatient/types';
+import type {
+  BillingCorrectionSignal,
+  BillingTransmissionSignal,
+  ReceptionBillingProjection,
 } from '../../outpatient/types';
 import { countAppointmentDataIntegrity, getAppointmentDataBanner } from '../../outpatient/appointmentDataBanner';
 import type { OrcaQueueEntry } from '../../outpatient/orcaQueueApi';
@@ -89,7 +88,7 @@ import {
   type PendingReceptionHandoff,
   type ResolvedReceptionHandoff,
 } from '../receptionHandoff';
-import { findOrcaClaimSendEntryForContext, loadOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
+import { findOrcaClaimSendEntryForMatch, loadOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
 import { postMedicalRecords, type MedicalRecordEntry } from '../../administration/orcaInternalWrapperApi';
 import { searchLocalPatients, type PatientListResponse, type PatientRecord } from '../../patients/api';
 import {
@@ -133,8 +132,8 @@ import { resolveAcceptmodFallbackMessage } from '../acceptmodv2Result';
 type SortKey = 'time' | 'acceptance' | 'reservation' | 'name' | 'department';
 type StatusListLayout = 'table' | 'cards';
 
-const SECTION_ORDER: ReceptionWorkflowStatus[] = ['受付中', '診療中', '会計待ち', '再計待', '会計済み', '予約'];
-const SECTION_LABEL: Record<ReceptionWorkflowStatus, string> = {
+const SECTION_ORDER: ReceptionStatus[] = ['受付中', '診療中', '会計待ち', '再計待', '会計済み', '予約'];
+const SECTION_LABEL: Record<ReceptionStatus, string> = {
   受付中: '診察待ち',
   診療中: '診察中',
   会計待ち: '会計待ち',
@@ -168,14 +167,14 @@ const isSortKey = (value?: string | null): value is SortKey =>
   value === 'time' || value === 'acceptance' || value === 'reservation' || value === 'name' || value === 'department';
 const isStatusListLayout = (value?: string | null): value is StatusListLayout =>
   value === 'table' || value === 'cards';
-const resolveInitialStatusTab = (section?: string | null): ReceptionWorkflowStatus => {
+const resolveInitialStatusTab = (section?: string | null): ReceptionStatus => {
   if (section === 'appointment') return '予約';
   if (section === 'billing') return '会計待ち';
   return '受付中';
 };
 
 const entryKey = (entry: ReceptionEntry) =>
-  getReceptionRowLocalKey(entry) ?? entry.id ?? entry.patientId ?? 'unknown-entry';
+  entry.encounterKey ?? entry.scheduleKey ?? entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
 
 const queuePhaseLabel: Record<ClaimQueuePhase, string> = {
   pending: '待ち',
@@ -193,6 +192,58 @@ const queuePhaseTone: Record<ClaimQueuePhase, 'info' | 'warning' | 'error' | 'su
   failed: 'error',
   sent: 'info',
   ack: 'success',
+};
+
+type BillingWorkflowStatus = Extract<ReceptionStatus, '会計待ち' | '再計待' | '会計済み'>;
+
+const REBILL_FALLBACK_REASON = '会計済み後に変更があったため再会計が必要です。';
+
+const normalizeBillingReason = (value?: string | null) => {
+  const normalized = value?.replace(/\s+/g, ' ').trim();
+  return normalized ? truncateText(normalized, 80) : undefined;
+};
+
+const resolveTransmissionFromQueuePhase = (phase?: ClaimQueuePhase): BillingTransmissionSignal => {
+  if (phase === 'retry') return '再送待ち';
+  if (phase === 'hold') return '保留';
+  if (phase === 'failed') return '失敗';
+  if (phase === 'sent') return '送信済';
+  if (phase === 'ack') return '応答済';
+  return '未送信';
+};
+
+const resolveCorrectionSignal = (params: {
+  bundle?: Pick<ClaimBundle, 'claimStatus' | 'claimStatusText'>;
+  cache?: { correctionKind?: 'confirm' | 'rebill'; correctionReason?: string } | null;
+}): BillingCorrectionSignal | undefined => {
+  if (params.cache?.correctionKind === 'rebill') {
+    return {
+      kind: '要再計',
+      reason: normalizeBillingReason(params.cache.correctionReason) ?? REBILL_FALLBACK_REASON,
+    };
+  }
+  if (params.cache?.correctionKind === 'confirm') {
+    const reason = normalizeBillingReason(params.cache.correctionReason);
+    return reason ? { kind: '要確認', reason } : undefined;
+  }
+  const statusText = params.bundle?.claimStatusText ?? '';
+  const normalized = statusText.toLowerCase();
+  if (/再計待|再会計|rebill/.test(statusText) || normalized.includes('rebill')) {
+    return {
+      kind: '要再計',
+      reason: normalizeBillingReason(statusText) ?? REBILL_FALLBACK_REASON,
+    };
+  }
+  if (/補正|要確認|correction/.test(statusText) || normalized.includes('correction')) {
+    const reason = normalizeBillingReason(statusText);
+    return reason ? { kind: '要確認', reason } : undefined;
+  }
+  return undefined;
+};
+
+const formatCorrectionNote = (correction?: BillingCorrectionSignal) => {
+  if (!correction) return undefined;
+  return correction.kind === '要再計' ? `再計待: ${correction.reason}` : `ORCA補正要確認: ${correction.reason}`;
 };
 
 const resolveQueueStatus = (entry?: ClaimQueueEntry) => {
@@ -255,36 +306,12 @@ const buildReceptionAcceptResultDetail = () => '結果を確認し、必要な�
 
 const buildReceptionClaimSendDetail = (outcome: 'success' | 'warning' | 'error') => {
   if (outcome === 'success') {
-    return '会計送信を完了。会計済みは収納確認後に反映します。';
+    return '会計済みは収納確認後に反映します。';
   }
   if (outcome === 'warning') {
     return '会計送信結果に警告があります。内容を確認し、必要なら再試行してください。';
   }
   return RECEPTION_SUPPORT_GUIDE;
-};
-
-const resolveWorkflowStatus = (entry: ReceptionEntry): ReceptionWorkflowStatus => entry.workflowStatus ?? entry.status;
-
-const resolveCorrectionNote = (entry: ReceptionEntry) => {
-  if (resolveWorkflowStatus(entry) !== '再計待') return undefined;
-  return `再計待: ${entry.workflowReason ?? '会計済み後に変更があったため再会計が必要です。'}`;
-};
-
-const resolveTransmissionSignal = (
-  entry: ReceptionEntry,
-  cached?: { sendStatus?: 'success' | 'error' } | null,
-  queue?: ClaimQueueEntry,
-): { label: ReceptionTransmissionStatus; tone: 'info' | 'warning' | 'error' | 'success' | 'neutral' } => {
-  if (cached?.sendStatus === 'success') return { label: '送信済', tone: 'info' };
-  if (cached?.sendStatus === 'error') return { label: '失敗', tone: 'error' };
-  if (queue?.phase === 'retry') return { label: '再送待ち', tone: 'warning' };
-  if (queue?.phase === 'hold') return { label: '保留', tone: 'warning' };
-  if (queue?.phase === 'failed') return { label: '失敗', tone: 'error' };
-  if (queue?.phase === 'sent') return { label: '送信済', tone: 'info' };
-  if (queue?.phase === 'ack') return { label: '応答済', tone: 'success' };
-  if (queue?.phase === 'pending') return { label: '未送信', tone: 'warning' };
-  if (getReceptionRowLocalKey(entry)) return { label: '未送信', tone: 'neutral' };
-  return { label: '未確認', tone: 'warning' };
 };
 
 type PhysicianNameMap = Record<string, string>;
@@ -712,7 +739,7 @@ const sortEntries = (entries: ReceptionEntry[], sortKey: SortKey) => {
 const groupByStatus = (entries: ReceptionEntry[]) =>
   SECTION_ORDER.map((status) => ({
     status,
-    items: entries.filter((entry) => resolveWorkflowStatus(entry) === status),
+    items: entries.filter((entry) => entry.status === status),
   }));
 
 type AcceptTargetSource = 'none' | 'manual' | 'patient-search' | 'master-search' | 'selection';
@@ -800,7 +827,7 @@ export function ReceptionPage({
     const fromUrl = searchParams.get('sort');
     return isSortKey(fromUrl) ? fromUrl : 'time';
   });
-  const [activeStatusTab, setActiveStatusTab] = useState<ReceptionWorkflowStatus>(() =>
+  const [activeStatusTab, setActiveStatusTab] = useState<ReceptionStatus>(() =>
     resolveInitialStatusTab(searchParams.get('section')),
   );
   const [filtersCollapsed, setFiltersCollapsed] = useState(() =>
@@ -936,7 +963,7 @@ export function ReceptionPage({
     reason: string;
   } | null>(null);
   const [retryingPatientId, setRetryingPatientId] = useState<string | null>(null);
-  const [claimSendingEntryKey, setClaimSendingEntryKey] = useState<string | null>(null);
+  const [claimSendingPatientId, setClaimSendingPatientId] = useState<string | null>(null);
   const [dailyStateRevision, setDailyStateRevision] = useState(0);
   const [openCardActionMenuKey, setOpenCardActionMenuKey] = useState<string | null>(null);
   const [receptionRealtimeStatus, setReceptionRealtimeStatus] =
@@ -1503,9 +1530,7 @@ export function ReceptionPage({
     for (const entry of liveAppointmentEntries) {
       const patientIdKey = entry.patientId?.trim();
       if (!patientIdKey) continue;
-      const reservationTime = normalizeTimeLabel(
-        entry.reservationTime ?? (resolveWorkflowStatus(entry) === '予約' ? entry.appointmentTime : undefined),
-      );
+      const reservationTime = normalizeTimeLabel(entry.reservationTime ?? (entry.status === '予約' ? entry.appointmentTime : undefined));
       if (!reservationTime) continue;
       const existing = map.get(patientIdKey);
       if (!existing || reservationTime < existing) {
@@ -1753,11 +1778,11 @@ export function ReceptionPage({
       selectedDepartmentCode: acceptDepartmentSelection,
     });
   }, [acceptDepartmentSelection, departmentLabelMap, visibleAppointmentEntries]);
-  const filteredEntries = useMemo(
+  const rawFilteredEntries = useMemo(
     () => filterEntries(visibleAppointmentEntries, keyword, departmentFilter, physicianFilter, paymentMode),
     [departmentFilter, keyword, paymentMode, physicianFilter, visibleAppointmentEntries],
   );
-  const sortedEntries = useMemo(() => sortEntries(filteredEntries, sortKey), [filteredEntries, sortKey]);
+  const rawSortedEntries = useMemo(() => sortEntries(rawFilteredEntries, sortKey), [rawFilteredEntries, sortKey]);
   useEffect(() => {
     if (!pendingAcceptedChartsHandoff) return;
     const resolved = resolvePendingAcceptHandoffFromEntries(visibleAppointmentEntries, pendingAcceptedChartsHandoff);
@@ -1787,32 +1812,6 @@ export function ReceptionPage({
       return prev;
     });
   }, [patientSearchTotalPages]);
-  const grouped = useMemo(() => groupByStatus(sortedEntries), [sortedEntries]);
-  const groupedByStatus = useMemo(
-    () =>
-      new Map<ReceptionWorkflowStatus, ReceptionEntry[]>(
-        grouped.map(({ status, items }) => [status, items]),
-      ),
-    [grouped],
-  );
-  const activeStatusItems = groupedByStatus.get(activeStatusTab) ?? [];
-  const activeStatusLabel = SECTION_LABEL[activeStatusTab] ?? activeStatusTab;
-  useEffect(() => {
-    if (statusTabAutoAdjustedRef.current) return;
-    if (!appointmentQuery.dataUpdatedAt) return;
-    if (statusTabManualSelectionRef.current) {
-      statusTabAutoAdjustedRef.current = true;
-      return;
-    }
-    const activeCount = groupedByStatus.get(activeStatusTab)?.length ?? 0;
-    if (activeCount === 0) {
-      const fallback = SECTION_ORDER.find((status) => (groupedByStatus.get(status)?.length ?? 0) > 0);
-      if (fallback) {
-        setActiveStatusTab(fallback);
-      }
-    }
-    statusTabAutoAdjustedRef.current = true;
-  }, [activeStatusTab, appointmentQuery.dataUpdatedAt, groupedByStatus]);
   useEffect(() => {
     if (!selectedDate || visibleAppointmentEntries.length === 0) return;
     saveReceptionEntriesForDate({
@@ -1821,10 +1820,19 @@ export function ReceptionPage({
       scope: storageScope,
     });
   }, [selectedDate, storageScope, visibleAppointmentEntries]);
-  const tableColCount = claimOutpatientEnabled ? 9 : 8;
+  const tableColCount = 9;
 
   const claimBundles = claimOutpatientEnabled ? claimQuery.data?.bundles ?? [] : [];
   const claimQueueEntries = claimOutpatientEnabled ? claimQuery.data?.queueEntries ?? [] : [];
+  const patientEntryCount = useMemo(() => {
+    const map = new Map<string, number>();
+    visibleAppointmentEntries.forEach((entry) => {
+      const patientId = entry.patientId?.trim();
+      if (!patientId) return;
+      map.set(patientId, (map.get(patientId) ?? 0) + 1);
+    });
+    return map;
+  }, [visibleAppointmentEntries]);
   const [claimSendCacheUpdatedAt, setClaimSendCacheUpdatedAt] = useState(0);
   useEffect(() => {
     setClaimSendCacheUpdatedAt(Date.now());
@@ -1838,17 +1846,6 @@ export function ReceptionPage({
   const claimSendCache = useMemo(
     () => loadOrcaClaimSendCache({ facilityId: session.facilityId, userId: session.userId }) ?? {},
     [claimSendCacheUpdatedAt, session.facilityId, session.userId],
-  );
-  const resolveClaimSendCacheForEntry = useCallback(
-    (entry: ReceptionEntry) =>
-      findOrcaClaimSendEntryForContext(claimSendCache, {
-        patientId: entry.patientId,
-        appointmentId: entry.appointmentId,
-        receptionId: entry.receptionId,
-        scheduleKey: entry.scheduleKey,
-        encounterKey: entry.encounterKey,
-      }),
-    [claimSendCache],
   );
 
   const queueSummary = useMemo(() => {
@@ -1878,6 +1875,12 @@ export function ReceptionPage({
   const claimQueueByKey = useMemo(() => {
     const map = new Map<string, ClaimQueueEntry>();
     for (const queue of claimQueueEntries) {
+      if (queue.encounterKey) {
+        map.set(`encounter:${queue.encounterKey}`, queue);
+      }
+      if (queue.scheduleKey) {
+        map.set(`schedule:${queue.scheduleKey}`, queue);
+      }
       if (queue.appointmentId) {
         map.set(`appointment:${queue.appointmentId}`, queue);
       }
@@ -1920,29 +1923,76 @@ export function ReceptionPage({
         const byAppointment = claimBundlesByKey.get(`appointment:${entry.appointmentId}`);
         if (byAppointment) bundles.push(...byAppointment);
       }
-      if (entry.patientId) {
+      if (bundles.length === 0 && entry.patientId && (patientEntryCount.get(entry.patientId.trim()) ?? 0) <= 1) {
         const byPatient = claimBundlesByKey.get(`patient:${entry.patientId}`);
         if (byPatient) bundles.push(...byPatient);
       }
       if (bundles.length === 0) return undefined;
       return [...bundles].sort((a, b) => toBundleTimeMs(b.performTime) - toBundleTimeMs(a.performTime))[0];
     },
-    [claimBundlesByKey],
+    [claimBundlesByKey, patientEntryCount],
   );
 
   const resolveQueueForEntry = useCallback(
     (entry: ReceptionEntry): ClaimQueueEntry | undefined => {
+      if (entry.encounterKey) {
+        const queue = claimQueueByKey.get(`encounter:${entry.encounterKey}`);
+        if (queue) return queue;
+      }
+      if (entry.scheduleKey) {
+        const queue = claimQueueByKey.get(`schedule:${entry.scheduleKey}`);
+        if (queue) return queue;
+      }
       if (entry.appointmentId) {
         const queue = claimQueueByKey.get(`appointment:${entry.appointmentId}`);
         if (queue) return queue;
       }
-      if (entry.patientId) {
+      if (entry.patientId && (patientEntryCount.get(entry.patientId.trim()) ?? 0) <= 1) {
         const queue = claimQueueByKey.get(`patient:${entry.patientId}`);
         if (queue) return queue;
       }
       return undefined;
     },
-    [claimQueueByKey],
+    [claimQueueByKey, patientEntryCount],
+  );
+
+  const resolveClaimSendCacheForEntry = useCallback(
+    (entry: ReceptionEntry) =>
+      findOrcaClaimSendEntryForMatch(claimSendCache, entry, {
+        allowPatientFallback: Boolean(entry.patientId && (patientEntryCount.get(entry.patientId.trim()) ?? 0) <= 1),
+      }),
+    [claimSendCache, patientEntryCount],
+  );
+
+  const resolveBillingProjectionForEntry = useCallback(
+    (entry: ReceptionEntry): ReceptionBillingProjection => {
+      const bundle = resolveBundleForEntry(entry);
+      const queue = resolveQueueForEntry(entry);
+      const cache = resolveClaimSendCacheForEntry(entry);
+      const correction = resolveCorrectionSignal({ bundle, cache });
+      const workflow: BillingWorkflowStatus =
+        correction?.kind === '要再計'
+          ? '再計待'
+          : bundle?.claimStatus === '会計済み'
+            ? '会計済み'
+            : entry.status === '会計済み' || entry.status === '再計待'
+              ? entry.status
+              : '会計待ち';
+      const transmission =
+        queue?.phase !== undefined
+          ? resolveTransmissionFromQueuePhase(queue.phase)
+          : cache?.sendStatus === 'success'
+            ? '送信済'
+            : cache?.sendStatus === 'error'
+              ? '失敗'
+              : '未送信';
+      return {
+        workflow,
+        transmission,
+        correction,
+      };
+    },
+    [resolveBundleForEntry, resolveClaimSendCacheForEntry, resolveQueueForEntry],
   );
 
   const resolveLastVisitForEntry = useCallback(
@@ -1952,6 +2002,53 @@ export function ReceptionPage({
     },
     [resolveBundleForEntry],
   );
+
+  const resolveQueueStatusForEntry = useCallback(
+    (entry: ReceptionEntry) => resolveQueueStatus(resolveQueueForEntry(entry)),
+    [resolveQueueForEntry],
+  );
+
+  const displayedEntries = useMemo(
+    () =>
+      rawSortedEntries.map((entry) => {
+        if (entry.status !== '会計待ち' && entry.status !== '会計済み' && entry.status !== '再計待') {
+          return entry;
+        }
+        const billingProjection = resolveBillingProjectionForEntry(entry);
+        return {
+          ...entry,
+          status: billingProjection.workflow,
+          billingProjection,
+        };
+      }),
+    [rawSortedEntries, resolveBillingProjectionForEntry],
+  );
+  const grouped = useMemo(() => groupByStatus(displayedEntries), [displayedEntries]);
+  const groupedByStatus = useMemo(
+    () =>
+      new Map<ReceptionStatus, ReceptionEntry[]>(
+        grouped.map(({ status, items }) => [status, items]),
+      ),
+    [grouped],
+  );
+  const activeStatusItems = groupedByStatus.get(activeStatusTab) ?? [];
+  const activeStatusLabel = SECTION_LABEL[activeStatusTab] ?? activeStatusTab;
+  useEffect(() => {
+    if (statusTabAutoAdjustedRef.current) return;
+    if (!appointmentQuery.dataUpdatedAt) return;
+    if (statusTabManualSelectionRef.current) {
+      statusTabAutoAdjustedRef.current = true;
+      return;
+    }
+    const activeCount = groupedByStatus.get(activeStatusTab)?.length ?? 0;
+    if (activeCount === 0) {
+      const fallback = SECTION_ORDER.find((status) => (groupedByStatus.get(status)?.length ?? 0) > 0);
+      if (fallback) {
+        setActiveStatusTab(fallback);
+      }
+    }
+    statusTabAutoAdjustedRef.current = true;
+  }, [activeStatusTab, appointmentQuery.dataUpdatedAt, groupedByStatus]);
 
   const receptionCarryover = useMemo<ReceptionCarryoverParams>(
     () => ({
@@ -2098,7 +2195,7 @@ export function ReceptionPage({
     const nowMs = Date.now();
     const baseRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
     const list: ReceptionExceptionItem[] = [];
-    for (const entry of sortedEntries) {
+    for (const entry of displayedEntries) {
       const bundle = resolveBundleForEntry(entry);
       const queue = resolveQueueForEntry(entry);
       const queueStatus = resolveQueueStatus(queue);
@@ -2144,7 +2241,7 @@ export function ReceptionPage({
     orcaQueueQuery.data?.source,
     resolveBundleForEntry,
     resolveQueueForEntry,
-    sortedEntries,
+    displayedEntries,
   ]);
 
   const exceptionCounts = useMemo(() => {
@@ -2171,9 +2268,9 @@ export function ReceptionPage({
           ? 'info'
           : 'neutral';
   const statusExceptionTone = useMemo(() => {
-    const byStatus = new Map<ReceptionWorkflowStatus, 'error' | 'warning' | 'info'>();
+    const byStatus = new Map<ReceptionStatus, 'error' | 'warning' | 'info'>();
     SECTION_ORDER.forEach((status) => {
-      const items = exceptionItems.filter((item) => resolveWorkflowStatus(item.entry) === status);
+      const items = exceptionItems.filter((item) => item.entry.status === status);
       if (items.some((item) => item.kind === 'send_error')) {
         byStatus.set(status, 'error');
         return;
@@ -2205,8 +2302,8 @@ export function ReceptionPage({
   const physicianOptions = useMemo(() => {
     const options = new Map<string, string>();
     const selected =
-      selectedEntryKey && sortedEntries.length > 0
-        ? sortedEntries.find((entry) => entryKey(entry) === selectedEntryKey)
+      selectedEntryKey && displayedEntries.length > 0
+        ? displayedEntries.find((entry) => entryKey(entry) === selectedEntryKey)
         : undefined;
     const registerEntry = (entry?: ReceptionEntry) => {
       const code = resolveReceptionEntryPhysicianCode(entry);
@@ -2234,25 +2331,25 @@ export function ReceptionPage({
         code,
         label,
       }));
-  }, [acceptPhysicianSelection, physicianNameMap, selectedEntryKey, sortedEntries, visibleAppointmentEntries]);
+  }, [acceptPhysicianSelection, displayedEntries, physicianNameMap, selectedEntryKey, visibleAppointmentEntries]);
 
   const selectedEntry = useMemo(() => {
     if (!selectedEntryKey) return undefined;
-    return sortedEntries.find((entry) => entryKey(entry) === selectedEntryKey);
-  }, [selectedEntryKey, sortedEntries]);
+    return displayedEntries.find((entry) => entryKey(entry) === selectedEntryKey);
+  }, [displayedEntries, selectedEntryKey]);
 
   useEffect(() => {
     if (!acceptedChartsHandoff) return;
     const handoffEncounterKey = acceptedChartsHandoff.encounter.encounterKey;
     const handoffScheduleKey = acceptedChartsHandoff.encounter.scheduleKey;
-    const matched = sortedEntries.find((entry) => {
+    const matched = displayedEntries.find((entry) => {
       if (handoffEncounterKey && entry.encounterKey === handoffEncounterKey) return true;
       if (handoffScheduleKey && entry.scheduleKey === handoffScheduleKey) return true;
       return false;
     });
     if (!matched) return;
     setSelectedEntryKey((previous) => (previous === entryKey(matched) ? previous : entryKey(matched)));
-  }, [acceptedChartsHandoff, sortedEntries]);
+  }, [acceptedChartsHandoff, displayedEntries]);
 
   const recordsModalPatientId = recordsModalPatient?.patientId?.trim() ?? '';
   const recordsModalPatientLabel = recordsModalPatient?.name?.trim() || recordsModalPatientId || '—';
@@ -2274,7 +2371,7 @@ export function ReceptionPage({
     lastAppointmentUpdatedAt.current = appointmentQuery.dataUpdatedAt;
     if (!previous) return;
     if (!selectedEntryKey) return;
-    const stillExists = sortedEntries.some((entry) => entryKey(entry) === selectedEntryKey);
+    const stillExists = displayedEntries.some((entry) => entryKey(entry) === selectedEntryKey);
     if (stillExists) {
       setSelectionNotice({ tone: 'info', message: '一覧を更新しました。選択は保持されています。' });
       setSelectionLost(false);
@@ -2283,7 +2380,7 @@ export function ReceptionPage({
       setSelectedEntryKey(null);
       setSelectionLost(true);
     }
-  }, [appointmentQuery.dataUpdatedAt, selectedEntryKey, sortedEntries]);
+  }, [appointmentQuery.dataUpdatedAt, displayedEntries, selectedEntryKey]);
 
   const applyAcceptAutoFill = useCallback(
     (entry: ReceptionEntry | undefined, options?: { force?: boolean }) => {
@@ -2400,12 +2497,12 @@ export function ReceptionPage({
     () => (selectedEntry ? resolveQueueForEntry(selectedEntry) : undefined),
     [resolveQueueForEntry, selectedEntry],
   );
-  const summaryText = useMemo(() => `検索結果 ${sortedEntries.length}件`, [sortedEntries.length]);
+  const summaryText = useMemo(() => `検索結果 ${displayedEntries.length}件`, [displayedEntries.length]);
 
   const selectionSummaryText = useMemo(() => {
     if (!selectedEntry) return '選択中の患者はありません。';
     const queue = resolveQueueStatus(selectedQueue);
-    const statusLabel = SECTION_LABEL[resolveWorkflowStatus(selectedEntry)] ?? resolveWorkflowStatus(selectedEntry) ?? '-';
+    const statusLabel = SECTION_LABEL[selectedEntry.status] ?? selectedEntry.status ?? '-';
     return [
       `選択中: ${selectedEntry.name ?? '未登録'}`,
       `患者ID ${selectedEntry.patientId ?? '未登録'}`,
@@ -2493,15 +2590,15 @@ export function ReceptionPage({
   }, [summaryText]);
 
   useEffect(() => {
-    if (sortedEntries.length === 0) {
+    if (displayedEntries.length === 0) {
       setSelectedEntryKey(null);
       setSelectionLost(false);
       return;
     }
     if (selectionLost) return;
-    if (selectedEntryKey && sortedEntries.some((entry) => entryKey(entry) === selectedEntryKey)) return;
-    setSelectedEntryKey(entryKey(sortedEntries[0]));
-  }, [selectedEntryKey, selectionLost, sortedEntries]);
+    if (selectedEntryKey && displayedEntries.some((entry) => entryKey(entry) === selectedEntryKey)) return;
+    setSelectedEntryKey(entryKey(displayedEntries[0]));
+  }, [displayedEntries, selectedEntryKey, selectionLost]);
 
   useEffect(() => {
     if (!selectedEntry) return;
@@ -2880,7 +2977,7 @@ export function ReceptionPage({
         enqueue({ tone: 'warning', message: '取消する患者を選択してください。' });
         return;
       }
-      if (resolveWorkflowStatus(entry) === '予約') {
+      if (entry.status === '予約') {
         enqueue({ tone: 'warning', message: '予約は受付取消できません。' });
         return;
       }
@@ -3103,7 +3200,7 @@ export function ReceptionPage({
         setPatientSearchPatientId(resolvedPatientId);
         lastAcceptAutoFill.current = { ...lastAcceptAutoFill.current, patientId: resolvedPatientId };
         setAcceptErrors((prev) => ({ ...prev, patientId: undefined }));
-        const matched = sortedEntries.find((entry) => entry.patientId === resolvedPatientId);
+        const matched = displayedEntries.find((entry) => entry.patientId === resolvedPatientId);
         if (matched) {
           setSelectedEntryKey(entryKey(matched));
           setSelectionNotice(null);
@@ -3145,7 +3242,7 @@ export function ReceptionPage({
       flags.runId,
       mergedMeta.runId,
       pendingAcceptedChartsHandoff?.patientId,
-      sortedEntries,
+      displayedEntries,
     ],
   );
 
@@ -3688,8 +3785,7 @@ export function ReceptionPage({
 
       const { patientId, visitDate: calculationDate, departmentCode, physicianCode } = sendGuard.encounterContext;
       const baseRunId = mergedMeta.runId ?? initialRunId ?? flags.runId;
-      const targetEntryKey = entryKey(entry);
-      setClaimSendingEntryKey(targetEntryKey);
+      setClaimSendingPatientId(patientId);
       const startedAt = performance.now();
       try {
         const orderBundleResult = await fetchMedicalModV2OrderBundles(patientId, calculationDate);
@@ -3845,7 +3941,6 @@ export function ReceptionPage({
             receptionId: entry.receptionId,
             scheduleKey: entry.scheduleKey,
             encounterKey: entry.encounterKey,
-            performDate: calculationDate,
             invoiceNumber: result.invoiceNumber,
             dataId: result.dataId,
             runId: nextRunId,
@@ -3873,7 +3968,7 @@ export function ReceptionPage({
           },
         });
       } finally {
-        setClaimSendingEntryKey(null);
+        setClaimSendingPatientId(null);
       }
     },
     [
@@ -3917,7 +4012,7 @@ export function ReceptionPage({
     },
     [acceptWorkflowModalOpen, flags.runId, initialRunId, mergedMeta.runId],
   );
-  const handleStatusTabChange = useCallback((status: ReceptionWorkflowStatus) => {
+  const handleStatusTabChange = useCallback((status: ReceptionStatus) => {
     statusTabManualSelectionRef.current = true;
     setActiveStatusTab(status);
   }, []);
@@ -4957,9 +5052,14 @@ export function ReceptionPage({
                         <p className="reception-board__empty">「{activeStatusLabel}」に該当する患者はいません。</p>
                       ) : (
                         activeStatusItems.map((entry) => {
-                          const workflowStatus = resolveWorkflowStatus(entry);
+                          const status = activeStatusTab;
                           const bundle = resolveBundleForEntry(entry);
-                          const queue = resolveQueueForEntry(entry);
+                          const billingProjection =
+                            entry.billingProjection ??
+                            (status === '会計待ち' || status === '会計済み' || status === '再計待'
+                              ? resolveBillingProjectionForEntry(entry)
+                              : undefined);
+                          const correctionNote = formatCorrectionNote(billingProjection?.correction);
                           const paymentLabel = paymentModeLabel(entry.insurance);
                           const canOpenCharts = hasHandoffEncounterKey(entry);
                           const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
@@ -4975,16 +5075,14 @@ export function ReceptionPage({
                               })
                             : null;
                           const cached = resolveClaimSendCacheForEntry(entry);
-                          const transmission = resolveTransmissionSignal(entry, cached, queue);
-                          const correctionNote = resolveCorrectionNote(entry);
                           const isSelected = selectedEntryKey === entryKey(entry);
                           const rowKey =
                             entryKey(entry) ??
                             `${entry.patientId ?? 'unknown'}-${entry.appointmentTime ?? entry.department ?? 'card'}`;
-                          const cardActionMenuKey = `${workflowStatus}:${rowKey}`;
+                          const cardActionMenuKey = `${status}:${rowKey}`;
                           const cardActionMenuOpen = openCardActionMenuKey === cardActionMenuKey;
                           const billingSendGuard =
-                            workflowStatus === '会計待ち' || workflowStatus === '再計待'
+                            billingProjection?.workflow === '会計待ち'
                               ? resolveBillingSendGuard({
                                   entry,
                                   fallbackUsed: mergedMeta.fallbackUsed,
@@ -4994,7 +5092,7 @@ export function ReceptionPage({
                             billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.visibleReason : null;
                           const billingSendBlockedTitle =
                             billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.title : 'ORCAへ会計送信します';
-                          const billingSendInProgress = claimSendingEntryKey === entryKey(entry);
+                          const billingSendInProgress = claimSendingPatientId === entry.patientId;
                           const activeQueue = orcaQueueStatus;
                           const queueDetailVisible =
                             Boolean(activeQueue.detail) && (activeQueue.tone === 'warning' || activeQueue.tone === 'error');
@@ -5003,13 +5101,13 @@ export function ReceptionPage({
                           );
                           const reservationTime =
                             normalizeTimeLabel(
-                              entry.reservationTime ?? (workflowStatus === '予約' ? entry.appointmentTime : undefined),
+                              entry.reservationTime ?? (entry.status === '予約' ? entry.appointmentTime : undefined),
                             ) ??
                             (entry.patientId ? reservationTimeByPatientId.get(entry.patientId.trim()) : undefined);
                           const visitKind =
-                            workflowStatus === '受付中' ? (reservationTime ? ('reserved' as const) : ('walkin' as const)) : null;
+                            status === '受付中' ? (reservationTime ? ('reserved' as const) : ('walkin' as const)) : null;
                           const elapsedMinutes =
-                            workflowStatus !== '予約' && acceptanceTime && isSelectedDateToday
+                            status !== '予約' && acceptanceTime && isSelectedDateToday
                               ? computeElapsedMinutes(nowMs, selectedDate, acceptanceTime)
                               : null;
                           const elapsedSeverity =
@@ -5023,10 +5121,10 @@ export function ReceptionPage({
                                     ? '1'
                                     : '0';
                           const elapsedLabel =
-                            elapsedMinutes === null ? null : `${workflowStatus === '受付中' ? '待ち' : '経過'} ${elapsedMinutes}分`;
-                          const mainTimeLabel = workflowStatus === '予約' ? '予約' : '受付';
-                          const mainTime = workflowStatus === '予約' ? reservationTime : acceptanceTime;
-                          const subTime = workflowStatus !== '予約' ? reservationTime : null;
+                            elapsedMinutes === null ? null : `${status === '受付中' ? '待ち' : '経過'} ${elapsedMinutes}分`;
+                          const mainTimeLabel = status === '予約' ? '予約' : '受付';
+                          const mainTime = status === '予約' ? reservationTime : acceptanceTime;
+                          const subTime = status !== '予約' ? reservationTime : null;
                           return (
                             <div
                               key={rowKey}
@@ -5036,7 +5134,7 @@ export function ReceptionPage({
                               className={`reception-card${isSelected ? ' is-selected' : ''}`}
                               data-test-id="reception-entry-card"
                               data-patient-id={entry.patientId ?? ''}
-                              data-reception-status={workflowStatus}
+                              data-reception-status={status}
                               data-visit-kind={visitKind ?? undefined}
                               data-elapsed-severity={elapsedSeverity ?? undefined}
                               aria-label={`${entry.name ?? '患者'} ${entry.patientId ?? ''}`}
@@ -5066,13 +5164,6 @@ export function ReceptionPage({
                                     DOB: {entry.birthDate ?? '—'} / 性別: {entry.sex ?? '—'}
                                   </small>
                                 </div>
-                              </div>
-                              <div className="reception-card__signals" aria-label="状態/送信">
-                                <span className={`reception-badge reception-badge--${workflowStatus}`} aria-label={`状態: ${SECTION_LABEL[workflowStatus]}`}>
-                                  {SECTION_LABEL[workflowStatus]}
-                                </span>
-                                <small>{`会計送信: ${transmission.label}`}</small>
-                                {correctionNote ? <small>{truncateText(correctionNote, 44)}</small> : null}
                               </div>
 
                               <div className="reception-card__actions">
@@ -5116,7 +5207,7 @@ export function ReceptionPage({
                                     </button>
                                     {cardActionMenuOpen ? (
                                       <div className="reception-card__submenu" role="menu" aria-label="カード追加操作">
-                                        {workflowStatus === '会計待ち' || workflowStatus === '再計待' ? (
+                                        {status === '会計待ち' ? (
                                           <button
                                             type="button"
                                             className="reception-card__submenu-item primary"
@@ -5178,13 +5269,13 @@ export function ReceptionPage({
                                             setOpenCardActionMenuKey(null);
                                             requestCancelEntry(entry, 'card');
                                           }}
-                                          disabled={isAcceptSubmitting || !entry.patientId || !entry.receptionId || workflowStatus === '予約'}
+                                          disabled={isAcceptSubmitting || !entry.patientId || !entry.receptionId || status === '予約'}
                                           title={
                                             isAcceptSubmitting
                                               ? '送信中です'
                                               : !entry.patientId
                                                 ? '患者IDが未登録のため取消できません'
-                                                : workflowStatus === '予約'
+                                                : status === '予約'
                                                   ? '予約は受付取消できません'
                                                   : entry.receptionId
                                                     ? '受付取消'
@@ -5217,7 +5308,7 @@ export function ReceptionPage({
                                         </div>
                                       ) : null}
                                       <div className="reception-card__chips" aria-label="種別/経過">
-                                        {workflowStatus === '受付中' && visitKind ? (
+                                        {status === '受付中' && visitKind ? (
                                           <span
                                             className="reception-card__chip reception-card__chip--kind"
                                             data-kind={visitKind}
@@ -5241,14 +5332,14 @@ export function ReceptionPage({
                                         ) : null}
                                       </div>
                                     </div>
-                                    <span className={`reception-badge reception-badge--${workflowStatus}`} aria-label={`状態: ${SECTION_LABEL[workflowStatus]}`}>
+                                    <span className={`reception-badge reception-badge--${status}`} aria-label={`状態: ${SECTION_LABEL[status]}`}>
                                       {isReceptionStatusMvpEnabled ? (
                                         <span className="reception-status-mvp" data-test-id="reception-status-mvp">
-                                          <span className="reception-status-mvp__dot" aria-hidden="true" data-status={workflowStatus} />
-                                          <span className="reception-status-mvp__label">{SECTION_LABEL[workflowStatus]}</span>
+                                          <span className="reception-status-mvp__dot" aria-hidden="true" data-status={status} />
+                                          <span className="reception-status-mvp__label">{SECTION_LABEL[status]}</span>
                                         </span>
                                       ) : (
-                                        SECTION_LABEL[workflowStatus]
+                                        SECTION_LABEL[status]
                                       )}
                                     </span>
                                   </div>
@@ -5278,13 +5369,19 @@ export function ReceptionPage({
                                     {bundle?.claimStatus || bundle?.claimStatusText ? (
                                       <small>請求: {bundle.claimStatus ?? bundle.claimStatusText}</small>
                                     ) : null}
-                                    <small>会計送信: {transmission.label}</small>
-                                    {correctionNote ? <small>{truncateText(correctionNote, 44)}</small> : null}
+                                    {billingProjection ? (
+                                      <small>送信: {billingProjection.transmission}</small>
+                                    ) : null}
                                     {debugUiEnabled && cached?.invoiceNumber ? <small>invoice: {cached.invoiceNumber}</small> : null}
                                     {debugUiEnabled && cached?.dataId ? <small>data: {cached.dataId}</small> : null}
                                     <span className={`reception-queue reception-queue--${activeQueue.tone}`}>{activeQueue.label}</span>
                                     {queueDetailVisible ? <small>{truncateText(activeQueue.detail ?? '', 44)}</small> : null}
                                   </div>
+                                  {correctionNote ? (
+                                    <div className="reception-status-mvp__next" data-tone={billingProjection?.correction?.kind === '要再計' ? 'warning' : 'info'}>
+                                      <strong data-test-id="reception-billing-correction-note">{correctionNote}</strong>
+                                    </div>
+                                  ) : null}
                                   {isReceptionStatusMvpPhase2 && mvpDecision ? (
                                     <div className="reception-status-mvp__next" data-tone={mvpDecision.tone}>
                                       <span className="reception-status-mvp__next-label">次:</span>
@@ -5328,7 +5425,7 @@ export function ReceptionPage({
                         aria-live={infoLive}
                         aria-atomic="true"
                       >
-                        {selectedEntry && resolveWorkflowStatus(selectedEntry) === activeStatusTab
+                        {selectedEntry && selectedEntry.status === activeStatusTab
                           ? selectionSummaryText
                           : `${activeStatusLabel} ${activeStatusItems.length}件`}
                       </p>
@@ -5342,7 +5439,7 @@ export function ReceptionPage({
                             <th scope="col">氏名</th>
                             <th scope="col">来院/科</th>
                             <th scope="col">支払</th>
-                            {claimOutpatientEnabled && <th scope="col">請求</th>}
+                            <th scope="col">請求</th>
                             <th scope="col">メモ/参照</th>
                             <th scope="col">直近</th>
                             <th scope="col">ORCA</th>
@@ -5358,10 +5455,14 @@ export function ReceptionPage({
                             </tr>
                           ) : null}
                           {activeStatusItems.map((entry) => {
-                            const queue = resolveQueueForEntry(entry);
-                            const queueStatus = resolveQueueStatus(queue);
+                            const queueStatus = resolveQueueStatusForEntry(entry);
                             const bundle = resolveBundleForEntry(entry);
-                            const workflowStatus = resolveWorkflowStatus(entry);
+                            const billingProjection =
+                              entry.billingProjection ??
+                              (activeStatusTab === '会計待ち' || activeStatusTab === '会計済み' || activeStatusTab === '再計待'
+                                ? resolveBillingProjectionForEntry(entry)
+                                : undefined);
+                            const correctionNote = formatCorrectionNote(billingProjection?.correction);
                             const paymentLabel = paymentModeLabel(entry.insurance);
                             const canOpenCharts = hasHandoffEncounterKey(entry);
                             const orcaQueueEntry = entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined;
@@ -5378,11 +5479,8 @@ export function ReceptionPage({
                                   orcaQueueEntry,
                                   isSystemAdmin,
                                   retrySupported: orcaQueueQuery.data?.retrySupported === true,
-                              })
+                                })
                               : null;
-                            const cached = resolveClaimSendCacheForEntry(entry);
-                            const transmission = resolveTransmissionSignal(entry, cached, queue);
-                            const correctionNote = resolveCorrectionNote(entry);
                             const fallbackAppointmentId =
                               entry.receptionId ? undefined : entry.appointmentId ?? (entry.id ? String(entry.id) : undefined);
                             const isSelected = selectedEntryKey === entryKey(entry);
@@ -5392,7 +5490,7 @@ export function ReceptionPage({
                             const tableActionMenuKey = `table:${activeStatusTab}:${rowKey}`;
                             const tableActionMenuOpen = openCardActionMenuKey === tableActionMenuKey;
                             const billingSendGuard =
-                              activeStatusTab === '会計待ち' || activeStatusTab === '再計待'
+                              billingProjection?.workflow === '会計待ち'
                                 ? resolveBillingSendGuard({
                                     entry,
                                     fallbackUsed: mergedMeta.fallbackUsed,
@@ -5402,7 +5500,7 @@ export function ReceptionPage({
                               billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.visibleReason : null;
                             const billingSendBlockedTitle =
                               billingSendGuard && !billingSendGuard.canSend ? billingSendGuard.title : 'ORCAへ会計送信します';
-                            const billingSendInProgress = claimSendingEntryKey === entryKey(entry);
+                            const billingSendInProgress = claimSendingPatientId === entry.patientId;
                             return (
                               <tr
                                 key={rowKey}
@@ -5420,7 +5518,7 @@ export function ReceptionPage({
                                 aria-label={`${entry.name ?? '患者'} ${entry.appointmentTime ?? ''} ${entry.department ?? ''}`}
                                 data-test-id="reception-entry-row"
                                 data-patient-id={entry.patientId ?? ''}
-                                data-reception-status={workflowStatus}
+                                data-reception-status={activeStatusTab}
                               >
                                 <td>
                                   <PatientMetaRow
@@ -5456,38 +5554,37 @@ export function ReceptionPage({
                                   </StatusPill>
                                   <small className="reception-table__sub">{entry.insurance ?? '—'}</small>
                                 </td>
-                                {claimOutpatientEnabled && (
-                                  <td className="reception-table__claim">
-                                    <div>{bundle?.claimStatus ?? bundle?.claimStatusText ?? '未取得'}</div>
-                                    <small className="reception-table__sub">会計送信: {transmission.label}</small>
-                                    {correctionNote ? (
-                                      <small className="reception-table__sub">{truncateText(correctionNote, 44)}</small>
-                                    ) : null}
-                                    {bundle?.bundleNumber && debugUiEnabled ? (
-                                      <small className="reception-table__sub">B: {bundle.bundleNumber}</small>
-                                    ) : null}
-                                    {debugUiEnabled && cached?.invoiceNumber ? (
-                                      <small className="reception-table__sub">I: {cached.invoiceNumber}</small>
-                                    ) : null}
-                                    {debugUiEnabled && cached?.dataId ? (
-                                      <small className="reception-table__sub">D: {cached.dataId}</small>
-                                    ) : null}
-                                  </td>
-                                )}
+                                <td className="reception-table__claim">
+                                  <div>{billingProjection?.workflow ?? bundle?.claimStatus ?? bundle?.claimStatusText ?? '未確認'}</div>
+                                  <small className="reception-table__sub">送信: {billingProjection?.transmission ?? '未送信'}</small>
+                                  {bundle?.bundleNumber && debugUiEnabled ? (
+                                    <small className="reception-table__sub">B: {bundle.bundleNumber}</small>
+                                  ) : null}
+                                  {(() => {
+                                    const cached = resolveClaimSendCacheForEntry(entry);
+                                    if (!cached) return null;
+                                    return (
+                                      <>
+                                        {debugUiEnabled && cached.invoiceNumber ? (
+                                          <small className="reception-table__sub">I: {cached.invoiceNumber}</small>
+                                        ) : null}
+                                        {debugUiEnabled && cached.dataId ? (
+                                          <small className="reception-table__sub">D: {cached.dataId}</small>
+                                        ) : null}
+                                      </>
+                                    );
+                                  })()}
+                                </td>
                                 <td className="reception-table__note">
                                   {correctionNote ? (
-                                    <small className="reception-table__sub">{truncateText(correctionNote, 36)}</small>
+                                    <small className="reception-table__sub" data-test-id="reception-billing-correction-note">
+                                      {correctionNote}
+                                    </small>
                                   ) : null}
                                   <div>{entry.note ? truncateText(entry.note, 36) : '—'}</div>
                                 </td>
                                 <td className="reception-table__last">{resolveLastVisitForEntry(entry)}</td>
                                 <td className="reception-table__queue">
-                                  <span
-                                    className={`reception-queue reception-queue--${transmission.tone}`}
-                                    aria-label={`会計送信: ${transmission.label}`}
-                                  >
-                                    {transmission.label}
-                                  </span>
                                   <span
                                     className={`reception-queue reception-queue--${displayedQueueStatus.tone}`}
                                     aria-label={`ORCAキュー: ${displayedQueueStatus.label}${displayedQueueStatus.detail ? ` ${displayedQueueStatus.detail}` : ''}`}
@@ -5499,7 +5596,7 @@ export function ReceptionPage({
                                   ) : null}
                                 </td>
                                 <td className="reception-table__action">
-                                  {activeStatusTab === '会計待ち' || activeStatusTab === '再計待' ? (
+                                  {billingProjection?.workflow === '会計待ち' ? (
                                     <div>
                                       <button
                                         type="button"
@@ -5601,13 +5698,13 @@ export function ReceptionPage({
                                             setOpenCardActionMenuKey(null);
                                             requestCancelEntry(entry, 'table');
                                           }}
-                                          disabled={isAcceptSubmitting || !entry.patientId || !entry.receptionId || workflowStatus === '予約'}
+                                          disabled={isAcceptSubmitting || !entry.patientId || !entry.receptionId || activeStatusTab === '予約'}
                                           title={
                                             isAcceptSubmitting
                                               ? '送信中です'
                                               : !entry.patientId
                                                 ? '患者IDが未登録のため取消できません'
-                                                : workflowStatus === '予約'
+                                                : activeStatusTab === '予約'
                                                   ? '予約は受付取消できません'
                                                   : entry.receptionId
                                                     ? '受付取消'
@@ -5837,7 +5934,7 @@ export function ReceptionPage({
                                 patientId: resolvedPatientId,
                                 acceptedHandoff:
                                   acceptedChartsHandoff?.encounter.patientId === resolvedPatientId ? acceptedChartsHandoff : null,
-                                entries: sortedEntries,
+                                entries: displayedEntries,
                               });
                               const canOpenCharts = chartsHandoffCandidate.kind === 'ready';
                               const patientSearchOpenChartsTitle =
@@ -6071,13 +6168,12 @@ export function ReceptionPage({
                 appointmentId={cancelConfirmState.entry.appointmentId}
                 sex={cancelConfirmState.entry.sex}
                 note={`氏名: ${cancelConfirmState.entry.name ?? '—'} / 状態: ${
-                  SECTION_LABEL[resolveWorkflowStatus(cancelConfirmState.entry)] ?? resolveWorkflowStatus(cancelConfirmState.entry)
+                  SECTION_LABEL[cancelConfirmState.entry.status] ?? cancelConfirmState.entry.status
                 }`}
                 selected
               />
               <p>
-                氏名: {cancelConfirmState.entry.name ?? '—'} / 状態:{' '}
-                {SECTION_LABEL[resolveWorkflowStatus(cancelConfirmState.entry)] ?? resolveWorkflowStatus(cancelConfirmState.entry)}
+                氏名: {cancelConfirmState.entry.name ?? '—'} / 状態: {SECTION_LABEL[cancelConfirmState.entry.status] ?? cancelConfirmState.entry.status}
               </p>
               <label className="reception-accept__field">
                 <span>取消理由（任意）</span>

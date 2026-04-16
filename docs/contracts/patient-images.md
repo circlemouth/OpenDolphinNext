@@ -44,6 +44,9 @@
 - [x] filename から path separator / CRLF / quote を除去する。
 - [x] raw exception message をクライアントへ返さない。
 - [x] `AttachmentStorageManager` が backend probe を持ち、health で利用できるようにする。
+- [x] patient image asset は `/patients/{patientId}/images` を正本にし、document attachment reference と同一視しない。
+- [x] document 側から参照する場合も `uri` / `digest` / `storageKey` は server 側で asset metadata を再解決する。
+- [x] reference remove は asset hard delete を意味しない。
 
 ## 実装タスク
 - [x] `PatientImagesResource` で `UriInfo` を用いて `downloadUrl` を生成する。

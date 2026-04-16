@@ -37,8 +37,21 @@ let mockMutationResult: any = null;
 let mockMutationQueue: any[] = [];
 let mockMutationCalls: unknown[] = [];
 let mockMutationPending = false;
-let mockClaimSendCache: Record<string, { invoiceNumber?: string; dataId?: string; sendStatus?: 'success' | 'error' }> =
-  {};
+let mockClaimSendCache: Record<
+  string,
+  {
+    patientId?: string;
+    appointmentId?: string;
+    receptionId?: string;
+    scheduleKey?: string;
+    encounterKey?: string;
+    invoiceNumber?: string;
+    dataId?: string;
+    sendStatus?: 'success' | 'error';
+    correctionKind?: 'confirm' | 'rebill';
+    correctionReason?: string;
+  }
+> = {};
 let mockMedicalInformationOptions = [{ code: '01', name: '外来' }];
 let mockSearchParams = new URLSearchParams();
 let mockLocationState: Record<string, unknown> | undefined;
@@ -164,24 +177,42 @@ vi.mock('../../outpatient/savedViews', () => ({
 
 vi.mock('../../charts/orcaClaimSendCache', () => ({
   loadOrcaClaimSendCache: () => mockClaimSendCache,
-  saveOrcaClaimSendCache: (entry: { patientId: string }) => {
-    mockClaimSendCache = { ...mockClaimSendCache, [entry.patientId]: entry as any };
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('orca-claim-send-cache-update', { detail: { patientId: entry.patientId } }));
-    }
+  findOrcaClaimSendEntryForMatch: (
+    store: typeof mockClaimSendCache,
+    entry: { patientId?: string; appointmentId?: string; receptionId?: string; scheduleKey?: string; encounterKey?: string },
+    options?: { allowPatientFallback?: boolean },
+  ) => {
+    const values = Object.values(store ?? {});
+    const direct =
+      values.find((candidate) => candidate.encounterKey && candidate.encounterKey === entry.encounterKey) ??
+      values.find((candidate) => candidate.scheduleKey && candidate.scheduleKey === entry.scheduleKey) ??
+      values.find((candidate) => candidate.receptionId && candidate.receptionId === entry.receptionId) ??
+      values.find((candidate) => candidate.appointmentId && candidate.appointmentId === entry.appointmentId);
+    if (direct) return direct;
+    if (!options?.allowPatientFallback || !entry.patientId) return null;
+    const patientMatches = values.filter((candidate) => candidate.patientId === entry.patientId);
+    return patientMatches.length === 1 ? patientMatches[0] ?? null : null;
   },
-  findOrcaClaimSendEntryForContext: (
-    store: Record<string, { patientId?: string; appointmentId?: string; receptionId?: string; scheduleKey?: string; encounterKey?: string }>,
-    context: { patientId?: string; appointmentId?: string; receptionId?: string; scheduleKey?: string; encounterKey?: string },
-  ) =>
-    Object.values(store).find((entry) => {
-      if (!context.patientId || entry.patientId !== context.patientId) return false;
-      if (context.encounterKey) return entry.encounterKey === context.encounterKey;
-      if (context.scheduleKey) return entry.scheduleKey === context.scheduleKey;
-      if (context.receptionId) return entry.receptionId === context.receptionId;
-      if (context.appointmentId) return entry.appointmentId === context.appointmentId;
-      return true;
-    }) ?? null,
+  saveOrcaClaimSendCache: (entry: {
+    patientId: string;
+    appointmentId?: string;
+    receptionId?: string;
+    scheduleKey?: string;
+    encounterKey?: string;
+  }) => {
+    const key =
+      entry.encounterKey
+        ? `encounter:${entry.encounterKey}`
+        : entry.scheduleKey
+          ? `schedule:${entry.scheduleKey}`
+          : entry.receptionId
+            ? `reception:${entry.receptionId}`
+            : entry.appointmentId
+              ? `appointment:${entry.appointmentId}`
+              : `patient:${entry.patientId}`;
+    mockClaimSendCache = { ...mockClaimSendCache, [key]: entry as any };
+    window.dispatchEvent(new CustomEvent('orca-claim-send-cache-update', { detail: { patientId: entry.patientId, cacheKey: key } }));
+  },
 }));
 
 vi.mock('../../charts/orcaClaimApi', () => ({
@@ -1639,7 +1670,7 @@ describe('ReceptionPage status/date/card action UX', () => {
     });
   });
 
-  it('shows 会計送信 button on 会計待ち rows and keeps workflow separate from 送信済 on success', async () => {
+  it('shows 会計送信 button on 会計待ち rows and keeps workflow in 会計待ち on success', async () => {
     mockAppointmentData.entries = [createBillingEntry()];
     mockSearchParams = new URLSearchParams('date=2026-01-29');
     mockLocationState = { visitDate: '2026-01-29' };
@@ -1684,13 +1715,59 @@ describe('ReceptionPage status/date/card action UX', () => {
       expect.objectContaining({
         tone: 'success',
         message: '会計送信を完了',
-        detail: '会計送信を完了。会計済みは収納確認後に反映します。',
+        detail: '会計済みは収納確認後に反映します。',
       }),
     );
-    const billingList = screen.getByRole('region', { name: '受付一覧' });
-    const billingRow = await within(billingList).findByRole('row', { name: /診察終了患者/ });
-    expect(within(billingRow).getByText('送信済')).toBeInTheDocument();
-    expect(screen.queryByRole('tab', { name: /会計済/ })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(within(row).getByText(/送信:\s*送信済/)).toBeInTheDocument();
+    });
+    await expect(screen.queryByRole('tab', { name: /会計済/ })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /会計待ち/ })).toHaveAttribute('aria-selected', 'true');
+    expect(within(listRegion).getByRole('row', { name: /診察終了患者/ })).toBeInTheDocument();
+  });
+
+  it('shows rebill note in a separate slot and projects the row into 再計待', async () => {
+    mockAppointmentData.entries = [createBillingEntry({ patientId: 'P-611', receptionId: 'R-611', name: '再計患者' })];
+    mockClaimSendCache = {
+      'reception:R-611': {
+        patientId: 'P-611',
+        receptionId: 'R-611',
+        sendStatus: 'success',
+        correctionKind: 'rebill',
+        correctionReason: '会計済み後に変更があったため再会計が必要です。',
+      },
+    };
+
+    renderReceptionPage();
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: /再計待/ }));
+    const listRegion = screen.getByRole('region', { name: '受付一覧' });
+    const row = within(listRegion).getByRole('row', { name: /再計患者/ });
+    expect(within(row).getByText(/送信:\s*送信済/)).toBeInTheDocument();
+    expect(within(row).getByText(/再計待: 会計済み後に変更があったため再会計が必要です。/)).toBeInTheDocument();
+  });
+
+  it('does not apply patient-only send cache to multiple rows of the same patient', async () => {
+    mockAppointmentData.entries = [
+      createBillingEntry({ id: 'row-701a', patientId: 'P-701', receptionId: 'R-701-A', name: '同一患者A', appointmentTime: '09:00' }),
+      createBillingEntry({ id: 'row-701b', patientId: 'P-701', receptionId: 'R-701-B', name: '同一患者B', appointmentTime: '10:00' }),
+    ];
+    mockClaimSendCache = {
+      'patient:P-701': {
+        patientId: 'P-701',
+        sendStatus: 'success',
+      },
+    };
+
+    renderReceptionPage();
+    await userEvent.setup().click(screen.getByRole('tab', { name: /会計待ち/ }));
+    const listRegion = screen.getByRole('region', { name: '受付一覧' });
+    const firstRow = within(listRegion).getByRole('row', { name: /同一患者A/ });
+    const secondRow = within(listRegion).getByRole('row', { name: /同一患者B/ });
+
+    expect(within(firstRow).getByText('送信: 未送信')).toBeInTheDocument();
+    expect(within(secondRow).getByText('送信: 未送信')).toBeInTheDocument();
   });
 
   it.each([

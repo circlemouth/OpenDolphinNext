@@ -47,6 +47,7 @@
 
 ## Non-Persistence
 - Charts の workspace patient tabs は同一 SPA セッション内の揮発状態だけで扱います。
+- document / report print preview は `location.state` のみで開き、browser storage restore を行いません。
 - reload をまたいだ復元はしません。
 - new tab をまたいだ復元はしません。
 - bookmark をまたいだ復元はしません。

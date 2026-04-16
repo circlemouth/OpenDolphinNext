@@ -131,6 +131,17 @@ const buildReportRouter = (stateOverrides: Partial<ReportPrintPreviewState> = {}
   );
 };
 
+const buildMissingStateRouter = () =>
+  createMemoryRouter(
+    [
+      {
+        path: '/charts/print/document',
+        element: <ChartsDocumentPrintPage />,
+      },
+    ],
+    { initialEntries: [{ pathname: '/charts/print/document' }] },
+  );
+
 const setAuth = (value: boolean) => {
   const mocked = vi.mocked(hasStoredAuth);
   mocked.mockReturnValue(value);
@@ -236,5 +247,15 @@ describe('ChartsDocumentPrintPage', () => {
 
     expect(await screen.findByText(/PDFの取得に失敗しました。時間をおいて再試行してください。/)).toBeInTheDocument();
     expect(screen.queryByText(/traceId=trace-raw/)).not.toBeInTheDocument();
+  });
+
+  it('route state が無い場合は fail-close copy を表示する', () => {
+    const router = buildMissingStateRouter();
+    render(<RouterProvider router={router} />);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('文書プレビューの状態が見つかりません。');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'この画面は一時プレビューのため、再開できません。Charts へ戻って開き直してください。',
+    );
   });
 });

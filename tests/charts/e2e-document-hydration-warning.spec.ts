@@ -1,7 +1,7 @@
 import { test, expect } from '../playwright/fixtures';
 import { baseUrl, e2eAuthSession, seedAuthSession, withChartLock } from '../e2e/helpers/orcaMaster';
 
-const RUN_ID = process.env.RUN_ID ?? '20260121T111311Z';
+const RUN_ID = process.env.RUN_ID ?? '20260124T090000Z';
 process.env.RUN_ID ??= RUN_ID;
 
 test.use({
@@ -15,7 +15,7 @@ test.use({
   },
 });
 
-test('文書履歴をコピーして編集フォームへ再適用できる', async ({ page }) => {
+test('画像参照付き文書は再編集を fail-close する', async ({ page }) => {
   await withChartLock(page, async () => {
     await seedAuthSession(page);
     const facilityId = e2eAuthSession.credentials.facilityId;
@@ -37,15 +37,14 @@ test('文書履歴をコピーして編集フォームへ再適用できる', as
               id: 1,
               patientId: '000001',
               letterType: 'client',
-              title: '標準紹介状',
+              title: '画像参照つき紹介状',
               recorded: '2026-01-21T00:00:00Z',
               letterItems: [
                 { name: 'webTemplateId', value: 'REF-ODT-STD' },
                 { name: 'webTemplateLabel', value: '標準紹介状' },
-                { name: 'hospital', value: '東京クリニック' },
-                { name: 'doctor', value: '山田太郎' },
                 { name: 'purpose', value: '精査依頼' },
                 { name: 'disease', value: '高血圧' },
+                { name: 'webAttachmentIds', value: '[901]' },
               ],
               letterTexts: [{ name: 'clinicalCourse', textValue: '既往歴と検査結果を記載' }],
             },
@@ -61,15 +60,14 @@ test('文書履歴をコピーして編集フォームへ再適用できる', as
           id: 1,
           patientId: '000001',
           letterType: 'client',
-          title: '標準紹介状',
+          title: '画像参照つき紹介状',
           recorded: '2026-01-21T00:00:00Z',
           letterItems: [
             { name: 'webTemplateId', value: 'REF-ODT-STD' },
             { name: 'webTemplateLabel', value: '標準紹介状' },
-            { name: 'hospital', value: '東京クリニック' },
-            { name: 'doctor', value: '山田太郎' },
             { name: 'purpose', value: '精査依頼' },
             { name: 'disease', value: '高血圧' },
+            { name: 'webAttachmentIds', value: '[901]' },
           ],
           letterTexts: [{ name: 'clinicalCourse', textValue: '既往歴と検査結果を記載' }],
         }),
@@ -79,21 +77,12 @@ test('文書履歴をコピーして編集フォームへ再適用できる', as
     await page.goto(`${baseUrl}/f/${facilityId}/charts?patientId=000001&visitDate=2026-01-21&msw=1`);
     await expect(page.locator('.charts-page')).toBeVisible({ timeout: 20_000 });
 
-    const persistedKeys = await page.evaluate(() =>
-      Object.keys(window.localStorage).filter((key) => key.includes('document-history') || key.includes('printPreview:document')),
-    );
-    expect(persistedKeys).toHaveLength(0);
-
     await page.getByRole('button', { name: '文書を編集' }).click();
 
     const panel = page.locator('[data-test-id="document-create-panel"]');
     await expect(panel.getByText('文書作成メニュー')).toBeVisible({ timeout: 10_000 });
-    await panel.getByRole('button', { name: 'コピーして編集' }).click();
-
-    await expect(panel.getByLabel('宛先医療機関 *')).toHaveValue('東京クリニック');
-    await expect(panel.getByLabel('宛先医師 *')).toHaveValue('山田太郎');
-    await expect(panel.getByLabel('紹介目的 *')).toHaveValue('精査依頼');
-    await expect(panel.getByLabel('主病名 *')).toHaveValue('高血圧');
-    await expect(panel.getByLabel('紹介内容 *')).toHaveValue('既往歴と検査結果を記載');
+    await expect(panel.getByText('画像参照付き文書は現契約では安全に再編集できません。新規作成で画像を選び直してください。')).toBeVisible();
+    await expect(panel.getByRole('button', { name: 'コピーして編集' })).toBeDisabled();
+    await expect(panel.getByRole('button', { name: '編集' })).toBeDisabled();
   });
 });

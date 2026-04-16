@@ -158,6 +158,31 @@ const renderActionBar = (selectedEntry?: Partial<ReceptionEntry>) =>
     );
   };
 
+const renderActionBarWithProps = (props: Record<string, unknown>) =>
+  render(
+    <MemoryRouter>
+      <ChartsActionBar
+        {...({
+          ...baseProps,
+          patientId: '000001',
+          encounterId: 'F001:E100',
+          visitDate: '2026-01-20',
+          orcaEncounterContext: {
+            patientId: '000001',
+            visitDate: '2026-01-20',
+            departmentCode: '01',
+            physicianCode: '10001',
+            insuranceCombinationNumber: '0001',
+            voucherNumber: '1234',
+            sequentialNumber: '1',
+          },
+          selectedEntry: defaultSelectedEntry,
+          ...props,
+        } as any)}
+      />
+    </MemoryRouter>,
+  );
+
 describe('ChartsActionBar ORCA send', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -175,6 +200,40 @@ describe('ChartsActionBar ORCA send', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('send success と会計済み確認のラベルを混同しない', () => {
+    const { rerender } = renderActionBarWithProps({
+      queueEntry: { id: 'q-sent', phase: 'sent', patientId: '000001', appointmentId: 'A-1' },
+    });
+
+    expect(screen.getByText('送信状態: 送信済み')).toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <ChartsActionBar
+          {...({
+            ...baseProps,
+            patientId: '000001',
+            encounterId: 'F001:E100',
+            visitDate: '2026-01-20',
+            orcaEncounterContext: {
+              patientId: '000001',
+              visitDate: '2026-01-20',
+              departmentCode: '01',
+              physicianCode: '10001',
+              insuranceCombinationNumber: '0001',
+              voucherNumber: '1234',
+              sequentialNumber: '1',
+            },
+            selectedEntry: defaultSelectedEntry,
+            queueEntry: { id: 'q-ack', phase: 'ack', patientId: '000001', appointmentId: 'A-1' },
+          } as any)}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('送信状態: 会計済み確認')).toBeInTheDocument();
   });
 
   it('sends a valid medicalmodv2 payload', async () => {

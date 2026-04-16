@@ -217,6 +217,8 @@ public class DocumentIntegrityService {
             appendField(builder, "attachment.fileName", attachment.getFileName());
             appendField(builder, "attachment.contentType", attachment.getContentType());
             appendField(builder, "attachment.contentSize", Long.toString(attachment.getContentSize()));
+            appendField(builder, "attachment.linkId", Long.toString(attachment.getLinkId()));
+            appendField(builder, "attachment.linkRelation", attachment.getLinkRelation());
             appendField(builder, "attachment.uri", attachment.getUri());
             appendField(builder, "attachment.digest", resolveAttachmentDigest(attachment));
         }

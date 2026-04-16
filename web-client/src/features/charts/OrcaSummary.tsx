@@ -19,11 +19,12 @@ import { buildIncomeInfoRequest, fetchOrcaIncomeInfo } from './orcaIncomeInfoApi
 import { getOrcaClaimSendEntry, type OrcaMedicalWarningUi } from './orcaClaimSendCache';
 import { formatOrcaIdentifier } from './orcaIdentifiers';
 import {
+  buildPaidInvoiceSet,
   buildBillingStatusUpdateAudit,
-  resolveBillingStatusFromInvoice,
+  resolveBillingStatusDecision,
   resolveBillingStatusUpdateDurationMs,
 } from './orcaBillingStatus';
-import { saveOrcaIncomeInfoCache } from './orcaIncomeInfoCache';
+import { getOrcaIncomeInfoEntry, saveOrcaIncomeInfoCache } from './orcaIncomeInfoCache';
 import type { OrcaEncounterContext } from './orcaEncounterContext';
 
 export interface OrcaSummaryProps {
@@ -232,10 +233,18 @@ export function OrcaSummary({
   }, [appointmentList]);
 
   const incomeEntries = incomeInfoQuery.data?.entries ?? [];
+  const cachedIncomeInfo = useMemo(
+    () => getOrcaIncomeInfoEntry({ facilityId: session?.facilityId, userId: session?.userId }, resolvedPatientId),
+    [incomeInfoQuery.dataUpdatedAt, resolvedPatientId, session?.facilityId, session?.userId],
+  );
   const paidInvoiceNumbers = useMemo(() => {
-    const numbers = incomeEntries.map((entry) => entry.invoiceNumber).filter((value): value is string => Boolean(value));
-    return new Set(numbers);
-  }, [incomeEntries]);
+    if (incomeInfoQuery.data?.ok) {
+      const numbers = incomeEntries.map((entry) => entry.invoiceNumber).filter((value): value is string => Boolean(value));
+      return new Set(numbers);
+    }
+    const cached = buildPaidInvoiceSet(cachedIncomeInfo);
+    return cached.size > 0 ? cached : undefined;
+  }, [cachedIncomeInfo, incomeEntries, incomeInfoQuery.data?.ok]);
   const incomePreview = incomeEntries.slice(0, 3);
   const incomeLatest = useMemo(() => {
     if (incomeEntries.length === 0) return undefined;
@@ -270,8 +279,14 @@ export function OrcaSummary({
   const lastSendInvoiceIdentifier = formatOrcaIdentifier('Invoice_Number', lastSendCache?.invoiceNumber);
   const lastSendDataIdIdentifier = formatOrcaIdentifier('Data_Id', lastSendCache?.dataId);
   const billingDecision = useMemo(
-    () => resolveBillingStatusFromInvoice(invoiceNumber, paidInvoiceNumbers),
-    [invoiceNumber, paidInvoiceNumbers],
+    () =>
+      resolveBillingStatusDecision({
+        invoiceNumber,
+        sendStatus: lastSendCache?.sendStatus,
+        paidInvoiceNumbers,
+        correctionRequired: sendWarnings.length > 0,
+      }),
+    [invoiceNumber, lastSendCache?.sendStatus, paidInvoiceNumbers, sendWarnings.length],
   );
   const displayClaimStatus = effectiveClaim?.claimStatus;
   const billingStatusRef = useRef<string | undefined>(undefined);
@@ -487,23 +502,31 @@ export function OrcaSummary({
   useEffect(() => {
     if (!resolvedPatientId || !invoiceNumber || !billingDecision.status) return;
     if (incomeRefreshCompletedAtRef.current) return;
-    if (billingStatusRef.current === billingDecision.status) return;
-    billingStatusRef.current = billingDecision.status;
+    if (billingStatusRef.current === billingDecision.statusText) return;
+    billingStatusRef.current = billingDecision.statusText;
     logAuditEvent({
       runId: resolvedRunId,
       source: 'charts/orca-summary',
       patientId: resolvedPatientId,
       payload: buildBillingStatusUpdateAudit({
         status: billingDecision.status,
+        statusText: billingDecision.statusText,
         invoiceNumber,
         performMonth,
         apiResult: incomeInfoQuery.data?.apiResult,
         apiResultMessage: incomeInfoQuery.data?.apiResultMessage,
         fetchedAt: incomeInfoQuery.data?.informationDate,
+        transmissionSource: billingDecision.transmissionSource,
+        confirmationSource: billingDecision.confirmationSource,
+        correctionState: billingDecision.correctionState,
       }),
     });
   }, [
+    billingDecision.confirmationSource,
+    billingDecision.correctionState,
     billingDecision.status,
+    billingDecision.statusText,
+    billingDecision.transmissionSource,
     incomeInfoQuery.data?.apiResult,
     incomeInfoQuery.data?.apiResultMessage,
     incomeInfoQuery.data?.informationDate,
@@ -528,25 +551,32 @@ export function OrcaSummary({
       fallbackUsed: resolvedFallbackUsed ?? false,
       runId: resolvedRunId,
       durationMs,
-      note: displayClaimStatus ?? billingDecision.status ?? 'unknown',
+      note: billingDecision.statusText ?? billingDecision.status ?? 'unknown',
     });
     logAuditEvent({
       runId: resolvedRunId,
       source: 'charts/orca-summary',
       patientId: resolvedPatientId,
       payload: buildBillingStatusUpdateAudit({
-        status: displayClaimStatus ?? billingDecision.status,
+        status: billingDecision.status,
+        statusText: billingDecision.statusText,
         invoiceNumber,
         performMonth,
         apiResult: incomeInfoQuery.data?.apiResult,
         apiResultMessage: incomeInfoQuery.data?.apiResultMessage,
         fetchedAt: incomeInfoQuery.data?.informationDate,
         durationMs,
+        transmissionSource: billingDecision.transmissionSource,
+        confirmationSource: billingDecision.confirmationSource,
+        correctionState: billingDecision.correctionState,
       }),
     });
   }, [
+    billingDecision.confirmationSource,
+    billingDecision.correctionState,
     billingDecision.status,
-    displayClaimStatus,
+    billingDecision.statusText,
+    billingDecision.transmissionSource,
     incomeInfoQuery.data?.apiResult,
     incomeInfoQuery.data?.apiResultMessage,
     incomeInfoQuery.data?.informationDate,
@@ -584,14 +614,13 @@ export function OrcaSummary({
   const summaryUpdatedAt = summary?.fetchedAt ?? effectiveClaim?.fetchedAt ?? lastSendCache?.savedAt ?? '—';
   const sendStatusLabel = lastSendCache?.sendStatus
     ? lastSendCache.sendStatus === 'success'
-      ? '送信成功'
+      ? '送信済'
       : '送信失敗'
     : '未送信';
   const warningStateLabel = sendWarnings.length > 0 ? `警告 ${sendWarnings.length} 件` : '警告なし';
   const hasRecoveryIssue =
     resolvedMissingMaster ||
     resolvedFallbackUsed ||
-    sendWarnings.length > 0 ||
     incomeInfoNotice?.tone === 'error';
   const recoveryTraceId = summary?.traceId ?? effectiveClaim?.traceId ?? lastSendCache?.traceId ?? '—';
 
@@ -621,7 +650,9 @@ export function OrcaSummary({
         />
       )}
       <div className="orca-summary__headline" role="status" aria-live={resolveAriaLive('info')}>
-        <span>送信状況: {sendStatusLabel}</span>
+        <span>workflow: {effectiveClaim?.claimStatusText ?? effectiveClaim?.claimStatus ?? '未取得'}</span>
+        <span>transmission: {sendStatusLabel}</span>
+        <span>confirmation: {billingDecision.statusText ?? billingDecision.status ?? '未確認'}</span>
         <span>{warningStateLabel}</span>
         <span>最終更新: {summaryUpdatedAt}</span>
       </div>
@@ -715,7 +746,7 @@ export function OrcaSummary({
         {claimEnabled && (
           <div className="orca-summary__card">
             <header>
-              <strong>院内ローカル診療サマリ</strong>
+              <strong>Workflow / 院内ローカル診療サマリ</strong>
               <span className="orca-summary__card-meta">status: {displayClaimStatus ?? '—'}</span>
             </header>
             <p className="orca-summary__help">院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。</p>
@@ -738,12 +769,37 @@ export function OrcaSummary({
             </ul>
           </div>
         )}
+        {claimEnabled && (
+          <div className="orca-summary__card">
+            <header>
+              <strong>Transmission / medical-mod-v2</strong>
+              <span className="orca-summary__card-meta">{billingDecision.transmissionState}</span>
+            </header>
+            <p className="orca-summary__help">medical-mod-v2 の送信結果です。会計済み判定とは別に扱ってください。</p>
+            <ul>
+              <li>送信状態: {billingDecision.transmissionState}</li>
+              <li>確認状態: {billingDecision.statusText ?? billingDecision.status ?? '未確認'}</li>
+              <li>confirmation source: {billingDecision.confirmationSource}</li>
+              {invoiceIdentifier && <li>{invoiceIdentifier}</li>}
+              {claimDataIdIdentifier && <li>{claimDataIdIdentifier}</li>}
+              {!effectiveClaim?.invoiceNumber && lastSendInvoiceIdentifier && <li>直近送信: {lastSendInvoiceIdentifier}</li>}
+              {!effectiveClaim?.dataId && lastSendDataIdIdentifier && <li>直近送信: {lastSendDataIdIdentifier}</li>}
+            </ul>
+          </div>
+        )}
         {claimEnabled && sendWarnings.length > 0 && (
           <div className="orca-summary__card orca-summary__card--warning">
             <header>
-              <strong>ORCA 警告</strong>
+              <strong>Correction / 補正メモ</strong>
               <span className="orca-summary__card-meta">{sendWarnings.length} 件</span>
             </header>
+            <p
+              className="orca-summary__help"
+              data-test-id="orca-billing-correction-note"
+            >
+              {billingDecision.correctionNote ??
+                '補正メモは medical-mod-v2 の警告だけを示します。workflow state は変更しません。'}
+            </p>
             <ul className="orca-summary__warning-list">
               {sendWarnings.slice(0, 8).map((warning, index) => {
                 const key = `${warning.groupPosition ?? 'g'}-${warning.itemPosition ?? 'l'}-${warning.code ?? ''}-${index}`;
@@ -772,6 +828,16 @@ export function OrcaSummary({
             <p className="orca-summary__help">
               警告項目をクリックすると、オーダー入力側（同一タブ内）で該当行へフォーカスします。
             </p>
+          </div>
+        )}
+        {claimEnabled && billingDecision.settingNote && (
+          <div className="orca-summary__card" data-test-id="orca-billing-setting-note">
+            <header>
+              <strong>Setting / 確認条件メモ</strong>
+              <span className="orca-summary__card-meta">{billingDecision.confirmationSource}</span>
+            </header>
+            <p className="orca-summary__help">{billingDecision.settingNote}</p>
+            <p className="orca-summary__help">会計確定は incomeinfv2 で確認します。medical-mod-v2 送信とは別の根拠です。</p>
           </div>
         )}
         <div className="orca-summary__card">

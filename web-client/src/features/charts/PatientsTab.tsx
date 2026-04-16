@@ -43,7 +43,8 @@ const STATUS_SORT_RANK: Record<ReceptionStatus, number> = {
   受付中: 1,
   診療中: 2,
   会計待ち: 3,
-  会計済み: 4,
+  再計待: 4,
+  会計済み: 5,
 };
 
 const resolveStatusTone = (status?: ReceptionStatus): StatusPillTone => {
@@ -51,6 +52,7 @@ const resolveStatusTone = (status?: ReceptionStatus): StatusPillTone => {
     case '診療中':
       return 'success';
     case '会計待ち':
+    case '再計待':
       return 'warning';
     case '受付中':
       return 'info';
@@ -321,6 +323,7 @@ export function PatientsTab({
       受付中: 0,
       診療中: 0,
       会計待ち: 0,
+      再計待: 0,
       会計済み: 0,
     };
     for (const entry of baseCandidates) {

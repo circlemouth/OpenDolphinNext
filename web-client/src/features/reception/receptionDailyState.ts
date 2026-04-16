@@ -1,11 +1,6 @@
 import type { StorageScope } from '../../libs/session/storageScope';
 import { buildScopedStorageKey, toScopeSuffix } from '../../libs/session/storageScope';
-import {
-  getReceptionRowLocalKey,
-  type ReceptionEntry,
-  type ReceptionStatus,
-  type ReceptionWorkflowStatus,
-} from '../outpatient/types';
+import type { ReceptionEntry, ReceptionStatus } from '../outpatient/types';
 
 const STORAGE_BASE_KEY = 'opendolphin:web-client:reception-daily-state';
 const STORAGE_VERSION = 'v1';
@@ -23,11 +18,10 @@ type ReceptionStatusOverrideSource =
   | 'manual';
 
 type ReceptionStatusOverride = {
-  workflowStatus: ReceptionWorkflowStatus;
+  status: ReceptionStatus;
   updatedAt: string;
   source: ReceptionStatusOverrideSource;
   runId?: string;
-  reason?: string;
 };
 
 type ReceptionDailyBucket = {
@@ -48,7 +42,7 @@ type ResolveEntriesResult = {
   availableDates: string[];
 };
 
-const RECEPTION_WORKFLOW_STATUS_RANK: Record<ReceptionWorkflowStatus, number> = {
+const RECEPTION_STATUS_RANK: Record<ReceptionStatus, number> = {
   予約: 0,
   受付中: 1,
   診療中: 2,
@@ -57,9 +51,7 @@ const RECEPTION_WORKFLOW_STATUS_RANK: Record<ReceptionWorkflowStatus, number> = 
   会計済み: 5,
 };
 
-const RECEPTION_STATUS_SET = new Set<ReceptionStatus>(['予約', '受付中', '診療中', '会計待ち', '会計済み']);
-const RECEPTION_WORKFLOW_STATUS_SET = new Set<ReceptionWorkflowStatus>(['予約', '受付中', '診療中', '会計待ち', '再計待', '会計済み']);
-const REBILL_REQUIRED_REASON = '会計済み後に変更があったため再会計が必要です。';
+const RECEPTION_STATUS_SET = new Set<ReceptionStatus>(['予約', '受付中', '診療中', '会計待ち', '再計待', '会計済み']);
 
 const toLocalDateYmd = (date: Date): string => {
   const year = date.getFullYear();
@@ -88,21 +80,10 @@ const normalizeReceptionStatus = (value: unknown): ReceptionStatus | undefined =
   return RECEPTION_STATUS_SET.has(value as ReceptionStatus) ? (value as ReceptionStatus) : undefined;
 };
 
-const normalizeReceptionWorkflowStatus = (value: unknown): ReceptionWorkflowStatus | undefined => {
-  if (typeof value !== 'string') return undefined;
-  return RECEPTION_WORKFLOW_STATUS_SET.has(value as ReceptionWorkflowStatus)
-    ? (value as ReceptionWorkflowStatus)
-    : undefined;
-};
-
 const normalizeReceptionSource = (value: unknown): ReceptionEntry['source'] => {
   if (value === 'slots' || value === 'reservations' || value === 'visits' || value === 'unknown') return value;
   return 'unknown';
 };
-
-const normalizeRowLocalKey = (
-  entry?: Pick<ReceptionEntry, 'scheduleKey' | 'encounterKey' | 'receptionId' | 'appointmentId'> | null,
-) => normalizeOptionalString(getReceptionRowLocalKey(entry));
 
 const normalizeReceptionEntry = (value: unknown): ReceptionEntry | null => {
   if (!value || typeof value !== 'object') return null;
@@ -119,7 +100,6 @@ const normalizeReceptionEntry = (value: unknown): ReceptionEntry | null => {
     patientId ??
     `snapshot-${Math.random().toString(36).slice(2, 8)}`;
   const status = normalizeReceptionStatus(raw.status) ?? '受付中';
-  const workflowStatus = normalizeReceptionWorkflowStatus(raw.workflowStatus);
   const visitDate = normalizeDate(normalizeOptionalString(raw.visitDate));
   return {
     id,
@@ -133,10 +113,22 @@ const normalizeReceptionEntry = (value: unknown): ReceptionEntry | null => {
     acceptanceTime: normalizeOptionalString(raw.acceptanceTime),
     visitDate,
     status,
-    workflowStatus,
-    workflowReason: normalizeOptionalString(raw.workflowReason),
     source: normalizeReceptionSource(raw.source),
   };
+};
+
+const resolveReceptionRowKey = (
+  value?: Pick<ReceptionEntry, 'encounterKey' | 'scheduleKey' | 'receptionId' | 'appointmentId'> | null,
+): string | undefined => {
+  const encounterKey = normalizeOptionalString(value?.encounterKey);
+  if (encounterKey) return `encounter:${encounterKey}`;
+  const scheduleKey = normalizeOptionalString(value?.scheduleKey);
+  if (scheduleKey) return `schedule:${scheduleKey}`;
+  const receptionId = normalizeOptionalString(value?.receptionId);
+  if (receptionId) return `reception:${receptionId}`;
+  const appointmentId = normalizeOptionalString(value?.appointmentId);
+  if (appointmentId) return `appointment:${appointmentId}`;
+  return undefined;
 };
 
 const toPersistedEntry = (entry: ReceptionEntry): ReceptionEntry => {
@@ -152,8 +144,6 @@ const toPersistedEntry = (entry: ReceptionEntry): ReceptionEntry => {
     acceptanceTime: normalizeOptionalString(entry.acceptanceTime),
     visitDate: normalizeDate(entry.visitDate),
     status: normalizeReceptionStatus(entry.status) ?? '受付中',
-    workflowStatus: normalizeReceptionWorkflowStatus(entry.workflowStatus),
-    workflowReason: normalizeOptionalString(entry.workflowReason),
     source: normalizeReceptionSource(entry.source),
   };
 };
@@ -161,8 +151,8 @@ const toPersistedEntry = (entry: ReceptionEntry): ReceptionEntry => {
 const normalizeOverride = (value: unknown): ReceptionStatusOverride | null => {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
-  const workflowStatus = normalizeReceptionWorkflowStatus(raw.workflowStatus ?? raw.status);
-  if (!workflowStatus) return null;
+  const status = normalizeReceptionStatus(raw.status);
+  if (!status) return null;
   const source =
     raw.source === 'api' ||
     raw.source === 'charts_open' ||
@@ -173,11 +163,10 @@ const normalizeOverride = (value: unknown): ReceptionStatusOverride | null => {
       ? raw.source
       : 'manual';
   return {
-    workflowStatus,
+    status,
     updatedAt: normalizeOptionalString(raw.updatedAt) ?? new Date().toISOString(),
     source,
     runId: normalizeOptionalString(raw.runId),
-    reason: normalizeOptionalString(raw.reason),
   };
 };
 
@@ -187,7 +176,7 @@ const normalizeBucket = (value: unknown): ReceptionDailyBucket | null => {
   const entriesRaw = Array.isArray(raw.entries) ? raw.entries : [];
   const entries = entriesRaw.map((entry) => normalizeReceptionEntry(entry)).filter((entry): entry is ReceptionEntry => Boolean(entry));
   const statusByRowKey: Record<string, ReceptionStatusOverride> = {};
-  const overridesRaw = raw.statusByRowKey;
+  const overridesRaw = raw.statusByRowKey ?? raw.statusByPatientId;
   if (overridesRaw && typeof overridesRaw === 'object') {
     Object.entries(overridesRaw as Record<string, unknown>).forEach(([rowKey, override]) => {
       const normalizedRowKey = normalizeOptionalString(rowKey);
@@ -195,19 +184,6 @@ const normalizeBucket = (value: unknown): ReceptionDailyBucket | null => {
       const normalizedOverride = normalizeOverride(override);
       if (!normalizedOverride) return;
       statusByRowKey[normalizedRowKey] = normalizedOverride;
-    });
-  }
-  const legacyOverridesRaw = raw.statusByPatientId;
-  if (legacyOverridesRaw && typeof legacyOverridesRaw === 'object') {
-    Object.entries(legacyOverridesRaw as Record<string, unknown>).forEach(([patientId, override]) => {
-      const normalizedPatientId = normalizeOptionalString(patientId);
-      const normalizedOverride = normalizeOverride(override);
-      if (!normalizedPatientId || !normalizedOverride) return;
-      const matches = entries.filter((entry) => normalizeOptionalString(entry.patientId) === normalizedPatientId);
-      if (matches.length !== 1) return;
-      const rowKey = normalizeRowLocalKey(matches[0]);
-      if (!rowKey) return;
-      statusByRowKey[rowKey] = normalizedOverride;
     });
   }
   return {
@@ -332,10 +308,7 @@ export const clearReceptionDailyState = (scope?: StorageScope) => {
 };
 
 const entryIdentity = (entry: ReceptionEntry): string =>
-  normalizeRowLocalKey(entry) ?? entry.id;
-
-const resolveEntryWorkflowStatus = (entry: ReceptionEntry): ReceptionWorkflowStatus =>
-  normalizeReceptionWorkflowStatus(entry.workflowStatus) ?? entry.status;
+  entry.receptionId ?? entry.appointmentId ?? entry.patientId ?? entry.id;
 
 const mergeEntry = (base: ReceptionEntry, override: ReceptionEntry): ReceptionEntry => {
   return {
@@ -349,31 +322,11 @@ const applyStatusOverrides = (
   statusByRowKey: Record<string, ReceptionStatusOverride>,
 ): ReceptionEntry[] => {
   return entries.map((entry) => {
-    const rowKey = normalizeRowLocalKey(entry);
-    if (!rowKey) {
-      if (entry.workflowStatus === undefined && entry.workflowReason === undefined) return entry;
-      return {
-        ...entry,
-        workflowStatus: undefined,
-        workflowReason: undefined,
-      };
-    }
+    const rowKey = resolveReceptionRowKey(entry);
+    if (!rowKey) return entry;
     const override = statusByRowKey[rowKey];
-    if (!override) {
-      if (entry.workflowStatus === undefined && entry.workflowReason === undefined) return entry;
-      return {
-        ...entry,
-        workflowStatus: undefined,
-        workflowReason: undefined,
-      };
-    }
-    const workflowStatus = normalizeReceptionWorkflowStatus(override.workflowStatus) ?? resolveEntryWorkflowStatus(entry);
-    if (workflowStatus === resolveEntryWorkflowStatus(entry) && override.reason === entry.workflowReason) return entry;
-    return {
-      ...entry,
-      workflowStatus,
-      workflowReason: override.reason,
-    };
+    if (!override || override.status === entry.status) return entry;
+    return { ...entry, status: override.status };
   });
 };
 
@@ -401,10 +354,10 @@ const updateBucketWithEntries = (
     const previous = existingById.get(entryIdentity(entry));
     return previous ? mergeEntry(previous, entry) : entry;
   });
-  const withOverrides = applyStatusOverrides(dedupeEntries(mergedEntries), bucket.statusByRowKey);
-  bucket.entries = withOverrides.map((entry) => toPersistedEntry(entry));
+  const withRowOverrides = applyStatusOverrides(dedupeEntries(mergedEntries), bucket.statusByRowKey);
+  bucket.entries = withRowOverrides.map((entry) => toPersistedEntry(entry));
   bucket.updatedAt = new Date().toISOString();
-  return { entries: withOverrides, source: existingEntries.length > 0 ? 'merged' : 'live' };
+  return { entries: withRowOverrides, source: existingEntries.length > 0 ? 'merged' : 'live' };
 };
 
 const ensureBucket = (store: ReceptionDailyStore, date: string): ReceptionDailyBucket => {
@@ -419,8 +372,8 @@ const ensureBucket = (store: ReceptionDailyStore, date: string): ReceptionDailyB
   return created;
 };
 
-const compareRank = (left: ReceptionWorkflowStatus, right: ReceptionWorkflowStatus): number => {
-  return RECEPTION_WORKFLOW_STATUS_RANK[left] - RECEPTION_WORKFLOW_STATUS_RANK[right];
+const compareRank = (left: ReceptionStatus, right: ReceptionStatus): number => {
+  return RECEPTION_STATUS_RANK[left] - RECEPTION_STATUS_RANK[right];
 };
 
 export const resolveReceptionEntriesForDate = (params: {
@@ -478,8 +431,8 @@ export const saveReceptionEntriesForDate = (params: {
 
 export const clearReceptionStatusOverridesForDate = (params: {
   date: string;
-  rowKey?: string;
   patientId?: string;
+  rowKey?: string;
   scope?: StorageScope;
 }) => {
   const date = normalizeDate(params.date);
@@ -488,85 +441,64 @@ export const clearReceptionStatusOverridesForDate = (params: {
   const bucket = store.days[date];
   if (!bucket) return;
   const rowKey = normalizeOptionalString(params.rowKey);
-  const patientId = normalizeOptionalString(params.patientId);
   if (rowKey) {
     if (!(rowKey in bucket.statusByRowKey)) return;
     delete bucket.statusByRowKey[rowKey];
-  } else if (patientId) {
-    let changed = false;
-    Object.keys(bucket.statusByRowKey).forEach((key) => {
-      const matchedEntry = (bucket.entries ?? []).find((entry) => normalizeRowLocalKey(entry) === key);
-      if (!matchedEntry) return;
-      if (normalizeOptionalString(matchedEntry.patientId) !== patientId) return;
-      delete bucket.statusByRowKey[key];
-      changed = true;
-    });
-    if (!changed) return;
   } else {
-    if (Object.keys(bucket.statusByRowKey).length === 0) return;
-    bucket.statusByRowKey = {};
+    const patientId = normalizeOptionalString(params.patientId);
+    if (patientId) {
+      const targetKeys = Object.keys(bucket.statusByRowKey).filter((key) => {
+        const matchedEntry = (bucket.entries ?? []).find((entry) => resolveReceptionRowKey(entry) === key);
+        return matchedEntry?.patientId === patientId;
+      });
+      if (targetKeys.length === 0) return;
+      targetKeys.forEach((key) => delete bucket.statusByRowKey[key]);
+    } else {
+      if (Object.keys(bucket.statusByRowKey).length === 0) return;
+      bucket.statusByRowKey = {};
+    }
   }
-  bucket.entries = applyStatusOverrides(dedupeEntries(bucket.entries ?? []), bucket.statusByRowKey).map((entry) =>
-    toPersistedEntry(entry),
-  );
+  bucket.entries = dedupeEntries(bucket.entries ?? []);
   bucket.updatedAt = new Date().toISOString();
   writeStore(params.scope, store);
 };
 
 export const upsertReceptionStatusOverride = (params: {
   date: string;
-  patientId?: string;
-  rowKey?: string;
-  status: ReceptionWorkflowStatus;
+  status: ReceptionStatus;
   source: ReceptionStatusOverrideSource;
   runId?: string;
   scope?: StorageScope;
   allowDemotion?: boolean;
-  reason?: string;
+  patientId?: string;
+  rowKey?: string;
   fallbackEntry?: Partial<ReceptionEntry>;
 }) => {
   const date = normalizeDate(params.date);
-  const patientId = normalizeOptionalString(params.patientId ?? params.fallbackEntry?.patientId);
-  let rowKey = normalizeOptionalString(params.rowKey) ?? normalizeRowLocalKey(params.fallbackEntry);
-  if (!date) return;
+  const rowKey = normalizeOptionalString(params.rowKey) ?? resolveReceptionRowKey(params.fallbackEntry);
+  if (!date || !rowKey) return;
+  const patientId = normalizeOptionalString(params.patientId) ?? normalizeOptionalString(params.fallbackEntry?.patientId);
   const store = readStore(params.scope);
   const bucket = ensureBucket(store, date);
-  if (!rowKey && patientId) {
-    const matches = (bucket.entries ?? []).filter((entry) => normalizeOptionalString(entry.patientId) === patientId);
-    if (matches.length === 1) {
-      rowKey = normalizeRowLocalKey(matches[0]);
-    }
-  }
-  if (!rowKey) return;
   const previous = bucket.statusByRowKey[rowKey];
-  const currentEntry = (bucket.entries ?? []).find((entry) => normalizeRowLocalKey(entry) === rowKey);
-  const currentWorkflowStatus = currentEntry ? resolveEntryWorkflowStatus(currentEntry) : undefined;
-  const currentWasPaid = previous?.workflowStatus === '会計済み' || currentWorkflowStatus === '会計済み';
-  const requestedStatus =
-    params.source === 'charts_start' && currentWasPaid ? ('再計待' as const) : params.status;
   const shouldKeepPrevious =
     !params.allowDemotion &&
     previous &&
-    compareRank(previous.workflowStatus, requestedStatus) > 0;
-  const nextStatus = shouldKeepPrevious ? previous.workflowStatus : requestedStatus;
-  const nextReason =
-    nextStatus === '再計待'
-      ? normalizeOptionalString(params.reason) ?? previous?.reason ?? REBILL_REQUIRED_REASON
-      : normalizeOptionalString(params.reason);
+    compareRank(previous.status, params.status) > 0;
+  const nextStatus = shouldKeepPrevious ? previous.status : params.status;
   bucket.statusByRowKey[rowKey] = {
-    workflowStatus: nextStatus,
+    status: nextStatus,
     updatedAt: new Date().toISOString(),
     source: params.source,
     runId: params.runId,
-    reason: nextReason,
   };
 
   let matched = false;
   const nextEntries = (bucket.entries ?? []).map((entry) => {
-    if (normalizeRowLocalKey(entry) !== rowKey) return entry;
+    if (resolveReceptionRowKey(entry) !== rowKey) return entry;
     matched = true;
-    if (resolveEntryWorkflowStatus(entry) === nextStatus && entry.workflowReason === nextReason) return entry;
-    return { ...entry, workflowStatus: nextStatus, workflowReason: nextReason };
+    if (entry.status === nextStatus) return entry;
+    return { ...entry, status: nextStatus };
   });
   if (!matched && params.fallbackEntry && patientId) {
     const fallbackVisitDate = normalizeDate(params.fallbackEntry.visitDate) ?? date;
@@ -579,6 +511,8 @@ export const upsertReceptionStatusOverride = (params: {
         patientId,
       appointmentId: normalizeOptionalString(params.fallbackEntry.appointmentId),
       receptionId: normalizeOptionalString(params.fallbackEntry.receptionId),
+      scheduleKey: normalizeOptionalString(params.fallbackEntry.scheduleKey),
+      encounterKey: normalizeOptionalString(params.fallbackEntry.encounterKey),
       patientId,
       appointmentTime: normalizeOptionalString(params.fallbackEntry.appointmentTime),
       reservationTime: normalizeOptionalString(params.fallbackEntry.reservationTime),
@@ -586,9 +520,7 @@ export const upsertReceptionStatusOverride = (params: {
         normalizeOptionalString(params.fallbackEntry.acceptanceTime) ??
         normalizeOptionalString(params.fallbackEntry.appointmentTime),
       visitDate: fallbackVisitDate,
-      status: normalizeReceptionStatus(params.fallbackEntry.status) ?? '受付中',
-      workflowStatus: nextStatus,
-      workflowReason: nextReason,
+      status: nextStatus,
       source: fallbackSource,
     };
     nextEntries.unshift(fallbackEntry);

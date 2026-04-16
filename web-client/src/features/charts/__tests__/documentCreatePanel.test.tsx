@@ -17,6 +17,8 @@ import {
   saveLetterModule,
 } from '../letterApi';
 
+const openPrintDocument = vi.fn();
+
 vi.mock('../../../routes/useAppNavigation', () => ({
   useAppNavigation: () => ({
     currentUrl: '/f/0001/charts',
@@ -32,7 +34,7 @@ vi.mock('../../../routes/useAppNavigation', () => ({
     openCharts: vi.fn(),
     openOrderSets: vi.fn(),
     openPrintOutpatient: vi.fn(),
-    openPrintDocument: vi.fn(),
+    openPrintDocument,
     openMobileImages: vi.fn(),
   }),
 }));
@@ -80,6 +82,18 @@ const makeReferralDetail = () =>
       { name: 'webTemplateLabel', value: '標準紹介状' },
       { name: 'purpose', value: '精査依頼' },
       { name: 'disease', value: '高血圧' },
+    ],
+    letterTexts: [{ name: 'clinicalCourse', textValue: '既往歴と検査結果を記載' }],
+  });
+
+const makeReferralDetailWithAttachment = () =>
+  makeLetter({
+    letterItems: [
+      { name: 'webTemplateId', value: 'REF-ODT-STD' },
+      { name: 'webTemplateLabel', value: '標準紹介状' },
+      { name: 'purpose', value: '精査依頼' },
+      { name: 'disease', value: '高血圧' },
+      { name: 'webAttachmentIds', value: '[901]' },
     ],
     letterTexts: [{ name: 'clinicalCourse', textValue: '既往歴と検査結果を記載' }],
   });
@@ -158,6 +172,7 @@ beforeEach(() => {
 afterEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  openPrintDocument.mockReset();
   vi.mocked(recordChartsAuditEvent).mockReset();
   vi.mocked(sendKarteDocumentWithAttachments).mockReset();
   vi.mocked(fetchKarteIdByPatientId).mockReset();
@@ -566,6 +581,47 @@ describe('DocumentCreatePanel', () => {
     );
 
     expect(await screen.findByRole('button', { name: '編集' })).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: '削除' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: '文書履歴参照を削除' })).toBeInTheDocument();
+  });
+
+  it('画像参照付き文書はコピー編集と編集を fail-close する', async () => {
+    const listSummary = makeReferralDetailWithAttachment();
+    vi.mocked(fetchLetterList).mockResolvedValue({ ok: true, letters: [listSummary] });
+    vi.mocked(fetchLetterDetail).mockResolvedValue({ ok: true, letter: listSummary });
+
+    render(
+      <MemoryRouter>
+        <DocumentCreatePanel {...baseProps} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText(/画像参照付き文書は現契約では安全に再編集できません/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'コピーして編集' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '編集' })).toBeDisabled();
+  });
+
+  it('文書プレビュー遷移で preview state を sessionStorage に保存しない', async () => {
+    const listSummary = makeReferralDetail();
+    vi.mocked(fetchLetterList).mockResolvedValue({ ok: true, letters: [listSummary] });
+    vi.mocked(fetchLetterDetail).mockResolvedValue({ ok: true, letter: listSummary });
+
+    render(
+      <MemoryRouter>
+        <DocumentCreatePanel {...baseProps} />
+      </MemoryRouter>,
+    );
+
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'プレビュー' }));
+
+    expect(openPrintDocument).toHaveBeenCalledTimes(1);
+    expect(
+      sessionStorage.getItem(
+        buildScopedStorageKey(
+          'opendolphin:web-client:charts:printPreview:document',
+          'v2',
+          { facilityId: '0001', userId: 'user01' },
+        ) ?? '',
+      ),
+    ).toBeNull();
   });
 });

@@ -8,6 +8,9 @@ const RUN_ID = process.env.RUN_ID ?? '20260120T232504Z';
 const TRACE_ID = `trace-${RUN_ID}`;
 const FACILITY_ID = '1.3.6.1.4.1.9414.72.103';
 const CLAIM_DATE = '2026-01-20';
+const RECEPTION_ID = 'RCPT-2401';
+const SCHEDULE_KEY = 'F001:S2401';
+const ENCOUNTER_KEY = 'F001:E2401';
 const RECEPTION_ENTRY_SELECTOR = '[data-test-id="reception-entry-card"], [data-test-id="reception-entry-row"]';
 type E2EPage = Parameters<typeof test>[0]['page'];
 
@@ -73,6 +76,30 @@ const findReceptionEntryByPatient = async (page: E2EPage, patientId: string) => 
   return byText;
 };
 
+const seedChartsNavigationState = async (
+  page: E2EPage,
+  params: { patientId: string; appointmentId: string; receptionId: string; scheduleKey: string; encounterKey: string; visitDate: string; runId: string },
+) => {
+  await page.addInitScript((state) => {
+    const current = window.history.state ?? {};
+    window.history.replaceState(
+      {
+        ...current,
+        usr: {
+          ...(typeof current === 'object' && current ? (current as { usr?: Record<string, unknown> }).usr : {}),
+          ...state,
+        },
+      },
+      '',
+      window.location.href,
+    );
+  }, params);
+};
+
+test.use({
+  serviceWorkers: 'block',
+});
+
 const registerBaseRoutes = async (
   page: E2EPage,
   baseFlags: Record<string, unknown>,
@@ -103,6 +130,20 @@ const registerBaseRoutes = async (
   await page.route('**/api/admin/delivery', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(adminConfig) }),
   );
+  await page.route('**/api/session/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        facilityId: FACILITY_ID,
+        userId: 'doctor1',
+        clientUuid: 'e2e-playwright',
+        runId: RUN_ID,
+        roles: ['admin'],
+        displayName: 'Playwright Doctor',
+      }),
+    }),
+  );
   await page.route('**/api/orca/official/appointments/list', (route) =>
     route.fulfill({
       status: 200,
@@ -118,6 +159,8 @@ const registerBaseRoutes = async (
             departmentCode: '01',
             physicianName: '藤井',
             physicianCode: '10001',
+            scheduleKey: SCHEDULE_KEY,
+            encounterKey: ENCOUNTER_KEY,
             patient: {
               patientId: '000001',
               wholeName: '山田 花子',
@@ -141,10 +184,25 @@ const registerBaseRoutes = async (
         visitDate: CLAIM_DATE,
         visits: [
           {
+            receptionId: RECEPTION_ID,
             patientId: '000001',
+            sequentialNumber: 'APT-2401',
+            scheduleKey: SCHEDULE_KEY,
+            encounterKey: ENCOUNTER_KEY,
+            acceptanceTime: '0910',
             departmentCode: '01',
+            departmentName: '01 内科',
             physicianCode: '10001',
             physician: '10001 藤井',
+            physicianName: '藤井',
+            visitInformation: '受付',
+            patient: {
+              patientId: '000001',
+              wholeName: '山田 花子',
+              wholeNameKana: 'ヤマダ ハナコ',
+              birthDate: '1985-04-12',
+              sex: 'F',
+            },
           },
         ],
       }),
@@ -233,12 +291,23 @@ const setupSession = async (page: E2EPage) => {
 
 const gotoCharts = async (page: E2EPage) => {
   const facilityId = encodeURIComponent(FACILITY_ID);
-  await page.goto(
-    `${baseUrl}/f/${facilityId}/charts?patientId=000001&appointmentId=APT-2401&visitDate=${CLAIM_DATE}`,
-  );
-  await expect(page.locator('[data-test-id="charts-actionbar"]')).toBeVisible({ timeout: 20_000 });
+  await seedChartsNavigationState(page, {
+    patientId: '000001',
+    appointmentId: 'APT-2401',
+    receptionId: RECEPTION_ID,
+    scheduleKey: SCHEDULE_KEY,
+    encounterKey: ENCOUNTER_KEY,
+    visitDate: CLAIM_DATE,
+    runId: RUN_ID,
+  });
+  await page.goto(`${baseUrl}/f/${facilityId}/charts`);
   await expect(page).toHaveURL(/charts/, { timeout: 10_000 });
+  const patientStartButton = page.getByRole('button', { name: '診察開始' }).first();
+  if (await patientStartButton.isVisible().catch(() => false)) {
+    await patientStartButton.click();
+  }
   await expandChartsQuickActions(page);
+  await expect(page.locator('[data-test-id="charts-actionbar"]')).toBeVisible({ timeout: 20_000 });
   await page.evaluate(async ({ runId, traceId }) => {
     const mod = await import('/src/libs/observability/observability');
     mod.updateObservabilityMeta({ runId, traceId });

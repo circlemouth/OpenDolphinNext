@@ -166,6 +166,7 @@
 - current screen は `ReturnToBar`、患者特定、アップロード、完了/参照の単一カラム構成です。
 - fallback は `from=reception` なら reception、`from=patients` なら patients、既定は charts です。
 - retry 後は送信ボタンへ、送信成功後は最初の参照リンクへ focus を戻します。
+- document/image lifecycle は `web-client/notes/document-image-lifecycle.md` を正本とし、print preview restore と attachment-linked saved document の再編集は fail-close します。
 
 ### Verification
 - code-confirm: deep link scrub 後の patient 復元、missing-patient error、feature-disabled message

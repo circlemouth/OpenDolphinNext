@@ -11,13 +11,11 @@ import { recordChartsAuditEvent } from '../audit';
 import { chartsPrintStyles } from '../print/printStyles';
 import { DocumentClinicalDocument } from '../print/documentClinicalDocument';
 import {
-  clearDocumentPrintPreview,
-  loadDocumentPrintPreview,
   saveDocumentOutputResult,
   type DocumentOutputMode,
   type DocumentPrintPreviewState,
 } from '../print/documentPrintPreviewStorage';
-import { clearReportPrintPreview, loadReportPrintPreview, type ReportPrintPreviewState } from '../print/printPreviewStorage';
+import { type ReportPrintPreviewState } from '../print/printPreviewStorage';
 import { DOCUMENT_TYPE_LABELS } from '../documentTemplates';
 import { useOptionalSession } from '../../../AppRouter';
 import { buildFacilityPath } from '../../../routes/facilityRoutes';
@@ -131,28 +129,9 @@ function ChartsDocumentPrintContent() {
     if (!scopeReady) return stateFromLocationRaw;
     return isStateScopeMatched(stateFromLocationRaw, storageScope) ? stateFromLocationRaw : null;
   }, [scopeReady, stateFromLocationRaw, storageScope]);
-  const restoredDocument = useMemo(() => {
-    if (!scopeReady) return null;
-    const restored = loadDocumentPrintPreview(storageScope);
-    if (!restored) return null;
-    return isStateScopeMatched(restored.value, storageScope) ? restored : null;
-  }, [scopeReady, storageScope]);
-  const restoredReport = useMemo(() => {
-    if (!scopeReady) return null;
-    const restored = loadReportPrintPreview(storageScope);
-    if (!restored) return null;
-    return isStateScopeMatched(restored.value, storageScope) ? restored : null;
-  }, [scopeReady, storageScope]);
   const state = useMemo<PrintPageState | null>(() => {
-    return (
-      stateFromLocation ??
-      restoredDocument?.value ??
-      restoredReport?.value ??
-      null
-    );
-  }, [restoredDocument?.value, restoredReport?.value, stateFromLocation]);
-  const restoredAt = restoredDocument?.storedAt ?? restoredReport?.storedAt;
-  const restoredFromSession = Boolean(!stateFromLocation && restoredAt);
+    return stateFromLocation ?? null;
+  }, [stateFromLocation]);
   const [printedAtIso] = useState(() => new Date().toISOString());
   const lastModeRef = useRef<OutputMode | null>(null);
   const [confirmMode, setConfirmMode] = useState<OutputMode | null>(null);
@@ -439,8 +418,6 @@ function ChartsDocumentPrintContent() {
   }, [handleRequestOutput, state]);
 
   const handleClose = () => {
-    clearDocumentPrintPreview(storageScope);
-    clearReportPrintPreview(storageScope);
     navigate(safeReturnTo ?? fallbackUrl);
   };
 
@@ -456,8 +433,8 @@ function ChartsDocumentPrintContent() {
           />
           <ToneBanner
             tone="error"
-            message="文書プレビューの状態が見つかりません（画面をリロードした可能性があります）"
-            nextAction="Charts へ戻り、文書を保存してから再度プレビューを開いてください。"
+            message="文書プレビューの状態が見つかりません。"
+            nextAction="この画面は一時プレビューのため、再開できません。Charts へ戻って開き直してください。"
           />
         </div>
         <div className="charts-print__toolbar">
@@ -479,8 +456,6 @@ function ChartsDocumentPrintContent() {
     return (
       <ChartsReportPrintContent
         state={state}
-        restoredAt={restoredAt}
-        restoredFromSession={restoredFromSession}
         onClose={handleClose}
         scope={returnToScope}
         returnTo={returnTo}
@@ -505,14 +480,6 @@ function ChartsDocumentPrintContent() {
           from={from}
           fallbackUrl={fallbackUrl}
         />
-        {restoredFromSession && (
-          <ToneBanner
-            tone="info"
-            message="文書プレビュー状態をセッションから復元しました（リロード対策）。"
-            nextAction="出力後は「閉じる」でセッション保存データを破棄します。"
-            runId={state.meta.runId}
-          />
-        )}
         <ToneBanner
           tone="warning"
           message="個人情報を含む診療文書です。画面共有/第三者の閲覧に注意し、印刷物・PDFは必要最小限にしてください。"
@@ -725,8 +692,6 @@ function ChartsDocumentPrintContent() {
 
 type ChartsReportPrintProps = {
   state: ReportPrintPreviewState;
-  restoredAt?: string;
-  restoredFromSession: boolean;
   onClose: () => void;
   scope: { facilityId: string | undefined; userId?: string };
   returnTo?: string;
@@ -734,7 +699,7 @@ type ChartsReportPrintProps = {
   fallbackUrl: string;
 };
 
-function ChartsReportPrintContent({ state, restoredAt, restoredFromSession, onClose, scope, returnTo, from, fallbackUrl }: ChartsReportPrintProps) {
+function ChartsReportPrintContent({ state, onClose, scope, returnTo, from, fallbackUrl }: ChartsReportPrintProps) {
   const [pdfStatus, setPdfStatus] = useState<ReportStatus>('idle');
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
@@ -869,14 +834,6 @@ function ChartsReportPrintContent({ state, restoredAt, restoredFromSession, onCl
     <main className="charts-print">
       <div className="charts-print__screen-only">
         <ReturnToBar scope={scope} returnTo={returnTo} from={from} fallbackUrl={fallbackUrl} />
-        {restoredFromSession && restoredAt && (
-          <ToneBanner
-            tone="info"
-            message="帳票プレビュー状態をセッションから復元しました（リロード対策）。"
-            nextAction="表示後は「閉じる」でセッション保存データを破棄します。"
-            runId={state.meta.runId}
-          />
-        )}
         <ToneBanner
           tone="warning"
           message="個人情報を含む帳票です。画面共有/第三者の閲覧に注意してください。"
