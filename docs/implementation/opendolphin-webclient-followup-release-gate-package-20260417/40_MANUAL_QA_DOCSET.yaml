@@ -1,0 +1,20 @@
+confirmed_accessible_file:
+  - /mnt/data/dads_app_ui_design_rules_20260411.md
+
+inline_context:
+  task_name: manual QA handoff
+  entry_conditions:
+    - correction-note verification completed
+    - runtime-ready-smoke passed
+    - web-client npm run ci passed
+    - server-modernized verify passed
+    - fixed premise drift check clean
+  qa_focus:
+    - Reception always-visible transmission status
+    - OrcaSummary shell/fallback and paid-vs-sent semantics
+    - Print preview route-state shell and missing-state fail-close shell
+    - shared fixed-premise drift check
+
+do_not_invent:
+  - clinical or business workflows beyond the observable scenarios listed here
+  - hidden data dependencies not evidenced by the release report

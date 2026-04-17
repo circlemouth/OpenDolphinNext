@@ -1,0 +1,86 @@
+confirmed_accessible_file:
+  - /mnt/data/dads_app_ui_design_rules_20260411.md
+
+inline_context:
+  blocker_name: web-client canonical npm run ci recovery
+  known_state:
+    - targeted blocker retests already pass
+    - npm run ci still fails
+    - reported failure count: 20 failures across 5 files
+  known_failure_files_from_report:
+    - web-client/src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order.test.tsx
+    - web-client/src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx
+    - web-client/src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx
+    - web-client/src/features/charts/__tests__/prescriptionOrderOrcaSupport.test.tsx
+  unknown_but_required:
+    - the fifth failing file must be discovered from actual ci output
+    - actual failure messages and stacks must be captured before implementation
+  fixed_premises:
+    - 3 pane responsibilities fixed
+    - patient context is non-persistent
+    - finish and send are separated
+    - right rail is chooser-only
+    - sent and paid are not merged
+    - send success != paid
+    - no new generic bottom navigation
+    - important information must not be hidden in disclosure
+    - one screen one primary
+    - unknowns remain gated with fail-close fallback
+
+repo_touchpoints:
+  - web-client/src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order.test.tsx
+  - web-client/src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx
+  - web-client/src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx
+  - web-client/src/features/charts/__tests__/prescriptionOrderOrcaSupport.test.tsx
+  - web-client/src/features/charts/orcaMaster.ts
+  - any shared test helpers/fixtures surfaced by actual ci output
+
+required_tests:
+  - cd web-client && npm run ci
+  - focused reruns for touched suites
+  - if touched areas overlap recent blocker fixes, re-run their targeted Playwright specs
+  - cd web-client && npm run typecheck
+
+do_not_invent:
+  - fifth failing file before actual inventory
+  - root cause before actual stacks/logs
+  - failure unrelatedness without repo evidence
+  - spec weakening in place of runtime/test contract repair
+  - new persistence/resume behavior
+  - new send/paid semantics
+
+subagent_prompts:
+  - name: ci_failure_inventory_probe
+    model: gpt 5.4 high
+    prompt: |
+      `cd web-client && npm run ci` の actual 失敗出力だけをもとに、failure inventory を作ってください。
+      file ごと、suite ごと、shared helper ごとに cluster 候補を整理してください。
+      実装はしないでください。
+      出力は次だけに限定してください。
+      - exact_failure_inventory
+      - candidate_clusters
+      - shared_helpers_or_fixtures_involved
+      - smallest_fix_order
+  - name: charts_recovery_order_probe
+    model: gpt 5.4 high
+    prompt: |
+      `chartsOrderDockCoexistence.recovery-order.test.tsx` を中心に、recovery-order 系の contract drift があるか調べてください。
+      current implementation と test contract のどちらが stale かを repo 証拠で判断してください。
+      実装はしないでください。
+      出力は次だけに限定してください。
+      - probable_root_cause
+      - exact_files_and_symbols_to_touch
+      - minimum_fix_recommendation
+      - regression_risk_to_recent_blocker_fixes
+  - name: charts_orca_support_probe
+    model: gpt 5.4 high
+    prompt: |
+      `orderBundleOrcaSupport.test.tsx`、`prescriptionOrderEditorPanel.orca-support.test.tsx`、`prescriptionOrderOrcaSupport.test.tsx` を中心に、
+      ORCA support test 群の shared root cause があるか調べてください。
+      shared fixture / mock / helper / auth/bootstrap/baseUrl drift の可能性を優先しつつ、repo 証拠で判断してください。
+      実装はしないでください。
+      出力は次だけに限定してください。
+      - probable_cluster_root_cause
+      - exact_files_and_symbols_to_touch
+      - minimum_fix_recommendation
+      - regression_risk_to_recent_blocker_fixes

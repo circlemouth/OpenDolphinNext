@@ -1,0 +1,21 @@
+confirmed_accessible_file:
+  - /mnt/data/dads_app_ui_design_rules_20260411.md
+
+inline_context:
+  task_name: ORCA live QA handoff
+  entry_conditions:
+    - manual QA completed
+    - correction-note verification completed
+    - runtime-ready-smoke passed
+    - web-client npm run ci passed
+    - server-modernized verify passed
+    - fixed premise drift check clean
+  qa_focus:
+    - live auth/bootstrap contract
+    - Reception sent-state visibility
+    - OrcaSummary current billing contract
+    - print preview route-state/fail-close behavior
+
+do_not_invent:
+  - ORCA operational details not evidenced in the report or repo
+  - endpoint-level assertions that are not observable from the intended live QA path
