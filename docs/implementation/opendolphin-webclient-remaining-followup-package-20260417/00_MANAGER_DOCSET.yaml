@@ -1,0 +1,61 @@
+confirmed_accessible_files:
+  - docs/web-client/ux/dads_app_ui_design_rules_20260411.md
+  - docs/implementation/opendolphin-webclient-implementation-package-20260416/
+  - artifacts/review-bundles/OpenDolphin_WebClient-review-package-curated-20260417T101132Z.zip
+  - docs/implementation/opendolphin-webclient-followup-release-gate-package-20260417/
+
+inline_context:
+  current_status:
+    - Reception transmission projection blocker is closed
+    - OrcaSummary mount contract blocker is closed
+    - print preview harness-first blocker is closed
+    - Task 31 print app-side escalation remains closed
+    - runtime-ready-smoke passed in the latest worker report
+    - web-client npm run ci passed in the latest worker report
+    - server verify passed in the latest worker report
+  remaining_blockers:
+    - charts correction-note spec verification is still open
+    - claim-send cache storage contract drift remains open
+    - manual QA not started
+    - ORCA live QA not started
+  known_failure_details:
+    - charts actual failing spec path: tests/charts/e2e-billing-correction-note.spec.ts
+    - reception actual spec path: tests/reception/e2e-billing-correction-note.spec.ts and it passed in the latest worker report
+    - latest charts failure report says orca-billing-setting-note was absent and the expected text around 収納情報の確認前です did not match
+  grounded_repo_facts:
+    - web-client/notes/security-spec.md says invoice numbers and warning details must not be persisted for orca-claim-send / orca-income-info
+    - web-client/src/features/charts/orcaClaimSendCache.ts comment says invoiceNumber and medicalWarnings should not be persisted
+    - current saveOrcaClaimSendCache implementation persists medicalWarnings into sessionStorage
+    - docs/implementation/opendolphin-webclient-implementation-package-20260416/05_screen_state_copy_spec.md says correction note and setting note are separate slots and important info must not go into disclosure
+    - current OrcaSummary implementation in the review package places correction/setting note cards inside a details fold
+
+shared_fixed_premises:
+  - 3 pane responsibilities fixed
+  - patient context is non-persistent
+  - finish and send are separated
+  - right rail is chooser-only
+  - sent and paid are not merged
+  - send success != paid
+  - no new generic bottom navigation
+  - important information must not be hidden in disclosure
+  - one screen one primary
+  - unknowns remain gated with fail-close fallback
+  - backward compatibility not required
+  - ignore build artifacts, logs, screenshots, test-results, and worktree artifacts
+
+required_tests:
+  - cd web-client && npm run typecheck
+  - targeted unit/component tests for touched charts cache and billing summary code
+  - PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/charts/e2e-billing-correction-note.spec.ts
+  - PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/reception/e2e-billing-correction-note.spec.ts
+  - cd web-client && npm run ci
+
+release_gate_note:
+  - manual QA and ORCA live QA remain required even after this package completes
+
+do_not_invent:
+  - route/state/schema/copy without repo evidence
+  - relaxed assertions in place of runtime/spec fixes
+  - new persistence/resume behavior
+  - new sent/paid semantics
+  - new right-rail responsibilities

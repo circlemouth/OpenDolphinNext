@@ -1,0 +1,172 @@
+{
+  "runId": "20260417T143935Z",
+  "appStartupPath": {
+    "command": "WEB_CLIENT_MODE=npm ./setup-modernized-env.sh",
+    "appUrl": "https://localhost:5173/"
+  },
+  "results": [
+    {
+      "id": "A-reception-send-status-1280",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/reception?date=2026-04-17&msw=1",
+      "width": 1280,
+      "observedTexts": [
+        "会計待ち",
+        "送信: 送信済",
+        "会計済み tab には同患者なし",
+        "カード表示でも 送信: 送信済"
+      ]
+    },
+    {
+      "id": "A-reception-send-status-1024",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/reception?date=2026-04-17&msw=1",
+      "width": 1024,
+      "observedTexts": [
+        "会計待ち",
+        "送信: 送信済",
+        "会計済み tab には同患者なし",
+        "カード表示でも 送信: 送信済"
+      ]
+    },
+    {
+      "id": "A-reception-send-status-768",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/reception?date=2026-04-17&msw=1",
+      "width": 768,
+      "observedTexts": [
+        "会計待ち",
+        "送信: 送信済",
+        "会計済み tab には同患者なし",
+        "カード表示でも 送信: 送信済"
+      ]
+    },
+    {
+      "id": "B-charts-notes-width-1280",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?sort=time&date=2026-04-17",
+      "width": 1280,
+      "observedTexts": [
+        "Correction / 補正メモ",
+        "補正が必要です。補正候補があります。",
+        "Setting / 確認条件メモ",
+        "収納情報の確認前です。送信済みですが、会計確定は未判定です。",
+        "詳細を表示 後も confirmation: 会計待ち+送信済"
+      ]
+    },
+    {
+      "id": "B-charts-notes-width-1024",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?sort=time&date=2026-04-17",
+      "width": 1024,
+      "observedTexts": [
+        "Correction / 補正メモ",
+        "補正が必要です。補正候補があります。",
+        "Setting / 確認条件メモ",
+        "収納情報の確認前です。送信済みですが、会計確定は未判定です。",
+        "詳細を表示 前から note が visible"
+      ]
+    },
+    {
+      "id": "B-charts-notes-width-768",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?sort=time&date=2026-04-17",
+      "width": 768,
+      "observedTexts": [
+        "Correction / 補正メモ",
+        "補正が必要です。補正候補があります。",
+        "Setting / 確認条件メモ",
+        "収納情報の確認前です。送信済みですが、会計確定は未判定です。",
+        "right rail は chooser-only のまま",
+        "primary count = 1"
+      ]
+    },
+    {
+      "id": "C-billing-semantics-1280",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?sort=time&date=2026-04-17",
+      "width": 1280,
+      "observedTexts": [
+        "before refresh: transmission: 送信済",
+        "before refresh: confirmation: 会計待ち+送信済",
+        "収納情報を確認 button visible/enabled",
+        "after refresh: confirmation: 会計済み"
+      ]
+    },
+    {
+      "id": "D-reload-fail-close-1280",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?runId=20260417T143935Z&sort=time&date=2026-04-17",
+      "width": 1280,
+      "observedTexts": [
+        "before reload: confirmation: 会計待ち+送信済",
+        "after reload: 患者未選択",
+        "after reload: 状態 再選択が必要",
+        "after reload: 受付へ戻る",
+        "after reload: #charts-action-send disabled",
+        "after reload: confirmation: 会計済み は非表示"
+      ]
+    },
+    {
+      "id": "D-new-tab-fail-close-1280",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?sort=time&date=2026-04-17&msw=1",
+      "width": 1280,
+      "observedTexts": [
+        "患者未選択",
+        "状態 再選択が必要",
+        "受付へ戻る",
+        "#charts-action-send disabled",
+        "会計済み positive restore なし"
+      ]
+    },
+    {
+      "id": "F-print-preview-with-route-state-1280",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/FAC-PRINT/charts/print/document?msw=1",
+      "width": 1280,
+      "observedTexts": [
+        "処方箋 PDFプレビュー",
+        "Data_Id=DATA-PRINT-1",
+        "PDFを開く",
+        "printPreview storage key なし"
+      ]
+    },
+    {
+      "id": "F-print-preview-missing-state-1280",
+      "status": "PASS",
+      "url": "https://localhost:5173/f/FAC-PRINT/charts/print/document?msw=1",
+      "width": 1280,
+      "observedTexts": [
+        "文書プレビューの状態が見つかりません。",
+        "状態が無いため出力できません。",
+        "Chartsへ戻る",
+        "printPreview storage key なし"
+      ]
+    }
+  ],
+  "failures": [],
+  "blocked": [
+    "live ORCA 実接続での official confirmation / incomeinfv2 実データ整合性確認",
+    "運用認証情報や運用環境が必要な role / facility 差分の実機確認",
+    "OS print dialog / 実プリンタ出力 / PDF viewer 実運用相性"
+  ],
+  "humanOnly": [
+    "live ORCA 応答の臨床運用上の妥当性確認",
+    "日本語 copy/tone の最終可読性判断",
+    "実業務オペレータによる narrow width 実運用確認"
+  ],
+  "fixedPremise": [
+    "3 ペイン責務固定: browser では left=病名・過去カルテ, center=PRIMARY WORKSPACE, right=chooser-only を確認",
+    "patient context 非永続: reload/new tab で patient-bound detail 非復元を確認",
+    "finish と send の分離: browser 上の送信不可ガードと action grouping を確認、send success 単独で paid 化しない",
+    "right rail chooser-only: 768 幅でも 処方/注射/処置/検査/算定 の chooser-only を確認",
+    "送信済 と 会計済み の非統合: Reception 会計待ちのまま 送信済、Charts では unresolved→会計済みの二段階を確認",
+    "send success != paid: before refresh で 会計待ち+送信済、after refresh で 会計済み を確認",
+    "generic bottom navigation の新規導入禁止: 1280/1024/768 で generic bottom navigation は未観測",
+    "重要情報を disclosure に隠さない: correction / setting note は詳細を開く前から visible",
+    "1 画面 1 primary: 768 幅で .charts-actions__button--primary-route visible count = 1",
+    "unknown は gate として残し fail-close fallback を添える: no-context / reload 後に 再選択が必要 + 受付へ戻る + send disabled を確認",
+    "既存 spec 側の fixed premise drift: tests/e2e/charts-1280-compression.spec.ts と tests/e2e/charts-missing-context-recovery.spec.ts は旧 login 前提で失敗し、browser 再検証では current UI contract 自体は通過"
+  ]
+}

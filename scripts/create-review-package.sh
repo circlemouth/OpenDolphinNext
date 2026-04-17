@@ -23,12 +23,19 @@ The package excludes:
   - dist/, target/, build/, out/
   - tmp/, output/, coverage/, test-results/
   - caches and temporary editor/runtime outputs
+Additionally, if present, the package includes:
+  - qa/browser-manual-qa-progress.json
+  - qa/browser-manual-qa-report.md
 USAGE
 }
 
 RUN_ID="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_DIR="./artifacts/review-bundles"
 PACKAGE_PREFIX="OpenDolphin_WebClient-review-package"
+OPTIONAL_INCLUDE_FILES=(
+  "qa/browser-manual-qa-progress.json"
+  "qa/browser-manual-qa-report.md"
+)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -104,7 +111,23 @@ git ls-files -- \
   ':(exclude)**/Thumbs.db' \
   > "$FILE_LIST"
 
+TRACKED_FILE_COUNT="$(wc -l < "$FILE_LIST" | awk '{print $1}')"
+
+OPTIONAL_INCLUDED=()
+for include_path in "${OPTIONAL_INCLUDE_FILES[@]}"; do
+  if [[ -f "$include_path" ]] && ! grep -Fxq "$include_path" "$FILE_LIST"; then
+    printf '%s\n' "$include_path" >> "$FILE_LIST"
+    OPTIONAL_INCLUDED+=("$include_path")
+  fi
+done
+
 FILE_COUNT="$(wc -l < "$FILE_LIST" | awk '{print $1}')"
+OPTIONAL_INCLUDE_COUNT="${#OPTIONAL_INCLUDED[@]}"
+if [[ "$OPTIONAL_INCLUDE_COUNT" -gt 0 ]]; then
+  OPTIONAL_INCLUDES_CSV="$(printf '%s\n' "${OPTIONAL_INCLUDED[@]}" | paste -sd, -)"
+else
+  OPTIONAL_INCLUDES_CSV="none"
+fi
 
 if [[ "$FILE_COUNT" -eq 0 ]]; then
   echo "No tracked files remained after exclusions" >&2
@@ -117,11 +140,14 @@ run_id=${RUN_ID}
 created_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 root_dir=${ROOT_DIR}
 tracked_file_count=${FILE_COUNT}
-policy=tracked-files-only
+tracked_git_file_count=${TRACKED_FILE_COUNT}
+optional_include_count=${OPTIONAL_INCLUDE_COUNT}
+optional_includes=${OPTIONAL_INCLUDES_CSV}
+policy=tracked-files-plus-optional-qa
 excluded_roots=client/,artifacts/
 excluded_generated_dirs=node_modules/,dist/,target/,build/,out/,tmp/,output/,coverage/,test-results/
 excluded_cache_dirs=.cache/,.vite/,.parcel-cache/,.turbo/,.nyc_output/
-notes=Repository reviewer package without artifacts or legacy client sources.
+notes=Repository reviewer package without artifacts or legacy client sources. Includes browser manual QA summary files when present.
 EOF
 
 rm -f "$PACKAGE_FILE"

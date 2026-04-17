@@ -129,6 +129,17 @@ describe('resolveBillingStatusDecision', () => {
     expect(decision.settingNote).toContain('収納情報の確認前');
   });
 
+  it('送信成功で伝票番号がなくても setting note を fail-close で出す', () => {
+    const decision = resolveBillingStatusDecision({
+      sendStatus: 'success',
+      paidInvoiceNumbers: undefined,
+    });
+    expect(decision.status).toBe('会計待ち');
+    expect(decision.statusText).toBe('会計待ち+送信済');
+    expect(decision.confirmationSource).toBe('unresolved');
+    expect(decision.settingNote).toContain('収納情報の確認前');
+  });
+
   it('UG-12: correction required は note のみで workflow state に昇格しない', () => {
     const decision = resolveBillingStatusDecision({
       invoiceNumber: 'INV-1',

@@ -144,7 +144,6 @@ export function saveOrcaClaimSendCache(value: OrcaClaimSendCacheInput, scope: St
     errorMessage: value.errorMessage,
     correctionKind: value.correctionKind,
     correctionReason: value.correctionReason,
-    medicalWarnings: value.medicalWarnings,
     savedAt,
   };
   const store = loadOrcaClaimSendCache(resolvedScope) ?? {};
@@ -194,7 +193,6 @@ const normalizeEntry = (entry: Partial<OrcaClaimSendCacheEntry> | null | undefin
     errorMessage: typeof entry.errorMessage === 'string' ? entry.errorMessage : undefined,
     correctionKind: entry.correctionKind === 'confirm' || entry.correctionKind === 'rebill' ? entry.correctionKind : undefined,
     correctionReason: typeof entry.correctionReason === 'string' ? entry.correctionReason : undefined,
-    medicalWarnings: Array.isArray(entry.medicalWarnings) ? entry.medicalWarnings : undefined,
     savedAt: resolvedSavedAt,
   };
 };

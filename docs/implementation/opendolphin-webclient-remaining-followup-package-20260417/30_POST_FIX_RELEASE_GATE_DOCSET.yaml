@@ -1,0 +1,35 @@
+confirmed_accessible_files:
+  - docs/web-client/ux/dads_app_ui_design_rules_20260411.md
+  - docs/implementation/opendolphin-webclient-followup-release-gate-package-20260417/
+
+inline_context:
+  task_name: post-fix release gate runbook
+  carried_forward_status:
+    - runtime-ready-smoke previously passed in the latest worker report
+    - web-client npm run ci previously passed in the latest worker report
+    - server verify previously passed in the latest worker report
+  open_requirements:
+    - charts correction-note spec must pass
+    - reception correction-note spec must still pass
+    - manual QA remains required
+    - ORCA live QA remains required
+
+required_tests:
+  - cd web-client && npm run typecheck
+  - touched unit/component tests
+  - tests/charts/e2e-billing-correction-note.spec.ts
+  - tests/reception/e2e-billing-correction-note.spec.ts
+  - cd web-client && npm run ci
+
+manual_QA_entry_conditions:
+  - charts correction-note spec passes
+  - reception correction-note spec passes
+  - claim-send cache storage contract aligned
+  - web-client npm run ci passes after residual fixes
+  - fixed premise drift check clean
+
+ORCA_live_QA_entry_conditions:
+  - manual QA completed
+  - charts correction-note follow-up closed
+  - web-client npm run ci pass maintained
+  - fixed premise drift check clean

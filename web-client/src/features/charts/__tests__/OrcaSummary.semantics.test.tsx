@@ -8,6 +8,10 @@ const { useQueryMock } = vi.hoisted(() => ({
   useQueryMock: vi.fn(),
 }));
 
+const { getOrcaClaimSendEntryMock } = vi.hoisted(() => ({
+  getOrcaClaimSendEntryMock: vi.fn(),
+}));
+
 vi.mock('@emotion/react', () => ({
   Global: () => null,
   css: () => '',
@@ -15,6 +19,10 @@ vi.mock('@emotion/react', () => ({
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: useQueryMock,
+}));
+
+vi.mock('../orcaClaimSendCache', () => ({
+  getOrcaClaimSendEntry: getOrcaClaimSendEntryMock,
 }));
 
 vi.mock('../../../routes/useAppNavigation', () => ({
@@ -63,7 +71,57 @@ vi.mock('../../../libs/audit/auditLogger', () => ({
 }));
 
 describe('OrcaSummary semantics', () => {
+  it('correction note と setting note を details 外の must-visible 領域に出す', () => {
+    getOrcaClaimSendEntryMock.mockReturnValue({
+      patientId: 'P-1',
+      appointmentId: 'A-1',
+      performDate: '2026-03-09',
+      invoiceNumber: 'INV-1',
+      sendStatus: 'success',
+      medicalWarnings: [{ message: '補正候補があります', code: 'W01', groupPosition: 1, itemPosition: 1 }],
+      savedAt: '2026-03-09T09:30:00Z',
+    });
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const { container } = render(
+      <OrcaSummary
+        summary={{ missingMaster: false } as any}
+        claim={{
+          claimStatus: '会計待ち',
+          claimStatusText: 'ローカル未送信',
+          recordsReturned: 1,
+          bundles: [{ totalClaimAmount: 1200, items: [] }],
+        } as any}
+        patientId="P-1"
+        visitDate="2026-03-09"
+        orcaEncounterContext={{
+          patientId: 'P-1',
+          visitDate: '2026-03-09',
+          departmentCode: '01',
+          physicianCode: '10001',
+          insuranceCombinationNumber: '0001',
+          voucherNumber: '1234',
+          sequentialNumber: '1',
+        }}
+      />,
+    );
+
+    expect(container.querySelector('[data-test-id="orca-billing-correction-note"]')).toHaveTextContent('補正が必要です');
+    expect(container.querySelector('[data-test-id="orca-billing-setting-note"]')).toHaveTextContent('収納情報の確認前です');
+
+    const details = container.querySelector('.orca-summary__details-fold');
+    expect(details?.querySelector('[data-test-id="orca-billing-correction-note"]')).toBeNull();
+    expect(details?.querySelector('[data-test-id="orca-billing-setting-note"]')).toBeNull();
+  });
+
   it('ORCA収納情報と院内ローカル診療サマリの責務を分離し official ラベルを表示する', () => {
+    getOrcaClaimSendEntryMock.mockReturnValue(null);
     useQueryMock.mockReturnValue({
       data: {
         ok: true,

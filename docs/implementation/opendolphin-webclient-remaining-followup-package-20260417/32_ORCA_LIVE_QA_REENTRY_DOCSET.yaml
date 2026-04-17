@@ -1,0 +1,10 @@
+confirmed_accessible_files:
+  - docs/web-client/ux/dads_app_ui_design_rules_20260411.md
+  - docs/implementation/opendolphin-webclient-followup-release-gate-package-20260417/
+
+inline_context:
+  task_name: ORCA live QA re-entry after correction-note follow-up
+  qa_focus:
+    - live sent-vs-paid separation
+    - correction and setting note visibility
+    - no storage contract regression visible in the tested flow

@@ -120,13 +120,11 @@ export const resolveBillingStatusDecision = ({
   const transmissionState: BillingTransmissionState =
     sendStatus === 'success' ? '送信済' : sendStatus === 'error' ? '送信失敗' : '未送信';
   const transmissionSource: BillingTransmissionSource = sendStatus ? 'medical-mod-v2' : 'none';
-  const confirmationSource: BillingConfirmationSource = normalized
-    ? paidInvoiceNumbers
+  const confirmationSource: BillingConfirmationSource = sendStatus === 'success'
+    ? paidInvoiceNumbers?.has(normalized ?? '') ? 'income-info' : 'unresolved'
+    : normalized && paidInvoiceNumbers
       ? 'income-info'
-      : sendStatus === 'success'
-        ? 'unresolved'
-        : 'none'
-    : 'none';
+      : 'none';
   const correctionState: BillingCorrectionState = correctionRequired ? 'required' : 'none';
   const correctionNote = correctionRequired
     ? '補正が必要です。medical-mod-v2 の警告を確認し、必要な修正だけを行ってください。'

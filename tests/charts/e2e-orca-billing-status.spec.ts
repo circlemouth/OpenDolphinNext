@@ -294,10 +294,10 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
       {
         storageKey: `charts:orca-claim-send:${facilityId}:${userId}`,
         payload: {
-          '000001': {
+          'appointment:A-1': {
+            cacheKey: 'appointment:A-1',
             patientId: '000001',
             appointmentId: 'A-1',
-            invoiceNumber: 'INV-001',
             dataId: 'DATA-1',
             runId: 'RUN-CLAIM',
             traceId: 'TRACE-CLAIM',

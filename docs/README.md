@@ -18,6 +18,7 @@
 ## Workflow Docs
 - [implementation/README.md](implementation/README.md)
 - [implementation/opendolphin-webclient-followup-release-gate-package-20260417/](implementation/opendolphin-webclient-followup-release-gate-package-20260417/)
+- [implementation/opendolphin-webclient-remaining-followup-package-20260417/](implementation/opendolphin-webclient-remaining-followup-package-20260417/)
 - [implementation/orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
 - [implementation/orca-order-alignment/orca_order_alignment_authoritative_spec_packet_20260407.md](implementation/orca-order-alignment/orca_order_alignment_authoritative_spec_packet_20260407.md)
 - [implementation/orca-order-alignment/orca_order_alignment_authoritative_tables_20260407.json](implementation/orca-order-alignment/orca_order_alignment_authoritative_tables_20260407.json)

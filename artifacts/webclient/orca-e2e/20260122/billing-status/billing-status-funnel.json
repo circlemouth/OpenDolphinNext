@@ -5,11 +5,11 @@
   "cacheHit": false,
   "missingMaster": false,
   "runId": "RUN-E2E",
-  "traceId": "b24db153-60a9-4162-aa47-8717d9a149d6",
+  "traceId": "2ca13c8d-736e-4e2b-a5e6-17a4941dfef7",
   "fallbackUsed": false,
   "action": "billing_status_update",
   "outcome": "success",
-  "durationMs": 9,
+  "durationMs": 13,
   "note": "会計済み",
-  "recordedAt": "2026-04-17T05:49:26.764Z"
+  "recordedAt": "2026-04-17T15:43:18.727Z"
 }

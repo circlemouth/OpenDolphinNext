@@ -1,6 +1,6 @@
 ---
 name: review-log-inclusive-bundle
-description: Create a reviewer package zip for OpenDolphin_WebClient using tracked source/config/docs only, excluding artifacts, the legacy client, and generated outputs.
+description: Create a reviewer package zip for OpenDolphin_WebClient using tracked source/config/docs plus browser manual QA summary files when present, excluding artifacts, the legacy client, and generated outputs.
 ---
 
 # Reviewer Package Bundle
@@ -18,6 +18,9 @@ Use this skill when someone asks for a **レビュワー提出向けの軽量 zi
 - one zip file: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
 - `REVIEW_PACKAGE_MANIFEST.txt` inside the zip
 - tracked repo files except excluded legacy/generated paths
+- if present, also include:
+  - `qa/browser-manual-qa-progress.json`
+  - `qa/browser-manual-qa-report.md`
 - no artifact or log re-inclusion step
 
 ## Run script
@@ -44,9 +47,15 @@ The script excludes the following from tracked files before bundling:
 - cache directories such as `.cache/`, `.vite/`, `.parcel-cache/`, `.turbo/`, `.nyc_output/`
 - `__MACOSX/`, `.DS_Store`, `Thumbs.db`
 
+The script also appends these QA summary files when they exist in the working tree:
+
+- `qa/browser-manual-qa-progress.json`
+- `qa/browser-manual-qa-report.md`
+
 ## Expected verification
 
 - the script prints file count, size, and sha256
+- the manifest records `optional_includes` when those QA files were added
 - `zipinfo -1` should not show `client/` or `artifacts/`
 - generated directories such as `node_modules/`, `dist/`, `target/`, `build/` must be absent
 

@@ -167,6 +167,9 @@ test('correction note は workflow ではなく note として表示し、settin
               departmentCode: '01',
               physicianName: '藤井',
               physicianCode: '10001',
+              insuranceCombinationNumber: '0001',
+              voucherNumber: 'V-2401',
+              sequentialNumber: 'APT-2401',
               scheduleKey: 'F001:S2401',
               encounterKey: 'F001:E2401',
               patient: {
@@ -194,6 +197,8 @@ test('correction note は workflow ではなく note として表示し、settin
             {
               receptionId: 'RCPT-2401',
               sequentialNumber: 'APT-2401',
+              voucherNumber: 'V-2401',
+              insuranceCombinationNumber: '0001',
               scheduleKey: 'F001:S2401',
               encounterKey: 'F001:E2401',
               acceptanceTime: '0910',
@@ -221,25 +226,21 @@ test('correction note は workflow ではなく note として表示し、settin
       {
         storageKey: `charts:orca-claim-send:${facilityId}:${userId}`,
         payload: {
-          '000001': {
+          'appointment:APT-2401': {
+            cacheKey: 'appointment:APT-2401',
             patientId: '000001',
-            appointmentId: 'A-1',
+            appointmentId: 'APT-2401',
+            receptionId: 'RCPT-2401',
+            scheduleKey: 'F001:S2401',
+            encounterKey: 'F001:E2401',
             performDate: visitDate,
-            invoiceNumber: 'INV-001',
             dataId: 'DATA-1',
             runId: 'RUN-CLAIM',
             traceId: 'TRACE-CLAIM',
             apiResult: '80',
             sendStatus: 'success',
-            medicalWarnings: [
-              {
-                medicalWarning: 'warning',
-                medicalWarningMessage: '補正候補があります',
-                medicalWarningCode: 'W01',
-                medicalWarningPosition: 1,
-                medicalWarningItemPosition: 1,
-              },
-            ],
+            correctionKind: 'confirm',
+            correctionReason: '補正候補があります。',
             savedAt: new Date().toISOString(),
           },
         },
@@ -257,13 +258,18 @@ test('correction note は workflow ではなく note として表示し、settin
     });
     await page.goto(`${baseUrl}/f/${facilityId}/charts?msw=1`);
     await expect(page.locator('.charts-page')).toBeVisible({ timeout: 20_000 });
+    const summary = page.locator('[data-test-id="orca-summary"]');
+    await expect(summary).toBeVisible({ timeout: 20_000 });
     await page.evaluate(
       async ({ facilityId, userId, visitDate }) => {
         const mod = await import('/src/features/charts/orcaClaimSendCache');
         mod.saveOrcaClaimSendCache(
           {
             patientId: '000001',
-            appointmentId: 'A-1',
+            appointmentId: 'APT-2401',
+            receptionId: 'RCPT-2401',
+            scheduleKey: 'F001:S2401',
+            encounterKey: 'F001:E2401',
             performDate: visitDate,
             invoiceNumber: 'INV-001',
             dataId: 'DATA-1',
@@ -271,6 +277,8 @@ test('correction note は workflow ではなく note として表示し、settin
             traceId: 'TRACE-CLAIM',
             apiResult: '80',
             sendStatus: 'success',
+            correctionKind: 'confirm',
+            correctionReason: '補正候補があります。',
             medicalWarnings: [
               {
                 medicalWarning: 'warning',
@@ -286,8 +294,9 @@ test('correction note は workflow ではなく note として表示し、settin
       },
       { facilityId, userId, visitDate },
     );
-    const summary = page.locator('[data-test-id="orca-summary"]');
-    await expect(summary).toBeVisible({ timeout: 20_000 });
+
+    await expect(summary.locator('[data-test-id="orca-billing-correction-note"]')).toContainText('補正が必要です');
+    await expect(summary.locator('[data-test-id="orca-billing-setting-note"]')).toContainText('収納情報の確認前です');
     const detailsToggle = summary.getByText('詳細を表示').first();
     if (await detailsToggle.isVisible().catch(() => false)) {
       await detailsToggle.click();
@@ -295,8 +304,6 @@ test('correction note は workflow ではなく note として表示し、settin
 
     await expect(summary.getByText('confirmation: 会計待ち+送信済')).toBeVisible({ timeout: 10_000 });
     await expect(summary.getByText('transmission: 送信済')).toBeVisible({ timeout: 10_000 });
-    await expect(summary.locator('[data-test-id="orca-billing-correction-note"]')).toContainText('補正が必要です');
-    await expect(summary.locator('[data-test-id="orca-billing-setting-note"]')).toContainText('収納情報の確認前です');
     await expect(summary.getByText('Workflow / 院内ローカル診療サマリ')).toBeVisible({ timeout: 10_000 });
   });
 });

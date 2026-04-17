@@ -284,16 +284,37 @@ export function OrcaSummary({
   const claimDataIdIdentifier = formatOrcaIdentifier('Data_Id', effectiveClaim?.dataId);
   const lastSendInvoiceIdentifier = formatOrcaIdentifier('Invoice_Number', lastSendCache?.invoiceNumber);
   const lastSendDataIdIdentifier = formatOrcaIdentifier('Data_Id', lastSendCache?.dataId);
+  const safeCorrectionReason = useMemo(() => {
+    const normalized = lastSendCache?.correctionReason?.trim();
+    return normalized ? normalized : undefined;
+  }, [lastSendCache?.correctionReason]);
+  const persistedCorrectionKind = lastSendCache?.correctionKind;
+  const hasPersistedCorrectionNote = persistedCorrectionKind === 'confirm' || persistedCorrectionKind === 'rebill';
   const billingDecision = useMemo(
     () =>
       resolveBillingStatusDecision({
         invoiceNumber,
         sendStatus: lastSendCache?.sendStatus,
         paidInvoiceNumbers,
-        correctionRequired: sendWarnings.length > 0,
+        correctionRequired: sendWarnings.length > 0 || hasPersistedCorrectionNote,
       }),
-    [invoiceNumber, lastSendCache?.sendStatus, paidInvoiceNumbers, sendWarnings.length],
+    [hasPersistedCorrectionNote, invoiceNumber, lastSendCache?.sendStatus, paidInvoiceNumbers, sendWarnings.length],
   );
+  const correctionNoteText = useMemo(() => {
+    if (sendWarnings.length > 0) {
+      return (
+        billingDecision.correctionNote ??
+        '補正メモは medical-mod-v2 の警告だけを示します。workflow state は変更しません。'
+      );
+    }
+    if (persistedCorrectionKind === 'rebill') {
+      return safeCorrectionReason ? `再計待: ${safeCorrectionReason}` : '再計待です。会計内容を確認してください。';
+    }
+    if (hasPersistedCorrectionNote) {
+      return safeCorrectionReason ? `補正が必要です。${safeCorrectionReason}` : '補正が必要です。詳細は再送時に確認してください。';
+    }
+    return undefined;
+  }, [billingDecision.correctionNote, hasPersistedCorrectionNote, persistedCorrectionKind, safeCorrectionReason, sendWarnings.length]);
   const displayClaimStatus = effectiveClaim?.claimStatus;
   const billingStatusRef = useRef<string | undefined>(undefined);
   const incomeRefreshCompletedAtRef = useRef<number | null>(null);
@@ -623,7 +644,7 @@ export function OrcaSummary({
       ? '送信済'
       : '送信失敗'
     : '未送信';
-  const warningStateLabel = sendWarnings.length > 0 ? `警告 ${sendWarnings.length} 件` : '警告なし';
+  const warningStateLabel = sendWarnings.length > 0 ? `警告 ${sendWarnings.length} 件` : hasPersistedCorrectionNote ? '補正メモあり' : '警告なし';
   const hasRecoveryIssue =
     resolvedMissingMaster ||
     resolvedFallbackUsed ||
@@ -674,6 +695,66 @@ export function OrcaSummary({
           <span>traceId: {recoveryTraceId}</span>
         </div>
       ) : null}
+      {claimEnabled && (Boolean(correctionNoteText) || Boolean(billingDecision.settingNote)) && (
+        <div className="orca-summary__cards" aria-live="off">
+          {correctionNoteText && (
+            <div className="orca-summary__card orca-summary__card--warning">
+              <header>
+                <strong>Correction / 補正メモ</strong>
+                <span className="orca-summary__card-meta">{sendWarnings.length > 0 ? `${sendWarnings.length} 件` : '要確認'}</span>
+              </header>
+              <p
+                className="orca-summary__help"
+                data-test-id="orca-billing-correction-note"
+              >
+                {correctionNoteText}
+              </p>
+              {sendWarnings.length > 0 && (
+                <>
+                  <ul className="orca-summary__warning-list">
+                    {sendWarnings.slice(0, 8).map((warning, index) => {
+                      const key = `${warning.groupPosition ?? 'g'}-${warning.itemPosition ?? 'l'}-${warning.code ?? ''}-${index}`;
+                      const pos = warning.groupPosition
+                        ? `G${warning.groupPosition}${warning.itemPosition ? `-L${warning.itemPosition}` : ''}`
+                        : '位置不明';
+                      const text = warning.message ?? warning.medicalWarning ?? warning.code ?? '警告';
+                      return (
+                        <li key={key}>
+                          <button
+                            type="button"
+                            className="orca-summary__warning-button"
+                            onClick={() => handleWarningFocus(warning)}
+                            title={warning.bundleName ? `${warning.bundleName} / ${text}` : text}
+                          >
+                            <span className="orca-summary__warning-pos">{pos}</span>
+                            <span className="orca-summary__warning-text">{text}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {sendWarnings.length > 8 && (
+                    <p className="orca-summary__help">他 {sendWarnings.length - 8} 件</p>
+                  )}
+                  <p className="orca-summary__help">
+                    警告項目をクリックすると、オーダー入力側（同一タブ内）で該当行へフォーカスします。
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+          {billingDecision.settingNote && (
+            <div className="orca-summary__card" data-test-id="orca-billing-setting-note">
+              <header>
+                <strong>Setting / 確認条件メモ</strong>
+                <span className="orca-summary__card-meta">{billingDecision.confirmationSource}</span>
+              </header>
+              <p className="orca-summary__help">{billingDecision.settingNote}</p>
+              <p className="orca-summary__help">会計確定は incomeinfv2 で確認します。medical-mod-v2 送信とは別の根拠です。</p>
+            </div>
+          )}
+        </div>
+      )}
       <details className="orca-summary__details-fold">
         <summary className="orca-summary__details-summary">詳細を表示</summary>
         <div className="orca-summary__details-body">
@@ -791,59 +872,6 @@ export function OrcaSummary({
               {!effectiveClaim?.invoiceNumber && lastSendInvoiceIdentifier && <li>直近送信: {lastSendInvoiceIdentifier}</li>}
               {!effectiveClaim?.dataId && lastSendDataIdIdentifier && <li>直近送信: {lastSendDataIdIdentifier}</li>}
             </ul>
-          </div>
-        )}
-        {claimEnabled && sendWarnings.length > 0 && (
-          <div className="orca-summary__card orca-summary__card--warning">
-            <header>
-              <strong>Correction / 補正メモ</strong>
-              <span className="orca-summary__card-meta">{sendWarnings.length} 件</span>
-            </header>
-            <p
-              className="orca-summary__help"
-              data-test-id="orca-billing-correction-note"
-            >
-              {billingDecision.correctionNote ??
-                '補正メモは medical-mod-v2 の警告だけを示します。workflow state は変更しません。'}
-            </p>
-            <ul className="orca-summary__warning-list">
-              {sendWarnings.slice(0, 8).map((warning, index) => {
-                const key = `${warning.groupPosition ?? 'g'}-${warning.itemPosition ?? 'l'}-${warning.code ?? ''}-${index}`;
-                const pos = warning.groupPosition
-                  ? `G${warning.groupPosition}${warning.itemPosition ? `-L${warning.itemPosition}` : ''}`
-                  : '位置不明';
-                const text = warning.message ?? warning.medicalWarning ?? warning.code ?? '警告';
-                return (
-                  <li key={key}>
-                    <button
-                      type="button"
-                      className="orca-summary__warning-button"
-                      onClick={() => handleWarningFocus(warning)}
-                      title={warning.bundleName ? `${warning.bundleName} / ${text}` : text}
-                    >
-                      <span className="orca-summary__warning-pos">{pos}</span>
-                      <span className="orca-summary__warning-text">{text}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {sendWarnings.length > 8 && (
-              <p className="orca-summary__help">他 {sendWarnings.length - 8} 件</p>
-            )}
-            <p className="orca-summary__help">
-              警告項目をクリックすると、オーダー入力側（同一タブ内）で該当行へフォーカスします。
-            </p>
-          </div>
-        )}
-        {claimEnabled && billingDecision.settingNote && (
-          <div className="orca-summary__card" data-test-id="orca-billing-setting-note">
-            <header>
-              <strong>Setting / 確認条件メモ</strong>
-              <span className="orca-summary__card-meta">{billingDecision.confirmationSource}</span>
-            </header>
-            <p className="orca-summary__help">{billingDecision.settingNote}</p>
-            <p className="orca-summary__help">会計確定は incomeinfv2 で確認します。medical-mod-v2 送信とは別の根拠です。</p>
           </div>
         )}
         <div className="orca-summary__card">
