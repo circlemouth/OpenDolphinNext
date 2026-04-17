@@ -1,0 +1,377 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - link "本文へスキップ" [ref=e3] [cursor=pointer]:
+    - /url: "#app-shell-main"
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: OpenDolphin Web
+        - generic [ref=e8]: 臨床業務ワークスペース
+      - generic [ref=e9]:
+        - generic [ref=e10]: "施設ID: 1.3.6.1.4.1.9414.72.103"
+        - generic [ref=e11]: "ユーザー: Playwright Doctor"
+        - generic [ref=e12]: "権限: admin 補助情報: 認可ロール"
+        - button "RUN_ID をコピー" [ref=e13] [cursor=pointer]: RUN_ID コピー
+    - generic [ref=e15]:
+      - tablist "固定ワークスペースタブ" [ref=e16]:
+        - tab "受付" [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+          - text: 受付
+        - tab "患者管理" [ref=e20] [cursor=pointer]:
+          - img [ref=e21]
+          - text: 患者管理
+      - tablist "患者ワークスペースタブ" [ref=e28]:
+        - generic [ref=e29]:
+          - tab "山田 花子 ID:000001 / 01 内科 / E2401 / 2026-04-17" [selected] [ref=e30] [cursor=pointer]:
+            - img [ref=e31]
+            - generic [ref=e35]:
+              - generic [ref=e36]: 山田 花子
+              - generic [ref=e37]: ID:000001 / 01 内科 / E2401 / 2026-04-17
+          - button "山田 花子 ID:000001 / 01 内科 / E2401 / 2026-04-17を閉じる" [ref=e38] [cursor=pointer]: ×
+      - group "ワークスペース操作" [ref=e39]:
+        - button "施設/ユーザー切替" [ref=e40] [cursor=pointer]
+        - button "ログアウト" [ref=e41] [cursor=pointer]
+    - generic [ref=e42]:
+      - link "本文へスキップ" [ref=e43] [cursor=pointer]:
+        - /url: "#charts-main"
+      - main [ref=e44]:
+        - region "外来カルテ作業台" [ref=e45]:
+          - generic "患者情報と診療操作" [ref=e48]:
+            - generic [ref=e50]:
+              - region "患者識別帯" [ref=e51]:
+                - generic [ref=e52]:
+                  - generic [ref=e54]: Pt
+                  - generic [ref=e55]:
+                    - generic [ref=e57]:
+                      - paragraph [ref=e58]: Charts / patient
+                      - generic [ref=e59]:
+                        - heading "山田 花子" [level=2] [ref=e60]
+                        - generic [ref=e61]: "患者ID: 000001"
+                      - paragraph [ref=e62]: ヤマダ ハナコ
+                    - generic "患者ID:000001、受付ID:RCPT-2401、予約ID:APT-2401" [ref=e63]:
+                      - generic [ref=e64]:
+                        - generic [ref=e65]:
+                          - generic [ref=e66]: 患者ID
+                          - generic [ref=e67]: "000001"
+                          - generic [ref=e68]: ・
+                        - generic [ref=e69]:
+                          - generic [ref=e70]: 受付ID
+                          - generic [ref=e71]: RCPT-2401
+                          - generic [ref=e72]: ・
+                        - generic [ref=e73]:
+                          - generic [ref=e74]: 予約ID
+                          - generic [ref=e75]: APT-2401
+                      - generic [ref=e77]: "性別/年齢: 女 / 41歳"
+                    - generic [ref=e79]: 診療日 2026-04-17
+                    - generic "server" [ref=e81]
+                    - generic [ref=e83]:
+                      - region "来院文脈" [ref=e84]:
+                        - generic [ref=e85]:
+                          - generic [ref=e86]: 診療日
+                          - generic [ref=e87]: 2026-04-17
+                        - generic [ref=e88]:
+                          - generic [ref=e89]: 状態
+                          - generic [ref=e90]: 受付中
+                        - generic [ref=e91]:
+                          - generic [ref=e92]: 受付ID / 予約ID
+                          - generic [ref=e93]: RCPT-2401 / APT-2401
+                        - generic [ref=e94]:
+                          - generic [ref=e95]: 診療科 / 担当医
+                          - generic [ref=e96]: 01 内科 / 藤井
+                      - generic "患者補足情報" [ref=e97]:
+                        - generic [ref=e98]:
+                          - generic [ref=e99]: 生年月日
+                          - generic [ref=e100]: 1985-04-12
+                        - generic [ref=e101]:
+                          - generic [ref=e102]: 性別
+                          - generic [ref=e103]: 女
+                        - generic [ref=e104]:
+                          - generic [ref=e105]: 年齢
+                          - generic [ref=e106]: 41歳
+              - generic [ref=e108]:
+                - status [ref=e110]:
+                  - strong [ref=e111]: ガード理由（短文）
+                  - list [ref=e112]:
+                    - listitem [ref=e113]: "ORCA送信: 来院文脈不足: 正式送信条件を満たさず送信不可 / 次: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期"
+                    - listitem [ref=e114]: "印刷: 来院文脈不足: 正式出力条件を満たさず印刷不可 / 次: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期"
+                - generic [ref=e115]:
+                  - group "主要送信操作" [ref=e116]:
+                    - button "ORCA 送信" [disabled] [ref=e117]
+                  - group "補助操作" [ref=e118]:
+                    - button "受付へ戻る" [ref=e119] [cursor=pointer]
+                    - button "ドラフト保存" [ref=e120] [cursor=pointer]
+                    - button "印刷/エクスポート" [disabled] [ref=e121]
+                - group [ref=e122]:
+                  - generic "その他" [ref=e123] [cursor=pointer]
+                - note [ref=e124]:
+                  - strong [ref=e125]: 送信不可（1件）
+                  - list [ref=e126]:
+                    - listitem [ref=e127]: "来院文脈不足: 正式送信条件を満たさず送信不可: Insurance_Combination_Number, Voucher_Number が不足しているため送信できません。（次にやること: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期）"
+                - note [ref=e128]:
+                  - strong [ref=e129]: 印刷不可（1件）
+                  - list [ref=e130]:
+                    - listitem [ref=e131]: "来院文脈不足: 正式出力条件を満たさず印刷不可: Insurance_Combination_Number, Voucher_Number が不足しているため印刷できません。（次にやること: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期）"
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]: 病名・過去カルテ
+                - generic [ref=e137]: 保険病名 / Past Hub / Do
+              - generic [ref=e139]:
+                - generic [ref=e140]:
+                  - generic [ref=e141]:
+                    - strong [ref=e142]: 保険病名
+                    - paragraph [ref=e143]: 保険病名だけが編集可能です。ORCA mirror は参照専用、候補は明示確認でのみ反映します。
+                  - group "病名操作" [ref=e144]:
+                    - button "詳細入力" [ref=e145] [cursor=pointer]
+                - generic [ref=e146]:
+                  - generic [ref=e147]: 保険病名の確認が必要です
+                  - generic [ref=e148]: clinical source が未実装のため、この画面では保険病名だけを扱います。
+                - generic [ref=e149]:
+                  - generic [ref=e150]:
+                    - generic [ref=e151]: 保険病名
+                    - generic [ref=e152]: 0件
+                  - paragraph [ref=e153]: 保険病名が未登録です。
+                - region "ORCA mirror" [ref=e154]:
+                  - generic [ref=e155]:
+                    - strong [ref=e156]: ORCA mirror
+                    - generic [ref=e157]: 参照専用。保険病名へ自動反映しません。
+                  - paragraph [ref=e158]: ORCA mirror を取得できないため、同期状態は未確認です。
+                - region "候補" [ref=e159]:
+                  - generic [ref=e160]:
+                    - strong [ref=e161]: 候補
+                    - generic [ref=e162]: 候補は自動反映されません。内容を確認してから保険病名に追加してください。
+                  - generic [ref=e163]:
+                    - generic [ref=e164]:
+                      - generic [ref=e165]: 病名 *
+                      - textbox "病名 *" [ref=e166]:
+                        - /placeholder: "例: 高血圧症"
+                    - generic [ref=e167]:
+                      - generic [ref=e168]: 病名候補
+                      - combobox "病名候補" [disabled] [ref=e169]:
+                        - option "候補なし" [selected]
+                    - generic [ref=e170]:
+                      - generic [ref=e171]: コード
+                      - textbox "コード" [ref=e172]:
+                        - /placeholder: "例: I10"
+                    - generic [ref=e173]:
+                      - generic [ref=e174]: 開始日
+                      - textbox "開始日" [ref=e175]: 2026-04-17
+                    - generic [ref=e176]:
+                      - checkbox "主病名" [ref=e177]
+                      - text: 主病名
+                    - generic [ref=e178]:
+                      - checkbox "疑い" [ref=e179]
+                      - text: 疑い
+                  - button "保険病名に追加" [ref=e181] [cursor=pointer]
+              - group "患者サマリ（free document）" [ref=e182]:
+                - generic "患者サマリ >" [ref=e183] [cursor=pointer]:
+                  - text: 患者サマリ
+                  - generic [ref=e184]: 未登録
+                  - text: ">"
+              - region "Past Hub（過去カルテとオーダー）" [ref=e186]:
+                - generic [ref=e188]:
+                  - strong [ref=e189]: Past Hub
+                  - paragraph [ref=e190]: 日付ごとに折りたたみ、左に過去カルテ、右にオーダー情報をまとめます（初期表示は全て閉じる）。
+                - generic "過去カルテ一覧" [ref=e191]:
+                  - list [ref=e192]:
+                    - listitem [ref=e193]:
+                      - generic "2026-04-17 01 内科 / 藤井 オーダー:0 表示中 >" [ref=e194] [cursor=pointer]:
+                        - generic [ref=e195]: 2026-04-17
+                        - generic [ref=e196]: 01 内科 / 藤井
+                        - generic [ref=e197]: オーダー:0
+                        - generic [ref=e198]: 表示中
+                        - text: ">"
+            - generic [ref=e199]:
+              - generic [ref=e200]:
+                - generic [ref=e201]: カルテ記載
+                - generic [ref=e202]: SOAP / 履歴 / オーダー
+              - region "SOAP 記載" [ref=e204]:
+                - generic [ref=e205]:
+                  - generic [ref=e206]:
+                    - paragraph [ref=e207]: Primary Workspace
+                    - generic [ref=e208]:
+                      - heading "SOAP 記載" [level=2] [ref=e209]
+                      - status [ref=e210]:
+                        - generic [ref=e211]: 保存済
+                    - paragraph [ref=e212]: 記載履歴なし
+                    - group [ref=e213]:
+                      - generic "記載情報" [ref=e214] [cursor=pointer]
+                  - generic [ref=e215]:
+                    - button "履歴" [ref=e216] [cursor=pointer]
+                    - button "表示:両方" [ref=e217] [cursor=pointer]
+                    - button "テンプレ" [ref=e218] [cursor=pointer]
+                    - button "保存" [ref=e219] [cursor=pointer]
+                    - group [ref=e220]:
+                      - generic "その他" [ref=e221] [cursor=pointer]
+                - generic [ref=e222]:
+                  - generic [ref=e223]:
+                    - generic [ref=e224]:
+                      - article [ref=e225]:
+                        - generic [ref=e226]:
+                          - generic [ref=e227]:
+                            - generic [ref=e228]: F
+                            - strong [ref=e229]: Free
+                          - generic [ref=e231]: 記載履歴なし
+                        - textbox "Free を記載してください。" [ref=e232]
+                        - button "新規カード" [ref=e234] [cursor=pointer]
+                      - article [ref=e235]:
+                        - generic [ref=e236]:
+                          - generic [ref=e237]:
+                            - generic [ref=e238]: S
+                            - strong [ref=e239]: Subjective
+                          - generic [ref=e241]: 記載履歴なし
+                        - textbox "Subjective を記載してください。" [ref=e242]
+                      - article [ref=e243]:
+                        - generic [ref=e244]:
+                          - generic [ref=e245]:
+                            - generic [ref=e246]: O
+                            - strong [ref=e247]: Objective
+                          - generic [ref=e249]: 記載履歴なし
+                        - textbox "Objective を記載してください。" [ref=e250]
+                      - article [ref=e251]:
+                        - generic [ref=e252]:
+                          - generic [ref=e253]:
+                            - generic [ref=e254]: A
+                            - strong [ref=e255]: Assessment
+                          - generic [ref=e257]: 記載履歴なし
+                        - textbox "Assessment を記載してください。" [ref=e258]
+                      - article [ref=e259]:
+                        - generic [ref=e260]:
+                          - generic [ref=e261]:
+                            - generic [ref=e262]: P
+                            - strong [ref=e263]: Plan
+                          - generic [ref=e265]: 記載履歴なし
+                        - textbox "Plan を記載してください。" [ref=e266]
+                    - group [ref=e267]:
+                      - generic "症状詳記（院内ローカル） >" [ref=e268] [cursor=pointer]
+                  - complementary "オーダー概要" [ref=e269]:
+                    - generic [ref=e271]:
+                      - strong [ref=e272]: オーダー概要
+                      - generic [ref=e273]: カテゴリ別詳細カード
+                    - paragraph [ref=e274]: オーダー情報の取得に失敗しました。時間をおいて再試行してください。
+                    - generic [ref=e275]:
+                      - generic [ref=e276]:
+                        - strong [ref=e277]: ORCA確認
+                        - generic [ref=e278]: runtime support
+                      - generic [ref=e279]:
+                        - 'alert "注意、最新データを確認しながら操作してください。 dataSourceTransition=server を監査ログへ再送出します。、送信先: ORCA master" [ref=e280]':
+                          - generic [ref=e281]: 注意
+                          - paragraph [ref=e282]: "最新データを確認しながら操作してください。 dataSourceTransition=server を監査ログへ再送出します。 ｜ 送信先: ORCA master"
+                        - status [ref=e283]:
+                          - generic [ref=e284]: "workflow: 廃止"
+                          - generic [ref=e285]: "transmission: 送信済"
+                          - generic [ref=e286]: "confirmation: 会計待ち+送信済"
+                          - generic [ref=e287]: 警告 1 件
+                          - generic [ref=e288]: "最終更新: 2026-04-17T06:57:41.121Z"
+                        - group [ref=e289]:
+                          - generic "詳細を表示" [active] [ref=e290] [cursor=pointer]
+                          - generic [ref=e292]:
+                            - generic [ref=e293]:
+                              - generic [ref=e294]:
+                                - strong [ref=e295]: Workflow / 院内ローカル診療サマリ
+                                - generic [ref=e296]: "status: —"
+                              - paragraph [ref=e297]: 院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。
+                              - list [ref=e298]:
+                                - listitem [ref=e299]: "ローカル見込み総額: —"
+                                - listitem [ref=e300]: "ローカル請求件数: 0 件"
+                                - listitem [ref=e301]: "院内ステータス: 廃止"
+                                - listitem [ref=e302]: "recordsReturned: 0"
+                                - listitem [ref=e303]: "ORCA送信: 成功"
+                            - generic [ref=e304]:
+                              - generic [ref=e305]:
+                                - strong [ref=e306]: Transmission / medical-mod-v2
+                                - generic [ref=e307]: 送信済
+                              - paragraph [ref=e308]: medical-mod-v2 の送信結果です。会計済み判定とは別に扱ってください。
+                              - list [ref=e309]:
+                                - listitem [ref=e310]: "送信状態: 送信済"
+                                - listitem [ref=e311]: "確認状態: 会計待ち+送信済"
+                                - listitem [ref=e312]: "confirmation source: none"
+                            - generic [ref=e313]:
+                              - generic [ref=e314]:
+                                - strong [ref=e315]: Correction / 補正メモ
+                                - generic [ref=e316]: 1 件
+                              - paragraph [ref=e317]: 補正が必要です。medical-mod-v2 の警告を確認し、必要な修正だけを行ってください。
+                              - list [ref=e318]:
+                                - listitem [ref=e319]:
+                                  - button "G1-L1 補正候補があります" [ref=e320] [cursor=pointer]:
+                                    - generic [ref=e321]: G1-L1
+                                    - generic [ref=e322]: 補正候補があります
+                              - paragraph [ref=e323]: 警告項目をクリックすると、オーダー入力側（同一タブ内）で該当行へフォーカスします。
+                            - generic [ref=e324]:
+                              - strong [ref=e326]: 予約サマリ (直近3件)
+                              - list [ref=e327]:
+                                - listitem [ref=e328]: 09:10 ｜ 01 内科 ｜ 受付中 ｜ 山田 花子
+                            - generic [ref=e329]:
+                              - generic [ref=e330]:
+                                - strong [ref=e331]: ORCA収納情報
+                                - generic [ref=e332]: "対象日: 2026-04-17"
+                              - button "収納情報を確認" [ref=e333]
+                              - paragraph [ref=e334]: official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。
+                              - generic [ref=e335]:
+                                - generic [ref=e336]:
+                                  - generic [ref=e337]: 直近請求
+                                  - strong [ref=e338]: データなし
+                                - generic [ref=e339]:
+                                  - generic [ref=e340]: 請求金額
+                                  - strong [ref=e341]: —
+                              - list [ref=e342]:
+                                - listitem [ref=e343]: "Api_Result: —"
+                                - listitem [ref=e344]: "件数: 0 件"
+                                - listitem [ref=e345]: "保険組合せ: —"
+                                - listitem [ref=e346]: "取得: —"
+                              - generic [ref=e347]:
+                                - generic [ref=e348]:
+                                  - generic [ref=e349]: 未収金合計 (Unpaid_Money_Total)
+                                  - strong [ref=e350]: —
+                                - generic [ref=e351]:
+                                  - generic [ref=e352]: 請求金額 (Ac_Money)
+                                  - strong [ref=e353]: —
+                                - generic [ref=e354]:
+                                  - generic [ref=e355]: 入金額 (Ic_Money)
+                                  - strong [ref=e356]: —
+                                - generic [ref=e357]:
+                                  - generic [ref=e358]: 保険適用金額 (Ai_Money)
+                                  - strong [ref=e359]: —
+                                - generic [ref=e360]:
+                                  - generic [ref=e361]: 自費金額 (Oe_Money)
+                                  - strong [ref=e362]: —
+                                - generic [ref=e363]:
+                                  - generic [ref=e364]: 食事・生活療養負担金 (Ml_Smoney)
+                                  - strong [ref=e365]: —
+                        - group "OrcaSummary アクション" [ref=e366]:
+                          - button "予約へ" [ref=e367]
+                          - button "会計へ" [ref=e368]
+                          - button "再取得" [ref=e369]
+                          - button "新規予約" [ref=e370]
+                  - complementary "右ドック" [ref=e372]:
+                    - paragraph [ref=e373]: 候補
+                    - generic [ref=e374]:
+                      - button "処方候補を開く" [pressed] [ref=e375] [cursor=pointer]:
+                        - generic [ref=e376]: 処方
+                      - button "注射候補を開く" [ref=e377] [cursor=pointer]:
+                        - generic [ref=e378]: 注射
+                      - button "処置候補を開く" [ref=e379] [cursor=pointer]:
+                        - generic [ref=e380]: 処置
+                      - button "検査候補を開く" [ref=e381] [cursor=pointer]:
+                        - generic [ref=e382]: 検査
+                      - button "算定候補を開く" [ref=e383] [cursor=pointer]:
+                        - generic [ref=e384]: 算定
+        - generic:
+          - complementary:
+            - button
+            - generic:
+              - strong: 処方候補
+              - generic:
+                - button: 最小化
+                - button: 一時隠す
+                - button: 閉じる
+            - tablist:
+              - tab [selected]: 処方
+              - tab: 注射
+              - tab: 処置
+              - tab: 検査
+              - tab: 算定
+    - complementary
+```

@@ -66,6 +66,7 @@ const renderPanel = (bundlesOverride: any[] = []) =>
         patientId="P-RX-LOCAL"
         meta={baseMeta}
         active
+        variant="utility"
         bundlesOverride={bundlesOverride}
       />
     </QueryClientProvider>,

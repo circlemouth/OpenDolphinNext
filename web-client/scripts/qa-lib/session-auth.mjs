@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const webClientDir = path.resolve(scriptDir, '..');
+const webClientDir = path.resolve(scriptDir, '..', '..');
 const repoRoot = path.resolve(webClientDir, '..');
 
 const DEFAULT_USER_ID = 'doctor1';

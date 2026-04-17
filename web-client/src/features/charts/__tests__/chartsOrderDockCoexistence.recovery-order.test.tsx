@@ -367,7 +367,7 @@ describe('ChartsPage order dock coexistence recovery', () => {
     await user.click(screen.getByRole('button', { name: '右欄編集開始' }));
     expect(document.querySelector('[data-test-id="charts-order-dock-coexist-guard-dialog"]')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: '診察終了（上部モック）' }));
+    await user.click(screen.getByRole('button', { name: '診察終了（モック）' }));
     await waitFor(() =>
       expect(document.querySelector('[data-test-id="charts-encounter-exit-guard-dialog"]')).not.toBeNull(),
     );

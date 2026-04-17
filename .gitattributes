@@ -28,6 +28,11 @@ ops/tools/**/*.profile text eol=lf
 ops/tools/**/*.ps1     text eol=lf
 ops/tools/**/*.psm1    text eol=lf
 
+# container/runtime shell scripts
+ops/shared/docker/**/*.sh text eol=lf
+ops/modernized-server/docker/**/*.sh text eol=lf
+server-modernized/tools/ci/*.sh text eol=lf
+
 # Source archive exclusions
 **/target/**           export-ignore
 **/__MACOSX/**         export-ignore

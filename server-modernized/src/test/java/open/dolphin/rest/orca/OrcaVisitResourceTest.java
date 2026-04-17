@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import open.dolphin.encounter.EncounterProjectionRepository;
 import open.dolphin.encounter.ProjectionPatientSummaryRepository;
+import open.dolphin.infomodel.KarteBean;
 import open.dolphin.orca.converter.OrcaXmlMapper;
 import open.dolphin.orca.service.DefaultOrcaLiveGateway;
 import open.dolphin.orca.service.OrcaLiveGateway;
@@ -34,6 +36,7 @@ import open.dolphin.rest.dto.orca.VisitMutationResponse;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
 import open.dolphin.rest.dto.orca.VisitPatientListResponse;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
+import open.dolphin.session.KarteServiceBean;
 import org.junit.jupiter.api.Test;
 
 class OrcaVisitResourceTest {
@@ -121,6 +124,105 @@ class OrcaVisitResourceTest {
         assertEquals("000001", merged.getPatient().getPatientId());
         assertTrue(response.isFallbackUsed());
         assertEquals(1, response.getRecordsReturned());
+    }
+
+    @Test
+    void visitListProjectsEncounterRowsForAcceptedVisitsWhenMissing() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitPatientListResponse stub = new VisitPatientListResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        stub.setVisitDate("2026-04-17");
+        VisitPatientListResponse.VisitEntry visit = new VisitPatientListResponse.VisitEntry();
+        visit.setVoucherNumber("A-100");
+        visit.setSequentialNumber("1");
+        visit.setUpdateDate("2026-04-17");
+        visit.setUpdateTime("09:30");
+        PatientSummary patient = new PatientSummary();
+        patient.setPatientId("000001");
+        visit.setPatient(patient);
+        stub.getVisits().add(visit);
+        when(wrapperService.getVisitList(anyString(), any(VisitPatientListRequest.class))).thenReturn(stub);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        when(encounterProjectionRepository.findByEncounterKey("F001:A-100")).thenReturn(null);
+        KarteServiceBean karteServiceBean = mock(KarteServiceBean.class);
+        KarteBean karte = new KarteBean();
+        karte.setId(10L);
+        when(karteServiceBean.getKarte("F001", "000001", null)).thenReturn(karte);
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+        resource.karteServiceBean = karteServiceBean;
+
+        VisitPatientListRequest request = new VisitPatientListRequest();
+        request.setRequestNumber("01");
+        request.setVisitDate(LocalDate.of(2026, 4, 17));
+
+        VisitPatientListResponse response = resource.visitList(createRequest("F001:doctor01", Map.of()), request);
+
+        assertEquals("F001:A-100", response.getVisits().get(0).getEncounterKey());
+        assertEquals("F001:1", response.getVisits().get(0).getScheduleKey());
+        verify(encounterProjectionRepository).upsertCheckedIn(argThat(command ->
+                "F001:A-100".equals(command.encounterKey())
+                        && "F001".equals(command.facilityId())
+                        && "000001".equals(command.patientId())
+                        && Long.valueOf(10L).equals(command.karteId())
+                        && "F001:1".equals(command.scheduleKey())
+                        && "A-100".equals(command.orcaAcceptanceId())
+                        && "checked_in".equals(command.businessState())));
+    }
+
+    @Test
+    void visitListDoesNotOverwriteExistingEncounterProjection() {
+        OrcaLiveGateway wrapperService = mock(OrcaLiveGateway.class);
+        VisitPatientListResponse stub = new VisitPatientListResponse();
+        stub.setApiResult("00");
+        stub.setApiResultMessage("OK");
+        stub.setVisitDate("2026-04-17");
+        VisitPatientListResponse.VisitEntry visit = new VisitPatientListResponse.VisitEntry();
+        visit.setVoucherNumber("A-100");
+        visit.setSequentialNumber("1");
+        visit.setUpdateDate("2026-04-17");
+        visit.setUpdateTime("09:30");
+        PatientSummary patient = new PatientSummary();
+        patient.setPatientId("000001");
+        visit.setPatient(patient);
+        stub.getVisits().add(visit);
+        when(wrapperService.getVisitList(anyString(), any(VisitPatientListRequest.class))).thenReturn(stub);
+
+        EncounterProjectionRepository encounterProjectionRepository = mock(EncounterProjectionRepository.class);
+        when(encounterProjectionRepository.findByEncounterKey("F001:A-100")).thenReturn(new EncounterProjectionRepository.EncounterRow(
+                "F001:A-100",
+                "F001",
+                "000001",
+                10L,
+                "F001:1",
+                "A-100",
+                Instant.parse("2026-04-17T00:30:00Z"),
+                "chart_opened",
+                Instant.parse("2026-04-17T00:40:00Z"),
+                null,
+                null,
+                "doctor01",
+                null,
+                "{}",
+                null,
+                2L,
+                Instant.parse("2026-04-17T00:40:01Z")));
+
+        OrcaVisitResource resource = new OrcaVisitResource();
+        resource.setWrapperService(wrapperService);
+        resource.encounterProjectionRepository = encounterProjectionRepository;
+
+        VisitPatientListRequest request = new VisitPatientListRequest();
+        request.setRequestNumber("01");
+        request.setVisitDate(LocalDate.of(2026, 4, 17));
+
+        resource.visitList(createRequest("F001:doctor01", Map.of()), request);
+
+        verify(encounterProjectionRepository, never()).upsertCheckedIn(any());
     }
 
     @Test

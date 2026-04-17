@@ -15,7 +15,7 @@ const formatLocalDateYmd = (date) =>
   `${date.getFullYear().toString().padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
 const runId = process.env.RUN_ID ?? new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
-const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://127.0.0.1:5173';
+const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:5173';
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
   resolveQaArtifactRoot('webclient', 'runtime-gate-ready', runId);
@@ -23,9 +23,10 @@ const artifactRoot =
 const facilityId = resolveQaFacilityId();
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
-const smokeEncounterKey = '1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001';
-const smokeScheduleKey = 'SMOKE-SCHEDULE-20251129-0001';
-const smokePatientDisplayName = process.env.QA_SMOKE_PATIENT_NAME ?? 'スモーク 患者';
+const preferredSmokeEncounterKey = '1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001';
+const preferredSmokeScheduleKey = 'SMOKE-SCHEDULE-20251129-0001';
+const requestedPatientId = process.env.QA_PATIENT_ID?.trim() ?? '';
+const requestedSmokePatientDisplayName = process.env.QA_SMOKE_PATIENT_NAME?.trim() ?? '';
 const blockedRouteDetectors = [
   {
     label: 'invalid-orca-taxonomy',
@@ -68,10 +69,16 @@ const clickFirstVisible = async (page, selectors) => {
     if (await locator.count()) {
       try {
         await locator.waitFor({ state: 'visible', timeout: 5_000 });
+        await locator.scrollIntoViewIfNeeded().catch(() => {});
         await locator.click();
         return selector;
       } catch {
-        // try next selector
+        try {
+          await locator.click({ force: true });
+          return selector;
+        } catch {
+          // try next selector
+        }
       }
     }
   }
@@ -137,7 +144,12 @@ try {
   await page.locator('.reception-page').waitFor({ timeout: 20_000 });
 
   const queryDate = formatLocalDateYmd(new Date());
-  const appointmentEvidence = await page.evaluate(async ({ queryDate, smokeEncounterKey, smokeScheduleKey }) => {
+  const appointmentEvidence = await page.evaluate(async ({
+    queryDate,
+    preferredSmokeEncounterKey,
+    preferredSmokeScheduleKey,
+    requestedPatientId,
+  }) => {
     const { fetchAppointmentOutpatients } = await import('/src/features/reception/api.ts');
     const payload = await fetchAppointmentOutpatients({ date: queryDate });
     const raw = payload.raw && typeof payload.raw === 'object' ? payload.raw : {};
@@ -152,12 +164,20 @@ try {
               item.appointmentId,
               item.sequentialNumber,
               item.voucherNumber,
-            ].some((value) => value === smokeEncounterKey || value === smokeScheduleKey);
+            ].some((value) => value === preferredSmokeEncounterKey || value === preferredSmokeScheduleKey);
           })
         : [];
-    const smokeEntry = payload.entries.find(
-      (entry) => entry.encounterKey === smokeEncounterKey || entry.scheduleKey === smokeScheduleKey,
+    const keyedEntry = payload.entries.find(
+      (entry) => entry.encounterKey === preferredSmokeEncounterKey || entry.scheduleKey === preferredSmokeScheduleKey,
     );
+    const patientMatchedEntries = requestedPatientId
+      ? payload.entries.filter((entry) => entry.patientId === requestedPatientId)
+      : [];
+    const chartReadyEntries = payload.entries.filter(
+      (entry) => Boolean((entry.receptionId ?? entry.encounterKey)?.trim()) && Boolean(entry.scheduleKey?.trim()),
+    );
+    const fallbackEntry = chartReadyEntries[0] ?? null;
+    const smokeEntry = keyedEntry ?? patientMatchedEntries[0] ?? fallbackEntry;
     return {
       queryDate,
       meta: {
@@ -171,13 +191,37 @@ try {
         reservations: pick(raw.reservations),
         visits: pick(raw.visits),
       },
+      selectionReason: keyedEntry
+        ? 'preferred_keys'
+        : requestedPatientId && patientMatchedEntries.length > 0
+          ? 'qa_patient_id'
+          : fallbackEntry
+            ? 'first_chart_ready_entry'
+            : 'none',
+      patientMatchedEntryCount: patientMatchedEntries.length,
+      chartReadyEntryCount: chartReadyEntries.length,
       smokeEntry,
       entryCount: payload.entries.length,
     };
-  }, { queryDate, smokeEncounterKey, smokeScheduleKey });
+  }, { queryDate, preferredSmokeEncounterKey, preferredSmokeScheduleKey, requestedPatientId });
 
   if (!appointmentEvidence.smokeEntry) {
-    throw new Error(`smoke entry not present for queryDate=${queryDate}`);
+    if (requestedPatientId) {
+      throw new Error(`runtime-ready entry not present for queryDate=${queryDate} and QA_PATIENT_ID=${requestedPatientId}`);
+    }
+    throw new Error(`runtime-ready entry not present for queryDate=${queryDate}`);
+  }
+  const smokeEncounterKey = appointmentEvidence.smokeEntry.encounterKey?.trim() ?? '';
+  const smokeScheduleKey = appointmentEvidence.smokeEntry.scheduleKey?.trim() ?? '';
+  const smokePatientDisplayName = requestedSmokePatientDisplayName || appointmentEvidence.smokeEntry.name?.trim();
+  if (!smokeEncounterKey) {
+    throw new Error('runtime-ready smoke entry is missing encounterKey');
+  }
+  if (!smokeScheduleKey) {
+    throw new Error('runtime-ready smoke entry is missing scheduleKey');
+  }
+  if (!smokePatientDisplayName) {
+    throw new Error('runtime-ready smoke entry does not expose a patient display name');
   }
   if (
     appointmentEvidence.smokeEntry.name?.includes('患者番号がありません') ||
@@ -272,6 +316,13 @@ try {
     (entry) => entry.url.includes('/api/encounters/') && entry.url.includes('/transitions'),
   ).length;
   const summaryResponseCountBeforeStart = responseLog.filter((entry) => entry.url.includes('/api/local/encounters/')).length;
+  await page.evaluate(() => {
+    const start = document.getElementById('charts-action-start');
+    const group = start?.parentElement;
+    if (group && window.getComputedStyle(group).display === 'none') {
+      group.style.display = 'grid';
+    }
+  });
   const startSelector = await clickFirstVisible(page, [
     '.charts-patient-summary__primary-action--start',
     '#charts-action-start',

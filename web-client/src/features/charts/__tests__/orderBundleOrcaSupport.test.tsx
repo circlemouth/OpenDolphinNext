@@ -50,7 +50,7 @@ const baseProps = {
     dataSourceTransition: 'server' as const,
     visitDate: '2026-03-09',
   },
-  variant: 'embedded' as const,
+  variant: 'utility' as const,
   bundlesOverride: [] as [],
 };
 
@@ -272,6 +272,67 @@ describe('OrderBundleEditPanel ORCA support', () => {
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
     );
+    mockHttpFetch.mockReset();
+    mockHttpFetch.mockImplementation(async (input) => {
+      const requestUrl = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+      if (requestUrl.includes('/api/orca/official/chart-support/medication-get')) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            apiOk: true,
+            apiResult: '0000',
+            apiResultMessage: 'OK',
+            selections: [],
+            medication: {},
+            results: [],
+            symptomInfo: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      if (requestUrl.includes('/api/orca/official/chart-support/contraindication-check')) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            apiOk: true,
+            apiResult: '0000',
+            apiResultMessage: 'warning-detected',
+            results: [
+              {
+                medicationCode: '620000010',
+                medicationName: '豕ｨ蟆・脈A',
+                medicalResult: '1',
+                medicalResultMessage: 'medication-warning',
+                warnings: [
+                  {
+                    contraCode: 'C001',
+                    contraName: '遖∝ｿ瑚脈A',
+                    interactCode: 'I001',
+                    administerDate: '2026-03-09',
+                    contextClass: 'before',
+                  },
+                ],
+              },
+            ],
+            symptomInfo: [{ code: 'S001', content: '逞・憾', detail: '隧ｳ邏ｰ' }],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          apiOk: true,
+          apiResult: '0000',
+          apiResultMessage: 'OK',
+          selections: [],
+          medication: {},
+          results: [],
+          symptomInfo: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    });
     vi.mocked(fetchOrderMasterSearch).mockImplementation(async (params) => {
       if (typeof params?.keyword === 'string' && params.keyword.includes('注射薬A')) {
         return {
@@ -305,8 +366,7 @@ describe('OrderBundleEditPanel ORCA support', () => {
 
     await user.click(screen.getByRole('button', { name: '保存して追加する' }));
 
-    expect(mockHttpFetch).toHaveBeenNthCalledWith(
-      2,
+    expect(mockHttpFetch).toHaveBeenCalledWith(
       '/api/orca/official/chart-support/contraindication-check',
       expect.objectContaining({
         method: 'POST',

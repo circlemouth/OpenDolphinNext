@@ -78,6 +78,7 @@ const renderPanel = (options?: { bundlesOverride?: any[]; request?: any }) => {
         patientId="P-RX-001"
         meta={baseMeta}
         active
+        variant="utility"
         bundlesOverride={options?.bundlesOverride ?? defaultBundlesOverride}
         request={options?.request}
       />

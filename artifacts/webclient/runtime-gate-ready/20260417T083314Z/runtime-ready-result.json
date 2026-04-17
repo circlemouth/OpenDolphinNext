@@ -1,0 +1,251 @@
+{
+  "runId": "20260417T083314Z",
+  "baseURL": "https://localhost:5173",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "smokeEncounterKey": "1.3.6.1.4.1.9414.72.103:0002410",
+  "smokeScheduleKey": "1.3.6.1.4.1.9414.72.103:1",
+  "login": {
+    "sessionMeStatus": 200,
+    "sessionMeBody": "{\"facilityId\":\"1.3.6.1.4.1.9414.72.103\",\"userId\":\"1.3.6.1.4.1.9414.72.103:doctor1\",\"userPk\":10,\"displayName\":\"Doctor One\",\"commonName\":\"Doctor One\",\"roles\":[\"admin\",\"doctor\",\"user\"],\"clientUuid\":\"qa-20260417T083314Z\",\"runId\":\"073906fc-63a3-48ce-95f1-c2fdbf07d315\"}"
+  },
+  "authoritativeReadEvidence": {
+    "queryDate": "2026-04-17",
+    "meta": {
+      "recordsReturned": 6,
+      "fallbackUsed": false,
+      "sourcePath": "/api/orca/official/appointments/list"
+    },
+    "rawSmoke": {
+      "slots": [],
+      "reservations": [],
+      "visits": []
+    },
+    "selectionReason": "first_chart_ready_entry",
+    "patientMatchedEntryCount": 0,
+    "chartReadyEntryCount": 6,
+    "smokeEntry": {
+      "id": "0002410",
+      "appointmentId": "1",
+      "receptionId": "0002410",
+      "scheduleKey": "1.3.6.1.4.1.9414.72.103:1",
+      "encounterKey": "1.3.6.1.4.1.9414.72.103:0002410",
+      "patientId": "01483",
+      "departmentCode": "01",
+      "physicianCode": "10001",
+      "voucherNumber": "0002410",
+      "sequentialNumber": "1",
+      "insuranceCombinationNumber": "0001",
+      "name": "鈴木　直樹",
+      "kana": "スズキ　ナオキ",
+      "birthDate": "1975-05-01",
+      "sex": "1",
+      "department": "内科",
+      "physician": "内科　太郎",
+      "appointmentTime": "10:13:32",
+      "acceptanceTime": "10:13:32",
+      "visitDate": "2026-04-17",
+      "status": "予約",
+      "insurance": "0001",
+      "source": "visits"
+    },
+    "entryCount": 7
+  },
+  "chartsNav": {
+    "via": "reception-card-open-charts",
+    "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?runId=20260417T083314Z&sort=time&date=2026-04-17"
+  },
+  "selectedEntryEvidence": {
+    "uiBeforeReload": {
+      "url": "/f/1.3.6.1.4.1.9414.72.103/charts?runId=20260417T083314Z&sort=time&date=2026-04-17",
+      "hasMissingKeyWarning": false,
+      "hasStartPatientGuard": false,
+      "hasPrintPatientGuard": false,
+      "hasPlaceholderName": false,
+      "startDisabled": false,
+      "printDisabled": false,
+      "patientLabel": "PtCharts / patient鈴木　直樹患者ID: 01483スズキ　ナオキ患者ID01483・受付ID0002410・予約ID1性別/年齢: 男 / 50歳11ヶ月診療日 2026-04-17server診療日2026-04-17状態予約受付ID / 予約ID0002410 / 1診療科 / 担当医内科 / 内科　太郎生年月日1975-05-01性別男年齢50歳11ヶ月診療操作診察状況・送信アクションを選択できます操作を閉じる患者鈴木　直樹（01483）診療日2026-04-17現在予約（受付→診療→会計）診察開始ORCA 送信受付へ戻るドラフト保存印刷/エクスポートその他最新を再読込タブを閉じるキャンセルロック解除"
+    },
+    "uiAfterReload": {
+      "url": "/f/1.3.6.1.4.1.9414.72.103/charts?runId=20260417T083314Z&sort=time&date=2026-04-17",
+      "hasMissingKeyWarning": false,
+      "hasPatientUnselectedBanner": false,
+      "hasPlaceholderName": false,
+      "startDisabled": false,
+      "startTitle": null,
+      "printDisabled": false,
+      "printTitle": null,
+      "printGuardText": null,
+      "patientLabel": "PtCharts / patient鈴木　直樹患者ID: 01483スズキ　ナオキ患者ID01483・受付ID0002410・予約ID1性別/年齢: 男 / 50歳11ヶ月診療日 2026-04-17server診療日2026-04-17状態予約受付ID / 予約ID0002410 / 1診療科 / 担当医内科 / 内科　太郎生年月日1975-05-01性別男年齢50歳11ヶ月診療操作診察状況・送信アクションを選択できます操作を閉じる患者鈴木　直樹（01483）診療日2026-04-17現在予約（受付→診療→会計）診察開始ORCA 送信受付へ戻るドラフト保存印刷/エクスポートその他最新を再読込タブを閉じるキャンセルロック解除"
+    },
+    "printState": {
+      "disabled": false,
+      "title": null,
+      "guard": null
+    }
+  },
+  "startEvidence": {
+    "uiAfterStart": {
+      "bodyText": "本文へスキップ\nOpenDolphin Web\n臨床業務ワークスペース\n施設ID: 1.3.6.1.4.1.9414.72.103\nユーザー: Doctor One\n権限: admin\nRUN_ID コピー\n受付\n患者管理\n鈴木　直樹\nID:01483 / 内科 / 0002410 / 2026-04-17\n×\n施設/ユーザー切替\nログアウト\n本文へスキップ\nPT\n\nCHARTS / PATIENT\n\n鈴木　直樹\n患者ID: 01483\n\nスズキ　ナオキ\n\n患者ID\n01483\n・\n受付ID\n0002410\n・\n予約ID\n1\n性別/年齢: 男 / 50歳11ヶ月\n診療日 2026-04-17\nserver\n診療日\n2026-04-17\n状態\n予約\n受付ID / 予約ID\n0002410 / 1\n診療科 / 担当医\n内科 / 内科　太郎\n生年月日\n1975-05-01\n性別\n男\n年齢\n50歳11ヶ月\n診察開始\nORCA 送信\n受付へ戻る\nドラフト保存\n印刷/エクスポート\nその他\n診察開始を完了\n\n画面上の状態更新を確認してください。\n\n閉じる\n病名・過去カルテ\n保険病名 / PAST HUB / DO\n保険病名\n\n保険病名だけが編集可能です。ORCA mirror は参照専用、候補は明示確認でのみ反映します。\n\n詳細入力\n保険病名の確認が必要です\nclinical source が未実装のため、この画面では保険病名だけを扱います。\n保険病名\n0件\n\n保険病名が未登録です。\n\nORCA mirror\n参照専用。保険病名へ自動反映しません。\n\nORCA mirror を取得できないため、同期状態は未確認です。\n\n候補\n候補は自動反映されません。内容を確認してから保険病名に追加してください。\n病名 *\n病名候補\n候補なし\nコード\n開始日\n主病名\n疑い\n保険病名に追加\n患者サマリ\n未登録\nPast Hub\n\n日付ごとに折りたたみ、左に過去カルテ、右にオーダー情報をまとめます（初期表示は全て閉じる）。\n\n2026-04-17\n内科 / 内科　太郎\nオーダー:0\n表示中\n—\n精神科 / 精神科　二郎\nオーダー:0\nカルテ記載\nSOAP / 履歴 / オーダー\n\nPRIMARY WORKSPACE\n\nSOAP 記載\n保存済\n\n記載履歴なし\n\n記載情報\n履歴\n表示:両方\nテンプレ\n保存\nその他\nF\nFree\n記載履歴なし\n新規カード\nS\nSubjective\n記載履歴なし\nO\nObjective\n記載履歴なし\nA\nAssessment\n記載履歴なし\nP\nPlan\n記載履歴なし\n症状詳記（院内ローカル）\nオーダー概要\nカテゴリ別詳細カード\n\n当日のオーダーはありません。\n\n文書\n編集\n\n入力者不明 医師 日時不明\n\n文書名: 文書情報なし\n\n本文情報なし\n\nORCA確認\nruntime support\n注意\n\n最新データを確認しながら操作してください。 dataSourceTransition=server を監査ログへ再送出します。 ｜ 送信先: ORCA master\n\nworkflow: 廃止\ntransmission: 未送信\nconfirmation: 未確認\n警告なし\n最終更新: 2026-04-17T08:33:21.365920954Z\n詳細を表示\n予約へ会計へ再取得新規予約\n\n候補\n\n処方\n注射\n処置\n検査\n算定\n処方候補\n最小化\n一時隠す\n閉じる\n処方\n注射\n処置\n検査\n算定",
+      "hasPlaceholderName": false,
+      "successVisible": true,
+      "patientLabel": "PtCharts / patient鈴木　直樹患者ID: 01483スズキ　ナオキ患者ID01483・受付ID0002410・予約ID1性別/年齢: 男 / 50歳11ヶ月診療日 2026-04-17server診療日2026-04-17状態予約受付ID / 予約ID0002410 / 1診療科 / 担当医内科 / 内科　太郎生年月日1975-05-01性別男年齢50歳11ヶ月診療操作診察状況・送信アクションを選択できます操作を閉じる患者鈴木　直樹（01483）診療日2026-04-17現在予約（受付→診療→会計）診察開始ORCA 送信受付へ戻るドラフト保存印刷/エクスポートその他最新を再読込タブを閉じるキャンセルロック解除診察開始を完了画面上の状態更新を確認してください。閉じる"
+    },
+    "startSelector": "#charts-action-start"
+  },
+  "traces": {
+    "summaryRequests": [
+      {
+        "method": "GET",
+        "url": "https://localhost:5173/api/local/encounters/1.3.6.1.4.1.9414.72.103%3A0002410/medical-summary",
+        "body": ""
+      },
+      {
+        "method": "GET",
+        "url": "https://localhost:5173/api/local/encounters/1.3.6.1.4.1.9414.72.103%3A0002410/medical-summary",
+        "body": ""
+      }
+    ],
+    "summaryResponses": [
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/local/encounters/1.3.6.1.4.1.9414.72.103%3A0002410/medical-summary",
+        "body": "{\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"runId\":\"20260417T083314Z\",\"fetchedAt\":\"2026-04-17T08:33:19.013249013Z\",\"recordsReturned\":0,\"outcome\":\"MISSING\",\"sourcePath\":\"/api/local/encounters/{encounterKey}/medical-summary\",\"payload\":{\"outpatientList\":[]}}"
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/local/encounters/1.3.6.1.4.1.9414.72.103%3A0002410/medical-summary",
+        "body": "{\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"runId\":\"20260417T083314Z\",\"fetchedAt\":\"2026-04-17T08:33:21.365920954Z\",\"recordsReturned\":0,\"outcome\":\"MISSING\",\"sourcePath\":\"/api/local/encounters/{encounterKey}/medical-summary\",\"payload\":{\"outpatientList\":[]}}"
+      }
+    ],
+    "transitionRequests": [
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/encounters/1.3.6.1.4.1.9414.72.103%3A0002410/transitions",
+        "body": "{\"operation\":\"chart_open\",\"patientId\":\"01483\",\"karteId\":20,\"requestId\":\"encounter-start-4e32c0d4-e1f8-4112-9c0b-1de200b73e6e\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"idempotencyKey\":\"encounter-start-idem-3f90a7b0-79c4-48c1-9370-f29150fdc2b5\"}"
+      }
+    ],
+    "transitionResponses": [
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/encounters/1.3.6.1.4.1.9414.72.103%3A0002410/transitions",
+        "body": "{\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002410\",\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"facilityId\":\"1.3.6.1.4.1.9414.72.103\",\"patientId\":\"01483\",\"karteId\":20,\"fromState\":\"checked_in\",\"businessState\":\"chart_opened\",\"requestId\":\"encounter-start-4e32c0d4-e1f8-4112-9c0b-1de200b73e6e\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"idempotencyKey\":\"encounter-start-idem-3f90a7b0-79c4-48c1-9370-f29150fdc2b5\",\"transitionedAt\":\"2026-04-17T08:33:21.319534395Z\"}"
+      }
+    ],
+    "appointmentsRequests": [
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"appointmentDate\":\"2026-04-17\",\"medicalInformation\":\"\",\"page\":1,\"size\":50}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"appointmentDate\":\"2026-04-17\",\"page\":1,\"size\":50}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"appointmentDate\":\"2026-04-17\",\"page\":1,\"size\":50}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"appointmentDate\":\"2026-04-17\",\"page\":1,\"size\":50}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"appointmentDate\":\"2026-04-17\",\"page\":1,\"size\":50}"
+      }
+    ],
+    "appointmentsResponses": [
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:17.557317070Z\",\"appointmentDate\":\"2026-04-17\",\"slots\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:01\",\"appointmentTime\":\"11:00:00\",\"medicalInformation\":\"01\",\"departmentCode\":\"02\",\"departmentName\":\"精神科\",\"physicianCode\":\"10003\",\"physicianName\":\"精神科　二郎\",\"appointmentId\":\"01\",\"patient\":{\"patientId\":\"00001\",\"wholeName\":\"事例　一\",\"wholeNameKana\":\"ジレイ　イチ\",\"birthDate\":\"2015-05-05\",\"sex\":\"1\"}}]}"
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:17.607036047Z\",\"appointmentDate\":\"2026-04-17\",\"slots\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:01\",\"appointmentTime\":\"11:00:00\",\"medicalInformation\":\"01\",\"departmentCode\":\"02\",\"departmentName\":\"精神科\",\"physicianCode\":\"10003\",\"physicianName\":\"精神科　二郎\",\"appointmentId\":\"01\",\"patient\":{\"patientId\":\"00001\",\"wholeName\":\"事例　一\",\"wholeNameKana\":\"ジレイ　イチ\",\"birthDate\":\"2015-05-05\",\"sex\":\"1\"}}]}"
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:18.937154499Z\",\"appointmentDate\":\"2026-04-17\",\"slots\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:01\",\"appointmentTime\":\"11:00:00\",\"medicalInformation\":\"01\",\"departmentCode\":\"02\",\"departmentName\":\"精神科\",\"physicianCode\":\"10003\",\"physicianName\":\"精神科　二郎\",\"appointmentId\":\"01\",\"patient\":{\"patientId\":\"00001\",\"wholeName\":\"事例　一\",\"wholeNameKana\":\"ジレイ　イチ\",\"birthDate\":\"2015-05-05\",\"sex\":\"1\"}}]}"
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:19.058097879Z\",\"appointmentDate\":\"2026-04-17\",\"slots\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:01\",\"appointmentTime\":\"11:00:00\",\"medicalInformation\":\"01\",\"departmentCode\":\"02\",\"departmentName\":\"精神科\",\"physicianCode\":\"10003\",\"physicianName\":\"精神科　二郎\",\"appointmentId\":\"01\",\"patient\":{\"patientId\":\"00001\",\"wholeName\":\"事例　一\",\"wholeNameKana\":\"ジレイ　イチ\",\"birthDate\":\"2015-05-05\",\"sex\":\"1\"}}]}"
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":1,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:21.355020081Z\",\"appointmentDate\":\"2026-04-17\",\"slots\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:01\",\"appointmentTime\":\"11:00:00\",\"medicalInformation\":\"01\",\"departmentCode\":\"02\",\"departmentName\":\"精神科\",\"physicianCode\":\"10003\",\"physicianName\":\"精神科　二郎\",\"appointmentId\":\"01\",\"patient\":{\"patientId\":\"00001\",\"wholeName\":\"事例　一\",\"wholeNameKana\":\"ジレイ　イチ\",\"birthDate\":\"2015-05-05\",\"sex\":\"1\"}}]}"
+      }
+    ],
+    "visitsRequests": [
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"visitDate\":\"2026-04-17\",\"requestNumber\":\"01\"}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"visitDate\":\"2026-04-17\",\"requestNumber\":\"01\"}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"visitDate\":\"2026-04-17\",\"requestNumber\":\"01\"}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"visitDate\":\"2026-04-17\",\"requestNumber\":\"01\"}"
+      },
+      {
+        "method": "POST",
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"visitDate\":\"2026-04-17\",\"requestNumber\":\"01\"}"
+      }
+    ],
+    "visitsResponses": [
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":6,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:17.606688601Z\",\"visitDate\":\"2026-04-17\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002410\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002410\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"10:13:32\",\"patient\":{\"patientId\":\"01483\",\"wholeName\":\"鈴木　直樹\",\"wholeNameKana\":\"スズキ　ナオキ\",\"birthDate\":\"1975-05-01\",\"sex\":\"1\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002415\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002415\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0002\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"11:07:01\",\"patient\":{\"patientId\":\"01460\",\"wholeName\":\"新橋　紬\",\"wholeNameKana\":\"シンバシ　ツムギ\",\"birthDate\":\"2000-01-03\",\"sex\":\"2\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002416\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002416\",\"sequentialNumber\":\"1\",\"insuranceCombinat..."
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":6,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:17.557384084Z\",\"visitDate\":\"2026-04-17\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002410\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002410\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"10:13:32\",\"patient\":{\"patientId\":\"01483\",\"wholeName\":\"鈴木　直樹\",\"wholeNameKana\":\"スズキ　ナオキ\",\"birthDate\":\"1975-05-01\",\"sex\":\"1\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002415\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002415\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0002\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"11:07:01\",\"patient\":{\"patientId\":\"01460\",\"wholeName\":\"新橋　紬\",\"wholeNameKana\":\"シンバシ　ツムギ\",\"birthDate\":\"2000-01-03\",\"sex\":\"2\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002416\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002416\",\"sequentialNumber\":\"1\",\"insuranceCombinat..."
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":6,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:18.936133516Z\",\"visitDate\":\"2026-04-17\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002410\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002410\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"10:13:32\",\"patient\":{\"patientId\":\"01483\",\"wholeName\":\"鈴木　直樹\",\"wholeNameKana\":\"スズキ　ナオキ\",\"birthDate\":\"1975-05-01\",\"sex\":\"1\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002415\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002415\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0002\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"11:07:01\",\"patient\":{\"patientId\":\"01460\",\"wholeName\":\"新橋　紬\",\"wholeNameKana\":\"シンバシ　ツムギ\",\"birthDate\":\"2000-01-03\",\"sex\":\"2\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002416\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002416\",\"sequentialNumber\":\"1\",\"insuranceCombinat..."
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":6,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:18.939272220Z\",\"visitDate\":\"2026-04-17\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002410\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002410\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"10:13:32\",\"patient\":{\"patientId\":\"01483\",\"wholeName\":\"鈴木　直樹\",\"wholeNameKana\":\"スズキ　ナオキ\",\"birthDate\":\"1975-05-01\",\"sex\":\"1\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002415\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002415\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0002\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"11:07:01\",\"patient\":{\"patientId\":\"01460\",\"wholeName\":\"新橋　紬\",\"wholeNameKana\":\"シンバシ　ツムギ\",\"birthDate\":\"2000-01-03\",\"sex\":\"2\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002416\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002416\",\"sequentialNumber\":\"1\",\"insuranceCombinat..."
+      },
+      {
+        "status": 200,
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "body": "{\"apiResult\":\"00\",\"apiResultMessage\":\"処理終了\",\"runId\":\"20260417T083314Z\",\"traceId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"requestId\":\"05ddec4c-2581-46bb-a584-badc7e63177e\",\"dataSource\":\"real\",\"dataSourceTransition\":\"server\",\"recordsReturned\":6,\"cacheHit\":false,\"missingMaster\":false,\"fallbackUsed\":false,\"fetchedAt\":\"2026-04-17T08:33:21.355666420Z\",\"visitDate\":\"2026-04-17\",\"visits\":[{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002410\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002410\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0001\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"10:13:32\",\"patient\":{\"patientId\":\"01483\",\"wholeName\":\"鈴木　直樹\",\"wholeNameKana\":\"スズキ　ナオキ\",\"birthDate\":\"1975-05-01\",\"sex\":\"1\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002415\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002415\",\"sequentialNumber\":\"1\",\"insuranceCombinationNumber\":\"0002\",\"updateDate\":\"2026-04-17\",\"updateTime\":\"11:07:01\",\"patient\":{\"patientId\":\"01460\",\"wholeName\":\"新橋　紬\",\"wholeNameKana\":\"シンバシ　ツムギ\",\"birthDate\":\"2000-01-03\",\"sex\":\"2\"}},{\"scheduleKey\":\"1.3.6.1.4.1.9414.72.103:1\",\"encounterKey\":\"1.3.6.1.4.1.9414.72.103:0002416\",\"departmentCode\":\"01\",\"departmentName\":\"内科\",\"physicianCode\":\"10001\",\"physicianName\":\"内科　太郎\",\"voucherNumber\":\"0002416\",\"sequentialNumber\":\"1\",\"insuranceCombinat..."
+      }
+    ]
+  },
+  "counters": {
+    "pauseFinishRequests": 0,
+    "billOperationBodies": 0,
+    "blockedRouteHits": {
+      "invalid-orca-taxonomy": 0,
+      "legacy-operations-readiness": 0
+    }
+  }
+}

@@ -186,6 +186,7 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
         try {
             VisitPatientListResponse response = wrapperService.getVisitList(facilityId, body);
             enrichVisitKeys(facilityId, response);
+            persistEncounterProjectionsFromVisitListIfNeeded(request, facilityId, body, response);
             mergeRuntimeProjectedVisits(facilityId, body, response);
             applyResponseAuditDetails(response, details);
             applyResponseMetadata(response, details);
@@ -330,6 +331,59 @@ public class OrcaVisitResource extends AbstractOrcaWrapperResource {
             if (karteId != null) {
                 details.put("karteId", karteId);
             }
+        }
+    }
+
+    private void persistEncounterProjectionsFromVisitListIfNeeded(HttpServletRequest request,
+            String facilityId,
+            VisitPatientListRequest body,
+            VisitPatientListResponse response) {
+        if (response == null || encounterProjectionRepository == null || body == null) {
+            return;
+        }
+        if (!"01".equals(normalizeRequestNumber(body.getRequestNumber()))) {
+            return;
+        }
+        String ownerUserId = request != null ? request.getRemoteUser() : null;
+        Instant projectedAt = Instant.now();
+        String fallbackVisitDate = body.getVisitDate() != null ? body.getVisitDate().toString() : null;
+        for (VisitPatientListResponse.VisitEntry visit : response.getVisits()) {
+            if (visit == null) {
+                continue;
+            }
+            String encounterKey = normalize(visit.getEncounterKey());
+            String acceptanceId = normalize(visit.getVoucherNumber());
+            String patientId = visit.getPatient() != null ? normalize(visit.getPatient().getPatientId()) : null;
+            Instant acceptanceDatetime = resolveAcceptanceInstant(
+                    visit.getUpdateDate(),
+                    visit.getUpdateTime(),
+                    fallbackVisitDate,
+                    null);
+            if (encounterKey == null
+                    || acceptanceId == null
+                    || patientId == null
+                    || acceptanceDatetime == null
+                    || encounterProjectionRepository.findByEncounterKey(encounterKey) != null) {
+                continue;
+            }
+            encounterProjectionRepository.upsertCheckedIn(new EncounterProjectionRepository.EncounterUpsertCommand(
+                    encounterKey,
+                    facilityId,
+                    patientId,
+                    resolveKarteId(facilityId, patientId),
+                    normalize(visit.getScheduleKey()),
+                    acceptanceId,
+                    acceptanceDatetime,
+                    "checked_in",
+                    null,
+                    null,
+                    null,
+                    ownerUserId,
+                    null,
+                    "{}",
+                    projectedAt,
+                    1L,
+                    projectedAt));
         }
     }
 

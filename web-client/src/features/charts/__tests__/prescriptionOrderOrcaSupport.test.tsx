@@ -95,6 +95,7 @@ const renderPanel = (bundlesOverride = [
       patientId="P-ORCA-001"
       meta={baseMeta}
       active
+      variant="utility"
       bundlesOverride={bundlesOverride as any}
     />,
   );

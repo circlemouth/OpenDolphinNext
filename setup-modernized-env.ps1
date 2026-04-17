@@ -26,9 +26,16 @@ $CustomPropTemplate = "ops/shared/docker/custom.properties"
 $CustomPropOutput = Join-Path $ScriptDir "custom.properties.dev"
 $ComposeOverrideFile = Join-Path $ScriptDir "docker-compose.override.dev.yml"
 $LocalSeedFile = "ops/db/local-baseline/local_synthetic_seed.sql"
+$FlywayLogDir = if ($env:FLYWAY_LOG_DIR) { $env:FLYWAY_LOG_DIR } else { "artifacts/preprod/flyway" }
+$FlywayMigrateOnBoot = if ($env:FLYWAY_MIGRATE_ON_BOOT) { $env:FLYWAY_MIGRATE_ON_BOOT } else { "1" }
+$FlywayOutOfOrder = if ($env:FLYWAY_OUT_OF_ORDER) { $env:FLYWAY_OUT_OF_ORDER } else { "1" }
+$FlywayRepairOnValidation = if ($env:FLYWAY_REPAIR_ON_VALIDATION) { $env:FLYWAY_REPAIR_ON_VALIDATION } else { "1" }
+$OpenDolphinSchemaAction = if ($env:OPENDOLPHIN_SCHEMA_ACTION) { $env:OPENDOLPHIN_SCHEMA_ACTION } else { "create" }
+$env:OPENDOLPHIN_SCHEMA_ACTION = $OpenDolphinSchemaAction
+$FlywayRunId = (Get-Date).ToUniversalTime().ToString("yyyyMMddTHHmmssZ")
 
 $ModernizedAppHttpPort = if ($env:MODERNIZED_APP_HTTP_PORT) { $env:MODERNIZED_APP_HTTP_PORT } else { "9080" }
-$ServerHealthUrl = "http://localhost:$ModernizedAppHttpPort/openDolphin/resources/dolphin"
+$ServerHealthUrl = "http://localhost:$ModernizedAppHttpPort/openDolphin/api/health"
 $WorktreeContainerSuffix = if ($env:WORKTREE_CONTAINER_SUFFIX) { $env:WORKTREE_CONTAINER_SUFFIX } else { "" }
 
 # 管理者認証 (システムアカウント)
@@ -53,10 +60,12 @@ $WebClientDevLog = if ($env:WEB_CLIENT_DEV_LOG) { $env:WEB_CLIENT_DEV_LOG } else
 $WebClientDevLogPath = if ([System.IO.Path]::IsPathRooted($WebClientDevLog)) { $WebClientDevLog } else { Join-Path $ScriptDir $WebClientDevLog }
 $WebClientDevPidFile = if ($env:WEB_CLIENT_DEV_PID_FILE) { $env:WEB_CLIENT_DEV_PID_FILE } else { "tmp/web-client-dev.pid" }
 $WebClientDevPidFilePath = if ([System.IO.Path]::IsPathRooted($WebClientDevPidFile)) { $WebClientDevPidFile } else { Join-Path $ScriptDir $WebClientDevPidFile }
+$FlywayLogDirPath = if ([System.IO.Path]::IsPathRooted($FlywayLogDir)) { $FlywayLogDir } else { Join-Path $ScriptDir $FlywayLogDir }
+$FlywayLogFile = Join-Path $FlywayLogDirPath "flyway-$FlywayRunId.log"
 
 $WebClientDevProxyTargetOverride = if ($env:WEB_CLIENT_DEV_PROXY_TARGET) { $env:WEB_CLIENT_DEV_PROXY_TARGET } else { $null }
-$WebClientDevProxyTargetDefault = "http://localhost:$ModernizedAppHttpPort/openDolphin/resources"
-$WebClientDockerProxyTargetDefault = "http://host.docker.internal:$ModernizedAppHttpPort/openDolphin/resources"
+$WebClientDevProxyTargetDefault = "http://localhost:$ModernizedAppHttpPort/openDolphin"
+$WebClientDockerProxyTargetDefault = "http://host.docker.internal:$ModernizedAppHttpPort/openDolphin"
 $WebClientDevProxyTarget = if ($WebClientDevProxyTargetOverride) { $WebClientDevProxyTargetOverride } else { $WebClientDevProxyTargetDefault }
 $WebClientDevApiBase = if ($env:WEB_CLIENT_DEV_API_BASE) { $env:WEB_CLIENT_DEV_API_BASE } else { "/api" }
 $WebClientEnvLocal = if ($env:WEB_CLIENT_ENV_LOCAL) { $env:WEB_CLIENT_ENV_LOCAL } else { Join-Path $ScriptDir "web-client/.env.local" }
@@ -147,6 +156,23 @@ function Read-OrcaInfo {
     $fileUser = $null
     $filePass = $null
 
+    function Get-MarkdownTableBacktickValue {
+        param(
+            [string]$Content,
+            [string]$Marker
+        )
+        foreach ($line in ($Content -split "`r?`n")) {
+            if ($line -notlike "*$Marker*") {
+                continue
+            }
+            $parts = $line -split '`'
+            if ($parts.Length -ge 3) {
+                return $parts[1].Trim()
+            }
+        }
+        return $null
+    }
+
     # .sh と同等の正規表現による抽出
     $pwsRegexAuth = 'Basic auth:\s*``([^`]*)``\s*/\s*``([^`]*)``'
 
@@ -167,6 +193,16 @@ function Read-OrcaInfo {
             $fileUser = $Matches[1]
             $filePass = $Matches[2]
         }
+        if (-not $fileUser -or -not $filePass) {
+            $tableUser = Get-MarkdownTableBacktickValue -Content $content -Marker '<<FILL_BASIC_USER>>'
+            $tablePass = Get-MarkdownTableBacktickValue -Content $content -Marker '<<FILL_BASIC_PASS>>'
+            if (-not $fileUser -and $tableUser) {
+                $fileUser = $tableUser
+            }
+            if (-not $filePass -and $tablePass) {
+                $filePass = $tablePass
+            }
+        }
     } else {
         Log "Warning: ORCA info file not found ($OrcaInfoFile)" -Color Yellow
     }
@@ -179,7 +215,7 @@ function Read-OrcaInfo {
         }
     }
 
-    $fallbackPort = if ($env:ORCA_API_PORT_FALLBACK) { $env:ORCA_API_PORT_FALLBACK } else { "18080" }
+    $fallbackPort = if ($env:ORCA_API_PORT_FALLBACK) { $env:ORCA_API_PORT_FALLBACK } else { "443" }
     $allowPort8000 = if ($env:ORCA_API_PORT_ALLOW_8000) { $env:ORCA_API_PORT_ALLOW_8000 } else { "0" }
     $allowPort8000Normalized = if (Is-Truthy $allowPort8000) { "1" } else { "0" }
 
@@ -366,6 +402,8 @@ services:
       ORCA_API_WEBORCA: $env:ORCA_API_WEBORCA
       ORCA_API_RETRY_MAX: $env:ORCA_API_RETRY_MAX
       ORCA_API_RETRY_BACKOFF_MS: $env:ORCA_API_RETRY_BACKOFF_MS
+      OPENDOLPHIN_SCHEMA_ACTION: $OpenDolphinSchemaAction
+      JAVA_OPTS_APPEND: \${JAVA_OPTS_APPEND:-} -Dhibernate.hbm2ddl.auto=$OpenDolphinSchemaAction -Djakarta.persistence.schema-generation.database.action=$OpenDolphinSchemaAction -Dmicrometer.export.otlp.enabled=false -Dio.micrometer.export.otlp.enabled=false -Dotlp.enabled=false -Dotel.metrics.exporter=none -Dotel.sdk.disabled=true
     volumes:
       - ./${propBaseName}:/opt/jboss/wildfly/custom.properties
   db-modernized:
@@ -380,6 +418,89 @@ services:
 function Start-ModernizedServer {
     Log "Starting Modernized Server..." -Color Cyan
     docker compose -f docker-compose.modernized.dev.yml -f $ComposeOverrideFile up -d --build --force-recreate
+}
+
+function Wait-ForPostgresReady {
+    $retries = 30
+    for ($i = 1; $i -le $retries; $i++) {
+        try {
+            $result = docker exec $PostgresContainerName psql -U opendolphin -d opendolphin_modern -tAc "SELECT 1" 2>$null
+            if (($result -replace '\s+', '') -eq "1") {
+                return
+            }
+        } catch { }
+        Start-Sleep -Seconds 2
+    }
+    Write-Error "Postgres did not become ready in time."
+}
+
+function Invoke-FlywayCommand {
+    param([string]$Subcommand)
+
+    $dbName = if ($env:MODERNIZED_POSTGRES_DB) { $env:MODERNIZED_POSTGRES_DB } else { "opendolphin_modern" }
+    $dbUser = if ($env:MODERNIZED_POSTGRES_USER) { $env:MODERNIZED_POSTGRES_USER } else { "opendolphin" }
+    $dbPassword = if ($env:MODERNIZED_POSTGRES_PASSWORD) { $env:MODERNIZED_POSTGRES_PASSWORD } else { "opendolphin" }
+
+    $args = @(
+        "run", "--rm",
+        "--network", "container:$PostgresContainerName",
+        "-v", "${ScriptDir}:/workspace",
+        "-w", "/workspace",
+        "-e", "DB_HOST=localhost",
+        "-e", "DB_PORT=5432",
+        "-e", "DB_NAME=$dbName",
+        "-e", "DB_USER=$dbUser",
+        "-e", "DB_PASSWORD=$dbPassword",
+        "flyway/flyway:10.17",
+        "-configFiles=server-modernized/tools/flyway/flyway.conf"
+    )
+    if (Is-Truthy $FlywayOutOfOrder) {
+        $args += "-outOfOrder=true"
+    }
+    $args += $Subcommand
+
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $output = & docker @args 2>&1
+        $exitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    $output | Tee-Object -FilePath $FlywayLogFile -Append | Out-Null
+    return $exitCode
+}
+
+function Apply-FlywayMigrations {
+    if (-not (Is-Truthy $FlywayMigrateOnBoot)) {
+        Log "Skipping Flyway migrate (FLYWAY_MIGRATE_ON_BOOT=$FlywayMigrateOnBoot)." -Color Yellow
+        return
+    }
+
+    Wait-ForPostgresReady
+
+    if (-not (Test-Path $FlywayLogDirPath)) {
+        New-Item -ItemType Directory -Path $FlywayLogDirPath -Force | Out-Null
+    }
+
+    Log "Running Flyway migrate... (log: $FlywayLogFile)" -Color Cyan
+    if ((Invoke-FlywayCommand "migrate") -eq 0) {
+        return
+    }
+
+    if (-not (Is-Truthy $FlywayRepairOnValidation)) {
+        Write-Error "Flyway migrate failed. Set FLYWAY_REPAIR_ON_VALIDATION=1 to auto-repair."
+    }
+
+    Log "Flyway migrate failed. Running flyway repair..." -Color Yellow
+    if ((Invoke-FlywayCommand "repair") -ne 0) {
+        Write-Error "Flyway repair failed."
+    }
+
+    Log "Retrying Flyway migrate after repair..." -Color Cyan
+    if ((Invoke-FlywayCommand "migrate") -ne 0) {
+        Write-Error "Flyway migrate failed after repair."
+    }
 }
 
 function Is-OrcaConfigOnly {
@@ -666,6 +787,7 @@ function Main {
     Generate-CustomProperties
     Generate-ComposeOverride
     Start-ModernizedServer
+    Apply-FlywayMigrations
     Wait-ForServer
     Apply-BaselineSeed
     Register-InitialUser
