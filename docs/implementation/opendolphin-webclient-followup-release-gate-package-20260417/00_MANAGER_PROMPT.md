@@ -6,7 +6,7 @@
 
 ## 使用可能情報
 - repo 実体
-- `/mnt/data/dads_app_ui_design_rules_20260411.md`
+- `docs/web-client/ux/dads_app_ui_design_rules_20260411.md`
 - この prompt と同梱 docset
 - 外部サイト、一般論、過去の repo bundle / review package / recovery zip は禁止
 

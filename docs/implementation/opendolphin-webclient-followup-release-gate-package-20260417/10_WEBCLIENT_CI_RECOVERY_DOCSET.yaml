@@ -1,5 +1,5 @@
 confirmed_accessible_file:
-  - /mnt/data/dads_app_ui_design_rules_20260411.md
+  - docs/web-client/ux/dads_app_ui_design_rules_20260411.md
 
 inline_context:
   blocker_name: web-client canonical npm run ci recovery
