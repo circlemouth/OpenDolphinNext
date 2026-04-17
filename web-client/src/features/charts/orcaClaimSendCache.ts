@@ -79,6 +79,21 @@ export const resolveOrcaClaimSendMatchKey = (
   return undefined;
 };
 
+export const resolveOrcaClaimSendMatchKeys = (
+  value?: Pick<OrcaClaimSendCacheEntry, 'encounterKey' | 'scheduleKey' | 'receptionId' | 'appointmentId'> | null,
+) => {
+  const keys: string[] = [];
+  const encounterKey = normalizeOptionalString(value?.encounterKey);
+  if (encounterKey) keys.push(`encounter:${encounterKey}`);
+  const scheduleKey = normalizeOptionalString(value?.scheduleKey);
+  if (scheduleKey) keys.push(`schedule:${scheduleKey}`);
+  const receptionId = normalizeOptionalString(value?.receptionId);
+  if (receptionId) keys.push(`reception:${receptionId}`);
+  const appointmentId = normalizeOptionalString(value?.appointmentId);
+  if (appointmentId) keys.push(`appointment:${appointmentId}`);
+  return keys;
+};
+
 const resolveStoreKey = (value: OrcaClaimSendCacheInput) =>
   resolveOrcaClaimSendMatchKey(value) ?? (normalizeOptionalString(value.patientId) ? `patient:${normalizeOptionalString(value.patientId)}` : undefined);
 
@@ -282,9 +297,10 @@ export function findOrcaClaimSendEntryForMatch(
 ) {
   if (!store) return null;
   const entries = Object.values(store).sort((left, right) => Date.parse(right.savedAt) - Date.parse(left.savedAt));
-  const matchKey = resolveOrcaClaimSendMatchKey(match);
-  if (matchKey) {
-    return entries.find((entry) => entry.cacheKey === matchKey) ?? null;
+  const matchKeys = resolveOrcaClaimSendMatchKeys(match);
+  for (const matchKey of matchKeys) {
+    const direct = entries.find((entry) => entry.cacheKey === matchKey);
+    if (direct) return direct;
   }
   if (!options?.allowPatientFallback) return null;
   const patientId = normalizeOptionalString(match.patientId);

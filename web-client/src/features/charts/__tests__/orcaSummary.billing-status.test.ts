@@ -4,6 +4,7 @@ import {
   buildBillingStatusUpdateAudit,
   buildQueueEntryFromSendCache,
   buildSendClaimBundle,
+  resolveBillingInvoiceNumber,
   resolveBillingStatusDecision,
   resolveBillingStatusFromInvoice,
   resolveBillingStatusUpdateDurationMs,
@@ -40,6 +41,47 @@ describe('resolveBillingStatusFromInvoice', () => {
     const decision = resolveBillingStatusFromInvoice(undefined, new Set(['INV-1']));
     expect(decision.status).toBeUndefined();
     expect(decision.paid).toBe(false);
+  });
+});
+
+describe('resolveBillingInvoiceNumber', () => {
+  it('claim invoice を優先する', () => {
+    expect(
+      resolveBillingInvoiceNumber({
+        claimInvoiceNumber: 'INV-CLAIM',
+        sendInvoiceNumber: 'INV-SEND',
+        sendStatus: 'success',
+        paidInvoiceNumbers: new Set(['INV-PAID']),
+      }),
+    ).toBe('INV-CLAIM');
+  });
+
+  it('send invoice があればそれを使う', () => {
+    expect(
+      resolveBillingInvoiceNumber({
+        sendInvoiceNumber: 'INV-SEND',
+        sendStatus: 'success',
+        paidInvoiceNumbers: new Set(['INV-PAID']),
+      }),
+    ).toBe('INV-SEND');
+  });
+
+  it('送信成功かつ paid invoice が 1 件なら fail-close で推論する', () => {
+    expect(
+      resolveBillingInvoiceNumber({
+        sendStatus: 'success',
+        paidInvoiceNumbers: new Set(['INV-ONLY']),
+      }),
+    ).toBe('INV-ONLY');
+  });
+
+  it('paid invoice が複数件なら推論しない', () => {
+    expect(
+      resolveBillingInvoiceNumber({
+        sendStatus: 'success',
+        paidInvoiceNumbers: new Set(['INV-1', 'INV-2']),
+      }),
+    ).toBeUndefined();
   });
 });
 

@@ -105,7 +105,7 @@ test.describe('Reception billing correction note', () => {
             sendStatus: 'success',
             correctionKind: 'rebill',
             correctionReason: '会計済み後に変更があったため再会計が必要です。',
-            savedAt: '2026-04-17T00:00:00.000Z',
+            savedAt: new Date().toISOString(),
           },
         }),
       );

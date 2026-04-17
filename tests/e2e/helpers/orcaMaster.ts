@@ -4,7 +4,8 @@ export const runId = process.env.RUN_ID ?? '20251124T181500Z';
 export const profile = process.env.VITE_DEV_PROXY_TARGET ? 'live' : 'msw';
 const useHttps = process.env.VITE_DEV_USE_HTTPS === '1';
 const protocol = useHttps ? 'https' : 'http';
-export const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `${protocol}://localhost:4173`;
+const webPort = Number(process.env.PLAYWRIGHT_WEB_PORT ?? '4173');
+export const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `${protocol}://localhost:${webPort}`;
 export const defaultChartPath = '/charts/72001?msw=1';
 
 export const orcaSelectors = {
@@ -99,7 +100,7 @@ export async function recordPerfLog(page: Page, label: string) {
 }
 
 export async function seedAuthSession(page: Page) {
-  await page.route('**/api/session/me', async (route) => {
+  await page.route('**/api/session/me**', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
       return;

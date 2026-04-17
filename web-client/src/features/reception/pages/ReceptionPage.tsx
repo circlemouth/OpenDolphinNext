@@ -5164,6 +5164,14 @@ export function ReceptionPage({
                                     DOB: {entry.birthDate ?? '—'} / 性別: {entry.sex ?? '—'}
                                   </small>
                                 </div>
+                                {billingProjection ? (
+                                  <div className="reception-card__billing-summary">
+                                    <small className="reception-table__sub">請求: {billingProjection.workflow}</small>
+                                    <small className="reception-table__sub" data-test-id="reception-billing-transmission">
+                                      送信: {billingProjection.transmission}
+                                    </small>
+                                  </div>
+                                ) : null}
                               </div>
 
                               <div className="reception-card__actions">
@@ -5556,7 +5564,9 @@ export function ReceptionPage({
                                 </td>
                                 <td className="reception-table__claim">
                                   <div>{billingProjection?.workflow ?? bundle?.claimStatus ?? bundle?.claimStatusText ?? '未確認'}</div>
-                                  <small className="reception-table__sub">送信: {billingProjection?.transmission ?? '未送信'}</small>
+                                  <small className="reception-table__sub" data-test-id="reception-billing-transmission">
+                                    送信: {billingProjection?.transmission ?? '未送信'}
+                                  </small>
                                   {bundle?.bundleNumber && debugUiEnabled ? (
                                     <small className="reception-table__sub">B: {bundle.bundleNumber}</small>
                                   ) : null}

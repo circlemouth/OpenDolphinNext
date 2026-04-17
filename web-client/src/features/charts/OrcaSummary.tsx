@@ -21,6 +21,7 @@ import { formatOrcaIdentifier } from './orcaIdentifiers';
 import {
   buildPaidInvoiceSet,
   buildBillingStatusUpdateAudit,
+  resolveBillingInvoiceNumber,
   resolveBillingStatusDecision,
   resolveBillingStatusUpdateDurationMs,
 } from './orcaBillingStatus';
@@ -273,7 +274,12 @@ export function OrcaSummary({
 
   const ctaDisabledReason = resolvedFallbackUsed ? 'fallback_used' : resolvedMissingMaster ? 'missing_master' : undefined;
   const isCtaDisabled = Boolean(ctaDisabledReason);
-  const invoiceNumber = effectiveClaim?.invoiceNumber ?? lastSendCache?.invoiceNumber;
+  const invoiceNumber = resolveBillingInvoiceNumber({
+    claimInvoiceNumber: effectiveClaim?.invoiceNumber,
+    sendInvoiceNumber: lastSendCache?.invoiceNumber,
+    sendStatus: lastSendCache?.sendStatus,
+    paidInvoiceNumbers,
+  });
   const invoiceIdentifier = formatOrcaIdentifier('Invoice_Number', invoiceNumber ?? effectiveClaim?.invoiceNumber);
   const claimDataIdIdentifier = formatOrcaIdentifier('Data_Id', effectiveClaim?.dataId);
   const lastSendInvoiceIdentifier = formatOrcaIdentifier('Invoice_Number', lastSendCache?.invoiceNumber);

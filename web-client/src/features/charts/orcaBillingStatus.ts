@@ -37,6 +37,28 @@ export type BillingStatusUpdateAudit = {
 
 const normalizeInvoiceNumber = (value?: string | null) => value?.trim() || undefined;
 
+export const resolveBillingInvoiceNumber = ({
+  claimInvoiceNumber,
+  sendInvoiceNumber,
+  sendStatus,
+  paidInvoiceNumbers,
+}: {
+  claimInvoiceNumber?: string | null;
+  sendInvoiceNumber?: string | null;
+  sendStatus?: OrcaClaimSendCacheEntry['sendStatus'];
+  paidInvoiceNumbers?: Set<string>;
+}) => {
+  const claimInvoice = normalizeInvoiceNumber(claimInvoiceNumber);
+  if (claimInvoice) return claimInvoice;
+  const sendInvoice = normalizeInvoiceNumber(sendInvoiceNumber);
+  if (sendInvoice) return sendInvoice;
+  if (sendStatus !== 'success' || !paidInvoiceNumbers || paidInvoiceNumbers.size !== 1) {
+    return undefined;
+  }
+  const [singleInvoice] = paidInvoiceNumbers;
+  return normalizeInvoiceNumber(singleInvoice);
+};
+
 export const buildPaidInvoiceSet = (income?: OrcaIncomeInfoCacheEntry | null) => {
   const invoices = income?.invoiceNumbers ?? [];
   return new Set(invoices.map((value) => value.trim()).filter(Boolean));

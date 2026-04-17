@@ -1727,6 +1727,30 @@ describe('ReceptionPage status/date/card action UX', () => {
     expect(within(listRegion).getByRole('row', { name: /診察終了患者/ })).toBeInTheDocument();
   });
 
+  it('keeps transmission visible in cards layout without selecting the card', async () => {
+    mockAppointmentData.entries = [createBillingEntry()];
+    mockClaimSendCache = {
+      'reception:R-501': {
+        patientId: 'P-501',
+        receptionId: 'R-501',
+        sendStatus: 'success',
+      },
+    };
+    mockSearchParams = new URLSearchParams('date=2026-01-29&receptionList=cards');
+
+    renderReceptionPage();
+
+    await userEvent.setup().click(screen.getByRole('tab', { name: /会計待ち/ }));
+    const card = document.querySelector(
+      '[data-test-id="reception-entry-card"][data-patient-id="P-501"][data-reception-status="会計待ち"]',
+    );
+    expect(card).not.toBeNull();
+    expect(within(card as HTMLElement).getByText(/請求:\s*会計待ち/)).toBeInTheDocument();
+    const transmission = (card as HTMLElement).querySelector('[data-test-id="reception-billing-transmission"]');
+    expect(transmission).not.toBeNull();
+    expect(transmission).toHaveTextContent('送信: 送信済');
+  });
+
   it('shows rebill note in a separate slot and projects the row into 再計待', async () => {
     mockAppointmentData.entries = [createBillingEntry({ patientId: 'P-611', receptionId: 'R-611', name: '再計患者' })];
     mockClaimSendCache = {
