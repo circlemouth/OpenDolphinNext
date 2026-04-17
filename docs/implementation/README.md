@@ -4,6 +4,7 @@
 
 ## Current Workstreams
 - [ORCA order alignment](orca-order-alignment/README.md)
+- [OpenDolphin WebClient 残ブロッカー解消 package 2026-04-17](opendolphin-webclient-implementation-package-20260417/README.md)
 - [OpenDolphin WebClient implementation package 2026-04-16](opendolphin-webclient-implementation-package-20260416/README.md)
 
 ## Rules

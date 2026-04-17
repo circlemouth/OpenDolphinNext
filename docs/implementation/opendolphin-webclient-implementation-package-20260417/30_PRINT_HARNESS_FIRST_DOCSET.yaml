@@ -1,0 +1,71 @@
+confirmed_accessible_file:
+  - docs/web-client/ux/dads_app_ui_design_rules_20260411.md
+
+inline_context:
+  blocker_name: Print preview harness-first isolation
+  known_failure:
+    - tests/e2e/charts-report-print.msw.spec.ts line 24 uncertain/hang
+  worker_classification:
+    - harness issue
+  worker_confidence:
+    - medium
+  fixed_premises:
+    - print preview is route-state only
+    - patient context is non-persistent
+    - missing-state must fail closed
+    - storage resume must not return
+  worker_evidence:
+    - old persistence/resume assumptions can drift against the new route-state-only contract
+    - missing-state fail-close means "preview not shown when state is absent" is not automatically an app defect
+    - route-state contract drift in the test harness is currently the leading explanation
+  isolation_steps_from_worker:
+    - inspect whether line 24 depends on explicit route-state or old implicit restore
+    - split expected outcomes into preview shell vs missing-state shell
+    - verify whether the wait condition only watches the preview path
+    - compare explicit-state and no-state paths
+    - escalate only if neither shell is reached deterministically
+
+repo_touchpoints:
+  - tests/e2e/charts-report-print.msw.spec.ts
+  - web-client/src/features/charts/pages/ChartsDocumentPrintPage.tsx
+  - web-client/src/features/charts/print/documentPrintPreviewStorage.ts
+
+required_tests:
+  - Re-run tests/e2e/charts-report-print.msw.spec.ts
+  - Re-run touched print/charts component/unit tests if present
+  - cd web-client && npm run typecheck
+
+do_not_invent:
+  - actual route-state payload shape before repo evidence
+  - storage keys or persistence rules not already in repo
+  - domain-specific UI copy without repo precedent
+  - timeout-only or wait-only "fixes"
+  - patient context persistence or storage resume
+  - any coupling with Reception or OrcaSummary blocker logic
+
+subagent_prompts:
+  - name: print_spec_route_state_probe
+    model: gpt 5.4 high
+    prompt: |
+      tests/e2e/charts-report-print.msw.spec.ts の line 24 前後だけを主対象に、
+      print preview 到達が route-state 明示受け渡しなのか、
+      旧 persistence / implicit restore / dark navigation assumption なのかを調べてください。
+      app コードの修正提案は不要です。
+      出力は次だけに限定してください。
+      - current_spec_path_classification
+      - exact_lines_or_helpers_to_touch
+      - minimum_harness_fix_recommendation
+      - unknowns_that_must_remain_unknown
+  - name: print_page_settle_probe
+    model: gpt 5.4 high
+    prompt: |
+      ChartsDocumentPrintPage と documentPrintPreviewStorage の関係、
+      そして preview shell / missing-state shell の可視終端だけを調べてください。
+      route-state 明示ありでも preview shell または missing-state shell に deterministic に収束するかを見て、
+      app defect evidence があるかどうかを判定してください。
+      コード変更はしないでください。
+      出力は次だけに限定してください。
+      - shell_settle_findings
+      - app_defect_evidence_yes_or_no
+      - minimal_locator_strategy_if_needed
+      - smallest_retest_set
