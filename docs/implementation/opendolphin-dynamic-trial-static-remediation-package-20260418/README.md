@@ -41,7 +41,7 @@ repo truth と package が衝突した場合は repo truth を優先してくだ
 ただし、source/test-backed negative finding を doc-only positive で覆してはいけません。
 
 ## repo 配置先
-この zip は repo root へ展開し、次へ置く前提です。
+この package は repo 内では次に配置します。
 
 `docs/implementation/opendolphin-dynamic-trial-static-remediation-package-20260418/`
 
