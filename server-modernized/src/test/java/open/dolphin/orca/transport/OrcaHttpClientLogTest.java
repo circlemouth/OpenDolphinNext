@@ -2,6 +2,7 @@ package open.dolphin.orca.transport;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.lang.reflect.Method;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -38,5 +39,77 @@ class OrcaHttpClientLogTest {
 
         assertTrue(log.contains("apiMessage=0001"));
         assertFalse(log.contains("apiMessageHash")); // numeric only should avoid hash in summary
+    }
+
+    @Test
+    void summaryLog_doesNotRenderRawTargetMaterial() {
+        String rawTarget = "https://admin:pass@facility.example.orca/secret-prefix";
+        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+                "98",
+                "Invalid target " + rawTarget,
+                List.of("baseUrl=" + rawTarget, "userinfo=admin:pass"));
+
+        String log = OrcaHttpClient.formatSummaryLog(
+                "trace-3", "POST", "/api/system", 400, result, 12);
+
+        assertFalse(log.contains(rawTarget));
+        assertFalse(log.contains("facility.example.orca"));
+        assertFalse(log.contains("admin:pass"));
+        assertFalse(log.contains("secret-prefix"));
+        assertTrue(log.contains("apiMessageHash="));
+        assertTrue(log.contains("warningsHash="));
+    }
+
+    @Test
+    void detailLog_reflectivePathDoesNotRenderRawTargetMaterial() throws Exception {
+        String rawTarget = "https://admin:pass@facility.example.orca/secret-prefix";
+        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+                "98",
+                "Invalid target " + rawTarget,
+                List.of("baseUrl=" + rawTarget, "userinfo=admin:pass"));
+
+        Method formatDetailLog = OrcaHttpClient.class.getDeclaredMethod(
+                "formatDetailLog",
+                String.class,
+                String.class,
+                String.class,
+                int.class,
+                OrcaHttpClient.OrcaApiResult.class,
+                OrcaHttpClient.OrcaLogMode.class);
+        formatDetailLog.setAccessible(true);
+        String log = (String) formatDetailLog.invoke(
+                null,
+                "trace-4",
+                "POST",
+                "/api/system",
+                400,
+                result,
+                OrcaHttpClient.OrcaLogMode.DETAIL);
+
+        assertFalse(log.contains(rawTarget));
+        assertFalse(log.contains("facility.example.orca"));
+        assertFalse(log.contains("admin:pass"));
+        assertFalse(log.contains("secret-prefix"));
+        assertTrue(log.contains("apiMessageHash="));
+        assertTrue(log.contains("warningsHash="));
+    }
+
+    @Test
+    void detailLog_doesNotRenderRawTargetMaterial() {
+        String rawTarget = "https://admin:pass@facility.example.orca/secret-prefix";
+        OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
+                "98",
+                "Invalid target " + rawTarget,
+                List.of("userinfo=admin:pass", "host=facility.example.orca"));
+
+        String log = OrcaHttpClient.formatDetailLog(
+                "trace-4", "POST", "/api/system", 400, result, OrcaHttpClient.OrcaLogMode.DETAIL);
+
+        assertFalse(log.contains(rawTarget));
+        assertFalse(log.contains("facility.example.orca"));
+        assertFalse(log.contains("admin:pass"));
+        assertFalse(log.contains("secret-prefix"));
+        assertTrue(log.contains("apiMessageHash="));
+        assertTrue(log.contains("warningsHash="));
     }
 }

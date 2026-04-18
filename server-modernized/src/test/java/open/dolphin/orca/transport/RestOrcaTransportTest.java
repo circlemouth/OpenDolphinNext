@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -135,6 +137,33 @@ class RestOrcaTransportTest {
         assertThrows(IllegalStateException.class, () -> transport.reloadSettings(null));
         assertThrows(IllegalStateException.class, () ->
                 transport.invoke(null, OrcaEndpoint.SYSTEM_INFO, OrcaTransportRequest.post("<request/>")));
+    }
+
+    @Test
+    void auditSummaryReflectsClientAuthTruthWithoutLeakingTargetMaterial() throws Exception {
+        OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        String rawBaseUrl = "https://facility.example.orca/secret-prefix";
+        when(store.resolve(FACILITY_ID)).thenReturn(new OrcaConnectionConfigStore.ResolvedOrcaConnection(
+                true,
+                rawBaseUrl,
+                null,
+                null,
+                true,
+                null,
+                null,
+                null));
+
+        RestOrcaTransport transport = new RestOrcaTransport();
+        setField(transport, "orcaConnectionConfigStore", store);
+        setField(transport, "configurationResolver", resolver());
+
+        OrcaTransportSettings settings = transport.currentSettings(FACILITY_ID);
+        String auditSummary = transport.auditSummary(FACILITY_ID);
+
+        assertTrue(settings.isClientAuthConfigured());
+        assertTrue(auditSummary.contains("clientAuthConfigured=true"));
+        assertFalse(auditSummary.contains("facility.example.orca"));
+        assertFalse(auditSummary.contains("secret-prefix"));
     }
 
     private static OrcaConnectionConfigStore.ResolvedOrcaConnection resolvedConnection(

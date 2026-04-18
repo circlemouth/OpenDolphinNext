@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 
 import { DocumentTimeline } from '../DocumentTimeline';
 import { AppToastProvider } from '../../../libs/ui/appToast';
+
+const { getOrcaClaimSendEntryForRowMock } = vi.hoisted(() => ({
+  getOrcaClaimSendEntryForRowMock: vi.fn(),
+}));
 
 vi.mock('@emotion/react', () => ({
   Global: () => null,
@@ -37,10 +41,20 @@ vi.mock('../../../libs/ui/appToast', async (importOriginal) => {
   };
 });
 
+vi.mock('../orcaClaimSendCache', async () => {
+  const actual = await vi.importActual<typeof import('../orcaClaimSendCache')>('../orcaClaimSendCache');
+  return {
+    ...actual,
+    getOrcaClaimSendEntryForRow: getOrcaClaimSendEntryForRowMock,
+  };
+});
+
 describe('DocumentTimeline recovery order', () => {
   beforeEach(() => {
     mockFlags = { ...defaultFlags };
     mockSession = { role: 'system_admin' };
+    getOrcaClaimSendEntryForRowMock.mockReset();
+    getOrcaClaimSendEntryForRowMock.mockReturnValue(null);
   });
 
   it('renders alert -> banner -> details in order', () => {
@@ -158,5 +172,146 @@ describe('DocumentTimeline recovery order', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'ORCA再送を試行' })).toBeNull();
+  });
+
+  it('same-day 別 reception 選択時は row-local key が無い限り送信IDを current entry に貼らない', () => {
+    render(
+      <AppToastProvider value={{ enqueue: vi.fn(), dismiss: vi.fn() }}>
+        <DocumentTimeline
+          entries={[
+            {
+              id: 'entry-1',
+              patientId: 'P-1',
+              name: 'テスト患者',
+              appointmentId: 'A-1',
+              receptionId: 'R-1',
+              scheduleKey: 'SCH-1',
+              encounterKey: 'ENC-1',
+              appointmentTime: '09:00',
+              status: '診療中',
+              source: 'visits',
+            },
+            {
+              id: 'entry-2',
+              patientId: 'P-1',
+              name: 'テスト患者',
+              appointmentId: 'A-2',
+              receptionId: 'R-2',
+              scheduleKey: 'SCH-2',
+              encounterKey: 'ENC-2',
+              appointmentTime: '09:30',
+              status: '診療中',
+              source: 'visits',
+            },
+          ]}
+          selectedAppointmentId="A-2"
+          selectedReceptionId="R-2"
+        />
+      </AppToastProvider>,
+    );
+
+    expect(getOrcaClaimSendEntryForRowMock).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({
+        patientId: 'P-1',
+        appointmentId: 'A-2',
+        receptionId: 'R-2',
+        scheduleKey: 'SCH-2',
+        encounterKey: 'ENC-2',
+      }),
+    );
+    expect(screen.queryByText(/送信ID:/)).not.toBeInTheDocument();
+  });
+
+  it('same-day 別 encounter の claim bundle は patientId fallback で current row に貼らない', () => {
+    const { container } = render(
+      <AppToastProvider value={{ enqueue: vi.fn(), dismiss: vi.fn() }}>
+        <DocumentTimeline
+          entries={[
+            {
+              id: 'entry-1',
+              patientId: 'P-1',
+              name: 'テスト患者',
+              appointmentId: 'A-1',
+              receptionId: 'R-1',
+              appointmentTime: '09:00',
+              status: '診療中',
+              source: 'visits',
+            },
+            {
+              id: 'entry-2',
+              patientId: 'P-1',
+              name: 'テスト患者',
+              appointmentId: 'A-2',
+              receptionId: 'R-2',
+              appointmentTime: '09:30',
+              status: '診療中',
+              source: 'visits',
+            },
+          ]}
+          selectedAppointmentId="A-2"
+          selectedReceptionId="R-2"
+          claimData={{
+            bundles: [
+              {
+                patientId: 'P-1',
+                appointmentId: 'A-1',
+                invoiceNumber: 'INV-OTHER',
+                claimStatus: '会計待ち',
+                claimStatusText: '別 encounter',
+              },
+            ],
+          } as any}
+        />
+      </AppToastProvider>,
+    );
+
+    const currentRow = Array.from(container.querySelectorAll('article')).find((article) =>
+      article.textContent?.includes('受付ID: R-2'),
+    );
+    expect(currentRow).toBeTruthy();
+    if (!currentRow) return;
+    expect(within(currentRow).queryByText(/Invoice_Number: INV-OTHER/)).not.toBeInTheDocument();
+  });
+
+  it('same-day 複数 row の patient-level queue status は positive send badge に使わない', () => {
+    render(
+      <AppToastProvider value={{ enqueue: vi.fn(), dismiss: vi.fn() }}>
+        <DocumentTimeline
+          entries={[
+            {
+              id: 'entry-1',
+              patientId: 'P-1',
+              name: 'テスト患者',
+              appointmentId: 'A-1',
+              receptionId: 'R-1',
+              appointmentTime: '09:00',
+              status: '診療中',
+              source: 'visits',
+            },
+            {
+              id: 'entry-2',
+              patientId: 'P-1',
+              name: 'テスト患者',
+              appointmentId: 'A-2',
+              receptionId: 'R-2',
+              appointmentTime: '09:30',
+              status: '診療中',
+              source: 'visits',
+            },
+          ]}
+          selectedAppointmentId="A-2"
+          selectedReceptionId="R-2"
+          orcaQueue={{
+            retrySupported: true,
+            ok: true,
+            status: 200,
+            queue: [{ patientId: 'P-1', status: 'delivered', lastDispatchAt: '2026-01-29T00:00:00Z' }],
+          }}
+        />
+      </AppToastProvider>,
+    );
+
+    expect(screen.queryByText('送信:成功')).not.toBeInTheDocument();
   });
 });

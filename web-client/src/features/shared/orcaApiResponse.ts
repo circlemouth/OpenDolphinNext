@@ -7,6 +7,9 @@ export type ParsedOrcaApiResponse = {
   text: string;
   json: Record<string, unknown> | null;
   runId?: string;
+  apiResult?: string;
+  apiResultMessage?: string;
+  businessOk?: boolean;
   errorCode?: string;
   message?: string;
   errorKind?: OrcaResponseErrorKind;
@@ -31,6 +34,19 @@ const resolveErrorCode = (json: Record<string, unknown> | null): string | undefi
     normalizeMessage(json.reason) ??
     normalizeMessage(json.error);
   return direct;
+};
+
+const resolveApiResult = (json: Record<string, unknown> | null): string | undefined => {
+  return normalizeMessage(json?.apiResult);
+};
+
+const resolveApiResultMessage = (json: Record<string, unknown> | null): string | undefined => {
+  return normalizeMessage(json?.apiResultMessage);
+};
+
+const isApiResultBusinessSuccess = (apiResult?: string): boolean | undefined => {
+  if (!apiResult) return undefined;
+  return /^[0]+$/.test(apiResult);
 };
 
 const resolveMessage = (json: Record<string, unknown> | null, text: string, status: number, fallback?: string): string => {
@@ -71,6 +87,9 @@ export async function parseOrcaApiResponse(
   const status = response.status;
   const errorCode = resolveErrorCode(json);
   const runId = normalizeMessage(json?.runId);
+  const apiResult = resolveApiResult(json);
+  const apiResultMessage = resolveApiResultMessage(json);
+  const businessOk = isApiResultBusinessSuccess(apiResult);
   const message = resolveMessage(json, text, status, options.fallbackMessage);
   const notFoundCodes = options.notFoundCodes ?? DEFAULT_NOT_FOUND_CODES;
 
@@ -82,6 +101,9 @@ export async function parseOrcaApiResponse(
       text,
       json,
       runId,
+      apiResult,
+      apiResultMessage,
+      businessOk,
       errorCode,
       message,
       errorKind: undefined,
@@ -107,6 +129,9 @@ export async function parseOrcaApiResponse(
     text,
     json,
     runId,
+    apiResult,
+    apiResultMessage,
+    businessOk,
     errorCode,
     message,
     errorKind,

@@ -4,7 +4,7 @@
 - [ ] `tests/reception/e2e-billing-correction-note.spec.ts` PASS
 - [ ] claim-send cache storage contract aligned (`invoiceNumber` / `medicalWarnings` not persisted)
 - [ ] `cd web-client && npm run ci` PASS after residual fixes
-- [ ] runtime-ready-smoke rerun PASS, or carry-forward reason documented with no touched dependency
+- [ ] runtime-ready-smoke rerun PASS in the current run
 - [ ] correction note と setting note が separate slot / separate tone で visible
 - [ ] correction note / setting note が details 展開前提になっていない
 - [ ] `send success != paid` drift なし

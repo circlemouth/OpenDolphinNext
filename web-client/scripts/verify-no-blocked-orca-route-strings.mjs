@@ -8,13 +8,27 @@ const scriptPath = fileURLToPath(import.meta.url);
 const scriptDir = path.dirname(scriptPath);
 const projectRootDir = path.resolve(scriptDir, '..');
 const srcDir = path.join(projectRootDir, 'src');
+const normalizeRelativePath = (filePath) => path.relative(projectRootDir, filePath).split(path.sep).join('/');
 
 const BLOCKED_SURFACE_PATTERNS = [
   { kind: 'mock-surface', pattern: /\/api\/orca\/official\/.+\/mock/ },
   { kind: 'mock-surface', pattern: /\/api\/local\/.+\/mock/ },
-  { kind: 'taxonomy-drift', pattern: /\/api\/orca\/(?!official(?:\/|\b)|master(?:\/|\b)|queue(?:\/|\b)|pusheventgetv2(?:\/|\b))/ },
+  { kind: 'taxonomy-drift', pattern: /\/api\/orca\/(?!official(?:\/|\b)|master(?:\/|\b))/ },
   { kind: 'taxonomy-drift', pattern: /\/api\/local-summary\// },
   { kind: 'taxonomy-drift', pattern: /\/api\/orca-live\// },
+];
+
+const LEGACY_ROUTE_STRING_CLASSIFICATIONS = [
+  {
+    category: 'client-production-fail-close-sentinel',
+    filePath: 'src/features/outpatient/orcaQueueApi.ts',
+    routes: ['/api/orca/queue', '/api/orca/pusheventgetv2'],
+  },
+  {
+    category: 'mock-test-only-legacy-route-surface',
+    filePath: 'src/mocks/handlers/orcaQueue.ts',
+    routes: ['/api/orca/queue', '/api/orca/pusheventgetv2'],
+  },
 ];
 
 const TEXT_FILE_EXTENSIONS = new Set([
@@ -32,6 +46,13 @@ const TEXT_FILE_EXTENSIONS = new Set([
 
 const findings = [];
 
+const resolveLegacyRouteClassification = (fullPath, line) => {
+  const relativePath = normalizeRelativePath(fullPath);
+  return LEGACY_ROUTE_STRING_CLASSIFICATIONS.find(
+    (entry) => relativePath === entry.filePath && entry.routes.some((route) => line.includes(route)),
+  );
+};
+
 const walk = (currentDir) => {
   const entries = readdirSync(currentDir, { withFileTypes: true });
   for (const entry of entries) {
@@ -47,6 +68,7 @@ const walk = (currentDir) => {
     lines.forEach((line, index) => {
       BLOCKED_SURFACE_PATTERNS.forEach((surface) => {
         if (!surface.pattern.test(line)) return;
+        if (surface.kind === 'taxonomy-drift' && resolveLegacyRouteClassification(fullPath, line)) return;
         findings.push({
           filePath: fullPath,
           line: index + 1,
@@ -68,4 +90,8 @@ if (findings.length > 0) {
   process.exit(2);
 }
 
-console.log('[verify:no-blocked-orca-route-strings] blocked ORCA route string / mock surface の再混入は検出されませんでした。');
+console.log(
+  '[verify:no-blocked-orca-route-strings] blocked ORCA route string / mock surface の再混入は検出されませんでした。' +
+    '/api/orca/queue と /api/orca/pusheventgetv2 は src/features/outpatient/orcaQueueApi.ts の production fail-close sentinel ' +
+    'および src/mocks/handlers/orcaQueue.ts の mock/test-only legacy route surface にだけ残っています。',
+);

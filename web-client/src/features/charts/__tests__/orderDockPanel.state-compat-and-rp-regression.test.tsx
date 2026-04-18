@@ -5,6 +5,11 @@ import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 
 import { OrderDockPanel } from '../OrderDockPanel';
+
+const { getOrcaClaimSendEntryForRowMock } = vi.hoisted(() => ({
+  getOrcaClaimSendEntryForRowMock: vi.fn(),
+}));
+
 vi.mock('../OrderBundleEditPanel', () => ({
   OrderBundleEditPanel: ({ title, onClose }: any) => (
     <div aria-label={`${title}入力`}>
@@ -17,6 +22,14 @@ vi.mock('../OrderBundleEditPanel', () => ({
     </div>
   ),
 }));
+
+vi.mock('../orcaClaimSendCache', async () => {
+  const actual = await vi.importActual<typeof import('../orcaClaimSendCache')>('../orcaClaimSendCache');
+  return {
+    ...actual,
+    getOrcaClaimSendEntryForRow: getOrcaClaimSendEntryForRowMock,
+  };
+});
 
 const renderWithClient = (ui: ReactElement) => {
   const client = new QueryClient({
@@ -76,9 +89,56 @@ afterEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   sessionStorage.clear();
+  getOrcaClaimSendEntryForRowMock.mockReset();
 });
 
 describe('OrderDockPanel state compatibility', () => {
+  it('same-day 別 encounter の warning cache は current bundle badge に貼らない', async () => {
+    const user = userEvent.setup();
+    getOrcaClaimSendEntryForRowMock.mockReturnValue(null);
+
+    renderWithClient(
+      <OrderDockPanel
+        patientId="P-100"
+        meta={{
+          ...baseMeta,
+          appointmentId: 'A-2',
+          receptionId: 'R-2',
+          scheduleKey: 'SCH-2',
+          encounterId: 'ENC-2',
+        }}
+        visitDate="2026-02-24"
+        orderBundles={[
+          {
+            ...treatmentBundle,
+            entity: 'treatmentOrder',
+            documentId: 'DOC-TM-2',
+            moduleId: 'MOD-TM-2',
+          },
+        ]}
+      />,
+    );
+
+    const treatmentGroup = document.querySelector('section.order-dock__group[data-group="treatment"]') as HTMLElement;
+    const toggle = within(treatmentGroup).getByRole('button', { name: /処置を(開く|閉じる)/ });
+    if (toggle.getAttribute('aria-expanded') !== 'true') {
+      await user.click(toggle);
+    }
+
+    expect(getOrcaClaimSendEntryForRowMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        patientId: 'P-100',
+        appointmentId: 'A-2',
+        receptionId: 'R-2',
+        scheduleKey: 'SCH-2',
+        encounterKey: 'ENC-2',
+      }),
+    );
+    expect(within(treatmentGroup).queryByText('警告')).not.toBeInTheDocument();
+    expect(within(treatmentGroup).queryByText('禁忌')).not.toBeInTheDocument();
+  });
+
   it('quick-add/group-add data-test-id を維持しつつ onStateChange(hasEditing/targetCategory/count/source) を通知する', async () => {
     const user = userEvent.setup();
     const onStateChange = vi.fn();

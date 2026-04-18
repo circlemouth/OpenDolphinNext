@@ -249,11 +249,15 @@ public class RestOrcaTransport implements OrcaTransport {
     }
 
     private static String requireFacilityId(String facilityId) {
-        String normalized = normalizeFacilityId(facilityId);
-        if (normalized == null || "default".equalsIgnoreCase(normalized)) {
+        try {
+            String normalized = OrcaConnectionConfigStore.requireConfiguredFacilityId(facilityId, "facilityId");
+            if (normalized == null) {
+                throw new IllegalArgumentException("facilityId が必要です。");
+            }
+            return normalized;
+        } catch (IllegalArgumentException ex) {
             throw new IllegalStateException("ORCA facilityId is not resolved");
         }
-        return normalized;
     }
 
     private static String normalizeFacilityId(String value) {

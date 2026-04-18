@@ -161,4 +161,28 @@ describe('useOrcaReportPrint', () => {
       expect(response.error).toContain('Perform_Date');
     }
   });
+
+  it('row-local key に紐づく送信 cache が無い時は positive invoice を初期表示しない', async () => {
+    const { result } = renderHook(() =>
+      useOrcaReportPrint({
+        dialogOpen: true,
+        appointmentId: 'A-2',
+        orcaEncounterContext: {
+          patientId: 'P-1',
+          visitDate: '2026-01-22',
+          departmentCode: '01',
+          insuranceCombinationNumber: '0001',
+        },
+        runId: 'RUN-PRINT',
+        cacheHit: false,
+        missingMaster: false,
+        fallbackUsed: false,
+        dataSourceTransition: 'server',
+        orcaSendEntry: null,
+      }),
+    );
+
+    await waitFor(() => expect(result.current.reportIncomeStatus).toBe('success'));
+    expect(result.current.reportForm.invoiceNumber).toBe('');
+  });
 });

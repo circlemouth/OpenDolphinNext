@@ -1,0 +1,8 @@
+timestamp=2026-04-18T12:36:21Z
+command=npx playwright test tests/charts/e2e-billing-correction-note.spec.ts tests/charts/e2e-orca-billing-status.spec.ts
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+

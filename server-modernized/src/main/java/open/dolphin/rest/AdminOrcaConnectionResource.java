@@ -117,18 +117,22 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         try {
             updated = store.update(facilityId, update, p12, ca, runId, actor);
         } catch (IllegalArgumentException ex) {
+            String safeMessage = sanitizeAdminFailureMessage(ex.getMessage());
             details.put("status", "failed");
-            details.put("error", ex.getMessage());
+            details.put("error", safeMessage);
             recordAudit(request, "ADMIN_ORCA_CONNECTION_SAVE", details,
-                    AuditEventEnvelope.Outcome.FAILURE, "orca.connection.invalid_request", ex.getMessage());
-            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", ex.getMessage());
+                    AuditEventEnvelope.Outcome.FAILURE, "orca.connection.invalid_request", safeMessage);
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", safeMessage,
+                    Map.of("details", buildSanitizedFailureDetails(details, safeMessage)), null);
         } catch (IllegalStateException ex) {
+            String safeMessage = "接続設定の永続化に失敗しました。サーバー設定を確認してください。";
             details.put("status", "failed");
-            details.put("error", ex.getMessage());
+            details.put("error", safeMessage);
             recordAudit(request, "ADMIN_ORCA_CONNECTION_SAVE", details,
-                    AuditEventEnvelope.Outcome.FAILURE, "orca.connection.persist_failed", ex.getMessage());
+                    AuditEventEnvelope.Outcome.FAILURE, "orca.connection.persist_failed", safeMessage);
             throw restError(request, Response.Status.INTERNAL_SERVER_ERROR,
-                    "persist_failed", "接続設定の永続化に失敗しました。サーバー設定を確認してください。");
+                    "persist_failed", safeMessage,
+                    Map.of("details", buildSanitizedFailureDetails(details, safeMessage)), null);
         }
 
         // Apply immediately.
@@ -186,6 +190,8 @@ public class AdminOrcaConnectionResource extends AbstractResource {
             updatedDefaultFacilityId = store.updateDefaultFacilityId(requestedDefaultFacilityId, runId, actor);
         } catch (OrcaConnectionPolicyException ex) {
             throw restError(request, Response.Status.BAD_REQUEST, ex.getErrorCategory(), "指定した施設の ORCA 接続設定がありません。");
+        } catch (IllegalArgumentException ex) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", sanitizeAdminFailureMessage(ex.getMessage()));
         } catch (IllegalStateException ex) {
             throw restError(request, Response.Status.INTERNAL_SERVER_ERROR,
                     "persist_failed", "接続設定の永続化に失敗しました。サーバー設定を確認してください。");
@@ -239,7 +245,7 @@ public class AdminOrcaConnectionResource extends AbstractResource {
         }
         body.put("ok", true);
         body.put("useWeborca", Boolean.TRUE.equals(record.getUseWeborca()));
-        body.put("serverUrl", record.getServerUrl());
+        body.put("serverUrl", sanitizeServerUrlForView(record.getServerUrl()));
         body.put("port", record.getPort());
         body.put("username", record.getUsername());
         body.put("pushUrl", record.getPushUrl());
@@ -275,15 +281,67 @@ public class AdminOrcaConnectionResource extends AbstractResource {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = mapper.readValue(payloadJson, Map.class);
             String defaultFacilityId = trimToNull(asString(payload.get("defaultFacilityId")));
-            if (defaultFacilityId == null) {
-                throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "defaultFacilityId が必要です。");
-            }
-            return defaultFacilityId;
-        } catch (jakarta.ws.rs.WebApplicationException ex) {
-            throw ex;
+            return OrcaConnectionConfigStore.requireConfiguredFacilityId(defaultFacilityId, "defaultFacilityId");
+        } catch (IllegalArgumentException ex) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
+                    sanitizeAdminFailureMessage(ex.getMessage()));
         } catch (Exception ex) {
             throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "defaultFacilityId のJSON解析に失敗しました。");
         }
+    }
+
+    private static String sanitizeAdminFailureMessage(String message) {
+        String trimmed = message != null ? message.trim() : "";
+        if (trimmed.isEmpty()) {
+            return "接続設定の入力が不正です。";
+        }
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (lower.contains("userinfo")) {
+            return "サーバURLに userinfo は指定できません。";
+        }
+        if (lower.contains("http://") || lower.contains("https://") || lower.contains("@")) {
+            return "接続先URLが不正です。";
+        }
+        return trimmed;
+    }
+
+    private static String sanitizeServerUrlForView(String serverUrl) {
+        String trimmed = trimToNull(serverUrl);
+        if (trimmed == null) {
+            return null;
+        }
+        try {
+            String withScheme = trimmed.contains("://") ? trimmed : "https://" + trimmed;
+            java.net.URI uri = java.net.URI.create(withScheme);
+            if (trimToNull(uri.getUserInfo()) != null || (uri.getAuthority() != null && uri.getAuthority().contains("@"))) {
+                return null;
+            }
+            return trimmed;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private static Map<String, Object> buildSanitizedFailureDetails(Map<String, Object> details, String message) {
+        Map<String, Object> responseDetails = new LinkedHashMap<>();
+        if (details != null) {
+            Object operation = details.get("operation");
+            Object facilityId = details.get("facilityId");
+            Object resource = details.get("resource");
+            if (operation != null) {
+                responseDetails.put("operation", operation);
+            }
+            if (facilityId != null) {
+                responseDetails.put("facilityId", facilityId);
+            }
+            if (resource != null) {
+                responseDetails.put("resource", resource);
+            }
+        }
+        if (message != null && !message.isBlank()) {
+            responseDetails.put("reason", message);
+        }
+        return responseDetails;
     }
 
     private OrcaConnectionConfigStore.UpdateRequest parseUpdateRequest(HttpServletRequest request, MultipartFormDataInput input) {

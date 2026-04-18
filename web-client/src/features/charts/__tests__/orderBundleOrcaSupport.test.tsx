@@ -10,6 +10,10 @@ import { mutateOrderBundles } from '../orderBundleApi';
 import { fetchOrderMasterSearch } from '../orderMasterSearchApi';
 import { httpFetch } from '../../../libs/http/httpClient';
 
+const { getOrcaClaimSendEntryForRowMock } = vi.hoisted(() => ({
+  getOrcaClaimSendEntryForRowMock: vi.fn(),
+}));
+
 vi.mock('../orderMasterSearchApi', async () => ({
   fetchOrderMasterSearch: vi.fn(),
 }));
@@ -35,6 +39,14 @@ vi.mock('../orderBundleApi', async () => {
 vi.mock('../../../libs/http/httpClient', () => ({
   httpFetch: vi.fn(),
 }));
+
+vi.mock('../orcaClaimSendCache', async () => {
+  const actual = await vi.importActual<typeof import('../orcaClaimSendCache')>('../orcaClaimSendCache');
+  return {
+    ...actual,
+    getOrcaClaimSendEntryForRow: getOrcaClaimSendEntryForRowMock,
+  };
+});
 
 const baseProps = {
   patientId: 'P-ORDER-001',
@@ -124,6 +136,8 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+  getOrcaClaimSendEntryForRowMock.mockReset();
+  getOrcaClaimSendEntryForRowMock.mockReturnValue(null);
   mockHttpFetch.mockReset();
   mockHttpFetch.mockImplementation(
     async () =>
@@ -223,6 +237,31 @@ describe('OrderBundleEditPanel ORCA support', () => {
         '投与指示は院内ローカル保存です。最近使った投与指示を含めて、admin/adminCode/adminMemo は ORCA送信では保持しません。',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('same-day 別 encounter の warning cache は current entity panel に貼らない', () => {
+    renderPanel({
+      entity: 'treatmentOrder',
+      meta: {
+        ...(baseProps.meta as any),
+        appointmentId: 'A-2',
+        receptionId: 'R-2',
+        scheduleKey: 'SCH-2',
+        encounterId: 'ENC-2',
+      } as any,
+    });
+
+    expect(getOrcaClaimSendEntryForRowMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        patientId: 'P-ORDER-001',
+        appointmentId: 'A-2',
+        receptionId: 'R-2',
+        scheduleKey: 'SCH-2',
+        encounterKey: 'ENC-2',
+      }),
+    );
+    expect(screen.queryByText('ORCA 警告')).not.toBeInTheDocument();
   });
 
   it('保存時に official contraindication route を呼び、患者別 ORCA 禁忌チェックとして確認ダイアログを開く', async () => {

@@ -6,7 +6,7 @@
 - [ ] `tests/charts/e2e-billing-correction-note.spec.ts` PASS
 - [ ] `tests/reception/e2e-billing-correction-note.spec.ts` PASS
 - [ ] `cd web-client && npm run ci` PASS after residual fixes
-- [ ] runtime-ready-smoke rerun PASS, or carry-forward reason documented with no touched dependency
+- [ ] runtime-ready-smoke rerun PASS in the current run
 - [ ] manual QA completed
 - [ ] ORCA live QA completed
 - [ ] fixed premise drift check clean

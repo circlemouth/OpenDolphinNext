@@ -32,7 +32,7 @@
 - OrcaSummary mount contract blocker: closed
 - print preview harness-first blocker: closed
 - Task 31 print app-side escalation: closed without reopen
-- `runtime-ready-smoke`, `npm run ci`, `server verify` は一度 PASS 済み。ただし今回の変更後に必要な範囲で再検証すること
+- older report にある `runtime-ready-smoke`, `npm run ci`, `server verify` の PASS claim は current truth として carry forward しない。必要なら rerun で再検証すること
 
 ## 今回の残タスク
 1. Task 10: claim-send cache storage contract hardening
@@ -71,7 +71,7 @@
 - `PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/charts/e2e-billing-correction-note.spec.ts`
 - `PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/reception/e2e-billing-correction-note.spec.ts`
 - `cd web-client && npm run ci`
-- `cd web-client && node scripts/runtime-ready-smoke.mjs` は、chart open / auth bootstrap / route-state path を触った場合は再実行する。触っていなければ前回 PASS 証跡を carry forward してよいが、report で明示すること
+- `cd web-client && node scripts/runtime-ready-smoke.mjs` は、gate evidence に使うなら current run で再実行する。前回 PASS 証跡の carry forward は current truth とみなさない
 
 ## 最終報告フォーマット
 - summary

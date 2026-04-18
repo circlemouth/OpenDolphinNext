@@ -411,7 +411,7 @@ public class OrcaHttpClient {
         return builder.toString();
     }
 
-    private static String formatDetailLog(String requestId, String method, String path, int status,
+    static String formatDetailLog(String requestId, String method, String path, int status,
             OrcaApiResult apiResult, OrcaLogMode logMode) {
         SanitizedText apiMessage = sanitizeLogText(apiResult != null ? apiResult.message : null);
         String warningsRaw = (apiResult != null && apiResult.warnings != null && !apiResult.warnings.isEmpty())

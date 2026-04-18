@@ -218,6 +218,56 @@ describe('patients api official mutation', () => {
     });
   });
 
+  it('create 200 でも canonical re-fetch が失敗したら full success にしない', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            apiResult: '00',
+            apiResultMessage: 'ORCA登録完了',
+            runId: 'RUN-CREATE',
+            traceId: 'TRACE-CREATE',
+            routeNamespace: 'official',
+            patient: {
+              patientId: '000099',
+              name: '新規患者',
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ patients: [] }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+    const result = await createOfficialPatient({
+      patient: {
+        name: '新規患者',
+      },
+    });
+
+    expect(result.writeAccepted).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.errorCategory).toBe('canonical_refetch_failed');
+    expect(result.message).toBe('新患登録は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。');
+    expect(result.canonicalRefetch).toMatchObject({
+      source: 'patientlst2v2',
+      ok: false,
+      expectedPatientIds: ['000099'],
+      matchedPatientIds: [],
+      missingPatientIds: ['000099'],
+    });
+  });
+
   it('local search keeps /api/local boundary and infers searchType on the client', async () => {
     vi.mocked(httpFetch).mockResolvedValueOnce(
       new Response(

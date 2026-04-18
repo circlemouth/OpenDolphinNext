@@ -1,0 +1,516 @@
+timestamp=2026-04-18T12:31:55Z
+command=npm test -- --run scripts/__tests__/medicalInformationGate.test.ts src/features/outpatient/__tests__/orcaPatientImportApi.test.ts src/features/patients/__tests__/PatientsPage.test.tsx src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx src/features/charts/__tests__/OrcaSummary.semantics.test.tsx src/mocks/handlers/orcaQueue.test.ts src/libs/http/httpClient.test.ts
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+
+> web-client@0.0.0 pretest
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] blocked ORCA route string / mock surface の再混入は検出されませんでした。/api/orca/queue と /api/orca/pusheventgetv2 は src/features/outpatient/orcaQueueApi.ts の production fail-close sentinel および src/mocks/handlers/orcaQueue.ts の mock/test-only legacy route surface にだけ残っています。
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 test
+> vitest run --run scripts/__tests__/medicalInformationGate.test.ts src/features/outpatient/__tests__/orcaPatientImportApi.test.ts src/features/patients/__tests__/PatientsPage.test.tsx src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx src/features/charts/__tests__/OrcaSummary.semantics.test.tsx src/mocks/handlers/orcaQueue.test.ts src/libs/http/httpClient.test.ts
+
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+ ❯ src/features/outpatient/__tests__/orcaPatientImportApi.test.ts (9 tests | 1 failed) 24ms
+     ✓ surfaces auth failure reason on 401 and suppresses session-expiry propagation 12ms
+     ✓ classifies html 404 as route mismatch 1ms
+     ✓ returns http error when network request throws 1ms
+     ✓ re-fetches canonical patient after successful import 1ms
+     ✓ write accepted でも canonical re-fetch 失敗なら full success にしない 1ms
+     ✓ HTTP 200 でも business partial は full success にしない 1ms
+     ✓ HTTP 200 でも skippedCount>0 は full success にしない 0ms
+     ✓ HTTP 200 でも requested/fetched/imported 不整合は full success にしない 1ms
+     × HTTP 200 でも count 項目が不足していれば fail closed で partial にする 4ms
+ ✓ src/mocks/handlers/orcaQueue.test.ts (2 tests) 42ms
+ ✓ src/libs/http/httpClient.test.ts (30 tests) 60ms
+ ✓ src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx (4 tests) 90ms
+ ✓ src/features/charts/__tests__/OrcaSummary.semantics.test.tsx (3 tests) 144ms
+ ✓ src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx (7 tests) 179ms
+ ✓ scripts/__tests__/medicalInformationGate.test.ts (8 tests) 9ms
+ ❯ src/features/patients/__tests__/PatientsPage.test.tsx (34 tests | 1 failed) 3303ms
+     ✓ keyword/outcome は全角混在と大文字小文字を正規化して一致する 191ms
+     ✓ date/limit フィルタと無効範囲エラーを反映する 189ms
+     ✓ 保存履歴の詳細IDはサポート向け disclosure に隔離する 43ms
+     ✓ 監査サマリに内部フラグ名をそのまま出さない 37ms
+     ✓ 監査ログの既定表示は action / outcome / 時刻 / RUN_ID に留め、詳細は disclosure に隔離する 34ms
+     ✓ ORCA 原本/保険/メモの補助タブを表示しない 31ms
+     ✓ patientId 文脈がない場合は未選択で開始する 30ms
+     ✓ legacy intent パラメータは無視して現行タブ構成を維持する 14ms
+     ✓ location state の patientId と一致する患者を自動選択する 33ms
+     ✓ location state の patientId が不一致の場合は警告を表示して未選択を維持する 29ms
+     ✓ create flow uses separate official create mutation 77ms
+     ✓ update flow uses separate official update mutation 45ms
+     ✓ import flow remains separate from create/update mutations 82ms
+     ✓ create success keeps canonical patient visible when local search list does not include it 81ms
+     ✓ write accepted でも canonical readback failure なら sync 完了 copy を出さない 45ms
+     ✓ create 200 + canonical readback failure でも full success copy を出さない 80ms
+     ✓ import flow も canonical readback failure を success 扱いしない 79ms
+     × import 200 + skipped-only partial は full success にせず audit summary も warning にする 1091ms
+     ✓ 未紐付警告を一覧と詳細で表示する 19ms
+     ✓ missingMaster 時は反映停止注意として表示する 33ms
+     ✓ changedKeys は上限5件で他n件表記 21ms
+     ✓ 未保存変更があると患者切替ダイアログを表示する 106ms
+     ✓ 破棄して切り替えで次の患者へ移動する 90ms
+     ✓ 非基本情報タブの Enter で患者保存 mutate が走らない 48ms
+     ✓ 郵便番号から住所補完できる 100ms
+     ✓ 保険 helper タブは表示しない 29ms
+     ✓ 矢印キーと Home/End でタブを移動できる 47ms
+     ✓ returnTo 指定がある場合は surface-aware な戻り導線を表示する 16ms
+     ✓ charts 由来の一覧ミスマッチでは患者の再選択を案内する 14ms
+     ✓ 検索サマリに recordsReturned / fetchedAt / Api_Result / missingTags を表示する 12ms
+     ✓ local search 文言は local を明示し未使用詳細条件を案内しない 19ms
+     ✓ API failure 時も raw Api_Result_Message を通信詳細へ表示しない 16ms
+     ✓ ArrowLeft/ArrowRight/Home/End で幅を調整し localStorage に保存する 30ms
+     ✓ 保存済み幅を初期値として読み込む 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/outpatient/__tests__/orcaPatientImportApi.test.ts > importPatientsFromOrca > HTTP 200 でも count 項目が不足していれば fail closed で partial にする
+AssertionError: expected 'ORCA既存患者取込は skippedCount を確認できず full …' to contain 'requested/fetched/imported count を確認で…'
+
+Expected: "requested/fetched/imported count を確認できず"
+Received: "ORCA既存患者取込は skippedCount を確認できず full success を判定できないため完了扱いにできません（入力 1 / requested 1 / fetched — / imported — / skipped — / errors 0）。"
+
+ ❯ src/features/outpatient/__tests__/orcaPatientImportApi.test.ts:290:26
+    288|     expect(result.businessOk).toBe(false);
+    289|     expect(result.errorCategory).toBe('business_partial');
+    290|     expect(result.error).toContain('requested/fetched/imported count を…
+       |                          ^
+    291|     expect(mockRefetchOfficialCanonicalPatients).not.toHaveBeenCalled(…
+    292|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/features/patients/__tests__/PatientsPage.test.tsx > PatientsPage official patient flows > import 200 + skipped-only partial は full success にせず audit summary も warning にする
+TestingLibraryElementError: Found multiple elements with the text: ORCA既存患者取込は skippedCount=1 が返されたため完了扱いにできません（入力 1 / requested 1 / fetched 1 / imported 1 / skipped 1 / errors 0）。
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33maria-live[39m=[32m"assertive"[39m
+  [33mclass[39m=[32m"patients-sidebar__statusbar-note patients-sidebar__statusbar-note--warning"[39m
+  [33mrole[39m=[32m"status"[39m
+[36m>[39m
+  [0mORCA既存患者取込は skippedCount=1 が返されたため完了扱いにできません（入力 1 / requested 1 / fetched 1 / imported 1 / skipped 1 / errors 0）。[0m
+[36m</div>[39m
+
+Ignored nodes: comments, script, style
+[36m<div>[39m
+  [0mORCA既存患者取込は skippedCount=1 が返されたため完了扱いにできません（入力 1 / requested 1 / fetched 1 / imported 1 / skipped 1 / errors 0）。[0m
+[36m</div>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<a[39m
+      [33mclass[39m=[32m"skip-link"[39m
+      [33mhref[39m=[32m"#patients-search"[39m
+    [36m>[39m
+      [0m本文へスキップ[0m
+    [36m</a>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"patients-page"[39m
+      [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+      [33mid[39m=[32m"patients-main"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+    [36m>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"戻り導線"[39m
+        [33mclass[39m=[32m"return-to-bar"[39m
+        [33mdata-layout[39m=[32m"wide"[39m
+        [33mrole[39m=[32m"region"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"return-to-bar__main"[39m
+        [36m>[39m
+          [36m<a[39m
+            [33maria-describedby[39m=[32m":r12:"[39m
+            [33mclass[39m=[32m"return-to-bar__back"[39m
+            [33mhref[39m=[32m"/f/FAC-TEST/charts"[39m
+          [36m>[39m
+            [0mカルテから再開する[0m
+          [36m</a>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"return-to-bar__hint"[39m
+            [33mdata-layout[39m=[32m"wide"[39m
+            [33mid[39m=[32m":r12:"[39m
+          [36m>[39m
+            [0m患者文脈が引き継がれていない場合は、既定の戻り先から入り直してください。[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"patients-page__header"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"patients-page__kicker"[39m
+          [36m>[39m
+            [0m患者管理 検索・管理[0m
+          [36m</p>[39m
+          [36m<h1>[39m
+            [0m患者管理[0m
+          [36m</h1>[39m
+          [36m<p[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"patients-page__hint"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m患者一覧から対象を選択し、右ペインのタブで目的別に操作してください。患者基本情報の official ORCA 更新は「基本情報」タブのみです。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"patients-page__ops-metrics"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0m患者件数: [0m
+            [0m1[0m
+            [0m件[0m
+          [36m</span>[39m
+          [36m<span>[39m
+            [0m更新時刻: [0m
+            [0m—[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"patients-page__ops-status is-ok"[39m
+          [36m>[39m
+            [0m状態: [0m
+            [0mOK[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<details[39m
+        [33mclass[39m=[32m"patients-page__network-details"[39m
+      [36m>[39m
+        [36m<summary>[39m
+          [0m通信詳細を表示[0m
+        [36m</summary>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"patients-page__badges"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-atomic[39m=[32m"true"[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"runid-badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"runid-badge__label"[39m
+            [36m>[39m
+              [0mRUN_ID[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"runid-badge__value"[39m
+            [36m>[39m
+              [0mRUN-PATIENTS[0m
+            [36m</span>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"RUN_ID をコピー"[39m
+              [33mclass[39m=[32m"runid-badge__copy"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mコピー[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"dataSourceTransition: server"[39m
+            [33mclass[39m=[32m"status-pill status-pill--info status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mdataSourceTransition[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mserver[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"missingMaster: false"[39m
+            [33mclass[39m=[32m"status-pill status-pill--success status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mmissingMaster[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mfalse[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"fallbackUsed: false"[39m
+            [33mclass[39m=[32m"status-pill status-pill--success status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mfallbackUsed[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mfalse[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"cacheHit: false"[39m
+            [33mclass[39m=[32m"status-pill status-pill--warning status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mcacheHit[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mfalse[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<div[39m
+            [33maria-atomic[39m=[32m"true"[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"audit-summary-inline audit-summary-inline--inline audit-summary-inline--info patients-page_...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<a[39m
+      [33mclass[39m=[32m"skip-link"[39m
+      [33mhref[39m=[32m"#patients-search"[39m
+    [36m>[39m
+      [0m本文へスキップ[0m
+    [36m</a>[39m
+    [36m<main[39m
+      [33mclass[39m=[32m"patients-page"[39m
+      [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+      [33mid[39m=[32m"patients-main"[39m
+      [33mtabindex[39m=[32m"-1"[39m
+    [36m>[39m
+      [36m<section[39m
+        [33maria-label[39m=[32m"戻り導線"[39m
+        [33mclass[39m=[32m"return-to-bar"[39m
+        [33mdata-layout[39m=[32m"wide"[39m
+        [33mrole[39m=[32m"region"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"return-to-bar__main"[39m
+        [36m>[39m
+          [36m<a[39m
+            [33maria-describedby[39m=[32m":r12:"[39m
+            [33mclass[39m=[32m"return-to-bar__back"[39m
+            [33mhref[39m=[32m"/f/FAC-TEST/charts"[39m
+          [36m>[39m
+            [0mカルテから再開する[0m
+          [36m</a>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"return-to-bar__hint"[39m
+            [33mdata-layout[39m=[32m"wide"[39m
+            [33mid[39m=[32m":r12:"[39m
+          [36m>[39m
+            [0m患者文脈が引き継がれていない場合は、既定の戻り先から入り直してください。[0m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</section>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"patients-page__header"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"patients-page__kicker"[39m
+          [36m>[39m
+            [0m患者管理 検索・管理[0m
+          [36m</p>[39m
+          [36m<h1>[39m
+            [0m患者管理[0m
+          [36m</h1>[39m
+          [36m<p[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"patients-page__hint"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [0m患者一覧から対象を選択し、右ペインのタブで目的別に操作してください。患者基本情報の official ORCA 更新は「基本情報」タブのみです。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"patients-page__ops-metrics"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [36m<span>[39m
+            [0m患者件数: [0m
+            [0m1[0m
+            [0m件[0m
+          [36m</span>[39m
+          [36m<span>[39m
+            [0m更新時刻: [0m
+            [0m—[0m
+          [36m</span>[39m
+          [36m<span[39m
+            [33mclass[39m=[32m"patients-page__ops-status is-ok"[39m
+          [36m>[39m
+            [0m状態: [0m
+            [0mOK[0m
+          [36m</span>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<details[39m
+        [33mclass[39m=[32m"patients-page__network-details"[39m
+      [36m>[39m
+        [36m<summary>[39m
+          [0m通信詳細を表示[0m
+        [36m</summary>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"patients-page__badges"[39m
+          [33mrole[39m=[32m"status"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33maria-atomic[39m=[32m"true"[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"runid-badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+            [33mrole[39m=[32m"status"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"runid-badge__label"[39m
+            [36m>[39m
+              [0mRUN_ID[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"runid-badge__value"[39m
+            [36m>[39m
+              [0mRUN-PATIENTS[0m
+            [36m</span>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"RUN_ID をコピー"[39m
+              [33mclass[39m=[32m"runid-badge__copy"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mコピー[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"dataSourceTransition: server"[39m
+            [33mclass[39m=[32m"status-pill status-pill--info status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mdataSourceTransition[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mserver[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"missingMaster: false"[39m
+            [33mclass[39m=[32m"status-pill status-pill--success status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mmissingMaster[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mfalse[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"fallbackUsed: false"[39m
+            [33mclass[39m=[32m"status-pill status-pill--success status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mfallbackUsed[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mfalse[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<span[39m
+            [33maria-label[39m=[32m"cacheHit: false"[39m
+            [33mclass[39m=[32m"status-pill status-pill--warning status-pill--sm patients-page__badge"[39m
+            [33mdata-run-id[39m=[32m"RUN-PATIENTS"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__label"[39m
+            [36m>[39m
+              [0mcacheHit[0m
+            [36m</span>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"status-pill__value"[39m
+            [36m>[39m
+              [0mfalse[0m
+            [36m</span>[39m
+          [36m</span>[39m
+          [36m<div[39m
+            [33maria-atomic[39m=[32m"true"[39m
+            [33maria-live[39m=[32m"polite"[39m
+            [33mclass[39m=[32m"audit-summary-inline audit-summary-inline--inline audit-summary-inline--info patients-page_...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/features/patients/__tests__/PatientsPage.test.tsx:757:25
+    755|     await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込…
+    756| 
+    757|     expect(await screen.findByText('ORCA既存患者取込は skippedCount=1 が返されたため…
+       |                         ^
+    758|     expect(screen.queryByText('ORCA既存患者取込が完了し canonical/local 同期を更新しまし…
+    759|     await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 6 passed (8)
+      Tests  2 failed | 95 passed (97)
+   Start at  21:31:56
+   Duration  4.66s (transform 3.06s, setup 976ms, import 3.99s, tests 3.85s, environment 4.48s)
+

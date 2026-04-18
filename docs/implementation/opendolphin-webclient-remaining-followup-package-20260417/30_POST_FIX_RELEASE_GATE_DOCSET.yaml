@@ -5,9 +5,9 @@ confirmed_accessible_files:
 inline_context:
   task_name: post-fix release gate runbook
   carried_forward_status:
-    - runtime-ready-smoke previously passed in the latest worker report
-    - web-client npm run ci previously passed in the latest worker report
-    - server verify previously passed in the latest worker report
+    - runtime-ready-smoke previous-pass claim is stale and must be rerun for current truth
+    - web-client npm run ci previous-pass claim is stale and must be rerun for current truth
+    - server verify previous-pass claim is stale and must be rerun for current truth
   open_requirements:
     - charts correction-note spec must pass
     - reception correction-note spec must still pass

@@ -3,6 +3,7 @@ package open.dolphin.orca.transport;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
@@ -23,6 +24,7 @@ class OrcaTransportRegistryTest {
         assertThrows(IllegalStateException.class, () -> registry.currentTransport(null));
         assertThrows(IllegalStateException.class, () -> registry.currentTransport(""));
         assertThrows(IllegalStateException.class, () -> registry.currentTransport("default"));
+        assertThrows(IllegalStateException.class, () -> registry.currentTransport("DeFaUlT"));
         assertThrows(IllegalStateException.class, () -> registry.reloadSettings(null));
     }
 
@@ -42,6 +44,26 @@ class OrcaTransportRegistryTest {
         OrcaTransportRegistry registry = new OrcaTransportRegistry(store, 60_000L, resolver());
 
         assertNotNull(registry.currentTransport("F001"));
+    }
+
+    @Test
+    void currentSettingsReflectsClientAuthTruthFromResolvedAdminConfig() {
+        OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.resolve("F001")).thenReturn(new OrcaConnectionConfigStore.ResolvedOrcaConnection(
+                true,
+                "https://facility.example.orca/secret-prefix",
+                "user",
+                "pass",
+                true,
+                null,
+                null,
+                null));
+
+        OrcaTransportRegistry registry = new OrcaTransportRegistry(store, 60_000L, resolver());
+
+        OrcaTransportSettings settings = registry.currentSettings("F001");
+        assertNotNull(settings);
+        assertTrue(settings.isClientAuthConfigured());
     }
 
     @Test

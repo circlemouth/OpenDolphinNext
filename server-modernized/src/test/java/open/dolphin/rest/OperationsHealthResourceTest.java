@@ -28,7 +28,7 @@ class OperationsHealthResourceTest {
 
     private EntityManager em;
     private Query query;
-    private StubRestOrcaTransport restOrcaTransport;
+    private RestOrcaTransport restOrcaTransport;
     private AttachmentStorageManager attachmentStorageManager;
     private PvtService pvtService;
     private OrcaConnectionConfigStore orcaConnectionConfigStore;
@@ -74,7 +74,7 @@ class OperationsHealthResourceTest {
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
         when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
-        restOrcaTransport.probeResult =
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
@@ -97,10 +97,51 @@ class OperationsHealthResourceTest {
     }
 
     @Test
+    void readinessReflectsClientAuthTruthWithoutLeakingConfiguredTargetMaterial() throws Exception {
+        String rawBaseUrl = "https://facility.example.orca/secret-prefix";
+        RestOrcaTransport realTransport = new RestOrcaTransport();
+        setField(RestOrcaTransport.class, realTransport, "orcaConnectionConfigStore", orcaConnectionConfigStore);
+        setField(RestOrcaTransport.class, realTransport, "configurationResolver",
+                TestServerConfigurationResolvers.resolver(
+                        ServerConfigurationResolver.KEY_ORCA_TRANSPORT_CACHE_TTL_MS, "60000"));
+        setField(OperationsReadinessEvaluator.class, evaluator, "restOrcaTransport", realTransport);
+
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
+        when(orcaConnectionConfigStore.resolve("F001")).thenReturn(new OrcaConnectionConfigStore.ResolvedOrcaConnection(
+                true,
+                rawBaseUrl,
+                null,
+                null,
+                true,
+                null,
+                null,
+                null));
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA).getClientAuthConfigured())
+                .isEqualTo(Boolean.TRUE);
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA).getReasonCode())
+                .isEqualTo(RestOrcaTransport.REASON_CODE_TRANSPORT_NOT_READY);
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertThat(rendered).doesNotContain("facility.example.orca");
+        assertThat(rendered).doesNotContain("secret-prefix");
+    }
+
+    @Test
     void readinessReturnsDownWithSanitizedCheckPayloadWhenCriticalCheckFails() {
         when(em.createNativeQuery(anyString())).thenThrow(new IllegalStateException("db unavailable"));
         when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
-        restOrcaTransport.probeResult =
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
                 new RestOrcaTransport.ProbeResult(false, "weborca", true, false,
                         RestOrcaTransport.REASON_CODE_PROBE_FAILED);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
@@ -129,7 +170,7 @@ class OperationsHealthResourceTest {
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
         when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
-        restOrcaTransport.probeResult =
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
         when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
@@ -163,7 +204,7 @@ class OperationsHealthResourceTest {
         OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
         assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA).getReasonCode())
                 .isEqualTo("facility_configuration_missing");
-        assertThat(restOrcaTransport.probeCalls).isZero();
+        assertThat(((StubRestOrcaTransport) restOrcaTransport).probeCalls).isZero();
     }
 
     private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {

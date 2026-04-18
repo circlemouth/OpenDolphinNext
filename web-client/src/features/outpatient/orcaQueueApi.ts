@@ -72,6 +72,8 @@ export type OrcaPushEventResponse = {
   error?: string;
 };
 
+// These historical public-route strings remain only so the client can fail closed
+// with an explicit unavailable response. They are not part of the current public taxonomy.
 const ORCA_QUEUE_ENDPOINT = '/api/orca/queue';
 const ORCA_PUSH_EVENT_ENDPOINT = '/api/orca/pusheventgetv2';
 export const ORCA_QUEUE_PUBLIC_ROUTE_AVAILABLE = false;

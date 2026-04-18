@@ -48,13 +48,18 @@ docs/implementation/opendolphin-postfix-static-remediation-20260418/
 - build 成果物が zip 内にあっても無視し、source / test / docs / notes / scripts のみ確認する。
 - 後方互換性は考慮しない。
 
-## 現在の static verdict 前提
+## 現在の static verdict
 
-- overall: `REJECT WORKER REPORT`
-- dynamic handoff: `NOT READY FOR DYNAMIC TRIAL CHECK`
-- READY を阻止している主因:
-  - C7 Critical: `medicalInformation` field-presence gate が閉じていない
-  - C5 High: import full-success semantics が `skippedCount` / count consistency を gate していない
-  - C3 High: charts Timeline / print に row-local false positive 経路が残る
-  - C2 High: userinfo/raw target material の admin surface が残る
-  - RT-01 High: route taxonomy guard/docs drift
+- initial premise at package creation:
+  - overall: `REJECT WORKER REPORT`
+  - dynamic handoff: `NOT READY FOR DYNAMIC TRIAL CHECK`
+- current manager rerun result:
+  - overall: `ACCEPT WORKER REPORT`
+  - dynamic handoff: `READY`
+  - closed: `C1/C2/C3/C5/C6/C7/R-OBS-01/T-NEG-01/RT-01`
+  - residual unknowns:
+    - `runtime-ready-smoke` は `127.0.0.1:9080` 未起動で environment blocker
+    - live ORCA / WebORCA は未実行で、成功 claim はしていない
+    - archived/historical docs には stale PASS wording が一部残る
+- final static exit report:
+  - `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md`

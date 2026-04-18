@@ -26,6 +26,7 @@ public class OrcaConnectionConfigStore {
     private static final Logger LOGGER = LoggerFactory.getLogger(OrcaConnectionConfigStore.class);
     private static final String STATE_CATEGORY = "orca_connection_config";
     private static final String STATE_KEY = "default";
+    private static final String RESERVED_DEFAULT_FACILITY_LITERAL = "default";
     public static final String REASON_CODE_FACILITY_CONFIGURATION_MISSING = "facility_configuration_missing";
     private static final int MULTI_FACILITY_FORMAT_VERSION = 2;
     private static final int DEFAULT_PORT_WEBORCA = 443;
@@ -48,7 +49,7 @@ public class OrcaConnectionConfigStore {
         lock.writeLock().lock();
         try {
             StoredState state = loadState();
-            this.defaultFacilityId = state != null ? normalizeFacilityId(state.defaultFacilityId()) : null;
+            this.defaultFacilityId = state != null ? normalizeOptionalFacilityId(state.defaultFacilityId(), "defaultFacilityId") : null;
             this.facilities = state != null ? new LinkedHashMap<>(state.facilities()) : new LinkedHashMap<>();
             if (state != null && !facilities.isEmpty()) {
                 persistBestEffort(buildStorageRecord(facilities, defaultFacilityId));
@@ -320,7 +321,7 @@ public class OrcaConnectionConfigStore {
             return null;
         }
 
-        String loadedDefaultFacilityId = normalizeFacilityId(raw.getDefaultFacilityId());
+        String loadedDefaultFacilityId = normalizeOptionalFacilityId(raw.getDefaultFacilityId(), "defaultFacilityId");
         if (loadedDefaultFacilityId != null && !loaded.containsKey(loadedDefaultFacilityId)) {
             throw new IllegalStateException("ORCA defaultFacilityId does not match any saved facility.");
         }
@@ -387,7 +388,7 @@ public class OrcaConnectionConfigStore {
             throw new IllegalStateException("ORCA connection facilities are empty");
         }
 
-        String normalizedDefaultFacilityId = normalizeFacilityId(activeDefaultFacilityId);
+        String normalizedDefaultFacilityId = normalizeOptionalFacilityId(activeDefaultFacilityId, "defaultFacilityId");
         if (normalizedDefaultFacilityId != null && !serialized.containsKey(normalizedDefaultFacilityId)) {
             throw new IllegalStateException("ORCA default facility must reference a saved facility");
         }
@@ -427,7 +428,7 @@ public class OrcaConnectionConfigStore {
         }
         resolved.setPushTenantId(trimToNull(resolved.getPushTenantId()));
 
-        resolved.setFacilityId(normalizeFacilityId(resolved.getFacilityId()));
+        resolved.setFacilityId(normalizeOptionalFacilityId(resolved.getFacilityId(), "facilityId"));
         resolved.setDefaultFacilityId(null);
         resolved.setFacilities(null);
 
@@ -477,11 +478,11 @@ public class OrcaConnectionConfigStore {
         if (facilities == null || facilities.isEmpty()) {
             return null;
         }
-        String normalizedFacilityId = normalizeFacilityId(facilityId);
+        String normalizedFacilityId = normalizeOptionalFacilityId(facilityId, "facilityId");
         if (normalizedFacilityId != null) {
             return facilities.get(normalizedFacilityId);
         }
-        String activeDefaultFacilityId = normalizeFacilityId(defaultFacilityId);
+        String activeDefaultFacilityId = normalizeOptionalFacilityId(defaultFacilityId, "defaultFacilityId");
         return activeDefaultFacilityId != null ? facilities.get(activeDefaultFacilityId) : null;
     }
 
@@ -528,7 +529,7 @@ public class OrcaConnectionConfigStore {
         }
         OrcaConnectionConfigRecord copy = new OrcaConnectionConfigRecord();
         copyFlatFields(record, copy);
-        copy.setFacilityId(normalizeFacilityId(record.getFacilityId()));
+        copy.setFacilityId(normalizeOptionalFacilityId(record.getFacilityId(), "facilityId"));
         copy.setDefaultFacilityId(null);
         copy.setFacilities(null);
         return copy;
@@ -576,15 +577,39 @@ public class OrcaConnectionConfigStore {
     }
 
     private static String requireFacilityId(String facilityId) {
-        String normalized = normalizeFacilityId(facilityId);
+        String normalized = normalizeOptionalFacilityId(facilityId, "facilityId");
         if (normalized == null) {
-            throw new IllegalArgumentException("facilityId is required");
+            throw new IllegalArgumentException("facilityId が必要です。");
+        }
+        return normalized;
+    }
+
+    public static String requireConfiguredFacilityId(String facilityId, String fieldName) {
+        String normalized = normalizeOptionalFacilityId(facilityId, fieldName);
+        if (normalized == null) {
+            throw new IllegalArgumentException(resolveFacilityIdRequiredMessage(fieldName));
         }
         return normalized;
     }
 
     private static String normalizeFacilityId(String facilityId) {
         return trimToNull(facilityId);
+    }
+
+    private static String normalizeOptionalFacilityId(String facilityId, String fieldName) {
+        String normalized = normalizeFacilityId(facilityId);
+        if (normalized == null) {
+            return null;
+        }
+        if (isReservedDefaultFacilityLiteral(normalized)) {
+            throw new IllegalArgumentException(resolveReservedFacilityMessage(fieldName));
+        }
+        return normalized;
+    }
+
+    public static boolean isReservedDefaultFacilityLiteral(String facilityId) {
+        String normalized = normalizeFacilityId(facilityId);
+        return normalized != null && RESERVED_DEFAULT_FACILITY_LITERAL.equalsIgnoreCase(normalized);
     }
 
     private static String trimToNull(String value) {
@@ -691,6 +716,9 @@ public class OrcaConnectionConfigStore {
         } catch (Exception ex) {
             throw new IllegalArgumentException("サーバURLが不正です。", ex);
         }
+        if (trimToNull(uri.getUserInfo()) != null || (uri.getAuthority() != null && uri.getAuthority().contains("@"))) {
+            throw new IllegalArgumentException("サーバURLに userinfo は指定できません。");
+        }
         String scheme = uri.getScheme() != null ? uri.getScheme() : "https";
         String host = uri.getHost();
         if (host == null || host.isBlank()) {
@@ -753,6 +781,20 @@ public class OrcaConnectionConfigStore {
             return "***";
         }
         return trimmed.substring(0, 2) + "***" + trimmed.substring(trimmed.length() - 2);
+    }
+
+    private static String resolveFacilityIdRequiredMessage(String fieldName) {
+        if ("defaultFacilityId".equals(fieldName)) {
+            return "defaultFacilityId が必要です。";
+        }
+        return "facilityId が必要です。";
+    }
+
+    private static String resolveReservedFacilityMessage(String fieldName) {
+        if ("defaultFacilityId".equals(fieldName)) {
+            return "defaultFacilityId に予約語 default は指定できません。";
+        }
+        return "facilityId に予約語 default は指定できません。";
     }
 
     public record UpdateRequest(

@@ -7,6 +7,7 @@ import { refetchOfficialCanonicalPatients, type PatientRecord } from '../patient
 export type OrcaPatientImportResult = {
   ok: boolean;
   writeAccepted?: boolean;
+  businessOk?: boolean;
   runId: string;
   status: number;
   payload?: any;
@@ -24,6 +25,17 @@ export type OrcaPatientImportResult = {
   errorKind?: OrcaResponseErrorKind;
   errorCategory?: string;
   routeMismatch?: boolean;
+  importSummary?: {
+    apiResult?: string;
+    apiResultMessage?: string;
+    requestedCount?: number;
+    fetchedCount?: number;
+    createdCount?: number;
+    updatedCount?: number;
+    importedCount?: number;
+    skippedCount?: number;
+    errorsCount: number;
+  };
 };
 
 const resolveAuthFailureReason = (parsed: ParsedOrcaApiResponse): string => {
@@ -44,6 +56,138 @@ const resolveImportFailureMessage = (parsed: ParsedOrcaApiResponse): string => {
   return parsed.message ?? `HTTP ${parsed.status}`;
 };
 
+const normalizeCount = (value: unknown): number | undefined => {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+};
+
+const extractImportSummary = (json: Record<string, unknown>) => {
+  const errors = Array.isArray(json.errors) ? json.errors : [];
+  const createdCount = normalizeCount(json.createdCount);
+  const updatedCount = normalizeCount(json.updatedCount);
+  return {
+    apiResult: typeof json.apiResult === 'string' ? json.apiResult : undefined,
+    apiResultMessage: typeof json.apiResultMessage === 'string' ? json.apiResultMessage : undefined,
+    requestedCount: normalizeCount(json.requestedCount),
+    fetchedCount: normalizeCount(json.fetchedCount),
+    createdCount,
+    updatedCount,
+    importedCount:
+      createdCount !== undefined && updatedCount !== undefined ? createdCount + updatedCount : undefined,
+    skippedCount: normalizeCount(json.skippedCount),
+    errorsCount: errors.length,
+  };
+};
+
+const normalizeExpectedPatientIds = (patientIds: string[]) => {
+  return Array.from(new Set(patientIds.map((patientId) => patientId.trim()).filter(Boolean)));
+};
+
+const formatImportCount = (value: number | undefined) => (value === undefined ? '—' : String(value));
+
+const formatImportSummaryMetrics = (
+  summary: ReturnType<typeof extractImportSummary>,
+  expectedPatientIdsCount: number,
+) => {
+  return [
+    `入力 ${expectedPatientIdsCount}`,
+    `requested ${formatImportCount(summary.requestedCount)}`,
+    `fetched ${formatImportCount(summary.fetchedCount)}`,
+    `imported ${formatImportCount(summary.importedCount)}`,
+    `skipped ${formatImportCount(summary.skippedCount)}`,
+    `errors ${summary.errorsCount}`,
+  ].join(' / ');
+};
+
+const resolveImportPartialMessage = (
+  summary: ReturnType<typeof extractImportSummary>,
+  expectedPatientIdsCount: number,
+  reason: string,
+) => {
+  return `ORCA既存患者取込は ${reason}ため完了扱いにできません（${formatImportSummaryMetrics(summary, expectedPatientIdsCount)}）。`;
+};
+
+const evaluateImportBusinessSuccess = (options: {
+  parsedBusinessOk: boolean;
+  summary: ReturnType<typeof extractImportSummary>;
+  expectedPatientIdsCount: number;
+}) => {
+  const { parsedBusinessOk, summary, expectedPatientIdsCount } = options;
+
+  if (!parsedBusinessOk) {
+    const apiResult = summary.apiResult ?? '—';
+    const apiResultMessage = summary.apiResultMessage ? ` / message=${summary.apiResultMessage}` : '';
+    return {
+      ok: false as const,
+      errorCategory: 'business_partial' as const,
+      error: resolveImportPartialMessage(
+        summary,
+        expectedPatientIdsCount,
+        `Api_Result=${apiResult}${apiResultMessage} で business success ではない`,
+      ),
+    };
+  }
+
+  if (summary.errorsCount !== 0) {
+    return {
+      ok: false as const,
+      errorCategory: 'business_partial' as const,
+      error: resolveImportPartialMessage(summary, expectedPatientIdsCount, `errors=${summary.errorsCount} が返された`),
+    };
+  }
+
+  if (summary.skippedCount === undefined) {
+    return {
+      ok: false as const,
+      errorCategory: 'business_partial' as const,
+      error: resolveImportPartialMessage(summary, expectedPatientIdsCount, 'skippedCount を確認できず full success を判定できない'),
+    };
+  }
+
+  if (summary.skippedCount !== 0) {
+    return {
+      ok: false as const,
+      errorCategory: 'business_partial' as const,
+      error: resolveImportPartialMessage(summary, expectedPatientIdsCount, `skippedCount=${summary.skippedCount} が返された`),
+    };
+  }
+
+  if (
+    summary.requestedCount === undefined
+    || summary.fetchedCount === undefined
+    || summary.importedCount === undefined
+  ) {
+    return {
+      ok: false as const,
+      errorCategory: 'business_partial' as const,
+      error: resolveImportPartialMessage(summary, expectedPatientIdsCount, 'requested/fetched/imported count を確認できず'),
+    };
+  }
+
+  if (summary.requestedCount !== expectedPatientIdsCount) {
+    return {
+      ok: false as const,
+      errorCategory: 'business_partial' as const,
+      error: resolveImportPartialMessage(
+        summary,
+        expectedPatientIdsCount,
+        `入力 patientIds=${expectedPatientIdsCount} と requestedCount=${summary.requestedCount} が一致しない`,
+      ),
+    };
+  }
+
+  if (summary.requestedCount !== summary.fetchedCount || summary.fetchedCount !== summary.importedCount) {
+    return {
+      ok: false as const,
+      errorCategory: 'business_partial' as const,
+      error: resolveImportPartialMessage(summary, expectedPatientIdsCount, 'requested/fetched/imported の件数整合が取れない'),
+    };
+  }
+
+  return {
+    ok: true as const,
+  };
+};
+
 export async function importPatientsFromOrca(params: {
   patientIds: string[];
   includeInsurance?: boolean;
@@ -51,9 +195,10 @@ export async function importPatientsFromOrca(params: {
 }): Promise<OrcaPatientImportResult> {
   const runId = params.runId ?? getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
+  const expectedPatientIds = normalizeExpectedPatientIds(params.patientIds ?? []);
 
-  if (!params.patientIds?.length) {
-    return { ok: false, writeAccepted: false, runId, status: 0, error: 'patientIds is required' };
+  if (!expectedPatientIds.length) {
+    return { ok: false, writeAccepted: false, businessOk: false, runId, status: 0, error: 'patientIds is required' };
   }
 
   let response: Response;
@@ -73,6 +218,7 @@ export async function importPatientsFromOrca(params: {
     return {
       ok: false,
       writeAccepted: false,
+      businessOk: false,
       runId,
       status: 0,
       error: `患者取込APIへの接続に失敗しました: ${message}`,
@@ -87,6 +233,7 @@ export async function importPatientsFromOrca(params: {
     return {
       ok: false,
       writeAccepted: false,
+      businessOk: false,
       runId: resolvedRunId,
       status: parsed.status,
       payload: parsed.json ?? parsed.text,
@@ -102,6 +249,7 @@ export async function importPatientsFromOrca(params: {
     return {
       ok: false,
       writeAccepted: false,
+      businessOk: false,
       runId: resolvedRunId,
       status: parsed.status,
       payload: parsed.text,
@@ -112,17 +260,38 @@ export async function importPatientsFromOrca(params: {
     };
   }
 
+  const importSummary = extractImportSummary(parsed.json);
+  const businessEvaluation = evaluateImportBusinessSuccess({
+    parsedBusinessOk: parsed.businessOk === true,
+    summary: importSummary,
+    expectedPatientIdsCount: expectedPatientIds.length,
+  });
+  if (!businessEvaluation.ok) {
+    return {
+      ok: false,
+      writeAccepted: true,
+      businessOk: false,
+      runId: resolvedRunId,
+      status: parsed.status,
+      payload: parsed.json,
+      error: businessEvaluation.error,
+      errorCategory: businessEvaluation.errorCategory,
+      routeMismatch: false,
+      importSummary,
+    };
+  }
+
   const canonicalRefetch = await refetchOfficialCanonicalPatients({
-    patientIds: params.patientIds,
+    patientIds: expectedPatientIds,
     runId: resolvedRunId,
   });
-  const expectedPatientIds = params.patientIds.map((patientId) => patientId.trim()).filter(Boolean);
   const canonicalReadbackOk =
     canonicalRefetch.ok && expectedPatientIds.every((patientId) => canonicalRefetch.matchedPatientIds.includes(patientId));
 
   return {
     ok: canonicalReadbackOk,
     writeAccepted: true,
+    businessOk: true,
     runId: resolvedRunId,
     status: parsed.status,
     payload: parsed.json,
@@ -139,5 +308,6 @@ export async function importPatientsFromOrca(params: {
       ? undefined
       : 'ORCA既存患者取込は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
     errorCategory: canonicalReadbackOk ? undefined : 'canonical_refetch_failed',
+    importSummary,
   };
 }

@@ -1,7 +1,9 @@
 package open.dolphin.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.eq;
@@ -21,11 +23,14 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.security.auth.AdminStepUpGuard;
+import open.dolphin.security.audit.AuditDetailSanitizer;
+import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.UserServiceBean;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
@@ -40,6 +45,7 @@ class AdminOrcaConnectionResourceTest {
     private UserServiceBean userServiceBean;
     private OrcaConnectionConfigStore configStore;
     private RestOrcaTransport restOrcaTransport;
+    private CapturingAuditDispatcher auditDispatcher;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -48,12 +54,13 @@ class AdminOrcaConnectionResourceTest {
         userServiceBean = mock(UserServiceBean.class);
         configStore = mock(OrcaConnectionConfigStore.class);
         restOrcaTransport = mock(RestOrcaTransport.class);
+        auditDispatcher = new CapturingAuditDispatcher();
 
         setField(resource, "orcaConnectionConfigStore", configStore);
         setField(resource, "restOrcaTransport", restOrcaTransport);
         setField(resource, "userServiceBean", userServiceBean);
         setField(resource, "adminStepUpGuard", mock(AdminStepUpGuard.class));
-        setField(resource, "sessionAuditDispatcher", mock(SessionAuditDispatcher.class));
+        setField(resource, "sessionAuditDispatcher", auditDispatcher);
     }
 
     @Test
@@ -211,6 +218,88 @@ class AdminOrcaConnectionResourceTest {
     }
 
     @Test
+    void putConfigSanitizesUserinfoFailureInResponse() throws Exception {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-USERINFO");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(request.getRequestURI()).thenReturn("/openDolphin/api/admin/orca/connection");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(configStore.update(eq("FACILITY"), org.mockito.ArgumentMatchers.any(), isNull(), isNull(), eq("RUN-USERINFO"), eq("FACILITY:admin")))
+                .thenThrow(new IllegalArgumentException("Invalid target https://admin:pass@facility.example.orca/secret-prefix"));
+
+        try {
+            resource.putConfig(
+                    request,
+                    multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://admin:pass@facility.example.orca/secret-prefix\",\"port\":443,\"username\":\"trial\"}")
+            );
+            fail("Expected WebApplicationException");
+        } catch (WebApplicationException ex) {
+            assertEquals(400, ex.getResponse().getStatus());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = (Map<String, Object>) ex.getResponse().getEntity();
+            assertEquals("invalid_request", body.get("error"));
+            assertEquals("接続先URLが不正です。", body.get("message"));
+            @SuppressWarnings("unchecked")
+            Map<String, Object> details = (Map<String, Object>) body.get("details");
+            assertEquals("save", details.get("operation"));
+            assertEquals("FACILITY", details.get("facilityId"));
+            String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+            assertFalse(rendered.contains("facility.example.orca"));
+            assertFalse(rendered.contains("admin:pass"));
+            assertFalse(rendered.contains("secret-prefix"));
+            assertFalse(String.valueOf(auditDispatcher.errorMessage).contains("facility.example.orca"));
+            assertFalse(String.valueOf(auditDispatcher.errorMessage).contains("admin:pass"));
+            assertFalse(String.valueOf(auditDispatcher.errorMessage).contains("secret-prefix"));
+            assertFalse(String.valueOf(auditDispatcher.sanitizedDetails).contains("facility.example.orca"));
+            assertFalse(String.valueOf(auditDispatcher.sanitizedDetails).contains("admin:pass"));
+            assertFalse(String.valueOf(auditDispatcher.sanitizedDetails).contains("secret-prefix"));
+        }
+    }
+
+    @Test
+    void getConfigOmitsLegacyUserinfoServerUrl() throws Exception {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-LEGACY");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+        when(configStore.getDefaultFacilityId()).thenReturn("FACILITY");
+
+        OrcaConnectionConfigRecord record = new OrcaConnectionConfigRecord();
+        record.setUseWeborca(Boolean.TRUE);
+        record.setServerUrl("https://admin:pass@facility.example.orca/secret-prefix");
+        record.setPort(443);
+        record.setUsername("trial");
+        when(configStore.getSnapshot("FACILITY")).thenReturn(record);
+
+        Response response = resource.getConfig(request);
+        assertEquals(200, response.getStatus());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getEntity();
+        assertNull(body.get("serverUrl"));
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertTrue(!rendered.contains("facility.example.orca"));
+        assertTrue(!rendered.contains("admin:pass"));
+        assertTrue(!rendered.contains("secret-prefix"));
+    }
+
+    @Test
+    void putDefaultFacilityRejectsReservedDefaultLiteral() {
+        when(request.getHeader("X-Run-Id")).thenReturn("RUN-DEFAULT");
+        when(request.getRemoteUser()).thenReturn("FACILITY:admin");
+        when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
+
+        try {
+            resource.putDefaultFacility(request, "{\"defaultFacilityId\":\"DeFaUlT\"}");
+            fail("Expected WebApplicationException");
+        } catch (WebApplicationException ex) {
+            assertEquals(400, ex.getResponse().getStatus());
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = (Map<String, Object>) ex.getResponse().getEntity();
+            assertEquals("invalid_request", body.get("error"));
+            assertEquals("defaultFacilityId に予約語 default は指定できません。", body.get("message"));
+        }
+    }
+
+    @Test
     void putDefaultFacilitySeparatesDefaultSwitchFromConfigSave() {
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-DEFAULT");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
@@ -258,5 +347,20 @@ class AdminOrcaConnectionResourceTest {
         Field f = target.getClass().getDeclaredField(name);
         f.setAccessible(true);
         f.set(target, value);
+    }
+
+    private static final class CapturingAuditDispatcher extends SessionAuditDispatcher {
+        private String errorMessage;
+        private Map<String, Object> sanitizedDetails;
+
+        @Override
+        public AuditEventEnvelope record(AuditEventPayload payload, AuditEventEnvelope.Outcome overrideOutcome,
+                String errorCode, String errorMessage) {
+            this.errorMessage = errorMessage;
+            this.sanitizedDetails = AuditDetailSanitizer.sanitizeDetails(
+                    payload != null ? payload.getAction() : null,
+                    payload != null ? payload.getDetails() : null);
+            return null;
+        }
     }
 }

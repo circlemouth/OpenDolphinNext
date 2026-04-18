@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Handler;
@@ -67,7 +68,7 @@ class OrcaTransportSettingsExternalConfigTest {
         logger.setUseParentHandlers(false);
         logger.setLevel(Level.ALL);
         logger.addHandler(handler);
-        String rawBaseUrl = "https://admin:pass@bad host.example.invalid/api";
+        String rawBaseUrl = "https://admin:pass@bad host.example.invalid/secret-prefix";
         try {
             IllegalArgumentException ex = org.junit.jupiter.api.Assertions.assertThrows(
                     IllegalArgumentException.class,
@@ -83,6 +84,7 @@ class OrcaTransportSettingsExternalConfigTest {
             assertFalse(joined.contains(rawBaseUrl));
             assertFalse(joined.contains("admin:pass"));
             assertFalse(joined.contains("bad host.example.invalid"));
+            assertFalse(joined.contains("secret-prefix"));
         } finally {
             logger.removeHandler(handler);
             logger.setLevel(originalLevel);
@@ -96,7 +98,10 @@ class OrcaTransportSettingsExternalConfigTest {
         @Override
         public void publish(LogRecord record) {
             if (record != null && record.getMessage() != null) {
-                messages.add(record.getMessage());
+                Object[] params = record.getParameters();
+                messages.add(params != null && params.length > 0
+                        ? MessageFormat.format(record.getMessage(), params)
+                        : record.getMessage());
             }
         }
 

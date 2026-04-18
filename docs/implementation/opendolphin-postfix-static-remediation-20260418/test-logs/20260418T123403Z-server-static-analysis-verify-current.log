@@ -1,0 +1,1662 @@
+timestamp=2026-04-18T12:34:03Z
+command=mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::staticFieldBase has been called by com.google.inject.internal.aop.HiddenClassDefiner (file:/opt/homebrew/Cellar/maven/3.9.11/libexec/lib/guice-5.1.0-classes.jar)
+WARNING: Please consider reporting this to the maintainers of class com.google.inject.internal.aop.HiddenClassDefiner
+WARNING: sun.misc.Unsafe::staticFieldBase will be removed in a future release
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] opendolphin                                                        [pom]
+[INFO] opendolphin-api-contract                                           [jar]
+[INFO] opendolphin-persistence                                            [jar]
+[INFO] opendolphin-reporting                                              [jar]
+[INFO] opendolphin-server-modernized                                      [war]
+[INFO] 
+[INFO] ----------------------< opendolphin:opendolphin >-----------------------
+[INFO] Building opendolphin 2.7.1                                         [1/5]
+[INFO]   from pom.server-modernized.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] >>> spotbugs:4.9.8.2:check (spotbugs-check) > :spotbugs @ opendolphin >>>
+[INFO] 
+[INFO] --- spotbugs:4.9.8.2:spotbugs (spotbugs) @ opendolphin ---
+[INFO] No files found to run spotbugs; check compile phase has been run.
+[INFO] Skipping com.github.spotbugs:spotbugs-maven-plugin:4.9.8.2:spotbugs report goal
+[INFO] 
+[INFO] <<< spotbugs:4.9.8.2:check (spotbugs-check) < :spotbugs @ opendolphin <<<
+[INFO] 
+[INFO] 
+[INFO] --- spotbugs:4.9.8.2:check (spotbugs-check) @ opendolphin ---
+[INFO] 
+[INFO] --- checkstyle:3.3.1:checkstyle (checkstyle-report) @ opendolphin ---
+[INFO] 
+[INFO] --- pmd:3.21.0:pmd (pmd-report) @ opendolphin ---
+[INFO] Skipping PMD execution
+[INFO] 
+[INFO] ----------------< opendolphin:opendolphin-api-contract >----------------
+[INFO] Building opendolphin-api-contract 2.7.1                            [2/5]
+[INFO]   from api-contract/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-api-contract ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/api-contract/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-api-contract ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-api-contract ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/api-contract/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-api-contract ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ opendolphin-api-contract ---
+[INFO] No tests to run.
+[INFO] 
+[INFO] --- jar:3.4.1:jar (default-jar) @ opendolphin-api-contract ---
+[INFO] 
+[INFO] ----------------< opendolphin:opendolphin-persistence >-----------------
+[INFO] Building opendolphin-persistence 2.7.1                             [3/5]
+[INFO]   from persistence/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-persistence ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/persistence/src/main/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-persistence ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-persistence ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/persistence/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-persistence ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ opendolphin-persistence ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junit4.JUnit4Provider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running open.dolphin.infomodel.ModuleJsonConverterTest
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.323 s -- in open.dolphin.infomodel.ModuleJsonConverterTest
+[INFO] Running open.dolphin.infomodel.TypedDateModelTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in open.dolphin.infomodel.TypedDateModelTest
+[INFO] Running open.dolphin.infomodel.DocumentModelCloneAttachmentTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.infomodel.DocumentModelCloneAttachmentTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.4.1:jar (default-jar) @ opendolphin-persistence ---
+[INFO] 
+[INFO] -----------------< opendolphin:opendolphin-reporting >------------------
+[INFO] Building opendolphin-reporting 2.7.1                               [4/5]
+[INFO]   from reporting/pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-reporting ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/reporting/src/main/resources
+[INFO] Copying 7 resources from ../server-modernized/reporting/templates to target/classes/reporting/templates
+[INFO] Copying 1 resource from ../server-modernized/reporting/glossary to target/classes/reporting/glossary
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-reporting ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-reporting ---
+[INFO] skip non existing resourceDirectory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/reporting/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-reporting ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO] 
+[INFO] --- surefire:3.2.5:test (default-test) @ opendolphin-reporting ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running open.dolphin.reporting.PdfSigningServiceTest
+4月 18, 2026 9:34:08 午後 open.dolphin.reporting.PdfDocumentWriter createBaseFont
+警告: Falling back to bundled HeiseiKakuGo-W5. Install Noto Sans CJK and set OPENDOLPHIN_REPORT_FONT_PATH or opendolphin.reporting.font to embed fonts from /opt/fonts.
+4月 18, 2026 9:34:09 午後 open.dolphin.reporting.PdfDocumentWriter createBaseFont
+警告: Falling back to bundled HeiseiKakuGo-W5. Install Noto Sans CJK and set OPENDOLPHIN_REPORT_FONT_PATH or opendolphin.reporting.font to embed fonts from /opt/fonts.
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+4月 18, 2026 9:34:09 午後 open.dolphin.reporting.PdfDocumentWriter createBaseFont
+警告: Falling back to bundled HeiseiKakuGo-W5. Install Noto Sans CJK and set OPENDOLPHIN_REPORT_FONT_PATH or opendolphin.reporting.font to embed fonts from /opt/fonts.
+4月 18, 2026 9:34:09 午後 open.dolphin.reporting.PdfDocumentWriter createBaseFont
+警告: Falling back to bundled HeiseiKakuGo-W5. Install Noto Sans CJK and set OPENDOLPHIN_REPORT_FONT_PATH or opendolphin.reporting.font to embed fonts from /opt/fonts.
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.567 s -- in open.dolphin.reporting.PdfSigningServiceTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.4.1:jar (default-jar) @ opendolphin-reporting ---
+[INFO] 
+[INFO] -------------< opendolphin:opendolphin-server-modernized >--------------
+[INFO] Building opendolphin-server-modernized 2.7.1                       [5/5]
+[INFO]   from server-modernized/pom.xml
+[INFO] --------------------------------[ war ]---------------------------------
+[INFO] 
+[INFO] --- antrun:3.1.0:run (prepare-static-analysis-dirs) @ opendolphin-server-modernized ---
+[INFO] Executing tasks
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ opendolphin-server-modernized ---
+[INFO] Copying 2 resources from src/main/resources to target/classes
+[INFO] Copying 7 resources from reporting/templates to target/classes/reporting/templates
+[INFO] Copying 1 resource from reporting/glossary to target/classes/reporting/glossary
+[INFO] 
+[INFO] --- antrun:3.1.0:run (clean-generated-flyway-migrations) @ opendolphin-server-modernized ---
+[INFO] Executing tasks
+[INFO]    [delete] Deleting directory /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/classes/db/migration
+[INFO]     [mkdir] Created dir: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/classes/db/migration
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- resources:3.3.1:copy-resources (copy-canonical-flyway-migrations) @ opendolphin-server-modernized ---
+[INFO] Copying 11 resources from tools/flyway/sql to target/classes/db/migration
+[INFO] 
+[INFO] --- compiler:3.11.0:compile (default-compile) @ opendolphin-server-modernized ---
+[INFO] Changes detected - recompiling the module! :source
+[INFO] Compiling 440 source files with javac [debug deprecation release 17] to target/classes
+[WARNING] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/java/open/dolphin/rest/AbstractResource.java:[168,46] com.fasterxml.jackson.databind.SerializationFeatureのWRITE_NULL_MAP_VALUESは推奨されません
+[WARNING] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/java/open/dolphin/rest/orca/LocalPatientMutationResource.java:[165,27] open.dolphin.session.PatientServiceBeanのupdate(open.dolphin.infomodel.PatientModel)は推奨されません
+[WARNING] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/java/open/dolphin/converter/PlistParser.java:[255,42] java.lang.ClassのnewInstance()は推奨されません
+[INFO] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/java/open/dolphin/session/PatientServiceBean.java: 入力ファイルの操作のうち、未チェックまたは安全ではないものがあります。
+[INFO] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/java/open/dolphin/session/PatientServiceBean.java: 詳細は、-Xlint:uncheckedオプションを指定して再コンパイルしてください。
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ opendolphin-server-modernized ---
+[INFO] Copying 80 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.11.0:testCompile (default-testCompile) @ opendolphin-server-modernized ---
+[INFO] Changes detected - recompiling the module! :dependency
+[INFO] Compiling 216 source files with javac [debug deprecation release 17] to target/test-classes
+[WARNING] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/test/java/open/dolphin/rest/PatientModV2OutpatientResourceIdempotencyTest.java:[149,20] open.dolphin.session.PatientServiceBeanのupdate(open.dolphin.infomodel.PatientModel)は推奨されません
+[WARNING] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/test/java/open/dolphin/db/FreshSchemaBaselineTest.java:[273,48] org.hibernate.cfg.JdbcSettingsのDATASOURCEは推奨されません
+[WARNING] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/test/java/open/dolphin/rest/orca/LocalPatientMutationResourceIdempotencyTest.java:[200,20] open.dolphin.session.PatientServiceBeanのupdate(open.dolphin.infomodel.PatientModel)は推奨されません
+[INFO] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/test/java/open/dolphin/session/PatientServiceBeanAddPatientTest.java: 入力ファイルの操作のうち、未チェックまたは安全ではないものがあります。
+[INFO] /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/test/java/open/dolphin/session/PatientServiceBeanAddPatientTest.java: 詳細は、-Xlint:uncheckedオプションを指定して再コンパイルしてください。
+[INFO] 
+[INFO] --- surefire:3.1.2:test (default-test) @ opendolphin-server-modernized ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running open.dolphin.metrics.MeterRegistryProducerTest
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.042 s -- in open.dolphin.metrics.MeterRegistryProducerTest
+[INFO] Running open.dolphin.metrics.RequestMetricsFilterTest
+4月 18, 2026 9:34:19 午後 org.jboss.logmanager.JBossLoggerFinder getLogger
+ERROR: The LogManager accessed before the "java.util.logging.manager" system property was set to "org.jboss.logmanager.LogManager". Results may be unexpected.
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/Users/Hayato/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.12/byte-buddy-agent-1.14.12.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by net.bytebuddy.dynamic.loading.ClassInjector$UsingUnsafe$Dispatcher$CreationAction (file:/Users/Hayato/.m2/repository/net/bytebuddy/byte-buddy/1.14.18/byte-buddy-1.14.18.jar)
+WARNING: Please consider reporting this to the maintainers of class net.bytebuddy.dynamic.loading.ClassInjector$UsingUnsafe$Dispatcher$CreationAction
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+METRIC opendolphin_api_request_total tags=[tag(method=GET), tag(path=/api/token/patient/{id}/{hex}), tag(status=403)] count=1
+METRIC opendolphin_api_error_total tags=[tag(method=GET), tag(path=/api/token/patient/{id}/{hex}), tag(status=403)] count=1
+METRIC opendolphin_auth_reject_total tags=[tag(method=GET), tag(path=/api/token/patient/{id}/{hex}), tag(status=403)] count=1
+METRIC opendolphin_api_request_duration tags=[tag(method=GET), tag(path=/api/token/patient/{id}/{hex}), tag(status=403)] count=1
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.822 s -- in open.dolphin.metrics.RequestMetricsFilterTest
+[INFO] Running open.dolphin.tools.ci.RepoGuardScriptsTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.994 s -- in open.dolphin.tools.ci.RepoGuardScriptsTest
+[INFO] Running open.dolphin.tools.ci.StaticAnalysisConfigContractTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.482 s -- in open.dolphin.tools.ci.StaticAnalysisConfigContractTest
+[INFO] Running open.dolphin.mbean.KanaToAsciiTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.mbean.KanaToAsciiTest
+[INFO] Running open.dolphin.mbean.ServletContextHolderTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in open.dolphin.mbean.ServletContextHolderTest
+[INFO] Running open.dolphin.mbean.ServletStartupSecurityGuardTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.283 s -- in open.dolphin.mbean.ServletStartupSecurityGuardTest
+[INFO] Running open.dolphin.mbean.PVTBuilderTest
+4月 18, 2026 9:34:23 午後 open.dolphin.mbean.PVTBuilderSupport applyClaim
+情報: 受付登録情報受信
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.077 s -- in open.dolphin.mbean.PVTBuilderTest
+[INFO] Running open.dolphin.msg.OidSenderTest
+4月 18, 2026 9:34:23 午後 open.dolphin.msg.OidSender resolveSmtpSettings
+警告: SMTP send skipped: authentication is enabled but username/password are missing.
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.082 s -- in open.dolphin.msg.OidSenderTest
+[INFO] Running open.dolphin.msg.VelocityHelperTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.068 s -- in open.dolphin.msg.VelocityHelperTest
+[INFO] Running open.dolphin.msg.MessagingDefensiveCopyTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.047 s -- in open.dolphin.msg.MessagingDefensiveCopyTest
+[INFO] Running open.dolphin.msg.gateway.ExternalServiceAuditLoggerTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in open.dolphin.msg.gateway.ExternalServiceAuditLoggerTest
+[INFO] Running open.dolphin.msg.gateway.SmsGatewayConfigTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.msg.gateway.SmsGatewayConfigTest
+[INFO] Running open.dolphin.security.auth.AuthSessionRegistryFilterTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.260 s -- in open.dolphin.security.auth.AuthSessionRegistryFilterTest
+[INFO] Running open.dolphin.security.auth.PasswordHashServiceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.610 s -- in open.dolphin.security.auth.PasswordHashServiceTest
+[INFO] Running open.dolphin.security.auth.TrustedProxyPolicyTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.014 s -- in open.dolphin.security.auth.TrustedProxyPolicyTest
+[INFO] Running open.dolphin.security.auth.TrustedRequestContextResolverTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in open.dolphin.security.auth.TrustedRequestContextResolverTest
+[INFO] Running open.dolphin.security.auth.SessionRevocationServiceTest
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:62126/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:25 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:26 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:26 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:26 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:26 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:26 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.183s)
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:62138/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:27 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:28 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.378s)
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.046 s -- in open.dolphin.security.auth.SessionRevocationServiceTest
+[INFO] Running open.dolphin.security.auth.AdminStepUpGuardTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.012 s -- in open.dolphin.security.auth.AdminStepUpGuardTest
+[INFO] Running open.dolphin.security.auth.UserSecurityStateRepositoryTest
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:62153/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:30 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:30 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:30 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:30 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:30 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:30 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.292s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.967 s -- in open.dolphin.security.auth.UserSecurityStateRepositoryTest
+[INFO] Running open.dolphin.security.auth.AuthSessionRegistryRepositoryTest
+4月 18, 2026 9:34:31 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:62425/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:31 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:31 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:31 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:31 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:31 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:31 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:32 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.787s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.947 s -- in open.dolphin.security.auth.AuthSessionRegistryRepositoryTest
+[INFO] Running open.dolphin.security.xml.SecureXmlTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in open.dolphin.security.xml.SecureXmlTest
+[INFO] Running open.dolphin.security.SecurityDefensiveCopyTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.security.SecurityDefensiveCopyTest
+[INFO] Running open.dolphin.security.audit.AuditOutboxRepositoryTest
+4月 18, 2026 9:34:34 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:62810/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:34 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:34 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:34 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:34 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:34 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:34 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:35 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.449s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.302 s -- in open.dolphin.security.audit.AuditOutboxRepositoryTest
+[INFO] Running open.dolphin.security.audit.AuditChainVerifierTest
+4月 18, 2026 9:34:36 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63280/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:36 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:36 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:36 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:36 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:36 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:36 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:37 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.446s)
+4月 18, 2026 9:34:38 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63573/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:38 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:38 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:38 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:38 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:38 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:38 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:39 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.333s)
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.673 s -- in open.dolphin.security.audit.AuditChainVerifierTest
+[INFO] Running open.dolphin.security.audit.AuthoritativeAuditRepositoryManagedTransactionTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.404 s -- in open.dolphin.security.audit.AuthoritativeAuditRepositoryManagedTransactionTest
+[INFO] Running open.dolphin.security.audit.AuditOutboxDispatcherTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.096 s -- in open.dolphin.security.audit.AuditOutboxDispatcherTest
+[INFO] Running open.dolphin.security.audit.AuditHashServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.security.audit.AuditHashServiceTest
+[INFO] Running open.dolphin.security.audit.AuthoritativeAuditRepositoryTest
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63612/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:41 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.356s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.979 s -- in open.dolphin.security.audit.AuthoritativeAuditRepositoryTest
+[INFO] Running open.dolphin.security.audit.AuditTrailServiceTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.security.audit.AuditTrailServiceTest
+[INFO] Running open.dolphin.security.audit.SessionAuditDispatcherTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.035 s -- in open.dolphin.security.audit.SessionAuditDispatcherTest
+[INFO] Running open.dolphin.security.integrity.DocumentIntegrityServiceTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.191 s -- in open.dolphin.security.integrity.DocumentIntegrityServiceTest
+[INFO] Running open.dolphin.security.integrity.DocumentIntegrityConfigTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in open.dolphin.security.integrity.DocumentIntegrityConfigTest
+[INFO] Running open.dolphin.security.totp.TotpSecretProtectorTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.security.totp.TotpSecretProtectorTest
+[INFO] Running open.dolphin.security.totp.TotpHelperTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in open.dolphin.security.totp.TotpHelperTest
+[INFO] Running open.dolphin.security.sql.SqlPlaceholdersTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.security.sql.SqlPlaceholdersTest
+[INFO] Running open.dolphin.runtime.config.ServerConfigurationResolverTest
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.025 s -- in open.dolphin.runtime.config.ServerConfigurationResolverTest
+[INFO] Running open.dolphin.runtime.config.ServerConfigurationValidatorTest
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.082 s -- in open.dolphin.runtime.config.ServerConfigurationValidatorTest
+[INFO] Running open.dolphin.runtime.config.StoragePersistenceContractValidatorTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.037 s -- in open.dolphin.runtime.config.StoragePersistenceContractValidatorTest
+[INFO] Running open.dolphin.runtime.RuntimeConfigurationSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.runtime.RuntimeConfigurationSupportTest
+[INFO] Running open.dolphin.storage.attachment.AttachmentStorageConfigLoaderTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.storage.attachment.AttachmentStorageConfigLoaderTest
+[INFO] Running open.dolphin.storage.attachment.AttachmentStorageManagerTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.182 s -- in open.dolphin.storage.attachment.AttachmentStorageManagerTest
+[INFO] Running open.dolphin.storage.image.ImageStorageManagerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.storage.image.ImageStorageManagerTest
+[INFO] Running open.dolphin.encounter.CanonicalEncounterKeysTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.encounter.CanonicalEncounterKeysTest
+[INFO] Running open.dolphin.encounter.EncounterProjectionRepositoryTest
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63659/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:43 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:44 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.352s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.897 s -- in open.dolphin.encounter.EncounterProjectionRepositoryTest
+[INFO] Running open.dolphin.system.license.FileLicenseRepositoryTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in open.dolphin.system.license.FileLicenseRepositoryTest
+[INFO] Running open.dolphin.db.FreshSchemaBaselineTest
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63685/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:45 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:46 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:46 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:46 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:46 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:46 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:46 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:46 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.334s)
+4月 18, 2026 9:34:46 午後 org.hibernate.Version logVersion
+INFO: HHH000412: Hibernate ORM core version 6.4.4.Final
+4月 18, 2026 9:34:46 午後 org.hibernate.cache.internal.RegionFactoryInitiator initiateService
+INFO: HHH000026: Second-level cache disabled
+4月 18, 2026 9:34:46 午後 org.hibernate.engine.jdbc.dialect.internal.DialectFactoryImpl constructDialect
+WARN: HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+4月 18, 2026 9:34:46 午後 org.hibernate.resource.beans.spi.ManagedBeanRegistryInitiator resolveBeanContainer
+INFO: HHH10005002: No explicit CDI BeanManager reference was passed to Hibernate, but CDI is available on the Hibernate ClassLoader.
+4月 18, 2026 9:34:48 午後 org.hibernate.engine.transaction.jta.platform.internal.JtaPlatformInitiator initiateService
+INFO: HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.578 s -- in open.dolphin.db.FreshSchemaBaselineTest
+[INFO] Running open.dolphin.db.FlywayMigrationConsistencyTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in open.dolphin.db.FlywayMigrationConsistencyTest
+[INFO] Running open.dolphin.build.ServerModernizedPomContractTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.build.ServerModernizedPomContractTest
+[INFO] Running open.dolphin.worker.pvt.PvtSocketWorkerPipelineTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.worker.pvt.PvtSocketWorkerPipelineTest
+[INFO] Running open.dolphin.worker.pvt.PvtReplayToolTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.worker.pvt.PvtReplayToolTest
+[INFO] Running open.dolphin.infomodel.InfoModelCloneTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.infomodel.InfoModelCloneTest
+[INFO] Running open.dolphin.rest.OrcaApiProxySupportTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.OrcaApiProxySupportTest
+[INFO] Running open.dolphin.rest.OperationsHealthResourceTest
+4月 18, 2026 9:34:49 午後 open.dolphin.orca.transport.OrcaTransportRegistry reloadCache
+警告: ORCA transport settings not ready: orca.mode=weborca credentialConfigured=false clientAuthConfigured=true
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.236 s -- in open.dolphin.rest.OperationsHealthResourceTest
+[INFO] Running open.dolphin.rest.KarteDocumentSnapshotContractTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.245 s -- in open.dolphin.rest.KarteDocumentSnapshotContractTest
+[INFO] Running open.dolphin.rest.SecurityHeadersFilterTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.133 s -- in open.dolphin.rest.SecurityHeadersFilterTest
+[INFO] Running open.dolphin.rest.EncounterResourceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.rest.EncounterResourceTest
+[INFO] Running open.dolphin.rest.ChartEventHistoryRepositoryImplTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.rest.ChartEventHistoryRepositoryImplTest
+[INFO] Running open.dolphin.rest.SessionAuthResourceTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.164 s -- in open.dolphin.rest.SessionAuthResourceTest
+[INFO] Running open.dolphin.rest.KarteRevisionResourceAuthorizationTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.251 s -- in open.dolphin.rest.KarteRevisionResourceAuthorizationTest
+[INFO] Running open.dolphin.rest.ScheduleResourceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.rest.ScheduleResourceTest
+[INFO] Running open.dolphin.rest.AdminOrcaUserResourceTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.140 s -- in open.dolphin.rest.AdminOrcaUserResourceTest
+[INFO] Running open.dolphin.rest.AdminMasterUpdateResourceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.063 s -- in open.dolphin.rest.AdminMasterUpdateResourceTest
+[INFO] Running open.dolphin.rest.AdminAccessResourceTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.258 s -- in open.dolphin.rest.AdminAccessResourceTest
+[INFO] Running open.dolphin.rest.AdminOrcaConnectionTestSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.068 s -- in open.dolphin.rest.AdminOrcaConnectionTestSupportTest
+[INFO] Running open.dolphin.rest.PatientModV2OutpatientSupportTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.211 s -- in open.dolphin.rest.PatientModV2OutpatientSupportTest
+[INFO] Running open.dolphin.rest.KarteRevisionSnapshotContractTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in open.dolphin.rest.KarteRevisionSnapshotContractTest
+[INFO] Running open.dolphin.rest.AdminOrcaUserLinkResourceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.rest.AdminOrcaUserLinkResourceTest
+[INFO] Running open.dolphin.rest.SystemResourceTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.110 s -- in open.dolphin.rest.SystemResourceTest
+[INFO] Running open.dolphin.rest.KarteResourceAuthorizationTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.103 s -- in open.dolphin.rest.KarteResourceAuthorizationTest
+[INFO] Running open.dolphin.rest.FacilitySettingContractTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.054 s -- in open.dolphin.rest.FacilitySettingContractTest
+[INFO] Running open.dolphin.rest.ChartEventHistorySettingsResolverTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.ChartEventHistorySettingsResolverTest
+[INFO] Running open.dolphin.rest.AdminConfigResourceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.AdminConfigResourceTest
+[INFO] Running open.dolphin.rest.ReceptionRealtimeSseSupportTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.021 s -- in open.dolphin.rest.ReceptionRealtimeSseSupportTest
+[INFO] Running open.dolphin.rest.KarteResourceDocinfoAllPagingTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.rest.KarteResourceDocinfoAllPagingTest
+[INFO] Running open.dolphin.rest.support.LegacyOrcaResponseMapperTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in open.dolphin.rest.support.LegacyOrcaResponseMapperTest
+[INFO] Running open.dolphin.rest.SpaIndexSecurityFilterTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.117 s -- in open.dolphin.rest.SpaIndexSecurityFilterTest
+[INFO] Running open.dolphin.rest.PvtWorkerHealthResourceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.PvtWorkerHealthResourceTest
+[INFO] Running open.dolphin.rest.AdminOrcaCapabilitiesResourceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.AdminOrcaCapabilitiesResourceTest
+[INFO] Running open.dolphin.rest.PatientImageAttachmentReferenceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s -- in open.dolphin.rest.PatientImageAttachmentReferenceTest
+[INFO] Running open.dolphin.rest.OrcaReportDocumentResourceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.rest.OrcaReportDocumentResourceTest
+[INFO] Running open.dolphin.rest.LogFilterTest
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: unknown: /openDolphin/api/admin/token/identity traceId=client-trace-id
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: unknown: /openDolphin/api/operations/readiness traceId=32c99b7a-da77-42df-bfe5-815138f03aab
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logAccessResponse
+情報: access method=GET uri=/protected status=0 elapsedMs=2 traceId=949d398a-71ab-4669-a678-30d7b581187b requestId=949d398a-71ab-4669-a678-30d7b581187b runId=- userId=doctor01 facilityId=F001 remoteAddr=192.0.2.70
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: unknown: /openDolphin/resources/protected traceId=df29a646-3a2c-4d6e-b1a0-2b8b4ebb20f5
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: doctor01: /openDolphin/resources/protected traceId=256fb435-6b06-49ab-a35b-8e55175411d3
+Captured unauthorized log: WARNING Unauthorized user: unknown: /openDolphin/resources/protected traceId=5ad3cb9b-b140-433c-8bea-bc643c3313f1
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logAccessResponse
+警告: access method=GET uri=/error status=400 elapsedMs=9 traceId=314bceec-5ae7-44d4-92fe-a8a3b2ab8a72 requestId=314bceec-5ae7-44d4-92fe-a8a3b2ab8a72 runId=- userId=doctor01 facilityId=F001 remoteAddr=192.0.2.50
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logAccessResponse
+情報: access method=POST uri=dmin/token/identity status=0 elapsedMs=0 traceId=trace-authenticated requestId=trace-authenticated runId=- userId=user01 facilityId=F001 remoteAddr=192.0.2.12
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: unknown: /openDolphin/resources/protected traceId=d70c4b09-9002-42b5-b34b-65afca667315
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: unknown: /openDolphin/resources/protected traceId=91d858c0-0632-4039-8652-2096e297b24a
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: unknown: /openDolphin/resources/protected traceId=304b7280-9e70-4cb3-aeac-049db0b831d9
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logUnauthorized
+警告: Unauthorized user: unknown: /openDolphin/resources/protected traceId=f73b09fc-5fbf-42c5-ae46-bd9f79d502b0
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logAccessResponse
+情報: access method=GET uri=ealth/readiness status=0 elapsedMs=0 traceId=63380c8a-9ea6-41b0-9921-4a2ff616cca9 requestId=63380c8a-9ea6-41b0-9921-4a2ff616cca9 runId=- userId=- facilityId=- remoteAddr=192.0.2.22
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logAccessResponse
+情報: access method=POST uri=ession/login status=0 elapsedMs=0 traceId=1a8da283-03cf-4ebf-b738-da9661a28bd2 requestId=1a8da283-03cf-4ebf-b738-da9661a28bd2 runId=- userId=- facilityId=- remoteAddr=192.0.2.21
+4月 18, 2026 9:34:51 午後 open.dolphin.rest.LogFilter logAccessResponse
+情報: access method=GET uri=/user/F001:session-user status=0 elapsedMs=1 traceId=506254f3-0bc6-405d-8038-b281287d253e requestId=506254f3-0bc6-405d-8038-b281287d253e runId=- userId=session-user facilityId=F001 remoteAddr=192.0.2.77
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.118 s -- in open.dolphin.rest.LogFilterTest
+[INFO] Running open.dolphin.rest.PatientImagesResourceFeatureHeaderTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.114 s -- in open.dolphin.rest.PatientImagesResourceFeatureHeaderTest
+[INFO] Running open.dolphin.rest.LocalDiagnosisResourceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.rest.LocalDiagnosisResourceTest
+[INFO] Running open.dolphin.rest.OrcaGatewayExceptionMapperTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.OrcaGatewayExceptionMapperTest
+[INFO] Running open.dolphin.rest.KarteDocumentWriteResourceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.KarteDocumentWriteResourceTest
+[INFO] Running open.dolphin.rest.ChartEventStreamResourceTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.221 s -- in open.dolphin.rest.ChartEventStreamResourceTest
+[INFO] Running open.dolphin.rest.PatientImagesResourceTest
+[INFO] Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.218 s -- in open.dolphin.rest.PatientImagesResourceTest
+[INFO] Running open.dolphin.rest.PublicRouteInventoryContractTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.042 s -- in open.dolphin.rest.PublicRouteInventoryContractTest
+[INFO] Running open.dolphin.rest.StampResourceTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.119 s -- in open.dolphin.rest.StampResourceTest
+[INFO] Running open.dolphin.rest.PatientModV2OutpatientResourceIdempotencyTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.PatientModV2OutpatientResourceIdempotencyTest
+[INFO] Running open.dolphin.rest.OrcaPatientApiResourceRunIdTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.rest.OrcaPatientApiResourceRunIdTest
+[INFO] Running open.dolphin.rest.AbstractResourceErrorResponseTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.AbstractResourceErrorResponseTest
+[INFO] Running open.dolphin.rest.ChartEventSseSupportTest
+4月 18, 2026 9:34:52 午後 open.dolphin.rest.ChartEventSseSupport register
+警告: SSE history gap detected for facility facility-001, client client-2: lastEventId=0, oldestHistoryId=1
+4月 18, 2026 9:34:52 午後 open.dolphin.rest.ChartEventSseSupport register
+警告: SSE history gap detected for facility facility-001, client client-1: lastEventId=1, oldestHistoryId=10
+4月 18, 2026 9:34:52 午後 open.dolphin.rest.ChartEventSseSupport broadcast
+警告: Failed to persist chart-event history
+java.lang.IllegalStateException: history store unavailable
+	at open.dolphin.rest.ChartEventSseSupportTest$FailingHistoryRepository.save(ChartEventSseSupportTest.java:405)
+	at open.dolphin.rest.ChartEventSseSupport.broadcast(ChartEventSseSupport.java:201)
+	at open.dolphin.rest.ChartEventSseSupportTest.broadcastContinuesStreamingWhenHistorySaveFails(ChartEventSseSupportTest.java:299)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:728)
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:60)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:131)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:156)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:147)
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:103)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:93)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:106)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:64)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:45)
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:37)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:92)
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:86)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$7(TestMethodTestDescriptor.java:218)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:214)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:139)
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:69)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:151)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1604)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:41)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$6(NodeTestTask.java:155)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$8(NodeTestTask.java:141)
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:137)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$9(NodeTestTask.java:139)
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:73)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:138)
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:95)
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:35)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:57)
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:54)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:198)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:169)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:93)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:58)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:141)
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:57)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:103)
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:85)
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:47)
+	at org.apache.maven.surefire.junitplatform.LazyLauncher.execute(LazyLauncher.java:56)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:184)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:148)
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:122)
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385)
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162)
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495)
+
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.138 s -- in open.dolphin.rest.ChartEventSseSupportTest
+[INFO] Running open.dolphin.rest.ChartEventHistoryMaintenanceServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.ChartEventHistoryMaintenanceServiceTest
+[INFO] Running open.dolphin.rest.BlockWrapperTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.BlockWrapperTest
+[INFO] Running open.dolphin.rest.PatientImagesSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.PatientImagesSupportTest
+[INFO] Running open.dolphin.rest.LogoutResourceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.rest.LogoutResourceTest
+[INFO] Running open.dolphin.rest.KarteRevisionDocumentResponseJsonTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.rest.KarteRevisionDocumentResponseJsonTest
+[INFO] Running open.dolphin.rest.masterupdate.MasterUpdatePayloadsTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.masterupdate.MasterUpdatePayloadsTest
+[INFO] Running open.dolphin.rest.masterupdate.MasterUpdateSchedulerTest
+4月 18, 2026 9:34:52 午後 open.dolphin.rest.masterupdate.MasterUpdateScheduler start
+情報: Master update scheduler is disabled. Set MASTER_UPDATE_SCHEDULER_ENABLED=true to enable.
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.masterupdate.MasterUpdateSchedulerTest
+[INFO] Running open.dolphin.rest.masterupdate.MasterUpdateServiceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.masterupdate.MasterUpdateServiceTest
+[INFO] Running open.dolphin.rest.WebXmlEndpointExposureTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.rest.WebXmlEndpointExposureTest
+[INFO] Running open.dolphin.rest.AdminOrcaConnectionResourceTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.078 s -- in open.dolphin.rest.AdminOrcaConnectionResourceTest
+[INFO] Running open.dolphin.rest.CsrfProtectionFilterTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.013 s -- in open.dolphin.rest.CsrfProtectionFilterTest
+[INFO] Running open.dolphin.rest.KarteResourceDocumentContractTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.096 s -- in open.dolphin.rest.KarteResourceDocumentContractTest
+[INFO] Running open.dolphin.rest.ReceptionRealtimeStreamResourceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.rest.ReceptionRealtimeStreamResourceTest
+[INFO] Running open.dolphin.rest.LetterResourceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.044 s -- in open.dolphin.rest.LetterResourceTest
+[INFO] Running open.dolphin.rest.orca.LocalOrderBundleResourceTest
+[INFO] Tests run: 28, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.060 s -- in open.dolphin.rest.orca.LocalOrderBundleResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaPatientBatchResourceTest
+[INFO] Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.034 s -- in open.dolphin.rest.orca.OrcaPatientBatchResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaDiseaseMirrorSyncSupportTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.orca.OrcaDiseaseMirrorSyncSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaBillingCorrectionScenarioSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.rest.orca.OrcaBillingCorrectionScenarioSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderBundleRecommendationSupportTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.orca.OrcaOrderBundleRecommendationSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderBundle600SubtypeSupportTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.091 s -- in open.dolphin.rest.orca.OrcaOrderBundle600SubtypeSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderInputSetMetadataSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.orca.OrcaOrderInputSetMetadataSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaChartSupportResourceTest
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.028 s -- in open.dolphin.rest.orca.OrcaChartSupportResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderBundleMutationSupportTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.orca.OrcaOrderBundleMutationSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaChartSupportSupportTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in open.dolphin.rest.orca.OrcaChartSupportSupportTest
+[INFO] Running open.dolphin.rest.orca.LocalOrderBundleResource600Test
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in open.dolphin.rest.orca.LocalOrderBundleResource600Test
+[INFO] Running open.dolphin.rest.orca.LocalChartSubjectiveResourceTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.024 s -- in open.dolphin.rest.orca.LocalChartSubjectiveResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaMedicalClassCatalogTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in open.dolphin.rest.orca.OrcaMedicalClassCatalogTest
+[INFO] Running open.dolphin.rest.orca.OrcaLiveDiseaseMasterReadServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.039 s -- in open.dolphin.rest.orca.OrcaLiveDiseaseMasterReadServiceTest
+[INFO] Running open.dolphin.rest.orca.OrcaVisitResourceRealtimeTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.orca.OrcaVisitResourceRealtimeTest
+[INFO] Running open.dolphin.rest.orca.LocalChartMedicalResourceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in open.dolphin.rest.orca.LocalChartMedicalResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderBundleFetchSupportTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.rest.orca.OrcaOrderBundleFetchSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderBundleAggregationSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in open.dolphin.rest.orca.OrcaOrderBundleAggregationSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaPrescriptionOrderImportSupportTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.022 s -- in open.dolphin.rest.orca.OrcaPrescriptionOrderImportSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderInteractionReadServiceTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.rest.orca.OrcaOrderInteractionReadServiceTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderInputSetSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.orca.OrcaOrderInputSetSupportTest
+[INFO] Running open.dolphin.rest.orca.LocalPatientMutationResourceIdempotencyTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.orca.LocalPatientMutationResourceIdempotencyTest
+[INFO] Running open.dolphin.rest.orca.LocalPrescriptionOrderResourceTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.064 s -- in open.dolphin.rest.orca.LocalPrescriptionOrderResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderBundleMutationExecutionSupportTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.rest.orca.OrcaOrderBundleMutationExecutionSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaAppointmentResourceTest
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.037 s -- in open.dolphin.rest.orca.OrcaAppointmentResourceTest
+[INFO] Running open.dolphin.rest.orca.LocalPatientSearchResourceTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.rest.orca.LocalPatientSearchResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaOrderBundleRequestSupportTest
+[INFO] Tests run: 15, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.rest.orca.OrcaOrderBundleRequestSupportTest
+[INFO] Running open.dolphin.rest.orca.OrcaVisitResourceTest
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.176 s -- in open.dolphin.rest.orca.OrcaVisitResourceTest
+[INFO] Running open.dolphin.rest.orca.OrcaPatientSyncResourceTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.340 s -- in open.dolphin.rest.orca.OrcaPatientSyncResourceTest
+[INFO] Running open.dolphin.rest.UserResourceTest
+4月 18, 2026 9:34:53 午後 open.dolphin.rest.UserResource putUser
+警告: Role update is forbidden for non-admin:F001:user01
+4月 18, 2026 9:34:53 午後 open.dolphin.rest.UserResource putUser
+警告: User ID is different:F001:user01,F001:user02
+4月 18, 2026 9:34:53 午後 open.dolphin.rest.UserResource getUserName
+警告: Denied user name read for actor=F001:user01
+4月 18, 2026 9:34:53 午後 open.dolphin.rest.UserResource getUser
+警告: Denied user read for actor=F001:user01
+[INFO] Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.035 s -- in open.dolphin.rest.UserResourceTest
+[INFO] Running open.dolphin.rest.LocalMedicalSummaryResourceTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in open.dolphin.rest.LocalMedicalSummaryResourceTest
+[INFO] Running open.dolphin.orca.transport.OrcaHttpClientRequestTest
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaHttpClient logOrcaSummary
+情報: orca.http requestId=req-metrics-1 method=GET path=/api01rv2/systeminfv2 status=200 apiResult=00 durationMs=3
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaHttpClient logOrcaSummary
+情報: orca.http requestId=req-1 method=POST path=/api01rv2/pusheventgetv2 status=200 apiResult=0000 durationMs=0
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaHttpClient logOrcaSummary
+情報: orca.http requestId=req-2 method=POST path=/api01rv2/systeminfv2 status=200 apiResult=00 durationMs=0
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.015 s -- in open.dolphin.orca.transport.OrcaHttpClientRequestTest
+[INFO] Running open.dolphin.orca.transport.OrcaHttpClientLogTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.orca.transport.OrcaHttpClientLogTest
+[INFO] Running open.dolphin.orca.transport.OrcaHttpClientSupportTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.orca.transport.OrcaHttpClientSupportTest
+[INFO] Running open.dolphin.orca.transport.OrcaTransportRegistryTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.orca.transport.OrcaTransportRegistryTest
+[INFO] Running open.dolphin.orca.transport.RestOrcaTransportTest
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaTransportRegistry reloadCache
+警告: ORCA transport settings not ready: orca.mode=weborca credentialConfigured=false clientAuthConfigured=true
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.RestOrcaTransport reloadSettings
+情報: ORCA transport settings reloaded: orca.mode=weborca credentialConfigured=true clientAuthConfigured=false facilityId=F001
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.RestOrcaTransport reloadSettings
+情報: ORCA transport settings reloaded: orca.mode=weborca credentialConfigured=true clientAuthConfigured=false facilityId=F001
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.RestOrcaTransport reloadSettings
+情報: ORCA transport settings reloaded: orca.mode=weborca credentialConfigured=true clientAuthConfigured=false facilityId=F001
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.RestOrcaTransport reloadSettings
+情報: ORCA transport settings reloaded: orca.mode=weborca credentialConfigured=true clientAuthConfigured=false facilityId=F001
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in open.dolphin.orca.transport.RestOrcaTransportTest
+[INFO] Running open.dolphin.orca.transport.OrcaEndpointStubResourceTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.orca.transport.OrcaEndpointStubResourceTest
+[INFO] Running open.dolphin.orca.transport.OrcaTransportSettingsSecurityPolicyTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.orca.transport.OrcaTransportSettingsSecurityPolicyTest
+[INFO] Running open.dolphin.orca.transport.OrcaTransportSettingsExternalConfigTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.orca.transport.OrcaTransportSettingsExternalConfigTest
+[INFO] Running open.dolphin.orca.transport.OrcaHttpClientResilienceTest
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaHttpClient logOrcaSummary
+情報: orca.http requestId=req-r1 method=GET path=/api01rv2/systeminfv2 status=503 apiResult=E900 durationMs=0
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaHttpClient logOrcaSummary
+情報: orca.http requestId=req-r1 method=GET path=/api01rv2/systeminfv2 status=200 apiResult=0000 durationMs=0
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaHttpClient logOrcaSummary
+情報: orca.http requestId=req-c2 method=GET path=/api01rv2/systeminfv2 status=200 apiResult=0000 durationMs=122
+4月 18, 2026 9:34:53 午後 open.dolphin.orca.transport.OrcaHttpClient logOrcaSummary
+情報: orca.http requestId=req-c1 method=GET path=/api01rv2/systeminfv2 status=200 apiResult=0000 durationMs=124
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.181 s -- in open.dolphin.orca.transport.OrcaHttpClientResilienceTest
+[INFO] Running open.dolphin.orca.converter.OrcaXmlMapperPatientDetailParsingTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.orca.converter.OrcaXmlMapperPatientDetailParsingTest
+[INFO] Running open.dolphin.orca.converter.OrcaXmlMapperTypedTextParsingTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.orca.converter.OrcaXmlMapperTypedTextParsingTest
+[INFO] Running open.dolphin.orca.config.OrcaConnectionConfigStoreTest
+[INFO] Tests run: 13, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.113 s -- in open.dolphin.orca.config.OrcaConnectionConfigStoreTest
+[INFO] Running open.dolphin.orca.read.OrcaOrderInputSetReadServiceTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in open.dolphin.orca.read.OrcaOrderInputSetReadServiceTest
+[INFO] Running open.dolphin.orca.adapter.DefaultOrcaPatientAdapterStubIntegrationTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in open.dolphin.orca.adapter.DefaultOrcaPatientAdapterStubIntegrationTest
+[INFO] Running open.dolphin.orca.push.OrcaPushEventRouterTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.orca.push.OrcaPushEventRouterTest
+[INFO] Running open.dolphin.orca.push.OrcaPushEventInboxStoreTest
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63717/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:55 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.316s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.052 s -- in open.dolphin.orca.push.OrcaPushEventInboxStoreTest
+[INFO] Running open.dolphin.orca.push.MedicalPushHandlerTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.orca.push.MedicalPushHandlerTest
+[INFO] Running open.dolphin.orca.push.ReceptionPushHandlerTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.759 s -- in open.dolphin.orca.push.ReceptionPushHandlerTest
+[INFO] Running open.dolphin.orca.OrcaTrialIntegrationTest
+[WARNING] Tests run: 3, Failures: 0, Errors: 0, Skipped: 3, Time elapsed: 0 s -- in open.dolphin.orca.OrcaTrialIntegrationTest
+[INFO] Running open.dolphin.orca.sync.OrcaPatientSyncServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.orca.sync.OrcaPatientSyncServiceTest
+[INFO] Running open.dolphin.orca.sync.OrcaPatientSyncPlannerTest
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63746/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:34:59 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.481s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.221 s -- in open.dolphin.orca.sync.OrcaPatientSyncPlannerTest
+[INFO] Running open.dolphin.orca.sync.OrcaPatientSyncRunnerTest
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63766/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:35:01 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.448s)
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63787/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:03 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:35:04 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:35:04 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:35:04 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:35:04 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:35:04 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:35:04 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.465s)
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.300 s -- in open.dolphin.orca.sync.OrcaPatientSyncRunnerTest
+[INFO] Running open.dolphin.orca.sync.OrcaSyncRunStoreTest
+4月 18, 2026 9:35:05 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63803/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:35:05 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:35:05 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:35:05 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:35:05 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:35:05 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:35:05 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:35:06 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.440s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.096 s -- in open.dolphin.orca.sync.OrcaSyncRunStoreTest
+[INFO] Running open.dolphin.orca.service.DefaultOrcaLiveGatewayTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in open.dolphin.orca.service.DefaultOrcaLiveGatewayTest
+[INFO] Running open.dolphin.orca.service.OrcaWrapperServiceFailClosedTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in open.dolphin.orca.service.OrcaWrapperServiceFailClosedTest
+[INFO] Running open.dolphin.orca.service.OrcaLiveGatewaySupportTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.orca.service.OrcaLiveGatewaySupportTest
+[INFO] Running open.dolphin.orca.service.OrcaLiveGatewayMutationSupportTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in open.dolphin.orca.service.OrcaLiveGatewayMutationSupportTest
+[INFO] Running open.dolphin.orca.service.OrcaLiveGatewayPatientIdListPayloadTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.orca.service.OrcaLiveGatewayPatientIdListPayloadTest
+[INFO] Running open.dolphin.PersistenceXmlEntityRegistrationTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.076 s -- in open.dolphin.PersistenceXmlEntityRegistrationTest
+[INFO] Running open.dolphin.session.SessionMessageHandlerTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.117 s -- in open.dolphin.session.SessionMessageHandlerTest
+[INFO] Running open.dolphin.session.KarteDocumentBulkFetchSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.session.KarteDocumentBulkFetchSupportTest
+[INFO] Running open.dolphin.session.KarteServiceBeanDocPkTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.113 s -- in open.dolphin.session.KarteServiceBeanDocPkTest
+[INFO] Running open.dolphin.session.PatientServiceBeanSyncPatientUpsertTest
+4月 18, 2026 9:35:06 午後 open.dolphin.session.PatientServiceBeanSupport alignSyncPatientSequence
+警告: Aligned opendolphin.hibernate_sequence before patient sync upsert (from=90, to=102)
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.045 s -- in open.dolphin.session.PatientServiceBeanSyncPatientUpsertTest
+[INFO] Running open.dolphin.session.KarteServiceBeanGetDocumentsBulkFetchTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.010 s -- in open.dolphin.session.KarteServiceBeanGetDocumentsBulkFetchTest
+[INFO] Running open.dolphin.session.PatientServiceBeanSearchLoadFaultTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.099 s -- in open.dolphin.session.PatientServiceBeanSearchLoadFaultTest
+[INFO] Running open.dolphin.session.PVTServiceBeanPaginationTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.session.PVTServiceBeanPaginationTest
+[INFO] Running open.dolphin.session.KarteRevisionServiceBeanAttachmentCloneTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.session.KarteRevisionServiceBeanAttachmentCloneTest
+[INFO] Running open.dolphin.session.KarteServiceBeanRevisionBulkUpdateTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.dolphin.session.KarteServiceBeanRevisionBulkUpdateTest
+[INFO] Running open.dolphin.session.PatientImageServiceBeanTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in open.dolphin.session.PatientImageServiceBeanTest
+[INFO] Running open.dolphin.session.ChartEventServiceBeanPvtStateEventTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.session.ChartEventServiceBeanPvtStateEventTest
+[INFO] Running open.dolphin.session.KarteMedicationSummarySupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.session.KarteMedicationSummarySupportTest
+[INFO] Running open.dolphin.session.PatientServiceBeanAddPatientTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.session.PatientServiceBeanAddPatientTest
+[INFO] Running open.dolphin.session.KarteLegacyArtifactSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in open.dolphin.session.KarteLegacyArtifactSupportTest
+[INFO] Running open.dolphin.session.MessageSenderTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.046 s -- in open.dolphin.session.MessageSenderTest
+[INFO] Running open.dolphin.session.UserServiceBeanPasswordTest
+4月 18, 2026 9:35:07 午後 open.dolphin.session.UserServiceBean authenticateWithPolicy
+情報: Authentication rejected for F001:user01: password mismatch
+4月 18, 2026 9:35:07 午後 open.dolphin.session.UserServiceBean authenticateWithPolicy
+警告: Authentication rejected for F001:user01: stored password format is not current
+4月 18, 2026 9:35:07 午後 open.dolphin.session.UserServiceBean authenticateWithPolicy
+警告: Authentication rejected for F001:user01: stored password format is not current
+4月 18, 2026 9:35:08 午後 open.dolphin.session.UserServiceBean authenticateWithPolicy
+警告: Authentication rejected for F001:user01: stored password format is not current
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.377 s -- in open.dolphin.session.UserServiceBeanPasswordTest
+[INFO] Running open.dolphin.session.KarteServiceBeanGetKarteTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.009 s -- in open.dolphin.session.KarteServiceBeanGetKarteTest
+[INFO] Running open.dolphin.session.ChartEventServiceBeanInitializationTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.007 s -- in open.dolphin.session.ChartEventServiceBeanInitializationTest
+[INFO] Running open.dolphin.session.SystemServiceBeanBulkAggregationTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.027 s -- in open.dolphin.session.SystemServiceBeanBulkAggregationTest
+[INFO] Running open.dolphin.session.KarteServiceBeanBatchWriteTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.076 s -- in open.dolphin.session.KarteServiceBeanBatchWriteTest
+[INFO] Running open.dolphin.session.PatientServiceBeanGetAllPatientPagingTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.dolphin.session.PatientServiceBeanGetAllPatientPagingTest
+[INFO] Running open.dolphin.session.SystemServiceBeanAddFacilityAdminTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.session.SystemServiceBeanAddFacilityAdminTest
+[INFO] Running open.dolphin.session.ChartEventServiceBeanNotifyEventTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 s -- in open.dolphin.session.ChartEventServiceBeanNotifyEventTest
+[INFO] Running open.dolphin.session.PatientServiceBeanPurposeSearchTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.session.PatientServiceBeanPurposeSearchTest
+[INFO] Running open.dolphin.session.NLabServiceBeanCreateTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.session.NLabServiceBeanCreateTest
+[INFO] Running open.dolphin.session.PVTServiceBeanClinicalTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.dolphin.session.PVTServiceBeanClinicalTest
+[INFO] Running open.dolphin.session.PVTServiceBeanAddPvtTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in open.dolphin.session.PVTServiceBeanAddPvtTest
+[INFO] Running open.orca.rest.OrcaDepartmentInfoSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.orca.rest.OrcaDepartmentInfoSupportTest
+[INFO] Running open.orca.rest.OrcaDiseaseQuerySupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.003 s -- in open.orca.rest.OrcaDiseaseQuerySupportTest
+[INFO] Running open.orca.rest.EtensuRefactorSupportTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.orca.rest.EtensuRefactorSupportTest
+[INFO] Running open.orca.rest.OrcaMasterResourceTest
+[INFO] Tests run: 61, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.040 s -- in open.orca.rest.OrcaMasterResourceTest
+[INFO] Running open.orca.rest.MasterSearchKeywordSupportTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.002 s -- in open.orca.rest.MasterSearchKeywordSupportTest
+[INFO] Running open.orca.rest.OrcaStampSupportTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.orca.rest.OrcaStampSupportTest
+[INFO] Running open.orca.rest.OrcaMasterQuerySupportTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.orca.rest.OrcaMasterQuerySupportTest
+[INFO] Running open.orca.rest.OrcaMasterSchemaValidatorTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in open.orca.rest.OrcaMasterSchemaValidatorTest
+[INFO] Running open.orca.rest.OrcaMasterRequestSupportTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.orca.rest.OrcaMasterRequestSupportTest
+[INFO] Running open.orca.rest.OrcaLegacyRequestSupportTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 s -- in open.orca.rest.OrcaLegacyRequestSupportTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[WARNING] Tests run: 925, Failures: 0, Errors: 0, Skipped: 3
+[INFO] 
+[INFO] 
+[INFO] --- war:3.4.0:war (default-war) @ opendolphin-server-modernized ---
+[INFO] Packaging webapp
+[INFO] Assembling webapp [opendolphin-server-modernized] in [/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/opendolphin-server]
+[INFO] Processing war project
+[INFO] Copying webapp resources [/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/src/main/webapp]
+[INFO] Building war: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/server-modernized/target/opendolphin-server.war
+[INFO] 
+[INFO] --- failsafe:3.1.2:integration-test (default) @ opendolphin-server-modernized ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running open.dolphin.tools.ci.RepoGuardScriptsIT
+4月 18, 2026 9:35:11 午後 org.jboss.logmanager.JBossLoggerFinder getLogger
+ERROR: The LogManager accessed before the "java.util.logging.manager" system property was set to "org.jboss.logmanager.LogManager". Results may be unexpected.
+[INFO] Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 16.25 s -- in open.dolphin.tools.ci.RepoGuardScriptsIT
+[INFO] Running open.dolphin.orca.sync.OrcaPatientSyncStateStoreIT
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+4月 18, 2026 9:35:28 午後 open.dolphin.orca.sync.OrcaPatientSyncStateStore markSuccess
+警告: Failed to persist ORCA patient sync success state. facilityId=F001 err=ERROR: relation "opendolphin.d_orca_patient_sync_state" does not exist
+  位置: 13
+4月 18, 2026 9:35:28 午後 open.dolphin.orca.sync.OrcaPatientSyncStateStore loadFacilityState
+警告: Failed to load ORCA patient sync state. facilityId=F001 err=ERROR: relation "opendolphin.d_orca_patient_sync_state" does not exist
+  位置: 71
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.FlywayExecutor execute
+情報: Database: jdbc:postgresql://localhost:63829/postgres (PostgreSQL 14.15)
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.database.base.Schema create
+情報: Creating schema "opendolphin" ...
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.schemahistory.JdbcTableSchemaHistory create
+情報: Creating Schema History table "opendolphin"."flyway_schema_history" ...
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate migrateGroup
+情報: Current version of schema "opendolphin": null
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0300 - baseline fresh schema"
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: schema "opendolphin" already exists, skipping (SQL State: 42P06 - Error Code: 0)
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "d_users_seq" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0301 - orca patient sync state store"
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0302 - module payload table"
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor outputQueryResult
+情報: +----------+
+| ?column? |
++----------+
+| 1        |
++----------+
+
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0303 - performance index tuning"
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0304 - runtime state store"
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0305 - orca push runtime tables"
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0306 - security session audit tables"
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: relation "idx_audit_event_trace_id" already exists, skipping (SQL State: 42P07 - Error Code: 0)
+4月 18, 2026 9:35:28 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0307 - schedule encounter runtime tables"
+4月 18, 2026 9:35:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0308 - orca user link facility native"
+4月 18, 2026 9:35:29 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+情報: DB: index "uq_d_orca_user_link_orca_user_id" does not exist, skipping
+4月 18, 2026 9:35:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0309 - health insurance json compat"
+4月 18, 2026 9:35:29 午後 org.flywaydb.core.internal.sqlscript.DefaultSqlScriptExecutor printWarnings
+警告: DB: column "bean_json" of relation "d_health_insurance" already exists, skipping (SQL State: 42701 - Error Code: 0)
+4月 18, 2026 9:35:29 午後 org.flywaydb.core.internal.command.DbMigrate doMigrateGroup
+情報: Migrating schema "opendolphin" to version "0310 - storage object metadata"
+4月 18, 2026 9:35:29 午後 org.flywaydb.core.internal.command.DbMigrate logSummary
+情報: Successfully applied 11 migrations to schema "opendolphin", now at version v0310 (execution time 00:00.269s)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.916 s -- in open.dolphin.orca.sync.OrcaPatientSyncStateStoreIT
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- antrun:3.1.0:run (run-ci-contract-checks) @ opendolphin-server-modernized ---
+[INFO] Executing tasks
+[INFO] Executed tasks
+[INFO] 
+[INFO] --- failsafe:3.1.2:verify (default) @ opendolphin-server-modernized ---
+[INFO] 
+[INFO] --- spotbugs:4.9.8.2:spotbugs (spotbugs-analyze) @ opendolphin-server-modernized ---
+[INFO] Fork Value is true
+[INFO] Done SpotBugs Analysis....
+[INFO] Skipping com.github.spotbugs:spotbugs-maven-plugin:4.9.8.2:spotbugs report goal
+[INFO] 
+[INFO] >>> spotbugs:4.9.8.2:check (spotbugs-check) > :spotbugs @ opendolphin-server-modernized >>>
+[INFO] 
+[INFO] --- spotbugs:4.9.8.2:spotbugs (spotbugs) @ opendolphin-server-modernized ---
+[INFO] Fork Value is true
+[INFO] Done SpotBugs Analysis....
+[INFO] Skipping com.github.spotbugs:spotbugs-maven-plugin:4.9.8.2:spotbugs report goal
+[INFO] 
+[INFO] <<< spotbugs:4.9.8.2:check (spotbugs-check) < :spotbugs @ opendolphin-server-modernized <<<
+[INFO] 
+[INFO] 
+[INFO] --- spotbugs:4.9.8.2:check (spotbugs-check) @ opendolphin-server-modernized ---
+[INFO] BugInstance size is 0
+[INFO] Error size is 0
+[INFO] No errors/warnings found
+[INFO] 
+[INFO] --- checkstyle:3.3.1:checkstyle (checkstyle-report) @ opendolphin-server-modernized ---
+[INFO] 
+[INFO] --- pmd:3.21.0:pmd (pmd-report) @ opendolphin-server-modernized ---
+[INFO] Skipping PMD execution
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for opendolphin 2.7.1:
+[INFO] 
+[INFO] opendolphin ........................................ SUCCESS [  1.964 s]
+[INFO] opendolphin-api-contract ........................... SUCCESS [  0.360 s]
+[INFO] opendolphin-persistence ............................ SUCCESS [  0.832 s]
+[INFO] opendolphin-reporting .............................. SUCCESS [  2.312 s]
+[INFO] opendolphin-server-modernized ...................... SUCCESS [02:02 min]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  02:08 min
+[INFO] Finished at: 2026-04-18T21:36:13+09:00
+[INFO] ------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import { clearDevVolatilePlainPassword } from './devAuthVolatile';
 import { shouldNotifySessionExpired } from './httpClient';
 
 const AUTH_KEY = 'opendolphin:web-client:auth';
+const OFFICIAL_ORCA_APPOINTMENTS_ROUTE = '/api/orca/official/appointments/list';
 
 const setSession = () => {
   sessionStorage.setItem(
@@ -204,11 +205,11 @@ describe('httpFetch session expiry reasons', () => {
     const notifySpy = vi.spyOn(sessionExpiry, 'notifySessionExpired');
 
     mockFetchSequence([401]);
-    await httpClient.httpFetch('/api/orca/queue', { method: 'GET' });
+    await httpClient.httpFetch(OFFICIAL_ORCA_APPOINTMENTS_ROUTE, { method: 'GET' });
     expect(notifySpy).not.toHaveBeenCalled();
 
     mockFetchSequence([403]);
-    await httpClient.httpFetch('/api/orca/queue', { method: 'GET' });
+    await httpClient.httpFetch(OFFICIAL_ORCA_APPOINTMENTS_ROUTE, { method: 'GET' });
     expect(notifySpy).not.toHaveBeenCalled();
   });
 
@@ -261,7 +262,7 @@ describe('httpFetch session expiry reasons', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 200 }));
     const { httpClient } = await importSubjects();
 
-    await httpClient.httpFetch('/api/orca/queue', { method: 'GET' });
+    await httpClient.httpFetch(OFFICIAL_ORCA_APPOINTMENTS_ROUTE, { method: 'GET' });
     const headers = new Headers((fetchSpy.mock.calls[0]?.[1] as RequestInit | undefined)?.headers ?? {});
     expect(headers.get('Authorization')).toBeNull();
   });

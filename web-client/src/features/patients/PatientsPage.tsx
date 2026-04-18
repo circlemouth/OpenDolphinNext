@@ -53,7 +53,7 @@ import {
   type PatientMutationResult,
   type PatientRecord,
 } from './api';
-import { importPatientsFromOrca } from '../outpatient/orcaPatientImportApi';
+import { importPatientsFromOrca, type OrcaPatientImportResult } from '../outpatient/orcaPatientImportApi';
 import { fetchOrcaAddress } from './orcaAddressApi';
 import { PATIENT_FIELD_LABEL, diffPatientKeys } from './patientDiff';
 import { validatePatientMutation, type PatientOperation, type PatientValidationError } from './patientValidation';
@@ -136,13 +136,16 @@ const buildPatientEditBlockReason = (
 };
 
 const buildPatientsOrcaStatus = (options: {
+  action?: 'create' | 'update' | 'import' | null;
   missingMaster?: boolean;
   fallbackUsed?: boolean;
   dataSourceTransition?: DataSourceTransition;
   lastSaveSucceeded?: boolean;
   lastSaveFailed?: boolean;
   lastSaveWriteAcceptedWithoutReadback?: boolean;
+  lastErrorCategory?: string;
 }) => {
+  const actionLabel = options.action === 'import' ? 'ORCA既存患者取込' : 'official create/update';
   if (options.missingMaster) {
     return {
       state: '反映停止',
@@ -170,24 +173,77 @@ const buildPatientsOrcaStatus = (options: {
   if (options.lastSaveFailed) {
     return {
       state: '反映失敗',
-      detail: 'official create/update に失敗したため canonical/local 同期は完了していません。時間をおいて再試行してください。',
+      detail: `${actionLabel}に失敗したため canonical/local 同期は完了していません。時間をおいて再試行してください。`,
     };
   }
   if (options.lastSaveWriteAcceptedWithoutReadback) {
+    if (options.lastErrorCategory === 'business_partial') {
+      return {
+        state: '一部処理',
+        detail: `${actionLabel}は full-success 条件を満たしていないため canonical/local 同期完了は確認できていません。`,
+      };
+    }
     return {
       state: '同期確認失敗',
-      detail: 'official create/update は受け付けられましたが canonical readback に失敗したため、canonical/local 同期完了は確認できていません。',
+      detail: `${actionLabel}は受け付けられましたが canonical readback に失敗したため、canonical/local 同期完了は確認できていません。`,
     };
   }
   if (options.lastSaveSucceeded) {
     return {
       state: '反映完了',
-      detail: 'official create/update 後の canonical/local 同期を受け付けました。必要なら監査ログで結果を確認してください。',
+      detail: `${actionLabel}後の canonical/local 同期が完了しました。必要なら監査ログで結果を確認してください。`,
     };
   }
   return {
     state: '反映可能',
-    detail: 'official create/update を実行できます。',
+    detail: options.action === 'import' ? 'ORCA既存患者取込を実行できます。' : 'official create/update を実行できます。',
+  };
+};
+
+const buildImportAuditEvent = (patientId: string, result: OrcaPatientImportResult) => {
+  return {
+    action: 'ORCA_OFFICIAL_IMPORT_PATIENT',
+    outcome: result.ok ? 'success' : result.writeAccepted ? 'warning' : 'error',
+    subject: 'patients',
+    runId: result.runId,
+    details: {
+      patientId,
+      status: result.status,
+      writeAccepted: result.writeAccepted ?? false,
+      businessOk: result.businessOk ?? false,
+      errorCategory: result.errorCategory,
+      importApiResult: result.importSummary?.apiResult,
+      importApiResultMessage: result.importSummary?.apiResultMessage,
+      importRequestedCount: result.importSummary?.requestedCount,
+      importFetchedCount: result.importSummary?.fetchedCount,
+      importCreatedCount: result.importSummary?.createdCount,
+      importUpdatedCount: result.importSummary?.updatedCount,
+      importImportedCount: result.importSummary?.importedCount,
+      importSkippedCount: result.importSummary?.skippedCount,
+      importErrorsCount: result.importSummary?.errorsCount,
+      canonicalRefetchSource: result.canonicalRefetch?.source,
+      canonicalRefetchOk: result.canonicalRefetch?.ok,
+      canonicalRefetchStatus: result.canonicalRefetch?.status,
+      canonicalRefetchExpectedPatientIds: result.canonicalRefetch?.expectedPatientIds,
+      canonicalRefetchMatchedPatientIds: result.canonicalRefetch?.matchedPatientIds,
+      canonicalRefetchMissingPatientIds: result.canonicalRefetch?.missingPatientIds,
+      message: result.ok ? 'ORCA既存患者取込と canonical/local 同期が完了しました。' : result.error,
+    },
+  } satisfies Record<string, unknown>;
+};
+
+const toImportSaveResult = (result: OrcaPatientImportResult): PatientMutationResult => {
+  return {
+    ok: result.ok,
+    writeAccepted: result.writeAccepted,
+    errorCategory: result.errorCategory,
+    runId: result.runId,
+    status: result.status,
+    message:
+      result.ok
+        ? 'ORCA既存患者取込と canonical/local 同期が完了しました。'
+        : result.error ?? 'ORCA既存患者取込に失敗しました。',
+    canonicalRefetch: result.canonicalRefetch,
   };
 };
 
@@ -445,6 +501,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [lastAuditEvent, setLastAuditEvent] = useState<Record<string, unknown> | undefined>();
   const [lastSaveResult, setLastSaveResult] = useState<PatientMutationResult | null>(null);
+  const [lastOfficialAction, setLastOfficialAction] = useState<'create' | 'update' | 'import' | null>(null);
   const [auditSnapshot, setAuditSnapshot] = useState<AuditEventRecord[]>(() => getAuditEventLog());
   const [validationErrors, setValidationErrors] = useState<PatientValidationError[]>([]);
   const [lastAttempt, setLastAttempt] = useState<PatientsMutationAttempt | null>(null);
@@ -617,6 +674,20 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       return importPatientsFromOrca({ patientIds: [patientId], runId: flags.runId });
     },
     onSuccess: async (result, patientId) => {
+      setLastOfficialAction('import');
+      setLastSaveResult(toImportSaveResult(result));
+      setLastAttempt(null);
+      const auditEvent = buildImportAuditEvent(patientId, result);
+      logAuditEvent({
+        runId: result.runId,
+        source: 'patient-import',
+        cacheHit: resolvedCacheHit,
+        missingMaster: resolvedMissingMaster,
+        fallbackUsed: resolvedFallbackUsed,
+        dataSourceTransition: resolvedTransition,
+        payload: auditEvent,
+      });
+      setLastAuditEvent(auditEvent);
       if (result.ok) {
         enqueue({
           tone: 'success',
@@ -640,6 +711,16 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             message: `ORCA既存患者取込は完了しましたが、現在の local search 条件では患者番号 ${patientId} が一覧に見つかりません。`,
           });
         }
+      } else if (result.writeAccepted && result.errorCategory === 'business_partial') {
+        enqueue({
+          tone: 'warning',
+          message: 'ORCA既存患者取込は一部のみ処理され、完了扱いにできませんでした',
+          detail: `患者番号=${patientId}`,
+        });
+        setSelectionNotice({
+          tone: 'warning',
+          message: result.error ?? `ORCA既存患者取込は一部のみ処理されました。患者番号 ${patientId} の取り込み結果を確認してください。`,
+        });
       } else if (result.writeAccepted) {
         enqueue({
           tone: 'warning',
@@ -663,11 +744,39 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       }
     },
     onError: (_error: unknown, patientId) => {
+      setLastOfficialAction('import');
+      setLastSaveResult({
+        ok: false,
+        writeAccepted: false,
+        message: 'ORCA既存患者取込に失敗しました。',
+      });
+      setLastAttempt(null);
       enqueue({
         tone: 'error',
         message: 'ORCA既存患者取込に失敗しました',
         detail: `患者番号=${patientId}`,
       });
+      const auditEvent = {
+        action: 'ORCA_OFFICIAL_IMPORT_PATIENT',
+        outcome: 'error',
+        subject: 'patients',
+        runId: resolvedRunId,
+        details: {
+          patientId,
+          writeAccepted: false,
+          message: 'ORCA既存患者取込に失敗しました。',
+        },
+      } satisfies Record<string, unknown>;
+      logAuditEvent({
+        runId: resolvedRunId,
+        source: 'patient-import',
+        cacheHit: resolvedCacheHit,
+        missingMaster: resolvedMissingMaster,
+        fallbackUsed: resolvedFallbackUsed,
+        dataSourceTransition: resolvedTransition,
+        payload: auditEvent,
+      });
+      setLastAuditEvent(auditEvent);
     },
   });
 
@@ -1196,6 +1305,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             ? 'official write は受け付けられましたが canonical 再取得を確認できませんでした。'
             : '保存に失敗しました。内容を確認して再試行してください。'),
       });
+      setLastOfficialAction(variables.operation);
       setToast({
         tone: fullSuccess ? 'success' : writeAccepted ? 'warning' : 'error',
         message:
@@ -1304,14 +1414,16 @@ export function PatientsPage({ runId }: PatientsPageProps) {
   const lastSaveOrcaStatus = useMemo(() => {
     if (!lastSaveResult) return { state: '未送信', detail: '保存操作はまだありません。' };
     return buildPatientsOrcaStatus({
+      action: lastOfficialAction,
       missingMaster: lastSaveResult.missingMaster,
       fallbackUsed: lastSaveResult.fallbackUsed,
       dataSourceTransition: lastSaveResult.dataSourceTransition,
       lastSaveSucceeded: lastSaveResult.ok,
       lastSaveFailed: !lastSaveResult.ok && !lastSaveResult.writeAccepted,
       lastSaveWriteAcceptedWithoutReadback: Boolean(lastSaveResult.writeAccepted && !lastSaveResult.ok),
+      lastErrorCategory: lastSaveResult.errorCategory,
     });
-  }, [lastSaveResult]);
+  }, [lastOfficialAction, lastSaveResult]);
 
   const resolveAuditPatientId = (record: AuditEventRecord) => {
     const payload = record.payload as Record<string, unknown> | undefined;
@@ -1585,6 +1697,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           ? (payloadBase as OfficialPatientCreatePayload)
           : (payloadBase as OfficialPatientUpdatePayload),
       };
+      setLastOfficialAction(operation);
       setLastAttempt(attempt);
       try {
         const result = await mutation.mutateAsync(attempt);
@@ -2800,7 +2913,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             ) : null}
             <div className="patients-page__audit-summary">
               <div className="patients-page__audit-card">
-                <span>保存結果</span>
+                <span>{lastOfficialAction === 'import' ? '取込結果' : '保存結果'}</span>
                 <strong>
                   {lastSaveResult
                     ? lastSaveResult.ok
@@ -2814,15 +2927,19 @@ export function PatientsPage({ runId }: PatientsPageProps) {
                 {lastSaveResult?.message ? (
                   <small>
                     {lastSaveResult.ok
-                      ? '保存処理は完了しました。'
+                      ? lastOfficialAction === 'import'
+                        ? '取込処理は完了しました。'
+                        : '保存処理は完了しました。'
                       : lastSaveResult.writeAccepted
-                        ? 'official write は受け付けられましたが canonical readback を確認できていません。'
+                        ? lastSaveResult.errorCategory === 'business_partial'
+                          ? 'full-success 条件を満たさないため完了扱いにしていません。'
+                          : 'official write は受け付けられましたが canonical readback を確認できていません。'
                         : '保存に失敗しました。時間をおいて再試行してください。'}
                   </small>
                 ) : null}
               </div>
               <div className="patients-page__audit-card">
-                <span>official ORCA 更新</span>
+                <span>{lastOfficialAction === 'import' ? 'official ORCA 取込' : 'official ORCA 更新'}</span>
                 <strong>{lastSaveOrcaStatus.state}</strong>
                 <small>{lastSaveOrcaStatus.detail}</small>
               </div>

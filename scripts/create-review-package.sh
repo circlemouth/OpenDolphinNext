@@ -91,19 +91,31 @@ git ls-files -- \
   ':(exclude)client/**' \
   ':(exclude)artifacts/**' \
   ':(exclude)web-client/artifacts/**' \
+  ':(exclude)node_modules/**' \
   ':(exclude)**/node_modules/**' \
+  ':(exclude)dist/**' \
   ':(exclude)**/dist/**' \
+  ':(exclude)target/**' \
   ':(exclude)**/target/**' \
+  ':(exclude)build/**' \
   ':(exclude)**/build/**' \
+  ':(exclude)out/**' \
   ':(exclude)**/out/**' \
+  ':(exclude)coverage/**' \
   ':(exclude)**/coverage/**' \
+  ':(exclude)test-results/**' \
   ':(exclude)**/test-results/**' \
   ':(exclude)tmp/**' \
   ':(exclude)output/**' \
+  ':(exclude).cache/**' \
   ':(exclude)**/.cache/**' \
+  ':(exclude).vite/**' \
   ':(exclude)**/.vite/**' \
+  ':(exclude).parcel-cache/**' \
   ':(exclude)**/.parcel-cache/**' \
+  ':(exclude).turbo/**' \
   ':(exclude)**/.turbo/**' \
+  ':(exclude).nyc_output/**' \
   ':(exclude)**/.nyc_output/**' \
   ':(exclude)**/*.log' \
   ':(exclude)**/*.tsbuildinfo' \
@@ -154,7 +166,7 @@ rm -f "$PACKAGE_FILE"
 zip -q "$PACKAGE_FILE" -@ < "$FILE_LIST"
 zip -q "$PACKAGE_FILE" "$MANIFEST_FILE" -j
 
-BAD_PATHS="$(zipinfo -1 "$PACKAGE_FILE" | grep -E '^(client/|artifacts/|web-client/artifacts/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|tmp/|output/|.*/coverage/|.*/test-results/)' || true)"
+BAD_PATHS="$(zipinfo -1 "$PACKAGE_FILE" | grep -E '^(client/|artifacts/|web-client/artifacts/|node_modules/|dist/|target/|build/|out/|tmp/|output/|coverage/|test-results/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|.*/coverage/|.*/test-results/)' || true)"
 if [[ -n "$BAD_PATHS" ]]; then
   echo "Excluded paths were found in package:" >&2
   echo "$BAD_PATHS" >&2

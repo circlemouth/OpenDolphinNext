@@ -29,6 +29,14 @@ const requestedPatientId = process.env.QA_PATIENT_ID?.trim() ?? '';
 const requestedSmokePatientDisplayName = process.env.QA_SMOKE_PATIENT_NAME?.trim() ?? '';
 const blockedRouteDetectors = [
   {
+    label: 'blocked-legacy-orca-queue-hit',
+    matches: (url) => url.includes('/api/orca/queue'),
+  },
+  {
+    label: 'blocked-legacy-orca-push-event-hit',
+    matches: (url) => url.includes('/api/orca/pusheventgetv2'),
+  },
+  {
     label: 'invalid-orca-taxonomy',
     matches: (url) => /\/api\/orca\/(?!official\/|master\/|queue(?:\/|$)|pusheventgetv2(?:\/|$))/.test(url),
   },
@@ -396,6 +404,14 @@ try {
   };
 
   fs.writeFileSync(path.join(artifactRoot, 'runtime-ready-result.json'), JSON.stringify(result, null, 2));
+  const blockedRouteSummary = Object.entries(blockedRouteHits).filter(([, count]) => count > 0);
+  if (blockedRouteSummary.length > 0) {
+    throw new Error(
+      `runtime-ready smoke detected blocked route hits: ${blockedRouteSummary
+        .map(([label, count]) => `${label}=${count}`)
+        .join(', ')}`,
+    );
+  }
   console.log(JSON.stringify({ artifactRoot, result }, null, 2));
 } finally {
   await context.close();

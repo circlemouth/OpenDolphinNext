@@ -294,10 +294,13 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
       {
         storageKey: `charts:orca-claim-send:${facilityId}:${userId}`,
         payload: {
-          'appointment:A-1': {
-            cacheKey: 'appointment:A-1',
+          'encounter:F001:E2401': {
+            cacheKey: 'encounter:F001:E2401',
             patientId: '000001',
-            appointmentId: 'A-1',
+            appointmentId: 'APT-2401',
+            receptionId: 'RCPT-2401',
+            scheduleKey: 'F001:S2401',
+            encounterKey: 'F001:E2401',
             dataId: 'DATA-1',
             runId: 'RUN-CLAIM',
             traceId: 'TRACE-CLAIM',
@@ -345,7 +348,10 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
         mod.saveOrcaClaimSendCache(
           {
             patientId: '000001',
-            appointmentId: 'A-1',
+            appointmentId: 'APT-2401',
+            receptionId: 'RCPT-2401',
+            scheduleKey: 'F001:S2401',
+            encounterKey: 'F001:E2401',
             performDate: visitDate,
             invoiceNumber: 'INV-001',
             dataId: 'DATA-1',
@@ -361,11 +367,28 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
     );
 
     const summary = page.locator('[data-test-id="orca-summary"]');
+    const incomeCard = summary.locator('[data-test-id="orca-income-summary-card"]');
     await expect(summary).toBeVisible({ timeout: 20_000 });
+    await expect(summary.getByText('Workflow / 院内ローカル診療サマリ')).toBeVisible({ timeout: 10_000 });
+    await expect(summary.getByText('Transmission / medical-mod-v2')).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard.getByText('ORCA収納情報')).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard.getByText(`対象日: ${visitDate}`)).toBeVisible({ timeout: 10_000 });
+    await expect(
+      incomeCard.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。'),
+    ).toBeVisible({ timeout: 10_000 });
     const detailsToggle = summary.getByText('詳細を表示').first();
     if (await detailsToggle.isVisible().catch(() => false)) {
       await detailsToggle.click();
     }
+    const details = summary.locator('.orca-summary__details-fold');
+    await expect(details).not.toContainText('Workflow / 院内ローカル診療サマリ');
+    await expect(details).not.toContainText('Transmission / medical-mod-v2');
+    await expect(details).not.toContainText('ORCA収納情報');
+    await expect(details.getByText(`対象日: ${visitDate}`)).toHaveCount(0);
+    await expect(
+      details.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。'),
+    ).toHaveCount(0);
 
     const refreshButton = summary.getByRole('button', { name: '収納情報を確認' });
     await expect(refreshButton).toBeEnabled({ timeout: 20_000 });
@@ -378,6 +401,18 @@ test('会計伝票の送信結果と incomeinfv2 を突き合わせて会計済�
 
     await expect(summary.getByText(/Api_Result=00/)).toBeVisible({ timeout: 10_000 });
     await expect(summary.getByText('confirmation: 会計済み')).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard).toContainText('保険組合せ: 0001');
+    await expect(incomeCard.getByText('未収金合計 (Unpaid_Money_Total)')).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard.getByText('請求金額 (Ac_Money)')).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard).toContainText('直近請求');
+    await expect(incomeCard).toContainText('請求金額:');
+    await expect(incomeCard).toContainText('入金額:');
+    await expect(details).not.toContainText('保険組合せ: 0001');
+    await expect(details.getByText('未収金合計 (Unpaid_Money_Total)')).toHaveCount(0);
+    await expect(details.getByText('請求金額 (Ac_Money)')).toHaveCount(0);
+    await expect(details).not.toContainText('直近請求');
+    await expect(details).not.toContainText('請求金額:');
+    await expect(details).not.toContainText('入金額:');
 
     const billingLog = await page.evaluate(() => {
       const log = (window as any).__OUTPATIENT_FUNNEL__ as Array<any> | undefined;

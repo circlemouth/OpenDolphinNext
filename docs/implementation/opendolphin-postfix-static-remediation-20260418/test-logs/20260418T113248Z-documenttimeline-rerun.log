@@ -1,0 +1,41 @@
+timestamp=2026-04-18T12:20:23Z
+command=npm test -- --run src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+
+> web-client@0.0.0 pretest
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] blocked ORCA route string / mock surface の再混入は検出されませんでした。/api/orca/queue と /api/orca/pusheventgetv2 は src/features/outpatient/orcaQueueApi.ts の production fail-close sentinel および src/mocks/handlers/orcaQueue.ts の mock/test-only legacy route surface にだけ残っています。
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 test
+> vitest run --run src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx
+
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+ ✓ src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx (7 tests) 120ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  21:20:26
+   Duration  917ms (transform 252ms, setup 67ms, import 315ms, tests 120ms, environment 328ms)
+

@@ -2,6 +2,14 @@ import { http, HttpResponse, passthrough } from 'msw';
 
 import { applyFaultDelay, parseFaultSpec } from '../utils/faultInjection';
 
+// Mock/test-only legacy route surface. These strings remain here so MSW can intercept
+// legacy queue polling in isolated tests without reintroducing them as public taxonomy.
+export const MOCK_ONLY_LEGACY_ORCA_QUEUE_ROUTE = '/api/orca/queue';
+export const MOCK_ONLY_LEGACY_ORCA_PUSH_EVENT_ROUTE = '/api/orca/pusheventgetv2';
+
+const escapeForRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const ORCA_QUEUE_ROUTE_PATTERN = new RegExp(`${escapeForRegex(MOCK_ONLY_LEGACY_ORCA_QUEUE_ROUTE)}(?:\\?|$)`);
+
 const toIso = (date: Date) => date.toISOString();
 
 const normalizeFlag = (value: string | null): boolean | undefined => {
@@ -49,7 +57,7 @@ const buildStalledQueue = () => {
 };
 
 export const orcaQueueHandlers = [
-  http.get(/\/api\/orca\/queue/, async ({ request }) => {
+  http.get(ORCA_QUEUE_ROUTE_PATTERN, async ({ request }) => {
     if (shouldBypass(request)) {
       return passthrough();
     }
@@ -160,7 +168,7 @@ export const orcaQueueHandlers = [
       },
     );
   }),
-  http.post('/api/orca/pusheventgetv2', async ({ request }) => {
+  http.post(MOCK_ONLY_LEGACY_ORCA_PUSH_EVENT_ROUTE, async ({ request }) => {
     const fault = parseFaultSpec(request);
     await applyFaultDelay(fault);
 

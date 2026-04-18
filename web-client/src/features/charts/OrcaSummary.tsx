@@ -830,7 +830,7 @@ export function OrcaSummary({
             </ul>
           </div>
         )}
-        <div className="orca-summary__card">
+        <div className="orca-summary__card" data-test-id="orca-income-summary-card">
           <header>
             <strong>ORCA収納情報</strong>
             <span className="orca-summary__card-meta">

@@ -32,10 +32,11 @@ public final class OrcaTransportSettings {
     private final String baseUrl;
     private final String mode;
     private final String modeNormalized;
+    private final boolean clientAuthConfigured;
 
     private OrcaTransportSettings(String host, int port, String scheme, String user, String password,
             String pathPrefix, boolean weborcaExplicit, boolean autoApiPrefixEnabled,
-            int retryMax, long retryBackoffMs, String baseUrl, String mode) {
+            int retryMax, long retryBackoffMs, String baseUrl, String mode, boolean clientAuthConfigured) {
         this.host = host;
         this.port = port;
         this.scheme = scheme;
@@ -49,6 +50,7 @@ public final class OrcaTransportSettings {
         this.baseUrl = trim(baseUrl);
         this.mode = trim(mode);
         this.modeNormalized = normalizeMode(this.mode);
+        this.clientAuthConfigured = clientAuthConfigured;
     }
 
     public static OrcaTransportSettings load() {
@@ -122,7 +124,8 @@ public final class OrcaTransportSettings {
                 api.retryMax() != null ? api.retryMax() : DEFAULT_RETRY_MAX,
                 api.retryBackoffMs() != null ? api.retryBackoffMs() : DEFAULT_RETRY_BACKOFF_MS,
                 baseUrl,
-                mode
+                mode,
+                false
         );
         settings.validateSecurityPolicy(runtime, transportHttp);
         return settings;
@@ -145,6 +148,15 @@ public final class OrcaTransportSettings {
             boolean useWeborca,
             String user,
             String password,
+            ServerConfigurationResolver resolver) {
+        return fromAdminConfig(baseUrl, useWeborca, user, password, false, resolver);
+    }
+
+    public static OrcaTransportSettings fromAdminConfig(String baseUrl,
+            boolean useWeborca,
+            String user,
+            String password,
+            boolean clientAuthConfigured,
             ServerConfigurationResolver resolver) {
         ServerConfigurationResolver activeResolver = resolver != null ? resolver : new ServerConfigurationResolver();
         ServerRuntimeConfiguration.RuntimeSettings runtime = activeResolver.runtime();
@@ -172,7 +184,8 @@ public final class OrcaTransportSettings {
                 api.retryMax() != null ? api.retryMax() : DEFAULT_RETRY_MAX,
                 api.retryBackoffMs() != null ? api.retryBackoffMs() : DEFAULT_RETRY_BACKOFF_MS,
                 resolvedBaseUrl,
-                mode
+                mode,
+                clientAuthConfigured
         );
         settings.validateSecurityPolicy(runtime, transportHttp);
         return settings;
@@ -249,7 +262,7 @@ public final class OrcaTransportSettings {
     }
 
     public boolean isClientAuthConfigured() {
-        return false;
+        return clientAuthConfigured;
     }
 
     public int getRetryMax() {
@@ -275,6 +288,7 @@ public final class OrcaTransportSettings {
         updateDigest(digest, baseUrl);
         updateDigest(digest, mode);
         updateDigest(digest, modeNormalized);
+        updateDigest(digest, clientAuthConfigured);
         return toHex(digest.digest());
     }
 

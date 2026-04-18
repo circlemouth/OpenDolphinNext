@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { OrcaSummary } from '../OrcaSummary';
@@ -119,8 +119,12 @@ describe('OrcaSummary semantics', () => {
       />,
     );
 
-    expect(container.querySelector('[data-test-id="orca-billing-correction-note"]')).toHaveTextContent('補正が必要です');
-    expect(container.querySelector('[data-test-id="orca-billing-setting-note"]')).toHaveTextContent('収納情報の確認前です');
+    const correctionNote = container.querySelector('[data-test-id="orca-billing-correction-note"]');
+    const settingNote = container.querySelector('[data-test-id="orca-billing-setting-note"]');
+    expect(correctionNote).toBeVisible();
+    expect(settingNote).toBeVisible();
+    expect(correctionNote).toHaveTextContent('補正が必要です');
+    expect(settingNote).toHaveTextContent('収納情報の確認前です');
 
     const details = container.querySelector('.orca-summary__details-fold');
     expect(details?.querySelector('[data-test-id="orca-billing-correction-note"]')).toBeNull();
@@ -164,7 +168,7 @@ describe('OrcaSummary semantics', () => {
       refetch: vi.fn(),
     });
 
-    render(
+    const { container } = render(
       <OrcaSummary
         summary={{ missingMaster: false } as any}
         claim={{
@@ -191,28 +195,35 @@ describe('OrcaSummary semantics', () => {
       />,
     );
 
-    expect(screen.getByText('Workflow / 院内ローカル診療サマリ')).toBeVisible();
-    expect(screen.getByText('院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。')).toBeInTheDocument();
-    expect(screen.getByText('Transmission / medical-mod-v2')).toBeVisible();
-    expect(screen.getByText('ORCA収納情報')).toBeVisible();
-    expect(screen.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。')).toBeInTheDocument();
-    expect(screen.getByText('対象日: 2026-03-09')).toBeInTheDocument();
-    expect(screen.getByText(/保険組合せ: 0001/)).toBeInTheDocument();
-    expect(screen.getByText('未収金合計 (Unpaid_Money_Total)')).toBeInTheDocument();
-    expect(screen.getByText('請求金額 (Ac_Money)')).toBeInTheDocument();
-    expect(screen.getByText('入金額 (Ic_Money)')).toBeInTheDocument();
-    expect(screen.getByText('保険適用金額 (Ai_Money)')).toBeInTheDocument();
-    expect(screen.getByText('自費金額 (Oe_Money)')).toBeInTheDocument();
-    expect(screen.getByText('食事・生活療養負担金 (Ml_Smoney)')).toBeInTheDocument();
-    expect(screen.getByText(/2026-03-09 ｜ 内科 ｜ 請求金額: 1,200 円 ｜ 入金額:/)).toBeInTheDocument();
-    expect(screen.getByText(/未収金情報: 2026-03-09 ｜ 伝票 INV-1 ｜ 500 円/)).toBeInTheDocument();
-    expect(screen.queryByText('請求サマリ')).not.toBeInTheDocument();
-
-    const details = document.querySelector('.orca-summary__details-fold');
+    const details = container.querySelector('.orca-summary__details-fold');
     expect(details).not.toBeNull();
-    expect(details?.textContent).not.toContain('Workflow / 院内ローカル診療サマリ');
-    expect(details?.textContent).not.toContain('Transmission / medical-mod-v2');
-    expect(details?.textContent).not.toContain('ORCA収納情報');
+    const detailsWithin = within(details as HTMLElement);
+    const incomeCard = container.querySelector('[data-test-id="orca-income-summary-card"]');
+    expect(incomeCard).not.toBeNull();
+    expect(incomeCard).toBeVisible();
+
+    const expectVisibleOutsideDetails = (text: string | RegExp) => {
+      expect(screen.getByText(text)).toBeVisible();
+      expect(detailsWithin.queryByText(text)).not.toBeInTheDocument();
+    };
+
+    expectVisibleOutsideDetails('Workflow / 院内ローカル診療サマリ');
+    expectVisibleOutsideDetails('院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。');
+    expectVisibleOutsideDetails('Transmission / medical-mod-v2');
+    expectVisibleOutsideDetails('medical-mod-v2 の送信結果です。会計済み判定とは別に扱ってください。');
+    expectVisibleOutsideDetails('ORCA収納情報');
+    expectVisibleOutsideDetails('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。');
+    expectVisibleOutsideDetails('対象日: 2026-03-09');
+    expectVisibleOutsideDetails(/保険組合せ: 0001/);
+    expectVisibleOutsideDetails('未収金合計 (Unpaid_Money_Total)');
+    expectVisibleOutsideDetails('請求金額 (Ac_Money)');
+    expectVisibleOutsideDetails('入金額 (Ic_Money)');
+    expectVisibleOutsideDetails('保険適用金額 (Ai_Money)');
+    expectVisibleOutsideDetails('自費金額 (Oe_Money)');
+    expectVisibleOutsideDetails('食事・生活療養負担金 (Ml_Smoney)');
+    expectVisibleOutsideDetails(/2026-03-09 ｜ 内科 ｜ 請求金額: 1,200 円 ｜ 入金額:/);
+    expectVisibleOutsideDetails(/未収金情報: 2026-03-09 ｜ 伝票 INV-1 ｜ 500 円/);
+    expect(screen.queryByText('請求サマリ')).not.toBeInTheDocument();
   });
 
   it('same-day 別 encounter の cache では positive transmission / invoice / warning を出さない', () => {

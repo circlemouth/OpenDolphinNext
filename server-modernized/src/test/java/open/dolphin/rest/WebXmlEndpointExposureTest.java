@@ -82,6 +82,10 @@ class WebXmlEndpointExposureTest {
                         "GET /api/orca/master/drug",
                         "GET /api/local/order/bundles",
                         "GET /api/admin/internal/orca/patients/sync/status")
+                .doesNotContain(
+                        "GET /api/orca/queue",
+                        "POST /api/orca/pusheventgetv2",
+                        "DELETE /api/orca/queue")
                 .allMatch(routeKey -> !routeKey.contains(" /api/orca/")
                         || routeKey.contains(" /api/orca/official/")
                         || routeKey.contains(" /api/orca/master/"));

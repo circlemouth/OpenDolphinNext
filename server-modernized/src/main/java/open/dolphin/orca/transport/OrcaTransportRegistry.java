@@ -38,7 +38,7 @@ final class OrcaTransportRegistry {
 
     OrcaResolvedTransport currentTransport(String facilityId) {
         CachedTransportEntry entry = currentEntry(facilityId);
-        return entry != null ? entry.transport() : null;
+        return entry.transport();
     }
 
     OrcaTransportSettings currentSettings(String facilityId) {
@@ -53,7 +53,7 @@ final class OrcaTransportRegistry {
 
     OrcaTransportSettings reloadSettings(String facilityId) {
         CachedTransportEntry entry = reloadCache(facilityId);
-        return entry != null ? entry.transport().settings() : null;
+        return entry.transport().settings();
     }
 
     private CachedTransportEntry currentEntry(String facilityId) {
@@ -110,6 +110,7 @@ final class OrcaTransportRegistry {
                 resolved.useWeborca(),
                 resolved.username(),
                 resolved.password(),
+                resolved.clientAuthEnabled(),
                 configurationResolver);
         return ResolvedTransportConfig.forAdminConfig(
                 settings,
@@ -159,11 +160,15 @@ final class OrcaTransportRegistry {
     }
 
     private static String requireFacilityId(String facilityId) {
-        String normalized = normalizeFacilityId(facilityId);
-        if (normalized == null || "default".equalsIgnoreCase(normalized)) {
+        try {
+            String normalized = OrcaConnectionConfigStore.requireConfiguredFacilityId(facilityId, "facilityId");
+            if (normalized == null) {
+                throw new IllegalArgumentException("facilityId が必要です。");
+            }
+            return normalized;
+        } catch (IllegalArgumentException ex) {
             throw new IllegalStateException("ORCA facilityId is required");
         }
-        return normalized;
     }
 
     private static String safeFacility(String facilityId) {

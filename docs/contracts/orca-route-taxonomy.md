@@ -1,6 +1,6 @@
 # ORCA Route Taxonomy
 
-最終更新: 2026-04-12
+最終更新: 2026-04-18
 
 ## 目的
 
@@ -11,9 +11,19 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `local`: local-only wrapper / local projection / local persistence。公開 prefix は `/api/local/*` のみ。
 - `admin-internal`: 管理 UI 向けの internal label / internal state。公開 prefix は `/api/admin/internal/*` のみ。
 
+## Route String Categories
+
+1. server public ORCA route surface
+   current public surface は `official=/api/orca/official/*` と `master=/api/orca/master/*` だけです。`/api/orca/queue` と `/api/orca/pusheventgetv2` は inventory / exposure / runtime contract に含めません。
+2. client production fail-close sentinel
+   `web-client/src/features/outpatient/orcaQueueApi.ts` にだけ historical route string を残し、unavailable response を返して browser network call を fail-close します。
+3. mock/test-only legacy route surface
+   `web-client/src/mocks/handlers/orcaQueue.ts` にだけ mock/test 用の legacy route constant を残します。これは public taxonomy ではなく、MSW/isolated test 以外の runtime で使ってはなりません。
+
 ## Taxonomy Rules
 
 - `/api/orca/*` 直下には `official` と `master` 以外を置かない。
+- `/api/orca/queue` と `/api/orca/pusheventgetv2` は current public taxonomy に含めない。server public surface に登録せず、browser runtime が到達したら failure とみなす。
 - official transport を呼ばない local wrapper / local read model / local persistence を `/api/orca/*` に置かない。
 - master-backed read は `/api/orca/master/*` へ寄せ、official bridge と混在させない。
 - audit action も taxonomy に合わせ、official は `ORCA_OFFICIAL_*`、master は `ORCA_MASTER_*`、local は `LOCAL_*` を使う。
@@ -92,6 +102,13 @@ public route の taxonomy を固定し、official / master / local / admin-inter
   `/api/admin/internal/orca/medical-sets`
   `/api/admin/internal/orca/birth-delivery`
 
+### Intentional Fail-Close Exceptions
+
+- `/api/orca/queue`
+- `/api/orca/pusheventgetv2`
+
+上記 2 つは current public route ではありません。`web-client/src/features/outpatient/orcaQueueApi.ts` では production fail-close sentinel としてだけ残し、`web-client/src/mocks/handlers/orcaQueue.ts` では mock/test-only legacy route surface としてだけ残します。route inventory・browser request・release evidence では hit させません。
+
 ## Taxonomy Checkpoints
 
 - patient create / update は official bridge として `/api/orca/official/patientmodv2/outpatient/*` に固定する。
@@ -104,7 +121,8 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 ## Verification Contract
 
 - `PublicRouteInventoryContractTest` は taxonomy 別 inventory を固定し、official/master/local/admin-internal の逸脱を検知する。
-- `WebXmlEndpointExposureTest` は `/api/*` の単一 public entrypoint に加え、route prefix が taxonomy に収まることを検証する。
+- `WebXmlEndpointExposureTest` は `/api/*` の単一 public entrypoint に加え、route prefix が taxonomy に収まり、`/api/orca/queue` と `/api/orca/pusheventgetv2` が露出していないことを検証する。
 - ORCA `Api_Result` の success/warn/error tone policy は `web-client/src/libs/orca/orcaApiResultPolicy.ts` を正本とし、feature ローカル実装を増やさない。
 - `web-client/src/libs/http/httpClient.ts` と administration wrapper metadata は `scope=official|master|local` を明示し、実 path と一致させる。
+- `verify-no-blocked-orca-route-strings.mjs` は legacy route string を category 2 と category 3 の allowlist にだけ許可し、成功メッセージも同じ分類を表示する。
 - repo grep で旧 path を runtime 参照として残さない。

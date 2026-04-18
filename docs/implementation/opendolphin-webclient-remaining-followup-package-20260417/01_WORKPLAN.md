@@ -22,10 +22,10 @@
 3. tests/reception/e2e-billing-correction-note.spec.ts
 4. cd web-client && npm run ci
 
-## release gate carry-forward
-- runtime-ready-smoke と server verify は前回 PASS 証跡がある
-- 今回の変更が auth/bootstrap/chart-open path に及ぶ場合のみ runtime-ready-smoke を再実行する
-- server 側を触らない場合は server verify の PASS 証跡を carry forward してよい
+## release gate truth
+- runtime-ready-smoke / `npm run ci` / server verify の「前回 PASS」文言は current truth として carry forward しない
+- この package の判断に使う前に rerun で current truth を取り直す
+- server 側未変更でも server verify を PASS 済み扱いにしない
 
 ## stop conditions
 - security spec と逆向きの永続化が増える変更しか成立しない場合

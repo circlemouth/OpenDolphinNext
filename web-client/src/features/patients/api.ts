@@ -70,6 +70,7 @@ export type PatientListResponse = {
 export type PatientMutationResult = {
   ok: boolean;
   writeAccepted?: boolean;
+  errorCategory?: string;
   runId?: string;
   traceId?: string;
   requestId?: string;
@@ -501,6 +502,10 @@ const performOfficialPatientMutation = async (
           : '既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。')
       : ((json.apiResultMessage as string | undefined)
         ?? (operation === 'create' ? '新患登録に失敗しました。' : '既存患者更新に失敗しました。'));
+  result.errorCategory =
+    writeAccepted && !result.ok
+      ? 'canonical_refetch_failed'
+      : undefined;
 
   const serverDetails =
     serverAuditEvent && typeof serverAuditEvent.details === 'object' && serverAuditEvent.details !== null

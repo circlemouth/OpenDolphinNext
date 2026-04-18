@@ -228,16 +228,14 @@ export function useOrcaReportPrint({
   }, [dialogOpen, resolvedPatientId, resolvedVisitDate]);
 
   useEffect(() => {
-    const latestIncome = pickLatestIncomeEntry(reportIncomeEntries);
     setReportForm((prev) => {
       const next = { ...prev };
       if (!reportTouchedRef.current.invoiceNumber) {
-        const invoiceNumber = lastSendInvoiceNumber ?? latestIncome?.invoiceNumber;
-        if (invoiceNumber) next.invoiceNumber = invoiceNumber;
+        next.invoiceNumber = lastSendInvoiceNumber ?? '';
       }
       if (!reportTouchedRef.current.insuranceCombinationNumber) {
         const insuranceCombinationNumber =
-          resolvedInsuranceCombinationNumber ?? latestIncome?.insuranceCombinationNumber;
+          resolvedInsuranceCombinationNumber ?? pickLatestIncomeEntry(reportIncomeEntries)?.insuranceCombinationNumber;
         if (insuranceCombinationNumber) {
           next.insuranceCombinationNumber = insuranceCombinationNumber;
         }

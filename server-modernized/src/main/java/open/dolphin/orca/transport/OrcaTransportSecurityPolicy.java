@@ -41,6 +41,9 @@ public final class OrcaTransportSecurityPolicy {
         if (uri == null) {
             throw new IllegalArgumentException("サーバURLが不正です。");
         }
+        if (normalize(uri.getUserInfo()) != null || hasAuthorityUserInfo(uri)) {
+            throw new IllegalArgumentException("サーバURLに userinfo は指定できません。");
+        }
         String scheme = normalize(uri.getScheme());
         String host = normalizeHost(uri);
         if (scheme == null || host == null) {
@@ -117,6 +120,11 @@ public final class OrcaTransportSecurityPolicy {
         }
         int colonIndex = withoutUserInfo.indexOf(':');
         return colonIndex >= 0 ? withoutUserInfo.substring(0, colonIndex) : withoutUserInfo;
+    }
+
+    private static boolean hasAuthorityUserInfo(URI uri) {
+        String authority = uri != null ? uri.getRawAuthority() : null;
+        return authority != null && authority.contains("@");
     }
 
     private static String normalize(String value) {

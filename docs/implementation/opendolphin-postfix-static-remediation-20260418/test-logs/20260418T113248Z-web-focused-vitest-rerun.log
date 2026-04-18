@@ -1,0 +1,76 @@
+timestamp=2026-04-18T12:18:56Z
+command=npm test -- --run scripts/__tests__/medicalInformationGate.test.ts src/features/outpatient/__tests__/orcaPatientImportApi.test.ts src/features/patients/__tests__/PatientsPage.test.tsx src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx src/features/charts/__tests__/OrcaSummary.semantics.test.tsx src/mocks/handlers/orcaQueue.test.ts src/libs/http/httpClient.test.ts
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+
+> web-client@0.0.0 pretest
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] blocked ORCA route string / mock surface の再混入は検出されませんでした。/api/orca/queue と /api/orca/pusheventgetv2 は src/features/outpatient/orcaQueueApi.ts の production fail-close sentinel および src/mocks/handlers/orcaQueue.ts の mock/test-only legacy route surface にだけ残っています。
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 test
+> vitest run --run scripts/__tests__/medicalInformationGate.test.ts src/features/outpatient/__tests__/orcaPatientImportApi.test.ts src/features/patients/__tests__/PatientsPage.test.tsx src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx src/features/charts/__tests__/OrcaSummary.semantics.test.tsx src/mocks/handlers/orcaQueue.test.ts src/libs/http/httpClient.test.ts
+
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+ ✓ src/features/outpatient/__tests__/orcaPatientImportApi.test.ts (8 tests) 16ms
+ ✓ src/mocks/handlers/orcaQueue.test.ts (2 tests) 38ms
+ ✓ src/libs/http/httpClient.test.ts (30 tests) 49ms
+ ✓ src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx (4 tests) 83ms
+ ✓ src/features/charts/__tests__/OrcaSummary.semantics.test.tsx (3 tests) 143ms
+ ❯ src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx (7 tests | 1 failed) 161ms
+     ✓ renders alert -> banner -> details in order 30ms
+     ✓ admin かつ retrySupported=true のときだけ再送 CTA を表示する 47ms
+     ✓ 非 admin では再送 CTA を表示しない 18ms
+     ✓ retrySupported=false では再送 CTA を表示しない 11ms
+     ✓ same-day 別 reception 選択時は row-local key が無い限り送信IDを current entry に貼らない 28ms
+     × same-day 別 encounter の claim bundle は patientId fallback で current row に貼らない 14ms
+     ✓ same-day 複数 row の patient-level queue status は positive send badge に使わない 12ms
+ ✓ scripts/__tests__/medicalInformationGate.test.ts (8 tests) 9ms
+ ✓ src/features/patients/__tests__/PatientsPage.test.tsx (34 tests) 1997ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx > DocumentTimeline recovery order > same-day 別 encounter の claim bundle は patientId fallback で current row に貼らない
+Error: expect(element).not.toBeInTheDocument()
+
+expected document not to contain element, found <p
+  class="document-timeline__entry-note"
+>
+  別 encounter ｜ 請求: 別 encounter ｜ Invoice_Number: INV-OTHER
+</p> instead
+ ❯ src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx:272:77
+    270|     expect(currentRow).toBeTruthy();
+    271|     if (!currentRow) return;
+    272|     expect(within(currentRow).queryByText(/Invoice_Number: INV-OTHER/)…
+       |                                                                             ^
+    273|   });
+    274| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 7 passed (8)
+      Tests  1 failed | 95 passed (96)
+   Start at  21:18:57
+   Duration  3.36s (transform 2.34s, setup 919ms, import 3.24s, tests 2.50s, environment 4.59s)
+

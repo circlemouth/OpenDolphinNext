@@ -16,6 +16,7 @@ import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaEndpoint;
 import open.dolphin.orca.transport.OrcaTransportRequest;
 import open.dolphin.rest.orca.AbstractOrcaRestResource;
+import open.dolphin.security.audit.AuditDetailSanitizer;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.security.audit.SessionAuditDispatcher;
@@ -70,7 +71,8 @@ class AdminOrcaConnectionTestSupportTest {
     }
 
     @Test
-    void testConnectionSanitizesInvalidUrlFailureInResponseAndAudit() {
+    void testConnectionSanitizesInvalidUrlFailureInResponseAndAudit() throws Exception {
+        String rawTarget = "https://admin:pass@bad host.example.invalid/secret-prefix";
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-ORCA");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
@@ -88,7 +90,7 @@ class AdminOrcaConnectionTestSupportTest {
                 org.mockito.ArgumentMatchers.eq(OrcaEndpoint.SYSTEM_MANAGEMENT_LIST),
                 org.mockito.ArgumentMatchers.any(OrcaTransportRequest.class)))
                 .thenThrow(new OrcaGatewayException(
-                        "[invalid_url] Invalid ORCA API URL: https://admin:pass@bad host.example.invalid/api"));
+                        "[invalid_url] Invalid ORCA API URL: " + rawTarget));
         CapturingAuditDispatcher dispatcher = new CapturingAuditDispatcher();
 
         Response response = new AdminOrcaConnectionTestSupport(
@@ -105,15 +107,23 @@ class AdminOrcaConnectionTestSupportTest {
         assertEquals(Boolean.FALSE, body.get("ok"));
         assertEquals("config_invalid", body.get("errorCategory"));
         assertEquals("接続先URLが不正です。", body.get("error"));
-        assertFalse(String.valueOf(body.get("error")).contains("bad host.example.invalid"));
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertFalse(rendered.contains(rawTarget));
+        assertFalse(rendered.contains("bad host.example.invalid"));
+        assertFalse(rendered.contains("admin:pass"));
+        assertFalse(rendered.contains("secret-prefix"));
         assertFalse(String.valueOf(dispatcher.errorMessage).contains("bad host.example.invalid"));
         assertFalse(String.valueOf(dispatcher.errorMessage).contains("admin:pass"));
+        assertFalse(String.valueOf(dispatcher.sanitizedDetails).contains("bad host.example.invalid"));
+        assertFalse(String.valueOf(dispatcher.sanitizedDetails).contains("admin:pass"));
+        assertFalse(String.valueOf(dispatcher.sanitizedDetails).contains("secret-prefix"));
     }
 
     private static final class CapturingAuditDispatcher extends SessionAuditDispatcher {
         private AuditEventPayload payload;
         private String errorCode;
         private String errorMessage;
+        private Map<String, Object> sanitizedDetails;
 
         @Override
         public AuditEventEnvelope record(AuditEventPayload payload, AuditEventEnvelope.Outcome overrideOutcome,
@@ -121,6 +131,9 @@ class AdminOrcaConnectionTestSupportTest {
             this.payload = payload;
             this.errorCode = errorCode;
             this.errorMessage = errorMessage;
+            this.sanitizedDetails = AuditDetailSanitizer.sanitizeDetails(
+                    payload != null ? payload.getAction() : null,
+                    payload != null ? payload.getDetails() : null);
             return null;
         }
     }

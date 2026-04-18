@@ -259,6 +259,7 @@ test('correction note は workflow ではなく note として表示し、settin
     await page.goto(`${baseUrl}/f/${facilityId}/charts?msw=1`);
     await expect(page.locator('.charts-page')).toBeVisible({ timeout: 20_000 });
     const summary = page.locator('[data-test-id="orca-summary"]');
+    const incomeCard = summary.locator('[data-test-id="orca-income-summary-card"]');
     await expect(summary).toBeVisible({ timeout: 20_000 });
     await page.evaluate(
       async ({ facilityId, userId, visitDate }) => {
@@ -295,15 +296,39 @@ test('correction note は workflow ではなく note として表示し、settin
       { facilityId, userId, visitDate },
     );
 
+    await expect(summary.locator('[data-test-id="orca-billing-correction-note"]')).toBeVisible({ timeout: 10_000 });
     await expect(summary.locator('[data-test-id="orca-billing-correction-note"]')).toContainText('補正が必要です');
+    await expect(summary.locator('[data-test-id="orca-billing-setting-note"]')).toBeVisible({ timeout: 10_000 });
     await expect(summary.locator('[data-test-id="orca-billing-setting-note"]')).toContainText('収納情報の確認前です');
+    await expect(summary.getByText('Workflow / 院内ローカル診療サマリ')).toBeVisible({ timeout: 10_000 });
+    await expect(summary.getByText('Transmission / medical-mod-v2')).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard.getByText('ORCA収納情報')).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard.getByText(`対象日: ${visitDate}`)).toBeVisible({ timeout: 10_000 });
+    await expect(
+      incomeCard.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。'),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(incomeCard.getByText('未収金合計 (Unpaid_Money_Total)')).toBeVisible({ timeout: 10_000 });
     const detailsToggle = summary.getByText('詳細を表示').first();
     if (await detailsToggle.isVisible().catch(() => false)) {
       await detailsToggle.click();
     }
 
+    const details = summary.locator('.orca-summary__details-fold');
+    await expect(details).not.toContainText('補正が必要です');
+    await expect(details).not.toContainText('収納情報の確認前です');
+    await expect(details).not.toContainText('Workflow / 院内ローカル診療サマリ');
+    await expect(details).not.toContainText('Transmission / medical-mod-v2');
+    await expect(details).not.toContainText('ORCA収納情報');
+    await expect(details.locator('[data-test-id="orca-billing-correction-note"]')).toHaveCount(0);
+    await expect(details.locator('[data-test-id="orca-billing-setting-note"]')).toHaveCount(0);
+    await expect(details.getByText(`対象日: ${visitDate}`)).toHaveCount(0);
+    await expect(
+      details.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。'),
+    ).toHaveCount(0);
+    await expect(details.getByText('未収金合計 (Unpaid_Money_Total)')).toHaveCount(0);
+
     await expect(summary.getByText('confirmation: 会計待ち+送信済')).toBeVisible({ timeout: 10_000 });
     await expect(summary.getByText('transmission: 送信済')).toBeVisible({ timeout: 10_000 });
-    await expect(summary.getByText('Workflow / 院内ローカル診療サマリ')).toBeVisible({ timeout: 10_000 });
   });
 });

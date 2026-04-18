@@ -679,6 +679,33 @@ describe('PatientsPage official patient flows', () => {
     expect(screen.queryByText('保存を再試行できます')).not.toBeInTheDocument();
   });
 
+  it('create 200 + canonical readback failure でも full success copy を出さない', async () => {
+    mockMutationResult = {
+      ok: false,
+      writeAccepted: true,
+      errorCategory: 'canonical_refetch_failed',
+      message: '新患登録は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
+      patient: {
+        patientId: '000099',
+        name: '新規患者',
+      },
+      canonicalRefetch: {
+        source: 'patientlst2v2',
+        ok: false,
+        status: 503,
+      },
+    };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole('button', { name: '新患登録' }));
+    await user.type(getInputById('patients-form-name'), '新規患者');
+    await user.click(screen.getByRole('button', { name: '新患登録を実行' }));
+
+    expect(screen.queryByText(/canonical\/local 同期済み患者/)).not.toBeInTheDocument();
+    expect(screen.getByText('新患登録は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。')).toBeInTheDocument();
+  });
+
   it('import flow も canonical readback failure を success 扱いしない', async () => {
     mockMutationResult = {
       ok: false,
@@ -699,6 +726,42 @@ describe('PatientsPage official patient flows', () => {
 
     expect(await screen.findByText('ORCA既存患者取込は受け付けられましたが、患者番号 00001234 の canonical readback に失敗したため同期完了を確認できませんでした。')).toBeInTheDocument();
     expect(screen.queryByText('ORCA既存患者取込が完了し canonical/local 同期を更新しました')).not.toBeInTheDocument();
+  });
+
+  it('import 200 + skipped-only partial は full success にせず audit summary も warning にする', async () => {
+    mockMutationResult = {
+      ok: false,
+      writeAccepted: true,
+      businessOk: false,
+      errorCategory: 'business_partial',
+      error: 'ORCA既存患者取込は skippedCount=1 が返されたため完了扱いにできません（入力 1 / requested 1 / fetched 1 / imported 1 / skipped 1 / errors 0）。',
+      importSummary: {
+        apiResult: '00',
+        apiResultMessage: 'OK',
+        requestedCount: 1,
+        fetchedCount: 1,
+        createdCount: 1,
+        updatedCount: 0,
+        importedCount: 1,
+        skippedCount: 1,
+        errorsCount: 0,
+      },
+    };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByText('ORCA既存患者取込', { selector: 'summary' }));
+    await user.type(getInputById('patients-orca-import-patient-id'), '00001234');
+    await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込' })[0]);
+
+    expect(await screen.findAllByText('ORCA既存患者取込は skippedCount=1 が返されたため完了扱いにできません（入力 1 / requested 1 / fetched 1 / imported 1 / skipped 1 / errors 0）。')).toHaveLength(2);
+    expect(screen.queryByText('ORCA既存患者取込が完了し canonical/local 同期を更新しました')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: '監査/ログ' }));
+    expect(screen.getByText('取込結果')).toBeInTheDocument();
+    expect(screen.getByText('要確認')).toBeInTheDocument();
+    expect(screen.getByText('full-success 条件を満たさないため完了扱いにしていません。')).toBeInTheDocument();
+    expect(screen.getByText('official ORCA 取込')).toBeInTheDocument();
+    expect(screen.getByText('一部処理')).toBeInTheDocument();
   });
 });
 

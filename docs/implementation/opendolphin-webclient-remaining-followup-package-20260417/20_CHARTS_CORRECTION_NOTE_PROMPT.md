@@ -88,7 +88,7 @@ current scenario が `unresolved` ではなく `paid` に落ちているなら�
 - `PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/charts/e2e-billing-correction-note.spec.ts`
 - `PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/reception/e2e-billing-correction-note.spec.ts`
 - `cd web-client && npm run ci`
-- `cd web-client && node scripts/runtime-ready-smoke.mjs` は chart open / auth bootstrap / route-state path を触った場合のみ再実行。carry forward する場合は report に明記する
+- `cd web-client && node scripts/runtime-ready-smoke.mjs` は gate evidence に使うなら current run で再実行する。過去 PASS claim の carry forward は current truth としない
 
 ## report format
 - summary

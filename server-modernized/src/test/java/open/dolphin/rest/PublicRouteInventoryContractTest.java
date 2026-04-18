@@ -94,6 +94,9 @@ class PublicRouteInventoryContractTest {
         assertThat(masterRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_MASTER_ROUTE_KEYS);
         assertThat(localRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_LOCAL_ROUTE_KEYS);
         assertThat(adminInternalRoutes).containsExactlyInAnyOrderElementsOf(EXPECTED_ADMIN_INTERNAL_ROUTE_KEYS);
+        assertThat(routeKeys)
+                .noneMatch(routeKey -> routeKey.contains(" /api/orca/queue"))
+                .noneMatch(routeKey -> routeKey.contains(" /api/orca/pusheventgetv2"));
 
         assertThat(routes)
                 .filteredOn(route -> route.path().startsWith("/api/orca/"))

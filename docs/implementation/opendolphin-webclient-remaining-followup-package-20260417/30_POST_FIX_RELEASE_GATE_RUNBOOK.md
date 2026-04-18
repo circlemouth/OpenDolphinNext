@@ -9,7 +9,7 @@ Task 10 と Task 20 の修正後に、manual QA / ORCA live QA に入れる状�
 3. `PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/charts/e2e-billing-correction-note.spec.ts`
 4. `PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/reception/e2e-billing-correction-note.spec.ts`
 5. `cd web-client && npm run ci`
-6. auth/bootstrap/chart-open path を触った場合のみ `cd web-client && node scripts/runtime-ready-smoke.mjs`
+6. `cd web-client && node scripts/runtime-ready-smoke.mjs`
 7. manual QA entry conditions を点検する
 8. ORCA live QA entry conditions を点検する
 
@@ -19,7 +19,7 @@ Task 10 と Task 20 の修正後に、manual QA / ORCA live QA に入れる状�
 - claim-send cache storage contract aligned
 - web-client npm run ci passes after residual fixes
 - fixed premise drift check clean
-- runtime-ready-smoke is either re-run and pass, or explicitly carried forward with no touched dependency
+- runtime-ready-smoke rerun passes in the current run
 
 ## ORCA live QA entry conditions
 - manual QA completed

@@ -1,0 +1,27 @@
+[2m[WebServer] [22m
+[2m[WebServer] [22m> web-client@0.0.0 dev
+[2m[WebServer] [22m> vite --host --port 4173 --clearScreen false
+[2m[WebServer] [22m
+[2m[WebServer] [22m(node:53171) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[2m[WebServer] [22m(Use `node --trace-warnings ...` to show where the warning was created)
+[2m[WebServer] [22m
+[2m[WebServer] [22m  VITE v6.4.1  ready in 167 ms
+[2m[WebServer] [22m
+[2m[WebServer] [22m  ➜  Local:   http://localhost:4173/
+[2m[WebServer] [22m  ➜  Network: http://192.168.10.136:4173/
+[2m[WebServer] [22m  ➜  Network: http://100.81.72.14:4173/
+
+Running 2 tests using 2 workers
+
+(node:53202) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:53201) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:53201) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:53202) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 tests/charts/e2e-billing-correction-note.spec.ts:44:5 › correction note は workflow ではなく note として表示し、setting note と分離する (MSW) (4.6s)
+  ✓  2 tests/charts/e2e-orca-billing-status.spec.ts:47:5 › 会計伝票の送信結果と incomeinfv2 を突き合わせて会計済みを表示する (MSW) (5.3s)
+
+  2 passed (11.0s)

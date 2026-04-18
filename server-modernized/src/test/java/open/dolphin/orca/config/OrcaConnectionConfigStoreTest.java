@@ -87,7 +87,7 @@ class OrcaConnectionConfigStoreTest {
         Map<String, String> db = new LinkedHashMap<>();
         OrcaConnectionConfigStore store = newStore(protector, db);
 
-        store.update("DEFAULT", new OrcaConnectionConfigStore.UpdateRequest(
+        store.update("D001", new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
                 "https://default.example.orca",
                 443,
@@ -98,7 +98,7 @@ class OrcaConnectionConfigStoreTest {
                 Boolean.FALSE,
                 null
         ), null, null, "RUN-DEFAULT", "FACILITY:admin");
-        store.updateDefaultFacilityId("DEFAULT", "RUN-DEFAULT", "FACILITY:admin");
+        store.updateDefaultFacilityId("D001", "RUN-DEFAULT", "FACILITY:admin");
 
         store.update("F001", new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
@@ -116,7 +116,7 @@ class OrcaConnectionConfigStoreTest {
         assertNotNull(defaultSnapshot);
         assertEquals("https://default.example.orca", defaultSnapshot.getServerUrl());
         assertEquals("default-user", defaultSnapshot.getUsername());
-        assertEquals("DEFAULT", store.getDefaultFacilityId());
+        assertEquals("D001", store.getDefaultFacilityId());
 
         OrcaConnectionConfigRecord facilitySnapshot = store.getSnapshot("F001");
         assertNotNull(facilitySnapshot);
@@ -222,6 +222,58 @@ class OrcaConnectionConfigStoreTest {
     }
 
     @Test
+    void updateRejectsReservedDefaultFacilityLiteral() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
+        Map<String, String> db = new LinkedHashMap<>();
+        OrcaConnectionConfigStore store = newStore(protector, db);
+
+        OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
+                Boolean.TRUE,
+                "https://weborca-trial.orca.med.or.jp",
+                443,
+                "trial",
+                null,
+                null,
+                "weborcatrial",
+                Boolean.FALSE,
+                null
+        );
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> store.update("default", update, null, null, "RUN-DEFAULT", "FACILITY:admin")
+        );
+
+        assertEquals("facilityId に予約語 default は指定できません。", ex.getMessage());
+    }
+
+    @Test
+    void updateRejectsServerUrlWithUserinfo() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
+        Map<String, String> db = new LinkedHashMap<>();
+        OrcaConnectionConfigStore store = newStore(protector, db);
+
+        OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
+                Boolean.TRUE,
+                "https://admin:pass@facility.example.orca/secret-prefix",
+                443,
+                "trial",
+                null,
+                null,
+                "weborcatrial",
+                Boolean.FALSE,
+                null
+        );
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> store.update("F001", update, null, null, "RUN-USERINFO", "FACILITY:admin")
+        );
+
+        assertEquals("サーバURLに userinfo は指定できません。", ex.getMessage());
+    }
+
+    @Test
     void initRejectsLegacySingleRecordConfig() throws Exception {
         TotpSecretProtector protector = buildProtector(1);
         Map<String, String> db = new LinkedHashMap<>();
@@ -257,6 +309,77 @@ class OrcaConnectionConfigStoreTest {
                 () -> store.updateDefaultFacilityId("UNKNOWN", "RUN-DEFAULT", "FACILITY:admin"));
 
         assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, ex.getErrorCategory());
+    }
+
+    @Test
+    void updateDefaultFacilityRejectsReservedDefaultLiteral() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
+        OrcaConnectionConfigStore store = newStore(protector, new LinkedHashMap<>());
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> store.updateDefaultFacilityId("DeFaUlT", "RUN-DEFAULT", "FACILITY:admin"));
+
+        assertEquals("facilityId に予約語 default は指定できません。", ex.getMessage());
+    }
+
+    @Test
+    void initRejectsReservedDefaultFacilityEntryKey() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
+        Map<String, String> db = new LinkedHashMap<>();
+        db.put(STATE_CATEGORY + ":" + STATE_KEY, """
+                {
+                  "version": 2,
+                  "defaultFacilityId": "default",
+                  "facilities": {
+                    "default": {
+                      "facilityId": "default",
+                      "useWeborca": true,
+                      "serverUrl": "https://facility.example.orca",
+                      "port": 443,
+                      "username": "trial-user",
+                      "passwordEncrypted": "ciphertext"
+                    }
+                  }
+                }
+                """);
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> newStore(protector, db)
+        );
+
+        assertEquals("facilityId に予約語 default は指定できません。", ex.getMessage());
+    }
+
+    @Test
+    void snapshotPreservesClientAuthConfiguredTruthPerFacility() throws Exception {
+        TotpSecretProtector protector = buildProtector(7);
+        Map<String, String> db = new LinkedHashMap<>();
+        db.put(STATE_CATEGORY + ":" + STATE_KEY, """
+                {
+                  "version": 2,
+                  "defaultFacilityId": "F001",
+                  "facilities": {
+                    "F001": {
+                      "facilityId": "F001",
+                      "useWeborca": true,
+                      "serverUrl": "https://facility.example.orca",
+                      "port": 443,
+                      "username": "trial-user",
+                      "passwordEncrypted": "ciphertext",
+                      "clientAuthEnabled": true
+                    }
+                  }
+                }
+                """);
+
+        OrcaConnectionConfigStore store = newStore(protector, db);
+
+        OrcaConnectionConfigRecord snapshot = store.getSnapshot("F001");
+        assertNotNull(snapshot);
+        assertEquals(Boolean.TRUE, snapshot.getClientAuthEnabled());
+        assertEquals("F001", store.getDefaultFacilityId());
     }
 
     @Test

@@ -419,6 +419,7 @@ const buildSummaryMarkdown = (summary) =>
   `- Reception Row: ${summary.receptionRowStatus ?? 'unknown'}\n` +
   `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
   `- Medical Information Gate: ${summary.medicalInformationGate?.ok === false ? 'failed' : summary.medicalInformationGate?.enforced ? 'passed' : 'skipped'}\n` +
+  `- Medical Information Checked Requests: ${summary.medicalInformationGate?.checkedRequests ?? 0}\n` +
   `- Charts Handoff: ${summary.chartsHandoff?.status ?? 'unknown'}\n` +
   `- Visit Row Readiness: ${summary.visitRowReadiness ?? 'unknown'}\n` +
   `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +

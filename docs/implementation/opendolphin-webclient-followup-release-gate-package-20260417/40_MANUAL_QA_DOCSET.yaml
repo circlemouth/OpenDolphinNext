@@ -5,9 +5,9 @@ inline_context:
   task_name: manual QA handoff
   entry_conditions:
     - correction-note verification completed
-    - runtime-ready-smoke passed
-    - web-client npm run ci passed
-    - server-modernized verify passed
+    - runtime-ready-smoke previous-pass claim is stale; rerun before using as current truth
+    - web-client npm run ci previous-pass claim is stale; rerun before using as current truth
+    - server-modernized verify previous-pass claim is stale; rerun before using as current truth
     - fixed premise drift check clean
   qa_focus:
     - Reception always-visible transmission status

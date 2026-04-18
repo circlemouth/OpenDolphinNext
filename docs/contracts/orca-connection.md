@@ -33,9 +33,11 @@
 }
 ```
 - `defaultFacilityId` は明示設定のみ許可する。
+- `facilityId` / `defaultFacilityId` には `null` / blank / 大文字小文字を問わない予約語 `default` を許可しない。
 - 施設更新時に `defaultFacilityId` を暗黙変更してはならない。
 - `PUT /api/admin/orca/connection` は施設別接続設定のみ更新する。
 - `PUT /api/admin/orca/connection/default-facility` は `{"defaultFacilityId":"..."}` を受け取り、default facility 切替だけを行う。
+- `serverUrl` は設定保存時に検証し、userinfo を含む URL は拒否する。userinfo を黙って除去・正規化して保存してはならない。
 
 ## 解決順序
 1. 呼び出し引数の facilityId
@@ -74,6 +76,8 @@
   - password
   - certificate 内容
   - pathPrefix
+  - userinfo
+- failure response / audit details / readiness / summary log / detail log は raw URL、userinfo、host、secret path、credential を含めない。
 
 ## 実装タスク
 - [x] `SecondFactorSecurityConfig` から ORCA 用保護器を分離し、`OrcaCredentialSecurityConfig` 等の専用設定クラスを追加する。

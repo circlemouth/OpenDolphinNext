@@ -64,7 +64,7 @@ class OrcaGatewayExceptionMapperTest {
         field.set(mapper, request);
 
         Response response = mapper.toResponse(new OrcaGatewayException(
-                "[invalid_url] Invalid ORCA API URL: https://admin:pass@bad host.example.invalid/api"));
+                "[invalid_url] Invalid ORCA API URL: https://admin:pass@bad host.example.invalid/secret-prefix"));
         assertEquals(502, response.getStatus());
 
         @SuppressWarnings("unchecked")
@@ -72,5 +72,10 @@ class OrcaGatewayExceptionMapperTest {
         assertEquals("Invalid ORCA API URL", body.get("message"));
         assertFalse(String.valueOf(body.get("message")).contains("bad host.example.invalid"));
         assertFalse(String.valueOf(body.get("message")).contains("admin:pass"));
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertFalse(rendered.contains("https://admin:pass@bad host.example.invalid/secret-prefix"));
+        assertFalse(rendered.contains("bad host.example.invalid"));
+        assertFalse(rendered.contains("admin:pass"));
+        assertFalse(rendered.contains("secret-prefix"));
     }
 }

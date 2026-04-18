@@ -10,9 +10,9 @@ inline_context:
     - OrcaSummary mount contract blocker is closed
     - print preview harness-first blocker is closed
     - Task 31 print app-side escalation remains closed
-    - runtime-ready-smoke passed in the latest worker report
-    - web-client npm run ci passed in the latest worker report
-    - server verify passed in the latest worker report
+    - runtime-ready-smoke latest-pass claim is stale; current truth requires rerun before gate use
+    - web-client npm run ci latest-pass claim is stale; current truth requires rerun before gate use
+    - server verify latest-pass claim is stale; current truth requires rerun before gate use
   remaining_blockers:
     - charts correction-note spec verification is still open
     - claim-send cache storage contract drift remains open
@@ -20,7 +20,7 @@ inline_context:
     - ORCA live QA not started
   known_failure_details:
     - charts actual failing spec path: tests/charts/e2e-billing-correction-note.spec.ts
-    - reception actual spec path: tests/reception/e2e-billing-correction-note.spec.ts and it passed in the latest worker report
+    - reception actual spec path: tests/reception/e2e-billing-correction-note.spec.ts; older pass claim is stale and rerun is required before gate use
     - latest charts failure report says orca-billing-setting-note was absent and the expected text around 収納情報の確認前です did not match
   grounded_repo_facts:
     - web-client/notes/security-spec.md says invoice numbers and warning details must not be persisted for orca-claim-send / orca-income-info

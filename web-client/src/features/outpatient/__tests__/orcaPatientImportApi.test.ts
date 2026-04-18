@@ -94,6 +94,12 @@ describe('importPatientsFromOrca', () => {
           apiResult: '00',
           apiResultMessage: 'OK',
           runId: 'RUN-OK',
+          requestedCount: 1,
+          fetchedCount: 1,
+          createdCount: 1,
+          updatedCount: 0,
+          skippedCount: 0,
+          errors: [],
         }),
         {
           status: 200,
@@ -127,6 +133,12 @@ describe('importPatientsFromOrca', () => {
           apiResult: '00',
           apiResultMessage: 'OK',
           runId: 'RUN-OK',
+          requestedCount: 1,
+          fetchedCount: 1,
+          createdCount: 1,
+          updatedCount: 0,
+          skippedCount: 0,
+          errors: [],
         }),
         {
           status: 200,
@@ -148,5 +160,134 @@ describe('importPatientsFromOrca', () => {
       matchedPatientIds: [],
       missingPatientIds: ['000001'],
     });
+  });
+
+  it('HTTP 200 でも business partial は full success にしない', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '10',
+          apiResultMessage: 'PARTIAL',
+          runId: 'RUN-PARTIAL',
+          requestedCount: 1,
+          fetchedCount: 0,
+          createdCount: 0,
+          updatedCount: 0,
+          skippedCount: 1,
+          errors: [{ patientId: '000001', message: 'Import failed' }],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await importPatientsFromOrca({ patientIds: ['000001'], runId: 'RUN-CALL' });
+
+    expect(result.writeAccepted).toBe(true);
+    expect(result.businessOk).toBe(false);
+    expect(result.ok).toBe(false);
+    expect(result.errorCategory).toBe('business_partial');
+    expect(result.error).toContain('Api_Result=10 / message=PARTIAL で business success ではない');
+    expect(result.importSummary).toMatchObject({
+      apiResult: '10',
+      apiResultMessage: 'PARTIAL',
+      requestedCount: 1,
+      fetchedCount: 0,
+      importedCount: 0,
+      skippedCount: 1,
+      errorsCount: 1,
+    });
+    expect(mockRefetchOfficialCanonicalPatients).not.toHaveBeenCalled();
+  });
+
+  it('HTTP 200 でも skippedCount>0 は full success にしない', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          runId: 'RUN-SKIPPED',
+          requestedCount: 1,
+          fetchedCount: 1,
+          createdCount: 0,
+          updatedCount: 0,
+          skippedCount: 1,
+          errors: [],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await importPatientsFromOrca({ patientIds: ['000001'], runId: 'RUN-CALL' });
+
+    expect(result.ok).toBe(false);
+    expect(result.writeAccepted).toBe(true);
+    expect(result.businessOk).toBe(false);
+    expect(result.errorCategory).toBe('business_partial');
+    expect(result.error).toContain('skippedCount=1 が返された');
+    expect(mockRefetchOfficialCanonicalPatients).not.toHaveBeenCalled();
+  });
+
+  it('HTTP 200 でも requested/fetched/imported 不整合は full success にしない', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          runId: 'RUN-COUNT-MISMATCH',
+          requestedCount: 2,
+          fetchedCount: 2,
+          createdCount: 1,
+          updatedCount: 0,
+          skippedCount: 0,
+          errors: [],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await importPatientsFromOrca({ patientIds: ['000001', '000002'], runId: 'RUN-CALL' });
+
+    expect(result.ok).toBe(false);
+    expect(result.writeAccepted).toBe(true);
+    expect(result.businessOk).toBe(false);
+    expect(result.errorCategory).toBe('business_partial');
+    expect(result.error).toContain('requested/fetched/imported の件数整合が取れない');
+    expect(mockRefetchOfficialCanonicalPatients).not.toHaveBeenCalled();
+  });
+
+  it('HTTP 200 でも count 項目が不足していれば fail closed で partial にする', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          runId: 'RUN-AMBIGUOUS',
+          requestedCount: 1,
+          errors: [],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await importPatientsFromOrca({ patientIds: ['000001'], runId: 'RUN-CALL' });
+
+    expect(result.ok).toBe(false);
+    expect(result.writeAccepted).toBe(true);
+    expect(result.businessOk).toBe(false);
+    expect(result.errorCategory).toBe('business_partial');
+    expect(result.error).toContain('skippedCount を確認できず full success を判定できない');
+    expect(mockRefetchOfficialCanonicalPatients).not.toHaveBeenCalled();
   });
 });

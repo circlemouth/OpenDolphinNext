@@ -74,9 +74,6 @@ const pickClaimBundleForEntry = (entry: ReceptionEntry, bundles: ClaimBundle[]) 
     const byAppointment = bundles.find((bundle) => bundle.appointmentId === entry.appointmentId);
     if (byAppointment) return byAppointment;
   }
-  if (entry.patientId) {
-    return bundles.find((bundle) => bundle.patientId === entry.patientId);
-  }
   return undefined;
 };
 
@@ -408,27 +405,32 @@ export function DocumentTimeline({
   const [windowStart, setWindowStart] = useState(0);
   const [windowSize, setWindowSize] = useState(VIRTUAL_WINDOW);
   const totalEntries = sortedEntries.length;
+  const patientEntryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of sortedEntries) {
+      if (!entry.patientId) continue;
+      counts.set(entry.patientId, (counts.get(entry.patientId) ?? 0) + 1);
+    }
+    return counts;
+  }, [sortedEntries]);
+  const selectedPatientEntryCount = useMemo(
+    () => (selectedPatientId ? patientEntryCounts.get(selectedPatientId) ?? 0 : 0),
+    [patientEntryCounts, selectedPatientId],
+  );
 
   const selectedIndex = useMemo(() =>
     sortedEntries.findIndex(
       (entry) =>
         (selectedReceptionId && entry.receptionId === selectedReceptionId) ||
         (selectedAppointmentId && entry.appointmentId === selectedAppointmentId) ||
-        (selectedPatientId && entry.patientId === selectedPatientId),
+        (selectedPatientEntryCount === 1 && selectedPatientId && entry.patientId === selectedPatientId),
     ),
-  [selectedAppointmentId, selectedPatientId, selectedReceptionId, sortedEntries]);
+  [selectedAppointmentId, selectedPatientEntryCount, selectedPatientId, selectedReceptionId, sortedEntries]);
 
   const selectedEntry = useMemo(() => {
     if (selectedIndex < 0) return undefined;
     return sortedEntries[selectedIndex];
   }, [selectedIndex, sortedEntries]);
-  const selectedPatientEntryCount = useMemo(
-    () =>
-      selectedPatientId
-        ? sortedEntries.filter((entry) => entry.patientId === selectedPatientId).length
-        : 0,
-    [selectedPatientId, sortedEntries],
-  );
   const selectedSendMatch = useMemo<OrcaClaimSendCacheMatch | null>(
     () =>
       selectedEntry
@@ -461,9 +463,8 @@ export function DocumentTimeline({
     () => getOrcaClaimSendEntryForRow({}, selectedSendMatch),
     [selectedSendMatch],
   );
-  const selectedInvoiceNumber =
-    selectedBundle?.invoiceNumber ?? effectiveClaimData?.invoiceNumber ?? selectedSendCache?.invoiceNumber;
-  const selectedDataId = effectiveClaimData?.dataId ?? selectedSendCache?.dataId;
+  const selectedInvoiceNumber = selectedBundle?.invoiceNumber ?? selectedSendCache?.invoiceNumber;
+  const selectedDataId = selectedSendCache?.dataId;
   const selectedIdentifierInline = formatOrcaIdentifierInline({
     invoiceNumber: selectedInvoiceNumber,
     dataId: selectedDataId,
@@ -753,11 +754,14 @@ export function DocumentTimeline({
           section.items.map((entry) => {
             const isSelected =
               (selectedReceptionId && entry.receptionId === selectedReceptionId) ||
-              (selectedPatientId && entry.patientId === selectedPatientId) ||
-              (selectedAppointmentId && entry.appointmentId === selectedAppointmentId);
+              (selectedAppointmentId && entry.appointmentId === selectedAppointmentId) ||
+              (selectedPatientEntryCount === 1 && selectedPatientId && entry.patientId === selectedPatientId);
             const shouldHighlight = resolvedMissingMaster || isSelected;
             const bundle = pickClaimBundleForEntry(entry, claimBundles);
-            const sendStatus = resolveOrcaSendStatus(entry.patientId ? orcaQueueByPatientId.get(entry.patientId) : undefined);
+            const sendStatus =
+              entry.patientId && (patientEntryCounts.get(entry.patientId) ?? 0) === 1
+                ? resolveOrcaSendStatus(orcaQueueByPatientId.get(entry.patientId))
+                : undefined;
             const nextAction = deriveNextAction(entry.status, queuePhase, resolvedMissingMaster, sendStatus, claimEnabled);
             const bundleStatus = bundle?.claimStatus ?? '診療中';
             const entryInvoiceIdentifier = formatOrcaIdentifier(
@@ -882,6 +886,7 @@ export function DocumentTimeline({
     groupedEntries,
     handleQueueRetry,
     orcaQueueByPatientId,
+    patientEntryCounts,
     queuePhase,
     queueRetryState.patientId,
     queueRetryState.status,
@@ -892,6 +897,7 @@ export function DocumentTimeline({
     selectedAppointmentId,
     selectedDataId,
     selectedInvoiceNumber,
+    selectedPatientEntryCount,
     selectedPatientId,
     selectedReceptionId,
     toggleSection,

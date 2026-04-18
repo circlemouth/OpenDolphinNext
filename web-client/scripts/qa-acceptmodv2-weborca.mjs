@@ -350,6 +350,7 @@ const buildMarkdownSummary = (summary) =>
   `- 来院区分: ${summary.visitKind}\n` +
   `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
   `- Medical Information Gate: ${summary.medicalInformationGate?.ok === false ? 'failed' : summary.medicalInformationGate?.enforced ? 'passed' : 'skipped'}\n` +
+  `- Medical Information Checked Requests: ${summary.medicalInformationGate?.checkedRequests ?? 0}\n` +
   `- Blocker: ${summary.blockerClassification}\n` +
   (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
   `\n## 送信結果\n\n` +
