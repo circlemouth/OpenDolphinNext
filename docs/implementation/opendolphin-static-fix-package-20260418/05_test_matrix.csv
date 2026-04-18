@@ -1,0 +1,12 @@
+test_id,cluster,scope,type,target_files,expected_assertion,owner
+TEST-S-01,C1,facility default resolution,unit/contract,OrcaConnectionConfigStoreTest;OrcaTransportRegistryTest,explicit defaultなしでruntime fallbackしない; unresolvedはfacility_configuration_missing,SA-01
+TEST-S-02,C2,sanitize invalid host/baseUrl,unit,OrcaTransportSettings tests,warning logにraw host/baseUrl/pathPrefix/userinfoが出ない,SA-01
+TEST-S-03,C2,sanitize malformed ORCA API URL,unit/contract,OrcaGatewayExceptionMapperTest;AdminOrcaConnectionTestSupportTest;AbstractResource related tests,error body/audit/admin responseにraw URLが出ない,SA-01
+TEST-W-01,C3,row-local cache lookup,unit,orcaClaimSendCache tests,patientId latest cacheでpositive signalを返さない; match優先順を固定,SA-02
+TEST-W-02,C3,same-day multi-encounter overlay,component,OrcaSummary/chartsActionBar/report/order panels tests,別encounterのsend/invoice/warningがcurrent encounterに貼られない,SA-02
+TEST-W-03,C4,OrcaSummary must-visible,component,OrcaSummary.semantics.test.tsx,Workflow/Transmission/ORCA収納情報が初期表示でvisible,SA-02/SA-04
+TEST-P-01,C5,official create/update readback failure,unit/component,patients api/page/dialog tests,write 200 + readback failureでfull-success copy/closeにならない,SA-03
+TEST-P-02,C5,official import readback failure,unit/component,orcaPatientImportApi test;PatientsPage test,import 200 + readback failureでcanonical sync success copyにならない,SA-03
+TEST-Q-01,C7,Medical_Information omission gate,script,qa-acceptmodv2-weborca.mjs;qa-fullflow-weborca.mjs,QA_MEDICAL_INFORMATION未指定runでrequestにMedical_Informationが入ったらscript failure,SA-04
+TEST-G-01,guard,reception pass area,component,ReceptionPage tests;receptionHandoff tests,既存 official flow / fail-close handoff を壊さない,main-agent
+TEST-G-02,guard,administration pass area,component/contract,AdministrationPage.connection tests;FacilitySettingContractTest,admin/manageusers pass area を壊さない,main-agent
