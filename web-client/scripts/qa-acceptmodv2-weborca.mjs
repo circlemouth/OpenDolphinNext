@@ -26,6 +26,10 @@ const summaryJsonPath = path.join(artifactRoot, 'accept-summary.json');
 const summaryMdPath = path.join(artifactRoot, 'accept-summary.md');
 const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
+const preflightSummaryPath =
+  process.env.QA_READONLY_PREFLIGHT_SUMMARY ??
+  path.resolve(process.cwd(), '..', 'artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'weborca-readonly-preflight', 'summary.json');
+const requireReadonlyPreflight = process.env.QA_REQUIRE_READONLY_PREFLIGHT !== '0';
 
 fs.mkdirSync(screenshotDir, { recursive: true });
 fs.mkdirSync(networkDir, { recursive: true });
@@ -67,6 +71,24 @@ const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
 if (!patientId) {
   throw new Error('QA_PATIENT_ID is required; pass a current local-searchable patient id for the target facility.');
 }
+if (requireReadonlyPreflight) {
+  if (!fs.existsSync(preflightSummaryPath)) {
+    throw new Error(
+      `read-only WebORCA preflight summary is required before acceptmodv2 mutation: ${preflightSummaryPath}. Run qa-weborca-readonly-preflight.mjs with the same RUN_ID first.`,
+    );
+  }
+  const preflightSummary = JSON.parse(fs.readFileSync(preflightSummaryPath, 'utf8'));
+  if (preflightSummary.verdict !== 'accepted' || preflightSummary.blockerClassification !== 'none') {
+    throw new Error(
+      `read-only WebORCA preflight was not accepted for RUN_ID=${runId}; verdict=${preflightSummary.verdict ?? 'unknown'} blocker=${preflightSummary.blockerClassification ?? 'unknown'}`,
+    );
+  }
+  if (preflightSummary.patientSearch?.patientId && preflightSummary.patientSearch.patientId !== patientId) {
+    throw new Error(
+      `read-only WebORCA preflight patient mismatch: preflight=${preflightSummary.patientSearch.patientId} QA_PATIENT_ID=${patientId}`,
+    );
+  }
+}
 
 const session = buildQaSession({ facilityId, userId: authUserId, runId, scenarioLabel, sessionRole, sessionRoles });
 
@@ -83,6 +105,8 @@ const redactHeaders = (headers) => {
       /^authorization$/i.test(key) ||
       /^cookie$/i.test(key) ||
       /^set-cookie$/i.test(key) ||
+      /^x-csrf-token$/i.test(key) ||
+      /^csrf-token$/i.test(key) ||
       /^username$/i.test(key) ||
       /^password$/i.test(key)
     ) {
@@ -90,6 +114,22 @@ const redactHeaders = (headers) => {
     }
   }
   return out;
+};
+
+const redactUrl = (value) => {
+  try {
+    const url = new URL(value);
+    if (url.username) url.username = 'redacted';
+    if (url.password) url.password = 'redacted';
+    for (const key of [...url.searchParams.keys()]) {
+      if (/auth|token|password|passwd|cookie|session|jsessionid/i.test(key)) {
+        url.searchParams.set(key, '<<redacted>>');
+      }
+    }
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return String(value).replace(/(Authorization|Cookie|JSESSIONID|password|passwd|token)=([^&\s]+)/gi, '$1=<<redacted>>');
+  }
 };
 
 const isTarget = (url) =>
@@ -102,7 +142,7 @@ const recordRequest = (request) => {
   const url = request.url();
   if (!isTarget(url)) return;
   requestRecords.push({
-    url,
+    url: redactUrl(url),
     method: request.method(),
     headers: redactHeaders(request.headers()),
     postData: request.postData() ?? '',
@@ -144,7 +184,7 @@ const collectResponse = async (response) => {
     responseText = `<<failed to read response body: ${String(error)}>>`;
   }
   const record = {
-    url,
+    url: redactUrl(url),
     status: response.status(),
     statusText: response.statusText(),
     request: {
@@ -162,9 +202,9 @@ const collectResponse = async (response) => {
 
 const probeMedicalInformationOptions = async (context) => {
   const url = new URL(MEDICAL_INFORMATION_PROBE_PATH, baseURL).toString();
-  logStep(`medical information probe start url=${url}`);
+  logStep(`medical information probe start url=${redactUrl(url)}`);
   requestRecords.push({
-    url,
+    url: redactUrl(url),
     method: 'GET',
     headers: {},
     postData: '',
@@ -173,7 +213,7 @@ const probeMedicalInformationOptions = async (context) => {
     const response = await context.request.get(url);
     const body = await response.text().catch(() => '');
     const record = {
-      url,
+      url: redactUrl(url),
       status: response.status(),
       statusText: response.statusText(),
       request: {
@@ -191,12 +231,12 @@ const probeMedicalInformationOptions = async (context) => {
     return {
       status: response.status(),
       ok: response.ok(),
-      url,
+      url: redactUrl(url),
     };
   } catch (error) {
     const message = String(error);
     networkRecords.push({
-      url,
+      url: redactUrl(url),
       status: 0,
       statusText: 'probe-error',
       request: {
@@ -213,7 +253,7 @@ const probeMedicalInformationOptions = async (context) => {
     return {
       status: 0,
       ok: false,
-      url,
+      url: redactUrl(url),
       error: message,
     };
   }
@@ -414,19 +454,6 @@ const run = async () => {
   await patientSearchForm.waitFor({ timeout: 20000 });
   logStep('patient search form ready');
 
-  await page
-    .waitForFunction(() => {
-      const select = document.querySelector('#reception-accept-department');
-      return select && select.querySelectorAll('option').length >= 1;
-    }, { timeout: 20000 })
-    .catch(() => null);
-  await page
-    .waitForFunction(() => {
-      const select = document.querySelector('#reception-accept-physician');
-      return select && select.querySelectorAll('option').length >= 1;
-    }, { timeout: 20000 })
-    .catch(() => null);
-
   const patientSearchInputMethod = await setTextInputValue(
     patientSearchForm.locator('#reception-patient-search-patient-id'),
     patientId,
@@ -489,12 +516,11 @@ const run = async () => {
   const summary = {
     runId,
     executedAt: new Date().toISOString(),
-    baseURL,
+    baseURL: redactUrl(baseURL),
     facilityId,
     sessionRole,
     login: {
       sessionMeStatus: sessionMe.status,
-      sessionMeBody: sessionMe.body,
     },
     patientId,
     departmentCode,
@@ -543,6 +569,12 @@ const run = async () => {
   }
 
   console.log(`Artifacts written to ${artifactRoot}`);
+  if (summary.blockerClassification !== 'none') {
+    console.error(
+      `acceptmodv2 rejected: blockerClassification=${summary.blockerClassification} apiResult=${summary.acceptResponse?.apiResult ?? 'none'}`,
+    );
+    process.exitCode = 1;
+  }
 };
 
 run().catch(async (error) => {
@@ -557,7 +589,7 @@ run().catch(async (error) => {
     lastSummary ?? {
       runId,
       executedAt: new Date().toISOString(),
-      baseURL,
+      baseURL: redactUrl(baseURL),
       facilityId,
       sessionRole,
       patientId,

@@ -617,7 +617,6 @@ try {
     smokeScheduleKey,
     login: {
       sessionMeStatus: sessionMe.status,
-      sessionMeBody: sessionMe.body,
     },
     authoritativeReadEvidence: summarizeAppointmentEvidence(appointmentEvidence),
     chartsNav: {

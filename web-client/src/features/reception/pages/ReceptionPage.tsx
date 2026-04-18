@@ -90,7 +90,12 @@ import {
 } from '../receptionHandoff';
 import { findOrcaClaimSendEntryForMatch, loadOrcaClaimSendCache } from '../../charts/orcaClaimSendCache';
 import { postMedicalRecords, type MedicalRecordEntry } from '../../administration/orcaInternalWrapperApi';
-import { searchLocalPatients, type PatientListResponse, type PatientRecord } from '../../patients/api';
+import {
+  searchLocalPatients,
+  type LocalPatientSearchParams,
+  type PatientListResponse,
+  type PatientRecord,
+} from '../../patients/api';
 import {
   loadOutpatientSavedViews,
   removeOutpatientSavedView,
@@ -1225,8 +1230,12 @@ export function ReceptionPage({
   const visitMutation = useMutation<VisitMutationPayload, Error, VisitMutationParams>({
     mutationFn: (params) => mutateVisit(params),
   });
-  const patientSearchMutation = useMutation<PatientListResponse, Error, { keyword: string }>({
-    mutationFn: (params) => searchLocalPatients({ keyword: params.keyword }),
+  const patientSearchMutation = useMutation<
+    PatientListResponse,
+    Error,
+    { keyword: string; searchType?: LocalPatientSearchParams['searchType'] }
+  >({
+    mutationFn: (params) => searchLocalPatients({ keyword: params.keyword, searchType: params.searchType }),
     onSuccess: (result) => {
       const normalizeToken = (value: string) => value.replace(/\s+/g, '').trim();
       const filters = patientSearchFilterRef.current;
@@ -3147,7 +3156,10 @@ export function ReceptionPage({
       setAcceptPatientId('');
       setAcceptWorkflowModalOpen(true);
       setDailyCalendarOpen(false);
-      await patientSearchMutation.mutateAsync({ keyword: primaryKeyword });
+      await patientSearchMutation.mutateAsync({
+        keyword: primaryKeyword,
+        searchType: filters.patientId ? 'patient-id' : undefined,
+      });
       logUiState({
         action: 'patient_search',
         screen: 'reception',

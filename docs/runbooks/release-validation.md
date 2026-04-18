@@ -94,15 +94,22 @@ cd web-client && npm run ci
 ```bash
 cd web-client && node scripts/runtime-ready-smoke.mjs
 curl -sk https://127.0.0.1:8443/openDolphin/api/orca/official/appointments/medical-information
+cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-weborca-readonly-preflight.mjs
 cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs
 cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs
 ```
 期待結果:
 - web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
+- `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` は Vite PID だけを成功条件にしない。`https://localhost:5173/` が連続して応答し、dev server process が生存していることを setup log に残す。
 - `runtime-ready-smoke` は current local smoke seed を前提に動作する。smoke seed 不一致で受付行が現れない場合は repo defect と決め打ちせず、`tests/runtime-ready-smoke.log` を保存して `test-data-blocker` または `environment-blocker` として切り分ける。
+- local smoke seed の既定キーは `encounterKey=1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001`、`scheduleKey=SMOKE-SCHEDULE-20251129-0001`、`DEV_SMOKE_PATIENT_ID=0000001`、Asia/Tokyo 当日 `09:00` の `scheduled_datetime` とする。`DEV_SMOKE_PATIENT_ID` を変更する場合は schedule / encounter projection が同じ患者を指すことを確認する。
 - `runtime-ready-smoke` は `/api/orca/queue` と `/api/orca/pusheventgetv2` を current public route とみなさず、browser request が出た場合は blocked route hit として failure にする。
 - `appointments/medical-information` の direct probe で `system01lstv2 Request_Number=06` 相当の応答可否を smoke 前に evidence 化する。
+- Phase 3 mutation の前に `qa-weborca-readonly-preflight.mjs` を必ず実行する。medical-information が HTTP 200 / `apiResult=00`、patient search が selectable、department / physician / visit kind / payment mode / medical-information select が存在することを accepted 条件とする。
+- `visitptlstv2` は HTTP 200 でも `apiResult=13` なら business success として扱わない。read-only preflight では rejected / not verified として記録し、mutation 成功の代替 evidence にしない。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` の patient picker は current reception workflow に合わせて `/api/local/patients/search` を使う。固定 seed を正本とみなさず、実行直前に current facility で local search 可能かつ単一 active entry を作れる患者IDを確認して `QA_PATIENT_ID` に渡す。
+- `qa-acceptmodv2-weborca.mjs` は既定で同じ `RUN_ID` の `qa/weborca-readonly-preflight/summary.json` を要求する。preflight artifact を別パスに置いた場合は `QA_READONLY_PREFLIGHT_SUMMARY` を渡し、preflight accepted でない run では mutation を実行しない。
+- `qa-fullflow-weborca.mjs` は Phase 3 が business accepted になった後だけ実行する。
 - 旧 closeout evidence の patientId や old RUN_ID を受入れ候補へ流用しない。current RUN_ID の rerun で local search 可否と active entry 解決性を取り直すこと。
 - patient search が 0 件、または accept 後に canonical handoff 用の active entry を一意に解決できない場合は `test-data-blocker` として停止し、summary / network / console / page-errors を保存する。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `medicalInformation` を browser request body へ送らず、含まれた場合は script 自身が failure で停止する。指定時だけ current select option を送る。
@@ -152,7 +159,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `npm run ci` が成功する。
 - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` が成功する。
 - `runtime-ready-smoke` が成功する。
-- `qa-acceptmodv2-weborca.mjs` と `qa-fullflow-weborca.mjs` が current 受付導線で完走し、`medicalInformation` 未選択時は browser request body 未送信の証跡を残す。未指定 run で request body に `medicalInformation` が含まれた場合は fail と判定される。
+- `qa-weborca-readonly-preflight.mjs` が accepted になり、その後に `qa-acceptmodv2-weborca.mjs` が current 受付導線で business accepted になる。`qa-fullflow-weborca.mjs` は Phase 3 business accepted 後にだけ実行し、`medicalInformation` 未選択時は browser request body 未送信の証跡を残す。未指定 run で request body に `medicalInformation` が含まれた場合は fail と判定される。
 - patient search が 0 件なら、script は `QA_PATIENT_ID` の不足/不一致を明示したエラーで停止する。
 - direct runtime lookup grep は `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` 1 件だけを返す。
 - `dolphin.facilityId` grep は 0 件。
@@ -160,6 +167,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 ## 証跡保存先
 - closeout 提出用の正本は `artifacts/orca-remediation/closeout/<RUN_ID>/`。
 - runtime smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/runtime-ready/`。
+- read-only preflight は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-readonly-preflight/`。
 - accept smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/acceptmodv2/`。
 - fullflow smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/fullflow/`。
 - 最低限 `git/git-head-current.txt`、`git/git-branch-current.txt`、`reports/final-report.md`、`qa/acceptmodv2/accept-summary.json`、`qa/fullflow/summary.json`、`qa/fullflow/steps.log`、`qa/fullflow/network/network.json`、`qa/fullflow/network/requests.json`、`qa/fullflow/console.json`、`qa/fullflow/page-errors.json` を同一 RUN_ID へ揃える。

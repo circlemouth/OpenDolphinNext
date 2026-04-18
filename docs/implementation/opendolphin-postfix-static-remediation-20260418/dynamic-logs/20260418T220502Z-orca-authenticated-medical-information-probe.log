@@ -1,0 +1,20 @@
+RUN_ID=20260418T220502Z
+command=cd web-client && RUN_ID=20260418T220502Z QA_BASE_URL=https://localhost:5173 node --input-type=module <authenticated medical-information probe>
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+commit=79616d7e549bc0d432345d17f7e828c64c0e4c10
+start=2026-04-18T22:19:09Z
+environment=server=http://localhost:9080/openDolphin web=https://localhost:5173; authenticated QA session; no cookies/authorization logged
+--- output ---
+{
+  "sessionMeStatus": 200,
+  "status": 200,
+  "ok": true,
+  "safeBody": {
+    "apiResult": "00",
+    "itemsCount": 8,
+    "runId": "20260418T220502Z"
+  }
+}
+--- end ---
+end=2026-04-18T22:19:11Z
+exit=0

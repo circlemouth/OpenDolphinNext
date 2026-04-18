@@ -28,10 +28,11 @@
 4. `cd web-client && node scripts/runtime-ready-smoke.mjs`
 5. `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh`
 6. `curl -sk https://127.0.0.1:8443/openDolphin/api/orca/official/appointments/medical-information` で `system01lstv2 Request_Number=06` 相当の direct probe を先に取り、同じ `RUN_ID` 配下へ evidence 化する。
-7. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。固定 seed を前提にせず、実行直前に current facility の local search と active entry 状態を確認する。patient search 0 件、重複受付、active entry 非一意のいずれかが見つかったら `test-data-blocker` として停止し、summary / network / console / page-errors を残す。
-8. 同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs` を実行する。
-9. reception / charts / patients / admin の手動 smoke を実行する。
-10. current `RUN_ID` の closeout report を完成させ、reviewer submission packet を生成・検証する。
+7. ORCA Trial または承認済み接続先で、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-weborca-readonly-preflight.mjs` を実行する。mutation は行わず、medical-information HTTP 200 / `apiResult=00`、patient search selectable、department / physician / visit kind / payment mode / medical-information select の存在を確認する。`visitptlstv2` は HTTP 200 でも `apiResult=13` なら business success として扱わない。
+8. read-only preflight accepted 後だけ、`cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs` を実行する。固定 seed を前提にせず、実行直前に current facility の local search と active entry 状態を確認する。patient search 0 件、重複受付、active entry 非一意、live mutation business reject のいずれかが見つかったら `test-data-blocker` として停止し、summary / network / console / page-errors を残す。
+9. Phase 3 business accepted 後だけ、同じ環境・同じ `RUN_ID`・同じ `QA_PATIENT_ID` で `cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs` を実行する。
+10. reception / charts / patients / admin の手動 smoke を実行する。
+11. current `RUN_ID` の closeout report を完成させ、reviewer submission packet を生成・検証する。
 ```bash
 ./scripts/create-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
 ./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>
@@ -60,10 +61,13 @@
 
 ## 5. Smoke artifact
 - `qa-acceptmodv2-weborca.mjs` は current 受付導線のスクリーンショット、network、summary を残す。
+- `qa-weborca-readonly-preflight.mjs` は Phase 3 前提を mutation なしで確認し、accepted / rejected / not verified と blocker classification を summary に残す。preflight accepted でない場合、`qa-acceptmodv2-weborca.mjs` は実行しない。
 - `qa-fullflow-weborca.mjs` は reception -> charts -> claim/income/support の一連の network とスクリーンショットを残す。
 - `appointments/medical-information` の direct probe を同じ `RUN_ID` の network evidence に残し、`system01lstv2` 側の成功/失敗を smoke 本体と分離して再読できるようにする。
 - patient search が 0 件なら `QA_PATIENT_ID` の不足/不一致として扱い、local seed 不一致のまま「UI 不具合」と誤判定しない。
 - `runtime-ready-smoke` が smoke seed 不一致で失敗した場合は、`tests/runtime-ready-smoke.log` を current `RUN_ID` へ保存し、`test-data-blocker` または `environment-blocker` として分類する。repo defect と断定したまま cutover 判断を進めない。
+- `WEB_CLIENT_MODE=npm ./setup-modernized-env.sh` は Vite PID だけで成功扱いしない。`https://localhost:5173/` の実応答と dev server process 生存を確認し、失敗時は actionable error として setup log に残す。
+- local smoke seed は `encounterKey=1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001`、`scheduleKey=SMOKE-SCHEDULE-20251129-0001`、`DEV_SMOKE_PATIENT_ID=0000001`、Asia/Tokyo 当日 09:00 を既定とし、schedule / encounter projection が同じ患者を指すことを確認する。
 - `runtime-ready-smoke` は `/api/orca/queue` と `/api/orca/pusheventgetv2` を blocked legacy route hit として扱い、browser request が出た場合は failure にする。
 - `QA_MEDICAL_INFORMATION` を指定しない run を 1 本含め、未選択時に browser request body の `medicalInformation` が未送信であることを証跡化する。未指定 run で request body に `medicalInformation` が含まれた場合は script failure として cutover を止める。
 - `Acceptance_Push` suppress が必要な環境では server runtime config で明示し、client 側の補完/抑止に戻さない。

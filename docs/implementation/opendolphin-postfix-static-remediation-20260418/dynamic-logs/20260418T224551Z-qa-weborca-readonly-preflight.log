@@ -1,0 +1,68 @@
+{
+  "runId": "20260418T224551Z",
+  "executedAt": "2026-04-18T23:08:56.076Z",
+  "baseURL": "/",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "sessionRole": "admin",
+  "login": {
+    "sessionMeStatus": 200
+  },
+  "patientSearch": {
+    "patientId": "0000001",
+    "selectable": false,
+    "selectableCount": 0,
+    "verdict": "rejected"
+  },
+  "selectors": {
+    "department": {
+      "exists": false,
+      "optionCount": 0,
+      "hasDesiredValue": false,
+      "verdict": "rejected"
+    },
+    "physician": {
+      "exists": false,
+      "optionCount": 0,
+      "hasDesiredValue": false,
+      "verdict": "rejected"
+    },
+    "visitKind": {
+      "exists": false,
+      "optionCount": 0,
+      "hasDesiredValue": false,
+      "verdict": "rejected"
+    },
+    "paymentMode": {
+      "exists": false,
+      "optionCount": 0,
+      "hasDesiredValue": false,
+      "verdict": "rejected"
+    },
+    "medicalInformation": {
+      "exists": false,
+      "optionCount": 0,
+      "hasDesiredValue": true,
+      "verdict": "rejected"
+    }
+  },
+  "medicalInformationProbe": {
+    "status": 200,
+    "ok": true,
+    "apiResult": "00",
+    "apiResultMessage": "処理終了",
+    "itemsCount": 8,
+    "verdict": "accepted",
+    "accepted": true
+  },
+  "visitListApiResult": "13",
+  "visitListBusinessSuccess": false,
+  "visitListVerdict": "rejected",
+  "verdict": "rejected",
+  "blockerClassification": "test-data-blocker",
+  "c7Gate": {
+    "status": "not verified",
+    "reason": "read-only preflight does not execute visits mutation"
+  },
+  "consoleMessages": [],
+  "pageErrors": []
+}

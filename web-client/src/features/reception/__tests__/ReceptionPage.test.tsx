@@ -1278,6 +1278,28 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(screen.queryByTestId('reception-audit')).toBeNull();
   });
 
+  it('sends patient-id searchType when the accept workflow patient ID field is used', async () => {
+    mockMutationQueue.push({
+      patients: [],
+      recordsReturned: 0,
+      runId: 'RUN-PATIENT-ID-SEARCH',
+    });
+
+    const user = userEvent.setup();
+    renderReceptionPage();
+
+    const workflowModal = await openAcceptWorkflowModal(user);
+    const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
+    const form = within(patientSearch);
+    await user.clear(form.getByLabelText('患者ID'));
+    await user.type(form.getByLabelText('患者ID'), '0000001');
+    await user.click(form.getByRole('button', { name: '検索' }));
+
+    await waitFor(() => {
+      expect(mockMutationCalls.at(-1)).toEqual({ keyword: '0000001', searchType: 'patient-id' });
+    });
+  });
+
   it('removes direct chart-open form from 当日受付モーダル', async () => {
     const user = userEvent.setup();
     renderReceptionPage();

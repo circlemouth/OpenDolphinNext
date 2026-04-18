@@ -72,7 +72,7 @@ SMOKE_USER_SIR_NAME="${DEV_SMOKE_SIR_NAME:-Takagi}"
 SMOKE_USER_GIVEN_NAME="${DEV_SMOKE_GIVEN_NAME:-Kaoru}"
 SMOKE_USER_EMAIL="${DEV_SMOKE_EMAIL:-doctor1@example.com}"
 SMOKE_USER_PASS_CURRENT_HASH="${DEV_SMOKE_USER_PASSWORD_HASH:-pbkdf2_sha256_v1\$310000\$Iy73ehQDQ6j1pqxP7fpnpw==\$NQj7UL55NKB2QY+ojvhHxV+Cyr98koplDjaFo3ymyiE=}"
-SMOKE_USER_PASS_SOURCE="default:doctor2025"
+SMOKE_USER_PASS_SOURCE="default-dev-smoke-password"
 FACILITY_ID="${OPENDOLPHIN_FACILITY_ID:-1.3.6.1.4.1.9414.72.103}"
 SMOKE_PATIENT_ID="${DEV_SMOKE_PATIENT_ID:-0000001}"
 SMOKE_PATIENT_FULL_NAME="${DEV_SMOKE_PATIENT_FULL_NAME:-スモーク 患者}"
@@ -91,6 +91,7 @@ WEB_CLIENT_DEV_LOG_PATH="$WEB_CLIENT_DEV_LOG"
 if [[ "${WEB_CLIENT_DEV_LOG_PATH}" != /* ]]; then
   WEB_CLIENT_DEV_LOG_PATH="$SCRIPT_DIR/$WEB_CLIENT_DEV_LOG_PATH"
 fi
+WEB_CLIENT_DEV_TMUX_SESSION="${WEB_CLIENT_DEV_TMUX_SESSION:-opendolphin-web-client-dev}"
 SCHEMA_DUMP_PATH="$SCHEMA_DUMP_FILE"
 if [[ "$SCHEMA_DUMP_PATH" != /* ]]; then
   SCHEMA_DUMP_PATH="$SCRIPT_DIR/$SCHEMA_DUMP_PATH"
@@ -466,7 +467,7 @@ resolve_dev_admin_credentials() {
     SMOKE_USER_PASS_SOURCE="env:DEV_SMOKE_USER_PASSWORD_HASH"
   elif [[ -n "${DEV_SMOKE_USER_PASS:-}" ]]; then
     if [[ "$SMOKE_USER_PASS" == "doctor2025" ]]; then
-      SMOKE_USER_PASS_SOURCE="env:DEV_SMOKE_USER_PASS(known-doctor2025)"
+      SMOKE_USER_PASS_SOURCE="env:DEV_SMOKE_USER_PASS(default-dev-smoke-password)"
     else
       echo "DEV_SMOKE_USER_PASS is set to a non-default value, but setup-modernized-env.sh no longer generates legacy hashes." >&2
       echo "Provide DEV_SMOKE_USER_PASSWORD_HASH with pbkdf2_sha256_v1 format instead." >&2
@@ -996,7 +997,7 @@ patient_ctx AS (
         (SELECT k.id FROM d_karte k WHERE k.patient_id = p.id ORDER BY k.id DESC LIMIT 1) AS karte_id
     FROM d_patient p
     WHERE p.facilityid = '$FACILITY_ID'
-      AND p.patientid = '0000001'
+      AND p.patientid = '$SMOKE_PATIENT_ID'
 )
 INSERT INTO schedule_projection (
     schedule_key, facility_id, patient_id, karte_id, orca_appointment_id, scheduled_datetime,
@@ -1143,6 +1144,11 @@ stop_existing_web_client_dev_server() {
     rm -f "$WEB_CLIENT_DEV_PID_FILE"
   fi
 
+  if command -v tmux >/dev/null 2>&1 && tmux has-session -t "$WEB_CLIENT_DEV_TMUX_SESSION" >/dev/null 2>&1; then
+    log "Stopping existing Web Client dev tmux session $WEB_CLIENT_DEV_TMUX_SESSION..."
+    tmux kill-session -t "$WEB_CLIENT_DEV_TMUX_SESSION" >/dev/null 2>&1 || true
+  fi
+
   if command -v lsof >/dev/null 2>&1; then
     local port_pids
     port_pids=$(lsof -t -iTCP:"$WEB_CLIENT_DEV_PORT" -sTCP:LISTEN || true)
@@ -1243,26 +1249,20 @@ EOF
   cp "$npm_env_dir/.env" "$WEB_CLIENT_ENV_LOCAL"
 
   local npm_pid
-  npm_pid=$(
-    cd web-client
-    VITE_DEV_PROXY_TARGET="$dev_proxy_target" \
-      VITE_DEV_USE_HTTPS="$dev_use_https" \
-      VITE_DISABLE_MSW="$dev_disable_msw" \
-      VITE_ENABLE_TELEMETRY="$dev_enable_telemetry" \
-    VITE_DISABLE_SECURITY="$dev_disable_security" \
-      VITE_DISABLE_AUDIT="$dev_disable_audit" \
-      VITE_ENABLE_FACILITY_HEADER="$dev_enable_facility_header" \
-    VITE_ORCA_MASTER_USER="$dev_orca_master_user" \
-    VITE_ORCA_MASTER_PASSWORD="$dev_orca_master_password" \
-    VITE_ORCA_MODE="$dev_orca_mode" \
-    VITE_ORCA_API_PATH_PREFIX="$dev_orca_path_prefix" \
-    VITE_API_BASE_URL="$dev_api_base_url" \
-    VITE_BASE_PATH="$base_path" \
-    ORCA_BASIC_USER="$dev_orca_basic_user" \
-    ORCA_BASIC_PASSWORD="$dev_orca_basic_password" \
-    nohup npm run dev -- --host "$WEB_CLIENT_DEV_HOST" --port "$WEB_CLIENT_DEV_PORT" > "$WEB_CLIENT_DEV_LOG_PATH" 2>&1 &
-    printf "%s" "$!"
-  )
+  if command -v tmux >/dev/null 2>&1; then
+    tmux new-session -d \
+      -s "$WEB_CLIENT_DEV_TMUX_SESSION" \
+      -c "$SCRIPT_DIR/web-client" \
+      "exec npm run dev -- --host '$WEB_CLIENT_DEV_HOST' --port '$WEB_CLIENT_DEV_PORT' > '$WEB_CLIENT_DEV_LOG_PATH' 2>&1"
+    sleep 0.2
+    npm_pid="$(tmux list-panes -t "$WEB_CLIENT_DEV_TMUX_SESSION" -F '#{pane_pid}' | head -n 1)"
+    log "Web Client dev tmux session $WEB_CLIENT_DEV_TMUX_SESSION started."
+  else
+    pushd web-client >/dev/null
+    nohup npm run dev -- --host "$WEB_CLIENT_DEV_HOST" --port "$WEB_CLIENT_DEV_PORT" > "$WEB_CLIENT_DEV_LOG_PATH" 2>&1 < /dev/null &
+    npm_pid="$!"
+    popd >/dev/null
+  fi
   printf "%s" "$npm_pid" > "$WEB_CLIENT_DEV_PID_FILE"
 
   log "Web Client dev server PID $npm_pid, logs at $WEB_CLIENT_DEV_LOG_PATH"
@@ -1278,6 +1278,44 @@ start_web_client() {
       start_web_client_docker
       ;;
   esac
+}
+
+wait_for_web_client_dev_server() {
+  local scheme="http"
+  if [[ "${VITE_DEV_USE_HTTPS:-1}" == "1" ]]; then
+    scheme="https"
+  fi
+  local url="${scheme}://${WEB_CLIENT_DEV_HOST}:${WEB_CLIENT_DEV_PORT}/"
+  local pid=""
+  if [[ -f "$WEB_CLIENT_DEV_PID_FILE" ]]; then
+    pid="$(<"$WEB_CLIENT_DEV_PID_FILE" || true)"
+  fi
+
+  log "Waiting for Web Client dev server response at ${url}..."
+  local consecutive_successes=0
+  for _ in {1..60}; do
+    if [[ -n "$pid" ]] && ! kill -0 "$pid" >/dev/null 2>&1; then
+      echo "Web Client dev server exited before it became available (PID $pid)." >&2
+      echo "Log path: $WEB_CLIENT_DEV_LOG_PATH" >&2
+      tail -n 80 "$WEB_CLIENT_DEV_LOG_PATH" >&2 || true
+      return 1
+    fi
+    if curl -kfsS --max-time 2 "$url" >/dev/null 2>&1; then
+      consecutive_successes=$((consecutive_successes + 1))
+      if [[ "$consecutive_successes" -ge 5 ]]; then
+        log "Web Client dev server responded at ${url} for ${consecutive_successes} consecutive checks"
+        return 0
+      fi
+    else
+      consecutive_successes=0
+    fi
+    sleep 1
+  done
+
+  echo "Web Client dev server did not respond within 60s: ${url}" >&2
+  echo "Log path: $WEB_CLIENT_DEV_LOG_PATH" >&2
+  tail -n 80 "$WEB_CLIENT_DEV_LOG_PATH" >&2 || true
+  return 1
 }
 
 main() {
@@ -1308,6 +1346,7 @@ main() {
   seed_smoke_runtime_projection
   start_web_client
   if [[ "$WEB_CLIENT_MODE_LOWER" == npm* || "$WEB_CLIENT_MODE_LOWER" == dev* ]]; then
+    wait_for_web_client_dev_server
     local scheme="http"
     if [[ "${VITE_DEV_USE_HTTPS:-1}" == "1" ]]; then
       scheme="https"
@@ -1317,7 +1356,7 @@ main() {
   else
     log "All set! Web Client is running at http://localhost:${WEB_CLIENT_DEV_PORT}"
   fi
-  log "Login with User: $SMOKE_USER_ID / Pass: $SMOKE_USER_PASS"
+  log "Login with User: $SMOKE_USER_ID / Pass source: $SMOKE_USER_PASS_SOURCE"
 }
 
 # ---------------------------------------------------------

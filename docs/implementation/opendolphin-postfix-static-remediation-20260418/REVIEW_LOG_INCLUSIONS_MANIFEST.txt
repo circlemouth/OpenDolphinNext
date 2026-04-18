@@ -1,0 +1,39 @@
+RUN_ID=20260418T224551Z
+ORIGINAL_BLOCKER_RUN_ID=20260418T220502Z
+LOG_COUNT=22
+
+Dynamic ORCA / WebORCA Trial logs:
+- dynamic-logs/20260418T220502Z-orca-authenticated-medical-information-probe.log
+- dynamic-logs/20260418T220502Z-orca-local-config-db.log
+- dynamic-logs/20260418T220502Z-orca-official-medical-information-probe.log
+- dynamic-logs/20260418T220502Z-runtime-ready-smoke.log
+- dynamic-logs/20260418T220502Z-server-orca-transport-sanitized.log
+- dynamic-logs/20260418T220502Z-server-restart-after-orca-config.log
+- dynamic-logs/20260418T220502Z-setup-modernized-env.log
+- dynamic-logs/20260418T220502Z-web-client-dev.log
+- dynamic-logs/20260418T220502Z-web-client-manual-start.log
+- dynamic-logs/20260418T224551Z-qa-acceptmodv2-weborca-final.log
+- dynamic-logs/20260418T224551Z-qa-acceptmodv2-weborca.log
+- dynamic-logs/20260418T224551Z-qa-weborca-readonly-preflight-01481.log
+- dynamic-logs/20260418T224551Z-qa-weborca-readonly-preflight-final.log
+- dynamic-logs/20260418T224551Z-qa-weborca-readonly-preflight-rerun.log
+- dynamic-logs/20260418T224551Z-qa-weborca-readonly-preflight.log
+- dynamic-logs/20260418T224551Z-runtime-ready-smoke-final.log
+- dynamic-logs/20260418T224551Z-runtime-ready-smoke-rerun.log
+- dynamic-logs/20260418T224551Z-runtime-ready-smoke.log
+- dynamic-logs/20260418T224551Z-setup-modernized-env-final.log
+- dynamic-logs/20260418T224551Z-setup-modernized-env-rerun.log
+- dynamic-logs/20260418T224551Z-setup-modernized-env-tmux.log
+- dynamic-logs/20260418T224551Z-setup-modernized-env.log
+
+Dynamic report:
+- 09_dynamic_orca_trial_report.md
+
+Closeout artifact policy:
+- Raw screenshots / raw JSON artifacts under artifacts/orca-remediation/closeout/20260418T224551Z are local evidence and are not package inclusion artifacts.
+- Review package should include sanitized report/log summaries from docs, not generated browser screenshots.
+
+Sanitization note:
+- Logs were scanned for raw passwords, Authorization headers, cookies, JSESSIONID, raw sessions, unredacted CSRF headers, and credential-bearing URLs.
+- Redacted placeholders such as ORCA_API_PASSWORD=<redacted> and x-csrf-token=<<redacted>> are expected.
+- Local-only generated config files such as custom.properties.dev, docker-compose.override.dev.yml, and web-client/.env.local are not inclusion artifacts.
