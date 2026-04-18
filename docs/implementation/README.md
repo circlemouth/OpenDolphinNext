@@ -4,6 +4,7 @@
 
 ## Current Workstreams
 - [OpenDolphin dynamic-trial static remediation package 2026-04-18](opendolphin-dynamic-trial-static-remediation-package-20260418/README.md)
+- [OpenDolphin postfix static remediation docset 2026-04-18](opendolphin-postfix-static-remediation-20260418/README.md)
 - [OpenDolphin static fix package 2026-04-18](opendolphin-static-fix-package-20260418/README.md)
 - [ORCA order alignment](orca-order-alignment/README.md)
 - [OpenDolphin WebClient follow-up release gate package 2026-04-17](opendolphin-webclient-followup-release-gate-package-20260417/README.md)

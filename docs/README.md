@@ -18,6 +18,7 @@
 ## Workflow Docs
 - [implementation/README.md](implementation/README.md)
 - [implementation/opendolphin-dynamic-trial-static-remediation-package-20260418/README.md](implementation/opendolphin-dynamic-trial-static-remediation-package-20260418/README.md)
+- [implementation/opendolphin-postfix-static-remediation-20260418/README.md](implementation/opendolphin-postfix-static-remediation-20260418/README.md)
 - [implementation/opendolphin-webclient-followup-release-gate-package-20260417/](implementation/opendolphin-webclient-followup-release-gate-package-20260417/)
 - [implementation/opendolphin-webclient-remaining-followup-package-20260417/](implementation/opendolphin-webclient-remaining-followup-package-20260417/)
 - [implementation/orca-order-alignment/README.md](implementation/orca-order-alignment/README.md)
