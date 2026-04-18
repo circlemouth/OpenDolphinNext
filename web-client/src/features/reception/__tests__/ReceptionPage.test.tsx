@@ -1205,6 +1205,11 @@ describe('ReceptionPage list and side pane guidance', () => {
     const row1 = screen.getByRole('row', { name: /山田太郎/ });
 
     expect(row1).toHaveClass('reception-table__row--selected');
+    expect(row1).toHaveAttribute('data-patient-id', 'P-001');
+    expect(row1).toHaveAttribute('data-reception-id', 'R-001');
+    expect(row1).toHaveAttribute('data-schedule-key', '');
+    expect(row1).toHaveAttribute('data-encounter-key', '');
+    expect(row1).toHaveAttribute('data-appointment-id', '');
     expect(screen.queryByRole('row', { name: /佐藤花子/ })).toBeNull();
 
     await user.click(screen.getByRole('tab', { name: /診察中/ }));
@@ -1222,6 +1227,8 @@ describe('ReceptionPage list and side pane guidance', () => {
         patientId: 'P-010',
         receptionId: 'R-010',
         appointmentId: 'A-010',
+        scheduleKey: 'F001:S150',
+        encounterKey: 'F001:E150',
         name: '集約患者',
         kana: 'シュウヤク',
         appointmentTime: '11:30',
@@ -1236,6 +1243,13 @@ describe('ReceptionPage list and side pane guidance', () => {
     renderReceptionPage();
 
     expect(screen.queryByRole('region', { name: '患者検索' })).toBeNull();
+    await user.click(screen.getByRole('tab', { name: /会計待ち/ }));
+    const selectedRow = screen.getByRole('row', { name: /集約患者/ });
+    expect(selectedRow).toHaveAttribute('data-patient-id', 'P-010');
+    expect(selectedRow).toHaveAttribute('data-reception-id', 'R-010');
+    expect(selectedRow).toHaveAttribute('data-appointment-id', 'A-010');
+    expect(selectedRow).toHaveAttribute('data-schedule-key', 'F001:S150');
+    expect(selectedRow).toHaveAttribute('data-encounter-key', 'F001:E150');
     const workflowModal = await openAcceptWorkflowModal(user);
     const patientSearch = within(workflowModal).getByRole('region', { name: '患者検索' });
     expect(patientSearch).toBeInTheDocument();
@@ -1248,7 +1262,6 @@ describe('ReceptionPage list and side pane guidance', () => {
     expect(within(patientSearch).queryByLabelText(/保険\/自費/)).toBeNull();
 
     // Preview medical records in a modal (no new tab).
-    await user.click(screen.getByRole('tab', { name: /会計待ち/ }));
     const row = screen.getByRole('row', { name: /集約患者/ });
     await openRowActionMenu(user, row);
     await user.click(getRowMenuAction(row, /過去カルテ/));
@@ -1527,6 +1540,9 @@ describe('ReceptionPage status/date/card action UX', () => {
         id: 'row-card-1',
         patientId: 'P-301',
         receptionId: 'R-301',
+        appointmentId: 'A-301',
+        scheduleKey: 'S-301',
+        encounterKey: 'E-301',
         name: 'カード患者',
         appointmentTime: '09:30',
         department: '01 内科',
@@ -1539,6 +1555,11 @@ describe('ReceptionPage status/date/card action UX', () => {
     renderReceptionPage();
 
     const row = screen.getByRole('row', { name: /カード患者/ });
+    expect(row).toHaveAttribute('data-patient-id', 'P-301');
+    expect(row).toHaveAttribute('data-reception-id', 'R-301');
+    expect(row).toHaveAttribute('data-appointment-id', 'A-301');
+    expect(row).toHaveAttribute('data-schedule-key', 'S-301');
+    expect(row).toHaveAttribute('data-encounter-key', 'E-301');
     expect(within(row).getByRole('button', { name: 'カルテを開く' })).toBeInTheDocument();
     expect(within(row).getByRole('button', { name: /その他|操作を開く/ })).toBeInTheDocument();
     await openRowActionMenu(user, row);

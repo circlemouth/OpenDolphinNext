@@ -5134,6 +5134,10 @@ export function ReceptionPage({
                               className={`reception-card${isSelected ? ' is-selected' : ''}`}
                               data-test-id="reception-entry-card"
                               data-patient-id={entry.patientId ?? ''}
+                              data-encounter-key={entry.encounterKey ?? ''}
+                              data-schedule-key={entry.scheduleKey ?? ''}
+                              data-reception-id={entry.receptionId ?? ''}
+                              data-appointment-id={entry.appointmentId ?? ''}
                               data-reception-status={status}
                               data-visit-kind={visitKind ?? undefined}
                               data-elapsed-severity={elapsedSeverity ?? undefined}
@@ -5526,6 +5530,10 @@ export function ReceptionPage({
                                 aria-label={`${entry.name ?? '患者'} ${entry.appointmentTime ?? ''} ${entry.department ?? ''}`}
                                 data-test-id="reception-entry-row"
                                 data-patient-id={entry.patientId ?? ''}
+                                data-encounter-key={entry.encounterKey ?? ''}
+                                data-schedule-key={entry.scheduleKey ?? ''}
+                                data-reception-id={entry.receptionId ?? ''}
+                                data-appointment-id={entry.appointmentId ?? ''}
                                 data-reception-status={activeStatusTab}
                               >
                                 <td>
