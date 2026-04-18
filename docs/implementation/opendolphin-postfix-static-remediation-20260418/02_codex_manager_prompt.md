@@ -25,8 +25,8 @@ post-fix static review integrator が rejected / partial と判定した残課�
 
 最初に行うこと:
 1. `git status --short` を確認し、既存変更があれば一覧化して触る/触らないを判断する。
-2. `01_task_split.md` と `07_invariants_matrix.md` を読み、Critical/High から順に修正計画を作る。
-3. すべてのサブエージェントを gpt-5.4 high で起動する。サブエージェントには `03_codex_subagent_prompts.md` の該当 prompt を渡す。
+2. `docs/implementation/opendolphin-postfix-static-remediation-20260418/01_task_split.md` と `docs/implementation/opendolphin-postfix-static-remediation-20260418/07_invariants_matrix.md` を読み、Critical/High から順に修正計画を作る。
+3. すべてのサブエージェントを gpt-5.4 high で起動する。サブエージェントには `docs/implementation/opendolphin-postfix-static-remediation-20260418/03_codex_subagent_prompts.md` の該当 prompt を渡す。
 4. サブエージェントには原則として直接 main branch に commit させない。各サブエージェントは調査・差分案・test proposal・risk を返す。main manager がマージ順、コンフリクト解消、最終 test、最終 report を統括する。
 
 サブエージェント構成:

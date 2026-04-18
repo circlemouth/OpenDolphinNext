@@ -3,9 +3,9 @@
 作成日: 2026-04-18  
 用途: post-fix static review integrator の rejected / partial findings を、実装変更が必要な Codex 作業と、コード変更不要の ChatGPT 検討作業へ分離する。
 
-## 配置想定
+## 配置先
 
-このディレクトリ一式を実リポジトリの次の場所へ置く想定です。
+このディレクトリ一式は、実リポジトリでは次の場所に配置済みです。
 
 ```text
 docs/implementation/opendolphin-postfix-static-remediation-20260418/
@@ -30,13 +30,13 @@ docs/implementation/opendolphin-postfix-static-remediation-20260418/
 
 | file | purpose |
 |---|---|
-| `01_task_split.md` | 残課題を Codex 実装タスク / ChatGPT 検討タスクに分離 |
-| `02_codex_manager_prompt.md` | 実リポジトリで作業する Codex メインエージェント用プロンプト |
-| `03_codex_subagent_prompts.md` | gpt-5.4 high サブエージェント用プロンプト集 |
-| `04_codex_merge_order_and_acceptance.md` | マージ順、テスト、exit 条件 |
-| `05_chatgpt_noncoding_prompts.md` | コーディング不要タスクを ChatGPT に検討させるコピペ用プロンプト |
-| `06_final_report_template.md` | Codex 作業後の worker report / static exit report テンプレート |
-| `07_invariants_matrix.md` | 必ず守る invariant と対応 claim |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/01_task_split.md` | 残課題を Codex 実装タスク / ChatGPT 検討タスクに分離 |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/02_codex_manager_prompt.md` | 実リポジトリで作業する Codex メインエージェント用プロンプト |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/03_codex_subagent_prompts.md` | gpt-5.4 high サブエージェント用プロンプト集 |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/04_codex_merge_order_and_acceptance.md` | マージ順、テスト、exit 条件 |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/05_chatgpt_noncoding_prompts.md` | コーディング不要タスクを ChatGPT に検討させるコピペ用プロンプト |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/06_final_report_template.md` | Codex 作業後の worker report / static exit report テンプレート |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/07_invariants_matrix.md` | 必ず守る invariant と対応 claim |
 
 ## 最上位の禁止事項
 

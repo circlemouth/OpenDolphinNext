@@ -298,7 +298,7 @@ Required invariant:
 - Live ORCA success is not claimed.
 
 Deliverables to manager:
-1. Final report draft using `06_final_report_template.md`.
+1. Final report draft using `docs/implementation/opendolphin-postfix-static-remediation-20260418/06_final_report_template.md`.
 2. Test evidence table from actual logs.
 3. Residual unknowns table.
 4. Dynamic handoff verdict recommendation.
