@@ -26,7 +26,12 @@ import { useOptionalSession } from '../../AppRouter';
 import { buildPrintUrl } from '../../routes/appNavigation';
 import { useAppNavigation } from '../../routes/useAppNavigation';
 import { buildMedicalModV2RequestXml, postOrcaMedicalModV2Xml } from './orcaClaimApi';
-import { getOrcaClaimSendEntry, saveOrcaClaimSendCache, type OrcaMedicalWarningUi } from './orcaClaimSendCache';
+import {
+  getOrcaClaimSendEntryForRow,
+  saveOrcaClaimSendCache,
+  type OrcaClaimSendCacheMatch,
+  type OrcaMedicalWarningUi,
+} from './orcaClaimSendCache';
 import { ReportPrintDialog } from './print/ReportPrintDialog';
 import { useOrcaReportPrint } from './print/useOrcaReportPrint';
 import { MISSING_MASTER_RECOVERY_NEXT_STEPS } from '../shared/missingMasterRecovery';
@@ -333,6 +338,8 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
   const resolvedPatientId = patientId ?? selectedEntry?.patientId;
   const resolvedAppointmentId = queueEntry?.appointmentId ?? selectedEntry?.appointmentId;
   const resolvedReceptionId = selectedEntry?.receptionId;
+  const resolvedScheduleKey = queueEntry?.scheduleKey ?? selectedEntry?.scheduleKey;
+  const resolvedEncounterKey = queueEntry?.encounterKey ?? encounterId ?? selectedEntry?.encounterKey;
   const isServerRoute = dataSourceTransition === 'server';
   const headerMetaCollapsed = compactHeader && isHeaderCollapsed;
   const resolvedVisitDate = useMemo(
@@ -347,7 +354,20 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
     () => resolveMissingOrcaEncounterContextFields(resolvedOrcaEncounterContext),
     [resolvedOrcaEncounterContext],
   );
-  const orcaSendEntry = getOrcaClaimSendEntry(storageScope, resolvedPatientId);
+  const orcaSendMatch = useMemo<OrcaClaimSendCacheMatch | null>(
+    () =>
+      resolvedPatientId
+        ? {
+            patientId: resolvedPatientId,
+            appointmentId: resolvedAppointmentId,
+            receptionId: resolvedReceptionId,
+            scheduleKey: resolvedScheduleKey,
+            encounterKey: resolvedEncounterKey,
+          }
+        : null,
+    [resolvedAppointmentId, resolvedEncounterKey, resolvedPatientId, resolvedReceptionId, resolvedScheduleKey],
+  );
+  const orcaSendEntry = getOrcaClaimSendEntryForRow(storageScope, orcaSendMatch);
   const reportPrint = useOrcaReportPrint({
     dialogOpen: printDialogOpen,
     appointmentId: resolvedAppointmentId,
@@ -1583,6 +1603,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
               {
                 patientId: resolvedPatientId,
                 appointmentId: resolvedAppointmentId,
+                receptionId: resolvedReceptionId,
+                scheduleKey: resolvedScheduleKey,
+                encounterKey: resolvedEncounterKey,
                 performDate: resolvedOrcaEncounterContext.visitDate,
                 invoiceNumber: result.invoiceNumber,
                 dataId: result.dataId,
@@ -1835,6 +1858,9 @@ export const ChartsActionBar = forwardRef<ChartsActionBarHandle, ChartsActionBar
             {
               patientId: resolvedPatientId,
               appointmentId: resolvedAppointmentId,
+              receptionId: resolvedReceptionId,
+              scheduleKey: resolvedScheduleKey,
+              encounterKey: resolvedEncounterKey,
               performDate: normalizeVisitDate(resolvedVisitDate) ?? undefined,
               runId: errorRunId,
               traceId: errorTraceId ?? undefined,

@@ -2854,6 +2854,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       dataSourceTransition: resolvedTransition ?? 'snapshot',
       patientId: encounterContext.patientId,
       encounterId: encounterContext.encounterKey,
+      scheduleKey: encounterContext.scheduleKey,
       appointmentId: encounterContext.appointmentId,
       receptionId: encounterContext.receptionId,
       visitDate: encounterContext.visitDate,
@@ -2873,6 +2874,7 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
       encounterContext.encounterKey,
       encounterContext.patientId,
       encounterContext.receptionId,
+      encounterContext.scheduleKey,
       encounterContext.visitDate,
       flags.runId,
       lockState.locked,
@@ -4934,6 +4936,10 @@ function ChartsContent({ onRequestHardReload }: { onRequestHardReload: () => voi
                           appointmentMeta={appointmentMeta}
                           patientId={encounterContext.patientId}
                           visitDate={encounterContext.visitDate}
+                          appointmentId={encounterContext.appointmentId}
+                          receptionId={encounterContext.receptionId}
+                          scheduleKey={encounterContext.scheduleKey}
+                          encounterKey={encounterContext.encounterKey}
                           orcaEncounterContext={actionOrcaEncounterContext}
                           onRefresh={handleRefreshSummary}
                           isRefreshing={isManualRefreshing}

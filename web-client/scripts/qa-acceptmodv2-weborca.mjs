@@ -8,6 +8,7 @@ import {
   resolveQaPasswordPlain,
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
+import { evaluateMedicalInformationGate } from './qa-lib/medical-information-gate.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
@@ -348,6 +349,7 @@ const buildMarkdownSummary = (summary) =>
   `- 保険/自費: ${summary.paymentMode}\n` +
   `- 来院区分: ${summary.visitKind}\n` +
   `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
+  `- Medical Information Gate: ${summary.medicalInformationGate?.ok === false ? 'failed' : summary.medicalInformationGate?.enforced ? 'passed' : 'skipped'}\n` +
   `- Blocker: ${summary.blockerClassification}\n` +
   (summary.fatalError ? `- Fatal Error: ${summary.fatalError}\n` : '') +
   `\n## 送信結果\n\n` +
@@ -507,6 +509,10 @@ const run = async () => {
       patientSearchInputMethod,
     },
     medicalInformationProbe,
+    medicalInformationGate: evaluateMedicalInformationGate({
+      requestRecords,
+      medicalInformation,
+    }),
     acceptResult: {
       toneText,
       apiResultText,
@@ -519,6 +525,9 @@ const run = async () => {
     pageErrors,
     blockerClassification: classifyAcceptBlocker(acceptResponse),
   };
+  if (summary.medicalInformationGate.ok === false) {
+    summary.blockerClassification = 'repo-defect';
+  }
 
   persistArtifacts(summary);
   fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
@@ -527,6 +536,10 @@ const run = async () => {
   activeContext = null;
   activeBrowser = null;
   activePage = null;
+
+  if (summary.medicalInformationGate.ok === false) {
+    throw new Error(summary.medicalInformationGate.error);
+  }
 
   console.log(`Artifacts written to ${artifactRoot}`);
 };
@@ -551,7 +564,12 @@ run().catch(async (error) => {
       physicianCode,
       paymentMode,
       visitKind,
+      medicalInformation: medicalInformation || undefined,
       medicalInformationProbe: undefined,
+      medicalInformationGate: evaluateMedicalInformationGate({
+        requestRecords,
+        medicalInformation,
+      }),
       selection: {},
       acceptResult: {},
       acceptResponse: parseMutationResponse(),
@@ -564,6 +582,9 @@ run().catch(async (error) => {
         failure: failureShot,
       },
     };
+  if (summary.medicalInformationGate?.ok === false) {
+    summary.blockerClassification = 'repo-defect';
+  }
   persistArtifacts(summary);
   fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
   await safeClose(() => activeContext?.close?.());

@@ -6,6 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.TestServerConfigurationResolvers;
 import org.junit.jupiter.api.AfterEach;
@@ -50,5 +56,56 @@ class OrcaTransportSettingsExternalConfigTest {
         OrcaTransportSettings settings = OrcaTransportSettings.load();
 
         assertFalse(settings.isReady());
+    }
+
+    @Test
+    void loadDoesNotLogRawMalformedBaseUrl() {
+        Logger logger = Logger.getLogger(OrcaTransportSettings.class.getName());
+        CapturingHandler handler = new CapturingHandler();
+        Level originalLevel = logger.getLevel();
+        boolean originalUseParentHandlers = logger.getUseParentHandlers();
+        logger.setUseParentHandlers(false);
+        logger.setLevel(Level.ALL);
+        logger.addHandler(handler);
+        String rawBaseUrl = "https://admin:pass@bad host.example.invalid/api";
+        try {
+            IllegalArgumentException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> OrcaTransportSettings.load(TestServerConfigurationResolvers.resolver(
+                            ServerConfigurationResolver.KEY_ORCA_API_BASE_URL, rawBaseUrl,
+                            ServerConfigurationResolver.KEY_ORCA_API_USER, "trial-user",
+                            ServerConfigurationResolver.KEY_ORCA_API_PASSWORD, "trial-password",
+                            ServerConfigurationResolver.KEY_ORCA_API_MODE, "weborca")));
+
+            assertEquals("サーバURLが不正です。", ex.getMessage());
+            String joined = String.join("\n", handler.messages);
+            assertTrue(joined.contains("Invalid ORCA transport"));
+            assertFalse(joined.contains(rawBaseUrl));
+            assertFalse(joined.contains("admin:pass"));
+            assertFalse(joined.contains("bad host.example.invalid"));
+        } finally {
+            logger.removeHandler(handler);
+            logger.setLevel(originalLevel);
+            logger.setUseParentHandlers(originalUseParentHandlers);
+        }
+    }
+
+    private static final class CapturingHandler extends Handler {
+        private final List<String> messages = new ArrayList<>();
+
+        @Override
+        public void publish(LogRecord record) {
+            if (record != null && record.getMessage() != null) {
+                messages.add(record.getMessage());
+            }
+        }
+
+        @Override
+        public void flush() {
+        }
+
+        @Override
+        public void close() {
+        }
     }
 }

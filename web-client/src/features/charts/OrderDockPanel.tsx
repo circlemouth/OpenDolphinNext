@@ -24,7 +24,11 @@ import {
 import type { OrderRecommendationCandidate } from './orderRecommendationApi';
 import { OrderRecommendationModal } from './OrderRecommendationModal';
 import type { RpHistoryEntry } from './karteExtrasApi';
-import { getOrcaClaimSendEntry, type OrcaMedicalWarningUi } from './orcaClaimSendCache';
+import {
+  getOrcaClaimSendEntryForRow,
+  type OrcaClaimSendCacheMatch,
+  type OrcaMedicalWarningUi,
+} from './orcaClaimSendCache';
 import { resolveOrcaOrderItemFields } from './orcaOrderItemMeta';
 import { buildOrderHubEventId, recordOrderHubKpi, type OrderHubKpiSource } from './orderHubKpi';
 import { buildRpRequiredEditorMessage, resolveRpRequiredFieldLabel, resolveRpRequiredIssueFromBundle } from './orderRpRequirements';
@@ -409,24 +413,37 @@ export function OrderDockPanel(props: {
       patientId,
     ],
   );
-  const [orcaSendEntry, setOrcaSendEntry] = useState<ReturnType<typeof getOrcaClaimSendEntry> | null>(() =>
-    getOrcaClaimSendEntry(storageScope, patientId),
+  const orcaSendMatch = useMemo<OrcaClaimSendCacheMatch | null>(
+    () =>
+      patientId
+        ? {
+            patientId,
+            appointmentId: meta.appointmentId,
+            receptionId: meta.receptionId,
+            scheduleKey: meta.scheduleKey,
+            encounterKey: meta.encounterId,
+          }
+        : null,
+    [meta.appointmentId, meta.encounterId, meta.receptionId, meta.scheduleKey, patientId],
+  );
+  const [orcaSendEntry, setOrcaSendEntry] = useState<ReturnType<typeof getOrcaClaimSendEntryForRow> | null>(() =>
+    getOrcaClaimSendEntryForRow(storageScope, orcaSendMatch),
   );
   useEffect(() => {
-    setOrcaSendEntry(getOrcaClaimSendEntry(storageScope, patientId));
-  }, [patientId, storageScope]);
+    setOrcaSendEntry(getOrcaClaimSendEntryForRow(storageScope, orcaSendMatch));
+  }, [orcaSendMatch, storageScope]);
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ patientId?: string }>).detail;
       if (detail?.patientId && detail.patientId !== patientId) return;
-      setOrcaSendEntry(getOrcaClaimSendEntry(storageScope, patientId));
+      setOrcaSendEntry(getOrcaClaimSendEntryForRow(storageScope, orcaSendMatch));
     };
     window.addEventListener('orca-claim-send-cache-update', handler);
     return () => {
       window.removeEventListener('orca-claim-send-cache-update', handler);
     };
-  }, [patientId, storageScope]);
+  }, [orcaSendMatch, patientId, storageScope]);
 
   const orcaMedicalWarnings = useMemo<OrcaMedicalWarningUi[]>(() => {
     const warnings = orcaSendEntry?.medicalWarnings ?? [];

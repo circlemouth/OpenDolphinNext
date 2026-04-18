@@ -376,7 +376,7 @@ public final class OrcaTransportSettings {
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException ex) {
-            LOGGER.log(Level.WARNING, "Invalid ORCA API port: {0}", value);
+            logInvalidTransportConfig("port");
             return -1;
         }
     }
@@ -511,7 +511,7 @@ public final class OrcaTransportSettings {
                     host = uri.getRawAuthority();
                 }
             } catch (java.net.URISyntaxException ex) {
-                LOGGER.log(Level.WARNING, "Invalid ORCA host spec: {0}", trimmed);
+                logInvalidTransportConfig("host_spec");
             }
         }
         if (!parsedUri) {
@@ -646,7 +646,7 @@ public final class OrcaTransportSettings {
                 java.net.URI uri = new java.net.URI(trimmed);
                 return normalizePathPrefix(uri.getPath());
             } catch (java.net.URISyntaxException ex) {
-                LOGGER.log(Level.WARNING, "Invalid ORCA base URL: {0}", trimmed);
+                logInvalidTransportConfig("base_url");
             }
         }
         HostSpec spec = parseHostSpec(trimmed, null);
@@ -654,6 +654,10 @@ public final class OrcaTransportSettings {
             return spec.pathPrefixOverride;
         }
         return null;
+    }
+
+    private static void logInvalidTransportConfig(String part) {
+        LOGGER.log(Level.WARNING, "Invalid ORCA transport {0} rejected", safe(part));
     }
 
     private static String safe(String value) {

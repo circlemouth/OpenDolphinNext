@@ -141,6 +141,7 @@ const buildPatientsOrcaStatus = (options: {
   dataSourceTransition?: DataSourceTransition;
   lastSaveSucceeded?: boolean;
   lastSaveFailed?: boolean;
+  lastSaveWriteAcceptedWithoutReadback?: boolean;
 }) => {
   if (options.missingMaster) {
     return {
@@ -170,6 +171,12 @@ const buildPatientsOrcaStatus = (options: {
     return {
       state: '反映失敗',
       detail: 'official create/update に失敗したため canonical/local 同期は完了していません。時間をおいて再試行してください。',
+    };
+  }
+  if (options.lastSaveWriteAcceptedWithoutReadback) {
+    return {
+      state: '同期確認失敗',
+      detail: 'official create/update は受け付けられましたが canonical readback に失敗したため、canonical/local 同期完了は確認できていません。',
     };
   }
   if (options.lastSaveSucceeded) {
@@ -633,6 +640,16 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             message: `ORCA既存患者取込は完了しましたが、現在の local search 条件では患者番号 ${patientId} が一覧に見つかりません。`,
           });
         }
+      } else if (result.writeAccepted) {
+        enqueue({
+          tone: 'warning',
+          message: 'ORCA既存患者取込は受け付けられましたが canonical/local 同期を確認できませんでした',
+          detail: `患者番号=${patientId}`,
+        });
+        setSelectionNotice({
+          tone: 'warning',
+          message: `ORCA既存患者取込は受け付けられましたが、患者番号 ${patientId} の canonical readback に失敗したため同期完了を確認できませんでした。`,
+        });
       } else {
         enqueue({
           tone: 'error',
@@ -1168,13 +1185,26 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         ? createOfficialPatient(attempt.payload as OfficialPatientCreatePayload)
         : updateOfficialPatient(attempt.payload as OfficialPatientUpdatePayload),
     onSuccess: async (result: PatientMutationResult, variables: PatientsMutationAttempt) => {
+      const writeAccepted = result.writeAccepted ?? false;
+      const fullSuccess = result.ok;
       setLastAuditEvent(result.auditEvent);
-      setLastSaveResult(
-        result.ok ? result : { ...result, message: '保存に失敗しました。内容を確認して再試行してください。' },
-      );
+      setLastSaveResult({
+        ...result,
+        message:
+          result.message
+          ?? (writeAccepted
+            ? 'official write は受け付けられましたが canonical 再取得を確認できませんでした。'
+            : '保存に失敗しました。内容を確認して再試行してください。'),
+      });
       setToast({
-        tone: result.ok ? 'success' : 'error',
-        message: result.ok ? result.message ?? '保存しました' : '保存に失敗しました。内容を確認して再試行してください。',
+        tone: fullSuccess ? 'success' : writeAccepted ? 'warning' : 'error',
+        message:
+          result.message
+          ?? (fullSuccess
+            ? '保存しました'
+            : writeAccepted
+              ? 'official write は受け付けられましたが canonical 再取得を確認できませんでした。'
+              : '保存に失敗しました。内容を確認して再試行してください。'),
       });
       appliedMeta.current = applyAuthServicePatch(
         {
@@ -1194,7 +1224,7 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         dataSourceTransition: result.dataSourceTransition ?? prev.dataSourceTransition,
         runId: result.runId ?? prev.runId,
       }));
-      if (result.ok) {
+      if (fullSuccess) {
         const canonicalOrSyncedPatient = result.canonicalPatient ?? result.patient;
         const syncedPatientId =
           result.canonicalPatient?.patientId ?? result.patient?.patientId ?? variables.payload.patient.patientId;
@@ -1230,6 +1260,15 @@ export function PatientsPage({ runId }: PatientsPageProps) {
           });
         }
         setValidationErrors([]);
+        setLastAttempt(null);
+      } else if (writeAccepted) {
+        setSelectionNotice({
+          tone: 'warning',
+          message:
+            variables.operation === 'create'
+              ? '新患登録は受け付けられましたが、canonical readback に失敗したため canonical/local 同期完了を確認できませんでした。'
+              : '既存患者更新は受け付けられましたが、canonical readback に失敗したため canonical/local 同期完了を確認できませんでした。',
+        });
         setLastAttempt(null);
       } else {
         setLastAttempt(variables);
@@ -1269,7 +1308,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
       fallbackUsed: lastSaveResult.fallbackUsed,
       dataSourceTransition: lastSaveResult.dataSourceTransition,
       lastSaveSucceeded: lastSaveResult.ok,
-      lastSaveFailed: !lastSaveResult.ok,
+      lastSaveFailed: !lastSaveResult.ok && !lastSaveResult.writeAccepted,
+      lastSaveWriteAcceptedWithoutReadback: Boolean(lastSaveResult.writeAccepted && !lastSaveResult.ok),
     });
   }, [lastSaveResult]);
 
@@ -1422,6 +1462,8 @@ export function PatientsPage({ runId }: PatientsPageProps) {
         ? '反映停止'
         : outcome === 'success'
           ? '反映完了'
+          : outcome === 'warning'
+            ? '同期確認失敗'
           : outcome === 'error'
             ? '反映失敗'
             : '反映待ち';
@@ -2759,9 +2801,25 @@ export function PatientsPage({ runId }: PatientsPageProps) {
             <div className="patients-page__audit-summary">
               <div className="patients-page__audit-card">
                 <span>保存結果</span>
-                <strong>{lastSaveResult ? (lastSaveResult.ok ? '成功' : '失敗') : '未送信'}</strong>
+                <strong>
+                  {lastSaveResult
+                    ? lastSaveResult.ok
+                      ? '成功'
+                      : lastSaveResult.writeAccepted
+                        ? '要確認'
+                        : '失敗'
+                    : '未送信'}
+                </strong>
                 <small>{PATIENTS_SUPPORT_GUIDE}</small>
-                {lastSaveResult?.message ? <small>{lastSaveResult.ok ? '保存処理は完了しました。' : '保存に失敗しました。時間をおいて再試行してください。'}</small> : null}
+                {lastSaveResult?.message ? (
+                  <small>
+                    {lastSaveResult.ok
+                      ? '保存処理は完了しました。'
+                      : lastSaveResult.writeAccepted
+                        ? 'official write は受け付けられましたが canonical readback を確認できていません。'
+                        : '保存に失敗しました。時間をおいて再試行してください。'}
+                  </small>
+                ) : null}
               </div>
               <div className="patients-page__audit-card">
                 <span>official ORCA 更新</span>

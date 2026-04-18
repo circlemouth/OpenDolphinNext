@@ -44,5 +44,9 @@ export const buildPatientImportFailureMessage = (contextLabel: string, result: O
     return `${contextLabel}の再取得前に患者取込を完了できませんでした。対象患者が見つからないため、患者選択からやり直してください。`;
   }
 
+  if (cause === 'canonical_refetch_failed') {
+    return `${contextLabel}の再取得前に患者取込は受け付けられましたが、canonical 再取得に失敗したため同期完了を確認できませんでした。時間をおいて再試行してください。`;
+  }
+
   return `${contextLabel}の再取得前に患者取込を完了できませんでした。時間をおいて再試行してください。`;
 };

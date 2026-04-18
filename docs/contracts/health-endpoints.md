@@ -83,6 +83,7 @@
 
 ## reasonCode 一覧
 - `database_unreachable`
+- `facility_configuration_missing`
 - `orca_transport_not_ready`
 - `orca_http_client_unavailable`
 - `orca_probe_failed`
@@ -104,5 +105,6 @@
 ## 受け入れ条件
 - [x] 匿名 readiness 応答に `checks` フィールドが存在しない。
 - [x] 認証付き readiness でも URL / host / port / stack trace が JSON に含まれない。
+- [x] default facility 未設定時は `facility_configuration_missing` で fail-close し、runtime ORCA config へ fallback しない。
 - [x] ORCA / storage / PVT / patient images の DOWN ケースを固定 reasonCode で返す。
 - [x] ログと API 応答の双方で secret と接続先詳細を出力しない。

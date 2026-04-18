@@ -78,6 +78,7 @@
 - オーダー truth editor、`文書を編集` entry、`OrcaSummary` は center primary 側に置き、right rail は chooser source と handoff だけを担います。
 - `latest-follow` は `SoapNotePanel` / `PastHubPanel` / `ChartsActionBar` の局所補助として存在し、独立 route はありません。
 - `OrcaSummary` は Charts 内部の補助 panel です。
+- `OrcaSummary` の `Workflow / 院内ローカル診療サマリ`、`Transmission / medical-mod-v2`、`ORCA収納情報` は must-visible 情報として closed disclosure の外に置き、page CTA owner を奪いません。
 - `DocumentTimeline` と `MedicalOutpatientRecordPanel` は `showDebugUi` 有効時のみ表示される debug-only surface です。
 - `MedicalOutpatientRecordPanel` は debug-only でも `院内ローカル診療サマリ詳細` の visible card として表示し、`ORCA収納情報` と混同する official 風 label や disclosure にはしません。
 
@@ -123,6 +124,7 @@
 - 受付一覧の workflow state は `受付中 / 診療中 / 会計待ち / 再計待 / 会計済み / 予約` で扱い、`送信済` は transmission signal として別表示します。会計送信成功だけで `会計済み` へ遷移させません。
 - `再計待` は会計済み後の編集を示す workflow state です。補足文は correction note として扱い、generic memo と混在させません。
 - row-local key (`encounterKey` / `scheduleKey` / `receptionId` / `appointmentId`) を一意に解決できない場合、受付一覧に positive な `送信済` 表示を重ねません。
+- Charts の transmission evidence / invoice / warning も同じ row-local key で解決し、`patientId` latest cache を positive source に戻しません。
 
 ### Verification
 - test: reception accept/cancel の `Api_Result=21` を保険不一致、`Api_Result=60` を受付なしとして統一

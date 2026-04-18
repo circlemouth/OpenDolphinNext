@@ -8,7 +8,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ChartsActionBar } from '../ChartsActionBar';
 import { ORCA_OFFICIAL_MEDICAL_MOD_V2_PATH, postOrcaMedicalModV2Xml } from '../orcaClaimApi';
 import { fetchOrderBundles } from '../orderBundleApi';
-import { getOrcaClaimSendEntry } from '../orcaClaimSendCache';
+import { getOrcaClaimSendEntry, getOrcaClaimSendEntryForRow } from '../orcaClaimSendCache';
 import { buildEmptyPrescriptionOrder, fetchPrescriptionOrder } from '../prescriptionOrderApi';
 import type { ReceptionEntry } from '../../reception/api';
 
@@ -120,6 +120,10 @@ const defaultSelectedEntry: ReceptionEntry = {
   id: 'reception-001',
   status: '受付中',
   source: 'visits',
+  appointmentId: 'A-100',
+  receptionId: 'R-100',
+  scheduleKey: 'F001:S100',
+  encounterKey: 'F001:E100',
   department: '01',
   physician: '10001',
   patientId: '000001',
@@ -274,6 +278,54 @@ describe('ChartsActionBar ORCA send', () => {
     expect(screen.getByText(/ORCA送信/)).toBeInTheDocument();
     expect(screen.queryByText(/Invoice_Number=INV-999/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Data_Id=DATA-999/)).not.toBeInTheDocument();
+  });
+
+  it('same-day 別 encounter へ positive cache を誤帰属しない', async () => {
+    const user = userEvent.setup();
+    vi.mocked(postOrcaMedicalModV2Xml).mockResolvedValue({
+      ok: true,
+      status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
+      invoiceNumber: 'INV-ROW-LOCAL',
+      dataId: 'DATA-ROW-LOCAL',
+      runId: 'RUN-ROW-LOCAL',
+      traceId: 'TRACE-ROW-LOCAL',
+      rawXml: '<xml></xml>',
+      missingTags: [],
+    });
+
+    renderActionBar();
+
+    await user.click(screen.getByRole('button', { name: 'ORCA 送信' }));
+    await user.click(screen.getByRole('button', { name: '送信する' }));
+
+    await waitFor(() =>
+      expect(
+        getOrcaClaimSendEntryForRow(
+          { facilityId: 'F-1', userId: 'U-1' },
+          {
+            patientId: '000001',
+            appointmentId: 'A-100',
+            receptionId: 'R-100',
+            scheduleKey: 'F001:S100',
+            encounterKey: 'F001:E100',
+          },
+        )?.invoiceNumber,
+      ).toBe('INV-ROW-LOCAL'),
+    );
+    expect(
+      getOrcaClaimSendEntryForRow(
+        { facilityId: 'F-1', userId: 'U-1' },
+        {
+          patientId: '000001',
+          appointmentId: 'A-200',
+          receptionId: 'R-200',
+          scheduleKey: 'F001:S200',
+          encounterKey: 'F001:E200',
+        },
+      ),
+    ).toBeNull();
   });
 
   it('blocks missing physician code', async () => {

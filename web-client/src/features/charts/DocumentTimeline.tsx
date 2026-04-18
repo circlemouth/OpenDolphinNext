@@ -21,7 +21,7 @@ import {
 } from '../outpatient/orcaQueueApi';
 import { buildOrcaPushEventSummary, resolveOrcaPushEventTone, resolveOrcaSendStatus } from '../outpatient/orcaQueueStatus';
 import { resolveOutpatientFlags, type OutpatientFlagSource } from '../outpatient/flags';
-import { getOrcaClaimSendEntry } from './orcaClaimSendCache';
+import { getOrcaClaimSendEntryForRow, type OrcaClaimSendCacheMatch } from './orcaClaimSendCache';
 import { formatOrcaIdentifier, formatOrcaIdentifierInline } from './orcaIdentifiers';
 import { formatSoapAuthoredAt, getLatestSoapEntries, SOAP_SECTION_LABELS, type SoapEntry, type SoapSectionKey } from './soapNote';
 
@@ -334,11 +334,6 @@ export function DocumentTimeline({
     }
   }, [isSystemAdmin, retryUiVisible]);
 
-  const selectedSendStatus = useMemo(() => {
-    if (!selectedPatientId) return undefined;
-    return resolveOrcaSendStatus(orcaQueueByPatientId.get(selectedPatientId));
-  }, [orcaQueueByPatientId, selectedPatientId]);
-
   const orcaQueueCounts = useMemo(() => buildOrcaQueueCounts([...orcaQueueByPatientId.values()]), [orcaQueueByPatientId]);
 
   const orcaQueueCountsTone = useMemo(() => {
@@ -427,14 +422,44 @@ export function DocumentTimeline({
     if (selectedIndex < 0) return undefined;
     return sortedEntries[selectedIndex];
   }, [selectedIndex, sortedEntries]);
+  const selectedPatientEntryCount = useMemo(
+    () =>
+      selectedPatientId
+        ? sortedEntries.filter((entry) => entry.patientId === selectedPatientId).length
+        : 0,
+    [selectedPatientId, sortedEntries],
+  );
+  const selectedSendMatch = useMemo<OrcaClaimSendCacheMatch | null>(
+    () =>
+      selectedEntry
+        ? {
+            patientId: selectedEntry.patientId,
+            appointmentId: selectedEntry.appointmentId,
+            receptionId: selectedEntry.receptionId,
+            scheduleKey: selectedEntry.scheduleKey,
+            encounterKey: selectedEntry.encounterKey,
+          }
+        : selectedPatientId
+          ? {
+              patientId: selectedPatientId,
+              appointmentId: selectedAppointmentId,
+              receptionId: selectedReceptionId,
+            }
+          : null,
+    [selectedAppointmentId, selectedEntry, selectedPatientId, selectedReceptionId],
+  );
+  const selectedSendStatus = useMemo(() => {
+    if (!selectedPatientId || selectedPatientEntryCount > 1) return undefined;
+    return resolveOrcaSendStatus(orcaQueueByPatientId.get(selectedPatientId));
+  }, [orcaQueueByPatientId, selectedPatientEntryCount, selectedPatientId]);
 
   const selectedBundle = useMemo(
     () => (selectedEntry ? pickClaimBundleForEntry(selectedEntry, claimBundles) : undefined),
     [claimBundles, selectedEntry],
   );
   const selectedSendCache = useMemo(
-    () => getOrcaClaimSendEntry({}, selectedPatientId),
-    [selectedPatientId],
+    () => getOrcaClaimSendEntryForRow({}, selectedSendMatch),
+    [selectedSendMatch],
   );
   const selectedInvoiceNumber =
     selectedBundle?.invoiceNumber ?? effectiveClaimData?.invoiceNumber ?? selectedSendCache?.invoiceNumber;

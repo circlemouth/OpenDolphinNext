@@ -169,4 +169,47 @@ describe('PatientInfoEditDialog', () => {
     expect(onRefetchBaseline).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('canonical readback failure 時は warning を表示して close しない', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onSaved = vi.fn();
+    const onRefetchBaseline = vi.fn();
+    mockUpdateOfficialPatient.mockResolvedValue({
+      ok: false,
+      writeAccepted: true,
+      message: '既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
+      patient: { patientId: '000001', name: '山田 花子 改' },
+      canonicalRefetch: { source: 'patientlst2v2', ok: false, status: 503 },
+    });
+
+    render(
+      <PatientInfoEditDialog
+        open
+        baseline={{
+          patientId: '000001',
+          name: '山田 花子',
+          zip: '100-0001',
+          address: '東京都千代田区',
+        }}
+        fallback={null}
+        editAllowed
+        meta={{ runId: 'RUN-TEST', dataSourceTransition: 'server' }}
+        onClose={onClose}
+        onSaved={onSaved}
+        onRefetchBaseline={onRefetchBaseline}
+      />,
+    );
+
+    await user.clear(screen.getByLabelText('氏名（必須）'));
+    await user.type(screen.getByLabelText('氏名（必須）'), '山田 花子 改');
+    await user.click(screen.getByRole('button', { name: '差分確認へ' }));
+    await user.click(screen.getByLabelText('差分を確認しました（既存患者更新を実行します）'));
+    await user.click(screen.getByRole('button', { name: '既存患者更新' }));
+
+    expect(await screen.findByText('既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。')).toBeInTheDocument();
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ writeAccepted: true, ok: false }));
+    expect(onRefetchBaseline).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

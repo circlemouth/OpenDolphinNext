@@ -22,7 +22,9 @@ public class OrcaGatewayExceptionMapper implements ExceptionMapper<OrcaGatewayEx
         if (resolvedStatus == null) {
             resolvedStatus = Response.Status.BAD_GATEWAY;
         }
-        String message = exception != null ? exception.getMessage() : "Orca gateway error";
+        String message = exception != null
+                ? AbstractResource.sanitizeOrcaTransportMessage(exception.getMessage())
+                : "Orca gateway error";
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("source", "orca_gateway");
         return AbstractResource.restError(

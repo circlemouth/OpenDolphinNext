@@ -634,6 +634,7 @@ describe('PatientsPage official patient flows', () => {
   it('create success keeps canonical patient visible when local search list does not include it', async () => {
     mockMutationResult = {
       ok: true,
+      writeAccepted: true,
       canonicalPatient: {
         patientId: '000099',
         name: '新規患者',
@@ -651,6 +652,53 @@ describe('PatientsPage official patient flows', () => {
     expect(screen.getByText('新患登録は完了しましたが、現在の local search 条件では一覧に見つかりません。canonical patient を詳細表示しています。')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('000099');
     expect(screen.getByRole('region', { name: '患者識別帯' })).toHaveTextContent('新規患者');
+  });
+
+  it('write accepted でも canonical readback failure なら sync 完了 copy を出さない', async () => {
+    mockMutationResult = {
+      ok: false,
+      writeAccepted: true,
+      message: '既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
+      patient: {
+        patientId: '000001',
+        name: '山田 花子',
+      },
+      canonicalRefetch: {
+        source: 'patientlst2v2',
+        ok: false,
+        status: 503,
+      },
+    };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await clickPatientRowByName(user, '山田 花子');
+    await user.click(screen.getByRole('button', { name: '既存患者更新を実行' }));
+
+    expect(screen.queryByText(/canonical\/local 同期済み患者/)).not.toBeInTheDocument();
+    expect(screen.queryByText('保存を再試行できます')).not.toBeInTheDocument();
+  });
+
+  it('import flow も canonical readback failure を success 扱いしない', async () => {
+    mockMutationResult = {
+      ok: false,
+      writeAccepted: true,
+      error: 'ORCA既存患者取込は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
+      canonicalRefetch: {
+        source: 'patientlst2v2',
+        ok: false,
+        status: 503,
+      },
+    };
+    renderPatientsPage();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByText('ORCA既存患者取込', { selector: 'summary' }));
+    await user.type(getInputById('patients-orca-import-patient-id'), '00001234');
+    await user.click(screen.getAllByRole('button', { name: 'ORCA既存患者取込' })[0]);
+
+    expect(await screen.findByText('ORCA既存患者取込は受け付けられましたが、患者番号 00001234 の canonical readback に失敗したため同期完了を確認できませんでした。')).toBeInTheDocument();
+    expect(screen.queryByText('ORCA既存患者取込が完了し canonical/local 同期を更新しました')).not.toBeInTheDocument();
   });
 });
 

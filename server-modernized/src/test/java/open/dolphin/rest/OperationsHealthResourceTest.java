@@ -73,6 +73,7 @@ class OperationsHealthResourceTest {
     void readinessReturnsDetailedChecksOnPublicHealthReadinessRoute() {
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
         restOrcaTransport.probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
@@ -98,6 +99,7 @@ class OperationsHealthResourceTest {
     @Test
     void readinessReturnsDownWithSanitizedCheckPayloadWhenCriticalCheckFails() {
         when(em.createNativeQuery(anyString())).thenThrow(new IllegalStateException("db unavailable"));
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
         restOrcaTransport.probeResult =
                 new RestOrcaTransport.ProbeResult(false, "weborca", true, false,
                         RestOrcaTransport.REASON_CODE_PROBE_FAILED);
@@ -126,6 +128,7 @@ class OperationsHealthResourceTest {
                         ServerConfigurationResolver.KEY_ORCA_PUSH_MEDICAL_ENABLED, "true"));
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
         restOrcaTransport.probeResult =
                 new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
         when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
@@ -143,6 +146,26 @@ class OperationsHealthResourceTest {
                 .isEqualTo("orca_push_not_configured");
     }
 
+    @Test
+    void readinessFailsClosedWhenDefaultFacilityIsMissing() {
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn(null);
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA).getReasonCode())
+                .isEqualTo("facility_configuration_missing");
+        assertThat(restOrcaTransport.probeCalls).isZero();
+    }
+
     private static void setField(Class<?> owner, Object target, String fieldName, Object value) throws Exception {
         Field field = owner.getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -152,9 +175,11 @@ class OperationsHealthResourceTest {
     private static final class StubRestOrcaTransport extends RestOrcaTransport {
         private RestOrcaTransport.ProbeResult probeResult =
                 RestOrcaTransport.unavailableProbe(RestOrcaTransport.REASON_CODE_TRANSPORT_NOT_READY);
+        private int probeCalls;
 
         @Override
         public RestOrcaTransport.ProbeResult probeReadiness(String facilityId) {
+            probeCalls++;
             return probeResult;
         }
     }

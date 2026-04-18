@@ -100,7 +100,7 @@ cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-full
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` の patient picker は current reception workflow に合わせて `/api/local/patients/search` を使う。固定 seed を正本とみなさず、実行直前に current facility で local search 可能かつ単一 active entry を作れる患者IDを確認して `QA_PATIENT_ID` に渡す。
 - 旧 closeout evidence の patientId や old RUN_ID を受入れ候補へ流用しない。current RUN_ID の rerun で local search 可否と active entry 解決性を取り直すこと。
 - patient search が 0 件、または accept 後に canonical handoff 用の active entry を一意に解決できない場合は `test-data-blocker` として停止し、summary / network / console / page-errors を保存する。
-- `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `Medical_Information` を送らず、指定時だけ current select option を送る。
+- `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` は `QA_MEDICAL_INFORMATION` 未指定時に `Medical_Information` を送らず、request body に含まれた場合は script 自身が failure で停止する。指定時だけ current select option を送る。
 - WebORCA Trial で `Acceptance_Push` workaround が必要な環境では、client 側ではなく server runtime config `ORCA_ACCEPTMOD_SUPPRESS_ACCEPTANCE_PUSH=true` を明示する。`setup-modernized-env.sh` の dev 起動はこの flag を既定で有効化する。
 - artifact が `RUN_ID` 単位でまとまり、accept / fullflow / runtime-ready smoke の結果を同じ受入れ束へ添付できる。official `Voucher_Number` / `Sequential_Number` が不足する場合は fail-close のまま `official-visit-row-blocker` または `test-data-blocker` として summary / steps / network へ残す。
 - fullflow が send 到達を示した run だけ `qa/fullflow/request-xml/medicalmodv2.xml` を必須とする。send 未到達 run では XML 不在を許容する代わりに、`summary.json`、`blocker-summary.json`、`handoff-state.json`、`selected-visit-row.json` で停止理由を third party が再読できることを必須とする。
@@ -146,7 +146,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `npm run ci` が成功する。
 - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` が成功する。
 - `runtime-ready-smoke` が成功する。
-- `qa-acceptmodv2-weborca.mjs` と `qa-fullflow-weborca.mjs` が current 受付導線で完走し、`Medical_Information` 未選択時は未送信の証跡を残す。
+- `qa-acceptmodv2-weborca.mjs` と `qa-fullflow-weborca.mjs` が current 受付導線で完走し、`Medical_Information` 未選択時は未送信の証跡を残す。未指定 run で request body に `Medical_Information` が含まれた場合は fail と判定される。
 - patient search が 0 件なら、script は `QA_PATIENT_ID` の不足/不一致を明示したエラーで停止する。
 - direct runtime lookup grep は `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` 1 件だけを返す。
 - `dolphin.facilityId` grep は 0 件。

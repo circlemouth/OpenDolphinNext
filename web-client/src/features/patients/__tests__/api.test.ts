@@ -106,6 +106,8 @@ describe('patients api official mutation', () => {
       patientId: '000099',
       name: '新規患者',
     });
+    expect(result.writeAccepted).toBe(true);
+    expect(result.ok).toBe(true);
     expect(result.canonicalRefetch).toMatchObject({
       source: 'patientlst2v2',
       ok: true,
@@ -161,7 +163,59 @@ describe('patients api official mutation', () => {
       patientId: '000001',
       name: '既存患者 改',
     });
+    expect(result.writeAccepted).toBe(true);
+    expect(result.ok).toBe(true);
     expect(result.canonicalRefetch?.ok).toBe(true);
+  });
+
+  it('write accepted でも canonical re-fetch が失敗したら full success にしない', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            apiResult: '00',
+            apiResultMessage: 'ORCA更新完了',
+            runId: 'RUN-UPDATE',
+            traceId: 'TRACE-UPDATE',
+            routeNamespace: 'official',
+            patient: {
+              patientId: '000001',
+              name: '既存患者 改',
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ patients: [] }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      );
+
+    const result = await updateOfficialPatient({
+      patient: {
+        patientId: '000001',
+        name: '既存患者 改',
+      },
+    });
+
+    expect(result.writeAccepted).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe('既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。');
+    expect(result.canonicalRefetch).toMatchObject({
+      source: 'patientlst2v2',
+      ok: false,
+      expectedPatientIds: ['000001'],
+      matchedPatientIds: [],
+      missingPatientIds: ['000001'],
+    });
   });
 
   it('local search keeps /api/local boundary and infers searchType on the client', async () => {

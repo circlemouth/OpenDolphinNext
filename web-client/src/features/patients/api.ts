@@ -69,6 +69,7 @@ export type PatientListResponse = {
 
 export type PatientMutationResult = {
   ok: boolean;
+  writeAccepted?: boolean;
   runId?: string;
   traceId?: string;
   requestId?: string;
@@ -87,6 +88,9 @@ export type PatientMutationResult = {
     source: 'patientlst2v2';
     ok: boolean;
     status?: number;
+    expectedPatientIds?: string[];
+    matchedPatientIds?: string[];
+    missingPatientIds?: string[];
   };
 };
 
@@ -268,10 +272,10 @@ const buildOfficialPatientBody = (
 export async function refetchOfficialCanonicalPatients(params: {
   patientIds: string[];
   runId?: string;
-}): Promise<{ ok: boolean; patients: PatientRecord[]; status?: number }> {
+}): Promise<{ ok: boolean; patients: PatientRecord[]; status?: number; matchedPatientIds: string[]; missingPatientIds: string[] }> {
   const patientIds = params.patientIds.map((value) => value.trim()).filter(Boolean);
   if (patientIds.length === 0) {
-    return { ok: false, patients: [], status: 0 };
+    return { ok: false, patients: [], status: 0, matchedPatientIds: [], missingPatientIds: [] };
   }
   const runId = params.runId ?? getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
@@ -281,10 +285,20 @@ export async function refetchOfficialCanonicalPatients(params: {
   });
   const json = asObjectRecord(result.json);
   const list = Array.isArray(json.patients) ? (json.patients as any[]) : [];
+  const patients = list.map(mapCanonicalPatient).filter((patient) => Object.values(patient).some(Boolean));
+  const requestedPatientIds = new Set(patientIds);
+  const matchedPatientIds = patients
+    .map((patient) => normalizeApiString(patient.patientId))
+    .filter((patientId): patientId is string => {
+      return typeof patientId === 'string' && requestedPatientIds.has(patientId);
+    });
+  const missingPatientIds = patientIds.filter((patientId) => !matchedPatientIds.includes(patientId));
   return {
     ok: result.ok,
-    patients: list.map(mapCanonicalPatient).filter((patient) => Object.values(patient).some(Boolean)),
+    patients,
     status: result.status,
+    matchedPatientIds,
+    missingPatientIds,
   };
 }
 
@@ -430,8 +444,10 @@ const performOfficialPatientMutation = async (
   const traceId = typeof json.traceId === 'string' ? (json.traceId as string) : getObservabilityMeta().traceId;
   const requestId = typeof json.requestId === 'string' ? (json.requestId as string) : undefined;
   const dataSourceTransition = normalizeDataSourceTransition(json.dataSourceTransition);
+  const writeAccepted = postResult.ok;
   const result: PatientMutationResult = {
-    ok: postResult.ok,
+    ok: false,
+    writeAccepted,
     runId: (json.runId as string | undefined) ?? runId,
     traceId,
     requestId,
@@ -441,28 +457,50 @@ const performOfficialPatientMutation = async (
     dataSourceTransition,
     fallbackUsed: normalizeBoolean(json.fallbackUsed),
     auditEvent: Object.keys(serverAuditEvent).length > 0 ? serverAuditEvent : undefined,
-    message: (json.apiResultMessage as string | undefined)
-      ?? (postResult.ok
-        ? (operation === 'create' ? '新患登録が完了しました。' : '既存患者更新が完了しました。')
-        : (operation === 'create' ? '新患登録に失敗しました。' : '既存患者更新に失敗しました。')),
+    message: undefined,
     patient: json.patient ? mapLocalPatient(json.patient) : undefined,
     status: postResult.status,
     sourcePath: postResult.path,
   };
 
-  const patientIdForCanonical = result.patient?.patientId ?? payload.patient.patientId;
-  if (result.ok && patientIdForCanonical) {
+  const patientIdForCanonical = normalizeApiString(result.patient?.patientId ?? payload.patient.patientId);
+  if (writeAccepted && patientIdForCanonical) {
     const canonicalRefetch = await refetchOfficialCanonicalPatients({
       patientIds: [patientIdForCanonical],
       runId: result.runId,
     });
-    result.canonicalPatient = canonicalRefetch.patients[0];
+    result.canonicalPatient =
+      canonicalRefetch.patients.find((patient) => normalizeApiString(patient.patientId) === patientIdForCanonical)
+      ?? canonicalRefetch.patients[0];
     result.canonicalRefetch = {
       source: 'patientlst2v2',
-      ok: canonicalRefetch.ok,
+      ok: canonicalRefetch.ok && canonicalRefetch.matchedPatientIds.includes(patientIdForCanonical),
       status: canonicalRefetch.status,
+      expectedPatientIds: [patientIdForCanonical],
+      matchedPatientIds: canonicalRefetch.matchedPatientIds,
+      missingPatientIds: canonicalRefetch.missingPatientIds,
+    };
+  } else if (writeAccepted) {
+    result.canonicalRefetch = {
+      source: 'patientlst2v2',
+      ok: false,
+      expectedPatientIds: patientIdForCanonical ? [patientIdForCanonical] : [],
+      matchedPatientIds: [],
+      missingPatientIds: patientIdForCanonical ? [patientIdForCanonical] : [],
     };
   }
+  result.ok = writeAccepted && Boolean(result.canonicalRefetch?.ok);
+  result.message =
+    writeAccepted
+      ? result.ok
+        ? (operation === 'create'
+          ? '新患登録と canonical 再取得が完了しました。'
+          : '既存患者更新と canonical 再取得が完了しました。')
+        : (operation === 'create'
+          ? '新患登録は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。'
+          : '既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。')
+      : ((json.apiResultMessage as string | undefined)
+        ?? (operation === 'create' ? '新患登録に失敗しました。' : '既存患者更新に失敗しました。'));
 
   const serverDetails =
     serverAuditEvent && typeof serverAuditEvent.details === 'object' && serverAuditEvent.details !== null
@@ -485,15 +523,20 @@ const performOfficialPatientMutation = async (
     status: result.status,
     sourcePath: result.sourcePath,
     dataSourceTransition: result.dataSourceTransition,
-    outcome: result.ok ? 'success' : 'error',
+    writeAccepted: result.writeAccepted,
+    outcome: result.ok ? 'success' : result.writeAccepted ? 'warning' : 'error',
     message: result.message,
     canonicalRefetchSource: result.canonicalRefetch?.source,
+    canonicalRefetchOk: result.canonicalRefetch?.ok,
     canonicalRefetchStatus: result.canonicalRefetch?.status,
+    canonicalRefetchExpectedPatientIds: result.canonicalRefetch?.expectedPatientIds,
+    canonicalRefetchMatchedPatientIds: result.canonicalRefetch?.matchedPatientIds,
+    canonicalRefetchMissingPatientIds: result.canonicalRefetch?.missingPatientIds,
   }) as Record<string, unknown>;
 
   result.auditEvent = {
     action: (serverAuditEvent?.action as string | undefined) ?? `ORCA_OFFICIAL_${operation.toUpperCase()}_PATIENT`,
-    outcome: (serverAuditEvent?.outcome as string | undefined) ?? (result.ok ? 'success' : 'error'),
+    outcome: result.ok ? 'success' : result.writeAccepted ? 'warning' : 'error',
     subject: (serverAuditEvent?.subject as string | undefined) ?? (payload.auditMeta?.source ?? 'patients'),
     runId: (serverAuditEvent?.runId as string | undefined) ?? result.runId,
     traceId: (serverAuditEvent?.traceId as string | undefined) ?? result.traceId,
@@ -517,8 +560,10 @@ const performOfficialPatientMutation = async (
     fallbackUsed: result.fallbackUsed ?? false,
     action: `official_patient_${operation}`,
     outcome: result.ok ? 'success' : 'error',
-    note: result.ok ? (result.sourcePath ?? '') : `${result.sourcePath ?? ''} status=${result.status ?? 'unknown'}`,
-    reason: result.ok ? undefined : result.message ?? result.sourcePath,
+    note: result.ok
+      ? (result.sourcePath ?? '')
+      : `${result.sourcePath ?? ''} status=${result.status ?? 'unknown'} writeAccepted=${result.writeAccepted ? 'true' : 'false'}`,
+    reason: result.message ?? result.sourcePath,
   });
 
   logAuditEvent({

@@ -157,17 +157,18 @@ final class AdminOrcaConnectionTestSupport {
             Map<String, Object> body,
             Map<String, Object> details,
             OrcaConnectionPolicyException ex) {
+        String safeMessage = AbstractResource.sanitizeOrcaTransportMessage(ex.getMessage());
         body.put("ok", false);
         body.put("errorCategory", ex.getErrorCategory());
-        body.put("error", ex.getMessage());
+        body.put("error", safeMessage);
         body.put("testedAt", Instant.now().toString());
         details.put("status", "failed");
         details.put("errorCategory", ex.getErrorCategory());
-        details.put("error", ex.getMessage());
+        details.put("error", safeMessage);
         recordAudit("ADMIN_ORCA_CONNECTION_TEST", details,
                 AuditEventEnvelope.Outcome.FAILURE,
                 "orca.connection.test.policy_violation",
-                ex.getMessage());
+                safeMessage);
         return Response.status(Response.Status.BAD_REQUEST).entity(body).header("x-run-id", runId).build();
     }
 
@@ -288,14 +289,21 @@ final class AdminOrcaConnectionTestSupport {
         if (hasCause(root, SSLException.class) || containsSslHint(root)) {
             return new Failure("certificate_error", "証明書エラーの可能性があります。クライアント証明書/パスフレーズ/CA証明書を確認してください。", orcaHttpStatus);
         }
+        if (isInvalidUrlFailure(ex, root)) {
+            return new Failure("config_invalid", "接続先URLが不正です。", orcaHttpStatus);
+        }
         if (root instanceof IllegalArgumentException) {
-            return new Failure("config_incomplete", root.getMessage(), orcaHttpStatus);
+            return new Failure("config_incomplete",
+                    AbstractResource.sanitizeOrcaTransportMessage(root.getMessage()),
+                    orcaHttpStatus);
         }
         if (root instanceof open.dolphin.orca.OrcaGatewayException) {
-            return new Failure("http_error", root.getMessage(), orcaHttpStatus);
+            return new Failure("http_error",
+                    AbstractResource.sanitizeOrcaTransportMessage(root.getMessage()),
+                    orcaHttpStatus);
         }
         String message = root != null && root.getMessage() != null ? root.getMessage() : "不明なエラーです。";
-        return new Failure("unknown", message, orcaHttpStatus);
+        return new Failure("unknown", AbstractResource.sanitizeOrcaTransportMessage(message), orcaHttpStatus);
     }
 
     private Throwable unwrap(Throwable ex) {
@@ -353,6 +361,26 @@ final class AdminOrcaConnectionTestSupport {
         } catch (Exception ex) {
             return null;
         }
+    }
+
+    private boolean isInvalidUrlFailure(Throwable original, Throwable root) {
+        return hasFailureCategory(original, "invalid_url") || hasFailureCategory(root, "invalid_url");
+    }
+
+    private boolean hasFailureCategory(Throwable throwable, String expected) {
+        if (throwable == null || expected == null || expected.isBlank()) {
+            return false;
+        }
+        String message = throwable.getMessage();
+        if (message == null || message.isBlank() || message.charAt(0) != '[') {
+            return false;
+        }
+        int end = message.indexOf(']');
+        if (end <= 1) {
+            return false;
+        }
+        String category = message.substring(1, end).trim().toLowerCase(Locale.ROOT);
+        return expected.equals(category);
     }
 
     private record Failure(String category, String message, Integer orcaHttpStatus) {}

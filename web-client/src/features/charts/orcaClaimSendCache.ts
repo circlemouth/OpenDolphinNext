@@ -44,6 +44,10 @@ export type OrcaClaimSendCacheEntry = {
 };
 
 export type OrcaClaimSendCacheInput = Omit<OrcaClaimSendCacheEntry, 'savedAt'>;
+export type OrcaClaimSendCacheMatch = Pick<
+  OrcaClaimSendCacheEntry,
+  'patientId' | 'appointmentId' | 'receptionId' | 'scheduleKey' | 'encounterKey'
+>;
 
 type OrcaClaimSendCacheStore = Record<string, OrcaClaimSendCacheEntry>;
 const AUTH_STORAGE_KEY = 'opendolphin:web-client:auth';
@@ -93,6 +97,10 @@ export const resolveOrcaClaimSendMatchKeys = (
   if (appointmentId) keys.push(`appointment:${appointmentId}`);
   return keys;
 };
+
+export const hasOrcaClaimSendMatchKey = (
+  value?: Pick<OrcaClaimSendCacheEntry, 'encounterKey' | 'scheduleKey' | 'receptionId' | 'appointmentId'> | null,
+) => resolveOrcaClaimSendMatchKeys(value).length > 0;
 
 const resolveStoreKey = (value: OrcaClaimSendCacheInput) =>
   resolveOrcaClaimSendMatchKey(value) ?? (normalizeOptionalString(value.patientId) ? `patient:${normalizeOptionalString(value.patientId)}` : undefined);
@@ -197,6 +205,33 @@ const normalizeEntry = (entry: Partial<OrcaClaimSendCacheEntry> | null | undefin
   };
 };
 
+const getScopedVolatileEntries = (scope: StorageScope) => {
+  const scopePrefix = `${buildKey(scope)}:`;
+  const values: OrcaClaimSendCacheEntry[] = [];
+  for (const [volatileKey, entry] of volatileClaimSendCache.entries()) {
+    if (!volatileKey.startsWith(scopePrefix)) continue;
+    if (isExpired(entry.savedAt)) {
+      volatileClaimSendCache.delete(volatileKey);
+      continue;
+    }
+    values.push(entry);
+  }
+  return values;
+};
+
+const mergeScopedStoreWithVolatile = (scope: StorageScope) => {
+  const persisted = loadOrcaClaimSendCache(scope) ?? {};
+  const combined: OrcaClaimSendCacheStore = { ...persisted };
+  for (const entry of getScopedVolatileEntries(scope)) {
+    if (!entry.cacheKey) continue;
+    const previous = combined[entry.cacheKey];
+    if (!previous || Date.parse(entry.savedAt) >= Date.parse(previous.savedAt)) {
+      combined[entry.cacheKey] = entry;
+    }
+  }
+  return combined;
+};
+
 export function loadOrcaClaimSendCache(scope: StorageScope): OrcaClaimSendCacheStore | null {
   if (typeof sessionStorage === 'undefined') return null;
   const resolvedScope = resolveScope(scope);
@@ -288,9 +323,16 @@ export function getOrcaClaimSendEntry(scope: StorageScope, patientId?: string | 
   return matches[0] ?? null;
 }
 
+export function getOrcaClaimSendEntryForRow(scope: StorageScope, match?: OrcaClaimSendCacheMatch | null) {
+  if (!match || !hasOrcaClaimSendMatchKey(match)) return null;
+  const resolvedScope = resolveScope(scope);
+  const combinedStore = mergeScopedStoreWithVolatile(resolvedScope);
+  return findOrcaClaimSendEntryForMatch(combinedStore, match, { allowPatientFallback: false });
+}
+
 export function findOrcaClaimSendEntryForMatch(
   store: OrcaClaimSendCacheStore | null | undefined,
-  match: Pick<OrcaClaimSendCacheEntry, 'patientId' | 'appointmentId' | 'receptionId' | 'scheduleKey' | 'encounterKey'>,
+  match: OrcaClaimSendCacheMatch,
   options?: { allowPatientFallback?: boolean },
 ) {
   if (!store) return null;

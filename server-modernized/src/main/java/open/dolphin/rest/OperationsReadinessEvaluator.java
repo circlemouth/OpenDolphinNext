@@ -13,6 +13,7 @@ import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.push.OrcaPushClientRegistry;
 import open.dolphin.orca.push.OrcaPushConnectionStateStore;
+import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.RestOrcaTransport;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.runtime.config.ServerRuntimeConfiguration;
@@ -109,6 +110,12 @@ public class OperationsReadinessEvaluator {
         OperationsReadinessCheck detail = new OperationsReadinessCheck();
         try {
             String facilityId = orcaConnectionConfigStore != null ? orcaConnectionConfigStore.getDefaultFacilityId() : null;
+            if (facilityId == null || facilityId.isBlank()) {
+                detail.setStatus(STATUS_DOWN);
+                detail.setReasonCode(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING);
+                checks.put(CHECK_ORCA, detail);
+                return false;
+            }
             RestOrcaTransport.ProbeResult probe = restOrcaTransport != null
                     ? restOrcaTransport.probeReadiness(facilityId)
                     : RestOrcaTransport.unavailableProbe(RestOrcaTransport.REASON_CODE_HTTP_CLIENT_UNAVAILABLE);
@@ -122,6 +129,13 @@ public class OperationsReadinessEvaluator {
             }
             checks.put(CHECK_ORCA, detail);
             return up;
+        } catch (OrcaConnectionPolicyException ex) {
+            detail.setStatus(STATUS_DOWN);
+            detail.setReasonCode(ex.getErrorCategory() != null
+                    ? ex.getErrorCategory()
+                    : OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING);
+            checks.put(CHECK_ORCA, detail);
+            return false;
         } catch (RuntimeException ex) {
             detail.setStatus(STATUS_DOWN);
             detail.setReasonCode(RestOrcaTransport.REASON_CODE_PROBE_FAILED);

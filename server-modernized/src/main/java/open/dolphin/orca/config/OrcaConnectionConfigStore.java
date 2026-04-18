@@ -17,7 +17,6 @@ import open.dolphin.orca.transport.OrcaConnectionPolicyException;
 import open.dolphin.orca.transport.OrcaTransportSecurityPolicy;
 import open.dolphin.rest.AbstractResource;
 import open.dolphin.runtime.RuntimeStateRepository;
-import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.security.OrcaCredentialSecurityConfig;
 import open.dolphin.security.totp.TotpSecretProtector;
 import org.slf4j.Logger;
@@ -39,8 +38,6 @@ public class OrcaConnectionConfigStore {
     private OrcaCredentialSecurityConfig orcaCredentialSecurityConfig;
     @Inject
     private RuntimeStateRepository stateRepository;
-    @Inject
-    private ServerConfigurationResolver configurationResolver;
     private TotpSecretProtector protector;
     private String defaultFacilityId;
     private Map<String, OrcaConnectionConfigRecord> facilities = new LinkedHashMap<>();
@@ -63,10 +60,7 @@ public class OrcaConnectionConfigStore {
     public String getDefaultFacilityId() {
         lock.readLock().lock();
         try {
-            if (defaultFacilityId != null) {
-                return defaultFacilityId;
-            }
-            return configurationResolver != null ? normalizeFacilityId(configurationResolver.orcaRuntime().facilityId()) : null;
+            return defaultFacilityId;
         } finally {
             lock.readLock().unlock();
         }

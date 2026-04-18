@@ -8,8 +8,8 @@ const { useQueryMock } = vi.hoisted(() => ({
   useQueryMock: vi.fn(),
 }));
 
-const { getOrcaClaimSendEntryMock } = vi.hoisted(() => ({
-  getOrcaClaimSendEntryMock: vi.fn(),
+const { getOrcaClaimSendEntryForRowMock } = vi.hoisted(() => ({
+  getOrcaClaimSendEntryForRowMock: vi.fn(),
 }));
 
 vi.mock('@emotion/react', () => ({
@@ -22,7 +22,7 @@ vi.mock('@tanstack/react-query', () => ({
 }));
 
 vi.mock('../orcaClaimSendCache', () => ({
-  getOrcaClaimSendEntry: getOrcaClaimSendEntryMock,
+  getOrcaClaimSendEntryForRow: getOrcaClaimSendEntryForRowMock,
 }));
 
 vi.mock('../../../routes/useAppNavigation', () => ({
@@ -72,9 +72,12 @@ vi.mock('../../../libs/audit/auditLogger', () => ({
 
 describe('OrcaSummary semantics', () => {
   it('correction note と setting note を details 外の must-visible 領域に出す', () => {
-    getOrcaClaimSendEntryMock.mockReturnValue({
+    getOrcaClaimSendEntryForRowMock.mockReturnValue({
       patientId: 'P-1',
       appointmentId: 'A-1',
+      receptionId: 'R-1',
+      scheduleKey: 'SCH-1',
+      encounterKey: 'ENC-1',
       performDate: '2026-03-09',
       invoiceNumber: 'INV-1',
       sendStatus: 'success',
@@ -100,6 +103,10 @@ describe('OrcaSummary semantics', () => {
         } as any}
         patientId="P-1"
         visitDate="2026-03-09"
+        appointmentId="A-1"
+        receptionId="R-1"
+        scheduleKey="SCH-1"
+        encounterKey="ENC-1"
         orcaEncounterContext={{
           patientId: 'P-1',
           visitDate: '2026-03-09',
@@ -121,7 +128,7 @@ describe('OrcaSummary semantics', () => {
   });
 
   it('ORCA収納情報と院内ローカル診療サマリの責務を分離し official ラベルを表示する', () => {
-    getOrcaClaimSendEntryMock.mockReturnValue(null);
+    getOrcaClaimSendEntryForRowMock.mockReturnValue(null);
     useQueryMock.mockReturnValue({
       data: {
         ok: true,
@@ -168,6 +175,10 @@ describe('OrcaSummary semantics', () => {
         } as any}
         patientId="P-1"
         visitDate="2026-03-09"
+        appointmentId="A-1"
+        receptionId="R-1"
+        scheduleKey="SCH-1"
+        encounterKey="ENC-1"
         orcaEncounterContext={{
           patientId: 'P-1',
           visitDate: '2026-03-09',
@@ -180,9 +191,10 @@ describe('OrcaSummary semantics', () => {
       />,
     );
 
-    expect(screen.getByText('Workflow / 院内ローカル診療サマリ')).toBeInTheDocument();
+    expect(screen.getByText('Workflow / 院内ローカル診療サマリ')).toBeVisible();
     expect(screen.getByText('院内編集中のローカル集計です。ORCA の請求・収納記録ではありません。')).toBeInTheDocument();
-    expect(screen.getByText('ORCA収納情報')).toBeInTheDocument();
+    expect(screen.getByText('Transmission / medical-mod-v2')).toBeVisible();
+    expect(screen.getByText('ORCA収納情報')).toBeVisible();
     expect(screen.getByText('official incomeinfv2 の収納情報です。ローカル診療サマリとは別の記録として扱ってください。')).toBeInTheDocument();
     expect(screen.getByText('対象日: 2026-03-09')).toBeInTheDocument();
     expect(screen.getByText(/保険組合せ: 0001/)).toBeInTheDocument();
@@ -195,5 +207,53 @@ describe('OrcaSummary semantics', () => {
     expect(screen.getByText(/2026-03-09 ｜ 内科 ｜ 請求金額: 1,200 円 ｜ 入金額:/)).toBeInTheDocument();
     expect(screen.getByText(/未収金情報: 2026-03-09 ｜ 伝票 INV-1 ｜ 500 円/)).toBeInTheDocument();
     expect(screen.queryByText('請求サマリ')).not.toBeInTheDocument();
+
+    const details = document.querySelector('.orca-summary__details-fold');
+    expect(details).not.toBeNull();
+    expect(details?.textContent).not.toContain('Workflow / 院内ローカル診療サマリ');
+    expect(details?.textContent).not.toContain('Transmission / medical-mod-v2');
+    expect(details?.textContent).not.toContain('ORCA収納情報');
+  });
+
+  it('same-day 別 encounter の cache では positive transmission / invoice / warning を出さない', () => {
+    getOrcaClaimSendEntryForRowMock.mockReturnValue(null);
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      isFetching: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <OrcaSummary
+        summary={{ missingMaster: false } as any}
+        claim={{
+          claimStatus: '会計待ち',
+          claimStatusText: 'ローカル未送信',
+          recordsReturned: 1,
+          bundles: [{ totalClaimAmount: 1200, items: [] }],
+        } as any}
+        patientId="P-1"
+        visitDate="2026-03-09"
+        appointmentId="A-2"
+        receptionId="R-2"
+        scheduleKey="SCH-2"
+        encounterKey="ENC-2"
+        orcaEncounterContext={{
+          patientId: 'P-1',
+          visitDate: '2026-03-09',
+          departmentCode: '01',
+          physicianCode: '10001',
+          insuranceCombinationNumber: '0001',
+          voucherNumber: '1234',
+          sequentialNumber: '1',
+        }}
+      />,
+    );
+
+    expect(screen.getByText('transmission: 未送信')).toBeInTheDocument();
+    expect(screen.getByText('警告なし')).toBeInTheDocument();
+    expect(screen.queryByText(/INV-/)).not.toBeInTheDocument();
   });
 });

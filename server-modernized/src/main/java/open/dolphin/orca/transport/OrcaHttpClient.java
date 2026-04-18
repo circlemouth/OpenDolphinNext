@@ -249,8 +249,23 @@ public class OrcaHttpClient {
         try {
             return new URI(url);
         } catch (Exception ex) {
-            throw failure(FailureCategory.INVALID_URL, "Invalid ORCA API URL: " + url, ex);
+            throw failure(FailureCategory.INVALID_URL, "Invalid ORCA API URL", ex);
         }
+    }
+
+    public static String sanitizeFailureMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return "Orca gateway error";
+        }
+        String trimmed = message.trim();
+        String category = extractFailureCategory(trimmed);
+        if ("invalid_url".equals(category)) {
+            return "Invalid ORCA API URL";
+        }
+        if (containsSensitiveTargetMaterial(trimmed)) {
+            return "ORCA transport configuration is invalid";
+        }
+        return trimmed;
     }
 
     private void logOrcaSummary(String requestId, String method, String path, int status,
@@ -519,6 +534,29 @@ public class OrcaHttpClient {
 
     private static OrcaGatewayException failure(FailureCategory category, String message, Throwable cause) {
         return new OrcaGatewayException("[" + category.code + "] " + message, cause);
+    }
+
+    private static String extractFailureCategory(String message) {
+        if (message == null || message.isBlank() || message.charAt(0) != '[') {
+            return null;
+        }
+        int end = message.indexOf(']');
+        if (end <= 1) {
+            return null;
+        }
+        return message.substring(1, end).trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static boolean containsSensitiveTargetMaterial(String message) {
+        String lower = message.toLowerCase(Locale.ROOT);
+        return lower.contains("://")
+                || lower.contains("userinfo")
+                || lower.contains("baseurl")
+                || lower.contains("base url")
+                || lower.contains("host spec")
+                || lower.contains("pathprefix")
+                || lower.contains("path prefix")
+                || lower.contains("@");
     }
 
     enum OrcaLogMode {

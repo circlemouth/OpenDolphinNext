@@ -31,6 +31,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import open.dolphin.infomodel.DiagnosisSendWrapper;
 import open.dolphin.infomodel.IInfoModel;
+import open.dolphin.orca.transport.OrcaHttpClient;
 import open.dolphin.runtime.config.ServerConfigurationResolver;
 import open.dolphin.security.auth.TrustedProxyPolicy;
 import open.dolphin.security.auth.TrustedRequestContextResolver;
@@ -230,6 +231,10 @@ public class AbstractResource {
     public static WebApplicationException restError(HttpServletRequest request, Response.Status status,
             String errorCode, String message) {
         return restError(request, status, errorCode, message, null, null);
+    }
+
+    public static String sanitizeOrcaTransportMessage(String message) {
+        return OrcaHttpClient.sanitizeFailureMessage(message);
     }
 
     public static WebApplicationException restError(HttpServletRequest request, Response.Status status,

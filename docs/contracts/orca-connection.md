@@ -6,6 +6,7 @@
 ## 非機能方針
 - 後方互換は保持しない。
 - 施設未解決時の「最後に保存したレコード」 fallback を禁止する。
+- explicit `defaultFacilityId` が未設定のときに runtime facility / runtime ORCA config へ fallback しない。
 - ORCA 資格情報の暗号鍵は 2FA 用鍵と分離する。
 - ログ / 監査 / readiness で接続先詳細を出さない。
 - `testedScope` や optional module visibility はこの契約に含めない。connection API は施設別接続設定だけを返す。
@@ -46,6 +47,7 @@
 - [x] `_default` を「最後に編集した施設」で上書きしない。
 - [x] `records.values().iterator().next()` を fallback に使わない。
 - [x] facilityId 未解決時に別施設へ接続しない。
+- [x] store 不在 / `defaultFacilityId` 未設定 / `facility_configuration_missing` のとき runtime config へ接続しない。
 
 ## Secret Protector 契約
 - `factor2.aes-key-b64` は 2FA のみ。

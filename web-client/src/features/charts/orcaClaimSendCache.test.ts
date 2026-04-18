@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   findOrcaClaimSendEntryForMatch,
   getOrcaClaimSendEntry,
+  getOrcaClaimSendEntryForRow,
   resetOrcaClaimSendCacheForTests,
   resolveOrcaClaimSendMatchKeys,
   saveOrcaClaimSendCache,
@@ -144,6 +145,106 @@ describe('orcaClaimSendCache', () => {
     const volatile = getOrcaClaimSendEntry(STORAGE_SCOPE, 'P-2402');
     expect(volatile?.invoiceNumber).toBe('INV-2402');
     expect(volatile?.medicalWarnings).toEqual([{ message: '補正候補があります', code: 'W01' }]);
+  });
+
+  it('same-day multi-encounter では current encounter row の送信 cache だけを返す', () => {
+    saveOrcaClaimSendCache(
+      {
+        patientId: 'P-2402',
+        appointmentId: 'A-2402-1',
+        receptionId: 'R-2402-1',
+        scheduleKey: 'SCH-2402-1',
+        encounterKey: 'ENC-2402-1',
+        performDate: '2026-04-17',
+        invoiceNumber: 'INV-2402-1',
+        sendStatus: 'success',
+      },
+      STORAGE_SCOPE,
+    );
+    saveOrcaClaimSendCache(
+      {
+        patientId: 'P-2402',
+        appointmentId: 'A-2402-2',
+        receptionId: 'R-2402-2',
+        scheduleKey: 'SCH-2402-2',
+        encounterKey: 'ENC-2402-2',
+        performDate: '2026-04-17',
+        invoiceNumber: 'INV-2402-2',
+        sendStatus: 'success',
+      },
+      STORAGE_SCOPE,
+    );
+
+    expect(
+      getOrcaClaimSendEntryForRow(STORAGE_SCOPE, {
+        patientId: 'P-2402',
+        encounterKey: 'ENC-2402-1',
+        scheduleKey: 'SCH-2402-1',
+        receptionId: 'R-2402-1',
+        appointmentId: 'A-2402-1',
+      })?.invoiceNumber,
+    ).toBe('INV-2402-1');
+    expect(
+      getOrcaClaimSendEntryForRow(STORAGE_SCOPE, {
+        patientId: 'P-2402',
+        encounterKey: 'ENC-2402-2',
+        scheduleKey: 'SCH-2402-2',
+        receptionId: 'R-2402-2',
+        appointmentId: 'A-2402-2',
+      })?.invoiceNumber,
+    ).toBe('INV-2402-2');
+  });
+
+  it('same-day multi-reception では row-local key が無いと positive cache を返さない', () => {
+    saveOrcaClaimSendCache(
+      {
+        patientId: 'P-2402',
+        appointmentId: 'A-2402-1',
+        receptionId: 'R-2402-1',
+        performDate: '2026-04-17',
+        invoiceNumber: 'INV-2402-1',
+        sendStatus: 'success',
+      },
+      STORAGE_SCOPE,
+    );
+    saveOrcaClaimSendCache(
+      {
+        patientId: 'P-2402',
+        appointmentId: 'A-2402-2',
+        receptionId: 'R-2402-2',
+        performDate: '2026-04-17',
+        invoiceNumber: 'INV-2402-2',
+        sendStatus: 'success',
+      },
+      STORAGE_SCOPE,
+    );
+
+    expect(getOrcaClaimSendEntryForRow(STORAGE_SCOPE, { patientId: 'P-2402' })).toBeNull();
+  });
+
+  it('save 時に strongest key と row-local fields を落とさない', () => {
+    saveOrcaClaimSendCache(
+      {
+        patientId: 'P-2402',
+        appointmentId: 'A-2402',
+        receptionId: 'R-2402',
+        scheduleKey: 'SCH-2402',
+        encounterKey: 'ENC-2402',
+        performDate: '2026-04-17',
+        sendStatus: 'success',
+      },
+      STORAGE_SCOPE,
+    );
+
+    const parsed = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}') as Record<string, Record<string, unknown>>;
+    expect(parsed['encounter:ENC-2402']).toMatchObject({
+      cacheKey: 'encounter:ENC-2402',
+      patientId: 'P-2402',
+      appointmentId: 'A-2402',
+      receptionId: 'R-2402',
+      scheduleKey: 'SCH-2402',
+      encounterKey: 'ENC-2402',
+    });
   });
 
   it('旧 persisted payload を読み戻す時も請求番号と警告詳細を復元しない', () => {

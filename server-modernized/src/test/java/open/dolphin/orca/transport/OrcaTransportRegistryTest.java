@@ -1,5 +1,6 @@
 package open.dolphin.orca.transport;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -41,6 +42,43 @@ class OrcaTransportRegistryTest {
         OrcaTransportRegistry registry = new OrcaTransportRegistry(store, 60_000L, resolver());
 
         assertNotNull(registry.currentTransport("F001"));
+    }
+
+    @Test
+    void currentSettingsFailsClosedWhenStoreIsMissingEvenIfRuntimeConfigExists() {
+        OrcaTransportRegistry registry = new OrcaTransportRegistry(
+                null,
+                60_000L,
+                TestServerConfigurationResolvers.resolver(
+                        ServerConfigurationResolver.KEY_ORCA_API_BASE_URL, "https://runtime.example.orca",
+                        ServerConfigurationResolver.KEY_ORCA_API_USER, "runtime-user",
+                        ServerConfigurationResolver.KEY_ORCA_API_PASSWORD, "runtime-pass"));
+
+        OrcaConnectionPolicyException ex = assertThrows(
+                OrcaConnectionPolicyException.class,
+                () -> registry.currentSettings("F001"));
+        assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, ex.getErrorCategory());
+    }
+
+    @Test
+    void currentSettingsFailsClosedWhenFacilityConfigIsMissing() {
+        OrcaConnectionConfigStore store = Mockito.mock(OrcaConnectionConfigStore.class);
+        when(store.resolve("F001")).thenThrow(new OrcaConnectionPolicyException(
+                OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING,
+                "ORCA facility configuration is not available"));
+
+        OrcaTransportRegistry registry = new OrcaTransportRegistry(
+                store,
+                60_000L,
+                TestServerConfigurationResolvers.resolver(
+                        ServerConfigurationResolver.KEY_ORCA_API_BASE_URL, "https://runtime.example.orca",
+                        ServerConfigurationResolver.KEY_ORCA_API_USER, "runtime-user",
+                        ServerConfigurationResolver.KEY_ORCA_API_PASSWORD, "runtime-pass"));
+
+        OrcaConnectionPolicyException ex = assertThrows(
+                OrcaConnectionPolicyException.class,
+                () -> registry.currentSettings("F001"));
+        assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, ex.getErrorCategory());
     }
 
     private static ServerConfigurationResolver resolver() {

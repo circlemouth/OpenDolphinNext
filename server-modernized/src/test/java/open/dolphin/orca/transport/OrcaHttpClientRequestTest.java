@@ -139,6 +139,27 @@ class OrcaHttpClientRequestTest {
         assertEquals(1L, latency.count());
     }
 
+    @Test
+    void invalidRequestUrlDoesNotExposeResolvedTarget() {
+        StubHttpClient stubClient = new StubHttpClient(List.of());
+        OrcaHttpClient client = new OrcaHttpClient(stubClient);
+
+        OrcaGatewayException error = assertThrows(
+                OrcaGatewayException.class,
+                () -> client.get(
+                        SETTINGS,
+                        "/bad path",
+                        null,
+                        "application/xml",
+                        "req-invalid-url",
+                        "trace-invalid-url"));
+
+        assertTrue(error.getMessage().contains("[invalid_url]"));
+        assertTrue(error.getMessage().contains("Invalid ORCA API URL"));
+        assertTrue(!error.getMessage().contains("localhost:18080"));
+        assertTrue(!error.getMessage().contains("/bad path"));
+    }
+
     private record ResponseSpec(int status, String body, String contentType, IOException failure) {
         private static ResponseSpec response(int status, String body, String contentType) {
             return new ResponseSpec(status, body, contentType, null);

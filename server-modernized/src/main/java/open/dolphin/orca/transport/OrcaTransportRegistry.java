@@ -73,11 +73,12 @@ final class OrcaTransportRegistry {
     private CachedTransportEntry reloadCache(String facilityId, CachedTransportEntry existingEntry) {
         facilityId = requireFacilityId(facilityId);
         String key = cacheKey(facilityId);
-        ResolvedTransportConfig resolvedConfig = loadSettingsExplicit(facilityId);
-        if (resolvedConfig == null) {
-            LOGGER.warning("ORCA transport settings load returned null");
+        ResolvedTransportConfig resolvedConfig;
+        try {
+            resolvedConfig = loadSettingsExplicit(facilityId);
+        } catch (RuntimeException ex) {
             facilityCache.remove(key);
-            return null;
+            throw ex;
         }
         CachedTransportEntry entry = existingEntry != null && existingEntry.hasFingerprint(resolvedConfig.fingerprint())
                 ? existingEntry.refresh(resolvedConfig.settings(), resolvedConfig.fingerprint(), System.currentTimeMillis())
@@ -91,32 +92,11 @@ final class OrcaTransportRegistry {
 
     private ResolvedTransportConfig loadSettingsExplicit(String facilityId) {
         if (orcaConnectionConfigStore == null) {
-            return loadFallbackSettings();
+            throw new OrcaConnectionPolicyException(
+                    OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING,
+                    "ORCA facility configuration is not available");
         }
-        if (orcaConnectionConfigStore.listConfiguredFacilityIds().isEmpty()) {
-            return loadFallbackSettings();
-        }
-        try {
-            return loadSettingsFromAdminConfig(facilityId);
-        } catch (OrcaConnectionPolicyException ex) {
-            if (OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING.equals(ex.getErrorCategory())) {
-                LOGGER.log(Level.INFO,
-                        "ORCA admin config is not bootstrapped for facilityId={0}; using external runtime config fallback",
-                        safeFacility(facilityId));
-                return loadFallbackSettings();
-            }
-            LOGGER.log(Level.WARNING,
-                    "Failed to load ORCA transport settings from admin config: " + ex.getMessage()
-                            + " facilityId=" + safeFacility(facilityId),
-                    ex);
-            return null;
-        } catch (RuntimeException ex) {
-            LOGGER.log(Level.WARNING,
-                    "Failed to load ORCA transport settings from admin config: " + ex.getMessage()
-                            + " facilityId=" + safeFacility(facilityId),
-                    ex);
-            return null;
-        }
+        return loadSettingsFromAdminConfig(facilityId);
     }
 
     private ResolvedTransportConfig loadSettingsFromAdminConfig(String facilityId) {
@@ -137,11 +117,6 @@ final class OrcaTransportRegistry {
                 resolved.clientCertificateP12(),
                 resolved.clientCertificatePassphrase(),
                 resolved.caCertificate());
-    }
-
-    private ResolvedTransportConfig loadFallbackSettings() {
-        OrcaTransportSettings settings = OrcaTransportSettings.load(configurationResolver);
-        return ResolvedTransportConfig.forFallback(settings);
     }
 
     private CachedTransportEntry buildTransportEntry(ResolvedTransportConfig resolvedConfig) {
@@ -249,16 +224,6 @@ final class OrcaTransportRegistry {
                     clientCertificatePassphrase,
                     caCopy,
                     computeFingerprint(settings, clientAuthEnabled, p12Copy, clientCertificatePassphrase, caCopy));
-        }
-
-        private static ResolvedTransportConfig forFallback(OrcaTransportSettings settings) {
-            return new ResolvedTransportConfig(
-                    settings,
-                    false,
-                    null,
-                    null,
-                    null,
-                    computeFingerprint(settings, false, null, null, null));
         }
 
         private boolean requiresCustomSslContext() {

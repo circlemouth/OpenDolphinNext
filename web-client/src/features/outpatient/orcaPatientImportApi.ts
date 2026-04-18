@@ -6,10 +6,19 @@ import { refetchOfficialCanonicalPatients, type PatientRecord } from '../patient
 
 export type OrcaPatientImportResult = {
   ok: boolean;
+  writeAccepted?: boolean;
   runId: string;
   status: number;
   payload?: any;
   canonicalPatients?: PatientRecord[];
+  canonicalRefetch?: {
+    source: 'patientlst2v2';
+    ok: boolean;
+    status?: number;
+    expectedPatientIds: string[];
+    matchedPatientIds: string[];
+    missingPatientIds: string[];
+  };
   error?: string;
   errorCode?: string;
   errorKind?: OrcaResponseErrorKind;
@@ -44,7 +53,7 @@ export async function importPatientsFromOrca(params: {
   updateObservabilityMeta({ runId });
 
   if (!params.patientIds?.length) {
-    return { ok: false, runId, status: 0, error: 'patientIds is required' };
+    return { ok: false, writeAccepted: false, runId, status: 0, error: 'patientIds is required' };
   }
 
   let response: Response;
@@ -63,6 +72,7 @@ export async function importPatientsFromOrca(params: {
     const message = error instanceof Error ? error.message : String(error);
     return {
       ok: false,
+      writeAccepted: false,
       runId,
       status: 0,
       error: `患者取込APIへの接続に失敗しました: ${message}`,
@@ -76,6 +86,7 @@ export async function importPatientsFromOrca(params: {
   if (!parsed.ok) {
     return {
       ok: false,
+      writeAccepted: false,
       runId: resolvedRunId,
       status: parsed.status,
       payload: parsed.json ?? parsed.text,
@@ -90,6 +101,7 @@ export async function importPatientsFromOrca(params: {
   if (!parsed.json) {
     return {
       ok: false,
+      writeAccepted: false,
       runId: resolvedRunId,
       status: parsed.status,
       payload: parsed.text,
@@ -104,12 +116,28 @@ export async function importPatientsFromOrca(params: {
     patientIds: params.patientIds,
     runId: resolvedRunId,
   });
+  const expectedPatientIds = params.patientIds.map((patientId) => patientId.trim()).filter(Boolean);
+  const canonicalReadbackOk =
+    canonicalRefetch.ok && expectedPatientIds.every((patientId) => canonicalRefetch.matchedPatientIds.includes(patientId));
 
   return {
-    ok: true,
+    ok: canonicalReadbackOk,
+    writeAccepted: true,
     runId: resolvedRunId,
     status: parsed.status,
     payload: parsed.json,
     canonicalPatients: canonicalRefetch.patients,
+    canonicalRefetch: {
+      source: 'patientlst2v2',
+      ok: canonicalReadbackOk,
+      status: canonicalRefetch.status,
+      expectedPatientIds,
+      matchedPatientIds: canonicalRefetch.matchedPatientIds,
+      missingPatientIds: canonicalRefetch.missingPatientIds,
+    },
+    error: canonicalReadbackOk
+      ? undefined
+      : 'ORCA既存患者取込は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
+    errorCategory: canonicalReadbackOk ? undefined : 'canonical_refetch_failed',
   };
 }

@@ -92,7 +92,7 @@ export function PatientInfoEditDialog({
   const [step, setStep] = useState<'edit' | 'review'>('edit');
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [errors, setErrors] = useState<PatientValidationError[]>([]);
-  const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'error'; message: string; detail?: string } | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'info' | 'success' | 'warning' | 'error'; message: string; detail?: string } | null>(null);
   const [orcaAddressPending, setOrcaAddressPending] = useState(false);
   const draftRef = useRef<PatientRecord>({});
   const lastBaseDraftRef = useRef<PatientRecord | null>(null);
@@ -208,11 +208,14 @@ export function PatientInfoEditDialog({
     },
     onSuccess: (result) => {
       onSaved?.(result);
+      const writeAccepted = result.writeAccepted ?? false;
       const failureMessage = result.message
-        ? `患者情報の更新に失敗しました。${resolveUserSafeOperationFailure(result.message)}`
+        ? writeAccepted
+          ? result.message
+          : `患者情報の更新に失敗しました。${resolveUserSafeOperationFailure(result.message)}`
         : '患者情報の更新に失敗しました。状態を確認してからやり直してください。';
       setNotice({
-        tone: result.ok ? 'success' : 'error',
+        tone: result.ok ? 'success' : writeAccepted ? 'warning' : 'error',
         message: result.ok ? (result.message ?? '既存患者更新が完了しました。') : failureMessage,
       });
       if (result.ok) {
@@ -237,8 +240,8 @@ export function PatientInfoEditDialog({
           fallbackUsed: result.fallbackUsed ?? false,
           action: 'save',
           outcome: 'error',
-          note: result.ok ? 'save success' : failureMessage,
-          reason: result.ok ? undefined : failureMessage,
+          note: writeAccepted ? `write accepted: ${failureMessage}` : failureMessage,
+          reason: failureMessage,
         });
       }
     },

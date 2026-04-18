@@ -132,6 +132,41 @@ class OrcaConnectionConfigStoreTest {
     }
 
     @Test
+    void explicitDefaultFacilityIsRequiredForImplicitUpdates() throws Exception {
+        TotpSecretProtector protector = buildProtector(1);
+        Map<String, String> db = new LinkedHashMap<>();
+        OrcaConnectionConfigStore store = newStore(protector, db);
+
+        store.update("F001", new OrcaConnectionConfigStore.UpdateRequest(
+                Boolean.TRUE,
+                "https://facility.example.orca",
+                443,
+                "facility-user",
+                null,
+                null,
+                "facility-pass",
+                Boolean.FALSE,
+                null
+        ), null, null, "RUN-F001", "FACILITY:admin");
+
+        assertNull(store.getDefaultFacilityId());
+        OrcaConnectionPolicyException ex = assertThrows(
+                OrcaConnectionPolicyException.class,
+                () -> store.update(new OrcaConnectionConfigStore.UpdateRequest(
+                        Boolean.TRUE,
+                        "https://facility.example.orca",
+                        443,
+                        "facility-user",
+                        null,
+                        null,
+                        "facility-pass",
+                        Boolean.FALSE,
+                        null
+                ), null, null, "RUN-IMPLICIT", "FACILITY:admin"));
+        assertEquals(OrcaConnectionConfigStore.REASON_CODE_FACILITY_CONFIGURATION_MISSING, ex.getErrorCategory());
+    }
+
+    @Test
     void updateRejectsInsecureHttpInProduction() throws Exception {
         try (AutoCloseable ignored = MicroProfileConfigTestSupport.withConfig(
                 ServerConfigurationResolver.KEY_ENVIRONMENT, "production")) {

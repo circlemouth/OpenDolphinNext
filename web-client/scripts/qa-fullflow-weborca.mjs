@@ -8,6 +8,7 @@ import {
   resolveQaPasswordPlain,
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
+import { evaluateMedicalInformationGate } from './qa-lib/medical-information-gate.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
@@ -417,6 +418,7 @@ const buildSummaryMarkdown = (summary) =>
   `- Patient ID: ${summary.patientId}\n` +
   `- Reception Row: ${summary.receptionRowStatus ?? 'unknown'}\n` +
   `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
+  `- Medical Information Gate: ${summary.medicalInformationGate?.ok === false ? 'failed' : summary.medicalInformationGate?.enforced ? 'passed' : 'skipped'}\n` +
   `- Charts Handoff: ${summary.chartsHandoff?.status ?? 'unknown'}\n` +
   `- Visit Row Readiness: ${summary.visitRowReadiness ?? 'unknown'}\n` +
   `- Order Result: ${summary.orderResult?.status ?? 'unknown'}\n` +
@@ -1010,6 +1012,10 @@ const run = async () => {
     visitKind,
     medicalInformation: medicalInformation || undefined,
     medicalInformationProbe,
+    medicalInformationGate: evaluateMedicalInformationGate({
+      requestRecords,
+      medicalInformation,
+    }),
     selection: {
       department: departmentSelection,
       physician: physicianSelection,
@@ -1089,6 +1095,10 @@ const run = async () => {
       har: recordHar ? 'har/network.har' : undefined,
     },
   };
+  if (summary.medicalInformationGate.ok === false) {
+    summary.blockerClassification = 'repo-defect';
+    summary.blockerReason = 'medical_information_omission_violation';
+  }
 
   persistArtifacts(summary);
   fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(summary));
@@ -1098,6 +1108,10 @@ const run = async () => {
   activeContext = null;
   activeBrowser = null;
   activePage = null;
+
+  if (summary.medicalInformationGate.ok === false) {
+    throw new Error(summary.medicalInformationGate.error);
+  }
 };
 
 run().catch(async (error) => {
@@ -1122,7 +1136,12 @@ run().catch(async (error) => {
       physicianCode,
       paymentMode,
       visitKind,
+      medicalInformation: medicalInformation || undefined,
       medicalInformationProbe: undefined,
+      medicalInformationGate: evaluateMedicalInformationGate({
+        requestRecords,
+        medicalInformation,
+      }),
       receptionRowStatus: 'unknown',
       chartsHandoff: { status: 'error' },
       visitRowReadiness: 'unknown',
@@ -1157,6 +1176,10 @@ run().catch(async (error) => {
         screenshots: 'screenshots',
       },
     };
+  if (summary.medicalInformationGate?.ok === false) {
+    summary.blockerClassification = 'repo-defect';
+    summary.blockerReason = 'medical_information_omission_violation';
+  }
   persistArtifacts(summary);
   fs.writeFileSync(summaryMdPath, buildSummaryMarkdown(summary));
   await safeClose(() => activeContext?.close?.());

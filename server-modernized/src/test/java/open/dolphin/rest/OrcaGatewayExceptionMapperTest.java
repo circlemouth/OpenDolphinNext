@@ -2,6 +2,7 @@ package open.dolphin.rest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.lang.reflect.Field;
 import java.util.Map;
@@ -50,5 +51,26 @@ class OrcaGatewayExceptionMapperTest {
 
         Response response = mapper.toResponse(new OrcaGatewayException("ORCA transport settings are incomplete"));
         assertEquals(503, response.getStatus());
+    }
+
+    @Test
+    void mapperSanitizesInvalidUrlMessage() throws Exception {
+        OrcaGatewayExceptionMapper mapper = new OrcaGatewayExceptionMapper();
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRequestURI()).thenReturn("/api/orca/official/patient");
+
+        Field field = OrcaGatewayExceptionMapper.class.getDeclaredField("request");
+        field.setAccessible(true);
+        field.set(mapper, request);
+
+        Response response = mapper.toResponse(new OrcaGatewayException(
+                "[invalid_url] Invalid ORCA API URL: https://admin:pass@bad host.example.invalid/api"));
+        assertEquals(502, response.getStatus());
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) response.getEntity();
+        assertEquals("Invalid ORCA API URL", body.get("message"));
+        assertFalse(String.valueOf(body.get("message")).contains("bad host.example.invalid"));
+        assertFalse(String.valueOf(body.get("message")).contains("admin:pass"));
     }
 }

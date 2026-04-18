@@ -26,6 +26,8 @@ describe('importPatientsFromOrca', () => {
       ok: true,
       patients: [{ patientId: '000001', name: '山田 太郎' }],
       status: 200,
+      matchedPatientIds: ['000001'],
+      missingPatientIds: [],
     });
   });
 
@@ -103,10 +105,48 @@ describe('importPatientsFromOrca', () => {
     const result = await importPatientsFromOrca({ patientIds: ['000001'], runId: 'RUN-CALL' });
 
     expect(result.ok).toBe(true);
+    expect(result.writeAccepted).toBe(true);
     expect(mockRefetchOfficialCanonicalPatients).toHaveBeenCalledWith({
       patientIds: ['000001'],
       runId: 'RUN-OK',
     });
     expect(result.canonicalPatients).toEqual([{ patientId: '000001', name: '山田 太郎' }]);
+  });
+
+  it('write accepted でも canonical re-fetch 失敗なら full success にしない', async () => {
+    mockRefetchOfficialCanonicalPatients.mockResolvedValueOnce({
+      ok: false,
+      patients: [],
+      status: 503,
+      matchedPatientIds: [],
+      missingPatientIds: ['000001'],
+    });
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          runId: 'RUN-OK',
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await importPatientsFromOrca({ patientIds: ['000001'], runId: 'RUN-CALL' });
+
+    expect(result.writeAccepted).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.errorCategory).toBe('canonical_refetch_failed');
+    expect(result.error).toContain('canonical 再取得に失敗');
+    expect(result.canonicalRefetch).toMatchObject({
+      source: 'patientlst2v2',
+      ok: false,
+      expectedPatientIds: ['000001'],
+      matchedPatientIds: [],
+      missingPatientIds: ['000001'],
+    });
   });
 });
