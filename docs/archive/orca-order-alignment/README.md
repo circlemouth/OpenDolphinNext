@@ -2,6 +2,8 @@
 
 このディレクトリは ORCA order alignment workstream の dated packet / prompt / closeout / recovery / review docs を保持します。current workflow の正本ではありません。
 
+Historical disclaimer: archived packet files may say `PASS`, `G0〜G7`, `close`, or similar release language. Those lines are historical goals/templates from the archived workstream and are not current evidence. Use the current entries below and `../../implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` for present status.
+
 ## Archived Files
 - [Closure packet 2026-04-08](orca_order_alignment_closure_packet_20260408.md)
 - [Remaining tasks checklist 2026-04-10](orca_remaining_tasks_checklist_20260410.md)

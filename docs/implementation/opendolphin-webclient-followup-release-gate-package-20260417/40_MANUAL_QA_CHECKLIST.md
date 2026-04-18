@@ -1,5 +1,7 @@
 # manual QA checklist
 
+> Historical note: this checklist is a 2026-04-17 entry-condition template. `PASS` entries below describe required entry conditions, not current evidence. Use `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` for current static status; manual QA was not run by that static remediation.
+
 ## entry conditions
 - correction-note spec verification 完了
 - runtime-ready-smoke PASS

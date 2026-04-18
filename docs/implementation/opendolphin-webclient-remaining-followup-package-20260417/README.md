@@ -1,5 +1,19 @@
 # OpenDolphin WebClient remaining follow-up package 2026-04-17
 
+## Historical status
+
+This package is a historical planning package. Stale `PASS`, `latest worker report`, `pass 済み`, `already closed`, and completion language in this directory is not current evidence.
+
+Current source of truth is:
+
+1. `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md`
+2. `docs/contracts/orca-route-taxonomy.md`
+3. `docs/contracts/orca-connection.md`
+4. `docs/runbooks/release-validation.md`
+5. `docs/releases/orca-remediation-cutover.md`
+
+The 2026-04-18 static report includes accepted static test logs under `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/`. It does not claim live ORCA success. `runtime-ready-smoke` is recorded as an environment blocker when `127.0.0.1:9080` was not running, and `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` were not run.
+
 ## 目的
 この package は **planning-only** の統合物です。Codex 実装担当は、この package と repo 内の `source / tests / docs / notes / route / DTO / QA script` だけを参照して着手してください。
 この package 自体は **コード変更、コミット、PR 作成を含みません**。

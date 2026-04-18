@@ -1,5 +1,7 @@
 # ORCA live QA checklist
 
+> Historical note: this checklist is a 2026-04-17 entry-condition template. `PASS` entries below describe prerequisites, not current live ORCA evidence. The 2026-04-18 static report does not claim live ORCA success, and `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` were not run.
+
 ## entry conditions
 - manual QA 完了
 - correction-note verification 完了

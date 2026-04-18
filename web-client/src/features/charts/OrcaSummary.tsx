@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { ToneBanner } from '../reception/components/ToneBanner';
@@ -86,7 +86,6 @@ export function OrcaSummary({
     [orcaEncounterContext?.visitDate, visitDate],
   );
   const performMonth = useMemo(() => performDate?.slice(0, 7), [performDate]);
-  const hasIncomeRequestContext = Boolean(resolvedPatientId && performDate);
   const tonePayload: ChartTonePayload = {
     missingMaster: resolvedMissingMaster ?? false,
     cacheHit: resolvedCacheHit ?? false,
@@ -287,6 +286,21 @@ export function OrcaSummary({
     if (incomeEntries.length === 0) return 'データなし';
     return null;
   }, [incomeEntries.length, performDate, resolvedPatientId]);
+  const incomeActionDisabledReason = !resolvedPatientId
+    ? 'no-patient'
+    : !performDate
+      ? 'missing-perform-date'
+      : incomeInfoQuery.isFetching
+        ? 'loading'
+        : undefined;
+  const incomeActionHelperText = !resolvedPatientId
+    ? '患者IDが確定すると収納情報を確認できます。'
+    : !performDate
+      ? '来院日が確定すると収納情報を確認できます。'
+      : incomeInfoQuery.isFetching
+        ? '収納情報を確認しています。'
+        : undefined;
+  const incomeActionHelperId = useId();
   const incomeTotals = useMemo(() => {
     const totals = incomeEntries.reduce(
       (acc, entry) => {
@@ -840,11 +854,21 @@ export function OrcaSummary({
           <button
             type="button"
             onClick={handleIncomeRefresh}
-            disabled={!hasIncomeRequestContext || incomeInfoQuery.isFetching}
-            data-disabled-reason={!resolvedPatientId ? 'no-patient' : !performDate ? 'missing-perform-date' : incomeInfoQuery.isFetching ? 'loading' : undefined}
+            disabled={Boolean(incomeActionDisabledReason)}
+            aria-describedby={incomeActionHelperText ? incomeActionHelperId : undefined}
+            data-disabled-reason={incomeActionDisabledReason}
           >
             {incomeInfoQuery.isFetching ? '収納情報確認中…' : '収納情報を確認'}
           </button>
+          {incomeActionHelperText && (
+            <p
+              id={incomeActionHelperId}
+              className="orca-summary__help"
+              data-test-id="orca-income-refresh-disabled-reason"
+            >
+              {incomeActionHelperText}
+            </p>
+          )}
           {incomeInfoNotice ? (
             <ToneBanner
               tone={resolvedIncomeTone ?? 'info'}

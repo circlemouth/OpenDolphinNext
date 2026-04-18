@@ -1,5 +1,7 @@
 # OpenDolphinNext ORCA是正 残件クローズ用 Codex Packet R2
 
+> Archive note: this packet is historical. `PASS` / close 条件 / final report language below is not current evidence. Current status is tracked by `../../../implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` and current contracts/runbooks.
+
 このパケットは、2026-04-13 の closeout 報告を踏まえ、**まだ閉じていない残件だけ** を解消するための作業セットです。
 
 ## 目的

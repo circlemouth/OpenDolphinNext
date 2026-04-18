@@ -1,5 +1,7 @@
 # OpenDolphinNext ORCA是正 クローズアウト用 Codex Packet
 
+> Archive note: this packet is historical. `PASS` / close 条件 / final report language below is not current evidence. Current status is tracked by `../../../implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` and current contracts/runbooks.
+
 このパケットは、前回の最終受入れレビューで **FAIL / 再オープン推奨** になった残件を、Codex のメインエージェント + サブエージェントで収束させるための作業セットです。
 
 ## このパケットの前提

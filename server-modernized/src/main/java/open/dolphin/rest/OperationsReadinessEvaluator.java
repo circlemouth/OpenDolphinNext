@@ -168,7 +168,6 @@ public class OperationsReadinessEvaluator {
                     .orElse(null);
             if (latestState != null) {
                 detail.setLastConnectedAt(latestState.lastConnectedAt());
-                detail.setLastError(latestState.lastError());
                 detail.setWorkerStatus(latestState.connectionStatus());
                 detail.setConnected(OrcaPushConnectionStateStore.STATUS_CONNECTED.equals(latestState.connectionStatus()));
             } else {

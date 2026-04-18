@@ -1,5 +1,7 @@
 # manual QA re-entry checklist
 
+> Historical note: this 2026-04-17 checklist records required re-entry conditions, not current evidence. Use the 2026-04-18 static exit report for accepted static status; manual QA was not run there.
+
 - [ ] `tests/charts/e2e-billing-correction-note.spec.ts` PASS
 - [ ] `tests/reception/e2e-billing-correction-note.spec.ts` PASS
 - [ ] claim-send cache storage contract aligned (`invoiceNumber` / `medicalWarnings` not persisted)

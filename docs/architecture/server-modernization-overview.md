@@ -52,9 +52,9 @@ cd web-client && node scripts/runtime-ready-smoke.mjs
 - ORCA 接続は施設別設定と allowlist で解決し、任意 URL 接続や implicit fallback を許容しない。
 - official patient mutation は create / update / import を別 route / 別 DTO で分離し、create は `patientmodv2 class=01`、update は `patientmodv2 class=02`、import は `patientlst2v2` / `patientgetv2` 系の canonical re-fetch + local sync を前提にする。
 - 添付、患者画像、文書整合性は server 生成メタデータと fail-closed 検証を前提に扱う。
-- health / readiness / reporting は匿名公開時に最小情報だけ返し、内部詳細は構造化ログで扱う。
+- health / readiness / reporting は匿名公開時も sanitize 済み情報だけを返し、接続先・資格情報・内部例外は構造化ログ側でも秘匿する。
 
 ## 注意
-- health / readiness / liveness は最小公開を維持する
+- health / readiness / liveness は匿名公開面で接続先・資格情報・内部例外を返さない。readiness は current contract として sanitized detailed checks を返す
 - ORCA 接続先や credential は server 側で決定する
 - クライアント入力の owner / facility / uri / digest を権威情報として扱わない

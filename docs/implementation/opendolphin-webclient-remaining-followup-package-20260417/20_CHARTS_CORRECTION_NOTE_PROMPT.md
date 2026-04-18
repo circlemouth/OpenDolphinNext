@@ -1,5 +1,7 @@
 # Task 20 — charts correction-note / setting-note follow-up fix
 
+> Historical note: this 2026-04-17 task prompt is retained for traceability. `latest worker report`, `PASS`, and `pass 済み` wording below is historical planning context, not current truth. Current closure evidence is in `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md`.
+
 ## ゴール
 `tests/charts/e2e-billing-correction-note.spec.ts` を current billing boundary contract に沿って通す。
 correction note と setting note は別 slot / 別 tone とし、重要情報として visibility を確保する。

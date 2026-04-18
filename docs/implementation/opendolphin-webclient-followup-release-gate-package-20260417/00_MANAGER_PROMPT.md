@@ -1,5 +1,7 @@
 # OpenDolphin WebClient 追加作業 orchestrator prompt
 
+> Historical note: this 2026-04-17 prompt is not current release truth. `PASS` / `完了済み` / `already closed` language below reflects the worker-report-based planning state at package creation time. Current truth is `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` plus current `docs/contracts/` and `docs/runbooks/`.
+
 ## 役割
 あなたは main Codex agent です。repo 実体を開いて、今回の追加作業を release gate の観点で閉じてください。
 今回の追加作業は、すでに解消済みの 3 blocker をやり直すことではありません。残っている release gate 項目を、必要なら最小限のコード修正で閉じることが目的です。

@@ -89,6 +89,8 @@ export type PatientMutationResult = {
     source: 'patientlst2v2';
     ok: boolean;
     status?: number;
+    apiResult?: string;
+    apiResultMessage?: string;
     expectedPatientIds?: string[];
     matchedPatientIds?: string[];
     missingPatientIds?: string[];
@@ -116,6 +118,8 @@ const extractApiResult = (json: Record<string, unknown>): string | undefined => 
 const extractApiResultMessage = (json: Record<string, unknown>): string | undefined => {
   return normalizeApiString(json.apiResultMessage);
 };
+
+const isAllZeroApiResult = (apiResult?: string) => Boolean(apiResult && /^[0]+$/.test(apiResult));
 
 const buildMissingTags = (apiResult?: string, apiResultMessage?: string) => {
   const missing: string[] = [];
@@ -273,7 +277,15 @@ const buildOfficialPatientBody = (
 export async function refetchOfficialCanonicalPatients(params: {
   patientIds: string[];
   runId?: string;
-}): Promise<{ ok: boolean; patients: PatientRecord[]; status?: number; matchedPatientIds: string[]; missingPatientIds: string[] }> {
+}): Promise<{
+  ok: boolean;
+  patients: PatientRecord[];
+  status?: number;
+  apiResult?: string;
+  apiResultMessage?: string;
+  matchedPatientIds: string[];
+  missingPatientIds: string[];
+}> {
   const patientIds = params.patientIds.map((value) => value.trim()).filter(Boolean);
   if (patientIds.length === 0) {
     return { ok: false, patients: [], status: 0, matchedPatientIds: [], missingPatientIds: [] };
@@ -285,19 +297,23 @@ export async function refetchOfficialCanonicalPatients(params: {
     includeInsurance: false,
   });
   const json = asObjectRecord(result.json);
+  const apiResult = extractApiResult(json);
+  const apiResultMessage = extractApiResultMessage(json);
   const list = Array.isArray(json.patients) ? (json.patients as any[]) : [];
   const patients = list.map(mapCanonicalPatient).filter((patient) => Object.values(patient).some(Boolean));
   const requestedPatientIds = new Set(patientIds);
-  const matchedPatientIds = patients
+  const matchedPatientIds = Array.from(new Set(patients
     .map((patient) => normalizeApiString(patient.patientId))
     .filter((patientId): patientId is string => {
       return typeof patientId === 'string' && requestedPatientIds.has(patientId);
-    });
+    })));
   const missingPatientIds = patientIds.filter((patientId) => !matchedPatientIds.includes(patientId));
   return {
-    ok: result.ok,
+    ok: result.ok && isAllZeroApiResult(apiResult) && missingPatientIds.length === 0,
     patients,
     status: result.status,
+    apiResult,
+    apiResultMessage,
     matchedPatientIds,
     missingPatientIds,
   };
@@ -477,6 +493,8 @@ const performOfficialPatientMutation = async (
       source: 'patientlst2v2',
       ok: canonicalRefetch.ok && canonicalRefetch.matchedPatientIds.includes(patientIdForCanonical),
       status: canonicalRefetch.status,
+      apiResult: canonicalRefetch.apiResult,
+      apiResultMessage: canonicalRefetch.apiResultMessage,
       expectedPatientIds: [patientIdForCanonical],
       matchedPatientIds: canonicalRefetch.matchedPatientIds,
       missingPatientIds: canonicalRefetch.missingPatientIds,
@@ -534,6 +552,8 @@ const performOfficialPatientMutation = async (
     canonicalRefetchSource: result.canonicalRefetch?.source,
     canonicalRefetchOk: result.canonicalRefetch?.ok,
     canonicalRefetchStatus: result.canonicalRefetch?.status,
+    canonicalRefetchApiResult: result.canonicalRefetch?.apiResult,
+    canonicalRefetchApiResultMessage: result.canonicalRefetch?.apiResultMessage,
     canonicalRefetchExpectedPatientIds: result.canonicalRefetch?.expectedPatientIds,
     canonicalRefetchMatchedPatientIds: result.canonicalRefetch?.matchedPatientIds,
     canonicalRefetchMissingPatientIds: result.canonicalRefetch?.missingPatientIds,

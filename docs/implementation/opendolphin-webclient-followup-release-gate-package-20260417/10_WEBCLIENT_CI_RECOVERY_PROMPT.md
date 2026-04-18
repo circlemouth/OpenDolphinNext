@@ -1,5 +1,7 @@
 # OpenDolphin WebClient — canonical `npm run ci` recovery prompt
 
+> Historical note: this 2026-04-17 prompt is retained for traceability only. `PASS` / `PASS 済み` wording below must not be carried forward as current evidence. Current accepted evidence is recorded in `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` and its `test-logs/` directory.
+
 ## ゴール
 `cd web-client && npm run ci` を通す。
 今回の report では 20 failures / 5 files が残っている。少なくとも 4 files は既知だが、5 つ目は actual CI 出力で確認する。

@@ -16,6 +16,8 @@ export type OrcaPatientImportResult = {
     source: 'patientlst2v2';
     ok: boolean;
     status?: number;
+    apiResult?: string;
+    apiResultMessage?: string;
     expectedPatientIds: string[];
     matchedPatientIds: string[];
     missingPatientIds: string[];
@@ -300,6 +302,8 @@ export async function importPatientsFromOrca(params: {
       source: 'patientlst2v2',
       ok: canonicalReadbackOk,
       status: canonicalRefetch.status,
+      apiResult: canonicalRefetch.apiResult,
+      apiResultMessage: canonicalRefetch.apiResultMessage,
       expectedPatientIds,
       matchedPatientIds: canonicalRefetch.matchedPatientIds,
       missingPatientIds: canonicalRefetch.missingPatientIds,

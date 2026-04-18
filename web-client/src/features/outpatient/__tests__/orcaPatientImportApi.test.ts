@@ -26,6 +26,8 @@ describe('importPatientsFromOrca', () => {
       ok: true,
       patients: [{ patientId: '000001', name: '山田 太郎' }],
       status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
       matchedPatientIds: ['000001'],
       missingPatientIds: [],
     });
@@ -124,6 +126,8 @@ describe('importPatientsFromOrca', () => {
       ok: false,
       patients: [],
       status: 503,
+      apiResult: undefined,
+      apiResultMessage: undefined,
       matchedPatientIds: [],
       missingPatientIds: ['000001'],
     });
@@ -156,9 +160,58 @@ describe('importPatientsFromOrca', () => {
     expect(result.canonicalRefetch).toMatchObject({
       source: 'patientlst2v2',
       ok: false,
+      status: 503,
       expectedPatientIds: ['000001'],
       matchedPatientIds: [],
       missingPatientIds: ['000001'],
+    });
+  });
+
+  it('import business gate が通っても canonical batch Api_Result=10 なら full success にしない', async () => {
+    mockRefetchOfficialCanonicalPatients.mockResolvedValueOnce({
+      ok: false,
+      patients: [{ patientId: '000001', name: '山田 太郎' }],
+      status: 200,
+      apiResult: '10',
+      apiResultMessage: 'BUSINESS ERROR',
+      matchedPatientIds: ['000001'],
+      missingPatientIds: [],
+    });
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          runId: 'RUN-OK',
+          requestedCount: 1,
+          fetchedCount: 1,
+          createdCount: 1,
+          updatedCount: 0,
+          skippedCount: 0,
+          errors: [],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await importPatientsFromOrca({ patientIds: ['000001'], runId: 'RUN-CALL' });
+
+    expect(result.writeAccepted).toBe(true);
+    expect(result.businessOk).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.errorCategory).toBe('canonical_refetch_failed');
+    expect(result.canonicalRefetch).toMatchObject({
+      source: 'patientlst2v2',
+      ok: false,
+      status: 200,
+      apiResult: '10',
+      apiResultMessage: 'BUSINESS ERROR',
+      expectedPatientIds: ['000001'],
+      matchedPatientIds: ['000001'],
+      missingPatientIds: [],
     });
   });
 

@@ -1,5 +1,7 @@
 # release gate checklist after blocker fixes
 
+> Historical note: this 2026-04-17 checklist is retained as planning history. Unchecked `PASS` items below are required gates, not current truth. Current static closure and remaining runtime/live boundaries are in `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md`.
+
 ## still required
 - [ ] correction-note spec verification completed
 - [ ] `cd web-client && node scripts/runtime-ready-smoke.mjs` PASS

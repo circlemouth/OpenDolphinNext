@@ -7,11 +7,11 @@ Codex manager は作業後、以下の形式で final report を作る。
 
 ## 1. overall verdict
 
-- ACCEPT WORKER REPORT / PARTIAL / NEEDS REOPEN / REJECT WORKER REPORT
+- ACCEPT / PARTIAL / REJECT
 
 ## 2. dynamic handoff verdict
 
-- READY FOR DYNAMIC TRIAL CHECK / NOT READY FOR DYNAMIC TRIAL CHECK
+- READY / NOT READY
 
 ## 3. changed files
 

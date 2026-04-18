@@ -85,6 +85,9 @@ cd web-client && npm run ci
 ```
 期待結果:
 - blocked route string / legacy auth drift / public secret の再混入がない。
+- `verify-no-blocked-orca-route-strings.mjs` は `web-client/src` だけでなく `web-client/scripts`、`web-client/plugins`、`tests`、`docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` を走査する。存在しない root は明示 skip、存在する root の走査失敗は fail。
+- guard success message は category counts を表示し、`server public route`、`client production fail-close sentinel`、`MSW mock/test-only legacy route surface`、`e2e fixture/test-only surface`、`blocked-route detector`、`docs/reference` の分類で current tree の残存 route string を説明できる。
+- guard allowlist は `path + route + category + reason` で管理され、allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure。`/api/orca/(official|master 以外)` の新規 route、および production source に混入した mock/test-only legacy route surface も failure。
 - typecheck / test / build まで成功する。
 
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
@@ -128,8 +131,8 @@ cd web-client && node scripts/verify-no-blocked-orca-route-strings.mjs
 
 - `PublicRouteInventoryContractTest` で official / master / local / admin-internal inventory が current taxonomy と一致することを確認する。
 - `WebXmlEndpointExposureTest` で `/api/*` exposure と `/api/orca/*` taxonomy が崩れていないことを確認する。
-- `verify-no-blocked-orca-route-strings.mjs` で web-client source に taxonomy drift や blocked mock surface が残っていないことを確認する。
-- `/api/orca/queue` と `/api/orca/pusheventgetv2` は `orcaQueueApi.ts` の production fail-close sentinel と `src/mocks/handlers/orcaQueue.ts` の mock/test-only legacy route surface にだけ残り、guard success message も同じ分類を示すことを確認する。
+- `verify-no-blocked-orca-route-strings.mjs` で repo-wide scanned roots の taxonomy drift や blocked mock surface が残っていないことを確認する。
+- `/api/orca/queue` と `/api/orca/pusheventgetv2` は `orcaQueueApi.ts` の production fail-close sentinel、`src/mocks/handlers/orcaQueue.ts` の MSW mock/test-only legacy route surface、QA/e2e fixture、blocked-route detector、docs/reference の allowlist にだけ残り、guard success message も category counts で同じ分類を示すことを確認する。
 - Reception / Patients / Charts / Admin の UI と server contract が taxonomy contract と一致していることを確認する。
 - web-client と server-modernized を別々の remediation wave で混在 deploy しない。pair release で同時に切り替える。
 
@@ -166,8 +169,9 @@ rg 'dolphin\\.facilityId' server-modernized -n
 ## 手動確認
 ### Health
 - [ ] `GET /api/health` が最小 payload を返す。
-- [ ] `GET /api/health/readiness` が `status` だけを返す。
-- [ ] 認証後の operations readiness が sanitize された詳細を返す。
+- [ ] `GET /api/health/readiness` が匿名で sanitized detailed readiness (`status` と `checks`) を返す。
+- [ ] `/api/health/readiness` に URL / host / port / scheme / username / statusCode / raw exception / stack trace / secret path が出ない。
+- [ ] `/api/operations/readiness` は current resource として公開されず、追加時も匿名許可されない。
 
 ### ORCA connection
 - [ ] 既定施設が明示設定されていない場合、facility 未解決で fail する。

@@ -1,5 +1,7 @@
 # release gate checklist after residual follow-up
 
+> Historical note: this 2026-04-17 checklist is planning history. `PASS` and `already closed` language below must not be read as current gate evidence. Current source of truth is `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` plus current contracts/runbooks.
+
 ## still required
 - [ ] Task 10 claim-send cache storage contract hardening completed
 - [ ] Task 20 charts correction-note / setting-note follow-up completed

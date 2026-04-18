@@ -20,11 +20,17 @@ vi.mock('../../../libs/observability/observability', () => ({
 }));
 
 import { httpFetch } from '../../../libs/http/httpClient';
-import { createOfficialPatient, searchLocalPatients, updateOfficialPatient } from '../api';
+import { createOfficialPatient, refetchOfficialCanonicalPatients, searchLocalPatients, updateOfficialPatient } from '../api';
 
-const buildCanonicalBatchResponse = (patientId: string, name: string) =>
+const buildCanonicalBatchResponse = (
+  patientId: string,
+  name: string,
+  options: { apiResult?: string; apiResultMessage?: string } = { apiResult: '00', apiResultMessage: 'OK' },
+) =>
   new Response(
     JSON.stringify({
+      ...(options.apiResult === undefined ? {} : { apiResult: options.apiResult }),
+      ...(options.apiResultMessage === undefined ? {} : { apiResultMessage: options.apiResultMessage }),
       patients: [
         {
           summary: {
@@ -112,6 +118,8 @@ describe('patients api official mutation', () => {
       source: 'patientlst2v2',
       ok: true,
       status: 200,
+      apiResult: '00',
+      apiResultMessage: 'OK',
     });
   });
 
@@ -168,6 +176,119 @@ describe('patients api official mutation', () => {
     expect(result.canonicalRefetch?.ok).toBe(true);
   });
 
+  it('canonical batch HTTP 200 + Api_Result=10 + matching patient は ok=false', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      buildCanonicalBatchResponse('000001', '既存患者', {
+        apiResult: '10',
+        apiResultMessage: 'BUSINESS ERROR',
+      }),
+    );
+
+    const result = await refetchOfficialCanonicalPatients({
+      patientIds: ['000001'],
+      runId: 'RUN-CANONICAL',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(200);
+    expect(result.apiResult).toBe('10');
+    expect(result.apiResultMessage).toBe('BUSINESS ERROR');
+    expect(result.matchedPatientIds).toEqual(['000001']);
+    expect(result.missingPatientIds).toEqual([]);
+  });
+
+  it('canonical batch HTTP 200 + Api_Result missing + matching patient は ok=false', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      buildCanonicalBatchResponse('000001', '既存患者', {
+        apiResult: undefined,
+        apiResultMessage: 'OK',
+      }),
+    );
+
+    const result = await refetchOfficialCanonicalPatients({
+      patientIds: ['000001'],
+      runId: 'RUN-CANONICAL',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(200);
+    expect(result.apiResult).toBeUndefined();
+    expect(result.apiResultMessage).toBe('OK');
+    expect(result.matchedPatientIds).toEqual(['000001']);
+    expect(result.missingPatientIds).toEqual([]);
+  });
+
+  it('canonical batch HTTP 200 + Api_Result=00 + matching patient は ok=true', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      buildCanonicalBatchResponse('000001', '既存患者', {
+        apiResult: '00',
+        apiResultMessage: 'OK',
+      }),
+    );
+
+    const result = await refetchOfficialCanonicalPatients({
+      patientIds: ['000001'],
+      runId: 'RUN-CANONICAL',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.status).toBe(200);
+    expect(result.apiResult).toBe('00');
+    expect(result.apiResultMessage).toBe('OK');
+    expect(result.matchedPatientIds).toEqual(['000001']);
+    expect(result.missingPatientIds).toEqual([]);
+  });
+
+  it('write accepted でも canonical batch Api_Result=10 なら full success にしない', async () => {
+    vi.mocked(httpFetch)
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            apiResult: '00',
+            apiResultMessage: 'ORCA更新完了',
+            runId: 'RUN-UPDATE',
+            traceId: 'TRACE-UPDATE',
+            routeNamespace: 'official',
+            patient: {
+              patientId: '000001',
+              name: '既存患者 改',
+            },
+          }),
+          {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        buildCanonicalBatchResponse('000001', '既存患者 改', {
+          apiResult: '10',
+          apiResultMessage: 'BUSINESS ERROR',
+        }),
+      );
+
+    const result = await updateOfficialPatient({
+      patient: {
+        patientId: '000001',
+        name: '既存患者 改',
+      },
+    });
+
+    expect(result.writeAccepted).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.errorCategory).toBe('canonical_refetch_failed');
+    expect(result.canonicalRefetch).toMatchObject({
+      source: 'patientlst2v2',
+      ok: false,
+      status: 200,
+      apiResult: '10',
+      apiResultMessage: 'BUSINESS ERROR',
+      expectedPatientIds: ['000001'],
+      matchedPatientIds: ['000001'],
+      missingPatientIds: [],
+    });
+  });
+
   it('write accepted でも canonical re-fetch が失敗したら full success にしない', async () => {
     vi.mocked(httpFetch)
       .mockResolvedValueOnce(
@@ -191,7 +312,7 @@ describe('patients api official mutation', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ patients: [] }),
+          JSON.stringify({ apiResult: '00', apiResultMessage: 'OK', patients: [] }),
           {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
@@ -241,7 +362,7 @@ describe('patients api official mutation', () => {
       )
       .mockResolvedValueOnce(
         new Response(
-          JSON.stringify({ patients: [] }),
+          JSON.stringify({ apiResult: '00', apiResultMessage: 'OK', patients: [] }),
           {
             status: 200,
             headers: { 'Content-Type': 'application/json' },

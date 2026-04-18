@@ -70,6 +70,34 @@ vi.mock('../../../libs/audit/auditLogger', () => ({
   logUiState: () => ({ timestamp: new Date().toISOString() }),
 }));
 
+const renderIncomeActionSummary = (
+  props: Partial<Parameters<typeof OrcaSummary>[0]> = {},
+  queryState: Partial<ReturnType<typeof useQueryMock>> = {},
+) => {
+  getOrcaClaimSendEntryForRowMock.mockReturnValue(null);
+  useQueryMock.mockReturnValue({
+    data: undefined,
+    isFetching: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+    ...queryState,
+  });
+
+  return render(
+    <OrcaSummary
+      summary={{ missingMaster: false } as any}
+      claim={{
+        claimStatus: '会計待ち',
+        claimStatusText: 'ローカル未送信',
+        recordsReturned: 1,
+        bundles: [{ totalClaimAmount: 1200, items: [] }],
+      } as any}
+      {...props}
+    />,
+  );
+};
+
 describe('OrcaSummary semantics', () => {
   it('correction note と setting note を details 外の must-visible 領域に出す', () => {
     getOrcaClaimSendEntryForRowMock.mockReturnValue({
@@ -129,6 +157,54 @@ describe('OrcaSummary semantics', () => {
     const details = container.querySelector('.orca-summary__details-fold');
     expect(details?.querySelector('[data-test-id="orca-billing-correction-note"]')).toBeNull();
     expect(details?.querySelector('[data-test-id="orca-billing-setting-note"]')).toBeNull();
+  });
+
+  it('収納情報確認 button が patientId 未確定で disabled のとき直近に理由と条件を表示する', () => {
+    const { container } = renderIncomeActionSummary({ visitDate: '2026-03-09' });
+
+    const incomeCard = container.querySelector('[data-test-id="orca-income-summary-card"]') as HTMLElement;
+    const button = within(incomeCard).getByRole('button', { name: '収納情報を確認' });
+    const helper = incomeCard.querySelector('[data-test-id="orca-income-refresh-disabled-reason"]') as HTMLElement;
+
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('data-disabled-reason', 'no-patient');
+    expect(button).toHaveAttribute('aria-describedby', helper.id);
+    expect(helper).toBeVisible();
+    expect(helper).toHaveTextContent('患者IDが確定すると収納情報を確認できます。');
+
+    const details = container.querySelector('.orca-summary__details-fold');
+    expect(details?.querySelector('[data-test-id="orca-income-refresh-disabled-reason"]')).toBeNull();
+  });
+
+  it('収納情報確認 button が来院日未確定で disabled のとき直近に理由と条件を表示する', () => {
+    const { container } = renderIncomeActionSummary({ patientId: 'P-1' });
+
+    const incomeCard = container.querySelector('[data-test-id="orca-income-summary-card"]') as HTMLElement;
+    const button = within(incomeCard).getByRole('button', { name: '収納情報を確認' });
+    const helper = incomeCard.querySelector('[data-test-id="orca-income-refresh-disabled-reason"]') as HTMLElement;
+
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('data-disabled-reason', 'missing-perform-date');
+    expect(button).toHaveAttribute('aria-describedby', helper.id);
+    expect(helper).toBeVisible();
+    expect(helper).toHaveTextContent('来院日が確定すると収納情報を確認できます。');
+  });
+
+  it('収納情報確認 button が loading で disabled のとき確認中を表示する', () => {
+    const { container } = renderIncomeActionSummary(
+      { patientId: 'P-1', visitDate: '2026-03-09' },
+      { isFetching: true },
+    );
+
+    const incomeCard = container.querySelector('[data-test-id="orca-income-summary-card"]') as HTMLElement;
+    const button = within(incomeCard).getByRole('button', { name: '収納情報確認中…' });
+    const helper = incomeCard.querySelector('[data-test-id="orca-income-refresh-disabled-reason"]') as HTMLElement;
+
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('data-disabled-reason', 'loading');
+    expect(button).toHaveAttribute('aria-describedby', helper.id);
+    expect(helper).toBeVisible();
+    expect(helper).toHaveTextContent('収納情報を確認しています。');
   });
 
   it('ORCA収納情報と院内ローカル診療サマリの責務を分離し official ラベルを表示する', () => {

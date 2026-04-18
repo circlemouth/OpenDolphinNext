@@ -3,6 +3,26 @@
 作成日: 2026-04-18  
 用途: post-fix static review integrator の rejected / partial findings を、実装変更が必要な Codex 作業と、コード変更不要の ChatGPT 検討作業へ分離する。
 
+RUN_ID: `20260418T210850Z`
+
+## Current source of truth
+
+この文書セット内で current static closure を読む場合は、次を正本にする。
+
+1. `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md`
+2. `docs/contracts/orca-route-taxonomy.md`
+3. `docs/contracts/orca-connection.md`
+4. `docs/runbooks/release-validation.md`
+5. `docs/releases/orca-remediation-cutover.md`
+
+Accepted static test logs are included under:
+
+```text
+docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/
+```
+
+2026-04-17 の follow-up / remaining package と `docs/archive/` は historical context であり、そこに残る `PASS`、`READY`、`already closed`、`latest worker report`、`完了済み` は current evidence ではない。
+
 ## 配置先
 
 このディレクトリ一式は、実リポジトリでは次の場所に配置済みです。
@@ -54,12 +74,12 @@ docs/implementation/opendolphin-postfix-static-remediation-20260418/
   - overall: `REJECT WORKER REPORT`
   - dynamic handoff: `NOT READY FOR DYNAMIC TRIAL CHECK`
 - current manager rerun result:
-  - overall: `ACCEPT WORKER REPORT`
+  - overall: `ACCEPT`
   - dynamic handoff: `READY`
   - closed: `C1/C2/C3/C5/C6/C7/R-OBS-01/T-NEG-01/RT-01`
+  - older docs cleanup: `closed`
   - residual unknowns:
     - `runtime-ready-smoke` は `127.0.0.1:9080` 未起動で environment blocker
     - live ORCA / WebORCA は未実行で、成功 claim はしていない
-    - archived/historical docs には stale PASS wording が一部残る
 - final static exit report:
   - `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md`

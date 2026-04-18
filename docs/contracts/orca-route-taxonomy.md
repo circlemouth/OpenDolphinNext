@@ -1,6 +1,6 @@
 # ORCA Route Taxonomy
 
-最終更新: 2026-04-18
+最終更新: 2026-04-19
 
 ## 目的
 
@@ -19,6 +19,12 @@ public route の taxonomy を固定し、official / master / local / admin-inter
    `web-client/src/features/outpatient/orcaQueueApi.ts` にだけ historical route string を残し、unavailable response を返して browser network call を fail-close します。
 3. mock/test-only legacy route surface
    `web-client/src/mocks/handlers/orcaQueue.ts` にだけ mock/test 用の legacy route constant を残します。これは public taxonomy ではなく、MSW/isolated test 以外の runtime で使ってはなりません。
+4. e2e fixture/test-only surface
+   `tests/**`、`web-client/scripts/qa-*.mjs`、`web-client/plugins/flagged-mock-plugin.ts` の fixture / QA / dev-preview 用 route string です。production source へ移動した場合は failure です。
+5. blocked-route detector
+   `web-client/scripts/verify-no-blocked-orca-route-strings.mjs`、`web-client/scripts/lib/orca-route-taxonomy-guard.mjs`、`web-client/scripts/runtime-ready-smoke.mjs`、classifier fixture test が legacy route を検出・拒否するために保持する route string です。
+6. docs/reference
+   `docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` の説明用 route string です。docs でも `/api/orca/queue` と `/api/orca/pusheventgetv2` 以外の `/api/orca/(official|master 以外)` を新規 route として書いた場合は failure です。
 
 ## Taxonomy Rules
 
@@ -124,5 +130,10 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `WebXmlEndpointExposureTest` は `/api/*` の単一 public entrypoint に加え、route prefix が taxonomy に収まり、`/api/orca/queue` と `/api/orca/pusheventgetv2` が露出していないことを検証する。
 - ORCA `Api_Result` の success/warn/error tone policy は `web-client/src/libs/orca/orcaApiResultPolicy.ts` を正本とし、feature ローカル実装を増やさない。
 - `web-client/src/libs/http/httpClient.ts` と administration wrapper metadata は `scope=official|master|local` を明示し、実 path と一致させる。
-- `verify-no-blocked-orca-route-strings.mjs` は legacy route string を category 2 と category 3 の allowlist にだけ許可し、成功メッセージも同じ分類を表示する。
+- `verify-no-blocked-orca-route-strings.mjs` は `web-client/src`、`web-client/scripts`、`web-client/plugins`、`tests`、`docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` を repo-wide に走査する。存在しない root は明示 skip、存在する root の走査失敗は fail とする。
+- guard の allowlist は `path + route + category + reason` で定義し、legacy route string と mock-only surface の残存理由を固定する。
+- guard は success message に category counts を出し、server public route / client production fail-close sentinel / MSW mock-test-only legacy route surface / e2e fixture-test-only surface / blocked-route detector / docs-reference の分類が current tree と一致することを示す。
+- allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure とする。
+- `/api/orca/(official|master 以外)` の route string は、上記 2 legacy route または blocked-route detector の fixture でない限り failure とする。
+- `/api/orca/official/*/mock` などの mock/test-only route surface が production source (`web-client/src` の mocks/test 以外) に混入した場合は failure とする。
 - repo grep で旧 path を runtime 参照として残さない。

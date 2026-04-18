@@ -1,0 +1,171 @@
+
+> web-client@0.0.0 ci
+> npm run verify:web-guard && npm run typecheck && npm run test:ci && npm run build
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=8, files=677. category counts: server public route=47, client production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e fixture/test-only surface=225, blocked-route detector=31, docs/reference=91. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 pretypecheck
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=8, files=677. category counts: server public route=47, client production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e fixture/test-only surface=225, blocked-route detector=31, docs/reference=91. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 typecheck
+> tsc -b --noEmit
+
+
+> web-client@0.0.0 pretest:ci
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=8, files=677. category counts: server public route=47, client production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e fixture/test-only surface=225, blocked-route detector=31, docs/reference=91. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 test:ci
+> vitest run --silent --reporter=dot
+
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+····················································································································································································································-···············································-··································································Error: Uncaught [Error: java.lang.IllegalStateException: render exploded]
+    at reportException (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:26599:12) Error: java.lang.IllegalStateException: render exploded
+    at PatientsPage (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/AppRouter.navigation.test.tsx:77:13)
+    at renderWithHooks (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+Error: Uncaught [Error: java.lang.IllegalStateException: render exploded]
+    at reportException (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:26599:12) Error: java.lang.IllegalStateException: render exploded
+    at PatientsPage (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/AppRouter.navigation.test.tsx:77:13)
+    at renderWithHooks (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+·····································································································································································································································································································································································································································································································································································································································································································································································································
+
+ Test Files  181 passed (181)
+      Tests  1098 passed | 2 skipped (1100)
+   Start at  06:21:51
+   Duration  34.35s (transform 13.97s, setup 12.76s, import 52.78s, tests 68.94s, environment 72.43s)
+
+
+> web-client@0.0.0 prebuild
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=8, files=677. category counts: server public route=47, client production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e fixture/test-only surface=225, blocked-route detector=31, docs/reference=91. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 build
+> tsc -b && vite build && node scripts/prune-prod-artifacts.mjs
+
+vite v6.4.1 building for production...
+transforming...
+✓ 607 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     3.77 kB │ gzip:   1.47 kB
+dist/assets/index-CWJ7lyzn.css     89.49 kB │ gzip:  14.41 kB
+dist/assets/index-DvJmTjAD.js   1,932.58 kB │ gzip: 474.53 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 1.98s
+[prune-prod-artifacts] removed: mockServiceWorker.js

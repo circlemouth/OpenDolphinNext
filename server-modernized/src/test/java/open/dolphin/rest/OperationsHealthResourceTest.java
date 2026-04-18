@@ -11,6 +11,7 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.mbean.PvtService;
+import open.dolphin.orca.config.OrcaConnectionConfigRecord;
 import open.dolphin.orca.config.OrcaConnectionConfigStore;
 import open.dolphin.orca.push.OrcaPushClientRegistry;
 import open.dolphin.orca.push.OrcaPushConnectionStateStore;
@@ -188,6 +189,50 @@ class OperationsHealthResourceTest {
     }
 
     @Test
+    void readinessDoesNotExposeOrcaPushRawLastError() throws Exception {
+        setField(OperationsReadinessEvaluator.class, evaluator, "configurationResolver",
+                TestServerConfigurationResolvers.resolver(
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_ENABLED, "true",
+                        ServerConfigurationResolver.KEY_ORCA_PUSH_MEDICAL_ENABLED, "true"));
+        setField(OperationsReadinessEvaluator.class, evaluator, "orcaPushStateStore", new StubPushStateStore(List.of(
+                new OrcaPushConnectionStateStore.FacilityPushConnectionState(
+                        "F001",
+                        "push",
+                        OrcaPushConnectionStateStore.STATUS_DISCONNECTED,
+                        "wss://facility.example.orca/push",
+                        "2026-04-18T00:00:00Z",
+                        null,
+                        "java.net.ConnectException: failed https://admin:pass@facility.example.orca/secret-prefix"))));
+
+        when(em.createNativeQuery(anyString())).thenReturn(query);
+        when(query.getSingleResult()).thenReturn(1);
+        when(orcaConnectionConfigStore.getDefaultFacilityId()).thenReturn("F001");
+        OrcaConnectionConfigRecord snapshot = new OrcaConnectionConfigRecord();
+        snapshot.setPushUrl("wss://facility.example.orca/push");
+        when(orcaConnectionConfigStore.getSnapshot()).thenReturn(snapshot);
+        ((StubRestOrcaTransport) restOrcaTransport).probeResult =
+                new RestOrcaTransport.ProbeResult(true, "weborca", true, false, null);
+        when(attachmentStorageManager.getMode()).thenReturn(AttachmentStorageMode.S3);
+        when(attachmentStorageManager.isBackendReachable()).thenReturn(true);
+        when(pvtService.workerHealthBody()).thenReturn(Map.of(
+                "status", "UP",
+                "reasonCodes", List.of()));
+
+        Response response = resource.readiness();
+
+        assertThat(response.getStatus()).isEqualTo(503);
+        OperationsReadinessResponse body = (OperationsReadinessResponse) response.getEntity();
+        assertThat(body.getChecks().get(OperationsReadinessEvaluator.CHECK_ORCA_PUSH).getReasonCode())
+                .isEqualTo("orca_push_runtime_unavailable");
+        String rendered = AbstractResource.getSerializeMapper().writeValueAsString(body);
+        assertThat(rendered).doesNotContain("lastError");
+        assertThat(rendered).doesNotContain("facility.example.orca");
+        assertThat(rendered).doesNotContain("admin:pass");
+        assertThat(rendered).doesNotContain("secret-prefix");
+        assertThat(rendered).doesNotContain("ConnectException");
+    }
+
+    @Test
     void readinessFailsClosedWhenDefaultFacilityIsMissing() {
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);
@@ -239,5 +284,19 @@ class OperationsHealthResourceTest {
     }
 
     private static final class StubPushStateStore extends OrcaPushConnectionStateStore {
+        private final List<OrcaPushConnectionStateStore.FacilityPushConnectionState> states;
+
+        private StubPushStateStore() {
+            this(List.of());
+        }
+
+        private StubPushStateStore(List<OrcaPushConnectionStateStore.FacilityPushConnectionState> states) {
+            this.states = states;
+        }
+
+        @Override
+        public List<OrcaPushConnectionStateStore.FacilityPushConnectionState> listStates() {
+            return states;
+        }
     }
 }

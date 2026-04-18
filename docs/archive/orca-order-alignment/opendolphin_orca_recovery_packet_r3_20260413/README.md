@@ -1,5 +1,7 @@
 # OpenDolphinNext ORCA closeout recovery packet R3
 
+> Archive note: this packet is historical. `PASS` / close 条件 / final report template language in this directory is not current evidence. Current status is tracked by `../../../implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` and current contracts/runbooks.
+
 この packet は、差し替え後レビューで残った未完了を完遂するための Codex 用 prompt セットです。
 
 今回の狙いは広い再実装ではなく、次の 3 つです。
