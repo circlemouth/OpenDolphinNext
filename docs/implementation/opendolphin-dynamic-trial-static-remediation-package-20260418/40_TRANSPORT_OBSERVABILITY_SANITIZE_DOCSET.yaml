@@ -1,0 +1,42 @@
+confirmed_accessible_files:
+  - docs/implementation/opendolphin-static-fix-package-20260418/
+  - docs/implementation/opendolphin-webclient-implementation-package-20260416/
+
+inline_context:
+  blocker_name: transport observability and sanitize net
+  grounded_facts:
+    - C1/C2 core fail-close and sanitize behavior are already closed
+    - actual client-auth state is held in config store / registry path
+    - settings-derived observability currently reports clientAuthConfigured=false
+    - sanitize negative tests exist but do not fully lock rendered log / audit detail / readiness detail surfaces
+  fixed_premises:
+    - do not reopen facility fail-close
+    - do not weaken sanitize behavior
+    - live mTLS / live ORCA reachability is out of scope
+  expected_fix_direction:
+    - restore truthful clientAuthConfigured observability without changing fail-close routing
+    - extend tests so rendered log / audit details / readiness detail non-leak is pinned
+
+repo_touchpoints:
+  - server-modernized/src/main/java/open/dolphin/orca/transport/OrcaTransportSettings.java
+  - server-modernized/src/main/java/open/dolphin/orca/transport/RestOrcaTransport.java
+  - server-modernized/src/main/java/open/dolphin/orca/transport/OrcaTransportRegistry.java
+  - server-modernized/src/main/java/open/dolphin/orca/config/OrcaConnectionConfigStore.java
+  - server-modernized/src/main/java/open/dolphin/rest/OperationsReadinessEvaluator.java
+  - server-modernized/src/test/java/open/dolphin/orca/config/OrcaConnectionConfigStoreTest.java
+  - server-modernized/src/test/java/open/dolphin/orca/transport/OrcaTransportRegistryTest.java
+  - server-modernized/src/test/java/open/dolphin/orca/transport/RestOrcaTransportTest.java
+  - server-modernized/src/test/java/open/dolphin/rest/OperationsHealthResourceTest.java
+  - server-modernized/src/test/java/open/dolphin/orca/transport/OrcaTransportSettingsExternalConfigTest.java
+  - server-modernized/src/test/java/open/dolphin/rest/OrcaGatewayExceptionMapperTest.java
+  - server-modernized/src/test/java/open/dolphin/rest/AdminOrcaConnectionTestSupportTest.java
+  - server-modernized/src/test/java/open/dolphin/orca/transport/OrcaHttpClientLogTest.java
+
+required_tests:
+  - mvn -f pom.server-modernized.xml -pl server-modernized -am -Dtest=OrcaConnectionConfigStoreTest,OrcaTransportRegistryTest,RestOrcaTransportTest,OperationsHealthResourceTest,OrcaTransportSettingsExternalConfigTest,OrcaGatewayExceptionMapperTest,AdminOrcaConnectionTestSupportTest,OrcaHttpClientLogTest test
+
+do_not_invent:
+  - live mTLS success/failure claims
+  - new transport mode semantics
+  - admin UI redesign
+  - weakening sanitize to make tests easier

@@ -1,0 +1,57 @@
+confirmed_accessible_files:
+  - docs/web-client/ux/dads_app_ui_design_rules_20260411.md
+  - docs/implementation/opendolphin-static-fix-package-20260418/
+  - docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/
+
+inline_context:
+  blocker_name: release-gate truth restoration
+  grounded_facts:
+    - QA medical-information helper currently detects Medical_Information while actual browser request body uses medicalInformation
+    - release-validation and cutover docs currently read as if scripts already fail on that actual leak
+    - blocked-route guard still exempts /api/orca/queue and /api/orca/pusheventgetv2
+    - older follow-up docsets still carry forward runtime-ready-smoke / npm run ci / server verify pass claims that are not current truth
+  fixed_premises:
+    - reception runtime contract itself is already a pass area
+    - the task is to fix gate truthfulness, not to redesign Reception
+    - route taxonomy public surface must not widen
+    - live ORCA / WebORCA execution is out of scope
+  expected_fix_direction:
+    - align omission gate to actual browser request payload shape
+    - keep script self-failure and artifact retention
+    - align runbook / cutover wording to actual fail condition
+    - either remove stale queue/pushevent exceptions or document them as intentional current truth with no ambiguous wording
+    - remove or downgrade carried-forward pass claims to explicit not-verified / rerun-required wording
+
+repo_touchpoints:
+  - web-client/scripts/qa-lib/medical-information-gate.mjs
+  - web-client/scripts/__tests__/medicalInformationGate.test.ts
+  - web-client/scripts/qa-acceptmodv2-weborca.mjs
+  - web-client/scripts/qa-fullflow-weborca.mjs
+  - web-client/src/features/reception/api.ts
+  - web-client/src/features/reception/pages/ReceptionPage.tsx
+  - web-client/src/features/outpatient/fetchWithResolver.ts
+  - web-client/src/features/reception/__tests__/ReceptionPage.test.tsx
+  - web-client/src/mocks/handlers/receptionMocks.test.ts
+  - web-client/scripts/verify-no-blocked-orca-route-strings.mjs
+  - web-client/scripts/runtime-ready-smoke.mjs
+  - web-client/src/features/outpatient/orcaQueueApi.ts
+  - web-client/src/features/outpatient/__tests__/orcaQueueApi.test.ts
+  - docs/runbooks/release-validation.md
+  - docs/releases/orca-remediation-cutover.md
+  - docs/contracts/orca-route-taxonomy.md
+  - docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/00_MANAGER_DOCSET.yaml
+  - docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/00_MANAGER_PROMPT.md
+  - docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/01_WORKPLAN.md
+  - docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/30_POST_FIX_RELEASE_GATE_DOCSET.yaml
+  - docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/30_POST_FIX_RELEASE_GATE_RUNBOOK.md
+
+required_tests:
+  - cd web-client && npm run verify:web-guard
+  - cd web-client && npm run typecheck
+  - cd web-client && npx vitest run scripts/__tests__/medicalInformationGate.test.ts src/features/reception/__tests__/ReceptionPage.test.tsx src/mocks/handlers/receptionMocks.test.ts src/features/outpatient/__tests__/orcaQueueApi.test.ts
+
+do_not_invent:
+  - a new Reception request shape without repo evidence
+  - route-taxonomy cleanliness by wording only if source/script still disagree
+  - live QA success claims
+  - reopening reception blocker logic beyond the gate/docs truth problem

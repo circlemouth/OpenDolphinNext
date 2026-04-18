@@ -1,0 +1,79 @@
+confirmed_accessible_files:
+  - docs/web-client/ux/dads_app_ui_design_rules_20260411.md
+  - docs/implementation/opendolphin-static-fix-package-20260418/
+  - docs/implementation/opendolphin-webclient-implementation-package-20260416/
+
+inline_context:
+  final_static_verdict:
+    - NO-GO FOR DYNAMIC TRIAL CHECK until the remaining static tasks are closed
+  grounded_blockers:
+    - C7: medical-information omission gate looks for Medical_Information while actual browser request body uses medicalInformation
+    - C5: patient import treats HTTP 200 as accepted success and does not separate business PARTIAL/errors from full success
+    - C3: row-local production call sites exist, but report/order-panel/timeline direct negative tests are still insufficient
+    - C6: OrcaSummary visibility tests still allow DOM-presence-only pass for must-visible notes/labels
+    - R-OBS-01: clientAuthConfigured is reported through a settings path that currently returns false
+    - T-NEG-01: sanitize negative tests do not fully lock rendered log / audit details / readiness detail surfaces
+    - RT-01: route taxonomy guard still exempts queue/pushevent strings; docs/guard/source are not fully aligned
+    - docs drift: older follow-up docsets still carry forward runtime-ready-smoke / npm run ci / server verify pass claims that are not current truth
+  fixed_premises:
+    - backward compatibility is not required
+    - build artifacts, logs, screenshots, test-results, and worktree artifacts are ignored
+    - reception official flow is a pass area and must stay intact
+    - administration / manageusers is a pass area and must stay intact
+    - C1/C2 core fail-close and sanitize behavior are already closed and must not be reopened
+    - C4 current OrcaSummary layout direction is already closed and must not be regressed
+    - send success != paid must remain
+    - important information must not be hidden in disclosure
+    - one screen one primary must remain
+    - no new public route / DTO / state owner
+    - external sites and general theory are out of scope for this package
+
+repo_touchpoints:
+  - web-client/scripts/qa-lib/medical-information-gate.mjs
+  - web-client/scripts/__tests__/medicalInformationGate.test.ts
+  - web-client/scripts/qa-acceptmodv2-weborca.mjs
+  - web-client/scripts/qa-fullflow-weborca.mjs
+  - web-client/scripts/verify-no-blocked-orca-route-strings.mjs
+  - web-client/scripts/runtime-ready-smoke.mjs
+  - docs/runbooks/release-validation.md
+  - docs/releases/orca-remediation-cutover.md
+  - docs/contracts/orca-route-taxonomy.md
+  - docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/
+  - web-client/src/features/shared/orcaApiResponse.ts
+  - web-client/src/features/outpatient/orcaPatientImportApi.ts
+  - web-client/src/features/patients/api.ts
+  - web-client/src/features/patients/PatientsPage.tsx
+  - web-client/src/features/charts/PatientInfoEditDialog.tsx
+  - web-client/src/features/charts/orcaClaimSendCache.ts
+  - web-client/src/features/charts/OrcaSummary.tsx
+  - web-client/src/features/charts/__tests__/OrcaSummary.semantics.test.tsx
+  - web-client/src/features/charts/print/useOrcaReportPrint.ts
+  - web-client/src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx
+  - web-client/src/features/charts/OrderBundleEditPanel.tsx
+  - web-client/src/features/charts/OrderDockPanel.tsx
+  - web-client/src/features/charts/DocumentTimeline.tsx
+  - web-client/src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx
+  - server-modernized/src/main/java/open/dolphin/orca/transport/OrcaTransportSettings.java
+  - server-modernized/src/main/java/open/dolphin/orca/transport/RestOrcaTransport.java
+  - server-modernized/src/main/java/open/dolphin/orca/transport/OrcaTransportRegistry.java
+  - server-modernized/src/main/java/open/dolphin/orca/config/OrcaConnectionConfigStore.java
+  - server-modernized/src/main/java/open/dolphin/rest/OperationsReadinessEvaluator.java
+
+required_tests:
+  - cd web-client && npm run verify:web-guard
+  - cd web-client && npm run typecheck
+  - focused Vitest / JUnit reruns for all touched suites from 61_TEST_MATRIX.csv
+  - PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/charts/e2e-billing-correction-note.spec.ts
+  - PLAYWRIGHT_WEB_PORT=<repo convention> RUN_ID=<new> npx playwright test tests/charts/e2e-orca-billing-status.spec.ts
+  - cd web-client && npm run ci
+  - mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify
+
+do_not_invent:
+  - live ORCA / WebORCA success claims
+  - business success rules not evidenced by current server contract/service
+  - route taxonomy exception policy without repo evidence
+  - hidden-detail-only fixes for must-visible information
+  - assertion weakening in place of contract repair
+  - new persistence / resume behavior
+  - new patient-global positive fallback
+  - new public route / DTO / state owner
