@@ -159,7 +159,7 @@ validate_sanitized_review_evidence_path() {
   lower_path="$(printf '%s' "$repo_path" | tr '[:upper:]' '[:lower:]')"
 
   case "$lower_path" in
-    *raw*|*har*|*network*|*requests*|*request-xml*|*response-xml*|*stacktrace*|*screenshot*|*trace*|*.xml|*.html|*.htm|*.png|*.jpg|*.jpeg|*.webm|*.zip|*.gz|*.tgz)
+    *raw*|*/har/*|*.har|*network*|*requests*|*request-xml*|*response-xml*|*stacktrace*|*screenshot*|*trace*|*.xml|*.html|*.htm|*.png|*.jpg|*.jpeg|*.webm|*.zip|*.gz|*.tgz)
       if [[ "$lower_path" != *".sanitized."* ]]; then
         echo "review log manifest entry appears to be a raw artifact and is not allowed: $repo_path" >&2
         exit 1

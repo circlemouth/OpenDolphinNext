@@ -1,0 +1,11 @@
+command_log_version=1
+command=./scripts/create-review-package.sh --run-id 20260419T131740Z --out-dir artifacts/review-bundles --name-suffix -phase2_5-gate-hardening --include-review-log-manifest docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260419T131740Z
+start_utc=2026-04-19T13:51:34Z
+--- command output ---
+review log manifest entry appears to be a raw artifact and is not allowed: docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/FINAL_REPORT.md
+--- command summary ---
+end_utc=2026-04-19T13:51:35Z
+exit_code=1
+result=FAIL

@@ -147,24 +147,26 @@ test('creates a reviewer package without artifacts or legacy client content', ()
 });
 
 test('adds manifest-listed review logs when requested', () => {
-  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const manifestPath = 'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
   const { sandbox, repoDir } = setupRepo({
     'README.md': '# repo\n',
     [manifestPath]: [
       'RUN_ID=20260418T224551Z',
       'Review logs:',
+      '- FINAL_REPORT.md',
       '- test-logs/static.log',
       '- dynamic-logs/dynamic.log',
       '- dynamic-evidence/accept-summary.sanitized.json',
       '',
     ].join('\n'),
-    'docs/implementation/postfix/test-logs/static.log': commandLogContent('npm run verify:web-guard'),
-    'docs/implementation/postfix/dynamic-logs/dynamic.log': commandLogContent('node scripts/runtime-ready-smoke.mjs'),
+    'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/FINAL_REPORT.md': '# final report\n',
+    'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/test-logs/static.log': commandLogContent('npm run verify:web-guard'),
+    'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-logs/dynamic.log': commandLogContent('node scripts/runtime-ready-smoke.mjs'),
   });
 
   try {
     writeText(
-      path.join(repoDir, 'docs/implementation/postfix/dynamic-evidence/accept-summary.sanitized.json'),
+      path.join(repoDir, 'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/accept-summary.sanitized.json'),
       '{"rawSensitiveFieldsExcluded":true}\n',
     );
     const output = run(
@@ -192,16 +194,17 @@ test('adds manifest-listed review logs when requested', () => {
 
     assert.match(output, /with-dynamic-evidence\.zip/);
     assert(entries.includes(manifestPath));
-    assert(entries.includes('docs/implementation/postfix/test-logs/static.log'));
-    assert(entries.includes('docs/implementation/postfix/dynamic-logs/dynamic.log'));
-    assert(entries.includes('docs/implementation/postfix/dynamic-evidence/accept-summary.sanitized.json'));
+    assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/FINAL_REPORT.md'));
+    assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/test-logs/static.log'));
+    assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-logs/dynamic.log'));
+    assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/accept-summary.sanitized.json'));
     assert.match(manifest, /review_package_name=OpenDolphin_WebClient-review-package-20260414T080812Z-with-dynamic-evidence\.zip/);
     assert.match(manifest, /review_log_include_count=3/);
     assert.match(manifest, /review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content/);
     assert.match(manifest, /secret_scan_scope=dynamic_review_evidence_only/);
-    assert.match(manifest, /secret_scan_file_count=4/);
+    assert.match(manifest, /secret_scan_file_count=5/);
     assert.match(manifest, /secret_scan_claim=dynamic-only/);
-    assert.match(manifest, /docs\/implementation\/postfix\/test-logs\/static\.log/);
+    assert.match(manifest, /docs\/implementation\/orca-trial-phase2_5-gate-hardening-20260419T131740Z\/test-logs\/static\.log/);
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
