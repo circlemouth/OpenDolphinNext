@@ -196,7 +196,7 @@ export const validatePreflightSummary = ({ summary, expected, artifactPath = '',
       expectedIdentity,
       preflightIdentity,
       mismatches: [],
-      error: `exact read-only WebORCA preflight was not accepted; acceptedForPhase3Attempt=${JSON.stringify(summary?.acceptedForPhase3Attempt)} verdict=${summary?.verdict ?? 'unknown'} blocker=${summary?.blockerClassification ?? 'unknown'}`,
+      error: `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER: exact read-only WebORCA preflight was not accepted; acceptedForPhase3Attempt=${JSON.stringify(summary?.acceptedForPhase3Attempt)} verdict=${summary?.verdict ?? 'unknown'} blocker=${summary?.blockerClassification ?? 'unknown'}. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent.`,
     };
   }
 
