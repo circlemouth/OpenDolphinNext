@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { mutateVisit, buildVisitEntryFromMutation } from '../api';
+import { mutateVisit, buildVisitEntryFromMutation, classifyAcceptmodv2ReadOnlyDiagnostic } from '../api';
 import { fetchWithResolver } from '../../outpatient/fetchWithResolver';
 
 const recordOutpatientFunnel = vi.hoisted(() => vi.fn());
@@ -62,6 +62,9 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(result.scheduleKey).toBe('F001:S100');
     expect(result.encounterKey).toBe('F001:E100');
     expect(result.patient?.patientId).toBe('000001');
+    expect(result.businessStatus).toBe('businessAccepted');
+    expect(result.businessReason).toBe('accepted_with_registration_evidence');
+    expect(result.hasRegistrationEvidence).toBe(true);
     expect(mockFetch).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({ requestNumber: '01', patientId: '000001' }),
@@ -138,6 +141,28 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(result.acceptanceId).toBeUndefined();
     expect(result.apiResult).toBe('21');
     expect(result.apiResultMessage).toBe('保険の組み合わせが一致しません');
+    expect(result.businessStatus).toBe('businessRejected');
+    expect(result.businessReason).toBe('insurance_mismatch');
+  });
+
+  it('Api_Result=10 は patient_not_found の businessRejected として扱う', async () => {
+    mockFetch.mockResolvedValue({
+      raw: { apiResult: '10', apiResultMessage: '該当患者なし' },
+      meta: { httpStatus: 200, dataSourceTransition: 'mock' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '000010',
+      requestNumber: '01',
+      acceptanceDate: '2026-01-20',
+      acceptancePush: '1',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.acceptanceId).toBeUndefined();
+    expect(result.businessStatus).toBe('businessRejected');
+    expect(result.businessReason).toBe('patient_not_found');
   });
 
   it('Api_Result=21 で Api_Result_Message が空なら保険不一致 fallback を使い、受付コンテキストを捏造しない', async () => {
@@ -184,6 +209,40 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(result.acceptanceId).toBeUndefined();
     expect(result.apiResult).toBe('60');
     expect(result.apiResultMessage).toBe('受付は存在しません');
+    expect(result.businessStatus).toBe('diagnosticNoExistingAcceptance');
+    expect(result.businessReason).toBe('no_existing_acceptance');
+  });
+
+  it('read-only diagnostic Api_Result=60 は Phase 3 候補として accepted だが mutation success ではない', () => {
+    const result = classifyAcceptmodv2ReadOnlyDiagnostic({
+      ok: true,
+      apiResult: '60',
+      raw: { apiResult: '60', apiResultMessage: '受付は存在しません' },
+    });
+
+    expect(result).toMatchObject({
+      verdict: 'accepted',
+      businessStatus: 'diagnosticNoExistingAcceptance',
+      businessReason: 'no_existing_acceptance',
+      mutationSuccess: false,
+      acceptedForPhase3Attempt: true,
+    });
+  });
+
+  it('read-only diagnostic Api_Result=10 は rejected にする', () => {
+    const result = classifyAcceptmodv2ReadOnlyDiagnostic({
+      ok: true,
+      apiResult: '10',
+      raw: { apiResult: '10', apiResultMessage: '患者番号が存在しません' },
+    });
+
+    expect(result).toMatchObject({
+      verdict: 'rejected',
+      businessStatus: 'businessRejected',
+      businessReason: 'patient_not_found',
+      mutationSuccess: false,
+      acceptedForPhase3Attempt: false,
+    });
   });
 
   it('Api_Result=60 で Api_Result_Message が空なら受付なし fallback を使い、受付コンテキストを捏造しない', async () => {
@@ -212,7 +271,88 @@ describe('acceptmodv2 mutateVisit', () => {
     expect(result.physicianCode).toBeUndefined();
   });
 
-  it('実環境相当の空文字応答でも patientId を維持する', async () => {
+  it('K1 は Acceptance_Id がある場合だけ acceptedWithWarnings にする', async () => {
+    mockFetch.mockResolvedValue({
+      raw: {
+        Api_Result: 'K1',
+        Api_Result_Message: '警告付き受付登録終了',
+        Acceptance_Id: 'A-K1',
+        Patient_Information: { Patient_ID: '0000K1' },
+      },
+      meta: { httpStatus: 200, dataSourceTransition: 'server' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '0000K1',
+      requestNumber: '01',
+      acceptanceDate: '2026-01-20',
+      acceptancePush: '1',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.acceptanceId).toBe('A-K1');
+    expect(result.businessStatus).toBe('businessAcceptedWithWarnings');
+    expect(result.businessReason).toBe('official_warning_with_registration_evidence');
+  });
+
+  it('K1 が message だけなら成功扱いせず notVerified にする', async () => {
+    mockFetch.mockResolvedValue({
+      raw: {
+        apiResult: 'K1',
+        apiResultMessage: '警告付き受付登録終了',
+      },
+      meta: { httpStatus: 200, dataSourceTransition: 'server' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '0000K1',
+      requestNumber: '01',
+      acceptanceDate: '2026-01-20',
+      acceptanceTime: '09:00:00',
+      departmentCode: '01',
+      physicianCode: '1001',
+      acceptancePush: '1',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.acceptanceId).toBeUndefined();
+    expect(result.acceptanceDate).toBeUndefined();
+    expect(result.departmentCode).toBeUndefined();
+    expect(result.businessStatus).toBe('notVerified');
+    expect(result.businessReason).toBe('warning_without_registration_evidence');
+  });
+
+  it('Api_Result=00 は Acceptance_Info evidence がある場合だけ accepted にする', async () => {
+    mockFetch.mockResolvedValue({
+      raw: {
+        apiResult: '00',
+        apiResultMessage: '受付登録終了',
+        Acceptance_Info: {
+          Acceptance_Id: 'A-INFO',
+          Acceptance_Date: '2026-01-20',
+        },
+        patient: { patientId: '000001' },
+      },
+      meta: { httpStatus: 200, dataSourceTransition: 'server' },
+      ok: true,
+    });
+
+    const result = await mutateVisit({
+      patientId: '000001',
+      requestNumber: '01',
+      acceptanceDate: '2026-01-20',
+      acceptancePush: '1',
+      paymentMode: 'insurance',
+    });
+
+    expect(result.businessStatus).toBe('businessAccepted');
+    expect(result.businessReason).toBe('accepted_with_registration_evidence');
+    expect(result.hasRegistrationEvidence).toBe(true);
+  });
+
+  it('実環境相当の空文字応答でも patientId を維持するが成功扱いしない', async () => {
     mockFetch.mockResolvedValue({
       raw: {
         apiResult: '00',
@@ -236,10 +376,11 @@ describe('acceptmodv2 mutateVisit', () => {
 
     expect(result.acceptanceId).toBeUndefined();
     expect(result.patient?.patientId).toBe('000099');
+    expect(result.businessStatus).toBe('notVerified');
+    expect(result.businessReason).toBe('success_code_without_registration_evidence');
 
     const entry = buildVisitEntryFromMutation(result, { paymentMode: 'insurance' });
-    expect(entry?.patientId).toBe('000099');
-    expect(entry?.id).toBe('000099');
+    expect(entry).toBeNull();
   });
 
   it('監査ログに action=reception_accept と runId/traceId が入る', async () => {
@@ -301,6 +442,7 @@ describe('buildVisitEntryFromMutation', () => {
     const entry = buildVisitEntryFromMutation(
       {
         requestNumber: '01',
+        businessStatus: 'businessAccepted',
         acceptanceId: 'A1',
         acceptanceDate: '2026-01-20',
         acceptanceTime: '09:00:00',
@@ -322,6 +464,7 @@ describe('buildVisitEntryFromMutation', () => {
     const entry = buildVisitEntryFromMutation(
       {
         requestNumber: '01',
+        businessStatus: 'businessAccepted',
         acceptanceId: 'A2',
         acceptanceDate: '2026-01-21',
         acceptanceTime: '10:00:00',

@@ -75,6 +75,28 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
     blockerClassification: 'none',
     harPath: `${repoDir}/artifacts/orca-remediation/${RUN_ID}/qa/acceptmodv2/har/network.har`,
   };
+  const sanitizedAcceptSummary = {
+    schemaVersion: 1,
+    runId: RUN_ID,
+    candidateId: `${RUN_ID}:acceptmodv2`,
+    command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+    cwd: 'web-client',
+    responseClassification: 'businessAccepted',
+    business: {
+      businessAccepted: true,
+      businessRejected: false,
+      c7GateObserved: true,
+    },
+    c7: {
+      checkedRequests: 1,
+      violationCount: 0,
+      violatedKeys: [],
+      bodyKeysObserved: ['patientId'],
+      medicalInformationFieldPresent: false,
+      unspecifiedRun: true,
+    },
+    rawSensitiveFieldsExcluded: true,
+  };
 
   const files = {
     'git/run-id.txt': `${RUN_ID}\n`,
@@ -89,6 +111,7 @@ function populateCloseout(repoDir, acceptedHead, mergeBase, options = {}) {
     'reports/command-log.md': '# command log\n',
     'reports/blocker-classification.md': options.blockerReport ?? '# blocker classification\n',
     'qa/acceptmodv2/accept-summary.json': `${JSON.stringify(acceptSummary, null, 2)}\n`,
+    'qa/acceptmodv2/accept-summary.sanitized.json': `${JSON.stringify(sanitizedAcceptSummary, null, 2)}\n`,
     'qa/acceptmodv2/steps.log': 'accept step\n',
     'qa/acceptmodv2/console.json': '[]\n',
     'qa/acceptmodv2/page-errors.json': '[]\n',

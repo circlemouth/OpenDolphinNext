@@ -9,14 +9,20 @@
 - 目的: このリポジトリをレビュワー提出向けに 1 本の軽量 zip にまとめる。
 - 出力: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
 - 方針:
-  - git tracked files のみを対象にする
+  - git tracked files を base とし、`--include-review-log-manifest` 指定時だけ manifest-listed evidence を追加する
   - `client/` と `artifacts/` を完全除外する
   - `node_modules/`, `dist/`, `target/`, `build/`, `out/`, `tmp/`, `output/`, `coverage/`, `test-results/` を除外する
   - `REVIEW_PACKAGE_MANIFEST.txt` を zip 直下へ含める
+  - `--include-review-log-manifest` 指定時のみ、manifest に列挙した sanitized review log / evidence contract を追加同梱する
+  - `.git/` は含めず、clean checkout 証跡は主張しない
+  - manifest と sidecar summary は `packageMode=extracted_review_subset`、`clean_checkout_claim=not_verified`、`full_source_secret_scan_claim=not_claimed` を明示する
+  - manifest-listed evidence は sanitized summaries / reports / command logs に限定し、raw ORCA artifact、HAR、network/request/response、画像、trace/video、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw session、raw password を拒否する
+  - Phase 2.5 の `acceptedCandidateCount=0` は、`00001`〜`00011` について current harness / API / auth / parser / readiness / exact-preflight criteria の read-only evidence が mutation-ready まで揃っていない、という意味に限定する。公式初期患者が存在しない証明として扱わない
 - 使い方:
   - `./scripts/create-review-package.sh`
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z`
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z --out-dir ./artifacts/review-bundles`
+  - `./scripts/create-review-package.sh --run-id 20260418T224551Z --name-suffix -with-dynamic-evidence --include-review-log-manifest docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
 
 ## create-review-package-curated.sh
 - 位置づけ: support。50MB 制約つきの curated review bundle。
@@ -48,6 +54,12 @@
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z`
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --output ./artifacts/reviewer-submission-packets`
   - `./scripts/create-reviewer-submission-packet.sh --run-id 20260414T010624Z --accepted-ref codex/orca-closeout-recovery-20260414T010624Z --dry-run`
+- Evidence policy:
+  - closeout evidence から reviewer 再読用の extracted subset だけを同梱する
+  - exact selected-candidate `qa/weborca-readonly-preflight/summary.json` だけを Phase 3 handoff artifact として扱う
+  - candidate discovery は sanitized proposal であり、Phase 3 許可や live success の根拠にしない
+  - accepted candidate 0 件は公式初期患者 `00001`〜`00011` の不在ではなく、`PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` として扱う
+  - credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password、患者機微 detail を packet に含めない
 
 ## validate-reviewer-submission-packet.sh
 - 位置づけ: canonical support。reviewer submission packet の検証ステップ。

@@ -253,7 +253,7 @@ class AdminOrcaUserResourceTest {
                 </data>
                 """;
         return new OrcaTransportResult(
-                "https://weborca-trial.orca.med.or.jp/api01rv2/manageusersv2",
+                "https://orca-trial.example.invalid/api01rv2/manageusersv2",
                 "POST",
                 200,
                 xml,

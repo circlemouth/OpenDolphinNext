@@ -1,0 +1,587 @@
+{
+  "runId": "20260419T012523Z",
+  "baseURL": "https://localhost:5173/",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "smokeEncounterKey": "1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001",
+  "smokeScheduleKey": "SMOKE-SCHEDULE-20251129-0001",
+  "login": {
+    "sessionMeStatus": 200
+  },
+  "authoritativeReadEvidence": {
+    "queryDate": "2026-04-19",
+    "meta": {
+      "recordsReturned": 1,
+      "fallbackUsed": true,
+      "sourcePath": "/api/orca/official/appointments/list"
+    },
+    "selectionReason": "preferred_keys",
+    "patientMatchedEntryCount": 0,
+    "chartReadyEntryCount": 1,
+    "entryCount": 2,
+    "smokeEntry": {
+      "encounterKey": "1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001",
+      "scheduleKey": "SMOKE-SCHEDULE-20251129-0001",
+      "appointmentId": "SMOKE-SCHEDULE-20251129-0001",
+      "patientId": "0000001",
+      "name": "スモーク 患者",
+      "status": "予約",
+      "source": "visits",
+      "appointmentTime": "09:00"
+    },
+    "rawSmoke": {
+      "slotsCount": 1,
+      "reservationsCount": 0,
+      "visitsCount": 1
+    }
+  },
+  "chartsNav": {
+    "via": "reception-card-open-charts",
+    "url": "https://localhost:5173/f/1.3.6.1.4.1.9414.72.103/charts?runId=20260419T012523Z&sort=time&date=2026-04-19"
+  },
+  "selectedEntryEvidence": {
+    "rowResolution": {
+      "strategy": "encounterKey",
+      "value": "1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001"
+    },
+    "beforeRowWait": {
+      "path": "runtime-ready-before-row-wait.json",
+      "visibleRowCount": 2,
+      "activeStatusTab": "予約",
+      "selectedDate": "2026-04-19"
+    },
+    "uiBeforeReload": {
+      "url": "/f/1.3.6.1.4.1.9414.72.103/charts?runId=20260419T012523Z&sort=time&date=2026-04-19",
+      "hasMissingKeyWarning": false,
+      "hasStartPatientGuard": false,
+      "hasPrintPatientGuard": false,
+      "hasPlaceholderName": false,
+      "startDisabled": false,
+      "printDisabled": true,
+      "patientLabelContainsSmokeName": true
+    },
+    "uiAfterReload": {
+      "url": "/f/1.3.6.1.4.1.9414.72.103/charts?runId=20260419T012523Z&sort=time&date=2026-04-19",
+      "hasMissingKeyWarning": false,
+      "hasPatientUnselectedBanner": false,
+      "hasPlaceholderName": false,
+      "startDisabled": false,
+      "startTitle": null,
+      "printDisabled": true,
+      "printTitle": "印刷不可: 来院文脈不足: 正式出力条件を満たさず印刷不可",
+      "printGuardText": "印刷不可（1件）来院文脈不足: 正式出力条件を満たさず印刷不可: Department_Code, Physician_Code, Insurance_Combination_Number, Voucher_Number, Sequential_Number が不足しているため印刷できません。（次にやること: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期）",
+      "patientLabelContainsSmokeName": true
+    },
+    "printState": {
+      "disabled": true,
+      "title": "印刷不可: 来院文脈不足: 正式出力条件を満たさず印刷不可",
+      "guard": "印刷不可（1件）来院文脈不足: 正式出力条件を満たさず印刷不可: Department_Code, Physician_Code, Insurance_Combination_Number, Voucher_Number, Sequential_Number が不足しているため印刷できません。（次にやること: 受付一覧を再取得 / 対象来院を開き直して文脈を再同期）"
+    }
+  },
+  "startEvidence": {
+    "uiAfterStart": {
+      "hasPlaceholderName": false,
+      "successVisible": true,
+      "patientLabelContainsSmokeName": true
+    },
+    "startSelector": "#charts-action-start"
+  },
+  "traces": {
+    "summaryRequests": [
+      {
+        "method": "GET",
+        "url": "/api/local/encounters/1.3.6.1.4.1.9414.72.103%3ASMOKE-20251129-0001/medical-summary",
+        "body": {
+          "bodyChars": 0
+        }
+      },
+      {
+        "method": "GET",
+        "url": "/api/local/encounters/1.3.6.1.4.1.9414.72.103%3ASMOKE-20251129-0001/medical-summary",
+        "body": {
+          "bodyChars": 0
+        }
+      }
+    ],
+    "summaryResponses": [
+      {
+        "status": 200,
+        "url": "/api/local/encounters/1.3.6.1.4.1.9414.72.103%3ASMOKE-20251129-0001/medical-summary",
+        "body": {
+          "bodyChars": 313,
+          "keys": [
+            "requestId",
+            "traceId",
+            "runId",
+            "fetchedAt",
+            "recordsReturned",
+            "outcome",
+            "sourcePath",
+            "payload"
+          ],
+          "recordsReturned": 0
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/local/encounters/1.3.6.1.4.1.9414.72.103%3ASMOKE-20251129-0001/medical-summary",
+        "body": {
+          "bodyChars": 313,
+          "keys": [
+            "requestId",
+            "traceId",
+            "runId",
+            "fetchedAt",
+            "recordsReturned",
+            "outcome",
+            "sourcePath",
+            "payload"
+          ],
+          "recordsReturned": 0
+        }
+      }
+    ],
+    "transitionRequests": [
+      {
+        "method": "POST",
+        "url": "/api/encounters/1.3.6.1.4.1.9414.72.103%3ASMOKE-20251129-0001/transitions",
+        "body": {
+          "bodyChars": 257,
+          "keys": [
+            "operation",
+            "patientId",
+            "karteId",
+            "requestId",
+            "traceId",
+            "idempotencyKey"
+          ]
+        }
+      }
+    ],
+    "transitionResponses": [
+      {
+        "status": 200,
+        "url": "/api/encounters/1.3.6.1.4.1.9414.72.103%3ASMOKE-20251129-0001/transitions",
+        "body": {
+          "bodyChars": 483,
+          "keys": [
+            "encounterKey",
+            "scheduleKey",
+            "facilityId",
+            "patientId",
+            "karteId",
+            "fromState",
+            "businessState",
+            "requestId",
+            "traceId",
+            "idempotencyKey",
+            "transitionedAt"
+          ]
+        }
+      }
+    ],
+    "appointmentsRequests": [
+      {
+        "method": "POST",
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 75,
+          "keys": [
+            "appointmentDate",
+            "medicalInformation",
+            "page",
+            "size"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 51,
+          "keys": [
+            "appointmentDate",
+            "page",
+            "size"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 51,
+          "keys": [
+            "appointmentDate",
+            "page",
+            "size"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 51,
+          "keys": [
+            "appointmentDate",
+            "page",
+            "size"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 51,
+          "keys": [
+            "appointmentDate",
+            "page",
+            "size"
+          ]
+        }
+      }
+    ],
+    "appointmentsResponses": [
+      {
+        "status": 200,
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 1012,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "appointmentDate",
+            "slots"
+          ],
+          "apiResult": "00",
+          "apiResultMessage": "処理終了",
+          "recordsReturned": 2,
+          "slotsCount": 2
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 1012,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "appointmentDate",
+            "slots"
+          ],
+          "apiResult": "00",
+          "apiResultMessage": "処理終了",
+          "recordsReturned": 2,
+          "slotsCount": 2
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 1012,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "appointmentDate",
+            "slots"
+          ],
+          "apiResult": "00",
+          "apiResultMessage": "処理終了",
+          "recordsReturned": 2,
+          "slotsCount": 2
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 1012,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "appointmentDate",
+            "slots"
+          ],
+          "apiResult": "00",
+          "apiResultMessage": "処理終了",
+          "recordsReturned": 2,
+          "slotsCount": 2
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/appointments/list",
+        "body": {
+          "bodyChars": 1012,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "appointmentDate",
+            "slots"
+          ],
+          "apiResult": "00",
+          "apiResultMessage": "処理終了",
+          "recordsReturned": 2,
+          "slotsCount": 2
+        }
+      }
+    ],
+    "visitsRequests": [
+      {
+        "method": "POST",
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 47,
+          "keys": [
+            "visitDate",
+            "requestNumber"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 47,
+          "keys": [
+            "visitDate",
+            "requestNumber"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 47,
+          "keys": [
+            "visitDate",
+            "requestNumber"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 47,
+          "keys": [
+            "visitDate",
+            "requestNumber"
+          ]
+        }
+      },
+      {
+        "method": "POST",
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 47,
+          "keys": [
+            "visitDate",
+            "requestNumber"
+          ]
+        }
+      }
+    ],
+    "visitsResponses": [
+      {
+        "status": 200,
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 635,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "visitDate",
+            "visits"
+          ],
+          "apiResult": "13",
+          "apiResultMessage": "対象がありません",
+          "recordsReturned": 1,
+          "visitsCount": 1
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 635,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "visitDate",
+            "visits"
+          ],
+          "apiResult": "13",
+          "apiResultMessage": "対象がありません",
+          "recordsReturned": 1,
+          "visitsCount": 1
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 635,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "visitDate",
+            "visits"
+          ],
+          "apiResult": "13",
+          "apiResultMessage": "対象がありません",
+          "recordsReturned": 1,
+          "visitsCount": 1
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 635,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "visitDate",
+            "visits"
+          ],
+          "apiResult": "13",
+          "apiResultMessage": "対象がありません",
+          "recordsReturned": 1,
+          "visitsCount": 1
+        }
+      },
+      {
+        "status": 200,
+        "url": "/api/orca/official/visits/list",
+        "body": {
+          "bodyChars": 635,
+          "keys": [
+            "apiResult",
+            "apiResultMessage",
+            "runId",
+            "traceId",
+            "requestId",
+            "dataSource",
+            "dataSourceTransition",
+            "recordsReturned",
+            "cacheHit",
+            "missingMaster",
+            "fallbackUsed",
+            "fetchedAt",
+            "visitDate",
+            "visits"
+          ],
+          "apiResult": "13",
+          "apiResultMessage": "対象がありません",
+          "recordsReturned": 1,
+          "visitsCount": 1
+        }
+      }
+    ]
+  },
+  "counters": {
+    "pauseFinishRequests": 0,
+    "billOperationBodies": 0,
+    "blockedRouteHits": {
+      "blocked-legacy-orca-queue-hit": 0,
+      "blocked-legacy-orca-push-event-hit": 0,
+      "invalid-orca-taxonomy": 0,
+      "legacy-operations-readiness": 0
+    }
+  }
+}

@@ -34,7 +34,7 @@ services:
       ATTACHMENT_STORAGE_CONFIG_PATH: ${ATTACHMENT_STORAGE_CONFIG_PATH:-/opt/jboss/config/attachment-storage.yaml}
       ATTACHMENT_S3_ENDPOINT: ${ATTACHMENT_S3_ENDPOINT:-http://minio:9000}
       ATTACHMENT_S3_ACCESS_KEY: ${ATTACHMENT_S3_ACCESS_KEY:-opendolphin}
-      ATTACHMENT_S3_SECRET_KEY: ${ATTACHMENT_S3_SECRET_KEY:-opendolphin-secret}
+      ATTACHMENT_S3_SECRET_KEY: ${ATTACHMENT_S3_SECRET_KEY:?ATTACHMENT_S3_SECRET_KEY is required}
       ATTACHMENT_S3_BUCKET: ${ATTACHMENT_S3_BUCKET:-opendolphin-attachments}
       ATTACHMENT_S3_REGION: ${ATTACHMENT_S3_REGION:-ap-northeast-1}
       ATTACHMENT_S3_BASE_PATH: ${ATTACHMENT_S3_BASE_PATH:-clinics/$${FACILITY_ID}}
@@ -66,7 +66,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-opendolphin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-opendolphin-secret}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
     ports:
       - "${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
@@ -85,7 +85,7 @@ services:
         condition: service_healthy
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-opendolphin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-opendolphin-secret}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
       ATTACHMENT_S3_BUCKET: ${ATTACHMENT_S3_BUCKET:-opendolphin-attachments}
     entrypoint: ["/bin/sh", "-c"]
     command: |

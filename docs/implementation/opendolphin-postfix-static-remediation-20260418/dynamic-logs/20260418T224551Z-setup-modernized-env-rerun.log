@@ -1,3 +1,9 @@
+command_log_version=retrofit-1
+command=WEB_CLIENT_MODE=npm ./setup-modernized-env.sh
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260418T224551Z
+start_utc=not_recorded
+--- command output ---
 [07:59:07] Reading ORCA connection info from docs/operations/ORCA_CERTIFICATION_ONLY.md...
 [07:59:07] ORCA_CONFIG target_env=unset base_url=https://weborca-trial.orca.med.or.jp mode=weborca path_prefix=auto
 [07:59:07] ORCA_CONFIG source host=file:ORCA_CERTIFICATION_ONLY port=file:ORCA_CERTIFICATION_ONLY scheme=file:ORCA_CERTIFICATION_ONLY base_url=computed mode=auto:weborca-host
@@ -277,3 +283,8 @@ INSERT 0 1
 [07:59:45] All set! Web Client dev server is listening at https://localhost:5173
 [07:59:45] Logs: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/tmp/web-client-dev.log
 [07:59:45] Login with User: doctor1 / Pass source: default-dev-smoke-password
+--- command summary ---
+end_utc=not_recorded
+exit_code=not_recorded
+result=RETROFIT_METADATA_ONLY
+pass_evidence=not_by_exit_code

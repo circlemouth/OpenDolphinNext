@@ -9,9 +9,24 @@ import {
   resolveQaPasswordPlain,
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
+import {
+  EXACT_PREFLIGHT_FLOW_MODE,
+  EXACT_PREFLIGHT_SOURCE,
+  SELECTOR_OPTION_MISSING_BLOCKER,
+  buildInputIdentity,
+  buildMedicalInformationState,
+  createEvidenceRef,
+} from './qa-lib/acceptmodv2-identity-gate.mjs';
+import {
+  classifyAcceptmodReadOnlyDiagnostic,
+  summarizeAppointmentDependency,
+  summarizeInsuranceReadiness,
+  summarizeOfficialPatientExistence,
+} from './qa-lib/orca-trial-preflight.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
+const requestedCandidateId = process.env.QA_CANDIDATE_ID?.trim() ?? '';
 const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:5173';
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
@@ -28,11 +43,23 @@ fs.mkdirSync(networkDir, { recursive: true });
 const facilityId = resolveQaFacilityId();
 const authUserId = resolveQaUserId();
 const authPasswordPlain = resolveQaPasswordPlain();
-const patientId = process.env.QA_PATIENT_ID?.trim() ?? '';
+const requestedPatientId = process.env.QA_PATIENT_ID?.trim() ?? '';
+const candidateId = requestedCandidateId || requestedPatientId || `${runId}:acceptmodv2`;
 const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
+const requestedAppointmentFlowMode = process.env.QA_APPOINTMENT_FLOW_MODE?.trim() ?? 'direct_acceptance';
+const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
+const acceptanceDate =
+  process.env.QA_ACCEPTANCE_DATE ??
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+const acceptanceTime = process.env.QA_ACCEPTANCE_TIME ?? '09:00:00';
 const sessionRole = process.env.QA_ROLE ?? 'admin';
 const sessionRoles = process.env.QA_ROLES
   ? process.env.QA_ROLES.split(',').map((role) => role.trim()).filter(Boolean)
@@ -46,17 +73,25 @@ const session = buildQaSession({
   sessionRoles,
 });
 
-if (!patientId) {
-  throw new Error('QA_PATIENT_ID is required for read-only WebORCA preflight.');
-}
-
+const TRIAL_INITIAL_PATIENT_IDS = Array.from({ length: 11 }, (_, index) => String(index + 1).padStart(5, '0'));
+const REJECTED_PATIENT_IDS = new Set(['0000001']);
 const MEDICAL_INFORMATION_PROBE_PATH = '/api/orca/official/appointments/medical-information';
+const OFFICIAL_PATIENT_BATCH_PATH = '/api/orca/official/patients/batch';
+const OFFICIAL_INSURANCE_COMBINATIONS_PATH = '/api/orca/official/insurance/combinations';
+const LOCAL_PATIENT_SEARCH_PATH = '/api/local/patients/search';
+const APPOINTMENTS_LIST_PATH = '/api/orca/official/appointments/list';
+const VISITS_LIST_PATH = '/api/orca/official/visits/list';
+const VISITS_MUTATION_PATH = '/api/orca/official/visits/mutation';
 const TARGET_PATHS = [
   MEDICAL_INFORMATION_PROBE_PATH,
-  '/api/local/patients/search',
-  '/api/orca/official/appointments/list',
-  '/api/orca/official/visits/list',
+  OFFICIAL_PATIENT_BATCH_PATH,
+  OFFICIAL_INSURANCE_COMBINATIONS_PATH,
+  LOCAL_PATIENT_SEARCH_PATH,
+  APPOINTMENTS_LIST_PATH,
+  VISITS_LIST_PATH,
+  VISITS_MUTATION_PATH,
 ];
+const ACCEPTMOD_PATIENT_NOT_FOUND = '10';
 
 const consoleMessages = [];
 const pageErrors = [];
@@ -93,7 +128,15 @@ const redactUrl = (value) => {
   }
 };
 
+const normalizeString = (value) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
+const normalizeApiResult = (value) => (value === null || value === undefined ? '' : String(value).trim());
+const isAllZeroApiResult = (apiResult) => Boolean(apiResult && /^[0]+$/.test(apiResult));
+const verdict = (accepted, verified = true) => {
+  if (!verified) return 'not_verified';
+  return accepted ? 'accepted' : 'rejected';
+};
 const isTarget = (url) => TARGET_PATHS.some((pathName) => url.includes(pathName));
+const urlFor = (pathName) => new URL(pathName, baseURL).toString();
 
 const summarizeBody = (body) => {
   if (!body) return { bodyChars: 0 };
@@ -106,6 +149,7 @@ const summarizeBody = (body) => {
       apiResultMessage: parsed?.apiResultMessage,
       recordsReturned: parsed?.recordsReturned,
       patientsCount: Array.isArray(parsed?.patients) ? parsed.patients.length : undefined,
+      combinationsCount: Array.isArray(parsed?.combinations) ? parsed.combinations.length : undefined,
       itemsCount: Array.isArray(parsed?.items) ? parsed.items.length : undefined,
       slotsCount: Array.isArray(parsed?.slots) ? parsed.slots.length : undefined,
       visitsCount: Array.isArray(parsed?.visits) ? parsed.visits.length : undefined,
@@ -124,11 +168,6 @@ const recordRequest = (request) => {
     headers: redactHeaders(request.headers()),
     postData: summarizeBody(request.postData() ?? ''),
   });
-};
-
-const statusLabel = (accepted, verified = true) => {
-  if (!verified) return 'not_verified';
-  return accepted ? 'accepted' : 'rejected';
 };
 
 const collectResponse = async (response) => {
@@ -156,39 +195,77 @@ const collectResponse = async (response) => {
   });
 };
 
-const parseApiResult = (body) => {
+const recordDirectExchange = async ({ pathName, method, requestBody, response, responseText }) => {
+  requestRecords.push({
+    url: redactUrl(urlFor(pathName)),
+    method,
+    headers: {},
+    postData: summarizeBody(requestBody ? JSON.stringify(requestBody) : ''),
+  });
+  networkRecords.push({
+    url: redactUrl(urlFor(pathName)),
+    status: response.status(),
+    statusText: response.statusText(),
+    request: {
+      method,
+      headers: {},
+      postData: summarizeBody(requestBody ? JSON.stringify(requestBody) : ''),
+    },
+    response: {
+      headers: redactHeaders(response.headers()),
+      body: summarizeBody(responseText),
+    },
+  });
+};
+
+const parseJson = (body) => {
   try {
-    const parsed = JSON.parse(body);
-    return {
-      apiResult: parsed?.apiResult ?? '',
-      apiResultMessage: parsed?.apiResultMessage ?? '',
-      itemsCount: Array.isArray(parsed?.items) ? parsed.items.length : undefined,
-    };
+    return JSON.parse(body);
   } catch {
-    return { apiResult: '', apiResultMessage: '', itemsCount: undefined };
+    return {};
   }
 };
 
+const normalizeDateDigits = (value) => {
+  const normalized = normalizeString(value)?.replace(/\D/g, '');
+  return normalized && normalized.length >= 8 ? normalized.slice(0, 8) : undefined;
+};
+
+const isCombinationEffectiveOn = (combination, baseDate) => {
+  const base = normalizeDateDigits(baseDate);
+  if (!base) return false;
+  const start = normalizeDateDigits(combination?.certificateStartDate);
+  const end = normalizeDateDigits(combination?.certificateExpiredDate);
+  return (!start || start <= base) && (!end || end >= base || /^9+$/.test(end));
+};
+
+const buildCandidateIds = () => {
+  const ids = requestedPatientId ? [requestedPatientId, ...TRIAL_INITIAL_PATIENT_IDS] : TRIAL_INITIAL_PATIENT_IDS;
+  return Array.from(new Set(ids.map((id) => id.trim()).filter(Boolean)));
+};
+
 const probeMedicalInformationOptions = async (context) => {
-  const url = new URL(MEDICAL_INFORMATION_PROBE_PATH, baseURL).toString();
   logStep('medical-information read-only probe start');
   try {
-    const response = await context.request.get(url);
+    const response = await context.request.get(urlFor(MEDICAL_INFORMATION_PROBE_PATH));
     const body = await response.text().catch(() => '');
-    const parsed = parseApiResult(body);
-    networkRecords.push({
-      url: redactUrl(url),
-      status: response.status(),
-      statusText: response.statusText(),
-      request: { method: 'GET', headers: {}, postData: { bodyChars: 0 } },
-      response: { headers: redactHeaders(response.headers()), body: summarizeBody(body) },
+    await recordDirectExchange({
+      pathName: MEDICAL_INFORMATION_PROBE_PATH,
+      method: 'GET',
+      response,
+      responseText: body,
     });
+    const parsed = parseJson(body);
+    const apiResult = normalizeApiResult(parsed?.apiResult);
+    const accepted = response.status() === 200 && apiResult === '00';
     return {
       status: response.status(),
       ok: response.ok(),
-      ...parsed,
-      verdict: statusLabel(response.status() === 200 && parsed.apiResult === '00'),
-      accepted: response.status() === 200 && parsed.apiResult === '00',
+      apiResult,
+      apiResultMessage: normalizeString(parsed?.apiResultMessage) ?? '',
+      optionCount: Array.isArray(parsed?.items) ? parsed.items.length : 0,
+      verdict: verdict(accepted),
+      accepted,
     };
   } catch (error) {
     return {
@@ -196,6 +273,7 @@ const probeMedicalInformationOptions = async (context) => {
       ok: false,
       apiResult: '',
       apiResultMessage: '',
+      optionCount: 0,
       verdict: 'rejected',
       accepted: false,
       error: String(error),
@@ -203,8 +281,241 @@ const probeMedicalInformationOptions = async (context) => {
   }
 };
 
+const probeOfficialPatientBatch = async (context, candidateIds) => {
+  const body = { patientIds: candidateIds, includeInsurance: false };
+  logStep(`official patient exact probe start candidates=${candidateIds.length}`);
+  try {
+    const response = await context.request.post(urlFor(OFFICIAL_PATIENT_BATCH_PATH), { data: body });
+    const text = await response.text().catch(() => '');
+    await recordDirectExchange({
+      pathName: OFFICIAL_PATIENT_BATCH_PATH,
+      method: 'POST',
+      requestBody: body,
+      response,
+      responseText: text,
+    });
+    const parsed = parseJson(text);
+    const apiResult = normalizeApiResult(parsed?.apiResult);
+    const candidates = Object.fromEntries(
+      candidateIds.map((candidateId) => {
+        const existence = summarizeOfficialPatientExistence({
+          httpStatus: response.status(),
+          body: parsed,
+          candidateId,
+        });
+        return [
+          candidateId,
+          {
+            ...existence,
+            exactMatch: existence.exactIdMatched,
+          },
+        ];
+      }),
+    );
+    const exactMatchedPatientIds = candidateIds.filter((candidateId) => candidates[candidateId]?.accepted === true);
+    const missingPatientIds = candidateIds.filter((candidateId) => !exactMatchedPatientIds.includes(candidateId));
+    const businessOk = response.ok() && isAllZeroApiResult(apiResult);
+    return {
+      status: response.status(),
+      ok: response.ok(),
+      apiResult,
+      apiResultMessage: normalizeString(parsed?.apiResultMessage) ?? '',
+      requestedCount: candidateIds.length,
+      returnedCount: exactMatchedPatientIds.length,
+      exactMatchedPatientIds,
+      missingPatientIds,
+      candidates,
+      verdict: verdict(businessOk && exactMatchedPatientIds.length > 0),
+      accepted: businessOk && exactMatchedPatientIds.length > 0,
+    };
+  } catch (error) {
+    return {
+      status: 0,
+      ok: false,
+      apiResult: '',
+      apiResultMessage: '',
+      requestedCount: candidateIds.length,
+      returnedCount: 0,
+      exactMatchedPatientIds: [],
+      missingPatientIds: candidateIds,
+      candidates: Object.fromEntries(candidateIds.map((candidateId) => [
+        candidateId,
+        { exactMatch: false, verdict: 'rejected' },
+      ])),
+      verdict: 'rejected',
+      accepted: false,
+      error: String(error),
+    };
+  }
+};
+
+const probeInsuranceReadiness = async (context, patientId) => {
+  const body = { patientId, baseDate: acceptanceDate };
+  logStep(`insurance read-only probe start patient=${patientId}`);
+  try {
+    const response = await context.request.post(urlFor(OFFICIAL_INSURANCE_COMBINATIONS_PATH), { data: body });
+    const text = await response.text().catch(() => '');
+    await recordDirectExchange({
+      pathName: OFFICIAL_INSURANCE_COMBINATIONS_PATH,
+      method: 'POST',
+      requestBody: body,
+      response,
+      responseText: text,
+    });
+    const parsed = parseJson(text);
+    const apiResult = normalizeApiResult(parsed?.apiResult);
+    const combinations = Array.isArray(parsed?.combinations) ? parsed.combinations : [];
+    const effectiveCount = combinations.filter((combination) => isCombinationEffectiveOn(combination, acceptanceDate)).length;
+    const readiness = summarizeInsuranceReadiness({
+      httpStatus: response.status(),
+      body: parsed,
+      baseDate: acceptanceDate,
+    });
+    const accepted = readiness.accepted;
+    return {
+      status: response.status(),
+      apiResult,
+      classification: readiness.classification,
+      count: combinations.length,
+      effectiveCount,
+      selectedCombinationId: effectiveCount > 0 ? '<<redacted>>' : undefined,
+      verdict: verdict(accepted),
+      accepted,
+      transportOk: response.ok(),
+      businessOk: isAllZeroApiResult(apiResult),
+    };
+  } catch (error) {
+    return {
+      status: 0,
+      apiResult: '',
+      classification: 'ambiguous_readiness_failure',
+      count: 0,
+      effectiveCount: 0,
+      selectedCombinationId: undefined,
+      verdict: 'rejected',
+      accepted: false,
+      transportOk: false,
+      businessOk: false,
+      error: String(error),
+    };
+  }
+};
+
+const probeLocalSelectable = async (context, patientId) => {
+  const body = { keyword: patientId, searchType: 'patient-id', runId };
+  logStep(`local exact patient search probe start patient=${patientId}`);
+  try {
+    const response = await context.request.post(urlFor(LOCAL_PATIENT_SEARCH_PATH), { data: body });
+    const text = await response.text().catch(() => '');
+    await recordDirectExchange({
+      pathName: LOCAL_PATIENT_SEARCH_PATH,
+      method: 'POST',
+      requestBody: body,
+      response,
+      responseText: text,
+    });
+    const parsed = parseJson(text);
+    const apiResult = normalizeApiResult(parsed?.apiResult);
+    const patients = Array.isArray(parsed?.patients) ? parsed.patients : [];
+    const localIds = patients.map((patient) => normalizeString(patient?.patientId)).filter(Boolean);
+    const exactMatchCount = localIds.filter((localId) => localId === patientId).length;
+    const recordsReturned = typeof parsed?.recordsReturned === 'number' ? parsed.recordsReturned : patients.length;
+    const accepted = response.ok() && isAllZeroApiResult(apiResult) && exactMatchCount === 1;
+    return {
+      patientId,
+      recordsReturned,
+      exactMatchCount,
+      verdict: verdict(accepted),
+      accepted,
+      reason:
+        exactMatchCount === 0
+          ? 'local_sync_required'
+          : exactMatchCount > 1
+            ? 'local_duplicate_active_entries'
+            : undefined,
+    };
+  } catch (error) {
+    return {
+      patientId,
+      recordsReturned: 0,
+      exactMatchCount: 0,
+      verdict: 'rejected',
+      accepted: false,
+      reason: 'local_search_failed',
+      error: String(error),
+    };
+  }
+};
+
+const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
+  const body = {
+    requestNumber: '00',
+    patientId,
+    acceptanceDate,
+    acceptanceTime,
+    departmentCode,
+    physicianCode,
+    insurances: paymentMode === 'self' ? [{ insuranceProviderClass: '9' }] : undefined,
+  };
+  Object.keys(body).forEach((key) => body[key] === undefined && delete body[key]);
+  logStep(`acceptmodv2 read-only diagnostic start patient=${patientId}`);
+  try {
+    const response = await context.request.post(urlFor(VISITS_MUTATION_PATH), { data: body });
+    const text = await response.text().catch(() => '');
+    await recordDirectExchange({
+      pathName: VISITS_MUTATION_PATH,
+      method: 'POST',
+      requestBody: body,
+      response,
+      responseText: text,
+    });
+    const parsed = parseJson(text);
+    const apiResult = normalizeApiResult(parsed?.apiResult);
+    const diagnostic = classifyAcceptmodReadOnlyDiagnostic({
+      executed: true,
+      httpStatus: response.status(),
+      apiResult,
+    });
+    return {
+      apiResult,
+      status: response.status(),
+      verdict: diagnostic.accepted ? 'accepted' : 'rejected',
+      businessStatus:
+        diagnostic.classification === 'diagnostic_no_existing_acceptance'
+          ? 'diagnosticNoExistingAcceptance'
+          : diagnostic.classification === 'diagnostic_existing_acceptance'
+            ? 'diagnosticExistingAcceptance'
+            : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
+            ? 'businessRejected'
+            : 'notVerified',
+      businessReason:
+        diagnostic.classification === 'diagnostic_no_existing_acceptance'
+          ? 'no_existing_acceptance'
+          : diagnostic.classification === 'diagnostic_existing_acceptance'
+            ? 'existing_acceptance'
+          : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
+            ? 'patient_not_found'
+            : 'not_readonly_no_existing_acceptance',
+      mutationSuccess: diagnostic.mutationSuccess,
+      classification: diagnostic.classification,
+      acceptedForPhase3Attempt: diagnostic.acceptedForPhase3Attempt,
+    };
+  } catch (error) {
+    return {
+      apiResult: '',
+      status: 0,
+      verdict: 'rejected',
+      businessStatus: 'notVerified',
+      businessReason: 'diagnostic_failed',
+      mutationSuccess: false,
+      acceptedForPhase3Attempt: false,
+      error: String(error),
+    };
+  }
+};
+
 const selectEvidence = async (page) =>
-  await page.evaluate(({ departmentCode, physicianCode, paymentMode, visitKind }) => {
+  await page.evaluate(({ departmentCode, physicianCode, paymentMode, visitKind, medicalInformation }) => {
     const inspect = (selector, desiredValue) => {
       const select = document.querySelector(selector);
       const options = select ? Array.from(select.querySelectorAll('option')).map((option) => option.value) : [];
@@ -219,41 +530,231 @@ const selectEvidence = async (page) =>
       physician: inspect('#reception-accept-physician', physicianCode),
       visitKind: inspect('#reception-accept-visit-kind', visitKind),
       paymentMode: inspect('#reception-accept-payment-mode', paymentMode),
-      medicalInformation: inspect('#reception-accept-medical-information', ''),
+      medicalInformation: {
+        ...inspect('#reception-accept-medical-information', medicalInformation),
+        selectedState: medicalInformation ? 'selected' : 'omitted',
+        selectedValue: medicalInformation || undefined,
+      },
     };
-  }, { departmentCode, physicianCode, paymentMode, visitKind });
+  }, { departmentCode, physicianCode, paymentMode, visitKind, medicalInformation });
 
-const classify = ({ sessionMe, medicalInformationProbe, patientSearch, selectors }) => {
-  if (sessionMe.status === 401 || sessionMe.status === 403 || medicalInformationProbe.status === 401 || medicalInformationProbe.status === 403) {
-    return 'auth-blocker';
+const buildSelectorReadiness = (selectors) => {
+  const details = Object.fromEntries(
+    Object.entries(selectors).map(([key, item]) => [
+      key,
+      {
+        ...item,
+        verdict: item.notVerifiedReason
+          ? verdict(false, false)
+          : verdict(item.exists && item.optionCount > 0 && item.hasDesiredValue !== false),
+      },
+    ]),
+  );
+  return {
+    details,
+    verdict: Object.values(details).every((item) => item.verdict === 'accepted') ? 'accepted' : 'rejected',
+    accepted: Object.values(details).every((item) => item.verdict === 'accepted'),
+  };
+};
+
+const buildAppointmentDependency = async (context, patientId) => {
+  if (requestedAppointmentFlowMode === 'appointment_row' && patientId) {
+    const body = {
+      appointmentDate: acceptanceDate,
+      departmentCode,
+      physicianCode,
+      page: 1,
+      size: 50,
+    };
+    logStep(`appointment row dependency probe start patient=${patientId}`);
+    try {
+      const response = await context.request.post(urlFor(APPOINTMENTS_LIST_PATH), { data: body });
+      const text = await response.text().catch(() => '');
+      await recordDirectExchange({
+        pathName: APPOINTMENTS_LIST_PATH,
+        method: 'POST',
+        requestBody: body,
+        response,
+        responseText: text,
+      });
+      const parsed = parseJson(text);
+      return summarizeAppointmentDependency({
+        flowMode: requestedAppointmentFlowMode,
+        httpStatus: response.status(),
+        body: parsed,
+        patientId,
+        baseDate: acceptanceDate,
+      });
+    } catch (error) {
+      return {
+        flowMode: 'appointment_row',
+        mode: 'appointment_row',
+        required: true,
+        absenceBlocker: true,
+        status: 0,
+        httpStatus: 0,
+        apiResult: '',
+        rowCount: 0,
+        exactRowCount: 0,
+        classification: 'ambiguous_readiness_failure',
+        verdict: 'rejected',
+        accepted: false,
+        error: String(error),
+      };
+    }
   }
-  if (medicalInformationProbe.status === 0 || medicalInformationProbe.status >= 500) {
-    return 'environment-blocker';
+  const appointmentRecord = [...networkRecords].reverse().find((record) => record.url.includes(APPOINTMENTS_LIST_PATH));
+  const visitRecord = [...networkRecords].reverse().find((record) => record.url.includes(VISITS_LIST_PATH));
+  const appointmentDependency = summarizeAppointmentDependency({
+    flowMode: requestedAppointmentFlowMode,
+    httpStatus: appointmentRecord?.status,
+    body: {
+      apiResult: appointmentRecord?.response?.body?.apiResult,
+      recordsReturned: appointmentRecord?.response?.body?.recordsReturned,
+    },
+    patientId,
+    baseDate: acceptanceDate,
+  });
+  return {
+    ...appointmentDependency,
+    visitApiResult: visitRecord?.response?.body?.apiResult,
+    visitRecordsReturned: visitRecord?.response?.body?.recordsReturned,
+    appointmentApiResult: appointmentRecord?.response?.body?.apiResult,
+    appointmentRecordsReturned: appointmentRecord?.response?.body?.recordsReturned,
+  };
+};
+
+const chooseCandidate = async ({ context, candidateIds, officialPatientExistence }) => {
+  const candidates = {};
+  let selectedPatientId = '';
+  for (const candidateId of candidateIds) {
+    const rejected = REJECTED_PATIENT_IDS.has(candidateId);
+    const inTrialInitialRange = TRIAL_INITIAL_PATIENT_IDS.includes(candidateId);
+    const explicitNonTrial = Boolean(requestedPatientId && candidateId === requestedPatientId && !inTrialInitialRange);
+    const officialExact = officialPatientExistence.exactMatchedPatientIds.includes(candidateId);
+    const candidate = {
+      patientId: candidateId,
+      source: inTrialInitialRange ? 'weborca-trial-initial-patient-range' : 'qa-patient-id',
+      inTrialInitialRange,
+      rejected,
+      rejectReason: rejected ? '0000001 is local smoke seed, not WebORCA Trial initial Patient_ID' : explicitNonTrial ? 'not_in_trial_initial_range' : undefined,
+      officialExactMatch: officialExact,
+      officialVerdict: verdict(!rejected && !explicitNonTrial && officialExact && officialPatientExistence.accepted),
+      insurance: { verdict: 'not_verified', accepted: false },
+      local: { verdict: 'not_verified', accepted: false },
+    };
+    if (!rejected && !explicitNonTrial && officialExact && officialPatientExistence.accepted) {
+      candidate.insurance = await probeInsuranceReadiness(context, candidateId);
+    }
+    if (!rejected && !explicitNonTrial && ((officialExact && officialPatientExistence.accepted) || candidateId === requestedPatientId)) {
+      candidate.local = await probeLocalSelectable(context, candidateId);
+    }
+    candidate.verdict = verdict(candidate.officialVerdict === 'accepted' && candidate.insurance.accepted && candidate.local.accepted);
+    candidates[candidateId] = candidate;
+    const canSelect = candidate.verdict === 'accepted' && (!requestedPatientId || candidateId === requestedPatientId);
+    if (!selectedPatientId && canSelect) {
+      selectedPatientId = candidateId;
+    }
+  }
+  return {
+    requestedPatientId: requestedPatientId || undefined,
+    probeCandidates: candidateIds,
+    fixedTrialInitialRange: TRIAL_INITIAL_PATIENT_IDS,
+    rejectedCandidates: Object.values(candidates)
+      .filter((candidate) => candidate.rejected || candidate.rejectReason)
+      .map((candidate) => ({ patientId: candidate.patientId, reason: candidate.rejectReason })),
+    selectedPatientId: selectedPatientId || undefined,
+    selectedSource: selectedPatientId ? candidates[selectedPatientId].source : undefined,
+    selectionPolicy: requestedPatientId
+      ? 'QA_PATIENT_ID must be an accepted official Trial initial candidate'
+      : 'first accepted official Trial initial candidate',
+    verdict: selectedPatientId ? 'accepted' : 'rejected',
+    candidates,
+  };
+};
+
+const classify = ({
+  sessionMe,
+  medicalInformationProbe,
+  trialSourceCandidate,
+  officialPatientExistence,
+  insuranceReadiness,
+  localSelectableReadiness,
+  selectorReadiness,
+  acceptmodv2ReadOnlyDiagnostic,
+  appointmentDependency,
+}) => {
+  if (sessionMe.status === 401 || sessionMe.status === 403 || medicalInformationProbe.status === 401 || medicalInformationProbe.status === 403) {
+    return { blockerClassification: 'auth-blocker', blockerReason: 'authentication_or_authorization_failed' };
+  }
+  if (medicalInformationProbe.status === 0 || medicalInformationProbe.status >= 500 || officialPatientExistence.status >= 500) {
+    return { blockerClassification: 'environment-blocker', blockerReason: 'official_readonly_probe_failed' };
+  }
+  if (requestedPatientId && REJECTED_PATIENT_IDS.has(requestedPatientId)) {
+    return { blockerClassification: 'test-data-blocker', blockerReason: 'rejected_trial_candidate' };
   }
   if (!medicalInformationProbe.accepted) {
-    return 'external-trial-ambiguity';
+    return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'medical_information_probe_not_accepted' };
   }
-  if (!patientSearch.selectable) {
-    return 'test-data-blocker';
+  if (!trialSourceCandidate.selectedPatientId) {
+    const requestedCandidate = requestedPatientId ? trialSourceCandidate.candidates[requestedPatientId] : undefined;
+    if (requestedCandidate?.local?.exactMatchCount > 0 && requestedCandidate?.officialVerdict !== 'accepted') {
+      return { blockerClassification: 'test-data-blocker', blockerReason: 'local_sync_required' };
+    }
+    return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'no_official_trial_candidate_accepted' };
   }
-  if (Object.values(selectors).some((item) => !item.exists || item.optionCount < 1 || item.hasDesiredValue === false)) {
-    return 'test-data-blocker';
+  if (localSelectableReadiness.verdict !== 'accepted') {
+    return { blockerClassification: 'test-data-blocker', blockerReason: localSelectableReadiness.reason ?? 'local_sync_required' };
+  }
+  if (insuranceReadiness.verdict !== 'accepted') {
+    if (insuranceReadiness.classification === 'ambiguous_readiness_failure') {
+      return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
+    }
+    if (insuranceReadiness.classification === 'business_rejected_insurance') {
+      return { blockerClassification: 'test-data-blocker', blockerReason: 'business_rejected_insurance' };
+    }
+    return { blockerClassification: 'test-data-blocker', blockerReason: 'insurance_missing_or_not_effective' };
+  }
+  if (selectorReadiness.verdict !== 'accepted') {
+    return { blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER, blockerReason: 'selector_missing' };
+  }
+  if (appointmentDependency?.classification === 'ambiguous_readiness_failure') {
+    return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
+  }
+  if (appointmentDependency?.required && appointmentDependency?.verdict !== 'accepted') {
+    return { blockerClassification: 'test-data-blocker', blockerReason: appointmentDependency.classification ?? 'appointment_row_missing' };
+  }
+  if (acceptmodv2ReadOnlyDiagnostic.verdict !== 'accepted') {
+    return {
+      blockerClassification: 'test-data-blocker',
+      blockerReason:
+        acceptmodv2ReadOnlyDiagnostic.apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
+          ? 'diagnostic_patient_not_found'
+          : 'diagnostic_not_no_existing_acceptance',
+    };
   }
   if (pageErrors.length > 0) {
-    return 'repo-defect';
+    return { blockerClassification: 'repo-defect', blockerReason: 'page_errors_observed' };
   }
-  return 'none';
+  return { blockerClassification: 'none', blockerReason: 'none' };
 };
 
 const buildMarkdownSummary = (summary) =>
   `# WebORCA read-only preflight\n\n` +
   `- RUN_ID: ${summary.runId}\n` +
   `- verdict: ${summary.verdict}\n` +
+  `- acceptedForPhase3Attempt: ${summary.acceptedForPhase3Attempt ? 'yes' : 'no'}\n` +
+  `- phase3AttemptPatientId: ${summary.phase3AttemptPatientId ?? 'none'}\n` +
+  `- medicalInformationState: ${summary.medicalInformationState?.state ?? 'omitted'}${summary.medicalInformationState?.value ? `/${summary.medicalInformationState.value}` : ''}\n` +
   `- blockerClassification: ${summary.blockerClassification}\n` +
-  `- medical-information: HTTP ${summary.medicalInformationProbe.status}, apiResult=${summary.medicalInformationProbe.apiResult || 'none'}\n` +
-  `- patient search selectable: ${summary.patientSearch.selectable ? 'yes' : 'no'}\n` +
-  `- C7 accepted: not verified (mutation not executed)\n` +
-  `- visitptlstv2 business success: ${summary.visitListBusinessSuccess === true ? 'accepted' : summary.visitListBusinessSuccess === false ? 'rejected' : 'not verified'}\n`;
+  `- blockerReason: ${summary.blockerReason}\n` +
+  `- trialSourceCandidate: ${summary.trialSourceCandidate.verdict}\n` +
+  `- officialPatientExistence: ${summary.officialPatientExistence.verdict}\n` +
+  `- insuranceReadiness: ${summary.insuranceReadiness.verdict} status=${summary.insuranceReadiness.status ?? 'none'} apiResult=${summary.insuranceReadiness.apiResult || 'none'} classification=${summary.insuranceReadiness.classification ?? 'none'} accepted=${summary.insuranceReadiness.accepted ? 'yes' : 'no'} count=${summary.insuranceReadiness.count ?? 0} effective=${summary.insuranceReadiness.effectiveCount ?? 0}\n` +
+  `- localSelectableReadiness: ${summary.localSelectableReadiness.verdict}\n` +
+  `- selectorReadiness: ${summary.selectorReadiness.verdict}\n` +
+  `- appointmentDependency: ${summary.appointmentDependency.verdict} flowMode=${summary.appointmentDependency.flowMode ?? 'unknown'} required=${summary.appointmentDependency.required ? 'yes' : 'no'} status=${summary.appointmentDependency.status ?? 'none'} apiResult=${summary.appointmentDependency.apiResult || 'none'} classification=${summary.appointmentDependency.classification ?? 'none'} accepted=${summary.appointmentDependency.accepted ? 'yes' : 'no'}\n` +
+  `- acceptmodv2ReadOnlyDiagnostic: ${summary.acceptmodv2ReadOnlyDiagnostic.verdict} apiResult=${summary.acceptmodv2ReadOnlyDiagnostic.apiResult || 'none'} mutationSuccess=${summary.acceptmodv2ReadOnlyDiagnostic.mutationSuccess ? 'yes' : 'no'}\n`;
 
 let browser;
 let context;
@@ -281,105 +782,233 @@ try {
   page.on('request', recordRequest);
   page.on('response', collectResponse);
 
+  const candidateIds = buildCandidateIds();
   const medicalInformationProbe = await probeMedicalInformationOptions(context);
+  const officialPatientExistence = await probeOfficialPatientBatch(context, candidateIds);
+  const trialSourceCandidate = await chooseCandidate({
+    context,
+    candidateIds,
+    officialPatientExistence,
+  });
+  const selectedPatientId = trialSourceCandidate.selectedPatientId;
 
-  await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
-  logStep('goto reception');
-  await page.locator('.reception-page').waitFor({ timeout: 20_000 });
-  await page.getByRole('button', { name: '既存患者受付/患者検索' }).click();
-  logStep('opened workflow modal');
-  const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
-  await workflowModal.waitFor({ timeout: 20_000 });
-  const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
-  await patientSearchForm.locator('#reception-patient-search-patient-id').fill(patientId);
-  await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
-  logStep('submitted read-only patient search');
-  const resultListItems = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]');
-  await resultListItems.first().waitFor({ timeout: 20_000 }).catch(() => null);
-  const selectableCount = await resultListItems.count().catch(() => 0);
-  const firstResultSelectable =
-    selectableCount > 0
-      ? await resultListItems
-          .first()
-          .evaluate((node) => {
-            if (!(node instanceof HTMLElement)) return false;
-            const style = window.getComputedStyle(node);
-            return (
-              style.display !== 'none' &&
-              style.visibility !== 'hidden' &&
-              node.getClientRects().length > 0 &&
-              node.getAttribute('aria-disabled') !== 'true'
-            );
-          })
-          .catch(() => false)
-      : false;
-  const patientSearch = {
-    patientId,
-    selectable: firstResultSelectable,
-    selectableCount,
-    verdict: statusLabel(firstResultSelectable),
+  let uiSelectableCount = 0;
+  let uiFirstSelectable = false;
+  let selectors = {
+    department: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'no accepted trial candidate' },
+    physician: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'no accepted trial candidate' },
+    visitKind: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'no accepted trial candidate' },
+    paymentMode: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'no accepted trial candidate' },
+    medicalInformation: { exists: false, optionCount: 0, hasDesiredValue: true, notVerifiedReason: 'no accepted trial candidate' },
   };
-  if (firstResultSelectable) {
-    await resultListItems.first().click();
-    logStep('selected read-only patient search result');
-    await page
-      .waitForFunction(
-        () =>
-          ['#reception-accept-department', '#reception-accept-physician', '#reception-accept-visit-kind', '#reception-accept-payment-mode'].every(
-            (selector) => document.querySelector(selector)?.querySelectorAll('option').length,
-          ),
-        { timeout: 20_000 },
-      )
-      .catch(() => null);
+
+  if (selectedPatientId) {
+    await page.goto(`/f/${encodeURIComponent(facilityId)}/reception`, { waitUntil: 'domcontentloaded' });
+    logStep('goto reception');
+    await page.locator('.reception-page').waitFor({ timeout: 20_000 });
+    await page.getByRole('button', { name: '既存患者受付/患者検索' }).click();
+    logStep('opened workflow modal');
+    const workflowModal = page.locator('[data-test-id="reception-accept-workflow-modal"]');
+    await workflowModal.waitFor({ timeout: 20_000 });
+    const patientSearchForm = workflowModal.locator('[data-test-id="reception-patient-search-form"]');
+    await patientSearchForm.locator('#reception-patient-search-patient-id').fill(selectedPatientId);
+    await patientSearchForm.locator('[data-test-id="reception-patient-search-submit"]').click();
+    logStep('submitted read-only patient search');
+    const resultListItems = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]');
+    await resultListItems.first().waitFor({ timeout: 20_000 }).catch(() => null);
+    uiSelectableCount = await resultListItems.count().catch(() => 0);
+    uiFirstSelectable =
+      uiSelectableCount > 0
+        ? await resultListItems
+            .first()
+            .evaluate((node) => {
+              if (!(node instanceof HTMLElement)) return false;
+              const style = window.getComputedStyle(node);
+              return (
+                style.display !== 'none' &&
+                style.visibility !== 'hidden' &&
+                node.getClientRects().length > 0 &&
+                node.getAttribute('aria-disabled') !== 'true'
+              );
+            })
+            .catch(() => false)
+        : false;
+    if (uiFirstSelectable) {
+      await resultListItems.first().click();
+      logStep('selected read-only patient search result');
+      await page
+        .waitForFunction(
+          () =>
+            ['#reception-accept-department', '#reception-accept-physician', '#reception-accept-visit-kind', '#reception-accept-payment-mode'].every(
+              (selector) => document.querySelector(selector)?.querySelectorAll('option').length,
+            ),
+          { timeout: 20_000 },
+        )
+        .catch(() => null);
+      selectors = await selectEvidence(page);
+    } else {
+      logStep('selected candidate was not selectable in UI result list');
+    }
   }
-  const selectors = firstResultSelectable
-    ? await selectEvidence(page)
+
+  const selectedCandidate = selectedPatientId ? trialSourceCandidate.candidates[selectedPatientId] : undefined;
+  const localSelectableReadiness = {
+    ...(selectedCandidate?.local ?? {
+      patientId: selectedPatientId,
+      recordsReturned: 0,
+      exactMatchCount: 0,
+      verdict: 'not_verified',
+      accepted: false,
+      reason: 'no accepted trial candidate',
+    }),
+    uiSelectableCount,
+    uiFirstSelectable,
+    verdict: selectedCandidate?.local?.accepted && uiFirstSelectable ? 'accepted' : (selectedCandidate?.local?.verdict ?? 'not_verified'),
+  };
+  localSelectableReadiness.accepted = localSelectableReadiness.verdict === 'accepted';
+
+  const insuranceReadiness = selectedCandidate?.insurance ?? {
+    count: 0,
+    effectiveCount: 0,
+    selectedCombinationId: undefined,
+    verdict: 'not_verified',
+    accepted: false,
+  };
+  const selectorReadiness = buildSelectorReadiness(selectors);
+  const appointmentDependency = await buildAppointmentDependency(context, selectedPatientId);
+  const acceptmodv2ReadOnlyDiagnostic = selectedPatientId
+    ? await probeAcceptmodv2ReadOnlyDiagnostic(context, selectedPatientId)
     : {
-        department: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'patient search returned no selectable result' },
-        physician: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'patient search returned no selectable result' },
-        visitKind: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'patient search returned no selectable result' },
-        paymentMode: { exists: false, optionCount: 0, hasDesiredValue: false, notVerifiedReason: 'patient search returned no selectable result' },
-        medicalInformation: { exists: false, optionCount: 0, hasDesiredValue: true, notVerifiedReason: 'patient search returned no selectable result' },
+        apiResult: '',
+        status: 0,
+        verdict: 'not_verified',
+        businessStatus: 'notVerified',
+        businessReason: 'no accepted trial candidate',
+        mutationSuccess: false,
+        acceptedForPhase3Attempt: false,
       };
 
-  const visitListRecord = [...networkRecords].reverse().find((record) => record.url.includes('/api/orca/official/visits/list'));
-  const visitListApiResult = visitListRecord?.response?.body?.apiResult;
-  const visitListBusinessSuccess = visitListApiResult ? visitListApiResult === '00' : undefined;
-  const selectorVerdicts = Object.fromEntries(
-    Object.entries(selectors).map(([key, item]) => [
-      key,
-      {
-        ...item,
-        verdict: item.notVerifiedReason
-          ? statusLabel(false, false)
-          : statusLabel(item.exists && item.optionCount > 0 && item.hasDesiredValue !== false),
-      },
-    ]),
-  );
-  const visitListVerdict =
-    visitListBusinessSuccess === undefined ? 'not_verified' : statusLabel(visitListBusinessSuccess);
-  const blockerClassification = classify({ sessionMe, medicalInformationProbe, patientSearch, selectors });
+  const classification = classify({
+    sessionMe,
+    medicalInformationProbe,
+    trialSourceCandidate,
+    officialPatientExistence,
+    insuranceReadiness,
+    localSelectableReadiness,
+    selectorReadiness,
+    appointmentDependency,
+    acceptmodv2ReadOnlyDiagnostic,
+  });
+  const acceptedForPhase3Attempt =
+    classification.blockerClassification === 'none' &&
+    Boolean(selectedPatientId) &&
+    medicalInformationProbe.accepted &&
+    trialSourceCandidate.verdict === 'accepted' &&
+    officialPatientExistence.candidates?.[selectedPatientId]?.verdict === 'accepted' &&
+    insuranceReadiness.verdict === 'accepted' &&
+    localSelectableReadiness.verdict === 'accepted' &&
+    selectorReadiness.verdict === 'accepted' &&
+    appointmentDependency.verdict === 'accepted' &&
+    acceptmodv2ReadOnlyDiagnostic.acceptedForPhase3Attempt === true;
+  const patientId = selectedPatientId ?? requestedPatientId;
+  const phaseCandidateId = requestedCandidateId || patientId || candidateId;
+  const medicalInformationState = buildMedicalInformationState(medicalInformation);
+  const inputIdentity = buildInputIdentity({
+    runId,
+    candidateId: phaseCandidateId,
+    facilityId,
+    patientId,
+    departmentCode,
+    physicianCode,
+    paymentMode,
+    visitKind,
+    medicalInformation,
+  });
+  const insuranceReadinessWithEvidence = {
+    ...insuranceReadiness,
+    key: `${facilityId}:${patientId || 'unresolved'}:${paymentMode}:${acceptanceDate}`,
+    ...createEvidenceRef('preflight:insurance-readiness', {
+      facilityId,
+      patientId,
+      paymentMode,
+      acceptanceDate,
+      insuranceReadiness,
+    }),
+  };
+  const officialPatientEvidence = createEvidenceRef('summary.json#/officialPatientExistence', {
+    patientId,
+    candidate: patientId ? officialPatientExistence.candidates?.[patientId] : undefined,
+    exactMatchedPatientIds: officialPatientExistence.exactMatchedPatientIds,
+  });
+  const insuranceEvidence = createEvidenceRef('summary.json#/insuranceReadiness', {
+    patientId,
+    paymentMode,
+    acceptanceDate,
+    count: insuranceReadiness.count,
+    effectiveCount: insuranceReadiness.effectiveCount,
+    verdict: insuranceReadiness.verdict,
+  });
+  const localSelectableEvidence = createEvidenceRef('summary.json#/localSelectableReadiness', {
+    patientId,
+    localSelectableReadiness,
+  });
+  const selectorEvidence = createEvidenceRef('summary.json#/selectorReadiness', {
+    patientId,
+    departmentCode,
+    physicianCode,
+    paymentMode,
+    visitKind,
+    medicalInformationState,
+    selectorReadiness,
+  });
+
   const summary = {
     runId,
+    source: EXACT_PREFLIGHT_SOURCE,
+    flowMode: EXACT_PREFLIGHT_FLOW_MODE,
+    candidateId: phaseCandidateId,
     executedAt: new Date().toISOString(),
     baseURL: redactUrl(baseURL),
     facilityId,
+    patientId,
+    departmentCode,
+    physicianCode,
+    paymentMode,
+    visitKind,
+    medicalInformation: medicalInformation || undefined,
+    medicalInformationState,
+    inputIdentity,
+    officialPatientEvidence,
+    officialPatientEvidenceRef: officialPatientEvidence.id,
+    officialPatientEvidenceHash: officialPatientEvidence.hash,
+    insuranceEvidence,
+    insuranceEvidenceRef: insuranceEvidence.id,
+    insuranceEvidenceHash: insuranceEvidence.hash,
+    localSelectableEvidence,
+    localSelectableEvidenceRef: localSelectableEvidence.id,
+    localSelectableEvidenceHash: localSelectableEvidence.hash,
+    selectorEvidence,
+    selectorEvidenceRef: selectorEvidence.id,
+    selectorEvidenceHash: selectorEvidence.hash,
     sessionRole,
     login: {
       sessionMeStatus: sessionMe.status,
     },
-    patientSearch,
-    selectors: selectorVerdicts,
-    medicalInformationProbe,
-    visitListApiResult,
-    visitListBusinessSuccess,
-    visitListVerdict,
-    verdict: blockerClassification === 'none' ? 'accepted' : 'rejected',
-    blockerClassification,
-    c7Gate: {
-      status: 'not verified',
-      reason: 'read-only preflight does not execute visits mutation',
-    },
+    acceptanceDate,
+    requestedPatientId: requestedPatientId || undefined,
+    phase3AttemptPatientId: acceptedForPhase3Attempt ? selectedPatientId : null,
+    trialSourceCandidate,
+    officialPatientExistence,
+    insuranceReadiness: insuranceReadinessWithEvidence,
+    selectorReadiness,
+    localSelectableReadiness,
+    appointmentDependency,
+    acceptmodv2ReadOnlyDiagnostic,
+    acceptedForPhase3Attempt,
+    verdict: acceptedForPhase3Attempt ? 'accepted' : 'rejected',
+    blockerClassification: classification.blockerClassification,
+    blockerReason: classification.blockerReason,
+    rawSensitiveFieldsExcluded: true,
     consoleMessages,
     pageErrors,
   };
@@ -394,7 +1023,7 @@ try {
   await context.close();
   await browser.close();
   console.log(JSON.stringify(summary, null, 2));
-  if (blockerClassification !== 'none') {
+  if (!acceptedForPhase3Attempt) {
     process.exit(1);
   }
 } catch (error) {
@@ -405,17 +1034,85 @@ try {
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
   const summary = {
     runId,
+    source: EXACT_PREFLIGHT_SOURCE,
+    flowMode: EXACT_PREFLIGHT_FLOW_MODE,
     executedAt: new Date().toISOString(),
     baseURL: redactUrl(baseURL),
     facilityId,
-    patientSearch: { patientId, selectable: false, selectableCount: 0 },
+    candidateId,
+    patientId: requestedPatientId || null,
+    departmentCode,
+    physicianCode,
+    paymentMode,
+    visitKind,
+    medicalInformation: medicalInformation || undefined,
+    medicalInformationState: buildMedicalInformationState(medicalInformation),
+    inputIdentity: buildInputIdentity({
+      runId,
+      candidateId,
+      facilityId,
+      patientId: requestedPatientId,
+      departmentCode,
+      physicianCode,
+      paymentMode,
+      visitKind,
+      medicalInformation,
+    }),
+    officialPatientEvidence: createEvidenceRef('summary.json#/officialPatientExistence', null),
+    officialPatientEvidenceRef: 'summary.json#/officialPatientExistence',
+    officialPatientEvidenceHash: createEvidenceRef('summary.json#/officialPatientExistence', null).hash,
+    insuranceEvidence: createEvidenceRef('summary.json#/insuranceReadiness', null),
+    insuranceEvidenceRef: 'summary.json#/insuranceReadiness',
+    insuranceEvidenceHash: createEvidenceRef('summary.json#/insuranceReadiness', null).hash,
+    localSelectableEvidence: createEvidenceRef('summary.json#/localSelectableReadiness', null),
+    localSelectableEvidenceRef: 'summary.json#/localSelectableReadiness',
+    localSelectableEvidenceHash: createEvidenceRef('summary.json#/localSelectableReadiness', null).hash,
+    selectorEvidence: createEvidenceRef('summary.json#/selectorReadiness', null),
+    selectorEvidenceRef: 'summary.json#/selectorReadiness',
+    selectorEvidenceHash: createEvidenceRef('summary.json#/selectorReadiness', null).hash,
+    requestedPatientId: requestedPatientId || undefined,
+    phase3AttemptPatientId: null,
+    trialSourceCandidate: {
+      requestedPatientId: requestedPatientId || undefined,
+      probeCandidates: buildCandidateIds(),
+      fixedTrialInitialRange: TRIAL_INITIAL_PATIENT_IDS,
+      selectedPatientId: undefined,
+      verdict: 'rejected',
+    },
+    officialPatientExistence: { verdict: 'not_verified', exactMatchedPatientIds: [], missingPatientIds: buildCandidateIds() },
+    insuranceReadiness: {
+      verdict: 'not_verified',
+      count: 0,
+      effectiveCount: 0,
+      key: `${facilityId}:${requestedPatientId || 'unresolved'}:${paymentMode}:${acceptanceDate}`,
+      ...createEvidenceRef('preflight:insurance-readiness', null),
+    },
+    selectorReadiness: { verdict: 'not_verified', details: {} },
+    localSelectableReadiness: { verdict: 'not_verified', exactMatchCount: 0, recordsReturned: 0 },
+    appointmentDependency: {
+      flowMode: requestedAppointmentFlowMode,
+      required: requestedAppointmentFlowMode === 'appointment_row',
+      absenceBlocker: requestedAppointmentFlowMode === 'appointment_row',
+      status: 0,
+      apiResult: '',
+      classification: 'ambiguous_readiness_failure',
+      verdict: 'not_verified',
+      accepted: false,
+    },
+    acceptmodv2ReadOnlyDiagnostic: {
+      verdict: 'not_verified',
+      apiResult: '',
+      businessStatus: 'notVerified',
+      businessReason: 'fatal_error',
+      mutationSuccess: false,
+      acceptedForPhase3Attempt: false,
+    },
+    acceptedForPhase3Attempt: false,
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',
+    blockerReason: 'fatal_error',
+    rawSensitiveFieldsExcluded: true,
     fatalError: String(error),
-    c7Gate: {
-      status: 'not verified',
-      reason: 'read-only preflight does not execute visits mutation',
-    },
   };
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
   fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');

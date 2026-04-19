@@ -8,17 +8,19 @@ const webClientRootDir = path.resolve(helperDir, '..', '..');
 const repoRootDir = path.resolve(webClientRootDir, '..');
 
 export const ROUTE_GUARD_CATEGORIES = {
-  SERVER_PUBLIC_ROUTE: 'server public route',
-  CLIENT_PRODUCTION_FAIL_CLOSE_SENTINEL: 'client production fail-close sentinel',
+  PRODUCTION_FAIL_CLOSE_SENTINEL: 'production fail-close sentinel',
   MSW_MOCK_TEST_ONLY_LEGACY_ROUTE_SURFACE: 'MSW mock/test-only legacy route surface',
-  E2E_FIXTURE_TEST_ONLY_SURFACE: 'e2e fixture/test-only surface',
+  E2E_QA_FIXTURE_SURFACE: 'e2e/QA fixture surface',
   BLOCKED_ROUTE_DETECTOR: 'blocked-route detector',
   DOCS_REFERENCE: 'docs/reference',
+  SERVER_ROUTE_INVENTORY_NEGATIVE_ASSERTION: 'server route inventory negative assertion',
+  WEB_XML_EXPOSURE_NEGATIVE_ASSERTION: 'web.xml exposure negative assertion',
 };
 
 const LEGACY_ORCA_ROUTES = new Set(['/api/orca/queue', '/api/orca/pusheventgetv2']);
 
 export const SCAN_ROOTS = [
+  'server-modernized/src/test',
   'web-client/src',
   'web-client/scripts',
   'web-client/plugins',
@@ -34,6 +36,7 @@ const TEXT_FILE_EXTENSIONS = new Set([
   '.css',
   '.csv',
   '.html',
+  '.java',
   '.js',
   '.json',
   '.jsx',
@@ -52,13 +55,13 @@ export const ROUTE_CLASSIFICATION_ALLOWLIST = [
   {
     path: 'web-client/src/features/outpatient/orcaQueueApi.ts',
     route: '/api/orca/queue',
-    category: ROUTE_GUARD_CATEGORIES.CLIENT_PRODUCTION_FAIL_CLOSE_SENTINEL,
+    category: ROUTE_GUARD_CATEGORIES.PRODUCTION_FAIL_CLOSE_SENTINEL,
     reason: 'historical route string retained only to return the explicit fail-close unavailable response',
   },
   {
     path: 'web-client/src/features/outpatient/orcaQueueApi.ts',
     route: '/api/orca/pusheventgetv2',
-    category: ROUTE_GUARD_CATEGORIES.CLIENT_PRODUCTION_FAIL_CLOSE_SENTINEL,
+    category: ROUTE_GUARD_CATEGORIES.PRODUCTION_FAIL_CLOSE_SENTINEL,
     reason: 'historical route string retained only to return the explicit fail-close unavailable response',
   },
   {
@@ -76,19 +79,19 @@ export const ROUTE_CLASSIFICATION_ALLOWLIST = [
   {
     path: 'web-client/plugins/flagged-mock-plugin.ts',
     route: '/api/orca/queue',
-    category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+    category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
     reason: 'Vite dev/preview fixture gated by explicit mock headers or env flags',
   },
   {
     path: 'web-client/plugins/flagged-mock-plugin.ts',
     route: '/api/orca/official/*/mock',
-    category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+    category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
     reason: 'Vite dev/preview fixture endpoint gated by explicit mock headers or env flags',
   },
   {
     path: 'web-client/scripts/qa-*.mjs',
     route: '/api/orca/queue',
-    category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+    category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
     reason: 'QA script network capture target for legacy-route regression evidence',
   },
   {
@@ -124,20 +127,44 @@ export const ROUTE_CLASSIFICATION_ALLOWLIST = [
   {
     path: 'tests/**',
     route: '/api/orca/queue',
-    category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+    category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
     reason: 'Playwright fixtures may stub or assert blocked legacy queue behavior outside production source',
   },
   {
     path: 'tests/**',
     route: '/api/orca/pusheventgetv2',
-    category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+    category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
     reason: 'Playwright fixtures may stub or assert blocked legacy push-event behavior outside production source',
   },
   {
     path: 'tests/**',
     route: '/api/orca/official/*/mock',
-    category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+    category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
     reason: 'Playwright fixtures may use explicit mock-only official paths outside production source',
+  },
+  {
+    path: 'server-modernized/src/test/java/open/dolphin/rest/PublicRouteInventoryContractTest.java',
+    route: '/api/orca/queue',
+    category: ROUTE_GUARD_CATEGORIES.SERVER_ROUTE_INVENTORY_NEGATIVE_ASSERTION,
+    reason: 'server route inventory test asserts the blocked legacy queue route is absent',
+  },
+  {
+    path: 'server-modernized/src/test/java/open/dolphin/rest/PublicRouteInventoryContractTest.java',
+    route: '/api/orca/pusheventgetv2',
+    category: ROUTE_GUARD_CATEGORIES.SERVER_ROUTE_INVENTORY_NEGATIVE_ASSERTION,
+    reason: 'server route inventory test asserts the blocked legacy push-event route is absent',
+  },
+  {
+    path: 'server-modernized/src/test/java/open/dolphin/rest/WebXmlEndpointExposureTest.java',
+    route: '/api/orca/queue',
+    category: ROUTE_GUARD_CATEGORIES.WEB_XML_EXPOSURE_NEGATIVE_ASSERTION,
+    reason: 'web.xml exposure test asserts the blocked legacy queue route is not exposed',
+  },
+  {
+    path: 'server-modernized/src/test/java/open/dolphin/rest/WebXmlEndpointExposureTest.java',
+    route: '/api/orca/pusheventgetv2',
+    category: ROUTE_GUARD_CATEGORIES.WEB_XML_EXPOSURE_NEGATIVE_ASSERTION,
+    reason: 'web.xml exposure test asserts the blocked legacy push-event route is not exposed',
   },
   {
     path: 'docs/**',
@@ -217,7 +244,7 @@ export const classifyOrcaRouteReference = ({ relativePath, route }) => {
   if (LEGACY_ORCA_ROUTES.has(route)) {
     return buildFailure(
       'blocked legacy ORCA route is not allowlisted for this path',
-      ROUTE_GUARD_CATEGORIES.CLIENT_PRODUCTION_FAIL_CLOSE_SENTINEL,
+      ROUTE_GUARD_CATEGORIES.PRODUCTION_FAIL_CLOSE_SENTINEL,
     );
   }
 
@@ -225,7 +252,7 @@ export const classifyOrcaRouteReference = ({ relativePath, route }) => {
     if (isProductionSourcePath(relativePath)) {
       return buildFailure(
         'mock/test-only ORCA route surface is present in production source',
-        ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+        ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
       );
     }
     if (isMswMockPath(relativePath)) {
@@ -238,7 +265,7 @@ export const classifyOrcaRouteReference = ({ relativePath, route }) => {
     if (isTestPath(relativePath) || relativePath.startsWith('web-client/scripts/') || relativePath.startsWith('web-client/plugins/')) {
       return {
         allowed: true,
-        category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
+        category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
         reason: 'mock surface is isolated to test, QA, or dev fixture code',
       };
     }
@@ -249,13 +276,13 @@ export const classifyOrcaRouteReference = ({ relativePath, route }) => {
         reason: 'documentation-only mock route reference',
       };
     }
-    return buildFailure('mock/test-only ORCA route surface is not allowlisted for this path', ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE);
+    return buildFailure('mock/test-only ORCA route surface is not allowlisted for this path', ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE);
   }
 
   if (!isOfficialOrMasterRoute(route)) {
     return buildFailure(
       'public /api/orca route must be under /api/orca/official/* or /api/orca/master/*',
-      ROUTE_GUARD_CATEGORIES.SERVER_PUBLIC_ROUTE,
+      'public route taxonomy violation',
     );
   }
 
@@ -263,21 +290,20 @@ export const classifyOrcaRouteReference = ({ relativePath, route }) => {
     return {
       allowed: true,
       category: ROUTE_GUARD_CATEGORIES.DOCS_REFERENCE,
-      reason: 'documentation reference to current route taxonomy',
+      reason: 'documentation reference to the official/master taxonomy; not a public-route declaration',
     };
   }
 
   if (isTestPath(relativePath) || relativePath.startsWith('web-client/scripts/') || relativePath.startsWith('web-client/plugins/')) {
     return {
       allowed: true,
-      category: ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE,
-      reason: 'test, QA, or dev fixture reference to current public route',
+      category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
+      reason: 'test, QA, or dev fixture reference to the official/master taxonomy; not a public-route declaration',
     };
   }
 
   return {
     allowed: true,
-    category: ROUTE_GUARD_CATEGORIES.SERVER_PUBLIC_ROUTE,
     reason: 'current public ORCA route uses the official/master taxonomy',
   };
 };
@@ -374,6 +400,7 @@ export const scanOrcaRouteTaxonomy = ({ repoRoot = repoRootDir, scanRoots = SCAN
 
   const categoryCounts = Object.fromEntries(Object.values(ROUTE_GUARD_CATEGORIES).map((category) => [category, 0]));
   for (const reference of references) {
+    if (!reference.category) continue;
     categoryCounts[reference.category] = (categoryCounts[reference.category] ?? 0) + 1;
   }
 

@@ -1,0 +1,8 @@
+{
+  "runId": "20260419T120043Z",
+  "phase": "Phase 3 acceptmodv2",
+  "script": "qa-acceptmodv2-weborca.mjs",
+  "ran": false,
+  "reason": "acceptedCandidateCount=0; exact selected-candidate preflight not run",
+  "mutationSuccess": false
+}

@@ -20,7 +20,14 @@ vi.mock('../../../libs/observability/observability', () => ({
 }));
 
 import { httpFetch } from '../../../libs/http/httpClient';
-import { createOfficialPatient, refetchOfficialCanonicalPatients, searchLocalPatients, updateOfficialPatient } from '../api';
+import {
+  createOfficialPatient,
+  fetchOfficialInsuranceReadiness,
+  refetchOfficialCanonicalPatients,
+  searchLocalPatients,
+  updateOfficialPatient,
+  verifyOfficialPatientExactExistence,
+} from '../api';
 
 const buildCanonicalBatchResponse = (
   patientId: string,
@@ -237,6 +244,72 @@ describe('patients api official mutation', () => {
     expect(result.apiResultMessage).toBe('OK');
     expect(result.matchedPatientIds).toEqual(['000001']);
     expect(result.missingPatientIds).toEqual([]);
+  });
+
+  it('official exact existence は Patient_ID 完全一致だけを accepted にする', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(buildCanonicalBatchResponse('00001', 'Trial 患者'));
+
+    const result = await verifyOfficialPatientExactExistence({
+      patientId: '00001',
+      runId: 'RUN-CANONICAL',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.exactMatchedPatientIds).toEqual(['00001']);
+    expect(result.missingPatientIds).toEqual([]);
+  });
+
+  it('official exact existence はゼロ桁違いの Patient_ID を rejected にする', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(buildCanonicalBatchResponse('00001', 'Trial 患者'));
+
+    const result = await verifyOfficialPatientExactExistence({
+      patientId: '0000001',
+      runId: 'RUN-CANONICAL',
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.exactMatchedPatientIds).toEqual([]);
+    expect(result.missingPatientIds).toEqual(['0000001']);
+  });
+
+  it('official insurance readiness は件数と有効件数だけを返し、組合せ番号は redacted にする', async () => {
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          apiResult: '00',
+          apiResultMessage: 'OK',
+          combinations: [
+            {
+              combinationNumber: '0001',
+              certificateStartDate: '2026-01-01',
+              certificateExpiredDate: '2026-12-31',
+            },
+            {
+              combinationNumber: '0002',
+              certificateStartDate: '2025-01-01',
+              certificateExpiredDate: '2025-12-31',
+            },
+          ],
+        }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      ),
+    );
+
+    const result = await fetchOfficialInsuranceReadiness({
+      patientId: '00001',
+      baseDate: '2026-04-19',
+      runId: 'RUN-CANONICAL',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.count).toBe(2);
+    expect(result.effectiveCount).toBe(1);
+    expect(result.selectedCombinationId).toBe('<<redacted>>');
+    expect(result).not.toHaveProperty('combinationNumber');
+    expect(result).not.toHaveProperty('combinations');
   });
 
   it('write accepted でも canonical batch Api_Result=10 なら full success にしない', async () => {

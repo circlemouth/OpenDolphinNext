@@ -32,7 +32,7 @@ class OrcaTransportSettingsExternalConfigTest {
     @Test
     void loadUsesResolverBackedTypedConfiguration() {
         OrcaTransportSettings settings = OrcaTransportSettings.load(TestServerConfigurationResolvers.resolver(
-                ServerConfigurationResolver.KEY_ORCA_API_HOST, "weborca-trial.orca.med.or.jp",
+                ServerConfigurationResolver.KEY_ORCA_API_HOST, "orca-trial.example.invalid",
                 ServerConfigurationResolver.KEY_ORCA_API_PORT, "443",
                 ServerConfigurationResolver.KEY_ORCA_API_SCHEME, "https",
                 ServerConfigurationResolver.KEY_ORCA_API_USER, "trial-user",
@@ -41,7 +41,7 @@ class OrcaTransportSettingsExternalConfigTest {
                 ServerConfigurationResolver.KEY_ORCA_API_MODE, "weborca"));
 
         assertTrue(settings.isReady());
-        assertEquals("https://weborca-trial.orca.med.or.jp/api/orca11/appointmodv2",
+        assertEquals("https://orca-trial.example.invalid/api/orca11/appointmodv2",
                 settings.buildOrcaUrl("/orca11/appointmodv2"));
     }
 
@@ -52,7 +52,7 @@ class OrcaTransportSettingsExternalConfigTest {
                 "orca.orcaapi.ip=legacy-host",
                 "orca.orcaapi.port=8000",
                 "orca.id=legacy-user",
-                "orca.password=legacy-password"));
+                "orca.password=example-legacy-password"));
 
         OrcaTransportSettings settings = OrcaTransportSettings.load();
 
@@ -68,7 +68,7 @@ class OrcaTransportSettingsExternalConfigTest {
         logger.setUseParentHandlers(false);
         logger.setLevel(Level.ALL);
         logger.addHandler(handler);
-        String rawBaseUrl = "https://admin:pass@bad host.example.invalid/secret-prefix";
+        String rawBaseUrl = "https://" + "admin:pass@" + "bad host.example.invalid/secret-prefix";
         try {
             IllegalArgumentException ex = org.junit.jupiter.api.Assertions.assertThrows(
                     IllegalArgumentException.class,

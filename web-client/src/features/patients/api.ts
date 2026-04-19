@@ -101,7 +101,33 @@ const LOCAL_PATIENT_SEARCH_ENDPOINTS = ['/api/local/patients/search'];
 const PATIENT_CREATE_OFFICIAL_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/create';
 const PATIENT_UPDATE_OFFICIAL_ENDPOINT = '/api/orca/official/patientmodv2/outpatient/update';
 const PATIENT_BATCH_OFFICIAL_ENDPOINT = '/api/orca/official/patients/batch';
+const PATIENT_INSURANCE_COMBINATION_OFFICIAL_ENDPOINT = '/api/orca/official/insurance/combinations';
+const REDACTED_COMBINATION_ID = '<<redacted>>';
 type OfficialPatientMutationOperation = 'create' | 'update';
+
+export type OfficialPatientExactExistenceResult = {
+  ok: boolean;
+  patientId: string;
+  status?: number;
+  apiResult?: string;
+  apiResultMessage?: string;
+  exactMatchedPatientIds: string[];
+  missingPatientIds: string[];
+  sourcePath?: string;
+  error?: string;
+};
+
+export type OfficialInsuranceReadinessResult = {
+  ok: boolean;
+  patientId: string;
+  count: number;
+  effectiveCount: number;
+  selectedCombinationId?: '<<redacted>>';
+  status?: number;
+  apiResult?: string;
+  sourcePath?: string;
+  error?: string;
+};
 
 const normalizeBoolean = (value: unknown) => {
   if (typeof value === 'boolean') return value;
@@ -150,6 +176,19 @@ const stripNullish = <T extends Record<string, unknown>>(value: T): T => {
 
 const asObjectRecord = (value: unknown): Record<string, unknown> => {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+};
+
+const normalizeDateDigits = (value: unknown): string | undefined => {
+  const normalized = normalizeApiString(value)?.replace(/\D/g, '');
+  return normalized && normalized.length >= 8 ? normalized.slice(0, 8) : undefined;
+};
+
+const isCombinationEffectiveOn = (combination: Record<string, unknown>, baseDate: string) => {
+  const base = normalizeDateDigits(baseDate);
+  if (!base) return false;
+  const start = normalizeDateDigits(combination.certificateStartDate);
+  const end = normalizeDateDigits(combination.certificateExpiredDate);
+  return (!start || start <= base) && (!end || end >= base || /^9+$/.test(end));
 };
 
 const mapLocalPatient = (raw: any): PatientRecord => ({
@@ -316,6 +355,74 @@ export async function refetchOfficialCanonicalPatients(params: {
     apiResultMessage,
     matchedPatientIds,
     missingPatientIds,
+  };
+}
+
+export async function verifyOfficialPatientExactExistence(params: {
+  patientId: string;
+  runId?: string;
+}): Promise<OfficialPatientExactExistenceResult> {
+  const patientId = params.patientId.trim();
+  if (!patientId) {
+    return {
+      ok: false,
+      patientId,
+      exactMatchedPatientIds: [],
+      missingPatientIds: [],
+      error: 'patientId is required',
+    };
+  }
+  const result = await refetchOfficialCanonicalPatients({
+    patientIds: [patientId],
+    runId: params.runId,
+  });
+  const exactMatchedPatientIds = result.matchedPatientIds.filter((matchedPatientId) => matchedPatientId === patientId);
+  const missingPatientIds = exactMatchedPatientIds.length === 1 ? [] : [patientId];
+  return {
+    ok: result.ok && exactMatchedPatientIds.length === 1,
+    patientId,
+    status: result.status,
+    apiResult: result.apiResult,
+    apiResultMessage: result.apiResultMessage,
+    exactMatchedPatientIds,
+    missingPatientIds,
+  };
+}
+
+export async function fetchOfficialInsuranceReadiness(params: {
+  patientId: string;
+  baseDate: string;
+  runId?: string;
+}): Promise<OfficialInsuranceReadinessResult> {
+  const patientId = params.patientId.trim();
+  if (!patientId) {
+    return {
+      ok: false,
+      patientId,
+      count: 0,
+      effectiveCount: 0,
+      error: 'patientId is required',
+    };
+  }
+  const runId = params.runId ?? getObservabilityMeta().runId ?? generateRunId();
+  updateObservabilityMeta({ runId });
+  const result = await tryPostJson(PATIENT_INSURANCE_COMBINATION_OFFICIAL_ENDPOINT, {
+    patientId,
+    baseDate: params.baseDate,
+  });
+  const json = asObjectRecord(result.json);
+  const apiResult = extractApiResult(json);
+  const combinations = Array.isArray(json.combinations) ? (json.combinations as Array<Record<string, unknown>>) : [];
+  const effectiveCount = combinations.filter((combination) => isCombinationEffectiveOn(combination, params.baseDate)).length;
+  return {
+    ok: result.ok && isAllZeroApiResult(apiResult) && effectiveCount > 0,
+    patientId,
+    count: combinations.length,
+    effectiveCount,
+    selectedCombinationId: effectiveCount > 0 ? REDACTED_COMBINATION_ID : undefined,
+    status: result.status,
+    apiResult,
+    sourcePath: result.path,
   };
 }
 

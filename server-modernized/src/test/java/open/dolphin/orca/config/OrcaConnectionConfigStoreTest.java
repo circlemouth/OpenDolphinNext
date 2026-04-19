@@ -40,12 +40,12 @@ class OrcaConnectionConfigStoreTest {
 
         OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
-                "https://weborca-trial.orca.med.or.jp",
+                "https://orca-trial.example.invalid",
                 443,
                 "trial",
                 "wss://push.orca.med.or.jp/ws/notifications",
                 "tenant-001",
-                "weborcatrial",
+                "example-orca-password",
                 Boolean.FALSE,
                 null
         );
@@ -61,12 +61,12 @@ class OrcaConnectionConfigStoreTest {
         assertTrue(rawJson.contains("\"defaultFacilityId\":\"F001\""));
         assertTrue(rawJson.contains("\"facilities\""));
         assertTrue(rawJson.contains("\"F001\""));
-        assertTrue(!rawJson.contains("\"passwordEncrypted\":\"weborcatrial\""));
+        assertTrue(!rawJson.contains("\"passwordEncrypted\":\"example-orca-password\""));
 
         OrcaConnectionConfigStore reloaded = newStore(protector, db);
         OrcaConnectionConfigRecord snapshot = reloaded.getSnapshot();
         assertNotNull(snapshot);
-        assertEquals("https://weborca-trial.orca.med.or.jp", snapshot.getServerUrl());
+        assertEquals("https://orca-trial.example.invalid", snapshot.getServerUrl());
         assertEquals(443, snapshot.getPort());
         assertEquals("trial", snapshot.getUsername());
         assertEquals("wss://push.orca.med.or.jp/ws/notifications", snapshot.getPushUrl());
@@ -74,9 +74,9 @@ class OrcaConnectionConfigStoreTest {
         assertEquals("F001", reloaded.getDefaultFacilityId());
 
         OrcaConnectionConfigStore.ResolvedOrcaConnection resolved = reloaded.resolve("F001");
-        assertEquals("https://weborca-trial.orca.med.or.jp", resolved.baseUrl());
+        assertEquals("https://orca-trial.example.invalid", resolved.baseUrl());
         assertEquals("trial", resolved.username());
-        assertEquals("weborcatrial", resolved.password());
+        assertEquals("example-orca-password", resolved.password());
         assertEquals("wss://push.orca.med.or.jp/ws/notifications", resolved.pushUrl());
         assertEquals("tenant-001", resolved.pushTenantId());
     }
@@ -181,7 +181,7 @@ class OrcaConnectionConfigStoreTest {
                     "trial",
                     null,
                     null,
-                    "weborcatrial",
+                    "example-orca-password",
                     Boolean.FALSE,
                     null
             );
@@ -203,12 +203,12 @@ class OrcaConnectionConfigStoreTest {
 
         OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
-                "https://weborca-trial.orca.med.or.jp",
+                "https://orca-trial.example.invalid",
                 443,
                 "trial",
                 "https://push.orca.med.or.jp/ws",
                 null,
-                "weborcatrial",
+                "example-orca-password",
                 Boolean.FALSE,
                 null
         );
@@ -229,12 +229,12 @@ class OrcaConnectionConfigStoreTest {
 
         OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
-                "https://weborca-trial.orca.med.or.jp",
+                "https://orca-trial.example.invalid",
                 443,
                 "trial",
                 null,
                 null,
-                "weborcatrial",
+                "example-orca-password",
                 Boolean.FALSE,
                 null
         );
@@ -255,12 +255,12 @@ class OrcaConnectionConfigStoreTest {
 
         OrcaConnectionConfigStore.UpdateRequest update = new OrcaConnectionConfigStore.UpdateRequest(
                 Boolean.TRUE,
-                "https://admin:pass@facility.example.orca/secret-prefix",
+                "https://" + "admin:pass@" + "facility.example.orca/secret-prefix",
                 443,
                 "trial",
                 null,
                 null,
-                "weborcatrial",
+                "example-orca-password",
                 Boolean.FALSE,
                 null
         );

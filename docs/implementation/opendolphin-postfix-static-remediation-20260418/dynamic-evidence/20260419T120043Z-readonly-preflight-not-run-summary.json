@@ -1,0 +1,13 @@
+{
+  "runId": "20260419T120043Z",
+  "phase": "Phase 2.5 exact selected-candidate preflight",
+  "ran": false,
+  "reason": "acceptedCandidateCount=0",
+  "source": "main-agent-policy",
+  "phase3": {
+    "ran": false
+  },
+  "phase4": {
+    "ran": false
+  }
+}

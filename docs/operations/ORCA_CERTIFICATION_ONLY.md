@@ -4,23 +4,19 @@
 - 更新日: 2026-04-14
 - 目的: ORCA 実環境/検証環境の接続先・認証方式と、管理画面で見える current behavior を **非Legacy の正本**として管理する。
 
-> ⚠️ 重要: 接続情報・資格情報は機微情報のため、このリポジトリには **原則として具体値を記載しない**。
-> ただし、**WebORCA Trial の公開情報は秘匿不要**のため、本ファイルに既定値として記載する。
-> それ以外の環境はすべて `<MASKED>` とし、実値は社内の承認済み共有手段（Secrets 管理/安全な共有）から取得する。
->
-> ✅ 現行の作業前提: ORCA Trial の接続情報・認証情報は**作業対象ディレクトリ内**に置き、公開情報扱いとする（機微情報ではない）。
-> ORCA Trial サーバーは**常時操作可能**な前提で運用する。
+> ⚠️ 重要: ORCA Trial を含む接続先・資格情報は、このリポジトリ、review package、実行ログ、summary、テスト fixture に具体値を書かない。
+> 実値は環境変数またはローカル secret store から取得し、ログや証跡では set/unset と sanitized classification のみを残す。
 
 ## 1. 参照ルール
 - 本ファイルが **非Legacy の正本**。
 - ログや証跡ではユーザー名・パスワード・証明書パスを **一切出力しない**。
 
-## 2. デフォルト開発接続（WebORCA Trial / 公開）
-| 項目 | 既定値（公開） | 入力欄（必要に応じて更新） |
+## 2. デフォルト開発接続（WebORCA Trial）
+| 項目 | source | 入力欄（必要に応じて更新） |
 | --- | --- | --- |
-| ベースURL | `https://weborca-trial.orca.med.or.jp` | `<<FILL_BASE_URL>>` |
-| Basic ユーザー名 | `trial` | `<<FILL_BASIC_USER>>` |
-| Basic パスワード | `weborcatrial` | `<<FILL_BASIC_PASS>>` |
+| ベースURL | local secret store or `ORCA_BASE_URL` / `ORCA_API_HOST` | `<<FILL_BASE_URL>>` |
+| Basic ユーザー名 | local secret store or `ORCA_API_USER` / `ORCA_BASIC_USER` | `<<FILL_BASIC_USER>>` |
+| Basic パスワード | local secret store or `ORCA_API_PASSWORD` / `ORCA_BASIC_PASSWORD` | `<<FILL_BASIC_PASS>>` |
 | 文字コード | XML/UTF-8 | `<<FILL_ENCODING>>` |
 | 証明書 | 不要 | `<<FILL_CERT_POLICY>>` |
 
@@ -52,13 +48,13 @@
 #### 優先順位（server-modernized）
 1. `ORCA_BASE_URL`（指定時はこれを最優先）
 2. `ORCA_API_HOST` / `ORCA_API_PORT` / `ORCA_API_SCHEME`
-3. 未指定の場合は `setup-modernized-env` の既定値（local/Trial 想定）
+3. 未指定の場合は local/onprem fallback のみ。Trial endpoint は暗黙 default にしない。
 
 ### Web クライアント dev proxy 向け
-- 接続先: `VITE_DEV_PROXY_TARGET=https://weborca-trial.orca.med.or.jp`（公開 Trial 既定）
+- 接続先: `VITE_DEV_PROXY_TARGET` をローカル secret store または環境変数から設定する。
 - 認証方式:
   - mTLS: `ORCA_CERT_PATH=<MASKED>` / `ORCA_CERT_PASS=<MASKED>`
-  - Basic: `ORCA_BASIC_USER=trial` / `ORCA_BASIC_PASSWORD=weborcatrial`（公開 Trial 既定）
+  - Basic: `ORCA_BASIC_USER` / `ORCA_BASIC_PASSWORD` をローカル secret store または環境変数から設定する。
 
 ## 6. 管理画面で確認する項目
 - 管理画面権限: `/api/admin/orca/connection` が 200 を返すこと。これは **設定取得権限確認** です。

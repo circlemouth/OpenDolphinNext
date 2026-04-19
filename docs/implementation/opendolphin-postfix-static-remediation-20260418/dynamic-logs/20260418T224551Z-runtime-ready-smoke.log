@@ -1,3 +1,9 @@
+command_log_version=retrofit-1
+command=cd web-client && node scripts/runtime-ready-smoke.mjs
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260418T224551Z
+start_utc=not_recorded
+--- command output ---
 node:internal/modules/run_main:123
     triggerUncaughtException(
     ^
@@ -13,3 +19,8 @@ Call log:
 }
 
 Node.js v22.16.0
+--- command summary ---
+end_utc=not_recorded
+exit_code=not_recorded
+result=RETROFIT_METADATA_ONLY
+pass_evidence=not_by_exit_code

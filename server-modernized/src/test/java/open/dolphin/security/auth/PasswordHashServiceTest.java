@@ -19,7 +19,7 @@ class PasswordHashServiceTest {
 
     @Test
     void hashAndVerifyWithRawPassword() {
-        String stored = service.hashForStorage("VerySecret123!");
+        String stored = service.hashForStorage("example-current-password");
 
         assertThat(stored).startsWith(PasswordHashService.FORMAT_PREFIX + "$");
         String[] parts = stored.split("\\$", 4);
@@ -27,7 +27,7 @@ class PasswordHashServiceTest {
         assertThat(Integer.parseInt(parts[1])).isGreaterThanOrEqualTo(PasswordHashService.MIN_ITERATIONS);
         assertThat(Base64.getDecoder().decode(parts[2]).length).isGreaterThanOrEqualTo(PasswordHashService.MIN_SALT_BYTES);
 
-        PasswordHashService.VerificationResult verification = service.verify(stored, "VerySecret123!");
+        PasswordHashService.VerificationResult verification = service.verify(stored, "example-current-password");
         assertThat(verification.matched()).isTrue();
         assertThat(verification.requiresUpgrade()).isFalse();
         assertThat(verification.upgradedHash()).isEmpty();
@@ -37,7 +37,7 @@ class PasswordHashServiceTest {
 
     @Test
     void verifyRejectsLegacyManagedHash() {
-        String rawPassword = "LegacyManagedPass!";
+        String rawPassword = "example-legacy-managed-password";
         String legacy = legacyManagedHash(rawPassword, 200_000);
 
         PasswordHashService.VerificationResult verification = service.verify(legacy, rawPassword);
@@ -50,7 +50,7 @@ class PasswordHashServiceTest {
 
     @Test
     void verifyRejectsRawMd5Digest() {
-        String rawPassword = "LegacyPass!";
+        String rawPassword = "example-legacy-password";
         String legacyMd5 = md5(rawPassword);
 
         PasswordHashService.VerificationResult verification = service.verify(legacyMd5, rawPassword);
@@ -62,11 +62,11 @@ class PasswordHashServiceTest {
 
     @Test
     void verifyRejectsPlainStoredPassword() {
-        PasswordHashService.VerificationResult verification = service.verify("plain-password", "plain-password");
+        PasswordHashService.VerificationResult verification = service.verify("example-plain-password", "example-plain-password");
 
         assertThat(verification.matched()).isFalse();
         assertThat(verification.requiresUpgrade()).isFalse();
-        assertThat(service.isManagedHash("plain-password")).isFalse();
+        assertThat(service.isManagedHash("example-plain-password")).isFalse();
     }
 
     private String legacyManagedHash(String rawPassword, int iterations) {

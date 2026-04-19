@@ -1,0 +1,30 @@
+command_log_version=retrofit-1
+command=npm run verify:web-guard
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260419T012523Z
+start_utc=not_recorded
+--- command output ---
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=8, files=691. category counts: server public route=48, client production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e fixture/test-only surface=236, blocked-route detector=31, docs/reference=121. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+--- command summary ---
+end_utc=not_recorded
+exit_code=not_recorded
+result=RETROFIT_METADATA_ONLY
+pass_evidence=not_by_exit_code

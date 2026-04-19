@@ -1,0 +1,12 @@
+{
+  "runId": "20260419T012523Z",
+  "phase": "qa-acceptmodv2-weborca",
+  "executed": false,
+  "businessAccepted": false,
+  "businessAcceptedWithWarnings": false,
+  "businessRejected": false,
+  "responseClassification": "not_run",
+  "blockerClassification": "test-data-blocker",
+  "reason": "no acceptedForPhase3Attempt candidate from qa-weborca-candidate-discovery",
+  "rawSensitiveFieldsExcluded": true
+}

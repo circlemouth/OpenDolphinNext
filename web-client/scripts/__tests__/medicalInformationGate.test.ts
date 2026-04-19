@@ -16,7 +16,12 @@ describe('evaluateMedicalInformationGate', () => {
 
     expect(result.ok).toBe(false);
     expect(result.enforced).toBe(true);
+    expect(result.targetMutationRequestCount).toBe(1);
     expect(result.violationCount).toBe(1);
+    expect(result.violation).toBe('C7');
+    expect(result.violatedKeys).toEqual(['medicalInformation']);
+    expect(result.bodyKeysObserved).toEqual(['medicalInformation', 'patientId', 'requestNumber']);
+    expect(result.medicalInformationFieldPresent).toBe(true);
     expect(result.error).toContain('medicalInformation');
   });
 
@@ -33,6 +38,7 @@ describe('evaluateMedicalInformationGate', () => {
 
     expect(result.ok).toBe(false);
     expect(result.violationCount).toBe(1);
+    expect(result.medicalInformationFieldPresent).toBe(true);
   });
 
   it('QA_MEDICAL_INFORMATION 未指定で Medical_Information empty string でも failure にする', () => {
@@ -48,7 +54,29 @@ describe('evaluateMedicalInformationGate', () => {
 
     expect(result.ok).toBe(false);
     expect(result.violationCount).toBe(1);
+    expect(result.violatedKeys).toEqual(['Medical_Information']);
+    expect(result.medicalInformationFieldPresent).toBe(true);
   });
+
+  it.each(['medicalInformation', 'Medical_Information'])(
+    'QA_MEDICAL_INFORMATION 未指定で key-only JSON fragment でも failure にする: %s',
+    (key) => {
+      const result = evaluateMedicalInformationGate({
+        medicalInformation: '',
+        requestRecords: [
+          {
+            url: 'https://localhost/api/orca/official/visits/mutation',
+            postData: `{"visit":{ "${key}": }`,
+          },
+        ],
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.violationCount).toBe(1);
+      expect(result.violatedKeys).toEqual([key]);
+      expect(result.medicalInformationFieldPresent).toBe(true);
+    },
+  );
 
   it('QA_MEDICAL_INFORMATION 未指定で null でも failure にする', () => {
     const result = evaluateMedicalInformationGate({
@@ -63,6 +91,25 @@ describe('evaluateMedicalInformationGate', () => {
 
     expect(result.ok).toBe(false);
     expect(result.violationCount).toBe(1);
+    expect(result.violatedKeys).toEqual(['medicalInformation']);
+    expect(result.medicalInformationFieldPresent).toBe(true);
+  });
+
+  it('QA_MEDICAL_INFORMATION 未指定で Medical_Information null でも failure にする', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00001","Medical_Information":null}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violationCount).toBe(1);
+    expect(result.violatedKeys).toEqual(['Medical_Information']);
+    expect(result.medicalInformationFieldPresent).toBe(true);
   });
 
   it('target mutation request を 1 件も捕捉できない場合は failure にする', () => {
@@ -72,7 +119,9 @@ describe('evaluateMedicalInformationGate', () => {
     });
 
     expect(result.ok).toBe(false);
+    expect(result.targetMutationRequestCount).toBe(0);
     expect(result.checkedRequests).toBe(0);
+    expect(result.violatedKeys).toEqual(['targetMutationRequest']);
     expect(result.error).toContain('1 件も捕捉できませんでした');
   });
 
@@ -90,6 +139,7 @@ describe('evaluateMedicalInformationGate', () => {
     expect(result.ok).toBe(true);
     expect(result.enforced).toBe(true);
     expect(result.violationCount).toBe(0);
+    expect(result.medicalInformationFieldPresent).toBe(false);
   });
 
   it('QA_MEDICAL_INFORMATION 指定 run では omission gate を強制しない', () => {

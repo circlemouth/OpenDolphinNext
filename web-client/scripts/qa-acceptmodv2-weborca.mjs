@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import {
@@ -9,9 +10,26 @@ import {
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
 import { evaluateMedicalInformationGate } from './qa-lib/medical-information-gate.mjs';
+import {
+  buildSanitizedAcceptmodv2Summary,
+  redactHeaders,
+  redactText,
+  redactUrl,
+  sanitizeNetworkRecord,
+  sanitizeRequestRecord,
+} from './qa-lib/acceptmodv2-business-evidence.mjs';
+import {
+  SELECTOR_OPTION_MISSING_BLOCKER,
+  buildInputIdentity,
+  resolveSelectableOption,
+  summarizeSelectorGate,
+  validatePreflightSummary,
+} from './qa-lib/acceptmodv2-identity-gate.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
+const candidateId = process.env.QA_CANDIDATE_ID ?? process.env.QA_PATIENT_ID?.trim() ?? `${runId}:acceptmodv2`;
+const scriptStartTime = now.toISOString();
 const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'https://localhost:5173';
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
@@ -23,6 +41,7 @@ const recordHar = process.env.QA_RECORD_HAR === '1';
 const harPath = path.join(harDir, 'network.har');
 const stepLogPath = path.join(artifactRoot, 'steps.log');
 const summaryJsonPath = path.join(artifactRoot, 'accept-summary.json');
+const sanitizedSummaryJsonPath = path.join(artifactRoot, 'accept-summary.sanitized.json');
 const summaryMdPath = path.join(artifactRoot, 'accept-summary.md');
 const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
@@ -67,26 +86,91 @@ const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
 const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
+const allowLocalOptionInjection = process.env.QA_ALLOW_LOCAL_OPTION_INJECTION === '1';
+const optionInjectionMode = allowLocalOptionInjection ? 'local_permissive' : 'live';
+let preflightGateResult = {
+  ok: !requireReadonlyPreflight,
+  mutationAllowed: !requireReadonlyPreflight,
+  blockerClassification: requireReadonlyPreflight ? 'not_checked' : 'none',
+  summaryPath: preflightSummaryPath,
+};
+let preflightSummarySha256 = '';
+const startupErrors = [];
+
+const resolvePreflightPhase3PatientId = (summary) =>
+  summary?.phase3AttemptPatientId ??
+  summary?.trialSourceCandidate?.selectedPatientId ??
+  summary?.patientId ??
+  summary?.patientSearch?.patientId;
+
+const phase3PreflightFailures = (summary, expectedPatientId) => {
+  const phase3PatientId = resolvePreflightPhase3PatientId(summary);
+  const checks = {
+    acceptedForPhase3Attempt: summary?.acceptedForPhase3Attempt === true,
+    phase3PatientId: phase3PatientId === expectedPatientId,
+    officialPatientExistence: summary?.officialPatientExistence?.candidates?.[phase3PatientId]?.verdict === 'accepted',
+    insuranceReadiness: summary?.insuranceReadiness?.verdict === 'accepted',
+    selectorReadiness: summary?.selectorReadiness?.verdict === 'accepted',
+    localSelectableReadiness: summary?.localSelectableReadiness?.verdict === 'accepted',
+    appointmentDependency: summary?.appointmentDependency?.required === false || summary?.appointmentDependency?.verdict === 'accepted',
+    acceptmodv2ReadOnlyDiagnostic:
+      summary?.acceptmodv2ReadOnlyDiagnostic?.acceptedForPhase3Attempt === true &&
+      summary?.acceptmodv2ReadOnlyDiagnostic?.mutationSuccess === false,
+  };
+  return Object.entries(checks)
+    .filter(([, ok]) => !ok)
+    .map(([key]) => key);
+};
 
 if (!patientId) {
-  throw new Error('QA_PATIENT_ID is required; pass a current local-searchable patient id for the target facility.');
+  startupErrors.push('QA_PATIENT_ID is required; pass a current local-searchable patient id for the target facility.');
 }
 if (requireReadonlyPreflight) {
   if (!fs.existsSync(preflightSummaryPath)) {
-    throw new Error(
+    startupErrors.push(
       `read-only WebORCA preflight summary is required before acceptmodv2 mutation: ${preflightSummaryPath}. Run qa-weborca-readonly-preflight.mjs with the same RUN_ID first.`,
     );
-  }
-  const preflightSummary = JSON.parse(fs.readFileSync(preflightSummaryPath, 'utf8'));
-  if (preflightSummary.verdict !== 'accepted' || preflightSummary.blockerClassification !== 'none') {
-    throw new Error(
-      `read-only WebORCA preflight was not accepted for RUN_ID=${runId}; verdict=${preflightSummary.verdict ?? 'unknown'} blocker=${preflightSummary.blockerClassification ?? 'unknown'}`,
-    );
-  }
-  if (preflightSummary.patientSearch?.patientId && preflightSummary.patientSearch.patientId !== patientId) {
-    throw new Error(
-      `read-only WebORCA preflight patient mismatch: preflight=${preflightSummary.patientSearch.patientId} QA_PATIENT_ID=${patientId}`,
-    );
+  } else {
+    try {
+      const preflightBuffer = fs.readFileSync(preflightSummaryPath);
+      preflightSummarySha256 = crypto.createHash('sha256').update(preflightBuffer).digest('hex');
+      const preflightSummary = JSON.parse(preflightBuffer.toString('utf8'));
+      const validation = validatePreflightSummary({
+        summary: preflightSummary,
+        artifactPath: preflightSummaryPath,
+        artifactSha256: preflightSummarySha256,
+        expected: {
+          runId,
+          candidateId,
+          facilityId,
+          patientId,
+          departmentCode,
+          physicianCode,
+          paymentMode,
+          visitKind,
+          medicalInformation,
+        },
+      });
+      const readinessFailures = validation.ok ? phase3PreflightFailures(preflightSummary, patientId) : [];
+      preflightGateResult = {
+        ...validation,
+        ...(readinessFailures.length > 0
+          ? {
+              ok: false,
+              mutationAllowed: false,
+              blockerClassification: 'preflight_phase3_not_accepted',
+              phase3ReadinessFailures: readinessFailures,
+              error: `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER: read-only WebORCA preflight is not accepted for Phase 3 mutation: ${readinessFailures.join(',')}. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; read-only mutation-ready evidence is incomplete.`,
+            }
+          : {}),
+        summaryPath: preflightSummaryPath,
+      };
+      if (!preflightGateResult.ok) {
+        startupErrors.push(preflightGateResult.error);
+      }
+    } catch (error) {
+      startupErrors.push(`read-only WebORCA preflight summary could not be parsed: ${String(error)}`);
+    }
   }
 }
 
@@ -97,40 +181,6 @@ const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
 const MEDICAL_INFORMATION_PROBE_PATH = '/api/orca/official/appointments/medical-information';
-
-const redactHeaders = (headers) => {
-  const out = { ...(headers ?? {}) };
-  for (const key of Object.keys(out)) {
-    if (
-      /^authorization$/i.test(key) ||
-      /^cookie$/i.test(key) ||
-      /^set-cookie$/i.test(key) ||
-      /^x-csrf-token$/i.test(key) ||
-      /^csrf-token$/i.test(key) ||
-      /^username$/i.test(key) ||
-      /^password$/i.test(key)
-    ) {
-      out[key] = '<<redacted>>';
-    }
-  }
-  return out;
-};
-
-const redactUrl = (value) => {
-  try {
-    const url = new URL(value);
-    if (url.username) url.username = 'redacted';
-    if (url.password) url.password = 'redacted';
-    for (const key of [...url.searchParams.keys()]) {
-      if (/auth|token|password|passwd|cookie|session|jsessionid/i.test(key)) {
-        url.searchParams.set(key, '<<redacted>>');
-      }
-    }
-    return `${url.pathname}${url.search}`;
-  } catch {
-    return String(value).replace(/(Authorization|Cookie|JSESSIONID|password|passwd|token)=([^&\s]+)/gi, '$1=<<redacted>>');
-  }
-};
 
 const isTarget = (url) =>
   url.includes(MEDICAL_INFORMATION_PROBE_PATH) ||
@@ -280,8 +330,7 @@ const setTextInputValue = async (locator, value) => {
   }
 };
 
-const ensureOption = async (selectLocator, desiredValue) => {
-  if (!desiredValue) return false;
+const injectLocalOption = async (selectLocator, desiredValue) => {
   try {
     await selectLocator.evaluate((select, value) => {
       const options = Array.from(select.options || []);
@@ -297,23 +346,26 @@ const ensureOption = async (selectLocator, desiredValue) => {
   }
 };
 
-const selectOptionFallback = async (selectLocator, desiredValue) => {
+const selectOptionWithGate = async (selectLocator, field, desiredValue) => {
   const options = await selectLocator.locator('option').evaluateAll((nodes) =>
     nodes.map((node) => node.value ?? ''),
   );
-  let resolved = options.includes(desiredValue)
-    ? desiredValue
-    : options.find((value) => value && value !== '') ?? '';
-  if (desiredValue && !options.includes(desiredValue)) {
-    const injected = await ensureOption(selectLocator, desiredValue);
-    if (injected) {
-      resolved = desiredValue;
-    }
+  const gate = resolveSelectableOption({
+    field,
+    desiredValue,
+    options,
+    allowLocalOptionInjection,
+  });
+  if (!gate.ok) {
+    return gate;
   }
-  if (resolved) {
-    await selectLocator.selectOption(resolved);
+  if (gate.injected) {
+    await injectLocalOption(selectLocator, gate.resolved);
   }
-  return { desired: desiredValue, resolved, options };
+  if (gate.resolved) {
+    await selectLocator.selectOption(gate.resolved);
+  }
+  return gate;
 };
 
 let activeBrowser = null;
@@ -321,7 +373,159 @@ let activeContext = null;
 let activePage = null;
 let lastSummary = null;
 
-const SUCCESS_ACCEPT_RESULTS = new Set(['00', 'K3']);
+const ACCEPTMOD_SUCCESS_RESULT = /^0+$/;
+const ACCEPTMOD_OFFICIAL_WARNING_RESULTS = new Set(['K1', 'K2', 'K3']);
+const ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER = '00';
+
+const normalizeApiResult = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value).trim().toUpperCase();
+  if (typeof value === 'string') return value.trim().toUpperCase();
+  return '';
+};
+
+const hasValue = (value) => {
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  return false;
+};
+
+const acceptanceEvidenceKeys = new Set([
+  'acceptanceId',
+  'Acceptance_Id',
+  'acceptance_id',
+  'receptionId',
+  'voucherNumber',
+  'Voucher_Number',
+  'visitNumber',
+  'Visit_Number',
+  'sequentialNumber',
+  'Sequential_Number',
+  'scheduleKey',
+  'Schedule_Key',
+  'encounterKey',
+  'Encounter_Key',
+]);
+const acceptanceInfoKeys = new Set(['acceptanceInfo', 'Acceptance_Info', 'acceptance_info']);
+const patientInfoKeys = new Set(['patient', 'Patient', 'patientInformation', 'Patient_Information', 'patient_information']);
+const patientEvidenceKeys = new Set([
+  'patientId',
+  'Patient_ID',
+  'patient_id',
+  'name',
+  'wholeName',
+  'WholeName',
+  'wholeNameKana',
+  'WholeName_inKana',
+  'birthDate',
+  'BirthDate',
+]);
+
+const hasAnyNonEmptyScalar = (value, depth = 0) => {
+  if (depth > 6 || value == null) return false;
+  if (hasValue(value)) return true;
+  if (Array.isArray(value)) return value.some((entry) => hasAnyNonEmptyScalar(entry, depth + 1));
+  if (typeof value !== 'object') return false;
+  return Object.values(value).some((entry) => hasAnyNonEmptyScalar(entry, depth + 1));
+};
+
+const hasPatientEvidence = (value, depth = 0) => {
+  if (depth > 6 || value == null) return false;
+  if (Array.isArray(value)) return value.some((entry) => hasPatientEvidence(entry, depth + 1));
+  if (typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, entry]) => {
+    if (patientEvidenceKeys.has(key) && hasValue(entry)) return true;
+    if (patientInfoKeys.has(key)) return hasPatientEvidence(entry, depth + 1);
+    return typeof entry === 'object' && entry != null && hasPatientEvidence(entry, depth + 1);
+  });
+};
+
+const hasAcceptanceEvidence = (value, depth = 0) => {
+  if (depth > 6 || value == null) return false;
+  if (Array.isArray(value)) return value.some((entry) => hasAcceptanceEvidence(entry, depth + 1));
+  if (typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, entry]) => {
+    if (acceptanceEvidenceKeys.has(key) && hasValue(entry)) return true;
+    if (acceptanceInfoKeys.has(key)) return hasAnyNonEmptyScalar(entry, depth + 1);
+    return typeof entry === 'object' && entry != null && hasAcceptanceEvidence(entry, depth + 1);
+  });
+};
+
+const hasRegistrationEvidence = (raw) => hasAcceptanceEvidence(raw) || hasPatientEvidence(raw);
+
+const classifyAcceptmodBusinessResult = ({ ok = true, apiResult, raw }) => {
+  const normalized = normalizeApiResult(apiResult);
+  const evidence = hasRegistrationEvidence(raw);
+  const requestNumber = String(raw?.requestNumber ?? raw?.Request_Number ?? '').trim();
+  if (requestNumber === ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER) {
+    return {
+      businessStatus: 'notVerified',
+      businessReason: 'diagnostic_request_number_without_mutation_success',
+      hasRegistrationEvidence: evidence,
+      requestNumber,
+    };
+  }
+  if (!ok) {
+    return { businessStatus: 'businessRejected', businessReason: 'transport_error', hasRegistrationEvidence: evidence, requestNumber };
+  }
+  if (normalized === '10') {
+    return { businessStatus: 'businessRejected', businessReason: 'patient_not_found', hasRegistrationEvidence: evidence, requestNumber };
+  }
+  if (normalized === '60') {
+    return {
+      businessStatus: 'diagnosticNoExistingAcceptance',
+      businessReason: 'no_existing_acceptance',
+      hasRegistrationEvidence: evidence,
+      requestNumber,
+    };
+  }
+  if (normalized === '21') {
+    return { businessStatus: 'businessRejected', businessReason: 'insurance_mismatch', hasRegistrationEvidence: evidence, requestNumber };
+  }
+  if (normalized === '16') {
+    return { businessStatus: 'businessRejected', businessReason: 'duplicate_acceptance', hasRegistrationEvidence: evidence, requestNumber };
+  }
+  if (ACCEPTMOD_OFFICIAL_WARNING_RESULTS.has(normalized)) {
+    return evidence
+      ? {
+          businessStatus: 'businessAcceptedWithWarnings',
+          businessReason: 'official_warning_with_registration_evidence',
+          hasRegistrationEvidence: evidence,
+          requestNumber,
+        }
+      : {
+          businessStatus: 'notVerified',
+          businessReason: 'warning_without_registration_evidence',
+          hasRegistrationEvidence: evidence,
+          requestNumber,
+        };
+  }
+  if (ACCEPTMOD_SUCCESS_RESULT.test(normalized)) {
+    return evidence
+      ? {
+          businessStatus: 'businessAccepted',
+          businessReason: 'accepted_with_registration_evidence',
+          hasRegistrationEvidence: evidence,
+          requestNumber,
+        }
+      : {
+          businessStatus: 'notVerified',
+          businessReason: 'success_code_without_registration_evidence',
+          hasRegistrationEvidence: evidence,
+          requestNumber,
+        };
+  }
+  if (!normalized) {
+    return {
+      businessStatus: 'notVerified',
+      businessReason: evidence ? 'registration_evidence_without_success_code' : 'missing_api_result',
+      hasRegistrationEvidence: evidence,
+      requestNumber,
+    };
+  }
+  return { businessStatus: 'businessRejected', businessReason: 'api_result_rejected', hasRegistrationEvidence: evidence, requestNumber };
+};
+
+const isBusinessAccepted = (status) => status === 'businessAccepted' || status === 'businessAcceptedWithWarnings';
 
 const parseMutationResponse = () => {
   const mutationRecord = [...networkRecords]
@@ -332,16 +536,27 @@ const parseMutationResponse = () => {
   }
   try {
     const body = JSON.parse(mutationRecord.response?.body ?? '{}');
+    const apiResult = body.apiResult ?? '';
+    const business = classifyAcceptmodBusinessResult({
+      ok: mutationRecord.status >= 200 && mutationRecord.status < 300,
+      apiResult,
+      raw: body,
+    });
     return {
       status: mutationRecord.status,
-      apiResult: body.apiResult ?? '',
+      apiResult,
       apiResultMessage: body.apiResultMessage ?? '',
       acceptanceId: body.acceptanceId ?? '',
       encounterKey: body.encounterKey ?? '',
       scheduleKey: body.scheduleKey ?? '',
+      requestNumber: business.requestNumber,
+      businessStatus: business.businessStatus,
+      businessReason: business.businessReason,
+      hasRegistrationEvidence: business.hasRegistrationEvidence,
       responsePath: 'network/network.json',
     };
   } catch {
+    const business = classifyAcceptmodBusinessResult({ ok: false, apiResult: '', raw: null });
     return {
       status: mutationRecord.status,
       apiResult: '',
@@ -349,6 +564,9 @@ const parseMutationResponse = () => {
       acceptanceId: '',
       encounterKey: '',
       scheduleKey: '',
+      businessStatus: business.businessStatus,
+      businessReason: business.businessReason,
+      hasRegistrationEvidence: business.hasRegistrationEvidence,
       responsePath: 'network/network.json',
     };
   }
@@ -361,19 +579,75 @@ const classifyAcceptBlocker = (mutationResponse) => {
   if (pageErrors.length > 0) {
     return 'repo-defect';
   }
-  if (mutationResponse?.apiResult && !SUCCESS_ACCEPT_RESULTS.has(mutationResponse.apiResult)) {
+  if (!mutationResponse) {
+    return 'test-data-blocker';
+  }
+  if (isBusinessAccepted(mutationResponse.businessStatus)) return 'none';
+  if (mutationResponse.businessStatus === 'notVerified') return 'repo-defect';
+  if (mutationResponse.businessStatus === 'businessRejected' || mutationResponse.businessStatus === 'diagnosticNoExistingAcceptance') {
     return 'test-data-blocker';
   }
   return 'none';
 };
 
+const toEvidencePath = (filePath) => {
+  if (!filePath) return '';
+  const repoRoot = path.basename(process.cwd()) === 'web-client' ? path.dirname(process.cwd()) : process.cwd();
+  const relative = path.relative(repoRoot, filePath);
+  return relative.startsWith('..') ? path.basename(filePath) : relative;
+};
+
+const commandForEvidence = () => [path.basename(process.execPath), ...process.argv.slice(1).map((arg) => path.basename(arg))].join(' ');
+
+const cwdForEvidence = () => path.basename(process.cwd()) || '.';
+
+const patientIdMatchedForEvidence = () => {
+  if (!requireReadonlyPreflight) return null;
+  if (!preflightGateResult?.preflightIdentity?.input?.patientId) return false;
+  return !preflightGateResult.mismatches?.some((item) => item.field === 'input.patientId' || item.field === 'candidate');
+};
+
+const buildSanitizedSummary = (summary, exitCode) => buildSanitizedAcceptmodv2Summary({
+  runId,
+  candidateId,
+  preflightPath: toEvidencePath(preflightGateResult?.summaryPath ?? preflightSummaryPath),
+  preflightSha256: preflightSummarySha256,
+  command: commandForEvidence(),
+  cwd: cwdForEvidence(),
+  startTime: scriptStartTime,
+  endTime: new Date().toISOString(),
+  exitCode,
+  acceptResponse: summary?.acceptResponse ?? null,
+  medicalInformationGate: summary?.medicalInformationGate ?? evaluateMedicalInformationGate({
+    requestRecords,
+    medicalInformation,
+  }),
+  patientIdMatched: patientIdMatchedForEvidence(),
+});
+
+const writeFinalEvidenceLog = (sanitizedSummary) => {
+  const c7 = sanitizedSummary.c7 ?? {};
+  const finalEntry =
+    `sanitizedSummary=${toEvidencePath(sanitizedSummaryJsonPath)} ` +
+    `responseClassification=${sanitizedSummary.responseClassification} ` +
+    `c7CheckedRequests=${c7.checkedRequests ?? 0} ` +
+    `c7ViolationCount=${c7.violationCount ?? 0} ` +
+    `businessAccepted=${sanitizedSummary.business?.businessAccepted === true}`;
+  logStep(finalEntry);
+  console.log(finalEntry);
+};
+
 const persistArtifacts = (summary) => {
   lastSummary = summary;
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
+  const exitCode = summary.blockerClassification && summary.blockerClassification !== 'none' ? 1 : 0;
+  const sanitizedSummary = buildSanitizedSummary(summary, exitCode);
+  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords.map(sanitizeNetworkRecord), null, 2), 'utf8');
+  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords.map(sanitizeRequestRecord), null, 2), 'utf8');
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
+  fs.writeFileSync(sanitizedSummaryJsonPath, JSON.stringify(sanitizedSummary, null, 2), 'utf8');
+  writeFinalEvidenceLog(sanitizedSummary);
 };
 
 const buildMarkdownSummary = (summary) =>
@@ -386,8 +660,11 @@ const buildMarkdownSummary = (summary) =>
   `- 患者ID: ${summary.patientId}\n` +
   `- 診療科: ${summary.selection?.department?.resolved || summary.departmentCode}\n` +
   `- 担当医: ${summary.selection?.physician?.resolved || summary.physicianCode}\n` +
-  `- 保険/自費: ${summary.paymentMode}\n` +
+  `- 保険/自費: ${summary.selection?.paymentMode?.resolved || summary.paymentMode}\n` +
   `- 来院区分: ${summary.visitKind}\n` +
+  `- Preflight Gate: ${summary.preflightGate?.ok ? 'passed' : 'failed'}\n` +
+  `- Option Injection Mode: ${summary.optionInjection?.mode ?? 'live'}\n` +
+  `- Accepted Live Evidence: ${summary.acceptedLiveEvidence === false ? 'false' : 'true'}\n` +
   `- Medical Information Probe: ${summary.medicalInformationProbe?.status ?? '—'}\n` +
   `- Medical Information Gate: ${summary.medicalInformationGate?.ok === false ? 'failed' : summary.medicalInformationGate?.enforced ? 'passed' : 'skipped'}\n` +
   `- Medical Information Checked Requests: ${summary.medicalInformationGate?.checkedRequests ?? 0}\n` +
@@ -400,12 +677,16 @@ const buildMarkdownSummary = (summary) =>
   `- Acceptance ID: ${summary.acceptResponse?.acceptanceId || '—'}\n` +
   `- Encounter Key: ${summary.acceptResponse?.encounterKey || '—'}\n` +
   `- Schedule Key: ${summary.acceptResponse?.scheduleKey || '—'}\n` +
+  `- Business Status: ${summary.acceptResponse?.businessStatus || '—'}\n` +
+  `- Business Reason: ${summary.acceptResponse?.businessReason || '—'}\n` +
+  `- Registration Evidence: ${summary.acceptResponse?.hasRegistrationEvidence === true ? 'yes' : 'no'}\n` +
   `- ${summary.acceptResult?.apiResultText ?? '—'}\n` +
   `- ${summary.acceptResult?.durationText ?? '—'}\n` +
   `- XHR Debug: ${summary.acceptResult?.xhrDebugText ?? '—'}\n` +
   `\n## Evidence\n\n` +
   `- Network: network/network.json\n` +
   `- Requests: network/requests.json\n` +
+  `- Sanitized summary: accept-summary.sanitized.json\n` +
   `- Console: console.json\n` +
   `- Page errors: page-errors.json\n` +
   `- Steps: steps.log\n` +
@@ -415,6 +696,61 @@ const buildMarkdownSummary = (summary) =>
   `- QA_BASE_URL=${baseURL} RUN_ID=${summary.runId} QA_PATIENT_ID=${summary.patientId} node scripts/qa-acceptmodv2-weborca.mjs\n`;
 
 const run = async () => {
+  if (startupErrors.length > 0) {
+    const blockerClassification = preflightGateResult?.blockerClassification && preflightGateResult.blockerClassification !== 'none'
+      ? preflightGateResult.blockerClassification
+      : 'test-data-blocker';
+    const summary = {
+      runId,
+      executedAt: new Date().toISOString(),
+      baseURL: redactUrl(baseURL),
+      facilityId,
+      sessionRole,
+      patientId,
+      departmentCode,
+      physicianCode,
+      paymentMode,
+      visitKind,
+      medicalInformation: medicalInformation || undefined,
+      inputIdentity: buildInputIdentity({
+        runId,
+        candidateId,
+        facilityId,
+        patientId,
+        departmentCode,
+        physicianCode,
+        paymentMode,
+        visitKind,
+        medicalInformation,
+      }),
+      preflightGate: preflightGateResult,
+      optionInjection: {
+        mode: optionInjectionMode,
+        allowLocalOptionInjection,
+        envFlag: 'QA_ALLOW_LOCAL_OPTION_INJECTION',
+      },
+      acceptedLiveEvidence: false,
+      selection: {},
+      medicalInformationProbe: undefined,
+      medicalInformationGate: evaluateMedicalInformationGate({
+        requestRecords,
+        medicalInformation,
+      }),
+      acceptResult: {},
+      acceptResponse: null,
+      harPath: recordHar ? harPath : undefined,
+      consoleMessages,
+      pageErrors,
+      fatalError: redactText(startupErrors.join('; ')),
+      blockerClassification,
+    };
+    persistArtifacts(summary);
+    fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
+    console.error(`acceptmodv2 rejected before browser launch: blockerClassification=${blockerClassification}`);
+    process.exitCode = 1;
+    return;
+  }
+
   const browser = await chromium.launch({ headless: true });
   activeBrowser = browser;
   const { context, page, sessionMe } = await createAuthenticatedContext(browser, {
@@ -423,7 +759,7 @@ const run = async () => {
     userId: authUserId,
     password: authPasswordPlain,
     session,
-    recordHar: recordHar ? { path: harPath, content: 'embed' } : undefined,
+    recordHar: recordHar ? { path: harPath, content: 'omit' } : undefined,
   });
   activeContext = context;
   activePage = page;
@@ -464,7 +800,7 @@ const run = async () => {
   const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
   await resultListItem.waitFor({ timeout: 20000 }).catch(() => {
     throw new Error(
-      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; set QA_PATIENT_ID to an ORCA-searchable patient in the current environment`,
+      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; classify as PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; verify harness/API/auth/ID normalization/parser/readiness evidence.`,
     );
   });
   await resultListItem.click();
@@ -473,23 +809,102 @@ const run = async () => {
   const acceptForm = workflowModal.locator('[data-test-id="reception-accept-detail-modal"]');
   await acceptForm.waitFor({ timeout: 20000 });
   logStep('accept form ready');
-  const departmentSelection = await selectOptionFallback(
+  const departmentSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-department'),
+    'departmentCode',
     departmentCode,
   );
-  await acceptForm.locator('#reception-accept-payment-mode').selectOption(paymentMode);
-  const physicianSelection = await selectOptionFallback(
+  const paymentModeSelection = await selectOptionWithGate(
+    acceptForm.locator('#reception-accept-payment-mode'),
+    'paymentMode',
+    paymentMode,
+  );
+  const physicianSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-physician'),
+    'physicianCode',
     physicianCode,
   );
-  const visitKindSelection = await selectOptionFallback(
+  const visitKindSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-visit-kind'),
+    'visitKind',
     visitKind,
   );
-  const medicalInformationSelection = await selectOptionFallback(
+  const medicalInformationSelection = await selectOptionWithGate(
     acceptForm.locator('#reception-accept-medical-information'),
+    'medicalInformation',
     medicalInformation,
   );
+  const selection = {
+    department: departmentSelection,
+    paymentMode: paymentModeSelection,
+    physician: physicianSelection,
+    visitKind: visitKindSelection,
+    medicalInformation: medicalInformationSelection,
+    patientSearchInputMethod,
+  };
+  const selectorGate = summarizeSelectorGate(selection);
+  const acceptedLiveEvidence = selectorGate.acceptedLiveEvidence && preflightGateResult.ok;
+  if (!selectorGate.ok) {
+    const summary = {
+      runId,
+      executedAt: new Date().toISOString(),
+      baseURL: redactUrl(baseURL),
+      facilityId,
+      sessionRole,
+      login: {
+        sessionMeStatus: sessionMe.status,
+      },
+      patientId,
+      departmentCode,
+      physicianCode,
+      paymentMode,
+      visitKind,
+      medicalInformation: medicalInformation || undefined,
+      inputIdentity: buildInputIdentity({
+        runId,
+        candidateId,
+        facilityId,
+        patientId,
+        departmentCode,
+        physicianCode,
+        paymentMode,
+        visitKind,
+        medicalInformation,
+      }),
+      preflightGate: preflightGateResult,
+      optionInjection: {
+        mode: optionInjectionMode,
+        allowLocalOptionInjection,
+        envFlag: 'QA_ALLOW_LOCAL_OPTION_INJECTION',
+      },
+      acceptedLiveEvidence,
+      selection,
+      medicalInformationProbe,
+      medicalInformationGate: {
+        ok: false,
+        enforced: false,
+        checkedRequests: 0,
+        violationCount: 0,
+        reason: 'mutation_not_attempted_selector_option_missing',
+      },
+      acceptResult: {},
+      acceptResponse: null,
+      harPath: recordHar ? harPath : undefined,
+      consoleMessages,
+      pageErrors,
+      blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER,
+    };
+    persistArtifacts(summary);
+    fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
+    await safeClose(() => context.close());
+    await safeClose(() => browser.close());
+    activeContext = null;
+    activeBrowser = null;
+    activePage = null;
+    console.error(`acceptmodv2 rejected before mutation: blockerClassification=${SELECTOR_OPTION_MISSING_BLOCKER}`);
+    process.exitCode = 1;
+    return;
+  }
 
   const beforeShot = await writeScreenshot(page, '01-reception-before-accept');
 
@@ -528,13 +943,25 @@ const run = async () => {
     paymentMode,
     visitKind,
     medicalInformation: medicalInformation || undefined,
-    selection: {
-      department: departmentSelection,
-      physician: physicianSelection,
-      visitKind: visitKindSelection,
-      medicalInformation: medicalInformationSelection,
-      patientSearchInputMethod,
+    inputIdentity: buildInputIdentity({
+      runId,
+      candidateId,
+      facilityId,
+      patientId,
+      departmentCode,
+      physicianCode,
+      paymentMode,
+      visitKind,
+      medicalInformation,
+    }),
+    preflightGate: preflightGateResult,
+    optionInjection: {
+      mode: optionInjectionMode,
+      allowLocalOptionInjection,
+      envFlag: 'QA_ALLOW_LOCAL_OPTION_INJECTION',
     },
+    acceptedLiveEvidence,
+    selection,
     medicalInformationProbe,
     medicalInformationGate: evaluateMedicalInformationGate({
       requestRecords,
@@ -598,6 +1025,24 @@ run().catch(async (error) => {
       paymentMode,
       visitKind,
       medicalInformation: medicalInformation || undefined,
+      inputIdentity: buildInputIdentity({
+        runId,
+        candidateId,
+        facilityId,
+        patientId,
+        departmentCode,
+        physicianCode,
+        paymentMode,
+        visitKind,
+        medicalInformation,
+      }),
+      preflightGate: preflightGateResult,
+      optionInjection: {
+        mode: optionInjectionMode,
+        allowLocalOptionInjection,
+        envFlag: 'QA_ALLOW_LOCAL_OPTION_INJECTION',
+      },
+      acceptedLiveEvidence: false,
       medicalInformationProbe: undefined,
       medicalInformationGate: evaluateMedicalInformationGate({
         requestRecords,
@@ -609,7 +1054,7 @@ run().catch(async (error) => {
       harPath: recordHar ? harPath : undefined,
       consoleMessages,
       pageErrors,
-      fatalError: String(error),
+      fatalError: redactText(error),
       blockerClassification,
       screenshots: {
         failure: failureShot,
@@ -618,8 +1063,10 @@ run().catch(async (error) => {
   if (summary.medicalInformationGate?.ok === false) {
     summary.blockerClassification = 'repo-defect';
   }
-  persistArtifacts(summary);
-  fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
+  if (!lastSummary) {
+    persistArtifacts(summary);
+    fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');
+  }
   await safeClose(() => activeContext?.close?.());
   await safeClose(() => activeBrowser?.close?.());
   console.error(error);

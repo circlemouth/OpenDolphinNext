@@ -1,4 +1,4 @@
-userName: 1.3.6.1.4.1.9414.10.1:dolphin
-password: 36cdf8b887a5cffc78dcd5c08991b993
+userName: {{SYSAD_USER_NAME}}
+password: {{SYSAD_PASSWORD}}
 clientUUID: observability-cli
 facilityId: 1.3.6.1.4.1.9414.72.103

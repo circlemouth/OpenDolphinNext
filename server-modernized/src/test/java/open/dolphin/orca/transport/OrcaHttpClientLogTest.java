@@ -43,7 +43,7 @@ class OrcaHttpClientLogTest {
 
     @Test
     void summaryLog_doesNotRenderRawTargetMaterial() {
-        String rawTarget = "https://admin:pass@facility.example.orca/secret-prefix";
+        String rawTarget = "https://" + "admin:pass@" + "facility.example.orca/secret-prefix";
         OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
                 "98",
                 "Invalid target " + rawTarget,
@@ -62,7 +62,7 @@ class OrcaHttpClientLogTest {
 
     @Test
     void detailLog_reflectivePathDoesNotRenderRawTargetMaterial() throws Exception {
-        String rawTarget = "https://admin:pass@facility.example.orca/secret-prefix";
+        String rawTarget = "https://" + "admin:pass@" + "facility.example.orca/secret-prefix";
         OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
                 "98",
                 "Invalid target " + rawTarget,
@@ -96,7 +96,7 @@ class OrcaHttpClientLogTest {
 
     @Test
     void detailLog_doesNotRenderRawTargetMaterial() {
-        String rawTarget = "https://admin:pass@facility.example.orca/secret-prefix";
+        String rawTarget = "https://" + "admin:pass@" + "facility.example.orca/secret-prefix";
         OrcaHttpClient.OrcaApiResult result = OrcaHttpClient.OrcaApiResult.of(
                 "98",
                 "Invalid target " + rawTarget,

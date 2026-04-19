@@ -1,0 +1,74 @@
+command_log_version=1
+command=node --test tests/review-package/create-review-package.test.mjs
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260419T131740Z
+start_utc=2026-04-19T15:00:41Z
+--- command output ---
+TAP version 13
+# Subtest: creates a reviewer package without artifacts or legacy client content
+ok 1 - creates a reviewer package without artifacts or legacy client content
+  ---
+  duration_ms: 323.33275
+  type: 'test'
+  ...
+# Subtest: adds manifest-listed review logs when requested
+ok 2 - adds manifest-listed review logs when requested
+  ---
+  duration_ms: 433.69425
+  type: 'test'
+  ...
+# Subtest: packages extracted source subsets without git metadata as not verified git truth
+ok 3 - packages extracted source subsets without git metadata as not verified git truth
+  ---
+  duration_ms: 80.297209
+  type: 'test'
+  ...
+# Subtest: rejects raw artifact paths from review log manifests
+ok 4 - rejects raw artifact paths from review log manifests
+  ---
+  duration_ms: 241.9875
+  type: 'test'
+  ...
+# Subtest: rejects credential-bearing review evidence before packaging
+ok 5 - rejects credential-bearing review evidence before packaging
+  ---
+  duration_ms: 1860.126917
+  type: 'test'
+  ...
+# Subtest: rejects empty manifest-listed command logs
+ok 6 - rejects empty manifest-listed command logs
+  ---
+  duration_ms: 221.413834
+  type: 'test'
+  ...
+# Subtest: records tracked missing file details in the package manifest
+ok 7 - records tracked missing file details in the package manifest
+  ---
+  duration_ms: 217.575042
+  type: 'test'
+  ...
+# Subtest: command log wrapper writes exit code metadata for silent success
+ok 8 - command log wrapper writes exit code metadata for silent success
+  ---
+  duration_ms: 16.78825
+  type: 'test'
+  ...
+# Subtest: fails when every tracked file is excluded
+ok 9 - fails when every tracked file is excluded
+  ---
+  duration_ms: 195.142708
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3659.444083
+--- command summary ---
+end_utc=2026-04-19T15:00:45Z
+exit_code=0
+result=PASS

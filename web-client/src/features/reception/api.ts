@@ -7,7 +7,11 @@ import { updateObservabilityMeta } from '../../libs/observability/observability'
 import type { DataSourceTransition, ResolveMasterSource } from '../../libs/observability/types';
 import { recordOutpatientFunnel } from '../../libs/telemetry/telemetryClient';
 import {
+  type Acceptmodv2BusinessReason,
+  type Acceptmodv2BusinessStatus,
+  classifyAcceptmodv2BusinessResult,
   isAcceptmodInsuranceMismatch,
+  isAcceptmodBusinessAccepted,
   isAcceptmodNoAcceptance,
   resolveAcceptmodFallbackMessage,
 } from './acceptmodv2Result';
@@ -76,11 +80,46 @@ export type VisitMutationPayload = OutpatientMeta & {
   warnings?: string[];
   apiResult?: string;
   apiResultMessage?: string;
+  businessStatus?: Acceptmodv2BusinessStatus;
+  businessReason?: Acceptmodv2BusinessReason;
+  hasRegistrationEvidence?: boolean;
 };
 
 export type MedicalInformationOption = {
   code: string;
   name: string;
+};
+
+export type Acceptmodv2ReadOnlyDiagnosticReadiness = {
+  verdict: 'accepted' | 'rejected' | 'not_verified';
+  apiResult: string;
+  businessStatus: Acceptmodv2BusinessStatus;
+  businessReason: Acceptmodv2BusinessReason;
+  mutationSuccess: false;
+  acceptedForPhase3Attempt: boolean;
+};
+
+export const classifyAcceptmodv2ReadOnlyDiagnostic = (params: {
+  ok?: boolean;
+  apiResult?: string | number | null;
+  raw?: unknown;
+}): Acceptmodv2ReadOnlyDiagnosticReadiness => {
+  const businessResult = classifyAcceptmodv2BusinessResult(params);
+  const acceptedForPhase3Attempt =
+    businessResult.businessStatus === 'diagnosticNoExistingAcceptance' &&
+    businessResult.businessReason === 'no_existing_acceptance';
+  return {
+    verdict: acceptedForPhase3Attempt
+      ? 'accepted'
+      : businessResult.businessStatus === 'notVerified'
+        ? 'not_verified'
+        : 'rejected',
+    apiResult: businessResult.apiResult,
+    businessStatus: businessResult.businessStatus,
+    businessReason: businessResult.businessReason,
+    mutationSuccess: false,
+    acceptedForPhase3Attempt,
+  };
 };
 
 const isMswRuntimeEnabled = () => {
@@ -351,6 +390,7 @@ export const buildVisitEntryFromMutation = (
   options: { paymentMode?: 'insurance' | 'self' } = {},
 ): ReceptionEntry | null => {
   if (payload.requestNumber === '02' || payload.requestNumber === '00') return null;
+  if (!isAcceptmodBusinessAccepted(payload.businessStatus)) return null;
   const patientId = payload.patient?.patientId;
   if (!patientId && !payload.acceptanceId) return null;
   const paymentLabel = options.paymentMode === 'self' ? '自費' : options.paymentMode === 'insurance' ? '保険' : undefined;
@@ -451,12 +491,18 @@ export async function mutateVisit(
   );
   const hasInsuranceMismatch = isAcceptmodInsuranceMismatch(apiResult);
   const hasNoAcceptance = isAcceptmodNoAcceptance(apiResult);
-  const shouldUseRequestFallback = !hasInsuranceMismatch && !hasNoAcceptance;
+  const businessResult = classifyAcceptmodv2BusinessResult({
+    ok: result.ok,
+    apiResult,
+    raw,
+  });
+  const isBusinessAccepted = isAcceptmodBusinessAccepted(businessResult.businessStatus);
+  const shouldUseRequestFallback = isBusinessAccepted && !hasInsuranceMismatch && !hasNoAcceptance;
 
   const payload: VisitMutationPayload = {
     ...meta,
     requestNumber: params.requestNumber,
-    acceptanceId: hasInsuranceMismatch || hasNoAcceptance ? undefined : normalizeOptionalString(acceptanceIdRaw),
+    acceptanceId: isBusinessAccepted ? normalizeOptionalString(acceptanceIdRaw) : undefined,
     acceptanceDate: normalizeOptionalString(acceptanceDateRaw) ?? (shouldUseRequestFallback ? fallbackAcceptanceDate : undefined),
     acceptanceTime: normalizeOptionalString(acceptanceTimeRaw) ?? (shouldUseRequestFallback ? fallbackAcceptanceTime : undefined),
     departmentCode: normalizeOptionalString(departmentCodeRaw) ?? (shouldUseRequestFallback ? fallbackDepartmentCode : undefined),
@@ -475,9 +521,13 @@ export async function mutateVisit(
     warnings: extractWarnings(raw),
     apiResult,
     apiResultMessage: apiResultMessage ?? resolveAcceptmodFallbackMessage(apiResult),
+    businessStatus: businessResult.businessStatus,
+    businessReason: businessResult.businessReason,
+    hasRegistrationEvidence: businessResult.hasRegistrationEvidence,
     patient,
   };
 
+  const mutationAccepted = isAcceptmodBusinessAccepted(payload.businessStatus);
   recordOutpatientFunnel('reception_accept', {
     runId: payload.runId,
     cacheHit: payload.cacheHit ?? result.meta.fromCache ?? false,
@@ -485,9 +535,11 @@ export async function mutateVisit(
     dataSourceTransition: payload.dataSourceTransition ?? 'server',
     fallbackUsed: payload.fallbackUsed ?? false,
     action: params.requestNumber === '02' ? 'cancel' : 'create',
-    outcome: result.ok ? 'success' : 'error',
+    outcome: mutationAccepted ? 'success' : 'error',
     note: payload.sourcePath,
-    reason: result.ok ? undefined : result.error ?? payload.apiResultMessage ?? payload.apiResult,
+    reason: mutationAccepted
+      ? undefined
+      : payload.businessReason ?? result.error ?? payload.apiResultMessage ?? payload.apiResult,
   });
 
   logUiState({
@@ -509,6 +561,9 @@ export async function mutateVisit(
       paymentMode: params.paymentMode,
       acceptancePush: params.acceptancePush,
       warnings: payload.warnings,
+      businessStatus: payload.businessStatus,
+      businessReason: payload.businessReason,
+      hasRegistrationEvidence: payload.hasRegistrationEvidence,
       traceId: payload.traceId,
     },
   });
@@ -529,6 +584,9 @@ export async function mutateVisit(
       paymentMode: params.paymentMode,
       acceptancePush: params.acceptancePush,
       warnings: payload.warnings,
+      businessStatus: payload.businessStatus,
+      businessReason: payload.businessReason,
+      hasRegistrationEvidence: payload.hasRegistrationEvidence,
       traceId: payload.traceId,
     },
   });
