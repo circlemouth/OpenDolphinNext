@@ -19,6 +19,17 @@ describe('orca route taxonomy guard classifier', () => {
     expect(result.category).toBeUndefined();
   });
 
+  it('classifies docs references to official routes as docs/reference, not public route declarations', () => {
+    const result = classifyOrcaRouteReference({
+      relativePath: 'docs/contracts/orca-route-taxonomy.md',
+      route: '/api/orca/official/appointments/list',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.DOCS_REFERENCE);
+    expect(result.reason).toContain('not a public-route declaration');
+  });
+
   it('allows the production fail-close legacy route sentinel only in the pinned client file', () => {
     const result = classifyOrcaRouteReference({
       relativePath: 'web-client/src/features/outpatient/orcaQueueApi.ts',
@@ -27,6 +38,17 @@ describe('orca route taxonomy guard classifier', () => {
 
     expect(result.allowed).toBe(true);
     expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.PRODUCTION_FAIL_CLOSE_SENTINEL);
+  });
+
+  it('classifies runtime-ready-smoke legacy route strings as blocked-route detectors, not success routes', () => {
+    const result = classifyOrcaRouteReference({
+      relativePath: 'web-client/scripts/runtime-ready-smoke.mjs',
+      route: '/api/orca/queue',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.BLOCKED_ROUTE_DETECTOR);
+    expect(result.reason).toContain('count any browser request');
   });
 
   it('rejects a legacy route when it appears in unrelated production source', () => {

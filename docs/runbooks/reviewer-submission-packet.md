@@ -40,6 +40,15 @@ reviewer 提出物を logs-only archive ではなく、同一 `RUN_ID` / 同一 
 - `reports/final-report.md`、`reports/command-log.md`、`reports/blocker-classification.md` が存在すること
 - `qa/acceptmodv2/`、`qa/fullflow/`、`evidence/patients-import/`、`evidence/medical-information-probe/`、`evidence/runtime-blockers/` の required file が欠けていないこと
 - `qa/fullflow/summary.json` が send 到達を示す場合、`qa/fullflow/request-xml/medicalmodv2.xml` が存在すること
+- Phase 3 handoff を示す evidence は exact selected-candidate `qa/weborca-readonly-preflight/summary.json` だけを正本とする。candidate discovery summary、local selectable のみ、HTTP 200 のみ、not-run / not-verified result、old RUN_ID evidence を handoff artifact にしない。
+
+## Evidence Extraction / Sanitization
+
+- packet に含める live evidence は、closeout evidence から reviewer が再読するための extracted subset に限定する。
+- `qa/weborca-candidate-discovery/` は sanitized selected-candidate proposal と rejected reason / classification だけを含め、raw official patient detail を含めない。accepted candidate が 0 件の場合も公式初期患者 `00001`〜`00011` の不在とは書かず、`PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` として harness/API/auth/ID normalization/response parser/insurance readiness/appointment dependency/exact preflight criteria の未充足を示す。
+- `qa/weborca-readonly-preflight/summary.json` は `source=qa-weborca-readonly-preflight`、`flowMode=exact-readonly-preflight`、`acceptedForPhase3Attempt`、`phase3AttemptPatientId`、artifact path/hash/input identity、sanitized readiness classification を含める。氏名、住所、電話番号、保険記号番号、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password は含めない。
+- accept / fullflow evidence は sanitized summary、redacted selected id、classification、artifact-relative path、必要な hash に限定する。HTTP 200、`apiResult=10/60`、K1/K2/K3 warning message、not-run / not-verified status だけから mutation success を推定しない。
+- `closeout-packet/` にコピーする docs / reports / evidence は packet-relative path で参照し、絶対ローカルパスや credentials を含んだ raw log を入れない。
 
 ## 出力レイアウト
 
