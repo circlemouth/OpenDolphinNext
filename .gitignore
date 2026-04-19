@@ -60,6 +60,8 @@ artifacts/source-archives/
 # Generated review support packages and sidecar integrity summaries.
 # Review ZIPs are local handoff artifacts; include source/log files via scripts/create-review-package.sh.
 artifacts/review-bundles/
+# RUN_ID-scoped local reviewer ZIP output under implementation packets.
+docs/implementation/**/review-package/
 web-client/tmp/
 .playwright-cli/
 artifacts/verification/

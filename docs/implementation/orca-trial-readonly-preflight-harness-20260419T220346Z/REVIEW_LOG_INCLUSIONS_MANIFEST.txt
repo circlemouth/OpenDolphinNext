@@ -1,0 +1,18 @@
+RUN_ID=20260419T220346Z
+Review logs:
+- README.md
+- FINAL_REPORT.md
+- subagent-prompts/A_exact-preflight-patientget-agent.md
+- subagent-prompts/B_acceptmod-diagnostic-hardening-agent.md
+- subagent-prompts/C_package-evidence-metadata-agent.md
+- subagent-prompts/D_readonly-investigation-agent.md
+- subagent-reports/A_exact-preflight-patientget-agent.md
+- subagent-reports/B_acceptmod-diagnostic-hardening-agent.md
+- subagent-reports/C_package-evidence-metadata-agent.md
+- subagent-reports/D_readonly-investigation-agent.md
+- dynamic-evidence/readonly-investigation-summary.md
+- dynamic-evidence/readonly-investigation-summary.sanitized.json
+- dynamic-evidence/readonly-investigation-command-log.md
+- dynamic-evidence/readonly-investigation-artifact-sha256.txt
+- dynamic-evidence/readonly-investigation-secret-scan.sanitized.txt
+- dynamic-evidence/secret-scan-review-bundle.log
