@@ -104,10 +104,21 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert(entries.includes('server-modernized/src/main/java/App.java'));
     assert(entries.includes('REVIEW_PACKAGE_MANIFEST.txt'));
     const manifest = run('unzip', ['-p', zipPath, 'REVIEW_PACKAGE_MANIFEST.txt'], repoDir);
+    assert.match(manifest, /packageMode=extracted_review_subset/);
     assert.match(manifest, /root_dir=\./);
     assert.match(manifest, /git_metadata_included=no/);
-    assert.match(manifest, /clean_checkout_claim=not_applicable/);
+    assert.match(manifest, /clean_checkout_claim=not_verified/);
+    assert.match(manifest, /source_git_metadata_available=yes/);
+    assert.match(manifest, /source_commit=[0-9a-f]{40}/);
+    assert.match(manifest, /source_branch=master/);
+    assert.match(manifest, /worktree_clean=not_verified/);
     assert.match(manifest, /git_claim_evidence_policy=git claims require package-included local git command logs/);
+    assert.match(manifest, /guarantee_scope=extracted_review_subset_excludes_legacy_client_server_artifacts_generated_dirs_and_rejects_forbidden_dynamic_evidence_secrets/);
+    assert.match(manifest, /non_guarantee_scope=not_clean_checkout_evidence_not_full_source_secret_scan_not_live_orca_evidence_not_git_truth/);
+    assert.match(manifest, /secret_scan_scope=no_dynamic_review_evidence/);
+    assert.match(manifest, /full_source_secret_scan_claim=not_claimed/);
+    assert.match(manifest, /orca_phase2_5_zero_candidate_verdict=PARTIAL_TEST_DATA_OR_HARNESS_READINESS_BLOCKER/);
+    assert.match(manifest, /orca_phase2_5_zero_candidate_semantics=acceptedCandidateCount_0_means_00001_to_00011_lack_current_read_only_mutation_ready_evidence_across_harness_api_auth_parser_readiness_exact_preflight_criteria_not_official_initial_patient_absence/);
     assert.match(manifest, /tracked_missing_file_count=0/);
     assert.match(manifest, /tracked_missing_files=none/);
     assert.match(manifest, /package_integrity_summary_file=OpenDolphin_WebClient-review-package-20260414T080812Z\.zip\.summary\.txt/);
@@ -125,8 +136,11 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     const summaryPath = `${zipPath}.summary.txt`;
     const summary = parseKeyValue(fs.readFileSync(summaryPath, 'utf8'));
     assert.equal(summary.get('review_package_name'), `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    assert.equal(summary.get('packageMode'), 'extracted_review_subset');
     assert.equal(summary.get('zip_size_bytes'), String(fs.statSync(zipPath).size));
     assert.equal(summary.get('zip_sha256'), sha256File(zipPath));
+    assert.equal(summary.get('secret_scan_scope'), 'no_dynamic_review_evidence');
+    assert.equal(summary.get('full_source_secret_scan_claim'), 'not_claimed');
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
@@ -184,9 +198,101 @@ test('adds manifest-listed review logs when requested', () => {
     assert.match(manifest, /review_package_name=OpenDolphin_WebClient-review-package-20260414T080812Z-with-dynamic-evidence\.zip/);
     assert.match(manifest, /review_log_include_count=3/);
     assert.match(manifest, /review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content/);
+    assert.match(manifest, /secret_scan_scope=dynamic_review_evidence_only/);
+    assert.match(manifest, /secret_scan_file_count=4/);
+    assert.match(manifest, /secret_scan_claim=dynamic-only/);
     assert.match(manifest, /docs\/implementation\/postfix\/test-logs\/static\.log/);
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('packages extracted source subsets without git metadata as not verified git truth', () => {
+  const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'review-package-extracted-subset-test-'));
+
+  try {
+    writeText(path.join(sandbox, 'README.md'), '# extracted subset\n');
+    writeText(path.join(sandbox, 'docs/guide.md'), '# guide\n');
+    writeText(path.join(sandbox, 'server-modernized/src/main/java/App.java'), 'class App {}\n');
+    writeText(path.join(sandbox, 'client/legacy.txt'), 'legacy\n');
+    writeText(path.join(sandbox, 'dist/app.js'), 'compiled\n');
+
+    run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out'], sandbox);
+    const zipPath = path.join(sandbox, 'out', `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    const entries = listZip(zipPath, sandbox);
+    const manifest = run('unzip', ['-p', zipPath, 'REVIEW_PACKAGE_MANIFEST.txt'], sandbox);
+
+    assert(entries.includes('README.md'));
+    assert(entries.includes('docs/guide.md'));
+    assert(entries.includes('server-modernized/src/main/java/App.java'));
+    assert(!entries.includes('client/legacy.txt'));
+    assert(!entries.includes('dist/app.js'));
+    assert.match(manifest, /packageMode=extracted_review_subset/);
+    assert.match(manifest, /source_git_metadata_available=no/);
+    assert.match(manifest, /source_commit=not_verified/);
+    assert.match(manifest, /source_branch=not_verified/);
+    assert.match(manifest, /worktree_clean=not_verified/);
+    assert.match(manifest, /clean_checkout_claim=not_verified/);
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('rejects raw artifact paths from review log manifests', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-evidence/raw-upstream-response.xml', ''].join('\n'),
+  });
+
+  try {
+    writeText(path.join(repoDir, 'docs/implementation/postfix/dynamic-evidence/raw-upstream-response.xml'), '<response />\n');
+    assert.throws(
+      () => run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
+      /raw artifact and is not allowed/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('rejects credential-bearing review evidence before packaging', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const secretCases = [
+    ['authorization', 'Authorization: Bearer should-not-ship'],
+    ['cookie', 'Cookie: JSESSIONID=should-not-ship'],
+    ['jsessionid', 'JSESSIONID=should-not-ship'],
+    ['csrf', 'X-CSRF-Token: should-not-ship'],
+    ['raw-session', 'sessionId=should-not-ship'],
+    ['raw-password', 'password=should-not-ship'],
+    ['credential-url', 'https://user:pass@example.invalid/api'],
+  ];
+
+  for (const [caseName, secretLine] of secretCases) {
+    const { sandbox, repoDir } = setupRepo({
+      'README.md': '# repo\n',
+      [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-logs/leaky.log', ''].join('\n'),
+      'docs/implementation/postfix/dynamic-logs/leaky.log': [
+        'command_log_version=1',
+        'command=npm test',
+        'cwd=/repo',
+        `runId=${RUN_ID}`,
+        'start_utc=2026-04-14T08:08:12Z',
+        secretLine,
+        'end_utc=2026-04-14T08:08:13Z',
+        'exit_code=0',
+        '',
+      ].join('\n'),
+    });
+
+    try {
+      assert.throws(
+        () => run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', `out-${caseName}`, '--include-review-log-manifest', manifestPath], repoDir),
+        /forbidden credential pattern/,
+      );
+    } finally {
+      fs.rmSync(sandbox, { recursive: true, force: true });
+    }
   }
 });
 

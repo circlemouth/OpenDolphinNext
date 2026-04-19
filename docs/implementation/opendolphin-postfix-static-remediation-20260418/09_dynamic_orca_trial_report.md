@@ -2,15 +2,15 @@
 
 - RUN_ID: `20260419T120043Z`
 - Scope: Phase 2.5 candidate discovery / exact preflight gate hardening, static evidence, read-only dynamic evidence, package evidence alignment.
-- Overall dynamic verdict: `PARTIAL / TEST-DATA BLOCKER`
+- Overall dynamic verdict: `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER`
 - Target readiness statement: source/test/docs/package are hardened for the next candidate attempt, but this run is not `READY TO RUN PHASE 3 IF EXACT PREFLIGHT PASSES` because no mutation-ready candidate was accepted and exact selected-candidate preflight was not run.
 - Raw sensitive fields excluded: yes.
 
 ## 1. Overall Dynamic Verdict
 
-`PARTIAL / TEST-DATA BLOCKER`
+`PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER`
 
-Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-ready candidate was accepted. Phase 3 and Phase 4 were intentionally not run.
+Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-ready candidate was accepted. Phase 3 and Phase 4 were intentionally not run. `acceptedCandidateCount=0` must not be read as proof that official initial patients do not exist; it means only that `00001`-`00011` did not have enough current read-only evidence across harness / API / auth / parser / readiness / exact-preflight criteria to authorize a mutation attempt.
 
 ## 2. Phase Status
 
@@ -18,7 +18,7 @@ Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-re
 | --- | --- | --- |
 | Phase 1 runtime-ready | accepted | `dynamic-logs/20260419T120043Z-runtime-ready-smoke.log`, `dynamic-evidence/20260419T120043Z-runtime-ready-result.json` |
 | Phase 2 read-only connectivity/auth | accepted historical evidence | retained `20260418T220502Z-*` read-only logs; no mutation claim |
-| Phase 2.5 candidate discovery | completed fail-closed / test-data blocker | `dynamic-logs/20260419T120043Z-qa-weborca-candidate-discovery.log`, `dynamic-evidence/20260419T120043Z-candidate-discovery-summary.json` |
+| Phase 2.5 candidate discovery | completed fail-closed / test-data or harness readiness blocker | `dynamic-logs/20260419T120043Z-qa-weborca-candidate-discovery.log`, `dynamic-evidence/20260419T120043Z-candidate-discovery-summary.json` |
 | Phase 2.5 exact selected-candidate preflight | not run | `dynamic-evidence/20260419T120043Z-readonly-preflight-not-run-summary.json`; no accepted candidate existed |
 | Phase 3 acceptmodv2 | not run | `dynamic-logs/20260419T120043Z-phase3-phase4-not-run.log`, `dynamic-evidence/20260419T120043Z-acceptmodv2-not-run-summary.json` |
 | Phase 4 fullflow | not run | `dynamic-logs/20260419T120043Z-phase3-phase4-not-run.log`, `dynamic-evidence/20260419T120043Z-fullflow-not-run-summary.json` |
@@ -30,7 +30,7 @@ Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-re
 | Probe candidates `00001`-`00011` | 11 | none | no |
 | Accepted candidate rows | 0 | none | no |
 
-All probe candidates returned official patient existence `apiResult=10`; official existence therefore remained rejected even when HTTP status was 200. Insurance and appointment probes returned HTTP 403 and were classified as `ambiguous_readiness_failure`, not as proven absence of insurance or appointment data.
+All probe candidates returned official patient existence `apiResult=10`; under the current harness/API/auth/parser/readiness criteria, official existence evidence therefore remained insufficient even when HTTP status was 200. This does not prove that official initial patients are absent. Insurance and appointment probes returned HTTP 403 and were classified as `ambiguous_readiness_failure`, not as proven absence of insurance or appointment data.
 
 | Required row field | Evidence |
 | --- | --- |
@@ -60,7 +60,7 @@ All probe candidates returned official patient existence `apiResult=10`; officia
 
 | Claim | Verdict | Evidence |
 | --- | --- | --- |
-| `00001`-`00011` are mutation-ready Trial-native candidates | rejected | `acceptedCandidateCount=0` |
+| `00001`-`00011` are mutation-ready Trial-native candidates | rejected | `acceptedCandidateCount=0`; this is a readiness/evidence failure, not proof of official initial patient absence |
 | HTTP 200 alone proves ORCA business success | rejected | official patient probes with HTTP 200 / `apiResult=10` are rejected |
 | HTTP 403 proves insurance or appointment absence | rejected | classified as route/auth/wrapper ambiguity |
 | prior `0000001` can be reused | rejected | legacy seed remains explicit rejected candidate |
