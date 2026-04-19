@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   TRIAL_NATIVE_PROBE_CANDIDATES,
   buildCandidateDiscoveryGate,
+  buildOfficialPatientReadinessAxes,
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
+  officialPatientEvidenceAccepted,
   isRejectedTrialCandidate,
+  sanitizeOfficialPatientExistenceEvidence,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
   summarizeLocalSelectableReadiness,
@@ -138,6 +141,65 @@ describe('orca trial-native preflight gates', () => {
     });
   });
 
+  it('rejects official patients batch DTO shape without raw ORCA Patient_Information as exact existence evidence', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      candidateId: '00001',
+      body: {
+        apiResult: '00',
+        recordsReturned: 1,
+        patients: [{ patientId: '00001', fullName: 'Sensitive Name' }],
+      },
+    });
+    const evidence = sanitizeOfficialPatientExistenceEvidence(result);
+
+    expect(result).toMatchObject({
+      parsedOrcaBody: true,
+      apiResultAccepted: true,
+      patientInformationPresent: false,
+      exactIdMatched: false,
+      accepted: false,
+      rejectionReason: 'patient_information_missing',
+    });
+    expect(officialPatientEvidenceAccepted(evidence)).toBe(false);
+    expect(Object.keys(evidence)).toEqual([
+      'httpStatus',
+      'parsedOrcaBody',
+      'apiResult',
+      'apiResultAccepted',
+      'patientInformationPresent',
+      'exactIdMatched',
+      'notFoundMessage',
+      'responseCategory',
+      'rejectionReason',
+      'evidenceHash',
+      'rawSensitiveFieldsExcluded',
+    ]);
+    expect(JSON.stringify(evidence)).not.toContain('Sensitive Name');
+  });
+
+  it('accepts patientgetv2 parsed ORCA body with Api_Result=00, Patient_Information, and exact Patient_ID', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      candidateId: '00001',
+      body: { Api_Result: '00', Patient_Information: { Patient_ID: '00001', WholeName: 'Sensitive Name' } },
+    });
+    const evidence = sanitizeOfficialPatientExistenceEvidence(result);
+
+    expect(result).toMatchObject({
+      httpStatus: 200,
+      parsedOrcaBody: true,
+      apiResult: '00',
+      apiResultAccepted: true,
+      patientInformationPresent: true,
+      exactIdMatched: true,
+      accepted: true,
+      rejectionReason: 'none',
+    });
+    expect(officialPatientEvidenceAccepted(evidence)).toBe(true);
+    expect(JSON.stringify(evidence)).not.toContain('Sensitive Name');
+  });
+
   it('accepts apiResult=00 with Patient_Information and exact Patient_ID after canonical normalization', () => {
     const result = summarizeOfficialPatientExistence({
       httpStatus: 204,
@@ -225,6 +287,49 @@ describe('orca trial-native preflight gates', () => {
       accepted: false,
       rejectionReason: 'patient_not_found_wording_present',
     });
+  });
+
+  it('builds exact preflight official patient failure dimensions without raw patient details or nonexistence claims', () => {
+    const accepted = sanitizeOfficialPatientExistenceEvidence(
+      summarizeOfficialPatientExistence({
+        httpStatus: 200,
+        candidateId: '00001',
+        body: { Api_Result: '00', Patient_Information: { Patient_ID: '00001', WholeName: 'Sensitive Name' } },
+      }),
+    );
+    const rejected = sanitizeOfficialPatientExistenceEvidence(
+      summarizeOfficialPatientExistence({
+        httpStatus: 200,
+        candidateId: '00002',
+        body: { Api_Result: '10', Patient_Information: { Patient_ID: '00002', WholeName: 'Other Sensitive Name' } },
+      }),
+    );
+
+    const axes = buildOfficialPatientReadinessAxes({ '00001': accepted, '00002': rejected });
+
+    expect(axes.rawSensitiveFieldsExcluded).toBe(true);
+    expect(axes.meaning).toContain('do not contradict official initial patient registration');
+    expect(axes.meaning).not.toMatch(/do not exist|nonexistent|存在しない/);
+    expect(axes.patientgetv2).toEqual([
+      expect.objectContaining({
+        patientId: '00001',
+        parsedOrcaBody: true,
+        apiResultAccepted: true,
+        patientInformationPresent: true,
+        exactIdMatched: true,
+        accepted: true,
+        rawSensitiveFieldsExcluded: true,
+      }),
+      expect.objectContaining({
+        patientId: '00002',
+        apiResult: '10',
+        accepted: false,
+        rejectionReason: 'api_result_not_all_zero',
+        rawSensitiveFieldsExcluded: true,
+      }),
+    ]);
+    expect(JSON.stringify(axes)).not.toContain('Sensitive Name');
+    expect(JSON.stringify(axes)).not.toContain('Other Sensitive Name');
   });
 
   it('apiResult=10 diagnostic rejects the candidate', () => {

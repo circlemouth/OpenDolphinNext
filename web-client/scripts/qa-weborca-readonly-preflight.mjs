@@ -18,7 +18,10 @@ import {
   createEvidenceRef,
 } from './qa-lib/acceptmodv2-identity-gate.mjs';
 import {
+  buildOfficialPatientReadinessAxes,
   classifyAcceptmodReadOnlyDiagnostic,
+  officialPatientEvidenceAccepted,
+  sanitizeOfficialPatientExistenceEvidence,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
   summarizeOfficialPatientExistence,
@@ -76,7 +79,7 @@ const session = buildQaSession({
 const TRIAL_INITIAL_PATIENT_IDS = Array.from({ length: 11 }, (_, index) => String(index + 1).padStart(5, '0'));
 const REJECTED_PATIENT_IDS = new Set(['0000001']);
 const MEDICAL_INFORMATION_PROBE_PATH = '/api/orca/official/appointments/medical-information';
-const OFFICIAL_PATIENT_BATCH_PATH = '/api/orca/official/patients/batch';
+const OFFICIAL_PATIENT_GET_PATH = '/api/orca/official/patientgetv2';
 const OFFICIAL_INSURANCE_COMBINATIONS_PATH = '/api/orca/official/insurance/combinations';
 const LOCAL_PATIENT_SEARCH_PATH = '/api/local/patients/search';
 const APPOINTMENTS_LIST_PATH = '/api/orca/official/appointments/list';
@@ -84,7 +87,7 @@ const VISITS_LIST_PATH = '/api/orca/official/visits/list';
 const VISITS_MUTATION_PATH = '/api/orca/official/visits/mutation';
 const TARGET_PATHS = [
   MEDICAL_INFORMATION_PROBE_PATH,
-  OFFICIAL_PATIENT_BATCH_PATH,
+  OFFICIAL_PATIENT_GET_PATH,
   OFFICIAL_INSURANCE_COMBINATIONS_PATH,
   LOCAL_PATIENT_SEARCH_PATH,
   APPOINTMENTS_LIST_PATH,
@@ -136,7 +139,15 @@ const verdict = (accepted, verified = true) => {
   return accepted ? 'accepted' : 'rejected';
 };
 const isTarget = (url) => TARGET_PATHS.some((pathName) => url.includes(pathName));
-const urlFor = (pathName) => new URL(pathName, baseURL).toString();
+const urlFor = (pathName, query) => {
+  const url = new URL(pathName, baseURL);
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value !== undefined && value !== null && String(value).trim()) {
+      url.searchParams.set(key, String(value));
+    }
+  }
+  return url.toString();
+};
 
 const summarizeBody = (body) => {
   if (!body) return { bodyChars: 0 };
@@ -195,15 +206,15 @@ const collectResponse = async (response) => {
   });
 };
 
-const recordDirectExchange = async ({ pathName, method, requestBody, response, responseText }) => {
+const recordDirectExchange = async ({ pathName, method, requestBody, query, response, responseText }) => {
   requestRecords.push({
-    url: redactUrl(urlFor(pathName)),
+    url: redactUrl(urlFor(pathName, query)),
     method,
     headers: {},
     postData: summarizeBody(requestBody ? JSON.stringify(requestBody) : ''),
   });
   networkRecords.push({
-    url: redactUrl(urlFor(pathName)),
+    url: redactUrl(urlFor(pathName, query)),
     status: response.status(),
     statusText: response.statusText(),
     request: {
@@ -289,72 +300,83 @@ const probeMedicalInformationOptions = async (context) => {
   }
 };
 
-const probeOfficialPatientBatch = async (context, candidateIds) => {
-  const body = { patientIds: candidateIds, includeInsurance: false };
-  logStep(`official patient exact probe start candidates=${candidateIds.length}`);
+const buildNotVerifiedOfficialEvidence = (rejectionReason = 'not_verified') =>
+  sanitizeOfficialPatientExistenceEvidence({
+    httpStatus: 0,
+    parsedOrcaBody: false,
+    apiResult: '',
+    apiResultAccepted: false,
+    patientInformationPresent: false,
+    exactIdMatched: false,
+    notFoundMessage: false,
+    responseCategory: 'not_verified',
+    rejectionReason,
+  });
+
+const probeOfficialPatientgetv2 = async (context, candidateId) => {
+  const query = { id: candidateId, class: '01', format: 'json' };
+  logStep(`official patientgetv2 exact probe start patient=${candidateId}`);
   try {
-    const response = await context.request.post(urlFor(OFFICIAL_PATIENT_BATCH_PATH), { data: body });
+    const response = await context.request.get(urlFor(OFFICIAL_PATIENT_GET_PATH, query));
     const text = await response.text().catch(() => '');
     await recordDirectExchange({
-      pathName: OFFICIAL_PATIENT_BATCH_PATH,
-      method: 'POST',
-      requestBody: body,
+      pathName: OFFICIAL_PATIENT_GET_PATH,
+      method: 'GET',
+      query,
       response,
       responseText: text,
     });
     const parsed = parseJson(text);
-    const apiResult = normalizeApiResult(parsed?.apiResult);
-    const candidates = Object.fromEntries(
-      candidateIds.map((candidateId) => {
-        const existence = summarizeOfficialPatientExistence({
-          httpStatus: response.status(),
-          body: parsed,
-          candidateId,
-        });
-        return [
-          candidateId,
-          {
-            ...existence,
-            exactMatch: existence.exactIdMatched,
-          },
-        ];
-      }),
-    );
-    const exactMatchedPatientIds = candidateIds.filter((candidateId) => candidates[candidateId]?.accepted === true);
-    const missingPatientIds = candidateIds.filter((candidateId) => !exactMatchedPatientIds.includes(candidateId));
-    const businessOk = response.ok() && isAllZeroApiResult(apiResult);
+    const existence = summarizeOfficialPatientExistence({
+      httpStatus: response.status(),
+      body: parsed,
+      candidateId,
+    });
+    const evidence = sanitizeOfficialPatientExistenceEvidence(existence);
     return {
       status: response.status(),
       ok: response.ok(),
-      apiResult,
-      apiResultMessage: normalizeString(parsed?.apiResultMessage) ?? '',
-      requestedCount: candidateIds.length,
-      returnedCount: exactMatchedPatientIds.length,
-      exactMatchedPatientIds,
-      missingPatientIds,
-      candidates,
-      verdict: verdict(businessOk && exactMatchedPatientIds.length > 0),
-      accepted: businessOk && exactMatchedPatientIds.length > 0,
+      ...evidence,
+      accepted: officialPatientEvidenceAccepted(evidence),
+      verdict: verdict(officialPatientEvidenceAccepted(evidence)),
+      exactMatch: evidence.exactIdMatched,
     };
   } catch (error) {
+    const evidence = buildNotVerifiedOfficialEvidence('patientgetv2_probe_failed');
     return {
       status: 0,
       ok: false,
-      apiResult: '',
-      apiResultMessage: '',
-      requestedCount: candidateIds.length,
-      returnedCount: 0,
-      exactMatchedPatientIds: [],
-      missingPatientIds: candidateIds,
-      candidates: Object.fromEntries(candidateIds.map((candidateId) => [
-        candidateId,
-        { exactMatch: false, verdict: 'rejected' },
-      ])),
-      verdict: 'rejected',
+      ...evidence,
       accepted: false,
+      verdict: 'rejected',
       error: String(error),
     };
   }
+};
+
+const probeOfficialPatients = async (context, candidateIds) => {
+  logStep(`official patientgetv2 exact probe set start candidates=${candidateIds.length}`);
+  const candidates = {};
+  for (const candidateId of candidateIds) {
+    candidates[candidateId] = await probeOfficialPatientgetv2(context, candidateId);
+  }
+  const exactMatchedPatientIds = candidateIds.filter((candidateId) => candidates[candidateId]?.accepted === true);
+  const missingPatientIds = candidateIds.filter((candidateId) => !exactMatchedPatientIds.includes(candidateId));
+  const statuses = Object.values(candidates).map((candidate) => candidate.httpStatus ?? candidate.status ?? 0);
+  const failedStatus = statuses.find((status) => status >= 500 || status === 0);
+  const status = failedStatus ?? statuses[0] ?? 0;
+  return {
+    status,
+    httpStatus: status,
+    requestedCount: candidateIds.length,
+    returnedCount: exactMatchedPatientIds.length,
+    exactMatchedPatientIds,
+    missingPatientIds,
+    candidates,
+    readinessAxes: buildOfficialPatientReadinessAxes(candidates),
+    verdict: verdict(exactMatchedPatientIds.length > 0),
+    accepted: exactMatchedPatientIds.length > 0,
+  };
 };
 
 const probeInsuranceReadiness = async (context, patientId) => {
@@ -760,7 +782,7 @@ const buildMarkdownSummary = (summary) =>
   `- blockerClassification: ${summary.blockerClassification}\n` +
   `- blockerReason: ${summary.blockerReason}\n` +
   `- trialSourceCandidate: ${summary.trialSourceCandidate.verdict}\n` +
-  `- officialPatientExistence: ${summary.officialPatientExistence.verdict}\n` +
+  `- officialPatientExistence: ${verdict(officialPatientEvidenceAccepted(summary.officialPatientExistence))} reason=${summary.officialPatientExistence.rejectionReason ?? 'none'}\n` +
   `- insuranceReadiness: ${summary.insuranceReadiness.verdict} status=${summary.insuranceReadiness.status ?? 'none'} apiResult=${summary.insuranceReadiness.apiResult || 'none'} classification=${summary.insuranceReadiness.classification ?? 'none'} accepted=${summary.insuranceReadiness.accepted ? 'yes' : 'no'} count=${summary.insuranceReadiness.count ?? 0} effective=${summary.insuranceReadiness.effectiveCount ?? 0}\n` +
   `- localSelectableReadiness: ${summary.localSelectableReadiness.verdict}\n` +
   `- selectorReadiness: ${summary.selectorReadiness.verdict}\n` +
@@ -795,7 +817,7 @@ try {
 
   const candidateIds = buildCandidateIds();
   const medicalInformationProbe = await probeMedicalInformationOptions(context);
-  const officialPatientExistence = await probeOfficialPatientBatch(context, candidateIds);
+  const officialPatientExistence = await probeOfficialPatients(context, candidateIds);
   const trialSourceCandidate = await chooseCandidate({
     context,
     candidateIds,
@@ -898,6 +920,11 @@ try {
         mutationSuccess: false,
         acceptedForPhase3Attempt: false,
       };
+  const selectedOfficialPatientEvidence = selectedPatientId
+    ? sanitizeOfficialPatientExistenceEvidence(officialPatientExistence.candidates?.[selectedPatientId])
+    : buildNotVerifiedOfficialEvidence('no_accepted_trial_candidate');
+  const officialPatientAccepted = officialPatientEvidenceAccepted(selectedOfficialPatientEvidence);
+  const rawSensitiveFieldsExcluded = selectedOfficialPatientEvidence.rawSensitiveFieldsExcluded === true;
 
   const classification = classify({
     sessionMe,
@@ -915,12 +942,13 @@ try {
     Boolean(selectedPatientId) &&
     medicalInformationProbe.accepted &&
     trialSourceCandidate.verdict === 'accepted' &&
-    officialPatientExistence.candidates?.[selectedPatientId]?.verdict === 'accepted' &&
+    officialPatientAccepted &&
     insuranceReadiness.verdict === 'accepted' &&
     localSelectableReadiness.verdict === 'accepted' &&
     selectorReadiness.verdict === 'accepted' &&
     appointmentDependency.verdict === 'accepted' &&
-    acceptmodv2ReadOnlyDiagnostic.acceptedForPhase3Attempt === true;
+    acceptmodv2ReadOnlyDiagnostic.acceptedForPhase3Attempt === true &&
+    rawSensitiveFieldsExcluded === true;
   const patientId = selectedPatientId ?? requestedPatientId;
   const phaseCandidateId = requestedCandidateId || patientId || candidateId;
   const medicalInformationState = buildMedicalInformationState(medicalInformation);
@@ -946,11 +974,9 @@ try {
       insuranceReadiness,
     }),
   };
-  const officialPatientEvidence = createEvidenceRef('summary.json#/officialPatientExistence', {
-    patientId,
-    candidate: patientId ? officialPatientExistence.candidates?.[patientId] : undefined,
-    exactMatchedPatientIds: officialPatientExistence.exactMatchedPatientIds,
-  });
+  const officialPatientEvidence = selectedOfficialPatientEvidence;
+  const officialPatientEvidenceRef = 'summary.json#/officialPatientExistence';
+  const officialPatientEvidenceHash = createEvidenceRef(officialPatientEvidenceRef, officialPatientEvidence).hash;
   const insuranceEvidence = createEvidenceRef('summary.json#/insuranceReadiness', {
     patientId,
     paymentMode,
@@ -990,8 +1016,8 @@ try {
     medicalInformationState,
     inputIdentity,
     officialPatientEvidence,
-    officialPatientEvidenceRef: officialPatientEvidence.id,
-    officialPatientEvidenceHash: officialPatientEvidence.hash,
+    officialPatientEvidenceRef,
+    officialPatientEvidenceHash,
     insuranceEvidence,
     insuranceEvidenceRef: insuranceEvidence.id,
     insuranceEvidenceHash: insuranceEvidence.hash,
@@ -1009,7 +1035,8 @@ try {
     requestedPatientId: requestedPatientId || undefined,
     phase3AttemptPatientId: acceptedForPhase3Attempt ? selectedPatientId : null,
     trialSourceCandidate,
-    officialPatientExistence,
+    officialPatientExistence: officialPatientEvidence,
+    officialPatientReadinessAxes: officialPatientExistence.readinessAxes,
     insuranceReadiness: insuranceReadinessWithEvidence,
     selectorReadiness,
     localSelectableReadiness,
@@ -1019,7 +1046,7 @@ try {
     verdict: acceptedForPhase3Attempt ? 'accepted' : 'rejected',
     blockerClassification: classification.blockerClassification,
     blockerReason: classification.blockerReason,
-    rawSensitiveFieldsExcluded: true,
+    rawSensitiveFieldsExcluded,
     consoleMessages,
     pageErrors,
   };
@@ -1043,6 +1070,9 @@ try {
   fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
+  const officialPatientEvidence = buildNotVerifiedOfficialEvidence('fatal_error');
+  const officialPatientEvidenceRef = 'summary.json#/officialPatientExistence';
+  const officialPatientEvidenceHash = createEvidenceRef(officialPatientEvidenceRef, officialPatientEvidence).hash;
   const summary = {
     runId,
     source: EXACT_PREFLIGHT_SOURCE,
@@ -1069,9 +1099,9 @@ try {
       visitKind,
       medicalInformation,
     }),
-    officialPatientEvidence: createEvidenceRef('summary.json#/officialPatientExistence', null),
-    officialPatientEvidenceRef: 'summary.json#/officialPatientExistence',
-    officialPatientEvidenceHash: createEvidenceRef('summary.json#/officialPatientExistence', null).hash,
+    officialPatientEvidence,
+    officialPatientEvidenceRef,
+    officialPatientEvidenceHash,
     insuranceEvidence: createEvidenceRef('summary.json#/insuranceReadiness', null),
     insuranceEvidenceRef: 'summary.json#/insuranceReadiness',
     insuranceEvidenceHash: createEvidenceRef('summary.json#/insuranceReadiness', null).hash,
@@ -1090,7 +1120,10 @@ try {
       selectedPatientId: undefined,
       verdict: 'rejected',
     },
-    officialPatientExistence: { verdict: 'not_verified', exactMatchedPatientIds: [], missingPatientIds: buildCandidateIds() },
+    officialPatientExistence: officialPatientEvidence,
+    officialPatientReadinessAxes: buildOfficialPatientReadinessAxes(
+      Object.fromEntries(buildCandidateIds().map((candidateId) => [candidateId, officialPatientEvidence])),
+    ),
     insuranceReadiness: {
       verdict: 'not_verified',
       count: 0,

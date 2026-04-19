@@ -215,6 +215,73 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
   };
 };
 
+export const sanitizeOfficialPatientExistenceEvidence = (summary) => {
+  const httpStatus = asFiniteStatus(summary?.httpStatus ?? summary?.status);
+  const parsedOrcaBody = summary?.parsedOrcaBody === true;
+  const apiResult = normalizeApiResult(summary?.apiResult);
+  const apiResultAccepted = summary?.apiResultAccepted === true;
+  const patientInformationPresent = summary?.patientInformationPresent === true;
+  const exactIdMatched = summary?.exactIdMatched === true;
+  const notFoundMessage = summary?.notFoundMessage === true;
+  const responseCategory = normalizeText(summary?.responseCategory ?? summary?.category) || 'not_verified';
+  const rejectionReason = normalizeText(summary?.rejectionReason) || 'not_verified';
+  const evidenceHash =
+    normalizeText(summary?.evidenceHash) ||
+    hash(
+      `${httpStatus}:${parsedOrcaBody}:${apiResult}:${apiResultAccepted}:${patientInformationPresent}:${exactIdMatched}:${notFoundMessage}:${responseCategory}:${rejectionReason}`,
+    );
+  return {
+    httpStatus,
+    parsedOrcaBody,
+    apiResult,
+    apiResultAccepted,
+    patientInformationPresent,
+    exactIdMatched,
+    notFoundMessage,
+    responseCategory,
+    rejectionReason,
+    evidenceHash,
+    rawSensitiveFieldsExcluded: true,
+  };
+};
+
+export const officialPatientEvidenceAccepted = (evidence) =>
+  is2xx(evidence?.httpStatus) &&
+  evidence?.parsedOrcaBody === true &&
+  evidence?.apiResultAccepted === true &&
+  evidence?.patientInformationPresent === true &&
+  evidence?.exactIdMatched === true &&
+  evidence?.notFoundMessage !== true &&
+  evidence?.rawSensitiveFieldsExcluded === true;
+
+export const buildOfficialPatientReadinessAxes = (candidateEvidenceMap) => {
+  const entries = Object.entries(candidateEvidenceMap ?? {});
+  return {
+    meaning:
+      '00001-00011 are official ORCA Trial initial patients; rejected exact preflight rows mean Phase 3 mutation-ready read-only evidence is incomplete and do not contradict official initial patient registration.',
+    officialTrialInitialPatientsExistenceAssumption: 'registered_by_official_orca_trial_docs',
+    rawSensitiveFieldsExcluded: true,
+    patientgetv2: entries.map(([patientId, value]) => {
+      const evidence = sanitizeOfficialPatientExistenceEvidence(value);
+      return {
+        patientId,
+        httpStatus: evidence.httpStatus,
+        parsedOrcaBody: evidence.parsedOrcaBody,
+        apiResult: evidence.apiResult,
+        apiResultAccepted: evidence.apiResultAccepted,
+        patientInformationPresent: evidence.patientInformationPresent,
+        exactIdMatched: evidence.exactIdMatched,
+        patientNotFoundWordingAbsent: evidence.notFoundMessage !== true,
+        responseCategory: evidence.responseCategory,
+        rejectionReason: evidence.rejectionReason,
+        accepted: officialPatientEvidenceAccepted(evidence),
+        evidenceHash: evidence.evidenceHash,
+        rawSensitiveFieldsExcluded: true,
+      };
+    }),
+  };
+};
+
 const collectInsuranceCombinations = (body) => {
   const combinations = [];
   const push = (value) => {
