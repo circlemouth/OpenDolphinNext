@@ -144,7 +144,7 @@ export const validatePreflightSummary = ({ summary, expected, artifactPath = '',
     };
   }
 
-  if (summary?.source === CANDIDATE_DISCOVERY_SOURCE || summary?.candidateDiscoveryAloneAuthorizesPhase3 === false) {
+  if (summary?.source === CANDIDATE_DISCOVERY_SOURCE) {
     return {
       ok: false,
       mutationAllowed: false,

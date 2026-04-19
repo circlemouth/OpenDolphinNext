@@ -141,6 +141,24 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.blockerClassification).toBe('candidate_discovery_only');
   });
 
+  it('does not reject exact preflight solely because it carries candidate discovery safety metadata', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        source: EXACT_PREFLIGHT_SOURCE,
+        flowMode: EXACT_PREFLIGHT_FLOW_MODE,
+        candidateDiscoveryAloneAuthorizesPhase3: false,
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.mutationAllowed).toBe(true);
+    expect(result.blockerClassification).toBe('none');
+  });
+
   it.each([
     ['false', false],
     ['string true', 'true'],
