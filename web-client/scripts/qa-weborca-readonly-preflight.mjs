@@ -490,9 +490,9 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
           : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
             ? 'patient_not_found'
             : 'not_readonly_no_existing_acceptance',
-      mutationSuccess: false,
+      mutationSuccess: diagnostic.mutationSuccess,
       classification: diagnostic.classification,
-      acceptedForPhase3Attempt: diagnostic.accepted,
+      acceptedForPhase3Attempt: diagnostic.acceptedForPhase3Attempt,
     };
   } catch (error) {
     return {

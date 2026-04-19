@@ -167,6 +167,42 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.missingFields).toContain('acceptmodv2ReadOnlyDiagnostic');
   });
 
+  it('rejects exact preflight when raw sensitive field exclusion is not asserted', () => {
+    const result = validatePreflightSummary({
+      summary: { ...acceptedSummary(), rawSensitiveFieldsExcluded: false },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+    expect(result.missingFields).toContain('rawSensitiveFieldsExcluded');
+  });
+
+  it('rejects exact preflight when Request_Number=00 found an existing acceptance', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        acceptmodv2ReadOnlyDiagnostic: {
+          apiResult: '00',
+          classification: 'diagnostic_existing_acceptance',
+          businessStatus: 'diagnosticExistingAcceptance',
+          businessReason: 'existing_acceptance',
+          mutationSuccess: false,
+          acceptedForPhase3Attempt: false,
+        },
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_diagnostic_not_verified');
+  });
+
   it('requires exact preflight artifact path and hash', () => {
     const result = validatePreflightSummary({
       summary: acceptedSummary(),

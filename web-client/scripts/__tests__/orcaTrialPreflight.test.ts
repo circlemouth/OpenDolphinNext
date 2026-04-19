@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   TRIAL_NATIVE_PROBE_CANDIDATES,
+  buildCandidateDiscoveryGate,
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
   isRejectedTrialCandidate,
@@ -142,11 +143,29 @@ describe('orca trial-native preflight gates', () => {
       httpStatus: 204,
       apiResult: '00',
       apiResultAccepted: true,
+      parsedOrcaBody: true,
       patientInformationPresent: true,
       exactIdMatched: true,
       category: 'present',
       accepted: true,
       rejectionReason: 'none',
+    });
+  });
+
+  it('rejects unparsed official patient bodies even when transport is 2xx', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      candidateId: '00001',
+      body: 'apiResult=00 Patient_ID=00001',
+    });
+
+    expect(result).toMatchObject({
+      parsedOrcaBody: false,
+      apiResultAccepted: false,
+      patientInformationPresent: false,
+      exactIdMatched: false,
+      accepted: false,
+      rejectionReason: 'orca_body_not_parsed',
     });
   });
 
@@ -213,6 +232,17 @@ describe('orca trial-native preflight gates', () => {
     expect(classifyAcceptmodReadOnlyDiagnostic({ executed: true, httpStatus: 200, apiResult: '60' })).toMatchObject({
       classification: 'diagnostic_no_existing_acceptance',
       accepted: true,
+      acceptedForPhase3Attempt: true,
+      mutationSuccess: false,
+    });
+  });
+
+  it('Request_Number=00 apiResult=00 is an existing-acceptance diagnostic, not Phase 3 authorization', () => {
+    expect(classifyAcceptmodReadOnlyDiagnostic({ executed: true, httpStatus: 200, apiResult: '00' })).toMatchObject({
+      classification: 'diagnostic_existing_acceptance',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
     });
   });
 
@@ -339,5 +369,39 @@ describe('orca trial-native preflight gates', () => {
 
   it('missing selector rejects the candidate', () => {
     expect(summarizeSelectorReadiness({ ...acceptedSelectors, physician: { exists: true, optionCount: 0 } }).accepted).toBe(false);
+  });
+
+  it('candidate discovery with zero accepted candidates is readiness-blocked without contradicting Trial registration', () => {
+    const gate = buildCandidateDiscoveryGate({
+      candidateCount: 11,
+      acceptedCandidateCount: 0,
+      blockedRequestCount: 0,
+      selectedCandidate: null,
+    });
+
+    expect(gate).toMatchObject({
+      candidateDiscoveryAloneAuthorizesPhase3: false,
+      acceptedForPhase3Attempt: false,
+      phase3AttemptPatientId: null,
+      releaseVerdict: 'PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER',
+      blockerClassification: 'test-data-or-harness-readiness-blocker',
+      blockerReason: 'phase3_mutation_ready_readonly_evidence_missing',
+      mutationPolicy: {
+        prohibited: true,
+        blockedRequestCount: 0,
+      },
+      exactSelectedCandidatePreflight: {
+        ran: false,
+      },
+      phase3: {
+        ran: false,
+      },
+      phase4: {
+        ran: false,
+      },
+      candidateDiscovery: {
+        acceptedCandidateCount: 0,
+      },
+    });
   });
 });

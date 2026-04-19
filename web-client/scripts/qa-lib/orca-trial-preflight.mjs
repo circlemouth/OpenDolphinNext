@@ -15,6 +15,11 @@ export const TRIAL_NATIVE_PROBE_CANDIDATES = [
 ];
 
 export const REJECTED_TRIAL_CANDIDATES = new Set(['0000001']);
+export const CANDIDATE_DISCOVERY_RELEASE_VERDICTS = {
+  exactPreflightRequired: 'PARTIAL / EXACT PREFLIGHT REQUIRED',
+  readinessBlocker: 'PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER',
+  readonlyMutationBlocked: 'PARTIAL / READONLY MUTATION BLOCKER',
+};
 
 const normalizeText = (value) => {
   if (typeof value === 'string') return value.trim();
@@ -144,6 +149,7 @@ const hasPatientNotFoundMessage = (body) =>
 export const isRejectedTrialCandidate = (candidateId) => REJECTED_TRIAL_CANDIDATES.has(normalizeText(candidateId));
 
 export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateId }) => {
+  const parsedOrcaBody = isRecord(body);
   const apiResult = normalizeApiResult(
     body?.apiResult ?? body?.Api_Result ?? findFirstDeep(body, ['apiResult', 'Api_Result', 'result', 'Result']),
   );
@@ -163,6 +169,8 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
   const rejectionReason =
     !is2xx(httpStatus)
       ? 'http_not_2xx'
+      : !parsedOrcaBody
+        ? 'orca_body_not_parsed'
       : !apiResultAccepted
         ? apiResult
           ? 'api_result_not_all_zero'
@@ -178,6 +186,7 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
                 : 'none';
   const accepted =
     is2xx(httpStatus) &&
+    parsedOrcaBody &&
     apiResultAccepted &&
     patientInformationPresent &&
     exactIdMatched &&
@@ -187,6 +196,7 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
   return {
     status: httpStatus,
     httpStatus,
+    parsedOrcaBody,
     apiResult,
     apiResultAccepted,
     patientInformationPresent,
@@ -423,11 +433,26 @@ export const summarizeLocalSelectableReadiness = ({ candidateId, selectableCount
 
 export const classifyAcceptmodReadOnlyDiagnostic = ({ executed, httpStatus, apiResult }) => {
   if (!executed) {
-    return { executed: false, apiResult: '', classification: 'not_verified', accepted: false };
+    return {
+      executed: false,
+      apiResult: '',
+      classification: 'not_verified',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+    };
   }
   const normalized = normalizeApiResult(apiResult);
   if (normalized === '10') {
-    return { executed: true, httpStatus, apiResult: normalized, classification: 'patient_not_found', accepted: false };
+    return {
+      executed: true,
+      httpStatus,
+      apiResult: normalized,
+      classification: 'patient_not_found',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+    };
   }
   if (normalized === '60') {
     return {
@@ -436,12 +461,83 @@ export const classifyAcceptmodReadOnlyDiagnostic = ({ executed, httpStatus, apiR
       apiResult: normalized,
       classification: 'diagnostic_no_existing_acceptance',
       accepted: true,
+      acceptedForPhase3Attempt: true,
+      mutationSuccess: false,
     };
   }
   if (httpStatus === 200 && isAllZeroApiResult(normalized)) {
-    return { executed: true, httpStatus, apiResult: normalized, classification: 'diagnostic_existing_acceptance', accepted: true };
+    return {
+      executed: true,
+      httpStatus,
+      apiResult: normalized,
+      classification: 'diagnostic_existing_acceptance',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+    };
   }
-  return { executed: true, httpStatus, apiResult: normalized, classification: 'not_verified', accepted: false };
+  return {
+    executed: true,
+    httpStatus,
+    apiResult: normalized,
+    classification: 'not_verified',
+    accepted: false,
+    acceptedForPhase3Attempt: false,
+    mutationSuccess: false,
+  };
+};
+
+export const buildCandidateDiscoveryGate = ({
+  candidateCount,
+  acceptedCandidateCount,
+  blockedRequestCount = 0,
+  selectedCandidate = null,
+}) => {
+  const acceptedCount = Number(acceptedCandidateCount ?? 0);
+  const blockedCount = Number(blockedRequestCount ?? 0);
+  const readonlyMutationBlocked = blockedCount > 0;
+  const hasProposal = acceptedCount > 0 && selectedCandidate;
+  const releaseVerdict = readonlyMutationBlocked
+    ? CANDIDATE_DISCOVERY_RELEASE_VERDICTS.readonlyMutationBlocked
+    : hasProposal
+      ? CANDIDATE_DISCOVERY_RELEASE_VERDICTS.exactPreflightRequired
+      : CANDIDATE_DISCOVERY_RELEASE_VERDICTS.readinessBlocker;
+  const blockerClassification = readonlyMutationBlocked
+    ? 'readonly-mutation-blocker'
+    : hasProposal
+      ? 'candidate_discovery_only'
+      : 'test-data-or-harness-readiness-blocker';
+  const blockerReason = readonlyMutationBlocked
+    ? 'readonly_mutation_attempt_blocked'
+    : hasProposal
+      ? 'exact_selected_candidate_preflight_required'
+      : 'phase3_mutation_ready_readonly_evidence_missing';
+  return {
+    candidateDiscoveryAloneAuthorizesPhase3: false,
+    acceptedForPhase3Attempt: false,
+    phase3AttemptPatientId: null,
+    releaseVerdict,
+    verdict: 'partial',
+    blockerClassification,
+    blockerReason,
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: blockedCount,
+    },
+    exactSelectedCandidatePreflight: {
+      ran: false,
+      reason: hasProposal ? 'exact_selected_candidate_preflight_required' : 'phase3_mutation_ready_readonly_evidence_missing',
+    },
+    phase3: {
+      ran: false,
+      reason: hasProposal ? 'exact_selected_candidate_preflight_required' : 'phase3_mutation_ready_readonly_evidence_missing',
+    },
+    phase4: { ran: false, reason: 'phase3_not_run' },
+    candidateDiscovery: {
+      candidateCount: Number(candidateCount ?? 0),
+      acceptedCandidateCount: acceptedCount,
+    },
+  };
 };
 
 export const evaluatePreflightSummary = (summary) => {
