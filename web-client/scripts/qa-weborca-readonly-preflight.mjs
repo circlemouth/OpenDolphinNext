@@ -21,6 +21,7 @@ import {
   classifyAcceptmodReadOnlyDiagnostic,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
+  summarizeOfficialPatientExistence,
 } from './qa-lib/orca-trial-preflight.mjs';
 
 const now = new Date();
@@ -225,9 +226,6 @@ const parseJson = (body) => {
   }
 };
 
-const getPatientIdFromOfficialPatient = (patient) =>
-  normalizeString(patient?.summary?.patientId ?? patient?.patientId ?? patient?.Patient_ID);
-
 const normalizeDateDigits = (value) => {
   const normalized = normalizeString(value)?.replace(/\D/g, '');
   return normalized && normalized.length >= 8 ? normalized.slice(0, 8) : undefined;
@@ -298,9 +296,23 @@ const probeOfficialPatientBatch = async (context, candidateIds) => {
     });
     const parsed = parseJson(text);
     const apiResult = normalizeApiResult(parsed?.apiResult);
-    const patients = Array.isArray(parsed?.patients) ? parsed.patients : [];
-    const returnedIds = patients.map(getPatientIdFromOfficialPatient).filter(Boolean);
-    const exactMatchedPatientIds = candidateIds.filter((candidateId) => returnedIds.includes(candidateId));
+    const candidates = Object.fromEntries(
+      candidateIds.map((candidateId) => {
+        const existence = summarizeOfficialPatientExistence({
+          httpStatus: response.status(),
+          body: parsed,
+          candidateId,
+        });
+        return [
+          candidateId,
+          {
+            ...existence,
+            exactMatch: existence.exactIdMatched,
+          },
+        ];
+      }),
+    );
+    const exactMatchedPatientIds = candidateIds.filter((candidateId) => candidates[candidateId]?.accepted === true);
     const missingPatientIds = candidateIds.filter((candidateId) => !exactMatchedPatientIds.includes(candidateId));
     const businessOk = response.ok() && isAllZeroApiResult(apiResult);
     return {
@@ -309,16 +321,10 @@ const probeOfficialPatientBatch = async (context, candidateIds) => {
       apiResult,
       apiResultMessage: normalizeString(parsed?.apiResultMessage) ?? '',
       requestedCount: candidateIds.length,
-      returnedCount: returnedIds.length,
+      returnedCount: exactMatchedPatientIds.length,
       exactMatchedPatientIds,
       missingPatientIds,
-      candidates: Object.fromEntries(candidateIds.map((candidateId) => [
-        candidateId,
-        {
-          exactMatch: exactMatchedPatientIds.includes(candidateId),
-          verdict: verdict(businessOk && exactMatchedPatientIds.includes(candidateId)),
-        },
-      ])),
+      candidates,
       verdict: verdict(businessOk && exactMatchedPatientIds.length > 0),
       accepted: businessOk && exactMatchedPatientIds.length > 0,
     };

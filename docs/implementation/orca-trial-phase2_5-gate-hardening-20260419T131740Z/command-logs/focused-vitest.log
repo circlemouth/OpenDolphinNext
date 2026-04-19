@@ -1,0 +1,24 @@
+command_log_version=1
+command=npx vitest run scripts/__tests__/orcaTrialPreflight.test.ts scripts/__tests__/acceptmodv2IdentityGate.test.ts scripts/__tests__/medicalInformationGate.test.ts scripts/__tests__/acceptmodv2BusinessEvidence.test.ts scripts/__tests__/orcaRouteTaxonomyGuard.test.ts
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+runId=20260419T131740Z
+start_utc=2026-04-19T13:50:28Z
+--- command output ---
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+
+ ✓ scripts/__tests__/acceptmodv2BusinessEvidence.test.ts (9 tests) 12ms
+ ✓ scripts/__tests__/medicalInformationGate.test.ts (11 tests) 10ms
+ ✓ scripts/__tests__/orcaTrialPreflight.test.ts (24 tests) 17ms
+ ✓ scripts/__tests__/orcaRouteTaxonomyGuard.test.ts (12 tests) 14ms
+ ✓ scripts/__tests__/acceptmodv2IdentityGate.test.ts (23 tests) 14ms
+
+ Test Files  5 passed (5)
+      Tests  79 passed (79)
+   Start at  22:50:29
+   Duration  786ms (transform 324ms, setup 492ms, import 270ms, tests 67ms, environment 2.32s)
+
+--- command summary ---
+end_utc=2026-04-19T13:50:30Z
+exit_code=0
+result=PASS
