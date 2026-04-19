@@ -1,3 +1,9 @@
+command_log_version=retrofit-1
+command=node --test tests/review-package/create-review-package.test.mjs tests/review-packet/reviewer-submission-packet.test.mjs
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260419T012523Z
+start_utc=not_recorded
+--- command output ---
 TAP version 13
 # Subtest: creates a reviewer package without artifacts or legacy client content
 ok 1 - creates a reviewer package without artifacts or legacy client content
@@ -56,3 +62,8 @@ ok 8 - freezes packet generation to --accepted-head even if the branch advances
 # skipped 0
 # todo 0
 # duration_ms 4494.083375
+--- command summary ---
+end_utc=not_recorded
+exit_code=not_recorded
+result=RETROFIT_METADATA_ONLY
+pass_evidence=not_by_exit_code

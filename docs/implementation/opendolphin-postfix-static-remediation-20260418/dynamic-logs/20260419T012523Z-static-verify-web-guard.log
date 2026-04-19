@@ -1,3 +1,9 @@
+command_log_version=retrofit-1
+command=npm run verify:web-guard
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260419T012523Z
+start_utc=not_recorded
+--- command output ---
 
 > web-client@0.0.0 verify:web-guard
 > npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
@@ -17,3 +23,8 @@
 > node scripts/verify-no-legacy-auth-drift.mjs
 
 [verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+--- command summary ---
+end_utc=not_recorded
+exit_code=not_recorded
+result=RETROFIT_METADATA_ONLY
+pass_evidence=not_by_exit_code

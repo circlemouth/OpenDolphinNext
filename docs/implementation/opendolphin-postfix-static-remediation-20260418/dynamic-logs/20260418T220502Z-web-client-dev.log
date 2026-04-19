@@ -1,0 +1,11 @@
+command_log_version=retrofit-1
+command=web-client dev server start
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260418T220502Z
+start_utc=not_recorded
+--- command output ---
+--- command summary ---
+end_utc=not_recorded
+exit_code=not_recorded
+result=RETROFIT_METADATA_ONLY
+pass_evidence=not_by_exit_code

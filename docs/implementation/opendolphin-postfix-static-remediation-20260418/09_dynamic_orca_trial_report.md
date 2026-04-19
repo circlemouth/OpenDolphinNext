@@ -1,140 +1,160 @@
-# ORCA Trial Dynamic Evidence Report
+# ORCA Trial Phase 2.5 Gate Hardening Report
 
-- RUN_ID: `20260419T012523Z`
-- Scope: Phase 3 test-data and evidence remediation for `qa-acceptmodv2-weborca`
-- Verdict: `PARTIAL / TEST-DATA BLOCKER`
-- Reason: no Trial-native mutation-ready patient was accepted from live read-only probes of the official Trial initial patient candidates.
-- Raw sensitive fields excluded: yes
+- RUN_ID: `20260419T120043Z`
+- Scope: Phase 2.5 candidate discovery / exact preflight gate hardening, static evidence, read-only dynamic evidence, package evidence alignment.
+- Overall dynamic verdict: `PARTIAL / TEST-DATA BLOCKER`
+- Target readiness statement: source/test/docs/package are hardened for the next candidate attempt, but this run is not `READY TO RUN PHASE 3 IF EXACT PREFLIGHT PASSES` because no mutation-ready candidate was accepted and exact selected-candidate preflight was not run.
+- Raw sensitive fields excluded: yes.
 
 ## 1. Overall Dynamic Verdict
 
 `PARTIAL / TEST-DATA BLOCKER`
 
-The harness is now fail-closed before Phase 3 mutation. It probes the official Trial page initial patient numbers `00001` through `00011` as candidate sources only, then requires live read-only official patient existence, insurance readiness, selector readiness, local exact selectable readiness, appointment dependency satisfaction when required, and acceptmodv2 diagnostic state before mutation.
-
-For `20260419T012523Z`, candidate discovery found `acceptedCandidateCount=0`. Phase 3 `qa-acceptmodv2-weborca` and Phase 4 `qa-fullflow-weborca` were intentionally not run.
+Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-ready candidate was accepted. Phase 3 and Phase 4 were intentionally not run.
 
 ## 2. Phase Status
 
 | Phase | Status | Evidence |
 | --- | --- | --- |
-| Phase 1 runtime-ready | accepted | `dynamic-logs/20260419T012523Z-runtime-ready-smoke.log`, `dynamic-evidence/20260419T012523Z-runtime-ready-result.json` |
-| Phase 2 read-only connectivity/auth | accepted historical evidence | `dynamic-logs/20260418T220502Z-*` logs retained in manifest |
-| Phase 2.5 candidate discovery | rejected / test-data blocker | `dynamic-logs/20260419T012523Z-qa-weborca-candidate-discovery.log`, `dynamic-evidence/20260419T012523Z-candidate-discovery-summary.json` |
-| Phase 2.5 exact preflight | not run as exact selected-candidate preflight | no accepted candidate existed; discovery emitted `dynamic-evidence/20260419T012523Z-readonly-preflight-summary.json` with blocker state |
-| Phase 3 acceptmodv2 | not run | `dynamic-logs/20260419T012523Z-phase3-phase4-not-run.log`, `dynamic-evidence/20260419T012523Z-acceptmodv2-not-run-summary.json` |
-| Phase 4 fullflow | not run | `dynamic-logs/20260419T012523Z-phase3-phase4-not-run.log`, `dynamic-evidence/20260419T012523Z-fullflow-not-run-summary.json` |
+| Phase 1 runtime-ready | accepted | `dynamic-logs/20260419T120043Z-runtime-ready-smoke.log`, `dynamic-evidence/20260419T120043Z-runtime-ready-result.json` |
+| Phase 2 read-only connectivity/auth | accepted historical evidence | retained `20260418T220502Z-*` read-only logs; no mutation claim |
+| Phase 2.5 candidate discovery | completed fail-closed / test-data blocker | `dynamic-logs/20260419T120043Z-qa-weborca-candidate-discovery.log`, `dynamic-evidence/20260419T120043Z-candidate-discovery-summary.json` |
+| Phase 2.5 exact selected-candidate preflight | not run | `dynamic-evidence/20260419T120043Z-readonly-preflight-not-run-summary.json`; no accepted candidate existed |
+| Phase 3 acceptmodv2 | not run | `dynamic-logs/20260419T120043Z-phase3-phase4-not-run.log`, `dynamic-evidence/20260419T120043Z-acceptmodv2-not-run-summary.json` |
+| Phase 4 fullflow | not run | `dynamic-logs/20260419T120043Z-phase3-phase4-not-run.log`, `dynamic-evidence/20260419T120043Z-fullflow-not-run-summary.json` |
 
-## 3. Candidate Source
+## 3. Candidate Discovery
 
-| Source | Probe candidates | Accepted as candidate source? | Accepted for Phase 3 attempt? | Notes |
-| --- | --- | --- | --- | --- |
-| Official Trial initial data page | `00001`-`00011` | yes, as probe inputs only | no | Official page data is not treated as current live availability because Trial data may reset. |
-| Explicit rejected legacy value | `0000001` | no | no | Previous Phase 3 returned `apiResult=10`; this value is not reused as an accepted candidate. |
+| Candidate set | Count | Selected candidate | Phase 3 authorization |
+| --- | ---: | --- | --- |
+| Probe candidates `00001`-`00011` | 11 | none | no |
+| Accepted candidate rows | 0 | none | no |
 
-| Candidate set | Count | Selected candidate |
-| --- | ---: | --- |
-| Probed Trial candidates | 11 | none |
-| `acceptedForPhase3Attempt=true` | 0 | none |
+All probe candidates returned official patient existence `apiResult=10`; official existence therefore remained rejected even when HTTP status was 200. Insurance and appointment probes returned HTTP 403 and were classified as `ambiguous_readiness_failure`, not as proven absence of insurance or appointment data.
 
-Per-candidate summary is included in `dynamic-evidence/20260419T012523Z-candidate-rows.json`. All `00001`-`00011` candidates were rejected because official exact patient existence was not accepted; insurance readiness also returned rejected readiness for each candidate. Local selector exact match was accepted only for `00001`; `00002`-`00011` were rejected as local exact-match missing and were not promoted by local-only selectable rows.
+| Required row field | Evidence |
+| --- | --- |
+| `candidateId` / `source` | present in `20260419T120043Z-candidate-rows.json` |
+| `officialPatientExistence.httpStatus/apiResult/apiResultAccepted/patientInformationPresent/exactIdMatched/accepted/rejectionReason` | present; accepted is false for all candidates |
+| `insuranceReadiness.status/apiResult/classification/accepted` | present; HTTP 403 classified as `ambiguous_readiness_failure` |
+| `appointmentDependency.flowMode/required/status/apiResult/classification/accepted` | present; direct flow mode did not convert HTTP 403 into proven appointment absence |
+| `acceptedForPhase3Attempt` | boolean false for every row |
 
-## 4. Accepted Live ORCA Claims
+## 4. Exact Preflight
+
+| Item | State | Evidence |
+| --- | --- | --- |
+| exact selected-candidate preflight script | not run | accepted candidate count was 0 |
+| accepted exact preflight artifact | absent | not applicable |
+| Phase 3 handoff | rejected | discovery summary declares `candidateDiscoveryAloneAuthorizesPhase3=false`; Phase 3 gate requires exact preflight artifact path/hash/runId/candidateId/input identity |
+
+## 5. Accepted Live ORCA Claims
 
 | Claim | Status | Evidence |
 | --- | --- | --- |
-| Runtime UI can load authenticated local paired stack and select the smoke appointment row | accepted | Phase 1 runtime-ready result: row resolution `encounterKey`, visible row count `2`, active tab `予約`, selected date `2026-04-19` |
-| Read-only ORCA connectivity/auth from prior accepted run | accepted historical evidence | medical-information route HTTP 200 / `apiResult=00`; system/master and appointment read-only evidence retained in prior logs |
-| Candidate discovery performed no mutation | accepted | `mutationPolicy.prohibited=true`, `blockedRequestCount=0` |
+| runtime-ready local stack loaded and authenticated | accepted | Phase 1 runtime-ready log/result |
+| candidate discovery was read-only | accepted | `mutationPolicy.prohibited=true`, `blockedRequestCount=0` |
+| official patient existence requires all-zero `apiResult` | accepted as harness behavior | static tests and candidate rows showing HTTP 200 + `apiResult=10` rejected |
 
-## 5. Rejected Live ORCA Claims
+## 6. Rejected Live ORCA Claims
 
 | Claim | Verdict | Evidence |
 | --- | --- | --- |
-| `00001`-`00011` are mutation-ready Trial-native candidates | rejected | `acceptedCandidateCount=0`, official exact patient existence rejected for every candidate |
-| Prior `0000001` Phase 3 attempt was a live mutation success | rejected | Prior evidence retained only as rejected Phase 3: HTTP 200 / `apiResult=10` / patient not found |
-| `apiResult=60` is a mutation success | rejected by parser policy | Classified as `diagnosticNoExistingAcceptance`, not a mutation success |
+| `00001`-`00011` are mutation-ready Trial-native candidates | rejected | `acceptedCandidateCount=0` |
+| HTTP 200 alone proves ORCA business success | rejected | official patient probes with HTTP 200 / `apiResult=10` are rejected |
+| HTTP 403 proves insurance or appointment absence | rejected | classified as route/auth/wrapper ambiguity |
+| prior `0000001` can be reused | rejected | legacy seed remains explicit rejected candidate |
+| `apiResult=60` is mutation success | rejected by policy | diagnostic no-existing-acceptance only |
 
-## 6. Not Run / Not Verified
+## 7. Not Run / Not Verified
 
 | Item | State | Why |
 | --- | --- | --- |
-| Exact selected-candidate preflight | not run | No selected candidate existed after discovery. |
-| Phase 3 acceptmodv2 mutation | not run | No `acceptedForPhase3Attempt=true` candidate. |
-| Phase 4 fullflow | not run | Phase 3 business accepted condition was not met. |
-| C5 live import full success | not verified | Fullflow was not executed. |
-| C3/C6 live row-local / visible lock evidence | not verified beyond Phase 1 runtime-ready | Fullflow was not executed. |
+| exact selected-candidate preflight | not run | no selected candidate existed |
+| `qa-acceptmodv2-weborca.mjs` | not run | Phase 3 explicitly out of scope |
+| `qa-fullflow-weborca.mjs` | not run | Phase 4 explicitly out of scope |
+| C7 dynamic mutation request evidence | not verified | no Phase 3 mutation request was sent |
+| C5/C3/C6 full live evidence | not verified | fullflow was not run |
 
-## 7. acceptmodv2 Business Semantics
+## 8. ORCA Business Semantics
 
-Endpoint-specific acceptmodv2 semantics are implemented separately from generic all-zero ORCA parsing.
-
-| apiResult / code | Classification | Accepted? | Why | Parser evidence |
-| --- | --- | --- | --- | --- |
-| `00` with acceptance evidence | `businessAccepted` | yes | Accepted only when response includes registration evidence such as `Acceptance_Info` / `Acceptance_Id` / patient evidence. | `web-client/src/features/reception/acceptmodv2Result.ts`, `web-client/scripts/qa-lib/acceptmodv2-business-evidence.mjs` |
-| `K1` / `K2` / `K3` with acceptance evidence | `businessAcceptedWithWarnings` | yes with warnings | Official API may return warning-coded responses; warning code alone is insufficient without acceptance evidence. | parser tests in `web-client/src/features/reception/__tests__/acceptmodv2.test.ts` and `web-client/scripts/__tests__/acceptmodv2BusinessEvidence.test.ts` |
-| `K1` / `K2` / `K3` without acceptance evidence | `notVerified` / not accepted | no | Warning code without registration evidence is not promoted to success. | focused helper test added |
-| `10` | `businessRejected` | no | Patient not found. HTTP 200 does not override business rejection. | parser and QA harness |
-| `60` | `diagnosticNoExistingAcceptance` | no | Read-only diagnostic/no existing acceptance state; not a mutation success. | parser and QA harness |
-| Message-only success text | not accepted by itself | no | `Api_Result_Message` alone is not authoritative. | parser policy |
-
-## 8. C7 Evidence
-
-| Gate | Status | targetMutationRequestCount | checkedRequests | violationCount | Artifact |
-| --- | --- | ---: | ---: | ---: | --- |
-| Static field-presence gate | accepted | n/a | n/a | n/a | `web-client/scripts/qa-lib/medical-information-gate.mjs`, tests |
-| Dynamic target request capture | not run | 0 | 0 | n/a | `dynamic-evidence/20260419T012523Z-acceptmodv2-not-run-summary.json` |
-| Dynamic C7 accepted | not verified | 0 | 0 | n/a | No Phase 3 mutation was allowed because no candidate passed preflight. |
-
-C7 remains fail-closed: an unspecified run must not include `medicalInformation` / `Medical_Information` fields in a target mutation body. Dynamic C7 cannot be accepted for this run because there was no target mutation request capture.
-
-## 9. C5 / C3 / C6 Evidence
-
-| Invariant | Live evidence status | Notes |
+| Result | Classification | Accepted? |
 | --- | --- | --- |
-| C5 import full success | not verified | No fullflow. MSW/local tests are not live ORCA evidence. |
-| C3 row-local signal isolation | partially covered by Phase 1 only | Phase 1 confirms row selection on the runtime-ready smoke route; fullflow-specific evidence remains not verified. |
-| C6 ORCA storage visible lock | not verified | Fullflow not run. |
+| patient existence HTTP 2xx + parsed ORCA body + all-zero `apiResult` + `Patient_Information` + exact `Patient_ID` | official patient exists | yes |
+| patient existence HTTP 200 + `apiResult=10` | patient not found | no |
+| missing/blank `apiResult` | not accepted | no |
+| insurance HTTP 200 + all-zero `apiResult` + usable combination | insurance ready | yes |
+| insurance `apiResult=21/23` | `business_rejected_insurance` | no |
+| insurance/appointment HTTP 401/403/404/5xx or wrapper error | `ambiguous_readiness_failure` | no |
+| appointment row absence in `direct_acceptance` | not a blocker by itself | n/a |
+| appointment row absence in `appointment_row` | `appointment_row_missing` | no |
+| acceptmodv2 diagnostic `apiResult=10` | patient not found | no |
+| acceptmodv2 diagnostic `apiResult=60` | no existing acceptance diagnostic | diagnostic only |
+| acceptmodv2 diagnostic `apiResult=00` | existing acceptance diagnostic | diagnostic only |
+| acceptmodv2 `K1/K2/K3` | accepted with warnings only with acceptance evidence | conditional |
 
-## 10. Evidence Artifact Inclusion
+## 9. C7 Dynamic Evidence
+
+| Gate | Status | Evidence |
+| --- | --- | --- |
+| Dynamic request capture | not verified | Phase 3 not run |
+| Medical information omission/selection on mutation | not verified dynamically | no mutation request existed |
+| Static C7 helper/tests | accepted | `medical-information-gate.mjs` and focused test coverage |
+
+## 10. C5 / C3 / C6 Live Evidence
+
+| Invariant | Live status | Notes |
+| --- | --- | --- |
+| C5 import/canonical readback | not verified | fullflow not run |
+| C3 row-local signal isolation | Phase 1 runtime-ready only | no Phase 4 evidence |
+| C6 visible storage/lock evidence | not verified | fullflow not run |
+
+## 11. Evidence Artifact Inclusion
 
 | Artifact | Inclusion |
 | --- | --- |
 | `09_dynamic_orca_trial_report.md` | included |
 | `REVIEW_LOG_INCLUSIONS_MANIFEST.txt` | included |
-| `dynamic-logs/20260419T012523Z-*.log` | included |
-| `dynamic-evidence/20260419T012523Z-*.json` / `.md` | included |
-| Prior Phase 2 logs | included as historical accepted read-only evidence |
-| Raw screenshots under `artifacts/**` | excluded |
-| Raw network dumps under `artifacts/**` | excluded |
+| `dynamic-logs/20260419T120043Z-*.log` | included |
+| `dynamic-evidence/20260419T120043Z-*.json` / `.md` | included |
+| raw screenshots/network dumps under `artifacts/**` | excluded |
 
-## 11. Secret Scan
+## 12. Static Command Evidence
 
-| Scope | Command | Result |
-| --- | --- | --- |
-| Included dynamic logs, static logs, JSON/Markdown summaries, reports, manifest | `rg --pcre2` risky raw credential / session / patient-detail patterns over package inclusion paths | clean: `dynamic-logs/20260419T012523Z-secret-scan.log` reports `CLEAN_NO_MATCHES` |
+| Command | CWD | Exit | Log |
+| --- | --- | ---: | --- |
+| `npm run verify:web-guard` | `web-client` | 0 | `dynamic-logs/20260419T120043Z-static-verify-web-guard.log` |
+| `npm test -- --run scripts/__tests__ src/features/reception src/features/outpatient src/features/patients src/features/charts` | `web-client` | 0 | `dynamic-logs/20260419T120043Z-static-web-test.log` |
+| `npm run typecheck` | `web-client` | 0 | `dynamic-logs/20260419T120043Z-static-typecheck.log` |
+| `bash -n setup-modernized-env.sh && node --check ...` | repo root | 0 | `dynamic-logs/20260419T120043Z-static-script-syntax.log` |
+| `node --test tests/review-package/create-review-package.test.mjs tests/review-packet/reviewer-submission-packet.test.mjs` | repo root | 0 | `dynamic-logs/20260419T120043Z-static-review-package-tests.log` |
 
-## 12. Remaining Blockers
+Server tests were not run because `server-modernized/` was not touched.
+
+## 13. Package Integrity
+
+| Field | Value |
+| --- | --- |
+| package path | `artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260419T120043Z-with-dynamic-evidence.zip` |
+| size bytes | `19263015` |
+| sha256 | `83687c1477b3c72c4d8f1b67a4f7623c781ade3b5f7986cf6e8a8d0df488d50f` |
+| integrity source | `artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260419T120043Z-with-dynamic-evidence.zip.summary.txt` |
+
+## 14. Secret Scan
+
+| Scope | Result |
+| --- | --- |
+| current included dynamic logs, static logs, JSON/Markdown summaries, report, manifest, and package manifest inputs | clean: `dynamic-logs/20260419T120043Z-secret-scan.log` reports `CLEAN_NO_MATCHES` |
+
+## 15. Remaining Blockers
 
 | Blocker | Current state |
 | --- | --- |
 | no accepted Trial-native candidate | active |
-| official patient missing | active for `00001`-`00011` live probes |
-| insurance missing | active/rejected readiness for `00001`-`00011` probes |
-| selector missing | not primary; selectors were available for `00001`, while `00002`-`00011` stopped before selector acceptance because local exact match was missing |
-| local selectable missing | active for `00002`-`00011`; local selector alone is no longer sufficient |
-| apiResult business rejected | prior `0000001` rejected evidence retained; no current Phase 3 run |
-| test harness issue | not active |
-| environment issue | not active for local stack; Trial data remains external test-data blocker |
+| exact selected-candidate preflight | not run because no candidate existed |
+| Phase 3 mutation | intentionally not run |
+| Phase 4 fullflow | intentionally not run |
 
-## 13. Final Recommendation
+## 16. Next Recommendation
 
-- Static fix needed: no known reopen from this run.
-- Harness fix needed: no; candidate discovery, identity gate, DOM injection prohibition, business semantics, and sanitized evidence artifacts are implemented.
-- Test-data investigation needed: yes. Obtain a current Trial-native patient that passes official exact existence and insurance readiness, or sync local selector data to a verified official patient without mutation.
-- Ready for Phase 3: no, blocked by test data.
-- Ready for Phase 4: no, Phase 4 must wait until Phase 3 businessAccepted or businessAcceptedWithWarnings with C7 request capture.
-
-## Package
-
-Final review package metadata is reported by the worker after package creation. The support zip does not include `.git` and does not claim clean checkout truth; package SHA-256 is kept outside the zip to avoid self-referential hash drift.
+Do not run Phase 3 from this evidence set. Obtain or configure a Trial-native patient that passes official all-zero patient existence and insurance readiness, then rerun Phase 2.5 candidate discovery. If at least one accepted candidate exists, run exact selected-candidate preflight. Phase 3 may be scheduled only if that exact preflight artifact passes and this task's no-mutation policy is no longer in force.

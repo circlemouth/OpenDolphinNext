@@ -11,22 +11,26 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `local`: local-only wrapper / local projection / local persistence。公開 prefix は `/api/local/*` のみ。
 - `admin-internal`: 管理 UI 向けの internal label / internal state。公開 prefix は `/api/admin/internal/*` のみ。
 
-`/api/orca/*` の public route は `official` と `master` だけです。test / mock / fixture / blocked-route detector / docs reference に残る route string は category-classified retained string であり、public route ではありません。
+`/api/orca/*` の public route は `official` と `master` だけです。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion に分類される route string は retained string または negative assertion であり、public route ではありません。
 
 ## Route String Categories
 
-1. server public ORCA route surface
+1. public ORCA route contract
    current public surface は `official=/api/orca/official/*` と `master=/api/orca/master/*` だけです。`/api/orca/queue` と `/api/orca/pusheventgetv2` は inventory / exposure / runtime contract に含めません。
-2. client production fail-close sentinel
-   `web-client/src/features/outpatient/orcaQueueApi.ts` にだけ historical route string を残し、unavailable response を返して browser network call を fail-close します。public route ではありません。
-3. mock/test-only legacy route surface
-   `web-client/src/mocks/handlers/orcaQueue.ts` にだけ mock/test 用の legacy route constant を残します。これは public taxonomy ではなく、MSW/isolated test 以外の runtime で使ってはなりません。
-4. e2e fixture/test-only surface
+2. production fail-close sentinel
+   `web-client/src/features/outpatient/orcaQueueApi.ts` が historical route string を保持し、unavailable response を返して browser network call を fail-close します。この category は public route ではありません。
+3. MSW mock/test-only legacy route surface
+   `web-client/src/mocks/handlers/orcaQueue.ts` が MSW/isolated test 用の legacy route constant を保持します。これは public taxonomy ではなく、MSW/isolated test 以外の runtime で使ってはなりません。
+4. e2e/QA fixture surface
    `tests/**`、`web-client/scripts/qa-*.mjs`、`web-client/plugins/flagged-mock-plugin.ts` の fixture / QA / dev-preview 用 route string です。public route ではなく、production source へ移動した場合は failure です。
 5. blocked-route detector
-   `web-client/scripts/verify-no-blocked-orca-route-strings.mjs`、`web-client/scripts/lib/orca-route-taxonomy-guard.mjs`、`web-client/scripts/runtime-ready-smoke.mjs`、classifier fixture test が legacy route を検出・拒否するために保持する route string です。public route ではありません。
+   `web-client/scripts/verify-no-blocked-orca-route-strings.mjs`、`web-client/scripts/lib/orca-route-taxonomy-guard.mjs`、`web-client/scripts/runtime-ready-smoke.mjs`、classifier fixture test が legacy route を検出・拒否するために保持する route string です。runtime-ready-smoke 内の blocked-route detector は success route ではなく、browser request が出た場合に failure にする detector です。
 6. docs/reference
    `docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` の説明用 route string です。docs でも `/api/orca/queue` と `/api/orca/pusheventgetv2` 以外の `/api/orca/(official|master 以外)` を新規 route として書いた場合は failure です。
+7. server route inventory negative assertion
+   `server-modernized/src/test/java/open/dolphin/rest/PublicRouteInventoryContractTest.java` が `/api/orca/queue` と `/api/orca/pusheventgetv2` を server inventory に含めないことを確認する negative assertion です。public route ではありません。
+8. web.xml exposure negative assertion
+   `server-modernized/src/test/java/open/dolphin/rest/WebXmlEndpointExposureTest.java` が `/api/orca/queue` と `/api/orca/pusheventgetv2` を web.xml exposure として公開しないことを確認する negative assertion です。public route ではありません。
 
 ## Taxonomy Rules
 
@@ -115,7 +119,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `/api/orca/queue`
 - `/api/orca/pusheventgetv2`
 
-上記 2 つは current public route ではありません。`web-client/src/features/outpatient/orcaQueueApi.ts` では production fail-close sentinel としてだけ残し、`web-client/src/mocks/handlers/orcaQueue.ts` では mock/test-only legacy route surface としてだけ残します。route inventory・browser request・release evidence では hit させません。
+上記 2 つは current public route ではありません。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion として分類された retained string / negative assertion だけを許可します。route inventory・web.xml exposure・browser request・release evidence の success route として hit させません。
 
 ## Taxonomy Checkpoints
 
@@ -128,13 +132,13 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 
 ## Verification Contract
 
-- `PublicRouteInventoryContractTest` は taxonomy 別 inventory を固定し、official/master/local/admin-internal の逸脱を検知する。
-- `WebXmlEndpointExposureTest` は `/api/*` の単一 public entrypoint に加え、route prefix が taxonomy に収まり、`/api/orca/queue` と `/api/orca/pusheventgetv2` が露出していないことを検証する。
+- `PublicRouteInventoryContractTest` は taxonomy 別 inventory を固定し、official/master/local/admin-internal の逸脱を検知する。`/api/orca/queue` と `/api/orca/pusheventgetv2` の literal は server route inventory negative assertion としてだけ扱う。
+- `WebXmlEndpointExposureTest` は `/api/*` の単一 public entrypoint に加え、route prefix が taxonomy に収まり、`/api/orca/queue` と `/api/orca/pusheventgetv2` が露出していないことを検証する。該当 literal は web.xml exposure negative assertion としてだけ扱う。
 - ORCA `Api_Result` の success/warn/error tone policy は `web-client/src/libs/orca/orcaApiResultPolicy.ts` を正本とし、feature ローカル実装を増やさない。
 - `web-client/src/libs/http/httpClient.ts` と administration wrapper metadata は `scope=official|master|local` を明示し、実 path と一致させる。
-- `verify-no-blocked-orca-route-strings.mjs` は `web-client/src`、`web-client/scripts`、`web-client/plugins`、`tests`、`docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` を repo-wide に走査する。存在しない root は明示 skip、存在する root の走査失敗は fail とする。
+- `verify-no-blocked-orca-route-strings.mjs` は `server-modernized/src/test`、`web-client/src`、`web-client/scripts`、`web-client/plugins`、`tests`、`docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` を repo-wide に走査する。存在しない root は明示 skip、存在する root の走査失敗は fail とする。
 - guard の allowlist は `path + route + category + reason` で定義し、legacy route string と mock-only surface の残存理由を固定する。
-- guard は success message に category counts を出し、server public route / client production fail-close sentinel / MSW mock-test-only legacy route surface / e2e fixture-test-only surface / blocked-route detector / docs-reference の分類が current tree と一致することを示す。
+- guard は success message に category counts を出し、production fail-close sentinel / MSW mock/test-only legacy route surface / e2e/QA fixture surface / blocked-route detector / docs/reference / server route inventory negative assertion / web.xml exposure negative assertion の分類が current tree と一致することを示す。official/master の actual public route reference は許可対象だが retained category としては数えない。
 - allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure とする。
 - `/api/orca/(official|master 以外)` の route string は、上記 2 legacy route または blocked-route detector の fixture でない限り failure とする。
 - `/api/orca/official/*/mock` などの mock/test-only route surface が production source (`web-client/src` の mocks/test 以外) に混入した場合は failure とする。

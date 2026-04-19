@@ -1,6 +1,17 @@
+command_log_version=retrofit-1
+command=manual gate record: Phase 3 and Phase 4 intentionally not run
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260419T012523Z
+start_utc=not_recorded
+--- command output ---
 RUN_ID=20260419T012523Z
 qa-acceptmodv2-weborca: NOT RUN
 reason=no acceptedForPhase3Attempt candidate from qa-weborca-candidate-discovery
 blockerClassification=test-data-blocker
 qa-fullflow-weborca: NOT RUN
 reason=Phase 3 acceptmodv2 not run; businessAccepted=false
+--- command summary ---
+end_utc=not_recorded
+exit_code=not_recorded
+result=RETROFIT_METADATA_ONLY
+pass_evidence=not_by_exit_code

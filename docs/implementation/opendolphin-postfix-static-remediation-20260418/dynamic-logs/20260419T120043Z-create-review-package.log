@@ -1,0 +1,14 @@
+command_log_version=1
+command=./scripts/create-review-package.sh --run-id 20260419T120043Z --name-suffix -with-dynamic-evidence --include-review-log-manifest docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
+runId=20260419T120043Z
+start_utc=2026-04-19T12:38:10Z
+--- command output ---
+[INFO] created ./artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260419T120043Z-with-dynamic-evidence.zip
+[INFO] files=2127 size=19262869 sha256=a55f21a5489cb9a4b6d245734066a5ae1d69e9d4b387f98c1442f6a41381a555
+[INFO] package_summary=./artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260419T120043Z-with-dynamic-evidence.zip.summary.txt
+[DONE] RUN_ID=20260419T120043Z
+--- command summary ---
+end_utc=2026-04-19T12:38:13Z
+exit_code=0
+result=PASS

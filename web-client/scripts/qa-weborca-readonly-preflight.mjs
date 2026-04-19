@@ -10,11 +10,18 @@ import {
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
 import {
+  EXACT_PREFLIGHT_FLOW_MODE,
+  EXACT_PREFLIGHT_SOURCE,
   SELECTOR_OPTION_MISSING_BLOCKER,
   buildInputIdentity,
   buildMedicalInformationState,
   createEvidenceRef,
 } from './qa-lib/acceptmodv2-identity-gate.mjs';
+import {
+  classifyAcceptmodReadOnlyDiagnostic,
+  summarizeAppointmentDependency,
+  summarizeInsuranceReadiness,
+} from './qa-lib/orca-trial-preflight.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
@@ -41,6 +48,7 @@ const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
+const requestedAppointmentFlowMode = process.env.QA_APPOINTMENT_FLOW_MODE?.trim() ?? 'direct_acceptance';
 const medicalInformation = (process.env.QA_MEDICAL_INFORMATION ?? '').trim();
 const acceptanceDate =
   process.env.QA_ACCEPTANCE_DATE ??
@@ -83,7 +91,6 @@ const TARGET_PATHS = [
   VISITS_MUTATION_PATH,
 ];
 const ACCEPTMOD_PATIENT_NOT_FOUND = '10';
-const ACCEPTMOD_NO_EXISTING_ACCEPTANCE = '60';
 
 const consoleMessages = [];
 const pageErrors = [];
@@ -353,8 +360,16 @@ const probeInsuranceReadiness = async (context, patientId) => {
     const apiResult = normalizeApiResult(parsed?.apiResult);
     const combinations = Array.isArray(parsed?.combinations) ? parsed.combinations : [];
     const effectiveCount = combinations.filter((combination) => isCombinationEffectiveOn(combination, acceptanceDate)).length;
-    const accepted = response.ok() && isAllZeroApiResult(apiResult) && effectiveCount > 0;
+    const readiness = summarizeInsuranceReadiness({
+      httpStatus: response.status(),
+      body: parsed,
+      baseDate: acceptanceDate,
+    });
+    const accepted = readiness.accepted;
     return {
+      status: response.status(),
+      apiResult,
+      classification: readiness.classification,
       count: combinations.length,
       effectiveCount,
       selectedCombinationId: effectiveCount > 0 ? '<<redacted>>' : undefined,
@@ -365,6 +380,9 @@ const probeInsuranceReadiness = async (context, patientId) => {
     };
   } catch (error) {
     return {
+      status: 0,
+      apiResult: '',
+      classification: 'ambiguous_readiness_failure',
       count: 0,
       effectiveCount: 0,
       selectedCombinationId: undefined,
@@ -447,25 +465,34 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
     });
     const parsed = parseJson(text);
     const apiResult = normalizeApiResult(parsed?.apiResult);
-    const accepted = response.ok() && apiResult === ACCEPTMOD_NO_EXISTING_ACCEPTANCE;
+    const diagnostic = classifyAcceptmodReadOnlyDiagnostic({
+      executed: true,
+      httpStatus: response.status(),
+      apiResult,
+    });
     return {
       apiResult,
       status: response.status(),
-      verdict: apiResult === ACCEPTMOD_PATIENT_NOT_FOUND ? 'rejected' : verdict(accepted),
+      verdict: diagnostic.accepted ? 'accepted' : 'rejected',
       businessStatus:
-        apiResult === ACCEPTMOD_NO_EXISTING_ACCEPTANCE
+        diagnostic.classification === 'diagnostic_no_existing_acceptance'
           ? 'diagnosticNoExistingAcceptance'
-          : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
+          : diagnostic.classification === 'diagnostic_existing_acceptance'
+            ? 'diagnosticExistingAcceptance'
+            : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
             ? 'businessRejected'
             : 'notVerified',
       businessReason:
-        apiResult === ACCEPTMOD_NO_EXISTING_ACCEPTANCE
+        diagnostic.classification === 'diagnostic_no_existing_acceptance'
           ? 'no_existing_acceptance'
+          : diagnostic.classification === 'diagnostic_existing_acceptance'
+            ? 'existing_acceptance'
           : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
             ? 'patient_not_found'
             : 'not_readonly_no_existing_acceptance',
       mutationSuccess: false,
-      acceptedForPhase3Attempt: accepted,
+      classification: diagnostic.classification,
+      acceptedForPhase3Attempt: diagnostic.accepted,
     };
   } catch (error) {
     return {
@@ -524,19 +551,70 @@ const buildSelectorReadiness = (selectors) => {
   };
 };
 
-const buildAppointmentDependency = () => {
+const buildAppointmentDependency = async (context, patientId) => {
+  if (requestedAppointmentFlowMode === 'appointment_row' && patientId) {
+    const body = {
+      appointmentDate: acceptanceDate,
+      departmentCode,
+      physicianCode,
+      page: 1,
+      size: 50,
+    };
+    logStep(`appointment row dependency probe start patient=${patientId}`);
+    try {
+      const response = await context.request.post(urlFor(APPOINTMENTS_LIST_PATH), { data: body });
+      const text = await response.text().catch(() => '');
+      await recordDirectExchange({
+        pathName: APPOINTMENTS_LIST_PATH,
+        method: 'POST',
+        requestBody: body,
+        response,
+        responseText: text,
+      });
+      const parsed = parseJson(text);
+      return summarizeAppointmentDependency({
+        flowMode: requestedAppointmentFlowMode,
+        httpStatus: response.status(),
+        body: parsed,
+        patientId,
+        baseDate: acceptanceDate,
+      });
+    } catch (error) {
+      return {
+        flowMode: 'appointment_row',
+        mode: 'appointment_row',
+        required: true,
+        absenceBlocker: true,
+        status: 0,
+        httpStatus: 0,
+        apiResult: '',
+        rowCount: 0,
+        exactRowCount: 0,
+        classification: 'ambiguous_readiness_failure',
+        verdict: 'rejected',
+        accepted: false,
+        error: String(error),
+      };
+    }
+  }
   const appointmentRecord = [...networkRecords].reverse().find((record) => record.url.includes(APPOINTMENTS_LIST_PATH));
   const visitRecord = [...networkRecords].reverse().find((record) => record.url.includes(VISITS_LIST_PATH));
+  const appointmentDependency = summarizeAppointmentDependency({
+    flowMode: requestedAppointmentFlowMode,
+    httpStatus: appointmentRecord?.status,
+    body: {
+      apiResult: appointmentRecord?.response?.body?.apiResult,
+      recordsReturned: appointmentRecord?.response?.body?.recordsReturned,
+    },
+    patientId,
+    baseDate: acceptanceDate,
+  });
   return {
-    mode: 'direct_patient_acceptance_flow',
-    required: false,
-    absenceBlocker: false,
-    appointmentApiResult: appointmentRecord?.response?.body?.apiResult,
-    appointmentRecordsReturned: appointmentRecord?.response?.body?.recordsReturned,
+    ...appointmentDependency,
     visitApiResult: visitRecord?.response?.body?.apiResult,
     visitRecordsReturned: visitRecord?.response?.body?.recordsReturned,
-    verdict: 'accepted',
-    reason: 'direct flow does not require an existing appointment row',
+    appointmentApiResult: appointmentRecord?.response?.body?.apiResult,
+    appointmentRecordsReturned: appointmentRecord?.response?.body?.recordsReturned,
   };
 };
 
@@ -598,6 +676,7 @@ const classify = ({
   localSelectableReadiness,
   selectorReadiness,
   acceptmodv2ReadOnlyDiagnostic,
+  appointmentDependency,
 }) => {
   if (sessionMe.status === 401 || sessionMe.status === 403 || medicalInformationProbe.status === 401 || medicalInformationProbe.status === 403) {
     return { blockerClassification: 'auth-blocker', blockerReason: 'authentication_or_authorization_failed' };
@@ -622,10 +701,22 @@ const classify = ({
     return { blockerClassification: 'test-data-blocker', blockerReason: localSelectableReadiness.reason ?? 'local_sync_required' };
   }
   if (insuranceReadiness.verdict !== 'accepted') {
+    if (insuranceReadiness.classification === 'ambiguous_readiness_failure') {
+      return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
+    }
+    if (insuranceReadiness.classification === 'business_rejected_insurance') {
+      return { blockerClassification: 'test-data-blocker', blockerReason: 'business_rejected_insurance' };
+    }
     return { blockerClassification: 'test-data-blocker', blockerReason: 'insurance_missing_or_not_effective' };
   }
   if (selectorReadiness.verdict !== 'accepted') {
     return { blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER, blockerReason: 'selector_missing' };
+  }
+  if (appointmentDependency?.classification === 'ambiguous_readiness_failure') {
+    return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
+  }
+  if (appointmentDependency?.required && appointmentDependency?.verdict !== 'accepted') {
+    return { blockerClassification: 'test-data-blocker', blockerReason: appointmentDependency.classification ?? 'appointment_row_missing' };
   }
   if (acceptmodv2ReadOnlyDiagnostic.verdict !== 'accepted') {
     return {
@@ -653,10 +744,10 @@ const buildMarkdownSummary = (summary) =>
   `- blockerReason: ${summary.blockerReason}\n` +
   `- trialSourceCandidate: ${summary.trialSourceCandidate.verdict}\n` +
   `- officialPatientExistence: ${summary.officialPatientExistence.verdict}\n` +
-  `- insuranceReadiness: ${summary.insuranceReadiness.verdict} count=${summary.insuranceReadiness.count ?? 0} effective=${summary.insuranceReadiness.effectiveCount ?? 0}\n` +
+  `- insuranceReadiness: ${summary.insuranceReadiness.verdict} status=${summary.insuranceReadiness.status ?? 'none'} apiResult=${summary.insuranceReadiness.apiResult || 'none'} classification=${summary.insuranceReadiness.classification ?? 'none'} accepted=${summary.insuranceReadiness.accepted ? 'yes' : 'no'} count=${summary.insuranceReadiness.count ?? 0} effective=${summary.insuranceReadiness.effectiveCount ?? 0}\n` +
   `- localSelectableReadiness: ${summary.localSelectableReadiness.verdict}\n` +
   `- selectorReadiness: ${summary.selectorReadiness.verdict}\n` +
-  `- appointmentDependency: ${summary.appointmentDependency.verdict} required=${summary.appointmentDependency.required ? 'yes' : 'no'}\n` +
+  `- appointmentDependency: ${summary.appointmentDependency.verdict} flowMode=${summary.appointmentDependency.flowMode ?? 'unknown'} required=${summary.appointmentDependency.required ? 'yes' : 'no'} status=${summary.appointmentDependency.status ?? 'none'} apiResult=${summary.appointmentDependency.apiResult || 'none'} classification=${summary.appointmentDependency.classification ?? 'none'} accepted=${summary.appointmentDependency.accepted ? 'yes' : 'no'}\n` +
   `- acceptmodv2ReadOnlyDiagnostic: ${summary.acceptmodv2ReadOnlyDiagnostic.verdict} apiResult=${summary.acceptmodv2ReadOnlyDiagnostic.apiResult || 'none'} mutationSuccess=${summary.acceptmodv2ReadOnlyDiagnostic.mutationSuccess ? 'yes' : 'no'}\n`;
 
 let browser;
@@ -778,7 +869,7 @@ try {
     accepted: false,
   };
   const selectorReadiness = buildSelectorReadiness(selectors);
-  const appointmentDependency = buildAppointmentDependency();
+  const appointmentDependency = await buildAppointmentDependency(context, selectedPatientId);
   const acceptmodv2ReadOnlyDiagnostic = selectedPatientId
     ? await probeAcceptmodv2ReadOnlyDiagnostic(context, selectedPatientId)
     : {
@@ -799,6 +890,7 @@ try {
     insuranceReadiness,
     localSelectableReadiness,
     selectorReadiness,
+    appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
   });
   const acceptedForPhase3Attempt =
@@ -842,13 +934,32 @@ try {
     candidate: patientId ? officialPatientExistence.candidates?.[patientId] : undefined,
     exactMatchedPatientIds: officialPatientExistence.exactMatchedPatientIds,
   });
+  const insuranceEvidence = createEvidenceRef('summary.json#/insuranceReadiness', {
+    patientId,
+    paymentMode,
+    acceptanceDate,
+    count: insuranceReadiness.count,
+    effectiveCount: insuranceReadiness.effectiveCount,
+    verdict: insuranceReadiness.verdict,
+  });
   const localSelectableEvidence = createEvidenceRef('summary.json#/localSelectableReadiness', {
     patientId,
     localSelectableReadiness,
   });
+  const selectorEvidence = createEvidenceRef('summary.json#/selectorReadiness', {
+    patientId,
+    departmentCode,
+    physicianCode,
+    paymentMode,
+    visitKind,
+    medicalInformationState,
+    selectorReadiness,
+  });
 
   const summary = {
     runId,
+    source: EXACT_PREFLIGHT_SOURCE,
+    flowMode: EXACT_PREFLIGHT_FLOW_MODE,
     candidateId: phaseCandidateId,
     executedAt: new Date().toISOString(),
     baseURL: redactUrl(baseURL),
@@ -862,14 +973,24 @@ try {
     medicalInformationState,
     inputIdentity,
     officialPatientEvidence,
+    officialPatientEvidenceRef: officialPatientEvidence.id,
+    officialPatientEvidenceHash: officialPatientEvidence.hash,
+    insuranceEvidence,
+    insuranceEvidenceRef: insuranceEvidence.id,
+    insuranceEvidenceHash: insuranceEvidence.hash,
     localSelectableEvidence,
+    localSelectableEvidenceRef: localSelectableEvidence.id,
+    localSelectableEvidenceHash: localSelectableEvidence.hash,
+    selectorEvidence,
+    selectorEvidenceRef: selectorEvidence.id,
+    selectorEvidenceHash: selectorEvidence.hash,
     sessionRole,
     login: {
       sessionMeStatus: sessionMe.status,
     },
     acceptanceDate,
     requestedPatientId: requestedPatientId || undefined,
-    phase3AttemptPatientId: acceptedForPhase3Attempt ? selectedPatientId : undefined,
+    phase3AttemptPatientId: acceptedForPhase3Attempt ? selectedPatientId : null,
     trialSourceCandidate,
     officialPatientExistence,
     insuranceReadiness: insuranceReadinessWithEvidence,
@@ -881,6 +1002,7 @@ try {
     verdict: acceptedForPhase3Attempt ? 'accepted' : 'rejected',
     blockerClassification: classification.blockerClassification,
     blockerReason: classification.blockerReason,
+    rawSensitiveFieldsExcluded: true,
     consoleMessages,
     pageErrors,
   };
@@ -906,11 +1028,13 @@ try {
   fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
   const summary = {
     runId,
+    source: EXACT_PREFLIGHT_SOURCE,
+    flowMode: EXACT_PREFLIGHT_FLOW_MODE,
     executedAt: new Date().toISOString(),
     baseURL: redactUrl(baseURL),
     facilityId,
     candidateId,
-    patientId: requestedPatientId || undefined,
+    patientId: requestedPatientId || null,
     departmentCode,
     physicianCode,
     paymentMode,
@@ -929,8 +1053,19 @@ try {
       medicalInformation,
     }),
     officialPatientEvidence: createEvidenceRef('summary.json#/officialPatientExistence', null),
+    officialPatientEvidenceRef: 'summary.json#/officialPatientExistence',
+    officialPatientEvidenceHash: createEvidenceRef('summary.json#/officialPatientExistence', null).hash,
+    insuranceEvidence: createEvidenceRef('summary.json#/insuranceReadiness', null),
+    insuranceEvidenceRef: 'summary.json#/insuranceReadiness',
+    insuranceEvidenceHash: createEvidenceRef('summary.json#/insuranceReadiness', null).hash,
     localSelectableEvidence: createEvidenceRef('summary.json#/localSelectableReadiness', null),
+    localSelectableEvidenceRef: 'summary.json#/localSelectableReadiness',
+    localSelectableEvidenceHash: createEvidenceRef('summary.json#/localSelectableReadiness', null).hash,
+    selectorEvidence: createEvidenceRef('summary.json#/selectorReadiness', null),
+    selectorEvidenceRef: 'summary.json#/selectorReadiness',
+    selectorEvidenceHash: createEvidenceRef('summary.json#/selectorReadiness', null).hash,
     requestedPatientId: requestedPatientId || undefined,
+    phase3AttemptPatientId: null,
     trialSourceCandidate: {
       requestedPatientId: requestedPatientId || undefined,
       probeCandidates: buildCandidateIds(),
@@ -948,7 +1083,16 @@ try {
     },
     selectorReadiness: { verdict: 'not_verified', details: {} },
     localSelectableReadiness: { verdict: 'not_verified', exactMatchCount: 0, recordsReturned: 0 },
-    appointmentDependency: { verdict: 'not_verified', required: false, absenceBlocker: false },
+    appointmentDependency: {
+      flowMode: requestedAppointmentFlowMode,
+      required: requestedAppointmentFlowMode === 'appointment_row',
+      absenceBlocker: requestedAppointmentFlowMode === 'appointment_row',
+      status: 0,
+      apiResult: '',
+      classification: 'ambiguous_readiness_failure',
+      verdict: 'not_verified',
+      accepted: false,
+    },
     acceptmodv2ReadOnlyDiagnostic: {
       verdict: 'not_verified',
       apiResult: '',
@@ -961,6 +1105,7 @@ try {
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',
     blockerReason: 'fatal_error',
+    rawSensitiveFieldsExcluded: true,
     fatalError: String(error),
   };
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');

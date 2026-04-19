@@ -1,8 +1,9 @@
 # OpenDolphinNext post-fix static remediation report
 
 RUN_ID: `20260418T210850Z`
+Alignment update RUN_ID: `20260419T120442Z`
 
-Current source of truth for this closure is this report plus current `docs/contracts/`, `docs/runbooks/`, `docs/releases/`, source, tests, scripts, and the RUN_ID test logs listed below. Older 2026-04-17 planning packages and `docs/archive/` are historical context only.
+Current source of truth for this closure is this report plus current `docs/contracts/`, `docs/runbooks/`, `docs/releases/`, source, tests, scripts, and the RUN_ID test logs listed below. The 2026-04-19 alignment update refreshes RT-01 wording/category names against the current guard output without creating a new review support zip. Older 2026-04-17 planning packages and `docs/archive/` are historical context only.
 
 ## 1. overall verdict
 
@@ -61,7 +62,7 @@ Static remediation was ready for dynamic ORCA/WebORCA trial. The later dynamic r
 | C7 | static accepted / dynamic partial | static logs plus `20260418T224551Z-qa-acceptmodv2-weborca-final.log` | medical-information gate source/tests and `accept-summary.json` | field-presence gate checked one mutation request with zero violations; business mutation rejected with `apiResult=10` |
 | R-OBS-01 | accepted | `20260418T210850Z-server-focused-maven.log`, `20260418T210850Z-server-static-analysis-verify.log` | `OperationsReadinessEvaluator.java`, `OperationsHealthResourceTest.java` | `clientAuthConfigured` truth remains while raw readiness details are hidden |
 | T-NEG-01 | accepted | `20260418T210850Z-server-focused-maven.log`, `20260418T210850Z-server-static-analysis-verify.log` | existing ORCA HTTP/admin tests | raw URL/userinfo/host/secret path negative coverage stayed green |
-| RT-01 | accepted | `20260418T210850Z-web-guard.log`, `20260418T210850Z-web-ci.log` | `orca-route-taxonomy-guard.mjs`, `orca-route-taxonomy.md` | repo-wide route strings are classified with category counts |
+| RT-01 | accepted | `20260418T210850Z-web-guard.log`, `20260418T210850Z-web-ci.log`; current rerun `20260419T120442Z` guard output | `orca-route-taxonomy-guard.mjs`, `orca-route-taxonomy.md` | repo-wide route strings are classified with aligned category counts |
 | older docs cleanup | accepted | current docs diff + `20260418T210850Z-web-guard.log` | scoped 2026-04-17 packages and archive READMEs | stale PASS/READY/closed wording is explicitly historical |
 | pass area guard | accepted | `20260418T210850Z-web-ci.log`, `20260418T210850Z-playwright-charts-msw.log` | charts e2e specs, full web CI | broader web regression stayed green |
 
@@ -78,37 +79,39 @@ No residual static source/test/docs blocker remains for RT-01, C5 secondary gate
 
 | file path | route string | category | production/browser reachable? | why allowed |
 |---|---|---|---|---|
-| `web-client/src/features/outpatient/orcaQueueApi.ts` | `/api/orca/queue` | client production fail-close sentinel | no successful browser route; production code returns 410 unavailable before fetch | explicit fail-close response for historical route |
-| `web-client/src/features/outpatient/orcaQueueApi.ts` | `/api/orca/pusheventgetv2` | client production fail-close sentinel | no successful browser route; production code returns 410 unavailable before fetch | explicit fail-close response for historical route |
+| `web-client/src/features/outpatient/orcaQueueApi.ts` | `/api/orca/queue` | production fail-close sentinel | no successful browser route; production code returns 410 unavailable before fetch | explicit fail-close response for historical route |
+| `web-client/src/features/outpatient/orcaQueueApi.ts` | `/api/orca/pusheventgetv2` | production fail-close sentinel | no successful browser route; production code returns 410 unavailable before fetch | explicit fail-close response for historical route |
 | `web-client/src/mocks/handlers/orcaQueue.ts` | `/api/orca/queue` | MSW mock/test-only legacy route surface | no | isolated MSW legacy queue tests only |
 | `web-client/src/mocks/handlers/orcaQueue.ts` | `/api/orca/pusheventgetv2` | MSW mock/test-only legacy route surface | no | isolated MSW push-event tests only |
-| `web-client/plugins/flagged-mock-plugin.ts` | `/api/orca/queue` | e2e fixture/test-only surface | dev/preview fixture only, gated by mock controls | Playwright/dev fixture compatibility |
-| `tests/charts/e2e-management-setting-visibility.spec.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | Playwright fixture stub/assertion |
-| `tests/charts/e2e-orca-billing-status.spec.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | Playwright fixture stub/assertion |
-| `tests/e2e/charts-outpatient-mainflow.spec.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | Playwright fixture stub/assertion |
-| `tests/e2e/charts/e2e-orca-claim-send.spec.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | Playwright fixture stub/assertion |
-| `tests/e2e/orca-delivery.spec.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | Playwright fixture server/assertion |
-| `tests/e2e/orca-fullflow.spec.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | Playwright fixture blocked-route capture |
-| `tests/images/e2e-mobile-patient-picker-phase1.spec.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | legacy patient-picker fixture assertion |
-| `tests/playwright/utils/ui-helpers.ts` | `/api/orca/queue` | e2e fixture/test-only surface | no | Playwright helper, not production browser code |
-| `web-client/scripts/qa-acceptmodv2-weborca.mjs` | `/api/orca/queue` | e2e fixture/test-only surface | no | network capture target for blocked-route evidence; not executed in this task |
-| `web-client/scripts/qa-fullflow-weborca.mjs` | `/api/orca/queue` | e2e fixture/test-only surface | no | network capture target for blocked-route evidence; not executed in this task |
-| `web-client/scripts/runtime-ready-smoke.mjs` | `/api/orca/queue` | blocked-route detector | no; detector fails if browser requests it | runtime smoke blocked-route failure detector |
-| `web-client/scripts/runtime-ready-smoke.mjs` | `/api/orca/pusheventgetv2` | blocked-route detector | no; detector fails if browser requests it | runtime smoke blocked-route failure detector |
+| `web-client/plugins/flagged-mock-plugin.ts` | `/api/orca/queue` | e2e/QA fixture surface | dev/preview fixture only, gated by mock controls | Playwright/dev fixture compatibility |
+| `tests/charts/e2e-management-setting-visibility.spec.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | Playwright fixture stub/assertion |
+| `tests/charts/e2e-orca-billing-status.spec.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | Playwright fixture stub/assertion |
+| `tests/e2e/charts-outpatient-mainflow.spec.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | Playwright fixture stub/assertion |
+| `tests/e2e/charts/e2e-orca-claim-send.spec.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | Playwright fixture stub/assertion |
+| `tests/e2e/orca-delivery.spec.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | Playwright fixture server/assertion |
+| `tests/e2e/orca-fullflow.spec.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | Playwright fixture blocked-route capture |
+| `tests/images/e2e-mobile-patient-picker-phase1.spec.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | legacy patient-picker fixture assertion |
+| `tests/playwright/utils/ui-helpers.ts` | `/api/orca/queue` | e2e/QA fixture surface | no | Playwright helper, not production browser code |
+| `web-client/scripts/qa-acceptmodv2-weborca.mjs` | `/api/orca/queue` | e2e/QA fixture surface | no | network capture target for blocked-route evidence; not executed in this task |
+| `web-client/scripts/qa-fullflow-weborca.mjs` | `/api/orca/queue` | e2e/QA fixture surface | no | network capture target for blocked-route evidence; not executed in this task |
+| `web-client/scripts/runtime-ready-smoke.mjs` | `/api/orca/queue` | blocked-route detector | no; detector fails if browser requests it | detector only; not a success route |
+| `web-client/scripts/runtime-ready-smoke.mjs` | `/api/orca/pusheventgetv2` | blocked-route detector | no; detector fails if browser requests it | detector only; not a success route |
 | `web-client/scripts/lib/orca-route-taxonomy-guard.mjs` | `/api/orca/queue` | blocked-route detector | no | guard allowlist/classifier owns monitored string |
 | `web-client/scripts/lib/orca-route-taxonomy-guard.mjs` | `/api/orca/pusheventgetv2` | blocked-route detector | no | guard allowlist/classifier owns monitored string |
 | `web-client/scripts/__tests__/orcaRouteTaxonomyGuard.test.ts` | `/api/orca/queue` | blocked-route detector | no | classifier fixture test |
 | `web-client/scripts/__tests__/orcaRouteTaxonomyGuard.test.ts` | taxonomy-drift fixture string | blocked-route detector | no | negative classifier fixture for non-official/master route drift |
 | `web-client/scripts/__tests__/orcaRouteTaxonomyGuard.test.ts` | boundary fixture string | blocked-route detector | no | classifier fixture string, not runtime route |
+| `server-modernized/src/test/java/open/dolphin/rest/PublicRouteInventoryContractTest.java` | `/api/orca/queue`, `/api/orca/pusheventgetv2` | server route inventory negative assertion | no | test asserts legacy routes are absent from server inventory |
+| `server-modernized/src/test/java/open/dolphin/rest/WebXmlEndpointExposureTest.java` | `/api/orca/queue`, `/api/orca/pusheventgetv2` | web.xml exposure negative assertion | no | test asserts legacy routes are absent from web.xml exposure |
 | `docs/contracts/orca-route-taxonomy.md` | `/api/orca/queue`, `/api/orca/pusheventgetv2` | docs/reference | no | contract describes blocked non-public routes |
 | `docs/runbooks/release-validation.md` | `/api/orca/queue`, `/api/orca/pusheventgetv2` | docs/reference | no | validation instructions describe blocked-route handling |
 | `docs/releases/orca-remediation-cutover.md` | `/api/orca/queue`, `/api/orca/pusheventgetv2` | docs/reference | no | cutover instructions describe blocked-route handling |
 | `docs/implementation/opendolphin-dynamic-trial-static-remediation-package-20260418/*` | `/api/orca/queue`, `/api/orca/pusheventgetv2` | docs/reference | no | historical/current implementation packet references only |
 | `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` | `/api/orca/queue`, `/api/orca/pusheventgetv2` | docs/reference | no | this classification table |
 
-Guard result: `server public route=47`, `client production fail-close sentinel=2`, `MSW mock/test-only legacy route surface=2`, `e2e fixture/test-only surface=225`, `blocked-route detector=31`, `docs/reference=117`, skipped roots `none`.
+Current guard result for alignment RUN_ID `20260419T120442Z`: scanned roots `9`, files `953`; category counts: `production fail-close sentinel=2`, `MSW mock/test-only legacy route surface=2`, `e2e/QA fixture surface=236`, `blocked-route detector=37`, `docs/reference=152`, `server route inventory negative assertion=2`, `web.xml exposure negative assertion=3`; skipped roots `none`.
 
-Route taxonomy note: the only public `/api/orca/*` route categories are official and master. The client fail-close sentinel, MSW mock/test-only legacy surface, e2e fixture/test-only surface, blocked-route detector, and docs/reference strings are category-classified retained strings, not public routes.
+Route taxonomy note: the only public `/api/orca/*` routes are official and master. The production fail-close sentinel, MSW mock/test-only legacy route surface, e2e/QA fixture surface, blocked-route detector, docs/reference, server route inventory negative assertion, and web.xml exposure negative assertion strings are category-classified retained strings or negative assertions, not public routes.
 
 ## 7. accepted test evidence table
 
@@ -139,16 +142,10 @@ These logs are accepted package evidence only when the generated review support 
 
 ## 10. package evidence alignment
 
-- Package path: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260418T224551Z-with-dynamic-evidence.zip`
-- Package generator: `./scripts/create-review-package.sh --run-id 20260418T224551Z --name-suffix -with-dynamic-evidence --include-review-log-manifest docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
-- Package evidence manifest: `docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
-- Included evidence: 8 static logs + 22 dynamic logs + 1 dynamic evidence contract from the manifest.
-- Zip entry count: `2346`.
-- Actual size: `19694180` bytes.
-- Actual sha256: `110de12cc187426a93eee1adc0ebe5794150373d9d84c9c395b08b01c36d8045`.
-- `.git/` included: no.
-- Clean checkout truth: not asserted by this support zip. Use reviewer submission packet for `.git`-backed clean checkout evidence.
-- Manifest note: `REVIEW_PACKAGE_MANIFEST.txt` records `root_dir=.`, `git_metadata_included=no`, `clean_checkout_claim=not_applicable`, `tracked_missing_file_count=3`, and `review_log_include_count=31`.
+- No current review support zip was generated for alignment RUN_ID `20260419T120442Z`.
+- Historical support zip metadata from prior 2026-04-18/2026-04-19 package attempts is not current acceptance metadata for this report, and old package hash/size values are intentionally omitted here.
+- Package evidence manifest remains `docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt` for the historical static/dynamic log inclusion set.
+- Clean checkout truth is not asserted by any support zip. Use reviewer submission packet for `.git`-backed clean checkout evidence.
 
 ## 11. final recommendation
 

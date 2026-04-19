@@ -137,6 +137,8 @@ if (requireReadonlyPreflight) {
       const preflightSummary = JSON.parse(preflightBuffer.toString('utf8'));
       const validation = validatePreflightSummary({
         summary: preflightSummary,
+        artifactPath: preflightSummaryPath,
+        artifactSha256: preflightSummarySha256,
         expected: {
           runId,
           candidateId,

@@ -20,6 +20,7 @@ Options:
 Creates one reviewer package zip for this repository using git tracked files as the base.
 The package excludes:
   - client/
+  - server/
   - artifacts/
   - node_modules/
   - dist/, target/, build/, out/
@@ -100,6 +101,10 @@ calculate_sha256() {
   fi
 }
 
+file_size_bytes() {
+  wc -c < "$1" | awk '{print $1}'
+}
+
 repo_relative_path() {
   local input_path="$1"
   local input_dir
@@ -121,13 +126,47 @@ repo_relative_path() {
 
 is_excluded_package_path() {
   case "$1" in
-    .git|.git/*|client/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|*.tsbuildinfo|*/.DS_Store|*/Thumbs.db)
+    .git|.git/*|client/*|server/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|*.tsbuildinfo|*/.DS_Store|*/Thumbs.db)
       return 0
       ;;
     *)
       return 1
       ;;
   esac
+}
+
+validate_command_log_evidence() {
+  local log_path="$1"
+
+  if [[ ! -s "$log_path" ]]; then
+    echo "review log manifest entry is empty and cannot be pass evidence: $log_path" >&2
+    exit 1
+  fi
+
+  grep -Eq '^command=' "$log_path" || {
+    echo "review command log missing command metadata: $log_path" >&2
+    exit 1
+  }
+  grep -Eq '^cwd=' "$log_path" || {
+    echo "review command log missing cwd metadata: $log_path" >&2
+    exit 1
+  }
+  grep -Eq '^(runId|RUN_ID)=' "$log_path" || {
+    echo "review command log missing runId metadata: $log_path" >&2
+    exit 1
+  }
+  grep -Eq '^start(_utc)?=' "$log_path" || {
+    echo "review command log missing start metadata: $log_path" >&2
+    exit 1
+  }
+  grep -Eq '^end(_utc)?=' "$log_path" || {
+    echo "review command log missing end metadata: $log_path" >&2
+    exit 1
+  }
+  grep -Eq '^exit(_code)?=' "$log_path" || {
+    echo "review command log missing exit code metadata: $log_path" >&2
+    exit 1
+  }
 }
 
 mkdir -p "$OUT_DIR"
@@ -139,10 +178,13 @@ FILE_LIST="$TMP_DIR/file-list.txt"
 RAW_FILE_LIST="$TMP_DIR/raw-file-list.txt"
 MANIFEST_FILE="$TMP_DIR/REVIEW_PACKAGE_MANIFEST.txt"
 PACKAGE_FILE="$OUT_DIR/${PACKAGE_PREFIX}-${RUN_ID}${PACKAGE_NAME_SUFFIX}.zip"
+PACKAGE_SUMMARY_FILE="${PACKAGE_FILE}.summary.txt"
+PACKAGE_SUMMARY_BASENAME="$(basename "$PACKAGE_SUMMARY_FILE")"
 
-git ls-files -- \
+git -c core.quotePath=false ls-files -- \
   . \
   ':(exclude)client/**' \
+  ':(exclude)server/**' \
   ':(exclude)artifacts/**' \
   ':(exclude)web-client/artifacts/**' \
   ':(exclude)node_modules/**' \
@@ -206,7 +248,7 @@ if [[ -n "$REVIEW_LOG_MANIFEST" ]]; then
   fi
 
   MANIFEST_DIR="$(dirname "$REVIEW_LOG_MANIFEST")"
-  MANIFEST_REPO_PATH="$(git ls-files --full-name -- "$REVIEW_LOG_MANIFEST" | head -n 1)"
+  MANIFEST_REPO_PATH="$(git -c core.quotePath=false ls-files --full-name -- "$REVIEW_LOG_MANIFEST" | head -n 1)"
   if [[ -z "$MANIFEST_REPO_PATH" ]]; then
     MANIFEST_REPO_PATH="$(repo_relative_path "$REVIEW_LOG_MANIFEST")"
   fi
@@ -230,7 +272,12 @@ if [[ -n "$REVIEW_LOG_MANIFEST" ]]; then
       echo "review log manifest entry not found: $repo_path" >&2
       exit 1
     fi
-    tracked_repo_path="$(git ls-files --full-name -- "$repo_path" | head -n 1)"
+    case "$repo_path" in
+      *.log)
+        validate_command_log_evidence "$repo_path"
+        ;;
+    esac
+    tracked_repo_path="$(git -c core.quotePath=false ls-files --full-name -- "$repo_path" | head -n 1)"
     if [[ -n "$tracked_repo_path" ]]; then
       repo_path="$tracked_repo_path"
     else
@@ -266,6 +313,21 @@ if [[ "$FILE_COUNT" -eq 0 ]]; then
   exit 1
 fi
 
+TRACKED_MISSING_BLOCK=""
+if [[ "$TRACKED_MISSING_FILE_COUNT" -gt 0 ]]; then
+  TRACKED_MISSING_BLOCK="$(
+    {
+      echo "tracked_missing_files_begin"
+      for missing_path in "${TRACKED_MISSING[@]}"; do
+        printf 'path=%s reason=tracked_by_git_but_absent_in_worktree source=git_ls_files category=source-test-docs criticality=critical\n' "$missing_path"
+      done
+      echo "tracked_missing_files_end"
+    }
+  )"
+else
+  TRACKED_MISSING_BLOCK="tracked_missing_files=none"
+fi
+
 cat > "$MANIFEST_FILE" <<EOF
 review_package_name=${PACKAGE_PREFIX}-${RUN_ID}${PACKAGE_NAME_SUFFIX}.zip
 run_id=${RUN_ID}
@@ -274,24 +336,29 @@ root_dir=.
 tracked_file_count=${FILE_COUNT}
 tracked_git_file_count=${TRACKED_FILE_COUNT}
 tracked_missing_file_count=${TRACKED_MISSING_FILE_COUNT}
+${TRACKED_MISSING_BLOCK}
 optional_include_count=${OPTIONAL_INCLUDE_COUNT}
 optional_includes=${OPTIONAL_INCLUDES_CSV}
 review_log_include_count=${REVIEW_LOG_INCLUDE_COUNT}
 review_log_includes=${REVIEW_LOG_INCLUDES_CSV}
+review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content
+package_integrity_summary_file=${PACKAGE_SUMMARY_BASENAME}
 git_metadata_included=no
 clean_checkout_claim=not_applicable
+git_claim_evidence_policy=git claims require package-included local git command logs; this support zip does not include .git metadata or claim clean checkout truth
 policy=tracked-files-plus-optional-qa
-excluded_roots=client/,artifacts/
+excluded_roots=client/,server/,artifacts/
 excluded_generated_dirs=node_modules/,dist/,target/,build/,out/,tmp/,output/,coverage/,test-results/
 excluded_cache_dirs=.cache/,.vite/,.parcel-cache/,.turbo/,.nyc_output/
 notes=Repository reviewer support package without artifacts or legacy client sources. Includes browser manual QA summary files when present. This zip has no .git directory and must not be used as clean checkout evidence.
 EOF
 
 rm -f "$PACKAGE_FILE"
+rm -f "$PACKAGE_SUMMARY_FILE"
 zip -q "$PACKAGE_FILE" -@ < "$FILE_LIST"
 zip -q "$PACKAGE_FILE" "$MANIFEST_FILE" -j
 
-BAD_PATHS="$(zipinfo -1 "$PACKAGE_FILE" | grep -E '^(\.git/|client/|artifacts/|web-client/artifacts/|node_modules/|dist/|target/|build/|out/|tmp/|output/|coverage/|test-results/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|.*/coverage/|.*/test-results/)' || true)"
+BAD_PATHS="$(zipinfo -1 "$PACKAGE_FILE" | grep -E '^(\.git/|client/|server/|artifacts/|web-client/artifacts/|node_modules/|dist/|target/|build/|out/|tmp/|output/|coverage/|test-results/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|.*/coverage/|.*/test-results/)' || true)"
 if [[ -n "$BAD_PATHS" ]]; then
   echo "Excluded paths were found in package:" >&2
   echo "$BAD_PATHS" >&2
@@ -299,9 +366,22 @@ if [[ -n "$BAD_PATHS" ]]; then
 fi
 
 ZIP_FILE_COUNT="$(zipinfo -1 "$PACKAGE_FILE" | wc -l | awk '{print $1}')"
-ZIP_SIZE="$(wc -c < "$PACKAGE_FILE" | awk '{print $1}')"
+ZIP_SIZE="$(file_size_bytes "$PACKAGE_FILE")"
 ZIP_SHA="$(calculate_sha256 "$PACKAGE_FILE")"
+
+cat > "$PACKAGE_SUMMARY_FILE" <<EOF
+review_package_name=$(basename "$PACKAGE_FILE")
+review_package_file=$(basename "$PACKAGE_FILE")
+run_id=${RUN_ID}
+created_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+zip_file_count=${ZIP_FILE_COUNT}
+zip_size_bytes=${ZIP_SIZE}
+zip_sha256=${ZIP_SHA}
+manifest_entry=REVIEW_PACKAGE_MANIFEST.txt
+hash_note=external summary avoids self-referential package hash drift
+EOF
 
 echo "[INFO] created ${PACKAGE_FILE}"
 echo "[INFO] files=${ZIP_FILE_COUNT} size=${ZIP_SIZE} sha256=${ZIP_SHA}"
+echo "[INFO] package_summary=${PACKAGE_SUMMARY_FILE}"
 echo "[DONE] RUN_ID=${RUN_ID}"

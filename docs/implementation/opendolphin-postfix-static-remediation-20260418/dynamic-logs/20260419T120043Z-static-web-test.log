@@ -1,8 +1,8 @@
-command_log_version=retrofit-1
-command=npm test
-cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
-runId=20260419T012523Z
-start_utc=not_recorded
+command_log_version=1
+command=npm test -- --run scripts/__tests__ src/features/reception src/features/outpatient src/features/patients src/features/charts
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+runId=20260419T120043Z
+start_utc=2026-04-19T12:31:25Z
 --- command output ---
 
 > web-client@0.0.0 pretest
@@ -21,7 +21,7 @@ start_utc=not_recorded
 > web-client@0.0.0 verify:no-blocked-orca-route-strings
 > node scripts/verify-no-blocked-orca-route-strings.mjs
 
-[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=8, files=699. category counts: server public route=48, client production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e fixture/test-only surface=236, blocked-route detector=31, docs/reference=140. skipped roots: none
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=953. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=236, blocked-route detector=37, docs/reference=152, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
 
 > web-client@0.0.0 verify:no-legacy-auth-drift
 > node scripts/verify-no-legacy-auth-drift.mjs
@@ -54,6 +54,30 @@ stdout | src/features/reception/__tests__/ReceptionPage.test.tsx > ReceptionPage
   "durationMs": 2
 }
 
+stdout | src/features/reception/__tests__/ReceptionPage.test.tsx > ReceptionPage accept UX > omits Medical_Information when left unselected
+[acceptmodv2] {
+  "runId": "RUN-VISIT-MEDICAL-EMPTY",
+  "traceId": "TRACE-VISIT-MEDICAL-EMPTY",
+  "requestNumber": "01",
+  "apiResult": "00",
+  "apiResultMessage": "OK",
+  "acceptanceId": "R-013",
+  "patientId": "P-013",
+  "durationMs": 2
+}
+
+stdout | src/features/reception/__tests__/ReceptionPage.test.tsx > ReceptionPage accept UX > accept success 後は patient search 側の canonical handoff で charts を開ける
+[acceptmodv2] {
+  "runId": "RUN-VISIT-HANDOFF",
+  "traceId": "TRACE-VISIT-HANDOFF",
+  "requestNumber": "01",
+  "apiResult": "00",
+  "apiResultMessage": "OK",
+  "acceptanceId": "R-015",
+  "patientId": "P-015",
+  "durationMs": 2
+}
+
 stderr | src/features/charts/__tests__/documentCreatePanel.test.tsx > DocumentCreatePanel > 文書作成メニューとフォームが表示される
 Warning: An update to DocumentCreatePanel inside a test was not wrapped in act(...).
 
@@ -69,18 +93,6 @@ This ensures that you're testing the behavior the user would see in the browser.
     at Router (file:///Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-router/dist/development/chunk-LFPYN7LY.mjs:6653:13)
     at MemoryRouter (file:///Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/node_modules/react-router/dist/development/chunk-LFPYN7LY.mjs:6569:3)
 
-stdout | src/features/reception/__tests__/ReceptionPage.test.tsx > ReceptionPage accept UX > omits Medical_Information when left unselected
-[acceptmodv2] {
-  "runId": "RUN-VISIT-MEDICAL-EMPTY",
-  "traceId": "TRACE-VISIT-MEDICAL-EMPTY",
-  "requestNumber": "01",
-  "apiResult": "00",
-  "apiResultMessage": "OK",
-  "acceptanceId": "R-013",
-  "patientId": "P-013",
-  "durationMs": 2
-}
-
 stderr | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBundleEditPanel ORCA support > medOrder は usage local-only を editor 上で明示する
 Query data cannot be undefined. Please make sure to return a value other than undefined from your query function. Affected query key: ["charts-order-usage-search","medOrder","2026-04-19"]
 
@@ -92,14 +104,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:44.677Z'
+  recordedAt: '2026-04-19T12:31:31.204Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -108,16 +120,17 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:44.678Z'
+  recordedAt: '2026-04-19T12:31:31.206Z'
 }
 
+ ✓ src/features/patients/__tests__/PatientsPage.test.tsx (34 tests) 2758ms
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > injectionOrder main drug row can edit generic flag and preserve hidden meta
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -126,14 +139,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'expand_continue',
   outcome: 'success',
   durationMs: undefined,
   note: '点滴セット',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:44.811Z'
+  recordedAt: '2026-04-19T12:31:31.355Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -144,26 +157,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:44.813Z'
-}
-
-stdout | src/features/reception/__tests__/ReceptionPage.test.tsx > ReceptionPage accept UX > accept success 後は patient search 側の canonical handoff で charts を開ける
-[acceptmodv2] {
-  "runId": "RUN-VISIT-HANDOFF",
-  "traceId": "TRACE-VISIT-HANDOFF",
-  "requestNumber": "01",
-  "apiResult": "00",
-  "apiResultMessage": "OK",
-  "acceptanceId": "R-015",
-  "patientId": "P-015",
-  "durationMs": 7
+  recordedAt: '2026-04-19T12:31:31.356Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -174,14 +175,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:44.870Z'
+  recordedAt: '2026-04-19T12:31:31.451Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -190,14 +191,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:44.870Z'
+  recordedAt: '2026-04-19T12:31:31.452Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > injectionOrder editor は { label: '薬剤のみ', bundleName: 'drug-only', items: [ { code: '620000010', name: '注射薬A', quantity: '1', unit: 'A', memo: '', rowRole: 'main' } ], expected: [ { code: '620000010', rowRole: 'main' } ] } の rowRole を round-trip で保持する
@@ -208,14 +209,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'expand_continue',
   outcome: 'success',
   durationMs: undefined,
   note: 'drug-only',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:44.902Z'
+  recordedAt: '2026-04-19T12:31:31.467Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > injectionOrder editor は { label: '手技+薬剤', bundleName: 'procedure-drug', items: [ { code: '0085001', name: 'COMMENT', quantity: '', unit: '', memo: 'after-procedure', rowRole: 'comment' }, { code: '830000001', name: 'PROCEDURE', quantity: '1', unit: '回', memo: '', rowRole: 'main' }, { code: '620000011', name: '注射薬B', quantity: '1', unit: 'A', memo: '', rowRole: 'main' } ], expected: [ { code: '830000001', rowRole: 'main' }, { code: '620000011', rowRole: 'main' }, { code: '0085001', rowRole: 'comment' } ] } の rowRole を round-trip で保持する
@@ -226,14 +227,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'expand_continue',
   outcome: 'success',
   durationMs: undefined,
   note: 'procedure-drug',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.051Z'
+  recordedAt: '2026-04-19T12:31:31.535Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -244,14 +245,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.049Z'
+  recordedAt: '2026-04-19T12:31:31.545Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -260,14 +261,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.050Z'
+  recordedAt: '2026-04-19T12:31:31.546Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > injectionOrder editor は { label: 'material+drug', bundleName: 'drip-set', items: [ { code: '700000031', name: 'DRIP_SET', quantity: '1', unit: 'set', memo: '', rowRole: 'material' }, { code: '620000012', name: '注射薬C', quantity: '1', unit: 'A', memo: '', rowRole: 'main' } ], expected: [ { code: '620000012', rowRole: 'main' }, { code: '700000031', rowRole: 'material' } ] } の rowRole を round-trip で保持する
@@ -278,14 +279,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'expand_continue',
   outcome: 'success',
   durationMs: undefined,
   note: 'drip-set',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.131Z'
+  recordedAt: '2026-04-19T12:31:31.613Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -296,14 +297,48 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.133Z'
+  recordedAt: '2026-04-19T12:31:31.629Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'success',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'editor_close',
+  recordedAt: '2026-04-19T12:31:31.689Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'success',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:31.689Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBundleEditPanel ORCA support > 保存時に official contraindication route を呼び、患者別 ORCA 禁忌チェックとして確認ダイアログを開く
@@ -314,14 +349,14 @@ stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-ORCA-TEST',
-  traceId: '9863a641-432f-4216-b49a-835fda53cb55',
+  traceId: '51b1bc02-6034-4fcc-8e6d-c836f2dc94aa',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.211Z'
+  recordedAt: '2026-04-19T12:31:31.714Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -332,48 +367,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.209Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.210Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.287Z'
+  recordedAt: '2026-04-19T12:31:31.779Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -382,17 +383,16 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.287Z'
+  recordedAt: '2026-04-19T12:31:31.780Z'
 }
 
- ✓ src/features/patients/__tests__/PatientsPage.test.tsx (34 tests) 3037ms
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -401,14 +401,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.351Z'
+  recordedAt: '2026-04-19T12:31:31.846Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -419,14 +419,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.398Z'
+  recordedAt: '2026-04-19T12:31:31.873Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -435,14 +435,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.398Z'
+  recordedAt: '2026-04-19T12:31:31.874Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -453,14 +453,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.460Z'
+  recordedAt: '2026-04-19T12:31:31.943Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -469,14 +469,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.461Z'
+  recordedAt: '2026-04-19T12:31:31.943Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -487,14 +487,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.528Z'
+  recordedAt: '2026-04-19T12:31:31.986Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -505,14 +505,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.588Z'
+  recordedAt: '2026-04-19T12:31:32.026Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -521,14 +521,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.588Z'
+  recordedAt: '2026-04-19T12:31:32.027Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > injectionOrder keeps rowRole=material when predictive search is used on a material row
@@ -539,14 +539,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '注射セット',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.591Z'
+  recordedAt: '2026-04-19T12:31:32.045Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -557,14 +557,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.666Z'
+  recordedAt: '2026-04-19T12:31:32.126Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -573,14 +573,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_new',
-  recordedAt: '2026-04-19T02:23:45.667Z'
+  recordedAt: '2026-04-19T12:31:32.126Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -591,14 +591,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.741Z'
+  recordedAt: '2026-04-19T12:31:32.176Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる
@@ -609,14 +609,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.774Z'
+  recordedAt: '2026-04-19T12:31:32.208Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -625,14 +625,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:45.774Z'
+  recordedAt: '2026-04-19T12:31:32.208Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > 検索仕様: 3文字候補表示・2文字入力は候補クリックで確定・前方/部分検索を切り替えられる
@@ -643,14 +643,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_copy',
-  recordedAt: '2026-04-19T02:23:45.902Z'
+  recordedAt: '2026-04-19T12:31:32.320Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -659,14 +659,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_search_copy',
-  recordedAt: '2026-04-19T02:23:45.903Z'
+  recordedAt: '2026-04-19T12:31:32.320Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > 検索仕様: 3文字候補表示・2文字入力は候補クリックで確定・前方/部分検索を切り替えられる
@@ -677,14 +677,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:45.973Z'
+  recordedAt: '2026-04-19T12:31:32.404Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > 検索仕様: 3文字候補表示・2文字入力は候補クリックで確定・前方/部分検索を切り替えられる
@@ -695,14 +695,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:46.030Z'
+  recordedAt: '2026-04-19T12:31:32.442Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -711,14 +711,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.031Z'
+  recordedAt: '2026-04-19T12:31:32.442Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > +RP導線（処方追加）で処方入力を開ける
@@ -729,14 +729,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.098Z'
+  recordedAt: '2026-04-19T12:31:32.524Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -745,14 +745,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.098Z'
+  recordedAt: '2026-04-19T12:31:32.524Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add は主要カテゴリの新規入力を開く
@@ -763,14 +763,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.148Z'
+  recordedAt: '2026-04-19T12:31:32.575Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -779,14 +779,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.148Z'
+  recordedAt: '2026-04-19T12:31:32.575Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add は主要カテゴリの新規入力を開く
@@ -797,14 +797,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:46.214Z'
+  recordedAt: '2026-04-19T12:31:32.627Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add は主要カテゴリの新規入力を開く
@@ -815,14 +815,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:46.244Z'
+  recordedAt: '2026-04-19T12:31:32.667Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -831,14 +831,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.245Z'
+  recordedAt: '2026-04-19T12:31:32.668Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBundleEditPanel ORCA support > radiologyOrder の ORCA診療セット適用後も bodyPart と class meta を保存 payload で保持する
@@ -849,14 +849,14 @@ stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-ORCA-TEST',
-  traceId: '9863a641-432f-4216-b49a-835fda53cb55',
+  traceId: '51b1bc02-6034-4fcc-8e6d-c836f2dc94aa',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '胸部CTセット',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.269Z'
+  recordedAt: '2026-04-19T12:31:32.674Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add は主要カテゴリの新規入力を開く
@@ -867,14 +867,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.263Z'
+  recordedAt: '2026-04-19T12:31:32.700Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -883,14 +883,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.264Z'
+  recordedAt: '2026-04-19T12:31:32.700Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add は主要カテゴリの新規入力を開く
@@ -901,14 +901,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:46.337Z'
+  recordedAt: '2026-04-19T12:31:32.802Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add は主要カテゴリの新規入力を開く
@@ -919,14 +919,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:46.387Z'
+  recordedAt: '2026-04-19T12:31:32.846Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -935,16 +935,18 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'success',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.387Z'
+  recordedAt: '2026-04-19T12:31:32.846Z'
 }
 
+ ✓ src/features/charts/__tests__/documentCreatePanel.test.tsx (18 tests) 1884ms
+     ✓ 保存すると履歴に追加される  421ms
 stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add は主要カテゴリの新規入力を開く
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -953,14 +955,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.415Z'
+  recordedAt: '2026-04-19T12:31:32.894Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -969,18 +971,16 @@ stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx >
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.418Z'
+  recordedAt: '2026-04-19T12:31:32.895Z'
 }
 
- ✓ src/features/charts/__tests__/documentCreatePanel.test.tsx (18 tests) 2040ms
-     ✓ 保存すると履歴に追加される  368ms
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > 入力順が保存 payload に反映される
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -989,48 +989,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: 'アムロジピン',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.496Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add 新規入力中は押下カテゴリのみ表示し、通常閲覧へ戻れる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
-  fallbackUsed: false,
-  action: 'order_hub_oui-01',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.530Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK',
-  traceId: '786f554a-60cb-4916-ab41-fe1bbdf83f04',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:46.530Z'
+  recordedAt: '2026-04-19T12:31:32.937Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBundleEditPanel ORCA support > laboTest boundary alias を testOrder に正規化して保存 payload に変換する
@@ -1041,20 +1007,50 @@ stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-ORCA-TEST',
-  traceId: '9863a641-432f-4216-b49a-835fda53cb55',
+  traceId: '51b1bc02-6034-4fcc-8e6d-c836f2dc94aa',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '血液検査セット',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.555Z'
+  recordedAt: '2026-04-19T12:31:32.963Z'
 }
 
- ✓ src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx (8 tests) 2195ms
-     ✓ カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる  1281ms
-     ✓ 検索仕様: 3文字候補表示・2文字入力は候補クリックで確定・前方/部分検索を切り替えられる  302ms
-     ✓ quick-add は主要カテゴリの新規入力を開く  322ms
+stdout | src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx > OrderDockPanel category quick-add > quick-add 新規入力中は押下カテゴリのみ表示し、通常閲覧へ戻れる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
+  fallbackUsed: false,
+  action: 'order_hub_oui-01',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'quick_add',
+  recordedAt: '2026-04-19T12:31:32.990Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK',
+  traceId: 'f3d86d64-4b0a-49d4-8fcd-1225cd3a03fe',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'quick_add',
+  recordedAt: '2026-04-19T12:31:32.991Z'
+}
+
 stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBundleEditPanel ORCA support > bacteriaOrder は testOrder の 600 input set detail を受け入れて subtype を保持する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1063,16 +1059,19 @@ stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-ORCA-TEST',
-  traceId: '9863a641-432f-4216-b49a-835fda53cb55',
+  traceId: '51b1bc02-6034-4fcc-8e6d-c836f2dc94aa',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '細菌培養セット',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.670Z'
+  recordedAt: '2026-04-19T12:31:33.073Z'
 }
 
+ ✓ src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx (8 tests) 2073ms
+     ✓ カテゴリ候補からインライン編集を開いても検索UIが残り、閉じるで閉じる  1142ms
+     ✓ quick-add は主要カテゴリの新規入力を開く  370ms
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > instractionChargeOrder は選択項目の category から canonical class meta を導出する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1081,16 +1080,17 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:46.934Z'
+  recordedAt: '2026-04-19T12:31:33.406Z'
 }
 
+ ✓ src/features/reception/__tests__/ReceptionPage.test.tsx (48 tests) 4596ms
 stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBundleEditPanel ORCA support > injectionOrder で 7xxxx 候補を main 行に選ぶと material 行へ昇格する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1099,14 +1099,14 @@ stdout | src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-ORCA-TEST',
-  traceId: '9863a641-432f-4216-b49a-835fda53cb55',
+  traceId: '51b1bc02-6034-4fcc-8e6d-c836f2dc94aa',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:47.413Z'
+  recordedAt: '2026-04-19T12:31:33.835Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > 頓用/院内の選択とRP名補正が保存 payload に反映される
@@ -1117,17 +1117,16 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: 'アムロジピン',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:47.456Z'
+  recordedAt: '2026-04-19T12:31:33.953Z'
 }
 
- ✓ src/features/reception/__tests__/ReceptionPage.test.tsx (48 tests) 4614ms
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > treatmentOrder は仕様準拠の Medical_Class を保存 payload に付与する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1136,14 +1135,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:47.826Z'
+  recordedAt: '2026-04-19T12:31:34.334Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > baseChargeOrder の再編集保存でも canonical className を優先する
@@ -1154,22 +1153,20 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'update',
   outcome: 'success',
   durationMs: undefined,
   note: '在宅指導',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:47.854Z'
+  recordedAt: '2026-04-19T12:31:34.366Z'
 }
 
- ✓ src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx (22 tests) 3762ms
-     ✓ 保存時に official contraindication route を呼び、患者別 ORCA 禁忌チェックとして確認ダイアログを開く  581ms
-     ✓ injectionOrder で 7xxxx 候補を main 行に選ぶと material 行へ昇格する  744ms
-     ✓ treatmentOrder で main row と material row を UI から作成して rowRole を保持する  739ms
- ✓ src/features/charts/__tests__/chartsDocumentPrintPage.test.tsx (8 tests) 1586ms
-     ✓ 出力前確認モーダルの表示/キャンセル/確定ができる  485ms
+ ✓ src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx (22 tests) 3662ms
+     ✓ 保存時に official contraindication route を呼び、患者別 ORCA 禁忌チェックとして確認ダイアログを開く  564ms
+     ✓ injectionOrder で 7xxxx 候補を main 行に選ぶと material 行へ昇格する  770ms
+     ✓ treatmentOrder で main row と material row を UI から作成して rowRole を保持する  800ms
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > 外用の混合トグルで混合コメント行が保存 payload に追加される
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1178,19 +1175,21 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: 'アムロジピン',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:48.332Z'
+  recordedAt: '2026-04-19T12:31:34.944Z'
 }
 
- ✓ src/features/charts/__tests__/prescriptionOrderEditorPanel.test.tsx (8 tests) 1516ms
-     ✓ 3文字以上は自動検索、2文字以下は手動検索ボタンで候補表示する  310ms
-     ✓ 薬剤検索で method/scope を API に渡し、scope は ORCA 値にマッピングする  428ms
+ ✓ src/features/charts/__tests__/chartsDocumentPrintPage.test.tsx (8 tests) 2356ms
+     ✓ 出力前確認モーダルの表示/キャンセル/確定ができる  533ms
+     ✓ 権限不足で出力ブロック表示が出る  360ms
+     ✓ missingMaster で出力ガードが表示される  307ms
+     ✓ PDF取得失敗時は raw detail ではなく canonical copy を表示する  388ms
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > 一般名指示と薬剤コメントが薬剤行ごとに memo meta へ共存保存される
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1199,17 +1198,19 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: 'アムロジピン',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:48.796Z'
+  recordedAt: '2026-04-19T12:31:35.409Z'
 }
 
- ✓ src/features/charts/__tests__/soapNoteRightDockDrawer.test.tsx (15 tests) 1285ms
+ ✓ src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx (9 tests) 1614ms
+     ✓ ORCA入力セットを末尾 RP に追加し既存 RP を保持する  361ms
+     ✓ マスタ相互作用ありでは確認 dialog を出し、続行時だけ保存する  330ms
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > 空白のみ薬剤コメントは memo meta から除去される
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1218,17 +1219,20 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: 'アムロジピン',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.246Z'
+  recordedAt: '2026-04-19T12:31:35.851Z'
 }
 
- ✓ src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx (9 tests) 1305ms
+ ✓ src/features/charts/__tests__/prescriptionOrderEditorPanel.test.tsx (8 tests) 1984ms
+     ✓ 3文字以上は自動検索、2文字以下は手動検索ボタンで候補表示する  407ms
+     ✓ 日数一括変更は内服/頓服RPのみに反映し、外用RPには反映しない  318ms
+     ✓ 薬剤検索で method/scope を API に渡し、scope は ORCA 値にマッピングする  458ms
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends a valid medicalmodv2 payload
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1237,14 +1241,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.633Z'
+  recordedAt: '2026-04-19T12:31:36.167Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends a valid medicalmodv2 payload
@@ -1259,28 +1263,10 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   fallbackUsed: false,
   action: 'send',
   outcome: 'success',
-  durationMs: 7,
+  durationMs: 11,
   note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK / Invoice_Number=INV-999 / Data_Id=DATA-999',
   reason: '00',
-  recordedAt: '2026-04-19T02:23:49.639Z'
-}
-
-stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > 保存成功時に最近使った用法履歴へ追加される
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
-  fallbackUsed: false,
-  action: 'create',
-  outcome: 'success',
-  durationMs: undefined,
-  note: 'アムロジピン',
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.683Z'
+  recordedAt: '2026-04-19T12:31:36.177Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > same-day 別 encounter へ positive cache を誤帰属しない
@@ -1291,14 +1277,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.723Z'
+  recordedAt: '2026-04-19T12:31:36.279Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > same-day 別 encounter へ positive cache を誤帰属しない
@@ -1313,10 +1299,64 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   fallbackUsed: false,
   action: 'send',
   outcome: 'success',
-  durationMs: 4,
+  durationMs: 3,
   note: 'runId=RUN-ROW-LOCAL / traceId=TRACE-ROW-LOCAL / Api_Result=00 / Api_Result_Message=OK / Invoice_Number=INV-ROW-LOCAL / Data_Id=DATA-ROW-LOCAL',
   reason: '00',
-  recordedAt: '2026-04-19T02:23:49.727Z'
+  recordedAt: '2026-04-19T12:31:36.282Z'
+}
+
+stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > 保存成功時に最近使った用法履歴へ追加される
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
+  fallbackUsed: false,
+  action: 'create',
+  outcome: 'success',
+  durationMs: undefined,
+  note: 'アムロジピン',
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:36.318Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks invalid treatment codes
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:36.456Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks invalid treatment codes
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'blocked',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_unsupported',
+  recordedAt: '2026-04-19T12:31:36.463Z'
 }
 
 stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBundleEditPanel item actions > injectionOrder の投与指示は local-only 投与指示として保存できる
@@ -1327,50 +1367,14 @@ stdout | src/features/charts/__tests__/orderBundleItemActions.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '39be845a-e56b-4c6e-9204-863f0d61b352',
+  traceId: 'a31ef571-9d85-4e81-816e-e06fdad95beb',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '点滴セット',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.806Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks invalid treatment codes
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.850Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks invalid treatment codes
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'blocked',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_unsupported',
-  recordedAt: '2026-04-19T02:23:49.856Z'
+  recordedAt: '2026-04-19T12:31:36.484Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks comment-only treatment rows
@@ -1381,14 +1385,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.910Z'
+  recordedAt: '2026-04-19T12:31:36.562Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks comment-only treatment rows
@@ -1399,14 +1403,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'bundle_unsupported',
-  recordedAt: '2026-04-19T02:23:49.913Z'
+  recordedAt: '2026-04-19T12:31:36.564Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks saved otherOrder bundles before send with explicit local-only notice
@@ -1417,14 +1421,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:49.963Z'
+  recordedAt: '2026-04-19T12:31:36.671Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks saved otherOrder bundles before send with explicit local-only notice
@@ -1435,14 +1439,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'order_hub_oui-04',
   outcome: 'blocked',
   durationMs: undefined,
   note: undefined,
   reason: 'bundle_unsupported',
-  recordedAt: '2026-04-19T02:23:49.965Z'
+  recordedAt: '2026-04-19T12:31:36.675Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles for allowed non-310 classCode and strips local-only admin fields
@@ -1453,14 +1457,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.055Z'
+  recordedAt: '2026-04-19T12:31:36.752Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles for allowed non-310 classCode and strips local-only admin fields
@@ -1475,10 +1479,10 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   fallbackUsed: false,
   action: 'send',
   outcome: 'success',
-  durationMs: 3,
+  durationMs: 5,
   note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
   reason: '00',
-  recordedAt: '2026-04-19T02:23:50.057Z'
+  recordedAt: '2026-04-19T12:31:36.756Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles when adminCode is missing because admin fields are local-only
@@ -1489,355 +1493,17 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.113Z'
+  recordedAt: '2026-04-19T12:31:36.793Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles when adminCode is missing because admin fields are local-only
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-API',
-  traceId: 'TRACE-API',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'success',
-  durationMs: 3,
-  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
-  reason: '00',
-  recordedAt: '2026-04-19T02:23:50.115Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks comment-only injection bundles
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.157Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks comment-only injection bundles
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'blocked',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_unsupported',
-  recordedAt: '2026-04-19T02:23:50.159Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles even when stored adminCode is non-sendable
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.198Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles even when stored adminCode is non-sendable
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-API',
-  traceId: 'TRACE-API',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'success',
-  durationMs: 3,
-  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
-  reason: '00',
-  recordedAt: '2026-04-19T02:23:50.201Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when admin exists without adminCode
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.239Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when admin exists without adminCode
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-API',
-  traceId: 'TRACE-API',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'success',
-  durationMs: 3,
-  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
-  reason: '00',
-  recordedAt: '2026-04-19T02:23:50.241Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only comment rows are present
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.281Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only comment rows are present
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'blocked',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_unsupported',
-  recordedAt: '2026-04-19T02:23:50.283Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > WorkspaceTabBar 統合後は Charts 内の患者タブUIを描画しない
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.267Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.269Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only material rows are present
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.323Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only material rows are present
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'blocked',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_unsupported',
-  recordedAt: '2026-04-19T02:23:50.325Z'
-}
-
-stdout | src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx > OrderBundleEditPanel bundle number UI > 保存時に処方区分メタが送信される
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER',
-  traceId: '1ae0f7e5-bda7-404f-8c10-fed7cad750be',
-  fallbackUsed: false,
-  action: 'create',
-  outcome: 'success',
-  durationMs: undefined,
-  note: 'アムロジピン',
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.332Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 未保存状態で診察終了すると保存/破棄/キャンセルの3択ダイアログを表示する
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.338Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.338Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when adminMemo is present because it is local-only
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.381Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when adminMemo is present because it is local-only
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-API',
-  traceId: 'TRACE-API',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'success',
-  durationMs: 3,
-  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
-  reason: '00',
-  recordedAt: '2026-04-19T02:23:50.384Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > accepts bodyPart and material rows on valid payloads
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
-  fallbackUsed: false,
-  action: 'send',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.456Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > accepts bodyPart and material rows on valid payloads
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
   funnel: 'funnels/outpatient',
@@ -1852,55 +1518,275 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   durationMs: 2,
   note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
   reason: '00',
-  recordedAt: '2026-04-19T02:23:50.459Z'
+  recordedAt: '2026-04-19T12:31:36.795Z'
 }
 
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 未保存状態で診察終了すると保存/破棄/キャンセルの3択ダイアログを表示する
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks comment-only injection bundles
 [telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
+  stage: 'charts_action',
   funnel: 'funnels/outpatient',
   dataSourceTransition: 'server',
-  cacheHit: true,
+  cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
+  action: 'send',
+  outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.479Z'
+  recordedAt: '2026-04-19T12:31:36.845Z'
 }
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks comment-only injection bundles
 [telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
+  stage: 'charts_action',
   funnel: 'funnels/outpatient',
   dataSourceTransition: 'server',
-  cacheHit: true,
+  cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
+  action: 'order_hub_oui-04',
+  outcome: 'blocked',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_unsupported',
+  recordedAt: '2026-04-19T12:31:36.847Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles even when stored adminCode is non-sendable
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.479Z'
+  recordedAt: '2026-04-19T12:31:36.890Z'
 }
 
- ✓ src/features/charts/__tests__/orderBundleItemActions.test.tsx (26 tests | 1 skipped) 6128ms
-     ✓ injectionOrder main drug row can edit generic flag and preserve hidden meta  403ms
-     ✓ injectionOrder keeps rowRole=material when predictive search is used on a material row  450ms
-     ✓ 入力順が保存 payload に反映される  791ms
-     ✓ instractionChargeOrder は選択項目の category から canonical class meta を導出する  438ms
-     ✓ 頓用/院内の選択とRP名補正が保存 payload に反映される  528ms
-     ✓ treatmentOrder は仕様準拠の Medical_Class を保存 payload に付与する  361ms
-     ✓ 外用の混合トグルで混合コメント行が保存 payload に追加される  490ms
-     ✓ 一般名指示と薬剤コメントが薬剤行ごとに memo meta へ共存保存される  455ms
-     ✓ 空白のみ薬剤コメントは memo meta から除去される  450ms
-     ✓ 保存成功時に最近使った用法履歴へ追加される  404ms
-     ✓ +薬剤/削除/全クリアで入力行とコメント行をまとめて初期化できる  583ms
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends injection bundles even when stored adminCode is non-sendable
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-API',
+  traceId: 'TRACE-API',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'success',
+  durationMs: 6,
+  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
+  reason: '00',
+  recordedAt: '2026-04-19T12:31:36.895Z'
+}
+
+ ✓ src/features/charts/__tests__/soapNoteRightDockDrawer.test.tsx (15 tests) 1626ms
+     ✓ 右ドック押下でドロワーが開き対象カテゴリを表示する  328ms
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when admin exists without adminCode
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:36.937Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when admin exists without adminCode
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-API',
+  traceId: 'TRACE-API',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'success',
+  durationMs: 2,
+  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
+  reason: '00',
+  recordedAt: '2026-04-19T12:31:36.940Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only comment rows are present
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:37.054Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only comment rows are present
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'blocked',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_unsupported',
+  recordedAt: '2026-04-19T12:31:37.056Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only material rows are present
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:37.130Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > blocks fetched injection bundles when only material rows are present
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'blocked',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_unsupported',
+  recordedAt: '2026-04-19T12:31:37.133Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when adminMemo is present because it is local-only
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:37.192Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > sends fetched injection bundles when adminMemo is present because it is local-only
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-API',
+  traceId: 'TRACE-API',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'success',
+  durationMs: 5,
+  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
+  reason: '00',
+  recordedAt: '2026-04-19T12:31:37.196Z'
+}
+
+ ✓ src/features/charts/__tests__/orderBundleItemActions.test.tsx (26 tests | 1 skipped) 6206ms
+     ✓ injectionOrder main drug row can edit generic flag and preserve hidden meta  382ms
+     ✓ injectionOrder keeps rowRole=material when predictive search is used on a material row  397ms
+     ✓ 入力順が保存 payload に反映される  824ms
+     ✓ instractionChargeOrder は選択項目の category から canonical class meta を導出する  460ms
+     ✓ 頓用/院内の選択とRP名補正が保存 payload に反映される  552ms
+     ✓ treatmentOrder は仕様準拠の Medical_Class を保存 payload に付与する  372ms
+     ✓ 外用の混合トグルで混合コメント行が保存 payload に追加される  579ms
+     ✓ 一般名指示と薬剤コメントが薬剤行ごとに memo meta へ共存保存される  471ms
+     ✓ 空白のみ薬剤コメントは memo meta から除去される  432ms
+     ✓ 保存成功時に最近使った用法履歴へ追加される  406ms
+     ✓ +薬剤/削除/全クリアで入力行とコメント行をまとめて初期化できる  487ms
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > accepts bodyPart and material rows on valid payloads
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:37.244Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > accepts bodyPart and material rows on valid payloads
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-API',
+  traceId: 'TRACE-API',
+  fallbackUsed: false,
+  action: 'send',
+  outcome: 'success',
+  durationMs: 3,
+  note: 'runId=RUN-API / traceId=TRACE-API / Api_Result=00 / Api_Result_Message=OK',
+  reason: '00',
+  recordedAt: '2026-04-19T12:31:37.248Z'
+}
+
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > caches warning positions for treatment bodyPart main material and comment rows
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1909,14 +1795,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '88fe6e5e-a8f3-44fc-90cb-85b6656f8a01',
+  traceId: '7426f53c-0fc8-47cb-8c50-7bb481fdfd2f',
   fallbackUsed: false,
   action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.556Z'
+  recordedAt: '2026-04-19T12:31:37.302Z'
 }
 
 stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > ChartsActionBar ORCA send > caches warning positions for treatment bodyPart main material and comment rows
@@ -1934,10 +1820,47 @@ stdout | src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx > Char
   durationMs: 2,
   note: 'runId=RUN-API-WARN / traceId=TRACE-API-WARN / Api_Result=80 / Api_Result_Message=warning',
   reason: '80',
-  recordedAt: '2026-04-19T02:23:50.558Z'
+  recordedAt: '2026-04-19T12:31:37.303Z'
 }
 
- ✓ src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx (20 tests | 1 skipped) 1113ms
+ ✓ src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx (20 tests | 1 skipped) 1299ms
+ ✓ src/features/charts/__tests__/orderBundleMasterSearch.test.tsx (26 tests) 6581ms
+     ✓ 検索条件変更時に結果が更新される  746ms
+     ✓ 検索結果の行選択で項目が追加される  365ms
+     ✓ 項目名入力のリアルタイム候補で主項目を補完できる  369ms
+     ✓ 候補が多い場合でも入力欄の選択肢で全件参照できる  321ms
+     ✓ treatmentOrder の手技検索は etensu カテゴリ4を使用する  334ms
+     ✓ baseChargeOrder は cross-range な算定候補を一覧に出さない  309ms
+     ✓ 画像診断オーダーの統合検索は etensuカテゴリ7 / material / drug を使用する  303ms
+     ✓ 生理検査オーダーの統合検索は etensuカテゴリ6 と kensa-sort を使用する  303ms
+     ✓ 管理料オーダーの手技検索は etensu カテゴリ1を使用する  300ms
+     ✓ コメント候補の行選択でコメントコードを追加できる  358ms
+     ✓ コメント内容入力欄の blur 補完でコメント追加できる  328ms
+     ✓ edit request の 9 桁コードと開始日から medicationgetv2 候補を取得できる  340ms
+ ✓ src/features/charts/__tests__/chartsOutpatientPrintPage.test.tsx (4 tests) 1476ms
+     ✓ 出力前確認モーダルの表示/キャンセル/確定ができる  740ms
+     ✓ ガード条件('missingMaster')で出力ブロック表示が出る  333ms
+stdout | src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx > OrderBundleEditPanel bundle number UI > 保存時に処方区分メタが送信される
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER',
+  traceId: '2ee1d4f3-7ed8-4f72-849b-03cd382a01ea',
+  fallbackUsed: false,
+  action: 'create',
+  outcome: 'success',
+  durationMs: undefined,
+  note: 'アムロジピン',
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:38.937Z'
+}
+
+ ✓ src/features/charts/__tests__/orderBundleBodyPart.test.tsx (7 tests) 1893ms
+     ✓ radiologyOrder の bodyPart 検索は 002 部位を read-only フィールドへ反映する  551ms
+     ✓ bodyPart 検索失敗時は aria-live=assertive のエラーを表示する  715ms
 stdout | src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx > OrderBundleEditPanel bundle number UI > charge 編集保存では明示 class meta を entity default に潰さない
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -1946,529 +1869,50 @@ stdout | src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx > Orde
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: '1ae0f7e5-bda7-404f-8c10-fed7cad750be',
+  traceId: '2ee1d4f3-7ed8-4f72-849b-03cd382a01ea',
   fallbackUsed: false,
   action: 'update',
   outcome: 'success',
   durationMs: undefined,
   note: '再診料',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.571Z'
+  recordedAt: '2026-04-19T12:31:39.313Z'
 }
 
- ✓ src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx (6 tests) 1119ms
-     ✓ 保存時に処方区分メタが送信される  531ms
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > Shift+Enter でドラフト保存ショートカット後は終了ガードを表示しない
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.585Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.585Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > Shift+Enter でドラフト保存ショートカット後は終了ガードを表示しない
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.603Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.603Z'
-}
-
- ✓ src/features/charts/__tests__/orderBundleBodyPart.test.tsx (7 tests) 1140ms
-     ✓ radiologyOrder の bodyPart 検索は 002 部位を read-only フィールドへ反映する  499ms
-     ✓ bodyPart 検索失敗時は aria-live=assertive のエラーを表示する  318ms
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察開始成功後だけ medical summary を再取得する
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.667Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.668Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察開始成功後だけ medical summary を再取得する
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.696Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.696Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察中断/終了では medical summary を再取得しない
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.724Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.724Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察中断/終了では medical summary を再取得しない
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.736Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.736Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active switch は保存成功後だけ切り替える
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.811Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.811Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active switch は保存成功後だけ切り替える
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.837Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.837Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の保存失敗時は active switch を継続せず guard を残す
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.910Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.910Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の保存失敗時は active switch を継続せず guard を残す
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.940Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.940Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active close でも保存/破棄/キャンセルの3択を出し、破棄時だけ次タブへ進む
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.989Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:50.990Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active close でも保存/破棄/キャンセルの3択を出し、破棄時だけ次タブへ進む
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:51.016Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:51.017Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > bounded prefetch は active を除く直近2タブまでに制限する
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:51.056Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:51.056Z'
-}
-
-stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > bounded prefetch は active を除く直近2タブまでに制限する
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:51.073Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: 'b6bc5bf7-4a72-44cb-9635-1e036ec8ad63',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:51.073Z'
-}
-
- ✓ src/features/charts/__tests__/chartsPageDirtyDot.test.tsx (9 tests) 857ms
- ✓ src/features/charts/__tests__/orderBundleMasterSearch.test.tsx (26 tests) 6759ms
-     ✓ 検索条件変更時に結果が更新される  795ms
-     ✓ 検索結果の行選択で項目が追加される  421ms
-     ✓ 項目名入力のリアルタイム候補で主項目を補完できる  398ms
-     ✓ 候補が多い場合でも入力欄の選択肢で全件参照できる  313ms
-     ✓ 手術オーダーの手技検索は etensu カテゴリ5を使用する  312ms
-     ✓ treatmentOrder の手技検索は etensu カテゴリ4を使用する  302ms
-     ✓ 算定オーダーの手技検索は etensu カテゴリ1を使用する  300ms
-     ✓ 画像診断オーダーの統合検索は etensuカテゴリ7 / material / drug を使用する  313ms
-     ✓ 生理検査オーダーの統合検索は etensuカテゴリ6 と kensa-sort を使用する  303ms
-     ✓ コメント候補の行選択でコメントコードを追加できる  379ms
-     ✓ コメント内容入力欄の blur 補完でコメント追加できる  346ms
-     ✓ edit request の 9 桁コードと開始日から medicationgetv2 候補を取得できる  349ms
- ✓ src/features/charts/__tests__/chartsOutpatientPrintPage.test.tsx (4 tests) 1481ms
-     ✓ 出力前確認モーダルの表示/キャンセル/確定ができる  738ms
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > ORCA送信の成功をトーストと監査ログに反映する
+ ✓ src/features/charts/__tests__/orderBundleBundleNumberUi.test.tsx (6 tests) 2081ms
+     ✓ 保存時に処方区分メタが送信される  1218ms
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel state compatibility > quick-add/group-add data-test-id を維持しつつ onStateChange(hasEditing/targetCategory/count/source) を通知する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
   funnel: 'funnels/outpatient',
   dataSourceTransition: 'server',
   cacheHit: false,
   missingMaster: false,
-  runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
   fallbackUsed: false,
-  action: 'send',
+  action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.339Z'
+  reason: 'quick_add',
+  recordedAt: '2026-04-19T12:31:39.930Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'quick_add',
+  recordedAt: '2026-04-19T12:31:39.931Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel state compatibility > quick-add/group-add data-test-id を維持しつつ onStateChange(hasEditing/targetCategory/count/source) を通知する
@@ -2479,14 +1923,50 @@ stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regres
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
   fallbackUsed: false,
-  action: 'order_hub_oui-01',
+  action: 'order_hub_oui-04',
+  outcome: 'blocked',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'editor_close',
+  recordedAt: '2026-04-19T12:31:39.959Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > ORCA送信の成功をトーストと監査ログに反映する
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ACTION',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'send',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
-  reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:52.342Z'
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:39.978Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel state compatibility > quick-add/group-add data-test-id を維持しつつ onStateChange(hasEditing/targetCategory/count/source) を通知する
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'success',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'editor_close',
+  recordedAt: '2026-04-19T12:31:39.985Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -2495,16 +1975,17 @@ stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regres
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
-  outcome: 'started',
+  outcome: 'success',
   durationMs: undefined,
   note: undefined,
-  reason: 'quick_add',
-  recordedAt: '2026-04-19T02:23:52.343Z'
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:39.985Z'
 }
 
+ ✓ src/features/charts/__tests__/stampLibraryPanel.test.tsx (5 tests) 951ms
 stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > ORCA送信の成功をトーストと監査ログに反映する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -2517,66 +1998,12 @@ stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBa
   fallbackUsed: false,
   action: 'send',
   outcome: 'success',
-  durationMs: 6,
+  durationMs: 10,
   note: 'runId=RUN-OK / traceId=TRACE-OK / Api_Result=00 / Api_Result_Message=OK / Invoice_Number=INV-123 / Data_Id=DATA-123',
   reason: '00',
-  recordedAt: '2026-04-19T02:23:52.345Z'
+  recordedAt: '2026-04-19T12:31:39.987Z'
 }
 
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel state compatibility > quick-add/group-add data-test-id を維持しつつ onStateChange(hasEditing/targetCategory/count/source) を通知する
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'blocked',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:52.366Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel state compatibility > quick-add/group-add data-test-id を維持しつつ onStateChange(hasEditing/targetCategory/count/source) を通知する
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:52.411Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.412Z'
-}
-
- ✓ src/features/charts/__tests__/prescriptionOrderOrcaSupport.test.tsx (3 tests) 786ms
-     ✓ 候補一覧と選択中薬剤に最低薬価を補助表示する  344ms
 stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察終了は ORCA 追加送信を行わず local after-finish フローを完了する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -2585,14 +2012,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBa
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
   fallbackUsed: false,
   action: 'finish',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.464Z'
+  recordedAt: '2026-04-19T12:31:40.140Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -2601,68 +2028,14 @@ stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBa
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
   fallbackUsed: false,
   action: 'finish',
   outcome: 'success',
-  durationMs: 0,
+  durationMs: 1,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.464Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始は afterStart 成功後のみ success toast を出す
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
-  fallbackUsed: false,
-  action: 'start',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.631Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始は afterStart 成功後のみ success toast を出す
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: '20260419T022352Z',
-  traceId: 'trace-start-1',
-  fallbackUsed: false,
-  action: 'start',
-  outcome: 'success',
-  durationMs: 6,
-  note: 'checked_in -> chart_opened / encounterKey=F001:E100 / requestId=req-start-1',
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.637Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始の afterStart が失敗した場合は success toast を出さず raw detail も表示しない
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
-  fallbackUsed: false,
-  action: 'start',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.714Z'
+  recordedAt: '2026-04-19T12:31:40.141Z'
 }
 
 stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 複数RPを連続編集でき、保存後に別RPを再編集できる
@@ -2673,14 +2046,14 @@ stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regres
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
   fallbackUsed: false,
   action: 'order_hub_oui-01',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:52.710Z'
+  recordedAt: '2026-04-19T12:31:40.296Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -2689,318 +2062,16 @@ stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regres
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
   fallbackUsed: false,
   action: 'order_hub_oui-03',
   outcome: 'started',
   durationMs: undefined,
   note: undefined,
   reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:52.713Z'
+  recordedAt: '2026-04-19T12:31:40.297Z'
 }
 
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始の afterStart が失敗した場合は success toast を出さず raw detail も表示しない
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: '20260419T022352Z',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
-  fallbackUsed: false,
-  action: 'start',
-  outcome: 'error',
-  durationMs: 2,
-  note: 'encounterKey がないため診察開始を実行できません。（runId=20260419T022352Z / traceId=086a8225-ac13-40f6-b73c-0ffac52efaa4） / 次にやること: 受付へ戻る / 請求を再取得 / 設定確認',
-  reason: 'encounterKey がないため診察開始を実行できません。（runId=20260419T022352Z / traceId=086a8225-ac13-40f6-b73c-0ffac52efaa4） / 次にやること: 受付へ戻る / 請求を再取得 / 設定確認',
-  recordedAt: '2026-04-19T02:23:52.716Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 複数RPを連続編集でき、保存後に別RPを再編集できる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'blocked',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:52.766Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 複数RPを連続編集でき、保存後に別RPを再編集できる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:52.795Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.796Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察中断では start hook を呼ばない
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
-  fallbackUsed: false,
-  action: 'pause',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.809Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察中断では start hook を呼ばない
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
-  fallbackUsed: false,
-  action: 'pause',
-  outcome: 'success',
-  durationMs: 4,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.813Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 複数RPを連続編集でき、保存後に別RPを再編集できる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-01',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:52.843Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:52.844Z'
-}
-
-stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察終了では start hook を呼ばない
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
-  fallbackUsed: false,
-  action: 'finish',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.848Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ACTION',
-  traceId: '086a8225-ac13-40f6-b73c-0ffac52efaa4',
-  fallbackUsed: false,
-  action: 'finish',
-  outcome: 'success',
-  durationMs: 0,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:52.848Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-01',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:52.994Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:52.996Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'blocked',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:53.052Z'
-}
-
- ✓ src/features/charts/__tests__/chartsActionBar.test.tsx (15 tests) 887ms
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-04',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'editor_close',
-  recordedAt: '2026-04-19T02:23:53.076Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'success',
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:53.077Z'
-}
-
-stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-01',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:53.112Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_action',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: false,
-  missingMaster: false,
-  runId: 'RUN-ORDER-DOCK-REGRESSION',
-  traceId: '28635f92-a896-478d-9de2-17ac57c8c27f',
-  fallbackUsed: false,
-  action: 'order_hub_oui-03',
-  outcome: 'started',
-  durationMs: undefined,
-  note: undefined,
-  reason: 'bundle_edit',
-  recordedAt: '2026-04-19T02:23:53.112Z'
-}
-
- ✓ src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx (6 tests) 987ms
- ✓ src/features/charts/__tests__/patientsTabFilterAndConfirm.test.tsx (2 tests) 548ms
-     ✓ keeps current patient fixed when filtering candidates  383ms
- ✓ src/features/charts/__tests__/stampLibraryPanel.test.tsx (5 tests) 1131ms
-     ✓ 編集フォームへ読み込んだ内容をローカル新規登録できる  457ms
- ✓ src/features/charts/__tests__/orderBundleTwoTableLayout.test.tsx (2 tests) 743ms
-     ✓ 候補は入力欄の選択肢として表示される  540ms
 stdout | src/features/charts/__tests__/soapNoteAudit.test.tsx > SOAP note audit > テンプレ挿入→保存でタイムラインに履歴が反映される
 [telemetry] Record outpatient funnel {
   stage: 'resolve_master',
@@ -3016,7 +2087,7 @@ stdout | src/features/charts/__tests__/soapNoteAudit.test.tsx > SOAP note audit 
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:53.689Z'
+  recordedAt: '2026-04-19T12:31:40.297Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3032,9 +2103,946 @@ stdout | src/features/charts/__tests__/soapNoteAudit.test.tsx > SOAP note audit 
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:53.689Z'
+  recordedAt: '2026-04-19T12:31:40.298Z'
 }
 
+ ✓ src/features/charts/__tests__/soapNoteAudit.test.tsx (3 tests) 967ms
+     ✓ テンプレ挿入と保存で監査イベントが必要メタを含む  523ms
+     ✓ テンプレ挿入→保存でタイムラインに履歴が反映される  433ms
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始は afterStart 成功後のみ success toast を出す
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ACTION',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'start',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.326Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始は afterStart 成功後のみ success toast を出す
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: '20260419T123139Z',
+  traceId: 'trace-start-1',
+  fallbackUsed: false,
+  action: 'start',
+  outcome: 'success',
+  durationMs: 6,
+  note: 'checked_in -> chart_opened / encounterKey=F001:E100 / requestId=req-start-1',
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.333Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 複数RPを連続編集でき、保存後に別RPを再編集できる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'blocked',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'editor_close',
+  recordedAt: '2026-04-19T12:31:40.337Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 複数RPを連続編集でき、保存後に別RPを再編集できる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'success',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'editor_close',
+  recordedAt: '2026-04-19T12:31:40.365Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'success',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.367Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 複数RPを連続編集でき、保存後に別RPを再編集できる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-01',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_edit',
+  recordedAt: '2026-04-19T12:31:40.401Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_edit',
+  recordedAt: '2026-04-19T12:31:40.401Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始の afterStart が失敗した場合は success toast を出さず raw detail も表示しない
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ACTION',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'start',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.409Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察開始の afterStart が失敗した場合は success toast を出さず raw detail も表示しない
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: '20260419T123139Z',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'start',
+  outcome: 'error',
+  durationMs: 2,
+  note: 'encounterKey がないため診察開始を実行できません。（runId=20260419T123139Z / traceId=486f628d-b46b-41cd-9e9e-9a0307732fe5） / 次にやること: 受付へ戻る / 請求を再取得 / 設定確認',
+  reason: 'encounterKey がないため診察開始を実行できません。（runId=20260419T123139Z / traceId=486f628d-b46b-41cd-9e9e-9a0307732fe5） / 次にやること: 受付へ戻る / 請求を再取得 / 設定確認',
+  recordedAt: '2026-04-19T12:31:40.411Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-01',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_edit',
+  recordedAt: '2026-04-19T12:31:40.442Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_edit',
+  recordedAt: '2026-04-19T12:31:40.442Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察中断では start hook を呼ばない
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ACTION',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'pause',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.461Z'
+}
+
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察中断では start hook を呼ばない
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ACTION',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'pause',
+  outcome: 'success',
+  durationMs: 7,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.468Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'blocked',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'editor_close',
+  recordedAt: '2026-04-19T12:31:40.484Z'
+}
+
+ ✓ src/features/charts/__tests__/prescriptionOrderOrcaSupport.test.tsx (3 tests) 1115ms
+     ✓ 候補一覧と選択中薬剤に最低薬価を補助表示する  429ms
+     ✓ ORCA入力セットを RP へ追記反映する  311ms
+     ✓ 相互作用ありのとき確認後に 1 回だけ保存する  374ms
+stdout | src/features/charts/__tests__/chartsActionBar.test.tsx > ChartsActionBar > 診察終了では start hook を呼ばない
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ACTION',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'finish',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.504Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ACTION',
+  traceId: '486f628d-b46b-41cd-9e9e-9a0307732fe5',
+  fallbackUsed: false,
+  action: 'finish',
+  outcome: 'success',
+  durationMs: 0,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.504Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-04',
+  outcome: 'success',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'editor_close',
+  recordedAt: '2026-04-19T12:31:40.505Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'success',
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.508Z'
+}
+
+stdout | src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx > OrderDockPanel RP regression > 単独RPでも保存して閉じる後に再編集できる
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-01',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_edit',
+  recordedAt: '2026-04-19T12:31:40.544Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: 'RUN-ORDER-DOCK-REGRESSION',
+  traceId: 'e6b795c3-ebc7-4d8f-80bb-5a67dd5ebb4d',
+  fallbackUsed: false,
+  action: 'order_hub_oui-03',
+  outcome: 'started',
+  durationMs: undefined,
+  note: undefined,
+  reason: 'bundle_edit',
+  recordedAt: '2026-04-19T12:31:40.545Z'
+}
+
+ ✓ src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx (6 tests) 878ms
+ ✓ src/features/charts/__tests__/chartsActionBar.test.tsx (15 tests) 866ms
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > WorkspaceTabBar 統合後は Charts 内の患者タブUIを描画しない
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.669Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.669Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 未保存状態で診察終了すると保存/破棄/キャンセルの3択ダイアログを表示する
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.786Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.786Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 未保存状態で診察終了すると保存/破棄/キャンセルの3択ダイアログを表示する
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.863Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.864Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > Shift+Enter でドラフト保存ショートカット後は終了ガードを表示しない
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.976Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:40.976Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > Shift+Enter でドラフト保存ショートカット後は終了ガードを表示しない
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.001Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.004Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察開始成功後だけ medical summary を再取得する
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.067Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.067Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察開始成功後だけ medical summary を再取得する
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.095Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.095Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察中断/終了では medical summary を再取得しない
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.118Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.118Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > 診察中断/終了では medical summary を再取得しない
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.139Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.139Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active switch は保存成功後だけ切り替える
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.218Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.218Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active switch は保存成功後だけ切り替える
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.277Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.278Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の保存失敗時は active switch を継続せず guard を残す
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.336Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.336Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の保存失敗時は active switch を継続せず guard を残す
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.365Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.365Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active close でも保存/破棄/キャンセルの3択を出し、破棄時だけ次タブへ進む
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.393Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.393Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > workspace tab の active close でも保存/破棄/キャンセルの3択を出し、破棄時だけ次タブへ進む
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.438Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.439Z'
+}
+
+ ✓ src/features/charts/__tests__/orderBundleUsageSearch.test.tsx (3 tests) 351ms
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > bounded prefetch は active を除く直近2タブまでに制限する
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.483Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.483Z'
+}
+
+stdout | src/features/charts/__tests__/chartsPageDirtyDot.test.tsx > ChartsPage patient tab dirty indicator > bounded prefetch は active を除く直近2タブまでに制限する
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.493Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: 'cfc7a563-a6cf-4ab8-b283-09b995168bf7',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:41.493Z'
+}
+
+ ✓ src/features/charts/__tests__/chartsPageDirtyDot.test.tsx (9 tests) 876ms
 stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientInfoEditDialog > 住所補完で draft.address を更新する
 [telemetry] Record outpatient funnel {
   stage: 'charts_patient_edit',
@@ -3043,19 +3051,16 @@ stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientI
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-TEST',
-  traceId: '6f173b04-dd92-4ee8-bd3a-d5f0b2959dcc',
+  traceId: '38e8ee4a-25c9-41ef-8199-f2cfa4ebff1f',
   fallbackUsed: false,
   action: 'open',
   outcome: 'success',
   durationMs: undefined,
   note: 'basic',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:53.690Z'
+  recordedAt: '2026-04-19T12:31:41.501Z'
 }
 
- ✓ src/features/charts/__tests__/soapNoteAudit.test.tsx (3 tests) 1033ms
-     ✓ テンプレ挿入と保存で監査イベントが必要メタを含む  652ms
-     ✓ テンプレ挿入→保存でタイムラインに履歴が反映される  372ms
 stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientInfoEditDialog > 住所補完失敗時は canonical copy を表示し raw detail を出さない
 [telemetry] Record outpatient funnel {
   stage: 'charts_patient_edit',
@@ -3064,14 +3069,14 @@ stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientI
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-TEST',
-  traceId: '6f173b04-dd92-4ee8-bd3a-d5f0b2959dcc',
+  traceId: '38e8ee4a-25c9-41ef-8199-f2cfa4ebff1f',
   fallbackUsed: false,
   action: 'open',
   outcome: 'success',
   durationMs: undefined,
   note: 'basic',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:53.797Z'
+  recordedAt: '2026-04-19T12:31:41.557Z'
 }
 
 stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientInfoEditDialog > 保存時は official update route を呼び出し、成功後に canonical/local sync 更新 callback を進める
@@ -3082,14 +3087,14 @@ stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientI
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-TEST',
-  traceId: '6f173b04-dd92-4ee8-bd3a-d5f0b2959dcc',
+  traceId: '38e8ee4a-25c9-41ef-8199-f2cfa4ebff1f',
   fallbackUsed: false,
   action: 'open',
   outcome: 'success',
   durationMs: undefined,
   note: 'basic',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:53.839Z'
+  recordedAt: '2026-04-19T12:31:41.596Z'
 }
 
 stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientInfoEditDialog > 保存時は official update route を呼び出し、成功後に canonical/local sync 更新 callback を進める
@@ -3100,14 +3105,14 @@ stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientI
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-TEST',
-  traceId: '6f173b04-dd92-4ee8-bd3a-d5f0b2959dcc',
+  traceId: '38e8ee4a-25c9-41ef-8199-f2cfa4ebff1f',
   fallbackUsed: false,
   action: 'save',
   outcome: 'success',
   durationMs: undefined,
   note: 'basic changedKeys=name',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:53.998Z'
+  recordedAt: '2026-04-19T12:31:41.734Z'
 }
 
 stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientInfoEditDialog > canonical readback failure 時は warning を表示して close しない
@@ -3118,14 +3123,14 @@ stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientI
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-TEST',
-  traceId: '6f173b04-dd92-4ee8-bd3a-d5f0b2959dcc',
+  traceId: '38e8ee4a-25c9-41ef-8199-f2cfa4ebff1f',
   fallbackUsed: false,
   action: 'open',
   outcome: 'success',
   durationMs: undefined,
   note: 'basic',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:54.030Z'
+  recordedAt: '2026-04-19T12:31:41.754Z'
 }
 
 stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientInfoEditDialog > canonical readback failure 時は warning を表示して close しない
@@ -3136,26 +3141,32 @@ stdout | src/features/charts/__tests__/PatientInfoEditDialog.test.tsx > PatientI
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-TEST',
-  traceId: '6f173b04-dd92-4ee8-bd3a-d5f0b2959dcc',
+  traceId: '38e8ee4a-25c9-41ef-8199-f2cfa4ebff1f',
   fallbackUsed: false,
   action: 'save',
   outcome: 'error',
   durationMs: undefined,
   note: 'write accepted: 既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
   reason: '既存患者更新は受け付けられましたが、canonical 再取得に失敗したため完了扱いにできません。',
-  recordedAt: '2026-04-19T02:23:54.151Z'
+  recordedAt: '2026-04-19T12:31:41.880Z'
 }
 
- ✓ src/features/charts/__tests__/PatientInfoEditDialog.test.tsx (4 tests) 589ms
- ✓ src/features/charts/__tests__/DiagnosisEditPanel.test.tsx (1 test) 463ms
-     ✓ 候補プルダウン選択で病名とコードを反映して登録できる  461ms
- ✓ src/features/charts/__tests__/OrcaHokenjaReferenceDialog.test.tsx (3 tests) 331ms
- ✓ src/features/charts/__tests__/orderSetEditorPage.test.tsx (2 tests) 473ms
-     ✓ 未保存変更がある状態の切替で保存/破棄/キャンセルを選べる  317ms
- ✓ src/features/charts/__tests__/prescriptionOrderEditorPanel.local-only.test.tsx (2 tests) 491ms
-     ✓ ORCA入力セット取込は用法コードを投与コードから復元し、注記テキストへは依存しない  397ms
- ✓ src/features/charts/__tests__/patientsTab.hokenjaReference.test.tsx (2 tests) 225ms
- ✓ src/features/charts/__tests__/chartsAccessibility.test.tsx (3 tests) 416ms
+ ✓ src/features/charts/__tests__/prescriptionOrderEditorPanel.local-only.test.tsx (2 tests) 401ms
+     ✓ ORCA入力セット取込は用法コードを投与コードから復元し、注記テキストへは依存しない  339ms
+ ✓ src/features/charts/__tests__/PatientInfoEditDialog.test.tsx (4 tests) 483ms
+ ✓ src/features/charts/__tests__/soapNoteDirtyState.test.tsx (1 test) 323ms
+     ✓ SOAPローカルカルテ保存失敗時は dirty が残る  320ms
+ ✓ src/features/charts/__tests__/orderSetEditorPage.test.tsx (2 tests) 490ms
+     ✓ 未保存変更がある状態の切替で保存/破棄/キャンセルを選べる  361ms
+ ✓ src/features/charts/__tests__/orderBundleTwoTableLayout.test.tsx (2 tests) 597ms
+     ✓ 候補は入力欄の選択肢として表示される  487ms
+ ✓ src/features/charts/__tests__/patientsTabFilterAndConfirm.test.tsx (2 tests) 540ms
+     ✓ keeps current patient fixed when filtering candidates  384ms
+ ✓ src/features/charts/__tests__/orderBundleAudit.test.tsx (1 test) 233ms
+ ✓ src/features/charts/__tests__/OrcaHokenjaReferenceDialog.test.tsx (3 tests) 346ms
+ ✓ src/features/charts/__tests__/DiagnosisEditPanel.test.tsx (1 test) 492ms
+     ✓ 候補プルダウン選択で病名とコードを反映して登録できる  490ms
+ ✓ src/features/charts/__tests__/patientsTabDraftDialog.test.tsx (1 test) 262ms
 stdout | src/features/charts/__tests__/orderBundleHistoryCopy.test.tsx > OrderBundleEditPanel history copy > 履歴コピー後は新規作成として保存される
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -3164,23 +3175,20 @@ stdout | src/features/charts/__tests__/orderBundleHistoryCopy.test.tsx > OrderBu
   cacheHit: false,
   missingMaster: false,
   runId: 'RUN-ORDER',
-  traceId: 'e5bd1a04-60bb-4da3-8972-f7492985e0d9',
+  traceId: 'ddf07b40-a66c-485c-be86-a52cb3e57105',
   fallbackUsed: false,
   action: 'create',
   outcome: 'success',
   durationMs: undefined,
   note: '降圧薬セット',
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:55.607Z'
+  recordedAt: '2026-04-19T12:31:43.701Z'
 }
 
- ✓ src/features/charts/__tests__/orderBundleHistoryCopy.test.tsx (2 tests) 499ms
-     ✓ 履歴コピー後は新規作成として保存される  360ms
- ✓ src/features/charts/__tests__/OrcaSummary.semantics.test.tsx (6 tests) 428ms
- ✓ src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx (7 tests) 362ms
- ✓ src/features/charts/__tests__/patientsTabDraftDialog.test.tsx (1 test) 399ms
-     ✓ shows draft dialog and reason when switching patient with dirty draft  397ms
- ✓ src/features/charts/__tests__/orderBundleUsageSearch.test.tsx (3 tests) 299ms
+ ✓ src/features/charts/__tests__/orderBundleHistoryCopy.test.tsx (2 tests) 298ms
+ ✓ src/features/charts/__tests__/OrcaSummary.semantics.test.tsx (6 tests) 309ms
+ ✓ src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx (7 tests) 276ms
+ ✓ src/features/charts/__tests__/chartsAccessibility.test.tsx (3 tests) 484ms
 stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts masterSource cache refresh > masterSource 切替で invalidate と再取得が走り、フラグ表示が更新される
 [telemetry] Record outpatient funnel {
   stage: 'resolve_master',
@@ -3189,14 +3197,14 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: false,
   missingMaster: true,
   runId: 'RUN-AUTH',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.009Z'
+  recordedAt: '2026-04-19T12:31:44.311Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3205,14 +3213,14 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: false,
   missingMaster: true,
   runId: 'RUN-AUTH',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.010Z'
+  recordedAt: '2026-04-19T12:31:44.312Z'
 }
 
 stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts masterSource cache refresh > masterSource 切替で invalidate と再取得が走り、フラグ表示が更新される
@@ -3223,14 +3231,14 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: false,
   missingMaster: true,
   runId: 'RUN-CLAIM-mock',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.046Z'
+  recordedAt: '2026-04-19T12:31:44.340Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3239,17 +3247,16 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: false,
   missingMaster: true,
   runId: 'RUN-CLAIM-mock',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.046Z'
+  recordedAt: '2026-04-19T12:31:44.341Z'
 }
 
- ✓ src/features/charts/__tests__/DoCopyDialog.test.tsx (2 tests) 167ms
 stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts masterSource cache refresh > masterSource 切替で invalidate と再取得が走り、フラグ表示が更新される
 [telemetry] Record outpatient funnel {
   stage: 'resolve_master',
@@ -3258,14 +3265,14 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-CLAIM-server',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.075Z'
+  recordedAt: '2026-04-19T12:31:44.364Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3274,14 +3281,14 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-CLAIM-server',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.077Z'
+  recordedAt: '2026-04-19T12:31:44.365Z'
 }
 
 stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts masterSource cache refresh > medical summary query key は encounterKey 主体で構築する
@@ -3292,14 +3299,14 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: false,
   missingMaster: true,
   runId: 'RUN-AUTH',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.133Z'
+  recordedAt: '2026-04-19T12:31:44.420Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3308,16 +3315,20 @@ stdout | src/features/charts/__tests__/chartsMasterSourceCache.test.tsx > Charts
   cacheHit: false,
   missingMaster: true,
   runId: 'RUN-AUTH',
-  traceId: '923b5f11-b8d8-4dfc-aba3-bc7b49c7c698',
+  traceId: 'e25da582-9c29-4a58-a007-61843c190bba',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.133Z'
+  recordedAt: '2026-04-19T12:31:44.420Z'
 }
 
+ ✓ src/features/charts/__tests__/chartsMasterSourceCache.test.tsx (2 tests) 233ms
+ ✓ src/features/charts/__tests__/patientsTab.hokenjaReference.test.tsx (2 tests) 282ms
+ ✓ src/features/charts/__tests__/orderBundleStampFlow.test.tsx (7 tests) 242ms
+ ✓ src/features/charts/__tests__/DoCopyDialog.test.tsx (2 tests) 319ms
 stdout | src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order.test.tsx > ChartsPage order dock coexistence recovery > 右欄編集中でも下方ユーティリティを表示せず、未保存離脱ガード後に復帰できる
 [telemetry] Record outpatient funnel {
   stage: 'resolve_master',
@@ -3326,14 +3337,14 @@ stdout | src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-AUTH',
-  traceId: '2a1b424a-d887-4d98-b7e0-bb77d4342751',
+  traceId: '0ad0f9b7-abb7-400b-b12d-a0ee9b7c2ec9',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.070Z'
+  recordedAt: '2026-04-19T12:31:45.260Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3342,96 +3353,22 @@ stdout | src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-AUTH',
-  traceId: '2a1b424a-d887-4d98-b7e0-bb77d4342751',
+  traceId: '0ad0f9b7-abb7-400b-b12d-a0ee9b7c2ec9',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:57.070Z'
+  recordedAt: '2026-04-19T12:31:45.261Z'
 }
 
- ✓ src/features/charts/__tests__/chartsMasterSourceCache.test.tsx (2 tests) 190ms
- ✓ src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order.test.tsx (1 test) 219ms
- ✓ src/features/charts/__tests__/soapNoteDirtyState.test.tsx (1 test) 299ms
- ✓ src/features/charts/__tests__/orderBundleAudit.test.tsx (1 test) 292ms
- ✓ src/features/charts/__tests__/OrderSummaryPane.categoryDisplay.test.tsx (5 tests) 223ms
- ✓ src/features/charts/__tests__/orderBundleStampFlow.test.tsx (7 tests) 234ms
- ✓ src/features/charts/__tests__/encounterContextUrlSync.guard.test.tsx (2 tests) 174ms
-stdout | src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx > ChartsPage ORCA recovery alert > shows auth cause in UI and avoids repeated retry loops
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: '6658bed8-c11a-4c65-a9c7-41b3c3bccb0c',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:58.311Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-AUTH',
-  traceId: '6658bed8-c11a-4c65-a9c7-41b3c3bccb0c',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:58.311Z'
-}
-
-stdout | src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx > ChartsPage ORCA recovery alert > shows auth cause in UI and avoids repeated retry loops
-[telemetry] Record outpatient funnel {
-  stage: 'resolve_master',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '6658bed8-c11a-4c65-a9c7-41b3c3bccb0c',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:58.345Z'
-}
-[telemetry] Record outpatient funnel {
-  stage: 'charts_orchestration',
-  funnel: 'funnels/outpatient',
-  dataSourceTransition: 'server',
-  cacheHit: true,
-  missingMaster: false,
-  runId: 'RUN-CLAIM',
-  traceId: '6658bed8-c11a-4c65-a9c7-41b3c3bccb0c',
-  fallbackUsed: false,
-  action: undefined,
-  outcome: undefined,
-  durationMs: undefined,
-  note: undefined,
-  reason: undefined,
-  recordedAt: '2026-04-19T02:23:58.345Z'
-}
-
- ✓ src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx (1 test) 107ms
- ✓ src/features/charts/__tests__/ChartsPatientSummaryBar.test.tsx (3 tests) 86ms
- ✓ src/features/reception/__tests__/ReceptionPage.recovery-order.test.tsx (1 test) 133ms
- ✓ src/features/charts/__tests__/SoapNotePanel.test.tsx (1 test) 157ms
- ✓ src/features/charts/OrderBundleEditPanel.600-subtype.test.tsx (2 tests) 185ms
+ ✓ src/features/charts/__tests__/OrderSummaryPane.categoryDisplay.test.tsx (5 tests) 559ms
+     ✓ 処方は prescriptionBundles を優先してクリック時に編集ペイロードを返す  310ms
+ ✓ src/features/charts/__tests__/encounterContextUrlSync.guard.test.tsx (2 tests) 587ms
+     ✓ active tab close 相当の内部切替で古いURLへ巻き戻らない  474ms
+ ✓ src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order.test.tsx (1 test) 698ms
+     ✓ 右欄編集中でも下方ユーティリティを表示せず、未保存離脱ガード後に復帰できる  696ms
 stdout | src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx > ChartsPage local summary semantics > debug local summary を visible card で表示し ORCA収納情報と混同しない
 [telemetry] Record outpatient funnel {
   stage: 'resolve_master',
@@ -3440,14 +3377,14 @@ stdout | src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx > Ch
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-AUTH',
-  traceId: '5d8f9640-2fff-4c55-b47f-725d7a80e164',
+  traceId: 'becee4e4-78f0-4f85-8dfa-399b6857c176',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:58.973Z'
+  recordedAt: '2026-04-19T12:31:45.867Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3456,14 +3393,14 @@ stdout | src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx > Ch
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-AUTH',
-  traceId: '5d8f9640-2fff-4c55-b47f-725d7a80e164',
+  traceId: 'becee4e4-78f0-4f85-8dfa-399b6857c176',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:58.976Z'
+  recordedAt: '2026-04-19T12:31:45.868Z'
 }
 
 stdout | src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx > ChartsPage local summary semantics > debug local summary を visible card で表示し ORCA収納情報と混同しない
@@ -3474,14 +3411,14 @@ stdout | src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx > Ch
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '5d8f9640-2fff-4c55-b47f-725d7a80e164',
+  traceId: 'becee4e4-78f0-4f85-8dfa-399b6857c176',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:59.063Z'
+  recordedAt: '2026-04-19T12:31:45.995Z'
 }
 [telemetry] Record outpatient funnel {
   stage: 'charts_orchestration',
@@ -3490,58 +3427,98 @@ stdout | src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx > Ch
   cacheHit: true,
   missingMaster: false,
   runId: 'RUN-CLAIM',
-  traceId: '5d8f9640-2fff-4c55-b47f-725d7a80e164',
+  traceId: 'becee4e4-78f0-4f85-8dfa-399b6857c176',
   fallbackUsed: false,
   action: undefined,
   outcome: undefined,
   durationMs: undefined,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:23:59.064Z'
+  recordedAt: '2026-04-19T12:31:45.995Z'
 }
 
- ✓ src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx (1 test) 189ms
- ✓ src/features/charts/__tests__/RightUtilityDrawer.test.tsx (1 test) 105ms
- ✓ src/features/charts/__tests__/PastHubPanel.test.tsx (2 tests) 162ms
- ✓ src/features/charts/__tests__/OrderSummaryPane.test.tsx (2 tests) 119ms
- ✓ src/features/charts/__tests__/PatientSummaryPanel.test.tsx (2 tests) 127ms
- ✓ src/features/charts/__tests__/orderDetailDisplayViewModel.test.ts (6 tests) 103ms
- ✓ src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx (4 tests) 123ms
- ✓ src/features/charts/__tests__/MedicalOutpatientRecordPanel.test.tsx (7 tests) 98ms
- ✓ src/features/charts/__tests__/prescriptionOrderApi.test.ts (13 tests) 51ms
- ✓ src/features/reception/__tests__/receptionDailyState.test.ts (7 tests) 55ms
- ✓ src/features/charts/__tests__/soapRevisionHistory.test.ts (2 tests) 31ms
- ✓ src/features/charts/__tests__/encounterGuard.integration.test.tsx (1 test) 82ms
- ✓ src/features/charts/__tests__/orderSendSmoke.test.ts (12 tests) 87ms
- ✓ src/features/charts/diseaseApi.test.ts (11 tests) 56ms
- ✓ src/features/charts/orcaMedicationGetApi.test.ts (4 tests) 38ms
- ✓ src/features/charts/__tests__/documentImageAttach.test.ts (4 tests) 15ms
- ✓ src/features/reception/__tests__/acceptmodv2.test.ts (18 tests) 25ms
- ✓ src/features/charts/__tests__/OrcaSummary.recovery-order.test.tsx (1 test) 100ms
- ✓ scripts/__tests__/orcaRouteTaxonomyGuard.test.ts (8 tests) 17ms
- ✓ src/features/patients/orcaHokenjaApi.test.ts (3 tests) 14ms
- ✓ src/features/charts/__tests__/orderRpNormalization.test.ts (28 tests) 83ms
- ✓ src/features/patients/__tests__/api.test.ts (12 tests) 32ms
- ✓ src/features/charts/__tests__/orcaOrderInputSetApi.test.ts (1 test) 27ms
- ✓ src/features/charts/__tests__/orderBundleApi.test.ts (26 tests) 47ms
- ✓ src/features/charts/orderMasterSearchApi.test.ts (20 tests) 20ms
- ✓ src/features/charts/__tests__/useChartsTabLock.test.tsx (3 tests) 34ms
- ✓ src/features/charts/stampApi.test.ts (4 tests) 23ms
- ✓ src/features/charts/__tests__/api.medicalSummary.test.ts (6 tests) 14ms
- ✓ src/features/reception/__tests__/exceptionLogic.test.ts (11 tests) 18ms
- ✓ src/features/charts/orderSend600SubtypeSmoke.test.ts (4 tests) 27ms
- ✓ src/features/charts/__tests__/orcaSummary.billing-status.test.ts (17 tests) 17ms
- ✓ src/features/charts/__tests__/orderBundleValidation.test.ts (54 tests) 37ms
- ✓ src/features/charts/orcaIncomeInfoApi.test.ts (2 tests) 17ms
- ✓ src/features/charts/orcaClaimSendCache.test.ts (8 tests) 29ms
- ✓ src/features/charts/orderRecommendationApi.test.ts (2 tests) 16ms
- ✓ src/features/patients/orcaAddressApi.test.ts (3 tests) 17ms
- ✓ src/features/reception/__tests__/patientSearchApi.test.ts (2 tests) 11ms
- ✓ src/features/charts/__tests__/chartOrderSetStorage.test.ts (4 tests) 24ms
- ✓ src/features/charts/orderBundleApi.600-subtype.test.ts (2 tests) 30ms
- ✓ src/features/charts/orcaGenericPriceApi.test.ts (2 tests) 15ms
- ✓ src/features/charts/orcaOrderInputSetApi.test.ts (3 tests) 26ms
- ✓ src/features/charts/__tests__/orderDetailFormatters.test.ts (4 tests) 33ms
+ ✓ src/features/charts/__tests__/chartsLocalSummarySemantics.test.tsx (1 test) 260ms
+ ✓ src/features/reception/__tests__/ReceptionPage.recovery-order.test.tsx (1 test) 118ms
+ ✓ src/features/charts/__tests__/ChartsPatientSummaryBar.test.tsx (3 tests) 154ms
+stdout | src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx > ChartsPage ORCA recovery alert > shows auth cause in UI and avoids repeated retry loops
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: '77c567cc-42e9-43b4-9dec-a1c1a53b55b6',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:46.788Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-AUTH',
+  traceId: '77c567cc-42e9-43b4-9dec-a1c1a53b55b6',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:46.789Z'
+}
+
+stdout | src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx > ChartsPage ORCA recovery alert > shows auth cause in UI and avoids repeated retry loops
+[telemetry] Record outpatient funnel {
+  stage: 'resolve_master',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '77c567cc-42e9-43b4-9dec-a1c1a53b55b6',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:46.881Z'
+}
+[telemetry] Record outpatient funnel {
+  stage: 'charts_orchestration',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: true,
+  missingMaster: false,
+  runId: 'RUN-CLAIM',
+  traceId: '77c567cc-42e9-43b4-9dec-a1c1a53b55b6',
+  fallbackUsed: false,
+  action: undefined,
+  outcome: undefined,
+  durationMs: undefined,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T12:31:46.881Z'
+}
+
+ ✓ src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx (1 test) 161ms
+ ✓ src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx (4 tests) 113ms
+ ✓ src/features/charts/__tests__/orderBundleValidation.test.ts (54 tests) 17ms
+ ✓ src/features/charts/OrderBundleEditPanel.600-subtype.test.tsx (2 tests) 110ms
+ ✓ src/features/charts/__tests__/SoapNotePanel.test.tsx (1 test) 140ms
+ ✓ src/features/charts/__tests__/OrderSummaryPane.test.tsx (2 tests) 180ms
+ ✓ src/features/charts/__tests__/RightUtilityDrawer.test.tsx (1 test) 141ms
+ ✓ src/features/charts/__tests__/orderDetailDisplayViewModel.test.ts (6 tests) 142ms
+ ✓ src/features/charts/__tests__/PastHubPanel.test.tsx (2 tests) 415ms
+     ✓ 初期表示で日付 details は自動展開されない  309ms
+ ✓ src/features/charts/__tests__/orderSendSmoke.test.ts (12 tests) 146ms
 stdout | src/features/charts/__tests__/auditTelemetryRunId.test.ts > auditEvent と telemetry の runId 整合 > 主要操作(ORCA_SEND)で runId/traceId が一致する
 [telemetry] Record outpatient funnel {
   stage: 'charts_action',
@@ -3557,50 +3534,84 @@ stdout | src/features/charts/__tests__/auditTelemetryRunId.test.ts > auditEvent 
   durationMs: 1200,
   note: undefined,
   reason: undefined,
-  recordedAt: '2026-04-19T02:24:04.229Z'
+  recordedAt: '2026-04-19T12:31:48.152Z'
 }
 
- ✓ src/features/charts/__tests__/auditTelemetryRunId.test.ts (3 tests) 10ms
- ✓ src/features/charts/__tests__/patientTabsStorage.test.ts (6 tests) 14ms
- ✓ src/features/outpatient/__tests__/fetchWithResolver.test.ts (2 tests) 13ms
- ✓ src/features/outpatient/__tests__/orcaPatientImportApi.test.ts (10 tests) 33ms
- ✓ src/features/charts/__tests__/editLock.test.ts (5 tests) 29ms
+ ✓ src/features/charts/__tests__/auditTelemetryRunId.test.ts (3 tests) 15ms
+ ✓ src/features/charts/__tests__/MedicalOutpatientRecordPanel.test.tsx (7 tests) 211ms
+ ✓ src/features/charts/orcaClaimSendCache.test.ts (8 tests) 57ms
+ ✓ src/features/charts/__tests__/encounterGuard.integration.test.tsx (1 test) 69ms
+ ✓ src/features/charts/orcaMedicationGetApi.test.ts (4 tests) 15ms
+ ✓ src/features/charts/diseaseApi.test.ts (11 tests) 27ms
+ ✓ src/features/charts/__tests__/OrcaSummary.recovery-order.test.tsx (1 test) 48ms
+ ✓ src/features/charts/__tests__/orderDetailFormatters.test.ts (4 tests) 22ms
+ ✓ src/features/charts/orderMasterSearchApi.test.ts (20 tests) 30ms
+ ✓ src/features/charts/__tests__/PatientSummaryPanel.test.tsx (2 tests) 142ms
+ ✓ src/features/outpatient/__tests__/orcaQueueApi.test.ts (6 tests) 9ms
+ ✓ src/features/charts/orderSend600SubtypeSmoke.test.ts (4 tests) 19ms
+ ✓ src/features/charts/__tests__/api.medicalSummary.test.ts (6 tests) 15ms
+ ✓ src/features/reception/__tests__/receptionDailyState.test.ts (7 tests) 48ms
+ ✓ src/features/charts/__tests__/useChartsTabLock.test.tsx (3 tests) 39ms
+ ✓ src/features/charts/__tests__/prescriptionOrderApi.test.ts (13 tests) 102ms
+ ✓ scripts/__tests__/orcaRouteTaxonomyGuard.test.ts (10 tests) 23ms
+ ✓ src/features/charts/stampApi.test.ts (4 tests) 39ms
+ ✓ src/features/charts/__tests__/encounterContext.test.ts (12 tests) 17ms
+ ✓ src/features/reception/__tests__/acceptmodv2.test.ts (18 tests) 120ms
+ ✓ src/features/charts/__tests__/orderBundleApi.test.ts (26 tests) 44ms
+ ✓ src/features/charts/orderRecommendationApi.test.ts (2 tests) 10ms
+ ✓ src/features/outpatient/__tests__/orcaPatientImportApi.test.ts (10 tests) 23ms
+ ✓ src/features/charts/__tests__/orderRpNormalization.test.ts (28 tests) 58ms
+ ✓ src/features/patients/__tests__/api.test.ts (12 tests) 33ms
+ ✓ src/features/patients/orcaAddressApi.test.ts (3 tests) 21ms
+ ✓ src/features/charts/__tests__/medicalOutpatient.test.ts (4 tests) 17ms
+ ✓ scripts/__tests__/medicalInformationGate.test.ts (8 tests) 9ms
+ ✓ src/features/patients/patientValidation.test.ts (4 tests) 26ms
+ ✓ src/features/reception/__tests__/exceptionLogic.test.ts (11 tests) 27ms
+ ✓ src/features/charts/__tests__/soapRevisionHistory.test.ts (2 tests) 33ms
+ ✓ src/features/charts/__tests__/orderCategoryRegistry.test.ts (6 tests) 58ms
+ ✓ src/features/charts/__tests__/orcaOrderInputSetApi.test.ts (1 test) 40ms
+ ✓ src/features/charts/orderBundleApi.test.ts (3 tests) 30ms
+ ✓ src/features/charts/orcaGenericPriceApi.test.ts (2 tests) 17ms
+ ✓ src/features/charts/__tests__/orcaOrderItemMeta.test.ts (5 tests) 22ms
+ ✓ src/features/patients/orcaHokenjaApi.test.ts (3 tests) 22ms
+ ✓ src/features/outpatient/__tests__/fetchWithResolver.test.ts (2 tests) 12ms
+ ✓ src/features/outpatient/__tests__/appointmentDataBanner.test.ts (3 tests) 9ms
+ ✓ src/features/charts/__tests__/chartOrderSetStorage.test.ts (4 tests) 14ms
+ ✓ src/features/patients/patientDiff.test.ts (2 tests) 9ms
+ ✓ src/features/charts/__tests__/encounterTransitionApi.test.ts (4 tests) 37ms
+ ✓ src/features/charts/__tests__/documentImageAttach.test.ts (4 tests) 17ms
+ ✓ src/features/charts/orcaIncomeInfoApi.test.ts (2 tests) 17ms
+ ✓ src/features/charts/orcaOrderInteractionApi.test.ts (2 tests) 15ms
+ ✓ src/features/charts/orcaOrderInputSetApi.test.ts (3 tests) 18ms
+ ✓ src/features/charts/__tests__/otherOrderContract.test.ts (2 tests) 7ms
+ ✓ src/features/charts/__tests__/patientTabsStorage.test.ts (6 tests) 10ms
+ ✓ src/features/charts/__tests__/orcaSummary.billing-status.test.ts (17 tests) 18ms
+ ✓ scripts/__tests__/orcaTrialPreflight.test.ts (21 tests) 15ms
+ ✓ src/features/charts/__tests__/editLock.test.ts (5 tests) 37ms
+ ✓ src/features/charts/orderBundleApi.600-subtype.test.ts (2 tests) 10ms
+ ✓ scripts/__tests__/acceptmodv2IdentityGate.test.ts (16 tests) 19ms
+ ✓ src/features/charts/__tests__/chartsPrintAudit.test.ts (2 tests) 13ms
  ✓ src/features/outpatient/__tests__/transformers.test.ts (3 tests) 12ms
- ✓ src/features/patients/patientDiff.test.ts (2 tests) 13ms
- ✓ scripts/__tests__/acceptmodv2BusinessEvidence.test.ts (5 tests) 13ms
- ✓ src/features/charts/__tests__/encounterTransitionApi.test.ts (4 tests) 20ms
- ✓ src/features/charts/__tests__/orderBundleContract.test.ts (4 tests) 11ms
- ✓ src/features/charts/orderBundleApi.test.ts (3 tests) 18ms
- ✓ src/features/charts/orcaOrderInteractionApi.test.ts (2 tests) 10ms
- ✓ src/features/outpatient/__tests__/orcaQueueApi.test.ts (6 tests) 13ms
- ✓ src/features/reception/__tests__/exceptionPresentation.test.ts (3 tests) 18ms
- ✓ src/features/charts/__tests__/orderCategoryRegistry.test.ts (6 tests) 20ms
- ✓ src/features/charts/__tests__/orcaOrderItemMeta.test.ts (5 tests) 11ms
+ ✓ src/features/reception/__tests__/patientSearchApi.test.ts (2 tests) 31ms
  ✓ scripts/__tests__/runtimeReadyRowLocator.test.ts (9 tests) 16ms
- ✓ scripts/__tests__/acceptmodv2IdentityGate.test.ts (10 tests) 26ms
- ✓ src/features/charts/__tests__/encounterContext.test.ts (12 tests) 25ms
- ✓ src/features/outpatient/__tests__/appointmentDataBanner.test.ts (3 tests) 11ms
- ✓ scripts/__tests__/medicalInformationGate.test.ts (8 tests) 15ms
- ✓ src/features/charts/__tests__/orderRpRequirements.test.ts (3 tests) 26ms
- ✓ src/features/charts/__tests__/chartsPrintAudit.test.ts (2 tests) 8ms
- ✓ src/features/patients/patientValidation.test.ts (4 tests) 11ms
- ✓ scripts/__tests__/orcaTrialPreflight.test.ts (8 tests) 15ms
- ✓ src/features/outpatient/__tests__/savedViews.test.ts (2 tests) 17ms
- ✓ src/features/reception/__tests__/receptionHandoff.test.ts (6 tests) 13ms
- ✓ src/features/charts/__tests__/otherOrderContract.test.ts (2 tests) 13ms
- ✓ src/features/charts/__tests__/userSafeErrorCopy.test.ts (3 tests) 11ms
- ✓ src/features/charts/__tests__/medicalOutpatient.test.ts (4 tests) 9ms
- ✓ src/features/charts/__tests__/orcaQueueSelection.test.ts (4 tests) 10ms
- ✓ src/features/charts/orcaReportApi.test.ts (1 test) 6ms
- ✓ src/features/charts/__tests__/orderBundlePrescription.test.ts (10 tests) 6ms
+ ✓ src/features/reception/__tests__/receptionHandoff.test.ts (6 tests) 31ms
+ ✓ src/features/outpatient/__tests__/savedViews.test.ts (2 tests) 18ms
+ ✓ scripts/__tests__/acceptmodv2BusinessEvidence.test.ts (5 tests) 32ms
+ ✓ src/features/charts/__tests__/orcaQueueSelection.test.ts (4 tests) 18ms
+ ✓ src/features/charts/__tests__/orderRpRequirements.test.ts (3 tests) 47ms
+ ✓ src/features/charts/__tests__/userSafeErrorCopy.test.ts (3 tests) 12ms
+ ✓ src/features/reception/__tests__/exceptionPresentation.test.ts (3 tests) 9ms
+ ✓ src/features/charts/orcaReportApi.test.ts (1 test) 7ms
+ ✓ src/features/charts/__tests__/orderBundleContract.test.ts (4 tests) 8ms
  ✓ src/features/charts/__tests__/orderBundleRecommendationTransform.test.ts (1 test) 3ms
+ ✓ src/features/charts/__tests__/orderBundlePrescription.test.ts (10 tests) 7ms
 
  Test Files  124 passed (124)
-      Tests  855 passed | 2 skipped (857)
-   Start at  11:23:40
-   Duration  27.31s (transform 14.85s, setup 9.50s, import 45.73s, tests 56.19s, environment 53.75s)
+      Tests  876 passed | 2 skipped (878)
+   Start at  21:31:26
+   Duration  30.74s (transform 17.03s, setup 10.96s, import 51.90s, tests 60.73s, environment 63.07s)
+
 --- command summary ---
-end_utc=not_recorded
-exit_code=not_recorded
-result=RETROFIT_METADATA_ONLY
-pass_evidence=not_by_exit_code
+end_utc=2026-04-19T12:31:57Z
+exit_code=0
+result=PASS

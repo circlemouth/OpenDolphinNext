@@ -9,14 +9,14 @@ import {
 } from '../lib/orca-route-taxonomy-guard.mjs';
 
 describe('orca route taxonomy guard classifier', () => {
-  it('allows current official/master routes as server public route references', () => {
+  it('allows current official/master routes without classifying them as retained strings', () => {
     const result = classifyOrcaRouteReference({
       relativePath: 'web-client/src/features/reception/api.ts',
       route: '/api/orca/official/appointments/list',
     });
 
     expect(result.allowed).toBe(true);
-    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.SERVER_PUBLIC_ROUTE);
+    expect(result.category).toBeUndefined();
   });
 
   it('allows the production fail-close legacy route sentinel only in the pinned client file', () => {
@@ -26,7 +26,7 @@ describe('orca route taxonomy guard classifier', () => {
     });
 
     expect(result.allowed).toBe(true);
-    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.CLIENT_PRODUCTION_FAIL_CLOSE_SENTINEL);
+    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.PRODUCTION_FAIL_CLOSE_SENTINEL);
   });
 
   it('rejects a legacy route when it appears in unrelated production source', () => {
@@ -66,7 +66,27 @@ describe('orca route taxonomy guard classifier', () => {
     });
 
     expect(result.allowed).toBe(true);
-    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.E2E_FIXTURE_TEST_ONLY_SURFACE);
+    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE);
+  });
+
+  it('classifies server route inventory negative assertions separately from public routes', () => {
+    const result = classifyOrcaRouteReference({
+      relativePath: 'server-modernized/src/test/java/open/dolphin/rest/PublicRouteInventoryContractTest.java',
+      route: '/api/orca/queue',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.SERVER_ROUTE_INVENTORY_NEGATIVE_ASSERTION);
+  });
+
+  it('classifies web.xml exposure negative assertions separately from public routes', () => {
+    const result = classifyOrcaRouteReference({
+      relativePath: 'server-modernized/src/test/java/open/dolphin/rest/WebXmlEndpointExposureTest.java',
+      route: '/api/orca/pusheventgetv2',
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(result.category).toBe(ROUTE_GUARD_CATEGORIES.WEB_XML_EXPOSURE_NEGATIVE_ASSERTION);
   });
 
   it('extracts route strings from Playwright glob patterns without trailing wildcards', () => {

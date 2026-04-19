@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  CANDIDATE_DISCOVERY_SOURCE,
+  EXACT_PREFLIGHT_FLOW_MODE,
+  EXACT_PREFLIGHT_SOURCE,
   SELECTOR_OPTION_MISSING_BLOCKER,
   buildInputIdentity,
   resolveSelectableOption,
@@ -21,18 +24,44 @@ const baseInput = {
 
 const acceptedSummary = (overrides = {}) => {
   const input = { ...baseInput, ...overrides };
+  const medicalInformationState = input.medicalInformation
+    ? { state: 'selected', value: input.medicalInformation }
+    : { state: 'omitted' };
   return {
     runId: input.runId,
+    source: EXACT_PREFLIGHT_SOURCE,
+    flowMode: EXACT_PREFLIGHT_FLOW_MODE,
+    candidateId: input.candidateId,
     verdict: 'accepted',
     blockerClassification: 'none',
+    acceptedForPhase3Attempt: true,
     facilityId: input.facilityId,
     patientId: input.patientId,
+    phase3AttemptPatientId: input.patientId,
     departmentCode: input.departmentCode,
     physicianCode: input.physicianCode,
     paymentMode: input.paymentMode,
     visitKind: input.visitKind,
     medicalInformation: input.medicalInformation || undefined,
+    medicalInformationState,
     inputIdentity: buildInputIdentity(input),
+    officialPatientEvidenceRef: 'summary.json#/officialPatientExistence',
+    officialPatientEvidenceHash: 'official-hash',
+    insuranceEvidenceRef: 'summary.json#/insuranceReadiness',
+    insuranceEvidenceHash: 'insurance-hash',
+    localSelectableEvidenceRef: 'summary.json#/localSelectableReadiness',
+    localSelectableEvidenceHash: 'local-hash',
+    selectorEvidenceRef: 'summary.json#/selectorReadiness',
+    selectorEvidenceHash: 'selector-hash',
+    acceptmodv2ReadOnlyDiagnostic: {
+      apiResult: '60',
+      classification: 'diagnostic_no_existing_acceptance',
+      businessStatus: 'diagnosticNoExistingAcceptance',
+      businessReason: 'no_existing_acceptance',
+      mutationSuccess: false,
+      acceptedForPhase3Attempt: true,
+    },
+    rawSensitiveFieldsExcluded: true,
   };
 };
 
@@ -40,6 +69,8 @@ describe('acceptmodv2 preflight identity gate', () => {
   it('same runId/candidate/input proceeds', () => {
     const result = validatePreflightSummary({
       summary: acceptedSummary(),
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
       expected: baseInput,
     });
 
@@ -59,6 +90,8 @@ describe('acceptmodv2 preflight identity gate', () => {
   ])('%s mismatch fails closed before mutation', (_label, expectedOverride, mismatchField) => {
     const result = validatePreflightSummary({
       summary: acceptedSummary(),
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
       expected: { ...baseInput, ...expectedOverride },
     });
 
@@ -66,6 +99,83 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.mutationAllowed).toBe(false);
     expect(result.blockerClassification).toBe('preflight_input_mismatch');
     expect(result.mismatches.map((item) => item.field)).toContain(mismatchField);
+  });
+
+  it('rejects candidate discovery summary even when it proposes a selected candidate', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        runId: baseInput.runId,
+        source: CANDIDATE_DISCOVERY_SOURCE,
+        flowMode: 'candidate-discovery-proposal',
+        candidateDiscoveryAloneAuthorizesPhase3: false,
+        acceptedForPhase3Attempt: false,
+        selectedCandidate: { kind: 'proposal', patientId: baseInput.patientId },
+      },
+      artifactPath: '/tmp/discovery-summary.json',
+      artifactSha256: 'def456',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('candidate_discovery_only');
+  });
+
+  it.each([
+    ['object', { patientId: baseInput.patientId }],
+    ['null', null],
+  ])('rejects non-boolean true acceptedForPhase3Attempt value: %s', (_label, acceptedForPhase3Attempt) => {
+    const result = validatePreflightSummary({
+      summary: { ...acceptedSummary(), acceptedForPhase3Attempt },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_not_accepted');
+  });
+
+  it('rejects exact preflight when inputIdentity is missing', () => {
+    const summary = acceptedSummary();
+    delete (summary as Record<string, unknown>).inputIdentity;
+    const result = validatePreflightSummary({
+      summary,
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+    expect(result.missingFields).toContain('inputIdentity');
+  });
+
+  it('rejects exact preflight when diagnostic is missing', () => {
+    const summary = acceptedSummary();
+    delete (summary as Record<string, unknown>).acceptmodv2ReadOnlyDiagnostic;
+    const result = validatePreflightSummary({
+      summary,
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+    expect(result.missingFields).toContain('acceptmodv2ReadOnlyDiagnostic');
+  });
+
+  it('requires exact preflight artifact path and hash', () => {
+    const result = validatePreflightSummary({
+      summary: acceptedSummary(),
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+    expect(result.missingFields).toEqual(['artifactPath', 'artifactSha256']);
   });
 });
 

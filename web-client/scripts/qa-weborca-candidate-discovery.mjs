@@ -9,6 +9,11 @@ import {
   resolveQaPasswordPlain,
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
+import {
+  summarizeAppointmentDependency,
+  summarizeInsuranceReadiness,
+  summarizeOfficialPatientExistence,
+} from './qa-lib/orca-trial-preflight.mjs';
 
 const now = new Date();
 const runId = process.env.RUN_ID ?? now.toISOString().replace(/[-:]/g, '').replace(/\..+/, 'Z');
@@ -39,6 +44,7 @@ const departmentCode = process.env.QA_DEPARTMENT_CODE ?? '01';
 const physicianCode = process.env.QA_PHYSICIAN_CODE ?? '10001';
 const paymentMode = process.env.QA_PAYMENT_MODE ?? 'insurance';
 const visitKind = process.env.QA_VISIT_KIND ?? '1';
+const requestedAppointmentFlowMode = process.env.QA_APPOINTMENT_FLOW_MODE?.trim() ?? 'direct_acceptance';
 const sessionRole = process.env.QA_ROLE ?? 'admin';
 const sessionRoles = process.env.QA_ROLES
   ? process.env.QA_ROLES.split(',').map((role) => role.trim()).filter(Boolean)
@@ -54,6 +60,8 @@ const session = buildQaSession({
 
 const DEFAULT_CANDIDATES = Array.from({ length: 11 }, (_, index) => String(index + 1).padStart(5, '0'));
 const REJECTED_LEGACY_SEED = '0000001';
+const CANDIDATE_DISCOVERY_SOURCE = 'qa-weborca-candidate-discovery';
+const CANDIDATE_DISCOVERY_FLOW_MODE = 'candidate-discovery-proposal';
 const MUTATION_ROUTE_PATTERN =
   /\/api\/orca\/official\/(?:visits\/mutation|appointments\/mutation|patientmodv2\/outpatient\/(?:create|update)|patients\/(?:import|sync\/run))/;
 const PATIENT_NOT_FOUND_PATTERN =
@@ -247,42 +255,6 @@ const extractPatientIdValues = (value) => {
   return unique(out);
 };
 
-const countArrayByNames = (body, names) => {
-  const stack = [{ key: '', value: body }];
-  const visited = new Set();
-  let count = 0;
-  while (stack.length) {
-    const current = stack.pop();
-    if (!current || current.value == null) continue;
-    const { key, value } = current;
-    if (typeof value !== 'object' || visited.has(value)) continue;
-    visited.add(value);
-    if (Array.isArray(value) && names.some((name) => key.toLowerCase().includes(name))) {
-      count += value.length;
-    }
-    if (Array.isArray(value)) {
-      for (const entry of value) stack.push({ key, value: entry });
-      continue;
-    }
-    for (const [childKey, entry] of Object.entries(value)) {
-      if (entry && typeof entry === 'object') stack.push({ key: childKey, value: entry });
-    }
-  }
-  return count;
-};
-
-const categorizeInitialPatientInfo = (body, requestedPatientId) => {
-  const patientsFound = countPatientLike(body);
-  const patientIds = extractPatientIdValues(body);
-  const patientIdMatched = patientIds.includes(requestedPatientId);
-  const insuranceCount = countArrayByNames(body, ['insurance', 'hoken']);
-  if (containsPatientNotFound(body)) return 'not_found';
-  if (!patientsFound && !patientIds.length) return 'empty';
-  if (!patientIdMatched && patientIds.length) return 'different_patient_id_present';
-  if (insuranceCount > 0) return 'present_with_insurance_category';
-  return 'present_without_insurance_category';
-};
-
 const summarizeBody = (bodyText) => {
   if (!bodyText) return { bodyChars: 0 };
   try {
@@ -398,24 +370,16 @@ const evaluateOfficialPatientExistence = async (context, patientId) => {
     pathName: OFFICIAL_PATIENT_GET_PATH,
     query: { id: patientId, class: '01', format: 'json' },
   });
-  const apiResult = extractApiResult(response.body);
-  const category = categorizeInitialPatientInfo(response.body, patientId);
-  const patientIdMatched = extractPatientIdValues(response.body).includes(patientId);
-  const accepted =
-    response.status === 200 &&
-    !containsPatientNotFound(response.body) &&
-    category !== 'empty' &&
-    category !== 'not_found' &&
-    patientIdMatched;
+  const officialSummary = summarizeOfficialPatientExistence({
+    httpStatus: response.status,
+    body: response.body,
+    candidateId: patientId,
+  });
   return {
-    status: response.status,
-    apiResult,
+    ...officialSummary,
+    status: officialSummary.httpStatus,
     apiResultMessageCategory: messageCategory(extractApiResultMessage(response.body)),
-    category,
-    patientIdMatched,
     patientLikeCount: countPatientLike(response.body),
-    verdict: verdict(accepted),
-    accepted,
   };
 };
 
@@ -426,17 +390,19 @@ const evaluateInsuranceReadiness = async (context, patientId) => {
     body: { patientId, baseDate },
   });
   const apiResult = extractApiResult(response.body);
-  const combinationsCount = Array.isArray(response.body?.combinations) ? response.body.combinations.length : 0;
-  const accepted =
-    response.status === 200 &&
-    apiResultSuccess(apiResult) &&
-    combinationsCount > 0 &&
-    !containsPatientNotFound(response.body);
+  const readiness = summarizeInsuranceReadiness({
+    httpStatus: response.status,
+    body: response.body,
+    baseDate,
+  });
+  const accepted = readiness.accepted && !containsPatientNotFound(response.body);
   return {
     status: response.status,
     apiResult,
+    classification: containsPatientNotFound(response.body) ? 'business_rejected_insurance' : readiness.classification,
     apiResultMessageCategory: messageCategory(extractApiResultMessage(response.body)),
-    combinationsCount,
+    combinationsCount: readiness.combinationsCount,
+    effectiveCount: readiness.effectiveCount,
     verdict: verdict(accepted),
     accepted,
   };
@@ -450,16 +416,33 @@ const evaluateAppointmentDependency = async (context, patientId) => {
   });
   const apiResult = extractApiResult(response.body);
   const reservationsCount = Array.isArray(response.body?.reservations) ? response.body.reservations.length : 0;
-  const noPatientNotFound = !containsPatientNotFound(response.body);
-  const accepted = response.status === 200 && noPatientNotFound;
+  const dependency = summarizeAppointmentDependency({
+    flowMode: requestedAppointmentFlowMode,
+    httpStatus: response.status,
+    body: response.body,
+    apiResult,
+    patientId,
+    baseDate,
+  });
   return {
+    flowMode: dependency.flowMode,
+    mode: dependency.mode,
+    required: dependency.required,
+    absenceBlocker: dependency.absenceBlocker,
     status: response.status,
     apiResult,
+    classification: containsPatientNotFound(response.body) ? 'business_rejected_appointment' : dependency.classification,
     apiResultMessageCategory: messageCategory(extractApiResultMessage(response.body)),
     reservationCount: reservationsCount,
-    dependency: reservationsCount > 0 ? 'readonly_reservations_present' : 'no_trial_appointment_dependency_detected',
-    verdict: verdict(accepted),
-    accepted,
+    exactRowCount: dependency.exactRowCount,
+    dependency:
+      dependency.flowMode === 'direct_acceptance'
+        ? dependency.classification
+        : reservationsCount > 0
+          ? 'readonly_reservations_present'
+          : 'appointment_row_missing',
+    verdict: verdict(dependency.accepted && !containsPatientNotFound(response.body)),
+    accepted: dependency.accepted && !containsPatientNotFound(response.body),
   };
 };
 
@@ -650,19 +633,45 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
   }
 };
 
-const buildRejectedLegacySeedRow = (patientId) => ({
+const buildRejectedLegacySeedRow = (patientId, source) => ({
+  candidateId: patientId,
   patientId,
+  source,
+  accepted: false,
+  rejectionReason: 'legacy_local_smoke_seed_rejected',
   acceptedForPhase3Attempt: false,
   rejectedWarning: 'legacy local smoke seed is not accepted as a Trial-native candidate',
   officialPatientExistence: {
+    httpStatus: 0,
+    status: 0,
+    apiResult: '',
+    apiResultAccepted: false,
+    patientInformationPresent: false,
+    exactIdMatched: false,
     verdict: 'rejected',
     accepted: false,
     category: 'legacy_local_smoke_seed_rejected_without_probe',
+    responseCategory: 'legacy_local_smoke_seed_rejected_without_probe',
+    rejectionReason: 'legacy_local_smoke_seed_rejected',
   },
-  insuranceReadiness: { verdict: 'not_verified' },
+  insuranceReadiness: {
+    status: 0,
+    apiResult: '',
+    classification: 'not_verified',
+    accepted: false,
+    verdict: 'not_verified',
+  },
   selectorReadiness: { verdict: 'not_verified' },
   localSelectable: { verdict: 'not_verified' },
-  appointmentDependency: { verdict: 'not_verified' },
+  appointmentDependency: {
+    flowMode: requestedAppointmentFlowMode,
+    required: requestedAppointmentFlowMode === 'appointment_row',
+    status: 0,
+    apiResult: '',
+    classification: 'not_verified',
+    accepted: false,
+    verdict: 'not_verified',
+  },
   diagnosticNoPatientNotFound: { verdict: 'not_verified' },
   mutationProhibited: {
     verdict: 'accepted',
@@ -670,11 +679,31 @@ const buildRejectedLegacySeedRow = (patientId) => ({
   },
 });
 
-const evaluateCandidate = async (context, medicalInformationProbe, patientId) => {
+const resolveCandidateRejectionReason = ({
+  medicalInformationProbe,
+  officialPatientExistence,
+  insuranceReadiness,
+  appointmentDependency,
+  uiReadiness,
+  diagnosticNoPatientNotFound,
+  mutationProhibited,
+}) => {
+  if (medicalInformationProbe.accepted !== true) return 'medical_information_not_ready';
+  if (officialPatientExistence.accepted !== true) return officialPatientExistence.rejectionReason ?? 'official_patient_missing';
+  if (insuranceReadiness.accepted !== true) return insuranceReadiness.classification ?? 'insurance_not_ready';
+  if (appointmentDependency.accepted !== true) return appointmentDependency.classification ?? 'appointment_dependency_not_ready';
+  if (uiReadiness.localSelectable.selectable !== true) return uiReadiness.localSelectable.reason ?? 'local_selectable_not_ready';
+  if (uiReadiness.selectorReadiness.accepted !== true) return uiReadiness.selectorReadiness.reason ?? 'selector_not_ready';
+  if (diagnosticNoPatientNotFound.accepted !== true) return 'patient_not_found_wording_detected';
+  if (mutationProhibited.blockedRequestCount > 0) return 'readonly_mutation_attempt_blocked';
+  return 'none';
+};
+
+const evaluateCandidate = async (context, medicalInformationProbe, patientId, source) => {
   logStep(`candidate ${patientId} evaluation start`);
   if (patientId === REJECTED_LEGACY_SEED) {
     logStep(`candidate ${patientId} rejected as legacy local smoke seed`);
-    return buildRejectedLegacySeedRow(patientId);
+    return buildRejectedLegacySeedRow(patientId, source);
   }
   const officialPatientExistence = await evaluateOfficialPatientExistence(context, patientId);
   const insuranceReadiness = await evaluateInsuranceReadiness(context, patientId);
@@ -694,6 +723,15 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId) =>
     verdict: verdict(blockedMutationRequests.length === 0),
     blockedRequestCount: blockedMutationRequests.length,
   };
+  const rejectionReason = resolveCandidateRejectionReason({
+    medicalInformationProbe,
+    officialPatientExistence,
+    insuranceReadiness,
+    appointmentDependency,
+    uiReadiness,
+    diagnosticNoPatientNotFound,
+    mutationProhibited,
+  });
   const acceptedForPhase3Attempt =
     medicalInformationProbe.accepted === true &&
     officialPatientExistence.accepted === true &&
@@ -704,7 +742,11 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId) =>
     diagnosticNoPatientNotFound.accepted === true &&
     blockedMutationRequests.length === 0;
   const row = {
+    candidateId: patientId,
     patientId,
+    source,
+    accepted: acceptedForPhase3Attempt,
+    rejectionReason: acceptedForPhase3Attempt ? 'none' : rejectionReason,
     acceptedForPhase3Attempt,
     officialPatientExistence,
     insuranceReadiness,
@@ -719,11 +761,21 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId) =>
 };
 
 const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }) => {
+  const selectedCandidate = acceptedRow
+    ? {
+        kind: 'proposal',
+        patientId: acceptedRow.patientId,
+        rowPath: path.relative(preflightArtifactRoot, rowsJsonPath),
+        requiredNextStep: 'run qa-weborca-readonly-preflight.mjs for exact selected-candidate preflight with the same RUN_ID before Phase 3',
+      }
+    : null;
   if (!acceptedRow) {
     return {
       runId,
       executedAt: new Date().toISOString(),
-      source: 'qa-weborca-candidate-discovery',
+      source: CANDIDATE_DISCOVERY_SOURCE,
+      flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
+      candidateDiscoveryAloneAuthorizesPhase3: false,
       discoverySummaryPath: path.relative(preflightArtifactRoot, summaryJsonPath),
       baseURL: redactUrl(baseURL),
       facilityId,
@@ -731,8 +783,11 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
       patientSearch: { patientId: '', selectable: false, selectableCount: 0, verdict: 'rejected' },
       selectors: {},
       medicalInformationProbe,
-      acceptedForPhase3Attempt: null,
+      acceptedForPhase3Attempt: false,
+      selectedCandidate,
       phase3AttemptPatientId: null,
+      phase3: { ran: false, reason: 'no_trial_native_mutation_ready_candidate' },
+      phase4: { ran: false, reason: 'no_trial_native_mutation_ready_candidate' },
       verdict: 'rejected',
       blockerClassification: 'test-data-blocker',
       blockerReason: 'no_trial_native_mutation_ready_candidate',
@@ -750,7 +805,9 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
   return {
     runId,
     executedAt: new Date().toISOString(),
-    source: 'qa-weborca-candidate-discovery',
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
     discoverySummaryPath: path.relative(preflightArtifactRoot, summaryJsonPath),
     baseURL: redactUrl(baseURL),
     facilityId,
@@ -768,13 +825,14 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
     insuranceReadiness: acceptedRow.insuranceReadiness,
     appointmentDependency: acceptedRow.appointmentDependency,
     diagnosticNoPatientNotFound: acceptedRow.diagnosticNoPatientNotFound,
-    acceptedForPhase3Attempt: {
-      patientId: acceptedRow.patientId,
-      rowPath: path.relative(preflightArtifactRoot, rowsJsonPath),
-    },
-    phase3AttemptPatientId: acceptedRow.patientId,
-    verdict: 'accepted',
-    blockerClassification: 'none',
+    acceptedForPhase3Attempt: false,
+    selectedCandidate,
+    phase3AttemptPatientId: null,
+    phase3: { ran: false, reason: 'exact_selected_candidate_preflight_required' },
+    phase4: { ran: false, reason: 'phase3_not_run' },
+    verdict: 'rejected',
+    blockerClassification: 'candidate_discovery_only',
+    blockerReason: 'candidate discovery proposes a patient but exact read-only preflight is still required',
     c7Gate: {
       status: 'not verified',
       reason: 'read-only candidate discovery does not execute visits mutation',
@@ -794,7 +852,9 @@ const buildMarkdownSummary = (summary) =>
   `- blockerClassification: ${summary.blockerClassification}\n` +
   `- blockerReason: ${summary.blockerReason ?? 'none'}\n` +
   `- candidates: ${summary.candidateCount}\n` +
-  `- acceptedForPhase3Attempt: ${summary.acceptedForPhase3Attempt?.patientId ?? 'none'}\n` +
+  `- acceptedForPhase3Attempt: ${summary.acceptedForPhase3Attempt === true ? 'true' : 'false'}\n` +
+  `- selectedCandidate: ${summary.selectedCandidate?.patientId ?? 'none'}\n` +
+  `- candidateDiscoveryAloneAuthorizesPhase3: ${summary.candidateDiscoveryAloneAuthorizesPhase3 === false ? 'false' : 'unknown'}\n` +
   `- preflightSummary: ${path.relative(artifactRoot, preflightSummaryJsonPath)}\n` +
   `- mutationBlockedRequests: ${summary.mutationPolicy.blockedRequestCount}\n\n` +
   `## Candidate rows\n\n` +
@@ -802,9 +862,11 @@ const buildMarkdownSummary = (summary) =>
     .map(
       (candidate) =>
         `- ${candidate.patientId}: phase3=${candidate.acceptedForPhase3Attempt ? 'accepted' : 'rejected'}, ` +
-        `official=${candidate.officialPatientExistence.verdict}, insurance=${candidate.insuranceReadiness.verdict}, ` +
+        `official=${candidate.officialPatientExistence.verdict}, ` +
+        `insurance=${candidate.insuranceReadiness.verdict}/${candidate.insuranceReadiness.status ?? 'none'}/${candidate.insuranceReadiness.apiResult || 'none'}/${candidate.insuranceReadiness.classification ?? 'none'}/${candidate.insuranceReadiness.accepted ? 'accepted' : 'rejected'}, ` +
         `local=${candidate.localSelectable.verdict}, selectors=${candidate.selectorReadiness.verdict}, ` +
-        `appointment=${candidate.appointmentDependency.verdict}, noPatientNotFound=${candidate.diagnosticNoPatientNotFound.verdict}`,
+        `appointment=${candidate.appointmentDependency.verdict}/${candidate.appointmentDependency.flowMode ?? 'unknown'}/${candidate.appointmentDependency.required ? 'required' : 'not_required'}/${candidate.appointmentDependency.status ?? 'none'}/${candidate.appointmentDependency.apiResult || 'none'}/${candidate.appointmentDependency.classification ?? 'none'}/${candidate.appointmentDependency.accepted ? 'accepted' : 'rejected'}, ` +
+        `noPatientNotFound=${candidate.diagnosticNoPatientNotFound.verdict}`,
     )
     .join('\n') +
   '\n';
@@ -814,9 +876,11 @@ const buildPreflightMarkdown = (summary) =>
   `- RUN_ID: ${summary.runId}\n` +
   `- source: ${summary.source}\n` +
   `- verdict: ${summary.verdict}\n` +
+  `- candidateDiscoveryAloneAuthorizesPhase3: ${summary.candidateDiscoveryAloneAuthorizesPhase3 === false ? 'false' : 'unknown'}\n` +
   `- blockerClassification: ${summary.blockerClassification}\n` +
   `- blockerReason: ${summary.blockerReason ?? 'none'}\n` +
-  `- acceptedForPhase3Attempt: ${summary.acceptedForPhase3Attempt?.patientId ?? 'none'}\n` +
+  `- acceptedForPhase3Attempt: ${summary.acceptedForPhase3Attempt === true ? 'true' : 'false'}\n` +
+  `- selectedCandidate: ${summary.selectedCandidate?.patientId ?? 'none'}\n` +
   `- discoverySummaryPath: ${summary.discoverySummaryPath}\n`;
 
 let browser;
@@ -842,7 +906,7 @@ try {
   const medicalInformationProbe = await evaluateMedicalInformation(context);
   const rows = [];
   for (const patientId of candidates) {
-    rows.push(await evaluateCandidate(context, medicalInformationProbe, patientId));
+    rows.push(await evaluateCandidate(context, medicalInformationProbe, patientId, candidateSource));
   }
 
   const acceptedRow = rows.find((row) => row.acceptedForPhase3Attempt === true) ?? null;
@@ -850,6 +914,8 @@ try {
   const summary = {
     runId,
     executedAt: new Date().toISOString(),
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
     baseURL: redactUrl(baseURL),
     facilityId,
     sessionRole,
@@ -866,13 +932,17 @@ try {
     medicalInformationProbe,
     candidates: rows,
     acceptedCandidateCount,
-    acceptedForPhase3Attempt: acceptedRow
+    acceptedForPhase3Attempt: false,
+    selectedCandidate: acceptedRow
       ? {
+          kind: 'proposal',
           patientId: acceptedRow.patientId,
           rowPath: path.relative(artifactRoot, rowsJsonPath),
+          requiredNextStep: 'run qa-weborca-readonly-preflight.mjs for exact selected-candidate preflight with the same RUN_ID before Phase 3',
         }
       : null,
-    phase3AttemptPatientId: acceptedRow?.patientId ?? null,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
+    phase3AttemptPatientId: null,
     releaseVerdict: acceptedRow ? 'ACCEPTED' : 'PARTIAL / TEST-DATA BLOCKER',
     verdict: acceptedRow ? 'accepted' : 'partial',
     blockerClassification: acceptedRow ? 'none' : 'test-data-blocker',
@@ -882,6 +952,8 @@ try {
       blockedRequestCount: blockedMutationRequests.length,
       blockedRequests: blockedMutationRequests,
     },
+    phase3: { ran: false, reason: acceptedRow ? 'exact_selected_candidate_preflight_required' : 'no_trial_native_mutation_ready_candidate' },
+    phase4: { ran: false, reason: 'phase3_not_run' },
     preflightSummaryPath: path.relative(artifactRoot, preflightSummaryJsonPath),
     consoleMessages,
     pageErrors,
@@ -913,8 +985,13 @@ try {
   const summary = {
     runId,
     executedAt: new Date().toISOString(),
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
     baseURL: redactUrl(baseURL),
     facilityId,
+    acceptedForPhase3Attempt: false,
+    selectedCandidate: null,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
     releaseVerdict: 'PARTIAL / ENVIRONMENT BLOCKER',
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',
@@ -928,14 +1005,19 @@ try {
   const preflightSummary = {
     runId,
     executedAt: new Date().toISOString(),
-    source: 'qa-weborca-candidate-discovery',
+    source: CANDIDATE_DISCOVERY_SOURCE,
+    flowMode: CANDIDATE_DISCOVERY_FLOW_MODE,
+    candidateDiscoveryAloneAuthorizesPhase3: false,
     discoverySummaryPath: path.relative(preflightArtifactRoot, summaryJsonPath),
     baseURL: redactUrl(baseURL),
     facilityId,
     patientSearch: { patientId: '', selectable: false, selectableCount: 0, verdict: 'rejected' },
     selectors: {},
-    acceptedForPhase3Attempt: null,
+    acceptedForPhase3Attempt: false,
+    selectedCandidate: null,
     phase3AttemptPatientId: null,
+    phase3: { ran: false, reason: 'candidate_discovery_environment_failure' },
+    phase4: { ran: false, reason: 'phase3_not_run' },
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',
     blockerReason: 'candidate_discovery_environment_failure',
