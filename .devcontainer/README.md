@@ -2,7 +2,7 @@
 
 This dev container spins up a complete development stack for the `web-client` and the Jakarta EE–based `server-modernized` service.
 
-> **Note (Apple Silicon)**  
+> **Note (Apple Silicon)**
 > Dev コンテナ本体は `mcr.microsoft.com/devcontainers/base:jammy` を利用するため ARM ネイティブで動作しますが、WildFly ベースの `server-modernized-dev` は x86_64 イメージのみ提供されているため Docker Desktop 上でエミュレーションが入ります。
 
 ## Getting Started
@@ -14,7 +14,7 @@ This dev container spins up a complete development stack for the `web-client` an
 ## Working with the Services
 
 - `web-client`: run `npm run dev --prefix web-client` inside the `app` container to start the frontend Vite dev server (port 5173).
-- `db-modernized`: PostgreSQL 14 is available on port 55432 with the default credentials defined in `.devcontainer/docker-compose.yml` (起動は任意)。
+- `db-modernized`: PostgreSQL 14 is available on port 55432 (起動は任意)。`MODERNIZED_POSTGRES_PASSWORD` is required; do not commit a real password or local secret value.
 
 ## サーバーを起動したい場合
 
@@ -24,6 +24,7 @@ Dev Container 起動時には `server-modernized-dev` コンテナは自動で�
 docker compose -f .devcontainer/docker-compose.yml --profile modernized-server up server-modernized-dev
 ```
 
+- Required local environment values: `MODERNIZED_POSTGRES_PASSWORD`, `SYSAD_USER_NAME`, and `SYSAD_PASSWORD`.
 - サーバー停止は `docker compose -f .devcontainer/docker-compose.yml --profile modernized-server down` で行えます。
 - `--build` を追加すると最新ソースで WildFly イメージを再ビルドできますが、Jakarta EE 10 移行が未完のためビルドに失敗することがあります。
 

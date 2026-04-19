@@ -1,10 +1,10 @@
 command_log_version=1
-command=bash -n setup-modernized-env.sh
+command=bash -lc bash\ -n\ setup-modernized-env.sh\ \&\&\ bash\ -n\ server-modernized/tools/flyway/scripts/export-schema.sh
 cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
 runId=20260419T131740Z
-start_utc=2026-04-19T13:47:26Z
+start_utc=2026-04-19T14:30:24Z
 --- command output ---
 --- command summary ---
-end_utc=2026-04-19T13:47:26Z
+end_utc=2026-04-19T14:30:24Z
 exit_code=0
 result=PASS

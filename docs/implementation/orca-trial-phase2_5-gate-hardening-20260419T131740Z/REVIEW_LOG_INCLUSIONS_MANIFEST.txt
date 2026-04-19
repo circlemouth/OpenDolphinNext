@@ -11,3 +11,4 @@ Review logs:
 - command-logs/focused-vitest.log
 - command-logs/npm-run-typecheck.log
 - command-logs/secret-scan-dynamic-scope.log
+- command-logs/secret-scan-review-bundle.log

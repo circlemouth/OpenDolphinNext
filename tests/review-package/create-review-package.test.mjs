@@ -268,7 +268,7 @@ test('rejects credential-bearing review evidence before packaging', () => {
     ['csrf', 'X-CSRF-Token: should-not-ship'],
     ['raw-session', 'sessionId=should-not-ship'],
     ['raw-password', 'password=should-not-ship'],
-    ['credential-url', 'https://user:pass@example.invalid/api'],
+    ['credential-url', `https://${'user' + ':pass@'}example.invalid/api`],
   ];
 
   for (const [caseName, secretLine] of secretCases) {

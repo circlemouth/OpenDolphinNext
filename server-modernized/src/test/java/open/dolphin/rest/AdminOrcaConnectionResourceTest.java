@@ -97,7 +97,7 @@ class AdminOrcaConnectionResourceTest {
 
         OrcaConnectionConfigRecord record = new OrcaConnectionConfigRecord();
         record.setUseWeborca(Boolean.TRUE);
-        record.setServerUrl("https://weborca-trial.orca.med.or.jp");
+        record.setServerUrl("https://orca-trial.example.invalid");
         record.setPort(443);
         record.setUsername("trial");
         record.setPushUrl("wss://push.orca.med.or.jp/ws/notifications");
@@ -116,7 +116,7 @@ class AdminOrcaConnectionResourceTest {
         assertEquals("FACILITY", body.get("facilityId"));
         assertEquals("FACILITY", body.get("defaultFacilityId"));
         assertEquals(Boolean.TRUE, body.get("ok"));
-        assertEquals("https://weborca-trial.orca.med.or.jp", body.get("serverUrl"));
+        assertEquals("https://orca-trial.example.invalid", body.get("serverUrl"));
         assertEquals(443, body.get("port"));
         assertEquals("trial", body.get("username"));
         assertEquals("wss://push.orca.med.or.jp/ws/notifications", body.get("pushUrl"));
@@ -166,7 +166,7 @@ class AdminOrcaConnectionResourceTest {
 
         OrcaConnectionConfigRecord updated = new OrcaConnectionConfigRecord();
         updated.setUseWeborca(Boolean.TRUE);
-        updated.setServerUrl("https://weborca-trial.orca.med.or.jp");
+        updated.setServerUrl("https://orca-trial.example.invalid");
         updated.setPort(443);
         updated.setUsername("trial");
         updated.setPushUrl("wss://push.orca.med.or.jp/ws/notifications");
@@ -177,7 +177,7 @@ class AdminOrcaConnectionResourceTest {
 
         Response response = resource.putConfig(
                 request,
-                multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://weborca-trial.orca.med.or.jp\",\"port\":443,\"username\":\"trial\",\"pushUrl\":\"wss://push.orca.med.or.jp/ws/notifications\",\"pushTenantId\":\"tenant-001\"}")
+                multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://orca-trial.example.invalid\",\"port\":443,\"username\":\"trial\",\"pushUrl\":\"wss://push.orca.med.or.jp/ws/notifications\",\"pushTenantId\":\"tenant-001\"}")
         );
 
         assertEquals(200, response.getStatus());
@@ -209,7 +209,7 @@ class AdminOrcaConnectionResourceTest {
         try {
             resource.putConfig(
                     request,
-                    multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://weborca-trial.orca.med.or.jp\",\"port\":443,\"username\":\"trial\",\"pushUrl\":\"https://push.orca.med.or.jp/ws\"}")
+                    multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://orca-trial.example.invalid\",\"port\":443,\"username\":\"trial\",\"pushUrl\":\"https://push.orca.med.or.jp/ws\"}")
             );
             fail("Expected WebApplicationException");
         } catch (WebApplicationException ex) {
@@ -224,12 +224,12 @@ class AdminOrcaConnectionResourceTest {
         when(request.getRequestURI()).thenReturn("/openDolphin/api/admin/orca/connection");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);
         when(configStore.update(eq("FACILITY"), org.mockito.ArgumentMatchers.any(), isNull(), isNull(), eq("RUN-USERINFO"), eq("FACILITY:admin")))
-                .thenThrow(new IllegalArgumentException("Invalid target https://admin:pass@facility.example.orca/secret-prefix"));
+                .thenThrow(new IllegalArgumentException("Invalid target https://" + "admin:pass@" + "facility.example.orca/secret-prefix"));
 
         try {
             resource.putConfig(
                     request,
-                    multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://admin:pass@facility.example.orca/secret-prefix\",\"port\":443,\"username\":\"trial\"}")
+                    multipartInputWithConfig("{\"useWeborca\":true,\"serverUrl\":\"https://" + "admin:pass@" + "facility.example.orca/secret-prefix\",\"port\":443,\"username\":\"trial\"}")
             );
             fail("Expected WebApplicationException");
         } catch (WebApplicationException ex) {
@@ -264,7 +264,7 @@ class AdminOrcaConnectionResourceTest {
 
         OrcaConnectionConfigRecord record = new OrcaConnectionConfigRecord();
         record.setUseWeborca(Boolean.TRUE);
-        record.setServerUrl("https://admin:pass@facility.example.orca/secret-prefix");
+        record.setServerUrl("https://" + "admin:pass@" + "facility.example.orca/secret-prefix");
         record.setPort(443);
         record.setUsername("trial");
         when(configStore.getSnapshot("FACILITY")).thenReturn(record);

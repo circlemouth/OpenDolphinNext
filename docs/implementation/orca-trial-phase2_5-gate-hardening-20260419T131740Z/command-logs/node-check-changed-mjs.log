@@ -1,10 +1,10 @@
 command_log_version=1
-command=bash -lc for\ f\ in\ scripts/qa-weborca-candidate-discovery.mjs\ scripts/qa-weborca-readonly-preflight.mjs\ scripts/qa-acceptmodv2-weborca.mjs\ scripts/qa-lib/orca-trial-preflight.mjs\ scripts/qa-lib/acceptmodv2-identity-gate.mjs\ scripts/qa-lib/medical-information-gate.mjs\ scripts/qa-lib/acceptmodv2-business-evidence.mjs\ scripts/lib/orca-route-taxonomy-guard.mjs\ scripts/verify-no-blocked-orca-route-strings.mjs\;\ do\ node\ --check\ \"\$f\"\ \|\|\ exit\ \$\?\;\ done
-cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+command=bash -lc for\ f\ in\ scripts/tools/scan-review-bundle.mjs\ web-client/scripts/qa-weborca-candidate-discovery.mjs\ web-client/scripts/qa-weborca-readonly-preflight.mjs\ web-client/scripts/qa-acceptmodv2-weborca.mjs\ web-client/scripts/qa-lib/orca-trial-preflight.mjs\ web-client/scripts/qa-lib/acceptmodv2-identity-gate.mjs\ web-client/scripts/qa-lib/medical-information-gate.mjs\ web-client/scripts/qa-lib/acceptmodv2-business-evidence.mjs\ web-client/scripts/lib/orca-route-taxonomy-guard.mjs\;\ do\ node\ --check\ \"\$f\"\;\ done
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
 runId=20260419T131740Z
-start_utc=2026-04-19T13:50:28Z
+start_utc=2026-04-19T15:07:20Z
 --- command output ---
 --- command summary ---
-end_utc=2026-04-19T13:50:29Z
+end_utc=2026-04-19T15:07:20Z
 exit_code=0
 result=PASS

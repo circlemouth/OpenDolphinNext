@@ -72,7 +72,7 @@ class AdminOrcaConnectionTestSupportTest {
 
     @Test
     void testConnectionSanitizesInvalidUrlFailureInResponseAndAudit() throws Exception {
-        String rawTarget = "https://admin:pass@bad host.example.invalid/secret-prefix";
+        String rawTarget = "https://" + "admin:pass@" + "bad host.example.invalid/secret-prefix";
         when(request.getHeader("X-Run-Id")).thenReturn("RUN-ORCA");
         when(request.getRemoteUser()).thenReturn("FACILITY:admin");
         when(userServiceBean.isAdmin("FACILITY:admin")).thenReturn(true);

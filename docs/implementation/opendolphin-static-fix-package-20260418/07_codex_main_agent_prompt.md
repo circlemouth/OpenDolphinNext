@@ -92,8 +92,8 @@ ownership:
 重要:
 - 今回は live ORCA trial を実行しない
 - 後続で human が dynamic ORCA trial check を明示した場合のみ、次の trial site を使う
-  - URL: https://weborca-trial.orca.med.or.jp/
-  - user: trial
-  - password: weborcatrial
+  - URL: local secret store or `ORCA_BASE_URL` / `ORCA_API_HOST` only
+  - user: local secret store or `ORCA_API_USER` only
+  - password source: local secret store or `ORCA_API_PASSWORD` only
 - その live phase に入るまでは、connection test code path の静的品質だけを整える
 ```

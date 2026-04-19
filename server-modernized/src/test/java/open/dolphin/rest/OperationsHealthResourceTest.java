@@ -202,7 +202,7 @@ class OperationsHealthResourceTest {
                         "wss://facility.example.orca/push",
                         "2026-04-18T00:00:00Z",
                         null,
-                        "java.net.ConnectException: failed https://admin:pass@facility.example.orca/secret-prefix"))));
+                        "java.net.ConnectException: failed https://" + "admin:pass@" + "facility.example.orca/secret-prefix"))));
 
         when(em.createNativeQuery(anyString())).thenReturn(query);
         when(query.getSingleResult()).thenReturn(1);

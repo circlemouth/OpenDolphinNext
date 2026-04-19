@@ -69,9 +69,9 @@ repo truth とこの package が衝突した場合は、repo truth を優先し�
 この package では **live 実行しない** ことが前提です。
 ただし、後続フェーズで Codex に ORCA 接続テストを指示する場合は、次の trial site を使うことを main prompt に明記しています。
 
-- URL: `https://weborca-trial.orca.med.or.jp/`
-- user: `trial`
-- password: `weborcatrial`
+- URL: local secret store or `ORCA_BASE_URL` / `ORCA_API_HOST` only
+- user: local secret store or `ORCA_API_USER` only
+- password source: local secret store or `ORCA_API_PASSWORD` only
 
 ## package 外で禁止すること
 - build artifact を truth 扱いすること

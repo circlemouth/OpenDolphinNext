@@ -1,9 +1,9 @@
 # RUN_ID_PLACEHOLDER={{RUN_ID}} (example: 20251118TlicenseCheckZ2)
-userName: LOCAL.FACILITY.0001:dolphin
-password: 36cdf8b887a5cffc78dcd5c08991b993
+userName: {{SYSAD_USER_NAME}}
+password: {{SYSAD_PASSWORD}}
 clientUUID: license-cli
 facilityId: LOCAL.FACILITY.0001
-Authorization: Basic TE9DQUwuRkFDSUxJVFkuMDAwMTpkb2xwaGluOjM2Y2RmOGI4ODdhNWNmZmM3OGRjZDVjMDg5OTFiOTkz
+Authorization: Basic {{SYSAD_BASIC_AUTH_B64}}
 X-Trace-Id: {{RUN_ID}}
 Accept: text/plain
 Content-Type: text/plain

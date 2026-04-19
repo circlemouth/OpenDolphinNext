@@ -24,9 +24,9 @@
 
 ## deferred live target
 human が後続で dynamic ORCA trial check を明示したときのみ、次を使う。
-- URL: `https://weborca-trial.orca.med.or.jp/`
-- user: `trial`
-- password: `weborcatrial`
+- URL: local secret store or `ORCA_BASE_URL` / `ORCA_API_HOST` only
+- user: local secret store or `ORCA_API_USER` only
+- password source: local secret store or `ORCA_API_PASSWORD` only
 
 ## dynamic へ渡す report template
 1. static fix completed clusters

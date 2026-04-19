@@ -278,7 +278,7 @@ read_orca_info() {
     log "Warning: ORCA credential file not found ($ORCA_CREDENTIAL_FILE)"
   fi
 
-  # デフォルトは WebORCA Trial（https://weborca-trial.orca.med.or.jp:443）
+  # Trial endpoint and credentials must come from env or the local certification-only secret file.
   local fallback_port="${ORCA_API_PORT_FALLBACK:-443}"
   local allow_port_8000="${ORCA_API_PORT_ALLOW_8000:-0}"
   local allow_port_8000_normalized="0"
@@ -313,8 +313,8 @@ read_orca_info() {
     ORCA_API_HOST="$file_host"
     ORCA_API_HOST_SOURCE="file:ORCA_CERTIFICATION_ONLY"
   else
-    ORCA_API_HOST="weborca-trial.orca.med.or.jp"
-    ORCA_API_HOST_SOURCE="default:weborca-trial"
+    ORCA_API_HOST="localhost"
+    ORCA_API_HOST_SOURCE="default:localhost"
   fi
 
   ORCA_API_PORT_SOURCE="default"
@@ -355,8 +355,8 @@ read_orca_info() {
     ORCA_API_USER="$file_user"
     ORCA_API_USER_SOURCE="file:ORCA_CERTIFICATION_ONLY"
   else
-    ORCA_API_USER="trial"
-    ORCA_API_USER_SOURCE="default:trial-user"
+    ORCA_API_USER=""
+    ORCA_API_USER_SOURCE="unset"
   fi
 
   ORCA_API_PASSWORD_SOURCE="default"
@@ -370,8 +370,8 @@ read_orca_info() {
     ORCA_API_PASSWORD="$file_pass"
     ORCA_API_PASSWORD_SOURCE="file:ORCA_CERTIFICATION_ONLY"
   else
-    ORCA_API_PASSWORD="weborcatrial"
-    ORCA_API_PASSWORD_SOURCE="default:trial-password"
+    ORCA_API_PASSWORD=""
+    ORCA_API_PASSWORD_SOURCE="unset"
   fi
 
   if [[ ! "$ORCA_API_PORT" =~ ^[0-9]+$ ]]; then
@@ -517,7 +517,7 @@ services:
       ORCA_API_PASSWORD: ${ORCA_API_PASSWORD:-}
       ORCA_BASE_URL: ${ORCA_BASE_URL}
       ORCA_MODE: ${ORCA_MODE}
-      ORCA_CREDENTIALS_AES_KEY_B64: ${ORCA_CREDENTIALS_AES_KEY_B64:-b3BlbmRvbHBoaW4tZGV2LW9yY2EtY3JlZC1rZXktMzJieXRlcw==}
+      ORCA_CREDENTIALS_AES_KEY_B64: ${ORCA_CREDENTIALS_AES_KEY_B64:?ORCA_CREDENTIALS_AES_KEY_B64 is required}
       ORCA_API_PATH_PREFIX: ${ORCA_API_PATH_PREFIX:-}
       ORCA_API_WEBORCA: ${ORCA_API_WEBORCA:-}
       ORCA_API_RETRY_MAX: ${ORCA_API_RETRY_MAX:-}

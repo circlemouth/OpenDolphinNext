@@ -2,7 +2,7 @@ command_log_version=1
 command=npm run verify:web-guard
 cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
 runId=20260419T131740Z
-start_utc=2026-04-19T13:47:43Z
+start_utc=2026-04-19T14:30:33Z
 --- command output ---
 
 > web-client@0.0.0 verify:web-guard
@@ -17,13 +17,13 @@ start_utc=2026-04-19T13:47:43Z
 > web-client@0.0.0 verify:no-blocked-orca-route-strings
 > node scripts/verify-no-blocked-orca-route-strings.mjs
 
-[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=969. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=238, blocked-route detector=39, docs/reference=173, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=971. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=238, blocked-route detector=39, docs/reference=173, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
 
 > web-client@0.0.0 verify:no-legacy-auth-drift
 > node scripts/verify-no-legacy-auth-drift.mjs
 
 [verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
 --- command summary ---
-end_utc=2026-04-19T13:47:45Z
+end_utc=2026-04-19T14:30:34Z
 exit_code=0
 result=PASS

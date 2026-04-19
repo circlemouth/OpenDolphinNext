@@ -2,9 +2,9 @@ command_log_version=1
 command=bash -n scripts/create-review-package-curated.sh
 cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
 runId=20260419T131740Z
-start_utc=2026-04-19T13:48:24Z
+start_utc=2026-04-19T15:00:41Z
 --- command output ---
 --- command summary ---
-end_utc=2026-04-19T13:48:24Z
+end_utc=2026-04-19T15:00:41Z
 exit_code=0
 result=PASS

@@ -26,9 +26,9 @@
 ここから先は別フェーズ。static package 実行中は行わない。
 
 Codex で ORCA 接続テストをする場合の trial site:
-- URL: `https://weborca-trial.orca.med.or.jp/`
-- user: `trial`
-- password: `weborcatrial`
+- URL: official WebORCA Trial endpoint from local secret store or environment only.
+- user: local secret store or `ORCA_TRIAL_USER` only.
+- password source: local secret store or `ORCA_TRIAL_PASSWORD` only.
 
 dynamic trial 開始前の最低条件:
 1. static exit checklist が全部埋まっている

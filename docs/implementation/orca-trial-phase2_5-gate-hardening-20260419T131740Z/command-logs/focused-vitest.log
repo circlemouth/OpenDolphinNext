@@ -1,24 +1,43 @@
 command_log_version=1
-command=npx vitest run scripts/__tests__/orcaTrialPreflight.test.ts scripts/__tests__/acceptmodv2IdentityGate.test.ts scripts/__tests__/medicalInformationGate.test.ts scripts/__tests__/acceptmodv2BusinessEvidence.test.ts scripts/__tests__/orcaRouteTaxonomyGuard.test.ts
+command=npx vitest run scripts/__tests__/orcaTrialPreflight.test.ts scripts/__tests__/acceptmodv2IdentityGate.test.ts scripts/__tests__/medicalInformationGate.test.ts scripts/__tests__/acceptmodv2BusinessEvidence.test.ts scripts/__tests__/orcaRouteTaxonomyGuard.test.ts src/features/charts/__tests__/auditTelemetryRunId.test.ts
 cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
 runId=20260419T131740Z
-start_utc=2026-04-19T13:50:28Z
+start_utc=2026-04-19T14:17:54Z
 --- command output ---
 
  RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
 
- ✓ scripts/__tests__/acceptmodv2BusinessEvidence.test.ts (9 tests) 12ms
- ✓ scripts/__tests__/medicalInformationGate.test.ts (11 tests) 10ms
- ✓ scripts/__tests__/orcaTrialPreflight.test.ts (24 tests) 17ms
- ✓ scripts/__tests__/orcaRouteTaxonomyGuard.test.ts (12 tests) 14ms
- ✓ scripts/__tests__/acceptmodv2IdentityGate.test.ts (23 tests) 14ms
+ ✓ scripts/__tests__/acceptmodv2BusinessEvidence.test.ts (9 tests) 13ms
+ ✓ scripts/__tests__/medicalInformationGate.test.ts (11 tests) 14ms
+ ✓ scripts/__tests__/acceptmodv2IdentityGate.test.ts (23 tests) 19ms
+ ✓ scripts/__tests__/orcaRouteTaxonomyGuard.test.ts (12 tests) 18ms
+ ✓ scripts/__tests__/orcaTrialPreflight.test.ts (24 tests) 22ms
+stdout | src/features/charts/__tests__/auditTelemetryRunId.test.ts > auditEvent と telemetry の runId 整合 > 主要操作(ORCA_SEND)で runId/traceId が一致する
+[telemetry] Record outpatient funnel {
+  stage: 'charts_action',
+  funnel: 'funnels/outpatient',
+  dataSourceTransition: 'server',
+  cacheHit: false,
+  missingMaster: false,
+  runId: '20251218T183545Z',
+  traceId: 'trace-52-run',
+  fallbackUsed: false,
+  action: 'ORCA_SEND',
+  outcome: 'started',
+  durationMs: 1200,
+  note: undefined,
+  reason: undefined,
+  recordedAt: '2026-04-19T14:17:55.408Z'
+}
 
- Test Files  5 passed (5)
-      Tests  79 passed (79)
-   Start at  22:50:29
-   Duration  786ms (transform 324ms, setup 492ms, import 270ms, tests 67ms, environment 2.32s)
+ ✓ src/features/charts/__tests__/auditTelemetryRunId.test.ts (3 tests) 10ms
+
+ Test Files  6 passed (6)
+      Tests  82 passed (82)
+   Start at  23:17:54
+   Duration  850ms (transform 470ms, setup 591ms, import 460ms, tests 96ms, environment 2.81s)
 
 --- command summary ---
-end_utc=2026-04-19T13:50:30Z
+end_utc=2026-04-19T14:17:55Z
 exit_code=0
 result=PASS
