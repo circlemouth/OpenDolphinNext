@@ -80,6 +80,7 @@ describe('acceptmodv2 preflight identity gate', () => {
   });
 
   it.each([
+    ['runId', { runId: '20260419T999999Z' }, 'runId'],
     ['candidate', { candidateId: 'other-candidate' }, 'candidate.candidateId'],
     ['patient', { patientId: '9999999' }, 'input.patientId'],
     ['department', { departmentCode: '02' }, 'input.departmentCode'],
@@ -121,7 +122,28 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.blockerClassification).toBe('candidate_discovery_only');
   });
 
+  it('rejects candidate discovery summary even if it claims acceptedForPhase3Attempt=true', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        source: CANDIDATE_DISCOVERY_SOURCE,
+        flowMode: 'candidate-discovery-proposal',
+        candidateDiscoveryAloneAuthorizesPhase3: false,
+        acceptedForPhase3Attempt: true,
+      },
+      artifactPath: '/tmp/discovery-summary.json',
+      artifactSha256: 'def456',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('candidate_discovery_only');
+  });
+
   it.each([
+    ['false', false],
+    ['string true', 'true'],
     ['object', { patientId: baseInput.patientId }],
     ['null', null],
   ])('rejects non-boolean true acceptedForPhase3Attempt value: %s', (_label, acceptedForPhase3Attempt) => {
@@ -176,6 +198,21 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.ok).toBe(false);
     expect(result.blockerClassification).toBe('preflight_artifact_invalid');
     expect(result.missingFields).toEqual(['artifactPath', 'artifactSha256']);
+  });
+
+  it('rejects selected preflight when current run omits medicalInformation', () => {
+    const result = validatePreflightSummary({
+      summary: acceptedSummary({ medicalInformation: '01' }),
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_input_mismatch');
+    expect(result.mismatches.map((item) => item.field)).toContain('summary.medicalInformationState');
+    expect(result.mismatches.map((item) => item.field)).toContain('input.medicalInformation');
   });
 });
 

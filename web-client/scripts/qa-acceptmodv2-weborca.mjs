@@ -160,7 +160,7 @@ if (requireReadonlyPreflight) {
               mutationAllowed: false,
               blockerClassification: 'preflight_phase3_not_accepted',
               phase3ReadinessFailures: readinessFailures,
-              error: `read-only WebORCA preflight is not accepted for Phase 3 mutation: ${readinessFailures.join(',')}`,
+              error: `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER: read-only WebORCA preflight is not accepted for Phase 3 mutation: ${readinessFailures.join(',')}. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; read-only mutation-ready evidence is incomplete.`,
             }
           : {}),
         summaryPath: preflightSummaryPath,
@@ -375,6 +375,7 @@ let lastSummary = null;
 
 const ACCEPTMOD_SUCCESS_RESULT = /^0+$/;
 const ACCEPTMOD_OFFICIAL_WARNING_RESULTS = new Set(['K1', 'K2', 'K3']);
+const ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER = '00';
 
 const normalizeApiResult = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value).trim().toUpperCase();
@@ -454,24 +455,34 @@ const hasRegistrationEvidence = (raw) => hasAcceptanceEvidence(raw) || hasPatien
 const classifyAcceptmodBusinessResult = ({ ok = true, apiResult, raw }) => {
   const normalized = normalizeApiResult(apiResult);
   const evidence = hasRegistrationEvidence(raw);
+  const requestNumber = String(raw?.requestNumber ?? raw?.Request_Number ?? '').trim();
+  if (requestNumber === ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER) {
+    return {
+      businessStatus: 'notVerified',
+      businessReason: 'diagnostic_request_number_without_mutation_success',
+      hasRegistrationEvidence: evidence,
+      requestNumber,
+    };
+  }
   if (!ok) {
-    return { businessStatus: 'businessRejected', businessReason: 'transport_error', hasRegistrationEvidence: evidence };
+    return { businessStatus: 'businessRejected', businessReason: 'transport_error', hasRegistrationEvidence: evidence, requestNumber };
   }
   if (normalized === '10') {
-    return { businessStatus: 'businessRejected', businessReason: 'patient_not_found', hasRegistrationEvidence: evidence };
+    return { businessStatus: 'businessRejected', businessReason: 'patient_not_found', hasRegistrationEvidence: evidence, requestNumber };
   }
   if (normalized === '60') {
     return {
       businessStatus: 'diagnosticNoExistingAcceptance',
       businessReason: 'no_existing_acceptance',
       hasRegistrationEvidence: evidence,
+      requestNumber,
     };
   }
   if (normalized === '21') {
-    return { businessStatus: 'businessRejected', businessReason: 'insurance_mismatch', hasRegistrationEvidence: evidence };
+    return { businessStatus: 'businessRejected', businessReason: 'insurance_mismatch', hasRegistrationEvidence: evidence, requestNumber };
   }
   if (normalized === '16') {
-    return { businessStatus: 'businessRejected', businessReason: 'duplicate_acceptance', hasRegistrationEvidence: evidence };
+    return { businessStatus: 'businessRejected', businessReason: 'duplicate_acceptance', hasRegistrationEvidence: evidence, requestNumber };
   }
   if (ACCEPTMOD_OFFICIAL_WARNING_RESULTS.has(normalized)) {
     return evidence
@@ -479,11 +490,13 @@ const classifyAcceptmodBusinessResult = ({ ok = true, apiResult, raw }) => {
           businessStatus: 'businessAcceptedWithWarnings',
           businessReason: 'official_warning_with_registration_evidence',
           hasRegistrationEvidence: evidence,
+          requestNumber,
         }
       : {
           businessStatus: 'notVerified',
           businessReason: 'warning_without_registration_evidence',
           hasRegistrationEvidence: evidence,
+          requestNumber,
         };
   }
   if (ACCEPTMOD_SUCCESS_RESULT.test(normalized)) {
@@ -492,11 +505,13 @@ const classifyAcceptmodBusinessResult = ({ ok = true, apiResult, raw }) => {
           businessStatus: 'businessAccepted',
           businessReason: 'accepted_with_registration_evidence',
           hasRegistrationEvidence: evidence,
+          requestNumber,
         }
       : {
           businessStatus: 'notVerified',
           businessReason: 'success_code_without_registration_evidence',
           hasRegistrationEvidence: evidence,
+          requestNumber,
         };
   }
   if (!normalized) {
@@ -504,9 +519,10 @@ const classifyAcceptmodBusinessResult = ({ ok = true, apiResult, raw }) => {
       businessStatus: 'notVerified',
       businessReason: evidence ? 'registration_evidence_without_success_code' : 'missing_api_result',
       hasRegistrationEvidence: evidence,
+      requestNumber,
     };
   }
-  return { businessStatus: 'businessRejected', businessReason: 'api_result_rejected', hasRegistrationEvidence: evidence };
+  return { businessStatus: 'businessRejected', businessReason: 'api_result_rejected', hasRegistrationEvidence: evidence, requestNumber };
 };
 
 const isBusinessAccepted = (status) => status === 'businessAccepted' || status === 'businessAcceptedWithWarnings';
@@ -533,9 +549,10 @@ const parseMutationResponse = () => {
       acceptanceId: body.acceptanceId ?? '',
       encounterKey: body.encounterKey ?? '',
       scheduleKey: body.scheduleKey ?? '',
-      businessStatus: body.businessStatus ?? business.businessStatus,
-      businessReason: body.businessReason ?? business.businessReason,
-      hasRegistrationEvidence: body.hasRegistrationEvidence ?? business.hasRegistrationEvidence,
+      requestNumber: business.requestNumber,
+      businessStatus: business.businessStatus,
+      businessReason: business.businessReason,
+      hasRegistrationEvidence: business.hasRegistrationEvidence,
       responsePath: 'network/network.json',
     };
   } catch {
@@ -783,7 +800,7 @@ const run = async () => {
   const resultListItem = workflowModal.locator('[role="region"][aria-label="患者検索結果モーダル"] [role="listitem"]').first();
   await resultListItem.waitFor({ timeout: 20000 }).catch(() => {
     throw new Error(
-      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; set QA_PATIENT_ID to an ORCA-searchable patient in the current environment`,
+      `patient search returned no selectable result for QA_PATIENT_ID=${patientId}; classify as PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; verify harness/API/auth/ID normalization/parser/readiness evidence.`,
     );
   });
   await resultListItem.click();

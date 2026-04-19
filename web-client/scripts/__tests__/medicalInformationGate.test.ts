@@ -58,6 +58,26 @@ describe('evaluateMedicalInformationGate', () => {
     expect(result.medicalInformationFieldPresent).toBe(true);
   });
 
+  it.each(['medicalInformation', 'Medical_Information'])(
+    'QA_MEDICAL_INFORMATION 未指定で key-only JSON fragment でも failure にする: %s',
+    (key) => {
+      const result = evaluateMedicalInformationGate({
+        medicalInformation: '',
+        requestRecords: [
+          {
+            url: 'https://localhost/api/orca/official/visits/mutation',
+            postData: `{"visit":{ "${key}": }`,
+          },
+        ],
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.violationCount).toBe(1);
+      expect(result.violatedKeys).toEqual([key]);
+      expect(result.medicalInformationFieldPresent).toBe(true);
+    },
+  );
+
   it('QA_MEDICAL_INFORMATION 未指定で null でも failure にする', () => {
     const result = evaluateMedicalInformationGate({
       medicalInformation: '',
@@ -72,6 +92,23 @@ describe('evaluateMedicalInformationGate', () => {
     expect(result.ok).toBe(false);
     expect(result.violationCount).toBe(1);
     expect(result.violatedKeys).toEqual(['medicalInformation']);
+    expect(result.medicalInformationFieldPresent).toBe(true);
+  });
+
+  it('QA_MEDICAL_INFORMATION 未指定で Medical_Information null でも failure にする', () => {
+    const result = evaluateMedicalInformationGate({
+      medicalInformation: '',
+      requestRecords: [
+        {
+          url: 'https://localhost/api/orca/official/visits/mutation',
+          postData: '{"requestNumber":"01","patientId":"00001","Medical_Information":null}',
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.violationCount).toBe(1);
+    expect(result.violatedKeys).toEqual(['Medical_Information']);
     expect(result.medicalInformationFieldPresent).toBe(true);
   });
 
