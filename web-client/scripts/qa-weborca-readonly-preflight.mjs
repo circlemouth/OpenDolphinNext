@@ -226,6 +226,14 @@ const parseJson = (body) => {
   }
 };
 
+const parseJsonWithStatus = (body) => {
+  try {
+    return { body: JSON.parse(body), ok: true };
+  } catch {
+    return { body: {}, ok: false };
+  }
+};
+
 const normalizeDateDigits = (value) => {
   const normalized = normalizeString(value)?.replace(/\D/g, '');
   return normalized && normalized.length >= 8 ? normalized.slice(0, 8) : undefined;
@@ -469,19 +477,22 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
       response,
       responseText: text,
     });
-    const parsed = parseJson(text);
+    const parsedDiagnostic = parseJsonWithStatus(text);
+    const parsed = parsedDiagnostic.body;
     const apiResult = normalizeApiResult(parsed?.apiResult);
     const diagnostic = classifyAcceptmodReadOnlyDiagnostic({
       executed: true,
       httpStatus: response.status(),
       apiResult,
+      body: parsed,
+      diagnosticBodyParseSucceeded: parsedDiagnostic.ok,
     });
     return {
       apiResult,
       status: response.status(),
       verdict: diagnostic.accepted ? 'accepted' : 'rejected',
       businessStatus:
-        diagnostic.classification === 'diagnostic_no_existing_acceptance'
+        diagnostic.accepted === true && diagnostic.classification === 'diagnostic_no_existing_acceptance'
           ? 'diagnosticNoExistingAcceptance'
           : diagnostic.classification === 'diagnostic_existing_acceptance'
             ? 'diagnosticExistingAcceptance'
@@ -489,7 +500,7 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
             ? 'businessRejected'
             : 'notVerified',
       businessReason:
-        diagnostic.classification === 'diagnostic_no_existing_acceptance'
+        diagnostic.accepted === true && diagnostic.classification === 'diagnostic_no_existing_acceptance'
           ? 'no_existing_acceptance'
           : diagnostic.classification === 'diagnostic_existing_acceptance'
             ? 'existing_acceptance'

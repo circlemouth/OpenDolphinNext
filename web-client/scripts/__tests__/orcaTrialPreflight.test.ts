@@ -62,7 +62,13 @@ describe('orca trial-native preflight gates', () => {
       selectorReadiness: summarizeSelectorReadiness(acceptedSelectors),
       localSelectableReadiness: summarizeLocalSelectableReadiness({ candidateId: '00001', selectableCount: 1, exactMatch: true }),
       appointmentDependency: { required: false, accepted: true },
-      acceptmodv2ReadOnlyDiagnostic: classifyAcceptmodReadOnlyDiagnostic({ executed: true, httpStatus: 200, apiResult: '60' }),
+      acceptmodv2ReadOnlyDiagnostic: classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult: '60',
+        body: { apiResult: '60' },
+        parsedOrcaBody: true,
+      }),
       secretScanClean: true,
     };
 
@@ -222,24 +228,148 @@ describe('orca trial-native preflight gates', () => {
   });
 
   it('apiResult=10 diagnostic rejects the candidate', () => {
-    expect(classifyAcceptmodReadOnlyDiagnostic({ executed: true, httpStatus: 200, apiResult: '10' })).toMatchObject({
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult: '10',
+        body: { apiResult: '10' },
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
       classification: 'patient_not_found',
       accepted: false,
-    });
-  });
-
-  it('apiResult=60 diagnostic means no existing acceptance, not mutation success', () => {
-    expect(classifyAcceptmodReadOnlyDiagnostic({ executed: true, httpStatus: 200, apiResult: '60' })).toMatchObject({
-      classification: 'diagnostic_no_existing_acceptance',
-      accepted: true,
-      acceptedForPhase3Attempt: true,
+      acceptedForPhase3Attempt: false,
       mutationSuccess: false,
     });
   });
 
+  it('apiResult=60 diagnostic means no existing acceptance, not mutation success', () => {
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult: '60',
+        body: { apiResult: '60' },
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
+      classification: 'diagnostic_no_existing_acceptance',
+      accepted: true,
+      acceptedForPhase3Attempt: true,
+      mutationSuccess: false,
+      rejectionReason: 'none',
+    });
+  });
+
   it('Request_Number=00 apiResult=00 is an existing-acceptance diagnostic, not Phase 3 authorization', () => {
-    expect(classifyAcceptmodReadOnlyDiagnostic({ executed: true, httpStatus: 200, apiResult: '00' })).toMatchObject({
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult: '00',
+        body: { apiResult: '00' },
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
       classification: 'diagnostic_existing_acceptance',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+    });
+  });
+
+  it.each([500, 403, 404, 0, 302])('rejects apiResult=60 diagnostic on HTTP status %s', (httpStatus) => {
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus,
+        apiResult: '60',
+        body: { apiResult: '60' },
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
+      httpStatus,
+      apiResult: '60',
+      classification: 'diagnostic_no_existing_acceptance',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+      rejectionReason: 'http_not_2xx',
+    });
+  });
+
+  it.each([
+    ['wrapperError', { wrapperError: 'failed' }],
+    ['upstreamError', { upstreamError: 'failed' }],
+    ['errors', { errors: ['failed'] }],
+    ['errorCategory', { errorCategory: 'UPSTREAM' }],
+  ])('rejects apiResult=60 diagnostic when %s is present', (_field, errorShape) => {
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult: '60',
+        body: { apiResult: '60', ...errorShape },
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
+      apiResult: '60',
+      classification: 'diagnostic_no_existing_acceptance',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+      rejectionReason: 'wrapper_or_upstream_error',
+    });
+  });
+
+  it('rejects apiResult=60 diagnostic when the ORCA body was not parsed', () => {
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult: '60',
+        parsedOrcaBody: false,
+      }),
+    ).toMatchObject({
+      apiResult: '60',
+      classification: 'diagnostic_no_existing_acceptance',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+      rejectionReason: 'orca_body_not_parsed',
+    });
+  });
+
+  it.each(['21', '23'])('does not accept diagnostic apiResult=%s', (apiResult) => {
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult,
+        body: { apiResult },
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
+      apiResult,
+      classification: 'not_verified',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+    });
+  });
+
+  it('does not accept message-only success without diagnostic business evidence', () => {
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        body: { apiResultMessage: '正常終了' },
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
+      apiResult: '',
+      classification: 'not_verified',
       accepted: false,
       acceptedForPhase3Attempt: false,
       mutationSuccess: false,

@@ -431,7 +431,18 @@ export const summarizeLocalSelectableReadiness = ({ candidateId, selectableCount
   evidenceHash: hash(`${candidateId}:${selectableCount}:${exactMatch}`),
 });
 
-export const classifyAcceptmodReadOnlyDiagnostic = ({ executed, httpStatus, apiResult }) => {
+export const classifyAcceptmodReadOnlyDiagnostic = ({
+  executed,
+  httpStatus,
+  apiResult,
+  body,
+  parsedOrcaBody,
+  diagnosticBodyParseSucceeded,
+  wrapperError,
+  upstreamError,
+  errors,
+  errorCategory,
+}) => {
   if (!executed) {
     return {
       executed: false,
@@ -442,48 +453,77 @@ export const classifyAcceptmodReadOnlyDiagnostic = ({ executed, httpStatus, apiR
       mutationSuccess: false,
     };
   }
-  const normalized = normalizeApiResult(apiResult);
+  const status = asFiniteStatus(httpStatus);
+  const normalized = normalizeApiResult(
+    apiResult ?? body?.apiResult ?? body?.Api_Result ?? findFirstDeep(body, ['apiResult', 'Api_Result', 'result', 'Result']),
+  );
+  const parseStateProvided = parsedOrcaBody !== undefined || diagnosticBodyParseSucceeded !== undefined;
+  const diagnosticBodyParsed = parseStateProvided
+    ? parsedOrcaBody === true || diagnosticBodyParseSucceeded === true
+    : isRecord(body);
+  const wrapperRejected =
+    hasWrapperError(body) ||
+    hasWrapperError({
+      wrapperError,
+      upstreamError,
+      errors,
+      errorCategory,
+    });
+  const acceptedDiagnosticTransport = is2xx(status) && !wrapperRejected && diagnosticBodyParsed;
+  const rejectionReason =
+    wrapperRejected
+      ? 'wrapper_or_upstream_error'
+      : !is2xx(status)
+        ? 'http_not_2xx'
+        : !diagnosticBodyParsed
+          ? 'orca_body_not_parsed'
+          : 'none';
   if (normalized === '10') {
     return {
       executed: true,
-      httpStatus,
+      httpStatus: status,
       apiResult: normalized,
       classification: 'patient_not_found',
       accepted: false,
       acceptedForPhase3Attempt: false,
       mutationSuccess: false,
+      rejectionReason,
     };
   }
   if (normalized === '60') {
+    const acceptedForPhase3Attempt = acceptedDiagnosticTransport;
     return {
       executed: true,
-      httpStatus,
+      httpStatus: status,
       apiResult: normalized,
       classification: 'diagnostic_no_existing_acceptance',
-      accepted: true,
-      acceptedForPhase3Attempt: true,
+      accepted: acceptedForPhase3Attempt,
+      acceptedForPhase3Attempt,
       mutationSuccess: false,
+      rejectionReason,
     };
   }
-  if (httpStatus === 200 && isAllZeroApiResult(normalized)) {
+  if (acceptedDiagnosticTransport && isAllZeroApiResult(normalized)) {
     return {
       executed: true,
-      httpStatus,
+      httpStatus: status,
       apiResult: normalized,
       classification: 'diagnostic_existing_acceptance',
       accepted: false,
       acceptedForPhase3Attempt: false,
       mutationSuccess: false,
+      rejectionReason: 'existing_acceptance',
     };
   }
   return {
     executed: true,
-    httpStatus,
+    httpStatus: status,
     apiResult: normalized,
     classification: 'not_verified',
     accepted: false,
     acceptedForPhase3Attempt: false,
     mutationSuccess: false,
+    rejectionReason,
   };
 };
 
