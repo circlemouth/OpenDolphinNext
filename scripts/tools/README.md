@@ -15,6 +15,9 @@
   - `REVIEW_PACKAGE_MANIFEST.txt` を zip 直下へ含める
   - `--include-review-log-manifest` 指定時のみ、manifest に列挙した sanitized review log / evidence contract を追加同梱する
   - `.git/` は含めず、clean checkout 証跡は主張しない
+  - manifest と sidecar summary は `packageMode=extracted_review_subset`、`clean_checkout_claim=not_verified`、`full_source_secret_scan_claim=not_claimed` を明示する
+  - manifest-listed evidence は sanitized summaries / reports / command logs に限定し、raw ORCA artifact、HAR、network/request/response、画像、trace/video、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw session、raw password を拒否する
+  - Phase 2.5 の `acceptedCandidateCount=0` は、`00001`〜`00011` について current harness / API / auth / parser / readiness / exact-preflight criteria の read-only evidence が mutation-ready まで揃っていない、という意味に限定する。公式初期患者が存在しない証明として扱わない
 - 使い方:
   - `./scripts/create-review-package.sh`
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z`
