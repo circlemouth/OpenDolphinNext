@@ -88,15 +88,16 @@ cd web-client && npm run ci
 - `verify-no-blocked-orca-route-strings.mjs` は `web-client/src` だけでなく `web-client/scripts`、`web-client/plugins`、`tests`、`docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` を走査する。存在しない root は明示 skip、存在する root の走査失敗は fail。
 - guard success message は category counts を表示し、`server public route`、`client production fail-close sentinel`、`MSW mock/test-only legacy route surface`、`e2e fixture/test-only surface`、`blocked-route detector`、`docs/reference` の分類で current tree の残存 route string を説明できる。
 - guard allowlist は `path + route + category + reason` で管理され、allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure。`/api/orca/(official|master 以外)` の新規 route、および production source に混入した mock/test-only legacy route surface も failure。
+- `server public route` は `/api/orca/official/*` と `/api/orca/master/*` だけを意味する。client fail-close sentinel、MSW mock/test-only legacy route surface、e2e fixture/test-only surface、blocked-route detector、docs/reference は public route ではない。
 - typecheck / test / build まで成功する。
 
 6. runtime-ready smoke と ORCA smoke scripts を pair release 前提で実行する。
 ```bash
 cd web-client && node scripts/runtime-ready-smoke.mjs
 curl -sk https://127.0.0.1:8443/openDolphin/api/orca/official/appointments/medical-information
-cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-weborca-readonly-preflight.mjs
-cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-acceptmodv2-weborca.mjs
-cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-fullflow-weborca.mjs
+cd web-client && node scripts/qa-weborca-candidate-discovery.mjs
+cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-acceptmodv2-weborca.mjs
+cd web-client && QA_PATIENT_ID=<summary.phase3AttemptPatientId> node scripts/qa-fullflow-weborca.mjs
 ```
 期待結果:
 - web-client と server-modernized を同じ remediation pair として起動した状態で成功する。
@@ -105,8 +106,19 @@ cd web-client && QA_PATIENT_ID=<local searchable patientId> node scripts/qa-full
 - local smoke seed の既定キーは `encounterKey=1.3.6.1.4.1.9414.72.103:SMOKE-20251129-0001`、`scheduleKey=SMOKE-SCHEDULE-20251129-0001`、`DEV_SMOKE_PATIENT_ID=0000001`、Asia/Tokyo 当日 `09:00` の `scheduled_datetime` とする。`DEV_SMOKE_PATIENT_ID` を変更する場合は schedule / encounter projection が同じ患者を指すことを確認する。
 - `runtime-ready-smoke` は `/api/orca/queue` と `/api/orca/pusheventgetv2` を current public route とみなさず、browser request が出た場合は blocked route hit として failure にする。
 - `appointments/medical-information` の direct probe で `system01lstv2 Request_Number=06` 相当の応答可否を smoke 前に evidence 化する。
-- Phase 3 mutation の前に `qa-weborca-readonly-preflight.mjs` を必ず実行する。medical-information が HTTP 200 / `apiResult=00`、patient search が selectable、department / physician / visit kind / payment mode / medical-information select が存在することを accepted 条件とする。
+- Phase 3 mutation の候補患者は `qa-weborca-candidate-discovery.mjs` で先に探索する。既定候補は WebORCA Trial native 候補 `00001`〜`00011` とし、`QA_WEBORCA_CANDIDATES` または `QA_CANDIDATE_PATIENT_IDS` で上書きできる。旧 local smoke seed `0000001` が渡された場合は warning 付き rejected row として扱い、Trial native candidate として採用しない。
+- `qa-weborca-candidate-discovery.mjs` は read-only 限定で、official patient existence、insurance readiness、selector readiness、local selectable、appointment dependency、diagnostic no patient-not-found を candidate ごとに評価する。official 初期患者情報は category / count 程度に sanitization し、氏名・住所・電話番号・保険詳細など raw sensitive detail は summary / row に残さない。mutation 系 route が発火した場合は script 側で abort し、candidate を accepted にしない。
+- discovery で `acceptedForPhase3Attempt` の最初の 1 件が見つかった場合だけ、同じ RUN_ID の `qa/weborca-readonly-preflight/summary.json` に sanitized row link を書き、`qa-acceptmodv2-weborca.mjs` の既定 preflight gate に渡す。候補 0 件の場合は `PARTIAL / TEST-DATA BLOCKER`、reason `no_trial_native_mutation_ready_candidate` として rejected preflight summary を残し、`qa-acceptmodv2-weborca.mjs` は実行しない。
+- Phase 3 mutation の前に、`qa-weborca-candidate-discovery.mjs` が生成した preflight summary、または `QA_PATIENT_ID=<accepted candidate patientId> node scripts/qa-weborca-readonly-preflight.mjs` の追加確認のどちらかが accepted であることを必須とする。
+- preflight summary は `trialSourceCandidate` / `officialPatientExistence` / `insuranceReadiness` / `selectorReadiness` / `localSelectableReadiness` / `appointmentDependency` / `acceptmodv2ReadOnlyDiagnostic` を分離し、`acceptedForPhase3Attempt=true` と `phase3AttemptPatientId` が揃った run だけ `qa-acceptmodv2-weborca.mjs` へ渡す。official `Patient_ID` は完全一致必須で、ゼロ埋め桁違いは一致扱いにしない。
+- `insuranceReadiness` は count / effectiveCount / redacted selected combination id だけを summary に残し、保険番号・記号番号・氏名等を出さない。`localSelectableReadiness` が official exact match と一致しない場合は `local_sync_required` の `test-data-blocker` として止める。
+- `appointmentDependency` は direct patient acceptance flow では required=false とし、予約行 absence だけを blocker にしない。`acceptmodv2ReadOnlyDiagnostic` は Request_Number=00 の read-only diagnostic として扱い、`apiResult=10` は rejected、`apiResult=60` は `no existing acceptance` diagnostic であって mutation success ではない。
+- medical-information が HTTP 200 / `apiResult=00`、patient search が selectable、department / physician / visit kind / payment mode / medical-information select が存在することを accepted 条件とする。
 - `visitptlstv2` は HTTP 200 でも `apiResult=13` なら business success として扱わない。read-only preflight では rejected / not verified として記録し、mutation 成功の代替 evidence にしない。
+- `acceptmodv2` は endpoint-specific semantics で判定する。HTTP 200、`Api_Result=00` / `0000`、または all-zero generic parser だけでは mutation success としない。
+- `acceptmodv2` の business accepted 条件は、`Api_Result=00` / `0000` と `Acceptance_Info`、`Acceptance_Id`、`Patient_Information`、server-generated `encounterKey` / `scheduleKey` 等の受付登録証跡が同じ response に存在すること。証跡がなければ `notVerified` として停止する。
+- `acceptmodv2` の `Api_Result=K1/K2/K3` は official warning code として扱うが、受付登録証跡がある場合だけ `businessAcceptedWithWarnings` とする。`Api_Result_Message` だけ、または warning message だけでは accepted にしない。
+- `acceptmodv2` の `Api_Result=10` は `businessRejected` / `patient_not_found`、`Api_Result=60` は `diagnosticNoExistingAcceptance` / `no_existing_acceptance` とし、どちらも mutation success の証跡にしない。
 - `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` の patient picker は current reception workflow に合わせて `/api/local/patients/search` を使う。固定 seed を正本とみなさず、実行直前に current facility で local search 可能かつ単一 active entry を作れる患者IDを確認して `QA_PATIENT_ID` に渡す。
 - `qa-acceptmodv2-weborca.mjs` は既定で同じ `RUN_ID` の `qa/weborca-readonly-preflight/summary.json` を要求する。preflight artifact を別パスに置いた場合は `QA_READONLY_PREFLIGHT_SUMMARY` を渡し、preflight accepted でない run では mutation を実行しない。
 - `qa-fullflow-weborca.mjs` は Phase 3 が business accepted になった後だけ実行する。
@@ -140,6 +152,7 @@ cd web-client && node scripts/verify-no-blocked-orca-route-strings.mjs
 - `WebXmlEndpointExposureTest` で `/api/*` exposure と `/api/orca/*` taxonomy が崩れていないことを確認する。
 - `verify-no-blocked-orca-route-strings.mjs` で repo-wide scanned roots の taxonomy drift や blocked mock surface が残っていないことを確認する。
 - `/api/orca/queue` と `/api/orca/pusheventgetv2` は `orcaQueueApi.ts` の production fail-close sentinel、`src/mocks/handlers/orcaQueue.ts` の MSW mock/test-only legacy route surface、QA/e2e fixture、blocked-route detector、docs/reference の allowlist にだけ残り、guard success message も category counts で同じ分類を示すことを確認する。
+- 上記 allowlist category は retained string の説明であり、public route として受け入れない。official/master 以外の `/api/orca/*` を新しい public route として追加した場合は release を止める。
 - Reception / Patients / Charts / Admin の UI と server contract が taxonomy contract と一致していることを確認する。
 - web-client と server-modernized を別々の remediation wave で混在 deploy しない。pair release で同時に切り替える。
 
@@ -159,7 +172,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 - `npm run ci` が成功する。
 - `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` が成功する。
 - `runtime-ready-smoke` が成功する。
-- `qa-weborca-readonly-preflight.mjs` が accepted になり、その後に `qa-acceptmodv2-weborca.mjs` が current 受付導線で business accepted になる。`qa-fullflow-weborca.mjs` は Phase 3 business accepted 後にだけ実行し、`medicalInformation` 未選択時は browser request body 未送信の証跡を残す。未指定 run で request body に `medicalInformation` が含まれた場合は fail と判定される。
+- `qa-weborca-candidate-discovery.mjs` が Trial native mutation-ready candidate を 1 件以上 accepted にし、同一 RUN_ID の preflight summary へ `acceptedForPhase3Attempt` をリンクする。その後に `qa-acceptmodv2-weborca.mjs` が current 受付導線で `businessAccepted` または `businessAcceptedWithWarnings` になる。`qa-fullflow-weborca.mjs` は Phase 3 business accepted 後にだけ実行し、`medicalInformation` 未選択時は browser request body 未送信の証跡を残す。未指定 run で request body に `medicalInformation` が含まれた場合は fail と判定される。
 - patient search が 0 件なら、script は `QA_PATIENT_ID` の不足/不一致を明示したエラーで停止する。
 - direct runtime lookup grep は `ServerConfigurationResolver.java` の `ConfigProvider.getConfig()` 1 件だけを返す。
 - `dolphin.facilityId` grep は 0 件。
@@ -167,6 +180,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 ## 証跡保存先
 - closeout 提出用の正本は `artifacts/orca-remediation/closeout/<RUN_ID>/`。
 - runtime smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/runtime-ready/`。
+- WebORCA candidate discovery は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-candidate-discovery/`。
 - read-only preflight は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/weborca-readonly-preflight/`。
 - accept smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/acceptmodv2/`。
 - fullflow smoke は `artifacts/orca-remediation/closeout/<RUN_ID>/qa/fullflow/`。
@@ -205,6 +219,7 @@ rg 'dolphin\\.facilityId' server-modernized -n
 
 ## Review / Archive
 - reviewer 提出物は `git archive` ではなく reviewer submission packet を正本とする。
+- `create-review-package.sh` の support zip は `.git/` を含まず、clean checkout truth を主張しない。clean checkout 判定は reviewer submission packet の `review-checkout/` に限定する。
 - packet 生成は repo root から実行し、`review-checkout/` と `closeout-packet/` を分離同梱する。
 - `closeout-packet/` の required file が欠けていたら fail する。欠落を別 zip や old RUN_ID で補わない。
 - packet 生成後は `./scripts/validate-reviewer-submission-packet.sh --run-id <RUN_ID> --accepted-ref <ACCEPTED_BRANCH>` を必ず通す。branch drift がある場合は create/validate の両方へ `--accepted-head <ACCEPTED_HEAD>` を付ける。

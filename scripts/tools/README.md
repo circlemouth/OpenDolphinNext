@@ -9,14 +9,17 @@
 - 目的: このリポジトリをレビュワー提出向けに 1 本の軽量 zip にまとめる。
 - 出力: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
 - 方針:
-  - git tracked files のみを対象にする
+  - git tracked files を base とし、`--include-review-log-manifest` 指定時だけ manifest-listed evidence を追加する
   - `client/` と `artifacts/` を完全除外する
   - `node_modules/`, `dist/`, `target/`, `build/`, `out/`, `tmp/`, `output/`, `coverage/`, `test-results/` を除外する
   - `REVIEW_PACKAGE_MANIFEST.txt` を zip 直下へ含める
+  - `--include-review-log-manifest` 指定時のみ、manifest に列挙した sanitized review log / evidence contract を追加同梱する
+  - `.git/` は含めず、clean checkout 証跡は主張しない
 - 使い方:
   - `./scripts/create-review-package.sh`
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z`
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z --out-dir ./artifacts/review-bundles`
+  - `./scripts/create-review-package.sh --run-id 20260418T224551Z --name-suffix -with-dynamic-evidence --include-review-log-manifest docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
 
 ## create-review-package-curated.sh
 - 位置づけ: support。50MB 制約つきの curated review bundle。

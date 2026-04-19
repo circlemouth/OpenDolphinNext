@@ -12,9 +12,9 @@ The residual static review items are closed in current source/test/docs/scripts.
 
 ## 2. dynamic handoff verdict
 
-- `READY`
+- `STATIC READY / DYNAMIC PARTIAL`
 
-This means the static remediation can be handed off to a separate dynamic ORCA/WebORCA trial task. It does **not** claim live ORCA success. `runtime-ready-smoke` remains an environment blocker in this run because `127.0.0.1:9080` refused connections.
+Static remediation was ready for dynamic ORCA/WebORCA trial. The later dynamic run accepted Phase 1 runtime-ready and Phase 2 read-only preflight, but Phase 3 mutation was business-rejected and Phase 4 fullflow was not executed. This report does **not** claim live mutation or fullflow success.
 
 ## 3. changed files
 
@@ -38,6 +38,11 @@ This means the static remediation can be handed off to a separate dynamic ORCA/W
 | `docs/implementation/opendolphin-postfix-static-remediation-20260418/README.md` | docs | current source of truth and evidence location | evidence |
 | `docs/implementation/opendolphin-postfix-static-remediation-20260418/06_final_report_template.md` | docs | verdict vocabulary aligned to ACCEPT/PARTIAL/REJECT and READY/NOT READY | evidence |
 | `docs/implementation/opendolphin-postfix-static-remediation-20260418/08_static_exit_report.md` | docs | final evidence matrix | evidence |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/09_dynamic_orca_trial_report.md` | docs | dynamic evidence truth aligned to accepted/rejected/not verified buckets | evidence |
+| `docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt` | docs | static and dynamic log package inclusion manifest | evidence |
+| `scripts/create-review-package.sh` | script | optional review-log manifest inclusion and no-clean-checkout package truth | evidence package |
+| `tests/review-package/create-review-package.test.mjs` | test | package manifest and review-log inclusion coverage | evidence package |
+| `scripts/tools/README.md` | docs | package support workflow docs | evidence package |
 | `docs/implementation/opendolphin-webclient-followup-release-gate-package-20260417/README.md` | docs | new historical disclaimer entrypoint | older docs cleanup |
 | `docs/implementation/opendolphin-webclient-followup-release-gate-package-20260417/*` | docs | stale PASS/READY wording marked historical | older docs cleanup |
 | `docs/implementation/opendolphin-webclient-remaining-followup-package-20260417/*` | docs | stale worker-report/closed wording marked historical | older docs cleanup |
@@ -50,10 +55,10 @@ This means the static remediation can be handed off to a separate dynamic ORCA/W
 |---|---|---|---|---|
 | C1 | accepted | `20260418T210850Z-server-focused-maven.log`, `20260418T210850Z-server-static-analysis-verify.log` | existing ORCA connection source/tests | reserved `default` and userinfo URL invariants stayed green |
 | C2 | accepted | `20260418T210850Z-server-focused-maven.log`, `20260418T210850Z-server-static-analysis-verify.log` | existing admin ORCA connection source/tests | raw target material remains sanitized |
-| C3 | accepted | `20260418T210850Z-web-focused-vitest.log`, `20260418T210850Z-web-ci.log` | existing chart/print source/tests | row-local positive signal invariant stayed green |
-| C5 | accepted | `20260418T210850Z-web-focused-vitest.log`, `20260418T210850Z-web-ci.log` | `patients/api.ts`, `orcaPatientImportApi.ts` | canonical readback now gates on all-zero PatientBatchResponse business result |
-| C6 | accepted | `20260418T210850Z-web-focused-vitest.log`, `20260418T210850Z-playwright-charts-msw.log` | `OrcaSummary.tsx`, chart e2e specs | ORCA income/correction/setting notes remain visible outside details |
-| C7 | accepted | `20260418T210850Z-web-focused-vitest.log`, `20260418T210850Z-web-ci.log` | existing medical information gate source/tests | unspecified run field-presence failure invariant stayed green |
+| C3 | static accepted / dynamic not verified | `20260418T210850Z-web-focused-vitest.log`, `20260418T210850Z-web-ci.log`; dynamic fullflow not run | existing chart/print source/tests | row-local positive signal invariant stayed green, but live chart fullflow was not executed |
+| C5 | static accepted / dynamic not verified | `20260418T210850Z-web-focused-vitest.log`, `20260418T210850Z-web-ci.log`; dynamic import/canonical flow not run | `patients/api.ts`, `orcaPatientImportApi.ts` | canonical readback gates on all-zero PatientBatchResponse business result, but live import/canonical readback was not executed |
+| C6 | static accepted / dynamic not verified | `20260418T210850Z-web-focused-vitest.log`, `20260418T210850Z-playwright-charts-msw.log`; dynamic fullflow not run | `OrcaSummary.tsx`, chart e2e specs | ORCA income/correction/setting notes remain visible outside details, but live income/claim/fullflow was not executed |
+| C7 | static accepted / dynamic partial | static logs plus `20260418T224551Z-qa-acceptmodv2-weborca-final.log` | medical-information gate source/tests and `accept-summary.json` | field-presence gate checked one mutation request with zero violations; business mutation rejected with `apiResult=10` |
 | R-OBS-01 | accepted | `20260418T210850Z-server-focused-maven.log`, `20260418T210850Z-server-static-analysis-verify.log` | `OperationsReadinessEvaluator.java`, `OperationsHealthResourceTest.java` | `clientAuthConfigured` truth remains while raw readiness details are hidden |
 | T-NEG-01 | accepted | `20260418T210850Z-server-focused-maven.log`, `20260418T210850Z-server-static-analysis-verify.log` | existing ORCA HTTP/admin tests | raw URL/userinfo/host/secret path negative coverage stayed green |
 | RT-01 | accepted | `20260418T210850Z-web-guard.log`, `20260418T210850Z-web-ci.log` | `orca-route-taxonomy-guard.mjs`, `orca-route-taxonomy.md` | repo-wide route strings are classified with category counts |
@@ -67,7 +72,7 @@ This means the static remediation can be handed off to a separate dynamic ORCA/W
 | `runtime-ready-smoke` environment blocker | medium | paired backend was not running on `127.0.0.1:9080` | optional local runtime smoke | this task does not start live backend/ORCA; log preserved as blocker evidence |
 | live ORCA / WebORCA not verified | high for release, out of static scope | dynamic trial was explicitly prohibited | dynamic ORCA acceptance | separate dynamic trial task must run `qa-acceptmodv2-weborca.mjs` / `qa-fullflow-weborca.mjs` |
 
-No residual static source/test/docs blocker remains for RT-01, C5 secondary gate, DADS disabled reason, health readiness contract, older docs cleanup, or final evidence alignment.
+No residual static source/test/docs blocker remains for RT-01, C5 secondary gate, DADS disabled reason, health readiness contract, older docs cleanup, or final evidence alignment. Dynamic C3/C5/C6 remain not verified until Phase 4 fullflow runs after an accepted Phase 3 mutation.
 
 ## 6. RT-01 route string classification table
 
@@ -103,18 +108,22 @@ No residual static source/test/docs blocker remains for RT-01, C5 secondary gate
 
 Guard result: `server public route=47`, `client production fail-close sentinel=2`, `MSW mock/test-only legacy route surface=2`, `e2e fixture/test-only surface=225`, `blocked-route detector=31`, `docs/reference=117`, skipped roots `none`.
 
+Route taxonomy note: the only public `/api/orca/*` route categories are official and master. The client fail-close sentinel, MSW mock/test-only legacy surface, e2e fixture/test-only surface, blocked-route detector, and docs/reference strings are category-classified retained strings, not public routes.
+
 ## 7. accepted test evidence table
 
-| command | cwd | exit | timestamp | log path | accepted? |
+These logs are accepted package evidence only when the generated review support zip contains `REVIEW_LOG_INCLUSIONS_MANIFEST.txt` and the listed `test-logs/20260418T210850Z-*.log` entries.
+
+| command | cwd | exit | timestamp | log path | package evidence? |
 |---|---|---:|---|---|---|
-| `npm run verify:web-guard` | `web-client` | 0 | `2026-04-18T21:28:15Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-guard.log` | yes |
-| `npm test -- --run scripts/__tests__/medicalInformationGate.test.ts src/features/outpatient/__tests__/orcaPatientImportApi.test.ts src/features/patients/__tests__/api.test.ts src/features/patients/__tests__/PatientsPage.test.tsx src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx src/features/charts/__tests__/OrcaSummary.semantics.test.tsx src/mocks/handlers/orcaQueue.test.ts src/libs/http/httpClient.test.ts` | `web-client` | 0 | `2026-04-18T21:21:04Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-focused-vitest.log` | yes |
-| `npm run typecheck` | `web-client` | 0 | `2026-04-18T21:21:21Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-typecheck.log` | yes |
-| `npm run ci` | `web-client` | 0 | `2026-04-18T21:22:39Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-ci.log` | yes |
-| `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaConnectionConfigStoreTest,AdminOrcaConnectionResourceTest,AdminOrcaConnectionTestSupportTest,OrcaHttpClientLogTest,OrcaTransportRegistryTest,OperationsHealthResourceTest test` | repo root | 0 | `2026-04-18T21:22:51Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-server-focused-maven.log` | yes |
-| `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` | repo root | 0 | `2026-04-18T21:24:13Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-server-static-analysis-verify.log` | yes |
-| `npx playwright test tests/charts/e2e-billing-correction-note.spec.ts tests/charts/e2e-orca-billing-status.spec.ts` | repo root | 0 | `2026-04-18T21:24:30Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-playwright-charts-msw.log` | yes |
-| `node scripts/runtime-ready-smoke.mjs` | `web-client` | 1 | `2026-04-18T21:24:37Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-runtime-ready-smoke.log` | yes, as environment blocker |
+| `npm run verify:web-guard` | `web-client` | 0 | `2026-04-18T21:28:15Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-guard.log` | yes, listed in `REVIEW_LOG_INCLUSIONS_MANIFEST.txt` |
+| `npm test -- --run scripts/__tests__/medicalInformationGate.test.ts src/features/outpatient/__tests__/orcaPatientImportApi.test.ts src/features/patients/__tests__/api.test.ts src/features/patients/__tests__/PatientsPage.test.tsx src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx src/features/charts/__tests__/OrcaSummary.semantics.test.tsx src/mocks/handlers/orcaQueue.test.ts src/libs/http/httpClient.test.ts` | `web-client` | 0 | `2026-04-18T21:21:04Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-focused-vitest.log` | yes, listed |
+| `npm run typecheck` | `web-client` | 0 | `2026-04-18T21:21:21Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-typecheck.log` | yes, listed |
+| `npm run ci` | `web-client` | 0 | `2026-04-18T21:22:39Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-web-ci.log` | yes, listed |
+| `mvn -f pom.server-modernized.xml -pl server-modernized -am -Dsurefire.failIfNoSpecifiedTests=false -Dtest=OrcaConnectionConfigStoreTest,AdminOrcaConnectionResourceTest,AdminOrcaConnectionTestSupportTest,OrcaHttpClientLogTest,OrcaTransportRegistryTest,OperationsHealthResourceTest test` | repo root | 0 | `2026-04-18T21:22:51Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-server-focused-maven.log` | yes, listed |
+| `mvn -f pom.server-modernized.xml -pl server-modernized -am -Pstatic-analysis verify` | repo root | 0 | `2026-04-18T21:24:13Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-server-static-analysis-verify.log` | yes, listed |
+| `npx playwright test tests/charts/e2e-billing-correction-note.spec.ts tests/charts/e2e-orca-billing-status.spec.ts` | repo root | 0 | `2026-04-18T21:24:30Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-playwright-charts-msw.log` | yes, listed |
+| `node scripts/runtime-ready-smoke.mjs` | `web-client` | 1 | `2026-04-18T21:24:37Z` | `docs/implementation/opendolphin-postfix-static-remediation-20260418/test-logs/20260418T210850Z-runtime-ready-smoke.log` | yes, listed as environment-blocker evidence |
 
 ## 8. not run / not verified table
 
@@ -128,8 +137,21 @@ Guard result: `server public route=47`, `client production fail-close sentinel=2
 
 `runtime-ready-smoke` exited `1` with `TypeError: fetch failed` caused by `connect ECONNREFUSED 127.0.0.1:9080`. This is recorded as an environment blocker only. It is not a live success, and it is not promoted to dynamic ORCA evidence.
 
-## 10. final recommendation
+## 10. package evidence alignment
+
+- Package path: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-20260418T224551Z-with-dynamic-evidence.zip`
+- Package generator: `./scripts/create-review-package.sh --run-id 20260418T224551Z --name-suffix -with-dynamic-evidence --include-review-log-manifest docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
+- Package evidence manifest: `docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
+- Included evidence: 8 static logs + 22 dynamic logs + 1 dynamic evidence contract from the manifest.
+- Zip entry count: `2346`.
+- Actual size: `19694180` bytes.
+- Actual sha256: `110de12cc187426a93eee1adc0ebe5794150373d9d84c9c395b08b01c36d8045`.
+- `.git/` included: no.
+- Clean checkout truth: not asserted by this support zip. Use reviewer submission packet for `.git`-backed clean checkout evidence.
+- Manifest note: `REVIEW_PACKAGE_MANIFEST.txt` records `root_dir=.`, `git_metadata_included=no`, `clean_checkout_claim=not_applicable`, `tracked_missing_file_count=3`, and `review_log_include_count=31`.
+
+## 11. final recommendation
 
 1. Static fix: accepted for RT-01, C5 secondary gate, DADS disabled reason, health readiness contract, older docs cleanup, and evidence alignment, while preserving C1/C2/C3/C5/C6/C7/R-OBS-01/T-NEG-01.
 2. Docs/test alignment: accepted. Current truth is this report, contracts, runbooks, releases, source/tests/scripts, and the RUN_ID logs.
-3. Dynamic ORCA trial check: ready to hand off as a separate task. Do not claim live success until `qa-acceptmodv2-weborca.mjs` and `qa-fullflow-weborca.mjs` are run under a live trial assignment.
+3. Dynamic ORCA trial check: Phase 1/2 accepted, Phase 3 partial/rejected, Phase 4 not verified. Do not claim live mutation/fullflow success until `qa-acceptmodv2-weborca.mjs` and `qa-fullflow-weborca.mjs` pass under a live trial assignment.

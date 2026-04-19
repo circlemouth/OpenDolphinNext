@@ -1,0 +1,6 @@
+RUN_ID=20260419T012523Z
+qa-acceptmodv2-weborca: NOT RUN
+reason=no acceptedForPhase3Attempt candidate from qa-weborca-candidate-discovery
+blockerClassification=test-data-blocker
+qa-fullflow-weborca: NOT RUN
+reason=Phase 3 acceptmodv2 not run; businessAccepted=false

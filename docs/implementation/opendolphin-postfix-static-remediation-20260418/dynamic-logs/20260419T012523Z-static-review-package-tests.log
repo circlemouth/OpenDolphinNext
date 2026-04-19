@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: creates a reviewer package without artifacts or legacy client content
+ok 1 - creates a reviewer package without artifacts or legacy client content
+  ---
+  duration_ms: 284.473458
+  type: 'test'
+  ...
+# Subtest: adds manifest-listed review logs when requested
+ok 2 - adds manifest-listed review logs when requested
+  ---
+  duration_ms: 294.621542
+  type: 'test'
+  ...
+# Subtest: fails when every tracked file is excluded
+ok 3 - fails when every tracked file is excluded
+  ---
+  duration_ms: 199.263333
+  type: 'test'
+  ...
+# Subtest: fails when a required closeout file is missing
+ok 4 - fails when a required closeout file is missing
+  ---
+  duration_ms: 500.220125
+  type: 'test'
+  ...
+# Subtest: fails when closeout HEAD does not match the accepted ref
+ok 5 - fails when closeout HEAD does not match the accepted ref
+  ---
+  duration_ms: 493.112
+  type: 'test'
+  ...
+# Subtest: fails when an unrelated absolute path survives normalization
+ok 6 - fails when an unrelated absolute path survives normalization
+  ---
+  duration_ms: 891.405458
+  type: 'test'
+  ...
+# Subtest: creates a clean review-checkout and validates the packet layout
+ok 7 - creates a clean review-checkout and validates the packet layout
+  ---
+  duration_ms: 1339.574208
+  type: 'test'
+  ...
+# Subtest: freezes packet generation to --accepted-head even if the branch advances
+ok 8 - freezes packet generation to --accepted-head even if the branch advances
+  ---
+  duration_ms: 1209.543708
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4494.083375
