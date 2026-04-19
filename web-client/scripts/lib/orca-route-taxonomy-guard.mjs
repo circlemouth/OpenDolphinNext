@@ -290,7 +290,7 @@ export const classifyOrcaRouteReference = ({ relativePath, route }) => {
     return {
       allowed: true,
       category: ROUTE_GUARD_CATEGORIES.DOCS_REFERENCE,
-      reason: 'documentation reference to current route taxonomy',
+      reason: 'documentation reference to the official/master taxonomy; not a public-route declaration',
     };
   }
 
@@ -298,7 +298,7 @@ export const classifyOrcaRouteReference = ({ relativePath, route }) => {
     return {
       allowed: true,
       category: ROUTE_GUARD_CATEGORIES.E2E_QA_FIXTURE_SURFACE,
-      reason: 'test, QA, or dev fixture reference to current public route',
+      reason: 'test, QA, or dev fixture reference to the official/master taxonomy; not a public-route declaration',
     };
   }
 

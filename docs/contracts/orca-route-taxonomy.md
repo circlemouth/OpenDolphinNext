@@ -15,8 +15,10 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 
 ## Route String Categories
 
+以下は guard / docs / report で同じ名称を使う分類です。`public ORCA route contract` は retained string の guard category ではなく、production route として成立する `/api/orca/official/*` と `/api/orca/master/*` だけを指します。docs/reference、mock/test fixture、blocked-route detector、negative assertion は、たとえ official/master の literal を含んでも public route 宣言ではありません。
+
 1. public ORCA route contract
-   current public surface は `official=/api/orca/official/*` と `master=/api/orca/master/*` だけです。`/api/orca/queue` と `/api/orca/pusheventgetv2` は inventory / exposure / runtime contract に含めません。
+   current public surface は production route として公開される `official=/api/orca/official/*` と `master=/api/orca/master/*` だけです。docs/reference、mock/test fixture、blocked-route detector、server inventory assertion、web.xml exposure assertion は public route ではありません。`/api/orca/queue` と `/api/orca/pusheventgetv2` は inventory / exposure / runtime contract に含めません。
 2. production fail-close sentinel
    `web-client/src/features/outpatient/orcaQueueApi.ts` が historical route string を保持し、unavailable response を返して browser network call を fail-close します。この category は public route ではありません。
 3. MSW mock/test-only legacy route surface
@@ -139,6 +141,7 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `verify-no-blocked-orca-route-strings.mjs` は `server-modernized/src/test`、`web-client/src`、`web-client/scripts`、`web-client/plugins`、`tests`、`docs/contracts`、`docs/runbooks`、`docs/releases`、`docs/implementation` を repo-wide に走査する。存在しない root は明示 skip、存在する root の走査失敗は fail とする。
 - guard の allowlist は `path + route + category + reason` で定義し、legacy route string と mock-only surface の残存理由を固定する。
 - guard は success message に category counts を出し、production fail-close sentinel / MSW mock/test-only legacy route surface / e2e/QA fixture surface / blocked-route detector / docs/reference / server route inventory negative assertion / web.xml exposure negative assertion の分類が current tree と一致することを示す。official/master の actual public route reference は許可対象だが retained category としては数えない。
+- docs/reference、mock/test fixture、blocked-route detector の category count は、該当 route string が説明・検出・fixture 用に残っていることだけを示す。public route の存在証明、live success、Phase 3 実行許可、HTTP 200 business success の代替証跡として扱わない。
 - allowlist にない `/api/orca/queue` または `/api/orca/pusheventgetv2` は failure とする。
 - `/api/orca/(official|master 以外)` の route string は、上記 2 legacy route または blocked-route detector の fixture でない限り failure とする。
 - `/api/orca/official/*/mock` などの mock/test-only route surface が production source (`web-client/src` の mocks/test 以外) に混入した場合は failure とする。
