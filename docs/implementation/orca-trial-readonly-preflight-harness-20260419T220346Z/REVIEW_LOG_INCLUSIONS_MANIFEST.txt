@@ -16,3 +16,4 @@ Review logs:
 - dynamic-evidence/readonly-investigation-artifact-sha256.txt
 - dynamic-evidence/readonly-investigation-secret-scan.sanitized.txt
 - dynamic-evidence/secret-scan-review-bundle.log
+- test-logs/final-static-verification.log

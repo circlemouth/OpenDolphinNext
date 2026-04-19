@@ -58,6 +58,17 @@ RUN_ID: `20260419T220346Z`
 - `packageMode=extracted_review_subset`.
 - `package_source_secret_scan_claim` is package-source-scope only when backed by `secret-scan-review-bundle.log`; `full_source_secret_scan_claim=not_claimed` unless a full repo source scan is actually performed.
 
+## Final Static Verification
+- Command log: `docs/implementation/orca-trial-readonly-preflight-harness-20260419T220346Z/test-logs/final-static-verification.log`
+- CWD: `/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient`
+- RUN_ID: `20260419T220346Z`
+- Start: `2026-04-19T22:41:05Z`
+- End: `2026-04-19T22:41:40Z`
+- Exit code: `0`
+- Covered commands: `bash -n setup-modernized-env.sh`, `bash -n scripts/create-review-package.sh`, `node --check` for changed package/preflight scripts, `node --test tests/review-package/create-review-package.test.mjs`, `npm run verify:web-guard`, focused Vitest, `npm run typecheck`, `npm run build`.
+- Separate lint run: `npm run lint` exit `0` with existing warnings only.
+- Separate package verification: `node scripts/tools/scan-review-bundle.mjs ...` exit `0`; `node scripts/tools/validate-review-package-metadata.mjs ...` exit `0`.
+
 ## DADS/UI
 - UI changes were not made; DADS/UI guidance is not materially applicable for this task.
 
