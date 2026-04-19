@@ -15,7 +15,7 @@
   - clean checkout / full source secret scan / live ORCA evidence を support zip の保証範囲から明示的に除外。
   - manifest-listed evidence を sanitized summary/report/manifest/command log に限定し、raw ORCA artifact、HAR、network/request/response、trace/video/image/XML を拒否。
   - included evidence secret scan で `Authorization`、Cookie、`JSESSIONID`、CSRF、raw session、raw password、credential-bearing URL を拒否。
-  - dynamic evidence の scan claim は `dynamic-only` とし、full source clean は `not_claimed` に固定。
+  - dynamic evidence の scan claim は `dynamic_secret_scan_claim=passed`、review bundle included source-scope scan は `package_source_secret_scan_claim=passed`、full source clean は `full_source_secret_scan_claim=not_claimed` と分離。
 - `tests/review-package/create-review-package.test.mjs` に extracted subset / raw artifact / credential secret scan / manifest sidecar consistency の regression を追加。
 - `docs/runbooks/release-validation.md`、`scripts/tools/README.md`、Phase 2.5 dynamic report の文言を更新。
 
@@ -32,7 +32,7 @@
 | `.git` を含まない support zip を clean checkout evidence と誤読する | manifest/summary に `clean_checkout_claim=not_verified`、`worktree_clean=not_verified`、non-guarantee scope を出力 |
 | sanitized summary として raw ORCA artifact / network / HAR / XML を混入する | manifest-listed evidence path allowlist と raw artifact denylist で package 前に fail |
 | log/evidence に credential literal や session token が混入する | included review evidence secret scan で Authorization/Cookie/JSESSIONID/CSRF/session/password/credential URL を拒否 |
-| dynamic-only scan を full source clean と誤読する | `secret_scan_claim=dynamic-only`、`full_source_secret_scan_claim=not_claimed`、`package_source_secret_scan_claim=not_claimed` を manifest/sidecar に出力 |
+| dynamic evidence scan、package source-scope scan、full repo source scan を混同する | `dynamic_secret_scan_claim=passed`、`package_source_secret_scan_claim=passed`、`full_source_secret_scan_claim=not_claimed` を manifest/sidecar/REVIEW_LOG_INCLUSIONS_MANIFEST で分離 |
 
 ## 検証結果
 
@@ -51,5 +51,5 @@
 
 ## 残リスク
 
-- support zip は full source secret scan を主張しない。full source clean を主張する場合は、別途 full ZIP/source secret scan と package-included git command logs が必要。
+- support zip は full source secret scan を主張しない。full source clean を主張する場合は、別途 full repo/source secret scan と package-included git command logs が必要。
 - 過去実行の dynamic evidence JSON は生成済み証跡として改変していない。誤読防止は docs/manifest 側で固定した。

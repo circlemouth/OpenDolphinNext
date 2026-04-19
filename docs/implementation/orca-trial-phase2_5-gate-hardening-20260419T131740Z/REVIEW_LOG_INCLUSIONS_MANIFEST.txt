@@ -1,4 +1,16 @@
 RUN_ID=20260419T131740Z
+PACKAGE_MODE=extracted_review_subset
+ZIP_FILE_COUNT_SOURCE=generated .summary.txt sidecar key zip_file_count
+ZIP_SIZE_BYTES_SOURCE=generated .summary.txt sidecar key zip_size_bytes
+ZIP_SHA256_SOURCE=generated .summary.txt sidecar key zip_sha256
+SECRET_SCAN_SCOPE=dynamic_review_evidence_only
+DYNAMIC_SECRET_SCAN_CLAIM=passed
+BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_CLAIM=passed by command-logs/secret-scan-review-bundle.log
+PACKAGE_SOURCE_SECRET_SCAN_CLAIM=passed by command-logs/secret-scan-review-bundle.log
+FULL_SOURCE_SECRET_SCAN_CLAIM=not_claimed
+WORKTREE_CLEAN=not_verified
+SOURCE_COMMIT_BRANCH_POLICY=source_commit and source_branch are package metadata only unless backed by package-included git command logs
+GIT_CLAIM_EVIDENCE_POLICY=git claims require package-included local git command logs; the support zip excludes .git and does not claim clean checkout truth
 Review logs:
 - FINAL_REPORT.md
 - command-logs/bash-n-setup-modernized-env.log
@@ -12,3 +24,6 @@ Review logs:
 - command-logs/npm-run-typecheck.log
 - command-logs/secret-scan-dynamic-scope.log
 - command-logs/secret-scan-review-bundle.log
+
+Package integrity note:
+REVIEW_PACKAGE_MANIFEST.txt records the external package integrity summary filename and recorded_in_external_sidecar placeholders for zip count, size, and SHA-256. The adjacent .summary.txt file records the actual zip filename, byte size, file count, and SHA-256 after zip creation to avoid self-referential hash drift. node scripts/tools/validate-review-package-metadata.mjs <zip> must pass before package integrity or package source-scope scan claims are accepted.

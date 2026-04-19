@@ -15,7 +15,11 @@
   - `REVIEW_PACKAGE_MANIFEST.txt` を zip 直下へ含める
   - `--include-review-log-manifest` 指定時のみ、manifest に列挙した sanitized review log / evidence contract を追加同梱する
   - `.git/` は含めず、clean checkout 証跡は主張しない
-  - manifest と sidecar summary は `packageMode=extracted_review_subset`、`clean_checkout_claim=not_verified`、`full_source_secret_scan_claim=not_claimed` を明示する
+  - manifest と sidecar summary は `packageMode=extracted_review_subset`、`clean_checkout_claim=not_verified`、`worktree_clean=not_verified`、`full_source_secret_scan_claim=not_claimed` を明示する
+  - sidecar summary は生成済み zip の `zip_file_count`、`zip_size_bytes`、`zip_sha256`、`source_commit`、`source_branch`、`git_claim_evidence_policy` を記録する
+  - zip 内 manifest は self-referential hash drift を避けるため、zip integrity は `recorded_in_external_sidecar` として sidecar を参照する
+  - dynamic evidence の secret scan は `dynamic_secret_scan_claim`、生成 review bundle 全体の source-scope scan は `package_source_secret_scan_claim` / `bundle_included_source_scope_secret_scan_claim`、full repo source scan は `full_source_secret_scan_claim` で分離する
+  - `secret-scan-review-bundle.log` を含める場合は command log metadata、`exit_code=0`、`result=PASS`、`review bundle included source scope secret scan passed:` の出力が必要。揃わない場合は package 生成を fail する
   - manifest-listed evidence は sanitized summaries / reports / command logs に限定し、raw ORCA artifact、HAR、network/request/response、画像、trace/video、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw session、raw password を拒否する
   - Phase 2.5 の `acceptedCandidateCount=0` は、`00001`〜`00011` について current harness / API / auth / parser / readiness / exact-preflight criteria の read-only evidence が mutation-ready まで揃っていない、という意味に限定する。公式初期患者が存在しない証明として扱わない
 - 使い方:
@@ -23,6 +27,18 @@
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z`
   - `./scripts/create-review-package.sh --run-id 20260414T080812Z --out-dir ./artifacts/review-bundles`
   - `./scripts/create-review-package.sh --run-id 20260418T224551Z --name-suffix -with-dynamic-evidence --include-review-log-manifest docs/implementation/opendolphin-postfix-static-remediation-20260418/REVIEW_LOG_INCLUSIONS_MANIFEST.txt`
+
+## validate-review-package-metadata.mjs
+- 位置づけ: support。`create-review-package.sh` が生成した zip と sidecar summary の metadata drift を検出する。
+- 検証内容:
+  - sidecar の `zip_file_count`、`zip_size_bytes`、`zip_sha256` が実 zip と一致する
+  - `packageMode=extracted_review_subset`、`.git` 非同梱時の `worktree_clean=not_verified`、`full_source_secret_scan_claim=not_claimed` が維持される
+  - `dynamic_secret_scan_claim`、`package_source_secret_scan_claim`、`bundle_included_source_scope_secret_scan_claim` が included log と矛盾しない
+  - `secret-scan-review-bundle.log` がある場合、source-scope scan pass marker と command log success metadata が揃う
+  - raw/generated path、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password などを含む package を拒否する
+- 使い方:
+  - `node scripts/tools/validate-review-package-metadata.mjs artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
+  - `node scripts/tools/validate-review-package-metadata.mjs <zip> <zip.summary.txt>`
 
 ## create-review-package-curated.sh
 - 位置づけ: support。50MB 制約つきの curated review bundle。

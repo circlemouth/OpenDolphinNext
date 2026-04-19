@@ -52,6 +52,7 @@ Focused Vitest result: 6 files passed, 82 tests passed.
 - Clean checkout claim in support package: `not_verified`
 - Full source secret scan claim: `not_claimed`
 - Dynamic evidence secret scan: passed for `docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z`
+- Package source-scope secret scan claim: `passed` via `command-logs/secret-scan-review-bundle.log`
 - Generated review bundle scan: passed for raw/generated path exclusion and included source-scope secret literals.
 
 ## Residual Blockers

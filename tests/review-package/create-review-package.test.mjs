@@ -8,6 +8,7 @@ import test from 'node:test';
 
 const SCRIPT_PATH = path.resolve('scripts/create-review-package.sh');
 const COMMAND_LOG_WRAPPER_PATH = path.resolve('scripts/tools/command-log-wrapper.sh');
+const METADATA_VALIDATOR_PATH = path.resolve('scripts/tools/validate-review-package-metadata.mjs');
 const RUN_ID = '20260414T080812Z';
 
 function run(command, args, cwd) {
@@ -49,7 +50,7 @@ function listZip(zipPath, cwd) {
     .filter(Boolean);
 }
 
-function commandLogContent(command = 'npm test') {
+function commandLogContent(command = 'npm test', commandOutput = 'test output') {
   return [
     'command_log_version=1',
     `command=${command}`,
@@ -57,7 +58,7 @@ function commandLogContent(command = 'npm test') {
     `runId=${RUN_ID}`,
     'start_utc=2026-04-14T08:08:12Z',
     '--- command output ---',
-    'test output',
+    commandOutput,
     '--- command summary ---',
     'end_utc=2026-04-14T08:08:13Z',
     'exit_code=0',
@@ -79,6 +80,14 @@ function parseKeyValue(text) {
 
 function sha256File(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function replaceSummaryValue(summaryPath, key, value) {
+  const lines = fs.readFileSync(summaryPath, 'utf8').split('\n');
+  const index = lines.findIndex((line) => line.startsWith(`${key}=`));
+  assert.notEqual(index, -1, `summary key ${key} must exist`);
+  lines[index] = `${key}=${value}`;
+  fs.writeFileSync(summaryPath, lines.join('\n'), 'utf8');
 }
 
 test('creates a reviewer package without artifacts or legacy client content', () => {
@@ -116,7 +125,13 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert.match(manifest, /guarantee_scope=extracted_review_subset_excludes_legacy_client_server_artifacts_generated_dirs_and_rejects_forbidden_dynamic_evidence_secrets/);
     assert.match(manifest, /non_guarantee_scope=not_clean_checkout_evidence_not_full_source_secret_scan_not_live_orca_evidence_not_git_truth/);
     assert.match(manifest, /secret_scan_scope=no_dynamic_review_evidence/);
+    assert.match(manifest, /dynamic_secret_scan_claim=not_applicable/);
+    assert.match(manifest, /bundle_included_source_scope_secret_scan_claim=not_claimed/);
     assert.match(manifest, /full_source_secret_scan_claim=not_claimed/);
+    assert.match(manifest, /package_source_secret_scan_claim=not_claimed/);
+    assert.match(manifest, /zip_file_count=recorded_in_external_sidecar/);
+    assert.match(manifest, /zip_size_bytes=recorded_in_external_sidecar/);
+    assert.match(manifest, /zip_sha256=recorded_in_external_sidecar/);
     assert.match(manifest, /orca_phase2_5_zero_candidate_verdict=PARTIAL_TEST_DATA_OR_HARNESS_READINESS_BLOCKER/);
     assert.match(manifest, /orca_phase2_5_zero_candidate_semantics=acceptedCandidateCount_0_means_00001_to_00011_lack_current_read_only_mutation_ready_evidence_across_harness_api_auth_parser_readiness_exact_preflight_criteria_not_official_initial_patient_absence/);
     assert.match(manifest, /tracked_missing_file_count=0/);
@@ -140,7 +155,15 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert.equal(summary.get('zip_size_bytes'), String(fs.statSync(zipPath).size));
     assert.equal(summary.get('zip_sha256'), sha256File(zipPath));
     assert.equal(summary.get('secret_scan_scope'), 'no_dynamic_review_evidence');
+    assert.equal(summary.get('dynamic_secret_scan_claim'), 'not_applicable');
+    assert.equal(summary.get('bundle_included_source_scope_secret_scan_claim'), 'not_claimed');
     assert.equal(summary.get('full_source_secret_scan_claim'), 'not_claimed');
+    assert.equal(summary.get('package_source_secret_scan_claim'), 'not_claimed');
+    assert.equal(summary.get('worktree_clean'), 'not_verified');
+    assert.equal(summary.get('source_branch'), 'master');
+    assert.match(summary.get('source_commit'), /^[0-9a-f]{40}$/);
+    assert.match(summary.get('git_claim_evidence_policy'), /git claims require package-included local git command logs/);
+    assert.match(run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir), /metadata validation passed/);
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
@@ -203,8 +226,123 @@ test('adds manifest-listed review logs when requested', () => {
     assert.match(manifest, /review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content/);
     assert.match(manifest, /secret_scan_scope=dynamic_review_evidence_only/);
     assert.match(manifest, /secret_scan_file_count=5/);
-    assert.match(manifest, /secret_scan_claim=dynamic-only/);
+    assert.match(manifest, /secret_scan_claim=dynamic_review_evidence_passed/);
+    assert.match(manifest, /dynamic_secret_scan_claim=passed/);
+    assert.match(manifest, /package_source_secret_scan_claim=not_claimed/);
     assert.match(manifest, /docs\/implementation\/orca-trial-phase2_5-gate-hardening-20260419T131740Z\/test-logs\/static\.log/);
+    assert.match(run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir), /metadata validation passed/);
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('claims package source-scope scan only when the package scan log proves pass', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const scanLogPath = 'docs/implementation/postfix/command-logs/secret-scan-review-bundle.log';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- command-logs/secret-scan-review-bundle.log', ''].join('\n'),
+    [scanLogPath]: commandLogContent(
+      'node scripts/tools/scan-review-bundle.mjs artifacts/review-bundles/package.zip',
+      'review bundle included source scope secret scan passed: artifacts/review-bundles/package.zip',
+    ),
+  });
+
+  try {
+    run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir);
+    const zipPath = path.join(repoDir, 'out', `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    const manifest = parseKeyValue(run('unzip', ['-p', zipPath, 'REVIEW_PACKAGE_MANIFEST.txt'], repoDir));
+    const summaryPath = `${zipPath}.summary.txt`;
+    const summary = parseKeyValue(fs.readFileSync(summaryPath, 'utf8'));
+
+    assert.equal(manifest.get('package_source_secret_scan_claim'), 'passed');
+    assert.equal(manifest.get('bundle_included_source_scope_secret_scan_claim'), 'passed');
+    assert.equal(summary.get('package_source_secret_scan_claim'), 'passed');
+    assert.equal(summary.get('bundle_included_source_scope_secret_scan_claim'), 'passed');
+    assert.match(run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir), /metadata validation passed/);
+
+    replaceSummaryValue(summaryPath, 'package_source_secret_scan_claim', 'not_claimed');
+    assert.throws(
+      () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
+      /package_source_secret_scan_claim/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('rejects dynamic-only evidence when the sidecar claims full source clean', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-logs/dynamic.log', ''].join('\n'),
+    'docs/implementation/postfix/dynamic-logs/dynamic.log': commandLogContent('node scripts/runtime-ready-smoke.mjs'),
+  });
+
+  try {
+    run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir);
+    const zipPath = path.join(repoDir, 'out', `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    const summaryPath = `${zipPath}.summary.txt`;
+    replaceSummaryValue(summaryPath, 'full_source_secret_scan_claim', 'passed');
+    assert.throws(
+      () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
+      /full_source_secret_scan_claim/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('rejects package source-scope claim when secret-scan-review-bundle log is not a pass result', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- command-logs/secret-scan-review-bundle.log', ''].join('\n'),
+    'docs/implementation/postfix/command-logs/secret-scan-review-bundle.log': commandLogContent(
+      'node scripts/tools/scan-review-bundle.mjs artifacts/review-bundles/package.zip',
+      'scan command ran but did not emit the source-scope pass marker',
+    ),
+  });
+
+  try {
+    assert.throws(
+      () => run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
+      /does not prove package source-scope secret scan passed/,
+    );
+  } finally {
+    fs.rmSync(sandbox, { recursive: true, force: true });
+  }
+});
+
+test('rejects sidecar zip integrity drift', () => {
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    'docs/guide.md': '# guide\n',
+  });
+
+  try {
+    run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out'], repoDir);
+    const zipPath = path.join(repoDir, 'out', `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    const summaryPath = `${zipPath}.summary.txt`;
+    replaceSummaryValue(summaryPath, 'zip_file_count', '1');
+    assert.throws(
+      () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
+      /zip_file_count/,
+    );
+
+    run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out'], repoDir);
+    replaceSummaryValue(summaryPath, 'zip_size_bytes', '1');
+    assert.throws(
+      () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
+      /zip_size_bytes/,
+    );
+
+    run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out'], repoDir);
+    replaceSummaryValue(summaryPath, 'zip_sha256', '0'.repeat(64));
+    assert.throws(
+      () => run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir),
+      /zip_sha256/,
+    );
   } finally {
     fs.rmSync(sandbox, { recursive: true, force: true });
   }
@@ -243,19 +381,27 @@ test('packages extracted source subsets without git metadata as not verified git
 
 test('rejects raw artifact paths from review log manifests', () => {
   const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
-  const { sandbox, repoDir } = setupRepo({
-    'README.md': '# repo\n',
-    [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-evidence/raw-upstream-response.xml', ''].join('\n'),
-  });
+  const rawCases = [
+    ['dynamic-evidence/raw-upstream-response.xml', '<response />\n'],
+    ['dynamic-evidence/screenshots/browser.png', 'not really a png\n'],
+    ['dynamic-evidence/network/raw-dump.json', '{"still":"raw path"}\n'],
+  ];
 
-  try {
-    writeText(path.join(repoDir, 'docs/implementation/postfix/dynamic-evidence/raw-upstream-response.xml'), '<response />\n');
-    assert.throws(
-      () => run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
-      /raw artifact and is not allowed/,
-    );
-  } finally {
-    fs.rmSync(sandbox, { recursive: true, force: true });
+  for (const [rawPath, content] of rawCases) {
+    const { sandbox, repoDir } = setupRepo({
+      'README.md': '# repo\n',
+      [manifestPath]: ['RUN_ID=20260418T224551Z', `- ${rawPath}`, ''].join('\n'),
+    });
+
+    try {
+      writeText(path.join(repoDir, 'docs/implementation/postfix', rawPath), content);
+      assert.throws(
+        () => run('bash', [SCRIPT_PATH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
+        /raw artifact and is not allowed/,
+      );
+    } finally {
+      fs.rmSync(sandbox, { recursive: true, force: true });
+    }
   }
 });
 
