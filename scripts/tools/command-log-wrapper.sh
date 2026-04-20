@@ -10,8 +10,10 @@ Usage:
 Writes command evidence logs with command/cwd/runId/start/end/exit_code metadata.
 When the command validates a concrete artifact, pass --target-path and
 --target-sha256 so the evidence binds to the exact target.
-The wrapped command's stdout and stderr are captured in the log, and the wrapper
-exits with the wrapped command's exit code.
+The wrapped command's stdout and stderr are captured in the log. If the command
+emits no output, the log records an explicit no-output marker so the evidence
+still has a non-empty command output section. The wrapper exits with the wrapped
+command's exit code.
 USAGE
 }
 
@@ -90,6 +92,8 @@ else
 fi
 
 mkdir -p "$(dirname "$LOG_PATH")"
+OUTPUT_TMP="$(mktemp)"
+trap 'rm -f "$OUTPUT_TMP"' EXIT
 
 quote_command() {
   local quoted=()
@@ -121,9 +125,15 @@ set +e
 (
   cd "$COMMAND_CWD" || exit 125
   "$@"
-) >> "$LOG_PATH" 2>&1
+) > "$OUTPUT_TMP" 2>&1
 EXIT_CODE=$?
 set -e
+
+if [[ -s "$OUTPUT_TMP" ]]; then
+  cat "$OUTPUT_TMP" >> "$LOG_PATH"
+else
+  echo "[no stdout/stderr emitted]" >> "$LOG_PATH"
+fi
 
 END_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 {

@@ -1,0 +1,17 @@
+{
+  "acceptedCandidateCount": "not_run",
+  "exactSelectedCandidatePreflightStatus": "not_run_waiting_for_main_agent_ready_signal",
+  "phase3Status": "not_run",
+  "phase4Status": "not_run",
+  "fullflowStatus": "not_run",
+  "mutationStatus": "not_run",
+  "c7Status": "not_verified_no_target_mutation_request_capture",
+  "targetMutationRequestCount": 0,
+  "checkedRequests": 0,
+  "blockerDimensions": [
+    "waiting_for_merged_source_ready_signal"
+  ],
+  "officialPatientget500SourceClassified": "not_run",
+  "insurance403SourceClassified": "not_run",
+  "appointment403SourceClassified": "not_run"
+}
