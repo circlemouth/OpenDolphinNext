@@ -11,6 +11,7 @@ const SCRIPT_PATH = path.resolve('scripts/create-review-package.sh');
 const COMMAND_LOG_WRAPPER_PATH = path.resolve('scripts/tools/command-log-wrapper.sh');
 const METADATA_VALIDATOR_PATH = path.resolve('scripts/tools/validate-review-package-metadata.mjs');
 const SCAN_REVIEW_BUNDLE_PATH = path.resolve('scripts/tools/scan-review-bundle.mjs');
+const ORCA_READONLY_FINALIZER_PATH = path.resolve('scripts/tools/orca-readonly-evidence-finalizer.mjs');
 const RUN_ID = '20260414T080812Z';
 
 function toBashPath(filePath) {
@@ -79,7 +80,7 @@ function commandLogContent(command = 'npm test', commandOutput = 'test output', 
     'start_utc=2026-04-14T08:08:12Z',
     ...(options.targetPath ? [`target_path=${options.targetPath}`, `target_sha256=${options.targetSha256 ?? '1'.repeat(64)}`] : []),
     '--- command output ---',
-    commandOutput,
+    ...(commandOutput === null ? [] : [commandOutput]),
     '--- command summary ---',
     'end_utc=2026-04-14T08:08:13Z',
     'exit_code=0',
@@ -423,6 +424,118 @@ test('rejects package source-scope claim when secret-scan-review-bundle log is n
   }
 });
 
+test('finalizes sanitized ORCA readonly evidence summary and package sidecar fields', () => {
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    'docs/guide.md': '# guide\n',
+  });
+  const evidenceDir = path.join(
+    repoDir,
+    'docs/implementation/orca-trial-readonly-diagnostics-20260414T080812Z',
+  );
+
+  try {
+    run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', toBashPath(evidenceDir)], repoDir);
+    const zipPath = path.join(evidenceDir, `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    const summaryPath = `${zipPath}.summary.txt`;
+    const packageSecretScanLogPath = `${zipPath}.secret-scan-review-bundle.log`;
+    const metadataValidationLogPath = path.join(evidenceDir, 'final-package-metadata-validation.log');
+    const statusJsonPath = path.join(evidenceDir, 'final-summary.status.sanitized.json');
+    const reviewLogManifestPath = path.join(evidenceDir, 'REVIEW_LOG_INCLUSIONS_MANIFEST.txt');
+
+    writeText(
+      metadataValidationLogPath,
+      commandLogContent(
+        `node scripts/tools/validate-review-package-metadata.mjs ${path.relative(repoDir, zipPath)}`,
+        `review package metadata validation passed: ${path.relative(repoDir, zipPath)}`,
+        { targetPath: path.relative(repoDir, zipPath), targetSha256: sha256File(zipPath) },
+      ),
+    );
+    writeText(
+      statusJsonPath,
+      JSON.stringify(
+        {
+          acceptedCandidateCount: '1/11',
+          exactSelectedCandidatePreflightStatus: 'passed',
+          phase3Status: 'not_run_pending_explicit_authorization',
+          phase4Status: 'not_run',
+          fullflowStatus: 'not_run',
+          mutationStatus: 'not_run',
+          c7Status: 'not_verified_no_target_mutation_request_capture',
+          targetMutationRequestCount: 0,
+          checkedRequests: 0,
+          blockerDimensions: ['phase3_authorization_pending'],
+          officialPatientget500SourceClassified: 'classified_server_diagnostic_fix_verified',
+          insurance403SourceClassified: 'classified_auth_or_wrapper_ambiguity',
+          appointment403SourceClassified: 'classified_auth_or_wrapper_ambiguity',
+        },
+        null,
+        2,
+      ),
+    );
+    writeText(reviewLogManifestPath, ['RUN_ID=20260414T080812Z', 'Review logs:', '- final-summary.sanitized.json', ''].join('\n'));
+
+    const output = run(
+      'node',
+      [
+        ORCA_READONLY_FINALIZER_PATH,
+        '--run-id',
+        RUN_ID,
+        '--evidence-dir',
+        evidenceDir,
+        '--status-json',
+        statusJsonPath,
+        '--package-zip',
+        zipPath,
+        '--package-summary',
+        summaryPath,
+        '--package-secret-scan-log',
+        packageSecretScanLogPath,
+        '--metadata-validation-log',
+        metadataValidationLogPath,
+        '--review-log-manifest',
+        reviewLogManifestPath,
+      ],
+      repoDir,
+    );
+
+    assert.match(output, /final sanitized summary written/);
+    const summary = parseKeyValue(fs.readFileSync(summaryPath, 'utf8'));
+    assert.equal(summary.get('acceptedCandidateCount'), '1/11');
+    assert.equal(summary.get('exact_selected_candidate_preflight_status'), 'passed');
+    assert.equal(summary.get('phase3_status'), 'not_run_pending_explicit_authorization');
+    assert.equal(summary.get('phase4_status'), 'not_run');
+    assert.equal(summary.get('fullflow_status'), 'not_run');
+    assert.equal(summary.get('mutation_status'), 'not_run');
+    assert.equal(summary.get('c7_status'), 'not_verified_no_target_mutation_request_capture');
+    assert.equal(summary.get('targetMutationRequestCount'), '0');
+    assert.equal(summary.get('checkedRequests'), '0');
+    assert.equal(summary.get('blocker_dimensions'), 'phase3_authorization_pending');
+    assert.equal(summary.get('official_patientget_500_source_classified'), 'classified_server_diagnostic_fix_verified');
+    assert.equal(summary.get('insurance_403_source_classified'), 'classified_auth_or_wrapper_ambiguity');
+    assert.equal(summary.get('appointment_403_source_classified'), 'classified_auth_or_wrapper_ambiguity');
+    assert.equal(summary.get('package_source_secret_scan_claim'), 'passed');
+    assert.equal(summary.get('full_source_secret_scan_claim'), 'not_claimed');
+
+    const finalSummary = JSON.parse(fs.readFileSync(path.join(evidenceDir, 'final-summary.sanitized.json'), 'utf8'));
+    assert.equal(finalSummary.packageMode, 'extracted_review_subset');
+    assert.equal(finalSummary.zip.sha256, sha256File(zipPath));
+    assert.equal(finalSummary.phase2_5.acceptedCandidateCount, '1/11');
+    assert.equal(finalSummary.rawSensitiveFieldsExcluded, true);
+
+    const secretScan = fs.readFileSync(path.join(evidenceDir, 'secret-scan.sanitized.txt'), 'utf8');
+    assert.match(secretScan, /^claim=passed$/m);
+    assert.match(secretScan, /^final_review_zip_sha256=[0-9a-f]{64}$/m);
+
+    const hashes = fs.readFileSync(path.join(evidenceDir, 'artifact-sha256.txt'), 'utf8');
+    assert.match(hashes, new RegExp(`  ${path.basename(zipPath).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm'));
+    assert.match(hashes, /  final-summary\.sanitized\.json$/m);
+    assert.match(hashes, /  secret-scan\.sanitized\.txt$/m);
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
 test('rejects sidecar zip integrity drift', () => {
   const { sandbox, repoDir } = setupRepo({
     'README.md': '# repo\n',
@@ -573,9 +686,12 @@ test('rejects credential-bearing review evidence before packaging', () => {
         'cwd=/repo',
         `runId=${RUN_ID}`,
         'start_utc=2026-04-14T08:08:12Z',
+        '--- command output ---',
         secretLine,
+        '--- command summary ---',
         'end_utc=2026-04-14T08:08:13Z',
         'exit_code=0',
+        'result=PASS',
         '',
       ].join('\n'),
     });
@@ -609,6 +725,24 @@ test('rejects empty manifest-listed command logs', () => {
   }
 });
 
+test('rejects manifest-listed command logs with an empty output section', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-logs/empty-output.log', ''].join('\n'),
+    'docs/implementation/postfix/dynamic-logs/empty-output.log': commandLogContent('node --check script.mjs', null),
+  });
+
+  try {
+    assert.throws(
+      () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
+      /empty command output evidence/,
+    );
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
 test('rejects malformed manifest-listed JSON command logs', () => {
   const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
   const { sandbox, repoDir } = setupRepo({
@@ -624,6 +758,40 @@ test('rejects malformed manifest-listed JSON command logs', () => {
     assert.throws(
       () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
       /review JSON command log entry 0 missing start/,
+    );
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
+test('rejects JSON command logs without non-empty output evidence', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-logs/subagent-command-log.json', ''].join('\n'),
+  });
+
+  try {
+    writeText(
+      path.join(repoDir, 'docs/implementation/postfix/dynamic-logs/subagent-command-log.json'),
+      JSON.stringify(
+        [
+          {
+            command: 'node --check script.mjs',
+            cwd: '/repo',
+            runId: RUN_ID,
+            start: '2026-04-14T08:08:12Z',
+            end: '2026-04-14T08:08:13Z',
+            exit_code: 0,
+          },
+        ],
+        null,
+        2,
+      ),
+    );
+    assert.throws(
+      () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
+      /missing non-empty output evidence/,
     );
   } finally {
     removeTree(sandbox);
@@ -701,6 +869,7 @@ test('command log wrapper writes exit code metadata for silent success', () => {
     assert.match(log, /^command=bash -c :$/m);
     assert.match(log, new RegExp(`^runId=${RUN_ID}$`, 'm'));
     assert.match(log, /^start_utc=/m);
+    assert.match(log, /^\[no stdout\/stderr emitted\]$/m);
     assert.match(log, /^end_utc=/m);
     assert.match(log, /^exit_code=0$/m);
     assert.match(log, /^result=PASS$/m);

@@ -43,10 +43,11 @@ Additionally, if present, the package includes:
   - qa/browser-manual-qa-report.md
 If --include-review-log-manifest is provided, the package also includes that
 manifest and the manifest's "- path" entries, resolved relative to the manifest
-directory. Manifest-listed evidence may be generated/untracked, but must stay
-inside the repository and outside excluded roots. This is for sanitized review
-log evidence only; it does not make the zip a clean git checkout and it does
-not include .git metadata.
+directory. Manifest-listed command logs must include command, cwd, runId,
+start, end, exit_code, and non-empty command output evidence. Manifest-listed
+evidence may be generated/untracked, but must stay inside the repository and
+outside excluded roots. This is for sanitized review log evidence only; it does
+not make the zip a clean git checkout and it does not include .git metadata.
 USAGE
 }
 
@@ -257,6 +258,15 @@ validate_command_log_evidence() {
     echo "review command log missing exit code metadata: $log_path" >&2
     exit 1
   }
+  awk '
+    /^--- command output ---$/ { in_output = 1; next }
+    /^--- command summary ---$/ { in_output = 0 }
+    in_output && $0 !~ /^[[:space:]]*$/ { seen_output = 1 }
+    END { exit(seen_output ? 0 : 1) }
+  ' "$log_path" || {
+    echo "review command log has empty command output evidence: $log_path" >&2
+    exit 1
+  }
 }
 
 validate_json_command_log_evidence() {
@@ -291,6 +301,18 @@ for (const [index, entry] of entries.entries()) {
       console.error(`review JSON command log entry ${index} missing ${key}: ${logPath}`);
       process.exit(1);
     }
+  }
+  const outputValues = [
+    entry.output,
+    entry.stdout,
+    entry.stderr,
+    entry.safe_result,
+    entry.result,
+    entry.summary,
+  ].filter((value) => value !== undefined && value !== null && String(value).trim() !== '');
+  if (outputValues.length === 0) {
+    console.error(`review JSON command log entry ${index} missing non-empty output evidence: ${logPath}`);
+    process.exit(1);
   }
 }
 NODE

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { listEntries, readAll, readEntry } from './zip-compat.mjs';
 
@@ -37,6 +37,15 @@ function normalizeHostPath(value) {
     return value.replace(/^\/mnt\/([A-Za-z])\//, (_, drive) => `${drive.toUpperCase()}:/`).replaceAll('/', path.sep);
   }
   return value;
+}
+
+function canonicalExistingPath(value) {
+  const resolved = path.resolve(value);
+  try {
+    return realpathSync(resolved);
+  } catch {
+    return resolved;
+  }
 }
 
 function readZipEntry(entry) {
@@ -225,6 +234,8 @@ function validateCommandLogContent(content, label) {
   if (!values.has('start') && !values.has('start_utc')) fail(`${label} missing start metadata`);
   if (!values.has('end') && !values.has('end_utc')) fail(`${label} missing end metadata`);
   if (!values.has('exit') && !values.has('exit_code')) fail(`${label} missing exit code metadata`);
+  const outputSection = content.match(/^--- command output ---\r?\n([\s\S]*?)\r?\n--- command summary ---/m)?.[1] ?? '';
+  if (outputSection.trim() === '') fail(`${label} has empty command output evidence`);
   return values;
 }
 
@@ -267,11 +278,11 @@ if (statSync(packageScanLogPath).size === 0) fail(`package source-scope secret s
 
 const packageScanLogContent = readFileSync(packageScanLogPath, 'utf8');
 const packageScanLog = validateCommandLogContent(packageScanLogContent, 'package source-scope secret scan log');
-const scanCwd = path.resolve(normalizeHostPath(required(packageScanLog, 'cwd', 'package source-scope secret scan log')));
+const scanCwd = canonicalExistingPath(normalizeHostPath(required(packageScanLog, 'cwd', 'package source-scope secret scan log')));
 const scanTargetPathValue = required(packageScanLog, 'target_path', 'package source-scope secret scan log');
 const normalizedScanTargetPathValue = normalizeHostPath(scanTargetPathValue);
-const scanTargetPath = path.resolve(scanCwd, normalizedScanTargetPathValue);
-const zipAbsolutePath = path.resolve(zipPath);
+const scanTargetPath = canonicalExistingPath(path.resolve(scanCwd, normalizedScanTargetPathValue));
+const zipAbsolutePath = canonicalExistingPath(zipPath);
 try {
   assert.equal(scanTargetPath, zipAbsolutePath, 'package source-scope scan target_path must be the final review ZIP');
   assert.equal(required(packageScanLog, 'target_sha256', 'package source-scope secret scan log'), actualSha, 'package source-scope scan target_sha256');

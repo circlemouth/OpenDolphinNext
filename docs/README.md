@@ -17,7 +17,9 @@
 
 ## Workflow Docs
 - [implementation/README.md](implementation/README.md)
+- [implementation/orca-trial-readonly-diagnostics-20260420T000000Z/README.md](implementation/orca-trial-readonly-diagnostics-20260420T000000Z/README.md)
 - [implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-A-official-patientget-500-report.md](implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-A-official-patientget-500-report.md)
+- [implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-D-evidence-rerun-package-report.md](implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-D-evidence-rerun-package-report.md)
 - [implementation/orca-trial-readonly-preflight-harness-20260420T000000Z/subagent-C-docs-report.md](implementation/orca-trial-readonly-preflight-harness-20260420T000000Z/subagent-C-docs-report.md)
 - [implementation/orca-trial-readonly-preflight-harness-20260419T220346Z/README.md](implementation/orca-trial-readonly-preflight-harness-20260419T220346Z/README.md)
 - [implementation/opendolphin-dynamic-trial-static-remediation-package-20260418/README.md](implementation/opendolphin-dynamic-trial-static-remediation-package-20260418/README.md)
