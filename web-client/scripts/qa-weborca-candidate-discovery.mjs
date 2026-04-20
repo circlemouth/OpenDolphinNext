@@ -165,6 +165,14 @@ const messageCategory = (message) => {
   return 'other';
 };
 
+const errorCategory = (error) => {
+  const text = String(error?.message ?? error ?? '');
+  const name = String(error?.name ?? '');
+  if (/timeout/i.test(name) || /timeout/i.test(text)) return 'timeout';
+  if (/abort|blocked/i.test(name) || /abort|blocked/i.test(text)) return 'aborted';
+  return 'request-error';
+};
+
 const containsPatientNotFound = (value) => {
   if (value == null) return false;
   if (typeof value === 'string') return PATIENT_NOT_FOUND_PATTERN.test(value);
@@ -326,7 +334,14 @@ const recordApiCall = async (context, { method, pathName, body, query }) => {
         body: summarizeBody(bodyText),
       },
     });
-    return { status: response.status(), ok: response.ok(), body: parsed, error: '' };
+    return {
+      status: response.status(),
+      ok: response.ok(),
+      body: parsed,
+      responseBodyChars: bodyText.length,
+      parsedBodyOk: bodyText ? Object.keys(parsed).length > 0 : false,
+      errorCategory: '',
+    };
   } catch (error) {
     networkRecords.push({
       url: redactUrl(url.toString()),
@@ -340,7 +355,14 @@ const recordApiCall = async (context, { method, pathName, body, query }) => {
       },
       response: { headers: {}, body: { bodyChars: 0, errorCategory: 'request-error' } },
     });
-    return { status: 0, ok: false, body: {}, error: String(error) };
+    return {
+      status: 0,
+      ok: false,
+      body: {},
+      responseBodyChars: 0,
+      parsedBodyOk: false,
+      errorCategory: errorCategory(error),
+    };
   }
 };
 
@@ -395,12 +417,21 @@ const evaluateInsuranceReadiness = async (context, patientId) => {
     httpStatus: response.status,
     body: response.body,
     baseDate,
+    method: 'POST',
+    expectedMethod: 'POST',
+    pathName: OFFICIAL_INSURANCE_PATH,
+    expectedPath: OFFICIAL_INSURANCE_PATH,
+    responseBodyChars: response.responseBodyChars,
+    parsedBodyOk: response.parsedBodyOk,
   });
   const accepted = readiness.accepted && !containsPatientNotFound(response.body);
   return {
     status: response.status,
     apiResult,
     classification: containsPatientNotFound(response.body) ? 'business_rejected_insurance' : readiness.classification,
+    diagnosticCategory: readiness.diagnosticCategory,
+    readinessFailureCategory: readiness.readinessFailureCategory,
+    diagnostic: readiness.diagnostic,
     apiResultMessageCategory: messageCategory(extractApiResultMessage(response.body)),
     combinationsCount: readiness.combinationsCount,
     effectiveCount: readiness.effectiveCount,
@@ -424,6 +455,12 @@ const evaluateAppointmentDependency = async (context, patientId) => {
     apiResult,
     patientId,
     baseDate,
+    method: 'POST',
+    expectedMethod: 'POST',
+    pathName: OFFICIAL_PATIENT_APPOINTMENTS_PATH,
+    expectedPath: OFFICIAL_PATIENT_APPOINTMENTS_PATH,
+    responseBodyChars: response.responseBodyChars,
+    parsedBodyOk: response.parsedBodyOk,
   });
   return {
     flowMode: dependency.flowMode,
@@ -433,6 +470,9 @@ const evaluateAppointmentDependency = async (context, patientId) => {
     status: response.status,
     apiResult,
     classification: containsPatientNotFound(response.body) ? 'business_rejected_appointment' : dependency.classification,
+    diagnosticCategory: dependency.diagnosticCategory,
+    readinessFailureCategory: dependency.readinessFailureCategory,
+    diagnostic: dependency.diagnostic,
     apiResultMessageCategory: messageCategory(extractApiResultMessage(response.body)),
     reservationCount: reservationsCount,
     exactRowCount: dependency.exactRowCount,
@@ -492,7 +532,7 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
         consoleMessages.push({ type, text: msg.text(), location: msg.location(), patientId });
       }
     });
-    page.on('pageerror', (error) => pageErrors.push({ text: String(error), patientId }));
+    page.on('pageerror', (error) => pageErrors.push({ category: errorCategory(error), patientId }));
     page.on('request', (request) => {
       if (request.url().includes(LOCAL_PATIENT_SEARCH_PATH) || MUTATION_ROUTE_PATTERN.test(request.url())) {
         const record = {
@@ -1056,7 +1096,7 @@ try {
     process.exit(1);
   }
 } catch (error) {
-  logStep(`fatal error=${String(error)}`);
+  logStep(`fatal errorCategory=${errorCategory(error)}`);
   fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
   fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
@@ -1074,7 +1114,7 @@ try {
     releaseVerdict: 'PARTIAL / ENVIRONMENT BLOCKER',
     verdict: 'rejected',
     blockerClassification: 'environment-blocker',
-    fatalError: String(error),
+    fatalErrorCategory: errorCategory(error),
     mutationPolicy: {
       prohibited: true,
       blockedRequestCount: blockedMutationRequests.length,

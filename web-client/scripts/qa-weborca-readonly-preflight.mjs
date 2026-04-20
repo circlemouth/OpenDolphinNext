@@ -96,6 +96,8 @@ const TARGET_PATHS = [
   VISITS_MUTATION_PATH,
 ];
 const ACCEPTMOD_PATIENT_NOT_FOUND = '10';
+const PATIENT_NOT_FOUND_PATTERN =
+  /(patient[-_\s]*not[-_\s]*found|no\s+patient|患者番号に該当する患者が存在しません|該当する患者が存在しません|患者.*存在しません)/i;
 
 const consoleMessages = [];
 const pageErrors = [];
@@ -135,6 +137,18 @@ const redactUrl = (value) => {
 const normalizeString = (value) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
 const normalizeApiResult = (value) => (value === null || value === undefined ? '' : String(value).trim());
 const isAllZeroApiResult = (apiResult) => Boolean(apiResult && /^[0]+$/.test(apiResult));
+const messageCategory = (message) => {
+  if (!message) return 'none';
+  if (PATIENT_NOT_FOUND_PATTERN.test(String(message))) return 'patient-not-found';
+  return 'other';
+};
+const errorCategory = (error) => {
+  const text = String(error?.message ?? error ?? '');
+  const name = String(error?.name ?? '');
+  if (/timeout/i.test(name) || /timeout/i.test(text)) return 'timeout';
+  if (/abort|blocked/i.test(name) || /abort|blocked/i.test(text)) return 'aborted';
+  return 'request-error';
+};
 const verdict = (accepted, verified = true) => {
   if (!verified) return 'not_verified';
   return accepted ? 'accepted' : 'rejected';
@@ -158,7 +172,7 @@ const summarizeBody = (body) => {
       bodyChars: body.length,
       keys: parsed && typeof parsed === 'object' ? Object.keys(parsed).slice(0, 20) : [],
       apiResult: parsed?.apiResult,
-      apiResultMessage: parsed?.apiResultMessage,
+      apiResultMessageCategory: messageCategory(parsed?.apiResultMessage ?? parsed?.Api_Result_Message),
       recordsReturned: parsed?.recordsReturned,
       patientsCount: Array.isArray(parsed?.patients) ? parsed.patients.length : undefined,
       combinationsCount: Array.isArray(parsed?.combinations) ? parsed.combinations.length : undefined,
@@ -282,7 +296,7 @@ const probeMedicalInformationOptions = async (context) => {
       status: response.status(),
       ok: response.ok(),
       apiResult,
-      apiResultMessage: normalizeString(parsed?.apiResultMessage) ?? '',
+      apiResultMessageCategory: messageCategory(parsed?.apiResultMessage ?? parsed?.Api_Result_Message),
       optionCount: Array.isArray(parsed?.items) ? parsed.items.length : 0,
       verdict: verdict(accepted),
       accepted,
@@ -292,11 +306,11 @@ const probeMedicalInformationOptions = async (context) => {
       status: 0,
       ok: false,
       apiResult: '',
-      apiResultMessage: '',
+      apiResultMessageCategory: 'none',
       optionCount: 0,
       verdict: 'rejected',
       accepted: false,
-      error: String(error),
+      errorCategory: errorCategory(error),
     };
   }
 };
@@ -350,7 +364,7 @@ const probeOfficialPatientgetv2 = async (context, candidateId) => {
       ...evidence,
       accepted: false,
       verdict: 'rejected',
-      error: String(error),
+      errorCategory: errorCategory(error),
     };
   }
 };
@@ -393,7 +407,8 @@ const probeInsuranceReadiness = async (context, patientId) => {
       response,
       responseText: text,
     });
-    const parsed = parseJson(text);
+    const parsedResult = parseJsonWithStatus(text);
+    const parsed = parsedResult.body;
     const apiResult = normalizeApiResult(parsed?.apiResult);
     const combinations = Array.isArray(parsed?.combinations) ? parsed.combinations : [];
     const effectiveCount = combinations.filter((combination) => isCombinationEffectiveOn(combination, acceptanceDate)).length;
@@ -401,12 +416,21 @@ const probeInsuranceReadiness = async (context, patientId) => {
       httpStatus: response.status(),
       body: parsed,
       baseDate: acceptanceDate,
+      method: 'POST',
+      expectedMethod: 'POST',
+      pathName: OFFICIAL_INSURANCE_COMBINATIONS_PATH,
+      expectedPath: OFFICIAL_INSURANCE_COMBINATIONS_PATH,
+      responseBodyChars: text.length,
+      parsedBodyOk: parsedResult.ok,
     });
     const accepted = readiness.accepted;
     return {
       status: response.status(),
       apiResult,
       classification: readiness.classification,
+      diagnosticCategory: readiness.diagnosticCategory,
+      readinessFailureCategory: readiness.readinessFailureCategory,
+      diagnostic: readiness.diagnostic,
       count: combinations.length,
       effectiveCount,
       selectedCombinationId: effectiveCount > 0 ? '<<redacted>>' : undefined,
@@ -427,7 +451,7 @@ const probeInsuranceReadiness = async (context, patientId) => {
       accepted: false,
       transportOk: false,
       businessOk: false,
-      error: String(error),
+      errorCategory: errorCategory(error),
     };
   }
 };
@@ -473,7 +497,7 @@ const probeLocalSelectable = async (context, patientId) => {
       verdict: 'rejected',
       accepted: false,
       reason: 'local_search_failed',
-      error: String(error),
+      errorCategory: errorCategory(error),
     };
   }
 };
@@ -545,7 +569,7 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
       accepted: false,
       mutationSuccess: false,
       acceptedForPhase3Attempt: false,
-      error: String(error),
+      errorCategory: errorCategory(error),
     };
   }
 };
@@ -613,13 +637,20 @@ const buildAppointmentDependency = async (context, patientId) => {
         response,
         responseText: text,
       });
-      const parsed = parseJson(text);
+      const parsedResult = parseJsonWithStatus(text);
+      const parsed = parsedResult.body;
       return summarizeAppointmentDependency({
         flowMode: requestedAppointmentFlowMode,
         httpStatus: response.status(),
         body: parsed,
         patientId,
         baseDate: acceptanceDate,
+        method: 'POST',
+        expectedMethod: 'POST',
+        pathName: APPOINTMENTS_LIST_PATH,
+        expectedPath: APPOINTMENTS_LIST_PATH,
+        responseBodyChars: text.length,
+        parsedBodyOk: parsedResult.ok,
       });
     } catch (error) {
       return {
@@ -635,7 +666,7 @@ const buildAppointmentDependency = async (context, patientId) => {
         classification: 'ambiguous_readiness_failure',
         verdict: 'rejected',
         accepted: false,
-        error: String(error),
+        errorCategory: errorCategory(error),
       };
     }
   }
@@ -814,7 +845,7 @@ try {
       consoleMessages.push({ type, text: msg.text(), location: msg.location() });
     }
   });
-  page.on('pageerror', (error) => pageErrors.push(String(error)));
+  page.on('pageerror', (error) => pageErrors.push({ category: errorCategory(error) }));
   page.on('request', recordRequest);
   page.on('response', collectResponse);
 
@@ -1070,7 +1101,7 @@ try {
     process.exit(1);
   }
 } catch (error) {
-  logStep(`fatal error=${String(error)}`);
+  logStep(`fatal errorCategory=${errorCategory(error)}`);
   fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords, null, 2), 'utf8');
   fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords, null, 2), 'utf8');
   fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
@@ -1163,7 +1194,7 @@ try {
     blockerClassification: 'environment-blocker',
     blockerReason: 'fatal_error',
     rawSensitiveFieldsExcluded: true,
-    fatalError: String(error),
+    fatalErrorCategory: errorCategory(error),
   };
   fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
   fs.writeFileSync(summaryMdPath, buildMarkdownSummary(summary), 'utf8');

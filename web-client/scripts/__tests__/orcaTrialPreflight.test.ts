@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  READINESS_FAILURE_CATEGORIES,
   TRIAL_NATIVE_PROBE_CANDIDATES,
   buildCandidateDiscoveryGate,
   buildOfficialPatientReadinessAxes,
+  classifyReadinessFailureDiagnostic,
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
   officialPatientEvidenceAccepted,
@@ -533,6 +535,151 @@ describe('orca trial-native preflight gates', () => {
     })).toBe('ambiguous_readiness_failure');
   });
 
+  it('classifies local route guard 403 as ambiguous readiness failure with localGuard category', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 403,
+      baseDate: '2026-04-19',
+      body: { errorCode: 'blocked_route_guard', errorCategory: 'forbidden' },
+      responseBodyChars: 96,
+      parsedBodyOk: true,
+    });
+
+    expect(result).toMatchObject({
+      classification: 'ambiguous_readiness_failure',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.localGuard,
+      diagnosticCategory: READINESS_FAILURE_CATEGORIES.localGuard,
+      accepted: false,
+    });
+    expect(JSON.stringify(result)).not.toMatch(/secret|authorization|cookie|csrf-token/i);
+  });
+
+  it('classifies CSRF 403 as ambiguous readiness failure with csrf category', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 403,
+      baseDate: '2026-04-19',
+      body: { errorCode: 'csrf_validation_failed', errorCategory: 'forbidden', details: { reason: 'csrf_validation_failed' } },
+      responseBodyChars: 128,
+      parsedBodyOk: true,
+    });
+
+    expect(result).toMatchObject({
+      classification: 'ambiguous_readiness_failure',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.csrf,
+      diagnostic: expect.objectContaining({
+        category: READINESS_FAILURE_CATEGORIES.csrf,
+        rawSensitiveFieldsExcluded: true,
+      }),
+      accepted: false,
+    });
+  });
+
+  it('classifies upstream ORCA 403 as ambiguous readiness failure with upstream category', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 502,
+      baseDate: '2026-04-19',
+      body: { errorCode: 'orca_http_error', errorCategory: 'bad_gateway', source: 'orca_gateway', details: { orcaHttpStatus: 403 } },
+      responseBodyChars: 128,
+      parsedBodyOk: true,
+    });
+
+    expect(result).toMatchObject({
+      classification: 'ambiguous_readiness_failure',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.upstream,
+      diagnostic: expect.objectContaining({
+        category: READINESS_FAILURE_CATEGORIES.upstream,
+        upstreamStatus: 403,
+      }),
+      accepted: false,
+    });
+  });
+
+  it('classifies local session/auth/role 403 separately from upstream 403', () => {
+    expect(
+      classifyReadinessFailureDiagnostic({
+        httpStatus: 403,
+        body: { errorCode: 'forbidden', errorCategory: 'forbidden' },
+        responseBodyChars: 96,
+        parsedBodyOk: true,
+      }),
+    ).toMatchObject({
+      category: READINESS_FAILURE_CATEGORIES.sessionAuthRole,
+      upstreamErrorPresent: false,
+      rawSensitiveFieldsExcluded: true,
+    });
+  });
+
+  it('classifies method/path mismatch, credential failure, empty upstream non-2xx, and unknown ambiguous 403 without raw details', () => {
+    expect(
+      classifyReadinessFailureDiagnostic({
+        httpStatus: 405,
+        method: 'GET',
+        expectedMethod: 'POST',
+        body: { errorCode: 'method_not_allowed' },
+      }),
+    ).toMatchObject({ category: READINESS_FAILURE_CATEGORIES.methodPathMismatch });
+
+    expect(
+      classifyReadinessFailureDiagnostic({
+        httpStatus: 503,
+        body: { errorCode: 'orca_gateway_error', message: 'ORCA facility configuration is not available' },
+      }),
+    ).toMatchObject({ category: READINESS_FAILURE_CATEGORIES.credentialUnavailable });
+
+    expect(
+      classifyReadinessFailureDiagnostic({
+        httpStatus: 502,
+        body: {},
+        responseBodyChars: 0,
+        parsedBodyOk: false,
+      }),
+    ).toMatchObject({ category: READINESS_FAILURE_CATEGORIES.upstreamNon2xxNoBody });
+
+    expect(
+      classifyReadinessFailureDiagnostic({
+        httpStatus: 403,
+        body: { errorCode: 'unexpected_denial' },
+        responseBodyChars: 64,
+        parsedBodyOk: true,
+      }),
+    ).toMatchObject({ category: READINESS_FAILURE_CATEGORIES.unknownAmbiguous403 });
+  });
+
+  it('accepts insurance only for HTTP 200 with all-zero apiResult and usable combination evidence', () => {
+    expect(
+      summarizeInsuranceReadiness({
+        httpStatus: 200,
+        baseDate: '2026-04-19',
+        body: {
+          apiResult: '0000',
+          combinations: [
+            { combinationNumber: '0001', certificateStartDate: '2020-01-01', certificateExpiredDate: '9999-12-31' },
+          ],
+        },
+      }),
+    ).toMatchObject({
+      classification: 'accepted',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.none,
+      effectiveCount: 1,
+      accepted: true,
+    });
+
+    expect(
+      summarizeInsuranceReadiness({
+        httpStatus: 204,
+        baseDate: '2026-04-19',
+        body: {
+          apiResult: '0000',
+          combinations: [
+            { combinationNumber: '0001', certificateStartDate: '2020-01-01', certificateExpiredDate: '9999-12-31' },
+          ],
+        },
+      }),
+    ).toMatchObject({
+      classification: 'ambiguous_readiness_failure',
+      accepted: false,
+    });
+  });
+
   it.each(['21', '23'])('classifies insurance apiResult=%s as business rejected insurance', (apiResult) => {
     const result = summarizeInsuranceReadiness({
       httpStatus: 200,
@@ -543,6 +690,40 @@ describe('orca trial-native preflight gates', () => {
     expect(result).toMatchObject({
       apiResult,
       classification: 'business_rejected_insurance',
+      accepted: false,
+    });
+  });
+
+  it('classifies blank insurance apiResult as ambiguous readiness failure with parserBlankApiResult category', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      body: { apiResult: '', combinations: [{ combinationNumber: '0001' }] },
+      responseBodyChars: 64,
+      parsedBodyOk: true,
+    });
+
+    expect(result).toMatchObject({
+      classification: 'ambiguous_readiness_failure',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.parserBlankApiResult,
+      accepted: false,
+    });
+  });
+
+  it('classifies wrapper error with any insurance apiResult as ambiguous readiness failure', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      body: {
+        apiResult: '00',
+        wrapperError: { category: 'before-upstream' },
+        combinations: [{ combinationNumber: '0001' }],
+      },
+    });
+
+    expect(result).toMatchObject({
+      classification: 'ambiguous_readiness_failure',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.wrapperErrorBeforeUpstream,
       accepted: false,
     });
   });
@@ -559,6 +740,22 @@ describe('orca trial-native preflight gates', () => {
     expect(result).toMatchObject({
       flowMode: 'direct_acceptance',
       required: false,
+      classification: 'direct_acceptance_no_appointment_required',
+      accepted: true,
+    });
+  });
+
+  it('accepts direct appointment flow without probing an appointment row', () => {
+    const result = summarizeAppointmentDependency({
+      flowMode: 'direct_acceptance',
+      patientId: '00001',
+      baseDate: '2026-04-19',
+    });
+
+    expect(result).toMatchObject({
+      flowMode: 'direct_acceptance',
+      required: false,
+      absenceBlocker: false,
       classification: 'direct_acceptance_no_appointment_required',
       accepted: true,
     });
@@ -618,6 +815,53 @@ describe('orca trial-native preflight gates', () => {
       appointmentDependency: result,
       secretScanClean: true,
     })).toBe('appointment_row_missing');
+  });
+
+  it('accepts appointment_row only with exact appointment row evidence', () => {
+    const result = summarizeAppointmentDependency({
+      flowMode: 'appointment_row',
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      patientId: '00001',
+      body: {
+        apiResult: '00',
+        reservations: [{ appointmentId: 'A-1', appointmentDate: '2026-04-19', patient: { patientId: '00001' } }],
+      },
+    });
+
+    expect(result).toMatchObject({
+      flowMode: 'appointment_row',
+      required: true,
+      exactRowCount: 1,
+      classification: 'appointment_row_present',
+      accepted: true,
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.none,
+    });
+  });
+
+  it('does not classify appointment 403 as appointment missing', () => {
+    const result = summarizeAppointmentDependency({
+      flowMode: 'appointment_row',
+      httpStatus: 403,
+      baseDate: '2026-04-19',
+      patientId: '00001',
+      body: { errorCode: 'forbidden', errorCategory: 'forbidden' },
+    });
+
+    expect(result).toMatchObject({
+      classification: 'ambiguous_readiness_failure',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.sessionAuthRole,
+      accepted: false,
+    });
+    expect(evaluatePreflightSummary({
+      candidateId: '00001',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: true },
+      selectorReadiness: { accepted: true },
+      localSelectableReadiness: { accepted: true },
+      appointmentDependency: result,
+      secretScanClean: true,
+    })).toBe('ambiguous_readiness_failure');
   });
 
   it('missing selector rejects the candidate', () => {
