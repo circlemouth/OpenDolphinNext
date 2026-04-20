@@ -38,6 +38,8 @@ The package excludes:
   - dist/, target/, build/, out/
   - tmp/, output/, coverage/, test-results/
   - caches and temporary editor/runtime outputs
+  - nested zip files, including old OpenDolphin_WebClient review packages
+  - HAR, trace, video, raw screenshot, raw network dump, and raw XML artifacts
 Additionally, if present, the package includes:
   - qa/browser-manual-qa-progress.json
   - qa/browser-manual-qa-report.md
@@ -183,7 +185,7 @@ repo_relative_path() {
 
 is_excluded_package_path() {
   case "$1" in
-    .git|.git/*|client/*|server/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|*.tsbuildinfo|*/.DS_Store|*/Thumbs.db)
+    .git|.git/*|client/*|server/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|*.tsbuildinfo|*.zip|*/*.zip|*.har|*/*.har|traces/*|*/traces/*|trace/*|*/trace/*|videos/*|*/videos/*|video/*|*/video/*|screenshots/*|*/screenshots/*|raw-screenshots/*|*/raw-screenshots/*|raw-network-dumps/*|*/raw-network-dumps/*|network/*|*/network/*|requests/*|*/requests/*|request-xml/*|*/request-xml/*|response-xml/*|*/response-xml/*|*.png|*/*.png|*.jpg|*/*.jpg|*.jpeg|*/*.jpeg|*.webm|*/*.webm|*.mp4|*/*.mp4|*/.DS_Store|*/Thumbs.db)
       return 0
       ;;
     *)
@@ -425,6 +427,24 @@ if [[ "$IS_GIT_WORKTREE" -eq 1 ]]; then
     ':(exclude)**/.nyc_output/**' \
     ':(exclude)**/*.log' \
     ':(exclude)**/*.tsbuildinfo' \
+    ':(exclude)**/*.zip' \
+    ':(exclude)**/*.har' \
+    ':(exclude)**/traces/**' \
+    ':(exclude)**/trace/**' \
+    ':(exclude)**/videos/**' \
+    ':(exclude)**/video/**' \
+    ':(exclude)**/screenshots/**' \
+    ':(exclude)**/raw-screenshots/**' \
+    ':(exclude)**/raw-network-dumps/**' \
+    ':(exclude)**/network/**' \
+    ':(exclude)**/requests/**' \
+    ':(exclude)**/request-xml/**' \
+    ':(exclude)**/response-xml/**' \
+    ':(exclude)**/*.png' \
+    ':(exclude)**/*.jpg' \
+    ':(exclude)**/*.jpeg' \
+    ':(exclude)**/*.webm' \
+    ':(exclude)**/*.mp4' \
     ':(exclude)**/.DS_Store' \
     ':(exclude)**/Thumbs.db' \
     > "$RAW_FILE_LIST"
@@ -650,7 +670,9 @@ policy=tracked-files-plus-optional-qa
 excluded_roots=client/,server/,artifacts/
 excluded_generated_dirs=node_modules/,dist/,target/,build/,out/,tmp/,output/,coverage/,test-results/
 excluded_cache_dirs=.cache/,.vite/,.parcel-cache/,.turbo/,.nyc_output/
-raw_artifact_policy=raw_orca_artifacts_har_network_request_response_screenshot_trace_video_and_xml_are_not_allowed_as_manifest_listed_review_evidence
+excluded_nested_archive_files=*.zip
+nested_zip_policy=default_exclude; intentional_nested_zip_inclusion_requires_explicit_manifest_justification_and_recursive_scan_before_a_future_tool_may_allow_it
+raw_artifact_policy=raw_orca_artifacts_har_network_request_response_screenshot_trace_video_xml_and_nested_zip_are_not_allowed_as_package_source_or_manifest_listed_review_evidence
 notes=Repository reviewer support package without artifacts or legacy client sources. Includes sanitized browser manual QA summary files when present. This zip has no .git directory and must not be used as clean checkout evidence or full-source secret-scan evidence.
 EOF
 
@@ -676,7 +698,7 @@ zip_create_from_file_list "$PACKAGE_FILE" "$FILE_LIST"
 zip_add_junk_file "$PACKAGE_FILE" "$MANIFEST_FILE"
 zip_add_junk_file "$PACKAGE_FILE" "$REVIEW_LOG_INCLUSIONS_FILE"
 
-BAD_PATHS="$(zip_list_entries "$PACKAGE_FILE" | grep -E '^(\.git/|client/|server/|artifacts/|web-client/artifacts/|node_modules/|dist/|target/|build/|out/|tmp/|output/|coverage/|test-results/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|.*/coverage/|.*/test-results/)' || true)"
+BAD_PATHS="$(zip_list_entries "$PACKAGE_FILE" | grep -E '(^|/)(\.git|node_modules|dist|target|build|out|tmp|output|coverage|test-results|traces?|videos?|screenshots?|raw-screenshots|raw-network-dumps|network|requests|request-xml|response-xml)/|^(client|server|artifacts|web-client/artifacts)/|(^|/).*\.zip$|(^|/).*\.har$' || true)"
 if [[ -n "$BAD_PATHS" ]]; then
   echo "Excluded paths were found in package:" >&2
   echo "$BAD_PATHS" >&2
