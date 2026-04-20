@@ -17,6 +17,7 @@
 
 ## Workflow Docs
 - [implementation/README.md](implementation/README.md)
+- [implementation/orca-trial-readonly-contract-fix-20260420T000000Z/subagent-A-orca-wrapper-contract-report.md](implementation/orca-trial-readonly-contract-fix-20260420T000000Z/subagent-A-orca-wrapper-contract-report.md)
 - [implementation/orca-trial-readonly-diagnostics-20260420T000000Z/README.md](implementation/orca-trial-readonly-diagnostics-20260420T000000Z/README.md)
 - [implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-A-official-patientget-500-report.md](implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-A-official-patientget-500-report.md)
 - [implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-D-evidence-rerun-package-report.md](implementation/orca-trial-readonly-diagnostics-20260420T000000Z/subagent-D-evidence-rerun-package-report.md)

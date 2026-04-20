@@ -216,13 +216,10 @@ final class OrcaLiveGatewaySupport {
         String patientId = requireText(request.getPatientId(), "patientId");
         LocalDate baseDate = request.getBaseDate() != null ? request.getBaseDate() : LocalDate.now();
         StringBuilder builder = new StringBuilder();
-        builder.append(buildOrcaMeta(OrcaEndpoint.PATIENT_APPOINTMENT_LIST, null));
+        builder.append(buildOrcaMeta(OrcaEndpoint.PATIENT_APPOINTMENT_LIST, "01"));
         builder.append("<data><appointlst2req>");
         builder.append("<Patient_ID>").append(patientId).append("</Patient_ID>");
         builder.append("<Base_Date>").append(baseDate).append("</Base_Date>");
-        if (request.getDepartmentCode() != null && !request.getDepartmentCode().isBlank()) {
-            builder.append("<Department_Code>").append(request.getDepartmentCode()).append("</Department_Code>");
-        }
         builder.append("</appointlst2req></data>");
         return builder.toString();
     }
@@ -356,17 +353,31 @@ final class OrcaLiveGatewaySupport {
     }
 
     String buildInsuranceCombinationPayload(InsuranceCombinationRequest request) {
+        String patientId = requireNumericId(request.getPatientId(), "patientId");
+        LocalDate baseDate = resolveIsoDateOrDefault(request.getBaseDate(), LocalDate.now(), "baseDate");
+        LocalDate startDate = resolveIsoDateOrDefault(request.getRangeStart(), baseDate, "rangeStart");
+        LocalDate endDate = resolveIsoDateOrDefault(request.getRangeEnd(), startDate, "rangeEnd");
         StringBuilder builder = new StringBuilder();
         builder.append(buildOrcaMeta(OrcaEndpoint.INSURANCE_COMBINATION, null));
-        builder.append("<data><insurancecombinationreq>");
-        if (request.getPatientId() != null) {
-            builder.append("<Patient_ID>").append(request.getPatientId()).append("</Patient_ID>");
-        }
-        if (request.getBaseDate() != null) {
-            builder.append("<Perform_Date>").append(request.getBaseDate()).append("</Perform_Date>");
-        }
-        builder.append("</insurancecombinationreq></data>");
+        builder.append("<data><patientlst6req>");
+        builder.append("<Reqest_Number>01</Reqest_Number>");
+        builder.append("<Patient_ID>").append(patientId).append("</Patient_ID>");
+        builder.append("<Base_Date>").append(baseDate).append("</Base_Date>");
+        builder.append("<Start_Date>").append(startDate).append("</Start_Date>");
+        builder.append("<End_Date>").append(endDate).append("</End_Date>");
+        builder.append("</patientlst6req></data>");
         return builder.toString();
+    }
+
+    private LocalDate resolveIsoDateOrDefault(String value, LocalDate fallback, String label) {
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (RuntimeException ex) {
+            throw new OrcaGatewayException(label + " must be an ISO-8601 date");
+        }
     }
 
     String buildFormerNameHistoryPayload(FormerNameHistoryRequest request) {
