@@ -355,8 +355,8 @@ final class OrcaLiveGatewaySupport {
     String buildInsuranceCombinationPayload(InsuranceCombinationRequest request) {
         String patientId = requireNumericId(request.getPatientId(), "patientId");
         LocalDate baseDate = resolveIsoDateOrDefault(request.getBaseDate(), LocalDate.now(), "baseDate");
-        LocalDate startDate = resolveIsoDateOrDefault(request.getRangeStart(), baseDate, "rangeStart");
-        LocalDate endDate = resolveIsoDateOrDefault(request.getRangeEnd(), startDate, "rangeEnd");
+        String startDate = resolveOptionalIsoDate(request.getRangeStart(), "rangeStart");
+        String endDate = resolveOptionalIsoDate(request.getRangeEnd(), "rangeEnd");
         StringBuilder builder = new StringBuilder();
         builder.append(buildOrcaMeta(OrcaEndpoint.INSURANCE_COMBINATION, null));
         builder.append("<data><patientlst6req>");
@@ -378,6 +378,13 @@ final class OrcaLiveGatewaySupport {
         } catch (RuntimeException ex) {
             throw new OrcaGatewayException(label + " must be an ISO-8601 date");
         }
+    }
+
+    private String resolveOptionalIsoDate(String value, String label) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        return resolveIsoDateOrDefault(value, null, label).toString();
     }
 
     String buildFormerNameHistoryPayload(FormerNameHistoryRequest request) {
