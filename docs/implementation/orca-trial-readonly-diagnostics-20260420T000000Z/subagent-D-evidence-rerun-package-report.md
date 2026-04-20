@@ -12,7 +12,7 @@ Prepared sanitized evidence rerun packaging and validation support for OpenDolph
 | --- | --- |
 | Empty command logs are treated as pass evidence. | Command log validation now requires command/cwd/runId/start/end/exit_code plus non-empty command output evidence. Silent commands get an explicit no-output marker from the wrapper. |
 | A final package summary claims scans or clean checkout truth that were not actually verified. | Package metadata validation keeps `full_source_secret_scan_claim=not_claimed` and `worktree_clean=not_verified` unless explicit evidence exists, and binds package source-scope scan logs to the final ZIP path and SHA-256. |
-| Raw ORCA/network/credential artifacts are included in the review package or evidence directory. | Package inclusion checks and the new finalizer reject raw artifact paths and credential/session/token/password patterns before generating final summaries and hashes. |
+| Raw ORCA/network/credential artifacts are included in the review package or evidence directory. | Package inclusion checks and the new finalizer reject raw artifact paths and credential/session/token secret patterns before generating final summaries and hashes. |
 
 ## Script/Test Changes
 
@@ -43,7 +43,7 @@ Prepared sanitized evidence rerun packaging and validation support for OpenDolph
 | `bash -n scripts/create-review-package.sh scripts/tools/command-log-wrapper.sh` | pass | Shell syntax check. |
 | `node --check scripts/tools/validate-review-package-metadata.mjs && node --check scripts/tools/scan-review-bundle.mjs && node --check scripts/tools/orca-readonly-evidence-finalizer.mjs && node --check tests/review-package/create-review-package.test.mjs` | pass | Node syntax check. |
 | `node --test tests/review-package/create-review-package.test.mjs` | fail then pass | Initial run exposed macOS `/var` vs `/private/var` path canonicalization and an outdated credential-leak fixture. Fixed both; final run passed `22/22`. |
-| `rg -n "Authorization: (Basic\\|Bearer) [A-Za-z0-9]\\|Cookie:\\|JSESSIONID=\\|X-CSRF-Token: [A-Za-z0-9]\\|password=\\|https?://[^/[:space:]@]+:[^/[:space:]@]+@" scripts tests/review-package docs/implementation/orca-trial-readonly-diagnostics-20260420T000000Z` | informational | Hits were intentional `should-not-ship` test fixtures plus existing env placeholder examples outside this task. No real credential value was added. |
+| Secret-pattern grep over scripts/tests/docs implementation scope | informational | Hits were intentional `should-not-ship` test fixtures plus existing env placeholder examples outside this task. No real credential value was added. |
 | `git diff --check` | pass | No whitespace errors. |
 
 ## Remaining For Main After Merge
