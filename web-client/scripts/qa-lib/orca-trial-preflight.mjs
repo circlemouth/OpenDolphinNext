@@ -15,6 +15,7 @@ export const TRIAL_NATIVE_PROBE_CANDIDATES = [
 ];
 
 export const REJECTED_TRIAL_CANDIDATES = new Set(['0000001']);
+export const PREFERRED_EXACT_PREFLIGHT_CANDIDATE_IDS = ['00001', '00005'];
 export const CANDIDATE_DISCOVERY_RELEASE_VERDICTS = {
   exactPreflightRequired: 'PARTIAL / EXACT PREFLIGHT REQUIRED',
   readinessBlocker: 'PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER',
@@ -410,6 +411,21 @@ const classifyOfficialPatientGetDiagnostic = ({
 };
 
 export const isRejectedTrialCandidate = (candidateId) => REJECTED_TRIAL_CANDIDATES.has(normalizeText(candidateId));
+
+export const selectPreferredExactPreflightCandidate = (
+  candidates,
+  isAccepted = (candidate) => candidate?.acceptedForExactPreflightProposal === true,
+) => {
+  const rows = Array.isArray(candidates) ? candidates : Object.values(candidates ?? {});
+  const acceptedRows = rows.filter((candidate) => candidate && isAccepted(candidate));
+  for (const preferredId of PREFERRED_EXACT_PREFLIGHT_CANDIDATE_IDS) {
+    const match = acceptedRows.find(
+      (candidate) => normalizePatientId(candidate.patientId ?? candidate.candidateId) === preferredId,
+    );
+    if (match) return match;
+  }
+  return acceptedRows[0] ?? null;
+};
 
 export const summarizeOfficialPatientExistence = ({
   httpStatus,
@@ -972,6 +988,7 @@ export const summarizeLocalSelectableDiagnostic = ({
     localCandidateCount,
     selectableCount: safeCount(selectableCount ?? recordsReturned),
     exactMatchCount: exactCount,
+    exactNormalizedPatientIdMatchCount: exactCount,
     exactMatch: exactCount === 1,
     rawSensitiveFieldsExcluded: true,
   };
@@ -1079,6 +1096,10 @@ export const summarizeSelectorDiagnostic = ({ selectors, localSelectableDiagnost
       accepted: false,
       reason: 'local_exact_match_missing',
       fields,
+      selectorOptionCount: 0,
+      selectorOptionCounts: Object.fromEntries(SELECTOR_FIELDS.map((field) => [field, 0])),
+      selectorTargetMatch: false,
+      selectorTargetMatches: Object.fromEntries(SELECTOR_FIELDS.map((field) => [field, false])),
       rawSensitiveFieldsExcluded: true,
     };
   }
@@ -1087,6 +1108,12 @@ export const summarizeSelectorDiagnostic = ({ selectors, localSelectableDiagnost
     SELECTOR_FIELDS.map((field) => [field, selectorItemDiagnostic(selectors?.[field])]),
   );
   const values = Object.values(fields);
+  const selectorOptionCounts = Object.fromEntries(
+    Object.entries(fields).map(([field, item]) => [field, item.optionCount]),
+  );
+  const selectorTargetMatches = Object.fromEntries(
+    Object.entries(fields).map(([field, item]) => [field, item.targetMatch === true]),
+  );
   const status = values.every((item) => item.status === 'accepted')
     ? 'accepted'
     : values.some((item) => item.status === 'not_verified')
@@ -1099,6 +1126,10 @@ export const summarizeSelectorDiagnostic = ({ selectors, localSelectableDiagnost
     accepted: status === 'accepted',
     reason: failed?.reason ?? 'none',
     fields,
+    selectorOptionCount: values.reduce((sum, item) => sum + item.optionCount, 0),
+    selectorOptionCounts,
+    selectorTargetMatch: values.every((item) => item.targetMatch === true),
+    selectorTargetMatches,
     rawSensitiveFieldsExcluded: true,
   };
 };
@@ -1170,6 +1201,94 @@ export const summarizeMedicalInformationReadiness = ({
     expectedMedicalInformationState: expectedState,
     observedMedicalInformationState: observedState,
     rawSensitiveFieldsExcluded: true,
+  };
+};
+
+const pushUniqueReason = (reasons, reason) => {
+  const normalized = normalizeText(reason);
+  if (!normalized || normalized === 'none') return;
+  if (!reasons.includes(normalized)) reasons.push(normalized);
+};
+
+const localSelectableAccepted = (localSelectable) =>
+  localSelectable?.accepted === true ||
+  localSelectable?.selectable === true ||
+  localSelectable?.verdict === 'accepted' ||
+  localSelectable?.status === 'accepted';
+
+const selectorAccepted = (selector) =>
+  selector?.accepted === true || selector?.verdict === 'accepted' || selector?.status === 'accepted';
+
+export const collectCandidateRejectionReasons = ({
+  officialPatientExistence,
+  insuranceReadiness,
+  appointmentDependency,
+  localSelectable,
+  localSelectableReadiness,
+  selectorReadiness,
+  medicalInformationProbe,
+  medicalInformationReadiness,
+  diagnosticNoPatientNotFound,
+  mutationProhibited,
+} = {}) => {
+  const reasons = [];
+  const localSelectableDiagnostic = localSelectableReadiness ?? localSelectable;
+
+  if (officialPatientExistence?.accepted !== true) {
+    pushUniqueReason(reasons, officialPatientExistence?.rejectionReason || 'official_patient_missing');
+  }
+
+  if (insuranceReadiness?.accepted !== true) {
+    pushUniqueReason(reasons, insuranceReadiness?.classification || insuranceReadiness?.reason || 'insurance_not_ready');
+  }
+
+  if (appointmentDependency?.accepted !== true) {
+    pushUniqueReason(
+      reasons,
+      appointmentDependency?.classification || appointmentDependency?.reason || 'appointment_dependency_not_ready',
+    );
+  }
+
+  if (!localSelectableAccepted(localSelectableDiagnostic)) {
+    pushUniqueReason(reasons, localSelectableDiagnostic?.reason || 'local_selectable_not_ready');
+  }
+
+  if (!selectorAccepted(selectorReadiness)) {
+    pushUniqueReason(reasons, selectorReadiness?.reason || 'selector_not_ready');
+  }
+
+  if (medicalInformationProbe && medicalInformationProbe.accepted !== true) {
+    pushUniqueReason(reasons, 'medical_information_probe_not_accepted');
+  }
+
+  if (medicalInformationReadiness?.accepted !== true) {
+    const failed = Array.isArray(medicalInformationReadiness?.failedSubdimensions)
+      ? medicalInformationReadiness.failedSubdimensions.filter(Boolean)
+      : [];
+    pushUniqueReason(
+      reasons,
+      failed.length > 0 ? `medical_information_not_ready:${failed.join(',')}` : 'medical_information_not_ready',
+    );
+  }
+
+  if (diagnosticNoPatientNotFound && diagnosticNoPatientNotFound.accepted !== true) {
+    pushUniqueReason(reasons, 'patient_not_found_wording_detected');
+  }
+
+  if (Number(mutationProhibited?.blockedRequestCount ?? 0) > 0) {
+    pushUniqueReason(reasons, 'readonly_mutation_attempt_blocked');
+  }
+
+  return reasons;
+};
+
+export const buildCandidateReadinessDecision = (readiness) => {
+  const rejectionReasons = collectCandidateRejectionReasons(readiness);
+  const acceptedForExactPreflightProposal = rejectionReasons.length === 0;
+  return {
+    acceptedForExactPreflightProposal,
+    primaryRejectionReason: acceptedForExactPreflightProposal ? 'none' : rejectionReasons[0],
+    rejectionReasons,
   };
 };
 

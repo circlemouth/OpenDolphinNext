@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   READINESS_FAILURE_CATEGORIES,
   TRIAL_NATIVE_PROBE_CANDIDATES,
+  buildCandidateReadinessDecision,
   buildCandidateDiscoveryGate,
   buildOfficialPatientReadinessAxes,
+  collectCandidateRejectionReasons,
   classifyReadinessFailureDiagnostic,
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
@@ -19,6 +21,7 @@ import {
   summarizeOfficialPatientExistence,
   summarizeSelectorDiagnostic,
   summarizeSelectorReadiness,
+  selectPreferredExactPreflightCandidate,
 } from '../qa-lib/orca-trial-preflight.mjs';
 import { buildQaUnsafeRequestHeaders } from '../qa-lib/session-auth.mjs';
 
@@ -1140,6 +1143,7 @@ describe('orca trial-native preflight gates', () => {
       status: 'accepted',
       normalizedTargetPatientId: '00001',
       localCandidateCount: 1,
+      exactNormalizedPatientIdMatchCount: 1,
       exactMatch: true,
       reason: 'none',
     });
@@ -1152,6 +1156,16 @@ describe('orca trial-native preflight gates', () => {
       optionCount: 2,
       targetMatch: false,
       reason: 'selector_exact_match_missing',
+    });
+    expect(selector.selectorOptionCounts).toMatchObject({
+      physician: 2,
+      paymentMode: 1,
+      visitKind: 1,
+    });
+    expect(selector.selectorTargetMatches).toMatchObject({
+      physician: false,
+      paymentMode: true,
+      visitKind: true,
     });
     expect(medicalInformationReadiness).toMatchObject({
       accepted: false,
@@ -1178,6 +1192,7 @@ describe('orca trial-native preflight gates', () => {
       reason: 'local_exact_match_missing',
       normalizedTargetPatientId: '00002',
       localCandidateCount: 0,
+      exactNormalizedPatientIdMatchCount: 0,
       rawSensitiveFieldsExcluded: true,
     });
     expect(selector).toMatchObject({
@@ -1239,6 +1254,112 @@ describe('orca trial-native preflight gates', () => {
       reason: 'selector_option_missing',
     });
     expect(JSON.stringify(readiness)).not.toMatch(/WholeName|Address|Phone|Insurance_Symbol/);
+  });
+
+  it('keeps a 00001-like row with accepted local selector medical-info but rejected insurance out of mutation readiness', () => {
+    const local = summarizeLocalSelectableDiagnostic({
+      patientId: '00001',
+      selectableCount: 1,
+      exactResultCount: 1,
+      selectable: true,
+      verdict: 'accepted',
+    });
+    const selector = summarizeSelectorDiagnostic({
+      localSelectableDiagnostic: local,
+      selectors: {
+        department: { exists: true, optionCount: 2, hasDesiredValue: true },
+        physician: { exists: true, optionCount: 2, hasDesiredValue: true },
+        paymentMode: { exists: true, optionCount: 1, hasDesiredValue: true },
+        visitKind: { exists: true, optionCount: 1, hasDesiredValue: true },
+        medicalInformation: { exists: true, optionCount: 1, hasDesiredValue: true },
+      },
+    });
+    const medicalInformationReadiness = summarizeMedicalInformationReadiness({
+      patientId: '00001',
+      departmentCode: '01',
+      physicianCode: '10001',
+      paymentMode: 'insurance',
+      visitKind: '1',
+      medicalInformation: '',
+      medicalInformationState: { state: 'omitted' },
+      medicalInformationProbe: { accepted: true },
+      selectorDiagnostic: selector,
+      localSelectableDiagnostic: local,
+    });
+    const decision = buildCandidateReadinessDecision({
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: false, classification: 'business_rejected_insurance' },
+      appointmentDependency: { accepted: true },
+      localSelectable: local,
+      selectorReadiness: selector,
+      medicalInformationProbe: { accepted: true },
+      medicalInformationReadiness,
+      diagnosticNoPatientNotFound: { accepted: true },
+      mutationProhibited: { blockedRequestCount: 0 },
+    });
+
+    expect(local.accepted).toBe(true);
+    expect(selector.accepted).toBe(true);
+    expect(medicalInformationReadiness.accepted).toBe(true);
+    expect(decision).toMatchObject({
+      acceptedForExactPreflightProposal: false,
+      primaryRejectionReason: 'business_rejected_insurance',
+      rejectionReasons: ['business_rejected_insurance'],
+    });
+  });
+
+  it('reports multiple candidate blockers without hiding them behind one primary reason', () => {
+    const reasons = collectCandidateRejectionReasons({
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: false, classification: 'business_rejected_insurance' },
+      appointmentDependency: { accepted: false, classification: 'appointment_row_missing' },
+      localSelectable: { accepted: false, reason: 'local_exact_match_missing' },
+      selectorReadiness: { accepted: false, verdict: 'not_verified', reason: 'local_exact_match_missing' },
+      medicalInformationProbe: { accepted: true },
+      medicalInformationReadiness: {
+        accepted: false,
+        failedSubdimensions: ['required_identity_fields_match'],
+      },
+      diagnosticNoPatientNotFound: { accepted: true },
+      mutationProhibited: { blockedRequestCount: 0 },
+    });
+    const decision = buildCandidateReadinessDecision({
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: false, classification: 'business_rejected_insurance' },
+      appointmentDependency: { accepted: false, classification: 'appointment_row_missing' },
+      localSelectable: { accepted: false, reason: 'local_exact_match_missing' },
+      selectorReadiness: { accepted: false, verdict: 'not_verified', reason: 'local_exact_match_missing' },
+      medicalInformationProbe: { accepted: true },
+      medicalInformationReadiness: {
+        accepted: false,
+        failedSubdimensions: ['required_identity_fields_match'],
+      },
+      diagnosticNoPatientNotFound: { accepted: true },
+      mutationProhibited: { blockedRequestCount: 0 },
+    });
+
+    expect(reasons).toEqual([
+      'business_rejected_insurance',
+      'appointment_row_missing',
+      'local_exact_match_missing',
+      'medical_information_not_ready:required_identity_fields_match',
+    ]);
+    expect(decision.primaryRejectionReason).toBe('business_rejected_insurance');
+    expect(decision.acceptedForExactPreflightProposal).toBe(false);
+  });
+
+  it('prefers 00001 and 00005 only after full exact-preflight proposal readiness is accepted', () => {
+    const selected = selectPreferredExactPreflightCandidate([
+      {
+        patientId: '00001',
+        acceptedForExactPreflightProposal: false,
+        primaryRejectionReason: 'business_rejected_insurance',
+      },
+      { patientId: '00002', acceptedForExactPreflightProposal: true },
+      { patientId: '00005', acceptedForExactPreflightProposal: true },
+    ]);
+
+    expect(selected?.patientId).toBe('00005');
   });
 
   it('candidate discovery with zero accepted candidates is readiness-blocked without contradicting Trial registration', () => {
