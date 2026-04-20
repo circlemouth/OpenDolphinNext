@@ -1,0 +1,4 @@
+a6433a140ec86fc47949c496138c9f7ed82b6abc6c58212ec32769314599ed63  subagent-D-readonly-probe-summary.json
+fdb61017ef74c8215bbf3f7ae5059ebcb1515de13eda349f1f1c66a0bda4ddab  subagent-D-command-log.json
+cb3723a34523d14765e2172f764d33edec712b729b6cb4e61b74737c5a7fe668  subagent-D-dynamic-evidence-secret-scan.md
+0c3b12276a0eee41ef351d093fd80557181636bd00837958c9bece00d1329db5  subagent-D-readonly-probe-report.md

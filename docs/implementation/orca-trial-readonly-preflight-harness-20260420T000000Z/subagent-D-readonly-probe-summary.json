@@ -1,0 +1,82 @@
+{
+  "runId": "20260420T000000Z",
+  "subagent": "D",
+  "worktree": "C:\\Users\\marug\\Documents\\GitHub\\opendolphin-subagent-readonly-probe",
+  "branchObserved": "codex/subagent-readonly-probe-20260420",
+  "task": "ORCA Trial Phase 2.5 read-only probe preparation",
+  "targetEndpoint": "https://weborca-trial.orca.med.or.jp/",
+  "sourceChanges": false,
+  "legacyClientOrServerModified": false,
+  "rawSensitiveDataCaptured": false,
+  "liveOrcaReadOnlyProbeStatus": "not_run",
+  "candidateDiscoveryStatus": "not_run",
+  "acceptedCandidateCount": null,
+  "exactSelectedCandidatePreflightStatus": "not_run",
+  "phase3Status": "blocked_not_run",
+  "phase4Status": "blocked_not_run",
+  "staticValidation": {
+    "candidateDiscoveryNodeCheck": {
+      "command": "node --check web-client\\scripts\\qa-weborca-candidate-discovery.mjs",
+      "exitCode": 0
+    },
+    "readonlyPreflightNodeCheck": {
+      "command": "node --check web-client\\scripts\\qa-weborca-readonly-preflight.mjs",
+      "exitCode": 0
+    }
+  },
+  "environmentReadiness": {
+    "initialVitePort5173": false,
+    "initialBackendPort9080": false,
+    "dedicatedContainersStarted": true,
+    "dedicatedContainersRemoved": true,
+    "dedicatedVolumesRemoved": true,
+    "serverHealthEndpointAfterPartialStartup": {
+      "httpStatus": 200,
+      "bodyCategory": "sanitized_up_only"
+    },
+    "authenticationBootstrap": {
+      "status": "blocked",
+      "safeSummary": "Backend session login returned 500 after partial setup because authoritative audit tables were unavailable."
+    }
+  },
+  "blockers": [
+    {
+      "id": "setup_script_crlf_bash_execution",
+      "classification": "environment_or_script_execution_blocker",
+      "safeSummary": "Direct Git Bash execution of setup-modernized-env.sh failed on CRLF shell parsing. A temporary LF-normalized copy was used and then deleted."
+    },
+    {
+      "id": "compose_env_export_gap",
+      "classification": "environment_or_setup_blocker",
+      "safeSummary": "setup-modernized-env.sh resolved ORCA values internally, but compose interpolation required exported variables. Execution proceeded only after sourcing with set -a; no source change was made."
+    },
+    {
+      "id": "flyway_baseline_over_legacy_schema_failure",
+      "classification": "database_migration_blocker",
+      "safeSummary": "Flyway V0300 failed against the imported legacy schema because the existing audit table did not have the run_id column required by later indexes."
+    },
+    {
+      "id": "authoritative_audit_table_missing",
+      "classification": "authentication_bootstrap_blocker",
+      "safeSummary": "After partial startup, login failed because authoritative audit chain storage was missing. Running read-only ORCA helpers would only produce environment failure evidence."
+    }
+  ],
+  "notRunByPolicy": [
+    "Phase 3 acceptmodv2 mutation",
+    "Phase 4 fullflow",
+    "live ORCA mutation request",
+    "new ORCA record write",
+    "exact selected-candidate preflight"
+  ],
+  "stopReason": "Read-only local harness was not eligible: candidate discovery could not be safely run because authenticated context bootstrap was blocked before any sanitized ORCA candidate evidence could be collected.",
+  "sanitization": {
+    "rawRequests": false,
+    "rawResponses": false,
+    "har": false,
+    "screenshots": false,
+    "videos": false,
+    "cookies": false,
+    "authorizationHeaders": false,
+    "credentialValues": false
+  }
+}
