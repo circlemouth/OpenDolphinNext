@@ -3,6 +3,7 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 
 import {
+  buildQaUnsafeRequestHeaders,
   buildQaSession,
   createAuthenticatedContext,
   resolveQaFacilityId,
@@ -81,6 +82,7 @@ const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
 const blockedMutationRequests = [];
+let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
 
 const logStep = (label) => {
   fs.appendFileSync(stepLogPath, `[${new Date().toISOString()}] ${label}\n`, 'utf8');
@@ -318,7 +320,7 @@ const recordApiCall = async (context, { method, pathName, body, query }) => {
         ? await context.request.get(url.toString())
         : await context.request.post(url.toString(), {
             data: body ?? {},
-            headers: { 'Content-Type': 'application/json' },
+            headers: unsafeRequestHeaders,
           });
     const bodyText = await response.text().catch(() => '');
     const parsed = parseJsonBody(bodyText);
@@ -1130,6 +1132,7 @@ try {
     session,
   });
   context = auth.context;
+  unsafeRequestHeaders = buildQaUnsafeRequestHeaders({ baseURL, csrfToken: auth.csrfToken });
   const sessionMe = auth.sessionMe;
   await auth.page.close().catch(() => {});
 

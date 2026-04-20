@@ -20,6 +20,7 @@ import {
   summarizeSelectorDiagnostic,
   summarizeSelectorReadiness,
 } from '../qa-lib/orca-trial-preflight.mjs';
+import { buildQaUnsafeRequestHeaders } from '../qa-lib/session-auth.mjs';
 
 const acceptedSelectors = {
   department: { exists: true, optionCount: 2, hasDesiredValue: true },
@@ -28,6 +29,32 @@ const acceptedSelectors = {
 };
 
 describe('orca trial-native preflight gates', () => {
+  it('builds same-origin CSRF headers for QA direct read-only POST probes without cookie or authorization', () => {
+    const headers = buildQaUnsafeRequestHeaders({
+      baseURL: 'https://localhost:5173/f/1.2.3/reception',
+      csrfToken: '  csrf-token-123  ',
+    });
+
+    expect(headers).toMatchObject({
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': 'csrf-token-123',
+      Origin: 'https://localhost:5173',
+      Referer: 'https://localhost:5173/f/1.2.3/reception',
+    });
+    expect(headers).not.toHaveProperty('Cookie');
+    expect(headers).not.toHaveProperty('Authorization');
+  });
+
+  it('omits blank QA CSRF token while preserving JSON content type', () => {
+    const headers = buildQaUnsafeRequestHeaders({ baseURL: 'https://localhost:5173', csrfToken: '   ' });
+
+    expect(headers).toMatchObject({
+      'Content-Type': 'application/json',
+      Origin: 'https://localhost:5173',
+    });
+    expect(headers).not.toHaveProperty('X-CSRF-Token');
+  });
+
   it('0000001 is an explicit rejected candidate', () => {
     expect(isRejectedTrialCandidate('0000001')).toBe(true);
   });

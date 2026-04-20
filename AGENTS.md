@@ -145,8 +145,9 @@
 - **再ビルド所要時間**: `docker compose build server-modernized-dev` は依存DLで時間がかかる。
   - 推奨待機時間: **7〜10分**（初回は **15分** を見込む）。
   - タイムアウト設定時は **最低 10分** 以上を指定すること。
-- **ORCA連携**: 実環境 (ORCA) への接続は機微情報を含むため、`docs/operations/ORCA_CERTIFICATION_ONLY.md` の手順を厳守し、ログを残すこと。
-  - **標準接続先**: WebORCA Trial（XML/UTF-8 + Basic）。公開 Trial の既定値（URL/ユーザー/パス）は上記ドキュメント §2 の入力欄に記載。
+- **ORCA連携**: 開発完了まで WebORCA Trial を標準接続先として使う。`docs/operations/ORCA_CERTIFICATION_ONLY.md` の手順を厳守し、ログを残すこと。
+  - **標準接続先**: `https://weborca-trial.orca.med.or.jp/`（XML/UTF-8 + Basic, `ORCA_MODE=weborca`, `ORCA_API_SCHEME=https`, `ORCA_API_PORT=443`）。
+  - 公開 Trial の Basic 値であっても、repo / review package / 実行ログ / summary / test fixture には raw 値を書かない。実行時に `ORCA_API_USER` / `ORCA_API_PASSWORD` またはローカル secret store から供給し、証跡では set/unset と sanitized classification だけを残すこと。
 - **本番相当設定の検証**:
   - 認証、Cookie、CORS、ORCA 接続、添付保存、エラーハンドリングは、可能な限り本番相当設定で確認すること。
   - 開発専用の緩和設定を使った場合は、報告に明記すること。

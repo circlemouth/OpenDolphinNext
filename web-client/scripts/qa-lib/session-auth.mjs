@@ -106,6 +106,24 @@ const bootstrapBackendSession = async ({ facilityId, userId, password, clientUui
   };
 };
 
+export const buildQaUnsafeRequestHeaders = ({ baseURL, csrfToken } = {}) => {
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  const token = typeof csrfToken === 'string' ? csrfToken.trim() : '';
+  if (token) {
+    headers['X-CSRF-Token'] = token;
+  }
+  try {
+    const url = new URL(baseURL);
+    headers.Origin = url.origin;
+    headers.Referer = url.toString();
+  } catch {
+    // The caller still gets the CSRF header; invalid base URLs fail closed at request time.
+  }
+  return headers;
+};
+
 export const fetchSessionMe = async (page) =>
   await page.evaluate(async () => {
     const response = await fetch('/api/session/me', {
@@ -203,5 +221,5 @@ export const createAuthenticatedContext = async (
   ]);
   const page = await context.newPage();
   const sessionMe = await ensureLoggedIn(page, { facilityId });
-  return { context, page, sessionMe };
+  return { context, page, sessionMe, csrfToken };
 };

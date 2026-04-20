@@ -1,7 +1,7 @@
 # ORCA 接続情報（Certification Only / 非Legacy）
 
 - RUN_ID: certification 実行ごとに採番し、`artifacts/orca-remediation/closeout/<RUN_ID>/git/run-id.txt` を正本にする
-- 更新日: 2026-04-14
+- 更新日: 2026-04-20
 - 目的: ORCA 実環境/検証環境の接続先・認証方式と、管理画面で見える current behavior を **非Legacy の正本**として管理する。
 
 > ⚠️ 重要: ORCA Trial を含む接続先・資格情報は、このリポジトリ、review package、実行ログ、summary、テスト fixture に具体値を書かない。
@@ -12,16 +12,22 @@
 - ログや証跡ではユーザー名・パスワード・証明書パスを **一切出力しない**。
 
 ## 2. デフォルト開発接続（WebORCA Trial）
+
+開発完了まで、ORCA 連携の標準接続先は WebORCA Trial とする。
+
 | 項目 | source | 入力欄（必要に応じて更新） |
 | --- | --- | --- |
-| ベースURL | local secret store or `ORCA_BASE_URL` / `ORCA_API_HOST` | `<<FILL_BASE_URL>>` |
-| Basic ユーザー名 | local secret store or `ORCA_API_USER` / `ORCA_BASIC_USER` | `<<FILL_BASIC_USER>>` |
-| Basic パスワード | local secret store or `ORCA_API_PASSWORD` / `ORCA_BASIC_PASSWORD` | `<<FILL_BASIC_PASS>>` |
-| 文字コード | XML/UTF-8 | `<<FILL_ENCODING>>` |
-| 証明書 | 不要 | `<<FILL_CERT_POLICY>>` |
+| ベースURL | fixed development default | `https://weborca-trial.orca.med.or.jp/` |
+| API scheme | fixed development default | `https` |
+| API port | fixed development default | `443` |
+| ORCA mode | fixed development default | `weborca` |
+| Basic ユーザー名 | WebORCA Trial published Basic credential; inject via local secret store or `ORCA_API_USER` / `ORCA_BASIC_USER` | raw 値は repo に書かない |
+| Basic パスワード | WebORCA Trial published Basic credential; inject via local secret store or `ORCA_API_PASSWORD` / `ORCA_BASIC_PASSWORD` | raw 値は repo に書かない |
+| 文字コード | XML/UTF-8 | `UTF-8` |
+| 証明書 | 不要 | `none` |
 
 ## 3. current behavior（管理画面）
-- 接続設定 UI は **WebORCA / cloud 前提**で始まり、`useWeborca=true` が既定です。WebORCA では `https://...` + `443` を既定とし、server 側で `/api` 系 path を解決します。
+- 接続設定 UI は **WebORCA / cloud 前提**で始まり、`useWeborca=true` が既定です。開発標準の WebORCA Trial では `https://weborca-trial.orca.med.or.jp/` + `443` を使い、server 側で `/api` 系 path を解決します。
 - 管理画面では **「管理画面権限確認」** と **「ORCA 接続テスト成功」** を別ステータスとして表示します。管理画面が開けても ORCA 接続成功を意味しません。
 - `接続テスト` は **保存済み設定に対する WebORCA API 到達確認のみ**です。`pushUrl` / `pushTenantId` の保存有無は表示しますが、push WebSocket の疎通はこのテスト対象外です。
 - `pushUrl` は `ws://` または `wss://` のみ許可し、`pushTenantId` は `pushUrl` がある場合だけ保存します。
@@ -33,7 +39,7 @@
 ## 4. 接続先テンプレート（Trial 以外は `<MASKED>`）
 | 環境 | ベースURL | 認証方式 | 備考 |
 | --- | --- | --- | --- |
-| Trial | 参照: §2 | Basic | XML/UTF-8（証明書不要） |
+| Trial | `https://weborca-trial.orca.med.or.jp/` | Basic | XML/UTF-8（証明書不要）。開発完了まで標準接続先として使う |
 | Stage | `<MASKED>` | Basic / mTLS | WebORCA cloud URL を承認後に設定 |
 | Preprod | `<MASKED>` | Basic / mTLS | WebORCA cloud URL を承認後に設定 |
 | Prod | `<MASKED>` | mTLS | 直接接続は承認必須 |
@@ -41,14 +47,14 @@
 ## 5. 設定手順（環境変数）
 ### server-modernized 向け
 - `ORCA_TARGET_ENV=preprod`（または `prod`）を明示し、**必ずホスト/ベースURLを指定する**。
-- `ORCA_API_HOST` / `ORCA_API_PORT` / `ORCA_API_SCHEME` または `ORCA_BASE_URL` を設定する。
+- 開発中は `ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/` または `ORCA_API_HOST=weborca-trial.orca.med.or.jp` / `ORCA_API_PORT=443` / `ORCA_API_SCHEME=https` を設定する。
 - Basic 認証が必要な場合は `ORCA_API_USER` / `ORCA_API_PASSWORD` を設定する。
 - WebORCA 接続時は `ORCA_MODE=weborca`（オンプレは `ORCA_MODE=onprem`）を **明示**する。
 
 #### 優先順位（server-modernized）
 1. `ORCA_BASE_URL`（指定時はこれを最優先）
 2. `ORCA_API_HOST` / `ORCA_API_PORT` / `ORCA_API_SCHEME`
-3. 未指定の場合は local/onprem fallback のみ。Trial endpoint は暗黙 default にしない。
+3. 未指定の場合は local/onprem fallback のみ。開発標準は WebORCA Trial だが、誤接続を避けるため Trial endpoint も暗黙 default にはせず、起動時 env またはローカル secret store で明示する。
 
 ### Web クライアント dev proxy 向け
 - 接続先: `VITE_DEV_PROXY_TARGET` をローカル secret store または環境変数から設定する。

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 
 import {
+  buildQaUnsafeRequestHeaders,
   buildQaSession,
   createAuthenticatedContext,
   resolveQaFacilityId,
@@ -106,6 +107,7 @@ const consoleMessages = [];
 const pageErrors = [];
 const networkRecords = [];
 const requestRecords = [];
+let unsafeRequestHeaders = { 'Content-Type': 'application/json' };
 
 const logStep = (label) => {
   fs.appendFileSync(stepLogPath, `[${new Date().toISOString()}] ${label}\n`, 'utf8');
@@ -405,7 +407,10 @@ const probeInsuranceReadiness = async (context, patientId) => {
   const body = { patientId, baseDate: acceptanceDate };
   logStep(`insurance read-only probe start patient=${patientId}`);
   try {
-    const response = await context.request.post(urlFor(OFFICIAL_INSURANCE_COMBINATIONS_PATH), { data: body });
+    const response = await context.request.post(urlFor(OFFICIAL_INSURANCE_COMBINATIONS_PATH), {
+      data: body,
+      headers: unsafeRequestHeaders,
+    });
     const text = await response.text().catch(() => '');
     await recordDirectExchange({
       pathName: OFFICIAL_INSURANCE_COMBINATIONS_PATH,
@@ -467,7 +472,10 @@ const probeLocalSelectable = async (context, patientId) => {
   const body = { keyword: patientId, searchType: 'patient-id', runId };
   logStep(`local exact patient search probe start patient=${patientId}`);
   try {
-    const response = await context.request.post(urlFor(LOCAL_PATIENT_SEARCH_PATH), { data: body });
+    const response = await context.request.post(urlFor(LOCAL_PATIENT_SEARCH_PATH), {
+      data: body,
+      headers: unsafeRequestHeaders,
+    });
     const text = await response.text().catch(() => '');
     await recordDirectExchange({
       pathName: LOCAL_PATIENT_SEARCH_PATH,
@@ -544,7 +552,10 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
   Object.keys(body).forEach((key) => body[key] === undefined && delete body[key]);
   logStep(`acceptmodv2 read-only diagnostic start patient=${patientId}`);
   try {
-    const response = await context.request.post(urlFor(VISITS_MUTATION_PATH), { data: body });
+    const response = await context.request.post(urlFor(VISITS_MUTATION_PATH), {
+      data: body,
+      headers: unsafeRequestHeaders,
+    });
     const text = await response.text().catch(() => '');
     await recordDirectExchange({
       pathName: VISITS_MUTATION_PATH,
@@ -663,7 +674,10 @@ const buildAppointmentDependency = async (context, patientId) => {
     };
     logStep(`appointment row dependency probe start patient=${patientId}`);
     try {
-      const response = await context.request.post(urlFor(APPOINTMENTS_LIST_PATH), { data: body });
+      const response = await context.request.post(urlFor(APPOINTMENTS_LIST_PATH), {
+        data: body,
+        headers: unsafeRequestHeaders,
+      });
       const text = await response.text().catch(() => '');
       await recordDirectExchange({
         pathName: APPOINTMENTS_LIST_PATH,
@@ -879,6 +893,7 @@ try {
     session,
   });
   context = auth.context;
+  unsafeRequestHeaders = buildQaUnsafeRequestHeaders({ baseURL, csrfToken: auth.csrfToken });
   const page = auth.page;
   const sessionMe = auth.sessionMe;
 
