@@ -1,11 +1,10 @@
 command_log_version=1
-command=bash -c for\ f\ in\ setup-modernized-env.sh\ scripts/\*.sh\ scripts/tools/\*.sh\;\ do\ bash\ -n\ \;\ done\;\ echo\ bash syntax check completed
+command=bash -c bash\ -n\ scripts/create-review-package.sh\ \&\&\ bash\ -n\ scripts/tools/command-log-wrapper.sh\ \&\&\ printf\ bash syntax validation passed for package scriptsn
 cwd=/mnt/c/Users/marug/Documents/GitHub/OpenDolphinNext
 runId=20260420T000000Z
-start_utc=2026-04-20T00:25:15Z
+start_utc=2026-04-20T00:38:54Z
 --- command output ---
-bash
---- command summary ---
-end_utc=2026-04-20T00:25:15Z
+bash--- command summary ---
+end_utc=2026-04-20T00:38:54Z
 exit_code=0
 result=PASS

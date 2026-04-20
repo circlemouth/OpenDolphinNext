@@ -217,6 +217,7 @@ test('adds manifest-listed review logs when requested', () => {
       '- test-logs/static.log',
       '- dynamic-logs/dynamic.log',
       '- dynamic-evidence/accept-summary.sanitized.json',
+      '- dynamic-evidence/subagent-command-log.json',
       '',
     ].join('\n'),
     'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/FINAL_REPORT.md': '# final report\n',
@@ -228,6 +229,24 @@ test('adds manifest-listed review logs when requested', () => {
     writeText(
       path.join(repoDir, 'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/accept-summary.sanitized.json'),
       '{"rawSensitiveFieldsExcluded":true}\n',
+    );
+    writeText(
+      path.join(repoDir, 'docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/subagent-command-log.json'),
+      JSON.stringify(
+        [
+          {
+            command: 'node --check web-client/scripts/qa-weborca-readonly-preflight.mjs',
+            cwd: '/repo',
+            runId: RUN_ID,
+            start: '2026-04-14T08:08:12Z',
+            end: '2026-04-14T08:08:13Z',
+            exit_code: 0,
+            safe_result: 'Static syntax validation passed.',
+          },
+        ],
+        null,
+        2,
+      ),
     );
     const output = run(
       'bash',
@@ -258,11 +277,12 @@ test('adds manifest-listed review logs when requested', () => {
     assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/test-logs/static.log'));
     assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-logs/dynamic.log'));
     assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/accept-summary.sanitized.json'));
+    assert(entries.includes('docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z/dynamic-evidence/subagent-command-log.json'));
     assert.match(manifest, /review_package_name=OpenDolphin_WebClient-review-package-20260414T080812Z-with-dynamic-evidence\.zip/);
-    assert.match(manifest, /review_log_include_count=3/);
+    assert.match(manifest, /review_log_include_count=4/);
     assert.match(manifest, /review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content/);
     assert.match(manifest, /secret_scan_scope=dynamic_review_evidence_only/);
-    assert.match(manifest, /secret_scan_file_count=5/);
+    assert.match(manifest, /secret_scan_file_count=6/);
     assert.match(manifest, /secret_scan_claim=dynamic_review_evidence_passed/);
     assert.match(manifest, /dynamic_secret_scan_claim=passed/);
     assert.match(manifest, /package_source_secret_scan_claim=recorded_in_external_sidecar/);
@@ -581,6 +601,27 @@ test('rejects empty manifest-listed command logs', () => {
     assert.throws(
       () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
       /empty and cannot be pass evidence/,
+    );
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
+test('rejects malformed manifest-listed JSON command logs', () => {
+  const manifestPath = 'docs/implementation/postfix/REVIEW_LOG_INCLUSIONS_MANIFEST.txt';
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+    [manifestPath]: ['RUN_ID=20260418T224551Z', '- dynamic-logs/subagent-command-log.json', ''].join('\n'),
+  });
+
+  try {
+    writeText(
+      path.join(repoDir, 'docs/implementation/postfix/dynamic-logs/subagent-command-log.json'),
+      JSON.stringify([{ command: 'node --check script.mjs', cwd: '/repo', runId: RUN_ID }], null, 2),
+    );
+    assert.throws(
+      () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
+      /review JSON command log entry 0 missing start/,
     );
   } finally {
     removeTree(sandbox);

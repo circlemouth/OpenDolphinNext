@@ -215,7 +215,7 @@ validate_sanitized_review_evidence_path() {
   esac
 
   case "$lower_path" in
-    *.log|*.md|*.txt|*.sanitized.json|*summary.json|*report.json|*progress.json|*manifest.json|*manifest.txt)
+    *.log|*.md|*.txt|*.sanitized.json|*summary.json|*report.json|*progress.json|*manifest.json|*manifest.txt|*command-log.json)
       return 0
       ;;
     *)
@@ -257,6 +257,43 @@ validate_command_log_evidence() {
     echo "review command log missing exit code metadata: $log_path" >&2
     exit 1
   }
+}
+
+validate_json_command_log_evidence() {
+  local log_path="$1"
+
+  if [[ ! -s "$log_path" ]]; then
+    echo "review JSON command log is empty and cannot be pass evidence: $log_path" >&2
+    exit 1
+  fi
+
+  node - "$log_path" <<'NODE'
+const fs = require('node:fs');
+const logPath = process.argv[2];
+let parsed;
+try {
+  parsed = JSON.parse(fs.readFileSync(logPath, 'utf8'));
+} catch {
+  console.error(`review JSON command log is not valid JSON: ${logPath}`);
+  process.exit(1);
+}
+
+const entries = Array.isArray(parsed) ? parsed : parsed?.commands;
+if (!Array.isArray(entries) || entries.length === 0) {
+  console.error(`review JSON command log must contain a non-empty command array: ${logPath}`);
+  process.exit(1);
+}
+
+const required = ['command', 'cwd', 'runId', 'start', 'end', 'exit_code'];
+for (const [index, entry] of entries.entries()) {
+  for (const key of required) {
+    if (entry?.[key] === undefined || entry?.[key] === null || entry?.[key] === '') {
+      console.error(`review JSON command log entry ${index} missing ${key}: ${logPath}`);
+      process.exit(1);
+    }
+  }
+}
+NODE
 }
 
 validate_package_source_secret_scan_log() {
@@ -445,6 +482,9 @@ if [[ -n "$REVIEW_LOG_MANIFEST" ]]; then
     case "$repo_path" in
       *.log)
         validate_command_log_evidence "$repo_path"
+        ;;
+      *command-log.json)
+        validate_json_command_log_evidence "$repo_path"
         ;;
     esac
     tracked_repo_path=""

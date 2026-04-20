@@ -1,122 +1,110 @@
 command_log_version=1
 command=node --test tests/review-package/create-review-package.test.mjs
-cwd=C:\Users\marug\Documents\GitHub\OpenDolphinNext
+cwd=/mnt/c/Users/marug/Documents/GitHub/OpenDolphinNext
 runId=20260420T000000Z
-start_utc=2026-04-20T00:28:37Z
+start_utc=2026-04-20T00:38:14Z
 --- command output ---
 TAP version 13
 # Subtest: creates a reviewer package without artifacts or legacy client content
 ok 1 - creates a reviewer package without artifacts or legacy client content
   ---
-  duration_ms: 1921.6562
-  type: 'test'
+  duration_ms: 1310.529927
   ...
 # Subtest: adds manifest-listed review logs when requested
 ok 2 - adds manifest-listed review logs when requested
   ---
-  duration_ms: 2133.9805
-  type: 'test'
+  duration_ms: 1495.13131
   ...
 # Subtest: claims package source-scope scan only when the package scan log proves pass
 ok 3 - claims package source-scope scan only when the package scan log proves pass
   ---
-  duration_ms: 1933.6653
-  type: 'test'
+  duration_ms: 1462.976232
   ...
 # Subtest: rejects dynamic-only evidence when the sidecar claims full source clean
 ok 4 - rejects dynamic-only evidence when the sidecar claims full source clean
   ---
-  duration_ms: 1930.565
-  type: 'test'
+  duration_ms: 1369.622537
   ...
 # Subtest: rejects final package scan evidence that targets a preliminary zip
 ok 5 - rejects final package scan evidence that targets a preliminary zip
   ---
-  duration_ms: 3146.4265
-  type: 'test'
+  duration_ms: 2544.214557
   ...
 # Subtest: rejects worktree clean claims without package-included git command log evidence
 ok 6 - rejects worktree clean claims without package-included git command log evidence
   ---
-  duration_ms: 1652.4899
-  type: 'test'
+  duration_ms: 1309.668397
   ...
 # Subtest: rejects package source-scope claim when secret-scan-review-bundle log is not a pass result
 ok 7 - rejects package source-scope claim when secret-scan-review-bundle log is not a pass result
   ---
-  duration_ms: 646.9843
-  type: 'test'
+  duration_ms: 149.502877
   ...
 # Subtest: rejects sidecar zip integrity drift
 ok 8 - rejects sidecar zip integrity drift
   ---
-  duration_ms: 4573.9832
-  type: 'test'
+  duration_ms: 3754.677164
   ...
 # Subtest: packages extracted source subsets without git metadata as not verified git truth
 ok 9 - packages extracted source subsets without git metadata as not verified git truth
   ---
-  duration_ms: 1343.5009
-  type: 'test'
+  duration_ms: 1064.236085
   ...
 # Subtest: rejects raw artifact paths from review log manifests
 ok 10 - rejects raw artifact paths from review log manifests
   ---
-  duration_ms: 2727.8622
-  type: 'test'
+  duration_ms: 537.812315
   ...
 # Subtest: scan tool rejects raw sensitive package path categories
 ok 11 - scan tool rejects raw sensitive package path categories
   ---
-  duration_ms: 1269.4754
-  type: 'test'
+  duration_ms: 2748.464955
   ...
 # Subtest: rejects credential-bearing review evidence before packaging
 ok 12 - rejects credential-bearing review evidence before packaging
   ---
-  duration_ms: 4175.9451
-  type: 'test'
+  duration_ms: 831.519196
   ...
 # Subtest: rejects empty manifest-listed command logs
 ok 13 - rejects empty manifest-listed command logs
   ---
-  duration_ms: 481.5133
-  type: 'test'
+  duration_ms: 91.37527
+  ...
+# Subtest: rejects malformed manifest-listed JSON command logs
+ok 14 - rejects malformed manifest-listed JSON command logs
+  ---
+  duration_ms: 177.354828
   ...
 # Subtest: records tracked missing file details in the package manifest
-ok 14 - records tracked missing file details in the package manifest
+ok 15 - records tracked missing file details in the package manifest
   ---
-  duration_ms: 1637.9375
-  type: 'test'
+  duration_ms: 1100.186422
   ...
 # Subtest: command log wrapper writes exit code metadata for silent success
-ok 15 - command log wrapper writes exit code metadata for silent success
+ok 16 - command log wrapper writes exit code metadata for silent success
   ---
-  duration_ms: 114.5466
-  type: 'test'
+  duration_ms: 20.588221
   ...
 # Subtest: command log wrapper records exact target metadata when supplied
-ok 16 - command log wrapper records exact target metadata when supplied
+ok 17 - command log wrapper records exact target metadata when supplied
   ---
-  duration_ms: 111.6589
-  type: 'test'
+  duration_ms: 21.265949
   ...
 # Subtest: fails when every tracked file is excluded
-ok 17 - fails when every tracked file is excluded
+ok 18 - fails when every tracked file is excluded
   ---
-  duration_ms: 465.494
-  type: 'test'
+  duration_ms: 87.732277
   ...
-1..17
-# tests 17
+1..18
+# tests 18
 # suites 0
-# pass 17
+# pass 18
 # fail 0
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 30353.7881
+# duration_ms 20251.93289
 --- command summary ---
-end_utc=2026-04-20T00:29:08Z
+end_utc=2026-04-20T00:38:35Z
 exit_code=0
 result=PASS
