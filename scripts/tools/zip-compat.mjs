@@ -37,6 +37,10 @@ function findEndOfCentralDirectory(buffer) {
 export function listEntries(zipPath) {
   if (!fs.existsSync(zipPath)) return [];
   const buffer = fs.readFileSync(zipPath);
+  return listEntriesFromBuffer(buffer);
+}
+
+function listEntriesFromBuffer(buffer) {
   const eocd = findEndOfCentralDirectory(buffer);
   const entryCount = buffer.readUInt16LE(eocd + 10);
   let offset = buffer.readUInt32LE(eocd + 16);
@@ -62,21 +66,26 @@ export function listEntries(zipPath) {
 
 export function readEntry(zipPath, entryName) {
   const buffer = fs.readFileSync(zipPath);
-  const entry = listEntries(zipPath).find((candidate) => candidate.name === entryName);
+  const entry = listEntriesFromBuffer(buffer).find((candidate) => candidate.name === entryName);
   if (!entry) throw new Error(`ZIP entry not found: ${entryName}`);
+  return readEntryFromBuffer(buffer, entry);
+}
+
+function readEntryFromBuffer(buffer, entry) {
   const offset = entry.localOffset;
-  if (buffer.readUInt32LE(offset) !== 0x04034b50) throw new Error(`invalid ZIP local header: ${entryName}`);
+  if (buffer.readUInt32LE(offset) !== 0x04034b50) throw new Error(`invalid ZIP local header: ${entry.name}`);
   const nameLength = buffer.readUInt16LE(offset + 26);
   const extraLength = buffer.readUInt16LE(offset + 28);
   const dataStart = offset + 30 + nameLength + extraLength;
   const data = buffer.subarray(dataStart, dataStart + entry.compressedSize);
   if (entry.method === 0) return Buffer.from(data);
   if (entry.method === 8) return zlib.inflateRawSync(data);
-  throw new Error(`unsupported ZIP compression method ${entry.method}: ${entryName}`);
+  throw new Error(`unsupported ZIP compression method ${entry.method}: ${entry.name}`);
 }
 
 export function readAll(zipPath) {
-  return Buffer.concat(listEntries(zipPath).map((entry) => readEntry(zipPath, entry.name)));
+  const buffer = fs.readFileSync(zipPath);
+  return Buffer.concat(listEntriesFromBuffer(buffer).map((entry) => readEntryFromBuffer(buffer, entry)));
 }
 
 function normalizeEntryName(name) {
