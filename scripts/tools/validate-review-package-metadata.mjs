@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { listEntries, readAll, readEntry } from './zip-compat.mjs';
 
-const [zipPath, summaryPathArg] = process.argv.slice(2);
+const [zipPath, summaryPathArg, packageScanLogPathArg] = process.argv.slice(2);
 
 if (!zipPath) {
   console.error('usage: validate-review-package-metadata.mjs <review-package.zip> [summary.txt]');
@@ -16,14 +17,6 @@ const summaryPath = summaryPathArg ?? `${zipPath}.summary.txt`;
 function fail(message) {
   console.error(message);
   process.exit(1);
-}
-
-function run(command, args) {
-  return execFileSync(command, args, {
-    encoding: 'utf8',
-    maxBuffer: 512 * 1024 * 1024,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
 }
 
 function parseKeyValue(text) {
@@ -39,8 +32,15 @@ function sha256File(filePath) {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
 
+function normalizeHostPath(value) {
+  if (process.platform === 'win32') {
+    return value.replace(/^\/mnt\/([A-Za-z])\//, (_, drive) => `${drive.toUpperCase()}:/`).replaceAll('/', path.sep);
+  }
+  return value;
+}
+
 function readZipEntry(entry) {
-  return run('unzip', ['-p', zipPath, entry]);
+  return readEntry(zipPath, entry).toString('utf8');
 }
 
 function required(values, key, label) {
@@ -58,16 +58,13 @@ if (!existsSync(summaryPath)) fail(`review package summary not found: ${summaryP
 
 let entries;
 try {
-  entries = run('zipinfo', ['-1', zipPath])
-    .trim()
-    .split(/\n/)
-    .filter(Boolean);
+  entries = listEntries(zipPath).map((entry) => entry.name).filter(Boolean);
 } catch (error) {
   fail(`failed to read zip entries: ${error.message}`);
 }
 
 const forbiddenPathPattern =
-  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:node_modules|dist|target|build|out|coverage|test-results)\/|\/(?:raw|har|screenshots?|trace|test-results)\/|\/(?:network|requests)\/|(?:^|\/)(?:request|response)-xml\/|(?:^|\/).*\.har$/i;
+  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:\.git|node_modules|dist|target|build|out|coverage|test-results|har|traces?|videos?|raw-screenshots?|screenshots?|raw-network-dumps?)\/|\/(?:network|requests)\/|(?:^|\/)(?:request|response)-xml\/|(?:^|\/).*\.har$/i;
 const forbiddenPath = entries.find((entry) => forbiddenPathPattern.test(entry));
 if (forbiddenPath) fail(`forbidden raw/generated path found in package: ${forbiddenPath}`);
 
@@ -104,7 +101,7 @@ const secretLiteralRules = [
 
 let combinedContent = '';
 try {
-  combinedContent = run('unzip', ['-p', zipPath]);
+  combinedContent = readAll(zipPath).toString('utf8');
 } catch {
   combinedContent = '';
 }
@@ -159,6 +156,9 @@ for (const entry of entries) {
 if (!entries.includes('REVIEW_PACKAGE_MANIFEST.txt')) {
   fail('REVIEW_PACKAGE_MANIFEST.txt missing from package');
 }
+if (!entries.includes('REVIEW_LOG_INCLUSIONS_MANIFEST.txt')) {
+  fail('REVIEW_LOG_INCLUSIONS_MANIFEST.txt missing from package');
+}
 
 const manifest = parseKeyValue(readZipEntry('REVIEW_PACKAGE_MANIFEST.txt'));
 const summary = parseKeyValue(readFileSync(summaryPath, 'utf8'));
@@ -180,6 +180,7 @@ try {
   for (const values of [manifest, summary]) {
     const label = values === manifest ? 'manifest' : 'summary';
     required(values, 'secret_scan_scope', label);
+    required(values, 'dynamic_review_evidence_secret_scan_claim', label);
     required(values, 'dynamic_secret_scan_claim', label);
     assertEqual(values, 'full_source_secret_scan_claim', 'not_claimed', label);
     assertEqual(values, 'worktree_clean', 'not_verified', label);
@@ -187,6 +188,14 @@ try {
     required(values, 'source_branch', label);
     required(values, 'git_claim_evidence_policy', label);
   }
+
+  assertEqual(manifest, 'review_log_inclusions_manifest_entry', 'REVIEW_LOG_INCLUSIONS_MANIFEST.txt', 'manifest');
+  assertEqual(summary, 'review_log_inclusions_manifest_entry', 'REVIEW_LOG_INCLUSIONS_MANIFEST.txt', 'summary');
+  assertEqual(manifest, 'package_source_secret_scan_claim', 'recorded_in_external_sidecar', 'manifest');
+  assertEqual(manifest, 'package_source_secret_scan_scope', 'final_review_zip_post_creation', 'manifest');
+  assertEqual(summary, 'package_source_secret_scan_claim', 'passed', 'summary');
+  assertEqual(summary, 'package_source_secret_scan_scope', 'final_review_zip_post_creation', 'summary');
+  assert.equal(required(summary, 'package_source_secret_scan_target_sha256', 'summary'), actualSha, 'summary package_source_secret_scan_target_sha256');
 
   const summaryScope = required(summary, 'secret_scan_scope', 'summary');
   if (summaryScope === 'dynamic_review_evidence_only') {
@@ -203,8 +212,27 @@ try {
 
 const sourceScanLogs = entries.filter((entry) => /(^|\/)secret-scan-review-bundle\.log$/.test(entry));
 let passingSourceScanLogCount = 0;
+function parseCommandLog(text) {
+  return parseKeyValue(text);
+}
+
+function validateCommandLogContent(content, label) {
+  if (content.trim() === '') fail(`${label} is empty and cannot be pass evidence`);
+  const values = parseCommandLog(content);
+  for (const key of ['command', 'cwd', 'runId']) {
+    required(values, key, label);
+  }
+  if (!values.has('start') && !values.has('start_utc')) fail(`${label} missing start metadata`);
+  if (!values.has('end') && !values.has('end_utc')) fail(`${label} missing end metadata`);
+  if (!values.has('exit') && !values.has('exit_code')) fail(`${label} missing exit code metadata`);
+  return values;
+}
+
 for (const entry of sourceScanLogs) {
   const content = readZipEntry(entry);
+  const logValues = validateCommandLogContent(content, entry);
+  required(logValues, 'target_path', entry);
+  required(logValues, 'target_sha256', entry);
   const passed =
     /^exit(_code)?=0$/m.test(content) &&
     /^result=PASS$/m.test(content) &&
@@ -215,25 +243,52 @@ for (const entry of sourceScanLogs) {
   passingSourceScanLogCount += 1;
 }
 
-const expectedPackageSourceClaim = passingSourceScanLogCount > 0 ? 'passed' : 'not_claimed';
+const expectedBundleIncludedSourceScopeClaim = passingSourceScanLogCount > 0 ? 'passed' : 'not_claimed';
 for (const [label, values] of [
   ['manifest', manifest],
   ['summary', summary],
 ]) {
   try {
     assert.equal(
-      required(values, 'package_source_secret_scan_claim', label),
-      expectedPackageSourceClaim,
-      `${label} package_source_secret_scan_claim`,
-    );
-    assert.equal(
       required(values, 'bundle_included_source_scope_secret_scan_claim', label),
-      expectedPackageSourceClaim,
+      expectedBundleIncludedSourceScopeClaim,
       `${label} bundle_included_source_scope_secret_scan_claim`,
     );
   } catch (error) {
     fail(error.message);
   }
+}
+
+const packageScanLogPath = packageScanLogPathArg
+  ? path.resolve(packageScanLogPathArg)
+  : path.resolve(path.dirname(summaryPath), required(summary, 'package_source_secret_scan_evidence', 'summary'));
+if (!existsSync(packageScanLogPath)) fail(`package source-scope secret scan log not found: ${packageScanLogPath}`);
+if (statSync(packageScanLogPath).size === 0) fail(`package source-scope secret scan log is empty: ${packageScanLogPath}`);
+
+const packageScanLogContent = readFileSync(packageScanLogPath, 'utf8');
+const packageScanLog = validateCommandLogContent(packageScanLogContent, 'package source-scope secret scan log');
+const scanCwd = path.resolve(normalizeHostPath(required(packageScanLog, 'cwd', 'package source-scope secret scan log')));
+const scanTargetPathValue = required(packageScanLog, 'target_path', 'package source-scope secret scan log');
+const normalizedScanTargetPathValue = normalizeHostPath(scanTargetPathValue);
+const scanTargetPath = path.resolve(scanCwd, normalizedScanTargetPathValue);
+const zipAbsolutePath = path.resolve(zipPath);
+try {
+  assert.equal(scanTargetPath, zipAbsolutePath, 'package source-scope scan target_path must be the final review ZIP');
+  assert.equal(required(packageScanLog, 'target_sha256', 'package source-scope secret scan log'), actualSha, 'package source-scope scan target_sha256');
+  assert.match(packageScanLogContent, /^exit(_code)?=0$/m, 'package source-scope scan exit_code');
+  assert.match(packageScanLogContent, /^result=PASS$/m, 'package source-scope scan result');
+  assert.match(
+    packageScanLogContent,
+    /review bundle included source scope secret scan passed:/,
+    'package source-scope scan pass marker',
+  );
+  assert.equal(
+    required(summary, 'package_source_secret_scan_target_path', 'summary'),
+    scanTargetPathValue,
+    'summary package_source_secret_scan_target_path',
+  );
+} catch (error) {
+  fail(error.message);
 }
 
 console.log(`review package metadata validation passed: ${zipPath}`);

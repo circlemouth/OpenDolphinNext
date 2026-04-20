@@ -5,9 +5,11 @@ set -uo pipefail
 usage() {
   cat <<'USAGE'
 Usage:
-  scripts/tools/command-log-wrapper.sh --run-id RUN_ID --log PATH [--cwd PATH] -- COMMAND [ARGS...]
+  scripts/tools/command-log-wrapper.sh --run-id RUN_ID --log PATH [--cwd PATH] [--target-path PATH --target-sha256 HASH] -- COMMAND [ARGS...]
 
 Writes command evidence logs with command/cwd/runId/start/end/exit_code metadata.
+When the command validates a concrete artifact, pass --target-path and
+--target-sha256 so the evidence binds to the exact target.
 The wrapped command's stdout and stderr are captured in the log, and the wrapper
 exits with the wrapped command's exit code.
 USAGE
@@ -16,6 +18,8 @@ USAGE
 RUN_ID="${RUN_ID:-}"
 LOG_PATH=""
 COMMAND_CWD=""
+TARGET_PATH=""
+TARGET_SHA256=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -29,6 +33,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --cwd)
       COMMAND_CWD="${2:-}"
+      shift 2
+      ;;
+    --target-path)
+      TARGET_PATH="${2:-}"
+      shift 2
+      ;;
+    --target-sha256)
+      TARGET_SHA256="${2:-}"
       shift 2
       ;;
     --help|-h)
@@ -59,6 +71,11 @@ fi
 
 if [[ $# -eq 0 ]]; then
   echo "wrapped command is required after --" >&2
+  exit 2
+fi
+
+if { [[ -n "$TARGET_PATH" ]] && [[ -z "$TARGET_SHA256" ]]; } || { [[ -z "$TARGET_PATH" ]] && [[ -n "$TARGET_SHA256" ]]; }; then
+  echo "--target-path and --target-sha256 must be provided together" >&2
   exit 2
 fi
 
@@ -93,6 +110,10 @@ START_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo "cwd=${COMMAND_CWD}"
   echo "runId=${RUN_ID}"
   echo "start_utc=${START_UTC}"
+  if [[ -n "$TARGET_PATH" ]]; then
+    echo "target_path=${TARGET_PATH}"
+    echo "target_sha256=${TARGET_SHA256}"
+  fi
   echo "--- command output ---"
 } > "$LOG_PATH"
 

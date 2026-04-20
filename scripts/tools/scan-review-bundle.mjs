@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { listEntries, readAll, readEntry } from './zip-compat.mjs';
 
 const zipPath = process.argv[2];
 
@@ -14,16 +14,10 @@ if (!existsSync(zipPath)) {
   process.exit(2);
 }
 
-const entries = execFileSync('zipinfo', ['-1', zipPath], {
-  encoding: 'utf8',
-  maxBuffer: 64 * 1024 * 1024,
-})
-  .trim()
-  .split(/\n/)
-  .filter(Boolean);
+const entries = listEntries(zipPath).map((entry) => entry.name);
 
 const forbiddenPathPattern =
-  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:node_modules|dist|target|build|out|coverage|test-results)\/|\/(?:raw|har|screenshots|trace|test-results)\/|\/(?:network|requests)\/[^/]*(?:dump|raw|trace|capture|payload)/i;
+  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:\.git|node_modules|dist|target|build|out|coverage|test-results|har|traces?|videos?|raw-screenshots?|screenshots?|raw-network-dumps?)\/|\/(?:network|requests)\/[^/]*(?:dump|raw|trace|capture|payload)|(?:^|\/).*\.har$/i;
 
 const forbiddenPath = entries.find((entry) => forbiddenPathPattern.test(entry));
 if (forbiddenPath) {
@@ -89,10 +83,7 @@ function extractPasswordValue(line) {
   return value.split(/[,\s;}'")\]]/, 1)[0] ?? '';
 }
 
-const combinedContent = execFileSync('unzip', ['-p', zipPath], {
-  encoding: 'utf8',
-  maxBuffer: 512 * 1024 * 1024,
-});
+const combinedContent = readAll(zipPath).toString('utf8');
 
 for (const { name, pattern } of secretLiteralRules) {
   if (pattern.test(combinedContent)) {
@@ -108,11 +99,7 @@ for (const entry of entries) {
 
   let content;
   try {
-    content = execFileSync('unzip', ['-p', zipPath, entry], {
-      encoding: 'utf8',
-      maxBuffer: 64 * 1024 * 1024,
-      stdio: ['ignore', 'pipe', 'ignore'],
-    });
+    content = readEntry(zipPath, entry).toString('utf8');
   } catch {
     continue;
   }

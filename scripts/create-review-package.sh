@@ -2,6 +2,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+SCAN_REVIEW_BUNDLE_SCRIPT="$SCRIPT_DIR/tools/scan-review-bundle.mjs"
+ZIP_COMPAT_SCRIPT="$SCRIPT_DIR/tools/zip-compat.mjs"
+
 if ROOT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)"; then
   IS_GIT_WORKTREE=1
 else
@@ -92,13 +96,18 @@ if [[ -n "$PACKAGE_NAME_SUFFIX" && ! "$PACKAGE_NAME_SUFFIX" =~ ^[-._A-Za-z0-9]+$
   exit 1
 fi
 
-if ! command -v zip >/dev/null 2>&1; then
-  echo "zip command not found" >&2
+if ! command -v node >/dev/null 2>&1; then
+  echo "node command not found" >&2
   exit 1
 fi
 
-if ! command -v zipinfo >/dev/null 2>&1; then
-  echo "zipinfo command not found" >&2
+if [[ ! -f "$SCAN_REVIEW_BUNDLE_SCRIPT" ]]; then
+  echo "review bundle scanner not found: $SCAN_REVIEW_BUNDLE_SCRIPT" >&2
+  exit 1
+fi
+
+if [[ ! -f "$ZIP_COMPAT_SCRIPT" ]]; then
+  echo "zip compatibility tool not found: $ZIP_COMPAT_SCRIPT" >&2
   exit 1
 fi
 
@@ -112,6 +121,44 @@ calculate_sha256() {
 
 file_size_bytes() {
   wc -c < "$1" | awk '{print $1}'
+}
+
+zip_create_from_file_list() {
+  local zip_path="$1"
+  local file_list="$2"
+  if command -v zip >/dev/null 2>&1; then
+    zip -q "$zip_path" -@ < "$file_list"
+  else
+    node "$ZIP_COMPAT_SCRIPT" create-from-stdin "$zip_path" < "$file_list"
+  fi
+}
+
+zip_add_junk_file() {
+  local zip_path="$1"
+  local file_path="$2"
+  if command -v zip >/dev/null 2>&1; then
+    zip -q "$zip_path" "$file_path" -j
+  else
+    node "$ZIP_COMPAT_SCRIPT" create "$zip_path" --junk-paths "$file_path"
+  fi
+}
+
+zip_list_entries() {
+  local zip_path="$1"
+  if command -v zipinfo >/dev/null 2>&1; then
+    zipinfo -1 "$zip_path"
+  else
+    node "$ZIP_COMPAT_SCRIPT" list "$zip_path"
+  fi
+}
+
+absolute_file_path() {
+  local input_path="$1"
+  local input_dir
+  local input_base
+  input_dir="$(dirname "$input_path")"
+  input_base="$(basename "$input_path")"
+  printf '%s/%s\n' "$(cd "$input_dir" && pwd -P)" "$input_base"
 }
 
 repo_relative_path() {
@@ -159,7 +206,7 @@ validate_sanitized_review_evidence_path() {
   lower_path="$(printf '%s' "$repo_path" | tr '[:upper:]' '[:lower:]')"
 
   case "$lower_path" in
-    *raw*|*/har/*|*.har|*network*|*requests*|*request-xml*|*response-xml*|*stacktrace*|*screenshot*|*trace*|*.xml|*.html|*.htm|*.png|*.jpg|*.jpeg|*.webm|*.zip|*.gz|*.tgz)
+    *raw*|*/har/*|*.har|*network*|*requests*|*request-xml*|*response-xml*|*stacktrace*|*screenshot*|*trace*|*/traces/*|*/video/*|*/videos/*|*.xml|*.html|*.htm|*.png|*.jpg|*.jpeg|*.webm|*.mp4|*.zip|*.gz|*.tgz)
       if [[ "$lower_path" != *".sanitized."* ]]; then
         echo "review log manifest entry appears to be a raw artifact and is not allowed: $repo_path" >&2
         exit 1
@@ -224,6 +271,14 @@ validate_package_source_secret_scan_log() {
     echo "secret-scan-review-bundle.log is missing PASS result evidence: $repo_path" >&2
     exit 1
   }
+  grep -Eq '^target_path=' "$log_path" || {
+    echo "secret-scan-review-bundle.log is missing exact target path evidence: $repo_path" >&2
+    exit 1
+  }
+  grep -Eq '^target_sha256=[0-9a-f]{64}$' "$log_path" || {
+    echo "secret-scan-review-bundle.log is missing exact target sha256 evidence: $repo_path" >&2
+    exit 1
+  }
   grep -Fq 'review bundle included source scope secret scan passed:' "$log_path" || {
     echo "secret-scan-review-bundle.log does not prove package source-scope secret scan passed: $repo_path" >&2
     exit 1
@@ -263,9 +318,12 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 FILE_LIST="$TMP_DIR/file-list.txt"
 RAW_FILE_LIST="$TMP_DIR/raw-file-list.txt"
 MANIFEST_FILE="$TMP_DIR/REVIEW_PACKAGE_MANIFEST.txt"
+REVIEW_LOG_INCLUSIONS_FILE="$TMP_DIR/REVIEW_LOG_INCLUSIONS_MANIFEST.txt"
 PACKAGE_FILE="$OUT_DIR/${PACKAGE_PREFIX}-${RUN_ID}${PACKAGE_NAME_SUFFIX}.zip"
 PACKAGE_SUMMARY_FILE="${PACKAGE_FILE}.summary.txt"
 PACKAGE_SUMMARY_BASENAME="$(basename "$PACKAGE_SUMMARY_FILE")"
+PACKAGE_SCAN_LOG="${PACKAGE_FILE}.secret-scan-review-bundle.log"
+PACKAGE_SCAN_LOG_BASENAME="$(basename "$PACKAGE_SCAN_LOG")"
 
 if [[ "$IS_GIT_WORKTREE" -eq 1 ]]; then
   GIT_COMMIT="$(git rev-parse HEAD 2>/dev/null || printf 'not_verified')"
@@ -347,8 +405,8 @@ for include_path in "${OPTIONAL_INCLUDE_FILES[@]}"; do
 done
 
 REVIEW_LOG_INCLUDED=()
-PACKAGE_SOURCE_SECRET_SCAN_CLAIM="not_claimed"
-PACKAGE_SOURCE_SECRET_SCAN_EVIDENCE="none"
+BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_CLAIM="not_claimed"
+BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE="none"
 if [[ -n "$REVIEW_LOG_MANIFEST" ]]; then
   if [[ ! -f "$REVIEW_LOG_MANIFEST" ]]; then
     echo "review log manifest not found: $REVIEW_LOG_MANIFEST" >&2
@@ -406,11 +464,11 @@ if [[ -n "$REVIEW_LOG_MANIFEST" ]]; then
     scan_review_evidence_for_forbidden_secrets "$repo_path" "$repo_path"
     if [[ "$(basename "$repo_path")" == "secret-scan-review-bundle.log" ]]; then
       validate_package_source_secret_scan_log "$repo_path" "$repo_path"
-      PACKAGE_SOURCE_SECRET_SCAN_CLAIM="passed"
-      if [[ "$PACKAGE_SOURCE_SECRET_SCAN_EVIDENCE" == "none" ]]; then
-        PACKAGE_SOURCE_SECRET_SCAN_EVIDENCE="$repo_path"
+      BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_CLAIM="passed"
+      if [[ "$BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE" == "none" ]]; then
+        BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE="$repo_path"
       else
-        PACKAGE_SOURCE_SECRET_SCAN_EVIDENCE="${PACKAGE_SOURCE_SECRET_SCAN_EVIDENCE},${repo_path}"
+        BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE="${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE},${repo_path}"
       fi
     fi
     if ! grep -Fxq "$repo_path" "$FILE_LIST"; then
@@ -482,6 +540,7 @@ optional_includes=${OPTIONAL_INCLUDES_CSV}
 review_log_include_count=${REVIEW_LOG_INCLUDE_COUNT}
 review_log_includes=${REVIEW_LOG_INCLUDES_CSV}
 review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content
+review_log_inclusions_manifest_entry=REVIEW_LOG_INCLUSIONS_MANIFEST.txt
 package_integrity_summary_file=${PACKAGE_SUMMARY_BASENAME}
 zip_file_count=recorded_in_external_sidecar
 zip_size_bytes=recorded_in_external_sidecar
@@ -490,13 +549,16 @@ git_metadata_included=no
 clean_checkout_claim=not_verified
 git_claim_evidence_policy=git claims require package-included local git command logs; this support zip does not include .git metadata or claim clean checkout truth
 secret_scan_scope=${SECRET_SCAN_SCOPE}
+dynamic_review_evidence_secret_scan_claim=${DYNAMIC_SECRET_SCAN_CLAIM}
 secret_scan_file_count=${SECRET_SCAN_FILE_COUNT}
 secret_scan_claim=${SECRET_SCAN_CLEAN_LABEL}
 dynamic_secret_scan_claim=${DYNAMIC_SECRET_SCAN_CLAIM}
-bundle_included_source_scope_secret_scan_claim=${PACKAGE_SOURCE_SECRET_SCAN_CLAIM}
+bundle_included_source_scope_secret_scan_claim=${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_CLAIM}
+bundle_included_source_scope_secret_scan_evidence=${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE}
 full_source_secret_scan_claim=not_claimed
-package_source_secret_scan_claim=${PACKAGE_SOURCE_SECRET_SCAN_CLAIM}
-package_source_secret_scan_evidence=${PACKAGE_SOURCE_SECRET_SCAN_EVIDENCE}
+package_source_secret_scan_claim=recorded_in_external_sidecar
+package_source_secret_scan_scope=final_review_zip_post_creation
+package_source_secret_scan_evidence=${PACKAGE_SCAN_LOG_BASENAME}
 orca_phase2_5_zero_candidate_verdict=PARTIAL_TEST_DATA_OR_HARNESS_READINESS_BLOCKER
 orca_phase2_5_zero_candidate_semantics=acceptedCandidateCount_0_means_00001_to_00011_lack_current_read_only_mutation_ready_evidence_across_harness_api_auth_parser_readiness_exact_preflight_criteria_not_official_initial_patient_absence
 guarantee_scope=extracted_review_subset_excludes_legacy_client_server_artifacts_generated_dirs_and_rejects_forbidden_dynamic_evidence_secrets
@@ -509,21 +571,76 @@ raw_artifact_policy=raw_orca_artifacts_har_network_request_response_screenshot_t
 notes=Repository reviewer support package without artifacts or legacy client sources. Includes sanitized browser manual QA summary files when present. This zip has no .git directory and must not be used as clean checkout evidence or full-source secret-scan evidence.
 EOF
 
+cat > "$REVIEW_LOG_INCLUSIONS_FILE" <<EOF
+review_log_inclusions_manifest_version=1
+run_id=${RUN_ID}
+created_at_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content
+review_log_include_count=${REVIEW_LOG_INCLUDE_COUNT}
+review_log_includes=${REVIEW_LOG_INCLUDES_CSV}
+source_manifest=$([[ -n "$REVIEW_LOG_MANIFEST" ]] && printf '%s' "$MANIFEST_REPO_PATH" || printf 'none')
+dynamic_review_evidence_secret_scan_claim=${DYNAMIC_SECRET_SCAN_CLAIM}
+bundle_included_source_scope_secret_scan_claim=${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_CLAIM}
+bundle_included_source_scope_secret_scan_evidence=${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE}
+package_source_secret_scan_evidence=${PACKAGE_SCAN_LOG_BASENAME}
+empty_log_policy=empty_logs_do_not_count_as_pass_evidence
+EOF
+
 rm -f "$PACKAGE_FILE"
 rm -f "$PACKAGE_SUMMARY_FILE"
-zip -q "$PACKAGE_FILE" -@ < "$FILE_LIST"
-zip -q "$PACKAGE_FILE" "$MANIFEST_FILE" -j
+rm -f "$PACKAGE_SCAN_LOG"
+zip_create_from_file_list "$PACKAGE_FILE" "$FILE_LIST"
+zip_add_junk_file "$PACKAGE_FILE" "$MANIFEST_FILE"
+zip_add_junk_file "$PACKAGE_FILE" "$REVIEW_LOG_INCLUSIONS_FILE"
 
-BAD_PATHS="$(zipinfo -1 "$PACKAGE_FILE" | grep -E '^(\.git/|client/|server/|artifacts/|web-client/artifacts/|node_modules/|dist/|target/|build/|out/|tmp/|output/|coverage/|test-results/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|.*/coverage/|.*/test-results/)' || true)"
+BAD_PATHS="$(zip_list_entries "$PACKAGE_FILE" | grep -E '^(\.git/|client/|server/|artifacts/|web-client/artifacts/|node_modules/|dist/|target/|build/|out/|tmp/|output/|coverage/|test-results/|.*/node_modules/|.*/dist/|.*/target/|.*/build/|.*/out/|.*/coverage/|.*/test-results/)' || true)"
 if [[ -n "$BAD_PATHS" ]]; then
   echo "Excluded paths were found in package:" >&2
   echo "$BAD_PATHS" >&2
   exit 1
 fi
 
-ZIP_FILE_COUNT="$(zipinfo -1 "$PACKAGE_FILE" | wc -l | awk '{print $1}')"
+ZIP_FILE_COUNT="$(zip_list_entries "$PACKAGE_FILE" | wc -l | awk '{print $1}')"
 ZIP_SIZE="$(file_size_bytes "$PACKAGE_FILE")"
 ZIP_SHA="$(calculate_sha256 "$PACKAGE_FILE")"
+PACKAGE_FILE_ABS="$(absolute_file_path "$PACKAGE_FILE")"
+
+SCAN_START_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+{
+  echo "command_log_version=1"
+  printf 'command=node %q %q\n' "$SCAN_REVIEW_BUNDLE_SCRIPT" "$PACKAGE_FILE"
+  echo "cwd=$ROOT_DIR"
+  echo "runId=${RUN_ID}"
+  echo "start_utc=${SCAN_START_UTC}"
+  echo "target_path=${PACKAGE_FILE}"
+  echo "target_sha256=${ZIP_SHA}"
+  echo "--- command output ---"
+} > "$PACKAGE_SCAN_LOG"
+set +e
+(
+  cd "$ROOT_DIR" || exit 125
+  node "$SCAN_REVIEW_BUNDLE_SCRIPT" "$PACKAGE_FILE"
+) >> "$PACKAGE_SCAN_LOG" 2>&1
+SCAN_EXIT_CODE=$?
+set -e
+SCAN_END_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+{
+  echo "--- command summary ---"
+  echo "end_utc=${SCAN_END_UTC}"
+  echo "exit_code=${SCAN_EXIT_CODE}"
+  if [[ "$SCAN_EXIT_CODE" -eq 0 ]]; then
+    echo "result=PASS"
+  else
+    echo "result=FAIL"
+  fi
+} >> "$PACKAGE_SCAN_LOG"
+
+if [[ "$SCAN_EXIT_CODE" -ne 0 ]]; then
+  echo "Final review ZIP secret scan failed. See: $PACKAGE_SCAN_LOG" >&2
+  exit "$SCAN_EXIT_CODE"
+fi
+
+PACKAGE_SCAN_LOG_SHA="$(calculate_sha256 "$PACKAGE_SCAN_LOG")"
 
 cat > "$PACKAGE_SUMMARY_FILE" <<EOF
 review_package_name=$(basename "$PACKAGE_FILE")
@@ -535,17 +652,25 @@ zip_file_count=${ZIP_FILE_COUNT}
 zip_size_bytes=${ZIP_SIZE}
 zip_sha256=${ZIP_SHA}
 manifest_entry=REVIEW_PACKAGE_MANIFEST.txt
+review_log_inclusions_manifest_entry=REVIEW_LOG_INCLUSIONS_MANIFEST.txt
 source_git_metadata_available=$([[ "$IS_GIT_WORKTREE" -eq 1 ]] && printf 'yes' || printf 'no')
 source_commit=${GIT_COMMIT}
 source_branch=${GIT_BRANCH}
 secret_scan_scope=${SECRET_SCAN_SCOPE}
+dynamic_review_evidence_secret_scan_claim=${DYNAMIC_SECRET_SCAN_CLAIM}
 secret_scan_file_count=${SECRET_SCAN_FILE_COUNT}
 secret_scan_claim=${SECRET_SCAN_CLEAN_LABEL}
 dynamic_secret_scan_claim=${DYNAMIC_SECRET_SCAN_CLAIM}
-bundle_included_source_scope_secret_scan_claim=${PACKAGE_SOURCE_SECRET_SCAN_CLAIM}
+bundle_included_source_scope_secret_scan_claim=${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_CLAIM}
+bundle_included_source_scope_secret_scan_evidence=${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE}
 full_source_secret_scan_claim=not_claimed
-package_source_secret_scan_claim=${PACKAGE_SOURCE_SECRET_SCAN_CLAIM}
-package_source_secret_scan_evidence=${PACKAGE_SOURCE_SECRET_SCAN_EVIDENCE}
+package_source_secret_scan_claim=passed
+package_source_secret_scan_scope=final_review_zip_post_creation
+package_source_secret_scan_evidence=${PACKAGE_SCAN_LOG_BASENAME}
+package_source_secret_scan_log_sha256=${PACKAGE_SCAN_LOG_SHA}
+package_source_secret_scan_target_path=${PACKAGE_FILE}
+package_source_secret_scan_target_abs_path=${PACKAGE_FILE_ABS}
+package_source_secret_scan_target_sha256=${ZIP_SHA}
 orca_phase2_5_zero_candidate_verdict=PARTIAL_TEST_DATA_OR_HARNESS_READINESS_BLOCKER
 orca_phase2_5_zero_candidate_semantics=acceptedCandidateCount_0_means_00001_to_00011_lack_current_read_only_mutation_ready_evidence_across_harness_api_auth_parser_readiness_exact_preflight_criteria_not_official_initial_patient_absence
 worktree_clean=${WORKTREE_CLEAN}
