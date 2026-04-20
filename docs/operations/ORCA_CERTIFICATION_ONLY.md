@@ -50,6 +50,7 @@
 - 開発中は `ORCA_BASE_URL=https://weborca-trial.orca.med.or.jp/` または `ORCA_API_HOST=weborca-trial.orca.med.or.jp` / `ORCA_API_PORT=443` / `ORCA_API_SCHEME=https` を設定する。
 - Basic 認証が必要な場合は `ORCA_API_USER` / `ORCA_API_PASSWORD` を設定する。
 - WebORCA 接続時は `ORCA_MODE=weborca`（オンプレは `ORCA_MODE=onprem`）を **明示**する。
+- ローカルでは `./orca.env.local` を自動読込し、見つからない場合は `~/.config/opendolphin/orca.env` を読む。`ORCA_ENV_FILE` を指定した場合はそれを優先する。
 
 #### 優先順位（server-modernized）
 1. `ORCA_BASE_URL`（指定時はこれを最優先）
@@ -61,6 +62,7 @@
 - 認証方式:
   - mTLS: `ORCA_CERT_PATH=<MASKED>` / `ORCA_CERT_PASS=<MASKED>`
   - Basic: `ORCA_BASIC_USER` / `ORCA_BASIC_PASSWORD` をローカル secret store または環境変数から設定する。
+- `web-client` の `npm run dev` は起動時に `./orca.env.local` を自動読込し、見つからない場合は `~/.config/opendolphin/orca.env` を読む。手動起動でも同じ値を使いたい場合は `ORCA_ENV_FILE` で上書きできる。
 
 ## 6. 管理画面で確認する項目
 - 管理画面権限: `/api/admin/orca/connection` が 200 を返すこと。これは **設定取得権限確認** です。
@@ -71,6 +73,7 @@
 
 ## 7. ログ/証跡ポリシー
 - `setup-modernized-env.sh` / `setup-modernized-env.ps1` の `ORCA_CONFIG` ログで **set/unset** のみ記録する。
+- `setup-modernized-env.sh` / `setup-modernized-env.ps1` / `ops/tests/orca/api-smoke.sh` / `web-client` の `npm run dev` は、`./orca.env.local` と `~/.config/opendolphin/orca.env` を自動読込する。
 - 機微情報は `<MASKED>` で保存し、必要であれば別途共有する。
 - 実環境接続を行った場合は `artifacts/orca-connectivity/<RUN_ID>/` に証跡を残す。
 - release cutover で使う接続確認は `docs/releases/orca-remediation-cutover.md` の事前チェック / smoke と同じ RUN_ID に束ねる。

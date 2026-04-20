@@ -123,12 +123,65 @@ function Mask-State {
     return "unset"
 }
 
+function Import-OrcaEnvFile {
+    $Candidates = @()
+    if ($env:ORCA_ENV_FILE) {
+        $Candidates += $env:ORCA_ENV_FILE
+    } else {
+        $Candidates += (Join-Path $ScriptDir "orca.env.local")
+        if ($HOME) {
+            $Candidates += (Join-Path $HOME ".config/opendolphin/orca.env")
+        }
+    }
+
+    foreach ($Candidate in $Candidates) {
+        if (-not $Candidate) { continue }
+        if (-not (Test-Path $Candidate)) { continue }
+
+        Log "Loading ORCA env from $Candidate..." -Color Cyan
+        foreach ($RawLine in Get-Content $Candidate) {
+            $Line = $RawLine.Trim()
+            if (-not $Line -or $Line.StartsWith("#")) { continue }
+            if ($Line.StartsWith("export ")) {
+                $Line = $Line.Substring(7).Trim()
+            }
+            if ($Line -notmatch '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+                continue
+            }
+            $Key = $Matches[1]
+            $RawValue = $Matches[2].Trim()
+            $Value = $RawValue
+            if ($RawValue.Length -ge 2 -and $RawValue.StartsWith("'") -and $RawValue.EndsWith("'")) {
+                $Value = $RawValue.Substring(1, $RawValue.Length - 2)
+            } elseif ($RawValue.Length -ge 2 -and $RawValue.StartsWith('"') -and $RawValue.EndsWith('"')) {
+                $Value = $RawValue.Substring(1, $RawValue.Length - 2)
+                $Value = $Value.Replace('\\', '\')
+                $Value = $Value.Replace('\"', '"')
+                $Value = $Value.Replace('\n', "`n")
+                $Value = $Value.Replace('\r', "`r")
+                $Value = $Value.Replace('\t', "`t")
+            }
+            Set-Item -Path "Env:$Key" -Value $Value
+        }
+        return
+    }
+
+    $HomeCandidate = if ($HOME) { Join-Path $HOME ".config/opendolphin/orca.env" } else { $null }
+    if ($HomeCandidate) {
+        Log "Warning: ORCA env file not found. Looked for $(Join-Path $ScriptDir 'orca.env.local') and $HomeCandidate." -Color Yellow
+    } else {
+        Log "Warning: ORCA env file not found. Looked for $(Join-Path $ScriptDir 'orca.env.local')." -Color Yellow
+    }
+}
+
 function Resolve-ProxyAuthEnv {
     $global:ORCA_PROXY_CERT_PATH = if ($env:ORCA_CERT_PATH) { $env:ORCA_CERT_PATH } elseif ($env:ORCA_PROD_CERT_PATH) { $env:ORCA_PROD_CERT_PATH } elseif ($env:ORCA_PROD_CERT) { $env:ORCA_PROD_CERT } else { $null }
     $global:ORCA_PROXY_CERT_PASS = if ($env:ORCA_CERT_PASS) { $env:ORCA_CERT_PASS } elseif ($env:ORCA_PROD_CERT_PASS) { $env:ORCA_PROD_CERT_PASS } else { $null }
     $global:ORCA_PROXY_BASIC_USER = if ($env:ORCA_BASIC_USER) { $env:ORCA_BASIC_USER } elseif ($env:ORCA_PROD_BASIC_USER) { $env:ORCA_PROD_BASIC_USER } elseif ($global:ORN_ORCA_API_USER) { $global:ORN_ORCA_API_USER } else { $null }
     $global:ORCA_PROXY_BASIC_PASSWORD = if ($env:ORCA_BASIC_PASSWORD) { $env:ORCA_BASIC_PASSWORD } elseif ($env:ORCA_BASIC_KEY) { $env:ORCA_BASIC_KEY } elseif ($env:ORCA_PROD_BASIC_KEY) { $env:ORCA_PROD_BASIC_KEY } elseif ($global:ORN_ORCA_API_PASSWORD) { $global:ORN_ORCA_API_PASSWORD } else { $null }
 }
+
+Import-OrcaEnvFile
 
 function Get-MD5Hash {
     param([string]$InputString)

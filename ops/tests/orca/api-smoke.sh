@@ -19,6 +19,38 @@ Example:
 USAGE
 }
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+
+load_orca_env_file() {
+  local env_file="${ORCA_ENV_FILE:-}"
+  local repo_local="$REPO_ROOT/orca.env.local"
+  local home_local=""
+  if [[ -n "${HOME:-}" ]]; then
+    home_local="$HOME/.config/opendolphin/orca.env"
+  fi
+
+  if [[ -n "$env_file" ]]; then
+    if [[ ! -r "$env_file" ]]; then
+      echo "[ERROR] ORCA_ENV_FILE is set but not readable: $env_file" >&2
+      exit 1
+    fi
+    # shellcheck disable=SC1090
+    source "$env_file"
+    return 0
+  fi
+
+  for candidate in "$repo_local" "$home_local"; do
+    if [[ -r "$candidate" ]]; then
+      # shellcheck disable=SC1090
+      source "$candidate"
+      return 0
+    fi
+  done
+}
+
+load_orca_env_file
+
 RUN_ID_DEFAULT="$(date -u +%Y%m%dT%H%M%SZ)TorcaApiSmoke"
 BASE_URL="${ORCA_SMOKE_BASE_URL:-http://orca:8000}"
 REQUESTED_PREFIXES="${ORCA_SMOKE_PREFIXES:-route,direct}"

@@ -30,4 +30,5 @@
 - `returnTo` は sanitize 済み internal path のみを扱う
 - 患者文脈は URL / browser storage に残さない
 - ORCA route taxonomy は `official=/api/orca/official/*`, `master=/api/orca/master/*`, `local=/api/local/*`
+- `npm run dev` は root の `orca.env.local` または `~/.config/opendolphin/orca.env` を自動読込する
 - security 規範の詳細は `notes/security-spec.md` を正本とする

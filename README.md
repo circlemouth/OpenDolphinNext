@@ -16,7 +16,7 @@
 
 ## Ops Entry
 - [ops/README.md](ops/README.md): ops harness の入口
-- [setup-modernized-env.sh](setup-modernized-env.sh), [setup-modernized-env.ps1](setup-modernized-env.ps1): 開発環境起動の主入口
+- [setup-modernized-env.sh](setup-modernized-env.sh), [setup-modernized-env.ps1](setup-modernized-env.ps1): 開発環境起動の主入口。`orca.env.local` または `~/.config/opendolphin/orca.env` を自動読込する
 - `docker-compose*.yml`: compose-based local stack entry
 
 ## Repository Map

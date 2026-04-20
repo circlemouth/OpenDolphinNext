@@ -1,3 +1,4 @@
+import './orca-env.mjs';
 import crypto from 'node:crypto';
 
 export const TRIAL_NATIVE_PROBE_CANDIDATES = [

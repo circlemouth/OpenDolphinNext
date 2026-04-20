@@ -29,6 +29,7 @@ node_modules/
 **/.env.local
 **/.env.*.local
 !.env.sample
+orca.env.local
 web-client/.env
 web-client/.env.*
 !web-client/.env.sample

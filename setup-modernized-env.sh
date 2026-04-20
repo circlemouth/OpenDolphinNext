@@ -38,6 +38,38 @@ normalize_base_path() {
   printf '%s' "$raw"
 }
 
+load_orca_env_file() {
+  local env_file="${ORCA_ENV_FILE:-}"
+  local repo_local="$SCRIPT_DIR/orca.env.local"
+  local home_local=""
+  if [[ -n "${HOME:-}" ]]; then
+    home_local="$HOME/.config/opendolphin/orca.env"
+  fi
+
+  if [[ -n "$env_file" ]]; then
+    if [[ ! -r "$env_file" ]]; then
+      echo "ORCA_ENV_FILE is set but not readable: $env_file" >&2
+      return 1
+    fi
+    log "Loading ORCA env from $env_file..."
+    # shellcheck disable=SC1090
+    source "$env_file"
+    return 0
+  fi
+
+  for candidate in "$repo_local" "$home_local"; do
+    if [[ -r "$candidate" ]]; then
+      log "Loading ORCA env from $candidate..."
+      # shellcheck disable=SC1090
+      source "$candidate"
+      return 0
+    fi
+  done
+
+  log "Warning: ORCA env file not found. Looked for $repo_local${home_local:+ and $home_local}."
+  return 0
+}
+
 ORCA_INFO_FILE="docs/operations/ORCA_CERTIFICATION_ONLY.md"
 ORCA_CREDENTIAL_FILE="docs/operations/ORCA_CERTIFICATION_ONLY.md"
 CUSTOM_PROP_TEMPLATE="ops/shared/docker/custom.properties"
@@ -161,6 +193,8 @@ SEARCH_PATH_FIXED=0
 log() {
   echo "[$(date +%H:%M:%S)] $*"
 }
+
+load_orca_env_file
 
 is_truthy() {
   local value="${1:-}"
