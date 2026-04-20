@@ -420,9 +420,12 @@ WORKTREE_CLEAN="not_verified"
 
 : > "$FILE_LIST"
 TRACKED_MISSING=()
+TRACKED_NON_FILE_SKIPPED=()
 while IFS= read -r tracked_path; do
-  if [[ -e "$tracked_path" ]]; then
+  if [[ -f "$tracked_path" || -L "$tracked_path" ]]; then
     printf '%s\n' "$tracked_path" >> "$FILE_LIST"
+  elif [[ -e "$tracked_path" ]]; then
+    TRACKED_NON_FILE_SKIPPED+=("$tracked_path")
   else
     TRACKED_MISSING+=("$tracked_path")
   fi
@@ -430,6 +433,7 @@ done < "$RAW_FILE_LIST"
 
 TRACKED_FILE_COUNT="$(wc -l < "$FILE_LIST" | awk '{print $1}')"
 TRACKED_MISSING_FILE_COUNT="${#TRACKED_MISSING[@]}"
+TRACKED_NON_FILE_SKIPPED_COUNT="${#TRACKED_NON_FILE_SKIPPED[@]}"
 
 OPTIONAL_INCLUDED=()
 for include_path in "${OPTIONAL_INCLUDE_FILES[@]}"; do
@@ -561,6 +565,21 @@ else
   TRACKED_MISSING_BLOCK="tracked_missing_files=none"
 fi
 
+TRACKED_NON_FILE_SKIPPED_BLOCK=""
+if [[ "$TRACKED_NON_FILE_SKIPPED_COUNT" -gt 0 ]]; then
+  TRACKED_NON_FILE_SKIPPED_BLOCK="$(
+    {
+      echo "tracked_non_file_skipped_begin"
+      for skipped_path in "${TRACKED_NON_FILE_SKIPPED[@]}"; do
+        printf 'path=%s reason=tracked_by_git_but_not_a_regular_file_or_symlink source=git_ls_files category=gitlink_or_directory criticality=informational\n' "$skipped_path"
+      done
+      echo "tracked_non_file_skipped_end"
+    }
+  )"
+else
+  TRACKED_NON_FILE_SKIPPED_BLOCK="tracked_non_file_skipped=none"
+fi
+
 cat > "$MANIFEST_FILE" <<EOF
 review_package_name=${PACKAGE_PREFIX}-${RUN_ID}${PACKAGE_NAME_SUFFIX}.zip
 packageMode=${PACKAGE_MODE}
@@ -575,6 +594,8 @@ tracked_file_count=${FILE_COUNT}
 tracked_git_file_count=${TRACKED_FILE_COUNT}
 tracked_missing_file_count=${TRACKED_MISSING_FILE_COUNT}
 ${TRACKED_MISSING_BLOCK}
+tracked_non_file_skipped_count=${TRACKED_NON_FILE_SKIPPED_COUNT}
+${TRACKED_NON_FILE_SKIPPED_BLOCK}
 optional_include_count=${OPTIONAL_INCLUDE_COUNT}
 optional_includes=${OPTIONAL_INCLUDES_CSV}
 review_log_include_count=${REVIEW_LOG_INCLUDE_COUNT}

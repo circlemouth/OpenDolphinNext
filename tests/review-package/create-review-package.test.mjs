@@ -169,6 +169,8 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert.match(manifest, /orca_phase2_5_zero_candidate_semantics=acceptedCandidateCount_0_means_00001_to_00011_lack_current_read_only_mutation_ready_evidence_across_harness_api_auth_parser_readiness_exact_preflight_criteria_not_official_initial_patient_absence/);
     assert.match(manifest, /tracked_missing_file_count=0/);
     assert.match(manifest, /tracked_missing_files=none/);
+    assert.match(manifest, /tracked_non_file_skipped_count=0/);
+    assert.match(manifest, /tracked_non_file_skipped=none/);
     assert.match(manifest, /package_integrity_summary_file=OpenDolphin_WebClient-review-package-20260414T080812Z\.zip\.summary\.txt/);
     assert(!entries.some((entry) => entry.startsWith('client/')));
     assert(!entries.some((entry) => entry.startsWith('server/')));
@@ -648,6 +650,36 @@ test('records tracked missing file details in the package manifest', () => {
     assert.match(manifest, /tracked_missing_files_begin/);
     assert.match(manifest, /path=docs\/missing\.md reason=tracked_by_git_but_absent_in_worktree source=git_ls_files category=source-test-docs criticality=critical/);
     assert.match(manifest, /tracked_missing_files_end/);
+  } finally {
+    removeTree(sandbox);
+  }
+});
+
+test('skips gitlink directory entries instead of packaging submodule contents', () => {
+  const { sandbox, repoDir } = setupRepo({
+    'README.md': '# repo\n',
+  });
+
+  try {
+    run(
+      'git',
+      ['update-index', '--add', '--cacheinfo', '160000,808673e2cd0281963c30c49399cc81b0900b5dd0,deps/vendor'],
+      repoDir,
+    );
+    run('git', ['commit', '-m', 'add gitlink'], repoDir);
+    fs.mkdirSync(path.join(repoDir, 'deps/vendor'), { recursive: true });
+    writeText(path.join(repoDir, 'deps/vendor/raw.txt'), 'submodule worktree content must not be packaged\n');
+
+    run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out'], repoDir);
+    const zipPath = path.join(repoDir, 'out', `OpenDolphin_WebClient-review-package-${RUN_ID}.zip`);
+    const entries = listZip(zipPath, repoDir);
+    const manifest = readZipText(zipPath, 'REVIEW_PACKAGE_MANIFEST.txt');
+
+    assert(!entries.includes('deps/vendor'));
+    assert(!entries.includes('deps/vendor/raw.txt'));
+    assert.match(manifest, /tracked_non_file_skipped_count=1/);
+    assert.match(manifest, /path=deps\/vendor reason=tracked_by_git_but_not_a_regular_file_or_symlink source=git_ls_files category=gitlink_or_directory criticality=informational/);
+    assert.match(run('node', [METADATA_VALIDATOR_PATH, zipPath], repoDir), /metadata validation passed/);
   } finally {
     removeTree(sandbox);
   }
