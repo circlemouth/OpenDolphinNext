@@ -827,10 +827,23 @@ const classify = ({
     if (insuranceReadiness.classification === 'ambiguous_readiness_failure') {
       return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
     }
-    if (insuranceReadiness.classification === 'business_rejected_insurance') {
-      return { blockerClassification: 'test-data-blocker', blockerReason: 'business_rejected_insurance' };
+    if (
+      insuranceReadiness.classification === 'request_contract_rejected' ||
+      insuranceReadiness.classification === 'unknown_nonzero'
+    ) {
+      return { blockerClassification: 'external-trial-ambiguity', blockerReason: insuranceReadiness.classification };
     }
-    return { blockerClassification: 'test-data-blocker', blockerReason: 'insurance_missing_or_not_effective' };
+    return { blockerClassification: 'test-data-blocker', blockerReason: insuranceReadiness.classification ?? 'insurance_missing_or_not_effective' };
+  }
+  if (
+    appointmentDependency?.classification === 'ambiguous_readiness_failure' ||
+    appointmentDependency?.classification === 'request_contract_rejected' ||
+    appointmentDependency?.classification === 'unknown_nonzero'
+  ) {
+    return { blockerClassification: 'external-trial-ambiguity', blockerReason: appointmentDependency.classification };
+  }
+  if (appointmentDependency?.verdict === 'rejected' || appointmentDependency?.accepted === false) {
+    return { blockerClassification: 'test-data-blocker', blockerReason: appointmentDependency.classification ?? 'appointment_dependency_not_ready' };
   }
   if (selectorReadiness.verdict !== 'accepted') {
     return { blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER, blockerReason: 'selector_missing' };
@@ -840,12 +853,6 @@ const classify = ({
       blockerClassification: 'test-data-blocker',
       blockerReason: `medical_information_not_ready:${medicalInformationReadiness.failedSubdimensions?.join(',') || 'unknown'}`,
     };
-  }
-  if (appointmentDependency?.classification === 'ambiguous_readiness_failure') {
-    return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
-  }
-  if (appointmentDependency?.required && appointmentDependency?.verdict !== 'accepted') {
-    return { blockerClassification: 'test-data-blocker', blockerReason: appointmentDependency.classification ?? 'appointment_row_missing' };
   }
   if (acceptmodv2ReadOnlyDiagnostic.verdict !== 'accepted') {
     return {

@@ -5,6 +5,7 @@ import {
   TRIAL_NATIVE_PROBE_CANDIDATES,
   buildCandidateDiscoveryGate,
   buildOfficialPatientReadinessAxes,
+  buildReadinessRejectionReasons,
   classifyReadinessFailureDiagnostic,
   classifyAcceptmodReadOnlyDiagnostic,
   evaluatePreflightSummary,
@@ -918,16 +919,75 @@ describe('orca trial-native preflight gates', () => {
     });
   });
 
-  it.each(['21', '23'])('classifies insurance apiResult=%s as business rejected insurance', (apiResult) => {
+  it('classifies patientlst6v2 apiResult=20 as no insurance combination', () => {
     const result = summarizeInsuranceReadiness({
       httpStatus: 200,
       baseDate: '2026-04-19',
-      body: { apiResult, combinations: [{ combinationNumber: '0001' }] },
+      endpointKind: 'patientlst6v2',
+      body: { apiResult: '20', combinations: [{ combinationNumber: '0001' }] },
     });
 
     expect(result).toMatchObject({
-      apiResult,
-      classification: 'business_rejected_insurance',
+      apiResult: '20',
+      classification: 'business_no_insurance_combination',
+      accepted: false,
+    });
+  });
+
+  it('classifies patientlst6v2 apiResult=21 as too many insurance combinations, not acceptmod mismatch', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      endpointKind: 'patientlst6v2',
+      body: { apiResult: '21', combinations: [{ combinationNumber: '0001' }] },
+    });
+
+    expect(result).toMatchObject({
+      apiResult: '21',
+      classification: 'business_too_many_insurance_combinations',
+      accepted: false,
+    });
+    expect(result.classification).not.toBe('business_rejected_insurance');
+  });
+
+  it('classifies patientlst6v2 apiResult=E91 as request contract rejected, not business rejected insurance', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      endpointKind: 'patientlst6v2',
+      body: { apiResult: 'E91', combinations: [{ combinationNumber: '0001' }] },
+    });
+
+    expect(result).toMatchObject({
+      apiResult: 'E91',
+      classification: 'request_contract_rejected',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.requestContractRejected,
+      accepted: false,
+    });
+    expect(result.classification).not.toBe('business_rejected_insurance');
+    expect(evaluatePreflightSummary({
+      candidateId: '00001',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: result,
+      selectorReadiness: { accepted: true },
+      localSelectableReadiness: { accepted: true },
+      appointmentDependency: { flowMode: 'direct_acceptance', required: false, accepted: true, verdict: 'accepted' },
+      secretScanClean: true,
+    })).toBe('request_contract_rejected');
+  });
+
+  it('classifies unknown insurance non-zero as unknown_nonzero', () => {
+    const result = summarizeInsuranceReadiness({
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      endpointKind: 'patientlst6v2',
+      body: { apiResult: '23', combinations: [{ combinationNumber: '0001' }] },
+    });
+
+    expect(result).toMatchObject({
+      apiResult: '23',
+      classification: 'unknown_nonzero',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.unknownNonzeroApiResult,
       accepted: false,
     });
   });
@@ -981,6 +1041,103 @@ describe('orca trial-native preflight gates', () => {
       classification: 'direct_acceptance_no_appointment_required',
       accepted: true,
     });
+  });
+
+  it('does not block direct acceptance solely for known appointlst2v2 no appointment result', () => {
+    const result = summarizeAppointmentDependency({
+      flowMode: 'direct_acceptance',
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      patientId: '00001',
+      body: { apiResult: '21', reservations: [] },
+    });
+
+    expect(result).toMatchObject({
+      flowMode: 'direct_acceptance',
+      required: false,
+      classification: 'direct_acceptance_no_appointment_required',
+      reason: 'known_no_appointment_row_benign_for_direct_acceptance',
+      accepted: true,
+    });
+    expect(evaluatePreflightSummary({
+      candidateId: '00001',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: true },
+      selectorReadiness: { accepted: true },
+      localSelectableReadiness: { accepted: true },
+      appointmentDependency: result,
+      secretScanClean: true,
+    })).toBe('none');
+  });
+
+  it('classifies appointlst2v2 apiResult=91 as request contract rejected, not business rejected appointment', () => {
+    const result = summarizeAppointmentDependency({
+      flowMode: 'appointment_row',
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      patientId: '00001',
+      body: { apiResult: '91', reservations: [] },
+    });
+
+    expect(result).toMatchObject({
+      apiResult: '91',
+      classification: 'request_contract_rejected',
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.requestContractRejected,
+      accepted: false,
+    });
+    expect(result.classification).not.toBe('business_rejected_appointment');
+  });
+
+  it('rejects direct acceptance preflight when an executed appointment probe has request contract rejection', () => {
+    const result = summarizeAppointmentDependency({
+      flowMode: 'direct_acceptance',
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      patientId: '00001',
+      body: { apiResult: '91', reservations: [] },
+    });
+
+    expect(result).toMatchObject({
+      flowMode: 'direct_acceptance',
+      classification: 'request_contract_rejected',
+      verdict: 'rejected',
+      accepted: false,
+    });
+    expect(evaluatePreflightSummary({
+      candidateId: '00001',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: true },
+      selectorReadiness: { accepted: true },
+      localSelectableReadiness: { accepted: true },
+      appointmentDependency: result,
+      secretScanClean: true,
+    })).toBe('request_contract_rejected');
+  });
+
+  it('marks appointment_row apiResult=21 as appointment_absent', () => {
+    const result = summarizeAppointmentDependency({
+      flowMode: 'appointment_row',
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      patientId: '00001',
+      body: { apiResult: '21', reservations: [] },
+    });
+
+    expect(result).toMatchObject({
+      flowMode: 'appointment_row',
+      classification: 'appointment_absent',
+      verdict: 'rejected',
+      accepted: false,
+    });
+    expect(evaluatePreflightSummary({
+      candidateId: '00001',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: true },
+      selectorReadiness: { accepted: true },
+      localSelectableReadiness: { accepted: true },
+      appointmentDependency: result,
+      secretScanClean: true,
+    })).toBe('appointment_absent');
   });
 
   it('accepts direct appointment flow without probing an appointment row', () => {
@@ -1273,5 +1430,86 @@ describe('orca trial-native preflight gates', () => {
         acceptedCandidateCount: 0,
       },
     });
+  });
+
+  it('keeps acceptedCandidateCount at 0 when request contract rejection prevents readiness', () => {
+    const insuranceReadiness = summarizeInsuranceReadiness({
+      httpStatus: 200,
+      baseDate: '2026-04-19',
+      endpointKind: 'patientlst6v2',
+      body: { apiResult: 'E91', HealthInsurance_Information: [{ Insurance_Combination_Number: '0001' }] },
+    });
+    const acceptedCandidateCount = insuranceReadiness.accepted ? 1 : 0;
+    const gate = buildCandidateDiscoveryGate({
+      candidateCount: 1,
+      acceptedCandidateCount,
+      blockedRequestCount: 0,
+      selectedCandidate: null,
+    });
+
+    expect(acceptedCandidateCount).toBe(0);
+    expect(gate).toMatchObject({
+      acceptedForPhase3Attempt: false,
+      phase3AttemptPatientId: null,
+      candidateDiscoveryAloneAuthorizesPhase3: false,
+      candidateDiscovery: { acceptedCandidateCount: 0 },
+    });
+  });
+
+  it('discovery-only artifact never authorizes Phase 3 even with a selected proposal', () => {
+    const gate = buildCandidateDiscoveryGate({
+      candidateCount: 11,
+      acceptedCandidateCount: 1,
+      blockedRequestCount: 0,
+      selectedCandidate: { kind: 'proposal', patientId: '00001' },
+    });
+
+    expect(gate).toMatchObject({
+      candidateDiscoveryAloneAuthorizesPhase3: false,
+      acceptedForPhase3Attempt: false,
+      phase3AttemptPatientId: null,
+      blockerClassification: 'candidate_discovery_only',
+      exactSelectedCandidatePreflight: { ran: false },
+      phase3: { ran: false },
+    });
+  });
+
+  it('rejectionReasons includes insurance, appointment, local, selector, and medical information dimensions', () => {
+    const reasons = buildReadinessRejectionReasons({
+      medicalInformationProbe: { verdict: 'accepted', accepted: true },
+      officialPatientExistence: { verdict: 'accepted', accepted: true },
+      insuranceReadiness: { verdict: 'rejected', accepted: false, apiResult: 'E91', classification: 'request_contract_rejected' },
+      appointmentDependency: {
+        verdict: 'rejected',
+        accepted: false,
+        flowMode: 'direct_acceptance',
+        apiResult: '91',
+        classification: 'request_contract_rejected',
+      },
+      localSelectableReadiness: { verdict: 'rejected', accepted: false, reason: 'local_exact_match_missing' },
+      selectorReadiness: { verdict: 'rejected', accepted: false, reason: 'selector_option_missing' },
+      medicalInformationReadiness: {
+        verdict: 'rejected',
+        accepted: false,
+        reason: 'medical_information_not_ready',
+        failedSubdimensions: ['medicalInformation_input_ready'],
+      },
+    });
+
+    expect(reasons.map((reason) => reason.dimension)).toEqual([
+      'insurance',
+      'appointment',
+      'local_selectable',
+      'selector',
+      'medical_information',
+    ]);
+    expect(reasons.map((reason) => reason.reason)).toEqual([
+      'request_contract_rejected',
+      'request_contract_rejected',
+      'local_exact_match_missing',
+      'selector_option_missing',
+      'medical_information_not_ready',
+    ]);
+    expect(JSON.stringify(reasons)).not.toMatch(/WholeName|Address|Phone|Insurance_Symbol|Authorization|Cookie/);
   });
 });
