@@ -1,0 +1,2016 @@
+{
+  "runId": "20260420T044655Z",
+  "executedAt": "2026-04-20T04:56:26.191Z",
+  "source": "qa-weborca-candidate-discovery",
+  "flowMode": "candidate-discovery-proposal",
+  "baseURL": "/",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "sessionRole": "admin",
+  "login": {
+    "sessionMeStatus": 200
+  },
+  "candidateSource": "env-list",
+  "candidateCount": 11,
+  "baseDate": "2026-04-20",
+  "requestedSelectorValues": {
+    "departmentCode": "01",
+    "physicianCode": "10001",
+    "paymentMode": "insurance",
+    "visitKind": "1"
+  },
+  "medicalInformationProbe": {
+    "status": 500,
+    "apiResult": "",
+    "verdict": "rejected",
+    "accepted": false
+  },
+  "candidates": [
+    {
+      "candidateId": "00001",
+      "patientId": "00001",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "a031cd331917fb6a",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "rejected",
+        "accepted": false,
+        "selectors": {
+          "department": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "physician": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "visitKind": {
+            "exists": true,
+            "optionCount": 4,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "paymentMode": {
+            "exists": true,
+            "optionCount": 3,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "medicalInformation": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          }
+        }
+      },
+      "localSelectable": {
+        "selectable": true,
+        "selectableCount": 1,
+        "exactResultCount": 1,
+        "verdict": "accepted"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00002",
+      "patientId": "00002",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "182d383a8c849049",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00003",
+      "patientId": "00003",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "bce40987c0e83dda",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00004",
+      "patientId": "00004",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "f7d8704228e9700b",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00005",
+      "patientId": "00005",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "7b975e86c48d3877",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "rejected",
+        "accepted": false,
+        "selectors": {
+          "department": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "physician": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "visitKind": {
+            "exists": true,
+            "optionCount": 4,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "paymentMode": {
+            "exists": true,
+            "optionCount": 3,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "medicalInformation": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          }
+        }
+      },
+      "localSelectable": {
+        "selectable": true,
+        "selectableCount": 1,
+        "exactResultCount": 1,
+        "verdict": "accepted"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00006",
+      "patientId": "00006",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "a9d66adc83fa2e4a",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00007",
+      "patientId": "00007",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "b1b2c0867d9af119",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00008",
+      "patientId": "00008",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "0684e97d5d36b14e",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00009",
+      "patientId": "00009",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "e5fadd40c6ddd39f",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00010",
+      "patientId": "00010",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "361f76a62c3b2d0d",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    },
+    {
+      "candidateId": "00011",
+      "patientId": "00011",
+      "source": "env-list",
+      "accepted": false,
+      "rejectionReason": "medical_information_not_ready",
+      "acceptedForExactPreflightProposal": false,
+      "acceptedForPhase3Attempt": false,
+      "officialPatientExistence": {
+        "status": 500,
+        "httpStatus": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactIdMatched": false,
+        "patientIdMatched": false,
+        "category": "empty",
+        "responseCategory": "empty",
+        "recordCount": 0,
+        "accepted": false,
+        "verdict": "rejected",
+        "rejectionReason": "http_not_2xx",
+        "evidenceHash": "46a797af00eda230",
+        "notFoundMessage": false,
+        "apiResultMessageCategory": "other",
+        "patientLikeCount": 0
+      },
+      "insuranceReadiness": {
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "selectorReadiness": {
+        "verdict": "not_verified",
+        "reason": "local_exact_match_missing",
+        "selectors": {}
+      },
+      "localSelectable": {
+        "selectable": false,
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "reason": "local_exact_match_missing"
+      },
+      "appointmentDependency": {
+        "flowMode": "direct_acceptance",
+        "mode": "direct_patient_acceptance_flow",
+        "required": false,
+        "absenceBlocker": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "apiResultMessageCategory": "other",
+        "reservationCount": 0,
+        "exactRowCount": 0,
+        "dependency": "ambiguous_readiness_failure",
+        "verdict": "rejected",
+        "accepted": false
+      },
+      "diagnosticNoPatientNotFound": {
+        "verdict": "accepted",
+        "accepted": true
+      },
+      "mutationProhibited": {
+        "verdict": "accepted",
+        "blockedRequestCount": 0
+      }
+    }
+  ],
+  "readinessAxes": {
+    "meaning": "00001-00011 are official ORCA Trial initial patients; zero accepted candidates means Phase 3 mutation-ready read-only evidence is incomplete and does not contradict official initial patient registration.",
+    "officialTrialInitialPatientsExistenceAssumption": "registered_by_official_orca_trial_docs",
+    "patientgetv2": [
+      {
+        "patientId": "00001",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00002",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00003",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00004",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00005",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00006",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00007",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00008",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00009",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00010",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      },
+      {
+        "patientId": "00011",
+        "status": 500,
+        "parsedOrcaBody": true,
+        "apiResult": "",
+        "apiResultAccepted": false,
+        "patientInformationPresent": false,
+        "exactPatientIdMatched": false,
+        "patientNotFoundWordingAbsent": true,
+        "category": "empty",
+        "accepted": false,
+        "rejectionReason": "http_not_2xx"
+      }
+    ],
+    "insuranceReadiness": [
+      {
+        "patientId": "00001",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00002",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00003",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00004",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00005",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00006",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00007",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00008",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00009",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00010",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00011",
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "combinationsCount": 0,
+        "effectiveCount": 0,
+        "accepted": false
+      }
+    ],
+    "appointmentDependency": [
+      {
+        "patientId": "00001",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00002",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00003",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00004",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00005",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00006",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00007",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00008",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00009",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00010",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      },
+      {
+        "patientId": "00011",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "status": 403,
+        "apiResult": "",
+        "classification": "ambiguous_readiness_failure",
+        "exactRowCount": 0,
+        "accepted": false
+      }
+    ],
+    "localSelectableReadiness": [
+      {
+        "patientId": "00001",
+        "selectableCount": 1,
+        "exactResultCount": 1,
+        "verdict": "accepted",
+        "accepted": true,
+        "reason": ""
+      },
+      {
+        "patientId": "00002",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00003",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00004",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00005",
+        "selectableCount": 1,
+        "exactResultCount": 1,
+        "verdict": "accepted",
+        "accepted": true,
+        "reason": ""
+      },
+      {
+        "patientId": "00006",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00007",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00008",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00009",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00010",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      },
+      {
+        "patientId": "00011",
+        "selectableCount": 0,
+        "exactResultCount": 0,
+        "verdict": "rejected",
+        "accepted": false,
+        "reason": "local_exact_match_missing"
+      }
+    ],
+    "selectorReadiness": [
+      {
+        "patientId": "00001",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "rejected",
+        "accepted": false,
+        "selectors": {
+          "department": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "physician": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "visitKind": {
+            "exists": true,
+            "optionCount": 4,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "paymentMode": {
+            "exists": true,
+            "optionCount": 3,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "medicalInformation": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          }
+        }
+      },
+      {
+        "patientId": "00002",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00003",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00004",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00005",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "rejected",
+        "accepted": false,
+        "selectors": {
+          "department": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "physician": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": false,
+            "verdict": "rejected"
+          },
+          "visitKind": {
+            "exists": true,
+            "optionCount": 4,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "paymentMode": {
+            "exists": true,
+            "optionCount": 3,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          },
+          "medicalInformation": {
+            "exists": true,
+            "optionCount": 1,
+            "hasDesiredValue": true,
+            "verdict": "accepted"
+          }
+        }
+      },
+      {
+        "patientId": "00006",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00007",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00008",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00009",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00010",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      },
+      {
+        "patientId": "00011",
+        "requested": {
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1"
+        },
+        "verdict": "not_verified",
+        "accepted": false,
+        "selectors": {}
+      }
+    ],
+    "diagnostics": [
+      {
+        "patientId": "00001",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00002",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00003",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00004",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00005",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00006",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00007",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00008",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00009",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00010",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      },
+      {
+        "patientId": "00011",
+        "acceptedForExactPreflightProposal": false,
+        "acceptedForPhase3Attempt": false,
+        "patientNotFoundWordingAbsent": true,
+        "verdict": "accepted",
+        "mutationProhibited": true,
+        "blockedRequestCount": 0
+      }
+    ]
+  },
+  "acceptedCandidateCount": 0,
+  "selectedCandidate": null,
+  "candidateDiscoveryAloneAuthorizesPhase3": false,
+  "acceptedForPhase3Attempt": false,
+  "phase3AttemptPatientId": null,
+  "releaseVerdict": "PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER",
+  "verdict": "partial",
+  "blockerClassification": "test-data-or-harness-readiness-blocker",
+  "blockerReason": "phase3_mutation_ready_readonly_evidence_missing",
+  "mutationPolicy": {
+    "prohibited": true,
+    "blockedRequestCount": 0,
+    "blockedRequests": []
+  },
+  "exactSelectedCandidatePreflight": {
+    "ran": false,
+    "reason": "phase3_mutation_ready_readonly_evidence_missing"
+  },
+  "phase3": {
+    "ran": false,
+    "reason": "phase3_mutation_ready_readonly_evidence_missing"
+  },
+  "phase4": {
+    "ran": false,
+    "reason": "phase3_not_run"
+  },
+  "candidateDiscovery": {
+    "candidateCount": 11,
+    "acceptedCandidateCount": 0
+  },
+  "preflightSummaryPath": "../weborca-readonly-preflight/summary.json",
+  "consoleMessages": [
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00001"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00001"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00001"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00002"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00002"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00002"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00003"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00003"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00003"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00004"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00004"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00004"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00005"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00005"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00005"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00006"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00006"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00006"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00007"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00007"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00007"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00008"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00008"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00008"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00009"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00009"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00009"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00010"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00010"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00010"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00011"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/visits/list",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00011"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      "location": {
+        "url": "https://localhost:5173/api/orca/official/appointments/medical-information",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "patientId": "00011"
+    }
+  ],
+  "pageErrors": []
+}
