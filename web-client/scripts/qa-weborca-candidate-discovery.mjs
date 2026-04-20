@@ -11,15 +11,15 @@ import {
   resolveQaUserId,
 } from './qa-lib/session-auth.mjs';
 import {
+  buildCandidateReadinessDecision,
   buildCandidateDiscoveryGate,
-  buildReadinessRejectionReasons,
-  primaryReadinessRejectionReason,
   summarizeLocalSelectableDiagnostic,
   summarizeMedicalInformationReadiness,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
   summarizeOfficialPatientExistence,
   summarizeSelectorDiagnostic,
+  selectPreferredExactPreflightCandidate,
 } from './qa-lib/orca-trial-preflight.mjs';
 
 const now = new Date();
@@ -736,9 +736,9 @@ const buildRejectedLegacySeedRow = (patientId, source) => ({
   patientId,
   source,
   accepted: false,
-  primaryRejectionReason: 'legacy_local_smoke_seed_rejected',
-  rejectionReasons: [{ dimension: 'trial_candidate_source', reason: 'legacy_local_smoke_seed_rejected' }],
   rejectionReason: 'legacy_local_smoke_seed_rejected',
+  primaryRejectionReason: 'legacy_local_smoke_seed_rejected',
+  rejectionReasons: ['legacy_local_smoke_seed_rejected'],
   acceptedForExactPreflightProposal: false,
   acceptedForPhase3Attempt: false,
   rejectedWarning: 'legacy local smoke seed is not accepted as a Trial-native candidate',
@@ -882,18 +882,17 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     selectorDiagnostic: uiReadiness.selectorReadiness,
     localSelectableDiagnostic: uiReadiness.localSelectable,
   });
-  const rejectionReasons = buildReadinessRejectionReasons({
+  const decision = buildCandidateReadinessDecision({
     medicalInformationProbe,
     medicalInformationReadiness,
     officialPatientExistence,
     insuranceReadiness,
     appointmentDependency,
-    localSelectableReadiness: uiReadiness.localSelectable,
+    localSelectable: uiReadiness.localSelectable,
     selectorReadiness: uiReadiness.selectorReadiness,
     diagnosticNoPatientNotFound,
     mutationProhibited,
   });
-  const primaryRejectionReason = primaryReadinessRejectionReason(rejectionReasons);
   const readinessAxes = buildCandidateRowReadinessAxes({
     officialPatientExistence,
     insuranceReadiness,
@@ -903,24 +902,15 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     diagnosticNoPatientNotFound,
     mutationProhibited,
   });
-  const acceptedForExactPreflightProposal =
-    medicalInformationProbe.accepted === true &&
-    medicalInformationReadiness.accepted === true &&
-    officialPatientExistence.accepted === true &&
-    insuranceReadiness.accepted === true &&
-    appointmentDependency.accepted === true &&
-    uiReadiness.localSelectable.selectable === true &&
-    uiReadiness.selectorReadiness.accepted === true &&
-    diagnosticNoPatientNotFound.accepted === true &&
-    blockedMutationRequests.length === 0;
+  const acceptedForExactPreflightProposal = decision.acceptedForExactPreflightProposal;
   const row = {
     candidateId: patientId,
     patientId,
     source,
     accepted: acceptedForExactPreflightProposal,
-    primaryRejectionReason: acceptedForExactPreflightProposal ? 'none' : primaryRejectionReason,
-    rejectionReasons,
-    rejectionReason: acceptedForExactPreflightProposal ? 'none' : primaryRejectionReason,
+    rejectionReason: decision.primaryRejectionReason,
+    primaryRejectionReason: decision.primaryRejectionReason,
+    rejectionReasons: decision.rejectionReasons,
     acceptedForExactPreflightProposal,
     acceptedForPhase3Attempt: false,
     officialPatientExistence,
@@ -943,6 +933,7 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
         kind: 'proposal',
         patientId: acceptedRow.patientId,
         rowPath: path.relative(preflightArtifactRoot, rowsJsonPath),
+        selectionPolicy: 'prefer 00001/00005 only among rows with official+insurance+appointment+local+selector+medical-information readiness accepted',
         requiredNextStep: 'run qa-weborca-readonly-preflight.mjs for exact selected-candidate preflight with the same RUN_ID before Phase 3',
       }
     : null;
@@ -1041,6 +1032,18 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
   };
 };
 
+const formatRejectionReasons = (rejectionReasons = []) =>
+  rejectionReasons
+    .map((reason) => {
+      if (typeof reason === 'string') return reason;
+      if (reason && typeof reason === 'object') {
+        return `${reason.dimension ?? 'unknown'}:${reason.reason ?? 'not_ready'}`;
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join('|') || 'none';
+
 const buildMarkdownSummary = (summary) =>
   `# WebORCA Trial candidate discovery\n\n` +
   `- RUN_ID: ${summary.runId}\n` +
@@ -1058,7 +1061,7 @@ const buildMarkdownSummary = (summary) =>
     .map(
       (candidate) =>
         `- ${candidate.patientId}: proposal=${candidate.acceptedForExactPreflightProposal ? 'accepted' : 'rejected'}, phase3=rejected, ` +
-        `primary=${candidate.primaryRejectionReason ?? candidate.rejectionReason ?? 'none'}, reasons=${(candidate.rejectionReasons ?? []).map((reason) => `${reason.dimension}:${reason.reason}`).join('|') || 'none'}, ` +
+        `primary=${candidate.primaryRejectionReason ?? candidate.rejectionReason ?? 'none'}, reasons=${formatRejectionReasons(candidate.rejectionReasons)}, ` +
         `official=${candidate.officialPatientExistence.verdict}, ` +
         `insurance=${candidate.insuranceReadiness.verdict}/${candidate.insuranceReadiness.status ?? 'none'}/${candidate.insuranceReadiness.apiResult || 'none'}/${candidate.insuranceReadiness.classification ?? 'none'}/${candidate.insuranceReadiness.accepted ? 'accepted' : 'rejected'}, ` +
         `local=${candidate.localSelectable.verdict}/${candidate.localSelectable.reason ?? 'none'}, selectors=${candidate.selectorReadiness.verdict}/${candidate.selectorReadiness.reason ?? 'none'}, ` +
@@ -1203,13 +1206,14 @@ try {
     rows.push(await evaluateCandidate(context, medicalInformationProbe, patientId, candidateSource));
   }
 
-  const acceptedRow = rows.find((row) => row.acceptedForExactPreflightProposal === true) ?? null;
+  const acceptedRow = selectPreferredExactPreflightCandidate(rows);
   const acceptedCandidateCount = rows.filter((row) => row.acceptedForExactPreflightProposal === true).length;
   const selectedCandidate = acceptedRow
     ? {
         kind: 'proposal',
         patientId: acceptedRow.patientId,
         rowPath: path.relative(artifactRoot, rowsJsonPath),
+        selectionPolicy: 'prefer 00001/00005 only among rows with official+insurance+appointment+local+selector+medical-information readiness accepted',
         requiredNextStep: 'run qa-weborca-readonly-preflight.mjs for exact selected-candidate preflight with the same RUN_ID before Phase 3',
       }
     : null;

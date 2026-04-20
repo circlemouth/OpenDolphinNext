@@ -24,6 +24,7 @@ import {
   classifyAcceptmodReadOnlyDiagnostic,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
+  selectPreferredExactPreflightCandidate,
   summarizeLocalSelectableDiagnostic,
   summarizeMedicalInformationReadiness,
   summarizeAppointmentDependency,
@@ -742,7 +743,6 @@ const buildAppointmentDependency = async (context, patientId) => {
 
 const chooseCandidate = async ({ context, candidateIds, officialPatientExistence }) => {
   const candidates = {};
-  let selectedPatientId = '';
   for (const candidateId of candidateIds) {
     const rejected = REJECTED_PATIENT_IDS.has(candidateId);
     const inTrialInitialRange = TRIAL_INITIAL_PATIENT_IDS.includes(candidateId);
@@ -767,11 +767,12 @@ const chooseCandidate = async ({ context, candidateIds, officialPatientExistence
     }
     candidate.verdict = verdict(candidate.officialVerdict === 'accepted' && candidate.insurance.accepted && candidate.local.accepted);
     candidates[candidateId] = candidate;
-    const canSelect = candidate.verdict === 'accepted' && (!requestedPatientId || candidateId === requestedPatientId);
-    if (!selectedPatientId && canSelect) {
-      selectedPatientId = candidateId;
-    }
   }
+  const selectedCandidate = selectPreferredExactPreflightCandidate(
+    candidates,
+    (candidate) => candidate?.verdict === 'accepted' && (!requestedPatientId || candidate.patientId === requestedPatientId),
+  );
+  const selectedPatientId = selectedCandidate?.patientId ?? '';
   return {
     requestedPatientId: requestedPatientId || undefined,
     probeCandidates: candidateIds,
@@ -783,7 +784,7 @@ const chooseCandidate = async ({ context, candidateIds, officialPatientExistence
     selectedSource: selectedPatientId ? candidates[selectedPatientId].source : undefined,
     selectionPolicy: requestedPatientId
       ? 'QA_PATIENT_ID must be an accepted official Trial initial candidate'
-      : 'first accepted official Trial initial candidate',
+      : 'prefer 00001/00005 among accepted official+insurance+local Trial initial candidates, otherwise first accepted candidate',
     verdict: selectedPatientId ? 'accepted' : 'rejected',
     candidates,
   };
