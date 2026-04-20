@@ -148,7 +148,7 @@ describe('orca trial-native preflight gates', () => {
       body: {
         apiResult: '00',
         recordsReturned: 1,
-        patients: [{ patientId: '00001', fullName: 'Sensitive Name' }],
+        patients: [{ patientId: '00001', fullName: 'SHOULD_NOT_LEAK' }],
       },
     });
     const evidence = sanitizeOfficialPatientExistenceEvidence(result);
@@ -164,6 +164,18 @@ describe('orca trial-native preflight gates', () => {
     expect(officialPatientEvidenceAccepted(evidence)).toBe(false);
     expect(Object.keys(evidence)).toEqual([
       'httpStatus',
+      'localStatus',
+      'upstreamStatus',
+      'endpointKind',
+      'method',
+      'diagnosticCategory',
+      'errorCategory',
+      'exceptionClassName',
+      'hasParsedBody',
+      'hasPatientInformation',
+      'apiResultCategory',
+      'exactPatientIdMatch',
+      'bodyHash',
       'parsedOrcaBody',
       'apiResult',
       'apiResultAccepted',
@@ -175,14 +187,109 @@ describe('orca trial-native preflight gates', () => {
       'evidenceHash',
       'rawSensitiveFieldsExcluded',
     ]);
-    expect(JSON.stringify(evidence)).not.toContain('Sensitive Name');
+    expect(JSON.stringify(evidence)).not.toContain('SHOULD_NOT_LEAK');
+  });
+
+  it('classifies local route exceptions without accepting official patientget evidence', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 500,
+      candidateId: '00001',
+      body: {
+        errorCategory: 'server_error',
+        errorCode: 'internal_error',
+        exceptionClassName: 'IllegalStateException',
+      },
+    });
+    const evidence = sanitizeOfficialPatientExistenceEvidence(result);
+
+    expect(result).toMatchObject({
+      localStatus: 500,
+      upstreamStatus: undefined,
+      diagnosticCategory: 'local_exception',
+      exceptionClassName: 'IllegalStateException',
+      accepted: false,
+      rejectionReason: 'local_exception',
+    });
+    expect(officialPatientEvidenceAccepted(evidence)).toBe(false);
+  });
+
+  it('classifies upstream ORCA non-2xx wrapped by the local route', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 502,
+      candidateId: '00001',
+      body: {
+        errorCategory: 'server_error',
+        code: 'orca_gateway_error',
+        message: 'ORCA HTTP response status 500',
+      },
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 502,
+      upstreamStatus: 500,
+      diagnosticCategory: 'upstream_http_not_2xx',
+      accepted: false,
+      rejectionReason: 'upstream_http_not_2xx',
+    });
+  });
+
+  it('rejects upstream ORCA non-2xx even if a local wrapper status is 2xx', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      upstreamStatus: 500,
+      candidateId: '00001',
+      body: { apiResult: '00', Patient_Information: { Patient_ID: '00001' } },
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 200,
+      upstreamStatus: 500,
+      diagnosticCategory: 'upstream_http_not_2xx',
+      accepted: false,
+      rejectionReason: 'upstream_http_not_2xx',
+    });
+  });
+
+  it('keeps a local 500 with unknown upstream status rejected and unknown when no safe clue exists', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 500,
+      candidateId: '00001',
+      body: {},
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 500,
+      upstreamStatus: undefined,
+      diagnosticCategory: 'unknown',
+      accepted: false,
+      rejectionReason: 'unknown',
+    });
+  });
+
+  it('classifies local parser failures separately from upstream failures', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 500,
+      candidateId: '00001',
+      body: {
+        errorCategory: 'server_error',
+        message: 'JSON parser failed',
+        exceptionClassName: 'JsonParseException',
+      },
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 500,
+      diagnosticCategory: 'parser_error',
+      accepted: false,
+      rejectionReason: 'parser_error',
+    });
   });
 
   it('accepts patientgetv2 parsed ORCA body with Api_Result=00, Patient_Information, and exact Patient_ID', () => {
     const result = summarizeOfficialPatientExistence({
       httpStatus: 200,
       candidateId: '00001',
-      body: { Api_Result: '00', Patient_Information: { Patient_ID: '00001', WholeName: 'Sensitive Name' } },
+      body: { Api_Result: '00', Patient_Information: { Patient_ID: '00001', WholeName: 'SHOULD_NOT_LEAK' } },
     });
     const evidence = sanitizeOfficialPatientExistenceEvidence(result);
 
@@ -193,11 +300,12 @@ describe('orca trial-native preflight gates', () => {
       apiResultAccepted: true,
       patientInformationPresent: true,
       exactIdMatched: true,
+      diagnosticCategory: 'accepted',
       accepted: true,
       rejectionReason: 'none',
     });
     expect(officialPatientEvidenceAccepted(evidence)).toBe(true);
-    expect(JSON.stringify(evidence)).not.toContain('Sensitive Name');
+    expect(JSON.stringify(evidence)).not.toContain('SHOULD_NOT_LEAK');
   });
 
   it('accepts apiResult=00 with Patient_Information and exact Patient_ID after canonical normalization', () => {
@@ -215,6 +323,7 @@ describe('orca trial-native preflight gates', () => {
       patientInformationPresent: true,
       exactIdMatched: true,
       category: 'present',
+      diagnosticCategory: 'accepted',
       accepted: true,
       rejectionReason: 'none',
     });
@@ -232,8 +341,77 @@ describe('orca trial-native preflight gates', () => {
       apiResultAccepted: false,
       patientInformationPresent: false,
       exactIdMatched: false,
+      diagnosticCategory: 'orca_body_missing',
       accepted: false,
       rejectionReason: 'orca_body_not_parsed',
+    });
+  });
+
+  it('rejects HTTP 200 with missing parsed body as official patientget evidence', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      candidateId: '00001',
+      body: {},
+      parsedOrcaBody: false,
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 200,
+      parsedOrcaBody: false,
+      diagnosticCategory: 'orca_body_missing',
+      accepted: false,
+      rejectionReason: 'orca_body_not_parsed',
+    });
+  });
+
+  it('rejects HTTP 200 with missing apiResult as official patientget evidence', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      candidateId: '00001',
+      body: { Patient_Information: { Patient_ID: '00001' } },
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 200,
+      apiResult: '',
+      apiResultCategory: 'missing',
+      diagnosticCategory: 'api_result_missing',
+      accepted: false,
+      rejectionReason: 'api_result_missing',
+    });
+  });
+
+  it('rejects HTTP 200 with non-zero apiResult as official patientget evidence', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      candidateId: '00001',
+      body: { apiResult: '10', Patient_Information: { Patient_ID: '00001' } },
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 200,
+      apiResult: '10',
+      apiResultCategory: 'non_zero',
+      diagnosticCategory: 'api_result_non_zero',
+      accepted: false,
+      rejectionReason: 'api_result_not_all_zero',
+    });
+  });
+
+  it('rejects HTTP 200 all-zero apiResult when Patient_Information is missing', () => {
+    const result = summarizeOfficialPatientExistence({
+      httpStatus: 200,
+      candidateId: '00001',
+      body: { apiResult: '00', patients: [{ patientId: '00001' }] },
+    });
+
+    expect(result).toMatchObject({
+      localStatus: 200,
+      apiResultCategory: 'all_zero',
+      patientInformationPresent: false,
+      diagnosticCategory: 'patient_information_missing',
+      accepted: false,
+      rejectionReason: 'patient_information_missing',
     });
   });
 
@@ -247,6 +425,7 @@ describe('orca trial-native preflight gates', () => {
     expect(result).toMatchObject({
       patientInformationPresent: true,
       exactIdMatched: false,
+      diagnosticCategory: 'exact_patient_id_mismatch',
       accepted: false,
       rejectionReason: 'exact_patient_id_mismatch',
     });
@@ -284,8 +463,37 @@ describe('orca trial-native preflight gates', () => {
     expect(result).toMatchObject({
       patientInformationPresent: true,
       exactIdMatched: true,
+      diagnosticCategory: 'patient_not_found_wording_present',
       accepted: false,
       rejectionReason: 'patient_not_found_wording_present',
+    });
+  });
+
+  it('classifies credential unavailable and local auth failures before upstream evidence', () => {
+    expect(
+      summarizeOfficialPatientExistence({
+        httpStatus: 503,
+        candidateId: '00001',
+        body: { errorCategory: 'server_error', message: 'ORCA transport settings are incomplete' },
+      }),
+    ).toMatchObject({
+      diagnosticCategory: 'credential_unavailable',
+      localStatus: 503,
+      accepted: false,
+      rejectionReason: 'credential_unavailable',
+    });
+
+    expect(
+      summarizeOfficialPatientExistence({
+        httpStatus: 403,
+        candidateId: '00001',
+        body: { errorCategory: 'forbidden', code: 'csrf_validation_failed' },
+      }),
+    ).toMatchObject({
+      diagnosticCategory: 'local_auth_failure',
+      localStatus: 403,
+      accepted: false,
+      rejectionReason: 'local_auth_failure',
     });
   });
 
@@ -294,14 +502,14 @@ describe('orca trial-native preflight gates', () => {
       summarizeOfficialPatientExistence({
         httpStatus: 200,
         candidateId: '00001',
-        body: { Api_Result: '00', Patient_Information: { Patient_ID: '00001', WholeName: 'Sensitive Name' } },
+        body: { Api_Result: '00', Patient_Information: { Patient_ID: '00001', WholeName: 'SHOULD_NOT_LEAK' } },
       }),
     );
     const rejected = sanitizeOfficialPatientExistenceEvidence(
       summarizeOfficialPatientExistence({
         httpStatus: 200,
         candidateId: '00002',
-        body: { Api_Result: '10', Patient_Information: { Patient_ID: '00002', WholeName: 'Other Sensitive Name' } },
+        body: { Api_Result: '10', Patient_Information: { Patient_ID: '00002', WholeName: 'OTHER_SHOULD_NOT_LEAK' } },
       }),
     );
 
@@ -328,8 +536,8 @@ describe('orca trial-native preflight gates', () => {
         rawSensitiveFieldsExcluded: true,
       }),
     ]);
-    expect(JSON.stringify(axes)).not.toContain('Sensitive Name');
-    expect(JSON.stringify(axes)).not.toContain('Other Sensitive Name');
+    expect(JSON.stringify(axes)).not.toContain('SHOULD_NOT_LEAK');
+    expect(JSON.stringify(axes)).not.toContain('OTHER_SHOULD_NOT_LEAK');
   });
 
   it('apiResult=10 diagnostic rejects the candidate', () => {

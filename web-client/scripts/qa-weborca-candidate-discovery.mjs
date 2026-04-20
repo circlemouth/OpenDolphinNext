@@ -279,11 +279,11 @@ const summarizeBody = (bodyText) => {
 };
 
 const parseJsonBody = (bodyText) => {
-  if (!bodyText) return {};
+  if (!bodyText) return { body: {}, ok: false };
   try {
-    return JSON.parse(bodyText);
+    return { body: JSON.parse(bodyText), ok: true };
   } catch {
-    return {};
+    return { body: {}, ok: false };
   }
 };
 
@@ -326,7 +326,7 @@ const recordApiCall = async (context, { method, pathName, body, query }) => {
         body: summarizeBody(bodyText),
       },
     });
-    return { status: response.status(), ok: response.ok(), body: parsed, error: '' };
+    return { status: response.status(), ok: response.ok(), body: parsed.body, parsedBody: parsed.ok, error: '' };
   } catch (error) {
     networkRecords.push({
       url: redactUrl(url.toString()),
@@ -340,7 +340,7 @@ const recordApiCall = async (context, { method, pathName, body, query }) => {
       },
       response: { headers: {}, body: { bodyChars: 0, errorCategory: 'request-error' } },
     });
-    return { status: 0, ok: false, body: {}, error: String(error) };
+    return { status: 0, ok: false, body: {}, parsedBody: false, errorCategory: 'request_error' };
   }
 };
 
@@ -375,6 +375,9 @@ const evaluateOfficialPatientExistence = async (context, patientId) => {
     httpStatus: response.status,
     body: response.body,
     candidateId: patientId,
+    parsedOrcaBody: response.parsedBody,
+    method: 'GET',
+    endpointKind: 'official_patientgetv2',
   });
   return {
     ...officialSummary,
@@ -910,6 +913,18 @@ const buildReadinessAxes = (rows) => ({
     exactPatientIdMatched: row.officialPatientExistence?.exactIdMatched === true,
     patientNotFoundWordingAbsent: row.officialPatientExistence?.notFoundMessage !== true,
     category: row.officialPatientExistence?.category ?? row.officialPatientExistence?.responseCategory ?? '',
+    diagnosticCategory: row.officialPatientExistence?.diagnosticCategory ?? '',
+    localStatus: row.officialPatientExistence?.localStatus ?? row.officialPatientExistence?.status ?? 0,
+    upstreamStatus: row.officialPatientExistence?.upstreamStatus ?? null,
+    endpointKind: row.officialPatientExistence?.endpointKind ?? 'official_patientgetv2',
+    method: row.officialPatientExistence?.method ?? 'GET',
+    errorCategory: row.officialPatientExistence?.errorCategory ?? 'none',
+    exceptionClassName: row.officialPatientExistence?.exceptionClassName,
+    hasParsedBody: row.officialPatientExistence?.hasParsedBody === true,
+    hasPatientInformation: row.officialPatientExistence?.hasPatientInformation === true,
+    apiResultCategory: row.officialPatientExistence?.apiResultCategory ?? '',
+    exactPatientIdMatch: row.officialPatientExistence?.exactPatientIdMatch === true,
+    bodyHash: row.officialPatientExistence?.bodyHash ?? '',
     accepted: row.officialPatientExistence?.accepted === true,
     rejectionReason: row.officialPatientExistence?.rejectionReason ?? '',
   })),
