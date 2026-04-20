@@ -11,9 +11,12 @@ import {
 } from './qa-lib/session-auth.mjs';
 import {
   buildCandidateDiscoveryGate,
+  summarizeLocalSelectableDiagnostic,
+  summarizeMedicalInformationReadiness,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
   summarizeOfficialPatientExistence,
+  summarizeSelectorDiagnostic,
 } from './qa-lib/orca-trial-preflight.mjs';
 
 const now = new Date();
@@ -499,6 +502,7 @@ const inspectSelectors = async (page) =>
       const options = select ? Array.from(select.querySelectorAll('option')).map((option) => option.value) : [];
       return {
         exists: Boolean(select),
+        disabled: Boolean(select?.disabled || select?.getAttribute('aria-disabled') === 'true'),
         optionCount: options.length,
         hasDesiredValue: desiredValue ? options.includes(desiredValue) : true,
       };
@@ -513,7 +517,9 @@ const inspectSelectors = async (page) =>
   }, { departmentCode, physicianCode, paymentMode, visitKind });
 
 const selectorReady = (selectors) =>
-  Object.values(selectors).every((item) => item.exists && item.optionCount > 0 && item.hasDesiredValue !== false);
+  Object.values(selectors).every(
+    (item) => item.exists && item.disabled !== true && item.optionCount > 0 && item.hasDesiredValue !== false,
+  );
 
 const evaluateLocalUiReadiness = async (context, patientId) => {
   const page = await context.newPage();
@@ -605,8 +611,21 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
           : exactResultCount > 1
             ? 'local_exact_match_ambiguous'
             : 'local_exact_match_not_selectable';
+      const localDiagnostic = summarizeLocalSelectableDiagnostic({
+        patientId,
+        selectableCount,
+        exactResultCount,
+        selectable: false,
+        verdict: 'rejected',
+        reason,
+      });
+      const selectorDiagnostic = summarizeSelectorDiagnostic({
+        selectors: {},
+        localSelectableDiagnostic: localDiagnostic,
+      });
       return {
         localSelectable: {
+          ...localDiagnostic,
           selectable: false,
           selectableCount,
           exactResultCount,
@@ -614,8 +633,9 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
           reason,
         },
         selectorReadiness: {
-          verdict: 'not_verified',
-          reason,
+          ...selectorDiagnostic,
+          verdict: selectorDiagnostic.status,
+          reason: selectorDiagnostic.reason,
           selectors: {},
         },
         diagnosticPatientNotFound: localResponses.some((record) => record.response?.body?.patientNotFound),
@@ -635,16 +655,31 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
       .catch(() => null);
     const selectors = await inspectSelectors(page);
     const ready = selectorReady(selectors);
+    const localDiagnostic = summarizeLocalSelectableDiagnostic({
+      patientId,
+      selectableCount,
+      exactResultCount,
+      selectable: true,
+      verdict: 'accepted',
+    });
+    const selectorDiagnostic = summarizeSelectorDiagnostic({
+      selectors,
+      localSelectableDiagnostic: localDiagnostic,
+    });
     return {
       localSelectable: {
+        ...localDiagnostic,
         selectable: true,
         selectableCount,
         exactResultCount,
         verdict: 'accepted',
       },
       selectorReadiness: {
+        ...selectorDiagnostic,
         verdict: verdict(ready),
-        accepted: ready,
+        status: selectorDiagnostic.status,
+        reason: selectorDiagnostic.reason,
+        accepted: ready && selectorDiagnostic.accepted,
         selectors: Object.fromEntries(
           Object.entries(selectors).map(([key, item]) => [
             key,
@@ -658,8 +693,20 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
       diagnosticPatientNotFound: localResponses.some((record) => record.response?.body?.patientNotFound),
     };
   } catch (error) {
+    const localDiagnostic = summarizeLocalSelectableDiagnostic({
+      patientId,
+      selectableCount: 0,
+      exactResultCount: 0,
+      verdict: 'rejected',
+      reason: 'local_search_failed',
+    });
+    const selectorDiagnostic = summarizeSelectorDiagnostic({
+      selectors: {},
+      localSelectableDiagnostic: localDiagnostic,
+    });
     return {
       localSelectable: {
+        ...localDiagnostic,
         selectable: false,
         selectableCount: 0,
         exactResultCount: 0,
@@ -667,8 +714,9 @@ const evaluateLocalUiReadiness = async (context, patientId) => {
         errorCategory: 'ui-evaluation-error',
       },
       selectorReadiness: {
-        verdict: 'not_verified',
-        reason: 'ui evaluation failed before selector inspection',
+        ...selectorDiagnostic,
+        verdict: selectorDiagnostic.status,
+        reason: selectorDiagnostic.reason,
         selectors: {},
       },
       diagnosticPatientNotFound: false,
@@ -710,6 +758,12 @@ const buildRejectedLegacySeedRow = (patientId, source) => ({
   },
   selectorReadiness: { verdict: 'not_verified' },
   localSelectable: { verdict: 'not_verified' },
+  medicalInformationReadiness: {
+    verdict: 'not_verified',
+    accepted: false,
+    reason: 'legacy_local_smoke_seed_rejected',
+    failedSubdimensions: ['required_identity_fields_match'],
+  },
   appointmentDependency: {
     flowMode: requestedAppointmentFlowMode,
     required: requestedAppointmentFlowMode === 'appointment_row',
@@ -728,6 +782,7 @@ const buildRejectedLegacySeedRow = (patientId, source) => ({
 
 const resolveCandidateRejectionReason = ({
   medicalInformationProbe,
+  medicalInformationReadiness,
   officialPatientExistence,
   insuranceReadiness,
   appointmentDependency,
@@ -735,7 +790,7 @@ const resolveCandidateRejectionReason = ({
   diagnosticNoPatientNotFound,
   mutationProhibited,
 }) => {
-  if (medicalInformationProbe.accepted !== true) return 'medical_information_not_ready';
+  if (medicalInformationProbe.accepted !== true || medicalInformationReadiness?.accepted === false) return 'medical_information_not_ready';
   if (officialPatientExistence.accepted !== true) return officialPatientExistence.rejectionReason ?? 'official_patient_missing';
   if (insuranceReadiness.accepted !== true) return insuranceReadiness.classification ?? 'insurance_not_ready';
   if (appointmentDependency.accepted !== true) return appointmentDependency.classification ?? 'appointment_dependency_not_ready';
@@ -770,8 +825,21 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     verdict: verdict(blockedMutationRequests.length === 0),
     blockedRequestCount: blockedMutationRequests.length,
   };
+  const medicalInformationReadiness = summarizeMedicalInformationReadiness({
+    patientId,
+    departmentCode,
+    physicianCode,
+    paymentMode,
+    visitKind,
+    medicalInformation: '',
+    medicalInformationState: { state: 'omitted' },
+    medicalInformationProbe,
+    selectorDiagnostic: uiReadiness.selectorReadiness,
+    localSelectableDiagnostic: uiReadiness.localSelectable,
+  });
   const rejectionReason = resolveCandidateRejectionReason({
     medicalInformationProbe,
+    medicalInformationReadiness,
     officialPatientExistence,
     insuranceReadiness,
     appointmentDependency,
@@ -781,6 +849,7 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
   });
   const acceptedForExactPreflightProposal =
     medicalInformationProbe.accepted === true &&
+    medicalInformationReadiness.accepted === true &&
     officialPatientExistence.accepted === true &&
     insuranceReadiness.accepted === true &&
     appointmentDependency.accepted === true &&
@@ -800,6 +869,7 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     insuranceReadiness,
     selectorReadiness: uiReadiness.selectorReadiness,
     localSelectable: uiReadiness.localSelectable,
+    medicalInformationReadiness,
     appointmentDependency,
     diagnosticNoPatientNotFound,
     mutationProhibited,
@@ -837,6 +907,14 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
       patientSearch: { patientId: '', selectable: false, selectableCount: 0, verdict: 'rejected' },
       selectors: {},
       medicalInformationProbe,
+      medicalInformationReadiness: {
+        status: 'not_verified',
+        verdict: 'not_verified',
+        accepted: false,
+        reason: 'no_accepted_candidate',
+        failedSubdimensions: ['required_identity_fields_match'],
+        rawSensitiveFieldsExcluded: true,
+      },
       acceptedForPhase3Attempt: gate.acceptedForPhase3Attempt,
       selectedCandidate,
       phase3AttemptPatientId: gate.phase3AttemptPatientId,
@@ -877,6 +955,7 @@ const buildPreflightSummary = ({ acceptedRow, summary, medicalInformationProbe }
     },
     selectors: acceptedRow.selectorReadiness.selectors ?? {},
     medicalInformationProbe,
+    medicalInformationReadiness: acceptedRow.medicalInformationReadiness,
     officialPatientExistence: acceptedRow.officialPatientExistence,
     insuranceReadiness: acceptedRow.insuranceReadiness,
     appointmentDependency: acceptedRow.appointmentDependency,
@@ -922,7 +1001,8 @@ const buildMarkdownSummary = (summary) =>
         `- ${candidate.patientId}: proposal=${candidate.acceptedForExactPreflightProposal ? 'accepted' : 'rejected'}, phase3=rejected, ` +
         `official=${candidate.officialPatientExistence.verdict}, ` +
         `insurance=${candidate.insuranceReadiness.verdict}/${candidate.insuranceReadiness.status ?? 'none'}/${candidate.insuranceReadiness.apiResult || 'none'}/${candidate.insuranceReadiness.classification ?? 'none'}/${candidate.insuranceReadiness.accepted ? 'accepted' : 'rejected'}, ` +
-        `local=${candidate.localSelectable.verdict}, selectors=${candidate.selectorReadiness.verdict}, ` +
+        `local=${candidate.localSelectable.verdict}/${candidate.localSelectable.reason ?? 'none'}, selectors=${candidate.selectorReadiness.verdict}/${candidate.selectorReadiness.reason ?? 'none'}, ` +
+        `medicalInfo=${candidate.medicalInformationReadiness?.verdict ?? 'not_verified'}/${candidate.medicalInformationReadiness?.failedSubdimensions?.join('|') || 'none'}, ` +
         `appointment=${candidate.appointmentDependency.verdict}/${candidate.appointmentDependency.flowMode ?? 'unknown'}/${candidate.appointmentDependency.required ? 'required' : 'not_required'}/${candidate.appointmentDependency.status ?? 'none'}/${candidate.appointmentDependency.apiResult || 'none'}/${candidate.appointmentDependency.classification ?? 'none'}/${candidate.appointmentDependency.accepted ? 'accepted' : 'rejected'}, ` +
         `noPatientNotFound=${candidate.diagnosticNoPatientNotFound.verdict}`,
     )
@@ -1008,6 +1088,19 @@ const buildReadinessAxes = (rows) => ({
     verdict: row.selectorReadiness?.verdict ?? 'not_verified',
     accepted: row.selectorReadiness?.accepted === true,
     selectors: row.selectorReadiness?.selectors ?? {},
+    diagnostic: {
+      status: row.selectorReadiness?.status ?? row.selectorReadiness?.verdict ?? 'not_verified',
+      reason: row.selectorReadiness?.reason ?? 'unknown',
+      fields: row.selectorReadiness?.fields ?? {},
+    },
+  })),
+  medicalInformationReadiness: rows.map((row) => ({
+    patientId: row.patientId,
+    status: row.medicalInformationReadiness?.status ?? row.medicalInformationReadiness?.verdict ?? 'not_verified',
+    accepted: row.medicalInformationReadiness?.accepted === true,
+    reason: row.medicalInformationReadiness?.reason ?? 'unknown',
+    failedSubdimensions: row.medicalInformationReadiness?.failedSubdimensions ?? [],
+    dimensions: row.medicalInformationReadiness?.dimensions ?? {},
   })),
   diagnostics: rows.map((row) => ({
     patientId: row.patientId,

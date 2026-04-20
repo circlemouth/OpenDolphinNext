@@ -80,6 +80,21 @@ const acceptedSummary = (overrides = {}) => {
       accepted: true,
       details: {},
     },
+    medicalInformationReadiness: {
+      verdict: 'accepted',
+      accepted: true,
+      reason: 'none',
+      failedSubdimensions: [],
+      dimensions: {
+        department_ready: { ready: true, reason: 'none' },
+        physician_ready: { ready: true, reason: 'none' },
+        payment_ready: { ready: true, reason: 'none' },
+        visitKind_ready: { ready: true, reason: 'none' },
+        medicalInformation_input_ready: { ready: true, reason: 'none' },
+        medicalInformation_omitted_state_matches: { ready: true, reason: 'none' },
+        required_identity_fields_match: { ready: true, reason: 'none' },
+      },
+    },
     localSelectableReadiness: {
       verdict: 'accepted',
       accepted: true,
@@ -289,6 +304,24 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.missingFields).toContain('acceptmodv2ReadOnlyDiagnostic');
   });
 
+  it.each(['departmentCode', 'physicianCode', 'paymentMode', 'visitKind'])(
+    'rejects exact preflight when required identity field %s is missing',
+    (field) => {
+      const summary = acceptedSummary();
+      delete (summary as Record<string, unknown>)[field];
+      const result = validatePreflightSummary({
+        summary,
+        artifactPath: '/tmp/summary.json',
+        artifactSha256: 'abc123',
+        expected: baseInput,
+      });
+
+      expect(result.ok).toBe(false);
+      expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+      expect(result.missingFields).toContain(field);
+    },
+  );
+
   it('rejects exact preflight when raw sensitive field exclusion is not asserted', () => {
     const result = validatePreflightSummary({
       summary: { ...acceptedSummary(), rawSensitiveFieldsExcluded: false },
@@ -300,6 +333,46 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.ok).toBe(false);
     expect(result.blockerClassification).toBe('preflight_artifact_invalid');
     expect(result.missingFields).toContain('rawSensitiveFieldsExcluded');
+  });
+
+  it('rejects exact preflight when medicalInformationReadiness is missing', () => {
+    const summary = acceptedSummary();
+    delete (summary as Record<string, unknown>).medicalInformationReadiness;
+    const result = validatePreflightSummary({
+      summary,
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+    expect(result.missingFields).toContain('medicalInformationReadiness');
+  });
+
+  it('rejects exact preflight when medicalInformation readiness subdimensions are not accepted', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        medicalInformationReadiness: {
+          verdict: 'rejected',
+          accepted: false,
+          reason: 'medical_information_not_ready',
+          failedSubdimensions: ['department_ready'],
+          dimensions: {
+            department_ready: { ready: false, reason: 'selector_exact_match_missing' },
+          },
+        },
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_phase3_not_accepted');
+    expect(result.phase3ReadinessFailures).toContain('medicalInformationReadiness');
   });
 
   it('rejects exact preflight when Request_Number=00 found an existing acceptance', () => {

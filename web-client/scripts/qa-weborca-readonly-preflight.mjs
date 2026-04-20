@@ -23,9 +23,12 @@ import {
   classifyAcceptmodReadOnlyDiagnostic,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
+  summarizeLocalSelectableDiagnostic,
+  summarizeMedicalInformationReadiness,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
   summarizeOfficialPatientExistence,
+  summarizeSelectorDiagnostic,
 } from './qa-lib/orca-trial-preflight.mjs';
 
 const now = new Date();
@@ -480,7 +483,21 @@ const probeLocalSelectable = async (context, patientId) => {
     const exactMatchCount = localIds.filter((localId) => localId === patientId).length;
     const recordsReturned = typeof parsed?.recordsReturned === 'number' ? parsed.recordsReturned : patients.length;
     const accepted = response.ok() && isAllZeroApiResult(apiResult) && exactMatchCount === 1;
+    const diagnostic = summarizeLocalSelectableDiagnostic({
+      patientId,
+      recordsReturned,
+      exactMatchCount,
+      accepted,
+      verdict: verdict(accepted),
+      reason:
+        exactMatchCount === 0
+          ? 'local_exact_match_missing'
+          : exactMatchCount > 1
+            ? 'local_exact_match_ambiguous'
+            : undefined,
+    });
     return {
+      ...diagnostic,
       patientId,
       recordsReturned,
       exactMatchCount,
@@ -488,13 +505,21 @@ const probeLocalSelectable = async (context, patientId) => {
       accepted,
       reason:
         exactMatchCount === 0
-          ? 'local_sync_required'
+          ? 'local_exact_match_missing'
           : exactMatchCount > 1
-            ? 'local_duplicate_active_entries'
+            ? 'local_exact_match_ambiguous'
             : undefined,
     };
   } catch (error) {
+    const diagnostic = summarizeLocalSelectableDiagnostic({
+      patientId,
+      recordsReturned: 0,
+      exactMatchCount: 0,
+      verdict: 'rejected',
+      reason: 'local_search_failed',
+    });
     return {
+      ...diagnostic,
       patientId,
       recordsReturned: 0,
       exactMatchCount: 0,
@@ -585,6 +610,7 @@ const selectEvidence = async (page) =>
       const options = select ? Array.from(select.querySelectorAll('option')).map((option) => option.value) : [];
       return {
         exists: Boolean(select),
+        disabled: Boolean(select?.disabled || select?.getAttribute('aria-disabled') === 'true'),
         optionCount: options.length,
         hasDesiredValue: desiredValue ? options.includes(desiredValue) : true,
       };
@@ -602,7 +628,11 @@ const selectEvidence = async (page) =>
     };
   }, { departmentCode, physicianCode, paymentMode, visitKind, medicalInformation });
 
-const buildSelectorReadiness = (selectors) => {
+const buildSelectorReadiness = (selectors, localSelectableDiagnostic) => {
+  const selectorDiagnostic = summarizeSelectorDiagnostic({
+    selectors,
+    localSelectableDiagnostic,
+  });
   const details = Object.fromEntries(
     Object.entries(selectors).map(([key, item]) => [
       key,
@@ -615,9 +645,10 @@ const buildSelectorReadiness = (selectors) => {
     ]),
   );
   return {
+    ...selectorDiagnostic,
     details,
-    verdict: Object.values(details).every((item) => item.verdict === 'accepted') ? 'accepted' : 'rejected',
-    accepted: Object.values(details).every((item) => item.verdict === 'accepted'),
+    verdict: selectorDiagnostic.status,
+    accepted: selectorDiagnostic.accepted,
   };
 };
 
@@ -752,6 +783,7 @@ const classify = ({
   insuranceReadiness,
   localSelectableReadiness,
   selectorReadiness,
+  medicalInformationReadiness,
   acceptmodv2ReadOnlyDiagnostic,
   appointmentDependency,
 }) => {
@@ -789,6 +821,12 @@ const classify = ({
   if (selectorReadiness.verdict !== 'accepted') {
     return { blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER, blockerReason: 'selector_missing' };
   }
+  if (medicalInformationReadiness?.accepted === false) {
+    return {
+      blockerClassification: 'test-data-blocker',
+      blockerReason: `medical_information_not_ready:${medicalInformationReadiness.failedSubdimensions?.join(',') || 'unknown'}`,
+    };
+  }
   if (appointmentDependency?.classification === 'ambiguous_readiness_failure') {
     return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
   }
@@ -822,8 +860,9 @@ const buildMarkdownSummary = (summary) =>
   `- trialSourceCandidate: ${summary.trialSourceCandidate.verdict}\n` +
   `- officialPatientExistence: ${verdict(officialPatientEvidenceAccepted(summary.officialPatientExistence))} reason=${summary.officialPatientExistence.rejectionReason ?? 'none'}\n` +
   `- insuranceReadiness: ${summary.insuranceReadiness.verdict} status=${summary.insuranceReadiness.status ?? 'none'} apiResult=${summary.insuranceReadiness.apiResult || 'none'} classification=${summary.insuranceReadiness.classification ?? 'none'} accepted=${summary.insuranceReadiness.accepted ? 'yes' : 'no'} count=${summary.insuranceReadiness.count ?? 0} effective=${summary.insuranceReadiness.effectiveCount ?? 0}\n` +
-  `- localSelectableReadiness: ${summary.localSelectableReadiness.verdict}\n` +
-  `- selectorReadiness: ${summary.selectorReadiness.verdict}\n` +
+  `- localSelectableReadiness: ${summary.localSelectableReadiness.verdict} reason=${summary.localSelectableReadiness.reason ?? 'none'} count=${summary.localSelectableReadiness.localCandidateCount ?? summary.localSelectableReadiness.recordsReturned ?? 0} exact=${summary.localSelectableReadiness.exactMatchCount ?? 0}\n` +
+  `- selectorReadiness: ${summary.selectorReadiness.verdict} reason=${summary.selectorReadiness.reason ?? 'none'}\n` +
+  `- medicalInformationReadiness: ${summary.medicalInformationReadiness?.verdict ?? 'not_verified'} failed=${summary.medicalInformationReadiness?.failedSubdimensions?.join(',') || 'none'}\n` +
   `- appointmentDependency: ${summary.appointmentDependency.verdict} flowMode=${summary.appointmentDependency.flowMode ?? 'unknown'} required=${summary.appointmentDependency.required ? 'yes' : 'no'} status=${summary.appointmentDependency.status ?? 'none'} apiResult=${summary.appointmentDependency.apiResult || 'none'} classification=${summary.appointmentDependency.classification ?? 'none'} accepted=${summary.appointmentDependency.accepted ? 'yes' : 'no'}\n` +
   `- acceptmodv2ReadOnlyDiagnostic: ${summary.acceptmodv2ReadOnlyDiagnostic.verdict} apiResult=${summary.acceptmodv2ReadOnlyDiagnostic.apiResult || 'none'} mutationSuccess=${summary.acceptmodv2ReadOnlyDiagnostic.mutationSuccess ? 'yes' : 'no'}\n`;
 
@@ -923,9 +962,20 @@ try {
   }
 
   const selectedCandidate = selectedPatientId ? trialSourceCandidate.candidates[selectedPatientId] : undefined;
+  const requestedCandidate = requestedPatientId ? trialSourceCandidate.candidates[requestedPatientId] : undefined;
+  const readinessCandidate = selectedCandidate ?? requestedCandidate;
+  const localUiVerdict = selectedCandidate?.local?.accepted
+    ? uiFirstSelectable
+      ? 'accepted'
+      : 'rejected'
+    : (readinessCandidate?.local?.verdict ?? 'not_verified');
+  const localUiReason =
+    selectedCandidate?.local?.accepted && !uiFirstSelectable
+      ? 'local_exact_match_not_selectable'
+      : (readinessCandidate?.local?.reason ?? 'no accepted trial candidate');
   const localSelectableReadiness = {
-    ...(selectedCandidate?.local ?? {
-      patientId: selectedPatientId,
+    ...(readinessCandidate?.local ?? {
+      patientId: selectedPatientId ?? requestedPatientId,
       recordsReturned: 0,
       exactMatchCount: 0,
       verdict: 'not_verified',
@@ -934,9 +984,11 @@ try {
     }),
     uiSelectableCount,
     uiFirstSelectable,
-    verdict: selectedCandidate?.local?.accepted && uiFirstSelectable ? 'accepted' : (selectedCandidate?.local?.verdict ?? 'not_verified'),
+    verdict: localUiVerdict,
+    reason: localUiReason,
   };
   localSelectableReadiness.accepted = localSelectableReadiness.verdict === 'accepted';
+  localSelectableReadiness.status = localSelectableReadiness.verdict;
 
   const insuranceReadiness = selectedCandidate?.insurance ?? {
     count: 0,
@@ -945,7 +997,8 @@ try {
     verdict: 'not_verified',
     accepted: false,
   };
-  const selectorReadiness = buildSelectorReadiness(selectors);
+  const localSelectableDiagnostic = summarizeLocalSelectableDiagnostic(localSelectableReadiness);
+  const selectorReadiness = buildSelectorReadiness(selectors, localSelectableDiagnostic);
   const appointmentDependency = await buildAppointmentDependency(context, selectedPatientId);
   const acceptmodv2ReadOnlyDiagnostic = selectedPatientId
     ? await probeAcceptmodv2ReadOnlyDiagnostic(context, selectedPatientId)
@@ -965,6 +1018,21 @@ try {
   const officialPatientAccepted = officialPatientEvidenceAccepted(selectedOfficialPatientEvidence);
   const rawSensitiveFieldsExcluded = selectedOfficialPatientEvidence.rawSensitiveFieldsExcluded === true;
 
+  const patientId = selectedPatientId ?? requestedPatientId;
+  const phaseCandidateId = requestedCandidateId || patientId || candidateId;
+  const medicalInformationState = buildMedicalInformationState(medicalInformation);
+  const medicalInformationReadiness = summarizeMedicalInformationReadiness({
+    patientId,
+    departmentCode,
+    physicianCode,
+    paymentMode,
+    visitKind,
+    medicalInformation,
+    medicalInformationState,
+    medicalInformationProbe,
+    selectorDiagnostic: selectorReadiness,
+    localSelectableDiagnostic,
+  });
   const classification = classify({
     sessionMe,
     medicalInformationProbe,
@@ -973,6 +1041,7 @@ try {
     insuranceReadiness,
     localSelectableReadiness,
     selectorReadiness,
+    medicalInformationReadiness,
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
   });
@@ -980,6 +1049,7 @@ try {
     classification.blockerClassification === 'none' &&
     Boolean(selectedPatientId) &&
     medicalInformationProbe.accepted &&
+    medicalInformationReadiness.accepted === true &&
     trialSourceCandidate.verdict === 'accepted' &&
     officialPatientAccepted &&
     insuranceReadiness.verdict === 'accepted' &&
@@ -988,9 +1058,6 @@ try {
     appointmentDependency.verdict === 'accepted' &&
     acceptmodv2ReadOnlyDiagnostic.acceptedForPhase3Attempt === true &&
     rawSensitiveFieldsExcluded === true;
-  const patientId = selectedPatientId ?? requestedPatientId;
-  const phaseCandidateId = requestedCandidateId || patientId || candidateId;
-  const medicalInformationState = buildMedicalInformationState(medicalInformation);
   const inputIdentity = buildInputIdentity({
     runId,
     candidateId: phaseCandidateId,
@@ -1036,6 +1103,7 @@ try {
     visitKind,
     medicalInformationState,
     selectorReadiness,
+    medicalInformationReadiness,
   });
 
   const summary = {
@@ -1080,6 +1148,8 @@ try {
     insuranceReadiness: insuranceReadinessWithEvidence,
     selectorReadiness,
     localSelectableReadiness,
+    localSelectableDiagnostic,
+    medicalInformationReadiness,
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
     acceptedForPhase3Attempt,
@@ -1172,8 +1242,32 @@ try {
       key: `${facilityId}:${requestedPatientId || 'unresolved'}:${paymentMode}:${acceptanceDate}`,
       ...createEvidenceRef('preflight:insurance-readiness', null),
     },
-    selectorReadiness: { verdict: 'not_verified', details: {} },
-    localSelectableReadiness: { verdict: 'not_verified', exactMatchCount: 0, recordsReturned: 0 },
+    selectorReadiness: { status: 'not_verified', verdict: 'not_verified', accepted: false, reason: 'unknown', details: {} },
+    localSelectableReadiness: {
+      status: 'not_verified',
+      verdict: 'not_verified',
+      accepted: false,
+      reason: 'unknown',
+      exactMatchCount: 0,
+      recordsReturned: 0,
+      normalizedTargetPatientId: requestedPatientId || '',
+      rawSensitiveFieldsExcluded: true,
+    },
+    medicalInformationReadiness: {
+      status: 'not_verified',
+      verdict: 'not_verified',
+      accepted: false,
+      reason: 'fatal_error',
+      failedSubdimensions: [
+        'department_ready',
+        'physician_ready',
+        'payment_ready',
+        'visitKind_ready',
+        'medicalInformation_input_ready',
+        'required_identity_fields_match',
+      ],
+      rawSensitiveFieldsExcluded: true,
+    },
     appointmentDependency: {
       flowMode: requestedAppointmentFlowMode,
       required: requestedAppointmentFlowMode === 'appointment_row',
