@@ -114,6 +114,7 @@ const missingRequiredExactFields = (summary) => {
     'localSelectableEvidenceHash',
     'selectorEvidenceRef',
     'selectorEvidenceHash',
+    'medicalInformationReadiness',
     'acceptmodv2ReadOnlyDiagnostic',
     'flowMode',
     'rawSensitiveFieldsExcluded',
@@ -121,7 +122,12 @@ const missingRequiredExactFields = (summary) => {
   return required.filter((field) => {
     const value = summary?.[field];
     if (field === 'rawSensitiveFieldsExcluded') return value !== true;
-    if (field === 'inputIdentity' || field === 'medicalInformationState' || field === 'acceptmodv2ReadOnlyDiagnostic') {
+    if (
+      field === 'inputIdentity' ||
+      field === 'medicalInformationState' ||
+      field === 'medicalInformationReadiness' ||
+      field === 'acceptmodv2ReadOnlyDiagnostic'
+    ) {
       return !value || typeof value !== 'object';
     }
     return !normalizeString(value);
@@ -164,6 +170,7 @@ export const collectPhase3PreflightReadinessFailures = (summary, expectedPatient
     insuranceReadiness: readinessAccepted(summary?.insuranceReadiness),
     selectorReadiness: readinessAccepted(summary?.selectorReadiness),
     localSelectableReadiness: readinessAccepted(summary?.localSelectableReadiness),
+    medicalInformationReadiness: readinessAccepted(summary?.medicalInformationReadiness),
     appointmentDependency: appointmentReady,
     acceptmodv2ReadOnlyDiagnostic: exactPreflightDiagnosticFailure(summary) === '',
     rawSensitiveFieldsExcluded:

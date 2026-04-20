@@ -33,6 +33,7 @@ const hash = (value) => crypto.createHash('sha256').update(String(value)).digest
 const INSURANCE_BUSINESS_REJECTED_RESULTS = new Set(['21', '23']);
 const AMBIGUOUS_READINESS_HTTP_STATUSES = new Set([0, 401, 403, 404]);
 const APPOINTMENT_FLOW_MODES = new Set(['direct_acceptance', 'appointment_row']);
+const SELECTOR_FIELDS = ['department', 'physician', 'paymentMode', 'visitKind', 'medicalInformation'];
 
 const asArray = (value) => (Array.isArray(value) ? value : value == null ? [] : [value]);
 const isRecord = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -497,6 +498,269 @@ export const summarizeLocalSelectableReadiness = ({ candidateId, selectableCount
   accepted: Number(selectableCount ?? 0) === 1 && exactMatch === true,
   evidenceHash: hash(`${candidateId}:${selectableCount}:${exactMatch}`),
 });
+
+const safeCount = (value) => {
+  const numeric = Number(value ?? 0);
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : 0;
+};
+
+const normalizeStatus = (value, accepted) => {
+  if (accepted === true || value === 'accepted') return 'accepted';
+  if (value === 'not_verified') return 'not_verified';
+  return 'rejected';
+};
+
+const sanitizeLocalSelectableReason = ({ status, reason, exactMatchCount, exactMatch, selectable }) => {
+  if (status === 'accepted') return 'none';
+  const normalizedReason = normalizeText(reason);
+  if (
+    normalizedReason === 'local_exact_match_missing' ||
+    normalizedReason === 'local_exact_match_ambiguous' ||
+    normalizedReason === 'local_exact_match_not_selectable' ||
+    normalizedReason === 'local_search_failed' ||
+    normalizedReason === 'no_accepted_trial_candidate'
+  ) {
+    return normalizedReason;
+  }
+  if (normalizedReason === 'local_sync_required') return 'local_exact_match_missing';
+  if (exactMatchCount === 0 || exactMatch === false) return 'local_exact_match_missing';
+  if (selectable === false) return 'local_exact_match_not_selectable';
+  return status === 'not_verified' ? 'unknown' : 'local_selectable_not_ready';
+};
+
+export const summarizeLocalSelectableDiagnostic = ({
+  patientId,
+  normalizedTargetPatientId,
+  selectableCount,
+  recordsReturned,
+  exactResultCount,
+  exactMatchCount,
+  exactMatch,
+  selectable,
+  accepted,
+  verdict,
+  reason,
+}) => {
+  const localCandidateCount = safeCount(recordsReturned ?? selectableCount);
+  const exactCount = safeCount(exactResultCount ?? exactMatchCount ?? (exactMatch === true ? 1 : 0));
+  const localAccepted = accepted === true || selectable === true || verdict === 'accepted';
+  const status = normalizeStatus(verdict, localAccepted);
+  const sanitizedReason = sanitizeLocalSelectableReason({
+    status,
+    reason,
+    exactMatchCount: exactCount,
+    exactMatch: exactMatch ?? exactCount > 0,
+    selectable,
+  });
+  return {
+    status,
+    verdict: status,
+    accepted: status === 'accepted',
+    reason: sanitizedReason,
+    normalizedTargetPatientId: normalizePatientId(normalizedTargetPatientId || patientId),
+    localCandidateCount,
+    selectableCount: safeCount(selectableCount ?? recordsReturned),
+    exactMatchCount: exactCount,
+    exactMatch: exactCount === 1,
+    rawSensitiveFieldsExcluded: true,
+  };
+};
+
+const selectorItemDiagnostic = (item) => {
+  const exists = item?.exists === true;
+  const disabled = item?.disabled === true;
+  const optionCount = safeCount(item?.optionCount);
+  const targetMatch = item?.hasDesiredValue !== false;
+  const notVerifiedReason = normalizeText(item?.notVerifiedReason);
+  if (notVerifiedReason) {
+    return {
+      status: 'not_verified',
+      verdict: 'not_verified',
+      reason: notVerifiedReason === 'local_exact_match_missing' ? 'local_exact_match_missing' : 'unknown',
+      exists,
+      disabled,
+      optionCount,
+      targetMatch,
+      accepted: false,
+    };
+  }
+  if (!exists) {
+    return {
+      status: 'rejected',
+      verdict: 'rejected',
+      reason: 'selector_unavailable',
+      exists,
+      disabled,
+      optionCount,
+      targetMatch,
+      accepted: false,
+    };
+  }
+  if (disabled) {
+    return {
+      status: 'rejected',
+      verdict: 'rejected',
+      reason: 'selector_disabled',
+      exists,
+      disabled,
+      optionCount,
+      targetMatch,
+      accepted: false,
+    };
+  }
+  if (optionCount === 0) {
+    return {
+      status: 'rejected',
+      verdict: 'rejected',
+      reason: 'selector_option_missing',
+      exists,
+      disabled,
+      optionCount,
+      targetMatch,
+      accepted: false,
+    };
+  }
+  if (!targetMatch) {
+    return {
+      status: 'rejected',
+      verdict: 'rejected',
+      reason: 'selector_exact_match_missing',
+      exists,
+      disabled,
+      optionCount,
+      targetMatch,
+      accepted: false,
+    };
+  }
+  return {
+    status: 'accepted',
+    verdict: 'accepted',
+    reason: 'none',
+    exists,
+    disabled,
+    optionCount,
+    targetMatch,
+    accepted: true,
+  };
+};
+
+export const summarizeSelectorDiagnostic = ({ selectors, localSelectableDiagnostic } = {}) => {
+  const localReason = normalizeText(localSelectableDiagnostic?.reason);
+  if (localSelectableDiagnostic?.status === 'rejected' && localReason === 'local_exact_match_missing') {
+    const fields = Object.fromEntries(
+      SELECTOR_FIELDS.map((field) => [
+        field,
+        {
+          status: 'not_verified',
+          verdict: 'not_verified',
+          reason: 'local_exact_match_missing',
+          exists: false,
+          disabled: false,
+          optionCount: 0,
+          targetMatch: false,
+          accepted: false,
+        },
+      ]),
+    );
+    return {
+      status: 'not_verified',
+      verdict: 'not_verified',
+      accepted: false,
+      reason: 'local_exact_match_missing',
+      fields,
+      rawSensitiveFieldsExcluded: true,
+    };
+  }
+
+  const fields = Object.fromEntries(
+    SELECTOR_FIELDS.map((field) => [field, selectorItemDiagnostic(selectors?.[field])]),
+  );
+  const values = Object.values(fields);
+  const status = values.every((item) => item.status === 'accepted')
+    ? 'accepted'
+    : values.some((item) => item.status === 'not_verified')
+      ? 'not_verified'
+      : 'rejected';
+  const failed = values.find((item) => item.status !== 'accepted');
+  return {
+    status,
+    verdict: status,
+    accepted: status === 'accepted',
+    reason: failed?.reason ?? 'none',
+    fields,
+    rawSensitiveFieldsExcluded: true,
+  };
+};
+
+const readinessDimension = (ready, reason = '') => ({
+  ready: ready === true,
+  reason: ready === true ? 'none' : reason || 'not_ready',
+});
+
+export const summarizeMedicalInformationReadiness = ({
+  patientId,
+  departmentCode,
+  physicianCode,
+  paymentMode,
+  visitKind,
+  medicalInformation,
+  medicalInformationState,
+  medicalInformationProbe,
+  selectorDiagnostic,
+  localSelectableDiagnostic,
+} = {}) => {
+  const expectedState = normalizeText(medicalInformation) ? 'selected' : 'omitted';
+  const observedState = normalizeText(medicalInformationState?.state) || expectedState;
+  const selectorFields = selectorDiagnostic?.fields ?? {};
+  const departmentReady = selectorFields.department?.status === 'accepted';
+  const physicianReady = selectorFields.physician?.status === 'accepted';
+  const paymentReady = selectorFields.paymentMode?.status === 'accepted';
+  const visitKindReady = selectorFields.visitKind?.status === 'accepted';
+  const medicalSelectorReady = selectorFields.medicalInformation?.status === 'accepted';
+  const medicalProbeReady = medicalInformationProbe?.accepted === true || medicalInformationProbe?.verdict === 'accepted';
+  const medicalInformationInputReady = medicalProbeReady && medicalSelectorReady;
+  const medicalInformationOmittedStateMatches =
+    expectedState === observedState &&
+    (expectedState === 'selected' || normalizeText(medicalInformationState?.value) === '');
+  const requiredIdentityFieldsMatch = Boolean(
+    normalizePatientId(patientId) &&
+      normalizeText(departmentCode) &&
+      normalizeText(physicianCode) &&
+      normalizeText(paymentMode) &&
+      normalizeText(visitKind) &&
+      medicalInformationOmittedStateMatches &&
+      localSelectableDiagnostic?.status === 'accepted',
+  );
+  const dimensions = {
+    department_ready: readinessDimension(departmentReady, selectorFields.department?.reason),
+    physician_ready: readinessDimension(physicianReady, selectorFields.physician?.reason),
+    payment_ready: readinessDimension(paymentReady, selectorFields.paymentMode?.reason),
+    visitKind_ready: readinessDimension(visitKindReady, selectorFields.visitKind?.reason),
+    medicalInformation_input_ready: readinessDimension(
+      medicalInformationInputReady,
+      medicalProbeReady ? selectorFields.medicalInformation?.reason : 'medical_information_probe_not_accepted',
+    ),
+    medicalInformation_omitted_state_matches: readinessDimension(
+      medicalInformationOmittedStateMatches,
+      'medical_information_omitted_state_mismatch',
+    ),
+    required_identity_fields_match: readinessDimension(requiredIdentityFieldsMatch, 'required_identity_fields_missing_or_unmatched'),
+  };
+  const failedSubdimensions = Object.entries(dimensions)
+    .filter(([, value]) => value.ready !== true)
+    .map(([key]) => key);
+  return {
+    status: failedSubdimensions.length === 0 ? 'accepted' : selectorDiagnostic?.status === 'not_verified' ? 'not_verified' : 'rejected',
+    verdict: failedSubdimensions.length === 0 ? 'accepted' : selectorDiagnostic?.status === 'not_verified' ? 'not_verified' : 'rejected',
+    accepted: failedSubdimensions.length === 0,
+    reason: failedSubdimensions.length === 0 ? 'none' : 'medical_information_not_ready',
+    failedSubdimensions,
+    dimensions,
+    expectedMedicalInformationState: expectedState,
+    observedMedicalInformationState: observedState,
+    rawSensitiveFieldsExcluded: true,
+  };
+};
 
 export const classifyAcceptmodReadOnlyDiagnostic = ({
   executed,

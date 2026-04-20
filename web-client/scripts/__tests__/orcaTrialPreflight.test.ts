@@ -11,8 +11,11 @@ import {
   sanitizeOfficialPatientExistenceEvidence,
   summarizeAppointmentDependency,
   summarizeInsuranceReadiness,
+  summarizeLocalSelectableDiagnostic,
   summarizeLocalSelectableReadiness,
+  summarizeMedicalInformationReadiness,
   summarizeOfficialPatientExistence,
+  summarizeSelectorDiagnostic,
   summarizeSelectorReadiness,
 } from '../qa-lib/orca-trial-preflight.mjs';
 
@@ -622,6 +625,141 @@ describe('orca trial-native preflight gates', () => {
 
   it('missing selector rejects the candidate', () => {
     expect(summarizeSelectorReadiness({ ...acceptedSelectors, physician: { exists: true, optionCount: 0 } }).accepted).toBe(false);
+  });
+
+  it('reports local selectable accepted plus selector rejected without accepting Phase 3 readiness', () => {
+    const local = summarizeLocalSelectableDiagnostic({
+      patientId: '00001',
+      selectableCount: 1,
+      exactResultCount: 1,
+      selectable: true,
+      verdict: 'accepted',
+    });
+    const selector = summarizeSelectorDiagnostic({
+      localSelectableDiagnostic: local,
+      selectors: {
+        ...acceptedSelectors,
+        physician: { exists: true, optionCount: 2, hasDesiredValue: false },
+        paymentMode: { exists: true, optionCount: 1, hasDesiredValue: true },
+        visitKind: { exists: true, optionCount: 1, hasDesiredValue: true },
+      },
+    });
+    const medicalInformationReadiness = summarizeMedicalInformationReadiness({
+      patientId: '00001',
+      departmentCode: '01',
+      physicianCode: '10001',
+      paymentMode: 'insurance',
+      visitKind: '1',
+      medicalInformation: '',
+      medicalInformationState: { state: 'omitted' },
+      medicalInformationProbe: { accepted: true },
+      selectorDiagnostic: selector,
+      localSelectableDiagnostic: local,
+    });
+
+    expect(local).toMatchObject({
+      status: 'accepted',
+      normalizedTargetPatientId: '00001',
+      localCandidateCount: 1,
+      exactMatch: true,
+      reason: 'none',
+    });
+    expect(selector).toMatchObject({
+      status: 'rejected',
+      reason: 'selector_exact_match_missing',
+      accepted: false,
+    });
+    expect(selector.fields.physician).toMatchObject({
+      optionCount: 2,
+      targetMatch: false,
+      reason: 'selector_exact_match_missing',
+    });
+    expect(medicalInformationReadiness).toMatchObject({
+      accepted: false,
+      reason: 'medical_information_not_ready',
+    });
+    expect(medicalInformationReadiness.failedSubdimensions).toContain('physician_ready');
+  });
+
+  it('reports local_exact_match_missing as selector not_verified without declaring official absence', () => {
+    const local = summarizeLocalSelectableDiagnostic({
+      patientId: '00002',
+      recordsReturned: 0,
+      exactMatchCount: 0,
+      verdict: 'rejected',
+      reason: 'local_exact_match_missing',
+    });
+    const selector = summarizeSelectorDiagnostic({
+      localSelectableDiagnostic: local,
+      selectors: {},
+    });
+
+    expect(local).toMatchObject({
+      status: 'rejected',
+      reason: 'local_exact_match_missing',
+      normalizedTargetPatientId: '00002',
+      localCandidateCount: 0,
+      rawSensitiveFieldsExcluded: true,
+    });
+    expect(selector).toMatchObject({
+      status: 'not_verified',
+      reason: 'local_exact_match_missing',
+      accepted: false,
+    });
+    expect(evaluatePreflightSummary({
+      candidateId: '00002',
+      officialPatientExistence: { accepted: true },
+      insuranceReadiness: { accepted: true },
+      selectorReadiness: selector,
+      localSelectableReadiness: { accepted: false },
+      appointmentDependency: { flowMode: 'direct_acceptance', required: false, accepted: true },
+      secretScanClean: true,
+    })).toBe('selector_missing');
+  });
+
+  it('splits medical_information_not_ready into sanitized subdimensions', () => {
+    const local = summarizeLocalSelectableDiagnostic({
+      patientId: '00005',
+      selectableCount: 1,
+      exactResultCount: 1,
+      selectable: true,
+      verdict: 'accepted',
+    });
+    const selector = summarizeSelectorDiagnostic({
+      localSelectableDiagnostic: local,
+      selectors: {
+        department: { exists: true, optionCount: 1, hasDesiredValue: true },
+        physician: { exists: true, optionCount: 1, hasDesiredValue: true },
+        paymentMode: { exists: true, optionCount: 1, hasDesiredValue: true },
+        visitKind: { exists: true, optionCount: 1, hasDesiredValue: true },
+        medicalInformation: { exists: true, optionCount: 0, hasDesiredValue: true },
+      },
+    });
+    const readiness = summarizeMedicalInformationReadiness({
+      patientId: '00005',
+      departmentCode: '01',
+      physicianCode: '10001',
+      paymentMode: 'insurance',
+      visitKind: '1',
+      medicalInformation: '',
+      medicalInformationState: { state: 'omitted' },
+      medicalInformationProbe: { accepted: true },
+      selectorDiagnostic: selector,
+      localSelectableDiagnostic: local,
+    });
+
+    expect(readiness).toMatchObject({
+      status: 'rejected',
+      accepted: false,
+      reason: 'medical_information_not_ready',
+      rawSensitiveFieldsExcluded: true,
+    });
+    expect(readiness.failedSubdimensions).toEqual(['medicalInformation_input_ready']);
+    expect(readiness.dimensions.medicalInformation_input_ready).toMatchObject({
+      ready: false,
+      reason: 'selector_option_missing',
+    });
+    expect(JSON.stringify(readiness)).not.toMatch(/WholeName|Address|Phone|Insurance_Symbol/);
   });
 
   it('candidate discovery with zero accepted candidates is readiness-blocked without contradicting Trial registration', () => {
