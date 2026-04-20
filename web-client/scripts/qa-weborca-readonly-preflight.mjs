@@ -11,6 +11,7 @@ import {
 } from './qa-lib/session-auth.mjs';
 import {
   EXACT_PREFLIGHT_FLOW_MODE,
+  EXACT_PREFLIGHT_KIND,
   EXACT_PREFLIGHT_SOURCE,
   SELECTOR_OPTION_MISSING_BLOCKER,
   buildInputIdentity,
@@ -529,6 +530,7 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
           : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
             ? 'patient_not_found'
             : 'not_readonly_no_existing_acceptance',
+      accepted: diagnostic.accepted,
       mutationSuccess: diagnostic.mutationSuccess,
       classification: diagnostic.classification,
       acceptedForPhase3Attempt: diagnostic.acceptedForPhase3Attempt,
@@ -540,6 +542,7 @@ const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
       verdict: 'rejected',
       businessStatus: 'notVerified',
       businessReason: 'diagnostic_failed',
+      accepted: false,
       mutationSuccess: false,
       acceptedForPhase3Attempt: false,
       error: String(error),
@@ -917,6 +920,7 @@ try {
         verdict: 'not_verified',
         businessStatus: 'notVerified',
         businessReason: 'no accepted trial candidate',
+        accepted: false,
         mutationSuccess: false,
         acceptedForPhase3Attempt: false,
       };
@@ -1003,6 +1007,7 @@ try {
     runId,
     source: EXACT_PREFLIGHT_SOURCE,
     flowMode: EXACT_PREFLIGHT_FLOW_MODE,
+    kind: EXACT_PREFLIGHT_KIND,
     candidateId: phaseCandidateId,
     executedAt: new Date().toISOString(),
     baseURL: redactUrl(baseURL),
@@ -1077,6 +1082,7 @@ try {
     runId,
     source: EXACT_PREFLIGHT_SOURCE,
     flowMode: EXACT_PREFLIGHT_FLOW_MODE,
+    kind: EXACT_PREFLIGHT_KIND,
     executedAt: new Date().toISOString(),
     baseURL: redactUrl(baseURL),
     facilityId,
@@ -1148,6 +1154,7 @@ try {
       apiResult: '',
       businessStatus: 'notVerified',
       businessReason: 'fatal_error',
+      accepted: false,
       mutationSuccess: false,
       acceptedForPhase3Attempt: false,
     },

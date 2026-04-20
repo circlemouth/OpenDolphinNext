@@ -4,11 +4,13 @@ export const SELECTOR_OPTION_MISSING_BLOCKER = 'selector_option_missing';
 export const EXACT_PREFLIGHT_SOURCE = 'qa-weborca-readonly-preflight';
 export const CANDIDATE_DISCOVERY_SOURCE = 'qa-weborca-candidate-discovery';
 export const EXACT_PREFLIGHT_FLOW_MODE = 'exact-readonly-preflight';
+export const EXACT_PREFLIGHT_KIND = 'exact-selected-candidate-preflight';
 export const PREFLIGHT_INPUT_MISMATCH_BLOCKER = 'preflight_input_mismatch';
 export const PREFLIGHT_NOT_ACCEPTED_BLOCKER = 'preflight_not_accepted';
 export const PREFLIGHT_ARTIFACT_INVALID_BLOCKER = 'preflight_artifact_invalid';
 export const PREFLIGHT_DISCOVERY_ONLY_BLOCKER = 'candidate_discovery_only';
 export const PREFLIGHT_DIAGNOSTIC_NOT_VERIFIED_BLOCKER = 'preflight_diagnostic_not_verified';
+export const PREFLIGHT_PHASE3_NOT_ACCEPTED_BLOCKER = 'preflight_phase3_not_accepted';
 
 const normalizeString = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -77,6 +79,14 @@ const preflightIdentityFromSummary = (summary) =>
     ? summary.inputIdentity
     : null;
 
+const normalizeApiResult = (value) => normalizeString(value).toUpperCase();
+const is2xx = (status) => {
+  const numeric = Number(status);
+  return Number.isFinite(numeric) && numeric >= 200 && numeric < 300;
+};
+const verdictAccepted = (value) => value === undefined || value === 'accepted';
+const readinessAccepted = (value) => value?.accepted === true && verdictAccepted(value?.verdict);
+
 const pushMismatch = (mismatches, field, preflightValue, expectedValue) => {
   if (JSON.stringify(stableNormalize(preflightValue)) !== JSON.stringify(stableNormalize(expectedValue))) {
     mismatches.push({ field, preflight: preflightValue, expected: expectedValue });
@@ -86,6 +96,7 @@ const pushMismatch = (mismatches, field, preflightValue, expectedValue) => {
 const missingRequiredExactFields = (summary) => {
   const required = [
     'runId',
+    'kind',
     'candidateId',
     'patientId',
     'phase3AttemptPatientId',
@@ -121,11 +132,55 @@ const exactPreflightDiagnosticFailure = (summary) => {
   const diagnostic = summary?.acceptmodv2ReadOnlyDiagnostic;
   if (!diagnostic || typeof diagnostic !== 'object') return 'missing';
   if (diagnostic.mutationSuccess !== false) return 'mutation_success_claimed';
+  if (normalizeApiResult(diagnostic.apiResult) !== '60') return diagnostic.businessReason ?? diagnostic.classification ?? 'not_no_existing_acceptance';
+  if (diagnostic.classification !== 'diagnostic_no_existing_acceptance') return diagnostic.classification ?? 'not_accepted';
+  if (diagnostic.accepted !== true) return diagnostic.businessReason ?? diagnostic.classification ?? 'not_accepted';
   if (diagnostic.acceptedForPhase3Attempt !== true) return diagnostic.businessReason ?? diagnostic.classification ?? 'not_accepted';
   return '';
 };
 
-export const validatePreflightSummary = ({ summary, expected, artifactPath = '', artifactSha256 = '' }) => {
+export const officialPatientEvidenceAccepted = (evidence) =>
+  is2xx(evidence?.httpStatus ?? evidence?.status) &&
+  evidence?.parsedOrcaBody === true &&
+  evidence?.apiResultAccepted === true &&
+  evidence?.patientInformationPresent === true &&
+  evidence?.exactIdMatched === true &&
+  evidence?.notFoundMessage !== true &&
+  evidence?.rawSensitiveFieldsExcluded === true;
+
+export const collectPhase3PreflightReadinessFailures = (summary, expectedPatientId) => {
+  const appointment = summary?.appointmentDependency;
+  const directAcceptance =
+    appointment?.flowMode === 'direct_acceptance' &&
+    appointment?.required === false &&
+    appointment?.absenceBlocker !== true &&
+    readinessAccepted(appointment);
+  const appointmentReady = appointment?.flowMode === 'direct_acceptance' ? directAcceptance : readinessAccepted(appointment);
+  const checks = {
+    kind: summary?.kind === EXACT_PREFLIGHT_KIND,
+    acceptedForPhase3Attempt: summary?.acceptedForPhase3Attempt === true,
+    phase3AttemptPatientId: summary?.phase3AttemptPatientId === expectedPatientId,
+    officialPatientExistence: officialPatientEvidenceAccepted(summary?.officialPatientExistence),
+    insuranceReadiness: readinessAccepted(summary?.insuranceReadiness),
+    selectorReadiness: readinessAccepted(summary?.selectorReadiness),
+    localSelectableReadiness: readinessAccepted(summary?.localSelectableReadiness),
+    appointmentDependency: appointmentReady,
+    acceptmodv2ReadOnlyDiagnostic: exactPreflightDiagnosticFailure(summary) === '',
+    rawSensitiveFieldsExcluded:
+      summary?.rawSensitiveFieldsExcluded === true && summary?.officialPatientExistence?.rawSensitiveFieldsExcluded === true,
+  };
+  return Object.entries(checks)
+    .filter(([, ok]) => !ok)
+    .map(([key]) => key);
+};
+
+export const validatePreflightSummary = ({
+  summary,
+  expected,
+  artifactPath = '',
+  artifactSha256 = '',
+  expectedArtifactSha256 = '',
+}) => {
   const expectedIdentity = buildInputIdentity(expected);
   const preflightIdentity = preflightIdentityFromSummary(summary);
   const artifactMissing = [];
@@ -143,6 +198,20 @@ export const validatePreflightSummary = ({ summary, expected, artifactPath = '',
       error: `exact read-only WebORCA preflight artifact metadata is required: ${artifactMissing.join(', ')}`,
     };
   }
+  const normalizedArtifactSha256 = normalizeString(artifactSha256).toLowerCase();
+  const normalizedExpectedArtifactSha256 = normalizeString(expectedArtifactSha256).toLowerCase();
+  if (normalizedExpectedArtifactSha256 && normalizedArtifactSha256 !== normalizedExpectedArtifactSha256) {
+    return {
+      ok: false,
+      mutationAllowed: false,
+      blockerClassification: PREFLIGHT_ARTIFACT_INVALID_BLOCKER,
+      expectedIdentity,
+      preflightIdentity,
+      mismatches: [],
+      missingFields: [],
+      error: 'exact read-only WebORCA preflight artifact hash mismatch',
+    };
+  }
 
   if (summary?.source === CANDIDATE_DISCOVERY_SOURCE) {
     return {
@@ -156,7 +225,7 @@ export const validatePreflightSummary = ({ summary, expected, artifactPath = '',
     };
   }
 
-  if (summary?.source !== EXACT_PREFLIGHT_SOURCE || summary?.flowMode !== EXACT_PREFLIGHT_FLOW_MODE) {
+  if (summary?.source !== EXACT_PREFLIGHT_SOURCE || summary?.flowMode !== EXACT_PREFLIGHT_FLOW_MODE || summary?.kind !== EXACT_PREFLIGHT_KIND) {
     return {
       ok: false,
       mutationAllowed: false,
@@ -164,7 +233,7 @@ export const validatePreflightSummary = ({ summary, expected, artifactPath = '',
       expectedIdentity,
       preflightIdentity,
       mismatches: [],
-      error: `exact read-only WebORCA preflight source/flow is required; source=${summary?.source ?? 'unknown'} flowMode=${summary?.flowMode ?? 'unknown'}`,
+      error: `exact read-only WebORCA preflight source/flow/kind is required; source=${summary?.source ?? 'unknown'} flowMode=${summary?.flowMode ?? 'unknown'} kind=${summary?.kind ?? 'unknown'}`,
     };
   }
 
@@ -254,6 +323,20 @@ export const validatePreflightSummary = ({ summary, expected, artifactPath = '',
       preflightIdentity,
       mismatches,
       error: `read-only WebORCA preflight identity mismatch: ${mismatches.map((item) => item.field).join(', ')}`,
+    };
+  }
+
+  const readinessFailures = collectPhase3PreflightReadinessFailures(summary, expectedIdentity.input.patientId);
+  if (readinessFailures.length > 0) {
+    return {
+      ok: false,
+      mutationAllowed: false,
+      blockerClassification: PREFLIGHT_PHASE3_NOT_ACCEPTED_BLOCKER,
+      expectedIdentity,
+      preflightIdentity,
+      mismatches: [],
+      phase3ReadinessFailures: readinessFailures,
+      error: `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER: read-only WebORCA preflight is not accepted for Phase 3 mutation: ${readinessFailures.join(',')}. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; read-only mutation-ready evidence is incomplete.`,
     };
   }
 

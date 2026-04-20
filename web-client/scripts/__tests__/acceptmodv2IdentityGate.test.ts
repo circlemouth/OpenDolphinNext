@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CANDIDATE_DISCOVERY_SOURCE,
   EXACT_PREFLIGHT_FLOW_MODE,
+  EXACT_PREFLIGHT_KIND,
   EXACT_PREFLIGHT_SOURCE,
   SELECTOR_OPTION_MISSING_BLOCKER,
   buildInputIdentity,
@@ -31,6 +32,7 @@ const acceptedSummary = (overrides = {}) => {
     runId: input.runId,
     source: EXACT_PREFLIGHT_SOURCE,
     flowMode: EXACT_PREFLIGHT_FLOW_MODE,
+    kind: EXACT_PREFLIGHT_KIND,
     candidateId: input.candidateId,
     verdict: 'accepted',
     blockerClassification: 'none',
@@ -53,11 +55,51 @@ const acceptedSummary = (overrides = {}) => {
     localSelectableEvidenceHash: 'local-hash',
     selectorEvidenceRef: 'summary.json#/selectorReadiness',
     selectorEvidenceHash: 'selector-hash',
+    officialPatientExistence: {
+      httpStatus: 200,
+      parsedOrcaBody: true,
+      apiResult: '00',
+      apiResultAccepted: true,
+      patientInformationPresent: true,
+      exactIdMatched: true,
+      notFoundMessage: false,
+      responseCategory: 'present',
+      rejectionReason: 'none',
+      evidenceHash: 'official-hash',
+      rawSensitiveFieldsExcluded: true,
+    },
+    insuranceReadiness: {
+      verdict: 'accepted',
+      accepted: true,
+      classification: 'accepted',
+      count: 1,
+      effectiveCount: 1,
+    },
+    selectorReadiness: {
+      verdict: 'accepted',
+      accepted: true,
+      details: {},
+    },
+    localSelectableReadiness: {
+      verdict: 'accepted',
+      accepted: true,
+      exactMatchCount: 1,
+      recordsReturned: 1,
+    },
+    appointmentDependency: {
+      flowMode: 'direct_acceptance',
+      required: false,
+      absenceBlocker: false,
+      verdict: 'accepted',
+      accepted: true,
+      classification: 'direct_acceptance_no_appointment_required',
+    },
     acceptmodv2ReadOnlyDiagnostic: {
       apiResult: '60',
       classification: 'diagnostic_no_existing_acceptance',
       businessStatus: 'diagnosticNoExistingAcceptance',
       businessReason: 'no_existing_acceptance',
+      accepted: true,
       mutationSuccess: false,
       acceptedForPhase3Attempt: true,
     },
@@ -66,9 +108,12 @@ const acceptedSummary = (overrides = {}) => {
 };
 
 describe('acceptmodv2 preflight identity gate', () => {
-  it('same runId/candidate/input proceeds', () => {
+  it('current exact selected-candidate shape proceeds without stale candidates map', () => {
+    const summary = acceptedSummary();
+    expect(summary.officialPatientExistence).not.toHaveProperty('candidates');
+
     const result = validatePreflightSummary({
-      summary: acceptedSummary(),
+      summary,
       artifactPath: '/tmp/summary.json',
       artifactSha256: 'abc123',
       expected: baseInput,
@@ -77,6 +122,21 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.ok).toBe(true);
     expect(result.mutationAllowed).toBe(true);
     expect(result.blockerClassification).toBe('none');
+  });
+
+  it('rejects artifact hash mismatch when a pinned hash is provided', () => {
+    const result = validatePreflightSummary({
+      summary: acceptedSummary(),
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expectedArtifactSha256: 'def456',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_artifact_invalid');
+    expect(result.error).toContain('hash mismatch');
   });
 
   it.each([
@@ -159,9 +219,31 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.blockerClassification).toBe('none');
   });
 
+  it('rejects direct acceptance preflight when an appointment blocker is present', () => {
+    const summary = acceptedSummary();
+    const result = validatePreflightSummary({
+      summary: {
+        ...summary,
+        appointmentDependency: {
+          ...summary.appointmentDependency,
+          absenceBlocker: true,
+        },
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_phase3_not_accepted');
+    expect(result.phase3ReadinessFailures).toContain('appointmentDependency');
+  });
+
   it.each([
     ['false', false],
     ['string true', 'true'],
+    ['number 1', 1],
     ['object', { patientId: baseInput.patientId }],
     ['null', null],
   ])('rejects non-boolean true acceptedForPhase3Attempt value: %s', (_label, acceptedForPhase3Attempt) => {

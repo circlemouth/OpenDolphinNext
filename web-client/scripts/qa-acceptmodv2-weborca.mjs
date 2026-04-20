@@ -49,6 +49,7 @@ const preflightSummaryPath =
   process.env.QA_READONLY_PREFLIGHT_SUMMARY ??
   path.resolve(process.cwd(), '..', 'artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'weborca-readonly-preflight', 'summary.json');
 const requireReadonlyPreflight = process.env.QA_REQUIRE_READONLY_PREFLIGHT !== '0';
+const expectedPreflightSummarySha256 = process.env.QA_READONLY_PREFLIGHT_SHA256 ?? '';
 
 fs.mkdirSync(screenshotDir, { recursive: true });
 fs.mkdirSync(networkDir, { recursive: true });
@@ -97,31 +98,6 @@ let preflightGateResult = {
 let preflightSummarySha256 = '';
 const startupErrors = [];
 
-const resolvePreflightPhase3PatientId = (summary) =>
-  summary?.phase3AttemptPatientId ??
-  summary?.trialSourceCandidate?.selectedPatientId ??
-  summary?.patientId ??
-  summary?.patientSearch?.patientId;
-
-const phase3PreflightFailures = (summary, expectedPatientId) => {
-  const phase3PatientId = resolvePreflightPhase3PatientId(summary);
-  const checks = {
-    acceptedForPhase3Attempt: summary?.acceptedForPhase3Attempt === true,
-    phase3PatientId: phase3PatientId === expectedPatientId,
-    officialPatientExistence: summary?.officialPatientExistence?.candidates?.[phase3PatientId]?.verdict === 'accepted',
-    insuranceReadiness: summary?.insuranceReadiness?.verdict === 'accepted',
-    selectorReadiness: summary?.selectorReadiness?.verdict === 'accepted',
-    localSelectableReadiness: summary?.localSelectableReadiness?.verdict === 'accepted',
-    appointmentDependency: summary?.appointmentDependency?.required === false || summary?.appointmentDependency?.verdict === 'accepted',
-    acceptmodv2ReadOnlyDiagnostic:
-      summary?.acceptmodv2ReadOnlyDiagnostic?.acceptedForPhase3Attempt === true &&
-      summary?.acceptmodv2ReadOnlyDiagnostic?.mutationSuccess === false,
-  };
-  return Object.entries(checks)
-    .filter(([, ok]) => !ok)
-    .map(([key]) => key);
-};
-
 if (!patientId) {
   startupErrors.push('QA_PATIENT_ID is required; pass a current local-searchable patient id for the target facility.');
 }
@@ -139,6 +115,7 @@ if (requireReadonlyPreflight) {
         summary: preflightSummary,
         artifactPath: preflightSummaryPath,
         artifactSha256: preflightSummarySha256,
+        expectedArtifactSha256: expectedPreflightSummarySha256,
         expected: {
           runId,
           candidateId,
@@ -151,18 +128,8 @@ if (requireReadonlyPreflight) {
           medicalInformation,
         },
       });
-      const readinessFailures = validation.ok ? phase3PreflightFailures(preflightSummary, patientId) : [];
       preflightGateResult = {
         ...validation,
-        ...(readinessFailures.length > 0
-          ? {
-              ok: false,
-              mutationAllowed: false,
-              blockerClassification: 'preflight_phase3_not_accepted',
-              phase3ReadinessFailures: readinessFailures,
-              error: `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER: read-only WebORCA preflight is not accepted for Phase 3 mutation: ${readinessFailures.join(',')}. Do not conclude WebORCA Trial initial patients 00001-00011 are nonexistent; read-only mutation-ready evidence is incomplete.`,
-            }
-          : {}),
         summaryPath: preflightSummaryPath,
       };
       if (!preflightGateResult.ok) {

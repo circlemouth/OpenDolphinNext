@@ -525,9 +525,10 @@ export const classifyAcceptmodReadOnlyDiagnostic = ({
     apiResult ?? body?.apiResult ?? body?.Api_Result ?? findFirstDeep(body, ['apiResult', 'Api_Result', 'result', 'Result']),
   );
   const parseStateProvided = parsedOrcaBody !== undefined || diagnosticBodyParseSucceeded !== undefined;
+  const bodyPresent = isRecord(body) === true;
   const diagnosticBodyParsed = parseStateProvided
-    ? parsedOrcaBody === true || diagnosticBodyParseSucceeded === true
-    : isRecord(body);
+    ? (parsedOrcaBody === true || diagnosticBodyParseSucceeded === true) && bodyPresent
+    : bodyPresent;
   const wrapperRejected =
     hasWrapperError(body) ||
     hasWrapperError({

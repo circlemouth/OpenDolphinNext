@@ -446,6 +446,24 @@ describe('orca trial-native preflight gates', () => {
     });
   });
 
+  it('rejects apiResult=60 diagnostic when parsed marker is true but body evidence is absent', () => {
+    expect(
+      classifyAcceptmodReadOnlyDiagnostic({
+        executed: true,
+        httpStatus: 200,
+        apiResult: '60',
+        parsedOrcaBody: true,
+      }),
+    ).toMatchObject({
+      apiResult: '60',
+      classification: 'diagnostic_no_existing_acceptance',
+      accepted: false,
+      acceptedForPhase3Attempt: false,
+      mutationSuccess: false,
+      rejectionReason: 'orca_body_not_parsed',
+    });
+  });
+
   it.each(['21', '23'])('does not accept diagnostic apiResult=%s', (apiResult) => {
     expect(
       classifyAcceptmodReadOnlyDiagnostic({
