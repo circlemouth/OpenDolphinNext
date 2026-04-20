@@ -12,6 +12,8 @@ import {
 } from './qa-lib/session-auth.mjs';
 import {
   buildCandidateDiscoveryGate,
+  buildReadinessRejectionReasons,
+  primaryReadinessRejectionReason,
   summarizeLocalSelectableDiagnostic,
   summarizeMedicalInformationReadiness,
   summarizeAppointmentDependency,
@@ -438,7 +440,7 @@ const evaluateInsuranceReadiness = async (context, patientId) => {
   return {
     status: response.status,
     apiResult,
-    classification: containsPatientNotFound(response.body) ? 'business_rejected_insurance' : readiness.classification,
+    classification: readiness.classification,
     diagnosticCategory: readiness.diagnosticCategory,
     readinessFailureCategory: readiness.readinessFailureCategory,
     diagnostic: readiness.diagnostic,
@@ -479,7 +481,7 @@ const evaluateAppointmentDependency = async (context, patientId) => {
     absenceBlocker: dependency.absenceBlocker,
     status: response.status,
     apiResult,
-    classification: containsPatientNotFound(response.body) ? 'business_rejected_appointment' : dependency.classification,
+    classification: dependency.classification,
     diagnosticCategory: dependency.diagnosticCategory,
     readinessFailureCategory: dependency.readinessFailureCategory,
     diagnostic: dependency.diagnostic,
@@ -734,6 +736,8 @@ const buildRejectedLegacySeedRow = (patientId, source) => ({
   patientId,
   source,
   accepted: false,
+  primaryRejectionReason: 'legacy_local_smoke_seed_rejected',
+  rejectionReasons: [{ dimension: 'trial_candidate_source', reason: 'legacy_local_smoke_seed_rejected' }],
   rejectionReason: 'legacy_local_smoke_seed_rejected',
   acceptedForExactPreflightProposal: false,
   acceptedForPhase3Attempt: false,
@@ -780,28 +784,67 @@ const buildRejectedLegacySeedRow = (patientId, source) => ({
     verdict: 'accepted',
     blockedRequestCount: 0,
   },
+  readinessAxes: {
+    officialPatient: { accepted: false, rejectionReason: 'legacy_local_smoke_seed_rejected' },
+    insurance: { accepted: false, classification: 'not_verified' },
+    appointment: { accepted: false, classification: 'not_verified' },
+    localSelectable: { accepted: false, reason: 'not_verified' },
+    selector: { accepted: false, reason: 'not_verified' },
+    medicalInformation: { accepted: false, reason: 'legacy_local_smoke_seed_rejected' },
+    mutationPolicy: { accepted: true, blockedRequestCount: 0 },
+  },
 });
 
-const resolveCandidateRejectionReason = ({
-  medicalInformationProbe,
-  medicalInformationReadiness,
+const buildCandidateRowReadinessAxes = ({
   officialPatientExistence,
   insuranceReadiness,
   appointmentDependency,
   uiReadiness,
+  medicalInformationReadiness,
   diagnosticNoPatientNotFound,
   mutationProhibited,
-}) => {
-  if (medicalInformationProbe.accepted !== true || medicalInformationReadiness?.accepted === false) return 'medical_information_not_ready';
-  if (officialPatientExistence.accepted !== true) return officialPatientExistence.rejectionReason ?? 'official_patient_missing';
-  if (insuranceReadiness.accepted !== true) return insuranceReadiness.classification ?? 'insurance_not_ready';
-  if (appointmentDependency.accepted !== true) return appointmentDependency.classification ?? 'appointment_dependency_not_ready';
-  if (uiReadiness.localSelectable.selectable !== true) return uiReadiness.localSelectable.reason ?? 'local_selectable_not_ready';
-  if (uiReadiness.selectorReadiness.accepted !== true) return uiReadiness.selectorReadiness.reason ?? 'selector_not_ready';
-  if (diagnosticNoPatientNotFound.accepted !== true) return 'patient_not_found_wording_detected';
-  if (mutationProhibited.blockedRequestCount > 0) return 'readonly_mutation_attempt_blocked';
-  return 'none';
-};
+}) => ({
+  officialPatient: {
+    accepted: officialPatientExistence?.accepted === true,
+    apiResult: officialPatientExistence?.apiResult ?? '',
+    rejectionReason: officialPatientExistence?.rejectionReason ?? 'none',
+  },
+  insurance: {
+    accepted: insuranceReadiness?.accepted === true,
+    apiResult: insuranceReadiness?.apiResult ?? '',
+    classification: insuranceReadiness?.classification ?? 'unknown',
+    effectiveCount: insuranceReadiness?.effectiveCount ?? 0,
+  },
+  appointment: {
+    accepted: appointmentDependency?.accepted === true,
+    flowMode: appointmentDependency?.flowMode ?? 'unknown',
+    apiResult: appointmentDependency?.apiResult ?? '',
+    classification: appointmentDependency?.classification ?? 'unknown',
+    exactRowCount: appointmentDependency?.exactRowCount ?? 0,
+  },
+  localSelectable: {
+    accepted: uiReadiness?.localSelectable?.accepted === true || uiReadiness?.localSelectable?.selectable === true,
+    reason: uiReadiness?.localSelectable?.reason ?? 'none',
+    exactResultCount: uiReadiness?.localSelectable?.exactResultCount ?? 0,
+  },
+  selector: {
+    accepted: uiReadiness?.selectorReadiness?.accepted === true,
+    reason: uiReadiness?.selectorReadiness?.reason ?? 'none',
+  },
+  medicalInformation: {
+    accepted: medicalInformationReadiness?.accepted === true,
+    reason: medicalInformationReadiness?.reason ?? 'none',
+    failedSubdimensions: medicalInformationReadiness?.failedSubdimensions ?? [],
+  },
+  diagnosticNoPatientNotFound: {
+    accepted: diagnosticNoPatientNotFound?.accepted === true,
+    verdict: diagnosticNoPatientNotFound?.verdict ?? 'not_verified',
+  },
+  mutationPolicy: {
+    accepted: Number(mutationProhibited?.blockedRequestCount ?? 0) === 0,
+    blockedRequestCount: Number(mutationProhibited?.blockedRequestCount ?? 0),
+  },
+});
 
 const evaluateCandidate = async (context, medicalInformationProbe, patientId, source) => {
   logStep(`candidate ${patientId} evaluation start`);
@@ -839,13 +882,24 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     selectorDiagnostic: uiReadiness.selectorReadiness,
     localSelectableDiagnostic: uiReadiness.localSelectable,
   });
-  const rejectionReason = resolveCandidateRejectionReason({
+  const rejectionReasons = buildReadinessRejectionReasons({
     medicalInformationProbe,
     medicalInformationReadiness,
     officialPatientExistence,
     insuranceReadiness,
     appointmentDependency,
+    localSelectableReadiness: uiReadiness.localSelectable,
+    selectorReadiness: uiReadiness.selectorReadiness,
+    diagnosticNoPatientNotFound,
+    mutationProhibited,
+  });
+  const primaryRejectionReason = primaryReadinessRejectionReason(rejectionReasons);
+  const readinessAxes = buildCandidateRowReadinessAxes({
+    officialPatientExistence,
+    insuranceReadiness,
+    appointmentDependency,
     uiReadiness,
+    medicalInformationReadiness,
     diagnosticNoPatientNotFound,
     mutationProhibited,
   });
@@ -864,7 +918,9 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     patientId,
     source,
     accepted: acceptedForExactPreflightProposal,
-    rejectionReason: acceptedForExactPreflightProposal ? 'none' : rejectionReason,
+    primaryRejectionReason: acceptedForExactPreflightProposal ? 'none' : primaryRejectionReason,
+    rejectionReasons,
+    rejectionReason: acceptedForExactPreflightProposal ? 'none' : primaryRejectionReason,
     acceptedForExactPreflightProposal,
     acceptedForPhase3Attempt: false,
     officialPatientExistence,
@@ -875,6 +931,7 @@ const evaluateCandidate = async (context, medicalInformationProbe, patientId, so
     appointmentDependency,
     diagnosticNoPatientNotFound,
     mutationProhibited,
+    readinessAxes,
   };
   logStep(`candidate ${patientId} acceptedForExactPreflightProposal=${acceptedForExactPreflightProposal}`);
   return row;
@@ -1001,6 +1058,7 @@ const buildMarkdownSummary = (summary) =>
     .map(
       (candidate) =>
         `- ${candidate.patientId}: proposal=${candidate.acceptedForExactPreflightProposal ? 'accepted' : 'rejected'}, phase3=rejected, ` +
+        `primary=${candidate.primaryRejectionReason ?? candidate.rejectionReason ?? 'none'}, reasons=${(candidate.rejectionReasons ?? []).map((reason) => `${reason.dimension}:${reason.reason}`).join('|') || 'none'}, ` +
         `official=${candidate.officialPatientExistence.verdict}, ` +
         `insurance=${candidate.insuranceReadiness.verdict}/${candidate.insuranceReadiness.status ?? 'none'}/${candidate.insuranceReadiness.apiResult || 'none'}/${candidate.insuranceReadiness.classification ?? 'none'}/${candidate.insuranceReadiness.accepted ? 'accepted' : 'rejected'}, ` +
         `local=${candidate.localSelectable.verdict}/${candidate.localSelectable.reason ?? 'none'}, selectors=${candidate.selectorReadiness.verdict}/${candidate.selectorReadiness.reason ?? 'none'}, ` +
@@ -1106,6 +1164,9 @@ const buildReadinessAxes = (rows) => ({
   })),
   diagnostics: rows.map((row) => ({
     patientId: row.patientId,
+    primaryRejectionReason: row.primaryRejectionReason ?? row.rejectionReason ?? 'none',
+    rejectionReasons: row.rejectionReasons ?? [],
+    readinessAxes: row.readinessAxes ?? {},
     acceptedForExactPreflightProposal: row.acceptedForExactPreflightProposal === true,
     acceptedForPhase3Attempt: row.acceptedForPhase3Attempt === true,
     patientNotFoundWordingAbsent: row.diagnosticNoPatientNotFound?.accepted === true,
