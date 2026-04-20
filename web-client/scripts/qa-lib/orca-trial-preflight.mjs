@@ -41,6 +41,10 @@ const asFiniteStatus = (value) => {
   return Number.isFinite(numeric) ? numeric : 0;
 };
 const is2xx = (httpStatus) => Number(httpStatus) >= 200 && Number(httpStatus) < 300;
+const optionalStatus = (value) => {
+  const numeric = Number(value);
+  return Number.isInteger(numeric) && numeric > 0 ? numeric : undefined;
+};
 
 const findFirstDeep = (value, names) => {
   const stack = [value];
@@ -113,10 +117,6 @@ const collectOfficialPatientInformationRecords = (body) =>
   collectByKeyDeep(body, [
     'Patient_Information',
     'Patient_Information_child',
-    'patientInformation',
-    'PatientInformation',
-    'patient_information',
-    'patient_information_child',
   ]);
 
 const patientIdOf = (record) =>
@@ -146,10 +146,158 @@ const hasPatientNotFoundMessage = (body) =>
     JSON.stringify(body ?? {}),
   );
 
+const collectDiagnosticText = (body) => {
+  if (!isRecord(body)) return '';
+  const fields = [
+    body.error,
+    body.code,
+    body.errorCode,
+    body.errorCategory,
+    body.message,
+    body.reason,
+    body.reasonCode,
+    body.exceptionClass,
+    body.exceptionClassName,
+    body.details?.error,
+    body.details?.code,
+    body.details?.errorCode,
+    body.details?.errorCategory,
+    body.details?.message,
+    body.details?.reason,
+    body.details?.reasonCode,
+    body.details?.exceptionClass,
+    body.details?.exceptionClassName,
+  ];
+  return fields.map(normalizeText).filter(Boolean).join(' ');
+};
+
+const diagnosticField = (body, names) =>
+  normalizeText(names.map((name) => findFirstDeep(body, [name])).find((value) => normalizeText(value)));
+
+const resolveUpstreamStatus = ({ body, responseHeaders }) => {
+  const headerStatus = responseHeaders
+    ? optionalStatus(responseHeaders['x-orca-upstream-status'] ?? responseHeaders['X-Orca-Upstream-Status'])
+    : undefined;
+  if (headerStatus) return headerStatus;
+  const explicit = optionalStatus(
+    body?.upstreamStatus ??
+      body?.upstreamHttpStatus ??
+      body?.orcaStatus ??
+      body?.details?.upstreamStatus ??
+      body?.details?.upstreamHttpStatus ??
+      body?.details?.orcaStatus,
+  );
+  if (explicit) return explicit;
+  const text = collectDiagnosticText(body);
+  const match = /\bORCA\s+HTTP\s+response\s+status\s+([1-5][0-9]{2})\b/i.exec(text);
+  return match ? optionalStatus(match[1]) : undefined;
+};
+
+const sanitizeErrorCategory = (body, httpStatus) => {
+  const value =
+    diagnosticField(body, ['diagnosticCategory']) ||
+    diagnosticField(body, ['errorCategory']) ||
+    diagnosticField(body, ['errorCode']) ||
+    diagnosticField(body, ['code']) ||
+    (httpStatus >= 500 ? 'server_error' : '');
+  const normalized = value.toLowerCase().replace(/[^a-z0-9_.-]+/g, '_').replace(/^_+|_+$/g, '');
+  return normalized || 'none';
+};
+
+const sanitizeExceptionClassName = (body) => {
+  const value = diagnosticField(body, ['exceptionClassName', 'exceptionClass', 'exception', 'type']);
+  if (!/^[A-Za-z_$][A-Za-z0-9_$.]*(Exception|Error)$/.test(value)) return undefined;
+  if (/auth|credential|password|secret|token|session|cookie|csrf/i.test(value)) return undefined;
+  return value.split('.').pop();
+};
+
+const apiResultCategoryOf = (apiResult) => {
+  const normalized = normalizeApiResult(apiResult);
+  if (!normalized) return 'missing';
+  return isAllZeroApiResult(normalized) ? 'all_zero' : 'non_zero';
+};
+
+const classifyOfficialPatientGetDiagnostic = ({
+  localStatus,
+  upstreamStatus,
+  body,
+  parsedOrcaBody,
+  apiResult,
+  patientInformationPresent,
+  exactIdMatched,
+  notFoundMessage,
+  responseCategory,
+  errorCategory,
+  exceptionClassName,
+}) => {
+  const text = collectDiagnosticText(body);
+  const status = asFiniteStatus(localStatus);
+  if (status === 401 || status === 403 || /unauthori[sz]ed|forbidden|csrf|role|permission|auth/i.test(text)) {
+    return 'local_auth_failure';
+  }
+  if (/credential|decrypt|orca_mode|orca\.mode|transport settings|settings are incomplete|not available/i.test(text)) {
+    return 'credential_unavailable';
+  }
+  if (optionalStatus(upstreamStatus) && !is2xx(upstreamStatus)) {
+    return 'upstream_http_not_2xx';
+  }
+  if (status >= 500 && /parse|parser|json|xml|deseriali[sz]e|mapping|converter/i.test(text)) {
+    return 'parser_error';
+  }
+  if (status >= 500 && exceptionClassName) {
+    return 'local_exception';
+  }
+  if (status >= 500) {
+    const genericText = text
+      .toLowerCase()
+      .replace(/\b(server_error|internal_error|orca_gateway_error|error)\b/g, '')
+      .replace(/[\s_.-]+/g, '');
+    return errorCategory === 'server_error' && !genericText ? 'unknown' : 'local_exception';
+  }
+  if (!is2xx(status)) {
+    return 'unknown';
+  }
+  if (parsedOrcaBody !== true) {
+    return 'orca_body_missing';
+  }
+  if (notFoundMessage) {
+    return 'patient_not_found_wording_present';
+  }
+  const apiResultCategory = apiResultCategoryOf(apiResult);
+  if (apiResultCategory === 'missing') {
+    return 'api_result_missing';
+  }
+  if (apiResultCategory === 'non_zero') {
+    return 'api_result_non_zero';
+  }
+  if (!patientInformationPresent) {
+    return 'patient_information_missing';
+  }
+  if (!exactIdMatched) {
+    return 'exact_patient_id_mismatch';
+  }
+  if (responseCategory === 'empty' || responseCategory === 'not_found') {
+    return `response_category_${responseCategory}`;
+  }
+  return 'accepted';
+};
+
 export const isRejectedTrialCandidate = (candidateId) => REJECTED_TRIAL_CANDIDATES.has(normalizeText(candidateId));
 
-export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateId }) => {
-  const parsedOrcaBody = isRecord(body);
+export const summarizeOfficialPatientExistence = ({
+  httpStatus,
+  localStatus,
+  upstreamStatus,
+  responseHeaders,
+  body,
+  candidateId,
+  parsedOrcaBody: parsedOrcaBodyInput,
+  method = 'GET',
+  endpointKind = 'official_patientgetv2',
+}) => {
+  const status = asFiniteStatus(localStatus ?? httpStatus);
+  const resolvedUpstreamStatus = optionalStatus(upstreamStatus) ?? resolveUpstreamStatus({ body, responseHeaders });
+  const parsedOrcaBody = parsedOrcaBodyInput !== undefined ? parsedOrcaBodyInput === true && isRecord(body) : isRecord(body);
   const apiResult = normalizeApiResult(
     body?.apiResult ?? body?.Api_Result ?? findFirstDeep(body, ['apiResult', 'Api_Result', 'result', 'Result']),
   );
@@ -166,9 +314,30 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
       : exactIdMatched
         ? 'present'
         : 'different_patient_id_present';
+  const errorCategory = sanitizeErrorCategory(body, status);
+  const exceptionClassName = sanitizeExceptionClassName(body);
+  const apiResultCategory = apiResultCategoryOf(apiResult);
+  const diagnosticCategory = classifyOfficialPatientGetDiagnostic({
+    localStatus: status,
+    upstreamStatus: resolvedUpstreamStatus,
+    body,
+    parsedOrcaBody,
+    apiResult,
+    patientInformationPresent,
+    exactIdMatched,
+    notFoundMessage,
+    responseCategory: category,
+    errorCategory,
+    exceptionClassName,
+  });
+  const bodyHash = hash(
+    `${status}:${resolvedUpstreamStatus ?? 'unknown'}:${endpointKind}:${method}:${errorCategory}:${exceptionClassName ?? 'none'}:${parsedOrcaBody}:${apiResultCategory}:${patientInformationPresent}:${exactIdMatched}:${notFoundMessage}:${category}`,
+  );
   const rejectionReason =
-    !is2xx(httpStatus)
-      ? 'http_not_2xx'
+    resolvedUpstreamStatus && !is2xx(resolvedUpstreamStatus)
+      ? 'upstream_http_not_2xx'
+      : !is2xx(status)
+        ? diagnosticCategory
       : !parsedOrcaBody
         ? 'orca_body_not_parsed'
       : !apiResultAccepted
@@ -185,7 +354,8 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
                 ? `response_category_${category}`
                 : 'none';
   const accepted =
-    is2xx(httpStatus) &&
+    is2xx(status) &&
+    (!resolvedUpstreamStatus || is2xx(resolvedUpstreamStatus)) &&
     parsedOrcaBody &&
     apiResultAccepted &&
     patientInformationPresent &&
@@ -194,8 +364,20 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
     category !== 'empty' &&
     category !== 'not_found';
   return {
-    status: httpStatus,
-    httpStatus,
+    status,
+    httpStatus: status,
+    localStatus: status,
+    upstreamStatus: resolvedUpstreamStatus,
+    endpointKind,
+    method,
+    diagnosticCategory,
+    errorCategory,
+    exceptionClassName,
+    hasParsedBody: parsedOrcaBody,
+    hasPatientInformation: patientInformationPresent,
+    apiResultCategory,
+    exactPatientIdMatch: exactIdMatched,
+    bodyHash,
     parsedOrcaBody,
     apiResult,
     apiResultAccepted,
@@ -209,14 +391,16 @@ export const summarizeOfficialPatientExistence = ({ httpStatus, body, candidateI
     verdict: accepted ? 'accepted' : 'rejected',
     rejectionReason,
     evidenceHash: hash(
-      `${normalizedCandidateId}:${httpStatus}:${apiResult}:${apiResultAccepted}:${patientInformationPresent}:${exactIdMatched}:${records.length}:${notFoundMessage}:${category}`,
+      `${normalizedCandidateId}:${status}:${resolvedUpstreamStatus ?? 'unknown'}:${apiResult}:${apiResultAccepted}:${patientInformationPresent}:${exactIdMatched}:${records.length}:${notFoundMessage}:${category}:${diagnosticCategory}:${bodyHash}`,
     ),
     notFoundMessage,
   };
 };
 
 export const sanitizeOfficialPatientExistenceEvidence = (summary) => {
-  const httpStatus = asFiniteStatus(summary?.httpStatus ?? summary?.status);
+  const httpStatus = asFiniteStatus(summary?.httpStatus ?? summary?.status ?? summary?.localStatus);
+  const localStatus = asFiniteStatus(summary?.localStatus ?? httpStatus);
+  const upstreamStatus = optionalStatus(summary?.upstreamStatus);
   const parsedOrcaBody = summary?.parsedOrcaBody === true;
   const apiResult = normalizeApiResult(summary?.apiResult);
   const apiResultAccepted = summary?.apiResultAccepted === true;
@@ -225,13 +409,37 @@ export const sanitizeOfficialPatientExistenceEvidence = (summary) => {
   const notFoundMessage = summary?.notFoundMessage === true;
   const responseCategory = normalizeText(summary?.responseCategory ?? summary?.category) || 'not_verified';
   const rejectionReason = normalizeText(summary?.rejectionReason) || 'not_verified';
+  const endpointKind = normalizeText(summary?.endpointKind) || 'official_patientgetv2';
+  const method = normalizeText(summary?.method) || 'GET';
+  const diagnosticCategory = normalizeText(summary?.diagnosticCategory) || 'unknown';
+  const errorCategory = normalizeText(summary?.errorCategory) || 'none';
+  const exceptionClassName = normalizeText(summary?.exceptionClassName) || undefined;
+  const apiResultCategory = normalizeText(summary?.apiResultCategory) || apiResultCategoryOf(apiResult);
+  const exactPatientIdMatch = summary?.exactPatientIdMatch === true || exactIdMatched;
+  const bodyHash =
+    normalizeText(summary?.bodyHash) ||
+    hash(
+      `${localStatus}:${upstreamStatus ?? 'unknown'}:${endpointKind}:${method}:${errorCategory}:${exceptionClassName ?? 'none'}:${parsedOrcaBody}:${apiResultCategory}:${patientInformationPresent}:${exactPatientIdMatch}:${notFoundMessage}:${responseCategory}`,
+    );
   const evidenceHash =
     normalizeText(summary?.evidenceHash) ||
     hash(
-      `${httpStatus}:${parsedOrcaBody}:${apiResult}:${apiResultAccepted}:${patientInformationPresent}:${exactIdMatched}:${notFoundMessage}:${responseCategory}:${rejectionReason}`,
+      `${httpStatus}:${localStatus}:${upstreamStatus ?? 'unknown'}:${parsedOrcaBody}:${apiResult}:${apiResultAccepted}:${patientInformationPresent}:${exactIdMatched}:${notFoundMessage}:${responseCategory}:${rejectionReason}:${diagnosticCategory}:${bodyHash}`,
     );
   return {
     httpStatus,
+    localStatus,
+    upstreamStatus,
+    endpointKind,
+    method,
+    diagnosticCategory,
+    errorCategory,
+    exceptionClassName,
+    hasParsedBody: parsedOrcaBody,
+    hasPatientInformation: patientInformationPresent,
+    apiResultCategory,
+    exactPatientIdMatch,
+    bodyHash,
     parsedOrcaBody,
     apiResult,
     apiResultAccepted,
@@ -274,6 +482,18 @@ export const buildOfficialPatientReadinessAxes = (candidateEvidenceMap) => {
         patientNotFoundWordingAbsent: evidence.notFoundMessage !== true,
         responseCategory: evidence.responseCategory,
         rejectionReason: evidence.rejectionReason,
+        diagnosticCategory: evidence.diagnosticCategory,
+        localStatus: evidence.localStatus,
+        upstreamStatus: evidence.upstreamStatus,
+        endpointKind: evidence.endpointKind,
+        method: evidence.method,
+        errorCategory: evidence.errorCategory,
+        exceptionClassName: evidence.exceptionClassName,
+        hasParsedBody: evidence.hasParsedBody,
+        hasPatientInformation: evidence.hasPatientInformation,
+        apiResultCategory: evidence.apiResultCategory,
+        exactPatientIdMatch: evidence.exactPatientIdMatch,
+        bodyHash: evidence.bodyHash,
         accepted: officialPatientEvidenceAccepted(evidence),
         evidenceHash: evidence.evidenceHash,
         rawSensitiveFieldsExcluded: true,

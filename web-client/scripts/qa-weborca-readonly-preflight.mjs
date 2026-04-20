@@ -327,11 +327,15 @@ const probeOfficialPatientgetv2 = async (context, candidateId) => {
       response,
       responseText: text,
     });
-    const parsed = parseJson(text);
+    const parsed = parseJsonWithStatus(text);
     const existence = summarizeOfficialPatientExistence({
       httpStatus: response.status(),
-      body: parsed,
+      body: parsed.body,
       candidateId,
+      parsedOrcaBody: parsed.ok,
+      method: 'GET',
+      endpointKind: 'official_patientgetv2',
+      responseHeaders: response.headers(),
     });
     const evidence = sanitizeOfficialPatientExistenceEvidence(existence);
     return {
