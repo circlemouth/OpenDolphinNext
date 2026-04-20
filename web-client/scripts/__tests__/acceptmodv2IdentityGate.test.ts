@@ -118,6 +118,12 @@ const acceptedSummary = (overrides = {}) => {
       mutationSuccess: false,
       acceptedForPhase3Attempt: true,
     },
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: 0,
+      blockedRequests: [],
+      targetMutationRequestCount: 0,
+    },
     rawSensitiveFieldsExcluded: true,
   };
 };
@@ -466,6 +472,107 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.ok).toBe(false);
     expect(result.mutationAllowed).toBe(false);
     expect(result.blockerClassification).toBe('preflight_diagnostic_not_verified');
+  });
+
+  it('accepts exact preflight when acceptmod diagnostic is intentionally not run by read-only policy', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        acceptmodv2ReadOnlyDiagnostic: {
+          apiResult: '',
+          status: 'not_run',
+          verdict: 'accepted',
+          businessStatus: 'notRun',
+          businessReason: 'mutation_route_not_called_by_policy',
+          accepted: true,
+          mutationSuccess: false,
+          classification: 'mutation_diagnostic_not_run_by_policy',
+          acceptedForPhase3Attempt: true,
+          routeCalled: false,
+          rawSensitiveFieldsExcluded: true,
+        },
+        mutationPolicy: {
+          prohibited: true,
+          blockedRequestCount: 0,
+          blockedRequests: [],
+          targetMutationRequestCount: 0,
+        },
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.mutationAllowed).toBe(true);
+    expect(result.blockerClassification).toBe('none');
+  });
+
+  it('rejects read-only not-run diagnostic when mutation policy evidence is missing', () => {
+    const summary = {
+      ...acceptedSummary(),
+      acceptmodv2ReadOnlyDiagnostic: {
+        apiResult: '',
+        status: 'not_run',
+        verdict: 'accepted',
+        businessStatus: 'notRun',
+        businessReason: 'mutation_route_not_called_by_policy',
+        accepted: true,
+        mutationSuccess: false,
+        classification: 'mutation_diagnostic_not_run_by_policy',
+        acceptedForPhase3Attempt: true,
+        routeCalled: false,
+        rawSensitiveFieldsExcluded: true,
+      },
+    };
+    delete (summary as Record<string, unknown>).mutationPolicy;
+
+    const result = validatePreflightSummary({
+      summary,
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_diagnostic_not_verified');
+    expect(result.error).toContain('mutation_policy_missing');
+  });
+
+  it('rejects read-only not-run diagnostic when target mutation request count is nonzero', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        acceptmodv2ReadOnlyDiagnostic: {
+          apiResult: '',
+          status: 'not_run',
+          verdict: 'accepted',
+          businessStatus: 'notRun',
+          businessReason: 'mutation_route_not_called_by_policy',
+          accepted: true,
+          mutationSuccess: false,
+          classification: 'mutation_diagnostic_not_run_by_policy',
+          acceptedForPhase3Attempt: true,
+          routeCalled: false,
+          rawSensitiveFieldsExcluded: true,
+        },
+        mutationPolicy: {
+          prohibited: true,
+          blockedRequestCount: 0,
+          blockedRequests: [],
+          targetMutationRequestCount: 1,
+        },
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_diagnostic_not_verified');
+    expect(result.error).toContain('target_mutation_request_count_nonzero');
   });
 
   it('requires exact preflight artifact path and hash', () => {

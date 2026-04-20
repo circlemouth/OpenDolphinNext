@@ -138,6 +138,19 @@ const exactPreflightDiagnosticFailure = (summary) => {
   const diagnostic = summary?.acceptmodv2ReadOnlyDiagnostic;
   if (!diagnostic || typeof diagnostic !== 'object') return 'missing';
   if (diagnostic.mutationSuccess !== false) return 'mutation_success_claimed';
+  if (diagnostic.classification === 'mutation_diagnostic_not_run_by_policy') {
+    const mutationPolicy = summary?.mutationPolicy;
+    if (diagnostic.status !== 'not_run') return diagnostic.status ?? 'not_run_status_missing';
+    if (diagnostic.routeCalled !== false) return 'mutation_route_called';
+    if (diagnostic.rawSensitiveFieldsExcluded !== true) return 'raw_sensitive_fields_not_excluded';
+    if (diagnostic.accepted !== true) return diagnostic.businessReason ?? 'not_accepted';
+    if (diagnostic.acceptedForPhase3Attempt !== true) return diagnostic.businessReason ?? 'not_accepted';
+    if (!mutationPolicy || typeof mutationPolicy !== 'object') return 'mutation_policy_missing';
+    if (mutationPolicy.prohibited !== true) return 'mutation_policy_not_prohibited';
+    if (Number(mutationPolicy.targetMutationRequestCount) !== 0) return 'target_mutation_request_count_nonzero';
+    if (Number(mutationPolicy.blockedRequestCount) !== 0) return 'blocked_request_count_nonzero';
+    return '';
+  }
   if (normalizeApiResult(diagnostic.apiResult) !== '60') return diagnostic.businessReason ?? diagnostic.classification ?? 'not_no_existing_acceptance';
   if (diagnostic.classification !== 'diagnostic_no_existing_acceptance') return diagnostic.classification ?? 'not_accepted';
   if (diagnostic.accepted !== true) return diagnostic.businessReason ?? diagnostic.classification ?? 'not_accepted';
