@@ -113,8 +113,8 @@ class OrcaLiveGatewaySupportTest {
 
         assertFalse(xml.contains("insurancecombinationreq"));
         assertFalse(xml.contains("Perform_Date"));
-        assertTrue(xml.contains("<Start_Date></Start_Date>"));
-        assertTrue(xml.contains("<End_Date></End_Date>"));
+        assertTrue(xml.contains("<Start_Date>2026-04-20</Start_Date>"));
+        assertTrue(xml.contains("<End_Date>2026-04-20</End_Date>"));
     }
 
     @Test

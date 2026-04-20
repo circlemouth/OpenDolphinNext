@@ -357,6 +357,12 @@ final class OrcaLiveGatewaySupport {
         LocalDate baseDate = resolveIsoDateOrDefault(request.getBaseDate(), LocalDate.now(), "baseDate");
         String startDate = resolveOptionalIsoDate(request.getRangeStart(), "rangeStart");
         String endDate = resolveOptionalIsoDate(request.getRangeEnd(), "rangeEnd");
+        if (startDate.isBlank()) {
+            startDate = baseDate.toString();
+        }
+        if (endDate.isBlank()) {
+            endDate = startDate;
+        }
         StringBuilder builder = new StringBuilder();
         builder.append(buildOrcaMeta(OrcaEndpoint.INSURANCE_COMBINATION, null));
         builder.append("<data><patientlst6req>");

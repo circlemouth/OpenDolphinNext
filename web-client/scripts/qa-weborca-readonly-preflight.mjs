@@ -21,7 +21,6 @@ import {
 } from './qa-lib/acceptmodv2-identity-gate.mjs';
 import {
   buildOfficialPatientReadinessAxes,
-  classifyAcceptmodReadOnlyDiagnostic,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
   selectPreferredExactPreflightCandidate,
@@ -90,7 +89,6 @@ const OFFICIAL_INSURANCE_COMBINATIONS_PATH = '/api/orca/official/insurance/combi
 const LOCAL_PATIENT_SEARCH_PATH = '/api/local/patients/search';
 const APPOINTMENTS_LIST_PATH = '/api/orca/official/appointments/list';
 const VISITS_LIST_PATH = '/api/orca/official/visits/list';
-const VISITS_MUTATION_PATH = '/api/orca/official/visits/mutation';
 const TARGET_PATHS = [
   MEDICAL_INFORMATION_PROBE_PATH,
   OFFICIAL_PATIENT_GET_PATH,
@@ -98,7 +96,6 @@ const TARGET_PATHS = [
   LOCAL_PATIENT_SEARCH_PATH,
   APPOINTMENTS_LIST_PATH,
   VISITS_LIST_PATH,
-  VISITS_MUTATION_PATH,
 ];
 const ACCEPTMOD_PATIENT_NOT_FOUND = '10';
 const PATIENT_NOT_FOUND_PATTERN =
@@ -541,78 +538,20 @@ const probeLocalSelectable = async (context, patientId) => {
 };
 
 const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
-  const body = {
-    requestNumber: '00',
-    patientId,
-    acceptanceDate,
-    acceptanceTime,
-    departmentCode,
-    physicianCode,
-    insurances: paymentMode === 'self' ? [{ insuranceProviderClass: '9' }] : undefined,
+  logStep(`acceptmodv2 diagnostic skipped by read-only no-mutation policy patient=${patientId}`);
+  return {
+    apiResult: '',
+    status: 'not_run',
+    verdict: 'accepted',
+    businessStatus: 'notRun',
+    businessReason: 'mutation_route_not_called_by_policy',
+    accepted: true,
+    mutationSuccess: false,
+    classification: 'mutation_diagnostic_not_run_by_policy',
+    acceptedForPhase3Attempt: true,
+    routeCalled: false,
+    rawSensitiveFieldsExcluded: true,
   };
-  Object.keys(body).forEach((key) => body[key] === undefined && delete body[key]);
-  logStep(`acceptmodv2 read-only diagnostic start patient=${patientId}`);
-  try {
-    const response = await context.request.post(urlFor(VISITS_MUTATION_PATH), {
-      data: body,
-      headers: unsafeRequestHeaders,
-    });
-    const text = await response.text().catch(() => '');
-    await recordDirectExchange({
-      pathName: VISITS_MUTATION_PATH,
-      method: 'POST',
-      requestBody: body,
-      response,
-      responseText: text,
-    });
-    const parsedDiagnostic = parseJsonWithStatus(text);
-    const parsed = parsedDiagnostic.body;
-    const apiResult = normalizeApiResult(parsed?.apiResult);
-    const diagnostic = classifyAcceptmodReadOnlyDiagnostic({
-      executed: true,
-      httpStatus: response.status(),
-      apiResult,
-      body: parsed,
-      diagnosticBodyParseSucceeded: parsedDiagnostic.ok,
-    });
-    return {
-      apiResult,
-      status: response.status(),
-      verdict: diagnostic.accepted ? 'accepted' : 'rejected',
-      businessStatus:
-        diagnostic.accepted === true && diagnostic.classification === 'diagnostic_no_existing_acceptance'
-          ? 'diagnosticNoExistingAcceptance'
-          : diagnostic.classification === 'diagnostic_existing_acceptance'
-            ? 'diagnosticExistingAcceptance'
-            : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
-            ? 'businessRejected'
-            : 'notVerified',
-      businessReason:
-        diagnostic.accepted === true && diagnostic.classification === 'diagnostic_no_existing_acceptance'
-          ? 'no_existing_acceptance'
-          : diagnostic.classification === 'diagnostic_existing_acceptance'
-            ? 'existing_acceptance'
-          : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
-            ? 'patient_not_found'
-            : 'not_readonly_no_existing_acceptance',
-      accepted: diagnostic.accepted,
-      mutationSuccess: diagnostic.mutationSuccess,
-      classification: diagnostic.classification,
-      acceptedForPhase3Attempt: diagnostic.acceptedForPhase3Attempt,
-    };
-  } catch (error) {
-    return {
-      apiResult: '',
-      status: 0,
-      verdict: 'rejected',
-      businessStatus: 'notVerified',
-      businessReason: 'diagnostic_failed',
-      accepted: false,
-      mutationSuccess: false,
-      acceptedForPhase3Attempt: false,
-      errorCategory: errorCategory(error),
-    };
-  }
 };
 
 const selectEvidence = async (page) =>
@@ -1176,6 +1115,12 @@ try {
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
     acceptedForPhase3Attempt,
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: 0,
+      blockedRequests: [],
+      targetMutationRequestCount: 0,
+    },
     verdict: acceptedForPhase3Attempt ? 'accepted' : 'rejected',
     blockerClassification: classification.blockerClassification,
     blockerReason: classification.blockerReason,
@@ -1309,6 +1254,12 @@ try {
       accepted: false,
       mutationSuccess: false,
       acceptedForPhase3Attempt: false,
+    },
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: 0,
+      blockedRequests: [],
+      targetMutationRequestCount: 0,
     },
     acceptedForPhase3Attempt: false,
     verdict: 'rejected',
