@@ -200,7 +200,7 @@ const forbiddenSecretRules = [
   },
 ];
 
-const textArtifactPattern = /\.(?:md|txt|json|log|ya?ml|toml|env|sample|sh|mjs|js|ts|tsx|properties|conf|csv)$/i;
+const textArtifactPattern = /\.(?:md|txt|json|jsonl|log|ya?ml|toml|env|sample|sh|mjs|js|ts|tsx|properties|conf|csv)$/i;
 
 function scanTextForSecrets(filePath, label) {
   const content = readRequiredText(filePath, label);
