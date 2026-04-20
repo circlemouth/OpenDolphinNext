@@ -185,7 +185,7 @@ repo_relative_path() {
 
 is_excluded_package_path() {
   case "$1" in
-    .git|.git/*|client/*|server/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|*.tsbuildinfo|*.zip|*/*.zip|*.har|*/*.har|traces/*|*/traces/*|trace/*|*/trace/*|videos/*|*/videos/*|video/*|*/video/*|screenshots/*|*/screenshots/*|raw-screenshots/*|*/raw-screenshots/*|raw-network-dumps/*|*/raw-network-dumps/*|network/*|*/network/*|requests/*|*/requests/*|request-xml/*|*/request-xml/*|response-xml/*|*/response-xml/*|*.png|*/*.png|*.jpg|*/*.jpg|*.jpeg|*/*.jpeg|*.webm|*/*.webm|*.mp4|*/*.mp4|*/.DS_Store|*/Thumbs.db)
+    .git|.git/*|client/*|server/*|artifacts/*|web-client/artifacts/*|node_modules/*|*/node_modules/*|dist/*|*/dist/*|target/*|*/target/*|build/*|*/build/*|out/*|*/out/*|coverage/*|*/coverage/*|test-results/*|*/test-results/*|tmp/*|output/*|.cache/*|*/.cache/*|.vite/*|*/.vite/*|.parcel-cache/*|*/.parcel-cache/*|.turbo/*|*/.turbo/*|.nyc_output/*|*/.nyc_output/*|*.tsbuildinfo|*.zip|*/*.zip|OpenDolphin_WebClient-review-package-*.zip.summary.txt|*/OpenDolphin_WebClient-review-package-*.zip.summary.txt|*.har|*/*.har|traces/*|*/traces/*|trace/*|*/trace/*|videos/*|*/videos/*|video/*|*/video/*|screenshots/*|*/screenshots/*|raw-screenshots/*|*/raw-screenshots/*|raw-network-dumps/*|*/raw-network-dumps/*|network/*|*/network/*|requests/*|*/requests/*|request-xml/*|*/request-xml/*|response-xml/*|*/response-xml/*|*.png|*/*.png|*.jpg|*/*.jpg|*.jpeg|*/*.jpeg|*.webm|*/*.webm|*.mp4|*/*.mp4|*/.DS_Store|*/Thumbs.db)
       return 0
       ;;
     *)
@@ -428,6 +428,7 @@ if [[ "$IS_GIT_WORKTREE" -eq 1 ]]; then
     ':(exclude)**/*.log' \
     ':(exclude)**/*.tsbuildinfo' \
     ':(exclude)**/*.zip' \
+    ':(exclude)**/OpenDolphin_WebClient-review-package-*.zip.summary.txt' \
     ':(exclude)**/*.har' \
     ':(exclude)**/traces/**' \
     ':(exclude)**/trace/**' \
@@ -698,7 +699,7 @@ zip_create_from_file_list "$PACKAGE_FILE" "$FILE_LIST"
 zip_add_junk_file "$PACKAGE_FILE" "$MANIFEST_FILE"
 zip_add_junk_file "$PACKAGE_FILE" "$REVIEW_LOG_INCLUSIONS_FILE"
 
-BAD_PATHS="$(zip_list_entries "$PACKAGE_FILE" | grep -E '(^|/)(\.git|node_modules|dist|target|build|out|tmp|output|coverage|test-results|traces?|videos?|screenshots?|raw-screenshots|raw-network-dumps|network|requests|request-xml|response-xml)/|^(client|server|artifacts|web-client/artifacts)/|(^|/).*\.zip$|(^|/).*\.har$' || true)"
+BAD_PATHS="$(zip_list_entries "$PACKAGE_FILE" | grep -E '(^|/)(\.git|node_modules|dist|target|build|out|tmp|output|coverage|test-results|traces?|videos?|screenshots?|raw-screenshots|raw-network-dumps|network|requests|request-xml|response-xml)/|^(client|server|artifacts|web-client/artifacts)/|(^|/).*\.zip$|(^|/)OpenDolphin_WebClient-review-package-[^/]+\.zip\.summary\.txt$|(^|/).*\.har$' || true)"
 if [[ -n "$BAD_PATHS" ]]; then
   echo "Excluded paths were found in package:" >&2
   echo "$BAD_PATHS" >&2
