@@ -8,6 +8,7 @@
 - 位置づけ: support。canonical reviewer flow ではなく、tracked source を軽量 zip 化する補助用途。
 - 目的: このリポジトリをレビュワー提出向けに 1 本の軽量 zip にまとめる。
 - 出力: `artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
+- Git 方針: 生成した reviewer ZIP と sidecar package artifact は外部提出物であり、`git add` / commit しない。永続化するのは package 生成・検証に必要な source / docs / scripts / skill の変更だけに限定する。
 - 方針:
   - git tracked files を base とし、`--include-review-log-manifest` 指定時だけ manifest-listed evidence を追加する
   - `client/` と `artifacts/` を完全除外する

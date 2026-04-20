@@ -61,8 +61,12 @@ artifacts/source-archives/
 # Generated review support packages and sidecar integrity summaries.
 # Review ZIPs are local handoff artifacts; include source/log files via scripts/create-review-package.sh.
 artifacts/review-bundles/
+artifacts/review-*.zip
+artifacts/review-*.zip.*
 # RUN_ID-scoped local reviewer ZIP output under implementation packets.
 docs/implementation/**/review-package/
+docs/implementation/**/OpenDolphin_WebClient-review*.zip
+docs/implementation/**/OpenDolphin_WebClient-review*.zip.*
 web-client/tmp/
 .playwright-cli/
 artifacts/verification/

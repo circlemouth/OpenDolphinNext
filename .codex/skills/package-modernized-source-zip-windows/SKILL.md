@@ -57,3 +57,4 @@ The packaging script also appends these QA summary files when they exist:
 
 - This skill is the repository-local counterpart to the reviewer package workflow.
 - Keep the bundle source-only and review-oriented; do not include build outputs, caches, or legacy client sources.
+- Generated reviewer ZIPs and sidecar package artifacts are external handoff artifacts. Do not `git add` or commit them; commit only source, docs, scripts, or skill changes needed to produce or validate the package.

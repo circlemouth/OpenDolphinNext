@@ -77,3 +77,4 @@ When recent current-thread edits exist, you may append review-relevant worktree 
 - if `zip` or `zipinfo` is missing, fail immediately
 - if no tracked files remain after exclusions, fail
 - if excluded paths appear in the archive, fail
+- generated reviewer ZIPs and sidecar package artifacts are external handoff artifacts. Do not `git add` or commit them; commit only source, docs, scripts, or skill changes needed to produce or validate the package.

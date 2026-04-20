@@ -86,3 +86,4 @@ Common options:
 - prefer `--include-archive-docs` only when the reviewer explicitly needs dated packet history
 - do not re-include `artifacts/review-bundles/*.zip` or reviewer packet zips inside the bundle
 - treat this bundle as a code review pack for `server-modernized/` and `web-client/`, not as an accepted-HEAD evidence packet
+- generated reviewer ZIPs and sidecar package artifacts are external handoff artifacts. Do not `git add` or commit them; commit only source, docs, scripts, or skill changes needed to produce or validate the package.
