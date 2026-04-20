@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.time.LocalDate;
+import open.dolphin.rest.dto.orca.InsuranceCombinationRequest;
+import open.dolphin.rest.dto.orca.PatientAppointmentListRequest;
 import open.dolphin.rest.dto.orca.PatientNameSearchRequest;
 import open.dolphin.rest.dto.orca.VisitPatientListRequest;
 import org.junit.jupiter.api.Test;
@@ -80,5 +82,53 @@ class OrcaLiveGatewaySupportTest {
         assertTrue(xml.contains("query=class=06"));
         assertTrue(xml.contains("<system01lstv2req type=\"record\">"));
         assertTrue(xml.contains("<Request_Number type=\"string\">06</Request_Number>"));
+    }
+
+    @Test
+    void buildInsuranceCombinationPayloadUsesOfficialPatientlst6Shape() {
+        InsuranceCombinationRequest request = new InsuranceCombinationRequest();
+        request.setPatientId("000019");
+        request.setBaseDate("2026-04-20");
+        request.setRangeStart("2026-04-01");
+        request.setRangeEnd("2026-04-30");
+
+        String xml = support.buildInsuranceCombinationPayload(request);
+
+        assertTrue(xml.contains("path=/api01rv2/patientlst6v2"));
+        assertTrue(xml.contains("<patientlst6req>"));
+        assertTrue(xml.contains("<Reqest_Number>01</Reqest_Number>"));
+        assertTrue(xml.contains("<Patient_ID>000019</Patient_ID>"));
+        assertTrue(xml.contains("<Base_Date>2026-04-20</Base_Date>"));
+        assertTrue(xml.contains("<Start_Date>2026-04-01</Start_Date>"));
+        assertTrue(xml.contains("<End_Date>2026-04-30</End_Date>"));
+    }
+
+    @Test
+    void buildInsuranceCombinationPayloadDoesNotUseLocalWrapperShapeOrPerformDate() {
+        InsuranceCombinationRequest request = new InsuranceCombinationRequest();
+        request.setPatientId("000019");
+        request.setBaseDate("2026-04-20");
+
+        String xml = support.buildInsuranceCombinationPayload(request);
+
+        assertFalse(xml.contains("insurancecombinationreq"));
+        assertFalse(xml.contains("Perform_Date"));
+    }
+
+    @Test
+    void buildPatientAppointmentListPayloadUsesOfficialClassAndBodyShape() {
+        PatientAppointmentListRequest request = new PatientAppointmentListRequest();
+        request.setPatientId("000019");
+        request.setBaseDate(LocalDate.of(2026, 4, 20));
+        request.setDepartmentCode("01");
+
+        String xml = support.buildPatientAppointmentListPayload(request);
+
+        assertTrue(xml.contains("path=/api01rv2/appointlst2v2"));
+        assertTrue(xml.contains("query=class=01"));
+        assertTrue(xml.contains("<appointlst2req>"));
+        assertTrue(xml.contains("<Patient_ID>000019</Patient_ID>"));
+        assertTrue(xml.contains("<Base_Date>2026-04-20</Base_Date>"));
+        assertFalse(xml.contains("<Department_Code>"));
     }
 }

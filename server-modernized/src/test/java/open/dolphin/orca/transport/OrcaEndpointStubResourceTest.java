@@ -1,7 +1,9 @@
 package open.dolphin.orca.transport;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,5 +26,20 @@ class OrcaEndpointStubResourceTest {
                         "Empty ORCA stub resource for endpoint " + endpoint.name() + ": " + resourcePath);
             }
         }
+    }
+
+    @Test
+    void patientAppointmentListEndpointCarriesClassQueryFromPayloadMeta() {
+        assertEquals("/api01rv2/appointlst2v2", OrcaEndpoint.PATIENT_APPOINTMENT_LIST.getPath());
+        assertTrue(OrcaEndpoint.PATIENT_APPOINTMENT_LIST.usesQueryFromMeta());
+        assertEquals("orca/stub/15_appointlst2v2_response.sample.xml",
+                StubOrcaPayloadCatalog.resourceFor(OrcaEndpoint.PATIENT_APPOINTMENT_LIST));
+    }
+
+    @Test
+    void insuranceCombinationEndpointUsesPatientlst6StubPayload() {
+        assertEquals("/api01rv2/patientlst6v2", OrcaEndpoint.INSURANCE_COMBINATION.getPath());
+        assertEquals("orca/stub/35_patientlst6v2_response.sample.xml",
+                StubOrcaPayloadCatalog.resourceFor(OrcaEndpoint.INSURANCE_COMBINATION));
     }
 }
