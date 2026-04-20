@@ -75,7 +75,7 @@ function commandLogContent(command = 'npm test', commandOutput = 'test output', 
   return [
     'command_log_version=1',
     `command=${command}`,
-    'cwd=/repo',
+    `cwd=${options.cwd ?? '/repo'}`,
     `runId=${RUN_ID}`,
     'start_utc=2026-04-14T08:08:12Z',
     ...(options.targetPath ? [`target_path=${options.targetPath}`, `target_sha256=${options.targetSha256 ?? '1'.repeat(64)}`] : []),
@@ -128,6 +128,12 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     'client/src/main/java/Legacy.java': 'class Legacy {}\n',
     'server/src/main/java/LegacyServer.java': 'class LegacyServer {}\n',
     'artifacts/evidence/run.txt': 'do not package\n',
+    'docs/implementation/old/OpenDolphin_WebClient-review-package-20260401T000000Z.zip': 'old package bytes\n',
+    'docs/implementation/old/raw-network-dumps/request.txt': 'raw network dump\n',
+    'docs/implementation/old/network/requests.json': 'raw network capture\n',
+    'docs/implementation/old/trace/browser.trace': 'raw trace\n',
+    'docs/implementation/old/videos/browser.webm': 'raw video\n',
+    'docs/sample.har': '{}\n',
     'web-client/dist/assets/app.js': 'compiled\n',
     'tmp/debug.txt': 'temporary\n',
   });
@@ -177,11 +183,17 @@ test('creates a reviewer package without artifacts or legacy client content', ()
     assert(!entries.some((entry) => entry.startsWith('server/')));
     assert(!entries.some((entry) => entry.startsWith('artifacts/')));
     assert(!entries.some((entry) => entry.startsWith('.git/')));
+    assert(!entries.some((entry) => entry.endsWith('.zip')));
+    assert(!entries.some((entry) => entry.endsWith('.har')));
     assert(!entries.some((entry) => entry.includes('/dist/')));
     assert(!entries.some((entry) => entry.includes('/node_modules/')));
     assert(!entries.some((entry) => entry.includes('/target/')));
     assert(!entries.some((entry) => entry.includes('/coverage/')));
     assert(!entries.some((entry) => entry.includes('/test-results/')));
+    assert(!entries.some((entry) => entry.includes('/network/')));
+    assert(!entries.some((entry) => entry.includes('/raw-network-dumps/')));
+    assert(!entries.some((entry) => entry.includes('/trace/')));
+    assert(!entries.some((entry) => entry.includes('/videos/')));
     assert(!entries.some((entry) => entry.startsWith('tmp/')));
 
     const summaryPath = `${zipPath}.summary.txt`;
@@ -441,20 +453,26 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
     const packageSecretScanLogPath = `${zipPath}.secret-scan-review-bundle.log`;
     const metadataValidationLogPath = path.join(evidenceDir, 'final-package-metadata-validation.log');
     const statusJsonPath = path.join(evidenceDir, 'final-summary.status.sanitized.json');
+    const candidateRowsJsonPath = path.join(evidenceDir, 'candidate-rows.sanitized.json');
+    const commandLogJsonlPath = path.join(evidenceDir, 'command-log.jsonl');
     const reviewLogManifestPath = path.join(evidenceDir, 'REVIEW_LOG_INCLUSIONS_MANIFEST.txt');
+    const packageSummary = parseKeyValue(fs.readFileSync(summaryPath, 'utf8'));
+    const sourceCommit = packageSummary.get('source_commit');
 
     writeText(
       metadataValidationLogPath,
       commandLogContent(
         `node scripts/tools/validate-review-package-metadata.mjs ${path.relative(repoDir, zipPath)}`,
         `review package metadata validation passed: ${path.relative(repoDir, zipPath)}`,
-        { targetPath: path.relative(repoDir, zipPath), targetSha256: sha256File(zipPath) },
+        { cwd: repoDir, targetPath: path.relative(repoDir, zipPath), targetSha256: sha256File(zipPath) },
       ),
     );
     writeText(
       statusJsonPath,
       JSON.stringify(
         {
+          sourceCommit,
+          sourceCommitMatch: true,
           acceptedCandidateCount: '1/11',
           exactSelectedCandidatePreflightStatus: 'passed',
           phase3Status: 'not_run_pending_explicit_authorization',
@@ -465,13 +483,46 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
           targetMutationRequestCount: 0,
           checkedRequests: 0,
           blockerDimensions: ['phase3_authorization_pending'],
+          officialPatientgetStatus: 'http_200_apiResult_00_exact_match',
           officialPatientget500SourceClassified: 'classified_server_diagnostic_fix_verified',
+          insuranceStatus: 'accepted',
+          insuranceClassification: 'business_ready',
           insurance403SourceClassified: 'classified_auth_or_wrapper_ambiguity',
+          appointmentStatus: 'not_required_direct_acceptance',
+          appointmentClassification: 'direct_acceptance',
           appointment403SourceClassified: 'classified_auth_or_wrapper_ambiguity',
+          selectorReadiness: 'ready',
+          localSelectableReadiness: 'ready',
+          medicalInformationReadiness: 'ready',
+          primaryRejectionReason: 'none',
+          rejectionReasons: [],
+          sanitizeResult: 'passed',
         },
         null,
         2,
       ),
+    );
+    writeText(
+      candidateRowsJsonPath,
+      JSON.stringify(
+        [
+          {
+            patientId: '00001',
+            acceptedForPhase3Attempt: true,
+            rawSensitiveFieldsExcluded: true,
+          },
+        ],
+        null,
+        2,
+      ),
+    );
+    writeText(
+      commandLogJsonlPath,
+      `${JSON.stringify({
+        runId: RUN_ID,
+        command: 'node scripts/qa-weborca-candidate-discovery.mjs',
+        result: 'sanitized read-only discovery fixture',
+      })}\n`,
     );
     writeText(reviewLogManifestPath, ['RUN_ID=20260414T080812Z', 'Review logs:', '- final-summary.sanitized.json', ''].join('\n'));
 
@@ -493,6 +544,10 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
         packageSecretScanLogPath,
         '--metadata-validation-log',
         metadataValidationLogPath,
+        '--candidate-rows-json',
+        candidateRowsJsonPath,
+        '--command-log-jsonl',
+        commandLogJsonlPath,
         '--review-log-manifest',
         reviewLogManifestPath,
       ],
@@ -501,6 +556,7 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
 
     assert.match(output, /final sanitized summary written/);
     const summary = parseKeyValue(fs.readFileSync(summaryPath, 'utf8'));
+    assert.equal(summary.get('source_commit_match'), 'true');
     assert.equal(summary.get('acceptedCandidateCount'), '1/11');
     assert.equal(summary.get('exact_selected_candidate_preflight_status'), 'passed');
     assert.equal(summary.get('phase3_status'), 'not_run_pending_explicit_authorization');
@@ -511,16 +567,35 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
     assert.equal(summary.get('targetMutationRequestCount'), '0');
     assert.equal(summary.get('checkedRequests'), '0');
     assert.equal(summary.get('blocker_dimensions'), 'phase3_authorization_pending');
+    assert.equal(summary.get('official_patientget_status'), 'http_200_apiResult_00_exact_match');
     assert.equal(summary.get('official_patientget_500_source_classified'), 'classified_server_diagnostic_fix_verified');
+    assert.equal(summary.get('insurance_status'), 'accepted');
+    assert.equal(summary.get('insurance_classification'), 'business_ready');
     assert.equal(summary.get('insurance_403_source_classified'), 'classified_auth_or_wrapper_ambiguity');
+    assert.equal(summary.get('appointment_status'), 'not_required_direct_acceptance');
+    assert.equal(summary.get('appointment_classification'), 'direct_acceptance');
     assert.equal(summary.get('appointment_403_source_classified'), 'classified_auth_or_wrapper_ambiguity');
+    assert.equal(summary.get('selector_readiness'), 'ready');
+    assert.equal(summary.get('local_selectable_readiness'), 'ready');
+    assert.equal(summary.get('medical_information_readiness'), 'ready');
+    assert.equal(summary.get('primary_rejection_reason'), 'none');
+    assert.equal(summary.get('rejectionReasons'), '');
+    assert.equal(summary.get('sanitize_result'), 'passed');
     assert.equal(summary.get('package_source_secret_scan_claim'), 'passed');
     assert.equal(summary.get('full_source_secret_scan_claim'), 'not_claimed');
 
     const finalSummary = JSON.parse(fs.readFileSync(path.join(evidenceDir, 'final-summary.sanitized.json'), 'utf8'));
     assert.equal(finalSummary.packageMode, 'extracted_review_subset');
+    assert.equal(finalSummary.source_commit_match, true);
     assert.equal(finalSummary.zip.sha256, sha256File(zipPath));
     assert.equal(finalSummary.phase2_5.acceptedCandidateCount, '1/11');
+    assert.equal(finalSummary.phase2_5.officialPatientgetStatus, 'http_200_apiResult_00_exact_match');
+    assert.equal(finalSummary.phase2_5.insuranceStatus, 'accepted');
+    assert.equal(finalSummary.phase2_5.appointmentClassification, 'direct_acceptance');
+    assert.equal(finalSummary.phase2_5.selectorReadiness, 'ready');
+    assert.equal(finalSummary.phase2_5.sanitizeResult, 'passed');
+    assert.equal(finalSummary.artifacts.candidateRowsSanitizedJson, 'candidate-rows.sanitized.json');
+    assert.equal(finalSummary.artifacts.commandLogJsonl, 'command-log.jsonl');
     assert.equal(finalSummary.rawSensitiveFieldsExcluded, true);
 
     const secretScan = fs.readFileSync(path.join(evidenceDir, 'secret-scan.sanitized.txt'), 'utf8');
@@ -529,6 +604,9 @@ test('finalizes sanitized ORCA readonly evidence summary and package sidecar fie
 
     const hashes = fs.readFileSync(path.join(evidenceDir, 'artifact-sha256.txt'), 'utf8');
     assert.match(hashes, new RegExp(`  ${path.basename(zipPath).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'm'));
+    assert.match(hashes, /  REVIEW_PACKAGE_MANIFEST\.txt$/m);
+    assert.match(hashes, /  candidate-rows\.sanitized\.json$/m);
+    assert.match(hashes, /  command-log\.jsonl$/m);
     assert.match(hashes, /  final-summary\.sanitized\.json$/m);
     assert.match(hashes, /  secret-scan\.sanitized\.txt$/m);
   } finally {
@@ -621,7 +699,7 @@ test('rejects raw artifact paths from review log manifests', () => {
       writeText(path.join(repoDir, 'docs/implementation/postfix', rawPath), content);
       assert.throws(
         () => run('bash', [SCRIPT_PATH_BASH, '--run-id', RUN_ID, '--out-dir', 'out', '--include-review-log-manifest', manifestPath], repoDir),
-        /raw artifact and is not allowed/,
+        /raw artifact and is not allowed|excluded from review packages/,
       );
     } finally {
       removeTree(sandbox);
@@ -643,6 +721,12 @@ test('scan tool rejects raw sensitive package path categories', () => {
     'docs/videos/session.webm',
     'docs/raw-screenshots/screen.txt',
     'docs/raw-network-dumps/dump.txt',
+    'docs/network/requests.json',
+    'docs/requests/capture.json',
+    'docs/request-xml/patientget.xml',
+    'docs/response-xml/patientget.xml',
+    'docs/implementation/old/OpenDolphin_WebClient-review-package-20260401T000000Z.zip',
+    'docs/archive/nested.zip',
     '.git/HEAD',
   ];
 

@@ -73,7 +73,7 @@ try {
 }
 
 const forbiddenPathPattern =
-  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:\.git|node_modules|dist|target|build|out|coverage|test-results|har|traces?|videos?|raw-screenshots?|screenshots?|raw-network-dumps?)\/|\/(?:network|requests)\/|(?:^|\/)(?:request|response)-xml\/|(?:^|\/).*\.har$/i;
+  /^(?:\.git\/|client\/|server\/|artifacts\/|web-client\/artifacts\/|node_modules\/|dist\/|target\/|build\/|out\/|tmp\/|output\/|coverage\/|test-results\/)|\/(?:\.git|node_modules|dist|target|build|out|tmp|output|coverage|test-results|har|traces?|videos?|raw-screenshots?|screenshots?|raw-network-dumps?|network|requests|request-xml|response-xml)\/|(?:^|\/).*\.(?:zip|har)$/i;
 const forbiddenPath = entries.find((entry) => forbiddenPathPattern.test(entry));
 if (forbiddenPath) fail(`forbidden raw/generated path found in package: ${forbiddenPath}`);
 

@@ -12,6 +12,8 @@
   - git tracked files を base とし、`--include-review-log-manifest` 指定時だけ manifest-listed evidence を追加する
   - `client/` と `artifacts/` を完全除外する
   - `node_modules/`, `dist/`, `target/`, `build/`, `out/`, `tmp/`, `output/`, `coverage/`, `test-results/` を除外する
+  - nested zip はデフォルトで除外する。旧 `OpenDolphin_WebClient-review-package-*.zip` を `docs/implementation/` から再同梱しない
+  - HAR、trace、video、raw screenshot、raw network dump、`network/`、`requests/`、`request-xml/`、`response-xml/` は package source から除外する
   - `REVIEW_PACKAGE_MANIFEST.txt` を zip 直下へ含める
   - `--include-review-log-manifest` 指定時のみ、manifest に列挙した sanitized review log / evidence contract を追加同梱する
   - `.git/` は含めず、clean checkout 証跡は主張しない
@@ -21,7 +23,8 @@
   - dynamic evidence の secret scan は `dynamic_secret_scan_claim`、生成 review bundle 全体の source-scope scan は `package_source_secret_scan_claim` / `bundle_included_source_scope_secret_scan_claim`、full repo source scan は `full_source_secret_scan_claim` で分離する
   - `secret-scan-review-bundle.log` を含める場合は command log metadata、`exit_code=0`、`result=PASS`、`review bundle included source scope secret scan passed:` の出力が必要。揃わない場合は package 生成を fail する
   - command log は `command` / `cwd` / `runId` / `start` / `end` / `exit_code` に加えて non-empty command output を必須にする。無出力コマンドは wrapper が明示的な no-output marker を記録する
-  - manifest-listed evidence は sanitized summaries / reports / command logs に限定し、raw ORCA artifact、HAR、network/request/response、画像、trace/video、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw session、raw password を拒否する
+  - manifest-listed evidence は sanitized summaries / reports / command logs に限定し、raw ORCA artifact、nested zip、HAR、network/request/response、画像、trace/video、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw session、raw password を拒否する
+  - nested zip inclusion が将来どうしても必要な場合は、明示 manifest・正当化理由・再帰 scan log を追加するまで許可しない
   - Phase 2.5 の `acceptedCandidateCount=0` は、`00001`〜`00011` について current harness / API / auth / parser / readiness / exact-preflight criteria の read-only evidence が mutation-ready まで揃っていない、という意味に限定する。公式初期患者が存在しない証明として扱わない
 - 使い方:
   - `./scripts/create-review-package.sh`
@@ -36,8 +39,9 @@
   - `packageMode=extracted_review_subset`、`.git` 非同梱時の `worktree_clean=not_verified`、`full_source_secret_scan_claim=not_claimed` が維持される
   - `dynamic_secret_scan_claim`、`package_source_secret_scan_claim`、`bundle_included_source_scope_secret_scan_claim` が included log と矛盾しない
   - `secret-scan-review-bundle.log` がある場合、source-scope scan pass marker と command log success metadata が揃う
+  - final ZIP source-scope secret scan log の `target_path` / `target_sha256` が final ZIP と一致する
   - command log の command output section が空なら fail する
-  - raw/generated path、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password などを含む package を拒否する
+  - raw/generated path、nested zip、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password などを含む package を拒否する
 - 使い方:
   - `node scripts/tools/validate-review-package-metadata.mjs artifacts/review-bundles/OpenDolphin_WebClient-review-package-<RUN_ID>.zip`
   - `node scripts/tools/validate-review-package-metadata.mjs <zip> <zip.summary.txt>`
@@ -48,20 +52,25 @@
   - final review ZIP と `.summary.txt`
   - final ZIP source-scope secret scan command log
   - final ZIP metadata validation command log
-  - sanitized status JSON。少なくとも `acceptedCandidateCount`、exact selected-candidate preflight status、Phase 3/4/fullflow/mutation/C7 status、`targetMutationRequestCount`、`checkedRequests`、blocker dimensions、official patientget 500 / insurance 403 / appointment 403 classification を持つこと
+  - `candidate-rows.sanitized.json`
+  - `command-log.jsonl`
+  - sanitized status JSON。少なくとも `sourceCommit` / `sourceCommitMatch`、`acceptedCandidateCount`、exact selected-candidate preflight status、Phase 3/4/fullflow/mutation/C7 status、`targetMutationRequestCount`、`checkedRequests`、official patientget status、insurance/appointment status and classification、selector/local/medical-information readiness、primary rejection reason、`rejectionReasons[]`、sanitize result、blocker dimensions、official patientget 500 / insurance 403 / appointment 403 classification を持つこと
 - 出力:
   - `final-summary.sanitized.json`
   - `final-summary.sanitized.md`
   - `secret-scan.sanitized.txt`
   - `artifact-sha256.txt`
+  - extracted `REVIEW_PACKAGE_MANIFEST.txt`
   - package sidecar `.summary.txt` への Phase 2.5 status field 追記
 - 方針:
   - `full_source_secret_scan_claim=not_claimed` は、full source scan を実行していない限り維持する
   - `worktree_clean` は、package-included git command log がない限り `not_verified` のまま扱う
   - final ZIP の source-scope scan は final ZIP path と SHA-256 に bind されていることを検証する
-  - raw ORCA body / raw patient detail / raw insurance detail / HAR / trace / video / raw screenshot / raw network dump / credential / cookie / Authorization / JSESSIONID / CSRF / raw session / password / credential-bearing URL を reject する
+  - final ZIP metadata validation log も final ZIP path と SHA-256 に bind されていることを検証する
+  - dynamic evidence secret scan は current `RUN_ID` の evidence dir、candidate rows、command log JSONL、review log manifest だけを対象にする
+  - raw ORCA body / raw patient detail / raw insurance detail / nested zip / HAR / trace / video / raw screenshot / raw network dump / credential / cookie / Authorization / JSESSIONID / CSRF / raw session / password / credential-bearing URL を reject する
 - 使い方:
-  - `node scripts/tools/orca-readonly-evidence-finalizer.mjs --run-id <RUN_ID> --evidence-dir docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID> --status-json docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/final-summary.status.sanitized.json --package-zip docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip --package-summary docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip.summary.txt --package-secret-scan-log docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip.secret-scan-review-bundle.log --metadata-validation-log docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/final-package-metadata-validation.log`
+  - `node scripts/tools/orca-readonly-evidence-finalizer.mjs --run-id <RUN_ID> --evidence-dir docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID> --status-json docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/final-summary.status.sanitized.json --candidate-rows-json docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/candidate-rows.sanitized.json --command-log-jsonl docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/command-log.jsonl --package-zip docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip --package-summary docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip.summary.txt --package-secret-scan-log docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/OpenDolphin_WebClient-review-package-<RUN_ID>-with-readonly-diagnostics.zip.secret-scan-review-bundle.log --metadata-validation-log docs/implementation/orca-trial-readonly-diagnostics-<RUN_ID>/final-package-metadata-validation.log`
 
 ## create-review-package-curated.sh
 - 位置づけ: support。50MB 制約つきの curated review bundle。
