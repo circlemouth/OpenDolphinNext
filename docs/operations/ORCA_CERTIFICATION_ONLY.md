@@ -36,6 +36,12 @@
 - administration の診断チェックは readiness / capability 付き local wrapper / 権限確認済み時の WebORCA 接続テストだけを実行します。official/local を混ぜた「一括疎通」ボタンとして扱いません。
 - master updates では **official 最終更新情報** と **local artifact の upload / rollback / history** を分けて表示します。official 取得の結果は local artifact 履歴へ追加されます。
 
+## 3.1 read-only wrapper の公式契約メモ
+- 保険組合せ一覧は `patientlst6v2` を使い、ORCA へ送る XML root は `patientlst6req` とする。`Reqest_Number=01`（公式表記）、`Patient_ID`、`Base_Date`、`Start_Date`、`End_Date` を送る。`insurancecombinationreq` や `Perform_Date` はこの read-only wrapper の upstream payload へ送らない。
+- 患者予約情報は `appointlst2v2?class=01` を使い、ORCA へ送る XML root は `appointlst2req` とする。`Patient_ID` と `Base_Date` を送る。`Department_Code` は ORCA 応答側データとして扱い、必要な絞り込みは wrapper 応答のローカル filter として行う。
+- `patientlst6v2` の `Api_Result=20` は保険組合せなし、`21` は組合せ件数過多として扱う。`appointlst2v2` の `Api_Result=21` は予約なし、`91` は処理区分欠落などのリクエスト契約不備として扱う。
+- read-only 診断では、raw ORCA request/response body、患者詳細、保険詳細、cookie、Authorization、JSESSIONID、CSRF、認証情報を artifact やログへ保存しない。
+
 ## 4. 接続先テンプレート（Trial 以外は `<MASKED>`）
 | 環境 | ベースURL | 認証方式 | 備考 |
 | --- | --- | --- | --- |

@@ -375,6 +375,76 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.phase3ReadinessFailures).toContain('medicalInformationReadiness');
   });
 
+  it('requires official, insurance, appointment, local, selector, and identity dimensions to all be accepted', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        officialPatientExistence: {
+          httpStatus: 200,
+          parsedOrcaBody: true,
+          apiResult: '00',
+          apiResultAccepted: true,
+          patientInformationPresent: true,
+          exactIdMatched: false,
+          notFoundMessage: false,
+          responseCategory: 'different_patient_id_present',
+          rejectionReason: 'exact_patient_id_mismatch',
+          rawSensitiveFieldsExcluded: true,
+        },
+        insuranceReadiness: {
+          verdict: 'rejected',
+          accepted: false,
+          classification: 'business_rejected_insurance',
+        },
+        appointmentDependency: {
+          flowMode: 'appointment_row',
+          required: true,
+          absenceBlocker: true,
+          verdict: 'rejected',
+          accepted: false,
+          classification: 'appointment_row_missing',
+        },
+        localSelectableReadiness: {
+          verdict: 'rejected',
+          accepted: false,
+          reason: 'local_exact_match_missing',
+          exactMatchCount: 0,
+        },
+        selectorReadiness: {
+          verdict: 'not_verified',
+          accepted: false,
+          reason: 'local_exact_match_missing',
+        },
+        medicalInformationReadiness: {
+          verdict: 'rejected',
+          accepted: false,
+          reason: 'medical_information_not_ready',
+          failedSubdimensions: ['required_identity_fields_match'],
+          dimensions: {
+            required_identity_fields_match: { ready: false, reason: 'required_identity_fields_missing_or_unmatched' },
+          },
+        },
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_phase3_not_accepted');
+    expect(result.phase3ReadinessFailures).toEqual(
+      expect.arrayContaining([
+        'officialPatientExistence',
+        'insuranceReadiness',
+        'appointmentDependency',
+        'localSelectableReadiness',
+        'selectorReadiness',
+        'medicalInformationReadiness',
+      ]),
+    );
+  });
+
   it('rejects exact preflight when Request_Number=00 found an existing acceptance', () => {
     const result = validatePreflightSummary({
       summary: {

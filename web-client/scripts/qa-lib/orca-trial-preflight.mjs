@@ -16,6 +16,7 @@ export const TRIAL_NATIVE_PROBE_CANDIDATES = [
 ];
 
 export const REJECTED_TRIAL_CANDIDATES = new Set(['0000001']);
+export const PREFERRED_EXACT_PREFLIGHT_CANDIDATE_IDS = ['00001', '00005'];
 export const CANDIDATE_DISCOVERY_RELEASE_VERDICTS = {
   exactPreflightRequired: 'PARTIAL / EXACT PREFLIGHT REQUIRED',
   readinessBlocker: 'PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER',
@@ -31,7 +32,6 @@ const normalizePatientId = (value) => normalizeText(value).normalize('NFKC');
 const normalizeApiResult = (value) => normalizeText(value).toUpperCase();
 const isAllZeroApiResult = (value) => /^0+$/.test(normalizeApiResult(value));
 const hash = (value) => crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 16);
-const INSURANCE_BUSINESS_REJECTED_RESULTS = new Set(['21', '23']);
 const AMBIGUOUS_READINESS_HTTP_STATUSES = new Set([0, 401, 403, 404]);
 const APPOINTMENT_FLOW_MODES = new Set(['direct_acceptance', 'appointment_row']);
 export const READINESS_FAILURE_CATEGORIES = {
@@ -44,6 +44,8 @@ export const READINESS_FAILURE_CATEGORIES = {
   wrapperErrorBeforeUpstream: 'wrapperErrorBeforeUpstream',
   parserBlankApiResult: 'parserBlankApiResult',
   upstreamNon2xxNoBody: 'upstreamNon2xxNoBody',
+  requestContractRejected: 'requestContractRejected',
+  unknownNonzeroApiResult: 'unknownNonzeroApiResult',
   unknownAmbiguous403: 'unknownAmbiguous403',
   unknown: 'unknown',
   none: 'none',
@@ -229,6 +231,25 @@ export const classifyReadinessFailureDiagnostic = ({
 const isAmbiguousReadinessStatus = (status) =>
   AMBIGUOUS_READINESS_HTTP_STATUSES.has(asFiniteStatus(status)) || asFiniteStatus(status) >= 500;
 
+const parsedOrcaBodyAccepted = (body, parsedBodyOk) => {
+  if (parsedBodyOk === false) return false;
+  if (parsedBodyOk === true) return isRecord(body);
+  return isRecord(body);
+};
+
+const isRequestContractApiResult = (apiResult) => {
+  const normalized = normalizeApiResult(apiResult);
+  return /^E/.test(normalized) || /^0*91$/.test(normalized);
+};
+
+const classifyNonZeroOrcaResult = (apiResult) =>
+  isRequestContractApiResult(apiResult) ? 'request_contract_rejected' : 'unknown_nonzero';
+
+const nonZeroReadinessCategory = (apiResult) =>
+  isRequestContractApiResult(apiResult)
+    ? READINESS_FAILURE_CATEGORIES.requestContractRejected
+    : READINESS_FAILURE_CATEGORIES.unknownNonzeroApiResult;
+
 const collectPatientRecords = (body) => {
   const records = [];
   const push = (value) => {
@@ -411,6 +432,21 @@ const classifyOfficialPatientGetDiagnostic = ({
 };
 
 export const isRejectedTrialCandidate = (candidateId) => REJECTED_TRIAL_CANDIDATES.has(normalizeText(candidateId));
+
+export const selectPreferredExactPreflightCandidate = (
+  candidates,
+  isAccepted = (candidate) => candidate?.acceptedForExactPreflightProposal === true,
+) => {
+  const rows = Array.isArray(candidates) ? candidates : Object.values(candidates ?? {});
+  const acceptedRows = rows.filter((candidate) => candidate && isAccepted(candidate));
+  for (const preferredId of PREFERRED_EXACT_PREFLIGHT_CANDIDATE_IDS) {
+    const match = acceptedRows.find(
+      (candidate) => normalizePatientId(candidate.patientId ?? candidate.candidateId) === preferredId,
+    );
+    if (match) return match;
+  }
+  return acceptedRows[0] ?? null;
+};
 
 export const summarizeOfficialPatientExistence = ({
   httpStatus,
@@ -668,6 +704,7 @@ export const summarizeInsuranceReadiness = ({
   httpStatus,
   body,
   baseDate,
+  endpointKind,
   method,
   expectedMethod,
   pathName,
@@ -676,6 +713,9 @@ export const summarizeInsuranceReadiness = ({
   parsedBodyOk,
 }) => {
   const apiResult = normalizeApiResult(body?.apiResult ?? body?.Api_Result);
+  const parsedOrcaBody = parsedOrcaBodyAccepted(body, parsedBodyOk);
+  const semantic = normalizeText(endpointKind ?? body?.endpointKind ?? body?.orcaApi ?? body?.apiName ?? pathName).toLowerCase();
+  const patientlst6v2Semantics = semantic.includes('patientlst6v2') || semantic.includes('insurance/combinations');
   const combinations = collectInsuranceCombinations(body);
   const eligible = combinations.filter((combination) =>
     dateInRange(
@@ -684,7 +724,8 @@ export const summarizeInsuranceReadiness = ({
       combination?.certificateExpiredDate ?? combination?.Certificate_ExpiredDate,
     ),
   );
-  const selected = eligible.find((combination) => combinationNumberOf(combination)) ?? eligible[0];
+  const usable = eligible.filter((combination) => combinationNumberOf(combination));
+  const selected = usable[0];
   const selectedCombinationHash = selected ? hash(combinationNumberOf(selected) || JSON.stringify(Object.keys(selected))) : undefined;
   const status = asFiniteStatus(httpStatus);
   const diagnostic = classifyReadinessFailureDiagnostic({
@@ -700,25 +741,35 @@ export const summarizeInsuranceReadiness = ({
   });
   const classification = (() => {
     if (hasWrapperError(body) || isAmbiguousReadinessStatus(status)) return 'ambiguous_readiness_failure';
+    if (!parsedOrcaBody) return 'ambiguous_readiness_failure';
     if (!apiResult) return 'ambiguous_readiness_failure';
-    if (INSURANCE_BUSINESS_REJECTED_RESULTS.has(apiResult)) return 'business_rejected_insurance';
     if (status !== 200) return 'ambiguous_readiness_failure';
-    if (!isAllZeroApiResult(apiResult)) return 'business_rejected_insurance';
-    if (eligible.length === 0) return 'insurance_not_usable';
+    if (apiResult === '20' && patientlst6v2Semantics) return 'business_no_insurance_combination';
+    if (apiResult === '21' && patientlst6v2Semantics) return 'business_too_many_insurance_combinations';
+    if (!isAllZeroApiResult(apiResult)) return classifyNonZeroOrcaResult(apiResult);
+    if (usable.length === 0) return 'insurance_not_usable';
     return 'accepted';
   })();
+  const readinessFailureCategory =
+    classification === 'accepted'
+      ? READINESS_FAILURE_CATEGORIES.none
+      : classification === 'request_contract_rejected' || classification === 'unknown_nonzero'
+        ? nonZeroReadinessCategory(apiResult)
+        : diagnostic.category;
   return {
     checked: true,
     status,
     httpStatus,
+    parsedOrcaBody,
     apiResult,
     classification,
     combinationsCount: combinations.length,
     eligibleCount: eligible.length,
-    effectiveCount: eligible.length,
+    usableCombinationCount: usable.length,
+    effectiveCount: usable.length,
     selectedCombinationHash,
     diagnosticCategory: diagnostic.category,
-    readinessFailureCategory: classification === 'accepted' ? READINESS_FAILURE_CATEGORIES.none : diagnostic.category,
+    readinessFailureCategory,
     diagnostic,
     accepted: classification === 'accepted',
   };
@@ -788,6 +839,7 @@ export const summarizeAppointmentDependency = ({
   const hasProbe = httpStatus !== undefined && httpStatus !== null;
   const status = hasProbe ? asFiniteStatus(httpStatus) : undefined;
   const normalizedApiResult = normalizeApiResult(apiResult ?? body?.apiResult ?? body?.Api_Result);
+  const parsedOrcaBody = hasProbe ? parsedOrcaBodyAccepted(body, parsedBodyOk) : false;
   const rows = collectAppointmentRows(body);
   const exactRowCount = rows.filter((row) => appointmentRowMatches(row, body, { patientId, baseDate })).length;
   const diagnostic = hasProbe
@@ -821,6 +873,7 @@ export const summarizeAppointmentDependency = ({
     absenceBlocker: normalizedFlowMode === 'appointment_row',
     status,
     httpStatus: status,
+    parsedOrcaBody,
     apiResult: normalizedApiResult,
     rowCount: rows.length,
     exactRowCount,
@@ -849,14 +902,45 @@ export const summarizeAppointmentDependency = ({
   if (hasWrapperError(body) || isAmbiguousReadinessStatus(status)) {
     return { ...base, classification: 'ambiguous_readiness_failure', verdict: 'rejected', accepted: false };
   }
+  if (!parsedOrcaBody) {
+    return { ...base, classification: 'ambiguous_readiness_failure', verdict: 'rejected', accepted: false };
+  }
   if (!normalizedApiResult) {
     return { ...base, classification: 'ambiguous_readiness_failure', verdict: 'rejected', accepted: false };
   }
   if (status !== 200) {
     return { ...base, classification: 'ambiguous_readiness_failure', verdict: 'rejected', accepted: false };
   }
+  if (normalizedApiResult === '21') {
+    if (normalizedFlowMode === 'direct_acceptance') {
+      return {
+        ...base,
+        required: false,
+        absenceBlocker: false,
+        classification: 'direct_acceptance_no_appointment_required',
+        verdict: 'accepted',
+        accepted: true,
+        readinessFailureCategory: READINESS_FAILURE_CATEGORIES.none,
+        reason: 'known_no_appointment_row_benign_for_direct_acceptance',
+      };
+    }
+    return {
+      ...base,
+      classification: 'appointment_absent',
+      verdict: 'rejected',
+      accepted: false,
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.none,
+      reason: 'known_no_appointment_row_for_appointment_row_flow',
+    };
+  }
   if (!isAllZeroApiResult(normalizedApiResult)) {
-    return { ...base, classification: 'business_rejected_appointment', verdict: 'rejected', accepted: false };
+    return {
+      ...base,
+      classification: classifyNonZeroOrcaResult(normalizedApiResult),
+      readinessFailureCategory: nonZeroReadinessCategory(normalizedApiResult),
+      verdict: 'rejected',
+      accepted: false,
+    };
   }
 
   if (normalizedFlowMode === 'direct_acceptance') {
@@ -973,6 +1057,7 @@ export const summarizeLocalSelectableDiagnostic = ({
     localCandidateCount,
     selectableCount: safeCount(selectableCount ?? recordsReturned),
     exactMatchCount: exactCount,
+    exactNormalizedPatientIdMatchCount: exactCount,
     exactMatch: exactCount === 1,
     rawSensitiveFieldsExcluded: true,
   };
@@ -1080,6 +1165,10 @@ export const summarizeSelectorDiagnostic = ({ selectors, localSelectableDiagnost
       accepted: false,
       reason: 'local_exact_match_missing',
       fields,
+      selectorOptionCount: 0,
+      selectorOptionCounts: Object.fromEntries(SELECTOR_FIELDS.map((field) => [field, 0])),
+      selectorTargetMatch: false,
+      selectorTargetMatches: Object.fromEntries(SELECTOR_FIELDS.map((field) => [field, false])),
       rawSensitiveFieldsExcluded: true,
     };
   }
@@ -1088,6 +1177,12 @@ export const summarizeSelectorDiagnostic = ({ selectors, localSelectableDiagnost
     SELECTOR_FIELDS.map((field) => [field, selectorItemDiagnostic(selectors?.[field])]),
   );
   const values = Object.values(fields);
+  const selectorOptionCounts = Object.fromEntries(
+    Object.entries(fields).map(([field, item]) => [field, item.optionCount]),
+  );
+  const selectorTargetMatches = Object.fromEntries(
+    Object.entries(fields).map(([field, item]) => [field, item.targetMatch === true]),
+  );
   const status = values.every((item) => item.status === 'accepted')
     ? 'accepted'
     : values.some((item) => item.status === 'not_verified')
@@ -1100,6 +1195,10 @@ export const summarizeSelectorDiagnostic = ({ selectors, localSelectableDiagnost
     accepted: status === 'accepted',
     reason: failed?.reason ?? 'none',
     fields,
+    selectorOptionCount: values.reduce((sum, item) => sum + item.optionCount, 0),
+    selectorOptionCounts,
+    selectorTargetMatch: values.every((item) => item.targetMatch === true),
+    selectorTargetMatches,
     rawSensitiveFieldsExcluded: true,
   };
 };
@@ -1171,6 +1270,94 @@ export const summarizeMedicalInformationReadiness = ({
     expectedMedicalInformationState: expectedState,
     observedMedicalInformationState: observedState,
     rawSensitiveFieldsExcluded: true,
+  };
+};
+
+const pushUniqueReason = (reasons, reason) => {
+  const normalized = normalizeText(reason);
+  if (!normalized || normalized === 'none') return;
+  if (!reasons.includes(normalized)) reasons.push(normalized);
+};
+
+const localSelectableAccepted = (localSelectable) =>
+  localSelectable?.accepted === true ||
+  localSelectable?.selectable === true ||
+  localSelectable?.verdict === 'accepted' ||
+  localSelectable?.status === 'accepted';
+
+const selectorAccepted = (selector) =>
+  selector?.accepted === true || selector?.verdict === 'accepted' || selector?.status === 'accepted';
+
+export const collectCandidateRejectionReasons = ({
+  officialPatientExistence,
+  insuranceReadiness,
+  appointmentDependency,
+  localSelectable,
+  localSelectableReadiness,
+  selectorReadiness,
+  medicalInformationProbe,
+  medicalInformationReadiness,
+  diagnosticNoPatientNotFound,
+  mutationProhibited,
+} = {}) => {
+  const reasons = [];
+  const localSelectableDiagnostic = localSelectableReadiness ?? localSelectable;
+
+  if (officialPatientExistence?.accepted !== true) {
+    pushUniqueReason(reasons, officialPatientExistence?.rejectionReason || 'official_patient_missing');
+  }
+
+  if (insuranceReadiness?.accepted !== true) {
+    pushUniqueReason(reasons, insuranceReadiness?.classification || insuranceReadiness?.reason || 'insurance_not_ready');
+  }
+
+  if (appointmentDependency?.accepted !== true) {
+    pushUniqueReason(
+      reasons,
+      appointmentDependency?.classification || appointmentDependency?.reason || 'appointment_dependency_not_ready',
+    );
+  }
+
+  if (!localSelectableAccepted(localSelectableDiagnostic)) {
+    pushUniqueReason(reasons, localSelectableDiagnostic?.reason || 'local_selectable_not_ready');
+  }
+
+  if (!selectorAccepted(selectorReadiness)) {
+    pushUniqueReason(reasons, selectorReadiness?.reason || 'selector_not_ready');
+  }
+
+  if (medicalInformationProbe && medicalInformationProbe.accepted !== true) {
+    pushUniqueReason(reasons, 'medical_information_probe_not_accepted');
+  }
+
+  if (medicalInformationReadiness?.accepted !== true) {
+    const failed = Array.isArray(medicalInformationReadiness?.failedSubdimensions)
+      ? medicalInformationReadiness.failedSubdimensions.filter(Boolean)
+      : [];
+    pushUniqueReason(
+      reasons,
+      failed.length > 0 ? `medical_information_not_ready:${failed.join(',')}` : 'medical_information_not_ready',
+    );
+  }
+
+  if (diagnosticNoPatientNotFound && diagnosticNoPatientNotFound.accepted !== true) {
+    pushUniqueReason(reasons, 'patient_not_found_wording_detected');
+  }
+
+  if (Number(mutationProhibited?.blockedRequestCount ?? 0) > 0) {
+    pushUniqueReason(reasons, 'readonly_mutation_attempt_blocked');
+  }
+
+  return reasons;
+};
+
+export const buildCandidateReadinessDecision = (readiness) => {
+  const rejectionReasons = collectCandidateRejectionReasons(readiness);
+  const acceptedForExactPreflightProposal = rejectionReasons.length === 0;
+  return {
+    acceptedForExactPreflightProposal,
+    primaryRejectionReason: acceptedForExactPreflightProposal ? 'none' : rejectionReasons[0],
+    rejectionReasons,
   };
 };
 
@@ -1324,20 +1511,107 @@ export const buildCandidateDiscoveryGate = ({
   };
 };
 
+export const buildReadinessRejectionReasons = ({
+  medicalInformationProbe,
+  medicalInformationReadiness,
+  officialPatientExistence,
+  insuranceReadiness,
+  appointmentDependency,
+  localSelectableReadiness,
+  selectorReadiness,
+  diagnosticNoPatientNotFound,
+  mutationProhibited,
+} = {}) => {
+  const reasons = [];
+  const push = (dimension, reason, details = {}) => {
+    const normalizedReason = normalizeText(reason) || 'not_ready';
+    if (normalizedReason === 'none') return;
+    reasons.push({
+      dimension,
+      reason: normalizedReason,
+      ...details,
+    });
+  };
+
+  if (officialPatientExistence && officialPatientExistence.accepted !== true) {
+    push('official_patient', officialPatientExistence.rejectionReason ?? 'official_patient_missing', {
+      verdict: officialPatientExistence.verdict ?? 'rejected',
+      apiResult: normalizeApiResult(officialPatientExistence.apiResult),
+    });
+  }
+  if (insuranceReadiness && insuranceReadiness.accepted !== true) {
+    push('insurance', insuranceReadiness.classification ?? 'insurance_not_ready', {
+      verdict: insuranceReadiness.verdict ?? 'rejected',
+      apiResult: normalizeApiResult(insuranceReadiness.apiResult),
+      classification: insuranceReadiness.classification ?? 'unknown',
+    });
+  }
+  if (appointmentDependency && appointmentDependency.accepted !== true && appointmentDependency.verdict !== 'accepted') {
+    push('appointment', appointmentDependency.classification ?? 'appointment_dependency_not_ready', {
+      verdict: appointmentDependency.verdict ?? 'rejected',
+      apiResult: normalizeApiResult(appointmentDependency.apiResult),
+      classification: appointmentDependency.classification ?? 'unknown',
+      flowMode: appointmentDependency.flowMode ?? 'unknown',
+    });
+  }
+  const localStatus = localSelectableReadiness?.status ?? localSelectableReadiness?.verdict;
+  if (localSelectableReadiness && localSelectableReadiness.accepted !== true && localSelectableReadiness.selectable !== true) {
+    push('local_selectable', localSelectableReadiness.reason ?? 'local_selectable_not_ready', {
+      verdict: localStatus ?? 'rejected',
+    });
+  }
+  if (selectorReadiness && selectorReadiness.accepted !== true && selectorReadiness.verdict !== 'accepted') {
+    push('selector', selectorReadiness.reason ?? 'selector_not_ready', {
+      verdict: selectorReadiness.verdict ?? selectorReadiness.status ?? 'rejected',
+    });
+  }
+  if (medicalInformationProbe && medicalInformationProbe.accepted !== true && medicalInformationProbe.verdict !== 'accepted') {
+    push('medical_information_probe', 'medical_information_probe_not_accepted', {
+      verdict: medicalInformationProbe.verdict ?? 'rejected',
+      apiResult: normalizeApiResult(medicalInformationProbe.apiResult),
+    });
+  }
+  if (medicalInformationReadiness && medicalInformationReadiness.accepted !== true) {
+    push('medical_information', medicalInformationReadiness.reason ?? 'medical_information_not_ready', {
+      verdict: medicalInformationReadiness.verdict ?? medicalInformationReadiness.status ?? 'rejected',
+      failedSubdimensions: medicalInformationReadiness.failedSubdimensions ?? [],
+    });
+  }
+  if (diagnosticNoPatientNotFound && diagnosticNoPatientNotFound.accepted !== true) {
+    push('diagnostic_no_patient_not_found', 'patient_not_found_wording_detected', {
+      verdict: diagnosticNoPatientNotFound.verdict ?? 'rejected',
+    });
+  }
+  if (Number(mutationProhibited?.blockedRequestCount ?? 0) > 0) {
+    push('mutation_policy', 'readonly_mutation_attempt_blocked', {
+      verdict: mutationProhibited?.verdict ?? 'rejected',
+      blockedRequestCount: Number(mutationProhibited?.blockedRequestCount ?? 0),
+    });
+  }
+  return reasons;
+};
+
+export const primaryReadinessRejectionReason = (rejectionReasons) =>
+  Array.isArray(rejectionReasons) && rejectionReasons.length > 0 ? rejectionReasons[0].reason : 'none';
+
 export const evaluatePreflightSummary = (summary) => {
   if (isRejectedTrialCandidate(summary?.candidateId)) return 'rejected_candidate';
   if (!summary?.officialPatientExistence?.accepted) return 'official_patient_missing';
   if (!summary?.insuranceReadiness?.accepted) {
     if (summary?.insuranceReadiness?.classification === 'ambiguous_readiness_failure') return 'ambiguous_readiness_failure';
-    if (summary?.insuranceReadiness?.classification === 'business_rejected_insurance') return 'business_rejected_insurance';
+    if (summary?.insuranceReadiness?.classification === 'request_contract_rejected') return 'request_contract_rejected';
+    if (summary?.insuranceReadiness?.classification === 'unknown_nonzero') return 'unknown_nonzero';
     return 'insurance_missing';
   }
   if (!summary?.selectorReadiness?.accepted) return 'selector_missing';
   if (!summary?.localSelectableReadiness?.accepted) return 'local_selectable_missing';
   if (summary?.appointmentDependency?.classification === 'ambiguous_readiness_failure') return 'ambiguous_readiness_failure';
-  if (summary?.appointmentDependency?.required && !summary?.appointmentDependency?.accepted) {
+  if (summary?.appointmentDependency?.classification === 'request_contract_rejected') return 'request_contract_rejected';
+  if (summary?.appointmentDependency?.classification === 'unknown_nonzero') return 'unknown_nonzero';
+  if (summary?.appointmentDependency?.verdict === 'rejected' || summary?.appointmentDependency?.accepted === false) {
     if (summary?.appointmentDependency?.classification === 'appointment_row_missing') return 'appointment_row_missing';
-    return 'appointment_missing';
+    if (summary?.appointmentDependency?.classification === 'appointment_absent') return 'appointment_absent';
+    return summary?.appointmentDependency?.classification ?? 'appointment_dependency_not_ready';
   }
   if (summary?.acceptmodv2ReadOnlyDiagnostic?.classification === 'patient_not_found') return 'diagnostic_patient_not_found';
   if (summary?.secretScanClean === false) return 'secret_scan_failed';

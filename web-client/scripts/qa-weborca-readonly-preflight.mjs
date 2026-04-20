@@ -21,9 +21,9 @@ import {
 } from './qa-lib/acceptmodv2-identity-gate.mjs';
 import {
   buildOfficialPatientReadinessAxes,
-  classifyAcceptmodReadOnlyDiagnostic,
   officialPatientEvidenceAccepted,
   sanitizeOfficialPatientExistenceEvidence,
+  selectPreferredExactPreflightCandidate,
   summarizeLocalSelectableDiagnostic,
   summarizeMedicalInformationReadiness,
   summarizeAppointmentDependency,
@@ -89,7 +89,6 @@ const OFFICIAL_INSURANCE_COMBINATIONS_PATH = '/api/orca/official/insurance/combi
 const LOCAL_PATIENT_SEARCH_PATH = '/api/local/patients/search';
 const APPOINTMENTS_LIST_PATH = '/api/orca/official/appointments/list';
 const VISITS_LIST_PATH = '/api/orca/official/visits/list';
-const VISITS_MUTATION_PATH = '/api/orca/official/visits/mutation';
 const TARGET_PATHS = [
   MEDICAL_INFORMATION_PROBE_PATH,
   OFFICIAL_PATIENT_GET_PATH,
@@ -97,7 +96,6 @@ const TARGET_PATHS = [
   LOCAL_PATIENT_SEARCH_PATH,
   APPOINTMENTS_LIST_PATH,
   VISITS_LIST_PATH,
-  VISITS_MUTATION_PATH,
 ];
 const ACCEPTMOD_PATIENT_NOT_FOUND = '10';
 const PATIENT_NOT_FOUND_PATTERN =
@@ -540,78 +538,20 @@ const probeLocalSelectable = async (context, patientId) => {
 };
 
 const probeAcceptmodv2ReadOnlyDiagnostic = async (context, patientId) => {
-  const body = {
-    requestNumber: '00',
-    patientId,
-    acceptanceDate,
-    acceptanceTime,
-    departmentCode,
-    physicianCode,
-    insurances: paymentMode === 'self' ? [{ insuranceProviderClass: '9' }] : undefined,
+  logStep(`acceptmodv2 diagnostic skipped by read-only no-mutation policy patient=${patientId}`);
+  return {
+    apiResult: '',
+    status: 'not_run',
+    verdict: 'accepted',
+    businessStatus: 'notRun',
+    businessReason: 'mutation_route_not_called_by_policy',
+    accepted: true,
+    mutationSuccess: false,
+    classification: 'mutation_diagnostic_not_run_by_policy',
+    acceptedForPhase3Attempt: true,
+    routeCalled: false,
+    rawSensitiveFieldsExcluded: true,
   };
-  Object.keys(body).forEach((key) => body[key] === undefined && delete body[key]);
-  logStep(`acceptmodv2 read-only diagnostic start patient=${patientId}`);
-  try {
-    const response = await context.request.post(urlFor(VISITS_MUTATION_PATH), {
-      data: body,
-      headers: unsafeRequestHeaders,
-    });
-    const text = await response.text().catch(() => '');
-    await recordDirectExchange({
-      pathName: VISITS_MUTATION_PATH,
-      method: 'POST',
-      requestBody: body,
-      response,
-      responseText: text,
-    });
-    const parsedDiagnostic = parseJsonWithStatus(text);
-    const parsed = parsedDiagnostic.body;
-    const apiResult = normalizeApiResult(parsed?.apiResult);
-    const diagnostic = classifyAcceptmodReadOnlyDiagnostic({
-      executed: true,
-      httpStatus: response.status(),
-      apiResult,
-      body: parsed,
-      diagnosticBodyParseSucceeded: parsedDiagnostic.ok,
-    });
-    return {
-      apiResult,
-      status: response.status(),
-      verdict: diagnostic.accepted ? 'accepted' : 'rejected',
-      businessStatus:
-        diagnostic.accepted === true && diagnostic.classification === 'diagnostic_no_existing_acceptance'
-          ? 'diagnosticNoExistingAcceptance'
-          : diagnostic.classification === 'diagnostic_existing_acceptance'
-            ? 'diagnosticExistingAcceptance'
-            : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
-            ? 'businessRejected'
-            : 'notVerified',
-      businessReason:
-        diagnostic.accepted === true && diagnostic.classification === 'diagnostic_no_existing_acceptance'
-          ? 'no_existing_acceptance'
-          : diagnostic.classification === 'diagnostic_existing_acceptance'
-            ? 'existing_acceptance'
-          : apiResult === ACCEPTMOD_PATIENT_NOT_FOUND
-            ? 'patient_not_found'
-            : 'not_readonly_no_existing_acceptance',
-      accepted: diagnostic.accepted,
-      mutationSuccess: diagnostic.mutationSuccess,
-      classification: diagnostic.classification,
-      acceptedForPhase3Attempt: diagnostic.acceptedForPhase3Attempt,
-    };
-  } catch (error) {
-    return {
-      apiResult: '',
-      status: 0,
-      verdict: 'rejected',
-      businessStatus: 'notVerified',
-      businessReason: 'diagnostic_failed',
-      accepted: false,
-      mutationSuccess: false,
-      acceptedForPhase3Attempt: false,
-      errorCategory: errorCategory(error),
-    };
-  }
 };
 
 const selectEvidence = async (page) =>
@@ -742,7 +682,6 @@ const buildAppointmentDependency = async (context, patientId) => {
 
 const chooseCandidate = async ({ context, candidateIds, officialPatientExistence }) => {
   const candidates = {};
-  let selectedPatientId = '';
   for (const candidateId of candidateIds) {
     const rejected = REJECTED_PATIENT_IDS.has(candidateId);
     const inTrialInitialRange = TRIAL_INITIAL_PATIENT_IDS.includes(candidateId);
@@ -767,11 +706,12 @@ const chooseCandidate = async ({ context, candidateIds, officialPatientExistence
     }
     candidate.verdict = verdict(candidate.officialVerdict === 'accepted' && candidate.insurance.accepted && candidate.local.accepted);
     candidates[candidateId] = candidate;
-    const canSelect = candidate.verdict === 'accepted' && (!requestedPatientId || candidateId === requestedPatientId);
-    if (!selectedPatientId && canSelect) {
-      selectedPatientId = candidateId;
-    }
   }
+  const selectedCandidate = selectPreferredExactPreflightCandidate(
+    candidates,
+    (candidate) => candidate?.verdict === 'accepted' && (!requestedPatientId || candidate.patientId === requestedPatientId),
+  );
+  const selectedPatientId = selectedCandidate?.patientId ?? '';
   return {
     requestedPatientId: requestedPatientId || undefined,
     probeCandidates: candidateIds,
@@ -783,7 +723,7 @@ const chooseCandidate = async ({ context, candidateIds, officialPatientExistence
     selectedSource: selectedPatientId ? candidates[selectedPatientId].source : undefined,
     selectionPolicy: requestedPatientId
       ? 'QA_PATIENT_ID must be an accepted official Trial initial candidate'
-      : 'first accepted official Trial initial candidate',
+      : 'prefer 00001/00005 among accepted official+insurance+local Trial initial candidates, otherwise first accepted candidate',
     verdict: selectedPatientId ? 'accepted' : 'rejected',
     candidates,
   };
@@ -827,10 +767,23 @@ const classify = ({
     if (insuranceReadiness.classification === 'ambiguous_readiness_failure') {
       return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
     }
-    if (insuranceReadiness.classification === 'business_rejected_insurance') {
-      return { blockerClassification: 'test-data-blocker', blockerReason: 'business_rejected_insurance' };
+    if (
+      insuranceReadiness.classification === 'request_contract_rejected' ||
+      insuranceReadiness.classification === 'unknown_nonzero'
+    ) {
+      return { blockerClassification: 'external-trial-ambiguity', blockerReason: insuranceReadiness.classification };
     }
-    return { blockerClassification: 'test-data-blocker', blockerReason: 'insurance_missing_or_not_effective' };
+    return { blockerClassification: 'test-data-blocker', blockerReason: insuranceReadiness.classification ?? 'insurance_missing_or_not_effective' };
+  }
+  if (
+    appointmentDependency?.classification === 'ambiguous_readiness_failure' ||
+    appointmentDependency?.classification === 'request_contract_rejected' ||
+    appointmentDependency?.classification === 'unknown_nonzero'
+  ) {
+    return { blockerClassification: 'external-trial-ambiguity', blockerReason: appointmentDependency.classification };
+  }
+  if (appointmentDependency?.verdict === 'rejected' || appointmentDependency?.accepted === false) {
+    return { blockerClassification: 'test-data-blocker', blockerReason: appointmentDependency.classification ?? 'appointment_dependency_not_ready' };
   }
   if (selectorReadiness.verdict !== 'accepted') {
     return { blockerClassification: SELECTOR_OPTION_MISSING_BLOCKER, blockerReason: 'selector_missing' };
@@ -840,12 +793,6 @@ const classify = ({
       blockerClassification: 'test-data-blocker',
       blockerReason: `medical_information_not_ready:${medicalInformationReadiness.failedSubdimensions?.join(',') || 'unknown'}`,
     };
-  }
-  if (appointmentDependency?.classification === 'ambiguous_readiness_failure') {
-    return { blockerClassification: 'external-trial-ambiguity', blockerReason: 'ambiguous_readiness_failure' };
-  }
-  if (appointmentDependency?.required && appointmentDependency?.verdict !== 'accepted') {
-    return { blockerClassification: 'test-data-blocker', blockerReason: appointmentDependency.classification ?? 'appointment_row_missing' };
   }
   if (acceptmodv2ReadOnlyDiagnostic.verdict !== 'accepted') {
     return {
@@ -1168,6 +1115,12 @@ try {
     appointmentDependency,
     acceptmodv2ReadOnlyDiagnostic,
     acceptedForPhase3Attempt,
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: 0,
+      blockedRequests: [],
+      targetMutationRequestCount: 0,
+    },
     verdict: acceptedForPhase3Attempt ? 'accepted' : 'rejected',
     blockerClassification: classification.blockerClassification,
     blockerReason: classification.blockerReason,
@@ -1301,6 +1254,12 @@ try {
       accepted: false,
       mutationSuccess: false,
       acceptedForPhase3Attempt: false,
+    },
+    mutationPolicy: {
+      prohibited: true,
+      blockedRequestCount: 0,
+      blockedRequests: [],
+      targetMutationRequestCount: 0,
     },
     acceptedForPhase3Attempt: false,
     verdict: 'rejected',

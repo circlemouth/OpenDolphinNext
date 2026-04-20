@@ -5,10 +5,12 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import { readEntry } from './zip-compat.mjs';
 
 const args = process.argv.slice(2);
 
@@ -21,6 +23,8 @@ function usage() {
   --package-summary REVIEW_PACKAGE_ZIP.summary.txt \\
   --package-secret-scan-log REVIEW_PACKAGE_ZIP.secret-scan-review-bundle.log \\
   --metadata-validation-log final-package-metadata-validation.log \\
+  [--candidate-rows-json candidate-rows.sanitized.json] \\
+  [--command-log-jsonl command-log.jsonl] \\
   [--review-log-manifest REVIEW_LOG_INCLUSIONS_MANIFEST.txt]`);
 }
 
@@ -65,11 +69,18 @@ const metadataValidationLogPath = path.resolve(requiredOption('metadata-validati
 const reviewLogManifestPath = options.has('review-log-manifest')
   ? path.resolve(options.get('review-log-manifest'))
   : path.join(evidenceDir, 'REVIEW_LOG_INCLUSIONS_MANIFEST.txt');
+const candidateRowsJsonPath = options.has('candidate-rows-json')
+  ? path.resolve(options.get('candidate-rows-json'))
+  : path.join(evidenceDir, 'candidate-rows.sanitized.json');
+const commandLogJsonlPath = options.has('command-log-jsonl')
+  ? path.resolve(options.get('command-log-jsonl'))
+  : path.join(evidenceDir, 'command-log.jsonl');
 
 const finalSummaryJsonPath = path.join(evidenceDir, 'final-summary.sanitized.json');
 const finalSummaryMdPath = path.join(evidenceDir, 'final-summary.sanitized.md');
 const secretScanPath = path.join(evidenceDir, 'secret-scan.sanitized.txt');
 const artifactShaPath = path.join(evidenceDir, 'artifact-sha256.txt');
+const packageManifestPath = path.join(evidenceDir, 'REVIEW_PACKAGE_MANIFEST.txt');
 
 function readRequiredText(filePath, label) {
   if (!existsSync(filePath)) fail(`${label} not found: ${filePath}`);
@@ -97,6 +108,32 @@ function sha256File(filePath) {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex');
 }
 
+function normalizeHostPath(value) {
+  if (process.platform === 'win32') {
+    return value.replace(/^\/mnt\/([A-Za-z])\//, (_, drive) => `${drive.toUpperCase()}:/`).replaceAll('/', path.sep);
+  }
+  return value;
+}
+
+function canonicalExistingPath(value) {
+  const resolved = path.resolve(value);
+  try {
+    return realpathSync(resolved);
+  } catch {
+    return resolved;
+  }
+}
+
+function commandLogTargetPath(values, label) {
+  const cwd = canonicalExistingPath(normalizeHostPath(kvRequired(values, 'cwd', label)));
+  const targetPathValue = kvRequired(values, 'target_path', label);
+  const normalizedTargetPathValue = normalizeHostPath(targetPathValue);
+  return {
+    targetPathValue,
+    targetPath: canonicalExistingPath(path.resolve(cwd, normalizedTargetPathValue)),
+  };
+}
+
 function relativeToEvidence(filePath) {
   return path.relative(evidenceDir, filePath).replaceAll(path.sep, '/');
 }
@@ -109,9 +146,35 @@ function loadJson(filePath, label) {
   }
 }
 
+function validateJsonl(filePath, label) {
+  const text = readRequiredText(filePath, label);
+  const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
+  if (lines.length === 0) fail(`${label} has no JSON lines: ${filePath}`);
+  for (const [index, line] of lines.entries()) {
+    let parsed;
+    try {
+      parsed = JSON.parse(line);
+    } catch (error) {
+      fail(`${label} line ${index + 1} is not valid JSON: ${error.message}`);
+    }
+    if (parsed?.runId !== undefined && parsed.runId !== runId) {
+      fail(`${label} line ${index + 1} runId mismatch`);
+    }
+  }
+}
+
+function manifestRunIdMatches(filePath, label) {
+  const values = parseKeyValue(readRequiredText(filePath, label));
+  const manifestRunId = values.get('run_id') ?? values.get('RUN_ID');
+  if (manifestRunId !== runId) {
+    fail(`${label} run_id mismatch: expected=${runId} actual=${manifestRunId ?? 'missing'}`);
+  }
+}
+
 function validateCommandLog(text, label) {
   const values = parseKeyValue(text);
   for (const key of ['command', 'cwd', 'runId']) kvRequired(values, key, label);
+  if (kvRequired(values, 'runId', label) !== runId) fail(`${label} runId mismatch`);
   if (!values.has('start') && !values.has('start_utc')) fail(`${label} missing start metadata`);
   if (!values.has('end') && !values.has('end_utc')) fail(`${label} missing end metadata`);
   if (!values.has('exit') && !values.has('exit_code')) fail(`${label} missing exit code metadata`);
@@ -213,6 +276,8 @@ mkdirSync(evidenceDir, { recursive: true });
 
 for (const [filePath, label] of [
   [statusJsonPath, 'status JSON'],
+  [candidateRowsJsonPath, 'candidate rows sanitized JSON'],
+  [commandLogJsonlPath, 'command log JSONL'],
   [packageZipPath, 'review package ZIP'],
   [packageSummaryPath, 'package summary'],
   [packageSecretScanLogPath, 'package source-scope secret scan log'],
@@ -224,15 +289,32 @@ for (const [filePath, label] of [
 }
 
 const status = loadJson(statusJsonPath, 'status JSON');
+if (status?.runId !== undefined && status.runId !== runId) fail('status JSON runId mismatch');
+const candidateRows = loadJson(candidateRowsJsonPath, 'candidate rows sanitized JSON');
+if (!Array.isArray(candidateRows)) fail('candidate rows sanitized JSON must be an array');
+for (const [index, row] of candidateRows.entries()) {
+  if (row?.runId !== undefined && row.runId !== runId) fail(`candidate rows sanitized JSON row ${index} runId mismatch`);
+}
+validateJsonl(commandLogJsonlPath, 'command log JSONL');
+if (!evidenceDir.split(path.sep).some((segment) => segment.includes(runId))) {
+  fail(`evidence-dir must be scoped to the current RUN_ID: ${runId}`);
+}
+manifestRunIdMatches(reviewLogManifestPath, 'review log inclusions manifest');
 const packageSummary = parseKeyValue(readRequiredText(packageSummaryPath, 'package summary'));
 const packageSecretScanLogText = readRequiredText(packageSecretScanLogPath, 'package source-scope secret scan log');
 const metadataValidationLogText = readRequiredText(metadataValidationLogPath, 'final ZIP metadata validation log');
 const packageSecretScanLog = validateCommandLog(packageSecretScanLogText, 'package source-scope secret scan log');
-validateCommandLog(metadataValidationLogText, 'final ZIP metadata validation log');
 
 const zipSha256 = sha256File(packageZipPath);
 const zipSizeBytes = String(statSync(packageZipPath).size);
 const packageZipRelative = relativeToEvidence(packageZipPath);
+
+try {
+  writeFileSync(packageManifestPath, readEntry(packageZipPath, 'REVIEW_PACKAGE_MANIFEST.txt').toString('utf8'), 'utf8');
+} catch (error) {
+  fail(`failed to extract REVIEW_PACKAGE_MANIFEST.txt from final ZIP: ${error.message}`);
+}
+manifestRunIdMatches(packageManifestPath, 'review package manifest');
 
 for (const [key, expected] of [
   ['run_id', runId],
@@ -261,14 +343,29 @@ for (const key of [
 if (kvRequired(packageSecretScanLog, 'target_sha256', 'package source-scope secret scan log') !== zipSha256) {
   fail('package source-scope secret scan log target_sha256 does not match final ZIP');
 }
+const finalZipCanonicalPath = canonicalExistingPath(packageZipPath);
+const packageScanTarget = commandLogTargetPath(packageSecretScanLog, 'package source-scope secret scan log');
+if (packageScanTarget.targetPath !== finalZipCanonicalPath) {
+  fail('package source-scope secret scan log target_path does not match final ZIP');
+}
 if (!/^exit(_code)?=0$/m.test(packageSecretScanLogText) || !/^result=PASS$/m.test(packageSecretScanLogText)) {
   fail('package source-scope secret scan log is not a PASS command log');
 }
 if (!packageSecretScanLogText.includes('review bundle included source scope secret scan passed:')) {
   fail('package source-scope secret scan log missing pass marker');
 }
+const metadataValidationLog = validateCommandLog(metadataValidationLogText, 'final ZIP metadata validation log');
+const metadataValidationTarget = commandLogTargetPath(metadataValidationLog, 'final ZIP metadata validation log');
+if (metadataValidationTarget.targetPath !== finalZipCanonicalPath) {
+  fail('final ZIP metadata validation log target_path does not match final ZIP');
+}
+if (kvRequired(metadataValidationLog, 'target_sha256', 'final ZIP metadata validation log') !== zipSha256) {
+  fail('final ZIP metadata validation log target_sha256 does not match final ZIP');
+}
 
 const statusKeys = [
+  'sourceCommit',
+  'sourceCommitMatch',
   'acceptedCandidateCount',
   'exactSelectedCandidatePreflightStatus',
   'phase3Status',
@@ -279,14 +376,34 @@ const statusKeys = [
   'targetMutationRequestCount',
   'checkedRequests',
   'blockerDimensions',
+  'officialPatientgetStatus',
   'officialPatientget500SourceClassified',
+  'insuranceStatus',
+  'insuranceClassification',
   'insurance403SourceClassified',
+  'appointmentStatus',
+  'appointmentClassification',
   'appointment403SourceClassified',
+  'selectorReadiness',
+  'localSelectableReadiness',
+  'medicalInformationReadiness',
+  'primaryRejectionReason',
+  'rejectionReasons',
+  'sanitizeResult',
 ];
 
 for (const key of statusKeys) statusRequired(status, key);
 
+if (String(status.sourceCommit) !== kvRequired(packageSummary, 'source_commit', 'package summary')) {
+  fail('status JSON sourceCommit does not match package summary source_commit');
+}
+if (!['true', 'matched', 'yes'].includes(String(status.sourceCommitMatch))) {
+  fail('status JSON sourceCommitMatch must be true/matched/yes');
+}
+if (!Array.isArray(status.rejectionReasons)) fail('status JSON rejectionReasons must be an array');
+
 const summaryUpdates = new Map([
+  ['source_commit_match', normalizeStatusValue(status.sourceCommitMatch)],
   ['acceptedCandidateCount', normalizeStatusValue(status.acceptedCandidateCount)],
   ['exact_selected_candidate_preflight_status', normalizeStatusValue(status.exactSelectedCandidatePreflightStatus)],
   ['phase3_status', normalizeStatusValue(status.phase3Status)],
@@ -297,13 +414,27 @@ const summaryUpdates = new Map([
   ['targetMutationRequestCount', normalizeStatusValue(status.targetMutationRequestCount)],
   ['checkedRequests', normalizeStatusValue(status.checkedRequests)],
   ['blocker_dimensions', normalizeStatusValue(status.blockerDimensions)],
+  ['official_patientget_status', normalizeStatusValue(status.officialPatientgetStatus)],
   ['official_patientget_500_source_classified', normalizeStatusValue(status.officialPatientget500SourceClassified)],
+  ['insurance_status', normalizeStatusValue(status.insuranceStatus)],
+  ['insurance_classification', normalizeStatusValue(status.insuranceClassification)],
   ['insurance_403_source_classified', normalizeStatusValue(status.insurance403SourceClassified)],
+  ['appointment_status', normalizeStatusValue(status.appointmentStatus)],
+  ['appointment_classification', normalizeStatusValue(status.appointmentClassification)],
   ['appointment_403_source_classified', normalizeStatusValue(status.appointment403SourceClassified)],
+  ['selector_readiness', normalizeStatusValue(status.selectorReadiness)],
+  ['local_selectable_readiness', normalizeStatusValue(status.localSelectableReadiness)],
+  ['medical_information_readiness', normalizeStatusValue(status.medicalInformationReadiness)],
+  ['primary_rejection_reason', normalizeStatusValue(status.primaryRejectionReason)],
+  ['rejectionReasons', normalizeStatusValue(status.rejectionReasons)],
+  ['sanitize_result', normalizeStatusValue(status.sanitizeResult)],
   [
     'insurance_appointment_403_source_classified',
     `${normalizeStatusValue(status.insurance403SourceClassified)}/${normalizeStatusValue(status.appointment403SourceClassified)}`,
   ],
+  ['candidate_rows_sanitized_json', relativeToEvidence(candidateRowsJsonPath)],
+  ['command_log_jsonl', relativeToEvidence(commandLogJsonlPath)],
+  ['review_package_manifest', 'REVIEW_PACKAGE_MANIFEST.txt'],
   ['final_summary_sanitized_json', 'final-summary.sanitized.json'],
   ['final_summary_sanitized_md', 'final-summary.sanitized.md'],
   ['artifact_sha256', 'artifact-sha256.txt'],
@@ -320,6 +451,7 @@ const finalSummary = {
   generatedAtUtc: new Date().toISOString(),
   source_branch: kvRequired(updatedPackageSummary, 'source_branch', 'package summary'),
   source_commit: kvRequired(updatedPackageSummary, 'source_commit', 'package summary'),
+  source_commit_match: true,
   source_git_metadata_available: kvRequired(updatedPackageSummary, 'source_git_metadata_available', 'package summary'),
   worktree_clean: kvRequired(updatedPackageSummary, 'worktree_clean', 'package summary'),
   packageMode: kvRequired(updatedPackageSummary, 'packageMode', 'package summary'),
@@ -358,15 +490,29 @@ const finalSummary = {
     targetMutationRequestCount: status.targetMutationRequestCount,
     checkedRequests: status.checkedRequests,
     blockerDimensions: status.blockerDimensions,
+    officialPatientgetStatus: status.officialPatientgetStatus,
     officialPatientget500SourceClassified: status.officialPatientget500SourceClassified,
+    insuranceStatus: status.insuranceStatus,
+    insuranceClassification: status.insuranceClassification,
     insurance403SourceClassified: status.insurance403SourceClassified,
+    appointmentStatus: status.appointmentStatus,
+    appointmentClassification: status.appointmentClassification,
     appointment403SourceClassified: status.appointment403SourceClassified,
+    selectorReadiness: status.selectorReadiness,
+    localSelectableReadiness: status.localSelectableReadiness,
+    medicalInformationReadiness: status.medicalInformationReadiness,
+    primaryRejectionReason: status.primaryRejectionReason,
+    rejectionReasons: status.rejectionReasons,
+    sanitizeResult: status.sanitizeResult,
   },
   artifacts: {
     packageSummary: relativeToEvidence(packageSummaryPath),
     packageSecretScanLog: relativeToEvidence(packageSecretScanLogPath),
     metadataValidationLog: relativeToEvidence(metadataValidationLogPath),
+    packageManifest: 'REVIEW_PACKAGE_MANIFEST.txt',
     reviewLogInclusionsManifest: relativeToEvidence(reviewLogManifestPath),
+    candidateRowsSanitizedJson: relativeToEvidence(candidateRowsJsonPath),
+    commandLogJsonl: relativeToEvidence(commandLogJsonlPath),
     finalSummaryJson: 'final-summary.sanitized.json',
     finalSummaryMarkdown: 'final-summary.sanitized.md',
     secretScan: 'secret-scan.sanitized.txt',
@@ -385,6 +531,7 @@ writeFileSync(
     '',
     `- source_branch: \`${finalSummary.source_branch}\``,
     `- source_commit: \`${finalSummary.source_commit}\``,
+    `- source_commit_match: \`${finalSummary.source_commit_match}\``,
     `- source_git_metadata_available: \`${finalSummary.source_git_metadata_available}\``,
     `- worktree_clean: \`${finalSummary.worktree_clean}\``,
     `- packageMode: \`${finalSummary.packageMode}\``,
@@ -405,9 +552,20 @@ writeFileSync(
     `- targetMutationRequestCount: \`${status.targetMutationRequestCount}\``,
     `- checkedRequests: \`${status.checkedRequests}\``,
     `- blocker dimensions: \`${normalizeStatusValue(status.blockerDimensions)}\``,
+    `- official patientget status: \`${status.officialPatientgetStatus}\``,
     `- official patientget 500 source classified: \`${status.officialPatientget500SourceClassified}\``,
+    `- insurance status/classification: \`${status.insuranceStatus}\` / \`${status.insuranceClassification}\``,
     `- insurance 403 source classified: \`${status.insurance403SourceClassified}\``,
+    `- appointment status/classification: \`${status.appointmentStatus}\` / \`${status.appointmentClassification}\``,
     `- appointment 403 source classified: \`${status.appointment403SourceClassified}\``,
+    `- selector readiness: \`${status.selectorReadiness}\``,
+    `- local selectable readiness: \`${status.localSelectableReadiness}\``,
+    `- medical-information readiness: \`${status.medicalInformationReadiness}\``,
+    `- primary rejection reason: \`${status.primaryRejectionReason}\``,
+    `- rejection reasons: \`${normalizeStatusValue(status.rejectionReasons)}\``,
+    `- sanitize result: \`${status.sanitizeResult}\``,
+    `- candidate rows sanitized JSON: \`${relativeToEvidence(candidateRowsJsonPath)}\``,
+    `- command log JSONL: \`${relativeToEvidence(commandLogJsonlPath)}\``,
     '',
     'No raw ORCA body, raw patient detail, raw insurance detail, HAR, trace, video, raw screenshot, raw network dump, credential, cookie, Authorization header, JSESSIONID, CSRF token, raw session, password, or credential-bearing URL is included.',
     '',
@@ -423,7 +581,10 @@ let scannedTextCount = 0;
 for (const filePath of filesForScan) {
   const relativePath = relativeToEvidence(filePath);
   if (forbiddenRawPathPattern.test(relativePath)) fail(`forbidden raw artifact path in evidence dir: ${relativePath}`);
-  if (filePath.endsWith('.zip')) continue;
+  if (filePath.endsWith('.zip')) {
+    if (canonicalExistingPath(filePath) !== finalZipCanonicalPath) fail(`forbidden nested zip in evidence dir: ${relativePath}`);
+    continue;
+  }
   if (!textArtifactPattern.test(filePath)) continue;
   scanTextForSecrets(filePath, relativePath);
   scannedTextCount += 1;

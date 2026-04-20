@@ -135,6 +135,7 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
         if (response == null) {
             response = new PatientAppointmentListResponse();
         }
+        applyPatientAppointmentDepartmentFilter(response, request.getDepartmentCode());
         response.setRecordsReturned(response.getReservations().size());
         enrich(response, result);
         return response;
@@ -331,6 +332,17 @@ public class DefaultOrcaLiveGateway implements OrcaLiveGateway {
     private void appendTag(StringBuilder builder, String tag, String value) { support.appendTag(builder, tag, value); }
     private void appendXml2Tag(StringBuilder builder, String tag, String value) { support.appendXml2Tag(builder, tag, value); }
     private <T> T mapResponse(String xml, Function<String, T> converter) { return xml != null ? converter.apply(xml) : null; }
+
+    private void applyPatientAppointmentDepartmentFilter(PatientAppointmentListResponse response, String departmentCode) {
+        if (response == null || departmentCode == null || departmentCode.isBlank()) {
+            return;
+        }
+        String expected = departmentCode.trim();
+        response.getReservations().removeIf(appointment ->
+                appointment == null
+                        || appointment.getDepartmentCode() == null
+                        || !expected.equals(appointment.getDepartmentCode().trim()));
+    }
 
     private static String requireFacilityId(String facilityId) {
         if (facilityId == null || facilityId.isBlank()) {
