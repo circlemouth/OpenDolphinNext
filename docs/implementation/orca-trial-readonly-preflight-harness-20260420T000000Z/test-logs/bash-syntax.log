@@ -1,0 +1,11 @@
+command_log_version=1
+command=bash -c for\ f\ in\ setup-modernized-env.sh\ scripts/\*.sh\ scripts/tools/\*.sh\;\ do\ bash\ -n\ \;\ done\;\ echo\ bash syntax check completed
+cwd=/mnt/c/Users/marug/Documents/GitHub/OpenDolphinNext
+runId=20260420T000000Z
+start_utc=2026-04-20T00:25:15Z
+--- command output ---
+bash
+--- command summary ---
+end_utc=2026-04-20T00:25:15Z
+exit_code=0
+result=PASS

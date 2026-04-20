@@ -1,0 +1,50 @@
+command_log_version=1
+command=npm test -- scripts/__tests__/acceptmodv2IdentityGate.test.ts scripts/__tests__/acceptmodv2BusinessEvidence.test.ts scripts/__tests__/orcaTrialPreflight.test.ts scripts/__tests__/orcaRouteTaxonomyGuard.test.ts
+cwd=C:\Users\marug\Documents\GitHub\OpenDolphinNext\web-client
+runId=20260420T000000Z
+start_utc=2026-04-20T00:26:52Z
+--- command output ---
+
+> web-client@0.0.0 pretest
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client M‘Nn0 gitignore þ[aŒY .env* k0OUL˜o0iúQU0Œ0~0[0“0g0W0_00
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=994. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=238, blocked-route detector=39, docs/reference=179, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token n0Q÷meQo0iúQU0Œ0~0[0“0g0W0_00
+
+> web-client@0.0.0 test
+> vitest run scripts/__tests__/acceptmodv2IdentityGate.test.ts scripts/__tests__/acceptmodv2BusinessEvidence.test.ts scripts/__tests__/orcaTrialPreflight.test.ts scripts/__tests__/orcaRouteTaxonomyGuard.test.ts
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/marug/Documents/GitHub/OpenDolphinNext/web-client[39m
+
+ [32m'[39m scripts/__tests__/acceptmodv2BusinessEvidence.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m'[39m scripts/__tests__/acceptmodv2IdentityGate.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m'[39m scripts/__tests__/orcaRouteTaxonomyGuard.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m'[39m scripts/__tests__/orcaTrialPreflight.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m      Tests [22m [1m[32m89 passed[39m[22m[90m (89)[39m
+[2m   Start at [22m 09:26:55
+[2m   Duration [22m 1.12s[2m (transform 314ms, setup 550ms, import 258ms, tests 81ms, environment 2.77s)[22m
+
+--- command summary ---
+end_utc=2026-04-20T00:26:56Z
+exit_code=0
+result=PASS

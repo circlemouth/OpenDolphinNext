@@ -1,0 +1,11 @@
+command_log_version=1
+command=bash -c for\ f\ in\ scripts/tools/zip-compat.mjs\ scripts/tools/scan-review-bundle.mjs\ scripts/tools/validate-review-package-metadata.mjs\ web-client/scripts/qa-acceptmodv2-weborca.mjs\ web-client/scripts/qa-weborca-readonly-preflight.mjs\ web-client/scripts/qa-weborca-candidate-discovery.mjs\ web-client/scripts/verify-no-target-blank-unsafe.mjs\ web-client/scripts/verify-no-blocked-orca-route-strings.mjs\;\ do\ node\ --check\ \;\ done\;\ echo\ node syntax check completed
+cwd=/mnt/c/Users/marug/Documents/GitHub/OpenDolphinNext
+runId=20260420T000000Z
+start_utc=2026-04-20T00:25:23Z
+--- command output ---
+node
+--- command summary ---
+end_utc=2026-04-20T00:25:24Z
+exit_code=0
+result=PASS
