@@ -5,6 +5,8 @@ const SENSITIVE_QUERY_PATTERN = /auth|token|password|passwd|cookie|session|jsess
 const ACCEPTMOD_SUCCESS_RESULT = /^0+$/;
 const ACCEPTMOD_OFFICIAL_WARNING_RESULTS = new Set(['K1', 'K2', 'K3']);
 const DIAGNOSTIC_REQUEST_NUMBER = '00';
+const PHASE3_ALLOWED_MUTATION_REQUEST_NUMBER = '01';
+const PHASE3_FORBIDDEN_REQUEST_NUMBERS = new Set(['02', '03', '04']);
 
 const sortKeys = (values) => [...new Set(values.filter(Boolean))].sort();
 
@@ -110,8 +112,14 @@ export const classifyBusinessResult = ({
   const warningCode = ACCEPTMOD_OFFICIAL_WARNING_RESULTS.has(normalizeApiResult(apiResult));
   const successCode = ACCEPTMOD_SUCCESS_RESULT.test(normalizedApiResult);
   const diagnosticRequest = normalizedRequestNumber === DIAGNOSTIC_REQUEST_NUMBER;
+  const forbiddenMutationRequest = PHASE3_FORBIDDEN_REQUEST_NUMBERS.has(normalizedRequestNumber);
+  const wrongObservedMutationRequest =
+    normalizedRequestNumber.length > 0 &&
+    normalizedRequestNumber !== DIAGNOSTIC_REQUEST_NUMBER &&
+    normalizedRequestNumber !== PHASE3_ALLOWED_MUTATION_REQUEST_NUMBER;
   const locallyAccepted =
     !diagnosticRequest &&
+    !wrongObservedMutationRequest &&
     c7BusinessEvidenceAccepted &&
     registrationEvidencePresent &&
     (
@@ -148,6 +156,15 @@ export const classifyBusinessResult = ({
       mutationSuccess: true,
     };
   }
+  if (forbiddenMutationRequest) {
+    return {
+      responseClassification: 'forbiddenMutationRequest',
+      businessAccepted: false,
+      businessAcceptedWithWarnings: false,
+      businessRejected: true,
+      mutationSuccess: false,
+    };
+  }
   if (businessStatus === 'diagnosticNoExistingAcceptance') {
     return {
       responseClassification: 'diagnosticNoExistingAcceptance',
@@ -161,6 +178,7 @@ export const classifyBusinessResult = ({
     businessStatus === 'notVerified' ||
     normalizedApiResult === '' ||
     diagnosticRequest ||
+    wrongObservedMutationRequest ||
     !c7BusinessEvidenceAccepted ||
     ((successCode || warningCode) && !registrationEvidencePresent)
   ) {
@@ -269,6 +287,15 @@ export const buildSanitizedAcceptmodv2Summary = ({
       medicalInformationFieldPresent: Boolean(medicalInformationGate?.medicalInformationFieldPresent),
       unspecifiedRun: Boolean(medicalInformationGate?.unspecifiedRun),
       preflightArtifactIncluded,
+    },
+    phase3RequestNumberPolicy: {
+      intendedMutationRequestNumber: PHASE3_ALLOWED_MUTATION_REQUEST_NUMBER,
+      observedRequestNumber: acceptResponse?.requestNumber ?? acceptResponse?.Request_Number ?? '',
+      requestNumber00IsInquiryOnly: true,
+      requestNumber02To04Forbidden: true,
+      http200AloneIsNotBusinessSuccess: true,
+      apiResult60IsDiagnosticOnly: true,
+      acceptedForPhase3AttemptIsNotMutationSuccess: true,
     },
     secretScanScope: [
       'acceptmodv2-summary',

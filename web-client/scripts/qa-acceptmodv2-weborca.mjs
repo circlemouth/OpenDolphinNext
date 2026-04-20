@@ -34,15 +34,18 @@ const baseURL = process.env.QA_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? 'h
 const artifactRoot =
   process.env.QA_ARTIFACT_DIR ??
   path.resolve(process.cwd(), '..', 'artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'acceptmodv2');
+const approvedPhase3Mode = process.env.QA_PHASE3_APPROVED_MODE === '1';
+const sanitizedEvidenceOnly = approvedPhase3Mode || process.env.QA_SANITIZED_EVIDENCE_ONLY === '1';
+const browserArtifactsDisabled = approvedPhase3Mode || process.env.QA_DISABLE_BROWSER_ARTIFACTS === '1';
 const screenshotDir = path.join(artifactRoot, 'screenshots');
 const networkDir = path.join(artifactRoot, 'network');
 const harDir = path.join(artifactRoot, 'har');
-const recordHar = process.env.QA_RECORD_HAR === '1';
+const recordHar = !browserArtifactsDisabled && process.env.QA_RECORD_HAR === '1';
 const harPath = path.join(harDir, 'network.har');
 const stepLogPath = path.join(artifactRoot, 'steps.log');
 const summaryJsonPath = path.join(artifactRoot, 'accept-summary.json');
 const sanitizedSummaryJsonPath = path.join(artifactRoot, 'accept-summary.sanitized.json');
-const summaryMdPath = path.join(artifactRoot, 'accept-summary.md');
+const summaryMdPath = path.join(artifactRoot, sanitizedEvidenceOnly ? 'accept-summary.sanitized.md' : 'accept-summary.md');
 const consoleJsonPath = path.join(artifactRoot, 'console.json');
 const pageErrorsJsonPath = path.join(artifactRoot, 'page-errors.json');
 const preflightSummaryPath =
@@ -50,10 +53,15 @@ const preflightSummaryPath =
   path.resolve(process.cwd(), '..', 'artifacts', 'orca-remediation', 'closeout', runId, 'qa', 'weborca-readonly-preflight', 'summary.json');
 const requireReadonlyPreflight = process.env.QA_REQUIRE_READONLY_PREFLIGHT !== '0';
 const expectedPreflightSummarySha256 = process.env.QA_READONLY_PREFLIGHT_SHA256 ?? '';
+const expectedInputIdentitySha256 = process.env.QA_EXPECTED_INPUT_IDENTITY_SHA256 ?? '';
 
-fs.mkdirSync(screenshotDir, { recursive: true });
-fs.mkdirSync(networkDir, { recursive: true });
 fs.mkdirSync(artifactRoot, { recursive: true });
+if (!browserArtifactsDisabled) {
+  fs.mkdirSync(screenshotDir, { recursive: true });
+}
+if (!sanitizedEvidenceOnly) {
+  fs.mkdirSync(networkDir, { recursive: true });
+}
 if (recordHar) {
   fs.mkdirSync(harDir, { recursive: true });
 }
@@ -101,6 +109,23 @@ const startupErrors = [];
 if (!patientId) {
   startupErrors.push('QA_PATIENT_ID is required; pass a current local-searchable patient id for the target facility.');
 }
+if (approvedPhase3Mode) {
+  if (candidateId !== '00001' || patientId !== '00001') {
+    startupErrors.push('approved Phase 3 acceptmodv2 mode is restricted to candidate/patient 00001 only.');
+  }
+  if (!expectedPreflightSummarySha256) {
+    startupErrors.push('approved Phase 3 acceptmodv2 mode requires QA_READONLY_PREFLIGHT_SHA256.');
+  }
+  if (!expectedInputIdentitySha256) {
+    startupErrors.push('approved Phase 3 acceptmodv2 mode requires QA_EXPECTED_INPUT_IDENTITY_SHA256.');
+  }
+  if (process.env.QA_RECORD_HAR === '1') {
+    startupErrors.push('approved Phase 3 acceptmodv2 mode forbids HAR recording.');
+  }
+  if (process.env.QA_ALLOW_LOCAL_OPTION_INJECTION === '1') {
+    startupErrors.push('approved Phase 3 acceptmodv2 mode forbids local option injection.');
+  }
+}
 if (requireReadonlyPreflight) {
   if (!fs.existsSync(preflightSummaryPath)) {
     startupErrors.push(
@@ -127,6 +152,7 @@ if (requireReadonlyPreflight) {
           visitKind,
           medicalInformation,
         },
+        expectedInputIdentitySha256,
       });
       preflightGateResult = {
         ...validation,
@@ -167,6 +193,7 @@ const recordRequest = (request) => {
 };
 
 const writeScreenshot = async (page, name) => {
+  if (browserArtifactsDisabled) return null;
   if (!page || page.isClosed()) return null;
   const fileName = `${name}.png`;
   const filePath = path.join(screenshotDir, fileName);
@@ -608,11 +635,13 @@ const persistArtifacts = (summary) => {
   lastSummary = summary;
   const exitCode = summary.blockerClassification && summary.blockerClassification !== 'none' ? 1 : 0;
   const sanitizedSummary = buildSanitizedSummary(summary, exitCode);
-  fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords.map(sanitizeNetworkRecord), null, 2), 'utf8');
-  fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords.map(sanitizeRequestRecord), null, 2), 'utf8');
-  fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
-  fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
-  fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
+  if (!sanitizedEvidenceOnly) {
+    fs.writeFileSync(path.join(networkDir, 'network.json'), JSON.stringify(networkRecords.map(sanitizeNetworkRecord), null, 2), 'utf8');
+    fs.writeFileSync(path.join(networkDir, 'requests.json'), JSON.stringify(requestRecords.map(sanitizeRequestRecord), null, 2), 'utf8');
+    fs.writeFileSync(consoleJsonPath, JSON.stringify(consoleMessages, null, 2), 'utf8');
+    fs.writeFileSync(pageErrorsJsonPath, JSON.stringify(pageErrors, null, 2), 'utf8');
+    fs.writeFileSync(summaryJsonPath, JSON.stringify(summary, null, 2), 'utf8');
+  }
   fs.writeFileSync(sanitizedSummaryJsonPath, JSON.stringify(sanitizedSummary, null, 2), 'utf8');
   writeFinalEvidenceLog(sanitizedSummary);
 };
@@ -651,12 +680,14 @@ const buildMarkdownSummary = (summary) =>
   `- ${summary.acceptResult?.durationText ?? '—'}\n` +
   `- XHR Debug: ${summary.acceptResult?.xhrDebugText ?? '—'}\n` +
   `\n## Evidence\n\n` +
-  `- Network: network/network.json\n` +
-  `- Requests: network/requests.json\n` +
   `- Sanitized summary: accept-summary.sanitized.json\n` +
-  `- Console: console.json\n` +
-  `- Page errors: page-errors.json\n` +
   `- Steps: steps.log\n` +
+  (sanitizedEvidenceOnly
+    ? `- Raw/browser/network artifacts: disabled by approved Phase 3 sanitized-evidence-only mode\n`
+    : `- Network: network/network.json\n` +
+      `- Requests: network/requests.json\n` +
+      `- Console: console.json\n` +
+      `- Page errors: page-errors.json\n`) +
   `\n## HAR\n\n` +
   `${recordHar ? `- ${harPath}\n` : '- なし\n'}` +
   `\n## Rerun\n\n` +

@@ -1,0 +1,315 @@
+{
+  "runId": "20260420T123200Z",
+  "source": "qa-weborca-readonly-preflight",
+  "flowMode": "exact-readonly-preflight",
+  "kind": "exact-selected-candidate-preflight",
+  "candidateId": "00001",
+  "executedAt": "2026-04-20T13:02:57.023Z",
+  "facilityId": "1.3.6.1.4.1.9414.72.103",
+  "patientId": "00001",
+  "phase3AttemptPatientId": "00001",
+  "departmentCode": "01",
+  "physicianCode": "10001",
+  "paymentMode": "insurance",
+  "visitKind": "1",
+  "medicalInformationState": {
+    "state": "omitted"
+  },
+  "inputIdentity": {
+    "runId": "20260420T123200Z",
+    "candidate": {
+      "candidateId": "00001",
+      "facilityId": "1.3.6.1.4.1.9414.72.103",
+      "patientId": "00001"
+    },
+    "input": {
+      "patientId": "00001",
+      "departmentCode": "01",
+      "physicianCode": "10001",
+      "paymentMode": "insurance",
+      "visitKind": "1",
+      "medicalInformation": {
+        "state": "omitted"
+      }
+    },
+    "hash": "356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a"
+  },
+  "officialPatientEvidenceRef": "summary.json#/officialPatientExistence",
+  "officialPatientEvidenceHash": "d6746a7118933a33673b2aa8f2d659291ceb333b39f1ac8aa1790c97d6254dd5",
+  "insuranceEvidenceRef": "summary.json#/insuranceReadiness",
+  "insuranceEvidenceHash": "69f09fe831837b56e12c1f21268408c3be1aef0387865d73f2efe1cf4900971a",
+  "localSelectableEvidenceRef": "summary.json#/localSelectableReadiness",
+  "localSelectableEvidenceHash": "2a656f150859a5991775e27e05a756653d67ecf211d2419b55f7343f2d767f15",
+  "selectorEvidenceRef": "summary.json#/selectorReadiness",
+  "selectorEvidenceHash": "7ac6b259e0e2d07e425ea79036d14d9412d799b02329e4b5910a6329b5a9a050",
+  "officialPatientExistence": {
+    "httpStatus": 200,
+    "parsedOrcaBody": true,
+    "apiResult": "00",
+    "apiResultAccepted": true,
+    "patientInformationPresent": true,
+    "exactIdMatched": true,
+    "notFoundMessage": false,
+    "responseCategory": "present",
+    "rejectionReason": "none",
+    "evidenceHash": "cbc22cc60ba0bd4f",
+    "rawSensitiveFieldsExcluded": true
+  },
+  "insuranceReadiness": {
+    "status": 200,
+    "apiResult": "000",
+    "classification": "accepted",
+    "diagnosticCategory": "none",
+    "readinessFailureCategory": "none",
+    "diagnostic": {
+      "category": "none",
+      "sourceCategory": "none",
+      "status": 200,
+      "bodyPresent": true,
+      "apiResultPresent": true,
+      "wrapperErrorPresent": false,
+      "upstreamErrorPresent": false,
+      "methodMismatch": false,
+      "pathMismatch": false,
+      "rawSensitiveFieldsExcluded": true
+    },
+    "count": 2,
+    "effectiveCount": 2,
+    "selectedCombinationId": "<<redacted>>",
+    "verdict": "accepted",
+    "accepted": true,
+    "transportOk": true,
+    "businessOk": true,
+    "key": "1.3.6.1.4.1.9414.72.103:00001:insurance:2026-04-20",
+    "id": "preflight:insurance-readiness",
+    "hash": "061b94e1aa1e397b5a6247b7035d40f4a2d9e689cf0d5365ab90344d83dae01d"
+  },
+  "selectorReadiness": {
+    "status": "accepted",
+    "verdict": "accepted",
+    "accepted": true,
+    "reason": "none",
+    "fields": {
+      "department": {
+        "status": "accepted",
+        "verdict": "accepted",
+        "reason": "none",
+        "exists": true,
+        "disabled": false,
+        "optionCount": 2,
+        "targetMatch": true,
+        "accepted": true
+      },
+      "physician": {
+        "status": "accepted",
+        "verdict": "accepted",
+        "reason": "none",
+        "exists": true,
+        "disabled": false,
+        "optionCount": 2,
+        "targetMatch": true,
+        "accepted": true
+      },
+      "paymentMode": {
+        "status": "accepted",
+        "verdict": "accepted",
+        "reason": "none",
+        "exists": true,
+        "disabled": false,
+        "optionCount": 3,
+        "targetMatch": true,
+        "accepted": true
+      },
+      "visitKind": {
+        "status": "accepted",
+        "verdict": "accepted",
+        "reason": "none",
+        "exists": true,
+        "disabled": false,
+        "optionCount": 4,
+        "targetMatch": true,
+        "accepted": true
+      },
+      "medicalInformation": {
+        "status": "accepted",
+        "verdict": "accepted",
+        "reason": "none",
+        "exists": true,
+        "disabled": false,
+        "optionCount": 9,
+        "targetMatch": true,
+        "accepted": true
+      }
+    },
+    "selectorOptionCount": 20,
+    "selectorOptionCounts": {
+      "department": 2,
+      "physician": 2,
+      "paymentMode": 3,
+      "visitKind": 4,
+      "medicalInformation": 9
+    },
+    "selectorTargetMatch": true,
+    "selectorTargetMatches": {
+      "department": true,
+      "physician": true,
+      "paymentMode": true,
+      "visitKind": true,
+      "medicalInformation": true
+    },
+    "rawSensitiveFieldsExcluded": true,
+    "details": {
+      "department": {
+        "exists": true,
+        "disabled": false,
+        "optionCount": 2,
+        "hasDesiredValue": true,
+        "verdict": "accepted"
+      },
+      "physician": {
+        "exists": true,
+        "disabled": false,
+        "optionCount": 2,
+        "hasDesiredValue": true,
+        "verdict": "accepted"
+      },
+      "visitKind": {
+        "exists": true,
+        "disabled": false,
+        "optionCount": 4,
+        "hasDesiredValue": true,
+        "verdict": "accepted"
+      },
+      "paymentMode": {
+        "exists": true,
+        "disabled": false,
+        "optionCount": 3,
+        "hasDesiredValue": true,
+        "verdict": "accepted"
+      },
+      "medicalInformation": {
+        "exists": true,
+        "disabled": false,
+        "optionCount": 9,
+        "hasDesiredValue": true,
+        "selectedState": "omitted",
+        "verdict": "accepted"
+      }
+    }
+  },
+  "localSelectableReadiness": {
+    "status": "accepted",
+    "verdict": "accepted",
+    "accepted": true,
+    "reason": "no accepted trial candidate",
+    "normalizedTargetPatientId": "00001",
+    "localCandidateCount": 1,
+    "selectableCount": 1,
+    "exactMatchCount": 1,
+    "exactNormalizedPatientIdMatchCount": 1,
+    "exactMatch": true,
+    "rawSensitiveFieldsExcluded": true,
+    "patientId": "00001",
+    "recordsReturned": 1,
+    "uiSelectableCount": 1,
+    "uiFirstSelectable": true
+  },
+  "medicalInformationReadiness": {
+    "status": "accepted",
+    "verdict": "accepted",
+    "accepted": true,
+    "reason": "none",
+    "failedSubdimensions": [],
+    "dimensions": {
+      "department_ready": {
+        "ready": true,
+        "reason": "none"
+      },
+      "physician_ready": {
+        "ready": true,
+        "reason": "none"
+      },
+      "payment_ready": {
+        "ready": true,
+        "reason": "none"
+      },
+      "visitKind_ready": {
+        "ready": true,
+        "reason": "none"
+      },
+      "medicalInformation_input_ready": {
+        "ready": true,
+        "reason": "none"
+      },
+      "medicalInformation_omitted_state_matches": {
+        "ready": true,
+        "reason": "none"
+      },
+      "required_identity_fields_match": {
+        "ready": true,
+        "reason": "none"
+      }
+    },
+    "expectedMedicalInformationState": "omitted",
+    "observedMedicalInformationState": "omitted",
+    "rawSensitiveFieldsExcluded": true
+  },
+  "appointmentDependency": {
+    "flowMode": "direct_acceptance",
+    "mode": "direct_patient_acceptance_flow",
+    "required": false,
+    "absenceBlocker": false,
+    "status": 200,
+    "httpStatus": 200,
+    "parsedOrcaBody": true,
+    "apiResult": "21",
+    "rowCount": 0,
+    "exactRowCount": 0,
+    "diagnosticCategory": "none",
+    "readinessFailureCategory": "none",
+    "diagnostic": {
+      "category": "none",
+      "sourceCategory": "none",
+      "status": 200,
+      "bodyPresent": true,
+      "apiResultPresent": true,
+      "wrapperErrorPresent": false,
+      "upstreamErrorPresent": false,
+      "methodMismatch": false,
+      "pathMismatch": false,
+      "rawSensitiveFieldsExcluded": true
+    },
+    "classification": "direct_acceptance_no_appointment_required",
+    "verdict": "accepted",
+    "accepted": true,
+    "reason": "known_no_appointment_row_benign_for_direct_acceptance",
+    "visitApiResult": "00",
+    "visitRecordsReturned": 3,
+    "appointmentApiResult": "21",
+    "appointmentRecordsReturned": 1
+  },
+  "acceptmodv2ReadOnlyDiagnostic": {
+    "apiResult": "",
+    "status": "not_run",
+    "verdict": "accepted",
+    "businessStatus": "notRun",
+    "businessReason": "mutation_route_not_called_by_policy",
+    "accepted": true,
+    "mutationSuccess": false,
+    "classification": "mutation_diagnostic_not_run_by_policy",
+    "acceptedForPhase3Attempt": true,
+    "routeCalled": false,
+    "rawSensitiveFieldsExcluded": true
+  },
+  "mutationPolicy": {
+    "prohibited": true,
+    "blockedRequestCount": 0,
+    "blockedRequests": [],
+    "targetMutationRequestCount": 0
+  },
+  "acceptedForPhase3Attempt": true,
+  "verdict": "accepted",
+  "blockerClassification": "none",
+  "blockerReason": "none",
+  "rawSensitiveFieldsExcluded": true
+}

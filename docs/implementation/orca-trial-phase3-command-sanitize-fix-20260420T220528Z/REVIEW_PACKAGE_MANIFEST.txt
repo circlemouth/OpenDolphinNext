@@ -1,0 +1,44 @@
+RUN_ID=20260420T220528Z
+package=OpenDolphin_WebClient-phase3-command-sanitize-fix-20260420T220528Z.zip
+mutation=not_run
+phase3_actual_execution=not_run
+phase4=not_run
+fullflow=not_run
+candidate=00001_only
+
+include:
+- docs/implementation/README.md
+- docs/implementation/orca-trial-phase3-command-sanitize-fix-20260420T220528Z/
+- docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/exact-selected-candidate-preflight.sanitized.json
+- docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/phase3-handoff.sanitized.json
+- docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/gate-validation.sanitized.json
+- docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/final-summary.sanitized.json
+- scripts/tools/README.md
+- web-client/scripts/qa-phase3-approved-acceptmodv2.mjs
+- web-client/scripts/qa-acceptmodv2-weborca.mjs
+- web-client/scripts/qa-lib/phase3-approved-command-guard.mjs
+- web-client/scripts/qa-lib/acceptmodv2-identity-gate.mjs
+- web-client/scripts/qa-lib/acceptmodv2-business-evidence.mjs
+- web-client/scripts/__tests__/phase3ApprovedCommandGuard.test.ts
+- web-client/scripts/__tests__/acceptmodv2IdentityGate.test.ts
+- web-client/scripts/__tests__/acceptmodv2BusinessEvidence.test.ts
+
+exclude:
+- node_modules
+- dist
+- target
+- coverage
+- test-results
+- .git
+- artifacts
+- old review ZIPs
+- old .zip.summary.txt sidecars
+- HAR
+- traces
+- videos
+- screenshots
+- raw network dumps
+- raw ORCA request or response body
+- raw patient or insurance detail
+- credentials, cookies, sessions, auth headers, CSRF
+

@@ -134,6 +134,66 @@ describe('acceptmodv2 business evidence summary', () => {
     expect(summary.business.mutationSuccess).toBe(false);
   });
 
+  it('Request_Number=02/03/04 は Phase 3 mutation success にしない', () => {
+    for (const requestNumber of ['02', '03', '04']) {
+      const summary = buildSanitizedAcceptmodv2Summary({
+        runId: '20260419T013639Z',
+        candidateId: 'candidate-3',
+        preflightPath: 'artifacts/preflight/summary.json',
+        preflightSha256: 'abc123',
+        command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+        cwd: 'web-client',
+        startTime: '2026-04-19T01:36:39.000Z',
+        endTime: '2026-04-19T01:36:40.000Z',
+        exitCode: 1,
+        acceptResponse: {
+          status: 200,
+          apiResult: '00',
+          requestNumber,
+          businessStatus: 'businessAccepted',
+          acceptanceId: 'redacted-by-summary',
+          hasRegistrationEvidence: true,
+        },
+        medicalInformationGate: c7Pass,
+        patientIdMatched: true,
+      });
+
+      expect(summary.responseClassification).toBe('forbiddenMutationRequest');
+      expect(summary.business.businessAccepted).toBe(false);
+      expect(summary.business.mutationSuccess).toBe(false);
+      expect(summary.phase3RequestNumberPolicy.intendedMutationRequestNumber).toBe('01');
+      expect(summary.phase3RequestNumberPolicy.requestNumber02To04Forbidden).toBe(true);
+    }
+  });
+
+  it('apiResult=60 diagnostic は mutation success にしない', () => {
+    const summary = buildSanitizedAcceptmodv2Summary({
+      runId: '20260419T013639Z',
+      candidateId: 'candidate-3',
+      preflightPath: 'artifacts/preflight/summary.json',
+      preflightSha256: 'abc123',
+      command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+      cwd: 'web-client',
+      startTime: '2026-04-19T01:36:39.000Z',
+      endTime: '2026-04-19T01:36:40.000Z',
+      exitCode: 1,
+      acceptResponse: {
+        status: 200,
+        apiResult: '60',
+        requestNumber: '01',
+        businessStatus: 'diagnosticNoExistingAcceptance',
+        hasRegistrationEvidence: true,
+      },
+      medicalInformationGate: c7Pass,
+      patientIdMatched: true,
+    });
+
+    expect(summary.responseClassification).toBe('diagnosticNoExistingAcceptance');
+    expect(summary.business.diagnosticNoExistingAcceptance).toBe(true);
+    expect(summary.business.mutationSuccess).toBe(false);
+    expect(summary.phase3RequestNumberPolicy.apiResult60IsDiagnosticOnly).toBe(true);
+  });
+
   it('Phase 3 not-run summary は success と読めない explicit not-run evidence を持つ', () => {
     const summary = buildSanitizedAcceptmodv2Summary({
       runId: '20260419T013639Z',
@@ -252,11 +312,11 @@ describe('acceptmodv2 business evidence summary', () => {
       statusText: 'OK',
       request: {
         method: 'POST',
-        headers: { authorization: 'Bearer secret', 'content-type': 'application/json' },
+        headers: { authorization: 'fixture-token', 'content-type': 'application/json' },
         postData: '{"patientId":"0000001","medicalInformation":null}',
       },
       response: {
-        headers: { 'set-cookie': 'JSESSIONID=secret' },
+        headers: { 'set-cookie': 'fixture-session' },
         body: '{"apiResult":"10","apiResultMessage":"patient 0000001"}',
       },
     });

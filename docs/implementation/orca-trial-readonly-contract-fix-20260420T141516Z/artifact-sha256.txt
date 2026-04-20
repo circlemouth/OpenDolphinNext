@@ -1,0 +1,16 @@
+# artifact-sha256.txt
+# Scope: package-included sanitized dynamic evidence files only.
+# The final ZIP hash is intentionally excluded to avoid a self-referential ledger.
+# Final ZIP hash is recorded in the external .zip.summary.txt sidecar after package creation.
+745e8a72ee8d7f4076f04736801b2c6f63ae27b6e5074cb5d01d62252dc708a2  REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+2cf801fa795b33cdc3674a5f9cd6ab27d293ac6ba3d6b70afdd35c7414816dca  candidate-rows.sanitized.json
+2fd75f340693bc56b5c912c9c5e8bf587bde7bd4962cb6e206689aeabc027d5d  command-log.json
+b6b32493c6c0c57d89fde7213d05f1230b6cd6ad9d75a4101866a621ec02fe5e  command-log.jsonl
+57d43788d7384cdcdc6368271bbcfdf1a2f1a87e92c6ee801271c36332159590  exact-selected-candidate-preflight.sanitized.json
+cb978a811361ed940d9a35ec1d3e110eb2df06107b47045227f965b187eaf4b7  final-summary.sanitized.json
+84361ed8bb1b6d58520b09964fb6e3576acaed9535f9c5ad7733d5853a8ed0d2  final-summary.sanitized.md
+59e2220e0455d3fec5c96fd63c331a58712d244cf6cef9718cf7da5c75f73178  gate-validation.sanitized.json
+4415ac9b59e974bbf2c1a8eb8c9f1e75e7c1aed4d60c523f76046d1646308295  phase3-handoff.sanitized.json
+721205fbb5928ef7b18d0548284361fdb676bc1f594b004d889dc6cf0620d893  phase3-handoff.sanitized.md
+cd61fa88c9bc0414884e5dce37060b6eacd032dd281c6ad7219a95f6a7435a98  review-response.sanitized.md
+655744764b8c92fa683c3f01da491fe7fed12ada6fc364f5dda8a5b317704e3e  secret-scan.sanitized.txt

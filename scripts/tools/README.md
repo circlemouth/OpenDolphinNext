@@ -125,6 +125,40 @@
   - 任意のパスを渡す場合は `node scripts/tools/orca-artifacts-namer.js <path/to/scan>`。
 - 終了コード: 命名がすべて規約通りであれば 0。規約違反があると違反一覧と推奨名を表示して 1 を返す。実行エラー時も 1。
 
+## web-client/scripts/qa-phase3-approved-acceptmodv2.mjs
+- 位置づけ: Phase 3 command/sanitize remediation の承認済み入口。Phase 3 本番実行そのものではなく、exact preflight gate と sanitized-only artifact contract を固定する。
+- 目的: `qa-acceptmodv2-weborca.mjs` を直接実行せず、candidate `00001`、exact selected-candidate preflight path/hash/input identity、Phase 3 only、no browser/network artifact を fail-closed で検証してから future Phase 3 owner だけが受付登録 mutation へ進めるようにする。
+- 固定入力:
+  - candidate / patient: `00001`
+  - preflight: `docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/exact-selected-candidate-preflight.sanitized.json`
+  - preflight sha256: `57d43788d7384cdcdc6368271bbcfdf1a2f1a87e92c6ee801271c36332159590`
+  - input identity hash: `356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a`
+- 必須 mode flags:
+  - `--sanitized-evidence-only`
+  - `--disable-browser-artifacts`
+  - `--phase3-only`
+  - ちょうど 1 つだけ: `--dry-run`, `--mock`, `--execute-approved-mutation`
+- 禁止:
+  - Phase 4 / fullflow / direct curl / other candidate flags
+  - HAR / trace / video / screenshot / raw network artifact flags
+  - `QA_RECORD_HAR=1`, raw network capture env, Phase 4/fullflow env, local option injection env
+- dry-run:
+```bash
+node web-client/scripts/qa-phase3-approved-acceptmodv2.mjs \
+  --candidate 00001 \
+  --preflight docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/exact-selected-candidate-preflight.sanitized.json \
+  --preflight-sha256 57d43788d7384cdcdc6368271bbcfdf1a2f1a87e92c6ee801271c36332159590 \
+  --input-identity-sha256 356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a \
+  --sanitized-evidence-only \
+  --disable-browser-artifacts \
+  --phase3-only \
+  --dry-run
+```
+- future Phase 3 owner 用の実行形は、ChatGPT が remediation package を accept した後に限り `--dry-run` を `--execute-approved-mutation` に置き換える。Phase 4 と fullflow は引き続き実行しない。
+- 出力:
+  - dry-run/mock: `phase3-approved-command.sanitized.json` のみ。ORCA 接続、mutation route、browser artifacts、network directory は生成しない。
+  - execute-approved-mutation: `qa-acceptmodv2-weborca.mjs` を `QA_PHASE3_APPROVED_MODE=1` / `QA_SANITIZED_EVIDENCE_ONLY=1` / `QA_DISABLE_BROWSER_ARTIFACTS=1` で呼び出し、raw summary、network directory、screenshots、HAR を生成しない。
+
 ## Naming Rule
 - 現行正本名は `reviewer submission packet`。
 - `review package` は support bundle。

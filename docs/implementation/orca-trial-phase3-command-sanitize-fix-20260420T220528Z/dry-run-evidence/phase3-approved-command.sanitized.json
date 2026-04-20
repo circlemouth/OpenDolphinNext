@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-04-20T22:22:16.596Z",
+  "commandContract": "approved-phase3-acceptmodv2-sanitized-only",
+  "verdict": "accepted",
+  "mutation": "not_run",
+  "phase3": "not_run",
+  "phase4": "not_run",
+  "fullflow": "not_run",
+  "candidate": "00001",
+  "selectedCandidateOnly": true,
+  "otherCandidatesMutation": "not_run",
+  "allowedMutationAttemptCount": 0,
+  "forbiddenMutationRequestCount": 0,
+  "intendedMutationRequestNumber": "01",
+  "forbiddenRequestNumbers": [
+    "00",
+    "02",
+    "03",
+    "04"
+  ],
+  "browserNetworkArtifactMode": "disabled",
+  "sanitizedEvidenceOnly": true,
+  "rawSensitiveFieldsExcluded": true,
+  "preflight": {
+    "path": "docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/exact-selected-candidate-preflight.sanitized.json",
+    "expectedSha256": "57d43788d7384cdcdc6368271bbcfdf1a2f1a87e92c6ee801271c36332159590",
+    "actualSha256": "57d43788d7384cdcdc6368271bbcfdf1a2f1a87e92c6ee801271c36332159590",
+    "acceptedForPhase3Attempt": true,
+    "targetMutationRequestCount": 0
+  },
+  "inputIdentity": {
+    "expectedSha256": "356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a",
+    "actualSha256": "356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a",
+    "computedSha256": "356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a"
+  },
+  "requestSemantics": {
+    "requestNumber01OnlyFutureMutation": true,
+    "requestNumber00IsInquiryOnly": true,
+    "requestNumber02To04ForbiddenForPhase3": true,
+    "apiResult60IsNotMutationSuccess": true,
+    "http200AloneIsNotBusinessSuccess": true,
+    "acceptedForPhase3AttemptIsNotMutationSuccess": true,
+    "diagnosticNotRunIsNotMutationSuccess": true
+  },
+  "guard": {
+    "ok": true,
+    "blockers": [],
+    "identityGate": {
+      "ok": true,
+      "mutationAllowed": true,
+      "blockerClassification": "none",
+      "artifactPath": "docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/exact-selected-candidate-preflight.sanitized.json",
+      "artifactSha256": "57d43788d7384cdcdc6368271bbcfdf1a2f1a87e92c6ee801271c36332159590",
+      "expectedIdentity": {
+        "runId": "20260420T123200Z",
+        "candidate": {
+          "candidateId": "00001",
+          "facilityId": "1.3.6.1.4.1.9414.72.103",
+          "patientId": "00001"
+        },
+        "input": {
+          "patientId": "00001",
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1",
+          "medicalInformation": {
+            "state": "omitted"
+          }
+        },
+        "hash": "356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a"
+      },
+      "preflightIdentity": {
+        "runId": "20260420T123200Z",
+        "candidate": {
+          "candidateId": "00001",
+          "facilityId": "1.3.6.1.4.1.9414.72.103",
+          "patientId": "00001"
+        },
+        "input": {
+          "patientId": "00001",
+          "departmentCode": "01",
+          "physicianCode": "10001",
+          "paymentMode": "insurance",
+          "visitKind": "1",
+          "medicalInformation": {
+            "state": "omitted"
+          }
+        },
+        "hash": "356d109381b57e0c792eada1a4bd394248c6fca8273a82ab770143efc92bc29a"
+      },
+      "mismatches": []
+    }
+  },
+  "runId": "20260420T222216Z",
+  "evidencePath": "docs/implementation/orca-trial-phase3-command-sanitize-fix-20260420T220528Z/dry-run-evidence/phase3-approved-command.sanitized.json"
+}

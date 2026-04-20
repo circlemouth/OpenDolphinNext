@@ -1,0 +1,685 @@
+[
+  {
+    "candidateId": "00001",
+    "patientId": "00001",
+    "accepted": true,
+    "acceptedForExactPreflightProposal": true,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "none",
+    "rejectionReasons": [],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 2
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "accepted",
+        "status": "accepted",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 1
+      },
+      "selector": {
+        "verdict": "accepted",
+        "status": "accepted",
+        "selectorOptionCount": 20,
+        "selectorTargetMatch": true
+      },
+      "medicalInformation": {
+        "verdict": "accepted",
+        "status": "accepted",
+        "failedSubdimensions": []
+      }
+    }
+  },
+  {
+    "candidateId": "00002",
+    "patientId": "00002",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00003",
+    "patientId": "00003",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00004",
+    "patientId": "00004",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00005",
+    "patientId": "00005",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00006",
+    "patientId": "00006",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00007",
+    "patientId": "00007",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00008",
+    "patientId": "00008",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 0,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00009",
+    "patientId": "00009",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00010",
+    "patientId": "00010",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  },
+  {
+    "candidateId": "00011",
+    "patientId": "00011",
+    "accepted": false,
+    "acceptedForExactPreflightProposal": false,
+    "acceptedForPhase3Attempt": false,
+    "primaryRejectionReason": "local_exact_match_missing",
+    "rejectionReasons": [
+      "local_exact_match_missing",
+      "medical_information_not_ready:department_ready,physician_ready,payment_ready,visitKind_ready,medicalInformation_input_ready,required_identity_fields_match"
+    ],
+    "readinessAxes": {
+      "officialPatient": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "00",
+        "exactIdMatched": true,
+        "patientInformationPresent": true,
+        "rawSensitiveFieldsExcluded": null
+      },
+      "insurance": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "000",
+        "classification": "accepted",
+        "effectiveCount": 1
+      },
+      "appointment": {
+        "verdict": "accepted",
+        "status": 200,
+        "apiResult": "21",
+        "classification": "direct_acceptance_no_appointment_required",
+        "flowMode": "direct_acceptance",
+        "required": false,
+        "absenceBlocker": false,
+        "rowCount": 0
+      },
+      "localSelectable": {
+        "verdict": "rejected",
+        "status": "rejected",
+        "localCandidateCount": 1,
+        "exactNormalizedPatientIdMatchCount": 0
+      },
+      "selector": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "selectorOptionCount": 0,
+        "selectorTargetMatch": false
+      },
+      "medicalInformation": {
+        "verdict": "not_verified",
+        "status": "not_verified",
+        "failedSubdimensions": [
+          "department_ready",
+          "physician_ready",
+          "payment_ready",
+          "visitKind_ready",
+          "medicalInformation_input_ready",
+          "required_identity_fields_match"
+        ]
+      }
+    }
+  }
+]

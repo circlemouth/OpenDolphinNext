@@ -1,0 +1,12 @@
+review_log_inclusions_manifest_version=1
+run_id=20260420T141516Z
+created_at_utc=2026-04-20T14:18:30Z
+review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content
+review_log_include_count=12
+review_log_includes=docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/REVIEW_LOG_INCLUSIONS_MANIFEST.txt,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/final-summary.sanitized.md,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/final-summary.sanitized.json,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/candidate-rows.sanitized.json,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/exact-selected-candidate-preflight.sanitized.json,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/phase3-handoff.sanitized.md,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/phase3-handoff.sanitized.json,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/gate-validation.sanitized.json,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/review-response.sanitized.md,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/command-log.json,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/artifact-sha256.txt,docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/secret-scan.sanitized.txt
+source_manifest=docs/implementation/orca-trial-readonly-contract-fix-20260420T141516Z/REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+dynamic_review_evidence_secret_scan_claim=passed
+bundle_included_source_scope_secret_scan_claim=not_claimed
+bundle_included_source_scope_secret_scan_evidence=none
+package_source_secret_scan_evidence=OpenDolphin_WebClient-review-package-20260420T141516Z-readonly-contract-fix-resubmission.zip.secret-scan-review-bundle.log
+empty_log_policy=empty_logs_do_not_count_as_pass_evidence

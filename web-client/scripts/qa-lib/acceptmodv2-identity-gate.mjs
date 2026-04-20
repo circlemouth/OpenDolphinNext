@@ -11,6 +11,7 @@ export const PREFLIGHT_ARTIFACT_INVALID_BLOCKER = 'preflight_artifact_invalid';
 export const PREFLIGHT_DISCOVERY_ONLY_BLOCKER = 'candidate_discovery_only';
 export const PREFLIGHT_DIAGNOSTIC_NOT_VERIFIED_BLOCKER = 'preflight_diagnostic_not_verified';
 export const PREFLIGHT_PHASE3_NOT_ACCEPTED_BLOCKER = 'preflight_phase3_not_accepted';
+export const PREFLIGHT_TARGET_MUTATION_COUNT_BLOCKER = 'preflight_target_mutation_count_nonzero';
 
 const normalizeString = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -200,6 +201,7 @@ export const validatePreflightSummary = ({
   artifactPath = '',
   artifactSha256 = '',
   expectedArtifactSha256 = '',
+  expectedInputIdentitySha256 = '',
 }) => {
   const expectedIdentity = buildInputIdentity(expected);
   const preflightIdentity = preflightIdentityFromSummary(summary);
@@ -272,6 +274,27 @@ export const validatePreflightSummary = ({
     };
   }
 
+  const normalizedExpectedInputIdentitySha256 = normalizeString(expectedInputIdentitySha256).toLowerCase();
+  if (
+    normalizedExpectedInputIdentitySha256 &&
+    normalizeString(preflightIdentity?.hash).toLowerCase() !== normalizedExpectedInputIdentitySha256
+  ) {
+    return {
+      ok: false,
+      mutationAllowed: false,
+      blockerClassification: PREFLIGHT_INPUT_MISMATCH_BLOCKER,
+      expectedIdentity,
+      preflightIdentity,
+      mismatches: [{
+        field: 'inputIdentity.hash',
+        preflight: preflightIdentity?.hash ?? '',
+        expected: normalizedExpectedInputIdentitySha256,
+      }],
+      missingFields: [],
+      error: 'exact read-only WebORCA preflight input identity hash mismatch',
+    };
+  }
+
   const accepted =
     summary?.acceptedForPhase3Attempt === true &&
     summary?.verdict === 'accepted' &&
@@ -299,6 +322,22 @@ export const validatePreflightSummary = ({
       preflightIdentity,
       mismatches: [],
       error: `exact read-only WebORCA preflight diagnostic is not verified: ${diagnosticFailure}`,
+    };
+  }
+
+  const targetMutationRequestCount = Number(
+    summary?.mutationPolicy?.targetMutationRequestCount ?? summary?.targetMutationRequestCount,
+  );
+  if (targetMutationRequestCount !== 0) {
+    return {
+      ok: false,
+      mutationAllowed: false,
+      blockerClassification: PREFLIGHT_TARGET_MUTATION_COUNT_BLOCKER,
+      expectedIdentity,
+      preflightIdentity,
+      mismatches: [],
+      phase3ReadinessFailures: ['targetMutationRequestCount'],
+      error: `exact read-only WebORCA preflight targetMutationRequestCount must be 0 before Phase 3 mutation; actual=${Number.isFinite(targetMutationRequestCount) ? targetMutationRequestCount : 'missing'}`,
     };
   }
 

@@ -160,6 +160,42 @@ describe('acceptmodv2 preflight identity gate', () => {
     expect(result.error).toContain('hash mismatch');
   });
 
+  it('rejects exact preflight input identity hash mismatch when a pinned hash is provided', () => {
+    const result = validatePreflightSummary({
+      summary: acceptedSummary(),
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expectedInputIdentitySha256: 'wrong-hash',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_input_mismatch');
+    expect(result.mismatches.map((item) => item.field)).toContain('inputIdentity.hash');
+  });
+
+  it('rejects exact preflight when targetMutationRequestCount is not zero', () => {
+    const result = validatePreflightSummary({
+      summary: {
+        ...acceptedSummary(),
+        mutationPolicy: {
+          prohibited: true,
+          blockedRequestCount: 0,
+          blockedRequests: [],
+          targetMutationRequestCount: 1,
+        },
+      },
+      artifactPath: '/tmp/summary.json',
+      artifactSha256: 'abc123',
+      expected: baseInput,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.mutationAllowed).toBe(false);
+    expect(result.blockerClassification).toBe('preflight_target_mutation_count_nonzero');
+  });
+
   it.each([
     ['runId', { runId: '20260419T999999Z' }, 'runId'],
     ['candidate', { candidateId: 'other-candidate' }, 'candidate.candidateId'],
