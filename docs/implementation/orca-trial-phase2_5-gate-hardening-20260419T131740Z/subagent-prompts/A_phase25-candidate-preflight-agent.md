@@ -30,7 +30,7 @@ Required hardening:
    - Phase 3 not run
    - Phase 4 not run
    - verdict `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER`
-   Do not conclude that official initial patients do not exist. ORCA Trial official initial patients `00001` to `00011` are treated as registered seed data; zero accepted candidates only means the current harness/API/auth/ID-normalization/response-parser/insurance-readiness/appointment-dependency/exact-preflight criteria did not produce mutation-ready read-only evidence.
+   Do not conclude that official initial patients are absent. ORCA Trial official initial patients `00001` to `00011` exist as official initial data; zero accepted candidates only means the current harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria did not produce mutation-ready read-only evidence.
 3. Official patient existence accepted requires all of:
    - HTTP 2xx
    - parsed ORCA body
@@ -55,8 +55,8 @@ Required hardening:
    `runId`, `patientId`, `phase3AttemptPatientId`, `inputIdentity`, `departmentCode`, `physicianCode`, `paymentMode`, `visitKind`, `medicalInformationState`, `officialPatientEvidenceRef/hash`, `insuranceEvidenceRef/hash`, `localSelectableEvidenceRef/hash`, `selectorEvidenceRef/hash`, `acceptmodv2ReadOnlyDiagnostic`, `flowMode`, `rawSensitiveFieldsExcluded=true`.
 10. Request_Number=00 diagnostic is read-only diagnostic only:
    - apiResult=10 => rejected / patient_not_found
-   - apiResult=60 => no-existing-acceptance diagnostic, not success
-   - apiResult=00 => existing-acceptance diagnostic, not mutation success
+   - apiResult=60 => no-existing-acceptance diagnostic, not mutation success
+   - apiResult=00 with Request_Number=00 => existing-acceptance diagnostic, not mutation success
    It must not by itself authorize Phase 3 if the diagnostic is not actual exact preflight evidence.
 
 Add or update focused Vitest coverage. Avoid broad refactors.

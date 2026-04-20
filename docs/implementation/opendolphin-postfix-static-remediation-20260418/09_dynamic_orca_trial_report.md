@@ -10,7 +10,7 @@
 
 `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER`
 
-Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-ready candidate was accepted. Phase 3 and Phase 4 were intentionally not run. `acceptedCandidateCount=0` must not be read as proof that official initial patients do not exist; it means only that `00001`-`00011` did not have enough current read-only evidence across harness / API / auth / parser / readiness / exact-preflight criteria to authorize a mutation attempt.
+Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-ready candidate was accepted. Phase 3 and Phase 4 were intentionally not run. This historical run is superseded for current wording by the 2026-04-19T220346Z read-only investigation. Current reviewed wording is: ORCA Trial official initial patients `00001`-`00011` exist as official initial data, but `acceptedCandidateCount=0` means they currently lack mutation-ready read-only evidence across harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria.
 
 ## 2. Phase Status
 
@@ -30,7 +30,7 @@ Phase 2.5 candidate discovery completed fail-closed. No Trial-native mutation-re
 | Probe candidates `00001`-`00011` | 11 | none | no |
 | Accepted candidate rows | 0 | none | no |
 
-All probe candidates returned official patient existence `apiResult=10`; under the current harness/API/auth/parser/readiness criteria, official existence evidence therefore remained insufficient even when HTTP status was 200. This does not prove that official initial patients are absent. Insurance and appointment probes returned HTTP 403 and were classified as `ambiguous_readiness_failure`, not as proven absence of insurance or appointment data.
+In this historical run, probe candidates returned official patient existence `apiResult=10`; `apiResult=10` is `patient_not_found` rejection and was not accepted as official existence evidence even when HTTP status was 200. This historical result must not be generalized into a claim that official initial patients are absent. Current reviewed evidence treats ORCA Trial official initial patients `00001`-`00011` as official initial data that are not mutation-ready in current evidence. Insurance and appointment probes returned HTTP 403 and were classified as `ambiguous_readiness_failure`, not as proven absence of insurance or appointment data.
 
 | Required row field | Evidence |
 | --- | --- |
@@ -73,7 +73,7 @@ All probe candidates returned official patient existence `apiResult=10`; under t
 | exact selected-candidate preflight | not run | no selected candidate existed |
 | `qa-acceptmodv2-weborca.mjs` | not run | Phase 3 explicitly out of scope |
 | `qa-fullflow-weborca.mjs` | not run | Phase 4 explicitly out of scope |
-| C7 dynamic mutation request evidence | not verified | no Phase 3 mutation request was sent |
+| C7 dynamic mutation request evidence | not verified | no Phase 3 target mutation request capture existed; `targetMutationRequestCount=0` / `checkedRequests=0` must not be accepted |
 | C5/C3/C6 full live evidence | not verified | fullflow was not run |
 
 ## 8. ORCA Business Semantics
@@ -81,16 +81,16 @@ All probe candidates returned official patient existence `apiResult=10`; under t
 | Result | Classification | Accepted? |
 | --- | --- | --- |
 | patient existence HTTP 2xx + parsed ORCA body + all-zero `apiResult` + `Patient_Information` + exact `Patient_ID` | official patient exists | yes |
-| patient existence HTTP 200 + `apiResult=10` | patient not found | no |
+| patient existence HTTP 200 + `apiResult=10` | `patient_not_found` rejection | no |
 | missing/blank `apiResult` | not accepted | no |
 | insurance HTTP 200 + all-zero `apiResult` + usable combination | insurance ready | yes |
 | insurance `apiResult=21/23` | `business_rejected_insurance` | no |
 | insurance/appointment HTTP 401/403/404/5xx or wrapper error | `ambiguous_readiness_failure` | no |
 | appointment row absence in `direct_acceptance` | not a blocker by itself | n/a |
 | appointment row absence in `appointment_row` | `appointment_row_missing` | no |
-| acceptmodv2 diagnostic `apiResult=10` | patient not found | no |
+| acceptmodv2 diagnostic `apiResult=10` | `patient_not_found` rejection | no |
 | acceptmodv2 diagnostic `apiResult=60` | no existing acceptance diagnostic | diagnostic only |
-| acceptmodv2 diagnostic `apiResult=00` | existing acceptance diagnostic | diagnostic only |
+| acceptmodv2 diagnostic `apiResult=00` with `Request_Number=00` | existing acceptance diagnostic | diagnostic only |
 | acceptmodv2 `K1/K2/K3` | accepted with warnings only with acceptance evidence | conditional |
 
 ## 9. C7 Dynamic Evidence
@@ -100,6 +100,8 @@ All probe candidates returned official patient existence `apiResult=10`; under t
 | Dynamic request capture | not verified | Phase 3 not run |
 | Medical information omission/selection on mutation | not verified dynamically | no mutation request existed |
 | Static C7 helper/tests | accepted | `medical-information-gate.mjs` and focused test coverage |
+
+MSW/local/static tests and helper coverage are not live ORCA fullflow success and must not be mixed with live mutation/fullflow evidence.
 
 ## 10. C5 / C3 / C6 Live Evidence
 

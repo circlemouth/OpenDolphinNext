@@ -5,7 +5,7 @@
 | id | invariant | must not regress | evidence required |
 |---|---|---|---|
 | C7-I1 | Unselected medical information run omits `medicalInformation` / `Medical_Information` field entirely. | Empty string, null, false, object, array, or any key presence cannot pass. | helper tests + QA script behavior + docs wording |
-| C7-I2 | Target mutation request capture is mandatory. | `checkedRequests=0` cannot be success. | helper test + script error propagation |
+| C7-I2 | Target mutation request capture is mandatory. | `targetMutationRequestCount=0` / `checkedRequests=0` cannot be accepted or phrased as C7 verified. | helper test + script error propagation |
 | C5-I1 | Patient import full success requires business success, no errors, no skipped, count consistency, canonical readback. | `skippedCount>0` or count mismatch cannot show success toast/audit success. | API tests + UI warning tests |
 | C3-I1 | Current row ORCA send/invoice signal must be row-local. | patientId/latest fallback cannot produce positive signal. | actual component + helper integration tests |
 | C3-I2 | Print invoice prefill must be row-local. | latest income from another encounter cannot prefill invoice. | print hook tests |

@@ -17,10 +17,10 @@
 
 - 候補探索を Phase 3 許可ではなく proposal-only として固定し、`candidateDiscoveryAloneAuthorizesPhase3=false`、`acceptedForPhase3Attempt=false`、`phase3.ran=false`、`phase4.ran=false`、`mutationPolicy.prohibited=true` を summary に明示した。
 - 候補行の proposal 成立は `acceptedForExactPreflightProposal` に分離し、candidate discovery 内の `acceptedForPhase3Attempt` は常に false になるよう固定した。
-- `acceptedCandidateCount=0` の verdict を `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` に変更した。公式 Trial 初期患者 `00001`-`00011` は登録済みデータという前提を維持し、current harness / API endpoint / auth / ID normalization / response parser / insurance readiness / appointment dependency / exact preflight criteria のいずれかで Phase 3 mutation-ready evidence が未充足であることを示す。
+- `acceptedCandidateCount=0` の verdict を `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` に変更した。ORCA Trial 公式初期患者 `00001`-`00011` は official initial data として存在するが、current harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria で Phase 3 mutation-ready evidence が未充足であることを示す。
 - 候補探索 summary に `readinessAxes` を追加し、patientgetv2 status、parsed ORCA body、Api_Result all-zero、Patient_Information、exact Patient_ID、patient-not-found wording absence、usable insurance、appointment dependency、selector、local selectable、mutation block count を機械可読に分離した。
 - 公式患者存在判定を HTTP 2xx、parsed ORCA object、all-zero apiResult、Patient_Information present、exact normalized Patient_ID、patient-not-found wording absence の全条件で fail-closed にした。
-- Request_Number=00 diagnostic は `apiResult=10` を rejected、`apiResult=60` を no-existing-acceptance diagnostic かつ mutation success ではない状態、`apiResult=00` を existing-acceptance diagnostic かつ Phase 3 authorization 不可として固定した。
+- Request_Number=00 diagnostic は `apiResult=10` を `patient_not_found` rejection、`apiResult=60` を no-existing-acceptance diagnostic かつ mutation success ではない状態、`apiResult=00` with `Request_Number=00` を existing-acceptance diagnostic かつ Phase 3 authorization 不可として固定した。
 - exact selected-candidate preflight gate は source/flow、refs/hashes、input identity、diagnostic、`rawSensitiveFieldsExcluded=true`、artifact path/hash を必須にするテストを追加した。
 
 ## 検証
@@ -40,7 +40,7 @@
 - ORCA endpoint credential、Cookie、Authorization、JSESSIONID、CSRF、raw password、credential-bearing URL、患者機微詳細は追加出力していない。
 - discovery は proposal-only であり、candidate discovery artifact 単独では Phase 3 mutation を許可しない。
 - read-only evidence の不備は fail-closed とし、patient-like body や local selectable だけでは official patient existence として受理しない。
-- `0000001` は legacy local smoke seed として rejected のまま維持した。`00001`-`00011` は公式 Trial 初期患者前提の probe candidates であり、mutation-ready 判定には exact selected-candidate preflight が必須。
+- `0000001` は legacy local smoke seed として rejected のまま維持した。`00001`-`00011` は ORCA Trial official initial data であり、current evidence 上の mutation-ready 判定には exact selected-candidate preflight が必須。
 
 ## 残リスク
 

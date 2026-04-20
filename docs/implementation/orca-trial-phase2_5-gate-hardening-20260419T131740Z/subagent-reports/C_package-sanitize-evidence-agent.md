@@ -21,7 +21,7 @@
 
 ## 補正反映
 
-`acceptedCandidateCount=0` は「公式初期患者が存在しない」という意味ではない。意味は、`00001`〜`00011` について current harness / API / auth / parser / readiness / exact-preflight criteria の read-only evidence が mutation-ready まで揃っていない、という限定に修正した。
+`acceptedCandidateCount=0` は「公式初期患者が存在しない」という意味ではない。ORCA Trial 公式初期患者 `00001`〜`00011` は official initial data として存在するが、current harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria の read-only evidence が mutation-ready まで揃っていない、という限定に修正した。
 
 この場合の verdict は `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` として扱う。
 
@@ -32,7 +32,7 @@
 | `.git` を含まない support zip を clean checkout evidence と誤読する | manifest/summary に `clean_checkout_claim=not_verified`、`worktree_clean=not_verified`、non-guarantee scope を出力 |
 | sanitized summary として raw ORCA artifact / network / HAR / XML を混入する | manifest-listed evidence path allowlist と raw artifact denylist で package 前に fail |
 | log/evidence に credential literal や session token が混入する | included review evidence secret scan で Authorization/Cookie/JSESSIONID/CSRF/session/password/credential URL を拒否 |
-| dynamic evidence scan、package source-scope scan、full repo source scan を混同する | `dynamic_secret_scan_claim=passed`、`package_source_secret_scan_claim=passed`、`full_source_secret_scan_claim=not_claimed` を manifest/sidecar/REVIEW_LOG_INCLUSIONS_MANIFEST で分離 |
+| dynamic evidence scan、package source-scope scan、full repo source scan を混同する | `dynamic_secret_scan_claim=passed`、`package_source_secret_scan_claim=passed`、`full_source_secret_scan_claim=not_claimed` を manifest/sidecar/REVIEW_LOG_INCLUSIONS_MANIFEST で分離し、`not_claimed` を full clean と表現しない |
 
 ## 検証結果
 

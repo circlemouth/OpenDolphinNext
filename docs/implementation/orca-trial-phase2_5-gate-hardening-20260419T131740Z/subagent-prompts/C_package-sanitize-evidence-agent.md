@@ -30,7 +30,7 @@ Required hardening:
 5. Full source clean may only be claimed after full ZIP/source secret scan. Dynamic-only clean must be labeled dynamic-only and never full clean.
 6. Raw artifacts must not be included. Only sanitized summaries/logs may be included.
 7. Manifest / sidecar / log inclusion / secret scan scope must be internally consistent and mechanically testable.
-8. Evidence/package wording must not turn acceptedCandidateCount=0 into "official initial patients do not exist". Use `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` and describe it as insufficient mutation-ready read-only evidence across harness/API/auth/parser/readiness/exact-preflight criteria.
+8. Evidence/package wording must not turn `acceptedCandidateCount=0` into "official initial patients are absent". ORCA Trial official initial patients `00001` to `00011` exist as official initial data, but zero accepted candidates means insufficient mutation-ready read-only evidence across harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria.
 9. Secret scan must reject obvious credential literals, cookies, Authorization, JSESSIONID, CSRF, raw session, raw password, credential-bearing URLs. Avoid false claims in manifest.
 10. Build artifacts, node_modules, dist, target, coverage, test-results, raw screenshots, raw network dumps, and raw artifacts dirs must not be included in review bundle ZIPs.
 

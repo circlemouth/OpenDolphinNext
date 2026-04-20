@@ -39,6 +39,8 @@ RUN_ID: `20260419T220346Z`
 - End: `2026-04-19T22:28:19.104Z`
 - Exit code: `1` (`acceptedCandidateCount=0` read-only stop)
 - acceptedCandidateCount: `0 / 11`
+- acceptedCandidateCount meaning: ORCA Trial official initial patients `00001`〜`00011` exist as official initial data, but currently lack mutation-ready read-only evidence across harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria.
+- candidate discovery: proposal-only; not a Phase 3 handoff artifact
 - exact selected-candidate preflight: not run
 - exact preflight `acceptedForPhase3Attempt`: not boolean true because exact preflight was not run
 - Phase 3: not run
@@ -51,12 +53,17 @@ RUN_ID: `20260419T220346Z`
 - `00002`, `00003`, `00004`, `00006`, `00007`, `00008`, `00009`, `00010`, `00011`: official patientget accepted; insurance/appointment `403/blank/ambiguous_readiness_failure`; local `local_exact_match_missing`; selector not verified.
 
 ## Security / Sanitization
-- ORCA official initial patients `00001`〜`00011` were treated as existing.
-- `acceptedCandidateCount=0` means current read-only mutation-ready evidence is insufficient; it does not mean official initial patients are nonexistent.
+- ORCA Trial official initial patients `00001`〜`00011` exist as official initial data, but are not mutation-ready in current evidence.
+- `acceptedCandidateCount=0` means current read-only mutation-ready evidence is insufficient across harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria; it does not mean official initial patients are absent.
+- HTTP 403 for insurance or appointment is `ambiguous_readiness_failure`, not insurance missing / appointment missing.
+- `apiResult=10` is `patient_not_found` rejection. `apiResult=60` is no-existing-acceptance diagnostic, not mutation success. `apiResult=00` with `Request_Number=00` is existing-acceptance diagnostic, not mutation success.
+- C7 dynamic evidence is not verified unless target mutation request capture exists. `targetMutationRequestCount=0` / `checkedRequests=0` must not be accepted.
+- MSW/local/static tests are not live ORCA fullflow success and must not be mixed with live ORCA fullflow claims.
 - Dynamic evidence secret scan: passed, findings `0`, `rawSensitiveFieldsExcluded=true`.
 - Review package raw artifact policy: raw ORCA bodies, raw network dumps, HAR, screenshots, traces, videos, credentials, cookies, sessions excluded.
 - `packageMode=extracted_review_subset`.
 - `package_source_secret_scan_claim` is package-source-scope only when backed by `secret-scan-review-bundle.log`; `full_source_secret_scan_claim=not_claimed` unless a full repo source scan is actually performed.
+- `full_source_secret_scan_claim=not_claimed` is not a full clean claim. `worktree_clean=not_verified` is not clean checkout truth.
 
 ## Final Static Verification
 - Command log: `docs/implementation/orca-trial-readonly-preflight-harness-20260419T220346Z/test-logs/final-static-verification.log`
@@ -70,7 +77,7 @@ RUN_ID: `20260419T220346Z`
 - Separate package verification: `node scripts/tools/scan-review-bundle.mjs ...` exit `0`; `node scripts/tools/validate-review-package-metadata.mjs ...` exit `0`.
 
 ## DADS/UI
-- UI changes were not made; DADS/UI guidance is not materially applicable for this task.
+- UI changes were not made; DADS/UI is not materially applicable.
 
 ## Residual Blocker
 - `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER`: read-only evidence still lacks mutation-ready insurance/appointment readiness, local selectable readiness for most candidates, and selector readiness for the locally selectable candidates.

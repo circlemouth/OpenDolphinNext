@@ -17,7 +17,7 @@ Commit: `7f64bd3a7 test(web-client): harden exact ORCA patient preflight`
 - exact preflight の公式患者存在確認を `/api/orca/official/patients/batch` から `/api/orca/official/patientgetv2?id=<patientId>&class=01&format=json` に変更。
 - `Api_Result`、`Patient_Information`、完全一致 `Patient_ID` が揃った parsed ORCA body だけを公式患者証跡として accepted。
 - `officialPatientExistence` / `officialPatientEvidence` を allowlist 済みフィールドだけに制限し、raw patient detail を summary に残さない形へ変更。
-- 00001〜00011 の patientgetv2 failure dimensions を `officialPatientReadinessAxes.patientgetv2[]` に機械可読で出すようにし、「公式初期患者が存在しない」とは結論しない文言に固定。
+- 00001〜00011 の patientgetv2 failure dimensions を `officialPatientReadinessAxes.patientgetv2[]` に機械可読で出すようにし、ORCA Trial 公式初期患者 `00001`〜`00011` は official initial data として存在するが current evidence では mutation-ready ではない、という文言に固定。
 - batch DTO 形状、`Api_Result=10`、`Patient_Information` 欠落、ID mismatch、patient-not-found wording の拒否をテストで固定。
 
 検証コマンド / exit code:

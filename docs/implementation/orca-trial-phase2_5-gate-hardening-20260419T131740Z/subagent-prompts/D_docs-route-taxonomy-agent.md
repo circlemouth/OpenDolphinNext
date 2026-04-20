@@ -37,9 +37,9 @@ Required hardening:
    - `0000001` is reusable WebORCA candidate
    - local selectable patient substitutes for official ORCA patient existence
    - HTTP 403 means insurance or appointment missing
-   - apiResult=10 or apiResult=60 can be mutation success
+   - diagnostic-only states (`apiResult=10`, `apiResult=60`, or `apiResult=00` with `Request_Number=00`) are mutation success
    - K1/K2/K3 are success without acceptance evidence
-   Also do not imply acceptedCandidateCount=0 means official Trial initial patients do not exist. `00001` to `00011` are official registered seed data; zero accepted candidates means read-only mutation-readiness evidence is incomplete in the current harness/API/auth/parser/readiness/exact-preflight chain.
+   Also do not imply `acceptedCandidateCount=0` means official Trial initial patients are absent. `00001` to `00011` exist as official initial data; zero accepted candidates means read-only mutation-readiness evidence is incomplete across current harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria.
 3. Docs must describe exact selected-candidate preflight as the only Phase 3 handoff artifact.
 4. Docs must describe review package extracted subset metadata, guarantee scope, non-guarantee scope, clean-claim limits, and sanitized evidence policy.
 5. Keep Japanese docs UTF-8 without BOM and avoid duplicating long source-of-truth sections unnecessarily.

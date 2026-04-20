@@ -22,8 +22,8 @@ RUN_ID: `20260419T131740Z`
 2. candidate discovery の summary だけで Phase 3 mutation 実行が許可される。
    - 対策: release / cutover / reviewer packet docs で、Phase 3 handoff artifact は `qa-weborca-readonly-preflight.mjs` の exact selected-candidate summary のみと固定した。
 3. `accepted candidate = 0` が ORCA Trial 公式初期患者の不存在として報告される。
-   - 対策: `00001`〜`00011` は公式登録済み初期患者として扱い、0 件時は `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` として current harness/API/auth/ID normalization/parser/insurance/appointment/exact preflight criteria の未充足に限定する文言へ修正した。
-4. HTTP 200、not-run / not-verified、`apiResult=10/60`、K1/K2/K3 warning text が mutation success と誤判定される。
+   - 対策: `00001`〜`00011` は official initial data として存在するが current evidence では mutation-ready ではないとし、0 件時は `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER` として current harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria の未充足に限定する文言へ修正した。
+4. HTTP 200、not-run / not-verified、`apiResult=10/60`、`apiResult=00` with `Request_Number=00`、K1/K2/K3 warning text が mutation success と誤判定される。
    - 対策: endpoint-specific acceptance evidence が必要であり、これら単独では Phase 3 / live success 証跡にしないことを維持・補強した。
 5. reviewer packet に raw live evidence、credential、患者機微情報が混入する。
    - 対策: extracted sanitized subset のみ同梱し、credential-bearing URL、Cookie、Authorization、JSESSIONID、CSRF、raw password、患者機微 detail を除外する policy を追加した。

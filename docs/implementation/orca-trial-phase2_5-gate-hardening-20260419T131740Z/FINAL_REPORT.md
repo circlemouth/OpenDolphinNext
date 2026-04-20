@@ -9,11 +9,11 @@
 
 - Candidate discovery is proposal-only and emits `candidateDiscoveryAloneAuthorizesPhase3=false`.
 - Candidate discovery never authorizes Phase 3; exact selected-candidate read-only preflight is the only Phase 3 handoff artifact.
-- `acceptedCandidateCount=0` means the current harness/API/auth/parser/readiness/exact-preflight criteria did not produce mutation-ready read-only evidence for official Trial initial patients `00001` to `00011`. It does not claim those official initial patients are absent.
+- `acceptedCandidateCount=0` means ORCA Trial official initial patients `00001` to `00011` exist as official initial data, but the current harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria did not produce mutation-ready read-only evidence. It does not claim those official initial patients are absent.
 - Official patient existence now requires parsed ORCA body, all-zero apiResult, `Patient_Information`, exact normalized `Patient_ID`, and no patient-not-found wording.
 - Insurance and appointment readiness distinguish ambiguous transport/auth/parser failures from business rejections.
-- `apiResult=10` is patient-not-found rejection. `apiResult=60` is no-existing-acceptance diagnostic, not mutation success.
-- Phase 3 not-run and C7 not-verified summaries cannot be read as success.
+- `apiResult=10` is `patient_not_found` rejection. `apiResult=60` is no-existing-acceptance diagnostic, not mutation success. `apiResult=00` with `Request_Number=00` is existing-acceptance diagnostic, not mutation success.
+- Phase 3 not-run and C7 not-verified summaries cannot be read as success. C7 dynamic evidence is not verified unless target mutation request capture exists; `targetMutationRequestCount=0` / `checkedRequests=0` must not be accepted.
 - K1/K2/K3 only become warning success with registration evidence and C7/preflight evidence.
 - Route taxonomy wording and guard tests now distinguish public official/master routes from docs/mock/test/detector references.
 - Review package metadata now declares `packageMode=extracted_review_subset`, guarantee scope, non-guarantee scope, `.git` absence, clean-claim limits, and dynamic-only secret scan scope.
@@ -39,7 +39,7 @@ Focused Vitest result: 6 files passed, 82 tests passed.
 ## Readiness
 
 - Phase 2.5 readiness: repo-local gate hardening is ready after static and focused unit verification.
-- Phase 3 readiness: not executable from candidate discovery alone. It requires exact selected-candidate read-only preflight with accepted boolean `true`, matching artifact path/hash/runId/candidateId/input identity, and complete patient/insurance/local/selector/appointment/diagnostic evidence.
+- Phase 3 readiness: not executable from candidate discovery alone. It requires exact selected-candidate read-only preflight with `acceptedForPhase3Attempt` boolean `true`, matching artifact path/hash/runId/candidateId/input identity, and complete patient/insurance/local selectable/selector/appointment/diagnostic evidence.
 - Phase 4 readiness: not executable until Phase 3 has business-accepted mutation evidence.
 
 ## Package
@@ -54,6 +54,8 @@ Focused Vitest result: 6 files passed, 82 tests passed.
 - Dynamic evidence secret scan: passed for `docs/implementation/orca-trial-phase2_5-gate-hardening-20260419T131740Z`
 - Package source-scope secret scan claim: `passed` via `command-logs/secret-scan-review-bundle.log`
 - Generated review bundle scan: passed for raw/generated path exclusion and included source-scope secret literals.
+- `full_source_secret_scan_claim=not_claimed` is not a full clean claim. `worktree_clean=not_verified` is not clean checkout truth.
+- MSW/local/static tests were not mixed with live ORCA fullflow success; Phase 3 / Phase 4 / fullflow / mutation were not run.
 
 ## Residual Blockers
 

@@ -43,7 +43,7 @@ Secret scan:
 - `secret-scan.log`
 - `status=pass`, `findings=0`, `rawSensitiveFieldsExcluded=true`
 
-ブロッカーは「公式初期患者の不存在」ではなく、current harness / endpoint / auth / parser / readiness / local sync / selector 条件の mutation-ready read-only evidence 不足です。
+ブロッカーは「公式初期患者の不存在」ではありません。ORCA Trial 公式初期患者 `00001`〜`00011` は official initial data として存在しますが、current harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria の mutation-ready read-only evidence が不足しています。
 
 Main agent note:
 - D の worktree commit は `artifacts/.../network/*.json` を含むため、その commit 全体は統合しない。review package には sanitized summary/report/hash/secret-scan のみを入れる。

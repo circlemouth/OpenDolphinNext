@@ -9,5 +9,7 @@
 - stdout: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient.worktrees/orca-readonly-investigation-20260419T220346Z/artifacts/orca-remediation/closeout/20260419T220346Z/reports/candidate-discovery.stdout.log
 - stderr: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient.worktrees/orca-readonly-investigation-20260419T220346Z/artifacts/orca-remediation/closeout/20260419T220346Z/reports/candidate-discovery.stderr.log
 
-Exact selected-candidate preflight was not run because acceptedCandidateCount=0.
+Exact selected-candidate preflight was not run because `acceptedCandidateCount=0`.
+`acceptedCandidateCount=0` means ORCA Trial official initial patients `00001`-`00011` exist as official initial data but currently lack mutation-ready read-only evidence across harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria.
 Phase 3, Phase 4, fullflow, and mutation scripts were not run.
+Candidate discovery is proposal-only and is not a Phase 3 handoff artifact.

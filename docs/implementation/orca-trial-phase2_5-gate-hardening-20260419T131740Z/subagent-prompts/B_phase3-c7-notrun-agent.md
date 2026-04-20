@@ -32,7 +32,7 @@ Required hardening:
    - `mutationSuccess=false`
    - `businessAccepted=false` or `notRunBusinessEvidenceAbsent=true`
    - `businessAcceptedWithWarnings=false` or `notRunBusinessEvidenceAbsent=true`
-   If the upstream reason is zero accepted candidates from `00001` to `00011`, the wording is `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER`; do not claim official initial patients are absent.
+   If the upstream reason is zero accepted candidates from `00001` to `00011`, the wording is `PARTIAL / TEST-DATA OR HARNESS READINESS BLOCKER`; do not claim official initial patients are absent. State that ORCA Trial official initial patients `00001` to `00011` exist as official initial data but currently lack mutation-ready read-only evidence across harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria.
 6. C7 dynamic gate:
    - If Phase 3 is not run, C7 is `not_verified`, not accepted.
    - `targetMutationRequestCount=0` and `checkedRequests=0` must not be accepted.
@@ -40,7 +40,8 @@ Required hardening:
 7. C7 static helper treats key presence as violation: empty string, null, and key-only presence do not false-pass. Include `Medical_Information` / `medicalInformation` variants in coverage.
 8. Request_Number=00 diagnostic in exact preflight remains diagnostic only:
    - apiResult=10 rejected
-   - apiResult=60 no-existing-acceptance diagnostic, not success
+   - apiResult=60 no-existing-acceptance diagnostic, not mutation success
+   - apiResult=00 with Request_Number=00 existing-acceptance diagnostic, not mutation success
    - apiResult=00 existing-acceptance diagnostic, not mutation success
 9. K1/K2/K3 must not be business success unless registration/acceptance evidence exists.
 

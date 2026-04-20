@@ -1,6 +1,6 @@
 # ORCA Route Taxonomy
 
-最終更新: 2026-04-19
+最終更新: 2026-04-20
 
 ## 目的
 
@@ -11,18 +11,18 @@ public route の taxonomy を固定し、official / master / local / admin-inter
 - `local`: local-only wrapper / local projection / local persistence。公開 prefix は `/api/local/*` のみ。
 - `admin-internal`: 管理 UI 向けの internal label / internal state。公開 prefix は `/api/admin/internal/*` のみ。
 
-`/api/orca/*` の public route は `official` と `master` だけです。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion に分類される route string は retained string または negative assertion であり、public route ではありません。
+`/api/orca/*` の public route は `official` と `master` だけです。production fail-close sentinel、MSW mock/test-only legacy route surface、e2e/QA fixture surface、blocked-route detector、docs/reference、server route inventory negative assertion、web.xml exposure negative assertion に分類される route string は retained string または negative assertion であり、public route ではありません。mock / test / detector / docs reference は public route ではなく、`runtime-ready-smoke` の blocked route detector も success route ではありません。
 
 ## Route String Categories
 
-以下は guard / docs / report で同じ名称を使う分類です。`public ORCA route contract` は retained string の guard category ではなく、production route として成立する `/api/orca/official/*` と `/api/orca/master/*` だけを指します。docs/reference、mock/test fixture、blocked-route detector、negative assertion は、たとえ official/master の literal を含んでも public route 宣言ではありません。
+以下は guard / docs / report で同じ名称を使う分類です。`public ORCA route contract` は retained string の guard category ではなく、production route として成立する `/api/orca/official/*` と `/api/orca/master/*` だけを指します。docs/reference、mock/test fixture、blocked-route detector、negative assertion は、たとえ official/master の literal を含んでも public route 宣言ではありません。各 category のファイル例は代表例であり、legacy route が `orcaQueueApi.ts` と `orcaQueue.ts` だけに残るという意味ではありません。guard の `path + route + category + reason` が実際の retained string 分類です。
 
 1. public ORCA route contract
    current public surface は production route として公開される `official=/api/orca/official/*` と `master=/api/orca/master/*` だけです。docs/reference、mock/test fixture、blocked-route detector、server inventory assertion、web.xml exposure assertion は public route ではありません。`/api/orca/queue` と `/api/orca/pusheventgetv2` は inventory / exposure / runtime contract に含めません。
 2. production fail-close sentinel
-   `web-client/src/features/outpatient/orcaQueueApi.ts` が historical route string を保持し、unavailable response を返して browser network call を fail-close します。この category は public route ではありません。
+   production source に残す必要がある historical route string は、unavailable response や blocked state を返して browser network call を fail-close する sentinel としてだけ許可します。現行 tree の代表例は `web-client/src/features/outpatient/orcaQueueApi.ts` ですが、この category は public route ではなく、他の production source へ無制限に広げるものでもありません。
 3. MSW mock/test-only legacy route surface
-   `web-client/src/mocks/handlers/orcaQueue.ts` が MSW/isolated test 用の legacy route constant を保持します。これは public taxonomy ではなく、MSW/isolated test 以外の runtime で使ってはなりません。
+   MSW / isolated unit test / local mock 用の legacy route constant だけを指します。現行 tree の代表例は `web-client/src/mocks/handlers/orcaQueue.ts` ですが、これは public taxonomy ではなく、MSW/isolated test 以外の runtime で使ってはなりません。
 4. e2e/QA fixture surface
    `tests/**`、`web-client/scripts/qa-*.mjs`、`web-client/plugins/flagged-mock-plugin.ts` の fixture / QA / dev-preview 用 route string です。public route ではなく、production source へ移動した場合は failure です。
 5. blocked-route detector

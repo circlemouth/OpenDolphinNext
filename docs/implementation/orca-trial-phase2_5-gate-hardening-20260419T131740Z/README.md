@@ -31,11 +31,13 @@ Saved prompts are in `subagent-prompts/`.
 ## Gate Invariants
 
 - Candidate discovery is proposal-only.
-- ORCA Trial initial patients `00001` to `00011` are treated as official registered seed data. If no candidate is accepted, the claim is not that those official initial patients do not exist; the claim is only that current read-only evidence through the harness/API/auth/parser/readiness/exact-preflight criteria is not sufficient for Phase 3 mutation readiness.
+- ORCA Trial initial patients `00001` to `00011` exist as official initial data. If no candidate is accepted, the claim is not that those official initial patients are absent; the claim is only that current read-only evidence across harness / endpoint / auth / parser / insurance / appointment / selector / local selectable / exact preflight criteria is not sufficient for Phase 3 mutation readiness.
 - Exact selected-candidate read-only preflight is the only Phase 3 handoff artifact.
 - `acceptedForPhase3Attempt` must be boolean `true` to permit mutation.
-- `apiResult=10` is patient-not-found rejection.
+- `apiResult=10` is `patient_not_found` rejection.
 - `apiResult=60` is no-existing-acceptance diagnostic, not mutation success.
-- Phase 3 not run and C7 not verified are not success states.
+- `apiResult=00` with `Request_Number=00` is existing-acceptance diagnostic, not mutation success.
+- Phase 3 not run and C7 not verified are not success states. C7 dynamic evidence is not verified unless target mutation request capture exists, and `targetMutationRequestCount=0` / `checkedRequests=0` must not be accepted.
 - Review packages must describe whether they are extracted subsets and what they do not prove.
+- `full_source_secret_scan_claim=not_claimed` must not be phrased as full clean, and `worktree_clean=not_verified` must not be phrased as clean checkout truth.
 - Raw artifacts and secret-bearing values must stay out of review bundles.
