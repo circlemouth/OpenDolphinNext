@@ -33,6 +33,20 @@ const hash = (value) => crypto.createHash('sha256').update(String(value)).digest
 const INSURANCE_BUSINESS_REJECTED_RESULTS = new Set(['21', '23']);
 const AMBIGUOUS_READINESS_HTTP_STATUSES = new Set([0, 401, 403, 404]);
 const APPOINTMENT_FLOW_MODES = new Set(['direct_acceptance', 'appointment_row']);
+export const READINESS_FAILURE_CATEGORIES = {
+  localGuard: 'localGuard',
+  csrf: 'csrf',
+  sessionAuthRole: 'sessionAuthRole',
+  upstream: 'upstream',
+  methodPathMismatch: 'methodPathMismatch',
+  credentialUnavailable: 'credentialUnavailable',
+  wrapperErrorBeforeUpstream: 'wrapperErrorBeforeUpstream',
+  parserBlankApiResult: 'parserBlankApiResult',
+  upstreamNon2xxNoBody: 'upstreamNon2xxNoBody',
+  unknownAmbiguous403: 'unknownAmbiguous403',
+  unknown: 'unknown',
+  none: 'none',
+};
 
 const asArray = (value) => (Array.isArray(value) ? value : value == null ? [] : [value]);
 const isRecord = (value) => value && typeof value === 'object' && !Array.isArray(value);
@@ -97,6 +111,118 @@ const hasWrapperError = (body) =>
       body?.status?.error ??
       body?.status?.errors,
   );
+
+const lower = (value) => normalizeText(value).toLowerCase();
+const safeBodyErrorTokens = (body) => {
+  if (!isRecord(body)) return [];
+  return [
+    body.error,
+    body.code,
+    body.errorCode,
+    body.errorCategory,
+    body.message,
+    body.reason,
+    body.source,
+    body.details?.errorMessage,
+    body.details?.message,
+    body.details?.reason,
+    body.details?.source,
+  ]
+    .map(lower)
+    .filter(Boolean);
+};
+
+const includesAny = (values, patterns) => values.some((value) => patterns.some((pattern) => pattern.test(value)));
+const bodyIsEmpty = (body) => !isRecord(body) || Object.keys(body).length === 0;
+const numberFrom = (...values) => {
+  for (const value of values) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  }
+  return undefined;
+};
+
+export const classifyReadinessFailureDiagnostic = ({
+  httpStatus,
+  body,
+  apiResult,
+  method,
+  expectedMethod,
+  pathName,
+  expectedPath,
+  responseBodyChars,
+  parsedBodyOk,
+} = {}) => {
+  const status = asFiniteStatus(httpStatus);
+  const tokens = safeBodyErrorTokens(body);
+  const normalizedApiResult = normalizeApiResult(apiResult ?? body?.apiResult ?? body?.Api_Result);
+  const responseChars = Number(responseBodyChars ?? 0);
+  const upstreamStatus = numberFrom(
+    body?.orcaHttpStatus,
+    body?.upstreamStatus,
+    body?.upstreamHttpStatus,
+    body?.details?.orcaHttpStatus,
+    body?.details?.upstreamStatus,
+    body?.details?.upstreamHttpStatus,
+  );
+  const methodMismatch =
+    normalizeText(method) &&
+    normalizeText(expectedMethod) &&
+    normalizeText(method).toUpperCase() !== normalizeText(expectedMethod).toUpperCase();
+  const pathMismatch =
+    normalizeText(pathName) &&
+    normalizeText(expectedPath) &&
+    normalizeText(pathName) !== normalizeText(expectedPath);
+  const wrapperErrorPresent = hasWrapperError(body);
+  const upstreamErrorPresent =
+    Boolean(body?.upstreamError ?? body?.details?.upstreamError) ||
+    includesAny(tokens, [/^orca_gateway$/, /orca_gateway_error/, /orca_http_error/, /upstream/, /orca_api_error/]) ||
+    upstreamStatus !== undefined;
+  const category = (() => {
+    if (methodMismatch || pathMismatch || status === 405 || includesAny(tokens, [/method_not_allowed/, /path_mismatch/, /route_not_found/])) {
+      return READINESS_FAILURE_CATEGORIES.methodPathMismatch;
+    }
+    if (includesAny(tokens, [/csrf/])) return READINESS_FAILURE_CATEGORIES.csrf;
+    if (includesAny(tokens, [/route.*guard/, /local.*guard/, /blocked.*route/, /taxonomy/])) {
+      return READINESS_FAILURE_CATEGORIES.localGuard;
+    }
+    if (
+      (status === 401 || status === 403) &&
+      includesAny(tokens, [/unauthorized/, /^forbidden$/, /facility_missing/, /remote_user_missing/, /session_revoked/, /step_up/, /privilege/])
+    ) {
+      return READINESS_FAILURE_CATEGORIES.sessionAuthRole;
+    }
+    if (
+      includesAny(tokens, [/credential/, /decrypt/, /protector/, /settings/, /not_available/, /not available/, /incomplete/])
+    ) {
+      return READINESS_FAILURE_CATEGORIES.credentialUnavailable;
+    }
+    if (upstreamStatus === 401 || upstreamStatus === 403 || upstreamErrorPresent) {
+      return READINESS_FAILURE_CATEGORIES.upstream;
+    }
+    if (wrapperErrorPresent) return READINESS_FAILURE_CATEGORIES.wrapperErrorBeforeUpstream;
+    if (status === 200 && !normalizedApiResult) return READINESS_FAILURE_CATEGORIES.parserBlankApiResult;
+    if (!is2xx(status) && (responseChars === 0 || bodyIsEmpty(body) || parsedBodyOk === false)) {
+      return READINESS_FAILURE_CATEGORIES.upstreamNon2xxNoBody;
+    }
+    if (status === 403) return READINESS_FAILURE_CATEGORIES.unknownAmbiguous403;
+    if (status === 0 || !is2xx(status) || !normalizedApiResult) return READINESS_FAILURE_CATEGORIES.unknown;
+    return READINESS_FAILURE_CATEGORIES.none;
+  })();
+  return {
+    category,
+    sourceCategory: category,
+    status,
+    upstreamStatus,
+    bodyPresent: !bodyIsEmpty(body),
+    apiResultPresent: Boolean(normalizedApiResult),
+    wrapperErrorPresent,
+    upstreamErrorPresent,
+    methodMismatch: Boolean(methodMismatch),
+    pathMismatch: Boolean(pathMismatch),
+    rawSensitiveFieldsExcluded: true,
+  };
+};
 
 const isAmbiguousReadinessStatus = (status) =>
   AMBIGUOUS_READINESS_HTTP_STATUSES.has(asFiniteStatus(status)) || asFiniteStatus(status) >= 500;
@@ -536,7 +662,17 @@ const dateInRange = (baseDate, startDate, endDate) => {
   return true;
 };
 
-export const summarizeInsuranceReadiness = ({ httpStatus, body, baseDate }) => {
+export const summarizeInsuranceReadiness = ({
+  httpStatus,
+  body,
+  baseDate,
+  method,
+  expectedMethod,
+  pathName,
+  expectedPath,
+  responseBodyChars,
+  parsedBodyOk,
+}) => {
   const apiResult = normalizeApiResult(body?.apiResult ?? body?.Api_Result);
   const combinations = collectInsuranceCombinations(body);
   const eligible = combinations.filter((combination) =>
@@ -549,6 +685,17 @@ export const summarizeInsuranceReadiness = ({ httpStatus, body, baseDate }) => {
   const selected = eligible.find((combination) => combinationNumberOf(combination)) ?? eligible[0];
   const selectedCombinationHash = selected ? hash(combinationNumberOf(selected) || JSON.stringify(Object.keys(selected))) : undefined;
   const status = asFiniteStatus(httpStatus);
+  const diagnostic = classifyReadinessFailureDiagnostic({
+    httpStatus: status,
+    body,
+    apiResult,
+    method,
+    expectedMethod,
+    pathName,
+    expectedPath,
+    responseBodyChars,
+    parsedBodyOk,
+  });
   const classification = (() => {
     if (hasWrapperError(body) || isAmbiguousReadinessStatus(status)) return 'ambiguous_readiness_failure';
     if (!apiResult) return 'ambiguous_readiness_failure';
@@ -568,6 +715,9 @@ export const summarizeInsuranceReadiness = ({ httpStatus, body, baseDate }) => {
     eligibleCount: eligible.length,
     effectiveCount: eligible.length,
     selectedCombinationHash,
+    diagnosticCategory: diagnostic.category,
+    readinessFailureCategory: classification === 'accepted' ? READINESS_FAILURE_CATEGORIES.none : diagnostic.category,
+    diagnostic,
     accepted: classification === 'accepted',
   };
 };
@@ -625,6 +775,12 @@ export const summarizeAppointmentDependency = ({
   apiResult,
   patientId,
   baseDate,
+  method,
+  expectedMethod,
+  pathName,
+  expectedPath,
+  responseBodyChars,
+  parsedBodyOk,
 }) => {
   const normalizedFlowMode = APPOINTMENT_FLOW_MODES.has(normalizeText(flowMode)) ? normalizeText(flowMode) : 'unknown';
   const hasProbe = httpStatus !== undefined && httpStatus !== null;
@@ -632,6 +788,30 @@ export const summarizeAppointmentDependency = ({
   const normalizedApiResult = normalizeApiResult(apiResult ?? body?.apiResult ?? body?.Api_Result);
   const rows = collectAppointmentRows(body);
   const exactRowCount = rows.filter((row) => appointmentRowMatches(row, body, { patientId, baseDate })).length;
+  const diagnostic = hasProbe
+    ? classifyReadinessFailureDiagnostic({
+        httpStatus: status,
+        body,
+        apiResult: normalizedApiResult,
+        method,
+        expectedMethod,
+        pathName,
+        expectedPath,
+        responseBodyChars,
+        parsedBodyOk,
+      })
+    : {
+        category: READINESS_FAILURE_CATEGORIES.none,
+        sourceCategory: READINESS_FAILURE_CATEGORIES.none,
+        status: 0,
+        bodyPresent: false,
+        apiResultPresent: false,
+        wrapperErrorPresent: false,
+        upstreamErrorPresent: false,
+        methodMismatch: false,
+        pathMismatch: false,
+        rawSensitiveFieldsExcluded: true,
+      };
   const base = {
     flowMode: normalizedFlowMode,
     mode: normalizedFlowMode === 'direct_acceptance' ? 'direct_patient_acceptance_flow' : normalizedFlowMode,
@@ -642,6 +822,9 @@ export const summarizeAppointmentDependency = ({
     apiResult: normalizedApiResult,
     rowCount: rows.length,
     exactRowCount,
+    diagnosticCategory: diagnostic.category,
+    readinessFailureCategory: diagnostic.category,
+    diagnostic,
   };
 
   if (normalizedFlowMode === 'unknown') {
@@ -656,6 +839,7 @@ export const summarizeAppointmentDependency = ({
       classification: 'direct_acceptance_no_appointment_required',
       verdict: 'accepted',
       accepted: true,
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.none,
       reason: 'direct flow does not require an existing appointment row',
     };
   }
@@ -681,6 +865,7 @@ export const summarizeAppointmentDependency = ({
       classification: exactRowCount > 0 ? 'appointment_row_present' : 'direct_acceptance_no_appointment_required',
       verdict: 'accepted',
       accepted: true,
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.none,
       reason: exactRowCount > 0
         ? 'direct flow observed an appointment row but does not require it'
         : 'direct flow does not require an existing appointment row',
@@ -688,7 +873,13 @@ export const summarizeAppointmentDependency = ({
   }
 
   if (exactRowCount > 0) {
-    return { ...base, classification: 'appointment_row_present', verdict: 'accepted', accepted: true };
+    return {
+      ...base,
+      classification: 'appointment_row_present',
+      verdict: 'accepted',
+      accepted: true,
+      readinessFailureCategory: READINESS_FAILURE_CATEGORIES.none,
+    };
   }
   return { ...base, classification: 'appointment_row_missing', verdict: 'rejected', accepted: false };
 };
