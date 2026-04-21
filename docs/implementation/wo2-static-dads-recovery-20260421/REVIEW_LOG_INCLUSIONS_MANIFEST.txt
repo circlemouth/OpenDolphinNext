@@ -1,21 +1,29 @@
 review_log_inclusions_manifest_version=1
-run_id=20260421T111148Z
-created_at_utc=2026-04-21T11:45:30Z
+run_id=20260421T132901Z
+created_at_utc=2026-04-21T13:29:01Z
 review_log_schema=command_logs_require_command_cwd_runId_start_end_exit_code_and_non_empty_content
-review_log_include_count=10
-review_log_includes=command-log.jsonl,command-logs/git-diff-check.log,command-logs/node-check.log,command-logs/bash-n.log,command-logs/npm-run-typecheck.log,command-logs/focused-dadsClinicalInputContract.log,command-logs/npm-run-build.log,command-logs/npm-run-lint.log,command-logs/npm-run-test-ci.log,command-logs/review-package-tests.log
 dynamic_review_evidence_secret_scan_claim=passed
 bundle_included_source_scope_secret_scan_claim=not_claimed
-package_source_secret_scan_evidence=OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip.secret-scan-review-bundle.log
+package_source_secret_scan_evidence=external_final_zip_secret_scan_sidecar
 empty_log_policy=empty_logs_do_not_count_as_pass_evidence
+self_reference_policy=final_zip_hash_summary_scan_metadata_and_ledger_verification_are_external_sidecars_generated_after_zip_creation
 
 - command-log.jsonl
+- command-logs/npm-ci.log
 - command-logs/git-diff-check.log
-- command-logs/node-check.log
-- command-logs/bash-n.log
+- command-logs/source-scope-static-inspection.log
+- command-logs/source-scope-forbidden-patterns.log
 - command-logs/npm-run-typecheck.log
-- command-logs/focused-dadsClinicalInputContract.log
 - command-logs/npm-run-build.log
 - command-logs/npm-run-lint.log
 - command-logs/npm-run-test-ci.log
+- command-logs/focused-dadsClinicalInputContract.log
 - command-logs/review-package-tests.log
+- command-logs/artifact-ledger-verify.log
+- command-logs/final-git-branch.log
+- command-logs/final-git-head.log
+- command-logs/final-git-status-short.log
+- command-logs/final-git-diff-stat.log
+- command-logs/final-git-diff-cached-stat.log
+- command-logs/final-git-show-stat.log
+- command-logs/final-changed-files.log

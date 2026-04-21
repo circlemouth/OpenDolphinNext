@@ -1,0 +1,387 @@
+command_log_version=1
+command=npm --prefix web-client run test:ci
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main
+runId=20260421T142818Z
+start_utc=2026-04-21T15:02:17Z
+--- command output ---
+
+> web-client@0.0.0 pretest:ci
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=1130. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=248, blocked-route detector=39, docs/reference=181, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 test:ci
+> vitest run --silent --reporter=dot
+
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client
+
+x·····························································································································································································-·····························································································································-·······················Error: Uncaught [Error: java.lang.IllegalStateException: render exploded]
+    at reportException (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:26599:12) Error: java.lang.IllegalStateException: render exploded
+    at PatientsPage (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/src/AppRouter.navigation.test.tsx:77:13)
+    at renderWithHooks (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+Error: Uncaught [Error: java.lang.IllegalStateException: render exploded]
+    at reportException (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/helpers/runtime-script-errors.js:66:24)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:353:9)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+    at HTMLUnknownElement.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventTarget.js:241:34)
+    at Object.invokeGuardedCallbackDev (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:4213:16)
+    at invokeGuardedCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:4277:31)
+    at beginWork$1 (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:27490:7)
+    at performUnitOfWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:26599:12) Error: java.lang.IllegalStateException: render exploded
+    at PatientsPage (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/src/AppRouter.navigation.test.tsx:77:13)
+    at renderWithHooks (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:15486:18)
+    at mountIndeterminateComponent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:20103:13)
+    at beginWork (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:21626:16)
+    at HTMLUnknownElement.callCallback (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/react-dom/cjs/react-dom.development.js:4164:14)
+    at HTMLUnknownElement.callTheUserObjectsOperation (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/generated/EventListener.js:26:30)
+    at innerInvokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:350:25)
+    at invokeEventListeners (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:286:3)
+    at HTMLUnknownElementImpl._dispatch (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:233:9)
+    at HTMLUnknownElementImpl.dispatchEvent (/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client/node_modules/jsdom/lib/jsdom/living/events/EventTarget-impl.js:104:17)
+··················································································································································································································································································································································································································································································································································································································································································································································································································································································································································································································
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/charts/__tests__/DiagnosisEditPanel.readback.test.tsx > DiagnosisEditPanel readback contract > principal and suspected fields roundtrip from readback into badge, edit dialog, and update payload
+TestingLibraryElementError: Found multiple elements with the text of: /転帰/
+
+Here are the matching elements:
+
+Ignored nodes: comments, script, style
+[36m<input[39m
+  [33maria-describedby[39m=[32m"diagnosis-end-help"[39m
+  [33mid[39m=[32m"diagnosis-end"[39m
+  [33mtype[39m=[32m"date"[39m
+  [33mvalue[39m=[32m"2026-04-20"[39m
+[36m/>[39m
+
+Ignored nodes: comments, script, style
+[36m<input[39m
+  [33maria-describedby[39m=[32m"diagnosis-outcome-help"[39m
+  [33mid[39m=[32m"diagnosis-outcome"[39m
+  [33mlist[39m=[32m"diagnosis-outcome-options"[39m
+  [33mplaceholder[39m=[32m"例: 継続"[39m
+  [33mvalue[39m=[32m"治癒"[39m
+[36m/>[39m
+
+(If this is intentional, then use the `*AllBy*` variant of the query (like `queryAllByText`, `getAllByText`, or `findAllByText`)).
+
+Ignored nodes: comments, script, style
+[36m<div[39m
+  [33maria-describedby[39m=[32m"focus-trap-:r0:-description"[39m
+  [33maria-labelledby[39m=[32m"focus-trap-:r0:-title"[39m
+  [33maria-modal[39m=[32m"true"[39m
+  [33mclass[39m=[32m"focus-trap-dialog__panel"[39m
+  [33mrole[39m=[32m"dialog"[39m
+  [33mtabindex[39m=[32m"-1"[39m
+[36m>[39m
+  [36m<header[39m
+    [33mclass[39m=[32m"focus-trap-dialog__header"[39m
+  [36m>[39m
+    [36m<h2[39m
+      [33mclass[39m=[32m"focus-trap-dialog__title"[39m
+      [33mid[39m=[32m"focus-trap-:r0:-title"[39m
+    [36m>[39m
+      [0m病名の編集[0m
+    [36m</h2>[39m
+    [36m<button[39m
+      [33maria-label[39m=[32m"ダイアログを閉じる"[39m
+      [33mclass[39m=[32m"focus-trap-dialog__close"[39m
+      [33mtype[39m=[32m"button"[39m
+    [36m>[39m
+      [0m×[0m
+    [36m</button>[39m
+  [36m</header>[39m
+  [36m<p[39m
+    [33mclass[39m=[32m"focus-trap-dialog__description"[39m
+    [33mid[39m=[32m"focus-trap-:r0:-description"[39m
+  [36m>[39m
+    [0m接頭語/接尾語、疑い病名に対応。Enter で保存、Esc で閉じます。[0m
+  [36m</p>[39m
+  [36m<div[39m
+    [33mclass[39m=[32m"focus-trap-dialog__content"[39m
+  [36m>[39m
+    [36m<form[39m
+      [33mclass[39m=[32m"charts-side-panel__form charts-diagnosis__editor"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"病名（接頭/病名/接尾）"[39m
+        [33mclass[39m=[32m"charts-diagnosis__name-row"[39m
+        [33mrole[39m=[32m"group"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"charts-side-panel__field charts-diagnosis__name-part"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"diagnosis-prefix"[39m
+          [36m>[39m
+            [0m接頭[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"diagnosis-prefix"[39m
+            [33mplaceholder[39m=[32m"例: 術後"[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"charts-side-panel__field charts-diagnosis__name-main"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"diagnosis-name"[39m
+          [36m>[39m
+            [0m病名 *[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"diagnosis-name"[39m
+            [33mplaceholder[39m=[32m"例: 高血圧症"[39m
+            [33mvalue[39m=[32m"糖尿病"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"charts-side-panel__field charts-diagnosis__name-part"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"diagnosis-suffix"[39m
+          [36m>[39m
+            [0m接尾[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"diagnosis-suffix"[39m
+            [33mplaceholder[39m=[32m"例: による"[39m
+            [33mvalue[39m=[32m""[39m
+          [36m/>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"charts-side-panel__field-row"[39m
+      [36m>[39m
+        [36m<label[39m
+          [33mclass[39m=[32m"charts-side-panel__toggle"[39m
+        [36m>[39m
+          [36m<input[39m
+            [33mchecked[39m=[32m""[39m
+            [33mid[39m=[32m"diagnosis-main"[39m
+            [33mname[39m=[32m"diagnosisMain"[39m
+            [33mtype[39m=[32m"checkbox"[39m
+          [36m/>[39m
+          [0m主病名[0m
+        [36m</label>[39m
+        [36m<label[39m
+          [33mclass[39m=[32m"charts-side-panel__toggle"[39m
+        [36m>[39m
+          [36m<input[39m
+            [33mchecked[39m=[32m""[39m
+            [33mid[39m=[32m"diagnosis-suspected"[39m
+            [33mname[39m=[32m"diagnosisSuspected"[39m
+            [33mtype[39m=[32m"checkbox"[39m
+          [36m/>[39m
+          [0m疑い[0m
+        [36m</label>[39m
+      [36m</div>[39m
+      [36m<details[39m
+        [33mclass[39m=[32m"charts-diagnosis__advanced"[39m
+        [33mopen[39m=[32m""[39m
+      [36m>[39m
+        [36m<summary[39m
+          [33mclass[39m=[32m"charts-diagnosis__advanced-summary"[39m
+        [36m>[39m
+          [0m詳細（コード/開始/転帰）[0m
+        [36m</summary>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"charts-side-panel__field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"diagnosis-code"[39m
+          [36m>[39m
+            [0m病名コード ※任意[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33mid[39m=[32m"diagnosis-code"[39m
+            [33mplaceholder[39m=[32m"例: I10"[39m
+            [33mvalue[39m=[32m"E11"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"charts-side-panel__field-row"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"charts-side-panel__field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"diagnosis-start"[39m
+            [36m>[39m
+              [0m開始日 ※必須[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33maria-describedby[39m=[32m"diagnosis-start-help"[39m
+              [33mid[39m=[32m"diagnosis-start"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-04-10"[39m
+            [36m/>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"charts-side-panel__help"[39m
+              [33mid[39m=[32m"diagnosis-start-help"[39m
+            [36m>[39m
+              [0m西暦の例: 2026-04-21。保存後に再取得した日付を一覧へ表示します。[0m
+            [36m</p>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"charts-side-panel__field"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mfor[39m=[32m"diagnosis-end"[39m
+            [36m>[39m
+              [0m転帰日 ※任意[0m
+            [36m</label>[39m
+            [36m<input[39m
+              [33maria-describedby[39m=[32m"diagnosis-end-help"[39m
+              [33mid[39m=[32m"diagnosis-end"[39m
+              [33mtype[39m=[32m"date"[39m
+              [33mvalue[39m=[32m"2026-04-20"[39m
+            [36m/>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"charts-side-panel__help"[39m
+              [33mid[39m=[32m"diagnosis-end-help"[39m
+            [36m>[39m
+              [0m西暦の例: 2026-04-30。開始日より前の日付は保存できません。[0m
+            [36m</p>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"charts-side-panel__field"[39m
+        [36m>[39m
+          [36m<label[39m
+            [33mfor[39m=[32m"diagnosis-outcome"[39m
+          [36m>[39m
+            [0m転帰 ※任意[0m
+          [36m</label>[39m
+          [36m<input[39m
+            [33maria-describedby[39m=[32m"diagnosis-outcome-help"[39m
+            [33mid[39m=[32m"diagnosis-outcome"[39m
+            [33mlist[39m=[32m"diagnosis-outcome-options"[39m
+            [33mplaceholder[39m=[32m"例: 継続"[39m
+            [33mvalue[39m=[32m"治癒"[39m
+          [36m/>[39m
+          [36m<datalist[39m
+            [33mid[39m=[32m"diagnosis-outcome-options"[39m
+          [36m>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"継続"[39m
+            [36m/>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"治癒"[39m
+            [36m/>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"中止"[39m
+            [36m/>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"再発"[39m
+            [36m/>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"死亡"[39m
+            [36m/>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"転院"[39m
+            [36m/>[39m
+            [36m<option[39m
+              [33mvalue[39m=[32m"不明"[39m
+            [36m/>[39m
+          [36m</datalist>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"charts-side-panel__help"[39m
+            [33mid[39m=[32m"diagnosis-outcome-help"[39m
+          [36m>[39m
+            [0m入力できる転帰: [0m
+            [0m継続、治癒、中止、再発、死亡、転院、不明[0m
+            [0m。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</details>[39m
+      [36m<div[39m
+        [33maria-label[39m=[32m"病名保存"[39m
+        [33mclass[39m=[32m"charts-diagnosis__editor-actions"[39m
+        [33mrole[39m=[32m"group"[39m
+      [36m>[39m
+        [36m<button[39m
+          [33mtype[39m=[32m"submit"[39m
+        [36m>[39m
+          [0m更新[0m
+        [36m</button>[39m
+        [36m<button[39m
+          [33mclass[39m=[32m"charts-side-panel__ghost"[39m
+          [33mtype[39m=[32m"button"[39m
+        [36m>[39m
+          [0m閉じる[0m
+        [36m</button>[39m
+      [36m</div>[39m
+      [36m<small[39m
+        [33mclass[39m=[32m"charts-diagnosis__hint"[39m
+      [36m>[39m
+        [0m追加後もダイアログは開いたままです（連続入力向け）。編集は保存後に自動で閉じます。[0m
+      [36m</small>[39m
+    [36m</form>[39m
+  [36m</div>[39m
+[36m</div>[39m
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ getElementError node_modules/@testing-library/dom/dist/query-helpers.js:20:35
+ ❯ getMultipleElementsFoundError node_modules/@testing-library/dom/dist/query-helpers.js:23:10
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:55:13
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/features/charts/__tests__/DiagnosisEditPanel.readback.test.tsx:118:27
+    116|     expect(within(dialog).getByLabelText(/開始日/)).toHaveValue('2026-04-…
+    117|     expect(within(dialog).getByLabelText(/転帰日/)).toHaveValue('2026-04-…
+    118|     expect(within(dialog).getByLabelText(/転帰/)).toHaveValue('治癒');
+       |                           ^
+    119| 
+    120|     await user.clear(within(dialog).getByLabelText(/転帰/));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 194 passed (195)
+      Tests  1 failed | 1315 passed | 2 skipped (1318)
+   Start at  00:02:18
+   Duration  76.05s (transform 19.88s, setup 32.49s, import 92.47s, tests 103.56s, environment 220.96s)
+
+--- command summary ---
+end_utc=2026-04-21T15:03:34Z
+exit_code=1
+result=FAIL

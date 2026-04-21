@@ -1,158 +1,158 @@
 command_log_version=1
 command=node --test tests/review-package/create-review-package.test.mjs
-cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient
-runId=20260421T111148Z
-start_utc=2026-04-21T11:45:00Z
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main
+runId=20260421T132901Z
+start_utc=2026-04-21T13:35:36Z
 --- command output ---
 TAP version 13
 # Subtest: creates a reviewer package without artifacts or legacy client content
 ok 1 - creates a reviewer package without artifacts or legacy client content
   ---
-  duration_ms: 400.138708
+  duration_ms: 344.962417
   type: 'test'
   ...
 # Subtest: adds manifest-listed review logs when requested
 ok 2 - adds manifest-listed review logs when requested
   ---
-  duration_ms: 685.447
+  duration_ms: 576.161833
   type: 'test'
   ...
 # Subtest: claims package source-scope scan only when the package scan log proves pass
 ok 3 - claims package source-scope scan only when the package scan log proves pass
   ---
-  duration_ms: 490.784417
+  duration_ms: 418.300833
   type: 'test'
   ...
 # Subtest: rejects dynamic-only evidence when the sidecar claims full source clean
 ok 4 - rejects dynamic-only evidence when the sidecar claims full source clean
   ---
-  duration_ms: 440.397292
+  duration_ms: 375.502833
   type: 'test'
   ...
 # Subtest: rejects final package scan evidence that targets a preliminary zip
 ok 5 - rejects final package scan evidence that targets a preliminary zip
   ---
-  duration_ms: 560.170791
+  duration_ms: 499.085958
   type: 'test'
   ...
 # Subtest: rejects missing or stale artifact hash ledger
 ok 6 - rejects missing or stale artifact hash ledger
   ---
-  duration_ms: 615.515375
+  duration_ms: 511.713958
   type: 'test'
   ...
 # Subtest: validates complete evidence directory artifact ledgers
 ok 7 - validates complete evidence directory artifact ledgers
   ---
-  duration_ms: 96.936209
+  duration_ms: 85.359459
   type: 'test'
   ...
 # Subtest: rejects worktree clean claims without package-included git command log evidence
 ok 8 - rejects worktree clean claims without package-included git command log evidence
   ---
-  duration_ms: 335.374458
+  duration_ms: 291.559166
   type: 'test'
   ...
 # Subtest: rejects package source-scope claim when secret-scan-review-bundle log is not a pass result
 ok 9 - rejects package source-scope claim when secret-scan-review-bundle log is not a pass result
   ---
-  duration_ms: 297.350333
+  duration_ms: 253.226042
   type: 'test'
   ...
 # Subtest: finalizes sanitized ORCA readonly evidence summary and package sidecar fields
 ok 10 - finalizes sanitized ORCA readonly evidence summary and package sidecar fields
   ---
-  duration_ms: 364.258958
+  duration_ms: 296.704541
   type: 'test'
   ...
 # Subtest: rejects sidecar zip integrity drift
 ok 11 - rejects sidecar zip integrity drift
   ---
-  duration_ms: 792.379042
+  duration_ms: 687.422125
   type: 'test'
   ...
 # Subtest: packages extracted source subsets without git metadata as not verified git truth
 ok 12 - packages extracted source subsets without git metadata as not verified git truth
   ---
-  duration_ms: 159.387375
+  duration_ms: 150.66475
   type: 'test'
   ...
 # Subtest: rejects raw artifact paths from review log manifests
 ok 13 - rejects raw artifact paths from review log manifests
   ---
-  duration_ms: 1258.695042
+  duration_ms: 1140.835375
   type: 'test'
   ...
 # Subtest: scan tool rejects raw sensitive package path categories
 ok 14 - scan tool rejects raw sensitive package path categories
   ---
-  duration_ms: 1108.087125
+  duration_ms: 1035.955125
   type: 'test'
   ...
 # Subtest: rejects credential-bearing review evidence before packaging
 ok 15 - rejects credential-bearing review evidence before packaging
   ---
-  duration_ms: 1987.555584
+  duration_ms: 1805.463958
   type: 'test'
   ...
 # Subtest: rejects empty manifest-listed command logs
 ok 16 - rejects empty manifest-listed command logs
   ---
-  duration_ms: 227.610917
+  duration_ms: 194.884917
   type: 'test'
   ...
 # Subtest: rejects manifest-listed command logs with an empty output section
 ok 17 - rejects manifest-listed command logs with an empty output section
   ---
-  duration_ms: 251.252125
+  duration_ms: 221.738333
   type: 'test'
   ...
 # Subtest: rejects package command logs with placeholder-only timestamps
 ok 18 - rejects package command logs with placeholder-only timestamps
   ---
-  duration_ms: 243.61375
+  duration_ms: 230.046792
   type: 'test'
   ...
 # Subtest: rejects malformed manifest-listed JSON command logs
 ok 19 - rejects malformed manifest-listed JSON command logs
   ---
-  duration_ms: 252.511084
+  duration_ms: 239.226625
   type: 'test'
   ...
 # Subtest: rejects JSON command logs without non-empty output evidence
 ok 20 - rejects JSON command logs without non-empty output evidence
   ---
-  duration_ms: 250.8895
+  duration_ms: 388.42975
   type: 'test'
   ...
 # Subtest: records tracked missing file details in the package manifest
 ok 21 - records tracked missing file details in the package manifest
   ---
-  duration_ms: 299.491209
+  duration_ms: 273.825958
   type: 'test'
   ...
 # Subtest: skips gitlink directory entries instead of packaging submodule contents
 ok 22 - skips gitlink directory entries instead of packaging submodule contents
   ---
-  duration_ms: 393.404208
+  duration_ms: 391.148542
   type: 'test'
   ...
 # Subtest: command log wrapper writes exit code metadata for silent success
 ok 23 - command log wrapper writes exit code metadata for silent success
   ---
-  duration_ms: 23.703042
+  duration_ms: 23.329083
   type: 'test'
   ...
 # Subtest: command log wrapper records exact target metadata when supplied
 ok 24 - command log wrapper records exact target metadata when supplied
   ---
-  duration_ms: 21.71325
+  duration_ms: 24.455541
   type: 'test'
   ...
 # Subtest: fails when every tracked file is excluded
 ok 25 - fails when every tracked file is excluded
   ---
-  duration_ms: 197.210833
+  duration_ms: 191.119042
   type: 'test'
   ...
 1..25
@@ -163,8 +163,8 @@ ok 25 - fails when every tracked file is excluded
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 11811.542208
+# duration_ms 10700.389625
 --- command summary ---
-end_utc=2026-04-21T11:45:12Z
+end_utc=2026-04-21T13:35:46Z
 exit_code=0
 result=PASS

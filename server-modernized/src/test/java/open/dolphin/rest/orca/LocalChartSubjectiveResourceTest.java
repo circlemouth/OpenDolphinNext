@@ -106,6 +106,7 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
         payload.setPatientId("00001");
         payload.setSoapCategory("S");
+        payload.setDisplaySection("free");
         payload.setPerformDate("2026-04-10");
         payload.setBody("咽頭痛あり");
 
@@ -114,6 +115,14 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
         assertNotNull(response);
         assertEquals("00", response.getApiResult());
         assertEquals("local", response.getRouteNamespace());
+        assertNotNull(response.getEntry());
+        assertEquals(Long.valueOf(9001L), response.getEntry().getDocumentId());
+        assertEquals("00001", response.getEntry().getPatientId());
+        assertEquals("2026-04-10", response.getEntry().getPerformDate());
+        assertEquals("S", response.getEntry().getSoapCategory());
+        assertEquals("free", response.getEntry().getDisplaySection());
+        assertEquals("咽頭痛あり", response.getEntry().getBody());
+        assertEquals("doctor01", response.getEntry().getAuthorName());
         assertEquals(1, fakeKarteServiceBean.getAddDocumentCalls());
 
         DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
@@ -159,23 +168,33 @@ class LocalChartSubjectiveResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
-    void postSubjectiveInvalidPerformDateCurrentlyFallsBackAndPersistsBlockerEvidence() {
+    void postSubjectiveInvalidPerformDateReturns400WithoutPersisting() {
         SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
         payload.setPatientId("00001");
         payload.setSoapCategory("S");
         payload.setPerformDate("not-a-date");
         payload.setBody("不正日付でも登録される現状確認");
 
-        SubjectiveEntryResponse response = resource.postSubjective(servletRequest, payload);
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.postSubjective(servletRequest, payload));
 
-        assertEquals("00", response.getApiResult());
-        assertEquals(1, fakeKarteServiceBean.getAddDocumentCalls());
-        DocumentModel saved = fakeKarteServiceBean.getLastAddedDocument();
-        assertNotNull(saved);
-        assertNotNull(saved.getStarted());
-        assertNotNull(saved.getConfirmed());
-        ProgressCourse progress = (ProgressCourse) saved.getModules().get(0).getModel();
-        assertEquals("不正日付でも登録される現状確認", progress.getFreeText());
+        assertValidationError(ex, "performDate");
+        assertEquals(0, fakeKarteServiceBean.getAddDocumentCalls());
+    }
+
+    @Test
+    void postSubjectiveReturns400WhenDisplaySectionDoesNotMatchSoapCategory() {
+        SubjectiveEntryRequest payload = new SubjectiveEntryRequest();
+        payload.setPatientId("00001");
+        payload.setSoapCategory("O");
+        payload.setDisplaySection("free");
+        payload.setBody("free は S としてのみ保存できる");
+
+        WebApplicationException ex = assertThrows(WebApplicationException.class,
+                () -> resource.postSubjective(servletRequest, payload));
+
+        assertValidationError(ex, "displaySection");
+        assertEquals(0, fakeKarteServiceBean.getAddDocumentCalls());
     }
 
     @Test

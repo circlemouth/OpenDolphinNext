@@ -1,0 +1,11 @@
+command_log_version=1
+command=node scripts/tools/validate-artifact-ledger.mjs docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/review-package docs/implementation/unified-clinical-wave1-batch1-wo3-20260421/review-package/artifact-sha256.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main
+runId=20260421T142818Z
+start_utc=2026-04-21T15:24:19Z
+--- command output ---
+artifact ledger validation passed: artifact-sha256.txt entries=3
+--- command summary ---
+end_utc=2026-04-21T15:24:19Z
+exit_code=0
+result=PASS

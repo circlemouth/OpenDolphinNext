@@ -40,6 +40,7 @@ export const DISEASE_MIRROR_UNAVAILABLE_NOTE = 'ORCA mirror を取得できな�
 export const DISEASE_CLINICAL_UNAVAILABLE_NOTE = 'clinical source が未実装のため、この画面では保険病名だけを扱います。';
 export const DISEASE_CANDIDATE_CONFIRM_NOTE = '候補は自動反映されません。内容を確認してから保険病名に追加してください。';
 export const ORDER_SET_CANDIDATE_NOTE = '候補です。オーダーセット適用時も保険病名へ自動登録しません。';
+export const DISEASE_OUTCOME_PRESETS = ['継続', '治癒', '中止', '再発', '死亡', '転院', '不明'] as const;
 
 export type DiseaseImportResponse = {
   ok?: boolean;
@@ -131,6 +132,67 @@ const ORCA_DISEASE_CODE_REGEX = /^[0-9]{7}$/;
 
 const normalizeTerm = (value?: string | null) => (value ?? '').trim();
 const normalizeNameKey = (value?: string | null) => normalizeTerm(value).replaceAll(' ', '').replaceAll('　', '');
+
+const isValidDateOnly = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return false;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year && parsed.getUTCMonth() === month - 1 && parsed.getUTCDate() === day;
+};
+
+const requireDateOnly = (value: string | undefined, fieldLabel: string) => {
+  const normalized = normalizeTerm(value);
+  if (!normalized || !isValidDateOnly(normalized)) {
+    throw new Error(`${fieldLabel}は西暦yyyy-MM-dd形式の実在する日付で入力してください。`);
+  }
+  return normalized;
+};
+
+const validateOutcome = (value?: string) => {
+  const normalized = normalizeTerm(value);
+  if (!normalized) {
+    return undefined;
+  }
+  if (!(DISEASE_OUTCOME_PRESETS as readonly string[]).includes(normalized)) {
+    throw new Error(`転帰は ${DISEASE_OUTCOME_PRESETS.join('、')} のいずれかを入力してください。`);
+  }
+  return normalized;
+};
+
+const toMutationRequestOperation = (operation: DiseaseMutationOperation): DiseaseMutationOperation => {
+  const base = {
+    operation: operation.operation,
+    diagnosisId: operation.diagnosisId,
+  };
+  if (operation.operation === 'delete') {
+    return {
+      ...base,
+      diagnosisName: normalizeTerm(operation.diagnosisName) || undefined,
+    };
+  }
+  const startDate = requireDateOnly(operation.startDate, '開始日');
+  const endDate = operation.endDate ? requireDateOnly(operation.endDate, '転帰日') : undefined;
+  if (endDate && endDate < startDate) {
+    throw new Error('転帰日は開始日以降の日付を入力してください。');
+  }
+  return {
+    ...base,
+    diagnosisName: normalizeTerm(operation.diagnosisName) || undefined,
+    diagnosisCode: normalizeTerm(operation.diagnosisCode) || undefined,
+    departmentCode: normalizeTerm(operation.departmentCode) || undefined,
+    insuranceCombinationNumber: normalizeTerm(operation.insuranceCombinationNumber) || undefined,
+    startDate,
+    endDate,
+    outcome: validateOutcome(operation.outcome),
+    category: normalizeTerm(operation.category) || undefined,
+    suspectedFlag: normalizeTerm(operation.suspectedFlag) || undefined,
+  };
+};
 
 const normalizeDiseaseLayer = (value?: string | null): DiseaseLayer => {
   const normalized = normalizeTerm(value);
@@ -555,7 +617,7 @@ export async function mutateDiseases(params: {
 }): Promise<DiseaseMutationResult> {
   const runId = getObservabilityMeta().runId ?? generateRunId();
   updateObservabilityMeta({ runId });
-  const normalizedOperations = assignMutationScopedDiagnosisIds(params.operations);
+  const normalizedOperations = assignMutationScopedDiagnosisIds(params.operations).map(toMutationRequestOperation);
   const response = await httpFetch('/api/local/diagnoses', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

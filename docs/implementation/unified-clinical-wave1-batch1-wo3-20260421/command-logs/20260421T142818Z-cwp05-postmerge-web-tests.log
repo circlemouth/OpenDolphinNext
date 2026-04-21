@@ -1,0 +1,277 @@
+command_log_version=1
+command=npm --prefix web-client test -- --run src/features/charts/diseaseApi.test.ts src/features/charts/__tests__/DiagnosisEditPanel.test.tsx
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main
+runId=20260421T142818Z
+start_utc=2026-04-21T14:53:24Z
+--- command output ---
+
+> web-client@0.0.0 pretest
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=1129. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=248, blocked-route detector=39, docs/reference=181, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 test
+> vitest run --run src/features/charts/diseaseApi.test.ts src/features/charts/__tests__/DiagnosisEditPanel.test.tsx
+
+
+ RUN  v4.0.18 /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main/web-client
+
+ ✓ src/features/charts/diseaseApi.test.ts (15 tests) 27ms
+ ❯ src/features/charts/__tests__/DiagnosisEditPanel.test.tsx (7 tests | 1 failed) 2026ms
+     ✓ 候補プルダウン選択で病名とコードを反映して登録できる  337ms
+     × 追加成功後にサーバー再取得結果の日付・転帰・主病名・疑いを一覧と編集ダイアログへ反映する 1177ms
+     ✓ 削除成功後にサーバー再取得結果で一覧から消える 29ms
+     ✓ ORCA mirror は編集・削除ボタンを表示せず参照専用に留める 13ms
+     ✓ 候補は選択だけでは保存せず明示追加でのみ local mutation する 280ms
+     ✓ 転帰日が開始日前の場合は通信前に具体エラーを表示する 115ms
+     ✓ 未知の転帰は通信前に具体エラーを表示する 74ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/features/charts/__tests__/DiagnosisEditPanel.test.tsx > DiagnosisEditPanel quick add candidates > 追加成功後にサーバー再取得結果の日付・転帰・主病名・疑いを一覧と編集ダイアログへ反映する
+AssertionError: expected "vi.fn()" to be called with arguments: [ ObjectContaining{…} ]
+
+Received: 
+
+  1st vi.fn() call:
+
+  [
+-   ObjectContaining {
++   {
++     "karteId": 1001,
+      "operations": [
+-       ObjectContaining {
++       {
+          "category": "主病名",
+-         "diagnosisName": "主病名テスト",
++         "diagnosisCode": undefined,
++         "diagnosisId": undefined,
++         "diagnosisName": "病名テスト",
+          "endDate": "2026-04-20",
+          "operation": "create",
+          "outcome": "治癒",
+          "startDate": "2026-04-10",
+          "suspectedFlag": "疑い",
+        },
+      ],
++     "patientId": "P-TEST-001",
+    },
+  ]
+
+
+Number of calls: 1
+
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head>[39m
+    [36m<meta[39m
+      [33mcontent[39m=[32m"test-csrf-token"[39m
+      [33mname[39m=[32m"csrf-token"[39m
+    [36m/>[39m
+  [36m</head>[39m
+  [36m<body[39m
+    [33mstyle[39m=[32m"overflow: hidden;"[39m
+  [36m>[39m
+    [36m<div>[39m
+      [36m<section[39m
+        [33mclass[39m=[32m"charts-side-panel__section"[39m
+        [33mdata-test-id[39m=[32m"diagnosis-edit-panel"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"charts-side-panel__section-header"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<strong>[39m
+              [0m保険病名[0m
+            [36m</strong>[39m
+            [36m<p[39m
+              [33mclass[39m=[32m"charts-diagnosis__lead"[39m
+            [36m>[39m
+              [0m保険病名だけが編集可能です。ORCA mirror は参照専用、候補は明示確認でのみ反映します。[0m
+            [36m</p>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33maria-label[39m=[32m"病名操作"[39m
+            [33mclass[39m=[32m"charts-diagnosis__header-actions"[39m
+            [33mrole[39m=[32m"group"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"charts-side-panel__ghost"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0m詳細入力[0m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</header>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"charts-diagnosis__notes"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"charts-side-panel__notice charts-side-panel__notice--info"[39m
+          [36m>[39m
+            [0m保険病名の確認が必要です[0m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"charts-side-panel__notice charts-side-panel__notice--info"[39m
+          [36m>[39m
+            [0mclinical source が未実装のため、この画面では保険病名だけを扱います。[0m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"charts-side-panel__notice charts-side-panel__notice--success"[39m
+        [36m>[39m
+          [0m病名を保存しました。[0m
+        [36m</div>[39m
+        [36m<div[39m
+          [33maria-live[39m=[32m"polite"[39m
+          [33mclass[39m=[32m"charts-side-panel__list charts-diagnosis__list-scroll"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"charts-side-panel__list-header"[39m
+          [36m>[39m
+            [36m<span>[39m
+              [0m保険病名[0m
+            [36m</span>[39m
+            [36m<span>[39m
+              [0m1件[0m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<ul[39m
+            [33maria-label[39m=[32m"保険病名（活動中）"[39m
+            [33mclass[39m=[32m"charts-side-panel__items charts-diagnosis__items"[39m
+          [36m/>[39m
+          [36m<details[39m
+            [33mclass[39m=[32m"charts-diagnosis__ended"[39m
+          [36m>[39m
+            [36m<summary[39m
+              [33mclass[39m=[32m"charts-diagnosis__ended-summary"[39m
+            [36m>[39m
+              [0m転帰あり（[0m
+              [0m1[0m
+              [0m件）[0m
+            [36m</summary>[39m
+            [36m<ul[39m
+              [33maria-label[39m=[32m"保険病名（転帰あり）"[39m
+              [33mclass[39m=[32m"charts-side-panel__items charts-diagnosis__items"[39m
+            [36m>[39m
+              [36m<li[39m
+                [33mclass[39m=[32m"charts-diagnosis__item"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"charts-diagnosis__item-main"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"charts-diagnosis__title"[39m
+                  [36m>[39m
+                    [36m<strong[39m
+                      [33mclass[39m=[32m"charts-diagnosis__name"[39m
+                    [36m>[39m
+                      [0m主病名テスト[0m
+                    [36m</strong>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"charts-diagnosis__code"[39m
+                    [36m>[39m
+                      [0m([0m
+                      [0mI10[0m
+                      [0m)[0m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"charts-diagnosis__meta"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33maria-label[39m=[32m"病名属性"[39m
+                      [33mclass[39m=[32m"charts-diagnosis__badges"[39m
+                      [33mrole[39m=[32m"list"[39m
+                    [36m>[39m
+                      [36m<span[39m
+                        [33mclass[39m=[32m"charts-diagnosis__badge charts-diagnosis__badge--main"[39m
+                        [33mrole[39m=[32m"listitem"[39m
+                      [36m>[39m
+                        [0m主[0m
+                      [36m</span>[39m
+                      [36m<span[39m
+                        [33mclass[39m=[32m"charts-diagnosis__badge charts-diagnosis__badge--suspected"[39m
+                        [33mrole[39m=[32m"listitem"[39m
+                      [36m>[39m
+                        [0m疑い[0m
+                      [36m</span>[39m
+                    [36m</span>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"charts-diagnosis__dates"[39m
+                    [36m>[39m
+                      [36m<span>[39m
+                        [0m開始:[0m
+                        [0m2026-04-10[0m
+                      [36m</span>[39m
+                      [36m<span>[39m
+                        [0m転帰:[0m
+                        [0m治癒[0m
+                      [36m</span>[39m
+                      [36m<span>[39m
+                        [0m終了:[0m
+                        [0m2026-04-20[0m
+                      [36m</span>[39m
+                      [36m<span[39m
+                        [33mclass[39m=[32m"charts-diagnosis__code-state charts-diagnosis__code-state--ok"[39m
+                      [36m>[39m
+                        [0mコードあり[0m
+                      [36m</span>[39m
+                    [36m</span>[39m
+                  [36m</div>[39m
+                [36m</div>[39m
+                [36m<div[39m
+                  [33maria-label[39m=[32m"病名操作"[39m
+                  [33mclass[39m=[32m"charts-side-panel__item-actions charts-diagnosis__item-actions"[39m
+                  [33mrole[39m=[32m"group"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0m編集[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    [33mtype[39m=[32m"button"[39...
+ ❯ src/features/charts/__tests__/DiagnosisEditPanel.test.tsx:199:30
+    197| 
+    198|     await waitFor(() => {
+    199|       expect(mutateDiseases).toHaveBeenCalledWith(
+       |                              ^
+    200|         expect.objectContaining({
+    201|           operations: [
+ ❯ runWithExpensiveErrorDiagnosticsDisabled node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 21 passed (22)
+   Start at  23:53:26
+   Duration  2.71s (transform 224ms, setup 133ms, import 330ms, tests 2.05s, environment 596ms)
+
+--- command summary ---
+end_utc=2026-04-21T14:53:29Z
+exit_code=1
+result=FAIL

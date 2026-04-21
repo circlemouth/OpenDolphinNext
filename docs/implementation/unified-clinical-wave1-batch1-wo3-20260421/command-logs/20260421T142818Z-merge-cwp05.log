@@ -1,0 +1,19 @@
+command_log_version=1
+command=git merge --ff-only c32fc3b69154be65a17857b1db6094a3530ffd1e
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo3-clinical-wave1-batch1-main
+runId=20260421T142818Z
+start_utc=2026-04-21T14:52:46Z
+--- command output ---
+Updating 672c37c7e..c32fc3b69
+Fast-forward
+ .../open/dolphin/rest/LocalDiagnosisResource.java  |  53 +++++-
+ .../dolphin/rest/LocalDiagnosisResourceTest.java   |  55 +++---
+ .../src/features/charts/DiagnosisEditPanel.tsx     |  83 +++++++--
+ .../charts/__tests__/DiagnosisEditPanel.test.tsx   | 194 ++++++++++++++++++++-
+ web-client/src/features/charts/diseaseApi.test.ts  |  99 +++++++++++
+ web-client/src/features/charts/diseaseApi.ts       |  64 ++++++-
+ 6 files changed, 495 insertions(+), 53 deletions(-)
+--- command summary ---
+end_utc=2026-04-21T14:52:47Z
+exit_code=0
+result=PASS

@@ -113,12 +113,12 @@ describe('DiagnosisEditPanel readback contract', () => {
     expect(within(dialog).getByLabelText('疑い')).toBeChecked();
 
     await user.click(within(dialog).getByText('詳細（コード/開始/転帰）'));
-    expect(within(dialog).getByLabelText('開始日')).toHaveValue('2026-04-10');
-    expect(within(dialog).getByLabelText('転帰日')).toHaveValue('2026-04-20');
-    expect(within(dialog).getByLabelText('転帰')).toHaveValue('治癒');
+    expect(within(dialog).getByLabelText(/開始日/)).toHaveValue('2026-04-10');
+    expect(within(dialog).getByLabelText(/転帰日/)).toHaveValue('2026-04-20');
+    expect(within(dialog).getByLabelText(/転帰 ※任意/)).toHaveValue('治癒');
 
-    await user.clear(within(dialog).getByLabelText('転帰'));
-    await user.type(within(dialog).getByLabelText('転帰'), '継続');
+    await user.clear(within(dialog).getByLabelText(/転帰 ※任意/));
+    await user.type(within(dialog).getByLabelText(/転帰 ※任意/), '継続');
     await user.click(within(dialog).getByRole('button', { name: '更新' }));
 
     await waitFor(() => {
@@ -173,7 +173,7 @@ describe('DiagnosisEditPanel readback contract', () => {
     await user.selectOptions(candidateSelect, selected?.value ?? '');
 
     expect(screen.getByLabelText('病名 *')).toHaveValue('高血圧症');
-    expect(screen.getByLabelText('コード')).toHaveValue('I10');
+    expect(screen.getByLabelText(/コード/)).toHaveValue('I10');
     expect(mutateDiseases).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: '保険病名に追加' }));

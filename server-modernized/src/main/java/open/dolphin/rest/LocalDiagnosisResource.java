@@ -13,6 +13,9 @@ import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -31,6 +34,8 @@ import open.dolphin.session.UserServiceBean;
 
 @Path("/local/diagnoses")
 public class LocalDiagnosisResource extends AbstractResource {
+
+    private static final List<String> ALLOWED_OUTCOMES = List.of("継続", "治癒", "中止", "再発", "死亡", "転院", "不明");
 
     @Inject
     private PatientServiceBean patientServiceBean;
@@ -112,12 +117,12 @@ public class LocalDiagnosisResource extends AbstractResource {
             validateInsuranceLocalOperation(operation, request);
             Long diagnosisId = requireLong(operation, "diagnosisId");
             if ("create".equals(op)) {
-                adds.add(toDiagnosis(operation, karte, user, null));
+                adds.add(toDiagnosis(operation, karte, user, null, request));
                 continue;
             }
             ensureDiagnosisFacilityAccess(diagnosisId, facilityId, request);
             if ("update".equals(op)) {
-                updates.add(toDiagnosis(operation, karte, user, diagnosisId));
+                updates.add(toDiagnosis(operation, karte, user, diagnosisId, request));
             } else if ("delete".equals(op)) {
                 removes.add(diagnosisId);
             } else {
@@ -140,7 +145,12 @@ public class LocalDiagnosisResource extends AbstractResource {
         return response;
     }
 
-    private RegisteredDiagnosisModel toDiagnosis(Map<String, Object> operation, KarteBean karte, UserModel user, Long diagnosisId) {
+    private RegisteredDiagnosisModel toDiagnosis(
+            Map<String, Object> operation,
+            KarteBean karte,
+            UserModel user,
+            Long diagnosisId,
+            HttpServletRequest request) {
         RegisteredDiagnosisModel model = new RegisteredDiagnosisModel();
         if (diagnosisId != null) {
             model.setId(diagnosisId);
@@ -153,16 +163,24 @@ public class LocalDiagnosisResource extends AbstractResource {
         model.setCategory(optionalText(operation, "category"));
         model.setCategoryDesc(optionalText(operation, "suspectedFlag"));
         model.setCategoryCodeSys("LOCAL");
-        model.setOutcome(optionalText(operation, "outcome"));
-        model.setOutcomeDesc(optionalText(operation, "outcome"));
+        String outcome = optionalText(operation, "outcome");
+        validateOutcome(outcome, request);
+        model.setOutcome(outcome);
+        model.setOutcomeDesc(outcome);
         model.setOutcomeCodeSys("LOCAL");
-        Date started = parseDate(requireText(operation, "startDate"));
+        LocalDate startedDate = parseDiagnosisDate(requireText(operation, "startDate"), "startDate", request);
+        Date started = toDate(startedDate);
         model.setStarted(started);
         model.setConfirmed(started);
         model.setRecorded(new Date());
         String endDate = optionalText(operation, "endDate");
         if (endDate != null) {
-            model.setEnded(parseDate(endDate));
+            LocalDate endedDate = parseDiagnosisDate(endDate, "endDate", request);
+            if (endedDate.isBefore(startedDate)) {
+                throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
+                        "endDate must be the same as or after startDate");
+            }
+            model.setEnded(toDate(endedDate));
         }
         model.setStatus(IInfoModel.STATUS_FINAL);
         return model;
@@ -229,5 +247,26 @@ public class LocalDiagnosisResource extends AbstractResource {
         if (Boolean.TRUE.equals(candidateOnly) || "true".equalsIgnoreCase(String.valueOf(candidateOnly))) {
             throw restError(request, Response.Status.BAD_REQUEST, "invalid_request", "candidate disease cannot be authored directly");
         }
+    }
+
+    private LocalDate parseDiagnosisDate(String value, String key, HttpServletRequest request) {
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
+                    key + " must be a valid yyyy-MM-dd date");
+        }
+    }
+
+    private void validateOutcome(String outcome, HttpServletRequest request) {
+        if (outcome == null || ALLOWED_OUTCOMES.contains(outcome)) {
+            return;
+        }
+        throw restError(request, Response.Status.BAD_REQUEST, "invalid_request",
+                "outcome must be one of: " + String.join(", ", ALLOWED_OUTCOMES));
+    }
+
+    private static Date toDate(LocalDate value) {
+        return Date.from(value.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 }
