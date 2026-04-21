@@ -1,8 +1,8 @@
 command_log_version=1
 command=npm run lint
-cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
-runId=20260421T111148Z
-start_utc=2026-04-21T11:44:04Z
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client
+runId=20260421T132901Z
+start_utc=2026-04-21T13:34:39Z
 --- command output ---
 
 > web-client@0.0.0 prelint
@@ -18,40 +18,40 @@ start_utc=2026-04-21T11:44:04Z
 > eslint .
 
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/qa-charts-compact-header-draft-save.mjs
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/scripts/qa-charts-compact-header-draft-save.mjs
   200:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
   205:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/qa-charts-compact-ui-phasea.mjs
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/scripts/qa-charts-compact-ui-phasea.mjs
   174:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
   179:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/qa-charts-do-copy-manual-regression.mjs
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/scripts/qa-charts-do-copy-manual-regression.mjs
   213:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
   218:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/qa-charts-do-copy-phase1.mjs
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/scripts/qa-charts-do-copy-phase1.mjs
   187:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
   192:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/qa-charts-ui-opt-b-phase1.mjs
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/scripts/qa-charts-ui-opt-b-phase1.mjs
   151:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
   156:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/qa-charts-ui-opt-b-regression.mjs
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/scripts/qa-charts-ui-opt-b-regression.mjs
   357:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
   362:3  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/scripts/qa-order-001-parity.mjs
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/scripts/qa-order-001-parity.mjs
   156:7  warning  Unused eslint-disable directive (no problems were reported from 'no-underscore-dangle')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/AppRouter.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/AppRouter.tsx
   1435:19  warning  The ref value 'toastTimers.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'toastTimers.current' to a variable inside the effect, and use that variable in the cleanup function  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/LoginScreen.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/LoginScreen.tsx
   157:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/__tests__/AppRouter.login-redirect.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/__tests__/AppRouter.login-redirect.test.tsx
    32:100  warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
    34:72   warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
    34:89   warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
@@ -63,13 +63,13 @@ start_utc=2026-04-21T11:44:04Z
   122:26   warning  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
   123:3    warning  Unused eslint-disable directive (no problems were reported from 'no-var')
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/administration/AccessManagementPanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/administration/AccessManagementPanel.tsx
   124:9  warning  The 'users' logical expression could make the dependencies of useMemo Hook (at line 125) change on every render. To fix this, wrap the initialization of 'users' in its own useMemo() Hook  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/administration/AdministrationPage.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/administration/AdministrationPage.tsx
   513:6  warning  React Hook useMemo has unnecessary dependencies: 'configQuery.data.runId', 'feedback.message', 'queueQuery.data.runId', and 'resolvedRunId'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/administration/OrcaUserManagementPanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/administration/OrcaUserManagementPanel.tsx
   180:9  warning  The 'orcaUsers' logical expression could make the dependencies of useEffect Hook (at line 205) change on every render. To fix this, wrap the initialization of 'orcaUsers' in its own useMemo() Hook  react-hooks/exhaustive-deps
   180:9  warning  The 'orcaUsers' logical expression could make the dependencies of useMemo Hook (at line 219) change on every render. To fix this, wrap the initialization of 'orcaUsers' in its own useMemo() Hook    react-hooks/exhaustive-deps
   180:9  warning  The 'orcaUsers' logical expression could make the dependencies of useMemo Hook (at line 233) change on every render. To fix this, wrap the initialization of 'orcaUsers' in its own useMemo() Hook    react-hooks/exhaustive-deps
@@ -77,26 +77,26 @@ start_utc=2026-04-21T11:44:04Z
   181:9  warning  The 'ehrUsers' logical expression could make the dependencies of useEffect Hook (at line 194) change on every render. To fix this, wrap the initialization of 'ehrUsers' in its own useMemo() Hook    react-hooks/exhaustive-deps
   181:9  warning  The 'ehrUsers' logical expression could make the dependencies of useMemo Hook (at line 209) change on every render. To fix this, wrap the initialization of 'ehrUsers' in its own useMemo() Hook      react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/administration/accessManagementApi.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/administration/accessManagementApi.ts
   74:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/ChartsActionBar.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/ChartsActionBar.tsx
   469:6  warning  React Hook useEffect has a missing dependency: 'storageScope'. Either include it or remove the dependency array                                            react-hooks/exhaustive-deps
   604:6  warning  React Hook useMemo has unnecessary dependencies: 'dataSourceTransition' and 'patientId'. Either exclude them or remove the dependency array                react-hooks/exhaustive-deps
   866:6  warning  React Hook useMemo has unnecessary dependencies: 'approvalLock.runId', 'resolvedTraceId', and 'runId'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/DocumentCreatePanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/DocumentCreatePanel.tsx
    798:6  warning  React Hook useEffect has a missing dependency: 'storageScope'. Either include it or remove the dependency array                                                                                                         react-hooks/exhaustive-deps
   1612:9  warning  The 'handleOpenDocumentPreview' function makes the dependencies of useEffect Hook (at line 1756) change on every render. To fix this, wrap the definition of 'handleOpenDocumentPreview' in its own useCallback() Hook  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/DocumentTimeline.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/DocumentTimeline.tsx
   258:9  warning  The 'claimBundles' logical expression could make the dependencies of useMemo Hook (at line 386) change on every render. To fix this, wrap the initialization of 'claimBundles' in its own useMemo() Hook  react-hooks/exhaustive-deps
   258:9  warning  The 'claimBundles' logical expression could make the dependencies of useMemo Hook (at line 460) change on every render. To fix this, wrap the initialization of 'claimBundles' in its own useMemo() Hook  react-hooks/exhaustive-deps
   344:9  warning  The 'pushEvents' logical expression could make the dependencies of useMemo Hook (at line 347) change on every render. To fix this, wrap the initialization of 'pushEvents' in its own useMemo() Hook      react-hooks/exhaustive-deps
   707:6  warning  React Hook useMemo has an unnecessary dependency: 'buildSoapMeta'. Either exclude it or remove the dependency array                                                                                       react-hooks/exhaustive-deps
   882:6  warning  React Hook useMemo has a missing dependency: 'claimEnabled'. Either include it or remove the dependency array                                                                                             react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/OrcaSummary.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/OrcaSummary.tsx
   241:9  warning  The 'claimBundles' logical expression could make the dependencies of useMemo Hook (at line 249) change on every render. To fix this, wrap the initialization of 'claimBundles' in its own useMemo() Hook      react-hooks/exhaustive-deps
   265:9  warning  The 'incomeEntries' logical expression could make the dependencies of useMemo Hook (at line 277) change on every render. To fix this, wrap the initialization of 'incomeEntries' in its own useMemo() Hook    react-hooks/exhaustive-deps
   265:9  warning  The 'incomeEntries' logical expression could make the dependencies of useMemo Hook (at line 282) change on every render. To fix this, wrap the initialization of 'incomeEntries' in its own useMemo() Hook    react-hooks/exhaustive-deps
@@ -104,7 +104,7 @@ start_utc=2026-04-21T11:44:04Z
   265:9  warning  The 'incomeEntries' logical expression could make the dependencies of useEffect Hook (at line 562) change on every render. To fix this, wrap the initialization of 'incomeEntries' in its own useMemo() Hook  react-hooks/exhaustive-deps
   268:5  warning  React Hook useMemo has an unnecessary dependency: 'incomeInfoQuery.dataUpdatedAt'. Either exclude it or remove the dependency array                                                                           react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/OrderBundleEditPanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/OrderBundleEditPanel.tsx
    828:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                   react-refresh/only-export-components
    874:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                   react-refresh/only-export-components
   1110:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                   react-refresh/only-export-components
@@ -118,10 +118,10 @@ start_utc=2026-04-21T11:44:04Z
   3323:9   warning  The 'fetchedBundles' logical expression could make the dependencies of useEffect Hook (at line 3333) change on every render. To fix this, wrap the initialization of 'fetchedBundles' in its own useMemo() Hook  react-hooks/exhaustive-deps
   3323:9   warning  The 'fetchedBundles' logical expression could make the dependencies of useMemo Hook (at line 3344) change on every render. To fix this, wrap the initialization of 'fetchedBundles' in its own useMemo() Hook    react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/PastHubPanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/PastHubPanel.tsx
   198:6  warning  React Hook useMemo has a missing dependency: 'selectedContext'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/PatientsTab.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/PatientsTab.tsx
    518:6    warning  React Hook useMemo has an unnecessary dependency: 'canEditMemoByRole'. Either exclude it or remove the dependency array                                                                                                                                  react-hooks/exhaustive-deps
    650:6    warning  React Hook useEffect has a missing dependency: 'selectedContext'. Either include it or remove the dependency array                                                                                                                                       react-hooks/exhaustive-deps
    816:5    warning  React Hook useCallback has a missing dependency: 'selectedContext'. Either include it or remove the dependency array                                                                                                                                     react-hooks/exhaustive-deps
@@ -136,31 +136,31 @@ start_utc=2026-04-21T11:44:04Z
   1815:57   warning  Unexpected any. Specify a different type                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
   2116:100  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/PrescriptionOrderEditorPanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/PrescriptionOrderEditorPanel.tsx
   544:6  warning  React Hook useEffect has missing dependencies: 'applyInputSet', 'canFetchFromServer', 'meta.encounterId', and 'sourceOrder'. Either include them or remove the dependency array. If 'setOrder' needs the current value of 'meta.encounterId', you can also switch to useReducer instead of useState and read 'meta.encounterId' in the reducer  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/RightUtilityDrawer.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/RightUtilityDrawer.tsx
   127:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
   127:31  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/SoapNotePanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/SoapNotePanel.tsx
   706:6  warning  React Hook useEffect has a missing dependency: 'activeCenterPanel'. Either include it or remove the dependency array                                                                                                                                     react-hooks/exhaustive-deps
   744:6  warning  React Hook useEffect has a missing dependency: 'history'. Either include it or remove the dependency array. If 'setDraft' needs the current value of 'history', you can also switch to useReducer instead of useState and read 'history' in the reducer  react-hooks/exhaustive-deps
   781:6  warning  React Hook useEffect has a missing dependency: 'replaceDraftRequest'. Either include it or remove the dependency array                                                                                                                                   react-hooks/exhaustive-deps
   810:6  warning  React Hook useEffect has a missing dependency: 'applyDraftPatch'. Either include it or remove the dependency array                                                                                                                                       react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/StampLibraryPanel.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/StampLibraryPanel.tsx
   228:9  warning  The 'trees' logical expression could make the dependencies of useMemo Hook (at line 247) change on every render. To fix this, wrap the initialization of 'trees' in its own useMemo() Hook  react-hooks/exhaustive-deps
   228:9  warning  The 'trees' logical expression could make the dependencies of useMemo Hook (at line 295) change on every render. To fix this, wrap the initialization of 'trees' in its own useMemo() Hook  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/DocumentTimeline.recovery-order.test.tsx
    64:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   264:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/OrcaSummary.recovery-order.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/OrcaSummary.recovery-order.test.tsx
   79:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/OrcaSummary.semantics.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/OrcaSummary.semantics.test.tsx
    89:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    95:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   125:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -170,21 +170,21 @@ start_utc=2026-04-21T11:44:04Z
   317:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   323:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/PastHubPanel.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/PastHubPanel.test.tsx
   94:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/PatientInfoEditDialog.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/PatientInfoEditDialog.test.tsx
   12:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   12:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   13:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   13:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   16:32  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/auditTelemetryRunId.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/auditTelemetryRunId.test.ts
   102:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   103:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/chartsActionBar.orca-send.test.tsx
   159:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   185:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   196:81  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -192,7 +192,7 @@ start_utc=2026-04-21T11:44:04Z
   235:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   873:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/chartsActionBar.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/chartsActionBar.test.tsx
   117:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   168:16   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   214:98   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -209,31 +209,31 @@ start_utc=2026-04-21T11:44:04Z
   476:98   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   497:116  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/chartsMasterSourceCache.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/chartsMasterSourceCache.test.tsx
   194:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/chartsOrcaRecoveryAlert.test.tsx
   158:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/chartsOrderDockCoexistence.recovery-order.test.tsx
   146:48   warning  Unexpected any. Specify a different type                                                                                @typescript-eslint/no-explicit-any
   176:67   warning  Unexpected any. Specify a different type                                                                                @typescript-eslint/no-explicit-any
   194:7    warning  React Hook useImperativeHandle has a missing dependency: 'runFinish'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
   208:69   warning  Unexpected any. Specify a different type                                                                                @typescript-eslint/no-explicit-any
   227:120  warning  Unexpected any. Specify a different type                                                                                @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/chartsPageDirtyDot.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/chartsPageDirtyDot.test.tsx
   254:48   warning  Unexpected any. Specify a different type                                                                                                              @typescript-eslint/no-explicit-any
   269:109  warning  Unexpected any. Specify a different type                                                                                                              @typescript-eslint/no-explicit-any
   293:7    warning  React Hook useImperativeHandle has missing dependencies: 'runFinish', 'runPause', and 'runStart'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
   335:80   warning  Unexpected any. Specify a different type                                                                                                              @typescript-eslint/no-explicit-any
   369:96   warning  Unexpected any. Specify a different type                                                                                                              @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/chartsPrintAudit.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/chartsPrintAudit.test.ts
   29:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   60:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderBundleApi.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderBundleApi.test.ts
    71:34   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    77:34   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    78:34   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -257,17 +257,17 @@ start_utc=2026-04-21T11:44:04Z
   726:14   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   731:107  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderBundleAudit.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderBundleAudit.test.tsx
   85:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   92:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   95:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderBundleBodyPart.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderBundleBodyPart.test.tsx
   211:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   241:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   270:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderBundleOrcaSupport.test.tsx
   246:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   251:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   389:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -279,7 +279,7 @@ start_utc=2026-04-21T11:44:04Z
   983:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   985:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderDetailDisplayViewModel.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderDetailDisplayViewModel.test.ts
    18:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    31:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    38:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -291,10 +291,10 @@ start_utc=2026-04-21T11:44:04Z
   225:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   272:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderDetailFormatters.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderDetailFormatters.test.ts
   16:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderDockPanel.categoryButtons.test.tsx
    39:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   115:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   121:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -303,18 +303,18 @@ start_utc=2026-04-21T11:44:04Z
   229:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   306:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderDockPanel.state-compat-and-rp-regression.test.tsx
    14:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    63:9   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    74:6   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    85:6   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   231:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderLocalPersistenceMatrix.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderLocalPersistenceMatrix.test.ts
   308:107  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   332:107  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderRpNormalization.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderRpNormalization.test.ts
    52:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    72:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    95:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -337,7 +337,7 @@ start_utc=2026-04-21T11:44:04Z
   568:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   605:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/orderSendSmoke.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/orderSendSmoke.test.ts
    143:44   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    192:78   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    340:78   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -352,10 +352,10 @@ start_utc=2026-04-21T11:44:04Z
   1229:63   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   1390:125  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/patientsTabFilterAndConfirm.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/patientsTabFilterAndConfirm.test.tsx
   69:111  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/prescriptionOrderApi.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/prescriptionOrderApi.test.ts
   128:107  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   131:45   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   132:45   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -366,53 +366,53 @@ start_utc=2026-04-21T11:44:04Z
   688:78   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   952:78   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/prescriptionOrderEditorPanel.local-only.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/prescriptionOrderEditorPanel.local-only.test.tsx
   62:39  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/prescriptionOrderEditorPanel.orca-support.test.tsx
    68:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    68:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   334:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/prescriptionOrderLocalRoundtripBoundary.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/prescriptionOrderLocalRoundtripBoundary.test.ts
   196:111  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/prescriptionOrderOrcaSupport.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/prescriptionOrderOrcaSupport.test.tsx
   99:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/soapNoteAudit.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/soapNoteAudit.test.tsx
   77:68  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   78:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   81:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   89:48  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   95:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/__tests__/soapNoteRightDockDrawer.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/__tests__/soapNoteRightDockDrawer.test.tsx
   434:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/authService.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/authService.tsx
    87:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
   110:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
   240:6   warning  React Hook useEffect has a missing dependency: 'flags'. Either include it or remove the dependency array                        react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/orderBundleApi.600-subtype.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/orderBundleApi.600-subtype.test.ts
   91:107  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/orderSend600SubtypeSmoke.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/orderSend600SubtypeSmoke.test.ts
   324:78  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   356:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   448:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   449:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/pages/ChartsDocumentPrintPage.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/pages/ChartsDocumentPrintPage.tsx
    89:60  warning  React Hook useMemo has unnecessary dependencies: 'session.facilityId' and 'session.userId'. Either exclude them or remove the dependency array                                                             react-hooks/exhaustive-deps
   201:6   warning  React Hook useEffect has a missing dependency: 'storeOutputResult'. Either include it or remove the dependency array                                                                                       react-hooks/exhaustive-deps
   380:9   warning  The 'handleRequestOutput' function makes the dependencies of useEffect Hook (at line 418) change on every render. To fix this, wrap the definition of 'handleRequestOutput' in its own useCallback() Hook  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/pages/ChartsOutpatientPrintPage.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/pages/ChartsOutpatientPrintPage.tsx
   82:60  warning  React Hook useMemo has unnecessary dependencies: 'session.facilityId' and 'session.userId'. Either exclude them or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/pages/ChartsPage.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/pages/ChartsPage.tsx
    646:6   warning  React Hook useEffect has a missing dependency: 'encounterContext'. Either include it or remove the dependency array                                                                                                       react-hooks/exhaustive-deps
   1555:6   warning  React Hook useEffect has missing dependencies: 'flags.cacheHit', 'flags.dataSourceTransition', 'flags.fallbackUsed', 'flags.missingMaster', and 'receptionCarryover'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
   1874:6   warning  React Hook useMemo has missing dependencies: 'claimQuery.data', 'flags', and 'medicalSummaryQuery.data'. Either include them or remove the dependency array                                                               react-hooks/exhaustive-deps
@@ -425,20 +425,20 @@ start_utc=2026-04-21T11:44:04Z
   3798:33  warning  Unexpected any. Specify a different type                                                                                                                                                                                  @typescript-eslint/no-explicit-any
   3869:43  warning  Unexpected any. Specify a different type                                                                                                                                                                                  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/print/__tests__/useOrcaReportPrint.test.tsx
   111:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   113:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   154:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   156:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/revisions/RevisionHistoryDrawer.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/revisions/RevisionHistoryDrawer.tsx
   68:6  warning  React Hook useEffect has a missing dependency: 'meta'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/revisions/revisionHistoryApi.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/revisions/revisionHistoryApi.ts
   38:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   83:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/charts/revisions/revisionWriteApi.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/charts/revisions/revisionWriteApi.ts
    53:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    76:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    79:18  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -446,13 +446,13 @@ start_utc=2026-04-21T11:44:04Z
   130:84  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   130:98  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/images/components/ImageCameraCapture.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/images/components/ImageCameraCapture.tsx
   147:6  warning  React Hook useCallback has a missing dependency: 'onCameraError'. Either include it or remove the dependency array. If 'onCameraError' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/images/pages/MobileImagesUploadPage.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/images/pages/MobileImagesUploadPage.tsx
   231:5  warning  React Hook useMemo has an unnecessary dependency: 'location.search'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/images/pages/__tests__/MobileImagesUploadPage.deeplink.test.tsx
   104:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   154:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   185:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -461,16 +461,16 @@ start_utc=2026-04-21T11:44:04Z
   274:12  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   278:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/login/FacilityLoginResolver.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/login/FacilityLoginResolver.tsx
   115:6  warning  React Hook useEffect has a missing dependency: 'forwardSearch'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/login/__tests__/loginRedirect.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/login/__tests__/loginRedirect.test.ts
   24:10  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/outpatient/orcaPatientImportApi.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/outpatient/orcaPatientImportApi.ts
   13:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/outpatient/transformers.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/outpatient/transformers.ts
    95:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   102:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   109:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -487,7 +487,7 @@ start_utc=2026-04-21T11:44:04Z
   262:23  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   296:17  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/patients/PatientsPage.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/patients/PatientsPage.tsx
    464:6  warning  React Hook useCallback has a missing dependency: 'appNav'. Either include it or remove the dependency array                                                                                          react-hooks/exhaustive-deps
    467:5  warning  React Hook useMemo has unnecessary dependencies: 'location.pathname' and 'location.search'. Either exclude them or remove the dependency array                                                       react-hooks/exhaustive-deps
    836:9  warning  The 'patients' logical expression could make the dependencies of useMemo Hook (at line 1063) change on every render. To fix this, wrap the initialization of 'patients' in its own useMemo() Hook    react-hooks/exhaustive-deps
@@ -497,7 +497,7 @@ start_utc=2026-04-21T11:44:04Z
    890:6  warning  React Hook useMemo has unnecessary dependencies: 'appliedFilters.department', 'appliedFilters.paymentMode', and 'appliedFilters.physician'. Either exclude them or remove the dependency array       react-hooks/exhaustive-deps
   1709:5  warning  React Hook useCallback has unnecessary dependencies: 'resolvedFallbackUsed' and 'resolvedMissingMaster'. Either exclude them or remove the dependency array                                          react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/patients/__tests__/PatientsPage.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/patients/__tests__/PatientsPage.test.tsx
    11:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    40:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    41:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -515,17 +515,17 @@ start_utc=2026-04-21T11:44:04Z
   145:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   173:55  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/patients/api.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/patients/api.ts
   194:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   208:35  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   341:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   448:69  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/reception/__tests__/ReceptionPage.recovery-order.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/reception/__tests__/ReceptionPage.recovery-order.test.tsx
   57:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   57:49  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/reception/__tests__/ReceptionPage.test.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/reception/__tests__/ReceptionPage.test.tsx
    36:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    37:24  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    85:34  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -536,7 +536,7 @@ start_utc=2026-04-21T11:44:04Z
   337:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   354:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/reception/api.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/reception/api.ts
   236:52   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   236:93   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   237:59   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -597,7 +597,7 @@ start_utc=2026-04-21T11:44:04Z
   520:54   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   520:83   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/reception/pages/ReceptionPage.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/reception/pages/ReceptionPage.tsx
   1023:9  warning  The 'appointmentQueryKey' array makes the dependencies of useCallback Hook (at line 1375) change on every render. To fix this, wrap the initialization of 'appointmentQueryKey' in its own useMemo() Hook                                              react-hooks/exhaustive-deps
   1530:9  warning  The 'liveAppointmentEntries' logical expression could make the dependencies of useMemo Hook (at line 1550) change on every render. To fix this, wrap the initialization of 'liveAppointmentEntries' in its own useMemo() Hook                          react-hooks/exhaustive-deps
   1530:9  warning  The 'liveAppointmentEntries' logical expression could make the dependencies of useMemo Hook (at line 1571) change on every render. To fix this, wrap the initialization of 'liveAppointmentEntries' in its own useMemo() Hook                          react-hooks/exhaustive-deps
@@ -613,22 +613,22 @@ start_utc=2026-04-21T11:44:04Z
   3089:9  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
   3581:5  warning  React Hook useCallback has an unnecessary dependency: 'tonePayload.dataSourceTransition'. Either exclude it or remove the dependency array                                                                                                             react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/shared/ChartEventStreamBridge.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/shared/ChartEventStreamBridge.tsx
   106:6  warning  React Hook useEffect has a missing dependency: 'mswEnabled'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/features/shared/autoRefreshNotice.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/features/shared/autoRefreshNotice.ts
   32:31  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/libs/admin/useAdminBroadcast.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/libs/admin/useAdminBroadcast.ts
   12:44  warning  React Hook useMemo has a missing dependency: 'scope'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/libs/telemetry/telemetryClient.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/libs/telemetry/telemetryClient.ts
   107:16  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/fixtures/outpatient.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/fixtures/outpatient.ts
   615:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/karteImage.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/karteImage.ts
   125:51  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   125:84  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   134:41  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -640,26 +640,26 @@ start_utc=2026-04-21T11:44:04Z
   174:43  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   175:33  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/orcaDisease.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/orcaDisease.ts
   23:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/orcaOrderBundles.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/orcaOrderBundles.test.ts
   71:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/orcaOrderBundles.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/orcaOrderBundles.ts
   32:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   36:46  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/orcaQueue.test.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/orcaQueue.test.ts
   59:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/orcaQueue.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/orcaQueue.ts
   135:14  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/orcaReception.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/orcaReception.ts
   24:75  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/outpatient.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/outpatient.ts
    20:37   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    56:50   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
    90:103  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -685,17 +685,17 @@ start_utc=2026-04-21T11:44:04Z
   351:61   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   424:12   warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/patientImages.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/patientImages.ts
   23:83  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/mocks/handlers/stampTree.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/mocks/handlers/stampTree.ts
   17:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/src/routes/NavigationGuardProvider.tsx
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/src/routes/NavigationGuardProvider.tsx
    65:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
   316:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
 
-/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client/vite.config.ts
+/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main/web-client/vite.config.ts
   221:30  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   223:47  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
   223:57  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
@@ -713,6 +713,6 @@ start_utc=2026-04-21T11:44:04Z
   0 errors and 17 warnings potentially fixable with the `--fix` option.
 
 --- command summary ---
-end_utc=2026-04-21T11:44:10Z
+end_utc=2026-04-21T13:34:45Z
 exit_code=0
 result=PASS

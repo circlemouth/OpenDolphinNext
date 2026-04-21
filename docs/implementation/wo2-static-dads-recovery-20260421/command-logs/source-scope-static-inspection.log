@@ -1,0 +1,23 @@
+command_log_version=1
+command=rg -n DiagnosisEditPanelMeta\|baseDiagnosisMeta\|renderDiagnosisPanel\|fetchLetterDetail\|letter:\\s\*null\|as\ any\|@ts-ignore\|LetterDetailResult web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx web-client/src/features/charts/letterApi.ts web-client/src/features/charts/DiagnosisEditPanel.tsx
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo2-reopen-main
+runId=20260421T132901Z
+start_utc=2026-04-21T13:42:50Z
+--- command output ---
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:11:import type { DiagnosisEditPanelMeta } from '../DiagnosisEditPanel';
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:14:import { fetchKarteIdByPatientId, fetchLetterDetail, fetchLetterList, saveLetterModule, deleteLetter } from '../letterApi';
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:31:  fetchLetterDetail: vi.fn(),
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:103:const baseDiagnosisMeta: DiagnosisEditPanelMeta = {
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:113:const renderDiagnosisPanel = (meta: DiagnosisEditPanelMeta = baseDiagnosisMeta) =>
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:182:  vi.mocked(fetchLetterDetail).mockResolvedValue({ ok: true });
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:225:    renderDiagnosisPanel();
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:242:    renderDiagnosisPanel({
+web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx:243:      ...baseDiagnosisMeta,
+web-client/src/features/charts/DiagnosisEditPanel.tsx:25:export type DiagnosisEditPanelMeta = {
+web-client/src/features/charts/DiagnosisEditPanel.tsx:42:  meta: DiagnosisEditPanelMeta;
+web-client/src/features/charts/letterApi.ts:84:export type LetterDetailResult = ApiResultBase & {
+web-client/src/features/charts/letterApi.ts:167:export async function fetchLetterDetail({ letterId }: { letterId: number }): Promise<LetterDetailResult> {
+--- command summary ---
+end_utc=2026-04-21T13:42:50Z
+exit_code=0
+result=PASS

@@ -1,8 +1,7 @@
 # WO-2 Final Summary
 
-- run_id: `20260421T111148Z`
+- run_id: `20260421T132901Z`
 - source_branch: `codex/wo2-static-dads-recovery-main-20260421`
-- source_commit: `b3766a65e62410095bfdb1544f1dd0731e61cd78`
 - packageMode: `extracted_review_subset`
 - worktree_clean: `not_verified`
 - full_source_secret_scan_claim: `not_claimed`
@@ -14,8 +13,5 @@
 - static/DADS recovery status: `pass`
 - typecheck/build/lint/test:ci: `pass`
 - DADS applicability: chart clinical input contract only
-- may_start_WO3: `yes_after_ChatGPT_review`
-- package: `OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip`
-- package_sha256: `0182ee0475406de33dc9dba463ba5ab1bafba91b64b7c7140de9b9de6a02a482`
-- package_size_bytes: `19014740`
-- package_file_count: `2349`
+- may_start_WO3: `no_until_ChatGPT_accepts_reopened_WO2`
+- final ZIP hash/size/file count: recorded in external final ZIP sidecar after package creation

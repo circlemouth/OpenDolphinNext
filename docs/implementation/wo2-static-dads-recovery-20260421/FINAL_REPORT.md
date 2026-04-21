@@ -1,36 +1,48 @@
 # WO-2 Static / DADS Recovery Final Report
 
-RUN_ID: `20260421T111148Z`
+RUN_ID: `20260421T132901Z`
 
 ## Result
 
-WO-2 restored web-client static health for the DADS/chart typing blockers.
+WO-2 reopened package evidence was completed for the Static/DADS recovery gate. The source/static scope remains limited to the accepted WO-2 target files and no WO-3 / Clinical Wave 1 work was started.
 
+- source/static scope audit: PASS
 - typecheck: PASS
 - build: PASS
 - lint: PASS
 - test:ci: PASS
 - focused DADS clinical input contract test: PASS
-- package metadata validation: PASS
-- final ZIP source-scope scan: PASS
-- artifact ledger verification: PASS
+- review package script tests: PASS
+- package evidence policy audit: PASS
+- sanitize/package validation audit: PASS
 
-## Package Truth
+## Source / Static Scope
 
-- packageMode: `extracted_review_subset`
-- source_branch: `codex/wo2-static-dads-recovery-main-20260421`
-- source_commit: `b3766a65e62410095bfdb1544f1dd0731e61cd78`
-- worktree_clean: `not_verified`
-- full_source_secret_scan_claim: `not_claimed`
-- package_source_secret_scan_claim: `passed`
+Accepted source/static target remains narrow:
 
-Package:
+- `web-client/src/features/charts/__tests__/dadsClinicalInputContract.test.tsx`
+  - imports `DiagnosisEditPanelMeta`.
+  - types `baseDiagnosisMeta` as `DiagnosisEditPanelMeta`.
+  - types `renderDiagnosisPanel` with `DiagnosisEditPanelMeta`.
+  - mocks `fetchLetterDetail` with omitted `letter`, not `letter: null`.
+  - contains no `any`, broad cast, or TypeScript-ignore workaround in the target test.
+- `web-client/src/features/charts/letterApi.ts`
+  - keeps `LetterDetailResult.letter` as optional `LetterModulePayload`, not nullable.
+- `web-client/src/features/charts/DiagnosisEditPanel.tsx`
+  - remains the source of `DiagnosisEditPanelMeta`.
 
-`docs/implementation/wo2-static-dads-recovery-20260421/OpenDolphin_WebClient-review-package-20260421T111148Z-WO2_static-dads-recovery.zip`
+## Package Truth Boundary
 
-- sha256: `0182ee0475406de33dc9dba463ba5ab1bafba91b64b7c7140de9b9de6a02a482`
-- size: `19,014,740 bytes`
-- file count: `2,349`
+The final reviewer support ZIP is an `extracted_review_subset` package generated after package-internal reports and command logs are present. Because the final ZIP SHA-256, final ZIP scan log, and metadata validation log are created after the ZIP exists, those final artifact checks are external sidecar evidence and cannot be self-contained inside the same ZIP without creating a hash/log self-reference.
+
+The final ZIP metadata must retain:
+
+- `packageMode=extracted_review_subset`
+- `worktree_clean=not_verified`
+- `full_source_secret_scan_claim=not_claimed`
+- `package_source_secret_scan_claim=passed`
+
+Final ZIP path, SHA-256, size, file count, and target-bound validation results are recorded in the external final ZIP `.summary.txt`, `.secret-scan-review-bundle.log`, `artifact-sha256.txt`, and post-package command logs.
 
 ## Scope Guard
 
@@ -40,14 +52,10 @@ Package:
 - new mutation: no.
 - Clinical Wave 1: not_started.
 - WO-3 / WO-4 / WO-5: not_started.
+- may_start_WO3: no until ChatGPT accepts the reopened WO-2 gate.
 
 ## Security Notes
 
-This task changed a static test fixture/type annotation only. It did not touch authentication, authorization, sessions, health checks, external connection code, attachment storage, audit behavior, or live ORCA execution paths.
+This task changed package evidence and static review documentation only. It did not touch authentication, authorization, sessions, health checks, external connection code, attachment storage, audit behavior, live ORCA execution paths, or CWP implementation.
 
-No raw credential, cookie, Authorization value, JSESSIONID, CSRF token value, raw session, raw password, credential-bearing URL, raw ORCA request/response body, raw patient detail, raw insurance detail, HAR, trace, video, screenshot, or raw network dump is included in the WO-2 package artifacts.
-
-## Next
-
-- next owner: ChatGPT review.
-- may_start_WO3: yes, only after ChatGPT review accepts this WO-2 gate.
+No raw credential, cookie, Authorization value, JSESSIONID, CSRF token value, raw session, raw password, credential-bearing URL, raw ORCA request/response body, raw patient detail, raw insurance detail, HAR, trace, video, screenshot, or raw network dump is included in the WO-2 package evidence.
