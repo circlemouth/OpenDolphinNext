@@ -20,11 +20,14 @@ import java.util.Optional;
 import open.dolphin.audit.AuditEventEnvelope;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.rest.dto.orca.PrescriptionClaimComment;
+import open.dolphin.rest.dto.orca.PrescriptionDoctorComment;
 import open.dolphin.rest.dto.orca.PrescriptionDrug;
 import open.dolphin.rest.dto.orca.PrescriptionOrder;
 import open.dolphin.rest.dto.orca.PrescriptionOrderFetchResponse;
 import open.dolphin.rest.dto.orca.PrescriptionOrderSaveResponse;
+import open.dolphin.rest.dto.orca.PrescriptionRemark;
 import open.dolphin.rest.dto.orca.PrescriptionRp;
+import open.dolphin.rest.dto.orca.PrescriptionSetting;
 import open.dolphin.security.audit.AuditEventPayload;
 import open.dolphin.security.audit.SessionAuditDispatcher;
 import open.dolphin.session.PatientServiceBean;
@@ -209,6 +212,60 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
     }
 
     @Test
+    void saveThenGetLatestRoundTripsFullLocalPrescriptionPayload() {
+        PrescriptionOrder payload = buildPayload();
+        payload.setDoctorComments(List.of(doctorComment("local doctor comment")));
+        payload.setPrescriptionSettings(List.of(prescriptionSetting("setting-1", "outside prescription", "enabled")));
+        payload.setRemarks(List.of(prescriptionRemark("remark-1", "local prescription remark")));
+        payload.getRps().get(0).setRemark("RP local remark");
+        payload.getRps().get(0).setDoctorComment("RP doctor comment");
+        payload.getRps().get(0).setClaimComments(List.of(claimComment("830000001", "rp claim comment", "rp-note")));
+
+        PrescriptionOrderSaveResponse saveResponse = resource.saveOrder(servletRequest, payload);
+        assertEquals("00", saveResponse.getApiResult());
+
+        PrescriptionOrderFetchResponse fetchResponse = resource.getLatestOrder(
+                servletRequest,
+                "00001",
+                "F001:E100",
+                "2026-04-03");
+
+        assertTrue(fetchResponse.isFound());
+        PrescriptionOrder fetched = fetchResponse.getOrder();
+        assertNotNull(fetched);
+        assertEquals("00001", fetched.getPatientId());
+        assertEquals("F001:E100", fetched.getEncounterId());
+        assertEquals("2026-04-03", fetched.getEncounterDate());
+        assertEquals("local doctor comment", fetched.getDoctorComments().get(0).getText());
+        assertEquals("setting-1", fetched.getPrescriptionSettings().get(0).getCode());
+        assertEquals("local prescription remark", fetched.getRemarks().get(0).getText());
+
+        PrescriptionRp fetchedRp = fetched.getRps().get(0);
+        assertEquals("rp-1", fetchedRp.getRpNumber());
+        assertEquals("Prescription RP", fetchedRp.getBundleName());
+        assertEquals("212", fetchedRp.getMedicalClass());
+        assertEquals("1", fetchedRp.getMedicalClassNumber());
+        assertEquals("001000", fetchedRp.getUsageCode());
+        assertEquals("after meal", fetchedRp.getUsageName());
+        assertEquals("RP local remark", fetchedRp.getRemark());
+        assertEquals("RP doctor comment", fetchedRp.getDoctorComment());
+        assertEquals("830000001", fetchedRp.getClaimComments().get(0).getCode());
+        assertEquals("rp-note", fetchedRp.getClaimComments().get(0).getNote());
+
+        PrescriptionDrug fetchedDrug = fetchedRp.getDrugs().get(0);
+        assertEquals("620000001", fetchedDrug.getCode());
+        assertEquals("Amlodipine", fetchedDrug.getName());
+        assertEquals("1", fetchedDrug.getQuantity());
+        assertEquals("tab", fetchedDrug.getUnit());
+        assertEquals("after meal", fetchedDrug.getDrugComment());
+        assertEquals(Boolean.TRUE, fetchedDrug.getGenericChangeAllowed());
+        assertEquals(Boolean.FALSE, fetchedDrug.getGeneralNamePrescription());
+        assertEquals(Boolean.TRUE, fetchedDrug.getPatientRequested());
+        assertEquals("810000001", fetchedDrug.getClaimComments().get(0).getCode());
+        assertEquals("note", fetchedDrug.getClaimComments().get(0).getNote());
+    }
+
+    @Test
     void getLatestOrderUsesEncounterIdToAvoidSameDayMixup() throws Exception {
         PrescriptionOrder encounterA = buildPayload();
         encounterA.setEncounterId("F001:E100");
@@ -279,6 +336,27 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
         return claimComment;
     }
 
+    private static PrescriptionDoctorComment doctorComment(String text) {
+        PrescriptionDoctorComment doctorComment = new PrescriptionDoctorComment();
+        doctorComment.setText(text);
+        return doctorComment;
+    }
+
+    private static PrescriptionSetting prescriptionSetting(String code, String name, String value) {
+        PrescriptionSetting setting = new PrescriptionSetting();
+        setting.setCode(code);
+        setting.setName(name);
+        setting.setValue(value);
+        return setting;
+    }
+
+    private static PrescriptionRemark prescriptionRemark(String code, String text) {
+        PrescriptionRemark remark = new PrescriptionRemark();
+        remark.setCode(code);
+        remark.setText(text);
+        return remark;
+    }
+
     @SuppressWarnings("unchecked")
     private static void assertValidationError(WebApplicationException ex, String field) {
         assertNotNull(ex);
@@ -345,6 +423,15 @@ class LocalPrescriptionOrderResourceTest extends RuntimeDelegateTestSupport {
             savedEncounterId = encounterId;
             savedEncounterDate = encounterDate;
             savedPayloadJson = payloadJson;
+            storedOrdersByEncounterId.put(
+                    encounterId,
+                    new StoredPrescriptionOrder(
+                            101L,
+                            payloadJson,
+                            encounterId,
+                            encounterDate,
+                            performDate,
+                            createdAt));
             return 101L;
         }
 
