@@ -19,10 +19,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import open.dolphin.infomodel.AttachmentModel;
+import open.dolphin.infomodel.BundleDolphin;
+import open.dolphin.infomodel.ClaimItem;
 import open.dolphin.infomodel.DocInfoModel;
 import open.dolphin.infomodel.DocumentModel;
 import open.dolphin.infomodel.ExtRefModel;
+import open.dolphin.infomodel.IInfoModel;
 import open.dolphin.infomodel.KarteBean;
+import open.dolphin.infomodel.ModelUtils;
+import open.dolphin.infomodel.ModuleInfoBean;
 import open.dolphin.infomodel.ModuleModel;
 import open.dolphin.infomodel.PatientModel;
 import open.dolphin.infomodel.SchemaModel;
@@ -186,6 +191,32 @@ class DocumentIntegrityServiceTest {
     }
 
     @Test
+    void verify_failsWhenOrderModulePayloadIsTamperedAfterSeal() throws Exception {
+        DocumentModel original = buildDocument(false);
+        replaceFirstModuleWithOrderModule(original, "TEST-DRUG-001", "テスト薬剤");
+        DocumentIntegrityEntity stored = buildStoredSeal(service, original, PRIMARY_KEY_B64, "v1");
+        when(em.find(DocumentIntegrityEntity.class, original.getId())).thenReturn(stored);
+
+        assertThatCode(() -> service.verifyDocumentOnRead(original)).doesNotThrowAnyException();
+
+        DocumentModel tampered = buildDocument(false);
+        replaceFirstModuleWithOrderModule(tampered, "TEST-DRUG-002", "改ざん後薬剤");
+
+        assertThatThrownBy(() -> service.verifyDocumentOnRead(tampered))
+                .isInstanceOf(WebApplicationException.class)
+                .satisfies(throwable -> {
+                    WebApplicationException ex = (WebApplicationException) throwable;
+                    assertThat(ex.getResponse().getStatus()).isEqualTo(409);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> body = (Map<String, Object>) ex.getResponse().getEntity();
+                    assertThat(body.get("errorCode")).isEqualTo("document_integrity_conflict");
+                    assertThat(body.get("details")).asInstanceOf(org.assertj.core.api.InstanceOfAssertFactories.MAP)
+                            .containsEntry("reasonCode", "content_hash_mismatch");
+                });
+        assertThat(tampered.getModules().get(0).getDocumentModel()).isSameAs(tampered);
+    }
+
+    @Test
     void canonicalBytes_includeAttachmentReferenceBoundary() throws Exception {
         DocumentModel direct = buildDocument(false);
         DocumentModel reference = buildDocument(false);
@@ -328,6 +359,41 @@ class DocumentIntegrityServiceTest {
         document.setAttachment(attachments);
 
         return document;
+    }
+
+    private static void replaceFirstModuleWithOrderModule(DocumentModel document, String itemCode, String itemName) {
+        ModuleModel module = document.getModules().get(0);
+        module.setDocumentModel(document);
+        module.setKarteBean(document.getKarteBean());
+        module.setUserModel(document.getUserModel());
+        ModuleInfoBean info = module.getModuleInfoBean();
+        info.setEntity(IInfoModel.ENTITY_MED_ORDER);
+        info.setStampName("テスト処方");
+        info.setStampRole(IInfoModel.ROLE_P);
+        info.setStampNumber(1);
+        module.setModel(buildOrderBundle(itemCode, itemName));
+        module.setBeanJson(ModelUtils.encodeModule(module));
+    }
+
+    private static BundleDolphin buildOrderBundle(String itemCode, String itemName) {
+        BundleDolphin bundle = new BundleDolphin();
+        bundle.setOrderName("テスト薬剤セット");
+        bundle.setClassCode("212");
+        bundle.setClassCodeSystem("Claim007");
+        bundle.setClassName("処方");
+        bundle.setAdmin("1日1回");
+        bundle.setAdminCode("TEST-USAGE-001");
+        bundle.setAdminCodeSystem("Claim007");
+        bundle.setBundleNumber("1");
+
+        ClaimItem item = new ClaimItem();
+        item.setCode(itemCode);
+        item.setCodeSystem("Claim007");
+        item.setName(itemName);
+        item.setNumber("1");
+        item.setUnit("錠");
+        bundle.setClaimItem(new ClaimItem[]{item});
+        return bundle;
     }
 
     private static void setField(Object target, String fieldName, Object value) throws Exception {
