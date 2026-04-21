@@ -37,6 +37,7 @@
 - [implementation/opendolphin-webclient-implementation-package-20260417/README.md](implementation/opendolphin-webclient-implementation-package-20260417/README.md)
 - [implementation/opendolphin-webclient-implementation-package-20260416/README.md](implementation/opendolphin-webclient-implementation-package-20260416/README.md)
 - [codex/README.md](codex/README.md)
+- [codex/clinical-input-cwp01-karte-order-persistence-20260421/README.md](codex/clinical-input-cwp01-karte-order-persistence-20260421/README.md)
 - [codex/clinical-input-wave2a-20260421/README.md](codex/clinical-input-wave2a-20260421/README.md)
 - [codex/clinical-input-test-wave1-20260421/README.md](codex/clinical-input-test-wave1-20260421/README.md)
 - current workflow の実行正本は [runbooks/release-validation.md](runbooks/release-validation.md)、[runbooks/reviewer-submission-packet.md](runbooks/reviewer-submission-packet.md)、[releases/orca-remediation-cutover.md](releases/orca-remediation-cutover.md) です。
