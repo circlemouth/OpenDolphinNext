@@ -218,7 +218,7 @@ validate_sanitized_review_evidence_path() {
   esac
 
   case "$lower_path" in
-    *.log|*.md|*.txt|*.sanitized.json|*summary.json|*report.json|*progress.json|*manifest.json|*manifest.txt|*command-log.json)
+    *.log|*.md|*.txt|*.sanitized.json|*summary.json|*report.json|*progress.json|*manifest.json|*manifest.txt|*command-log.json|*command-log.jsonl)
       return 0
       ;;
     *)
@@ -230,6 +230,8 @@ validate_sanitized_review_evidence_path() {
 
 validate_command_log_evidence() {
   local log_path="$1"
+  local start_value
+  local end_value
 
   if [[ ! -s "$log_path" ]]; then
     echo "review log manifest entry is empty and cannot be pass evidence: $log_path" >&2
@@ -256,6 +258,26 @@ validate_command_log_evidence() {
     echo "review command log missing end metadata: $log_path" >&2
     exit 1
   }
+  start_value="$(sed -n -E 's/^start(_utc)?=//p' "$log_path" | head -n 1)"
+  end_value="$(sed -n -E 's/^end(_utc)?=//p' "$log_path" | head -n 1)"
+  validate_actual_utc_timestamp() {
+    local value="$1"
+    local label="$2"
+    local lower_value
+    lower_value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+    case "$lower_value" in
+      ""|recorded_in_session_transcript|*placeholder*|*not_recorded*|*not-recorded*|*unknown*|*not_verified*|*todo*|*tbd*)
+        echo "review command log has placeholder-only ${label} timestamp: $log_path" >&2
+        exit 1
+        ;;
+    esac
+    if [[ ! "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,9})?Z$ ]]; then
+      echo "review command log ${label} timestamp must be an actual UTC timestamp: $log_path" >&2
+      exit 1
+    fi
+  }
+  validate_actual_utc_timestamp "$start_value" "start"
+  validate_actual_utc_timestamp "$end_value" "end"
   grep -Eq '^exit(_code)?=' "$log_path" || {
     echo "review command log missing exit code metadata: $log_path" >&2
     exit 1
@@ -282,9 +304,17 @@ validate_json_command_log_evidence() {
   node - "$log_path" <<'NODE'
 const fs = require('node:fs');
 const logPath = process.argv[2];
+const text = fs.readFileSync(logPath, 'utf8');
 let parsed;
 try {
-  parsed = JSON.parse(fs.readFileSync(logPath, 'utf8'));
+  if (logPath.endsWith('.jsonl')) {
+    parsed = text
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== '')
+      .map((line) => JSON.parse(line));
+  } else {
+    parsed = JSON.parse(text);
+  }
 } catch {
   console.error(`review JSON command log is not valid JSON: ${logPath}`);
   process.exit(1);
@@ -296,7 +326,31 @@ if (!Array.isArray(entries) || entries.length === 0) {
   process.exit(1);
 }
 
-const required = ['command', 'cwd', 'runId', 'start', 'end', 'exit_code'];
+function requireAny(entry, keys, index) {
+  for (const key of keys) {
+    if (entry?.[key] !== undefined && entry?.[key] !== null && entry?.[key] !== '') return entry[key];
+  }
+  console.error(`review JSON command log entry ${index} missing ${keys[0]}: ${logPath}`);
+  process.exit(1);
+}
+
+function assertActualUtcTimestamp(value, key, index) {
+  const text = String(value);
+  if (
+    text === '' ||
+    text === 'recorded_in_session_transcript' ||
+    /placeholder|not[_-]?recorded|unknown|not_verified|todo|tbd/i.test(text)
+  ) {
+    console.error(`review JSON command log entry ${index} has placeholder-only ${key} timestamp: ${logPath}`);
+    process.exit(1);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(text)) {
+    console.error(`review JSON command log entry ${index} ${key} must be an actual UTC timestamp: ${logPath}`);
+    process.exit(1);
+  }
+}
+
+const required = ['command', 'cwd', 'runId'];
 for (const [index, entry] of entries.entries()) {
   for (const key of required) {
     if (entry?.[key] === undefined || entry?.[key] === null || entry?.[key] === '') {
@@ -304,6 +358,11 @@ for (const [index, entry] of entries.entries()) {
       process.exit(1);
     }
   }
+  const start = requireAny(entry, ['start', 'start_utc'], index);
+  const end = requireAny(entry, ['end', 'end_utc'], index);
+  requireAny(entry, ['exit_code', 'exit'], index);
+  assertActualUtcTimestamp(start, 'start', index);
+  assertActualUtcTimestamp(end, 'end', index);
   const outputValues = [
     entry.output,
     entry.stdout,
@@ -385,6 +444,7 @@ PACKAGE_SUMMARY_FILE="${PACKAGE_FILE}.summary.txt"
 PACKAGE_SUMMARY_BASENAME="$(basename "$PACKAGE_SUMMARY_FILE")"
 PACKAGE_SCAN_LOG="${PACKAGE_FILE}.secret-scan-review-bundle.log"
 PACKAGE_SCAN_LOG_BASENAME="$(basename "$PACKAGE_SCAN_LOG")"
+ARTIFACT_SHA_FILE="$OUT_DIR/artifact-sha256.txt"
 
 if [[ "$IS_GIT_WORKTREE" -eq 1 ]]; then
   GIT_COMMIT="$(git rev-parse HEAD 2>/dev/null || printf 'not_verified')"
@@ -543,7 +603,7 @@ if [[ -n "$REVIEW_LOG_MANIFEST" ]]; then
       *.log)
         validate_command_log_evidence "$repo_path"
         ;;
-      *command-log.json)
+      *command-log.json|*command-log.jsonl)
         validate_json_command_log_evidence "$repo_path"
         ;;
     esac
@@ -571,9 +631,9 @@ if [[ -n "$REVIEW_LOG_MANIFEST" ]]; then
         BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE="${BUNDLE_INCLUDED_SOURCE_SCOPE_SECRET_SCAN_EVIDENCE},${repo_path}"
       fi
     fi
+    REVIEW_LOG_INCLUDED+=("$repo_path")
     if ! grep -Fxq "$repo_path" "$FILE_LIST"; then
       printf '%s\n' "$repo_path" >> "$FILE_LIST"
-      REVIEW_LOG_INCLUDED+=("$repo_path")
     fi
   done < <(sed -n 's/^- //p' "$REVIEW_LOG_MANIFEST")
 fi
@@ -709,6 +769,7 @@ EOF
 rm -f "$PACKAGE_FILE"
 rm -f "$PACKAGE_SUMMARY_FILE"
 rm -f "$PACKAGE_SCAN_LOG"
+rm -f "$ARTIFACT_SHA_FILE"
 zip_create_from_file_list "$PACKAGE_FILE" "$FILE_LIST"
 zip_add_junk_file "$PACKAGE_FILE" "$MANIFEST_FILE"
 zip_add_junk_file "$PACKAGE_FILE" "$REVIEW_LOG_INCLUSIONS_FILE"
@@ -798,7 +859,16 @@ git_claim_evidence_policy=git claims require package-included local git command 
 hash_note=external summary avoids self-referential package hash drift
 EOF
 
+{
+  echo "# artifact-sha256 for ${RUN_ID}"
+  echo "# Verify from this directory with: shasum -a 256 -c artifact-sha256.txt"
+  printf '%s  %s\n' "$ZIP_SHA" "$(basename "$PACKAGE_FILE")"
+  printf '%s  %s\n' "$(calculate_sha256 "$PACKAGE_SUMMARY_FILE")" "$(basename "$PACKAGE_SUMMARY_FILE")"
+  printf '%s  %s\n' "$(calculate_sha256 "$PACKAGE_SCAN_LOG")" "$(basename "$PACKAGE_SCAN_LOG")"
+} > "$ARTIFACT_SHA_FILE"
+
 echo "[INFO] created ${PACKAGE_FILE}"
 echo "[INFO] files=${ZIP_FILE_COUNT} size=${ZIP_SIZE} sha256=${ZIP_SHA}"
 echo "[INFO] package_summary=${PACKAGE_SUMMARY_FILE}"
+echo "[INFO] artifact_sha256=${ARTIFACT_SHA_FILE}"
 echo "[DONE] RUN_ID=${RUN_ID}"

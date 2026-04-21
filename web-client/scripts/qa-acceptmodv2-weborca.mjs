@@ -370,6 +370,7 @@ let lastSummary = null;
 const ACCEPTMOD_SUCCESS_RESULT = /^0+$/;
 const ACCEPTMOD_OFFICIAL_WARNING_RESULTS = new Set(['K1', 'K2', 'K3']);
 const ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER = '00';
+const ACCEPTMOD_ALLOWED_MUTATION_REQUEST_NUMBER = '01';
 
 const normalizeApiResult = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value).trim().toUpperCase();
@@ -450,10 +451,10 @@ const classifyAcceptmodBusinessResult = ({ ok = true, apiResult, raw }) => {
   const normalized = normalizeApiResult(apiResult);
   const evidence = hasRegistrationEvidence(raw);
   const requestNumber = String(raw?.requestNumber ?? raw?.Request_Number ?? '').trim();
-  if (requestNumber === ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER) {
+  if (requestNumber === ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER || (requestNumber && requestNumber !== ACCEPTMOD_ALLOWED_MUTATION_REQUEST_NUMBER)) {
     return {
       businessStatus: 'notVerified',
-      businessReason: 'diagnostic_request_number_without_mutation_success',
+      businessReason: 'non_phase3_registration_request_number_without_mutation_success',
       hasRegistrationEvidence: evidence,
       requestNumber,
     };
@@ -615,6 +616,8 @@ const buildSanitizedSummary = (summary, exitCode) => buildSanitizedAcceptmodv2Su
   medicalInformationGate: summary?.medicalInformationGate ?? evaluateMedicalInformationGate({
     requestRecords,
     medicalInformation,
+    expectedPatientId: patientId || '00001',
+    expectedCandidateId: candidateId || patientId || '00001',
   }),
   patientIdMatched: patientIdMatchedForEvidence(),
 });

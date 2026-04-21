@@ -1,0 +1,53 @@
+command_log_version=1
+command=shasum -a 256 -c artifact-sha256.txt
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/docs/implementation/orca-trial-phase3-retry-20260421T060636Z
+runId=20260421T101349Z
+start_utc=2026-04-21T10:29:25Z
+--- command output ---
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/MAIN_AGENT_REPORT.md: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/MAIN_AGENT_REPORT.md: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/OpenDolphin_WebClient-review-package-20260421T060636Z-phase3-retry.zip.secret-scan-review-bundle.log: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/OpenDolphin_WebClient-review-package-20260421T060636Z-phase3-retry.zip.secret-scan-review-bundle.log: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/OpenDolphin_WebClient-review-package-20260421T060636Z-phase3-retry.zip.summary.txt: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/OpenDolphin_WebClient-review-package-20260421T060636Z-phase3-retry.zip.summary.txt: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/REVIEW_LOG_INCLUSIONS_MANIFEST.txt: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/REVIEW_LOG_INCLUSIONS_MANIFEST.txt: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/REVIEW_PACKAGE_MANIFEST.txt: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/REVIEW_PACKAGE_MANIFEST.txt: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/TEST_LOGS.sanitized.md: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/TEST_LOGS.sanitized.md: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/accept-summary.sanitized.json: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/accept-summary.sanitized.json: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/accept-summary.sanitized.md: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/accept-summary.sanitized.md: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/steps.log: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/acceptmodv2-sanitized/steps.log: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/c7-dynamic-payload-gate.sanitized.json: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/c7-dynamic-payload-gate.sanitized.json: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/command-log.jsonl: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/command-log.jsonl: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/command-log.sanitized.json: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/command-log.sanitized.json: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/dry-run-evidence/phase3-approved-command.sanitized.json: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/dry-run-evidence/phase3-approved-command.sanitized.json: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-summary.sanitized.json: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-summary.sanitized.json: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-summary.sanitized.md: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-summary.sanitized.md: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-zip-metadata-validation.sanitized.txt: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-zip-metadata-validation.sanitized.txt: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-zip-source-scope-secret-scan.sanitized.txt: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/final-zip-source-scope-secret-scan.sanitized.txt: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-approved-command.sanitized.json: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-approved-command.sanitized.json: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-business-evidence.sanitized.json: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-business-evidence.sanitized.json: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-business-evidence.sanitized.md: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/phase3-business-evidence.sanitized.md: FAILED open or read
+shasum: docs/implementation/orca-trial-phase3-retry-20260421T060636Z/secret-scan.sanitized.txt: No such file or directory
+docs/implementation/orca-trial-phase3-retry-20260421T060636Z/secret-scan.sanitized.txt: FAILED open or read
+shasum: WARNING: 21 listed files could not be read
+--- command summary ---
+end_utc=2026-04-21T10:29:25Z
+exit_code=1
+result=FAIL

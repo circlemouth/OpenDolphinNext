@@ -12,8 +12,16 @@ const c7Pass = {
   checkedRequests: 1,
   violationCount: 0,
   violatedKeys: [],
-  bodyKeysObserved: ['acceptancePush', 'patientId'],
+  bodyKeysObserved: ['acceptancePush', 'patientId', 'requestNumber'],
   medicalInformationFieldPresent: false,
+  intendedRequestNumber01: true,
+  requestNumberKeyPresent: true,
+  requestNumberKeysObserved: ['requestNumber'],
+  requestNumber01ValueVerified: true,
+  requestNumber02_03_04Absent: true,
+  targetPatientId00001Verified: true,
+  targetCandidateOnly00001: true,
+  patientIdKeysObserved: ['patientId'],
   unspecifiedRun: true,
 };
 
@@ -78,6 +86,37 @@ describe('acceptmodv2 business evidence summary', () => {
     expect(summary.acceptanceIdPresent).toBe(false);
   });
 
+  it('K3 warning と registration evidence と C7 pass が揃った場合だけ acceptedWithWarnings にする', () => {
+    const summary = buildSanitizedAcceptmodv2Summary({
+      runId: '20260419T013639Z',
+      candidateId: 'candidate-2',
+      preflightPath: 'artifacts/preflight/summary.json',
+      preflightSha256: 'abc123',
+      command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+      cwd: 'web-client',
+      startTime: '2026-04-19T01:36:39.000Z',
+      endTime: '2026-04-19T01:36:40.000Z',
+      exitCode: 0,
+      acceptResponse: {
+        status: 200,
+        apiResult: 'K3',
+        requestNumber: '01',
+        businessStatus: 'businessAcceptedWithWarnings',
+        apiResultMessage: '警告あり',
+        acceptanceId: '',
+        hasRegistrationEvidence: true,
+      },
+      medicalInformationGate: c7Pass,
+      patientIdMatched: true,
+    });
+
+    expect(summary.responseClassification).toBe('businessAcceptedWithWarnings');
+    expect(summary.business.businessAccepted).toBe(true);
+    expect(summary.business.businessAcceptedWithWarnings).toBe(true);
+    expect(summary.c7.accepted).toBe(true);
+    expect(summary.c7.requestNumber01ValueVerified).toBe(true);
+  });
+
   it('K1 warning code だけでは business accepted にしない', () => {
     const summary = buildSanitizedAcceptmodv2Summary({
       runId: '20260419T013639Z',
@@ -92,6 +131,35 @@ describe('acceptmodv2 business evidence summary', () => {
       acceptResponse: {
         status: 200,
         apiResult: 'K1',
+        businessStatus: 'businessAcceptedWithWarnings',
+        apiResultMessage: '警告あり',
+        acceptanceId: '',
+        hasRegistrationEvidence: false,
+      },
+      medicalInformationGate: c7Pass,
+      patientIdMatched: true,
+    });
+
+    expect(summary.responseClassification).toBe('notVerified');
+    expect(summary.business.businessAccepted).toBe(false);
+    expect(summary.business.businessAcceptedWithWarnings).toBe(false);
+  });
+
+  it('K3 warning code だけでは business accepted にしない', () => {
+    const summary = buildSanitizedAcceptmodv2Summary({
+      runId: '20260419T013639Z',
+      candidateId: 'candidate-2',
+      preflightPath: 'artifacts/preflight/summary.json',
+      preflightSha256: 'abc123',
+      command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+      cwd: 'web-client',
+      startTime: '2026-04-19T01:36:39.000Z',
+      endTime: '2026-04-19T01:36:40.000Z',
+      exitCode: 1,
+      acceptResponse: {
+        status: 200,
+        apiResult: 'K3',
+        requestNumber: '01',
         businessStatus: 'businessAcceptedWithWarnings',
         apiResultMessage: '警告あり',
         acceptanceId: '',
@@ -264,6 +332,98 @@ describe('acceptmodv2 business evidence summary', () => {
     expect(summary.business.businessAccepted).toBe(false);
     expect(summary.c7.accepted).toBe(false);
     expect(summary.c7.verdict).toBe('not_verified');
+  });
+
+  it('C7 target mutation request count が複数の summary は business accepted にしない', () => {
+    const summary = buildSanitizedAcceptmodv2Summary({
+      runId: '20260419T013639Z',
+      candidateId: 'candidate-5',
+      preflightPath: 'artifacts/preflight/summary.json',
+      preflightSha256: 'abc123',
+      command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+      cwd: 'web-client',
+      startTime: '2026-04-19T01:36:39.000Z',
+      endTime: '2026-04-19T01:36:40.000Z',
+      exitCode: 1,
+      acceptResponse: {
+        status: 200,
+        apiResult: '00',
+        requestNumber: '01',
+        businessStatus: 'businessAccepted',
+        acceptanceId: 'redacted-by-summary',
+        hasRegistrationEvidence: true,
+      },
+      medicalInformationGate: {
+        ...c7Pass,
+        targetMutationRequestCount: 2,
+        checkedRequests: 2,
+      },
+      patientIdMatched: true,
+    });
+
+    expect(summary.responseClassification).toBe('notVerified');
+    expect(summary.business.businessAccepted).toBe(false);
+    expect(summary.c7.accepted).toBe(false);
+  });
+
+  it('C7 requestNumber01ValueVerified が false の summary は business accepted にしない', () => {
+    const summary = buildSanitizedAcceptmodv2Summary({
+      runId: '20260419T013639Z',
+      candidateId: 'candidate-5',
+      preflightPath: 'artifacts/preflight/summary.json',
+      preflightSha256: 'abc123',
+      command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+      cwd: 'web-client',
+      startTime: '2026-04-19T01:36:39.000Z',
+      endTime: '2026-04-19T01:36:40.000Z',
+      exitCode: 1,
+      acceptResponse: {
+        status: 200,
+        apiResult: '00',
+        requestNumber: '00',
+        businessStatus: 'businessAccepted',
+        acceptanceId: 'redacted-by-summary',
+        hasRegistrationEvidence: true,
+      },
+      medicalInformationGate: {
+        ...c7Pass,
+        requestNumber01ValueVerified: false,
+      },
+      patientIdMatched: true,
+    });
+
+    expect(summary.responseClassification).toBe('notVerified');
+    expect(summary.business.businessAccepted).toBe(false);
+    expect(summary.c7.accepted).toBe(false);
+    expect(summary.c7.requestNumber01ValueVerified).toBe(false);
+  });
+
+  it('patient identity mismatch は business accepted にしない', () => {
+    const summary = buildSanitizedAcceptmodv2Summary({
+      runId: '20260419T013639Z',
+      candidateId: 'candidate-5',
+      preflightPath: 'artifacts/preflight/summary.json',
+      preflightSha256: 'abc123',
+      command: 'node scripts/qa-acceptmodv2-weborca.mjs',
+      cwd: 'web-client',
+      startTime: '2026-04-19T01:36:39.000Z',
+      endTime: '2026-04-19T01:36:40.000Z',
+      exitCode: 1,
+      acceptResponse: {
+        status: 200,
+        apiResult: '00',
+        requestNumber: '01',
+        businessStatus: 'businessAccepted',
+        acceptanceId: 'redacted-by-summary',
+        hasRegistrationEvidence: true,
+      },
+      medicalInformationGate: c7Pass,
+      patientIdMatched: false,
+    });
+
+    expect(summary.responseClassification).toBe('notVerified');
+    expect(summary.business.businessAccepted).toBe(false);
+    expect(summary.c7.accepted).toBe(false);
   });
 
   it('preflight artifact path/hash が無ければ C7 accepted と business accepted にしない', () => {

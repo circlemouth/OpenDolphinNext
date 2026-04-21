@@ -3,6 +3,9 @@ const ACCEPTMOD_API_RESULT_NO_ACCEPTANCE = '60';
 const ACCEPTMOD_API_RESULT_INSURANCE_MISMATCH = '21';
 const ACCEPTMOD_API_RESULT_ALREADY_ACCEPTED = '16';
 const ACCEPTMOD_WARNING_RESULTS = new Set(['K1', 'K2', 'K3']);
+const ACCEPTMOD_ALLOWED_MUTATION_REQUEST_NUMBER = '01';
+const ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER = '00';
+const ACCEPTMOD_FORBIDDEN_MUTATION_REQUEST_NUMBERS = new Set(['02', '03', '04']);
 
 const normalizeApiResult = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value).trim().toUpperCase();
@@ -62,11 +65,29 @@ export const hasAcceptmodRegistrationEvidence = (raw) =>
 export const classifyAcceptmodv2BusinessResult = ({ ok = true, apiResult, raw } = {}) => {
   const normalized = normalizeApiResult(apiResult);
   const hasRegistrationEvidence = hasAcceptmodRegistrationEvidence(raw);
+  const requestNumber =
+    typeof raw?.requestNumber === 'string'
+      ? raw.requestNumber.trim()
+      : typeof raw?.Request_Number === 'string'
+        ? raw.Request_Number.trim()
+        : '';
+  const observedNonPhase3RegistrationRequest =
+    requestNumber === ACCEPTMOD_DIAGNOSTIC_REQUEST_NUMBER ||
+    ACCEPTMOD_FORBIDDEN_MUTATION_REQUEST_NUMBERS.has(requestNumber) ||
+    (requestNumber.length > 0 && requestNumber !== ACCEPTMOD_ALLOWED_MUTATION_REQUEST_NUMBER);
 
   if (!ok) {
     return {
       businessStatus: 'businessRejected',
       businessReason: 'transport_error',
+      apiResult: normalized,
+      hasRegistrationEvidence,
+    };
+  }
+  if (observedNonPhase3RegistrationRequest) {
+    return {
+      businessStatus: 'notVerified',
+      businessReason: 'non_phase3_registration_request_number_without_mutation_success',
       apiResult: normalized,
       hasRegistrationEvidence,
     };

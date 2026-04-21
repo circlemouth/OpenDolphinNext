@@ -1,0 +1,52 @@
+command_log_version=1
+command=npm run build
+cwd=/Users/Hayato/Documents/GitHub/OpenDolphin_WebClient/web-client
+runId=20260421T111148Z
+start_utc=2026-04-21T11:43:43Z
+--- command output ---
+
+> web-client@0.0.0 prebuild
+> npm run verify:web-guard
+
+
+> web-client@0.0.0 verify:web-guard
+> npm run verify:no-public-secrets && npm run verify:no-blocked-orca-route-strings && npm run verify:no-legacy-auth-drift
+
+
+> web-client@0.0.0 verify:no-public-secrets
+> node scripts/verify-no-public-secrets.mjs
+
+[verify:no-public-secrets] web-client 配下の gitignore 対象外 .env* に問題は検出されませんでした。
+
+> web-client@0.0.0 verify:no-blocked-orca-route-strings
+> node scripts/verify-no-blocked-orca-route-strings.mjs
+
+[verify:no-blocked-orca-route-strings] ORCA route taxonomy guard passed. scanned roots=9, files=1115. category counts: production fail-close sentinel=2, MSW mock/test-only legacy route surface=2, e2e/QA fixture surface=248, blocked-route detector=39, docs/reference=181, server route inventory negative assertion=2, web.xml exposure negative assertion=3. skipped roots: none
+
+> web-client@0.0.0 verify:no-legacy-auth-drift
+> node scripts/verify-no-legacy-auth-drift.mjs
+
+[verify:no-legacy-auth-drift] legacy auth drift token の再混入は検出されませんでした。
+
+> web-client@0.0.0 build
+> tsc -b && vite build && node scripts/prune-prod-artifacts.mjs
+
+vite v6.4.1 building for production...
+transforming...
+✓ 607 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     3.77 kB │ gzip:   1.47 kB
+dist/assets/index-CWJ7lyzn.css     89.49 kB │ gzip:  14.41 kB
+dist/assets/index-CAsbE0YT.js   1,936.25 kB │ gzip: 475.39 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.01s
+[prune-prod-artifacts] removed: mockServiceWorker.js
+--- command summary ---
+end_utc=2026-04-21T11:43:58Z
+exit_code=0
+result=PASS

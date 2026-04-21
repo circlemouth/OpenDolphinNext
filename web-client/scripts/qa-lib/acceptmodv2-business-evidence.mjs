@@ -220,11 +220,23 @@ export const buildSanitizedAcceptmodv2Summary = ({
   const targetMutationRequestCount = medicalInformationGate?.targetMutationRequestCount ?? 0;
   const checkedRequests = medicalInformationGate?.checkedRequests ?? 0;
   const violationCount = medicalInformationGate?.violationCount ?? 0;
+  const requestNumberKeyPresent = medicalInformationGate?.requestNumberKeyPresent === true;
+  const requestNumber01ValueVerified = medicalInformationGate?.requestNumber01ValueVerified === true;
+  const requestNumber02_03_04Absent = medicalInformationGate?.requestNumber02_03_04Absent === true;
+  const targetPatientId00001Verified = medicalInformationGate?.targetPatientId00001Verified === true;
+  const targetCandidateOnly00001 = medicalInformationGate?.targetCandidateOnly00001 === true;
   const c7Accepted =
     medicalInformationGate?.ok === true &&
     targetMutationRequestCount > 0 &&
+    targetMutationRequestCount === 1 &&
     checkedRequests > 0 &&
     violationCount === 0 &&
+    requestNumberKeyPresent &&
+    requestNumber01ValueVerified &&
+    requestNumber02_03_04Absent &&
+    targetPatientId00001Verified &&
+    targetCandidateOnly00001 &&
+    patientIdMatched !== false &&
     preflightArtifactIncluded;
   const business = classifyBusinessResult({
     httpStatus,
@@ -285,6 +297,15 @@ export const buildSanitizedAcceptmodv2Summary = ({
       violatedKeys: sortKeys(medicalInformationGate?.violatedKeys ?? []),
       bodyKeysObserved: sortKeys(medicalInformationGate?.bodyKeysObserved ?? []),
       medicalInformationFieldPresent: Boolean(medicalInformationGate?.medicalInformationFieldPresent),
+      intendedRequestNumber01: medicalInformationGate?.intendedRequestNumber01 === true,
+      requestNumberKeyPresent,
+      requestNumberKeysObserved: sortKeys(medicalInformationGate?.requestNumberKeysObserved ?? []),
+      requestNumber01ValueVerified,
+      requestNumber02_03_04Absent,
+      targetPatientId00001Verified,
+      targetCandidateOnly00001,
+      patientIdKeysObserved: sortKeys(medicalInformationGate?.patientIdKeysObserved ?? []),
+      candidateIdKeysObserved: sortKeys(medicalInformationGate?.candidateIdKeysObserved ?? []),
       unspecifiedRun: Boolean(medicalInformationGate?.unspecifiedRun),
       preflightArtifactIncluded,
     },

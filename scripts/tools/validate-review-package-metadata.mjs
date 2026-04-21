@@ -5,14 +5,15 @@ import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { listEntries, readAll, readEntry } from './zip-compat.mjs';
 
-const [zipPath, summaryPathArg, packageScanLogPathArg] = process.argv.slice(2);
+const [zipPath, summaryPathArg, packageScanLogPathArg, artifactLedgerPathArg] = process.argv.slice(2);
 
 if (!zipPath) {
-  console.error('usage: validate-review-package-metadata.mjs <review-package.zip> [summary.txt]');
+  console.error('usage: validate-review-package-metadata.mjs <review-package.zip> [summary.txt] [package-secret-scan.log] [artifact-sha256.txt]');
   process.exit(2);
 }
 
 const summaryPath = summaryPathArg ?? `${zipPath}.summary.txt`;
+const artifactLedgerPath = artifactLedgerPathArg ?? path.resolve(path.dirname(summaryPath), 'artifact-sha256.txt');
 
 function fail(message) {
   console.error(message);
@@ -26,6 +27,20 @@ function parseKeyValue(text) {
     if (index > 0) values.set(line.slice(0, index), line.slice(index + 1));
   }
   return values;
+}
+
+function assertActualUtcTimestamp(value, label) {
+  const text = String(value ?? '');
+  if (
+    text === '' ||
+    text === 'recorded_in_session_transcript' ||
+    /placeholder|not[_-]?recorded|unknown|not_verified|todo|tbd/i.test(text)
+  ) {
+    fail(`${label} has placeholder-only timestamp`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(text)) {
+    fail(`${label} must be an actual UTC timestamp`);
+  }
 }
 
 function sha256File(filePath) {
@@ -64,6 +79,8 @@ function assertEqual(values, key, expected, label) {
 
 if (!existsSync(zipPath)) fail(`review package not found: ${zipPath}`);
 if (!existsSync(summaryPath)) fail(`review package summary not found: ${summaryPath}`);
+if (!existsSync(artifactLedgerPath)) fail(`artifact hash ledger not found: ${artifactLedgerPath}`);
+if (statSync(artifactLedgerPath).size === 0) fail(`artifact hash ledger is empty: ${artifactLedgerPath}`);
 
 let entries;
 try {
@@ -175,6 +192,28 @@ const actualCount = String(entries.length);
 const actualSize = String(statSync(zipPath).size);
 const actualSha = sha256File(zipPath);
 
+function parseArtifactLedger(text) {
+  const hashes = new Map();
+  for (const line of text.split(/\r?\n/)) {
+    if (!line || line.startsWith('#')) continue;
+    const match = line.match(/^([0-9a-f]{64})\s{2,}(.+)$/i);
+    if (!match) fail(`artifact hash ledger has malformed line: ${line}`);
+    hashes.set(match[2], match[1].toLowerCase());
+  }
+  return hashes;
+}
+
+function assertLedgerHash(ledger, filePath, label) {
+  const basename = path.basename(filePath);
+  const expected = sha256File(filePath);
+  const actual = ledger.get(basename) ?? ledger.get(path.relative(path.dirname(artifactLedgerPath), filePath).replaceAll(path.sep, '/'));
+  if (!actual) fail(`artifact hash ledger missing ${label}: ${basename}`);
+  assert.equal(actual, expected, `artifact hash ledger ${label}`);
+}
+
+const artifactLedger = parseArtifactLedger(readFileSync(artifactLedgerPath, 'utf8'));
+assertLedgerHash(artifactLedger, zipPath, 'review package ZIP');
+
 try {
   assertEqual(manifest, 'packageMode', 'extracted_review_subset', 'manifest');
   assertEqual(summary, 'packageMode', 'extracted_review_subset', 'summary');
@@ -231,12 +270,59 @@ function validateCommandLogContent(content, label) {
   for (const key of ['command', 'cwd', 'runId']) {
     required(values, key, label);
   }
-  if (!values.has('start') && !values.has('start_utc')) fail(`${label} missing start metadata`);
-  if (!values.has('end') && !values.has('end_utc')) fail(`${label} missing end metadata`);
+  const start = values.get('start') ?? values.get('start_utc');
+  const end = values.get('end') ?? values.get('end_utc');
+  if (!start) fail(`${label} missing start metadata`);
+  if (!end) fail(`${label} missing end metadata`);
+  assertActualUtcTimestamp(start, `${label} start`);
+  assertActualUtcTimestamp(end, `${label} end`);
   if (!values.has('exit') && !values.has('exit_code')) fail(`${label} missing exit code metadata`);
   const outputSection = content.match(/^--- command output ---\r?\n([\s\S]*?)\r?\n--- command summary ---/m)?.[1] ?? '';
   if (outputSection.trim() === '') fail(`${label} has empty command output evidence`);
   return values;
+}
+
+function requireAnyCommandLogField(entry, keys, label) {
+  for (const key of keys) {
+    if (entry?.[key] !== undefined && entry?.[key] !== null && entry?.[key] !== '') return entry[key];
+  }
+  fail(`${label} missing ${keys[0]}`);
+}
+
+function validateStructuredCommandLogEntry(entry, label) {
+  for (const key of ['command', 'cwd', 'runId']) {
+    requireAnyCommandLogField(entry, [key], label);
+  }
+  const start = requireAnyCommandLogField(entry, ['start', 'start_utc'], label);
+  const end = requireAnyCommandLogField(entry, ['end', 'end_utc'], label);
+  requireAnyCommandLogField(entry, ['exit_code', 'exit'], label);
+  assertActualUtcTimestamp(start, `${label} start`);
+  assertActualUtcTimestamp(end, `${label} end`);
+  const outputValues = [entry.output, entry.stdout, entry.stderr, entry.safe_result, entry.result, entry.summary].filter(
+    (value) => value !== undefined && value !== null && String(value).trim() !== '',
+  );
+  if (outputValues.length === 0) fail(`${label} missing non-empty output evidence`);
+}
+
+function validateStructuredCommandLogContent(content, entryName) {
+  let parsed;
+  try {
+    if (entryName.endsWith('.jsonl')) {
+      parsed = content
+        .split(/\r?\n/)
+        .filter((line) => line.trim() !== '')
+        .map((line) => JSON.parse(line));
+    } else {
+      parsed = JSON.parse(content);
+    }
+  } catch (error) {
+    fail(`${entryName} is not valid JSON command log: ${error.message}`);
+  }
+  const commands = Array.isArray(parsed) ? parsed : parsed?.commands;
+  if (!Array.isArray(commands) || commands.length === 0) fail(`${entryName} must contain command log entries`);
+  for (const [index, entry] of commands.entries()) {
+    validateStructuredCommandLogEntry(entry, `${entryName} entry ${index}`);
+  }
 }
 
 for (const entry of sourceScanLogs) {
@@ -252,6 +338,21 @@ for (const entry of sourceScanLogs) {
     fail(`secret-scan-review-bundle.log result mismatch: ${entry}`);
   }
   passingSourceScanLogCount += 1;
+}
+
+const reviewLogInclusions = parseKeyValue(readZipEntry('REVIEW_LOG_INCLUSIONS_MANIFEST.txt'));
+const currentReviewLogIncludes = (reviewLogInclusions.get('review_log_includes') ?? 'none')
+  .split(',')
+  .map((entry) => entry.trim())
+  .filter((entry) => entry !== '' && entry !== 'none');
+for (const entry of currentReviewLogIncludes) {
+  if (!entries.includes(entry)) fail(`review log inclusion listed but missing from package: ${entry}`);
+  if (/\.log$/i.test(entry)) {
+    validateCommandLogContent(readZipEntry(entry), entry);
+  }
+  if (/(^|\/)(?:command-log(?:\.sanitized)?\.json|command-log\.jsonl|[^/]*command-log\.json)$/i.test(entry)) {
+    validateStructuredCommandLogContent(readZipEntry(entry), entry);
+  }
 }
 
 const expectedBundleIncludedSourceScopeClaim = passingSourceScanLogCount > 0 ? 'passed' : 'not_claimed';
