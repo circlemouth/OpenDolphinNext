@@ -1,0 +1,14 @@
+runId: 20260421T224445Z
+cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
+command: shasum -a 256 -c docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/review-package/artifact-sha256.txt
+start_utc: 2026-04-21T23:30:09Z
+
+docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/review-package/OpenDolphin_WebClient-review-package-20260421T232805Z-WO4_clinical-wave1-batch2.zip: OK
+docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/review-package/OpenDolphin_WebClient-review-package-20260421T232805Z-WO4_clinical-wave1-batch2.zip.summary.txt: OK
+docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/review-package/OpenDolphin_WebClient-review-package-20260421T232805Z-WO4_clinical-wave1-batch2.zip.secret-scan-review-bundle.log: OK
+docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/command-logs/post-package-metadata-validation.log: OK
+docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/command-logs/post-package-source-scope-scan.log: OK
+docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/command-logs/post-package-source-scope-scan-rerun.log: OK
+
+end_utc: 2026-04-21T23:30:09Z
+exit_code: 0

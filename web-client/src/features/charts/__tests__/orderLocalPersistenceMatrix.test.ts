@@ -309,6 +309,21 @@ describe('order local persistence matrix', () => {
     expect(body.patientId).toBe('000001');
     expect(body.operations[0]).toEqual(expect.objectContaining(expectedOperation));
     expect(fetchResult.bundles[0]).toEqual(expect.objectContaining(expectedBundle));
+    expect(fetchResult.bundles[0]?.items).toEqual(
+      serverBundle.items.map((item) => expect.objectContaining(item)),
+    );
+    expect(fetchResult.bundles[0]?.materialItems ?? []).toEqual(
+      (serverBundle.materialItems ?? []).map((item) => expect.objectContaining(item)),
+    );
+    expect(fetchResult.bundles[0]?.commentItems ?? []).toEqual(
+      (serverBundle.commentItems ?? []).map((item) => expect.objectContaining(item)),
+    );
+    if (serverBundle.bodyPart) {
+      expect(fetchResult.bundles[0]?.bodyPart).toEqual(expect.objectContaining(serverBundle.bodyPart));
+    }
+    if (serverBundle.bacteria?.specimen) {
+      expect(fetchResult.bundles[0]?.bacteria?.specimen).toEqual(expect.objectContaining(serverBundle.bacteria.specimen));
+    }
     if (fetchEntity === 'otherOrder') {
       expect(body.operations[0]).not.toHaveProperty('classCode');
       expect(body.operations[0]).not.toHaveProperty('className');
@@ -335,6 +350,45 @@ describe('order local persistence matrix', () => {
       expect.objectContaining({ code: '700000031', rowRole: 'material' }),
     ]);
     expect(body.operations[0]?.entity).not.toBe('materialOrder');
+    expectNoOrcaMutationCalls();
+  });
+
+  it('keeps treatment and surgery material rows on update while delete remains local-only', async () => {
+    const treatmentCase = localBundleCases.find((entry) => entry.fetchEntity === 'treatmentOrder');
+    const surgeryCase = localBundleCases.find((entry) => entry.fetchEntity === 'surgeryOrder');
+    expect(treatmentCase).toBeTruthy();
+    expect(surgeryCase).toBeTruthy();
+
+    vi.mocked(httpFetch).mockResolvedValueOnce(
+      responseJson({ runId: 'RUN-UPDATE-DELETE', updatedDocumentIds: [201], deletedDocumentIds: [202] }),
+    );
+
+    await mutateOrderBundles({
+      patientId: '000001',
+      operations: [
+        { ...treatmentCase!.operation, operation: 'update', documentId: 201 },
+        { ...surgeryCase!.operation, operation: 'delete', documentId: 202, items: undefined, materialItems: undefined, commentItems: undefined },
+      ],
+    });
+
+    const request = vi.mocked(httpFetch).mock.calls[0]?.[1];
+    const body = JSON.parse(String((request as RequestInit | undefined)?.body ?? '{}')) as Record<string, any>;
+    expect(calledUrls()).toEqual(['/api/local/order/bundles']);
+    expect(body.operations[0]).toEqual(
+      expect.objectContaining({
+        operation: 'update',
+        documentId: 201,
+        entity: 'treatmentOrder',
+        materialItems: [expect.objectContaining({ code: '700000031', rowRole: 'material' })],
+      }),
+    );
+    expect(body.operations[1]).toEqual(
+      expect.objectContaining({
+        operation: 'delete',
+        documentId: 202,
+        entity: 'surgeryOrder',
+      }),
+    );
     expectNoOrcaMutationCalls();
   });
 });

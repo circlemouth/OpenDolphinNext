@@ -1,0 +1,23 @@
+runId: 20260421T224445Z
+cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
+command: git status --short
+start_utc: 2026-04-21T23:32:27Z
+
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/CWP03_PRESCRIPTION_LOCAL_FLOW_REPORT.md
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/CWP04_GENERIC_ORDER_MATRIX_REPORT.md
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/CWP06_DOCUMENT_TWO_PHASE_FAILURE_REPORT.md
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/FINAL_REPORT.md
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/MAIN_AGENT_REPORT.md
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/REVIEW_LOG_INCLUSIONS_MANIFEST.txt
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/REVIEW_PACKAGE_MANIFEST.txt
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/TEST_LOGS.sanitized.md
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/command-log.jsonl
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/final-summary.sanitized.json
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/final-summary.sanitized.md
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/run_logged.sh
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/scan_review_bundle.sh
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/secret-scan.sanitized.txt
+?? docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/subagent-prompts/
+
+end_utc: 2026-04-21T23:32:28Z
+exit_code: 0

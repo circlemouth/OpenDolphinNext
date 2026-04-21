@@ -1,0 +1,17 @@
+runId: 20260421T224445Z
+cwd: /Users/Hayato/Documents/GitHub/OpenDolphin_WebClient-wo4-clinical-wave1-batch2-main
+command: git merge --no-ff 6a5e7e048ad9f89047be75c52631b86e31971219 -m "merge CWP-06 document two-phase failure"
+start_utc: 2026-04-21T23:19:32Z
+
+Merge made by the 'ort' strategy.
+ .../CWP06_DOCUMENT_TWO_PHASE_FAILURE_REPORT.md     |  95 ++++++++++++++
+ .../src/features/charts/DocumentCreatePanel.tsx    | 142 +++++++++++++++++++--
+ .../charts/__tests__/PatientSummaryPanel.test.tsx  |  71 ++++++++++-
+ .../charts/__tests__/documentCreatePanel.test.tsx  |  79 ++++++++++++
+ .../features/charts/patientFreeDocumentApi.test.ts |  69 ++++++++++
+ 5 files changed, 441 insertions(+), 15 deletions(-)
+ create mode 100644 docs/implementation/unified-clinical-wave1-batch2-wo4-20260421/subagent-reports/CWP06_DOCUMENT_TWO_PHASE_FAILURE_REPORT.md
+ create mode 100644 web-client/src/features/charts/patientFreeDocumentApi.test.ts
+
+end_utc: 2026-04-21T23:19:32Z
+exit_code: 0

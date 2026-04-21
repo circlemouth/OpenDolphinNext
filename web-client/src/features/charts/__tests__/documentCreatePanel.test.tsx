@@ -208,6 +208,22 @@ describe('DocumentCreatePanel', () => {
     expect(screen.getByText(/必須項目が未入力/)).toBeInTheDocument();
   });
 
+  it('発行日が空のときに保存せず具体的な必須エラーを表示する', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <DocumentCreatePanel {...baseProps} />
+      </MemoryRouter>,
+    );
+    await fillRequiredFields(user);
+    await user.clear(screen.getByLabelText('発行日 *'));
+
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(screen.getByText(/必須項目が未入力です: 発行日/)).toBeInTheDocument();
+    expect(saveLetterModule).not.toHaveBeenCalled();
+  });
+
   it('保存すると履歴に追加される', async () => {
     const user = userEvent.setup();
     const listSummary = makeLetter({ letterItems: [{ name: 'webTemplateId', value: 'REF-ODT-STD' }] });
@@ -568,6 +584,69 @@ describe('DocumentCreatePanel', () => {
     expect(attachEvents).toHaveLength(1);
     expect(attachEvents[0]?.outcome).toBe('error');
   });
+
+  it('添付 document 成功後に letter 保存が失敗しても入力を残し、再送で document を二重作成しない', async () => {
+    const user = userEvent.setup();
+    const attachment = {
+      id: 904,
+      fileName: 'letter-xray.png',
+      contentType: 'image/png',
+      contentSize: 1024,
+    };
+    const onImageAttachmentsClear = vi.fn();
+    vi.mocked(sendKarteDocumentWithAttachments).mockResolvedValue({
+      ok: true,
+      status: 200,
+      endpoint: '/karte/document',
+      docPk: 3001,
+      payload: { docPk: 3001 },
+    });
+    vi.mocked(saveLetterModule)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        endpoint: '/odletter/letter',
+        error: 'サーバーエラーが発生しました。時間をおいて再試行してください。',
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        endpoint: '/odletter/letter',
+        letterId: 44,
+      });
+
+    render(
+      <MemoryRouter>
+        <DocumentCreatePanel
+          {...baseProps}
+          imageAttachments={[attachment]}
+          onImageAttachmentsClear={onImageAttachmentsClear}
+        />
+      </MemoryRouter>,
+    );
+
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole('button', { name: '保存' }));
+
+    expect(await screen.findByText(/\/karte\/document への画像参照保存は完了しました/)).toBeInTheDocument();
+    expect(screen.getByText(/\/odletter\/letter の文書履歴参照保存に失敗しました/)).toBeInTheDocument();
+    expect(screen.getByLabelText('宛先医療機関 *')).toHaveValue('東京クリニック');
+    expect(screen.getByLabelText('紹介内容 *')).toHaveValue('既往歴と検査結果を記載');
+    expect(screen.getByText(/letter-xray\.png/)).toBeInTheDocument();
+    expect(onImageAttachmentsClear).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: '再送' }));
+
+    expect(sendKarteDocumentWithAttachments).toHaveBeenCalledTimes(1);
+    expect(saveLetterModule).toHaveBeenCalledTimes(2);
+    const retryPayload = vi.mocked(saveLetterModule).mock.calls.at(-1)?.[0] as {
+      payload?: { letterItems?: Array<{ name?: string; value?: string }> };
+    };
+    expect(retryPayload.payload?.letterItems?.find((item) => item.name === 'webDocumentId')?.value).toBe('3001');
+    expect(retryPayload.payload?.letterItems?.find((item) => item.name === 'webAttachmentIds')?.value).toBe('[904]');
+    expect(await screen.findByText(/画像参照 1 件を関連付けました/)).toBeInTheDocument();
+    expect(onImageAttachmentsClear).toHaveBeenCalledTimes(1);
+  }, 15000);
 
   it('編集と削除の導線が表示される', async () => {
     const listSummary = makeReplyDetail();

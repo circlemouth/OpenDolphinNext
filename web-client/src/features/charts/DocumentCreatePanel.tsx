@@ -147,6 +147,16 @@ type SavedDocument = {
   };
 };
 
+type PendingAttachmentDocumentSave = {
+  fingerprint: string;
+  documentId: number;
+  endpoint?: string;
+  status?: number;
+  durationMs?: number;
+  attachmentIds: number[];
+  createdAt: string;
+};
+
 const PRINT_HELP_URL = 'https://support.google.com/chrome/answer/1069693?hl=ja';
 const LETTER_ITEM_TEMPLATE_ID = 'webTemplateId';
 const LETTER_ITEM_TEMPLATE_LABEL = 'webTemplateLabel';
@@ -182,6 +192,35 @@ const DOCUMENT_TYPES: { type: DocumentType; label: string; hint: string }[] = [
 
 const hasAttachmentReferences = (doc?: Pick<SavedDocument, 'attachmentIds'> | null) =>
   Array.isArray(doc?.attachmentIds) && doc.attachmentIds.length > 0;
+
+const buildAttachmentDocumentFingerprint = (params: {
+  patientId: string;
+  documentType: DocumentType;
+  title: string;
+  issuedAt: string;
+  templateId: string;
+  editingLetterId?: number;
+  attachments: KarteAttachmentReference[];
+}) =>
+  JSON.stringify({
+    patientId: params.patientId,
+    documentType: params.documentType,
+    title: params.title,
+    issuedAt: params.issuedAt,
+    templateId: params.templateId,
+    editingLetterId: params.editingLetterId ?? null,
+    attachments: params.attachments.map((attachment) => ({
+      id: attachment.id,
+      fileName: attachment.fileName ?? null,
+      title: attachment.title ?? null,
+      contentType: attachment.contentType ?? null,
+      contentSize: attachment.contentSize ?? null,
+      recordedAt: attachment.recordedAt ?? null,
+    })),
+  });
+
+const TWO_PHASE_LETTER_FAILURE_NOTICE =
+  '/karte/document への画像参照保存は完了しましたが、/odletter/letter の文書履歴参照保存に失敗しました。入力内容と画像選択は残しています。再送では成功済みの documentId を再利用し、画像参照を二重作成しません。';
 
 const buildEmptyForms = (today: string): DocumentFormState => ({
   referral: {
@@ -601,6 +640,7 @@ export function DocumentCreatePanel({
   const [filterAudit, setFilterAudit] = useState<'all' | 'success' | 'failed' | 'pending'>('all');
   const [filterPatient, setFilterPatient] = useState<'current' | 'all'>('current');
   const [deleteTargetDoc, setDeleteTargetDoc] = useState<SavedDocument | null>(null);
+  const pendingAttachmentDocumentRef = useRef<PendingAttachmentDocumentSave | null>(null);
   const lastOpenRequestRef = useRef<string | null>(null);
   const pendingOutputResultRef = useRef<DocumentOutputResult | null>(null);
   const historyRequestSeqRef = useRef(0);
@@ -640,13 +680,25 @@ export function DocumentCreatePanel({
   const noticeRole = notice?.tone === 'error' ? 'alert' : 'status';
   const panelDirty = draftDirty || attachmentsForDocument.length > 0 || isSaving;
 
+  const clearPendingAttachmentDocument = useCallback(() => {
+    pendingAttachmentDocumentRef.current = null;
+  }, []);
+
   const handleRemoveAttachment = useCallback(
     (attachmentId: number) => {
       if (!onImageAttachmentsChange) return;
+      clearPendingAttachmentDocument();
+      setSaveRetryable(false);
       onImageAttachmentsChange(attachmentsForDocument.filter((attachment) => attachment.id !== attachmentId));
     },
-    [attachmentsForDocument, onImageAttachmentsChange],
+    [attachmentsForDocument, clearPendingAttachmentDocument, onImageAttachmentsChange],
   );
+
+  const handleClearAttachments = useCallback(() => {
+    clearPendingAttachmentDocument();
+    setSaveRetryable(false);
+    onImageAttachmentsClear?.();
+  }, [clearPendingAttachmentDocument, onImageAttachmentsClear]);
 
   useEffect(() => {
     logUiState({
@@ -681,7 +733,9 @@ export function DocumentCreatePanel({
   useEffect(() => {
     historyPatientIdRef.current = patientId;
     historyRequestSeqRef.current += 1;
-  }, [patientId]);
+    clearPendingAttachmentDocument();
+    setSaveRetryable(false);
+  }, [clearPendingAttachmentDocument, patientId]);
 
   useEffect(() => {
     let active = true;
@@ -921,6 +975,8 @@ export function DocumentCreatePanel({
   }, [refreshDocumentHistory]);
 
   const updateForm = <T extends DocumentType>(type: T, next: Partial<DocumentFormState[T]>) => {
+    clearPendingAttachmentDocument();
+    setSaveRetryable(false);
     setDraftDirty(true);
     setForms((prev) => ({
       ...prev,
@@ -1051,6 +1107,7 @@ export function DocumentCreatePanel({
         return;
       }
       const resolvedDoc = await ensureDocumentDetail(doc);
+      clearPendingAttachmentDocument();
       setActiveType(resolvedDoc.type);
       setForms((prev) => ({
         ...prev,
@@ -1095,6 +1152,7 @@ export function DocumentCreatePanel({
       meta.missingMaster,
       patientId,
       resolvedRunId,
+      clearPendingAttachmentDocument,
     ],
   );
 
@@ -1130,6 +1188,7 @@ export function DocumentCreatePanel({
         setNotice({ tone: 'error', message: '文書IDが取得できないため編集を開始できません。' });
         return;
       }
+      clearPendingAttachmentDocument();
       setActiveType(resolvedDoc.type);
       setForms((prev) => ({
         ...prev,
@@ -1143,7 +1202,7 @@ export function DocumentCreatePanel({
       setDraftDirty(false);
       setNotice({ tone: 'info', message: '文書を編集モードで読み込みました。' });
     },
-    [ensureDocumentDetail, handleAttachmentReferenceEditBlocked, patientId],
+    [clearPendingAttachmentDocument, ensureDocumentDetail, handleAttachmentReferenceEditBlocked, patientId],
   );
 
   const handleDeleteDocument = useCallback(
@@ -1201,6 +1260,8 @@ export function DocumentCreatePanel({
         },
       };
     });
+    clearPendingAttachmentDocument();
+    setSaveRetryable(false);
     setDraftDirty(true);
     setNotice({ tone: 'success', message: `テンプレート「${template.label}」を差し込みました。` });
   };
@@ -1302,6 +1363,11 @@ export function DocumentCreatePanel({
       setSaveRetryable(false);
       return;
     }
+    if (editingDocId && !editingDoc?.letterId) {
+      setNotice({ tone: 'error', message: '編集中の文書IDが取得できないため更新できません。' });
+      setSaveRetryable(false);
+      return;
+    }
     const oversized = attachmentsForDocument.filter(
       (attachment) =>
         typeof attachment.contentSize === 'number' && attachment.contentSize > IMAGE_ATTACHMENT_MAX_SIZE_BYTES,
@@ -1356,6 +1422,22 @@ export function DocumentCreatePanel({
     }
 
     const hasAttachments = attachmentsForDocument.length > 0;
+    const attachmentDocumentFingerprint = hasAttachments
+      ? buildAttachmentDocumentFingerprint({
+          patientId,
+          documentType: activeType,
+          title: summary,
+          issuedAt,
+          templateId: forms[activeType].templateId,
+          editingLetterId: editingDoc?.letterId,
+          attachments: attachmentsForDocument,
+        })
+      : null;
+    const pendingAttachmentDocument =
+      attachmentDocumentFingerprint &&
+      pendingAttachmentDocumentRef.current?.fingerprint === attachmentDocumentFingerprint
+        ? pendingAttachmentDocumentRef.current
+        : null;
     let documentId: number | undefined;
     let documentEndpoint: string | undefined;
     let documentStatus: number | undefined;
@@ -1364,7 +1446,12 @@ export function DocumentCreatePanel({
     setIsSaving(true);
     setNotice({ tone: 'info', message: '文書を保存しています。' });
     setSaveRetryable(false);
-    if (hasAttachments) {
+    if (pendingAttachmentDocument) {
+      documentId = pendingAttachmentDocument.documentId;
+      documentEndpoint = pendingAttachmentDocument.endpoint;
+      documentStatus = pendingAttachmentDocument.status;
+      documentDurationMs = pendingAttachmentDocument.durationMs;
+    } else if (hasAttachments) {
       const payload = buildAttachmentReferencePayload({
         attachments: attachmentsForDocument,
         patientId,
@@ -1380,6 +1467,7 @@ export function DocumentCreatePanel({
       documentError = result.error;
       documentId = result.docPk > 0 ? result.docPk : undefined;
       if (!result.ok) {
+        clearPendingAttachmentDocument();
         setIsSaving(false);
         setNotice({
           tone: 'error',
@@ -1413,12 +1501,17 @@ export function DocumentCreatePanel({
         });
         return;
       }
-    }
-
-    if (editingDocId && !editingDoc?.letterId) {
-      setIsSaving(false);
-      setNotice({ tone: 'error', message: '編集中の文書IDが取得できないため更新できません。' });
-      return;
+      if (attachmentDocumentFingerprint && documentId) {
+        pendingAttachmentDocumentRef.current = {
+          fingerprint: attachmentDocumentFingerprint,
+          documentId,
+          endpoint: result.endpoint,
+          status: result.status,
+          durationMs: documentDurationMs,
+          attachmentIds: attachmentsForDocument.map((attachment) => attachment.id),
+          createdAt: new Date().toISOString(),
+        };
+      }
     }
 
     const letterPayload = buildLetterModulePayload({
@@ -1437,14 +1530,33 @@ export function DocumentCreatePanel({
     const letterResult = await saveLetterModule({ payload: letterPayload });
     setIsSaving(false);
     if (!letterResult.ok) {
+      if (hasAttachments && documentId && attachmentDocumentFingerprint) {
+        pendingAttachmentDocumentRef.current = {
+          fingerprint: attachmentDocumentFingerprint,
+          documentId,
+          endpoint: documentEndpoint,
+          status: documentStatus,
+          durationMs: documentDurationMs,
+          attachmentIds: attachmentsForDocument.map((attachment) => attachment.id),
+          createdAt: pendingAttachmentDocument?.createdAt ?? new Date().toISOString(),
+        };
+        setSaveRetryable(true);
+        setDraftDirty(true);
+      } else {
+        setSaveRetryable(false);
+      }
       setNotice({
         tone: 'error',
-        message: `文書保存に失敗しました: ${letterResult.error ?? `HTTP ${letterResult.status}`}`,
+        message:
+          hasAttachments && documentId
+            ? `${TWO_PHASE_LETTER_FAILURE_NOTICE} 失敗理由: ${letterResult.error ?? `HTTP ${letterResult.status}`}`
+            : `文書保存に失敗しました: ${letterResult.error ?? `HTTP ${letterResult.status}`}`,
       });
       return;
     }
 
     await refreshDocumentHistory();
+    clearPendingAttachmentDocument();
     setNotice({
       tone: 'success',
       message: hasAttachments
@@ -1459,7 +1571,7 @@ export function DocumentCreatePanel({
     setEditingDocId(null);
     setDraftDirty(false);
     if (hasAttachments) {
-      onImageAttachmentsClear?.();
+      handleClearAttachments();
       attachmentsForDocument.forEach((attachment) => {
         recordChartsAuditEvent({
           action: 'chart_image_attach',
@@ -1503,11 +1615,12 @@ export function DocumentCreatePanel({
   };
 
   const handleCancel = () => {
+    clearPendingAttachmentDocument();
     setForms(buildEmptyForms(today));
     setEditingDocId(null);
     setDraftDirty(false);
     setNotice({ tone: 'info', message: '入力を中断しました。' });
-    onImageAttachmentsClear?.();
+    handleClearAttachments();
     logDocumentAudit('CHARTS_DOCUMENT_CANCEL', 'do', {
       documentTitle: buildDocumentSummary(activeType, forms),
       documentIssuedAt: forms[activeType].issuedAt,
@@ -1846,7 +1959,7 @@ export function DocumentCreatePanel({
             <strong>文書へ貼付予定の画像</strong>
             <span>{attachmentsForDocument.length} 件</span>
             {onImageAttachmentsClear ? (
-              <button type="button" onClick={onImageAttachmentsClear} disabled={isSaving}>
+              <button type="button" onClick={handleClearAttachments} disabled={isSaving}>
                 すべて解除
               </button>
             ) : null}
@@ -2131,6 +2244,7 @@ export function DocumentCreatePanel({
             <button
               type="button"
               onClick={() => {
+                clearPendingAttachmentDocument();
                 setEditingDocId(null);
                 setNotice({ tone: 'info', message: '編集モードを解除しました。' });
               }}
